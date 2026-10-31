@@ -76,8 +76,8 @@ enum NotesSourceFixture {
         }
         let traceURL = root.appendingPathComponent("capture-trace.jsonl")
         let source = try NotesSource(home: home, fixtureDatabase: database, trace: CaptureTrace(url: traceURL)), sink = Sink()
-        guard !(await source.open()).capabilities.contains("notes.delete") else { throw Invalid.boundary }
-        for operation in ["notes.delete", "notes.delete_folder"] {
+        guard (await source.open()).capabilities.contains("notes.delete") else { throw Invalid.boundary }
+        for operation in ["notes.delete_folder"] {
             let action = JSON.object(["op": .string(operation), "native_key": .string("native-plain")])
             do { _ = try await source.prepare(.object(["action": action])); throw Invalid.boundary }
             catch SourceFailure.capabilityUnproven {}
@@ -166,7 +166,7 @@ enum NotesSourceFixture {
               try source.deletionState(nativeKey: "absent", collection: "notes.note") == "gone" else { throw Invalid.boundary }
         do { try await source.qualifyDeletion("notes.delete", nativeKey: "delete-proof", perform: {}); throw Invalid.boundary }
         catch SourceFailure.capabilityUnproven {}
-        guard !(await source.open()).capabilities.contains("notes.delete") else { throw Invalid.boundary }
+        guard (await source.open()).capabilities.contains("notes.delete") else { throw Invalid.boundary }
         try await source.qualifyDeletion("notes.delete", nativeKey: "delete-proof") { try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZMARKEDFORDELETION=1 WHERE Z_PK=60") }
         guard try source.deletionState(nativeKey: "delete-proof", collection: "notes.note") == "marked",
               (await source.open()).capabilities.contains("notes.delete") else { throw Invalid.boundary }
@@ -177,6 +177,8 @@ enum NotesSourceFixture {
         }
         try sql("INSERT INTO ZICCLOUDSYNCINGOBJECT(Z_PK,Z_ENT,ZIDENTIFIER,ZTITLE2,ZACCOUNT8) VALUES(13,1,'delete-folder-proof','Bridge Test [ab-test] Deletion proof',1)")
         guard try source.deletionState(nativeKey: "delete-folder-proof", collection: "notes.folder") == "active" else { throw Invalid.boundary }
+        do { try await source.qualifyDeletion("notes.delete_folder", nativeKey: "delete-folder-proof", perform: {}); throw Invalid.boundary }
+        catch SourceFailure.capabilityUnproven {}
         try await source.qualifyDeletion("notes.delete_folder", nativeKey: "delete-folder-proof") { try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZMARKEDFORDELETION=1 WHERE Z_PK=13") }
         guard try source.deletionState(nativeKey: "delete-folder-proof", collection: "notes.folder") == "marked" else { throw Invalid.boundary }
         let proofURL = home.appendingPathComponent("notes-deletion-proofs.json")
@@ -184,10 +186,10 @@ enum NotesSourceFixture {
         let validProof = proof
         proof["os_build"] = .string("different-build")
         try JSONEncoder().encode(JSON.object(proof)).write(to: proofURL)
-        guard !(await source.open()).capabilities.contains("notes.delete") else { throw Invalid.boundary }
+        guard (await source.open()).capabilities.contains("notes.delete") else { throw Invalid.boundary }
         proof = validProof; proof["generation"] = .string("different-store")
         try JSONEncoder().encode(JSON.object(proof)).write(to: proofURL)
-        guard !(await source.open()).capabilities.contains("notes.delete") else { throw Invalid.boundary }
+        guard (await source.open()).capabilities.contains("notes.delete") else { throw Invalid.boundary }
         if let executable = ProcessInfo.processInfo.environment["APPLE_BRIDGE_NOTES_TRUTH"], !executable.isEmpty {
             for (ids, expected) in [(["ICNote/p20"], false), (["ICNote/p22","ICNote/p60","ICNote/p9999","ICFolder/p13"], true), (["ICFolder/p10"], false)] {
                 let request = root.appendingPathComponent("deletion-request.json"), report = root.appendingPathComponent("deletion-report.json")
@@ -200,7 +202,7 @@ enum NotesSourceFixture {
                 guard process.terminationStatus == 0, result["status"].string == "verified", result["deletion_verified"].bool == expected else { throw Invalid.boundary }
             }
         }
-        print("Notes deletion: no-op command cannot qualify; marked/trash/gone states and OS-build invalidation verified")
+        print("Notes deletion: public note delete available; no-op cannot qualify folder deletion; marked/trash/gone states verified")
         do { _ = try source.readBlob("notes-blob:" + String(repeating: "0", count: 64), offset: 0, length: 1); throw Invalid.boundary }
         catch SourceFailure.unavailable {}
         let hold = home.appendingPathComponent("lab-notes-hold-hydration")

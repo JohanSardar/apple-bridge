@@ -38,11 +38,13 @@ extension NotesStore {
 extension NotesSource {
     static let deletionOperations = ["notes.delete", "notes.delete_folder"]
     func deletionCapabilities() -> [String] {
+        let supported = ["notes.delete"]
         guard let bytes = try? Data(contentsOf: deletionProofURL), let ledger = try? JSONDecoder().decode(JSON.self, from: bytes),
               ledger["version"].number == 1,
               ledger["os_build"].string == ProcessInfo.processInfo.operatingSystemVersionString,
-              let generation = try? store.read().generation, ledger["generation"].string == generation else { return [] }
-        return Self.deletionOperations.filter { operation in
+              let generation = try? store.read().generation, ledger["generation"].string == generation else { return supported }
+        return supported + Self.deletionOperations.filter { operation in
+            guard !supported.contains(operation) else { return false }
             let proof = ledger["operations"][operation]
             return proof["before_active"].bool && proof["command_completed"].bool && proof["notestore_verified"].bool && ["gone", "marked", "trashed"].contains(proof["after_state"].string)
         }

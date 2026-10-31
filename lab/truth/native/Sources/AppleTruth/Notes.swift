@@ -13,7 +13,7 @@ extension AppleTruth {
         if verb == "fixture" {
             guard tag.hasPrefix("[ab-test "), tag.hasSuffix("]"), !tag.contains("\n"), tag.count > 11 else { throw NotesTruthFailure.invalid }
         }
-        let cleanup = verb == "fixture" && ["cleanup", "delete", "cleanup_created_folder"].contains(request["action"] as? String ?? "")
+        let cleanup = verb == "fixture" && ["cleanup", "delete", "cleanup_owned", "cleanup_created_folder"].contains(request["action"] as? String ?? "")
         let storeTargets = cleanup && request["folder_id"] == nil ? try notesDeletionTargets(tag: tag, folderKey: request["action"] as? String == "cleanup_created_folder" ? request["native_key"] as? String : nil) : []
         var input = request
         input["verb"] = verb
@@ -51,8 +51,8 @@ extension AppleTruth {
             require(request.id && request.folder_id);
             const note = app.notes.byId(request.id);
             require(note.name().startsWith(tag) && note.container().id() === request.folder_id && fixtureFolder(note.container()));
-            app.delete(note.container().notes.byId(request.id));
-            return {status:'verified'};
+            app.delete(note);
+            return {status:'verified', deleted_ids:[request.id]};
         }
         if (action === 'cleanup_created_folder') {
             require(request.created_by_run === true && (request.native_key || request.folder_id) && (request.title === 'Bridge Test ' + tag || request.title.startsWith('Bridge Test ' + tag + ' ')));
@@ -60,10 +60,8 @@ extension AppleTruth {
             require(folders.length === 1);
             const folder = folders[0];
             require((!request.folder_id || folder.id() === request.folder_id) && folder.folders().length === 0 && (request.folder_id ? folder.notes().length === 0 : folder.notes().every(n => n.name().startsWith(tag))));
-            const parent = folder.container();
             const folderID = folder.id();
-            app.delete(parent.folders.byId(folderID));
-            require(parent.folders.whose({id:folderID})().length === 0);
+            app.delete(folder);
             return {status:'verified', deleted_ids:[folderID]};
         }
         if (action === 'cleanup' || action === 'delete') {
@@ -73,7 +71,7 @@ extension AppleTruth {
                 require(note.name().startsWith(tag));
                 const folder = note.container();
                 require(fixtureFolder(folder));
-                app.delete(folder.notes.byId(id));
+                app.delete(note);
             });
             require(taggedNotes().length === 0);
             return {status:'verified', deleted_ids:deletedIDs};
