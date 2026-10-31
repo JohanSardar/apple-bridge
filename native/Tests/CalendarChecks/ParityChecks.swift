@@ -1,5 +1,7 @@
 import Foundation
 import SQLite3
+import EventKit
+import CoreLocation
 import CalendarSource
 import AgendaGate
 import SourceSupport
@@ -19,7 +21,22 @@ enum CalendarParityChecks {
         }
         try execute("CREATE TABLE Calendar(ROWID INTEGER PRIMARY KEY,UUID TEXT); CREATE TABLE Location(ROWID INTEGER PRIMARY KEY,title TEXT,address TEXT,latitude INTEGER,longitude INTEGER,radius INTEGER); CREATE TABLE Participant(ROWID INTEGER PRIMARY KEY,status INTEGER); CREATE TABLE Conference(owner_id INTEGER,url TEXT); CREATE TABLE CalendarItem(ROWID INTEGER PRIMARY KEY,unique_identifier TEXT,UUID TEXT,external_id TEXT,calendar_id INTEGER,location_id INTEGER,self_attendee_id INTEGER,travel_time INTEGER,travel_advisory_behavior INTEGER,invitation_status INTEGER,privacy_level INTEGER,priority INTEGER,conference_url TEXT); CREATE TABLE Attachment(owner_id INTEGER,file_id INTEGER); CREATE TABLE AttachmentFile(ROWID INTEGER PRIMARY KEY,UUID TEXT,filename TEXT,local_path TEXT,file_size INTEGER,format TEXT); INSERT INTO Calendar VALUES(1,'[ab-test] calendar'); INSERT INTO Participant VALUES(1,1); INSERT INTO CalendarItem VALUES(1,'[ab-test] event','[ab-test] uuid','[ab-test] external',1,NULL,1,NULL,0,0,0,0,NULL);")
         let observation: [String: JSON] = ["event": .object(["collection": .string("calendar.event"), "native_key": .string("[ab-test] event"), "data": .object(["calendar_id": .object(["$ref": .object(["native_key": .string("[ab-test] calendar")])])])])]
+        let location = EKStructuredLocation(title: "[ab-test] location")
+        location.geoLocation = CLLocation(latitude: 41.88, longitude: -87.63)
+        location.radius = 100
+        let native = CalendarEventKitFields.structuredLocation(location)
+        guard native["latitude"] == .number(41.88), native["longitude"] == .number(-87.63), native["radius"] == .number(100), CalendarEventKitFields.structuredLocation(nil) == .null, CalendarEventKitFields.participants(nil) == .array([]) else { throw SourceFailure.invalid }
         let reader = CalendarStoreEnrichment(root: root)
+        var nativeObservation = observation["event"]!.object
+        var nativeData = nativeObservation["data"]!.object
+        nativeData["structured_location"] = native
+        nativeObservation["data"] = .object(nativeData)
+        let projected = await reader.enrich(["event": .object(nativeObservation)], lookups: [:], force: true)
+        guard projected["event"]?["data"]["structured_location"] == native, projected["event"]?["data"]["store_coverage"]["structured_location"]["status"] == .string("complete") else { throw SourceFailure.invalid }
+        let unavailable = CalendarStoreEnrichment(root: root.appendingPathComponent("missing"))
+        let fallback = await unavailable.enrich(["event": .object(nativeObservation)], lookups: [:], force: true)
+        guard fallback["event"]?["data"]["structured_location"] == native else { throw SourceFailure.invalid }
+
         let unknown = await reader.enrich(observation, lookups: [:], force: true)
         guard unknown["event"]?["data"]["store_coverage"]["travel_time"]["status"] != .string("complete") else { throw SourceFailure.invalid }
         try execute("UPDATE CalendarItem SET travel_time='unknown' WHERE ROWID=1")

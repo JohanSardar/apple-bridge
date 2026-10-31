@@ -75,6 +75,7 @@ enum CalendarParityProof {
             }
             checks["invitation_response_readback"] = .bool(false)
             reasons["invitation"] = .string("This run has no owned incoming invitation. EventKit creates ordinary events and exposes attendees and response status as read-only; existing invitations were left untouched.")
+            do {
             stage = "travel_time"
             try await ui.revealTravel()
             try ui.travelPopup()
@@ -85,6 +86,10 @@ enum CalendarParityProof {
                 let value = current["travel_time"] ?? .null
                 return value == .number(900) || value == .number(15)
             })
+            } catch {
+                reasons["travel_time"] = .string("Calendar could not change travel time on the run-owned event (" + String(describing: error) + ").")
+            }
+            do {
             stage = "attachment_add"
             try await ui.openOwnedEvent()
             let filename = "ab-test-" + UUID().uuidString + ".txt"
@@ -128,6 +133,49 @@ enum CalendarParityProof {
                 try await Task.sleep(for: .milliseconds(100))
             }
             checks["attachment_remove_readback"] = .bool(removed)
+            } catch {
+                reasons["attachments"] = .string("Calendar could not change attachments on the run-owned event (" + String(describing: error) + ").")
+            }
+            stage = "invitation"
+            if let attendee = identities.sorted().last, let organizer = identities.sorted().first {
+                try await ui.openOwnedEvent()
+                let invitationTitle = title + " invitation"
+                let invitationUI = CalendarFixtureUI(app: app, title: invitationTitle)
+                let date = DateFormatter()
+                date.locale = Locale(identifier: "en_US_POSIX"); date.timeZone = TimeZone(secondsFromGMT: 0); date.dateFormat = "yyyyMMdd'T'HHmmss'Z'"
+                let lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//AppleBridge//Calendar parity//EN", "METHOD:REQUEST", "BEGIN:VEVENT", "UID:" + UUID().uuidString, "DTSTAMP:" + date.string(from: Date()), "DTSTART:" + date.string(from: event.startDate), "DTEND:" + date.string(from: event.endDate), "SUMMARY:" + invitationTitle, "ORGANIZER:mailto:" + organizer, "ATTENDEE;RSVP=TRUE;PARTSTAT=NEEDS-ACTION:mailto:" + attendee, "END:VEVENT", "END:VCALENDAR", ""]
+                let invitationFile = root.appendingPathComponent("[ab-test]-invitation.ics")
+                try Data(lines.joined(separator: "\r\n").utf8).write(to: invitationFile)
+                try await ui.importInvitation(invitationFile, calendarTitle: title)
+                store.reset()
+                guard let importedCalendar = store.calendar(withIdentifier: calendarID) else { throw SourceFailure.unavailable }
+                let query = store.predicateForEvents(withStart: event.startDate.addingTimeInterval(-1), end: event.endDate.addingTimeInterval(1), calendars: [importedCalendar])
+                let invitations = store.events(matching: query).filter { $0.title == invitationTitle }
+                guard invitations.count == 1, let invitation = invitations.first,
+                      let participants = invitation.attendees, participants.count == 1,
+                      participants[0].isCurrentUser,
+                      participants[0].url.absoluteString.lowercased() == "mailto:" + attendee else { throw SourceFailure.conflict }
+                checks["invitation_self_attendee_only"] = .bool(true)
+                let invitationID = invitation.calendarItemIdentifier
+                let before = participants[0].participantStatus
+                try await invitationUI.openOwnedEvent()
+                for name in ["Accept", "Maybe", "Decline", "Reply", "OK"] { controls[name] = .bool(!invitationUI.find(name).isEmpty) }
+                try invitationUI.press("Accept", role: kAXButtonRole)
+                for _ in 0..<60 {
+                    store.reset()
+                    if let current = store.calendarItem(withIdentifier: invitationID) as? EKEvent,
+                       current.title == invitationTitle, current.calendar.calendarIdentifier == calendarID,
+                       let attendees = current.attendees, attendees.count == 1,
+                       attendees[0].isCurrentUser, attendees[0].participantStatus == .accepted, before != .accepted {
+                        checks["invitation_response_readback"] = .bool(true)
+                        reasons.removeValue(forKey: "invitation")
+                        break
+                    }
+                    try await Task.sleep(for: .milliseconds(200))
+                }
+            } else {
+                reasons["invitation"] = .string("EventKit could not identify Johan's own account attendee address. No invitation was created or sent.")
+            }
         } catch {
             reasons[stage] = .string("Calendar could not verify " + stage + " on the test event (" + String(describing: error) + ").")
             if let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.iCal").first {
@@ -154,7 +202,7 @@ enum CalendarParityProof {
         var identities: Set<String> = []
         for event in store.events(matching: predicate) {
             for participant in (event.attendees ?? []) + [event.organizer].compactMap({ $0 }) where participant.isCurrentUser && participant.url.scheme?.lowercased() == "mailto" {
-                identities.insert(participant.url.resourceSpecifier.removingPercentEncoding?.lowercased() ?? "")
+                identities.insert(String(participant.url.absoluteString.dropFirst(7)).removingPercentEncoding?.lowercased() ?? "")
             }
         }
         return identities.filter { !$0.isEmpty && !$0.contains("\n") && !$0.contains("\r") }
@@ -245,6 +293,38 @@ final class CalendarFixtureUI {
                 return
             }
         }
+    }
+
+    func importInvitation(_ file: URL, calendarTitle: String) async throws {
+        try fence()
+        try await menu("File", ["Import…", "Import..."])
+        try await Task.sleep(for: .milliseconds(200))
+        try post(5, flags: [.maskCommand, .maskShift])
+        try await Task.sleep(for: .milliseconds(200))
+        try setFocused(file.path, requireInspector: false)
+        try post(36, flags: [])
+        try await Task.sleep(for: .milliseconds(200))
+        try dialogPress("Import")
+        try await Task.sleep(for: .milliseconds(500))
+        let popups = findRole(kAXPopUpButtonRole)
+        guard popups.count == 1, AXUIElementPerformAction(popups[0], kAXPressAction as CFString) == .success else { throw SourceFailure.conflict }
+        try await Task.sleep(for: .milliseconds(100))
+        let calendars = find(calendarTitle, role: kAXMenuItemRole)
+        guard calendars.count == 1, AXUIElementPerformAction(calendars[0], kAXPressAction as CFString) == .success else { throw SourceFailure.conflict }
+        try dialogPress("OK")
+        try await Task.sleep(for: .seconds(1))
+    }
+
+    func findRole(_ role: String) -> [AXUIElement] {
+        var budget = 3000
+        func walk(_ element: AXUIElement) -> [AXUIElement] {
+            guard budget > 0 else { return [] }; budget -= 1
+            var children: CFTypeRef?
+            AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children)
+            let descendants = (children as? [AXUIElement] ?? []).flatMap(walk)
+            return (value(element, kAXRoleAttribute) == role ? [element] : []) + descendants
+        }
+        return walk(root)
     }
 
     func dialogPress(_ name: String) throws {

@@ -60,7 +60,9 @@ public final class CalendarStoreEnrichment {
                 default: knownZero = false
                 }
                 set("travel_time", knownZero ? travel : .null, status: knownZero ? "complete" : "unsupported", reason: knownZero ? "" : travel == .null ? "travel_time_unavailable" : "positive_travel_time_units_not_verified_on_this_os")
-                if row["location_title"] == .null && row["location_address"] == .null { set("structured_location", .null) }
+                if let native = data["structured_location"] {
+                    set("structured_location", native)
+                } else if row["location_title"] == .null && row["location_address"] == .null { set("structured_location", .null) }
                 else {
                     set("structured_location", .object(["title": row["location_title"] ?? .null, "address": row["location_address"] ?? .null, "latitude": .null, "longitude": .null, "radius": .null]), status: "partial", reason: "coordinate_units_not_verified_on_this_os")
                 }
@@ -82,7 +84,9 @@ public final class CalendarStoreEnrichment {
                 set("attachments", .array(attachments), status: complete ? "complete" : "partial", reason: complete ? "" : "attachment_bytes_not_locally_available_or_path_unverified")
                 data["store_status"] = .string(coverage.values.allSatisfy { $0["status"].string == "complete" } ? "complete" : "partial")
             } else {
-                for field in Self.fields.subtracting(["store_status", "store_coverage"]) { set(field, .null, status: "unsupported", reason: ready ? "calendar_store_identity_unverified" : "calendar_store_unavailable_or_schema_unverified") }
+                for field in Self.fields.subtracting(["store_status", "store_coverage"]) {
+                    if field == "structured_location", let native = data[field] { set(field, native); continue }
+                    set(field, .null, status: "unsupported", reason: ready ? "calendar_store_identity_unverified" : "calendar_store_unavailable_or_schema_unverified") }
                 data["store_status"] = .string("unsupported")
             }
             data["store_coverage"] = .object(coverage)
