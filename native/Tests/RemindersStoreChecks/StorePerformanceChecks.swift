@@ -5,6 +5,10 @@ import SourceSupport
 @MainActor
 enum StorePerformanceChecks {
     static func run(path: String, execute: (String) -> Void, report: String) async throws {
+        execute("CREATE INDEX profile_reminders_visible ON ZREMCDREMINDER(ZMARKEDFORDELETION)")
+        execute("INSERT INTO ZREMCDREMINDER(Z_PK,Z_ENT,ZIDENTIFIER,ZMARKEDFORDELETION,ZCKNEEDSTOBEFETCHEDFROMCLOUD,ZCKNEEDSINITIALFETCHFROMCLOUD) VALUES(900,101,'[ab-test] null flags',NULL,NULL,NULL)")
+        let nullable = try await RemindersStoreSession(path: path).read(full: true)
+        precondition(nullable.snapshot.reminders[900] != nil && nullable.snapshot.reminders[12] == nil && nullable.snapshot.reminders[13] == nil && nullable.snapshot.reminders[14] == nil)
         execute("CREATE TABLE ATRANSACTION(Z_PK INTEGER PRIMARY KEY)")
         execute("CREATE TABLE ACHANGE(Z_PK INTEGER PRIMARY KEY,ZENTITY INTEGER,ZENTITYPK INTEGER,ZTRANSACTIONID INTEGER)")
         execute("BEGIN")

@@ -118,7 +118,8 @@ final class StoreConnection {
             for entity in descendants { entityTables[entity] = table }
             let required = ["Z_ENT", "ZMARKEDFORDELETION", "ZCKNEEDSTOBEFETCHEDFROMCLOUD", "ZCKNEEDSINITIALFETCHFROMCLOUD"]
             guard Set(required).isSubset(of: schema) else { throw SourceFailure.unsupported }
-            predicates[table] = "Z_ENT IN (" + descendants.sorted().map(String.init).joined(separator: ",") + ") AND COALESCE(ZMARKEDFORDELETION,0)=0 AND COALESCE(ZCKNEEDSTOBEFETCHEDFROMCLOUD,0)=0 AND COALESCE(ZCKNEEDSINITIALFETCHFROMCLOUD,0)=0"
+            let visible = required.dropFirst().map { "(\($0)=0 OR \($0) IS NULL)" }.joined(separator: " AND ")
+            predicates[table] = "Z_ENT IN (" + descendants.sorted().map(String.init).joined(separator: ",") + ") AND " + visible
         }
         for table in ["ATRANSACTION", "ACHANGE"] {
             var schema: Set<String> = []
