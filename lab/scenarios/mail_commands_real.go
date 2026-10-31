@@ -72,6 +72,8 @@ func runMailCommandsReal(ctx context.Context, s Scenario, level string) (e Evide
 	w, err := world.NewRealWithSetup(ctx, level, 0, world.NativeSetup{FilesystemTruth: true, DevelopmentIdentity: true}, world.BlobOptions{Scope: "mail:read,mail:write,system:read"})
 	add("mail_native_world", err == nil)
 	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		e.Conditions = map[string]string{"reason": "The Mail helper could not start. Check the qualification log for the build or permission failure"}
 		return
 	}
 	defer w.Close()

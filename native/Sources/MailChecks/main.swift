@@ -47,6 +47,7 @@ struct MailChecks {
         let scenario = CommandLine.arguments.last ?? ""
         if scenario == "MAIL-COMMANDS" {
  try await checkMailCommands()
+ try await checkMailCommandCapture(path)
  } else if scenario == "MAIL-BODY" {
             try await checkMailBodies(directory)
         } else if scenario == "MAIL-NO-FALSE-DELETE" {

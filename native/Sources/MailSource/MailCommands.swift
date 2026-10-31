@@ -5,7 +5,7 @@ import AppKit
 import SourceSupport
 
 public enum MailCommandFailure: Error, LocalizedError, Sendable {
-    case permission, timeout, rejected
+    case permission, timeout, rejected, unconfirmed
     public static func appleEvent(_ code: Int) -> Self {
         switch code {
         case -1712: .timeout
@@ -18,6 +18,7 @@ public enum MailCommandFailure: Error, LocalizedError, Sendable {
         case .permission: "Mail automation is not allowed. Enable Mail for Apple Bridge in System Settings > Privacy & Security > Automation."
         case .timeout: "Mail did not answer the command in time. Open Mail, let account sync finish, and try again."
         case .rejected: "Mail could not complete the command. Open Mail, check the account and mailbox, and try again."
+        case .unconfirmed: "Mail could not confirm the message after the command. Check Sent or Drafts before trying again."
         }
     }
 }
@@ -68,7 +69,7 @@ public struct MailCommands: Sendable {
     public func dispatch(_ prepared: Prepared) async throws -> JSON {
         let action = prepared.action, args = action["args"], op = action["op"].string
         let q = Self.quote
-        var body = "", readback = ""
+        var body = "", readback = "", identity = ""
         var creates = false
         if op == "mail.create_draft" || op == "mail.send" {
             if !args["reply_to"].string.isEmpty || !args["forward_of"].string.isEmpty { throw SourceFailure.unsupported }
@@ -78,7 +79,9 @@ public struct MailCommands: Sendable {
                 for address in args[field].array { body += "tell m to make new " + kind + " recipient at end of " + kind + " recipients with properties {address:" + q(address.string) + "}\n" }
             }
             body += op == "mail.send" ? "send m\n" : "save m\n"
-            readback = "return count of (messages of " + (op == "mail.send" ? "sent mailbox" : "drafts mailbox") + " whose subject is " + q(args["subject"].string) + " and content starts with " + q(args["body"].string) + ")"
+            let selection = "messages of " + (op == "mail.send" ? "sent mailbox" : "drafts mailbox") + " whose subject is " + q(args["subject"].string) + " and content starts with " + q(args["body"].string)
+            readback = "return count of (" + selection + ")"
+            identity = "set matched to (" + selection + ")\nif (count matched) is not 1 then return \"\"\nreturn (id of item 1 of matched) as string"
         } else {
             let key = action["native_key"].string
             guard UInt64(key) != nil else { throw SourceFailure.invalid }
@@ -105,9 +108,13 @@ public struct MailCommands: Sendable {
         _ = try await script(body)
         for _ in 0..<40 {
             let evidence = try await script(readback)
-            if evidence == "1" || evidence == "true" { return .object(["observed": .bool(true)]) }
+            if evidence == "1" || evidence == "true" {
+                let key = creates ? try await script(identity) : action["native_key"].string
+                guard UInt64(key) != nil else { throw MailCommandFailure.unconfirmed }
+                return .object(["observed": .bool(true), "native_key": .string(key), "fingerprint": .string(prepared.fingerprint)])
+            }
             try await Task.sleep(for: .milliseconds(200))
         }
-        return .object(["observed": .bool(false), "disposition": .string("indeterminate")])
+        return .object(["observed": .bool(false), "disposition": .string("indeterminate"), "reason": .string(MailCommandFailure.unconfirmed.localizedDescription)])
     }
 }
