@@ -100,7 +100,16 @@ extension MessagesParity {
         var selected: CFTypeRef?
         guard AXUIElementCopyAttributeValue(row, kAXSelectedAttribute as CFString, &selected) == .success, (selected as? NSNumber)?.boolValue == true else { throw MessagesUIFailure.targetUnavailable }
         var budget = 4000
-        let selections = MessagesAccessibility.matching(session.root, budget: &budget) { node in
+        var table = row
+        var tableFound = false
+        for _ in 0..<6 {
+            if [kAXTableRole, kAXOutlineRole].contains(MessagesAccessibility.value(table, kAXRoleAttribute)) { tableFound = true; break }
+            var parent: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(table, kAXParentAttribute as CFString, &parent) == .success, let parent, CFGetTypeID(parent) == AXUIElementGetTypeID() else { break }
+            table = unsafeDowncast(parent, to: AXUIElement.self)
+        }
+        guard tableFound else { throw MessagesUIFailure.targetUnavailable }
+        let selections = MessagesAccessibility.matching(table, budget: &budget) { node in
             guard MessagesAccessibility.value(node, kAXRoleAttribute) == kAXRowRole else { return false }
             var value: CFTypeRef?
             return AXUIElementCopyAttributeValue(node, kAXSelectedAttribute as CFString, &value) == .success && (value as? NSNumber)?.boolValue == true
@@ -175,7 +184,7 @@ extension MessagesParity {
             try wait(deleted)
             try deletedAction(target, permanently: true)
             try wait {
-                try reader.query("SELECT 1 FROM chat_recoverable_message_join j JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? UNION ALL SELECT 1 FROM chat_message_join j JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=?", [chat, chat]).isEmpty
+                try reader.query("SELECT 1 FROM chat WHERE guid=?", [chat]).isEmpty && reader.query("SELECT 1 FROM chat_recoverable_message_join j JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? UNION ALL SELECT 1 FROM chat_message_join j JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=?", [chat, chat]).isEmpty
             }
             return operations.map { .object(["operation": .string($0), "proven": .bool(true), "reason": .string("owned_conversation_native_recovery_and_purge"), "service": prepared.nativeState["service"]]) }
         } catch {

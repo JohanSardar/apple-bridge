@@ -291,6 +291,12 @@ enum MessagesAccessibility {
         let placeholder = value(fields[0], kAXPlaceholderValueAttribute)
         guard placeholder.contains(args["service"].string) else { throw MessagesUIFailure.wrongService }
         try session.type(args["text"].string, into: fields[0], value: textValue)
+        budget = 4000
+        let finalRecipients = matching(root, budget: &budget) { value($0, kAXRoleAttribute) == kAXPopUpButtonRole }
+        let finalDescriptions = finalRecipients.map { value($0, kAXDescriptionAttribute) }.joined(separator: ",").lowercased()
+        guard budget > 0, finalRecipients.count == handles.count, handles.allSatisfy({ handle in
+            handle.contains("@") ? finalDescriptions.contains(handle.lowercased()) : finalDescriptions.filter(\.isNumber).contains(handle.filter(\.isNumber))
+        }), session.focused(fields[0]), textValue(fields[0]) == args["text"].string else { throw MessagesUIFailure.recipientMismatch }
         try session.press(MessagesUISession.enter)
     }
     static func perform(_ prepared: Prepared) throws -> JSON {
