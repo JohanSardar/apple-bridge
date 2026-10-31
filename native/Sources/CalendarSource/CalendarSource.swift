@@ -126,6 +126,7 @@ public final class CalendarSource: Source {
             })?.recurrenceRules
         }
         fields["recurrence"] = nativeRules.map(encodedRules) ?? .null
+        fields["owner_participation_status"] = CalendarEventKitFields.ownerParticipationStatus(event.attendees)
         return .object(fields)
     }
 

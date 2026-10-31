@@ -51,7 +51,7 @@ public final class CalendarStoreEnrichment {
                 set("store_identifier_match", row["matched_by"] ?? .null)
                 for field in ["start_location", "attendee_proposals", "participant_comments", "store_alarm_details"] { set(field, .null, status: "unsupported", reason: "positive_native_fixture_not_verified_on_this_os") }
                 for field in ["travel_advisory_behavior", "invitation_status", "privacy_level", "priority"] { set(field, row[field] ?? .null) }
-                set("owner_participation_status", row["self_status"] ?? .null)
+                set("owner_participation_status", data["owner_participation_status"] ?? row["self_status"] ?? .null)
                 let travel = row["travel_time"] ?? .null
                 let knownZero: Bool
                 switch travel {
@@ -88,7 +88,7 @@ public final class CalendarStoreEnrichment {
                 data["store_status"] = .string(coverage.values.allSatisfy { $0["status"].string == "complete" } ? "complete" : "partial")
             } else {
                 for field in Self.fields.subtracting(["store_status", "store_coverage"]) {
-                    if field == "structured_location", let native = data[field] { set(field, native); continue }
+                    if ["structured_location", "owner_participation_status"].contains(field), let native = data[field] { set(field, native); continue }
                     set(field, .null, status: "unsupported", reason: ready ? "calendar_store_identity_unverified" : "calendar_store_unavailable_or_schema_unverified")
                 }
                 data["store_status"] = .string("unsupported")

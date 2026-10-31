@@ -27,4 +27,10 @@ public enum CalendarEventKitFields {
             ])
         })
     }
+
+    public static func ownerParticipationStatus(_ attendees: [EKParticipant]?) -> JSON {
+        let statuses = Set((attendees ?? []).filter(\.isCurrentUser).map { $0.participantStatus.rawValue })
+        guard statuses.count == 1, let status = statuses.first else { return .null }
+        return .number(Double(status))
+    }
 }
