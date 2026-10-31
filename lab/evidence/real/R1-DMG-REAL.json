@@ -1,17 +1,17 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "pro: load=[10.73 11.69 18.57] cpu_idle=21% cpus=10 other_heavy=0"
+    "quiet": true,
+    "summary": "pro: load=[6.99 7.12 9.3] cpu_idle=66% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M6A0VNRPW4MSDGRE3NK5EVXJ",
+  "run_id": "run_01M6A2H8FJTKPXYFF414EHX72F",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "R1-DMG-REAL",
   "level": "real",
-  "passed": false,
-  "git_sha": "e585e685680f7629b6c93fdb6f12440961651c34",
-  "at": "2026-10-31T22:21:37.430744Z",
+  "passed": true,
+  "git_sha": "59f5895af4ecd555fdaf464da83e9e3bdb682721",
+  "at": "2026-10-31T22:50:53.29891Z",
   "assertions": [
     {
       "name": "local_notarized_dmg_available",
@@ -19,11 +19,11 @@
     },
     {
       "name": "stapled_dmg",
-      "passed": false
+      "passed": true
     },
     {
       "name": "gatekeeper_accepts_dmg",
-      "passed": false
+      "passed": true
     },
     {
       "name": "private_mount_directory",
