@@ -485,6 +485,17 @@ features:
     scenarios:
       - {id: PKG-INSTALL, levels: [real]}
       - {id: PKG-BACKGROUND, levels: [real]}
+  - id: packaging.setup
+    title: First-run permission checklist, iPhone QR pairing and AI connectors
+    requirements: [R-PKG, R-SECURE]
+    milestone: M5
+    modules: [packaging/setup, native/AppleBridgeHelper]
+    depends_on: [packaging.app]
+    status: limited
+    scenarios:
+      - {id: Q1-SETUP, levels: [sim, real]}
+    limits:
+      - {scenario: Q1-SETUP, level: real, reason: 'Fresh setup snapshots on the Air pending.'}
   - id: packaging.release
     title: Notarized DMG, signed Sparkle updates, login and TestFlight pipeline
     requirements: [R-PKG, R-SECURE]

@@ -1,0 +1,7 @@
+id: Q1-SETUP
+feature: packaging.setup
+levels: [sim, real]
+given: []
+when: [{robustness: {case: setup}}]
+then: [{converge: {}}]
+cleanup: []

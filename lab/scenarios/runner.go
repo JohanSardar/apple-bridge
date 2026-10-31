@@ -435,6 +435,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "vision.queries" {
 		return runVisionQueries(ctx, s, level)
 	}
+	if s.Feature == "packaging.setup" {
+		return runSetup(ctx, s, level)
+	}
 	if s.Feature == "core.permissions" {
 		return runPermissionStatus(ctx, s, level)
 	}
@@ -1230,7 +1233,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 	}
 	packagingOnly := true
 	for _, scenario := range scenarios {
-		packagingOnly = packagingOnly && (level == "real" && (scenario.ID == "CONN-CLAUDE-AI" || scenario.ID == "CONN-CHATGPT") || isIPhoneRealScenario(scenario.ID, level) || level == "real" && isIPhoneSensorReal(scenario.ID) || scenario.Feature == "iphone.location" || scenario.Feature == "iphone.health" || scenario.Feature == "packaging.app" || scenario.Feature == "packaging.release" || scenario.Feature == "core.shortcuts" || scenario.Feature == "core.permissions" || scenario.Feature == "usage.action_probe" || scenario.Feature == "helper.siri_intents")
+		packagingOnly = packagingOnly && (level == "real" && (scenario.ID == "CONN-CLAUDE-AI" || scenario.ID == "CONN-CHATGPT") || isIPhoneRealScenario(scenario.ID, level) || level == "real" && isIPhoneSensorReal(scenario.ID) || scenario.Feature == "iphone.location" || scenario.Feature == "iphone.health" || scenario.Feature == "packaging.app" || scenario.Feature == "packaging.release" || scenario.Feature == "packaging.setup" || scenario.Feature == "core.shortcuts" || scenario.Feature == "core.permissions" || scenario.Feature == "usage.action_probe" || scenario.Feature == "helper.siri_intents")
 
 	}
 	if !packagingOnly {
