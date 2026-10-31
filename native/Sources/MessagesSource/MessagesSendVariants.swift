@@ -20,7 +20,8 @@ public enum MessagesSendVariants {
     public static var proofURL: URL { PrivateReport.directory.appendingPathComponent("messages-send-variant-proofs.json") }
     static var osBuild: String { ProcessInfo.processInfo.operatingSystemVersionString }
     static func proof() -> JSON {
-        guard let bytes=try? Data(contentsOf:proofURL),let data=try? JSONDecoder().decode(JSON.self,from:bytes),data["os_build"].string==osBuild,data["version"].number==1,data["complete"].bool else { return .null }
+        guard let bytes=try? Data(contentsOf:proofURL),let data=try? JSONDecoder().decode(JSON.self,from:bytes),data["os_build"].string==osBuild,data["version"].number==1,data["complete"].bool,
+              !MessagesParity.buildDigest.isEmpty,data["helper_digest"].string==MessagesParity.buildDigest else { return .null }
         return data
     }
     static func proven(_ operation: String, route: JSON? = nil, args: JSON? = nil) -> Bool {
@@ -46,7 +47,7 @@ public enum MessagesSendVariants {
         guard let operation = operation(args), ["messages.send_effect", "messages.send_formatted"].contains(operation) else { throw SourceFailure.invalid }
         var steps = proof()["steps"].array.filter { $0["operation"].string != operation || $0["route"].string != routeKey(prepared.nativeState["destination"]) }
         steps.append(.object(["operation": .string(operation), "route": .string(routeKey(prepared.nativeState["destination"])), "variant": args["variant"], "proven": .bool(true)]))
-        let report = JSON.object(["os_build": .string(osBuild), "version": .number(1), "complete": .bool(true), "steps": .array(steps)])
+        let report = JSON.object(["os_build": .string(osBuild), "helper_digest": .string(MessagesParity.buildDigest), "version": .number(1), "complete": .bool(true), "steps": .array(steps)])
         try JSONEncoder().encode(report).write(to: proofURL, options: .atomic)
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: proofURL.path)
     }
