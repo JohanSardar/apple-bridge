@@ -13,7 +13,9 @@ struct AppleBridgeHelper {
         app.finishLaunching()
         do {
             let arguments = Array(CommandLine.arguments.dropFirst())
-            if arguments.isEmpty || ["install", "uninstall", "service-status", "connector-approvals", "setup-snapshot"].contains(arguments[0]) {
+            if arguments.first == "intent-host" {
+                BridgeIntentHost.run(arguments)
+            } else if arguments.isEmpty || ["install", "uninstall", "service-status", "connector-approvals", "setup-snapshot"].contains(arguments[0]) {
                 try PackagedApp.run(arguments)
             } else {
                 try HelperCommand.run(arguments)

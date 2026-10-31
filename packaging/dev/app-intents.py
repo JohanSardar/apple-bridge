@@ -33,4 +33,10 @@ else:
     if (resources / "source.sha256").read_text().strip() != digest:
         raise SystemExit("App Intents changed; run packaging/dev/app-intents.py --generate with Xcode before building")
     destination = Path(sys.argv[1]) / "Contents/Resources/Metadata.appintents"
+    executable = Path(sys.argv[1]) / "Contents/MacOS/AppleBridgeHelper"
+    symbols = subprocess.check_output(["nm", "-j", str(executable)], text=True)
+    metadata = json.loads((resources / "Metadata.appintents/extract.actionsdata").read_bytes())
+    for action in metadata["actions"].values():
+        if action["mangledTypeName"] not in symbols:
+            raise SystemExit("The Helper executable is missing an App Intent implementation. Rebuild the Helper before packaging its metadata.")
     shutil.copytree(resources / "Metadata.appintents", destination)

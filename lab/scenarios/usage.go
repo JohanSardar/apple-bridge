@@ -66,13 +66,17 @@ func usageRows(result contracts.ReadResult) map[string]map[string]float64 {
 	return rows
 }
 func runUsage(ctx context.Context, s Scenario, level string) Evidence {
+	if s.ID == "USE-ACTION-PROBE" {
+		return runUsageActionProbe(ctx, s, level)
+	}
+	return runUsageData(ctx, s, level)
+}
+
+func runUsageData(ctx context.Context, s Scenario, level string) Evidence {
 	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
 	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Assertions: []Assertion{}, Metrics: map[string]any{}, Latency: map[string]Latency{}, Hosts: []string{"air"}}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	fail := func(name string) Evidence { add(name, false); return e }
-	if s.ID == "USE-ACTION-PROBE" {
-		return runUsageActionProbe(ctx, s, level)
-	}
 	if s.ID == "USE-SEGB-DECODE" {
 		output, err := os.ReadFile("native/.build/native-output-1")
 		if err != nil {

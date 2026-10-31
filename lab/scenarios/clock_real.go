@@ -21,6 +21,12 @@ func runClockReal(ctx context.Context, s Scenario, initial Evidence, pack clockp
 		e.Conditions = map[string]string{"reason": reason}
 		return e
 	}
+	stop, hostErr := startBridgeIntentHost(ctx)
+	add("current_helper_intent_host_ready", hostErr == nil)
+	if hostErr != nil {
+		return e
+	}
+	defer stop()
 	entries, err := (shortcut.CLI{}).Inventory(ctx, false, "")
 	add("clock_inventory_available", err == nil)
 	if err != nil {
