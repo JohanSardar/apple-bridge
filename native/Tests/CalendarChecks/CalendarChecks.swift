@@ -6,6 +6,7 @@ import Darwin
 @main
 struct CalendarChecks {
     static func main() async throws {
+        if CommandLine.arguments.contains("--parity") { try await CalendarParityChecks.run(); return }
         if CommandLine.arguments.contains("--store-reader") { try await CalendarStoreChecks.run(); return }
         if CommandLine.arguments.contains("--hint-coverage") {
             let checks = [

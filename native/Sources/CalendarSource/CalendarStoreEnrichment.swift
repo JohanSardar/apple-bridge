@@ -53,7 +53,13 @@ public final class CalendarStoreEnrichment {
                 for field in ["travel_advisory_behavior", "invitation_status", "privacy_level", "priority"] { set(field, row[field] ?? .null) }
                 set("owner_participation_status", row["self_status"] ?? .null)
                 let travel = row["travel_time"] ?? .null
-                set("travel_time", travel.number == 0 ? travel : .null, status: travel.number == 0 ? "complete" : "unsupported", reason: travel.number == 0 ? "" : "positive_travel_time_units_not_verified_on_this_os")
+                let knownZero: Bool
+                switch travel {
+                case .number(let value): knownZero = value == 0
+                case .integer(let value): knownZero = value == 0
+                default: knownZero = false
+                }
+                set("travel_time", knownZero ? travel : .null, status: knownZero ? "complete" : "unsupported", reason: knownZero ? "" : travel == .null ? "travel_time_unavailable" : "positive_travel_time_units_not_verified_on_this_os")
                 if row["location_title"] == .null && row["location_address"] == .null { set("structured_location", .null) }
                 else {
                     set("structured_location", .object(["title": row["location_title"] ?? .null, "address": row["location_address"] ?? .null, "latitude": .null, "longitude": .null, "radius": .null]), status: "partial", reason: "coordinate_units_not_verified_on_this_os")
