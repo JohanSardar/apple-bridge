@@ -79,10 +79,18 @@ enum HelperLabCommand {
         case "mail-real-checks":
             let reportURL = try report(arguments)
             guard arguments.count > 2 else { throw ProbeFailure.invalidArguments }
+            let cleanup = arguments[1] == "MAIL-CLEANUP"
+            let deadline = DispatchWorkItem {
+                let proof: JSON = .object([cleanup ? "cleanup_passed" : "fixture_and_commands": .bool(false), cleanup ? "cleanup_error" : "command_error": .string(MailCommandFailure.timeout.localizedDescription)])
+                try? JSONEncoder().encode(proof).write(to: reportURL, options: .atomic)
+                exit(1)
+            }
+            DispatchQueue.global().asyncAfter(deadline: .now() + (cleanup ? 25 : 80), execute: deadline)
+            defer { deadline.cancel() }
             var result: JSON?
             Task { @MainActor in
                 do { result = try await MailQualification().run(scenario: arguments[1], tag: arguments[2]) }
-                catch { result = .object(["fixture_and_commands": .bool(false)]) }
+                catch { result = .object(["fixture_and_commands": .bool(false), "command_error": .string(MailCommands.failureMessage(error))]) }
             }
             while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
             try JSONEncoder().encode(result!).write(to: reportURL, options: .atomic)

@@ -20,6 +20,9 @@ actor MailFake {
     func scripts() -> [String] { calls }
 }
 func checkMailCommands() async throws {
+    try require(MailCommandFailure.appleEvent(-1712) == .timeout)
+    try require(MailCommandFailure.appleEvent(-1743) == .permission && MailCommandFailure.appleEvent(-1744) == .permission)
+    try require(MailCommandFailure.appleEvent(-600) == .rejected)
     for op in MailCommands.operations {
         for observed in [true, false] {
             let fake = MailFake(observed ? "1" : "")

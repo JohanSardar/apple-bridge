@@ -20,14 +20,16 @@ func mailRealProof(ctx context.Context, w *world.World, scenario, tag string) (m
 	defer os.Remove(report)
 	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	defer cancel()
-	if err := exec.CommandContext(ctx, "open", "-n", "-W", "-g", "-a", w.HelperApp, "--args", "mail-real-checks", scenario, tag, "--report", report).Run(); err != nil {
-		return nil, fmt.Errorf("Mail qualification did not finish. Open Mail, check that Apple Bridge is running, and try again")
-	}
+	launchErr := exec.CommandContext(ctx, "open", "-n", "-W", "-g", "-a", w.HelperApp, "--args", "mail-real-checks", scenario, tag, "--report", report).Run()
 	data, err := os.ReadFile(report)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Mail qualification did not produce a report. Open Mail, check that Apple Bridge is running, and try again")
 	}
-	return decodeMailProof(data)
+	proof, err := decodeMailProof(data)
+	if err == nil && launchErr != nil {
+		err = fmt.Errorf("Mail qualification stopped before finishing. Check Mail before trying again")
+	}
+	return proof, err
 }
 
 func decodeMailProof(data []byte) (map[string]bool, error) {
