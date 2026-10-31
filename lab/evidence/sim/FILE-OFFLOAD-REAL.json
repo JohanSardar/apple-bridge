@@ -1,9 +1,9 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[21.04 21 15.56] cpu_idle=22% cpus=10 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[12.52 22.09 25.32] cpu_idle=60% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M69X2N917Z70M6SX6127KEHD",
+  "run_id": "run_01M6A0EKPSQMHN8CKY6MC874YA",
   "metrics": {
     "capture_observer_resets": 0
   },
@@ -11,7 +11,7 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-31T21:15:32.001136Z",
+  "at": "2026-10-31T22:14:29.33786Z",
   "assertions": [
     {
       "name": "gateway_start",

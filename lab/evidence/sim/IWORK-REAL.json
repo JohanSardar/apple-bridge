@@ -1,9 +1,9 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[20.81 20.95 15.64] cpu_idle=0% cpus=10 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[11.48 21.4 25.02] cpu_idle=73% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M69X370ST4CYGEVG9YWY0VD8",
+  "run_id": "run_01M6A0F1QBK70XP3PSCQP02BD4",
   "metrics": {
     "capture_observer_resets": 0,
     "installed_iwork_app_count": 0
@@ -12,7 +12,7 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-31T21:15:50.169631Z",
+  "at": "2026-10-31T22:14:43.691926Z",
   "assertions": [
     {
       "name": "world_started",
