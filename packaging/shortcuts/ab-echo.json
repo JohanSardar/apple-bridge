@@ -18,6 +18,15 @@
           }
         }
       }
+    },
+    {
+      "key": "output",
+      "identifier": "is.workflow.actions.output",
+      "parameters": {
+        "WFOutput": {
+          "$output": "echo"
+        }
+      }
     }
   ]
 }
