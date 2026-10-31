@@ -2,7 +2,7 @@ import AppIntents
 
 struct WeatherIntent: AppIntent {
     static let title: LocalizedStringResource = "Get Weather"
-    static let description = IntentDescription("Run iphone.weather on this iPhone.")
+    static let description = IntentDescription("Read the current weather.")
     static let openAppWhenRun = false
 
     @Parameter(title: "Arguments JSON")
@@ -15,7 +15,7 @@ struct WeatherIntent: AppIntent {
 
 struct JournalSuggestionsIntent: AppIntent {
     static let title: LocalizedStringResource = "Get Journal Suggestions"
-    static let description = IntentDescription("Run iphone.journal.suggestions on this iPhone.")
+    static let description = IntentDescription("Read available journal suggestions.")
     static let openAppWhenRun = false
 
     func perform() async throws -> some IntentResult & ReturnsValue<String> {
@@ -25,7 +25,7 @@ struct JournalSuggestionsIntent: AppIntent {
 
 struct EnergyHintsIntent: AppIntent {
     static let title: LocalizedStringResource = "Get Energy Hints"
-    static let description = IntentDescription("Run iphone.energy.hints on this iPhone.")
+    static let description = IntentDescription("Read the current energy suggestions.")
     static let openAppWhenRun = false
 
     @Parameter(title: "Arguments JSON")

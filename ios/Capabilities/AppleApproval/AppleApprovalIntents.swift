@@ -2,7 +2,7 @@ import AppIntents
 
 struct WalletAccountsIntent: AppIntent {
     static let title: LocalizedStringResource = "Get Wallet Accounts"
-    static let description = IntentDescription("Run iphone.wallet.account on this iPhone.")
+    static let description = IntentDescription("Read authorized wallet account information.")
     static let openAppWhenRun = false
 
     @Parameter(title: "Arguments JSON")
@@ -15,7 +15,7 @@ struct WalletAccountsIntent: AppIntent {
 
 struct WalletTransactionsIntent: AppIntent {
     static let title: LocalizedStringResource = "Get Wallet Transactions"
-    static let description = IntentDescription("Run iphone.wallet.transaction on this iPhone.")
+    static let description = IntentDescription("Read authorized wallet transactions.")
     static let openAppWhenRun = false
 
     @Parameter(title: "Arguments JSON")
@@ -28,7 +28,7 @@ struct WalletTransactionsIntent: AppIntent {
 
 struct CriticalAlertIntent: AppIntent {
     static let title: LocalizedStringResource = "Send Critical Alert"
-    static let description = IntentDescription("Run iphone.critical.alert on this iPhone.")
+    static let description = IntentDescription("Send the requested critical alert.")
     static let openAppWhenRun = false
 
     @Parameter(title: "Arguments JSON")
@@ -41,7 +41,7 @@ struct CriticalAlertIntent: AppIntent {
 
 struct LocationPushIntent: AppIntent {
     static let title: LocalizedStringResource = "Register Location Push"
-    static let description = IntentDescription("Run iphone.location.push on this iPhone.")
+    static let description = IntentDescription("Request a location refresh.")
     static let openAppWhenRun = false
 
     func perform() async throws -> some IntentResult & ReturnsValue<String> {
@@ -51,7 +51,7 @@ struct LocationPushIntent: AppIntent {
 
 struct FallDetectionIntent: AppIntent {
     static let title: LocalizedStringResource = "Get Fall Detection"
-    static let description = IntentDescription("Run iphone.fall.detection on this iPhone.")
+    static let description = IntentDescription("Read the fall detection status.")
     static let openAppWhenRun = false
 
     func perform() async throws -> some IntentResult & ReturnsValue<String> {

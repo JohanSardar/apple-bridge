@@ -2,7 +2,7 @@ import AppIntents
 
 struct CurrentLocationIntent: AppIntent {
     static let title: LocalizedStringResource = "Get Current Location"
-    static let description = IntentDescription("Run iphone.location.current on this iPhone.")
+    static let description = IntentDescription("Read the current location.")
     static let openAppWhenRun = false
 
     func perform() async throws -> some IntentResult & ReturnsValue<String> {
@@ -12,7 +12,7 @@ struct CurrentLocationIntent: AppIntent {
 
 struct AddGeofenceIntent: AppIntent {
     static let title: LocalizedStringResource = "Add Geofence"
-    static let description = IntentDescription("Run iphone.geofence.add on this iPhone.")
+    static let description = IntentDescription("Add a location boundary.")
     static let openAppWhenRun = false
 
     @Parameter(title: "Arguments JSON")
@@ -25,7 +25,7 @@ struct AddGeofenceIntent: AppIntent {
 
 struct RemoveGeofenceIntent: AppIntent {
     static let title: LocalizedStringResource = "Remove Geofence"
-    static let description = IntentDescription("Run iphone.geofence.remove on this iPhone.")
+    static let description = IntentDescription("Remove the selected location boundary.")
     static let openAppWhenRun = false
 
     @Parameter(title: "Arguments JSON")
@@ -38,7 +38,7 @@ struct RemoveGeofenceIntent: AppIntent {
 
 struct ListGeofencesIntent: AppIntent {
     static let title: LocalizedStringResource = "List Geofences"
-    static let description = IntentDescription("Run iphone.geofence.list on this iPhone.")
+    static let description = IntentDescription("List the saved location boundaries.")
     static let openAppWhenRun = false
 
     func perform() async throws -> some IntentResult & ReturnsValue<String> {
@@ -48,7 +48,7 @@ struct ListGeofencesIntent: AppIntent {
 
 struct SignificantLocationIntent: AppIntent {
     static let title: LocalizedStringResource = "Set Significant Location Monitoring"
-    static let description = IntentDescription("Run iphone.location.significant on this iPhone.")
+    static let description = IntentDescription("Read significant location changes.")
     static let openAppWhenRun = false
 
     @Parameter(title: "Arguments JSON")

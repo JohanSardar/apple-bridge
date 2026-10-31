@@ -2,7 +2,7 @@ import AppIntents
 
 struct HealthLogIntent: AppIntent {
     static let title: LocalizedStringResource = "Log Health Sample"
-    static let description = IntentDescription("Run iphone.health.log on this iPhone.")
+    static let description = IntentDescription("Record the requested Health sample.")
     static let openAppWhenRun = false
 
     @Parameter(title: "Arguments JSON")

@@ -2,7 +2,7 @@ import AppIntents
 
 struct DeviceStatusIntent: AppIntent {
     static let title: LocalizedStringResource = "Get Device Status"
-    static let description = IntentDescription("Run iphone.device.status on this iPhone.")
+    static let description = IntentDescription("Read the current device status.")
     static let openAppWhenRun = false
 
     func perform() async throws -> some IntentResult & ReturnsValue<String> {
@@ -12,7 +12,7 @@ struct DeviceStatusIntent: AppIntent {
 
 struct ReadNFCIntent: AppIntent {
     static let title: LocalizedStringResource = "Read NFC Tag"
-    static let description = IntentDescription("Run iphone.nfc.read on this iPhone.")
+    static let description = IntentDescription("Read a nearby NFC tag.")
     static let openAppWhenRun = true
 
     func perform() async throws -> some IntentResult & ReturnsValue<String> {

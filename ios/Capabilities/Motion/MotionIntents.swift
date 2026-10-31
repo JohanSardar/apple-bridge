@@ -2,7 +2,7 @@ import AppIntents
 
 struct MotionActivityIntent: AppIntent {
     static let title: LocalizedStringResource = "Get Motion Activity"
-    static let description = IntentDescription("Run iphone.motion.activity on this iPhone.")
+    static let description = IntentDescription("Read the current motion activity.")
     static let openAppWhenRun = false
 
     func perform() async throws -> some IntentResult & ReturnsValue<String> {
@@ -12,7 +12,7 @@ struct MotionActivityIntent: AppIntent {
 
 struct MotionHistoryIntent: AppIntent {
     static let title: LocalizedStringResource = "Get Motion History"
-    static let description = IntentDescription("Run iphone.motion.history on this iPhone.")
+    static let description = IntentDescription("Read motion history for the requested period.")
     static let openAppWhenRun = false
 
     @Parameter(title: "Arguments JSON")

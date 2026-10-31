@@ -59,6 +59,17 @@
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>NSUserActivityTypes</key>
+	<array>
+		<string>INSendMessageIntent</string>
+	</array>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Authenticate approval or rejection of agent commands.</string>
 <key>NSMicrophoneUsageDescription</key><string>Record audio only after your Face ID approval and upload it to your gateway.</string>
