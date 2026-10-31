@@ -1001,7 +1001,7 @@ features:
     scenarios:
       - {id: SC-CAPTURE, levels: [sim]}
       - {id: SC-RUN, levels: [sim]}
-      - {id: SC-RUN-REAL, levels: [real]}
+      - {id: SC-RUN-REAL, levels: [sim, real]}
       - {id: SC-IDLE, levels: [real]}
     limits:
       - {"scenario": "SC-RUN-REAL", "level": "real", "reason": "Failed assertions: bounded_runner_completed, echo_output_matches"}
@@ -1016,8 +1016,8 @@ features:
     notes: AB Clock is installed on the Air and both real runners invoke the live pack. The replacement signed pack fixes Clock time-token and conditional-subject serialization, explicitly coerces all equality subjects to text so literal and variable operands remain valid, and defaults no-input runs to structured alarm listing; it awaits leader import and live qualification. Alarm mutations are safely skipped until baseline readback qualifies. Start Timer exists on macOS; timer confirmation and city query remain unqualified and are not advertised.
     scenarios:
       - {id: CLK-SIM, levels: [sim]}
-      - {id: CLK-ALARM-REAL, levels: [real]}
-      - {id: CLK-TIMER-REAL, levels: [real]}
+      - {id: CLK-ALARM-REAL, levels: [sim, real]}
+      - {id: CLK-TIMER-REAL, levels: [sim, real]}
     limits:
       - {"scenario": "CLK-ALARM-REAL", "level": "real", "reason": "Imported AB Clock did not return versioned structured alarm fields; mutations were not attempted."}
       - {"scenario": "CLK-TIMER-REAL", "level": "real", "reason": "Imported AB Clock did not return structured timer running, duration and label confirmation."}
@@ -1350,7 +1350,7 @@ features:
     depends_on: [usage.read]
     status: limited
     scenarios:
-      - {id: USE-ACTION-PROBE, levels: [real]}
+      - {id: USE-ACTION-PROBE, levels: [sim, real]}
     limits:
       - {"scenario": "USE-ACTION-PROBE", "level": "real", "reason": "Screen Time action output unmeasured; pack setup: packaging/shortcuts/screen-time-probe.md. No shortcuts executed; retain Biome pending owner-qualified pack."}
   - id: helper.siri_intents
@@ -1361,7 +1361,7 @@ features:
     depends_on: [helper.session]
     status: limited
     scenarios:
-      - {id: SIRI-INTENTS, levels: [real]}
+      - {id: SIRI-INTENTS, levels: [sim, real]}
     limits:
       - {"scenario": "SIRI-INTENTS", "level": "real", "reason": "Metadata generated with Xcode and bundled; needs Shortcuts listing and status execution verification. Shortcuts CLI lists saved shortcuts, not App Intent actions."}
   - id: mac.extras

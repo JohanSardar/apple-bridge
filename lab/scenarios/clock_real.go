@@ -15,40 +15,62 @@ func runClockReal(ctx context.Context, s Scenario, initial Evidence, pack clockp
 		e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: passed})
 		e.Passed = e.Passed && passed
 	}
+
 	limited := func(reason string) Evidence {
 		e.Status, e.Passed = "limited", false
 		e.Conditions = map[string]string{"reason": reason}
 		return e
 	}
 	entries, err := (shortcut.CLI{}).Inventory(ctx, false, "")
+	add("clock_inventory_available", err == nil)
 	if err != nil {
-		return limited("needs Shortcuts inventory access")
+		return limited("Shortcuts inventory could not be read. Open Shortcuts, verify its library is available, then retry. No Clock changes were made.")
 	}
-	installed := false
+	matches := 0
 	for _, entry := range entries {
-		installed = installed || entry.Name == clockpack.Name
-	}
-	e.Metrics["pack_installed"] = installed
-	if !installed {
-		return limited("needs AB Clock import")
-	}
-	if s.ID == "CLK-TIMER-REAL" {
-		return limited("AB Clock cannot inspect and remove a tagged timer yet. Install a pack with timer readback and deletion before running this check; no timer was started.")
-	}
-	if s.ID == "CLK-TIMER-QUALIFIED" {
-		_, err := pack.Exchange(ctx, clockpack.Request{Operation: "start_timer", Duration: 5, Label: "[ab-test] " + e.RunID})
-		if err != nil {
-			return limited("AB Clock did not return structured timer running, duration and label confirmation; macOS Start Timer action exists")
+		if entry.Name == clockpack.Name {
+			matches++
 		}
-		add("timer_running_duration_label_readback", true)
+	}
+	e.Metrics["pack_matches"] = matches
+	add("unique_clock_pack_installed", matches == 1)
+	if matches != 1 {
+		return limited("Install exactly one AB Clock shortcut before retrying. No Clock changes were made.")
+	}
+	return runClockSession(ctx, s, e, pack)
+}
+
+func runClockSession(ctx context.Context, s Scenario, initial Evidence, pack clockpack.Pack) (e Evidence) {
+	e = initial
+	add := func(name string, passed bool) {
+		e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: passed})
+		e.Passed = e.Passed && passed
+	}
+	limited := func(reason string) Evidence {
+		e.Status, e.Passed = "limited", false
+		e.Conditions = map[string]string{"reason": reason}
 		return e
 	}
+	if s.ID == "CLK-TIMER-REAL" {
+		return runClockTimer(ctx, e, pack)
+	}
+
 	before, err := pack.Exchange(ctx, clockpack.Request{Operation: "alarms"})
+	add("alarm_baseline_readback", err == nil)
 	if err != nil {
-		return limited("AB Clock did not return versioned structured alarm fields (id, time, label, repeat_days, enabled); mutations not attempted")
+		return limited("AB Clock did not return structured alarm fields. Open the installed AB Clock in Shortcuts and verify alarm listing succeeds with id, time, label, repeat_days and enabled fields before retrying. No alarm was changed.")
 	}
 	e.Metrics["alarms_before"] = len(before.Alarms)
 	alarm := clockpack.Alarm{ID: e.RunID, Label: "[ab-test] " + e.RunID, Time: time.Now().Add(12 * time.Hour).Format("15:04"), RepeatDays: []int{1, 3}, Enabled: true}
+	for _, existing := range before.Alarms {
+		if existing.Label == alarm.Label {
+			return limited("A matching test alarm already exists. Remove only that test alarm in Clock, then retry.")
+		}
+	}
+	baseline := map[string]bool{}
+	for _, existing := range before.Alarms {
+		baseline[existing.ID] = true
+	}
 	request := clockpack.Request{Alarm: &alarm}
 	cleanup := func() {
 		cleanupCtx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
@@ -59,7 +81,7 @@ func runClockReal(ctx context.Context, s Scenario, initial Evidence, pack clockp
 			return
 		}
 		for _, candidate := range observed.Alarms {
-			if candidate.Label == alarm.Label {
+			if candidate.Label == alarm.Label && !baseline[candidate.ID] {
 				alarm = candidate
 				break
 			}
@@ -70,7 +92,7 @@ func runClockReal(ctx context.Context, s Scenario, initial Evidence, pack clockp
 		add("cleanup_delete_readback", deleteErr == nil && readErr == nil && !clockAlarmPresent(after.Alarms, alarm.ID))
 		if readErr == nil {
 			e.Metrics["alarms_after"] = len(after.Alarms)
-			add("cleanup_restores_count", len(after.Alarms) == len(before.Alarms))
+			add("cleanup_restores_baseline", sameClockAlarms(after.Alarms, before.Alarms))
 		}
 	}
 	defer cleanup()
@@ -112,4 +134,16 @@ func clockAlarmMatches(alarms []clockpack.Alarm, expected clockpack.Alarm) bool 
 		}
 	}
 	return false
+}
+
+func sameClockAlarms(actual, expected []clockpack.Alarm) bool {
+	if len(actual) != len(expected) {
+		return false
+	}
+	for _, alarm := range expected {
+		if !clockAlarmMatches(actual, alarm) {
+			return false
+		}
+	}
+	return true
 }
