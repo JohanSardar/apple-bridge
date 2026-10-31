@@ -1,6 +1,18 @@
 import Foundation
 import CryptoKit
+import Carbon
 import SourceSupport
+
+public enum MailCommandFailure: Error, LocalizedError, Sendable {
+    case permission, timeout, rejected
+    public var errorDescription: String? {
+        switch self {
+        case .permission: "Mail automation is not allowed. Enable Mail for Apple Bridge in System Settings > Privacy & Security > Automation."
+        case .timeout: "Mail did not answer the command in time. Open Mail, let account sync finish, and try again."
+        case .rejected: "Mail could not complete the command. Open Mail, check the account and mailbox, and try again."
+        }
+    }
+}
 
 public struct MailCommands: Sendable {
     public typealias Script = @Sendable (String) async throws -> String
@@ -8,11 +20,24 @@ public struct MailCommands: Sendable {
     public static let operations = ["mail.create_draft", "mail.send", "mail.move", "mail.set_flag", "mail.mark_read", "mail.delete"]
     public init(script: @escaping Script = MailCommands.run) { self.script = script }
     @MainActor public static func run(_ body: String) throws -> String {
+        let target = NSAppleEventDescriptor(bundleIdentifier: "com.apple.mail")
+        guard AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false) == noErr else { throw MailCommandFailure.permission }
         var error: NSDictionary?
         guard let script = NSAppleScript(source: "with timeout of 10 seconds\ntell application id \"com.apple.mail\"\n" + body + "\nend tell\nend timeout") else { throw SourceFailure.invalid }
         let result = script.executeAndReturnError(&error)
-        guard error == nil else { throw SourceFailure.unavailable }
+        if let error {
+            switch error["NSAppleScriptErrorNumber"] as? Int {
+            case -1712: throw MailCommandFailure.timeout
+            case -1743: throw MailCommandFailure.permission
+            default: throw MailCommandFailure.rejected
+            }
+        }
         return result.stringValue ?? ""
+    }
+    public static func failureMessage(_ error: any Error) -> String {
+        if let failure = error as? MailCommandFailure { return failure.localizedDescription }
+        if error is CancellationError { return "The Mail command was cancelled. Check Mail before trying again." }
+        return MailCommandFailure.rejected.localizedDescription
     }
     public static func quote(_ value: String) -> String {
         "\"" + value.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"").replacingOccurrences(of: "\r", with: "\\r").replacingOccurrences(of: "\n", with: "\\n") + "\""
@@ -69,7 +94,8 @@ public struct MailCommands: Sendable {
         }
         _ = try await script(body)
         for _ in 0..<40 {
-            if let evidence = try? await script(readback), evidence == "1" || evidence == "true" { return .object(["observed": .bool(true)]) }
+            let evidence = try await script(readback)
+            if evidence == "1" || evidence == "true" { return .object(["observed": .bool(true)]) }
             try await Task.sleep(for: .milliseconds(200))
         }
         return .object(["observed": .bool(false), "disposition": .string("indeterminate")])

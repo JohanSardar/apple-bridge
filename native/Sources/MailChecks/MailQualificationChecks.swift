@@ -15,7 +15,7 @@ private actor QualificationMailFake {
         if body.contains("set found to") { return created ? "123" : "" }
         if body.hasPrefix("return count") { return created ? "1" : "0" }
         if body.contains("make new outgoing message") {
-            if fail { throw SourceFailure.unavailable }
+            if fail { throw MailCommandFailure.timeout }
             created = true
         }
         if body.contains("return (flagged status") { return "true" }
@@ -38,6 +38,10 @@ func checkMailQualification() async throws {
     let runner = MailQualification(script: { try await failed.run($0) })
     let proof = try await runner.run(scenario: "MAIL-DRAFT-REAL", tag: "[ab-test] failed")
     try require(proof["fixture_and_commands"] == .bool(false) && proof["cleanup_passed"] == .bool(true))
+    try require(proof["command_error"].string == MailCommandFailure.timeout.localizedDescription)
+    let cleanupFailure = MailQualification(script: { _ in throw MailCommandFailure.permission })
+    let cleanup = try await cleanupFailure.run(scenario: "MAIL-CLEANUP", tag: "[ab-test] failed")
+    try require(cleanup["cleanup_passed"] == .bool(false) && cleanup["cleanup_error"].string == MailCommandFailure.permission.localizedDescription)
     let count = await failed.scripts().count
     do { _ = try await runner.run(scenario: "MAIL-CLEANUP", tag: "foreign"); throw SourceFailure.corrupt } catch SourceFailure.invalid {}
     try require(await failed.scripts().count == count)

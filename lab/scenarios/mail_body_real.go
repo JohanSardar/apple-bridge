@@ -46,8 +46,17 @@ func runMailBodyReal(ctx context.Context, s Scenario, level string) (e Evidence)
 			defer cancel()
 			proof, err := mailRealProof(cleanup, w, "MAIL-CLEANUP", tag)
 			e.Passed = check("owned_fixture_cleanup", err == nil && proof["cleanup_passed"]) && e.Passed
+			if err != nil {
+				if e.Conditions == nil {
+					e.Conditions = map[string]string{}
+				}
+				e.Conditions["cleanup"] = err.Error()
+			}
 		}()
 		proof, problem := mailRealProof(ctx, w, "MAIL-BODY-FIXTURE", tag)
+		if problem != nil {
+			e.Conditions = map[string]string{"reason": problem.Error()}
+		}
 		if !check("self_sent_fixture_created", problem == nil && proof["sent_to_self"] && proof["self_mail_received"]) {
 			return e
 		}
