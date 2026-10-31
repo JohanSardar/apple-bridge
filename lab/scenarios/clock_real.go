@@ -27,6 +27,7 @@ func runClockReal(ctx context.Context, s Scenario, initial Evidence, pack clockp
 		return e
 	}
 	defer stop()
+	pack.Timeout = 5 * time.Minute
 	entries, err := (shortcut.CLI{}).Inventory(ctx, false, "")
 	add("clock_inventory_available", err == nil)
 	if err != nil {

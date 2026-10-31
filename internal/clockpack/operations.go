@@ -94,7 +94,11 @@ func (p Pack) Exchange(ctx context.Context, request Request) (Readback, error) {
 	if err != nil {
 		return out, err
 	}
-	result, err := p.Runner.Run(ctx, shortcut.Input{Shortcut: Name, Timeout: 15 * time.Second, Data: data})
+	timeout := p.Timeout
+	if timeout == 0 {
+		timeout = 15 * time.Second
+	}
+	result, err := p.Runner.Run(ctx, shortcut.Input{Shortcut: Name, Timeout: timeout, Data: data})
 	if err != nil {
 		return out, err
 	}

@@ -19,7 +19,7 @@ let sourceTargets: [Target] = [
     .target(name: "VoicemailSource", dependencies: ["SourceSupport"]),
     .target(name: "VisionSource", dependencies: ["SourceSupport"]),
     .target(name: "PDFSource", dependencies: ["SourceSupport"]),
-    .target(name: "ShortcutsSource", dependencies: ["SourceSupport", "ClockNative"]),
+    .target(name: "ShortcutsSource", dependencies: ["SourceSupport"]),
     .target(name: "ContactsSource", dependencies: ["SourceSupport", "ContactsHistory", "MediaDerivatives"]),
     .target(name: "UsageSource", dependencies: ["SourceSupport", "Decoders"]),
     .target(name: "CalendarSource", dependencies: ["AgendaGate", "SourceSupport"]),
@@ -35,7 +35,6 @@ let package = Package(
     products: [.executable(name: "AppleBridgeHelper", targets: ["AppleBridgeHelper"])],
     targets: sourceTargets + [
         .target(name: "SourceSupport"),
-        .target(name: "ClockNative", publicHeadersPath: "include"),
         .executableTarget(name: "MusicChecks", dependencies: ["MusicSource", "SourceSupport"]),
         .executableTarget(name: "FocusChecks", dependencies: ["FocusSource", "SourceSupport"]),
         .executableTarget(name: "CaptureChecks", dependencies: ["CaptureSource", "MacSource", "SourceSupport"]),

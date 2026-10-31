@@ -10,13 +10,14 @@ enum BridgeIntentHost {
         let report = URL(fileURLWithPath: arguments[2])
         LSRegisterURL(Bundle.main.bundleURL as CFURL, true)
         BridgeShortcuts.updateAppShortcutParameters()
+        try? Data(String(getpid()).utf8).write(to: report, options: .atomic)
         let watcher = Task { @MainActor in
             let deadline = Date().addingTimeInterval(300)
             while let text = shortcutDialog(), Date() < deadline {
                 publish(text)
                 try? await Task.sleep(for: .seconds(1))
             }
-            try? Data(String(getpid()).utf8).write(to: report, options: .atomic)
+            try? Data().write(to: report.appendingPathExtension("ready"), options: .atomic)
             var previous = ""
             while !Task.isCancelled {
                 if let text = shortcutDialog(), text != previous { publish(text); previous = text }

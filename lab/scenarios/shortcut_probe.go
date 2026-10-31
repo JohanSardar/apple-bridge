@@ -47,7 +47,11 @@ func runShortcutProbe(ctx context.Context, s Scenario, level, name string, cli s
 	if !qualified {
 		return limited("Export and qualify the dedicated " + name + " shortcut before running this probe. Inventory alone does not establish its actions or permissions. No shortcut was run.")
 	}
-	result, err := cli.Run(ctx, shortcut.Input{Shortcut: name, Timeout: 20 * time.Second})
+	timeout := 20 * time.Second
+	if level == "real" {
+		timeout = 5 * time.Minute
+	}
+	result, err := cli.Run(ctx, shortcut.Input{Shortcut: name, Timeout: timeout})
 	digest := sha256.Sum256(result.Data)
 	e.Metrics["output_bytes"] = len(result.Data)
 	e.Metrics["output_sha256"] = hex.EncodeToString(digest[:])

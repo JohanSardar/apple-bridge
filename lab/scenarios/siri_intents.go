@@ -107,7 +107,8 @@ func startBridgeIntentHost(ctx context.Context) (string, func(), error) {
 			data, readErr := os.ReadFile(ready)
 			if readErr == nil {
 				pid, err = strconv.Atoi(string(data))
-				if err == nil && pid > 1 && syscall.Kill(pid, 0) == nil {
+				_, readyErr := os.Stat(ready + ".ready")
+				if err == nil && pid > 1 && syscall.Kill(pid, 0) == nil && readyErr == nil {
 					return app, stop, nil
 				}
 			}
