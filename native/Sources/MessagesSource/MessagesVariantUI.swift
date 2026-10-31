@@ -93,6 +93,7 @@ enum MessagesVariantUI {
             }
             try press(try unique(suggestions, failure: .mentionSuggestionMissing))
         }
+        let mentionedText = kind == "mention" ? value(editor, kAXValueAttribute) : ""
         let labels=["bold":"Bold","italic":"Italic","underline":"Underline","strikethrough":"Strikethrough"]
         if kind=="formatting" {
             for entry in variant["formatting"].array {
@@ -109,7 +110,7 @@ enum MessagesVariantUI {
             let label=variant["effect"].string=="invisible-ink" ? "Invisible Ink":variant["effect"].string.capitalized
             try press(try unique(find(application,name:label),failure:.effectPickerUnavailable))
         } else if !["schedule", "mention"].contains(kind) { throw SendVariantFailure.invalidVariant }
-        guard (try? session.fence()) != nil, kind == "mention" || value(editor,kAXValueAttribute)==args["text"].string else { throw SendVariantFailure.draftChanged }
+        guard (try? session.fence()) != nil, value(editor,kAXValueAttribute) == (kind == "mention" ? mentionedText : args["text"].string) else { throw SendVariantFailure.draftChanged }
         try MessagesAccessibility.validate(Prepared(nativeState:.object(["target":targetData]),fingerprint:"",action:.object(["op":.string("messages.send"),"native_key":.string(target)])))
         try session.focus(editor,failure:SendVariantFailure.composerUnavailable)
         guard Date()<expiresAt else { throw SourceFailure.expired }

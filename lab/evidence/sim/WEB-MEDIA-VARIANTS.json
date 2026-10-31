@@ -1,9 +1,9 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[12.34 15.39 15.18] cpu_idle=54% cpus=10 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[10.5 11.07 12.47] cpu_idle=1% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M69XH3G72BTBXMRW6HBWY60E",
+  "run_id": "run_01M69Y5F5AC52KSSC5BGGD9ZAB",
   "metrics": {
     "browser_playback": "Cross-engine playback is owned by the later UI unit",
     "capture_observer_resets": 0
@@ -11,8 +11,8 @@
   "scenario": "WEB-MEDIA-VARIANTS",
   "level": "sim",
   "passed": true,
-  "git_sha": "d55225b4049a0517ade1c122ad78a17877188de2",
-  "at": "2026-10-31T21:23:25.319595Z",
+  "git_sha": "b77a8c5294f7133764624d639a51f5e87e80d69b",
+  "at": "2026-10-31T21:34:32.618684Z",
   "assertions": [
     {
       "name": "seed_self",
@@ -28,6 +28,62 @@
     },
     {
       "name": "variants_captured_0",
+      "passed": true
+    },
+    {
+      "name": "image_native_appearance_measured",
+      "passed": true
+    },
+    {
+      "name": "image_variants_within_2_seconds",
+      "passed": true
+    },
+    {
+      "name": "image_original_preserved",
+      "passed": true
+    },
+    {
+      "name": "image_dimensions_and_thumbhash",
+      "passed": true
+    },
+    {
+      "name": "private_handles_removed",
+      "passed": true
+    },
+    {
+      "name": "display_authorized_blob_0",
+      "passed": true
+    },
+    {
+      "name": "variant_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "display_browser_image",
+      "passed": true
+    },
+    {
+      "name": "display_dimensions_bounded",
+      "passed": true
+    },
+    {
+      "name": "private_handles_removed",
+      "passed": true
+    },
+    {
+      "name": "thumb_authorized_blob_0",
+      "passed": true
+    },
+    {
+      "name": "variant_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "thumb_browser_image",
+      "passed": true
+    },
+    {
+      "name": "thumb_dimensions_bounded",
       "passed": true
     },
     {
@@ -103,11 +159,11 @@
       "passed": true
     },
     {
-      "name": "image_native_appearance_measured",
+      "name": "variants_captured_1",
       "passed": true
     },
     {
-      "name": "image_variants_within_2_seconds",
+      "name": "image_native_appearance_measured",
       "passed": true
     },
     {
@@ -123,7 +179,7 @@
       "passed": true
     },
     {
-      "name": "display_authorized_blob_0",
+      "name": "display_authorized_blob_1",
       "passed": true
     },
     {
@@ -143,7 +199,7 @@
       "passed": true
     },
     {
-      "name": "thumb_authorized_blob_0",
+      "name": "thumb_authorized_blob_1",
       "passed": true
     },
     {
@@ -156,10 +212,6 @@
     },
     {
       "name": "thumb_dimensions_bounded",
-      "passed": true
-    },
-    {
-      "name": "variants_captured_1",
       "passed": true
     },
     {
@@ -235,58 +287,6 @@
       "passed": true
     },
     {
-      "name": "image_native_appearance_measured",
-      "passed": true
-    },
-    {
-      "name": "image_original_preserved",
-      "passed": true
-    },
-    {
-      "name": "image_dimensions_and_thumbhash",
-      "passed": true
-    },
-    {
-      "name": "private_handles_removed",
-      "passed": true
-    },
-    {
-      "name": "display_authorized_blob_1",
-      "passed": true
-    },
-    {
-      "name": "variant_digest_verified",
-      "passed": true
-    },
-    {
-      "name": "display_browser_image",
-      "passed": true
-    },
-    {
-      "name": "display_dimensions_bounded",
-      "passed": true
-    },
-    {
-      "name": "private_handles_removed",
-      "passed": true
-    },
-    {
-      "name": "thumb_authorized_blob_1",
-      "passed": true
-    },
-    {
-      "name": "variant_digest_verified",
-      "passed": true
-    },
-    {
-      "name": "thumb_browser_image",
-      "passed": true
-    },
-    {
-      "name": "thumb_dimensions_bounded",
-      "passed": true
-    },
-    {
       "name": "sim_restart",
       "passed": true
     },
@@ -341,44 +341,44 @@
   "latency": {
     "audio_appearance_to_variants_0": {
       "samples": 1,
-      "p50_ms": 125.196291,
-      "p95_ms": 125.196291,
-      "max_ms": 125.196291,
+      "p50_ms": 129.592209,
+      "p95_ms": 129.592209,
+      "max_ms": 129.592209,
       "timeouts": 0
     },
     "audio_appearance_to_variants_1": {
       "samples": 1,
-      "p50_ms": 143.252208,
-      "p95_ms": 143.252208,
-      "max_ms": 143.252208,
+      "p50_ms": 145.665375,
+      "p95_ms": 145.665375,
+      "max_ms": 145.665375,
       "timeouts": 0
     },
     "image_appearance_to_variants_0": {
       "samples": 1,
-      "p50_ms": 125.196291,
-      "p95_ms": 125.196291,
-      "max_ms": 125.196291,
+      "p50_ms": 129.592209,
+      "p95_ms": 129.592209,
+      "max_ms": 129.592209,
       "timeouts": 0
     },
     "image_appearance_to_variants_1": {
       "samples": 1,
-      "p50_ms": 143.252208,
-      "p95_ms": 143.252208,
-      "max_ms": 143.252208,
+      "p50_ms": 145.665375,
+      "p95_ms": 145.665375,
+      "max_ms": 145.665375,
       "timeouts": 0
     },
     "video_appearance_to_variants_0": {
       "samples": 1,
-      "p50_ms": 125.196291,
-      "p95_ms": 125.196291,
-      "max_ms": 125.196291,
+      "p50_ms": 129.592209,
+      "p95_ms": 129.592209,
+      "max_ms": 129.592209,
       "timeouts": 0
     },
     "video_appearance_to_variants_1": {
       "samples": 1,
-      "p50_ms": 143.252208,
-      "p95_ms": 143.252208,
-      "max_ms": 143.252208,
+      "p50_ms": 145.665375,
+      "p95_ms": 145.665375,
+      "max_ms": 145.665375,
       "timeouts": 0
     }
   },

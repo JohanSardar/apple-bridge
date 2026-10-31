@@ -70,7 +70,7 @@ public enum MessagesSendVariants {
             let text = args["text"].string as NSString
             let prefix = text.substring(to: range.location), suffix = text.substring(from: range.location + range.length)
             return data["text"].string.hasPrefix(prefix) && data["text"].string.hasSuffix(suffix) && data["parts"].array.contains { part in
-                MessagesProbes.normalize(part["mention"].string) == expected && part["utf16_location"].number == Double(range.location) && part["utf16_length"].number > 0
+                MessagesProbes.normalize(part["mention"].string) == expected && part["utf16_location"].number == Double(range.location) && part["utf16_length"].number > 0 && Double(data["text"].string.utf16.count) == Double(prefix.utf16.count + suffix.utf16.count) + part["utf16_length"].number
             }
         case "effect":
             let value = data["effect"].string.lowercased().replacingOccurrences(of: "invisibleink", with: "invisible-ink")
