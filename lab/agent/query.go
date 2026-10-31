@@ -99,12 +99,14 @@ type queryEvent struct {
 		Type      string          `json:"type"`
 		Server    string          `json:"server"`
 		Tool      string          `json:"tool"`
+		Status    string          `json:"status"`
 		Arguments contracts.Query `json:"arguments"`
 		Error     json.RawMessage `json:"error"`
 		Result    *struct {
-			IsError           bool                  `json:"isError"`
-			StructuredContent contracts.QueryResult `json:"structuredContent"`
-			Content           []struct {
+			IsError                bool                  `json:"isError"`
+			StructuredContent      contracts.QueryResult `json:"structuredContent"`
+			CodexStructuredContent contracts.QueryResult `json:"structured_content"`
+			Content                []struct {
 				Text string `json:"text"`
 			} `json:"content"`
 		} `json:"result"`
@@ -113,14 +115,14 @@ type queryEvent struct {
 
 func queryChecks(raw []byte, answer string) (bool, bool) {
 	tools := false
-	answer = strings.ToLower(strings.ReplaceAll(answer, ",", ""))
+	answer = strings.ToLower(strings.NewReplacer(",", "", "**", "", "`", "").Replace(answer))
 	for _, line := range strings.Split(string(raw), "\n") {
 		var event queryEvent
 		if json.Unmarshal([]byte(line), &event) != nil {
 			continue
 		}
 		i := event.Item
-		if event.Type != "item.completed" || i.Type != "mcp_tool_call" || i.Server != "apple_bridge" || i.Tool != "maps_eta" || i.Result == nil || i.Result.IsError || len(i.Error) > 0 && string(i.Error) != "null" {
+		if event.Type != "item.completed" || i.Type != "mcp_tool_call" || i.Server != "apple_bridge" || i.Tool != "maps_eta" || i.Status == "failed" || i.Result == nil || i.Result.IsError || len(i.Error) > 0 && string(i.Error) != "null" {
 			continue
 		}
 		var args struct {
@@ -132,6 +134,9 @@ func queryChecks(raw []byte, answer string) (bool, bool) {
 			continue
 		}
 		result := i.Result.StructuredContent
+		if len(result.ResultJSON) == 0 {
+			result = i.Result.CodexStructuredContent
+		}
 		if len(result.ResultJSON) == 0 {
 			for _, content := range i.Result.Content {
 				if json.Unmarshal([]byte(content.Text), &result) == nil && len(result.ResultJSON) > 0 {
@@ -154,6 +159,21 @@ func queryChecks(raw []byte, answer string) (bool, bool) {
 }
 
 func simulatedQuery(ctx context.Context, w *world.World) (outcome, []byte, error) {
+	properties := func(schema map[string]any) map[string]any { p, _ := schema["properties"].(map[string]any); return p }
+	var schema map[string]any
+	for _, descriptor := range contracts.Operations {
+		if descriptor.Name == "maps.eta" {
+			schema = contracts.OperationSchema(descriptor)
+		}
+	}
+	args, _ := properties(schema)["args"].(map[string]any)
+	for _, name := range []string{"from", "to"} {
+		point, _ := properties(args)[name].(map[string]any)
+		if properties(point)["lat"] == nil || properties(point)["lon"] == nil {
+			return outcome{}, nil, fmt.Errorf("Maps ETA must describe the lat and lon fields for each endpoint")
+		}
+	}
+
 	endpoint := w.Replicas[0]
 	token, err := w.ScopedToken(endpoint, "maps:read")
 	if err != nil {

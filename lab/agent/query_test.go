@@ -13,6 +13,10 @@ func TestQueryChecks(t *testing.T) {
 		tools, used              bool
 	}{
 		{"valid", valid, answer, true, true},
+		{"markdown_numbers", valid, "`maps.eta` synthetic: **600,000** ms, **1,800** m", true, true},
+		{"codex_structured_content", strings.ReplaceAll(valid, "structuredContent", "structured_content"), answer, true, true},
+		{"codex_failed_status", strings.ReplaceAll(valid, `"type":"mcp_tool_call"`, `"type":"mcp_tool_call","status":"failed"`), answer, false, false},
+		{"coordinate_aliases", strings.ReplaceAll(strings.ReplaceAll(valid, `"lat":`, `"latitude":`), `"lon":`, `"longitude":`), answer, false, false},
 		{"missing_call", "", answer, false, false},
 		{"wrong_destination", strings.ReplaceAll(valid, "37.8024", "37.9"), answer, false, false},
 		{"wrong_mode", strings.ReplaceAll(valid, "driving", "walking"), answer, false, false},

@@ -18,7 +18,7 @@ func init() {
 			{Name: "maps.search", Version: 1, Kind: QueryOp, Source: "maps", Scope: "maps:read", Input: Query{}, Output: QueryResult{}, Description: "Transient maps.search result"},
 			{Name: "maps.nearby", Version: 1, Kind: QueryOp, Source: "maps", Scope: "maps:read", Input: Query{}, Output: QueryResult{}, Description: "Transient maps.nearby result"},
 			{Name: "maps.directions", Version: 1, Kind: QueryOp, Source: "maps", Scope: "maps:read", Input: Query{}, Output: QueryResult{}, Description: "Transient maps.directions result"},
-			{Name: "maps.eta", Version: 1, Kind: QueryOp, Source: "maps", Scope: "maps:read", Input: Query{}, Output: QueryResult{}, Description: "Transient maps.eta result"},
+			{Name: "maps.eta", Version: 1, Kind: QueryOp, Source: "maps", Scope: "maps:read", Input: Query{}, Output: QueryResult{}, Description: "Estimate travel time and distance between from/to points with numeric lat and lon fields. Returns duration in milliseconds and distance in meters."},
 		}
 	}, 81, 82, 83, 84, 85, 86, 87, 88, 89)
 }
@@ -68,4 +68,21 @@ func MapsOpenEvidence(raw json.RawMessage, hash string) bool {
 		}
 	}
 	return json.Unmarshal(raw, &value) == nil && value.Frontmost == "com.apple.Maps" && hash != "" && value.Prepared.Hash == hash
+}
+
+func mapsETAArgsSchema() map[string]any {
+	point := map[string]any{
+		"type": "object", "additionalProperties": false, "required": []string{"lat", "lon"},
+		"properties": map[string]any{
+			"lat": map[string]any{"type": "number", "minimum": -90, "maximum": 90},
+			"lon": map[string]any{"type": "number", "minimum": -180, "maximum": 180},
+		},
+	}
+	return map[string]any{
+		"type": "object", "additionalProperties": false, "required": []string{"from", "to", "mode"},
+		"properties": map[string]any{
+			"from": point, "to": point,
+			"mode": map[string]any{"type": "string", "enum": []string{"driving", "walking", "transit", "cycling"}},
+		},
+	}
 }
