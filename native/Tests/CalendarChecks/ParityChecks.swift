@@ -22,6 +22,9 @@ enum CalendarParityChecks {
         let reader = CalendarStoreEnrichment(root: root)
         let unknown = await reader.enrich(observation, lookups: [:], force: true)
         guard unknown["event"]?["data"]["store_coverage"]["travel_time"]["status"] != .string("complete") else { throw SourceFailure.invalid }
+        try execute("UPDATE CalendarItem SET travel_time='unknown' WHERE ROWID=1")
+        let invalid = await reader.enrich(observation, lookups: [:], force: true)
+        guard invalid["event"]?["data"]["store_coverage"]["travel_time"]["status"] == .string("unsupported") else { throw SourceFailure.invalid }
         try execute("UPDATE CalendarItem SET travel_time=0 WHERE ROWID=1")
         let zero = await reader.enrich(observation, lookups: [:], force: true)
         guard zero["event"]?["data"]["travel_time"] == .number(0), zero["event"]?["data"]["store_coverage"]["travel_time"]["status"] == .string("complete") else { throw SourceFailure.invalid }

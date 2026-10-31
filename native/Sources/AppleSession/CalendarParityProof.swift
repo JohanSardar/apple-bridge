@@ -123,6 +123,10 @@ enum CalendarParityProof {
         } catch {
             reasons[stage] = .string("Calendar could not verify " + stage + " on the test event. The action remains unavailable until this native check passes.")
         }
+        if let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.iCal").first {
+            let ui = CalendarFixtureUI(app: app, title: title + " event")
+            if ui.find("Cancel", role: kAXButtonRole).count == 1 { try? ui.press("Cancel", role: kAXButtonRole) }
+        }
         store.reset()
         if let owned = store.calendar(withIdentifier: calendarID), owned.title == title { try store.removeCalendar(owned, commit: true) }
         store.reset()

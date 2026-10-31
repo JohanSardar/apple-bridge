@@ -893,7 +893,7 @@ features:
     limits:
       - scenario: WEB-CAL-PARITY
         level: real
-        reason: "Native Calendar response, travel-time and attachment effects require the scoped real qualification. Invitation response proof requires an incoming run-owned invitation; ordinary EventKit fixtures expose attendee/status fields as read-only. No current permission failure is inferred from historical probes, and controls remain hidden."
+        reason: "Native Calendar qualification could not start because all three Air runner slots remained occupied. No fixture was created and the queued run was cancelled. Invitation response proof also requires an incoming run-owned invitation; ordinary EventKit fixtures expose attendee/status fields as read-only. No current permission failure is inferred, and controls remain hidden."
     scenarios:
       - {id: WEB-CAL-PARITY, levels: [sim, real, web]}
     notes: "WEB-CAL-PARITY now has synthetic store mutation/readback and native Helper qualification in addition to the existing browser coverage. Missing travel time stays unsupported; only numeric zero is verified without positive native unit proof. The scoped native check creates its own tagged calendar/event, attempts travel-time and attachment add/remove with digest readback, and verifies cleanup. Incoming invitation response effects remain unproven; existing invitations are never used. Native parity operations remain unregistered and controls stay hidden until real effects pass."
