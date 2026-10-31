@@ -19,9 +19,11 @@ public enum MessagesSendVariants {
     }
     public static var proofURL: URL { PrivateReport.directory.appendingPathComponent("messages-send-variant-proofs.json") }
     static var osBuild: String { ProcessInfo.processInfo.operatingSystemVersionString }
+    public static func validProof(_ data: JSON, osBuild: String, helperDigest: String) -> Bool {
+        data["os_build"].string == osBuild && data["version"].number == 1 && data["complete"].bool && !helperDigest.isEmpty && data["helper_digest"].string == helperDigest
+    }
     static func proof() -> JSON {
-        guard let bytes=try? Data(contentsOf:proofURL),let data=try? JSONDecoder().decode(JSON.self,from:bytes),data["os_build"].string==osBuild,data["version"].number==1,data["complete"].bool,
-              !MessagesParity.buildDigest.isEmpty,data["helper_digest"].string==MessagesParity.buildDigest else { return .null }
+        guard let bytes=try? Data(contentsOf:proofURL),let data=try? JSONDecoder().decode(JSON.self,from:bytes),validProof(data, osBuild: osBuild, helperDigest: MessagesParity.buildDigest) else { return .null }
         return data
     }
     static func proven(_ operation: String, route: JSON? = nil, args: JSON? = nil) -> Bool {
