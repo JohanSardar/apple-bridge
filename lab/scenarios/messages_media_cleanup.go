@@ -22,11 +22,19 @@ func runMediaCleanupProof(ctx context.Context, s Scenario, level string) Evidenc
 		return e
 	}
 	defer os.RemoveAll(directory)
-	app := filepath.Join(directory, "AppleBridgeHelper.app")
-	if _, err = exec.CommandContext(ctx, "packaging/dev/build-helper.sh", app).CombinedOutput(); err != nil {
-		add("signed_helper_build", false)
+	build := exec.CommandContext(ctx, "packaging/dev/build-native.sh")
+	build.Env = append(os.Environ(), "APPLE_BRIDGE_NATIVE_TARGET=MessagesVariantChecks")
+	if output, err := build.CombinedOutput(); err != nil {
+		os.Stderr.Write(output)
+		add("native_cleanup_checks_build", false)
 		return e
 	}
+	nativeOutput, err := os.ReadFile("native/.build/native-output-1")
+	if err != nil {
+		add("native_cleanup_checks_binary", false)
+		return e
+	}
+	binary := filepath.Join(strings.TrimSpace(string(nativeOutput)), "MessagesVariantChecks")
 	filename := "ab-run_media.heic"
 	fixture := map[string]any{"tag": "[ab-test run_media]", "registration": map[string]any{"scenario": "WEB-MEDIA-VARIANTS", "run_id": "run_media", "baseline_max_row_id": 30, "media_attachment_names": []string{filename}}, "own": []string{"self@example.com"}, "row": map[string]any{"row_id": 31, "attachments": []string{filename}, "peers": []string{"self@example.com"}, "is_from_me": true}, "candidates": []any{map[string]any{"outgoing": true, "values": []string{"file:///private/test/" + filename}}, map[string]any{"outgoing": false, "values": []string{filename}}}}
 	run := func(name string, patch func(map[string]any), authorized, target bool) {
@@ -38,7 +46,7 @@ func runMediaCleanupProof(ctx context.Context, s Scenario, level string) Evidenc
 		path := filepath.Join(directory, "fixture.json")
 		os.WriteFile(path, bytes, 0600)
 		started := time.Now()
-		output, problem := exec.CommandContext(ctx, filepath.Join(app, "Contents", "MacOS", "AppleBridgeHelper"), "media-cleanup-checks", "--fixtures", path).Output()
+		output, problem := exec.CommandContext(ctx, binary, "media-cleanup", "--fixtures", path).Output()
 		var result struct {
 			Authorized bool `json:"authorized"`
 			Target     bool `json:"target_verified"`
@@ -48,6 +56,14 @@ func runMediaCleanupProof(ctx context.Context, s Scenario, level string) Evidenc
 		e.Latency[name] = stats([]float64{float64(time.Since(started)) / float64(time.Millisecond)}, 0)
 	}
 	run("attachment_only_target", func(map[string]any) {}, true, true)
+	for _, extension := range []string{"mov", "caf"} {
+		run("attachment_only_"+extension, func(input map[string]any) {
+			name := "ab-run_media." + extension
+			input["registration"].(map[string]any)["media_attachment_names"] = []string{name}
+			input["row"].(map[string]any)["attachments"] = []string{name}
+			input["candidates"] = []any{map[string]any{"description": "Your iMessage, 0-" + name + ", Media, 3:45 PM"}}
+		}, true, true)
+	}
 	run("empty_database_baseline_is_valid", func(input map[string]any) {
 		input["registration"].(map[string]any)["baseline_max_row_id"] = 0
 		input["row"].(map[string]any)["row_id"] = 1

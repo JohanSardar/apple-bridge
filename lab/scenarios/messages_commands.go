@@ -20,12 +20,13 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 	if level == "real" && messageSendVariant(s.ID) != "" {
 		return runMessagesVariantReal(ctx, s, e)
 	}
-	if s.ID == "MSG-SELFTEST" {
+	if s.ID == "MSG-SELFTEST" && level == "real" {
 		return runNativeMessagesSelfTest(ctx, e)
 	}
-	if level == "real" && s.ID == "MSG-RESEND" && os.Getenv("APPLE_BRIDGE_RESEND_RUN") == "" {
+	if level == "real" && s.ID == "MSG-RESEND" && os.Getenv("APPLE_BRIDGE_RESEND_RUN") != e.RunID {
 		e.Status = "environment-limited"
-		e.Assertions = append(e.Assertions, Assertion{Name: "safe_failed_self_fixture", Status: "unverified", Detail: "Set APPLE_BRIDGE_RESEND_RUN to a registered run containing exactly one failed tagged self message; no native failure was induced"})
+		e.Metrics = map[string]any{"writes_submitted": 0}
+		e.Assertions = append(e.Assertions, Assertion{Name: "safe_failed_self_fixture", Status: "unverified", Detail: "This check needs a failed self-message created and registered by the current run. No native failure was induced; existing failed messages were left untouched."})
 		return e
 	}
 	if level == "real" && (s.ID == "MSG-READSTATE-REAL" || s.ID == "MSG-DELETE-REAL") && os.Getenv("APPLE_BRIDGE_MESSAGES_UI_DEFERRED") == "1" {
@@ -47,13 +48,44 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 		return e
 	}
 	defer w.Close()
-	add("seed_self_chat", w.ControlAction("/messages", map[string]any{"action": "seed", "count": 0}) == nil)
+	seedCount := 0
+	if s.ID == "MSG-SELFTEST" || s.ID == "MSG-READSTATE-REAL" || s.ID == "MSG-DELETE-REAL" {
+		seedCount = 1
+	}
+	add("seed_self_chat", w.ControlAction("/messages", map[string]any{"action": "seed", "count": seedCount}) == nil)
 	add("fixture_captured", w.Await(10*time.Second, func() bool { return convergence(w) }) == nil)
 	client := scripted.Client{Endpoint: w.Gateway}
 	read := func(collection string) []contracts.Record {
 		var r contracts.ReadResult
 		client.Call(ctx, "records.query", contracts.ReadQuery{Collection: collection, Limit: 100}, &r)
 		return r.Records
+	}
+	baselineMessages := read("messages.message")
+	preserved := func() bool {
+		current := read("messages.message")
+		missing, changed := 0, 0
+		for _, before := range baselineMessages {
+			found := false
+			for _, after := range current {
+				if before.ID == after.ID {
+					found = true
+					if before.Version != after.Version {
+						changed++
+					}
+				}
+			}
+			if !found {
+				missing++
+			}
+		}
+		if e.Metrics == nil {
+			e.Metrics = map[string]any{}
+		}
+		e.Metrics["baseline_missing"] = missing
+		e.Metrics["baseline_changed"] = changed
+		e.Metrics["remaining_messages"] = len(current)
+		e.Metrics["baseline_messages"] = len(baselineMessages)
+		return len(current) == len(baselineMessages) && missing == 0 && changed == 0
 	}
 	chats := read("messages.chat")
 	if len(chats) == 0 {
@@ -94,7 +126,7 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 		for _, r := range read("messages.message") {
 			var d map[string]any
 			json.Unmarshal(r.Data, &d)
-			if d["is_from_me"] == true {
+			if d["is_from_me"] == true && d["text"] == text {
 				return r
 			}
 		}
@@ -130,6 +162,64 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 	}
 
 	switch s.ID {
+	case "MSG-SELFTEST":
+		ownedIDs := map[string]bool{}
+		own := func(result contracts.CommandRecord) {
+			for _, id := range result.ObservedRecordIDs {
+				ownedIDs[id] = true
+			}
+		}
+		created, problem := send()
+		own(created)
+		add("send_text", observed(created, problem))
+		msg := findMessage()
+		if msg.ID == "" {
+			add("owned_self_message", false)
+			return e
+		}
+		file := command("send", map[string]any{"chat_id": chat.ID, "files": []contracts.MessageFile{{Name: "ab-" + e.RunID + ".txt", Data: base64.StdEncoding.EncodeToString([]byte(text))}}}, 0)
+		result, problem := submit(file)
+		own(result)
+		add("send_file", observed(result, problem))
+		result, problem = submit(target("reply", msg, map[string]any{"text": text + " reply"}))
+		own(result)
+		add("reply", observed(result, problem))
+		for _, kind := range []string{"love", "emoji"} {
+			for _, remove := range []bool{false, true} {
+				result, problem = submit(target("react", msg, map[string]any{"reaction": kind, "emoji": "🧪", "remove": remove}))
+				add(kind+fmtBool(remove), observed(result, problem))
+			}
+		}
+		msg = record("messages.message", msg.ID)
+		result, problem = submit(target("edit", msg, map[string]any{"text": text + " edited"}))
+		add("edit", observed(result, problem))
+		for _, op := range []string{"mark_unread", "mark_read"} {
+			result, problem = submit(target(op, chat, nil))
+			add(op, observed(result, problem))
+		}
+		unsend, problem := send()
+		own(unsend)
+		add("unsend_fixture", observed(unsend, problem) && len(unsend.ObservedRecordIDs) == 1)
+		if len(unsend.ObservedRecordIDs) == 1 {
+			fixture := record("messages.message", unsend.ObservedRecordIDs[0])
+			result, problem = submit(target("unsend", fixture, nil))
+			add("unsend", observed(result, problem))
+		}
+		for _, message := range read("messages.message") {
+			var data struct {
+				Text string `json:"text"`
+			}
+			json.Unmarshal(message.Data, &data)
+			if !ownedIDs[message.ID] && !strings.HasPrefix(data.Text, "[ab-test "+e.RunID+"]") {
+				continue
+			}
+			result, problem = submit(target("delete_message", message, nil))
+			add("owned_message_cleanup", observed(result, problem))
+		}
+		remaining := read("messages.message")
+		e.Metrics = map[string]any{"remaining_messages": len(remaining), "baseline_messages": len(baselineMessages)}
+		add("existing_residue_preserved", preserved())
+		add("self_chat_preserved", record("messages.chat", chat.ID).ID == chat.ID)
 	case "MSG-COMMAND-PARTS":
 		checkMessageParts(ctx, w, &e, chat.ID, add)
 	case "MSG-FAILED-OBSERVED-IDS":
@@ -486,7 +576,7 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 			var data map[string]any
 			json.Unmarshal(current.Data, &data)
 			add("native_retracted_evidence", data["retracted_at"] != nil)
-		case "MSG-MARK-READ":
+		case "MSG-MARK-READ", "MSG-READSTATE-REAL":
 			for _, op := range []string{"mark_unread", "mark_read"} {
 				r, err = submit(target(op, chat, nil))
 				add(op, observed(r, err))
@@ -495,12 +585,28 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 				json.Unmarshal(current.Data, &data)
 				add("native_chat_read_state", data["is_unread"] == (op == "mark_unread"))
 			}
-		case "MSG-DELETE":
+		case "MSG-DELETE", "MSG-DELETE-REAL":
 			r, err = submit(target("delete_message", msg, nil))
 			add("delete_message_complete_scan", observed(r, err) && record("messages.message", msg.ID).ID == "")
-			chat = record("messages.chat", chat.ID)
-			r, err = submit(target("delete_chat", chat, nil))
-			add("delete_chat_complete_scan", observed(r, err) && record("messages.chat", chat.ID).ID == "")
+			if s.ID == "MSG-DELETE-REAL" {
+				for _, message := range read("messages.message") {
+					var data struct {
+						Text string `json:"text"`
+					}
+					json.Unmarshal(message.Data, &data)
+					if !strings.HasPrefix(data.Text, "[ab-test "+e.RunID+"]") {
+						continue
+					}
+					r, err = submit(target("delete_message", message, nil))
+					add("owned_echo_cleanup", observed(r, err))
+				}
+				add("existing_residue_preserved", preserved())
+			}
+			if s.ID == "MSG-DELETE" {
+				chat = record("messages.chat", chat.ID)
+				r, err = submit(target("delete_chat", chat, nil))
+				add("delete_chat_complete_scan", observed(r, err) && record("messages.chat", chat.ID).ID == "")
+			}
 		case "MSG-UI-INTERFERENCE":
 			for _, name := range []string{"ui-interference-before", "ui-interference"} {
 				fault(name)

@@ -101,20 +101,7 @@ enum HelperLabCommand {
         case "media-cleanup-checks":
             guard let index = arguments.firstIndex(of: "--fixtures"), index + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
             let fixture = try JSONDecoder().decode(JSON.self, from: Data(contentsOf: URL(fileURLWithPath: arguments[index + 1])))
-            let proof = try MessagesMediaCleanupProof(registration: fixture["registration"], tag: fixture["tag"].string)
-            let row = fixture["row"]
-            guard let rowID = Int64(exactly: row["row_id"].number) else { throw ProbeFailure.invalidArguments }
-            let authorized = proof.authorizes(rowID: rowID, attachments: row["attachments"].array.map(\.string), peers: row["peers"].array.map(\.string), own: Set(fixture["own"].array.map { MessagesProbes.normalize($0.string) }))
-            let names = Set(proof.targetNames(row["attachments"].array.map(\.string)))
-            let candidates = fixture["candidates"].array.map { candidate -> JSON in
-                guard !candidate["description"].string.isEmpty else { return candidate }
-                var value = candidate.object
-                value["outgoing"] = MessagesMediaCleanupProof.direction(candidate["description"].string, names: names).map(JSON.bool) ?? .null
-                value["values"] = .array(candidate["values"].array + [candidate["description"]])
-                return .object(value)
-            }
-            let target = MessagesMediaCleanupProof.targetIndex(candidates, names: names, outgoing: row["is_from_me"].bool, allowSelfEcho: fixture["allow_self_echo"].bool)
-            let result = JSON.object(["authorized": .bool(authorized), "target_verified": .bool(authorized && target != nil)])
+            let result = try MessagesMediaCleanupProof.check(fixture)
             print(String(decoding: try JSONEncoder().encode(result), as: UTF8.self))
             return true
         case "wire-checks":

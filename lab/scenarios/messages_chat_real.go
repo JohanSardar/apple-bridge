@@ -54,13 +54,6 @@ func runNativeChatProof(ctx context.Context, s Scenario, e Evidence, w *world.Wo
 			}
 			add(op+"_independent_native_truth", problem == nil && truth["status"] == "verified" && truth["chat_read_state"] == expected)
 		}
-		var chat contracts.ReadResult
-		client.Call(ctx, "records.get", contracts.ReadQuery{Collection: "messages.chat", ID: data.ChatID}, &chat)
-		if len(chat.Records) == 1 {
-			submit("messages.delete_chat", data.ChatID, chat.Records[0].Version)
-		} else {
-			add("cleanup_chat_record", false)
-		}
 	} else {
 		args, _ := json.Marshal(map[string]any{"chat_id": data.ChatID, "text": "[ab-test " + e.RunID + "] chat remainder"})
 		remainder := contracts.Command{ID: contracts.NewCommandID(), Op: "messages.send", Args: args, WaitMS: 15000}
@@ -91,15 +84,6 @@ func runNativeChatProof(ctx context.Context, s Scenario, e Evidence, w *world.Wo
 			visible = visible || item["visible"] == true
 		}
 		add("message_deletion_independent_truth", problem == nil && truth["status"] == "verified" && !visible)
-		var chat contracts.ReadResult
-		client.Call(ctx, "records.get", contracts.ReadQuery{Collection: "messages.chat", ID: data.ChatID}, &chat)
-		if len(chat.Records) != 1 {
-			add("chat_record", false)
-			return e
-		}
-		submit("messages.delete_chat", data.ChatID, chat.Records[0].Version)
-		truth, problem = w.Truth("observe", map[string]any{"source": "messages", "guid": native, "chat_guid": nativeChat})
-		add("chat_deletion_independent_truth", problem == nil && truth["status"] == "verified" && (truth["chat_present"] == false || truth["chat_active"] == false))
 	}
 	e.Passed = true
 	for _, a := range e.Assertions {

@@ -21,12 +21,6 @@ import (
 )
 
 func runNativeMessagesCommands(ctx context.Context, s Scenario, level string, e Evidence) Evidence {
-	if s.ID == "WEB-MEDIA-VARIANTS" || s.ID == "WEB-UPLOAD-NATIVE-STAGING" {
-		e.Status = "limited"
-		e.Metrics = map[string]any{"writes_submitted": 0}
-		e.Assertions = append(e.Assertions, Assertion{Name: "owned_attachment_cleanup_qualified", Status: "limited", Detail: "needs native attachment cleanup qualification; the captured-ID media target remains unavailable; no send attempted"})
-		return e
-	}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	replicas := 0
 	if level == "replica" || s.ID == "WEB-MEDIA-VARIANTS" {
@@ -88,50 +82,9 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 			return e
 		}
 	}
-	newHandle := ""
-	chatProof := s.ID == "MSG-READSTATE-REAL" || s.ID == "MSG-DELETE-REAL"
-	var maximumChat int64
-	if chatProof {
-		known := map[string]bool{}
-		rows, problem := native.QueryContext(ctx, "SELECT h.id FROM chat_handle_join j JOIN handle h ON h.ROWID=j.handle_id")
-		if problem != nil {
-			add("existing_routes_truth", false)
-			return e
-		}
-		for rows.Next() {
-			var handle string
-			if rows.Scan(&handle) != nil {
-				rows.Close()
-				add("existing_routes_truth", false)
-				return e
-			}
-			known[contracts.NormalizeContactHandle(handle)] = true
-		}
-		problem = rows.Err()
-		rows.Close()
-		if problem != nil {
-			add("existing_routes_truth", false)
-			return e
-		}
-		for _, handle := range own.Handles {
-			if !known[contracts.NormalizeContactHandle(handle)] {
-				newHandle = handle
-				break
-			}
-		}
-		if newHandle == "" {
-			e.Status = "environment-limited"
-			e.Assertions = append(e.Assertions, Assertion{Name: "isolated_test_self_chat", Status: "unverified", Detail: "Every discovered own handle already has a chat; existing personal chats were left unchanged"})
-			return e
-		}
-		if native.QueryRowContext(ctx, "SELECT COALESCE(MAX(ROWID),0) FROM chat").Scan(&maximumChat) != nil {
-			add("chat_baseline", false)
-			return e
-		}
-	}
 	rows, err := native.QueryContext(ctx, "SELECT c.guid,h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.service_name='iMessage' AND (SELECT COUNT(*) FROM chat_handle_join x WHERE x.chat_id=c.ROWID)=1 ORDER BY c.ROWID DESC")
 	if err == nil {
-		for rawChat == "" && newHandle == "" && rows.Next() {
+		for rawChat == "" && rows.Next() {
 			var guid, handle string
 			rows.Scan(&guid, &handle)
 			for _, self := range own.Handles {
@@ -146,7 +99,7 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 		}
 		rows.Close()
 	}
-	if rawChat == "" && newHandle == "" {
+	if rawChat == "" {
 		add("existing_self_chat_truth", false)
 		return e
 	}
@@ -157,11 +110,14 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	}
 	defer stateDB.Close()
 	var chatID string
-	add("self_chat_captured", newHandle != "" || w.Await(30*time.Second, func() bool {
+	add("self_chat_captured", w.Await(30*time.Second, func() bool {
 		return stateDB.QueryRowContext(ctx, "SELECT record_id FROM aliases WHERE collection='messages.chat' AND native_key=? LIMIT 1", rawChat).Scan(&chatID) == nil
 	}) == nil)
-	if chatID == "" && newHandle == "" {
+	if chatID == "" {
 		return e
+	}
+	if s.ID == "WEB-MSG-REAL-READ" {
+		return runNativeWebMessagesRead(ctx, e, w, native, stateDB, rawChat, chatID)
 	}
 	client := scripted.Client{Endpoint: w.Gateway}
 	text := "[ab-test " + e.RunID + "] self command"
@@ -179,9 +135,7 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 		}
 		args["resend_of"] = failedID
 	}
-	if newHandle != "" {
-		args = map[string]any{"handles": []string{newHandle}, "service": "iMessage", "text": text}
-	}
+
 	if s.ID == "MSG-REPLY" {
 		contacts, err := nativeTestContacts()
 		handle := contacts["REMY_IMESSAGE_TEST_HANDLE"]
@@ -244,9 +198,6 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	}
 	cleanupPath := filepath.Join(cleanupDirectory, e.RunID+".json")
 	cleanup := map[string]any{"run_id": e.RunID, "command_id": c.ID, "baseline_max_row_id": maximum, "created_at": time.Now().UTC(), "cleanup_state": "pending_native_cleanup", "scenario": s.ID, "level": level}
-	if chatProof {
-		cleanup["baseline_max_chat_row_id"] = maximumChat
-	}
 	if s.ID == "MSG-INTERACTIVE-GATE" {
 		cleanup["interactive_text"] = text
 	}
@@ -279,7 +230,7 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 			return
 		}
 
-		ok, metrics := cleanupNativeMessageRun(w, e.RunID, false, s.ID == "WEB-MEDIA-VARIANTS" || s.ID == "WEB-UPLOAD-NATIVE-STAGING")
+		ok, metrics := cleanupNativeMessageRun(w, e.RunID, false, s.ID != "MSG-REPLY")
 		if s.ID == "MSG-INTERACTIVE-GATE" && !ok {
 			result.Status = "environment-limited"
 		}
@@ -437,17 +388,6 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 		CaptureCheckpoint string `json:"capture_checkpoint"`
 	}
 	json.Unmarshal(outcome.Evidence, &evidence)
-	if chatProof {
-		var rowID int64
-		problem := native.QueryRowContext(ctx, "SELECT c.guid,c.ROWID FROM chat c JOIN chat_message_join j ON j.chat_id=c.ROWID JOIN message m ON m.ROWID=j.message_id WHERE m.guid=?", evidence.NativeKey).Scan(&rawChat, &rowID)
-		cleanup["created_chat_key"] = rawChat
-		cleanup["created_by_run"] = problem == nil && rowID > maximumChat
-		saveCleanup()
-		if problem != nil || rowID <= maximumChat {
-			add("new_self_chat_creation_verified", false)
-			return e
-		}
-	}
 	cleanup["native_parts"] = evidence.Parts
 	cleanup["native_key"] = evidence.NativeKey
 	saveCleanup()

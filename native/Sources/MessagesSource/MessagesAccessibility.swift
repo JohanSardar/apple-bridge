@@ -56,7 +56,10 @@ enum MessagesAccessibility {
             return rows[0]
         }
         if !mediaNames.isEmpty {
-            let bubbles = matching(root, budget: &budget) { value($0, kAXIdentifierAttribute) == "Sticker" }
+            let bubbles = matching(root, budget: &budget) { element in
+                let identifier = value(element, kAXIdentifierAttribute)
+                return identifier == "Sticker" || identifier == guid || identifier == "message-" + guid
+            }
             var candidates: [JSON] = []
             for bubble in bubbles {
                 var nested = 150
@@ -65,11 +68,12 @@ enum MessagesAccessibility {
                     values += [kAXDescriptionAttribute, kAXValueAttribute, "AXURL", kAXTitleAttribute, "AXFilename", kAXHelpAttribute, "AXDocument", "AXValueDescription"].map { .string(value(child, $0)) }
                     return false
                 }
+                if [guid, "message-" + guid].contains(value(bubble, kAXIdentifierAttribute)) { values += mediaNames.map(JSON.string) }
                 let description = value(bubble, kAXDescriptionAttribute)
                 let direction = MessagesMediaCleanupProof.direction(description, names: Set(mediaNames)).map(JSON.bool) ?? .null
                 candidates.append(.object(["outgoing": direction, "values": nested > 0 ? .array(values) : .array([])]))
             }
-            guard budget > 0, let index = MessagesMediaCleanupProof.targetIndex(candidates, names: Set(mediaNames), outgoing: outgoing, allowSelfEcho: prepared.nativeState["target"]["cleanup_self_echo"].bool) else { throw MessagesUIFailure.targetUnavailable }
+            guard budget > 0, let index = MessagesMediaCleanupProof.targetIndex(candidates, names: Set(mediaNames), outgoing: outgoing, allowSelfEcho: prepared.nativeState["target"]["cleanup_self_echo"].bool, equivalentOwned: prepared.nativeState["target"]["cleanup_equivalent_owned_media"].bool) else { throw MessagesUIFailure.targetUnavailable }
             return bubbles[index]
         }
         let targets = matching(root, budget: &budget) { element in

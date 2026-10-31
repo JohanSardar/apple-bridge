@@ -1,17 +1,17 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[6.71 9.21 22.63] cpu_idle=41% cpus=10 other_heavy=0"
+    "summary": "air: load=[12.37 15.67 15.27] cpu_idle=54% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M650MS523281NSSPJ2SYDV8M",
+  "run_id": "run_01M69XG39NZY6XFDC70AXDVD5Z",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MSG-SEND-LATER",
   "level": "sim",
   "passed": true,
-  "git_sha": "cd736b6bdf6f556b3e7a7dd514fbc4f7d2d45c78",
-  "at": "2026-10-29T23:41:39.36301Z",
+  "git_sha": "d55225b4049a0517ade1c122ad78a17877188de2",
+  "at": "2026-10-31T21:22:52.341989Z",
   "assertions": [
     {
       "name": "native_readback_checks_build",
@@ -22,7 +22,15 @@
       "passed": true
     },
     {
-      "name": "unqualified_variant_rejected",
+      "name": "plain_send_rejected",
+      "passed": true
+    },
+    {
+      "name": "scheduled_date_exact_readback",
+      "passed": true
+    },
+    {
+      "name": "wrong_scheduled_date_rejected",
       "passed": true
     },
     {

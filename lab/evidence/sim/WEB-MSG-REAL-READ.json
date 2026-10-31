@@ -1,0 +1,44 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[11.26 15.06 15.07] cpu_idle=69% cpus=10 other_heavy=0"
+  },
+  "run_id": "run_01M69XHAG8FTN27M3C64YCXA6P",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "writes_submitted": 0
+  },
+  "scenario": "WEB-MSG-REAL-READ",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "d55225b4049a0517ade1c122ad78a17877188de2",
+  "at": "2026-10-31T21:23:32.488042Z",
+  "assertions": [
+    {
+      "name": "self_chat_and_message_identity",
+      "passed": true
+    },
+    {
+      "name": "private_web_session",
+      "passed": true
+    },
+    {
+      "name": "authenticated_web_socket",
+      "passed": true
+    },
+    {
+      "name": "web_chats_matches_independent_self_truth",
+      "passed": true
+    },
+    {
+      "name": "web_thread_matches_independent_self_truth",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": null
+}

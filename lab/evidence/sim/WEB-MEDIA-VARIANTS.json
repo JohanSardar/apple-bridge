@@ -1,9 +1,9 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[28.89 19.54 13.84] cpu_idle=0% cpus=10 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[12.34 15.39 15.18] cpu_idle=54% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M64V7TTA8TEJ1B6M0GVWK1ZM",
+  "run_id": "run_01M69XH3G72BTBXMRW6HBWY60E",
   "metrics": {
     "browser_playback": "Cross-engine playback is owned by the later UI unit",
     "capture_observer_resets": 0
@@ -11,8 +11,8 @@
   "scenario": "WEB-MEDIA-VARIANTS",
   "level": "sim",
   "passed": true,
-  "git_sha": "829d8e0d8e773aa71b721594e4413fe1c8af849a",
-  "at": "2026-10-29T22:07:12.202754Z",
+  "git_sha": "d55225b4049a0517ade1c122ad78a17877188de2",
+  "at": "2026-10-31T21:23:25.319595Z",
   "assertions": [
     {
       "name": "seed_self",
@@ -28,6 +28,30 @@
     },
     {
       "name": "variants_captured_0",
+      "passed": true
+    },
+    {
+      "name": "audio_native_appearance_measured",
+      "passed": true
+    },
+    {
+      "name": "audio_original_preserved",
+      "passed": true
+    },
+    {
+      "name": "audio_duration_and_64_bounded_peaks",
+      "passed": true
+    },
+    {
+      "name": "private_handles_removed",
+      "passed": true
+    },
+    {
+      "name": "audio_authorized_blob_0",
+      "passed": true
+    },
+    {
+      "name": "variant_digest_verified",
       "passed": true
     },
     {
@@ -135,6 +159,10 @@
       "passed": true
     },
     {
+      "name": "variants_captured_1",
+      "passed": true
+    },
+    {
       "name": "audio_native_appearance_measured",
       "passed": true
     },
@@ -151,15 +179,11 @@
       "passed": true
     },
     {
-      "name": "audio_authorized_blob_0",
+      "name": "audio_authorized_blob_1",
       "passed": true
     },
     {
       "name": "variant_digest_verified",
-      "passed": true
-    },
-    {
-      "name": "variants_captured_1",
       "passed": true
     },
     {
@@ -263,30 +287,6 @@
       "passed": true
     },
     {
-      "name": "audio_native_appearance_measured",
-      "passed": true
-    },
-    {
-      "name": "audio_original_preserved",
-      "passed": true
-    },
-    {
-      "name": "audio_duration_and_64_bounded_peaks",
-      "passed": true
-    },
-    {
-      "name": "private_handles_removed",
-      "passed": true
-    },
-    {
-      "name": "audio_authorized_blob_1",
-      "passed": true
-    },
-    {
-      "name": "variant_digest_verified",
-      "passed": true
-    },
-    {
       "name": "sim_restart",
       "passed": true
     },
@@ -341,44 +341,44 @@
   "latency": {
     "audio_appearance_to_variants_0": {
       "samples": 1,
-      "p50_ms": 346.734542,
-      "p95_ms": 346.734542,
-      "max_ms": 346.734542,
+      "p50_ms": 125.196291,
+      "p95_ms": 125.196291,
+      "max_ms": 125.196291,
       "timeouts": 0
     },
     "audio_appearance_to_variants_1": {
       "samples": 1,
-      "p50_ms": 370.705167,
-      "p95_ms": 370.705167,
-      "max_ms": 370.705167,
+      "p50_ms": 143.252208,
+      "p95_ms": 143.252208,
+      "max_ms": 143.252208,
       "timeouts": 0
     },
     "image_appearance_to_variants_0": {
       "samples": 1,
-      "p50_ms": 346.734542,
-      "p95_ms": 346.734542,
-      "max_ms": 346.734542,
+      "p50_ms": 125.196291,
+      "p95_ms": 125.196291,
+      "max_ms": 125.196291,
       "timeouts": 0
     },
     "image_appearance_to_variants_1": {
       "samples": 1,
-      "p50_ms": 370.705167,
-      "p95_ms": 370.705167,
-      "max_ms": 370.705167,
+      "p50_ms": 143.252208,
+      "p95_ms": 143.252208,
+      "max_ms": 143.252208,
       "timeouts": 0
     },
     "video_appearance_to_variants_0": {
       "samples": 1,
-      "p50_ms": 346.734542,
-      "p95_ms": 346.734542,
-      "max_ms": 346.734542,
+      "p50_ms": 125.196291,
+      "p95_ms": 125.196291,
+      "max_ms": 125.196291,
       "timeouts": 0
     },
     "video_appearance_to_variants_1": {
       "samples": 1,
-      "p50_ms": 370.705167,
-      "p95_ms": 370.705167,
-      "max_ms": 370.705167,
+      "p50_ms": 143.252208,
+      "p95_ms": 143.252208,
+      "max_ms": 143.252208,
       "timeouts": 0
     }
   },

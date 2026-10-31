@@ -1,6 +1,6 @@
 id: MSG-READSTATE-REAL
 feature: web.messages.write
-levels: [real]
+levels: [sim, real]
 given: [{world: {replicas: 1}}]
 when: [{messages_commands: {}}]
 then: [{converge: {}}]

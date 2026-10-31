@@ -1,1 +1,1 @@
-{id: WEB-MSG-REAL-READ, feature: web.messages.read, levels: [real]}
+{id: WEB-MSG-REAL-READ, feature: web.messages.read, levels: [sim, real]}

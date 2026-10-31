@@ -698,7 +698,7 @@ features:
       - {id: WEB-MSG-PERF-INPUT, levels: [web], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
       - {id: WEB-PERF-LIST, levels: [web]}
       - {id: WEB-MSG-LIVE, levels: [web]}
-      - {id: WEB-MSG-REAL-READ, levels: [real]}
+      - {id: WEB-MSG-REAL-READ, levels: [sim, real]}
     notes: The 12-project browser/theme/layout matrices qualify LIVE, THREAD-CORE, SEARCH and the formerly incomplete read matrices. Performance evidence separates observed script/style/layout proxies from complete input and paint budgets. Counts, digests and pass/fail are in WEB-MSG-READ-MATRIX.json.
     limits:
       - {"scenario": "WEB-MSG-REAL-READ", "level": "real", "reason": "Real acceptance harness is not implemented; no native effects dispatched"}
@@ -719,10 +719,10 @@ features:
       - {id: WEB-SOURCES-STATUS, levels: [sim, web]}
       - {id: MSG-INTERACTIVE-GATE, levels: [sim, real]}
       - {id: MSG-MEDIA-CLEANUP, levels: [sim]}
-      - {id: MSG-SELFTEST, levels: [real]}
+      - {id: MSG-SELFTEST, levels: [sim, real]}
       - {id: MSG-DELETE-VISIBILITY, levels: [sim, real]}
-      - {id: MSG-READSTATE-REAL, levels: [real]}
-      - {id: MSG-DELETE-REAL, levels: [real]}
+      - {id: MSG-READSTATE-REAL, levels: [sim, real]}
+      - {id: MSG-DELETE-REAL, levels: [sim, real]}
       - {id: MSG-RESEND, levels: [sim, real]}
       - {id: WEB-MSG-COMPOSER, levels: [web]}
       - {id: WEB-MSG-SEND, levels: [web]}

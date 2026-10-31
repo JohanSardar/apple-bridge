@@ -47,6 +47,7 @@ public enum MessagesCleanup {
         var ownedIDs: Set<String> = []
         var ownedBaseline: Int64?
         let ownedOnly = arguments.contains("--owned-only")
+        var equivalentOwnedMedia = false
         var mediaProof: MessagesMediaCleanupProof?
         var interactiveText = ""
         var interactiveBaseline: Int64 = 0
@@ -77,15 +78,24 @@ public enum MessagesCleanup {
                 }
             }
             var rows = try reader.query("SELECT DISTINCT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=j.chat_id AND r.message_id=m.ROWID) AND (instr(m.text,'[ab-test ')>0 OR instr(m.attributedBody,CAST('[ab-test ' AS BLOB))>0) ORDER BY m.ROWID DESC", [])
+            if ownedOnly, let baseline = ownedBaseline, !ownedIDs.isEmpty {
+                let known = Set(rows.map { $0["guid"] })
+                rows += try reader.query("SELECT DISTINCT m.guid FROM message m JOIN chat_message_join c ON c.message_id=m.ROWID WHERE m.ROWID>? AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=c.chat_id)", [String(baseline)]).filter { ownedIDs.contains($0["guid"]) && !known.contains($0["guid"]) }
+            }
             var mediaByMessage: [String: [String]] = [:]
             if !interactiveText.isEmpty, interactiveBaseline > 0 {
                 rows += try reader.query("SELECT DISTINCT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE m.ROWID>? AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=j.chat_id) AND (m.text=? OR instr(m.attributedBody,CAST(? AS BLOB))>0)", [String(interactiveBaseline), interactiveText, interactiveText])
             }
             if let proof = mediaProof {
+                let historical = try reader.query("SELECT a.filename,a.transfer_name FROM attachment a JOIN message_attachment_join j ON j.attachment_id=a.ROWID WHERE j.message_id<=?", [String(proof.baseline)])
+                equivalentOwnedMedia = !historical.contains { row in
+                    proof.names.contains(URL(fileURLWithPath: row["filename"]).lastPathComponent) || proof.names.contains(row["transfer_name"])
+                }
+                guard equivalentOwnedMedia else { throw SourceFailure.conflict }
                 var attachmentNames: [String: [String]] = [:]
                 var positions: [String: Int64] = [:]
-                for row in try reader.query("SELECT m.guid,m.ROWID AS native_row_id,a.filename FROM message m JOIN message_attachment_join j ON j.message_id=m.ROWID JOIN attachment a ON a.ROWID=j.attachment_id JOIN chat_message_join c ON c.message_id=m.ROWID WHERE m.ROWID>? AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=c.chat_id)", [String(proof.baseline)]) {
-                    attachmentNames[row["guid"], default: []].append(row["filename"])
+                for row in try reader.query("SELECT m.guid,m.ROWID AS native_row_id,a.filename,a.transfer_name FROM message m JOIN message_attachment_join j ON j.message_id=m.ROWID JOIN attachment a ON a.ROWID=j.attachment_id JOIN chat_message_join c ON c.message_id=m.ROWID WHERE m.ROWID>? AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=c.chat_id)", [String(proof.baseline)]) {
+                    attachmentNames[row["guid"], default: []].append(row["transfer_name"].isEmpty ? row["filename"] : row["transfer_name"])
                     positions[row["guid"]] = row.integer("native_row_id")
                 }
                 for (guid, names) in attachmentNames {
@@ -98,7 +108,7 @@ public enum MessagesCleanup {
             var result: [(String, JSON)] = []
             for key in rows {
                 if ownedOnly {
-                    guard ownedIDs.contains(key["guid"]), let baseline = ownedBaseline,
+                    guard (ownedIDs.contains(key["guid"]) || mediaByMessage[key["guid"]] != nil), let baseline = ownedBaseline,
                           let position = try reader.query("SELECT ROWID AS position FROM message WHERE guid=?", [key["guid"]]).first,
                           position.integer("position") > baseline else { continue }
                 }
@@ -115,6 +125,7 @@ public enum MessagesCleanup {
                 if let names = mediaByMessage[row["guid"]], peers.allSatisfy({ own.contains(MessagesProbes.normalize($0["id"])) }) {
                     fields["cleanup_media_names"] = names
                     fields["cleanup_self_echo"] = ownedOnly
+                    fields["cleanup_equivalent_owned_media"] = ownedOnly && equivalentOwnedMedia
                     let target = try JSONDecoder().decode(JSON.self, from: JSONSerialization.data(withJSONObject: fields))
                     result.append((row["guid"], target))
                     continue
@@ -124,8 +135,14 @@ public enum MessagesCleanup {
                     result.append((row["guid"], target))
                     continue
                 }
-                guard target["text"].string.range(of: #"\[ab-test [A-Za-z0-9_-]+\]"#, options: .regularExpression) != nil else { continue }
-                guard tag.isEmpty || target["text"].string.contains(tag) else { continue }
+                guard target["text"].string.range(of: #"\[ab-test [A-Za-z0-9_-]+\]"#, options: .regularExpression) != nil else {
+                    if ownedOnly, row.integer("date_retracted") == 0 { throw SourceFailure.conflict }
+                    continue
+                }
+                guard tag.isEmpty || target["text"].string.contains(tag) else {
+                    if ownedOnly { throw SourceFailure.conflict }
+                    continue
+                }
                 result.append((row["guid"], target))
             }
             return result
