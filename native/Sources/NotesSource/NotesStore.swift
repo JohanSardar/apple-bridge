@@ -139,7 +139,7 @@ struct NotesStore {
                     rawBodies[key] = bytes
                 } }
             }
-            var fingerprint = row.filter { $0.key != "BODY" }
+            var fingerprint = row.filter { !["BODY", "Z_OPT", "ZSERVERRECORDDATA"].contains($0.key) }
             fingerprint["body_digest"] = .string(bodyDigest)
             fingerprint["generation"] = .string(uuid)
             fingerprint["folder_state"] = .object(["key": .string(folderKey), "read_only": .bool(flags.readOnly), "recently_deleted": .bool(recent)])

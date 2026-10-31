@@ -52,7 +52,7 @@ enum NotesSourceFixture {
         try sql("CREATE TABLE Z_PRIMARYKEY(Z_ENT INTEGER,Z_NAME TEXT)")
         try sql("INSERT INTO Z_PRIMARYKEY VALUES(1,'ICFolder'),(2,'ICNote'),(3,'ICAccount'),(4,'ICAttachment'),(5,'ICMedia')")
         try sql("CREATE TABLE ZICNOTEDATA(Z_PK INTEGER PRIMARY KEY,ZDATA BLOB,Z_OPT INTEGER DEFAULT 1)")
-        try sql("CREATE TABLE ZICCLOUDSYNCINGOBJECT(Z_PK INTEGER PRIMARY KEY,Z_ENT INTEGER,ZIDENTIFIER TEXT,ZTITLE1 TEXT,ZTITLE2 TEXT,ZNAME TEXT,ZACCOUNT8 INTEGER,ZPARENT INTEGER,ZFOLDER INTEGER,ZNOTEDATA INTEGER,ZMARKEDFORDELETION INTEGER DEFAULT 0,ZFOLDERTYPE INTEGER DEFAULT 0,ZISPASSWORDPROTECTED INTEGER DEFAULT 0,ZISPINNED INTEGER DEFAULT 0,ZNOTE1 INTEGER,ZPARENTATTACHMENT INTEGER,ZMEDIA INTEGER,ZTYPEUTI1 TEXT,ZFILENAME TEXT,ZMERGEABLEDATA1 BLOB,ZALTTEXT TEXT,ZGENERATION TEXT,Z_OPT INTEGER DEFAULT 1)")
+        try sql("CREATE TABLE ZICCLOUDSYNCINGOBJECT(Z_PK INTEGER PRIMARY KEY,Z_ENT INTEGER,ZIDENTIFIER TEXT,ZTITLE1 TEXT,ZTITLE2 TEXT,ZNAME TEXT,ZACCOUNT8 INTEGER,ZPARENT INTEGER,ZFOLDER INTEGER,ZNOTEDATA INTEGER,ZMARKEDFORDELETION INTEGER DEFAULT 0,ZFOLDERTYPE INTEGER DEFAULT 0,ZISPASSWORDPROTECTED INTEGER DEFAULT 0,ZISPINNED INTEGER DEFAULT 0,ZNOTE1 INTEGER,ZPARENTATTACHMENT INTEGER,ZMEDIA INTEGER,ZTYPEUTI1 TEXT,ZFILENAME TEXT,ZMERGEABLEDATA1 BLOB,ZALTTEXT TEXT,ZGENERATION TEXT,ZSERVERRECORDDATA BLOB,Z_OPT INTEGER DEFAULT 1)")
         try sql("INSERT INTO ZICCLOUDSYNCINGOBJECT(Z_PK,Z_ENT,ZIDENTIFIER,ZNAME) VALUES(1,3,'account','Bridge Test Account')")
         try sql("INSERT INTO ZICCLOUDSYNCINGOBJECT(Z_PK,Z_ENT,ZIDENTIFIER,ZTITLE2,ZACCOUNT8,ZPARENT,ZFOLDERTYPE) VALUES(10,1,'root','Bridge Test',1,NULL,0),(11,1,'trash','Recently Deleted',1,NULL,1),(12,1,'nested','Nested',1,10,0)")
         try sql("CREATE TRIGGER object_revision AFTER UPDATE ON ZICCLOUDSYNCINGOBJECT WHEN NEW.Z_OPT=OLD.Z_OPT BEGIN UPDATE ZICCLOUDSYNCINGOBJECT SET Z_OPT=OLD.Z_OPT+1 WHERE Z_PK=NEW.Z_PK; END")
@@ -93,6 +93,18 @@ enum NotesSourceFixture {
               rich["data"]["editable"].string == "none" else { throw Invalid.projection }
         let zeroIndent = await sink.record("native-indent-0"), indented = await sink.record("native-indent-1")
         guard zeroIndent["data"]["editable"].string == "plain", indented["data"]["editable"].string == "none" else { throw Invalid.projection }
+        let plainAction = JSON.object(["op": .string("notes.update"), "native_key": plain["native_key"], "note_args": .object(["mode": .string("append"), "plain_text": .string("[ab-test] append")])])
+        let beforeSync = try await source.prepare(.object(["action": plainAction, "expected_state": plain["data"]]))
+        try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZSERVERRECORDDATA=X'010203' WHERE ZIDENTIFIER='native-plain'")
+        try source.validate(beforeSync)
+        _ = try await source.prepare(.object(["action": plainAction, "expected_state": plain["data"]]))
+        try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZTITLE1='[ab-test] Changed' WHERE ZIDENTIFIER='native-plain'")
+        do { try source.validate(beforeSync); throw Invalid.boundary }
+        catch SourceFailure.conflict {}
+        try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZTITLE1='[ab-test] Synthetic' WHERE ZIDENTIFIER='native-plain'")
+        try await source.reconcile(into: sink)
+        try await source.waitForHydration()
+        print("Notes conflict checks ignore cloud bookkeeping and reject changed titles")
         for candidate in [plain, zeroIndent, rich, indented] {
             let action = JSON.object(["op": .string("notes.update"), "native_key": candidate["native_key"], "mode": .string("append"), "plain_text": .string("[ab-test] append")])
             do {
