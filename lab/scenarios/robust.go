@@ -23,6 +23,9 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 	}
 	fail := func(name string) Evidence { add(name, false); return evidence }
 	name, _ := options["case"].(string)
+	if name == "release" {
+		return runRelease(ctx, level, evidence)
+	}
 	if name == "packaging" {
 		return runPackaging(ctx, s, level, evidence)
 	}

@@ -1,0 +1,13 @@
+{
+  "unsigned_assembly": true,
+  "recursive_adhoc_signature": true,
+  "developer_id_signature": false,
+  "sparkle_appcast_signature": true,
+  "archive_signature": true,
+  "tamper_rejected": true,
+  "in_memory_csr_verified": true,
+  "noninteractive_keychain_access": false,
+  "testflight_upload": false,
+  "notarized_dmg": false,
+  "ios_release_settings": true
+}

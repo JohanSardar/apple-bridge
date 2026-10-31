@@ -1,0 +1,45 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[13.37 16 15.37] cpu_idle=14% cpus=10 other_heavy=0"
+  },
+  "run_id": "run_01M69XFNCA37WKKXV57HCWAC29",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "R1-RELEASE-SIM",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "76629c420cf6509bda485082962b80b3c03d86ac",
+  "at": "2026-10-31T21:22:38.090235Z",
+  "assertions": [
+    {
+      "name": "release_unit_checks",
+      "passed": true
+    },
+    {
+      "name": "appcast",
+      "passed": true
+    },
+    {
+      "name": "version",
+      "passed": true
+    },
+    {
+      "name": "signature",
+      "passed": true
+    },
+    {
+      "name": "uninstall",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

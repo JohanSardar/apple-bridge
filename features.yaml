@@ -27,7 +27,7 @@ requirements:
   R-CON: Contacts read and basic create/update/delete
   R-NOTES: Notes read and demonstrated plain-text writes; unsupported rich edits reject
   R-USAGE: Screen Time per app, per device, per day estimates, read-only
-  R-PKG: Signed app with onboarding and background service; notarization optional, not required
+  R-PKG: Developer ID signed and notarized app, signed updates, onboarding, background service and clean uninstall
   R-AGENT: A remote agent can do real tasks through MCP only
   R-WEB-UI: A web app mirrors Apple's apps per design/web specs, light and dark, phone and desktop, latest two Safari, Chrome/Edge and Firefox
   R-WEB-FAST: Interaction under 8 ms, 120 fps scrolling of 100k-message threads, Mac-to-browser p95 under 500 ms, warm load under 1 s
@@ -486,6 +486,18 @@ features:
     scenarios:
       - {id: PKG-INSTALL, levels: [real]}
       - {id: PKG-BACKGROUND, levels: [real]}
+  - id: packaging.release
+    title: Notarized DMG, signed Sparkle updates, login and TestFlight pipeline
+    requirements: [R-PKG, R-SECURE]
+    milestone: M5
+    modules: [packaging/release]
+    depends_on: [packaging.app]
+    status: limited
+    scenarios:
+      - {id: R1-RELEASE-SIM, levels: [sim]}
+      - {id: R1-DMG-REAL, levels: [real]}
+    limits:
+      - {scenario: R1-DMG-REAL, level: real, reason: 'Pro has no Developer ID Application certificate; noninteractive key generation fails with errSecAuthFailed (-25293) in both CLI and GUI sessions. Notarization, Gatekeeper, previous-version Sparkle update and fresh-account uninstall remain unproved. No ASC app record or Apple Bridge App Store distribution profiles are available for TestFlight. macOS protected permission-list entries require removal in System Settings.'}
   - id: agent.suite
     title: Full MCP agent suite graded by Truth
     requirements: [R-AGENT, R-API]
