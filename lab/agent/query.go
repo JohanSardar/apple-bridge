@@ -45,7 +45,7 @@ func Query(ctx context.Context, level string, asJSON bool) error {
 		if err != nil {
 			return err
 		}
-		private := filepath.Join(w.Dir, "agent-private")
+		private := filepath.Join("lab/evidence/private", contracts.NewID("query"))
 		runner := AgentRunner{Driver: driver, Private: private}
 		prompt := `Use only apple_bridge MCP tools. What is the driving ETA and distance from San Francisco Ferry Building (latitude 37.7955, longitude -122.3937) to Coit Tower (latitude 37.8024, longitude -122.4058)? Call maps_eta with from/to lat/lon points and mode driving. This is a synthetic provider, not live traffic. Cite maps.eta and report the returned duration in milliseconds and distance in meters, preserving the numeric values and units.`
 		out, runErr = runner.execute(ctx, w, Task{ID: "QUERY-AGENT", Scope: "maps:read"}, 1, prompt, []string{"maps_eta"})
