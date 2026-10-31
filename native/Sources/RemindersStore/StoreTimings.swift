@@ -83,7 +83,9 @@ extension RemindersStoreProfile {
         func timings(_ values: [StoreTimings]) -> JSON {
             .object(["connection_open": summarize(values.map(\.openMS)), "backup": summarize(values.map(\.backupMS)), "query": summarize(values.map(\.queryMS)), "decode": summarize(values.map(\.decodeMS)), "total": summarize(values.map(\.totalMS))])
         }
-        return .object(["mode": .string("persistent_typed"), "cold": cold.json, "warm_full": timings(full), "warm_incremental_unchanged": timings(incremental), "iterations": .number(Double(iterations)), "profile_total_ms": .number((ProcessInfo.processInfo.systemUptime - start) * 1000)])
+        var result = try await changedCopy(paths: paths).object
+        for (key, value) in ["mode": JSON.string("persistent_typed"), "cold": cold.json, "warm_full": timings(full), "warm_incremental_unchanged": timings(incremental), "iterations": .number(Double(iterations)), "profile_total_ms": .number((ProcessInfo.processInfo.systemUptime - start) * 1000)] { result[key] = value }
+        return .object(result)
     }
 }
 #endif

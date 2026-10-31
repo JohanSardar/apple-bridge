@@ -49,6 +49,12 @@ enum StorePerformanceChecks {
         var reportFields: [String: JSON] = ["mode": .string("synthetic_1000_typed"), "cold": cold.timings.json, "warm_full": timings(full), "warm_incremental_unchanged": timings(unchanged), "iterations": .integer(200), "change_sized_history_proven": .bool(true)]
         for size in [1, 10, 100, 1000] { reportFields["warm_incremental_changed_\(size)"] = timings(batches[size]!) }
         let result = JSON.object(reportFields)
+        let beforeCopy = try await RemindersStoreSession(path: path).read(full: true)
+        let copied = try await RemindersStoreProfile.changedCopy(paths: [path, path])
+        precondition(copied["private_native_copy"].bool && copied["change_sized_history_proven"].bool && copied["source_stores"].number == 2)
+        for size in [1, 10, 100, 1000] { precondition(copied["warm_incremental_changed_\(size)"]["total"]["samples"].number == 200) }
+        let afterCopy = try await RemindersStoreSession(path: path).read(full: true)
+        precondition(beforeCopy.snapshot == afterCopy.snapshot)
         try JSONEncoder().encode(result).write(to: URL(fileURLWithPath: report), options: .atomic)
     }
 }

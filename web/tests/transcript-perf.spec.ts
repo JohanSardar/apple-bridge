@@ -24,7 +24,7 @@ test('WEB-MSG-PERF WEB-MSG-PERF-FRAME a 100k-message transcript fling records bo
     await expect(transcript).toHaveAttribute('aria-busy','false');await expect.poll(async()=>Number(await transcript.getAttribute('data-window-size'))).toBeGreaterThanOrEqual(200);
     expect(population).toBe(100000);page.off('websocket',observe);releases.forEach(release=>release());
     await expect(page.locator('.transcript')).toHaveCSS('transform','none');await page.waitForTimeout(300);await installProbe(page,true,page.context().browser()?.browserType().name()!=='chromium');
-    const stageProfile=Boolean(process.env.AB_WEB_STAGE_PROFILE);
+    const stageProfile=process.env.AB_WEB_STAGE_PROFILE==='1'||process.env.AB_WEB_STAGE_PROFILE==='fling';
     if(stageProfile)await page.evaluate(()=>{(window as any).__abWork={phase:'fling',samples:[]};});
     const tracing=await startTrace(page),profileCPU=Boolean(process.env.AB_WEB_CPU_PROFILE&&tracing);
     if(profileCPU){await tracing!.send('Profiler.enable');await tracing!.send('Profiler.start');}

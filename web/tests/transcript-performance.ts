@@ -40,7 +40,7 @@ export async function transcriptInputs(page:Page,info:TestInfo,label:string,acti
         },true);
         window.addEventListener('click',event=>{if(event.isTrusted&&(event.target as Element).closest('.conversation-row,.composer-send,.tapback-picker button,.media-open'))probe.actions.at(-1).processed=performance.now();});
         probe.phase='scroll';probe.scrollStart=performance.now();
-    },{label,stageProfile:Boolean(process.env.AB_WEB_STAGE_PROFILE)});
+    },{label,stageProfile:process.env.AB_WEB_STAGE_PROFILE==='1'||process.env.AB_WEB_STAGE_PROFILE===label});
     const session=await startTrace(page),profileCPU=Boolean(process.env.AB_WEB_CPU_PROFILE&&session);
     if(profileCPU){await session!.send('Profiler.enable');await session!.send('Profiler.start');}
     const sampling=page.evaluate(async()=>{

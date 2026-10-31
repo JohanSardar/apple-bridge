@@ -82,14 +82,14 @@ func runRemindersStorePerf(ctx context.Context, s Scenario, level string) Eviden
 		add(mode+"_200_samples_within_budget", components["total"].Samples == 200 && components["total"].P95 < budget)
 	}
 	add("full_and_incremental_measured", e.Latency["warm_full"].Samples == 200 && e.Latency["warm_incremental_unchanged"].Samples == 200)
-	if level == "sim" {
-		complete := true
-		for _, mode := range []string{"warm_incremental_changed_1", "warm_incremental_changed_10", "warm_incremental_changed_100", "warm_incremental_changed_1000"} {
-			complete = complete && e.Latency[mode].Samples == 200
-		}
-		add("changed_history_measured", complete)
+	complete := true
+	for _, mode := range []string{"warm_incremental_changed_1", "warm_incremental_changed_10", "warm_incremental_changed_100", "warm_incremental_changed_1000"} {
+		complete = complete && e.Latency[mode].Samples == 200
 	}
+	add("changed_history_measured", complete)
 	if level == "real" {
+		var privateCopy, proven bool
+		add("changed_reads_use_private_native_copy", json.Unmarshal(profile["private_native_copy"], &privateCopy) == nil && privateCopy && json.Unmarshal(profile["change_sized_history_proven"], &proven) == nil && proven)
 		var responsiveness struct {
 			MainQueue struct {
 				Under16 bool     `json:"under_16_ms"`
