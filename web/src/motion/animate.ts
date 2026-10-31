@@ -27,11 +27,12 @@ export function crossfade(element: Element, entering = true) {
 }
 export function enterPane(element: HTMLElement, phone: boolean, direction: number, width: number) {
     if (reducedMotion()) {
+        element.style.transform = ''; element.style.opacity = '';
         const animation = crossfade(element);
         return () => animation.cancel();
     }
     const distance = phone ? width * direction : 8;
-    element.style.transform = ''; element.style.opacity = '';
+    element.style.transform = phone ? 'translateX(0px)' : 'translateY(0px)'; element.style.opacity = '';
     const frames: Keyframe[] = [];
     for (let index = 0; index <= 240; index++) {
         const state = sampleSpring(distance, 0, 0, index / 120, { response: .35, damping: 1 });
@@ -41,11 +42,18 @@ export function enterPane(element: HTMLElement, phone: boolean, direction: numbe
         if (settled) break;
     }
     const animation = element.animate(frames, { duration: (frames.length - 1) / 120 * 1000, easing: 'linear' });
+    let active = true;
+    const clear = () => { if (active) { active = false; element.style.transform = ''; element.style.opacity = ''; } };
+    void animation.finished.then(clear, () => {});
     return () => {
+        if (!active) return;
         if (animation.playState === 'running' || animation.playState === 'paused') {
             const style = getComputedStyle(element);
             element.style.transform = style.transform; element.style.opacity = style.opacity;
+        } else {
+            element.style.transform = ''; element.style.opacity = '';
         }
+        active = false;
         animation.cancel();
     };
 }
