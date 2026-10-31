@@ -24,10 +24,10 @@ enum PhotosRealProof {
         guard AXIsProcessTrusted() else {
             return .object(["grant_passed": .bool(true), "failure": .string("Photos cleanup needs Helper Accessibility access. Enable it in System Settings before retrying.")])
         }
-        for bundle in ["com.apple.Photos", "com.apple.systemevents"] {
+        for bundle in ["com.apple.systemevents"] {
             let target = NSAppleEventDescriptor(bundleIdentifier: bundle)
             guard AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false) == noErr else {
-                return .object(["grant_passed": .bool(true), "failure": .string("Photos cleanup needs Helper Automation access to Photos and System Events. Enable it in System Settings before retrying.")])
+                return .object(["grant_passed": .bool(true), "failure": .string("Photos cleanup needs Helper Automation access to System Events. Enable it in System Settings before retrying.")])
             }
         }
         func script(_ body: String) throws -> NSAppleEventDescriptor {
@@ -37,8 +37,22 @@ enum PhotosRealProof {
             guard error == nil else { throw SourceFailure.unavailable }
             return result
         }
-        func quoted(_ value: String) -> String {
-            "\"" + value.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") + "\""
+        let filename = title + ".png"
+        await source.setImportFilenameForProof(filename)
+        func attribute(_ element: AXUIElement, _ key: String) -> CFTypeRef? {
+            var value: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(element, key as CFString, &value) == .success else { return nil }
+            return value
+        }
+        func displaysFilename(_ root: AXUIElement) -> Bool {
+            var budget = 4000
+            func matches(_ node: AXUIElement, _ depth: Int) -> Bool {
+                budget -= 1
+                guard budget > 0, depth < 25 else { return false }
+                if [kAXTitleAttribute, kAXValueAttribute, kAXDescriptionAttribute].contains(where: { (attribute(node, $0) as? String ?? "").contains(filename) }) { return true }
+                return (attribute(node, kAXChildrenAttribute) as? [AXUIElement] ?? []).contains { matches($0, depth + 1) }
+            }
+            return matches(root, 0)
         }
         func cleanup() async throws {
             let options = PHFetchOptions()
@@ -52,33 +66,40 @@ enum PhotosRealProof {
             guard assetIDs.count <= 1, Set(assetIDs).isSubset(of: owned) else { throw SourceFailure.conflict }
             for assetID in owned {
                 guard PHAsset.fetchAssets(withLocalIdentifiers: [assetID], options: nil).count != 0 else { continue }
-                let identity = quoted(assetID)
+                guard let asset = PHAsset.fetchAssets(withLocalIdentifiers: [assetID], options: nil).firstObject,
+                      PHAssetResource.assetResources(for: asset).contains(where: { $0.originalFilename == filename }) else { throw SourceFailure.conflict }
+                var link = URLComponents()
+                link.scheme = "photos"
+                link.host = "asset"
+                link.queryItems = [URLQueryItem(name: "identifier", value: assetID)]
+                guard let url = link.url, NSWorkspace.shared.open(url) else { throw SourceFailure.unavailable }
+                try await Task.sleep(for: .seconds(1))
+                guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.Photos").first,
+                      app.activate() else { throw SourceFailure.unavailable }
+                let root = AXUIElementCreateApplication(app.processIdentifier)
                 _ = try script("""
-                tell application "Photos"
-                    activate
-                    set targetPhoto to media item id \(identity)
-                    spotlight targetPhoto
+                tell application "System Events" to tell process "Photos"
+                    if frontmost is false then error "Photos must be in front for cleanup."
+                    if (count windows) is not 1 then error "Close other Photos windows before retrying."
+                    if (count sheets of window 1) is not 0 then error "Close the Photos dialog before retrying."
+                    keystroke "i" using command down
                 end tell
                 """)
-                var selected = false
+                var identified = false
                 for _ in 0..<40 {
-                    selected = try script("""
-                    tell application "Photos"
-                        set chosen to selection
-                        if (count chosen) is not 1 then return false
-                        return (id of item 1 of chosen) is \(identity)
-                    end tell
-                    """).booleanValue
-                    if selected { break }
+                    identified = displaysFilename(root)
+                    if identified { break }
                     try await Task.sleep(for: .milliseconds(150))
                 }
-                guard selected else { throw SourceFailure.conflict }
+                guard identified else { throw SourceFailure.conflict }
                 _ = try script("""
-                tell application "Photos"
-                    set chosen to selection
-                    if (count chosen) is not 1 then error "Photos cleanup selection changed."
-                    if (id of item 1 of chosen) is not \(identity) then error "Photos cleanup selection changed."
+                tell application "System Events" to tell process "Photos"
+                    if frontmost is false then error "Photos must be in front for cleanup."
+                    keystroke "i" using command down
                 end tell
+                """)
+                try await Task.sleep(for: .milliseconds(200))
+                _ = try script("""
                 tell application "System Events" to tell process "Photos"
                     if frontmost is false then error "Photos must be in front for cleanup."
                     if (count windows) is not 1 then error "Close other Photos windows before retrying."
@@ -92,14 +113,10 @@ enum PhotosRealProof {
                 }
                 guard PHAsset.fetchAssets(withLocalIdentifiers: [assetID], options: nil).count == 0 else { throw SourceFailure.unavailable }
             }
-            _ = try script("""
-            tell application "Photos"
-                set targetAlbum to album id \(quoted(album.localIdentifier))
-                if name of targetAlbum is not \(quoted(title)) then error "Photos cleanup album changed."
-                if (count media items of targetAlbum) is not 0 then error "Photos cleanup album is not empty."
-                delete targetAlbum
-            end tell
-            """)
+            guard PHAsset.fetchAssets(in: album, options: nil).count == 0 else { throw SourceFailure.conflict }
+            try PHPhotoLibrary.shared().performChangesAndWait {
+                PHAssetCollectionChangeRequest.deleteAssetCollections([album] as NSArray)
+            }
             for _ in 0..<40 {
                 if PHAssetCollection.fetchAssetCollections(withLocalIdentifiers: [album.localIdentifier], options: nil).count == 0 { return }
                 try await Task.sleep(for: .milliseconds(150))

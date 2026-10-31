@@ -143,7 +143,13 @@ extension PhotosSource {
             case "photos.import":
                 let request = PHAssetCreationRequest.forAsset()
                 if let temporary { request.addResource(with: .video, fileURL: temporary, options: nil) }
-                else { request.addResource(with: .photo, data: Data(base64Encoded: args["data"].string)!, options: nil) }
+                else {
+                    let options = PHAssetResourceCreationOptions()
+                    #if LAB
+                    options.originalFilename = proofImportFilename
+                    #endif
+                    request.addResource(with: .photo, data: Data(base64Encoded: args["data"].string)!, options: options)
+                }
                 guard let placeholder = request.placeholderForCreatedAsset else { return }
                 key = placeholder.localIdentifier
                 if let album { PHAssetCollectionChangeRequest(for: album)?.addAssets([placeholder] as NSArray) }
