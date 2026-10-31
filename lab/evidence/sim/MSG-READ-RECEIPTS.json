@@ -1,17 +1,17 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[52.09 71.48 67.94] cpu_idle=1% cpus=10 other_heavy=0"
+    "summary": "air: load=[48.3 45.08 29.58] cpu_idle=1% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M64YWR05Z7P3TMZX8Z2SCF57",
+  "run_id": "run_01M69Z8C3V0EJXF9XEYSNSMSN3",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MSG-READ-RECEIPTS",
   "level": "sim",
   "passed": true,
-  "git_sha": "",
-  "at": "2026-10-29T23:11:03.177042Z",
+  "git_sha": "bd7d670a738a84d1eca9d30edaeea32315329b62",
+  "at": "2026-10-31T21:53:36.379351Z",
   "assertions": [
     {
       "name": "seed",
