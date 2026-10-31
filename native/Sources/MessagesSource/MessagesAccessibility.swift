@@ -280,7 +280,7 @@ enum MessagesAccessibility {
         var budget = 4000
         let recipients = matching(root, budget: &budget) { value($0, kAXRoleAttribute) == kAXPopUpButtonRole }
         let descriptions = recipients.map { value($0, kAXDescriptionAttribute) }.joined(separator: ",").lowercased()
-        guard handles.allSatisfy({ handle in
+        guard recipients.count == handles.count, handles.allSatisfy({ handle in
             if handle.contains("@") { return descriptions.contains(handle.lowercased()) }
             return descriptions.filter(\.isNumber).contains(handle.filter(\.isNumber))
         }) else { throw MessagesUIFailure.recipientMismatch }

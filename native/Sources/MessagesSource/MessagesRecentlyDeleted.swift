@@ -1,9 +1,64 @@
 import Foundation
 import AppKit
 import ApplicationServices
+import Decoders
 import SourceSupport
 
 extension MessagesParity {
+    static func prepareDeleted(_ command: JSON, path: String) async throws -> Prepared {
+        let reader = try MessagesReader(path: path), chat = command["action"]["native_key"].string
+        guard try reader.recoverableChat(chat), let row = try reader.query("SELECT ROWID AS position,* FROM chat WHERE guid=?", [chat]).first else { throw SourceFailure.conflict }
+        let members = try deletedMembers(chat, reader: reader)
+        guard let guid = members.last, let message = try reader.message(guid), let observation = try reader.messageObservations(message).first else { throw SourceFailure.conflict }
+        let target = try JSONDecoder().decode(JSON.self, from: JSONSerialization.data(withJSONObject: observation.2))
+        let peers = try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [chat]).map { MessagesProbes.normalize($0["id"]) }
+        let own = Set(try MessagesProbes.discoverSelfHandles().handles)
+        guard peers.count == 1, own.contains(peers[0]) else { throw SourceFailure.invalid }
+        let interactive = try CommandOrigin(command) == .interactive
+        if !interactive {
+            guard let range = target["text"].string.range(of: #"\[ab-test ([A-Za-z0-9_-]+)\]"#, options: .regularExpression) else { throw SourceFailure.invalid }
+            let tag = String(target["text"].string[range]), run = String(tag.dropFirst(9).dropLast())
+            let ledger = try JSONDecoder().decode(JSON.self, from: Data(contentsOf: PrivateReport.directory.appendingPathComponent("messages-command-cleanup/" + run + ".json")))
+            guard ledger["run_id"].string == run, ledger["created_by_run"].bool, ledger["created_chat_key"].string == chat,
+                  row.integer("position") > Int64(ledger["baseline_max_chat_row_id"].number) else { throw SourceFailure.invalid }
+            for member in members {
+                guard let message = try reader.message(member), message.integer("row_position") > Int64(ledger["baseline_max_row_id"].number), let decoded = try reader.messageObservations(message).first,
+                      (decoded.2["text"] as? String)?.contains(tag) == true else { throw SourceFailure.invalid }
+            }
+        }
+        let candidates = try reader.query("SELECT DISTINCT c.guid,h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id JOIN chat_recoverable_message_join r ON r.chat_id=c.ROWID WHERE c.guid<>?", [chat])
+        guard !candidates.contains(where: { peers.contains(MessagesProbes.normalize($0["id"])) }) else { throw SourceFailure.capabilityUnproven }
+        let prepared = Prepared(nativeState: .object(["deleted_target": .bool(true), "target": target, "handles": .array(peers.map(JSON.string)), "members": .array(members.map(JSON.string)), "service": .string(row["service_name"]), "properties_digest": .string(BodyDigest.hash(row.blobs["properties"] ?? Data()))]), fingerprint: command["request_hash"].string, action: command["action"])
+        try await validate(prepared)
+        return prepared
+    }
+    @UIActor
+    static func validate(_ prepared: Prepared) throws {
+        if prepared.nativeState["deleted_target"].bool { _ = try openDeleted(prepared) }
+        else { try MessagesAccessibility.validate(prepared) }
+    }
+    static func dispatchDeleted(_ prepared: Prepared, path: String) async throws -> JSON {
+        let reader = try MessagesReader(path: path), chat = prepared.action["native_key"].string
+        guard try reader.recoverableChat(chat), JSON.array(try deletedMembers(chat, reader: reader).map(JSON.string)) == prepared.nativeState["members"],
+              let row = try reader.query("SELECT properties FROM chat WHERE guid=?", [chat]).first,
+              BodyDigest.hash(row.blobs["properties"] ?? Data()) == prepared.nativeState["properties_digest"].string else { throw SourceFailure.conflict }
+        let peers = try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [chat]).map { MessagesProbes.normalize($0["id"]) }
+        guard JSON.array(peers.map(JSON.string)) == prepared.nativeState["handles"] else { throw SourceFailure.conflict }
+        let permanently = prepared.action["op"].string == "messages.delete_chat_permanently"
+        try await deletedAction(prepared, permanently: permanently)
+        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+        repeat {
+            let observed: Bool
+            if permanently { observed = try reader.query("SELECT 1 FROM chat WHERE guid=?", [chat]).isEmpty }
+            else {
+                let active = try reader.query("SELECT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? ORDER BY m.guid", [chat]).map { $0["guid"] }
+                observed = try !reader.recoverableChat(chat) && deletedMembers(chat, reader: reader).isEmpty && JSON.array(active.map(JSON.string)) == prepared.nativeState["members"]
+            }
+            if observed { return .object(["source": .string("messages"), "collection": .string("messages.chat"), "native_key": .string(chat), "observed": .bool(true), "absent": .bool(permanently), "disposition": .string("locally_observed")]) }
+            try await Task.sleep(for: .milliseconds(50))
+        } while ContinuousClock.now < deadline
+        return .object(["source": .string("messages"), "observed": .bool(false), "disposition": .string("indeterminate"), "reason": .string("recently_deleted_change_not_observed")])
+    }
     static func deletedMembers(_ chat: String, reader: MessagesReader) throws -> [String] {
         try reader.query("SELECT m.guid FROM message m JOIN chat_recoverable_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? ORDER BY m.guid", [chat]).map { $0["guid"] }
     }

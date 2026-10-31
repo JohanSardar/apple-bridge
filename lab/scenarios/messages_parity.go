@@ -10,11 +10,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
 func runMessagesParity(ctx context.Context, s Scenario, level string) Evidence {
-	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, At: time.Now().UTC(), Hosts: []string{"air"}}
+	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
+	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Hosts: []string{"air"}}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	if level == "real" {
 		return runMessagesParityProof(ctx, s, e)
@@ -144,7 +146,7 @@ func runMessagesParityProof(ctx context.Context, s Scenario, e Evidence) Evidenc
 			return e
 		}
 	}
-	data, _ := bridgeruntime.MessagesParitySelfTest(ctx, app, true, true)
+	data, _ := bridgeruntime.MessagesParitySelfTest(ctx, app, os.Getenv("APPLE_BRIDGE_PARITY_FORCE") == "1", true)
 	var report struct {
 		OSBuild          string `json:"os_build"`
 		Cleanup          string `json:"cleanup_state"`
@@ -170,7 +172,7 @@ func runMessagesParityProof(ctx context.Context, s Scenario, e Evidence) Evidenc
 		e.Metrics["after_count"] = report.After
 		e.Metrics["baseline_preserved"] = report.Preserved
 	}
-	e.Passed = report.Cleanup == "verified_clean" && report.Preserved
+	e.Passed = report.Cleanup == "verified_clean" && report.BaselineCaptured && report.Preserved
 	e.Assertions = append(e.Assertions, Assertion{Name: "run_only_cleanup", Passed: report.Cleanup == "verified_clean" || report.Cleanup == "not_needed"})
 	for _, op := range want {
 		found := false

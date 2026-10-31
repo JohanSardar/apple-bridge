@@ -14,8 +14,12 @@ public enum MessagesParity {
         return failure.domain + ":" + String(failure.code)
     }
     public static var reportURL: URL { PrivateReport.directory.appendingPathComponent("messages-parity-selftest.json") }
+    public static let buildDigest: String = {
+        guard let executable = Bundle.main.executableURL, let bytes = try? Data(contentsOf: executable, options: .mappedIfSafe) else { return "" }
+        return BodyDigest.hash(bytes)
+    }()
     public static func report() -> JSON {
-        guard let data = try? Data(contentsOf: reportURL), let value = try? JSONDecoder().decode(JSON.self, from: data), value["os_build"].string == ProcessInfo.processInfo.operatingSystemVersionString else { return .null }
+        guard let data = try? Data(contentsOf: reportURL), let value = try? JSONDecoder().decode(JSON.self, from: data), value["os_build"].string == ProcessInfo.processInfo.operatingSystemVersionString, !buildDigest.isEmpty, value["helper_digest"].string == buildDigest else { return .null }
         return value
     }
     public static func coverage() -> [JSON] {
@@ -23,7 +27,7 @@ public enum MessagesParity {
         let steps = ledger["steps"].array
         return operations.map { operation in
             let step = steps.first { $0["operation"].string == operation }
-            return .object(["operation": .string(operation), "proven": .bool(["messages.pin", "messages.mute", "messages.set_read_receipts"].contains(operation) && step?["proven"].bool == true && ledger["cleanup_state"].string == "verified_clean" && ledger["baseline_preserved"].bool && ["iMessage", "SMS", "RCS"].contains(step?["service"].string ?? "")), "reason": .string(step?["reason"].string ?? "parity_selftest_required")])
+            return .object(["operation": .string(operation), "proven": .bool(step?["proven"].bool == true && ledger["cleanup_state"].string == "verified_clean" && ledger["baseline_preserved"].bool && ["iMessage", "SMS", "RCS"].contains(step?["service"].string ?? "")), "reason": .string(step?["reason"].string ?? "parity_selftest_required")])
         }
     }
     static func properties(_ chat: String) throws -> [String: Any] {
@@ -94,10 +98,10 @@ public enum MessagesParity {
             while try MessagesPins.read() != before, Date() < restoreDeadline { RunLoop.current.run(until: Date().addingTimeInterval(0.1)) }
             guard try MessagesPins.read() == before else { throw SourceFailure.conflict }
             changed = false
-            return .object(["operation": .string("messages.pin"), "proven": .bool(true), "reason": .string("native_pin_order_roundtrip"), "service": prepared.nativeState["service"]])
+            return .object(["operation": .string("messages.pin"), "proven": .bool(true), "restored": .bool(true), "reason": .string("native_pin_order_roundtrip"), "service": prepared.nativeState["service"]])
         } catch {
             if changed { try? pin(prepared, value: false) }
-            return .object(["operation": .string("messages.pin"), "proven": .bool(false), "reason": .string("pin_roundtrip_" + failureReason(error))])
+            return .object(["operation": .string("messages.pin"), "proven": .bool(false), "restored": .bool(!changed || (try? MessagesPins.read()) == before), "reason": .string("pin_roundtrip_" + failureReason(error))])
         }
     }
     @UIActor
@@ -120,7 +124,7 @@ public enum MessagesParity {
     static func proveMute(_ prepared: Prepared, titles: Set<String>) -> JSON {
         let operation = "messages.mute"
         let current = titles.contains("Show Alerts")
-        guard titles.contains("Hide Alerts") != current else { return .object(["operation": .string(operation), "proven": .bool(false), "reason": .string("conversation_menu_target_unavailable")]) }
+        guard titles.contains("Hide Alerts") != current else { return .object(["operation": .string(operation), "proven": .bool(false), "restored": .bool(true), "reason": .string("conversation_menu_target_unavailable")]) }
         var changed = false
         do {
             let before = try properties(prepared.action["native_key"].string)
@@ -135,10 +139,10 @@ public enum MessagesParity {
                 return before[key] == nil || (before[key] as? NSNumber)?.boolValue == reset.boolValue
             }
             guard keys.count == 1, let key = keys.first, let active = toggled[key] as? NSNumber else { throw SourceFailure.capabilityUnproven }
-            return .object(["operation": .string(operation), "proven": .bool(true), "reason": .string("native_menu_and_properties_roundtrip"), "property": .string(key), "muted_value": .bool(current ? !active.boolValue : active.boolValue), "service": prepared.nativeState["service"], "missing_is_unmuted": .bool(before[key] == nil && !current)])
+            return .object(["operation": .string(operation), "proven": .bool(true), "restored": .bool(true), "reason": .string("native_menu_and_properties_roundtrip"), "property": .string(key), "muted_value": .bool(current ? !active.boolValue : active.boolValue), "service": prepared.nativeState["service"], "missing_is_unmuted": .bool(before[key] == nil && !current)])
         } catch {
-            if changed { try? mute(prepared, value: current) }
-            return .object(["operation": .string(operation), "proven": .bool(false), "reason": .string("mute_roundtrip_" + failureReason(error))])
+            if changed { do { try mute(prepared, value: current); changed = false } catch {} }
+            return .object(["operation": .string(operation), "proven": .bool(false), "restored": .bool(!changed), "reason": .string("mute_roundtrip_" + failureReason(error))])
         }
     }
     @UIActor
@@ -185,6 +189,7 @@ extension MessagesParity {
     static func prepare(_ command: JSON, path: String) async throws -> Prepared {
         let operation = command["action"]["op"].string
         guard coverage().contains(where: { $0["operation"].string == operation && $0["proven"].bool }) else { throw SourceFailure.capabilityUnproven }
+        if ["messages.recover_chat", "messages.delete_chat_permanently"].contains(operation) { return try await prepareDeleted(command, path: path) }
         let args = command["action"]["messages"]
         switch operation {
         case "messages.mute": guard case .bool = args["muted"] else { throw SourceFailure.invalid }
@@ -230,6 +235,7 @@ extension MessagesParity {
     static func dispatch(_ prepared: Prepared, path: String) async throws -> JSON {
         let operation = prepared.action["op"].string
         guard coverage().contains(where: { $0["operation"].string == operation && $0["proven"].bool }) else { throw SourceFailure.capabilityUnproven }
+        if prepared.nativeState["deleted_target"].bool { return try await dispatchDeleted(prepared, path: path) }
         let reader = try MessagesReader(path: path), chat = prepared.action["native_key"].string
         guard let row = try reader.query("SELECT properties,service_name FROM chat WHERE guid=?", [chat]).first, row["service_name"] == prepared.nativeState["service"].string, BodyDigest.hash(row.blobs["properties"] ?? Data()) == prepared.nativeState["properties_digest"].string else { throw SourceFailure.conflict }
         let messages = try reader.query("SELECT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=m.ROWID) ORDER BY m.ROWID DESC", [chat])

@@ -292,6 +292,7 @@ public actor MessagesCommands {
         return .object(["source": .string("messages"), "observed": .bool(false), "disposition": .string("indeterminate"), "reason": .string("conversation_effect_unproven"), "ui": ui])
     }
     public func validate(_ prepared: Prepared) async throws {
+        if MessagesParity.operations.contains(prepared.action["op"].string) { try await MessagesParity.validate(prepared); return }
         if !["messages.send", "messages.create_group"].contains(prepared.action["op"].string) {try await MessagesAccessibility.validate(prepared)}
     }
     private func dispatchAccessibility(_ prepared: Prepared) async throws -> JSON {

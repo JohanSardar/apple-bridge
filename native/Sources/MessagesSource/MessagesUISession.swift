@@ -3,7 +3,7 @@ import AppKit
 import ApplicationServices
 import SourceSupport
 
-public enum MessagesUIInput: Sendable {
+public enum MessagesUIInput: Sendable, Equatable {
     case click(CGPoint), controlClick(CGPoint, dismissFirst: Bool), keys([Int], command: Bool), replaceText(String), clearText
     var script: String {
         switch self {

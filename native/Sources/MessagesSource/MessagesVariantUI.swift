@@ -46,10 +46,6 @@ enum MessagesVariantUI {
         try press(try unique(find(application,role:kAXMenuItemRole,name:title),failure:.formatMenuUnavailable))
     }
     static func send(_ args: JSON, target: String, targetData: JSON = .null, expiresAt: Date = Date().addingTimeInterval(30)) throws {
-        for bundle in ["com.apple.MobileSMS"] {
-            let target=NSAppleEventDescriptor(bundleIdentifier:bundle)
-            guard AEDeterminePermissionToAutomateTarget(target.aeDesc,AEEventClass(kAECoreSuite),AEEventID(kAEGetData),false)==noErr else { throw SendVariantFailure.automationDenied }
-        }
         let variant=args["variant"],kind=variant["kind"].string
         if kind=="audio" {
             guard AVCaptureDevice.authorizationStatus(for:.audio) == .authorized else { throw SendVariantFailure.audioConsentPending }

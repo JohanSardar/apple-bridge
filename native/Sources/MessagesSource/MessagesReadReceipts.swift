@@ -58,10 +58,14 @@ extension MessagesParity {
             try dismiss(restoredSession)
             guard restored == current else { throw SourceFailure.conflict }
             original = nil
-            return .object(["operation": .string("messages.set_read_receipts"), "proven": .bool(true), "reason": .string("native_checkbox_and_properties_roundtrip"), "service": prepared.nativeState["service"]])
+            return .object(["operation": .string("messages.set_read_receipts"), "proven": .bool(true), "restored": .bool(true), "reason": .string("native_checkbox_and_properties_roundtrip"), "service": prepared.nativeState["service"]])
         } catch {
-            if let original { try? receipts(prepared, value: original) }
-            return .object(["operation": .string("messages.set_read_receipts"), "proven": .bool(false), "reason": .string("receipt_roundtrip_" + failureReason(error))])
+            var restored = original == nil
+            if let original {
+                try? receipts(prepared, value: original)
+                if let (session, _, current) = try? receiptControl(prepared) { restored = current == original; try? dismiss(session) }
+            }
+            return .object(["operation": .string("messages.set_read_receipts"), "proven": .bool(false), "restored": .bool(restored), "reason": .string("receipt_roundtrip_" + failureReason(error))])
         }
     }
 }

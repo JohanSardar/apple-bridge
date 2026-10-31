@@ -15,10 +15,6 @@ public enum MessagesVariantProof {
         let session = CGSessionCopyCurrentDictionary() as? [String: Any]
         guard session?["CGSSessionScreenIsLocked"] as? Bool != true else { return limited("needs unlocked Mac") }
         await MessagesUISession.activate()
-        for bundle in ["com.apple.MobileSMS"] {
-            let target = NSAppleEventDescriptor(bundleIdentifier: bundle)
-            guard AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false) == noErr else { return limited("Allow the Helper to automate Messages in System Settings, then retry.") }
-        }
         let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/chat.db").path
         let reader = try MessagesReader(path: path)
         let own = Set(try MessagesProbes.discoverSelfHandles().handles.map(MessagesProbes.normalize))
@@ -38,6 +34,20 @@ public enum MessagesVariantProof {
         var reason = ""
         var preparedVariant: Prepared?
         var lateEffectPossible = false
+        var echoVerified = false
+        let creations = URL(fileURLWithPath: ledger.path + ".creations.json")
+        @Sendable func captureCreatedIDs() throws {
+            let reader = try MessagesReader(path: path)
+            let ids = try reader.query("SELECT guid FROM message WHERE ROWID>? AND (instr(text,?)>0 OR instr(attributedBody,CAST(? AS BLOB))>0)", [String(baseline), tag, tag]).map { $0["guid"] }
+            try PrivateReport.write(["run_id": run, "ids": ids], to: creations)
+        }
+        let captureTask = Task.detached {
+            while !Task.isCancelled {
+                try? captureCreatedIDs()
+                do { try await Task.sleep(for: .milliseconds(100)) } catch { break }
+            }
+        }
+        defer { captureTask.cancel() }
         func capture() throws {
             let rows = try reader.query("SELECT guid FROM message WHERE ROWID>? AND (instr(text,?)>0 OR instr(attributedBody,CAST(? AS BLOB))>0)", [String(baseline), tag, tag])
             registration["created_message_ids"] = rows.map { $0["guid"] }
@@ -48,10 +58,8 @@ public enum MessagesVariantProof {
             return try await commands.prepare(.object(["command_id": .string(UUID().uuidString), "principal": .string("selftest"), "request_hash": .string(UUID().uuidString), "expires_at": .string(timestamp(Date().addingTimeInterval(30))), "action": action]))
         }
         do {
-            let seed = try await prepare(tag + " fixture")
-            try await commands.validate(seed)
             writes += 1
-            let initial = try await commands.dispatch(seed)
+            let initial = try await MessagesParityFixture.send(text: tag + " fixture", handle: MessagesProbes.normalize(selectedChat["id"]), chat: chat)
             lateEffectPossible = initial["disposition"].string == "indeterminate"
             try capture()
             guard initial["observed"].bool else { throw SourceFailure.capabilityUnproven }
@@ -64,15 +72,34 @@ public enum MessagesVariantProof {
             outcome = try await commands.dispatch(prepared)
             lateEffectPossible = lateEffectPossible || outcome["disposition"].string == "indeterminate"
             reason = outcome["reason"].string
+            if outcome["observed"].bool, outcome["disposition"].string == "locally_observed" {
+                let deadline = ContinuousClock.now.advanced(by: .seconds(10))
+                repeat {
+                    let echoes = try reader.query("SELECT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE m.ROWID>? AND m.is_from_me=0 AND c.guid=? AND (m.text=? OR instr(m.attributedBody,CAST(? AS BLOB))>0)", [String(baseline), chat, text, text])
+                    if echoes.count == 1, let row = try reader.message(echoes[0]["guid"]), let captured = try reader.messageObservations(row).first {
+                        let data = try JSONDecoder().decode(JSON.self, from: JSONSerialization.data(withJSONObject: captured.2))
+                        echoVerified = MessagesSendVariants.matchesEcho(prepared.action["messages"], data: data)
+                        if echoVerified { break }
+                    }
+                    try await Task.sleep(for: .milliseconds(100))
+                } while ContinuousClock.now < deadline
+                if !echoVerified { reason = "self_echo_variant_attributes_unverified" }
+            }
         } catch { reason = (error as? SendVariantFailure)?.rawValue ?? (error as? MessagesUIFailure)?.rawValue ?? (error is SourceFailure ? String(describing: error) : "native_variant_probe_failed") }
         try await Task.sleep(for: .seconds(1))
         var ownershipCaptured = false
         do { try capture(); ownershipCaptured = true } catch { reason = "created_ids_capture_failed" }
-        let cleaned = try await MessagesCleanup.run(["--tag", tag, "--owned-only", "--only-chat-id", selectedChat["chat_row_id"]])
-        let cleanup = try JSONDecoder().decode(JSON.self, from: cleaned)
+        var cleanup: JSON = .null
+        for _ in 0..<3 {
+            try capture()
+            try captureCreatedIDs()
+            let cleaned = try await MessagesCleanup.run(["--tag", tag, "--owned-only", "--only-chat-id", selectedChat["chat_row_id"]])
+            cleanup = try JSONDecoder().decode(JSON.self, from: cleaned)
+            try await Task.sleep(for: .milliseconds(500))
+        }
         let remaining = try reader.query("SELECT DISTINCT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE m.ROWID>? AND (instr(m.text,?)>0 OR instr(m.attributedBody,CAST(? AS BLOB))>0) AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=j.chat_id)", [String(baseline), tag, tag])
         let cleanupPassed = ownershipCaptured && cleanup["passed"].bool && remaining.isEmpty
-        let passed = cleanupPassed && outcome["observed"].bool && outcome["disposition"].string == "locally_observed"
+        let passed = cleanupPassed && !lateEffectPossible && echoVerified && outcome["observed"].bool && outcome["disposition"].string == "locally_observed"
         registration["late_effect_possible"] = lateEffectPossible
         registration["cleanup_state"] = cleanupPassed ? (lateEffectPossible ? "pending_reconciliation" : "verified_clean") : "pending_native_cleanup"
         try PrivateReport.write(registration, to: ledger)

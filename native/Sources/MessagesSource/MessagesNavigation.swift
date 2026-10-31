@@ -12,11 +12,10 @@ enum MessagesNavigation {
         return NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.MobileSMS").first
     }
     static func open(_ url: URL) throws {
-        guard let application else { throw MessagesUIFailure.navigationUnavailable }
-        let event = NSAppleEventDescriptor(eventClass: AEEventClass(kInternetEventClass), eventID: AEEventID(kAEGetURL), targetDescriptor: NSAppleEventDescriptor(processIdentifier: application.processIdentifier), returnID: AEReturnID(kAutoGenerateReturnID), transactionID: AETransactionID(kAnyTransactionID))
-        event.setParam(NSAppleEventDescriptor(string: url.absoluteString), forKeyword: AEKeyword(keyDirectObject))
-        do { _ = try event.sendEvent(options: [.neverInteract, .noReply], timeout: 3) }
-        catch { throw (error as NSError).code == -1743 ? MessagesUIFailure.automationDenied : MessagesUIFailure.navigationUnavailable }
-        _ = application.activate()
+        guard let handler = NSWorkspace.shared.urlForApplication(toOpen: url), Bundle(url: handler)?.bundleIdentifier == "com.apple.MobileSMS",
+              NSWorkspace.shared.open(url) else { throw MessagesUIFailure.navigationUnavailable }
+        let deadline = Date().addingTimeInterval(3)
+        while application == nil, Date() < deadline { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
+        _ = application?.activate()
     }
 }

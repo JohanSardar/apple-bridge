@@ -12,7 +12,7 @@ public enum MessagesPins {
               pins.count <= 9, Set(pins).count == pins.count, pins.allSatisfy({ !$0.isEmpty }) else { throw SourceFailure.corrupt }
         return pins
     }
-    static func read() throws -> [String] {
+    public static func read() throws -> [String] {
         let file = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Preferences/com.apple.messages.pinning.plist")
         return try identifiers(Data(contentsOf: file))
     }

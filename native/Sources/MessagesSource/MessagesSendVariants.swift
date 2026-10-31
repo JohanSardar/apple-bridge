@@ -65,6 +65,12 @@ public enum MessagesSendVariants {
         default: return false
         }
     }
+    public static func matchesEcho(_ args: JSON, data: JSON) -> Bool {
+        guard data["is_from_me"] == .bool(false) else { return false }
+        var fields = data.object
+        fields["is_from_me"] = .bool(true)
+        return matches(args, data: .object(fields))
+    }
     static func capabilities() -> [String] {
         var names=operations.filter { proven($0) }
         for step in proof()["steps"].array where step["proven"].bool {
