@@ -1,24 +1,24 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[4.01 6.89 7.18] cpu_idle=82% cpus=10 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[7.32 10.56 12.96] cpu_idle=31% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M67EHV9NZHMVW6T1BCX11CYJ",
+  "run_id": "run_01M69XVQQ2P26TX5SPK62QQ6VS",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "REM-SECTIONS",
   "level": "sim",
   "passed": true,
-  "git_sha": "3bd923a1af4751bbdf11f7c731c75e8fcbb7a183",
-  "at": "2026-10-30T22:23:12.181979Z",
+  "git_sha": "ed4d3a9875b3cfe568e5a11e0603207b0e3ce26f",
+  "at": "2026-10-31T21:29:13.698586Z",
   "assertions": [
     {
       "name": "native_sections_build",
       "passed": true
     },
     {
-      "name": "store_section_order_membership_and_invalidation",
+      "name": "store_effects_and_invalidation",
       "passed": true
     },
     {
