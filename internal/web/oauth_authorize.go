@@ -102,8 +102,8 @@ func (s *server) authorizationRequest(r *http.Request) (trust.OAuthClient, trust
 	if err != nil || len(challenge) != 32 || q.Get("code_challenge_method") != "S256" || q.Get("response_type") != "code" || q.Get("resource") != servingOrigin(r)+"/mcp" || len(q.Get("state")) > 2048 {
 		return empty, code, contracts.ErrInvalid
 	}
-	if _, err = trust.AgentGrants(trust.AgentApprove, toGrants(requestedScopes(q))); err != nil {
-		return empty, code, err
+	if len(requestedScopes(q)) == 0 {
+		return empty, code, contracts.ErrInvalid
 	}
 	var client trust.OAuthClient
 	if strings.HasPrefix(q.Get("client_id"), "https://") {
@@ -124,9 +124,19 @@ func toGrants(scopes []string) []contracts.Grant {
 	return out
 }
 
+func agentScope(scope string) bool {
+	_, err := trust.AgentGrants(trust.AgentApprove, []contracts.Grant{contracts.Grant(scope)})
+	return err == nil
+}
+
 func requestedScopes(q url.Values) []string {
-	scopes := strings.Fields(q.Get("scope"))
-	if len(scopes) == 0 {
+	scopes := []string{}
+	for _, scope := range strings.Fields(q.Get("scope")) {
+		if agentScope(scope) {
+			scopes = append(scopes, scope)
+		}
+	}
+	if len(scopes) == 0 && strings.TrimSpace(q.Get("scope")) == "" {
 		return []string{"messages:read"}
 	}
 	return scopes
