@@ -4,8 +4,25 @@
   "passed": false,
   "assertions": [
     {
+      "name": "clock_inventory_available",
+      "passed": true
+    },
+    {
+      "name": "unique_clock_pack_installed",
+      "passed": true
+    },
+    {
+      "name": "timer_readback_and_cleanup_qualified",
+      "passed": false
+    },
+    {
       "name": "credential_backend_override_restored",
       "passed": true
     }
-  ]
+  ],
+  "metrics": {
+    "capture_observer_resets": 0,
+    "pack_matches": 1
+  },
+  "git_sha": "987bf04a7b0c10e3d73445fd59ba20c44cf59e49"
 }

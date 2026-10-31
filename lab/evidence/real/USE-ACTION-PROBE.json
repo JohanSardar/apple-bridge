@@ -8,12 +8,18 @@
       "passed": true
     },
     {
-      "name": "home_available",
-      "passed": true
+      "name": "unique_probe_pack_installed",
+      "passed": false
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
-  ]
+  ],
+  "metrics": {
+    "capture_observer_resets": 0,
+    "installed_shortcut_count": 17,
+    "probe_pack_matches": 0
+  },
+  "git_sha": "987bf04a7b0c10e3d73445fd59ba20c44cf59e49"
 }
