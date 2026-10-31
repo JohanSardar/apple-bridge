@@ -53,6 +53,11 @@ func runRelayWorld(ctx context.Context, s Scenario, level string, native bool) (
 		return
 	}
 	defer w.Close()
+	if contacts {
+		measured, stop := context.WithTimeout(ctx, 5*time.Minute)
+		defer stop()
+		ctx = measured
+	}
 	privateDir := filepath.Join("lab/evidence/private/relay", e.RunID)
 	os.MkdirAll(privateDir, 0700)
 	os.WriteFile(filepath.Join(privateDir, "serve-before.json"), before, 0600)
