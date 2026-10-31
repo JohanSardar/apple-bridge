@@ -80,9 +80,9 @@ def make_feed(path, build, marketing, url, payload, signature):
     ET.ElementTree(rss).write(path, encoding="utf-8", xml_declaration=True)
 
 
-def sign_bundle(app, identity):
+def sign_bundle(app, identity, keychain):
     def sign(path, entitlements=None):
-        args = ["codesign", "--force", "--sign", identity, "--options", "runtime", "--timestamp", "--preserve-metadata=entitlements"]
+        args = ["codesign", "--force", "--sign", identity, "--keychain", str(keychain), "--options", "runtime", "--timestamp", "--preserve-metadata=entitlements"]
         if entitlements:
             args += ["--entitlements", str(entitlements)]
         run(*args, path)
@@ -122,9 +122,12 @@ def build(args):
         raise ValueError("Use a private, mode-600 file containing a base64 Ed25519 seed.")
     identity = os.environ.get("DEVELOPER_ID_APPLICATION", "")
     if not args.prepare_unsigned:
-        identities = output("security", "find-identity", "-v", "-p", "codesigning")
+        keychain = Path(require("RELEASE_KEYCHAIN")).expanduser().resolve()
+        if not keychain.is_file() or keychain.name == "login.keychain-db":
+            raise ValueError("Use the dedicated release keychain prepared by signing.py.")
+        identities = output("security", "find-identity", "-v", "-p", "codesigning", keychain)
         if not identity or not re.fullmatch(r"[A-Fa-f0-9]{40}", identity) or not any(identity.upper() in line.upper() and "Developer ID Application:" in line for line in identities.splitlines()):
-            raise ValueError("No matching Developer ID Application identity is available. Provision it in the Pro keychain before building a signed release.")
+            raise ValueError("No matching Developer ID Application identity is available. Run signing.py to provision it in the dedicated release keychain before building.")
         for name in ["ASC_KEY_PATH", "ASC_KEY_ID", "ASC_ISSUER_ID"]:
             require(name)
     tools = sparkle()
@@ -150,7 +153,7 @@ def build(args):
     if args.prepare_unsigned:
         print("R1-BUILD passed=true signed=false")
         return
-    sign_bundle(app, identity)
+    sign_bundle(app, identity, keychain)
     submission = destination / "notary.zip"
     run("ditto", "-c", "-k", "--keepParent", app, submission)
     notarize(submission)
@@ -172,7 +175,7 @@ def build(args):
         (stage / "Applications").symlink_to("/Applications")
         dmg = destination / "AppleBridge.dmg"
         run("hdiutil", "create", "-volname", "Apple Bridge", "-srcfolder", stage, "-format", "UDZO", dmg)
-    run("codesign", "--sign", identity, "--timestamp", dmg)
+    run("codesign", "--sign", identity, "--keychain", keychain, "--timestamp", dmg)
     notarize(dmg)
     run("xcrun", "stapler", "staple", dmg)
     run("xcrun", "stapler", "validate", dmg)

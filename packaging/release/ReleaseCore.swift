@@ -97,6 +97,23 @@ enum ReleaseSignature {
 }
 
 enum ReleaseCleanup {
+    static func removeCredentials(home: URL, command: (String, [String]) throws -> Void) throws {
+        let keychain = home.appendingPathComponent("Library/Application Support/AppleBridge/Apple Bridge.keychain-db")
+        guard keychain.resolvingSymlinksInPath().path == keychain.standardizedFileURL.path else { throw ReleaseError.unsafePath }
+        if FileManager.default.fileExists(atPath: keychain.path) {
+            try command("/usr/bin/security", ["delete-keychain", keychain.path])
+        }
+    }
+    static func resetPermissions(bundleIdentifier: String, command: (String, [String]) throws -> Void) throws {
+        try command("/usr/bin/tccutil", ["reset", "All", bundleIdentifier])
+    }
+    static func uninstall(home: URL, app: URL, unregister: () throws -> Void, resetPermissions: () throws -> Void, command: (String, [String]) throws -> Void) throws {
+        guard app.pathExtension == "app", app.standardizedFileURL.path == app.resolvingSymlinksInPath().path else { throw ReleaseError.unsafePath }
+        try run(home: home, unregister: unregister, removeCredentials: {
+            try removeCredentials(home: home, command: command)
+        }, resetPermissions: resetPermissions)
+        try FileManager.default.removeItem(at: app)
+    }
     static func paths(home: URL) -> [URL] {
         ["Library/Application Support/AppleBridge", "Library/Caches/dev.applebridge.helper", "Library/Preferences/dev.applebridge.helper.plist", "Library/Saved Application State/dev.applebridge.helper.savedState"].map { home.appendingPathComponent($0) }
     }

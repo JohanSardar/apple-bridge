@@ -498,7 +498,7 @@ features:
       - {id: R1-RELEASE-SIM, levels: [sim]}
       - {id: R1-DMG-REAL, levels: [real]}
     limits:
-      - {scenario: R1-DMG-REAL, level: real, reason: 'Pro has no Developer ID Application certificate; noninteractive key generation fails with errSecAuthFailed (-25293) in both CLI and GUI sessions. Notarization, Gatekeeper, previous-version Sparkle update and fresh-account uninstall remain unproved. No ASC app record or Apple Bridge App Store distribution profiles are available for TestFlight. macOS protected permission-list entries require removal in System Settings.'}
+      - {scenario: R1-DMG-REAL, level: real, reason: 'Dedicated keychain signing, real Sparkle build 2-to-3 installation, temporary-HOME install/uninstall including TCC reset, and TestFlight archive/export pass. Both ASC API keys reject Developer ID Application issuance as Account Holder only, blocking notarization, staple, Gatekeeper and fresh-account first open. TestFlight upload requires creation of the missing ASC app record; all five App Store profiles and the IPA are ready.'}
   - id: agent.suite
     title: Full MCP agent suite graded by Truth
     requirements: [R-AGENT, R-API]

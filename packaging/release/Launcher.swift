@@ -104,31 +104,24 @@ final class ReleaseApplication: NSObject, NSApplicationDelegate, SPUUpdaterDeleg
     @objc func uninstall() {
         let alert = NSAlert()
         alert.messageText = "Uninstall Apple Bridge?"
-        alert.informativeText = "This stops sync, removes login items, deletes Apple Bridge data and saved permissions, and moves the app to the Trash. Remove any remaining Full Disk Access and Accessibility entries in System Settings > Privacy & Security. Your Apple app data stays in place."
+        alert.informativeText = "This stops sync, removes login items, deletes Apple Bridge data and saved permissions, and removes the app. Your Apple app data stays in place."
         alert.addButton(withTitle: "Cancel")
         alert.addButton(withTitle: "Uninstall")
         guard alert.runModal() == .alertSecondButtonReturn else { return }
         do {
             let home = FileManager.default.homeDirectoryForCurrentUser
-            try ReleaseCleanup.run(home: home, unregister: {
+            try ReleaseCleanup.uninstall(home: home, app: Bundle.main.bundleURL, unregister: {
                 if agent.status != .notRegistered { try agent.unregister() }
                 if SMAppService.mainApp.status != .notRegistered { try SMAppService.mainApp.unregister() }
                 onboarding?.terminate()
-            }, removeCredentials: {
-                let keychain = home.appendingPathComponent("Library/Application Support/AppleBridge/Apple Bridge.keychain-db")
-                if FileManager.default.fileExists(atPath: keychain.path) { try command("/usr/bin/security", ["delete-keychain", keychain.path]) }
             }, resetPermissions: {
-                try command("/usr/bin/tccutil", ["reset", "All", "dev.applebridge.helper"])
+                try ReleaseCleanup.resetPermissions(bundleIdentifier: "dev.applebridge.helper", command: command)
                 updater?.updater.automaticallyChecksForUpdates = false
                 updater?.updater.automaticallyDownloadsUpdates = false
                 UserDefaults.standard.removePersistentDomain(forName: "dev.applebridge.helper")
                 UserDefaults.standard.synchronize()
-            })
-            NSWorkspace.shared.recycle([Bundle.main.bundleURL]) { _, error in
-                Task { @MainActor in
-                    if let error { self.showError(error) } else { NSApplication.shared.terminate(nil) }
-                }
-            }
+            }, command: command)
+            NSApplication.shared.terminate(nil)
         } catch { showError(error) }
     }
 }
