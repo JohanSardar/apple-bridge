@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[7.97 10.97 13.18] cpu_idle=40% cpus=10 other_heavy=0"
+    "summary": "air: load=[12.67 9.56 12.41] cpu_idle=54% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M69XTZTKXSA6V7NER078XW4G",
+  "run_id": "run_01M6A1TY10ZP3EETT62BM1GKAR",
   "metrics": {
     "capture_observer_resets": 0
   },
@@ -11,7 +11,7 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-31T21:28:49.235268Z",
+  "at": "2026-10-31T22:38:41.696508Z",
   "assertions": [
     {
       "name": "descriptor_photos.search",
