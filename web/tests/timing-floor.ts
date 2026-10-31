@@ -3,9 +3,10 @@ import { stats } from './list-performance';
 
 export async function timingFloor(page: Page) {
     return page.evaluate(async () => {
-        let previous = performance.now();
+        const started = performance.now();
+        let previous = started;
         const ticks: number[] = [];
-        for (let index = 0; index < 10000; index++) {
+        while (ticks.length < 16 && performance.now() - started < 100) {
             const next = performance.now();
             if (next > previous) ticks.push(next - previous);
             previous = next;

@@ -40,6 +40,20 @@ func expandIdleSuite(scenarios []Scenario) ([]Scenario, error) {
 	})
 }
 
+func saveIdleGroup(level string, asJSON bool, result error) error {
+	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
+	e := Evidence{RunID: contracts.NewID("run"), Scenario: "Q2-IDLE", Level: level, GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Passed: result == nil, Assertions: []Assertion{{Name: "all_eleven_idle_scenarios_pass", Passed: result == nil}}}
+	if err := Save(e); err != nil {
+		return fmt.Errorf("save shared idle result: %w", err)
+	}
+	if asJSON {
+		json.NewEncoder(os.Stdout).Encode(e)
+	} else {
+		fmt.Printf("Q2-IDLE %s passed=%t\n", level, e.Passed)
+	}
+	return result
+}
+
 func idleSuite(ctx context.Context, scenarios []Scenario, asJSON bool) error {
 	ctx, cancel := context.WithTimeout(ctx, 40*time.Minute)
 	defer cancel()

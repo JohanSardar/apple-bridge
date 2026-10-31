@@ -1226,7 +1226,7 @@ func Save(e Evidence) error {
 	}
 	return os.WriteFile(filepath.Join(dir, e.Scenario+".json"), append(b, '\n'), 0644)
 }
-func Suite(ctx context.Context, paths []string, level string, asJSON bool) error {
+func Suite(ctx context.Context, paths []string, level string, asJSON bool) (result error) {
 	if level != "sim" && level != "replica" && level != "real" && level != "web" {
 		return fmt.Errorf("level unsupported by tracer")
 	}
@@ -1237,9 +1237,13 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 	if len(scenarios) == 0 {
 		return fmt.Errorf("no scenarios")
 	}
+	groupedIdle := len(scenarios) == 1 && scenarios[0].ID == "Q2-IDLE"
 	scenarios, err = expandIdleSuite(scenarios)
 	if err != nil {
 		return err
+	}
+	if groupedIdle {
+		defer func() { result = saveIdleGroup(level, asJSON, result) }()
 	}
 	packagingOnly := true
 	for _, scenario := range scenarios {
