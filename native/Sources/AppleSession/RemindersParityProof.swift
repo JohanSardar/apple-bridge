@@ -28,9 +28,15 @@ enum RemindersParityProof {
         list.title = title
         try store.saveCalendar(list, commit: true)
         let listID = list.calendarIdentifier
+        defer {
+            store.reset()
+            if let owned = store.calendar(withIdentifier: listID), owned.title == title { try? store.removeCalendar(owned, commit: true) }
+        }
         let first = EKReminder(eventStore: store), second = EKReminder(eventStore: store)
         first.calendar = list; first.title = title + " parent"
         second.calendar = list; second.title = title + " child"
+        let smartTitle = title + " smart"
+        var smartAttempted = false
         var stage = "fixture"
         do {
             try store.save(first, commit: true)
@@ -128,15 +134,73 @@ enum RemindersParityProof {
                 guard case .supported(let positions) = StoreManualOrder.decode(row.orderingJSON), let parentID = parent.identity.uuid, let childID = child.identity.uuid, let parentIndex = positions[parentID], let childIndex = positions[childID] else { return false }
                 return childIndex < parentIndex
             })
+            stage = "smart_list"
+            guard checks["tags_readback"]?.bool == true else { throw SourceFailure.unavailable }
+            try await ui.menu("File", ["New List…", "New List..."])
+            try ui.setFocused(text: smartTitle)
+            try ui.press("Standard", role: kAXPopUpButtonRole)
+            try ui.press("Smart List", role: kAXMenuItemRole)
+            try await Task.sleep(for: .milliseconds(300))
+            let tagChoices = ui.find(tag, role: kAXCheckBoxRole)
+            guard tagChoices.count == 1 else { throw SourceFailure.unsupported }
+            try ui.press(tag, role: kAXCheckBoxRole)
+            smartAttempted = true
+            try ui.pressAny(["OK", "Add List", "Done"], role: kAXButtonRole)
+            var found = false
+            for _ in 0..<60 {
+                for session in sessions {
+                    let snapshot = try await session.read().snapshot
+                    found = found || snapshot.lists.values.contains { $0.name == smartTitle && $0.filter != nil && $0.smartType != nil }
+                }
+                if found { break }
+                try await Task.sleep(for: .milliseconds(100))
+            }
+            checks["smart_list_readback"] = .bool(found)
         } catch {
             reasons[stage] = .string("The " + stage + " action could not be verified on the test list: " + String(describing: error))
+        }
+        if smartAttempted {
+          do {
+            var error: NSDictionary?
+            _ = NSAppleScript(source: "with timeout of 5 seconds\ntell application \"Reminders\"\nset matches to every list whose name is \"" + smartTitle + "\"\nif (count matches) is 1 then delete item 1 of matches\nend tell\nend timeout")?.executeAndReturnError(&error)
+            let sessions = try RemindersStore.paths().map { try RemindersStoreSession(path: $0) }
+            var absent = false
+            for _ in 0..<60 {
+                var present = false
+                for session in sessions {
+                    let snapshot = try await session.read().snapshot
+                    if snapshot.lists.values.contains(where: { $0.name == smartTitle }) { present = true }
+                }
+                if !present { absent = true; break }
+                try await Task.sleep(for: .milliseconds(100))
+            }
+            if !absent, let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.reminders").first {
+                let ui = RemindersFixtureUI(app: app, title: smartTitle)
+                try await ui.menu("File", ["Delete List", "Delete List…"])
+                try ui.press("Delete", role: kAXButtonRole)
+                try await Task.sleep(for: .milliseconds(500))
+                absent = true
+                for session in sessions {
+                    let snapshot = try await session.read().snapshot
+                    if snapshot.lists.values.contains(where: { $0.name == smartTitle }) { absent = false }
+                }
+            }
+            checks["owned_smart_list_cleanup"] = .bool(absent)
+          } catch {
+            checks["owned_smart_list_cleanup"] = .bool(false)
+            reasons["cleanup"] = .string("The test smart list could not be removed; rerun cleanup for this run before testing again.")
+          }
+        }
+        if let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.reminders").first {
+            let ui = RemindersFixtureUI(app: app, title: title)
+            if ui.find("Cancel", role: kAXButtonRole).count == 1 { try? ui.press("Cancel", role: kAXButtonRole) }
         }
         store.reset()
         if let owned = store.calendar(withIdentifier: listID), owned.title == title { try store.removeCalendar(owned, commit: true) }
         store.reset()
         checks["owned_list_cleanup"] = .bool(store.calendar(withIdentifier: listID) == nil)
         let required = ["flag_readback", "flag_clear_readback", "list_icon_readback", "indent_readback", "outdent_readback", "tags_readback", "reorder_readback", "image_readback", "smart_list_readback", "owned_list_cleanup"]
-        return .object(["passed": .bool(required.allSatisfy { checks[$0]?.bool == true }), "checks": .object(checks.filter { !$0.key.hasPrefix("control_") }), "controls": .object(checks.filter { $0.key.hasPrefix("control_") }), "reasons": .object(reasons)])
+        return .object(["passed": .bool(required.allSatisfy { checks[$0]?.bool == true } && (!smartAttempted || checks["owned_smart_list_cleanup"]?.bool == true)), "checks": .object(checks.filter { !$0.key.hasPrefix("control_") }), "controls": .object(checks.filter { $0.key.hasPrefix("control_") }), "reasons": .object(reasons)])
     }
 }
 
@@ -222,6 +286,21 @@ final class RemindersFixtureUI {
         try fence()
         let matches = find(name, role: role)
         guard matches.count == 1, AXUIElementPerformAction(matches[0], kAXPressAction as CFString) == .success else { throw SourceFailure.unsupported }
+    }
+
+    func setFocused(text: String) throws {
+        try fence()
+        var focused: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(root, kAXFocusedUIElementAttribute as CFString, &focused) == .success, let focused, CFGetTypeID(focused) == AXUIElementGetTypeID() else { throw SourceFailure.conflict }
+        let field = unsafeDowncast(focused, to: AXUIElement.self)
+        guard value(field, kAXRoleAttribute) == kAXTextFieldRole, value(field, kAXValueAttribute).isEmpty else { throw SourceFailure.conflict }
+        try set(field, text: text)
+    }
+
+    func pressAny(_ names: [String], role: String) throws {
+        let available = names.filter { find($0, role: role).count == 1 }
+        guard available.count == 1 else { throw SourceFailure.conflict }
+        try press(available[0], role: role)
     }
 
     func set(_ element: AXUIElement, text: String) throws {

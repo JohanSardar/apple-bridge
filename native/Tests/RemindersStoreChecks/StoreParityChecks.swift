@@ -27,6 +27,29 @@ enum StoreParityChecks {
         execute("UPDATE ZREMCDOBJECT SET ZREMINDER3=11,ZREMINDER4=10,Z_OPT=Z_OPT+1 WHERE Z_PK=30")
         let ambiguous = try await session.read().snapshot
         precondition(StoreTags.names(for: 11, snapshot: ambiguous) == nil)
+        execute("UPDATE ZREMCDREMINDER SET ZFLAGGED=1,Z_OPT=Z_OPT+1 WHERE Z_PK=10")
+        execute("UPDATE ZREMCDREMINDER SET ZPARENTREMINDER=10,Z_OPT=Z_OPT+1 WHERE Z_PK=11")
+        execute("UPDATE ZREMCDBASELIST SET ZBADGEEMBLEM='flag',Z_OPT=Z_OPT+1 WHERE Z_PK=1")
+        let changed = try await session.read().snapshot
+        precondition(changed.reminders[10]?.flagged == true && changed.reminders[11]?.parent == 10 && changed.lists[1]?.emblem == "flag")
+        execute("UPDATE ZREMCDREMINDER SET ZPARENTREMINDER=NULL,Z_OPT=Z_OPT+1 WHERE Z_PK=11")
+        let outdented = try await session.read().snapshot
+        precondition(outdented.reminders[11]?.parent == nil)
+        execute("ALTER TABLE ZREMCDBASELIST ADD COLUMN ZREMINDERIDSMERGEABLEORDERING_V2_JSON BLOB")
+        execute("ALTER TABLE ZREMCDBASELIST ADD COLUMN ZSMARTLISTTYPE INTEGER")
+        execute("ALTER TABLE ZREMCDBASELIST ADD COLUMN ZFILTERDATA BLOB")
+        let first = UUID(), second = UUID()
+        let order = try JSONEncoder().encode([second.uuidString, first.uuidString]).map { String(format: "%02x", $0) }.joined()
+        execute("UPDATE ZREMCDBASELIST SET ZREMINDERIDSMERGEABLEORDERING_V2_JSON=X'\(order)',Z_OPT=Z_OPT+1 WHERE Z_PK=1")
+        execute("INSERT INTO ZREMCDOBJECT(Z_PK,Z_ENT,ZIDENTIFIER,ZREMINDER3) VALUES(3003,934,'\(UUID())',11)")
+        execute("INSERT INTO ZREMCDBASELIST(Z_PK,Z_ENT,ZIDENTIFIER,ZNAME,ZSMARTLISTTYPE,ZFILTERDATA) VALUES(3004,408,'\(UUID())','[ab-test] smart',1,X'7b7d')")
+        let parity = try await session.read().snapshot
+        precondition(StoreManualOrder.decode(parity.lists[1]?.orderingJSON) == .supported([second: 0, first: 1]))
+        precondition(parity.objects[3003]?.reminder3 == 11 && parity.lists[3004]?.smartType == .integer(1) && parity.lists[3004]?.filter == Data("{}".utf8))
+        execute("DELETE FROM ZREMCDOBJECT WHERE Z_PK=3003")
+        execute("DELETE FROM ZREMCDBASELIST WHERE Z_PK=3004")
+        let cleaned = try await session.read().snapshot
+        precondition(cleaned.objects[3003] == nil && cleaned.lists[3004] == nil)
         print("parity checks passed")
     }
 }
