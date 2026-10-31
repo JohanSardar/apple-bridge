@@ -13,6 +13,31 @@ import (
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 )
 
+type calendarParityProof struct {
+	Passed   bool              `json:"passed"`
+	Checks   map[string]bool   `json:"checks"`
+	Reasons  map[string]string `json:"reasons"`
+	Controls map[string]any    `json:"controls"`
+}
+
+func calendarParityAssertions(proof calendarParityProof, valid bool) []Assertion {
+	checks := []Assertion{{Name: "native_parity_report", Passed: valid}}
+	names := make([]string, 0, len(proof.Checks))
+	for name := range proof.Checks {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		checks = append(checks, Assertion{Name: name, Passed: proof.Checks[name]})
+	}
+	for _, name := range []string{"accessibility_granted", "calendar_granted", "structured_location_readback", "invitation_self_attendee_only", "invitation_response_readback", "travel_time_readback", "attachment_add_readback", "attachment_remove_readback", "owned_calendar_cleanup"} {
+		if _, exists := proof.Checks[name]; !exists {
+			checks = append(checks, Assertion{Name: name, Passed: false})
+		}
+	}
+	return append(checks, Assertion{Name: "native_calendar_parity", Passed: valid && proof.Passed})
+}
+
 func runCalendarParity(ctx context.Context, scenario Scenario, level string) (e Evidence) {
 	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
 	e = Evidence{RunID: contracts.NewID("calendar-parity"), Scenario: scenario.ID, Level: level, GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Assertions: []Assertion{}, Metrics: map[string]any{}}
@@ -68,28 +93,9 @@ func runCalendarParity(ctx context.Context, scenario Scenario, level string) (e 
 		os.Stderr.Write(output)
 	}
 	data, readErr := os.ReadFile(report)
-	var proof struct {
-		Passed   bool              `json:"passed"`
-		Checks   map[string]bool   `json:"checks"`
-		Reasons  map[string]string `json:"reasons"`
-		Controls map[string]any    `json:"controls"`
-	}
+	var proof calendarParityProof
 	valid := err == nil && readErr == nil && json.Unmarshal(data, &proof) == nil
-	add("native_parity_report", valid)
-	names := make([]string, 0, len(proof.Checks))
-	for name := range proof.Checks {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	for _, name := range names {
-		add(name, proof.Checks[name])
-	}
-	for _, name := range []string{"accessibility_granted", "calendar_granted", "structured_location_readback", "invitation_response_readback", "travel_time_readback", "attachment_add_readback", "attachment_remove_readback", "owned_calendar_cleanup"} {
-		if _, exists := proof.Checks[name]; !exists {
-			add(name, false)
-		}
-	}
-	add("native_calendar_parity", valid && proof.Passed)
+	e.Assertions = append(e.Assertions, calendarParityAssertions(proof, valid)...)
 	e.Conditions = proof.Reasons
 	e.Metrics["controls"] = proof.Controls
 	return
