@@ -13,6 +13,8 @@ public enum MessagesCleanup {
                   arguments[index + 1].range(of: #"^\[ab-test [A-Za-z0-9_-]+\]$"#, options: .regularExpression) != nil else { throw ProbeFailure.invalidArguments }
             tag = arguments[index + 1]
         }
+        let ownedOnly = arguments.contains("--owned-only")
+        guard !ownedOnly || !tag.isEmpty else { throw ProbeFailure.invalidArguments }
         let scopedChat: Int64?
         if let index = arguments.firstIndex(of: "--only-chat-id") {
             guard index + 1 < arguments.count, let value = Int64(arguments[index + 1]), value > 0 else { throw ProbeFailure.invalidArguments }
@@ -41,16 +43,10 @@ public enum MessagesCleanup {
                 }
             }
         }
-        var draftsCleared = arguments.contains("--skip-draft") ? 0 : (try await MessagesAccessibility.clearTaggedDraft(tag) ? 1 : 0)
-        if arguments.contains("--group-draft") {
-            guard let remy = groupHandles["REMY_IMESSAGE_TEST_HANDLE"], let ben = groupHandles["BEN_GROUP_TEST_HANDLE"], remy != ben else { throw ProbeFailure.invalidArguments }
-            if try await MessagesAccessibility.clearTaggedDraft(tag, groupHandles: [remy, ben]) { draftsCleared += 1 }
-        }
         let own = Set(try MessagesProbes.discoverSelfHandles().handles)
         let reader = try MessagesReader(path: FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/chat.db").path)
         var ownedIDs: Set<String> = []
         var ownedBaseline: Int64?
-        let ownedOnly = arguments.contains("--owned-only")
         var equivalentOwnedMedia = false
         var mediaProof: MessagesMediaCleanupProof?
         var interactiveText = ""
@@ -73,6 +69,11 @@ public enum MessagesCleanup {
             }
         }
         guard !ownedOnly || (!tag.isEmpty && ownedBaseline != nil && approved.isEmpty) else { throw ProbeFailure.invalidArguments }
+        var draftsCleared = arguments.contains("--skip-draft") ? 0 : (try await MessagesAccessibility.clearTaggedDraft(tag) ? 1 : 0)
+        if arguments.contains("--group-draft") {
+            guard let remy = groupHandles["REMY_IMESSAGE_TEST_HANDLE"], let ben = groupHandles["BEN_GROUP_TEST_HANDLE"], remy != ben else { throw ProbeFailure.invalidArguments }
+            if try await MessagesAccessibility.clearTaggedDraft(tag, groupHandles: [remy, ben]) { draftsCleared += 1 }
+        }
         func candidates() throws -> [(String, JSON)] {
             if ownedOnly {
                 let run = String(tag.dropFirst(9).dropLast())

@@ -107,6 +107,14 @@ struct MessagesVariantChecks {
             checks["scheduled_send_does_not_require_early_delivery"] = !MessagesVariantProof.requiresSelfEcho("schedule") && MessagesVariantProof.requiresSelfEcho("mention") && MessagesVariantProof.requiresSelfEcho("audio")
             checks["date_commit_failure_retains_cleanup_obligation"] = MessagesSendVariants.dispatchFailure(SendVariantFailure.draftChanged, sendStarted: true) as? SendVariantFailure == .sendReceiptUnknown
             checks["pre_send_failure_remains_rejected"] = MessagesSendVariants.dispatchFailure(SendVariantFailure.draftPresent, sendStarted: false) as? SendVariantFailure == .draftPresent
+            do {
+                _ = try await MessagesCleanup.run(["--owned-only"])
+                checks["unscoped_owned_cleanup_refused_before_native_access"] = false
+            } catch ProbeFailure.invalidArguments {
+                checks["unscoped_owned_cleanup_refused_before_native_access"] = true
+            } catch {
+                checks["unscoped_owned_cleanup_refused_before_native_access"] = false
+            }
             checks["late_tagged_echo_owned"] = MessagesCleanup.allowsLateEcho(rowID: 11, baseline: 10, text: "[ab-test run_current] fixture", tag: "[ab-test run_current]")
             checks["earlier_residue_refused"] = !MessagesCleanup.allowsLateEcho(rowID: 9, baseline: 10, text: "[ab-test run_current] fixture", tag: "[ab-test run_current]")
             checks["other_run_echo_refused"] = !MessagesCleanup.allowsLateEcho(rowID: 11, baseline: 10, text: "[ab-test run_earlier] fixture", tag: "[ab-test run_current]")
