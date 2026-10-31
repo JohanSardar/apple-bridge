@@ -5,6 +5,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/JohanSardar/apple-bridge/lab/scripted"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 	"io"
@@ -49,7 +51,13 @@ func runCapture(ctx context.Context, s Scenario, level string) Evidence {
 		os.Stderr.Write(out)
 	}
 	publicContext := world.WithOptions(ctx, world.Options{Scope: "calendar:read,reminders:read,system:read,capture:write,mac:write,print:write"})
-	w, worldErr := world.New(publicContext, level, 0, 0)
+	var w *world.World
+	var worldErr error
+	if level == "real" {
+		w, worldErr = world.NewRealWithSetup(publicContext, level, 0, world.NativeSetup{IndependentTruth: true})
+	} else {
+		w, worldErr = world.New(publicContext, level, 0, 0)
+	}
 	add("public_gateway_start", worldErr == nil)
 	if worldErr != nil {
 		return e
@@ -69,10 +77,31 @@ func runCapture(ctx context.Context, s Scenario, level string) Evidence {
 				args = json.RawMessage(`{"seconds":2}`)
 			}
 			if op == "print.document" {
-				args = json.RawMessage(`{"file":"fixture.pdf","printer":"PDF"}`)
+				file, pathErr := filepath.Abs("lab/fixtures/vision/fixture.pdf")
+				add("print_fixture_path", pathErr == nil)
+				args, _ = json.Marshal(map[string]string{"file": file, "printer": "PDF"})
 			}
 			var command contracts.CommandRecord
 			err := client.Call(ctx, op, contracts.Command{ID: contracts.NewCommandID(), Args: args, WaitMS: 15000}, &command)
+			if err != nil || command.State != contracts.CommandObserved {
+				code := ""
+				var problem *contracts.Error
+				if errors.As(err, &problem) {
+					code = problem.Code
+				}
+				if command.Error != nil {
+					code = command.Error.Code
+				}
+				var native struct {
+					Code string `json:"native_error_code"`
+				}
+				json.Unmarshal(command.Evidence, &native)
+				fmt.Fprintf(os.Stderr, "%s %s state=%s code=%s native=%s\n", protocol, op, command.State, code, native.Code)
+				if e.Conditions == nil {
+					e.Conditions = map[string]string{}
+				}
+				e.Conditions[protocol+"_"+op] = "state=" + string(command.State) + "; code=" + code + "; native=" + native.Code
+			}
 			add(protocol+"_"+op+"_observed", err == nil && command.State == "observed")
 			var result struct {
 				Digest string `json:"digest"`
@@ -103,7 +132,7 @@ func captureChecksFresh(binary string) bool {
 		return false
 	}
 	fresh := true
-	for _, root := range []string{"native/Package.swift", "native/Sources/CaptureSource", "native/Sources/CaptureChecks", "native/Sources/SourceSupport"} {
+	for _, root := range []string{"native/Package.swift", "native/Sources/CaptureSource", "native/Sources/CaptureChecks", "native/Sources/MacSource", "native/Sources/SourceSupport"} {
 		err := filepath.Walk(root, func(_ string, item os.FileInfo, err error) error {
 			if err != nil {
 				return err

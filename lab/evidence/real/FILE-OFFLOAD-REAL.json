@@ -1,15 +1,35 @@
 {
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[127.74 129.59 85.95] cpu_idle=5% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M69XDNRGFDY41ZHFM2QB6X8G",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
   "scenario": "FILE-OFFLOAD-REAL",
   "level": "real",
-  "passed": false,
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-31T21:21:32.949982Z",
   "assertions": [
     {
+      "name": "native_build",
+      "passed": true
+    },
+    {
+      "name": "native_output",
+      "passed": true
+    },
+    {
       "name": "native_files_checks",
-      "passed": false
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
-  ]
+  ],
+  "latency": null,
+  "hosts": null
 }

@@ -12,7 +12,7 @@ import (
 )
 
 func runFiles(ctx context.Context, s Scenario, level string) Evidence {
-	if s.ID == "FILE-COMMANDS" {
+	if s.ID == "FILE-COMMANDS" || level == "sim" && (s.ID == "FILE-OFFLOAD-REAL" || s.ID == "FILE-CRUD-REAL") {
 		return runFileCommands(ctx, s)
 	}
 	if s.ID == "FILE-REPLICA" {

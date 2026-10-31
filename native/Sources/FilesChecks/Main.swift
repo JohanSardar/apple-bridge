@@ -9,6 +9,16 @@ import SourceSupport
 
 @main
 struct Checks {
+    static func awaitCloud(_ file: URL) async throws {
+        var file = file
+        let deadline = Date().addingTimeInterval(50)
+        while true {
+            file.removeAllCachedResourceValues()
+            if try file.resourceValues(forKeys: [.isUbiquitousItemKey]).isUbiquitousItem == true { return }
+            guard Date() < deadline else { throw SourceFailure.capabilityUnproven }
+            try await Task.sleep(for: .milliseconds(200))
+        }
+    }
     static func commands() async throws {
         let fm = FileManager.default
         let simulated = CommandLine.arguments.contains("FILE-COMMANDS")
@@ -16,8 +26,8 @@ struct Checks {
         if simulated { try fm.createDirectory(at: home, withIntermediateDirectories: true) }
         defer { if simulated { try? fm.removeItem(at: home) } }
         let source = try FilesSource(home: home)
-        let root = home.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/Bridge Test")
-        let folder = root.appendingPathComponent("[ab-test " + UUID().uuidString + "]")
+        let root = home.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/Bridge Test").resolvingSymlinksInPath()
+        let folder = root.appendingPathComponent("[ab-test] " + UUID().uuidString)
         try fm.createDirectory(at: folder, withIntermediateDirectories: true)
         defer { try? cleanupCommands(folder) }
         let parent = folder.lastPathComponent
@@ -32,8 +42,8 @@ struct Checks {
         for (op, text) in [("files.create", "first"), ("files.write", "second")] {
             let data = Data(text.utf8)
             let digest = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
-            let evidence = try await run(op, ["parent": .string(parent), "name": .string("a.txt"), "content_base64": .string(data.base64EncodedString()), "digest": .string(digest)])
-            guard evidence["digest"].string == digest, try Data(contentsOf: folder.appendingPathComponent("a.txt")) == data else { throw SourceFailure.corrupt }
+            let evidence = try await run(op, ["parent": .string(parent), "name": .string("[ab-test] a.txt"), "content_base64": .string(data.base64EncodedString()), "digest": .string(digest)])
+            guard evidence["digest"].string == digest, try Data(contentsOf: folder.appendingPathComponent("[ab-test] a.txt")) == data else { throw SourceFailure.corrupt }
         }
         let sink = CommandSink()
         try await source.reconcile(into: sink)
@@ -45,26 +55,36 @@ struct Checks {
                 throw SourceFailure.corrupt
             } catch SourceFailure.invalid {}
         }
-        _ = try await run("files.rename", ["path": .string(parent + "/a.txt"), "parent": .string(parent), "name": .string("b.txt")])
+        _ = try await run("files.rename", ["path": .string(parent + "/[ab-test] a.txt"), "parent": .string(parent), "name": .string("[ab-test] b.txt")])
         let target = folder.appendingPathComponent("target")
         try fm.createDirectory(at: target, withIntermediateDirectories: true)
-        _ = try await run("files.move", ["path": .string(parent + "/b.txt"), "parent": .string(parent + "/target"), "name": .string("c.txt")])
+        _ = try await run("files.move", ["path": .string(parent + "/[ab-test] b.txt"), "parent": .string(parent + "/target"), "name": .string("[ab-test] c.txt")])
         try await source.reconcile(into: sink)
         let captured = await sink.rows
-        guard captured.contains(where: { $0["kind"].string == "absent" && $0["native_key"].string == folder.appendingPathComponent("a.txt").path }), captured.contains(where: { $0["kind"].string == "upsert" && $0["native_key"].string == target.appendingPathComponent("c.txt").path }) else { throw SourceFailure.corrupt }
-        let file = target.appendingPathComponent("c.txt")
-        guard fm.fileExists(atPath: file.path), !fm.fileExists(atPath: folder.appendingPathComponent("b.txt").path) else { throw SourceFailure.corrupt }
-        _ = try await run("files.set_tags", ["path": .string(parent + "/target/c.txt"), "tags": .array([.string("Bridge Test")])])
+        guard captured.contains(where: { $0["kind"].string == "absent" && $0["native_key"].string.hasSuffix("/" + parent + "/[ab-test] a.txt") }), captured.contains(where: { $0["kind"].string == "upsert" && $0["native_key"].string.hasSuffix("/" + parent + "/target/[ab-test] c.txt") }) else { throw SourceFailure.corrupt }
+        let file = target.appendingPathComponent("[ab-test] c.txt")
+        guard fm.fileExists(atPath: file.path), !fm.fileExists(atPath: folder.appendingPathComponent("[ab-test] b.txt").path) else { throw SourceFailure.corrupt }
+        _ = try await run("files.set_tags", ["path": .string(parent + "/target/[ab-test] c.txt"), "tags": .array([.string("Bridge Test")])])
         guard try file.resourceValues(forKeys: [.tagNamesKey]).tagNames == ["Bridge Test"] else { throw SourceFailure.corrupt }
+        if !simulated {
+            try await awaitCloud(file)
+            _ = try await run("files.evict", ["path": .string(parent + "/target/[ab-test] c.txt")])
+            var cloudFile = file
+            cloudFile.removeAllCachedResourceValues()
+            guard try cloudFile.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey]).ubiquitousItemDownloadingStatus == .notDownloaded else { throw SourceFailure.corrupt }
+            _ = try await run("files.download", ["path": .string(parent + "/target/[ab-test] c.txt")])
+            guard try Data(contentsOf: file) == Data("second".utf8) else { throw SourceFailure.corrupt }
+            print("cloud_cycle_verified=true")
+        }
         if simulated {
             for op in ["files.download", "files.evict"] {
                 do {
-                    _ = try await run(op, ["path": .string(parent + "/target/c.txt")])
+                    _ = try await run(op, ["path": .string(parent + "/target/[ab-test] c.txt")])
                     throw SourceFailure.corrupt
                 } catch SourceFailure.unsupported {}
             }
         }
-        let trash = try await run("files.trash", ["path": .string(parent + "/target/c.txt")])
+        let trash = try await run("files.trash", ["path": .string(parent + "/target/[ab-test] c.txt")])
         let trashURL = URL(fileURLWithPath: trash["trash_path"].string)
         guard try Data(contentsOf: trashURL) == Data("second".utf8) else { throw SourceFailure.corrupt }
         try fm.moveItem(at: trashURL, to: file)
@@ -74,21 +94,27 @@ struct Checks {
     static func cleanupCommands(_ folder: URL) throws {
         let fm = FileManager.default
         guard fm.fileExists(atPath: folder.path) else { return }
-        guard folder.lastPathComponent.hasPrefix("[ab-test "), folder.deletingLastPathComponent().lastPathComponent == "Bridge Test" else { throw SourceFailure.corrupt }
+        guard folder.lastPathComponent.hasPrefix("[ab-test] "), folder.deletingLastPathComponent().lastPathComponent == "Bridge Test" else { throw SourceFailure.corrupt }
+        guard let resolved = realpath(folder.path, nil) else { throw SourceFailure.corrupt }
+        let folderPath = String(cString: resolved)
+        free(resolved)
         var failed = false
         guard let tree = fm.enumerator(at: folder, includingPropertiesForKeys: [.isSymbolicLinkKey, .isDirectoryKey, .fileSizeKey], options: [], errorHandler: { _, _ in failed = true; return false }) else { throw SourceFailure.corrupt }
         while let url = tree.nextObject() as? URL {
-            guard url.path.hasPrefix(folder.path + "/") else { throw SourceFailure.corrupt }
-            let path = String(url.path.dropFirst(folder.path.count + 1))
+            guard url.path.hasPrefix(folderPath + "/") else { throw SourceFailure.corrupt }
+            let path = String(url.path.dropFirst(folderPath.count + 1))
             let values = try url.resourceValues(forKeys: [.isSymbolicLinkKey, .isDirectoryKey, .fileSizeKey])
             if values.isSymbolicLink == true {
                 tree.skipDescendants()
                 let destination = try fm.destinationOfSymbolicLink(atPath: url.path)
-                guard path == "link", URL(fileURLWithPath: destination).resolvingSymlinksInPath().path == fm.temporaryDirectory.resolvingSymlinksInPath().path else { throw SourceFailure.corrupt }
+                guard path == "link" else { throw SourceFailure.corrupt }
+                let expected = URL(fileURLWithPath: fm.temporaryDirectory.path).resolvingSymlinksInPath().path
+                let actual = URL(fileURLWithPath: destination).resolvingSymlinksInPath().path
+                guard expected == actual else { throw SourceFailure.corrupt }
             } else if values.isDirectory == true {
                 guard path == "target" else { throw SourceFailure.corrupt }
             } else {
-                guard ["a.txt", "b.txt", "target/c.txt"].contains(path), let size = values.fileSize, size <= 6 else { throw SourceFailure.corrupt }
+                guard ["[ab-test] a.txt", "[ab-test] b.txt", "target/[ab-test] c.txt"].contains(path), let size = values.fileSize, size <= 6 else { throw SourceFailure.corrupt }
                 let data = try Data(contentsOf: url)
                 guard data == Data("first".utf8) || data == Data("second".utf8) else { throw SourceFailure.corrupt }
             }
@@ -100,7 +126,7 @@ struct Checks {
         let home = FileManager.default.temporaryDirectory.appendingPathComponent("ab-test-" + UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: home) }
         let source = try FilesSource(home: home)
-        let root = home.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/Bridge Test")
+        let root = home.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/Bridge Test").resolvingSymlinksInPath()
         guard let context = CGContext(data: nil, width: 16, height: 12, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue), let image = context.makeImage() else { throw SourceFailure.corrupt }
         let png = NSMutableData()
         guard let destination = CGImageDestinationCreateWithData(png, "public.png" as CFString, 1, nil) else { throw SourceFailure.corrupt }
@@ -148,17 +174,17 @@ struct Checks {
             return
         }
         let home = FileManager.default.homeDirectoryForCurrentUser
-        let root = home.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/Bridge Test")
+        let root = home.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/Bridge Test").resolvingSymlinksInPath()
         let source = try FilesSource()
-        let folder = root.appendingPathComponent("[ab-test " + UUID().uuidString + "]")
+        let folder = root.appendingPathComponent("[ab-test] " + UUID().uuidString)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: folder) }
-        let file = folder.appendingPathComponent("synthetic.txt")
+        let file = folder.appendingPathComponent("[ab-test] synthetic.txt")
         let token = "abtest" + UUID().uuidString.replacingOccurrences(of: "-", with: "")
         try Data(token.utf8).write(to: file)
         let (rows, complete) = try await source.snapshot(root)
         guard complete, rows.contains(where: { $0["native_key"].string == file.path }) else { throw SourceFailure.corrupt }
-        let args: JSON = .object(["root": .string(root.path), "path": .string(folder.lastPathComponent + "/synthetic.txt")])
+        let args: JSON = .object(["root": .string(root.path), "path": .string(folder.lastPathComponent + "/[ab-test] synthetic.txt")])
         let result = try await source.read(args)
         guard result["size"].number == Double(token.utf8.count), result["digest"].string.count == 64 else { throw SourceFailure.corrupt }
         do {
@@ -177,19 +203,10 @@ struct Checks {
             } while Date() < deadline
             guard found else { throw SourceFailure.capabilityUnproven }
         } else if scenario == "FILE-OFFLOAD-REAL" {
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/brctl")
-            process.arguments = ["evict", file.path]
-            process.standardOutput = FileHandle.nullDevice
-            process.standardError = FileHandle.nullDevice
-            try process.run()
-            process.waitUntilExit()
-            guard process.terminationStatus == 0 else { throw SourceFailure.capabilityUnproven }
-            let evictionDeadline = Date().addingTimeInterval(15)
-            while try file.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey]).ubiquitousItemDownloadingStatus != .notDownloaded {
-                guard Date() < evictionDeadline else { throw SourceFailure.capabilityUnproven }
-                try await Task.sleep(for: .milliseconds(100))
-            }
+            try await awaitCloud(file)
+            let prepared = try await source.prepare(.object(["action": .object(["op": .string("files.evict"), "args": args])]))
+            let evicted = try await source.dispatch(prepared)
+            guard evicted["downloaded"] == .bool(false) else { throw SourceFailure.corrupt }
             let reread = try await source.read(args)
             guard reread == result else { throw SourceFailure.corrupt }
         } else if scenario == "FILE-IDLE" {

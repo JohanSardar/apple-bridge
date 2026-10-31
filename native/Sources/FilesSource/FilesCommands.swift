@@ -80,8 +80,18 @@ extension FilesSource {
             case "files.download", "files.evict":
                 guard try url.resourceValues(forKeys: [.isUbiquitousItemKey]).isUbiquitousItem == true else { throw SourceFailure.unsupported }
                 if op == "files.download" { try fm.startDownloadingUbiquitousItem(at: url) }
-                else { try fm.evictUbiquitousItem(at: url) }
-                let deadline = Date().addingTimeInterval(10)
+                else {
+                    let uploadDeadline = Date().addingTimeInterval(50)
+                    while true {
+                        url.removeAllCachedResourceValues()
+                        let values = try url.resourceValues(forKeys: [.ubiquitousItemIsUploadedKey, .ubiquitousItemUploadingErrorKey])
+                        if values.ubiquitousItemIsUploaded == true { break }
+                        guard values.ubiquitousItemUploadingError == nil, Date() < uploadDeadline else { throw SourceFailure.unavailable }
+                        try await Task.sleep(for: .milliseconds(200))
+                    }
+                    try fm.evictUbiquitousItem(at: url)
+                }
+                let deadline = Date().addingTimeInterval(50)
                 while true {
                     url.removeAllCachedResourceValues()
                     guard let status = try url.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey]).ubiquitousItemDownloadingStatus else { throw SourceFailure.unavailable }

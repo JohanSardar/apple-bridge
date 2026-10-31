@@ -1,5 +1,5 @@
 id: IWORK-REAL
 feature: mac.extras
-levels: [real]
+levels: [sim, real]
 when:
   - mac: {}

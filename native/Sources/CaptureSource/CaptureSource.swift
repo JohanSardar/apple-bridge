@@ -1,4 +1,5 @@
 import AppKit
+import Darwin
 import SpeechSource
 import Foundation
 import CryptoKit
@@ -69,18 +70,36 @@ public actor CaptureSource: Source {
         _ = try await prepare(.object(["action": prepared.action]))
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let artifact = try await provider.produce(prepared.action["op"].string, args: prepared.action["args"], directory: directory)
-        let evidence = try verify(artifact, action: prepared.action)
+        let evidence: JSON
+        do { evidence = try verify(artifact, action: prepared.action) }
+        catch {
+            if owns(artifact.url) {
+                try? FileManager.default.removeItem(at: artifact.url)
+            }
+            throw error
+        }
         artifacts[evidence["digest"].string] = artifact
         return evidence
     }
+    func owns(_ url: URL) -> Bool {
+        func canonical(_ directory: URL) -> String? {
+            guard let resolved = realpath(directory.path, nil) else { return nil }
+            defer { free(resolved) }
+            return String(cString: resolved)
+        }
+        guard let expected = canonical(directory), let actual = canonical(url.deletingLastPathComponent()) else { return false }
+        return expected == actual
+    }
     func verify(_ artifact: CaptureArtifact, action: JSON) throws -> JSON {
-        guard artifact.url.deletingLastPathComponent().standardizedFileURL == directory.standardizedFileURL else { throw SourceFailure.corrupt }
+        guard owns(artifact.url) else { throw SourceFailure.corrupt }
         let values = try artifact.url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey])
         guard values.isRegularFile == true, values.isSymbolicLink != true, let size = values.fileSize, size > 0, size <= 128 << 20 else { throw SourceFailure.corrupt }
         guard artifact.duration.isFinite, artifact.duration >= 0 else { throw SourceFailure.corrupt }
         let seconds = action["args"]["seconds"].number
         guard seconds == 0 || abs(artifact.duration - seconds) <= 0.5 else { throw SourceFailure.corrupt }
-        if action["op"].string == "capture.screenshot" { guard artifact.width > 0, artifact.height > 0 else { throw SourceFailure.corrupt } }
+        if ["capture.screenshot", "capture.camera_photo", "mac.screen_record"].contains(action["op"].string) {
+            guard artifact.width > 0, artifact.height > 0 else { throw SourceFailure.corrupt }
+        }
         let bytes = try Data(contentsOf: artifact.url)
         guard bytes.count == size else { throw SourceFailure.corrupt }
         let digest = SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined()
@@ -112,6 +131,8 @@ public struct SystemCaptureProvider: CaptureProvider {
         }
     }
     public func produce(_ operation: String, args: JSON, directory: URL) async throws -> CaptureArtifact {
+        if operation == "mac.screen_record" { return try await screenVideo(seconds: args["seconds"].number, directory: directory) }
+        if operation == "capture.camera_photo" { return try await cameraPhoto(directory: directory) }
         if operation == "capture.screenshot" {
             guard CGPreflightScreenCaptureAccess() else { throw SourceFailure.permissionMissing }
             let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
