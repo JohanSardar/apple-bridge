@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -49,18 +50,35 @@ func runRemindersSections(ctx context.Context, level string, e Evidence) Evidenc
 		err = exec.CommandContext(ctx, "open", "-n", "-W", "-g", "-a", filepath.Join(dir, "AppleBridgeHelper.app"), "--args", remindersProofCommand(e.Scenario), "--report", report).Run()
 		data, problem := os.ReadFile(report)
 		var proof struct {
-			Passed bool            `json:"passed"`
-			Checks map[string]bool `json:"checks"`
-			Reason string          `json:"reason"`
+			Passed  bool              `json:"passed"`
+			Checks  map[string]bool   `json:"checks"`
+			Reason  string            `json:"reason"`
+			Reasons map[string]string `json:"reasons"`
 		}
 		valid := err == nil && problem == nil && json.Unmarshal(data, &proof) == nil
 		add("native_sections_report", valid)
-		for name, passed := range proof.Checks {
-			add(name, passed)
+		names := make([]string, 0, len(proof.Checks))
+		for name := range proof.Checks {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		for _, name := range names {
+			add(name, proof.Checks[name])
+		}
+		if e.Scenario == "WEB-REM-PARITY" {
+			for _, name := range []string{"flag_readback", "flag_clear_readback", "list_icon_readback", "indent_readback", "outdent_readback", "tags_readback", "reorder_readback", "image_readback", "smart_list_readback", "owned_list_cleanup"} {
+				if _, exists := proof.Checks[name]; !exists {
+					add(name, false)
+				}
+			}
 		}
 		add("native_sections_proof", valid && proof.Passed)
+		e.Conditions = proof.Reasons
 		if proof.Reason != "" {
-			e.Conditions = map[string]string{"reason": proof.Reason}
+			if e.Conditions == nil {
+				e.Conditions = map[string]string{}
+			}
+			e.Conditions["reason"] = proof.Reason
 		}
 	}
 	e.Passed = len(e.Assertions) > 0

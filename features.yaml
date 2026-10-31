@@ -334,7 +334,6 @@ features:
       - {id: REM-NATIVE-LIST-RACE, levels: [sim]}
     notes: "Tagged list create, rename and delete verified at sim and real; AppleTruth confirms the renamed list is absent after deletion."
     limits:
-      - {scenario: REM-SECTIONS, level: sim, reason: EventKit has no sections API; section order and membership decoders remain unverified.}
       - {scenario: REM-SECTIONS, level: real, reason: EventKit has no sections API; section order and membership decoders remain unverified.}
   - id: calendar.read
     title: Calendar window capture, identity, recurrence, time zones, window slide
@@ -852,7 +851,7 @@ features:
       - {id: WEB-REM-DETAILS, levels: [web]}
       - {id: WEB-REM-WRITE, levels: [web, real]}
       - {id: WEB-REM-ENTRY, levels: [web]}
-      - {id: WEB-REM-PARITY, levels: [web]}
+      - {id: WEB-REM-PARITY, levels: [sim, real, web]}
       - {id: WEB-REM-ACTIONS, levels: [web]}
       - {id: WEB-RM-REMINDERS-HARDENING, levels: [sim]}
       - {id: WEB-RM-REMINDERS-LISTS, levels: [sim]}
