@@ -47,11 +47,12 @@ export async function appInputPerformance(page: Page, info: TestInfo, scenario: 
     const dispatch = trace ? traceWork(trace.trace, 'action') : undefined;
     const frames = trace ? resultFrames(trace.trace).frames : undefined;
     const processing = actions.map((action: any, index: number) => Math.max(0, action.captured - action.at) + (dispatch?.dispatch_processing_ms[index] ?? action.processed - action.captured));
-    const metrics = { actions: actions.length, results: actions.filter((action: any) => action.result).length, processing: stats(processing), native_result_frame_work: frames ? stats(frames) : null, processing_and_result_frame: frames ? stats(processing.map((value: number, index: number) => value + frames[index])) : null, native_main_thread_paint_observed: Boolean(trace), timing_floor: await timingFloor(page) };
+    const metrics = { actions: actions.length, results: actions.filter((action: any) => action.result).length, processing: stats(processing), native_result_frame_work: frames ? stats(frames) : null, processing_and_result_frame: frames ? stats(processing.map((value: number, index: number) => value + frames[index])) : null, native_main_thread_paint_observed: Boolean(trace && trace.script_style_layout_ms.paint > 0), timing_floor: await timingFloor(page) };
     await mkdir('../lab/evidence/web/metrics', { recursive: true }); await mkdir('../lab/evidence/private/web', { recursive: true });
     await writeFile(`../lab/evidence/web/metrics/${scenario}-paint-${info.project.name}.json`, JSON.stringify({ ...metrics, digest: createHash('sha256').update(trace?.trace ?? JSON.stringify(metrics)).digest('hex') }, null, 2) + '\n');
     if (trace) await writeFile(`../lab/evidence/private/web/${scenario}-paint-${info.project.name}.json`, trace.trace);
     expect(metrics.actions).toBe(24); expect(metrics.results).toBe(24);
+    if (trace) { expect(frames).toHaveLength(24); expect(metrics.native_main_thread_paint_observed).toBe(true); }
     expect(metrics.processing.p95_ms).toBeLessThanOrEqual(8);
     if (metrics.processing_and_result_frame) expect(metrics.processing_and_result_frame.p95_ms).toBeLessThanOrEqual(8);
 }
