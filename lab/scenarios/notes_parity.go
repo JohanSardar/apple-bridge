@@ -35,18 +35,6 @@ func runNotesParity(ctx context.Context, s Scenario, level string) (e Evidence) 
 	if level == "sim" {
 		return
 	}
-	before, problem := cleanupSnapshot(ctx, "notes")
-	if problem != nil {
-		e.Status = "limited"
-		e.Assertions = append(e.Assertions, Assertion{Name: "cleanup_baseline", Status: "limited", Detail: "needs Notes Full Disk Access"})
-		return
-	}
-	owned, problem := newRunCleanup(e.RunID, before)
-	if problem != nil {
-		add("cleanup_baseline", false)
-		return
-	}
-	defer func() { finishCleanupAudit(context.Background(), owned, "notes", &e) }()
 	root, err := os.MkdirTemp("", "ab-test-notes-parity-")
 	if err != nil {
 		add("fixture_directory", false)
@@ -67,6 +55,18 @@ func runNotesParity(ctx context.Context, s Scenario, level string) (e Evidence) 
 	home, _ := os.UserHomeDir()
 	report := filepath.Join(home, "Library/Application Support/AppleBridgeDev", e.RunID+".json")
 	defer os.Remove(report)
+	before, problem := cleanupSnapshot(ctx, "notes")
+	if problem != nil {
+		e.Status = "limited"
+		e.Assertions = append(e.Assertions, Assertion{Name: "cleanup_baseline", Status: "limited", Detail: "needs Notes Full Disk Access"})
+		return
+	}
+	owned, problem := newRunCleanup(e.RunID, before)
+	if problem != nil {
+		add("cleanup_baseline", false)
+		return
+	}
+	defer func() { finishCleanupAudit(context.Background(), owned, "notes", &e) }()
 	cmd = exec.CommandContext(ctx, "open", "-n", "-W", "-g", "-a", app, "--args", "notes-parity-probe", "--report", report)
 	output, err = cmd.CombinedOutput()
 	if err != nil {
