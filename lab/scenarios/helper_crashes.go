@@ -1,9 +1,11 @@
 package scenarios
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -44,8 +46,34 @@ func newHelperCrashes(dir string, before map[string]bool) []string {
 	return added
 }
 
-func failOnHelperCrashes(e Evidence, dir string, before map[string]bool) Evidence {
+func failOnHelperCrashes(e Evidence, dir string, before map[string]bool, pids ...string) Evidence {
 	crashes := newHelperCrashes(dir, before)
+	if len(pids) > 0 {
+		selected := crashes[:0]
+		for _, name := range crashes {
+			file, err := os.Open(filepath.Join(dir, name))
+			var report struct {
+				PID int `json:"pid"`
+			}
+			if err == nil {
+				decoder := json.NewDecoder(file)
+				var header json.RawMessage
+				err = decoder.Decode(&header)
+				if err == nil {
+					err = decoder.Decode(&report)
+				}
+				file.Close()
+			}
+			matching := err != nil || report.PID == 0
+			for _, pid := range pids {
+				matching = matching || strconv.Itoa(report.PID) == pid
+			}
+			if matching {
+				selected = append(selected, name)
+			}
+		}
+		crashes = selected
+	}
 	if len(crashes) == 0 {
 		return e
 	}

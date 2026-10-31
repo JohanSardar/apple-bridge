@@ -72,6 +72,7 @@ func idleSuite(ctx context.Context, scenarios []Scenario, asJSON bool) error {
 		return err
 	}
 	defer w.Close()
+	initialPID, initialPIDErr := os.ReadFile(filepath.Join(w.Gateway.Home, "helper", "helper.pid"))
 	client := scripted.Client{Endpoint: w.Gateway}
 	ready := w.Await(30*time.Second, func() bool {
 		var out contracts.QueryResult
@@ -186,6 +187,9 @@ func idleSuite(ctx context.Context, scenarios []Scenario, asJSON bool) error {
 	failed := false
 	for _, e := range results {
 		e = idleWindowEvidence(e, window, settled, passed, settleSeconds, results[0])
+		sameHelper := initialPIDErr == nil && pidErr == nil && strings.TrimSpace(string(initialPID)) == pid
+		e.Assertions = append(e.Assertions, Assertion{Name: "same_helper_since_start", Passed: sameHelper})
+		e.Passed = e.Passed && sameHelper
 		e.Metrics["helper_pid"] = pid
 		if profileDigest != "" {
 			e.Metrics["helper_sample_sha256"] = profileDigest
@@ -193,7 +197,7 @@ func idleSuite(ctx context.Context, scenarios []Scenario, asJSON bool) error {
 		e.Metrics["capture_observer_resets"] = captureMetrics.Resets()
 		e.HostConditions = &conditions
 		if reportsErr == nil {
-			e = failOnHelperCrashes(e, reports, crashReports)
+			e = failOnHelperCrashes(e, reports, crashReports, strings.TrimSpace(string(initialPID)), pid)
 		}
 		if err := Save(e); err != nil {
 			return err
