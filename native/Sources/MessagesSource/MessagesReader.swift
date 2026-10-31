@@ -12,6 +12,7 @@ struct SQLiteRow {
 
 final class MessagesReader {
     let path: String
+    let pinsURL: URL?
     private let dateFormat: ISO8601DateFormatter = { let value = ISO8601DateFormatter(); value.formatOptions = [.withInternetDateTime, .withFractionalSeconds]; return value }()
     private var connection: OpaquePointer?
     private var identity = ""
@@ -19,8 +20,9 @@ final class MessagesReader {
     private var schemaVersion: Int64 = 0
     private(set) var generation = ""
     private(set) var columns: [String: Set<String>] = [:]
-    init(path: String) throws {
+    init(path: String, pinsURL: URL? = nil) throws {
         self.path = path
+        self.pinsURL = pinsURL
         guard sqlite3_open_v2(path, &connection, SQLITE_OPEN_READONLY | SQLITE_OPEN_FULLMUTEX, nil) == SQLITE_OK else {
             if let connection { sqlite3_close(connection) }
             connection = nil
@@ -262,7 +264,7 @@ final class MessagesReader {
     }
     func smallObservations() throws -> [(String, String, [String: Any])] {
         let muteProfile = MessagesParity.muteProfile()
-        let pins = try? MessagesPins.read()
+        let pins = try? MessagesPins.read(at: pinsURL)
         var result: [(String, String, [String: Any])] = []
         for row in try has("handle", "id", "service") ? query("SELECT ROWID AS row_position,* FROM handle") : [] {
             result.append(("messages.handle", row["service"] + ":" + row["id"], ["address": row["id"], "service": row["service"]]))

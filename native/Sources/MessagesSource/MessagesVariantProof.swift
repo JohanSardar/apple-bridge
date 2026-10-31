@@ -17,16 +17,16 @@ public enum MessagesVariantProof {
         await MessagesUISession.activate()
         let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/chat.db").path
         let reader = try MessagesReader(path: path)
-        let own = Set(try MessagesProbes.discoverSelfHandles().handles.map(MessagesProbes.normalize))
-        let chats = try reader.query("SELECT c.guid,c.ROWID AS chat_row_id,h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.service_name='iMessage' AND (SELECT COUNT(*) FROM chat_handle_join x WHERE x.chat_id=c.ROWID)=1 ORDER BY c.ROWID DESC")
-        guard let selectedChat = chats.first(where: { own.contains(MessagesProbes.normalize($0["id"])) }) else { return limited("needs existing self-chat") }
-        let chat = selectedChat["guid"]
+        let own = try MessagesProbes.discoverSelfHandles().handles
+        guard let handle = try MessagesSelfTestIsolation.unused(own, database: MessagesDatabase()).first else { return limited("No unused self address is available for an isolated test conversation. Add a self address in Messages before running this check.") }
+        var chat = ""
         let run = "variant_" + UUID().uuidString.replacingOccurrences(of: "-", with: "")
         let tag = "[ab-test " + run + "]"
         let baseline = try reader.maximum()
+        let baselineChat = try reader.query("SELECT COALESCE(MAX(ROWID),0) AS maximum FROM chat").first?.integer("maximum") ?? 0
         let ledger = PrivateReport.directory.appendingPathComponent("messages-command-cleanup/" + run + ".json")
         try FileManager.default.createDirectory(at: ledger.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-        var registration: [String: Any] = ["run_id": run, "baseline_max_row_id": baseline, "cleanup_state": "pending_native_cleanup", "created_message_ids": [String]()]
+        var registration: [String: Any] = ["run_id": run, "baseline_max_row_id": baseline, "baseline_max_chat_row_id": baselineChat, "cleanup_state": "pending_native_cleanup", "created_message_ids": [String]()]
         try PrivateReport.write(registration, to: ledger)
         let commands = MessagesCommands(path: path, labCommands: true)
         var writes = 0
@@ -59,10 +59,17 @@ public enum MessagesVariantProof {
         }
         do {
             writes += 1
-            let initial = try await MessagesParityFixture.send(text: tag + " fixture", handle: MessagesProbes.normalize(selectedChat["id"]), chat: chat)
+            lateEffectPossible = true
+            let initial = try await MessagesParityFixture.send(text: tag + " fixture", handle: handle)
             lateEffectPossible = initial["disposition"].string == "indeterminate"
             try capture()
             guard initial["observed"].bool else { throw SourceFailure.capabilityUnproven }
+            chat = initial["chat_key"].string
+            guard let created = try reader.query("SELECT ROWID AS position FROM chat WHERE guid=?", [chat]).first,
+                  created.integer("position") > baselineChat else { throw SourceFailure.conflict }
+            registration["created_chat_key"] = chat
+            registration["created_by_run"] = true
+            try capture()
             let text = tag + " variant"
             let variant: JSON = kind == "effect" ? .object(["kind": .string(kind), "effect": .string("loud")]) : .object(["kind": .string(kind), "formatting": .array([.object(["utf16_location": .number(Double(tag.utf16.count + 1)), "utf16_length": .number(7), "styles": .array([.string("bold")])])])])
             let prepared = try await prepare(text, variant: variant)
@@ -93,7 +100,7 @@ public enum MessagesVariantProof {
         for _ in 0..<3 {
             try capture()
             try captureCreatedIDs()
-            let cleaned = try await MessagesCleanup.run(["--tag", tag, "--owned-only", "--only-chat-id", selectedChat["chat_row_id"]])
+            let cleaned = try await MessagesCleanup.run(["--tag", tag, "--owned-only"])
             cleanup = try JSONDecoder().decode(JSON.self, from: cleaned)
             try await Task.sleep(for: .milliseconds(500))
         }
