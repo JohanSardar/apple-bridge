@@ -697,7 +697,8 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 			}
 			args, _ = json.Marshal(map[string]any{"id": created.ID})
 			command = contracts.CommandRecord{}
-			err = client.Call(ctx, "notes.delete", contracts.Command{ID: contracts.NewCommandID(), Args: args, ExpectedVersion: created.Version, WaitMS: 15000}, &command)
+			deleteID := contracts.NewCommandID()
+			err = client.Call(ctx, "notes.delete", contracts.Command{ID: deleteID, Args: args, ExpectedVersion: created.Version, WaitMS: 15000}, &command)
 			deleteCode := ""
 			if err != nil {
 				var problem *contracts.Error
@@ -716,7 +717,7 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 			add(protocol+"_delete_preserves_other_note", fixturePresent)
 			if level == "sim" {
 				effects, problem := w.Effects()
-				add(protocol+"_delete_applied_once", problem == nil && effects[command.ID] == 1)
+				add(protocol+"_delete_applied_once", problem == nil && effects[deleteID] == 1)
 			}
 		}
 	}
