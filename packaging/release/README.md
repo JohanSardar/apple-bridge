@@ -62,7 +62,7 @@ To exercise Sparkle's actual network, signature verification, extraction and ins
 python3 packaging/release/update_check.py --app '/path/to/Apple Bridge.app'
 ```
 
-This check requires the private `IOS_DISTRIBUTION_IDENTITY` and `RELEASE_KEYCHAIN` variables. It copies build 2 and build 3, signs both with the dedicated Apple Distribution identity and the same disposable update seed, and serves a signed fixture feed on loopback HTTP. Only these private fixtures permit HTTP. The custom user driver accepts the update; Sparkle installs build 3, and the check verifies its version and full code signature. It relaunches only the disposable driver, which exits immediately. It does not launch the product, enable login items, or replace a personal installation. This proves the real installer separately from the blocked Developer ID/Gatekeeper qualification.
+This check requires the private `IOS_DISTRIBUTION_IDENTITY` and `RELEASE_KEYCHAIN` variables. It copies build 2 and build 3, signs both with the dedicated Apple Distribution identity and the same disposable update seed, and serves a signed fixture feed on loopback HTTP. Only these private fixtures permit HTTP. The custom user driver accepts the update; Sparkle installs build 3, and the check verifies its version and full code signature. It relaunches only the disposable driver, which exits immediately. It does not launch the product, enable login items, or replace a personal installation. This proves the real installer separately from Developer ID/Gatekeeper qualification.
 
 The install/uninstall check uses the same cleanup implementation as the launcher:
 
@@ -76,7 +76,7 @@ swiftc -sdk /Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk \
 
 It copies the app and bundled helper into a temporary HOME under the user's cache, installs actual credentials in the app's own dedicated keychain, creates state/cache/preferences fixtures, runs `tccutil reset All dev.applebridge.r1test.uninstall`, deletes that keychain, and uninstalls. It checks that no files remain under the temporary HOME. LaunchServices must see the fixture before TCC reset; `/var/folders` fixtures are ignored. No desktop app launches with an overridden HOME, no actual user grants are reset, and no login service is registered by the check.
 
-The product uninstall explicitly confirms removal, unregisters the gateway and main-app login services, stops the setup helper, deletes the app credential keychain, resets `dev.applebridge.helper` TCC permissions, clears updater preferences and standard app data paths, and removes the app bundle including its helper. Redirected ancestors are refused; unregister, credential and TCC failures stop cleanup. A fresh macOS account's first-open Gatekeeper acceptance remains part of `R1-DMG-REAL`.
+The product uninstall explicitly confirms removal, unregisters the gateway and main-app login services, stops the setup helper, deletes the app credential keychain, resets `dev.applebridge.helper` TCC permissions, clears updater preferences and standard app data paths, and removes the app bundle including its helper. Redirected ancestors are refused; unregister, credential and TCC failures stop cleanup. `R1-DMG-REAL` runs locally on the Pro. It checks the stapled DMG, requires Gatekeeper to report `accepted` and `source=Notarized Developer ID`, mounts it read-only, verifies the bundled app with `codesign --verify --deep --strict`, validates its staple, checks the Applications link, and detaches the volume. It does not launch the product or change permissions.
 
 ## TestFlight
 
@@ -92,29 +92,19 @@ python3 packaging/release/testflight.py \
 
 The script checks profile types and bundle/team matches, archives with an explicit signing keychain, exports an internal-only TestFlight IPA, and uploads with `altool` using the ASC API key. Xcode runs with Apple tools first in PATH because Homebrew rsync rejects Apple's extended-attribute arguments during IPA export. No external tester groups or review submission are configured.
 
-The local archive and IPA export succeeded. The IPA is at `dist/testflight-3-final/export/AppleBridge.ipa`. Upload was attempted and rejected because ASC cannot determine an Apple ID for the bundle: its app record does not exist. The public ASC API cannot create app records (`asc apps create` directs callers to a web session).
+The App Store Connect iOS app record is `Apple Bridge`, bundle `com.johansardar.applebridge.ios`, SKU `APPLEBRIDGE-IOS`, app ID `6829322065`. The upload stays internal-only through `testFlightInternalTestingOnly=true`; no public release, external tester group, or App Store review is created.
 
-Create one app in App Store Connect > My Apps > + > New App with these values:
+The app icon uses the existing web icon in an opaque 1024-pixel iOS asset catalog. iPad orientation metadata supports multitasking, the obsolete NFC `NDEF` entitlement is excluded, and the Device Activity report uses ExtensionKit and the app's `Extensions` directory. These checks run in `R1-RELEASE-SIM` alongside the release tests.
 
-| Field | Value |
-| --- | --- |
-| Platform | iOS |
-| Name | Apple Bridge |
-| Primary language | English (U.S.) / en-US |
-| Bundle ID | com.johansardar.applebridge.ios (Apple Bridge iOS) |
-| SKU | APPLEBRIDGE-IOS |
-| User access | Full Access |
-
-After creating the record, upload the already exported IPA (the standard key filename is `AuthKey_<ASC_KEY_ID>.p8`):
+Confirm Apple's independent processing result after upload:
 
 ```sh
-API_PRIVATE_KEYS_DIR="$(dirname "$ASC_KEY_PATH")" xcrun altool \
-  --upload-app --type ios --file dist/testflight-3-final/export/AppleBridge.ipa \
-  --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
+ASC_BYPASS_KEYCHAIN=1 asc builds list --app 6829322065 \
+  --version 0.1.2 --build-number 3 --processing-state all --output json
 ```
 
-## Remaining Apple account blocker
+## Local qualification
 
-Both available ASC API keys reject `DEVELOPER_ID_APPLICATION` issuance with: “This operation can only be performed by the Account Holder.” `DEVELOPER_ID_APPLICATION_G2` is rejected identically. The saved OpenSSL CSR is `~/.config/apple-bridge-release/developer-id.csr`. The Account Holder must issue its Developer ID Application certificate. After issuing the certificate for that CSR, import the downloaded DER certificate with `python3 packaging/release/signing.py --certificate /private/path/developerID_application.cer`. Setup imports it into the dedicated keychain and applies the signing ACL. The dedicated-keychain creation, unlock, no-timeout setting, OpenSSL generation, certificate import, partition-list setup and actual Apple Distribution signing have all succeeded without a prompt.
+The supplied Developer ID Application certificate is installed with its private key in the dedicated release keychain. Unlock only that keychain using the saved private password before running the Mac pipeline. Keep all keys, passwords, profiles, and ASC credentials outside git.
 
-Until Developer ID issuance is allowed, no notarized DMG, successful staple/Gatekeeper result, or fresh-account first-open result is claimed. `packaging.release` remains limited for this reason and the missing ASC app record.
+The local update feed uses `example.invalid` intentionally. Replace it with a hosted HTTPS feed and enclosure URL before distributing a public download. No public download or update feed is published by these checks.

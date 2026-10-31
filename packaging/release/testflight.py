@@ -7,6 +7,7 @@ import plistlib
 import shutil
 import subprocess
 import sys
+import zipfile
 
 from release import ROOT, require, run, version
 
@@ -46,6 +47,16 @@ def xcode_environment():
     return environment
 
 
+def validate_internal_ipa(path):
+    try:
+        with zipfile.ZipFile(path) as archive:
+            info = plistlib.loads(archive.read("Payload/AppleBridge.app/Info.plist"))
+    except (zipfile.BadZipFile, KeyError, plistlib.InvalidFileException):
+        raise ValueError("The IPA is missing valid app metadata. Export Apple Bridge again before uploading.") from None
+    if info.get("CFBundleIdentifier") != BUNDLE or info.get("TFInternalTestingOnly") is not True:
+        raise ValueError("Export Apple Bridge with internal-only TestFlight testing enabled before uploading.")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Archive/export iOS for TestFlight; upload requires --upload-internal. Never adds testers.")
     parser.add_argument("--profiles", required=True, help="Private JSON mapping bundle IDs to App Store profile paths")
@@ -83,6 +94,7 @@ def main():
         ipa = destination / "export/AppleBridge.ipa"
         if not ipa.is_file():
             raise ValueError("Xcode did not export AppleBridge.ipa. Inspect the export log before retrying.")
+        validate_internal_ipa(ipa)
         print("R1-TESTFLIGHT-EXPORT passed=true", flush=True)
         if args.upload_internal:
             from tempfile import TemporaryDirectory

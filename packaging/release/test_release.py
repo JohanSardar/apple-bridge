@@ -33,6 +33,67 @@ class ReleaseTests(unittest.TestCase):
                 release.https(url)
 
 class TestFlightTests(unittest.TestCase):
+    def test_upload_refuses_ipa_without_internal_only_marker(self):
+        import sys
+        import plistlib
+        import zipfile
+        sys.path.insert(0, str(Path(__file__).parent))
+        import testflight
+        with tempfile.TemporaryDirectory(prefix="ab-test-ipa-") as temp:
+            ipa = Path(temp) / "AppleBridge.ipa"
+            ipa.write_bytes(b"not an IPA")
+            with self.assertRaisesRegex(ValueError, "Export Apple Bridge again"):
+                testflight.validate_internal_ipa(ipa)
+            for marker, bundle, accepted in [(None, testflight.BUNDLE, False), (False, testflight.BUNDLE, False), (True, "other.app", False), (True, testflight.BUNDLE, True)]:
+                info = {"CFBundleIdentifier": bundle}
+                if marker is not None:
+                    info["TFInternalTestingOnly"] = marker
+                with zipfile.ZipFile(ipa, "w") as archive:
+                    archive.writestr("Payload/AppleBridge.app/Info.plist", plistlib.dumps(info))
+                if accepted:
+                    testflight.validate_internal_ipa(ipa)
+                else:
+                    with self.assertRaises(ValueError):
+                        testflight.validate_internal_ipa(ipa)
+
+    def test_app_store_icon_is_opaque_and_configured(self):
+        import json
+        import struct
+        root = Path(__file__).resolve().parents[2]
+        assets = root / "ios/App/Assets.xcassets/AppIcon.appiconset"
+        icon = json.loads((assets / "Contents.json").read_text())["images"][0]
+        data = (assets / icon["filename"]).read_bytes()
+        self.assertEqual(data[:8], b"\x89PNG\r\n\x1a\n")
+        self.assertEqual(struct.unpack(">II", data[16:24]), (1024, 1024))
+        self.assertEqual(data[25], 2)
+        self.assertIn("ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon", (root / "ios/project.yml").read_text())
+
+    def test_ipad_multitasking_and_communication_metadata(self):
+        import plistlib
+        root = Path(__file__).resolve().parents[2]
+        info = plistlib.loads((root / "ios/App/Info.plist").read_bytes())
+        self.assertEqual(set(info["UISupportedInterfaceOrientations~ipad"]), {
+            "UIInterfaceOrientationPortrait", "UIInterfaceOrientationPortraitUpsideDown",
+            "UIInterfaceOrientationLandscapeLeft", "UIInterfaceOrientationLandscapeRight",
+        })
+        self.assertIn("INSendMessageIntent", info["NSUserActivityTypes"])
+
+    def test_nfc_entitlement_excludes_obsolete_ndef(self):
+        import plistlib
+        root = Path(__file__).resolve().parents[2]
+        entitlements = plistlib.loads((root / "ios/App/AppleBridge.entitlements").read_bytes())
+        formats = entitlements["com.apple.developer.nfc.readersession.formats"]
+        self.assertNotIn("NDEF", formats)
+        self.assertIn("TAG", formats)
+
+    def test_screen_time_report_uses_extensionkit(self):
+        import plistlib
+        root = Path(__file__).resolve().parents[2]
+        info = plistlib.loads((root / "ios/Extensions/ScreenTimeReport/Info.plist").read_bytes())
+        self.assertNotIn("NSExtension", info)
+        self.assertEqual(info["EXAppExtensionAttributes"]["EXExtensionPointIdentifier"], "com.apple.deviceactivityui.report-extension")
+        self.assertIn("ScreenTimeReport:\n    type: extensionkit-extension", (root / "ios/project.yml").read_text())
+
     def test_all_profiles_must_be_distribution_profiles_for_exact_bundle(self):
         import sys
         from unittest.mock import patch

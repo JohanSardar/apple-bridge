@@ -78,6 +78,10 @@ func Run(ctx context.Context, s Scenario, level string) (e Evidence) {
 		}
 	}
 	conditions.Quiet = samplesQuiet(conditions.Start)
+	if s.Feature == "packaging.release" {
+		conditions.Start["pro"] = conditions.Start["air"]
+		delete(conditions.Start, "air")
+	}
 	hosts := make([]string, 0, len(conditions.Start))
 	for host := range conditions.Start {
 		hosts = append(hosts, host)
