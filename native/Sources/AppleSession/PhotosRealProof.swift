@@ -81,6 +81,12 @@ enum PhotosRealProof {
                     keystroke "i" using command down
                 end tell
                 """)
+                var infoOpen = true
+                defer {
+                    if infoOpen {
+                        _ = try? script("tell application \"System Events\" to tell process \"Photos\"\nif frontmost then keystroke \"i\" using command down\nend tell")
+                    }
+                }
                 var identified = false
                 for _ in 0..<40 {
                     identified = displaysFilename(root)
@@ -94,6 +100,7 @@ enum PhotosRealProof {
                     keystroke "i" using command down
                 end tell
                 """)
+                infoOpen = false
                 try await Task.sleep(for: .milliseconds(200))
                 _ = try script("""
                 tell application "System Events" to tell process "Photos"
