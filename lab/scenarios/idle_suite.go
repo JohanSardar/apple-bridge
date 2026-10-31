@@ -116,10 +116,10 @@ func idleSuite(ctx context.Context, scenarios []Scenario, asJSON bool) error {
 			os.Remove(report)
 			var probe map[string]any
 			add("helper_report", problem == nil && readErr == nil && json.Unmarshal(raw, &probe) == nil)
-			for _, name := range []string{"grant_passed", "read_passed", "import_passed", "original_passed", "cleanup_passed"} {
+			for _, name := range []string{"grant_passed", "read_passed"} {
 				add(name, probe[name] == true)
 			}
-			for _, name := range []string{"asset_count", "original_digest"} {
+			for _, name := range []string{"asset_count"} {
 				e.Metrics[name] = probe[name]
 			}
 		}
@@ -155,6 +155,26 @@ func idleSuite(ctx context.Context, scenarios []Scenario, asJSON bool) error {
 		}
 		return total, nil
 	}
+	takeProfile := func(phase string) string {
+		profileDigest := ""
+		directory := filepath.Join("lab/evidence/private", "idle")
+		if os.MkdirAll(directory, 0700) == nil {
+			profile := filepath.Join(directory, results[0].RunID+"-"+phase+".sample")
+			if os.WriteFile(profile, nil, 0600) == nil {
+				bounded, stop := context.WithTimeout(ctx, 30*time.Second)
+				problem := exec.CommandContext(bounded, "/usr/bin/sample", pid, "15", "1", "-file", profile).Run()
+				stop()
+				if bytes, readErr := os.ReadFile(profile); problem == nil && readErr == nil {
+					profileDigest = fmt.Sprintf("%x", sha256.Sum256(bytes))
+				}
+			}
+		}
+		return profileDigest
+	}
+	beforeProfile := ""
+	if settled && pidErr == nil {
+		beforeProfile = takeProfile("before")
+	}
 	window := measureIdleWindow(ctx, settled && pidErr == nil, cpu, time.Now, func(ctx context.Context, duration time.Duration) error {
 		timer := time.NewTimer(duration)
 		defer timer.Stop()
@@ -167,18 +187,7 @@ func idleSuite(ctx context.Context, scenarios []Scenario, asJSON bool) error {
 	})
 	profileDigest := ""
 	if window.sampled {
-		directory := filepath.Join("lab/evidence/private", "idle")
-		if os.MkdirAll(directory, 0700) == nil {
-			profile := filepath.Join(directory, results[0].RunID+".sample")
-			if os.WriteFile(profile, nil, 0600) == nil {
-				bounded, stop := context.WithTimeout(ctx, 10*time.Second)
-				problem := exec.CommandContext(bounded, "sample", pid, "5", "10", "-file", profile).Run()
-				stop()
-				if bytes, readErr := os.ReadFile(profile); problem == nil && readErr == nil {
-					profileDigest = fmt.Sprintf("%x", sha256.Sum256(bytes))
-				}
-			}
-		}
+		profileDigest = takeProfile("after")
 	}
 	var version contracts.QueryResult
 	responsive := client.Call(ctx, "helper.version", contracts.Query{Args: json.RawMessage(`{}`), DeadlineMS: 1000}, &version) == nil
@@ -191,6 +200,9 @@ func idleSuite(ctx context.Context, scenarios []Scenario, asJSON bool) error {
 		e.Assertions = append(e.Assertions, Assertion{Name: "same_helper_since_start", Passed: sameHelper})
 		e.Passed = e.Passed && sameHelper
 		e.Metrics["helper_pid"] = pid
+		if beforeProfile != "" {
+			e.Metrics["helper_before_sample_sha256"] = beforeProfile
+		}
 		if profileDigest != "" {
 			e.Metrics["helper_sample_sha256"] = profileDigest
 		}

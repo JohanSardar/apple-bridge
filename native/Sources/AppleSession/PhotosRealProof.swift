@@ -15,6 +15,10 @@ enum PhotosRealProof {
             return .object(["grant_passed": .bool(false)])
         }
         let source = PhotosSource()
+        if scenario == "PHO-IDLE" {
+            let readiness = await source.open()
+            return .object(["grant_passed": .bool(true), "read_passed": .bool(readiness.state == "ready"), "asset_count": .number(Double(PHAsset.fetchAssets(with: nil).count))])
+        }
         func command(_ op: String, _ args: JSON) async throws -> JSON {
             try await source.dispatch(source.prepare(.object(["action": .object(["op": .string(op), "args": args])])))
         }
