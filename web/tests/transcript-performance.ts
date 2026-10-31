@@ -25,7 +25,7 @@ export async function transcriptInputs(page:Page,info:TestInfo,label:string,acti
         const capture=(at?:number)=>{
             const action=probe.actions.at(-1);if(!action||action.resultAt)return;
             const transcript=document.querySelector('.messages-transcript');
-            const ready=label==='open-chat'?transcript&&transcript!==action.previousTranscript&&transcript.getAttribute('aria-busy')==='false'&&transcript.querySelector('.message-row'):
+            const ready=label==='open-chat'?transcript&&transcript!==action.previousTranscript&&transcript.getAttribute('aria-busy')==='false'&&transcript.querySelector('.message-row')&&transcript.querySelector('[role=listbox]')?.getAttribute('aria-busy')==='false':
                 label==='send'?Array.from(document.querySelectorAll('.message-row')).some(row=>row.textContent?.includes(action.text)):
                 label==='react'?reactions()!==action.reactions:document.querySelector('[aria-label="Media viewer"][open][data-media-loading="false"] .media-viewer-stage [data-media-state="ready"]');
             if(!ready)return;

@@ -15,6 +15,11 @@ test('queued view snapshots persist the latest data and cursor once per key and 
                         transaction() {
                             const transaction: any = {};
                             transaction.objectStore = () => ({
+                                get(key: string) {
+                                    const request: any = {};
+                                    queueMicrotask(() => { request.result = saved.findLast(value => value.key === key); request.onsuccess(); });
+                                    return request;
+                                },
                                 put(value: unknown) {
                                     saved.push(structuredClone(value));
                                     setTimeout(() => transaction.oncomplete(), 0);
@@ -39,6 +44,7 @@ test('queued view snapshots persist the latest data and cursor once per key and 
     const pending: Promise<unknown>[] = [];
     for (let index = 0; index < 100; index++) pending.push(viewCache.write('thread', { older: index }, { epoch: 'epoch', subscription_revision: 1, sequence: index }));
     pending.push(viewCache.write('other-thread', { older: 10 }));
+    assert.equal((await viewCache.read('thread'))?.cursor?.sequence, 99);
     await Promise.all(pending);
     assert.equal(saved.length, 2);
     assert.equal(saved[0].data.older, 99);
@@ -53,6 +59,7 @@ test('queued view snapshots persist the latest data and cursor once per key and 
     const stale = viewCache.write('thread', { older: 200 });
     viewCache.disable();
     viewCache.enable('second-device');
+    assert.equal(await viewCache.read('thread'), undefined);
     const current = viewCache.write('thread', { older: 300 });
     await Promise.all([stale, current]);
     assert.equal(saved.length, 3);

@@ -19,9 +19,20 @@ test.afterEach(async({page},info)=>{
 test('WEB-MSG-PERF WEB-MSG-PERF-FRAME a 100k-message transcript fling records bounded rendering and frame coverage',async({page,request},info)=>{
     await prepareSession(page);const ids=await control(request,'/demo-fixtures');let population=0;const releases:(()=>void)[]=[];
     const observe=(socket:Socket)=>{const read=(event:{payload:string|Buffer})=>{const frame=JSON.parse(String(event.payload));if(frame.t==='snap'&&frame.data?.items?.[0]?.data.chat_id===ids['demo-chat-39'])population=Math.max(population,frame.data.items.length+Number(frame.data.older??0)+Number(frame.data.newer??0));};socket.on('framereceived',read);releases.push(()=>socket.off('framereceived',read));};
+    await page.addInitScript(()=>{
+        const states:{count:number;busy:boolean}[]=[];(window as any).__transcriptBatches=states;
+        const observer=new MutationObserver(()=>{
+            const list=document.querySelector('[role=listbox][aria-label="Messages transcript"]');if(!list)return;
+            const state={count:list.querySelectorAll('.virtual-row').length,busy:list.getAttribute('aria-busy')==='true'},previous=states.at(-1);
+            if(state.count&&(!previous||previous.count!==state.count||previous.busy!==state.busy))states.push(state);
+        });observer.observe(document,{subtree:true,childList:true,attributes:true,attributeFilter:['aria-busy']});(window as any).__stopTranscriptBatches=()=>observer.disconnect();
+    });
     page.on('websocket',observe);await page.goto('/messages/'+encodeURIComponent(ids['demo-chat-39']));
     const transcript=page.locator('.messages-transcript'),viewport=page.getByRole('listbox',{name:'Messages transcript'});
     await expect(transcript).toHaveAttribute('aria-busy','false');await expect.poll(async()=>Number(await transcript.getAttribute('data-window-size'))).toBeGreaterThanOrEqual(200);
+    await expect(viewport).toHaveAttribute('aria-busy','false');
+    const batches=await page.evaluate(()=>{(window as any).__stopTranscriptBatches();return (window as any).__transcriptBatches as {count:number;busy:boolean}[];});
+    expect(batches.length).toBeGreaterThan(0);expect(batches[0].count).toBeLessThanOrEqual(3);expect(batches.at(-1)?.busy).toBe(false);if(batches.at(-1)!.count>3)expect(batches.some(state=>state.busy)).toBe(true);
     expect(population).toBe(100000);page.off('websocket',observe);releases.forEach(release=>release());
     await expect(page.locator('.transcript')).toHaveCSS('transform','none');await page.waitForTimeout(300);await installProbe(page,true,page.context().browser()?.browserType().name()!=='chromium');
     const stageProfile=process.env.AB_WEB_STAGE_PROFILE==='1'||process.env.AB_WEB_STAGE_PROFILE==='fling';
