@@ -49,8 +49,8 @@ public enum ClockTimers {
         throw failure()
     }
 
-    private static func snapshot() throws -> [[String: Any]] {
-        let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Group Containers/group.com.apple.mobiletimerd/local.sqlite").path
+    public static func snapshot(at location: URL? = nil) throws -> [[String: Any]] {
+        let path = (location ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Group Containers/group.com.apple.mobiletimerd/local.sqlite")).path
         var database: OpaquePointer?
         guard sqlite3_open_v2(path, &database, SQLITE_OPEN_READONLY, nil) == SQLITE_OK else { if let database { sqlite3_close(database) }; throw failure() }
         defer { sqlite3_close(database) }

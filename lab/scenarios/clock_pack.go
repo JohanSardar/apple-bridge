@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/clockpack"
@@ -35,6 +36,26 @@ func runClockPack(ctx context.Context, s Scenario, level string) Evidence {
 		return runClockReal(ctx, s, e, clockpack.Pack{Runner: shortcut.CLI{}})
 	}
 	if s.ID == "CLK-ALARM-REAL" || s.ID == "CLK-TIMER-REAL" {
+		if s.ID == "CLK-TIMER-REAL" {
+			build := exec.CommandContext(ctx, "packaging/dev/build-native.sh")
+			build.Env = append(os.Environ(), "APPLE_BRIDGE_NATIVE_TARGET=ShortcutsChecks")
+			output, buildErr := build.CombinedOutput()
+			add("native_timer_snapshot_build", buildErr == nil)
+			if buildErr != nil {
+				os.Stderr.Write(output)
+				return e
+			}
+			directory, readErr := os.ReadFile("native/.build/native-output-1")
+			add("native_timer_snapshot_output", readErr == nil)
+			if readErr != nil {
+				return e
+			}
+			output, checkErr := exec.CommandContext(ctx, filepath.Join(strings.TrimSpace(string(directory)), "ShortcutsChecks"), "synthetic", s.ID).CombinedOutput()
+			add("native_timer_snapshot_states_and_readonly", checkErr == nil)
+			if checkErr != nil {
+				os.Stderr.Write(output)
+			}
+		}
 		return runClockSession(ctx, s, e, clockpack.Pack{Runner: newClockSimulation()})
 	}
 
