@@ -94,12 +94,11 @@ enum HelperLabCommand {
             let reportURL = try report(arguments)
             guard arguments.count > 2 else { throw ProbeFailure.invalidArguments }
             let cleanup = arguments[1] == "MAIL-CLEANUP"
-            let deadline = DispatchWorkItem {
+            let deadline = MailQualification.deadline(after: cleanup ? 25 : 80) { @Sendable in
                 let proof: JSON = .object([cleanup ? "cleanup_passed" : "fixture_and_commands": .bool(false), cleanup ? "cleanup_error" : "command_error": .string(MailCommandFailure.timeout.localizedDescription)])
                 try? JSONEncoder().encode(proof).write(to: reportURL, options: .atomic)
                 exit(1)
             }
-            DispatchQueue.global().asyncAfter(deadline: .now() + (cleanup ? 25 : 80), execute: deadline)
             defer { deadline.cancel() }
             var result: JSON?
             Task { @MainActor in
