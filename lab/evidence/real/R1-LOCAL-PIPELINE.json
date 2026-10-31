@@ -33,5 +33,9 @@
   "drag_to_applications": true,
   "readonly_dmg_mount": true,
   "dmg_unmounted": true,
-  "recursive_developer_id_signature": true
+  "recursive_developer_id_signature": true,
+  "notarization_app_wait_timed_out": true,
+  "notarization_dmg_wait_timed_out": true,
+  "notarization_pending_count": 2,
+  "testflight_export_compliance_complete": false
 }

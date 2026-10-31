@@ -108,3 +108,9 @@ ASC_BYPASS_KEYCHAIN=1 asc builds list --app 6829322065 \
 The supplied Developer ID Application certificate is installed with its private key in the dedicated release keychain. Unlock only that keychain using the saved private password before running the Mac pipeline. Keep all keys, passwords, profiles, and ASC credentials outside git.
 
 The local update feed uses `example.invalid` intentionally. Replace it with a hosted HTTPS feed and enclosure URL before distributing a public download. No public download or update feed is published by these checks.
+
+The Pro qualification produced `dist/r1c-dmg3/AppleBridge.dmg` and the internal-only IPA at `dist/testflight-r1c-4/export/AppleBridge.ipa`. The DMG's mounted app passes strict signature verification, the Applications link is present, and the real Sparkle build-2-to-build-3 update passes. Apple still reports both the app ZIP and DMG notarization submissions as In Progress after 20-minute waits. Staple and Gatekeeper qualification remain blocked until Apple accepts a submission.
+
+TestFlight version 0.1.2 build 4 is independently confirmed as VALID and INTERNAL_ONLY with no beta groups and external testing NOT_APPLICABLE. ASC's internal build state is MISSING_EXPORT_COMPLIANCE; the encryption declaration remains to be completed before assigning internal testers.
+
+If a notarization wait times out, preserve the signed artifact and query the existing submission with `notarytool history` and `notarytool info`, using the same path-based ASC key arguments. Once the DMG submission is Accepted, run `xcrun stapler staple`, the validation and Gatekeeper commands above, then rerun `R1-DMG-REAL` on the Pro with `APPLE_BRIDGE_RELEASE_DMG` pointing at that DMG. Do not queue this check on the Air.
