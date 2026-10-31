@@ -142,3 +142,28 @@ func TestConnectorPublicRoutesCannotApproveOrLeakLocalRequests(t *testing.T) {
 		t.Fatal("local denial failed")
 	}
 }
+
+func TestConnectorAuthorizeAcceptsEveryAdvertisedScope(t *testing.T) {
+	approvals, client, code := connectorFixture(t)
+	handler := Handler(Deps{Authority: approvals.Authority, ConnectorApprovals: approvals, Address: "127.0.0.1:7780"})
+	advertised := oauthScopes()
+	for _, scope := range advertised {
+		if scope == "admin" {
+			t.Fatal("admin advertised to connectors")
+		}
+	}
+	q := url.Values{"client_id": {client.ID}, "response_type": {"code"}, "redirect_uri": {code.RedirectURI}, "code_challenge": {code.Challenge}, "code_challenge_method": {"S256"}, "resource": {"http://127.0.0.1:7780/mcp"}, "scope": {strings.Join(append(advertised, "admin"), " ")}, "format": {"json"}}
+	req := httptest.NewRequest("GET", "http://127.0.0.1:7780/oauth/authorize?"+q.Encode(), nil)
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, req)
+	if response.Code != 200 || strings.Contains(response.Body.String(), `"admin"`) {
+		t.Fatalf("got %d %s", response.Code, response.Body.String())
+	}
+	q.Set("scope", "admin")
+	req = httptest.NewRequest("GET", "http://127.0.0.1:7780/oauth/authorize?"+q.Encode(), nil)
+	response = httptest.NewRecorder()
+	handler.ServeHTTP(response, req)
+	if response.Code != 400 {
+		t.Fatalf("admin-only request got %d", response.Code)
+	}
+}

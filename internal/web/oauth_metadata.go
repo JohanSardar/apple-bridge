@@ -11,7 +11,9 @@ func oauthScopes() []string {
 	scopes := []string{}
 	for _, group := range contracts.GrantGroups(false) {
 		for _, grant := range group.Grants {
-			scopes = append(scopes, string(grant))
+			if agentScope(string(grant)) {
+				scopes = append(scopes, string(grant))
+			}
 		}
 	}
 	return scopes
