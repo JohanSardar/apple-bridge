@@ -106,12 +106,14 @@ enum PhotosRealProof {
             }
             throw SourceFailure.unavailable
         }
+        var stage = "library read"
         do {
             let options = PHFetchOptions()
             options.includeHiddenAssets = true
             let libraryCount = PHAsset.fetchAssets(with: options).count
             let snapshot = try await source.snapshot()
             guard snapshot.filter({ $0["collection"].string == "photos.asset" }).count == libraryCount else { throw SourceFailure.corrupt }
+            stage = "test album creation"
             let created = try await command("photos.create_album", .object(["name": .string(title)]))
             let albumID = created["native_key"].string
             guard let album = PHAssetCollection.fetchAssetCollections(withLocalIdentifiers: [albumID], options: nil).firstObject, album.localizedTitle == title else { throw SourceFailure.corrupt }
@@ -119,21 +121,24 @@ enum PhotosRealProof {
             for x in 0..<2 { for y in 0..<2 { image.setColor(.red, atX: x, y: y) } }
             guard let bytes = image.representation(using: .png, properties: [:]) else { throw SourceFailure.corrupt }
             let digest = SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined()
+            stage = "test photo import"
             let imported = try await command("photos.import", .object(["data": .string(bytes.base64EncodedString()), "digest": .string(digest), "kind": .string("image"), "album": .string(albumID)]))
             let assetID = imported["native_key"].string
             let rows = try await source.search(.object(["album": .string(albumID)]))["items"].array
             guard rows.count == 1, rows[0]["local_id"].string == assetID else { throw SourceFailure.corrupt }
+            stage = "original byte verification"
             let original = try await source.blob("photos.original", .object(["asset": .string(assetID)]))
             guard original["digest"].string == digest, original["size"].number == Double(bytes.count) else { throw SourceFailure.corrupt }
             let read = try await source.readBlob(original["handle"].string, offset: 0, length: 131072)
             guard read["data"].string == bytes.base64EncodedString(), read["eof"].bool else { throw SourceFailure.corrupt }
             var result: [String: JSON] = ["grant_passed": .bool(true), "read_passed": .bool(true), "import_passed": .bool(true), "original_passed": .bool(true), "asset_count": .number(1), "library_asset_count": .number(Double(libraryCount)), "original_digest": .string(digest)]
+            stage = "test photo cleanup"
             try await cleanup()
             result["cleanup_passed"] = .bool(true)
             return .object(result)
         } catch {
-            try await cleanup()
-            return .object(["failure": .string("Photos read, import, original verification or cleanup failed. Check Helper Photos access and close any Photos dialog before retrying."), "grant_passed": .bool(true), "cleanup_passed": .bool(true), "library_asset_count": .number(Double(PHAsset.fetchAssets(with: nil).count))])
+            let cleaned = (try? await cleanup()) != nil
+            return .object(["failure": .string("Photos \(stage) failed. Check Helper Photos access and close any Photos dialog before retrying."), "grant_passed": .bool(true), "cleanup_passed": .bool(cleaned), "library_asset_count": .number(Double(PHAsset.fetchAssets(with: nil).count))])
         }
     }
 }
