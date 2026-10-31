@@ -19,15 +19,22 @@ func commandChecks() async throws {
             guard let png = image.representation(using: .png, properties: [:]) else { throw SourceFailure.corrupt }
             bytes = png
         }
+        #if LAB
         await source.delayNextFixtureObservationForProof(2)
+        #endif
         let digest = SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined()
         let imported = try await run("import", .object(["data": .string(bytes.base64EncodedString()), "digest": .string(digest), "kind": .string(kind), "album": album]))
         let asset = imported["native_key"]
         let blob = try await source.blob("photos.original", .object(["asset": asset]))
-        guard blob["digest"].string == digest, blob["size"].number == Double(bytes.count), await source.importedAssetIdentifiersForProof() == [asset.string] else { throw SourceFailure.corrupt }
+        guard blob["digest"].string == digest, blob["size"].number == Double(bytes.count) else { throw SourceFailure.corrupt }
+        #if LAB
+        guard await source.importedAssetIdentifiersForProof() == [asset.string] else { throw SourceFailure.corrupt }
+        #endif
         let original = try await source.readBlob(blob["handle"].string, offset: 0, length: 131072)
         guard original["data"].string == bytes.base64EncodedString(), original["eof"].bool else { throw SourceFailure.corrupt }
+        #if LAB
         await source.delayNextFixtureObservationForProof(2)
+        #endif
         _ = try await run("set_favorite", .object(["asset": asset, "favorite": .bool(true)]))
         guard try await source.search(.object(["favorite": .bool(true), "album": album]))["items"].array.count == 1 else { throw SourceFailure.corrupt }
         let rows = try await source.snapshot()
@@ -38,9 +45,14 @@ func commandChecks() async throws {
         guard try await source.search(.object(["album": album]))["items"].array.isEmpty else { throw SourceFailure.corrupt }
         _ = try await run("add_to_album", .object(["asset": asset, "album": album]))
         guard try await source.search(.object(["album": album]))["items"].array.count == 1 else { throw SourceFailure.corrupt }
+        #if LAB
         await source.delayNextFixtureObservationForProof(2)
+        #endif
         _ = try await run("delete", .object(["asset": asset]))
-        guard try await source.search(.object([:]))["items"].array.isEmpty, await source.importedAssetIdentifiersForProof().isEmpty else { throw SourceFailure.corrupt }
+        guard try await source.search(.object([:]))["items"].array.isEmpty else { throw SourceFailure.corrupt }
+        #if LAB
+        guard await source.importedAssetIdentifiersForProof().isEmpty else { throw SourceFailure.corrupt }
+        #endif
     }
     let external: JSON = .object(["kind": .string("upsert"), "collection": .string("photos.asset"), "native_key": .string("external"), "data": .object([:])])
     try await source.replaceFixture([external])
