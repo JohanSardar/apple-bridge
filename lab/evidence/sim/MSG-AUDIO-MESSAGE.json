@@ -1,17 +1,17 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[6.91 10.93 15] cpu_idle=18% cpus=10 other_heavy=0"
+    "summary": "air: load=[14.75 10.15 10.14] cpu_idle=37% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M6A1D4QBD1CB324E3KX2WKWE",
+  "run_id": "run_01M6A2PY2SNVQVMP44E0D8T5NY",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MSG-AUDIO-MESSAGE",
   "level": "sim",
   "passed": true,
-  "git_sha": "54a87045be19cb19c69adca6dd4f9f0db829a657",
-  "at": "2026-10-31T22:31:09.803066Z",
+  "git_sha": "be7d78a13e51c38bfb296f4c3c402e077083e193",
+  "at": "2026-10-31T22:53:59.257524Z",
   "assertions": [
     {
       "name": "native_readback_checks_build",
@@ -22,47 +22,7 @@
       "passed": true
     },
     {
-      "name": "other_recipient_email_rejected",
-      "passed": true
-    },
-    {
-      "name": "exact_recipient_phone",
-      "passed": true
-    },
-    {
-      "name": "late_tagged_echo_owned",
-      "passed": true
-    },
-    {
-      "name": "accessibility_input_without_automation",
-      "passed": true
-    },
-    {
-      "name": "additional_recipient_email_rejected",
-      "passed": true
-    },
-    {
-      "name": "phone_substring_rejected",
-      "passed": true
-    },
-    {
       "name": "exact_recipient_email",
-      "passed": true
-    },
-    {
-      "name": "personal_draft_preserved",
-      "passed": true
-    },
-    {
-      "name": "accessibility_input_interference_refused",
-      "passed": true
-    },
-    {
-      "name": "earlier_residue_refused",
-      "passed": true
-    },
-    {
-      "name": "ordinary_attachment_rejected",
       "passed": true
     },
     {
@@ -70,39 +30,7 @@
       "passed": true
     },
     {
-      "name": "stale_build_rejected",
-      "passed": true
-    },
-    {
       "name": "missing_build_rejected",
-      "passed": true
-    },
-    {
-      "name": "valid_pin_indices",
-      "passed": true
-    },
-    {
-      "name": "invalid_pin_index_rejected",
-      "passed": true
-    },
-    {
-      "name": "stale_os_rejected",
-      "passed": true
-    },
-    {
-      "name": "invalid_pin_state_rejected",
-      "passed": true
-    },
-    {
-      "name": "native_audio_flag_required",
-      "passed": true
-    },
-    {
-      "name": "current_build_qualified",
-      "passed": true
-    },
-    {
-      "name": "new_echo_alone_is_not_deletion",
       "passed": true
     },
     {
@@ -110,7 +38,39 @@
       "passed": true
     },
     {
-      "name": "late_echo_does_not_hide_deletion",
+      "name": "stale_build_rejected",
+      "passed": true
+    },
+    {
+      "name": "ordinary_attachment_rejected",
+      "passed": true
+    },
+    {
+      "name": "accessibility_input_without_automation",
+      "passed": true
+    },
+    {
+      "name": "native_audio_flag_required",
+      "passed": true
+    },
+    {
+      "name": "earlier_residue_refused",
+      "passed": true
+    },
+    {
+      "name": "current_build_qualified",
+      "passed": true
+    },
+    {
+      "name": "personal_draft_preserved",
+      "passed": true
+    },
+    {
+      "name": "new_echo_alone_is_not_deletion",
+      "passed": true
+    },
+    {
+      "name": "current_draft_replace_allowed",
       "passed": true
     },
     {
@@ -118,7 +78,19 @@
       "passed": true
     },
     {
-      "name": "incoming_audio_rejected",
+      "name": "stale_os_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_pin_index_rejected",
+      "passed": true
+    },
+    {
+      "name": "late_tagged_echo_owned",
+      "passed": true
+    },
+    {
+      "name": "phone_substring_rejected",
       "passed": true
     },
     {
@@ -126,7 +98,35 @@
       "passed": true
     },
     {
-      "name": "current_draft_replace_allowed",
+      "name": "other_recipient_email_rejected",
+      "passed": true
+    },
+    {
+      "name": "accessibility_input_interference_refused",
+      "passed": true
+    },
+    {
+      "name": "valid_pin_indices",
+      "passed": true
+    },
+    {
+      "name": "late_echo_does_not_hide_deletion",
+      "passed": true
+    },
+    {
+      "name": "additional_recipient_email_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_pin_state_rejected",
+      "passed": true
+    },
+    {
+      "name": "incoming_audio_rejected",
+      "passed": true
+    },
+    {
+      "name": "exact_recipient_phone",
       "passed": true
     },
     {

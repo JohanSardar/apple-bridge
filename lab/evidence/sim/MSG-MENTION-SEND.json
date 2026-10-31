@@ -1,48 +1,24 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[8.68 10.92 14.81] cpu_idle=56% cpus=10 other_heavy=0"
+    "summary": "air: load=[13.25 9.98 10.08] cpu_idle=60% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M6A1EANTQYDNE0G6JXYVVPRW",
+  "run_id": "run_01M6A2Q43KFAZKHVCFCW6RTW3P",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MSG-MENTION-SEND",
   "level": "sim",
   "passed": true,
-  "git_sha": "54a87045be19cb19c69adca6dd4f9f0db829a657",
-  "at": "2026-10-31T22:31:48.666294Z",
+  "git_sha": "be7d78a13e51c38bfb296f4c3c402e077083e193",
+  "at": "2026-10-31T22:54:05.427787Z",
   "assertions": [
     {
+      "name": "native_readback_checks_build",
+      "passed": true
+    },
+    {
       "name": "native_readback_checks",
-      "passed": true
-    },
-    {
-      "name": "valid_pin_indices",
-      "passed": true
-    },
-    {
-      "name": "invalid_pin_state_rejected",
-      "passed": true
-    },
-    {
-      "name": "exact_recipient_phone",
-      "passed": true
-    },
-    {
-      "name": "current_build_qualified",
-      "passed": true
-    },
-    {
-      "name": "accessibility_input_without_automation",
-      "passed": true
-    },
-    {
-      "name": "plain_send_rejected",
-      "passed": true
-    },
-    {
-      "name": "additional_recipient_email_rejected",
       "passed": true
     },
     {
@@ -50,31 +26,7 @@
       "passed": true
     },
     {
-      "name": "invalid_pin_index_rejected",
-      "passed": true
-    },
-    {
-      "name": "mention_identity_readback",
-      "passed": true
-    },
-    {
-      "name": "other_recipient_email_rejected",
-      "passed": true
-    },
-    {
-      "name": "missing_build_rejected",
-      "passed": true
-    },
-    {
-      "name": "exact_recipient_email",
-      "passed": true
-    },
-    {
-      "name": "stale_os_rejected",
-      "passed": true
-    },
-    {
-      "name": "native_pin_order",
+      "name": "plain_send_rejected",
       "passed": true
     },
     {
@@ -82,7 +34,43 @@
       "passed": true
     },
     {
-      "name": "phone_substring_rejected",
+      "name": "additional_recipient_email_rejected",
+      "passed": true
+    },
+    {
+      "name": "mention_identity_readback",
+      "passed": true
+    },
+    {
+      "name": "extra_mention_text_rejected",
+      "passed": true
+    },
+    {
+      "name": "exact_recipient_phone",
+      "passed": true
+    },
+    {
+      "name": "valid_pin_indices",
+      "passed": true
+    },
+    {
+      "name": "native_pin_order",
+      "passed": true
+    },
+    {
+      "name": "accessibility_input_without_automation",
+      "passed": true
+    },
+    {
+      "name": "invalid_pin_index_rejected",
+      "passed": true
+    },
+    {
+      "name": "exact_recipient_email",
+      "passed": true
+    },
+    {
+      "name": "current_build_qualified",
       "passed": true
     },
     {
@@ -90,7 +78,23 @@
       "passed": true
     },
     {
-      "name": "extra_mention_text_rejected",
+      "name": "invalid_pin_state_rejected",
+      "passed": true
+    },
+    {
+      "name": "missing_build_rejected",
+      "passed": true
+    },
+    {
+      "name": "other_recipient_email_rejected",
+      "passed": true
+    },
+    {
+      "name": "stale_os_rejected",
+      "passed": true
+    },
+    {
+      "name": "phone_substring_rejected",
       "passed": true
     },
     {
