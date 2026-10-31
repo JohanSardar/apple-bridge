@@ -4,6 +4,10 @@
   "passed": true,
   "assertions": [
     {
+      "name": "alarm_baseline_readback",
+      "passed": true
+    },
+    {
       "name": "create_alarm_fields",
       "passed": true
     },
