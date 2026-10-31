@@ -69,7 +69,7 @@ func runNotesExtrasReal(ctx context.Context, s Scenario, level string) (e Eviden
 		bytes, _ := json.Marshal(args)
 		var out contracts.CommandRecord
 		problem := client.Call(ctx, op, contracts.Command{ID: contracts.NewCommandID(), Args: bytes, ExpectedVersion: version, WaitMS: 15000}, &out)
-		e.Assertions = append(e.Assertions, Assertion{Name: strings.TrimPrefix(op, "notes.") + "_observed", Passed: problem == nil && out.State == "observed", Detail: string(out.State)})
+		e.Assertions = append(e.Assertions, Assertion{Name: client.Protocol + "_" + strings.TrimPrefix(op, "notes.") + "_observed", Passed: problem == nil && out.State == "observed", Detail: string(out.State)})
 		return problem == nil && out.State == "observed"
 	}
 	find := func(name string) (r contracts.Record) {
@@ -149,5 +149,32 @@ func runNotesExtrasReal(ctx context.Context, s Scenario, level string) (e Eviden
 		matched = matched || (row["id"] == noteID && row["folder_id"] == destinationID)
 	}
 	add("independent_move_readback", problem == nil && matched)
+	client.Protocol = "mcp"
+	destination = find(renamedTitle)
+	mcpTitle := title + " mcp"
+	if !call("notes.rename_folder", map[string]any{"id": destination.ID, "title": mcpTitle}, destination.Version) {
+		return
+	}
+	folders[destinationID] = mcpTitle
+	add("mcp_rename_readback", find(mcpTitle).ID == destination.ID)
+	note = find(tag + " note")
+	original := find(title)
+	if !call("notes.move", map[string]any{"id": note.ID, "folder_id": original.ID}, note.Version) {
+		return
+	}
+	add("mcp_move_readback", w.Await(10*time.Second, func() bool {
+		current := find(tag + " note")
+		var data map[string]any
+		json.Unmarshal(current.Data, &data)
+		return data["folder_id"] == original.ID
+	}) == nil)
+	observed, problem = w.Truth("observe", map[string]any{"source": "notes", "tag": tag})
+	matched = false
+	rows, _ = observed["records"].([]any)
+	for _, raw := range rows {
+		row := raw.(map[string]any)
+		matched = matched || (row["id"] == noteID && row["folder_id"] == folderID)
+	}
+	add("mcp_independent_move_readback", problem == nil && matched)
 	return
 }
