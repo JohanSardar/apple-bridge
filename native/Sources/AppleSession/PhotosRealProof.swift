@@ -25,6 +25,12 @@ enum PhotosRealProof {
             return .object(["grant_passed": .bool(true), "failure": .string("Photos cleanup needs Helper Accessibility access. Enable it in System Settings before retrying.")])
         }
         for bundle in ["com.apple.systemevents"] {
+            if NSRunningApplication.runningApplications(withBundleIdentifier: bundle).isEmpty {
+                guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundle) else { throw SourceFailure.unavailable }
+                let configuration = NSWorkspace.OpenConfiguration()
+                configuration.activates = false
+                _ = try await NSWorkspace.shared.openApplication(at: url, configuration: configuration)
+            }
             let target = NSAppleEventDescriptor(bundleIdentifier: bundle)
             guard AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false) == noErr else {
                 return .object(["grant_passed": .bool(true), "failure": .string("Photos cleanup needs Helper Automation access to System Events. Enable it in System Settings before retrying.")])
