@@ -33,6 +33,9 @@ func runClockReal(ctx context.Context, s Scenario, initial Evidence, pack clockp
 		return limited("needs AB Clock import")
 	}
 	if s.ID == "CLK-TIMER-REAL" {
+		return limited("AB Clock cannot inspect and remove a tagged timer yet. Install a pack with timer readback and deletion before running this check; no timer was started.")
+	}
+	if s.ID == "CLK-TIMER-QUALIFIED" {
 		_, err := pack.Exchange(ctx, clockpack.Request{Operation: "start_timer", Duration: 5, Label: "[ab-test] " + e.RunID})
 		if err != nil {
 			return limited("AB Clock did not return structured timer running, duration and label confirmation; macOS Start Timer action exists")
