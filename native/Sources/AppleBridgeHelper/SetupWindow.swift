@@ -57,6 +57,7 @@ final class SetupModel: ObservableObject {
             }
         }
     }
+    func stop() { refreshTask?.cancel(); refreshTask = nil }
     func refresh() async {
         statuses = await permissions.status()
         syncEnabled = syncStatus?() ?? false
@@ -75,11 +76,15 @@ final class SetupModel: ObservableObject {
             let expires_at: String?
         }
         struct Credentials: Decodable { let principals: [Principal] }
+        state.phone = false
+        state.connectors = []
         if let data = try? Data(contentsOf: home.appendingPathComponent("credentials.json")), let credentials = try? JSONDecoder().decode(Credentials.self, from: data) {
             let active = credentials.principals.filter { principal in
                 guard principal.revoked_at == nil else { return false }
                 guard let expiry = principal.expires_at, !expiry.hasPrefix("0001-") else { return true }
-                return ISO8601DateFormatter().date(from: expiry).map { $0 > Date() } ?? false
+                let fractional = ISO8601DateFormatter()
+                fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                return (fractional.date(from: expiry) ?? ISO8601DateFormatter().date(from: expiry)).map { $0 > Date() } ?? false
             }
             state.phone = active.contains { $0.iphone_signing_key != nil }
             state.connectors = Set(["Claude.ai", "ChatGPT"].filter { provider in
@@ -109,7 +114,12 @@ final class SetupModel: ObservableObject {
             try process.run()
             let timer = DispatchSource.makeTimerSource(queue: .global())
             timer.schedule(deadline: .now() + 60)
-            timer.setEventHandler { if process.isRunning { process.terminate() } }
+            timer.setEventHandler {
+                if process.isRunning { process.terminate() }
+                DispatchQueue.global().asyncAfter(deadline: .now() + 5) {
+                    if process.isRunning { kill(process.processIdentifier, SIGKILL) }
+                }
+            }
             timer.resume()
             let data = output.fileHandleForReading.readDataToEndOfFile()
             process.waitUntilExit()
@@ -203,6 +213,8 @@ struct SetupView: View {
                 }
             }
         }.padding(24).frame(minWidth: 820, minHeight: 690)
+            .background(Color(nsColor: .windowBackgroundColor))
+            .buttonStyle(SetupButtonStyle())
     }
     @ViewBuilder var content: some View {
         switch model.state.step {
@@ -267,5 +279,17 @@ struct SetupView: View {
             Text(model.remoteReady ? "✓ Remote ready" : "Remote is needed for iPhone pairing and AI connectors.")
             if !model.remoteReady { Button(model.busy.contains("remote") ? "Connecting…" : "Enable Remote") { model.enableRemote() }.disabled(model.busy.contains("remote")) }
         }
+    }
+}
+
+struct SetupButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) var enabled
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(.primary)
+            .padding(.horizontal, 10).padding(.vertical, 6)
+            .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 6))
+            .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color(nsColor: .separatorColor)))
+            .opacity(enabled ? configuration.isPressed ? 0.7 : 1 : 0.45)
     }
 }

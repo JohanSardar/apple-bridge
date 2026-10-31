@@ -4,7 +4,7 @@ import ServiceManagement
 import SwiftUI
 
 @MainActor
-final class PackagedApp: NSObject, NSApplicationDelegate {
+final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
     let service = SMAppService.agent(plistName: "dev.applebridge.gateway.plist")
     var window: NSWindow?
     var setup: SetupModel?
@@ -164,6 +164,7 @@ final class PackagedApp: NSObject, NSApplicationDelegate {
         window.contentView = NSHostingView(rootView: SetupView(model: model))
         window.minSize = NSSize(width: 860, height: 740)
         self.window = window
+        window.delegate = self
         self.setup = model
         if snapshotDirectory == nil { model.start() }
         window.center()
@@ -190,8 +191,11 @@ final class PackagedApp: NSObject, NSApplicationDelegate {
         return true
     }
 
+    func windowWillClose(_ notification: Notification) { setup?.stop() }
+
     @objc func reopenSetup() {
         setup?.state.step = 0
+        setup?.start()
         window?.makeKeyAndOrderFront(nil)
         NSApplication.shared.activate()
     }

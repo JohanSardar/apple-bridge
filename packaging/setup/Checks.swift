@@ -57,7 +57,7 @@ struct SetupChecks {
             if arguments.first == "remote" {
                 let remote = URL(fileURLWithPath: path).appendingPathComponent("remote")
                 try? FileManager.default.createDirectory(at: remote, withIntermediateDirectories: true)
-                try? Data(#"{"state":"on","url":"https://bridge.example.test"}"#.utf8).write(to: remote.appendingPathComponent("status.json"))
+                try? JSONSerialization.data(withJSONObject: ["state": "on", "url": "https://bridge.example.test"]).write(to: remote.appendingPathComponent("status.json"))
                 return Data()
             }
             if arguments == ["pair", "--iphone", "--via-remote"] { return Data("[ab-test] one-time-pairing-code\nQR text\n".utf8) }
@@ -117,6 +117,17 @@ struct SetupChecks {
         model.state.step = 1
         model.move(true)
         check("Q1-DENIED-CONTINUE", model.state.step == 2 && model.state.skipped.contains("camera"))
+        let revoked = #"{"principals":[{"kind":"replica","iphone_signing_key":"[ab-test]","revoked_at":"2026-01-01T00:00:00Z"},{"kind":"agent","name":"Claude","expires_at":"2000-01-01T00:00:00Z"},{"kind":"agent","name":"ChatGPT","expires_at":"2099-01-01T00:00:00.123Z"}]}"#
+        try Data(revoked.utf8).write(to: home.appendingPathComponent("credentials.json"))
+        await model.refresh()
+        check("Q1-REVOKED", !model.state.phone && model.state.connectors == ["ChatGPT"])
+        try FileManager.default.removeItem(at: home.appendingPathComponent("credentials.json"))
+        await model.refresh()
+        check("Q1-STALE", !model.state.phone && model.state.connectors.isEmpty)
+        model.start()
+        await Task.yield()
+        model.stop()
+        check("Q1-CLOSE", model.refreshTask == nil)
         model.save()
         let resumed = SetupModel(home: home)
         check("Q1-MODEL-RESUME", resumed.state.step == 2 && resumed.state.skipped.contains("camera"))
