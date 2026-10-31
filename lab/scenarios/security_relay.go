@@ -1,11 +1,16 @@
 package scenarios
 
 import (
+	"bytes"
+	"context"
 	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
+	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/relay"
 )
@@ -58,4 +63,34 @@ func securityRelayProofs(add func(string, bool)) {
 	device, _ := store.Device(credential.Hostname)
 	err = store.Policy(credential.Hostname, device.Limits, false, true)
 	add("relay_revoked_credential_refused", err == nil && !store.Verify(proof("tunnel"), "tunnel"))
+}
+
+func securityRevokeRelay(ctx context.Context, home string) bool {
+	raw, err := os.ReadFile(filepath.Join(home, "remote", "relay.json"))
+	if os.IsNotExist(err) {
+		return true
+	}
+	var identity struct {
+		Endpoint   string           `json:"endpoint"`
+		Credential relay.Credential `json:"credential"`
+	}
+	if err != nil || json.Unmarshal(raw, &identity) != nil {
+		return false
+	}
+	if identity.Credential.Hostname == "" {
+		return true
+	}
+	payload, _ := json.Marshal(map[string]string{"hostname": identity.Credential.Hostname})
+	req, err := http.NewRequestWithContext(ctx, "POST", identity.Endpoint+"/revoke", bytes.NewReader(payload))
+	if err != nil {
+		return false
+	}
+	req.Header.Set("Authorization", "Bearer "+identity.Credential.Credential)
+	client := &http.Client{Timeout: 5 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	response, err := client.Do(req)
+	if err != nil {
+		return false
+	}
+	defer response.Body.Close()
+	return response.StatusCode == http.StatusNoContent
 }

@@ -18,9 +18,9 @@ import (
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
-func runRemoteSecurity(ctx context.Context, s Scenario, level string) Evidence {
+func runRemoteSecurity(ctx context.Context, s Scenario, level string) (e Evidence) {
 	sha, _ := exec.CommandContext(ctx, "git", "rev-parse", "HEAD").Output()
-	e := Evidence{GitSHA: strings.TrimSpace(string(sha)), Scenario: s.ID, Level: level, At: time.Now().UTC(), RunID: contracts.NewID("security"), NetworkPath: "isolated Mac gateway adversarial HTTP and trust checks", Metrics: map[string]any{}}
+	e = Evidence{GitSHA: strings.TrimSpace(string(sha)), Scenario: s.ID, Level: level, At: time.Now().UTC(), RunID: contracts.NewID("security"), NetworkPath: "isolated Mac gateway adversarial HTTP and trust checks", Metrics: map[string]any{}}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	finish := func() Evidence {
 		e.Passed = len(e.Assertions) > 0
@@ -54,7 +54,9 @@ func runRemoteSecurity(ctx context.Context, s Scenario, level string) Evidence {
 		defer func() {
 			bounded, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
-			remote.Command(bounded, w.Gateway.Home, "off", "", "", &bytes.Buffer{})
+			offErr := remote.Command(bounded, w.Gateway.Home, "off", "", "", &bytes.Buffer{})
+			add("public_relay_test_credentials_revoked_and_tunnel_closed", securityRevokeRelay(bounded, w.Gateway.Home) && offErr == nil)
+			e = finish()
 		}()
 		bounded, cancel := context.WithTimeout(ctx, 150*time.Second)
 		err = remote.Command(bounded, w.Gateway.Home, "on", "relay", "bridge", &bytes.Buffer{})
