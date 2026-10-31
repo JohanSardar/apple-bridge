@@ -1,17 +1,17 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[8.22 8.15 7.58] cpu_idle=30% cpus=10 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[9.69 10.73 12.66] cpu_idle=66% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M67DKQQ4MDTAHF1Z0DM7F2Z5",
+  "run_id": "run_01M69Y0P2VKQJX8TH5VK0GNMKT",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "NOTE-CRUD",
   "level": "sim",
   "passed": true,
-  "git_sha": "3bd923a1af4751bbdf11f7c731c75e8fcbb7a183",
-  "at": "2026-10-30T22:06:45.47628Z",
+  "git_sha": "d050b54798ba543b7c56f2ac7b12f32863c56260",
+  "at": "2026-10-31T21:31:55.868004Z",
   "assertions": [
     {
       "name": "external_note_imported",
@@ -83,6 +83,14 @@
       "passed": true
     },
     {
+      "name": "rest_delete_preserves_other_note",
+      "passed": true
+    },
+    {
+      "name": "rest_delete_applied_once",
+      "passed": true
+    },
+    {
       "name": "mcp_create_folder_observed",
       "passed": true
     },
@@ -145,6 +153,14 @@
     },
     {
       "name": "mcp_delete_replicated",
+      "passed": true
+    },
+    {
+      "name": "mcp_delete_preserves_other_note",
+      "passed": true
+    },
+    {
+      "name": "mcp_delete_applied_once",
       "passed": true
     },
     {

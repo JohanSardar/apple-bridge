@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -14,7 +15,8 @@ import (
 )
 
 func runNotesParity(ctx context.Context, s Scenario, level string) (e Evidence) {
-	e = Evidence{RunID: contracts.NewID("notes-parity"), Scenario: s.ID, Level: level, At: time.Now().UTC(), Hosts: []string{"air"}, Metrics: map[string]any{}}
+	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
+	e = Evidence{GitSHA: strings.TrimSpace(string(sha)), RunID: contracts.NewID("notes-parity"), Scenario: s.ID, Level: level, At: time.Now().UTC(), Hosts: []string{"air"}, Metrics: map[string]any{}}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	defer func() {
 		e.Passed = len(e.Assertions) > 0

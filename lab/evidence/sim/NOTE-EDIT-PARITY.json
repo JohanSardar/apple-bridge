@@ -1,9 +1,9 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[8.12 8.13 7.57] cpu_idle=0% cpus=10 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[8.97 10.54 12.57] cpu_idle=70% cpus=10 other_heavy=0"
   },
-  "run_id": "notes-parity_01M67DKV022A9BCTVQ79J89JV0",
+  "run_id": "notes-parity_01M69Y0WGX289M1WVSMR04848P",
   "metrics": {
     "capture_observer_resets": 0
   },
@@ -11,7 +11,7 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-30T22:06:48.83443Z",
+  "at": "2026-10-31T21:32:02.461804Z",
   "assertions": [
     {
       "name": "NOTE-CRUD/external_note_imported",
@@ -83,6 +83,14 @@
       "passed": true
     },
     {
+      "name": "NOTE-CRUD/rest_delete_preserves_other_note",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_delete_applied_once",
+      "passed": true
+    },
+    {
       "name": "NOTE-CRUD/mcp_create_folder_observed",
       "passed": true
     },
@@ -148,11 +156,23 @@
       "passed": true
     },
     {
+      "name": "NOTE-CRUD/mcp_delete_preserves_other_note",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_delete_applied_once",
+      "passed": true
+    },
+    {
       "name": "NOTE-RICH-REJECT/external_note_imported",
       "passed": true
     },
     {
       "name": "NOTE-RICH-REJECT/rich_rejected_before_dispatch",
+      "passed": true
+    },
+    {
+      "name": "NOTE-RICH-REJECT/rich_rejection_explains_recovery",
       "passed": true
     },
     {
