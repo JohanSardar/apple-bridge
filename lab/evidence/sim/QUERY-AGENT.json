@@ -1,0 +1,11 @@
+{
+  "answer_check": true,
+  "at": "2026-10-31T22:24:46.00303Z",
+  "forbidden_calls": 0,
+  "git_sha": "f40625b321b0853de0bdbc0a59014f4a1853d3f4",
+  "level": "sim",
+  "mcp_calls": 1,
+  "passed": true,
+  "scenario": "QUERY-AGENT",
+  "tools_check": true
+}
