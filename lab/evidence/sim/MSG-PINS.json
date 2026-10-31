@@ -1,17 +1,17 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[5.02 12.28 12.99] cpu_idle=75% cpus=10 other_heavy=0"
+    "summary": "air: load=[5.27 6.6 8.53] cpu_idle=47% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M6A3YV3CQJ1T66QJ710CZY5A",
+  "run_id": "run_01M6A4VPBD7AB7MKTWZWCYYFWW",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MSG-PINS",
   "level": "sim",
   "passed": true,
-  "git_sha": "c4df3f7dc167d52fab15ac448f4727d17aa5e01e",
-  "at": "2026-10-31T23:15:46.92483Z",
+  "git_sha": "82129a34237538bf0c97a231767c815145a9c78b",
+  "at": "2026-10-31T23:31:32.333691Z",
   "assertions": [
     {
       "name": "seed",
