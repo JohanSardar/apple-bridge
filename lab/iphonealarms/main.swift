@@ -4,15 +4,21 @@ import Foundation
 final class FakeAlarmAdapter: AlarmAdapter {
     var alarms: [UUID: BridgeAlarm] = [:]
     var allowed = true
+    var scheduleFails = false
+    var cancelFails = false
     func authorize() async throws {
         if !allowed { throw AlarmCommandError.permission }
     }
     func list() -> [BridgeAlarm] { Array(alarms.values) }
-    func schedule(_ alarm: BridgeAlarm) -> BridgeAlarm {
+    func schedule(_ alarm: BridgeAlarm) throws -> BridgeAlarm {
         alarms[alarm.id] = alarm
+        if scheduleFails { throw CocoaError(.fileWriteUnknown) }
         return alarm
     }
-    func cancel(_ id: UUID) { alarms.removeValue(forKey: id) }
+    func cancel(_ id: UUID) throws {
+        if cancelFails { throw CocoaError(.fileReadUnknown) }
+        alarms.removeValue(forKey: id)
+    }
 }
 
 @main
@@ -35,6 +41,21 @@ struct AlarmChecks {
         precondition(timer.duration_seconds == 60 && timer.fire_at == nil)
         _ = try await run("timer.cancel", "{\"id\":\"\(timer.id)\"}")
         precondition(fake.alarms.isEmpty)
+        let qualification = BridgeAlarm(id: UUID(), fire_at: fire, duration_seconds: nil, snooze_seconds: 60, title: "[ab-test] qualification", state: "scheduled")
+        var checks: [String: Bool] = [:]
+        try await AlarmQualification.run(qualification, adapter: fake) { checks[$0] = $1 }
+        precondition(checks["created_and_read"] == true && checks["deleted_and_absent"] == true && fake.alarms.isEmpty)
+        fake.scheduleFails = true
+        for cancelFails in [false, true] {
+            fake.cancelFails = cancelFails
+            do {
+                try await AlarmQualification.run(qualification, adapter: fake) { checks[$0] = $1 }
+                fatalError("schedule failure was hidden")
+            } catch { precondition((error as NSError).code == CocoaError.fileWriteUnknown.rawValue) }
+            precondition(checks["cleanup_after_failure"] == !cancelFails)
+        }
+        fake.cancelFails = false
+        try fake.cancel(qualification.id)
         fake.allowed = false
         do {
             _ = try await run("alarm.create", "{\"fire_at\":\(fire)}")

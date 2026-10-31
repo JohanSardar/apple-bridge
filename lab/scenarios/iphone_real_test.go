@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -91,5 +92,20 @@ func TestRealPhoneReceiptRefreshesAfterNonFinalCopy(t *testing.T) {
 		if err != nil || receipt.Run != "fresh" || receipt.Done != done {
 			t.Fatalf("fresh receipt: %+v %v", receipt, err)
 		}
+	}
+}
+
+func TestRealPhoneInstructionsAppendSinglePlainLine(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "instructions.txt")
+	t.Setenv("AB_JOHAN_PROMPT_FILE", path)
+	logPhoneInstruction("tap Allow\non the iPhone")
+	logPhoneInstruction("complete Face ID")
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimSpace(string(raw)), "\n")
+	if len(lines) != 2 || !strings.HasSuffix(lines[0], "tap Allow on the iPhone") || !strings.HasSuffix(lines[1], "complete Face ID") {
+		t.Fatalf("unexpected prompt lines: %q", raw)
 	}
 }

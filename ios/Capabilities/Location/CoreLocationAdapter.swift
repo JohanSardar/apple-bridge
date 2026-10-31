@@ -76,6 +76,10 @@ final class CoreLocationAdapter: NSObject, LocationAdapter, @preconcurrency CLLo
         continuation?.resume(with: result)
     }
 
+    func isMonitoring(_ name: String) -> Bool {
+        manager.monitoredRegions.contains { $0.identifier == "ab.location." + name }
+    }
+
     func remove(_ name: String) {
         finishMonitoring(name, .failure(LocationFailure.unavailable))
         for region in manager.monitoredRegions where region.identifier == "ab.location." + name { manager.stopMonitoring(for: region) }

@@ -15,6 +15,22 @@ final class FakeCapture: CaptureAdapter {
 struct CaptureProof {
     @MainActor
     static func main() async throws {
+        var active = false
+        let activation = Task { @MainActor in
+            try await Task.sleep(for: .milliseconds(10))
+            active = true
+        }
+        let ready = await QualificationWait.until(timeout: 1, interval: .milliseconds(1)) { active }
+        try await activation.value
+        precondition(ready)
+        let expired = await QualificationWait.until(timeout: 0) { false }
+        precondition(!expired)
+        let cancelled = Task { @MainActor in
+            await QualificationWait.until(timeout: 1) { false }
+        }
+        cancelled.cancel()
+        let cancelledResult = await cancelled.value
+        precondition(!cancelledResult)
         let adapter = FakeCapture()
         var uploads = 0
         do {

@@ -358,6 +358,9 @@ func convergence(w *world.World) bool {
 }
 
 func runScenario(ctx context.Context, s Scenario, level string) Evidence {
+	if level == "real" && isIPhoneSensorReal(s.ID) {
+		return runIPhoneSensorReal(ctx, s)
+	}
 	if isIPhoneRealScenario(s.ID, level) {
 		return runIPhoneReal(ctx, s, level)
 	}
@@ -1218,7 +1221,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 	}
 	packagingOnly := true
 	for _, scenario := range scenarios {
-		packagingOnly = packagingOnly && (isIPhoneRealScenario(scenario.ID, level) || scenario.Feature == "iphone.location" || scenario.Feature == "iphone.health" || scenario.Feature == "packaging.app" || scenario.Feature == "core.shortcuts" || scenario.Feature == "core.permissions" || scenario.Feature == "usage.action_probe" || scenario.Feature == "helper.siri_intents")
+		packagingOnly = packagingOnly && (isIPhoneRealScenario(scenario.ID, level) || level == "real" && isIPhoneSensorReal(scenario.ID) || scenario.Feature == "iphone.location" || scenario.Feature == "iphone.health" || scenario.Feature == "packaging.app" || scenario.Feature == "core.shortcuts" || scenario.Feature == "core.permissions" || scenario.Feature == "usage.action_probe" || scenario.Feature == "helper.siri_intents")
 	}
 	if !packagingOnly {
 		if err = world.Build(ctx, level); err != nil {
@@ -1242,7 +1245,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		ran++
 		fmt.Fprintln(os.Stderr, "running", s.ID, level)
 		duration := 3 * time.Minute
-		if isIPhoneRealScenario(s.ID, level) {
+		if isIPhoneRealScenario(s.ID, level) || level == "real" && isIPhoneSensorReal(s.ID) {
 			duration = 70 * time.Minute
 		}
 		if s.ID == "RELAY-STREAMS" {

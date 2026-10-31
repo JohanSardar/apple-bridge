@@ -57,7 +57,7 @@ func runIPhoneReal(ctx context.Context, s Scenario, level string) (e Evidence) {
 	if os.Getenv("APPLE_BRIDGE_SECRET_STORE") != "file" {
 		return fail("isolated_file_secret_store", nil)
 	}
-	lock := exec.CommandContext(ctx, "lockf", "-k", "-t", "3600", "/tmp/ab-iphone.lock", "sh", "-c", "printf 'locked\\n'; cat >/dev/null")
+	lock := exec.CommandContext(ctx, "lockf", "-k", "-t", "0", "/tmp/ab-iphone.lock", "sh", "-c", "printf 'locked\\n'; cat >/dev/null")
 	input, err := lock.StdinPipe()
 	if err != nil {
 		return fail("phone_lock", err)
@@ -190,7 +190,7 @@ func runIPhoneReal(ctx context.Context, s Scenario, level string) (e Evidence) {
 	if err = devctl("device", "process", "launch", "--device", device, "--terminate-existing", bundle, "--ab-real"); err != nil {
 		return fail("launch_probe", err)
 	}
-	fmt.Fprintln(os.Stderr, ">>> JOHAN: "+phoneInstruction(s.ID)+" now; waiting up to 3 minutes")
+	logPhoneInstruction(phoneInstruction(s.ID))
 
 	deadline := time.Now().Add(400 * time.Second)
 	submitted := false
@@ -209,6 +209,7 @@ func runIPhoneReal(ctx context.Context, s Scenario, level string) (e Evidence) {
 				if current.Counts["phase"] != phase {
 					phase = current.Counts["phase"]
 					phaseStart = time.Now()
+					logPhoneInstruction(phoneInstruction(s.ID))
 				}
 				if phase != 0 && time.Since(phaseStart) > 185*time.Second {
 					break
@@ -305,6 +306,25 @@ func runIPhoneReal(ctx context.Context, s Scenario, level string) (e Evidence) {
 		e.Status = "failed"
 	}
 	return e
+}
+
+func logPhoneInstruction(instruction string) {
+	fmt.Fprintln(os.Stderr, ">>> JOHAN: "+instruction+" now; waiting up to 3 minutes")
+	path := os.Getenv("AB_JOHAN_PROMPT_FILE")
+	if path == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return
+		}
+		path = filepath.Join(home, "I1-NEEDS-JOHAN.txt")
+	}
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Could not append the iPhone tap instructions")
+		return
+	}
+	defer file.Close()
+	fmt.Fprintln(file, time.Now().Format("15:04")+" "+strings.ReplaceAll(strings.ReplaceAll(instruction, "\n", " "), "\r", " "))
 }
 
 func phoneInstruction(s string) string {
