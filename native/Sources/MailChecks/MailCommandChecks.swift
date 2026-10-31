@@ -65,6 +65,25 @@ func checkMailCommands() async throws {
     try require(ContinuousClock.now - started < .seconds(1))
     try await MailCommands.requireAutomationPermission { 0 }
 
+    let entered = DispatchSemaphore(value: 0)
+    let resume = DispatchSemaphore(value: 0)
+    let cancelledPermission = Task {
+        try await MailCommands.requireAutomationPermission {
+            entered.signal()
+            _ = resume.wait(timeout: .now() + 2)
+            return 0
+        }
+    }
+    let didEnter = await withCheckedContinuation { continuation in
+        DispatchQueue.global().async {
+            continuation.resume(returning: entered.wait(timeout: .now() + 2) == .success)
+        }
+    }
+    cancelledPermission.cancel()
+    resume.signal()
+    try require(didEnter)
+    do { try await cancelledPermission.value; throw SourceFailure.corrupt }
+    catch is CancellationError {}
     try require(MailCommandFailure.appleEvent(-1712) == .timeout)
     try require(MailCommandFailure.appleEvent(-1743) == .permission && MailCommandFailure.appleEvent(-1744) == .permission)
     try require(MailCommandFailure.appleEvent(-600) == .rejected)

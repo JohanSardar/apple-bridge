@@ -46,6 +46,7 @@ public struct MailCommands: Sendable {
     public static let operations = ["mail.create_draft", "mail.send", "mail.move", "mail.set_flag", "mail.mark_read", "mail.delete"]
     public init(script: @escaping Script = MailCommands.run) { self.script = script }
     @MainActor public static func run(_ body: String) async throws -> String {
+        try Task.checkCancellation()
         if NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.mail").isEmpty {
             guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.mail") else { throw MailCommandFailure.rejected }
             let configuration = NSWorkspace.OpenConfiguration()
@@ -64,6 +65,7 @@ public struct MailCommands: Sendable {
         return result.stringValue ?? ""
     }
     public static func requireAutomationPermission(after interval: TimeInterval = 10, check: @escaping @Sendable () -> Int32) async throws {
+        try Task.checkCancellation()
         try await withCheckedThrowingContinuation { continuation in
             let reply = MailPermissionReply(continuation)
             permissionQueue.async {
@@ -75,6 +77,7 @@ public struct MailCommands: Sendable {
                 reply.finish(.timeout)
             }
         }
+        try Task.checkCancellation()
     }
     public static func failureMessage(_ error: any Error) -> String {
         if let failure = error as? MailCommandFailure { return failure.localizedDescription }
