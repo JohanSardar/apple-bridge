@@ -95,7 +95,7 @@ enum NotesSourceFixture {
         guard zeroIndent["data"]["editable"].string == "plain", indented["data"]["editable"].string == "none" else { throw Invalid.projection }
         let plainAction = JSON.object(["op": .string("notes.update"), "native_key": plain["native_key"], "note_args": .object(["mode": .string("append"), "plain_text": .string("[ab-test] append")])])
         let beforeSync = try await source.prepare(.object(["action": plainAction, "expected_state": plain["data"]]))
-        try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZSERVERRECORDDATA=X'010203',ZGENERATION='cloud-generation' WHERE ZIDENTIFIER='native-plain'")
+        try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZSERVERRECORDDATA=X'010203',ZGENERATION='cloud-generation',ZISPINNED=NULL,ZISPASSWORDPROTECTED=NULL WHERE ZIDENTIFIER='native-plain'")
         try source.validate(beforeSync)
         _ = try await source.prepare(.object(["action": plainAction, "expected_state": plain["data"]]))
         try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZTITLE1='[ab-test] Changed' WHERE ZIDENTIFIER='native-plain'")
