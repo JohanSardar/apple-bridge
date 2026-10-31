@@ -1,17 +1,17 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[25.3 22.4 14.86] cpu_idle=24% cpus=10 other_heavy=0"
+    "summary": "air: load=[13.98 16.08 15.41] cpu_idle=32% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M69WXG51Y28N38QHTP9WNX80",
+  "run_id": "run_01M69XFTXC7JVMWWHP5NBSR74V",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "R1-DMG-REAL",
   "level": "real",
   "passed": false,
-  "git_sha": "6d94a9fda43ee93f1b3cc5e9d1f5c0a6b0bd2d24",
-  "at": "2026-10-31T21:12:42.913849Z",
+  "git_sha": "76629c420cf6509bda485082962b80b3c03d86ac",
+  "at": "2026-10-31T21:22:43.756792Z",
   "assertions": [
     {
       "name": "local_notarized_dmg_available",

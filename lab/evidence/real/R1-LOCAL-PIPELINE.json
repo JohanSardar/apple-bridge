@@ -8,5 +8,6 @@
   "in_memory_csr_verified": true,
   "noninteractive_keychain_access": false,
   "testflight_upload": false,
-  "notarized_dmg": false
+  "notarized_dmg": false,
+  "ios_release_settings": true
 }
