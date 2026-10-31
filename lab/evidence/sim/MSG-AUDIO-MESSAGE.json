@@ -1,17 +1,17 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[16.07 11.55 16.65] cpu_idle=43% cpus=10 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[6.91 10.93 15] cpu_idle=18% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M6A130HV5QF6REKEP6XGZCAC",
+  "run_id": "run_01M6A1D4QBD1CB324E3KX2WKWE",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MSG-AUDIO-MESSAGE",
   "level": "sim",
   "passed": true,
-  "git_sha": "cf69d27d07c23d97765b3f30571f58adc65fadd3",
-  "at": "2026-10-31T22:25:37.851597Z",
+  "git_sha": "54a87045be19cb19c69adca6dd4f9f0db829a657",
+  "at": "2026-10-31T22:31:09.803066Z",
   "assertions": [
     {
       "name": "native_readback_checks_build",
@@ -22,47 +22,7 @@
       "passed": true
     },
     {
-      "name": "invalid_pin_state_rejected",
-      "passed": true
-    },
-    {
-      "name": "stale_build_rejected",
-      "passed": true
-    },
-    {
-      "name": "missing_build_rejected",
-      "passed": true
-    },
-    {
-      "name": "ordinary_attachment_rejected",
-      "passed": true
-    },
-    {
-      "name": "exact_recipient_email",
-      "passed": true
-    },
-    {
-      "name": "valid_pin_indices",
-      "passed": true
-    },
-    {
-      "name": "native_pin_order",
-      "passed": true
-    },
-    {
-      "name": "earlier_residue_refused",
-      "passed": true
-    },
-    {
-      "name": "accessibility_input_without_automation",
-      "passed": true
-    },
-    {
-      "name": "accessibility_input_interference_refused",
-      "passed": true
-    },
-    {
-      "name": "personal_draft_preserved",
+      "name": "other_recipient_email_rejected",
       "passed": true
     },
     {
@@ -70,19 +30,11 @@
       "passed": true
     },
     {
-      "name": "stale_os_rejected",
+      "name": "late_tagged_echo_owned",
       "passed": true
     },
     {
-      "name": "new_echo_alone_is_not_deletion",
-      "passed": true
-    },
-    {
-      "name": "other_recipient_email_rejected",
-      "passed": true
-    },
-    {
-      "name": "native_audio_flag_required",
+      "name": "accessibility_input_without_automation",
       "passed": true
     },
     {
@@ -94,27 +46,55 @@
       "passed": true
     },
     {
+      "name": "exact_recipient_email",
+      "passed": true
+    },
+    {
+      "name": "personal_draft_preserved",
+      "passed": true
+    },
+    {
+      "name": "accessibility_input_interference_refused",
+      "passed": true
+    },
+    {
+      "name": "earlier_residue_refused",
+      "passed": true
+    },
+    {
+      "name": "ordinary_attachment_rejected",
+      "passed": true
+    },
+    {
       "name": "earlier_draft_preserved",
       "passed": true
     },
     {
-      "name": "other_run_echo_refused",
+      "name": "stale_build_rejected",
       "passed": true
     },
     {
-      "name": "late_tagged_echo_owned",
+      "name": "missing_build_rejected",
       "passed": true
     },
     {
-      "name": "current_draft_replace_allowed",
+      "name": "valid_pin_indices",
       "passed": true
     },
     {
-      "name": "incoming_audio_rejected",
+      "name": "invalid_pin_index_rejected",
       "passed": true
     },
     {
-      "name": "late_echo_does_not_hide_deletion",
+      "name": "stale_os_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_pin_state_rejected",
+      "passed": true
+    },
+    {
+      "name": "native_audio_flag_required",
       "passed": true
     },
     {
@@ -122,7 +102,31 @@
       "passed": true
     },
     {
-      "name": "invalid_pin_index_rejected",
+      "name": "new_echo_alone_is_not_deletion",
+      "passed": true
+    },
+    {
+      "name": "other_run_echo_refused",
+      "passed": true
+    },
+    {
+      "name": "late_echo_does_not_hide_deletion",
+      "passed": true
+    },
+    {
+      "name": "scheduled_send_does_not_require_early_delivery",
+      "passed": true
+    },
+    {
+      "name": "incoming_audio_rejected",
+      "passed": true
+    },
+    {
+      "name": "native_pin_order",
+      "passed": true
+    },
+    {
+      "name": "current_draft_replace_allowed",
       "passed": true
     },
     {

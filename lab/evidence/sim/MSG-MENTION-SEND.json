@@ -1,28 +1,40 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[46.72 44.82 29.67] cpu_idle=0% cpus=10 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[8.68 10.92 14.81] cpu_idle=56% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M69Z8JFV314YAZD6A8EF05A8",
+  "run_id": "run_01M6A1EANTQYDNE0G6JXYVVPRW",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MSG-MENTION-SEND",
   "level": "sim",
   "passed": true,
-  "git_sha": "ee34d002923471565769b132e6343077477f71be",
-  "at": "2026-10-31T21:53:42.907137Z",
+  "git_sha": "54a87045be19cb19c69adca6dd4f9f0db829a657",
+  "at": "2026-10-31T22:31:48.666294Z",
   "assertions": [
     {
       "name": "native_readback_checks",
       "passed": true
     },
     {
-      "name": "extra_mention_text_rejected",
+      "name": "valid_pin_indices",
       "passed": true
     },
     {
-      "name": "mention_identity_readback",
+      "name": "invalid_pin_state_rejected",
+      "passed": true
+    },
+    {
+      "name": "exact_recipient_phone",
+      "passed": true
+    },
+    {
+      "name": "current_build_qualified",
+      "passed": true
+    },
+    {
+      "name": "accessibility_input_without_automation",
       "passed": true
     },
     {
@@ -30,7 +42,55 @@
       "passed": true
     },
     {
+      "name": "additional_recipient_email_rejected",
+      "passed": true
+    },
+    {
+      "name": "accessibility_input_interference_refused",
+      "passed": true
+    },
+    {
+      "name": "invalid_pin_index_rejected",
+      "passed": true
+    },
+    {
+      "name": "mention_identity_readback",
+      "passed": true
+    },
+    {
+      "name": "other_recipient_email_rejected",
+      "passed": true
+    },
+    {
+      "name": "missing_build_rejected",
+      "passed": true
+    },
+    {
+      "name": "exact_recipient_email",
+      "passed": true
+    },
+    {
+      "name": "stale_os_rejected",
+      "passed": true
+    },
+    {
+      "name": "native_pin_order",
+      "passed": true
+    },
+    {
+      "name": "stale_build_rejected",
+      "passed": true
+    },
+    {
+      "name": "phone_substring_rejected",
+      "passed": true
+    },
+    {
       "name": "other_mention_rejected",
+      "passed": true
+    },
+    {
+      "name": "extra_mention_text_rejected",
       "passed": true
     },
     {

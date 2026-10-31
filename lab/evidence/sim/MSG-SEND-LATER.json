@@ -1,20 +1,36 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[45.39 44.53 29.48] cpu_idle=0% cpus=10 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[8.68 10.92 14.81] cpu_idle=69% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M69Z8EXHDZTZFZCNM0VSATD4",
+  "run_id": "run_01M6A1ECHTZA1ZG3APNVKGVM74",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MSG-SEND-LATER",
   "level": "sim",
   "passed": true,
-  "git_sha": "ee34d002923471565769b132e6343077477f71be",
-  "at": "2026-10-31T21:53:39.249666Z",
+  "git_sha": "54a87045be19cb19c69adca6dd4f9f0db829a657",
+  "at": "2026-10-31T22:31:50.586016Z",
   "assertions": [
     {
       "name": "native_readback_checks",
+      "passed": true
+    },
+    {
+      "name": "accessibility_input_without_automation",
+      "passed": true
+    },
+    {
+      "name": "current_build_qualified",
+      "passed": true
+    },
+    {
+      "name": "accessibility_input_interference_refused",
+      "passed": true
+    },
+    {
+      "name": "valid_pin_indices",
       "passed": true
     },
     {
@@ -22,11 +38,55 @@
       "passed": true
     },
     {
+      "name": "exact_recipient_email",
+      "passed": true
+    },
+    {
       "name": "wrong_scheduled_date_rejected",
       "passed": true
     },
     {
+      "name": "invalid_pin_index_rejected",
+      "passed": true
+    },
+    {
+      "name": "missing_build_rejected",
+      "passed": true
+    },
+    {
       "name": "plain_send_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_pin_state_rejected",
+      "passed": true
+    },
+    {
+      "name": "phone_substring_rejected",
+      "passed": true
+    },
+    {
+      "name": "stale_os_rejected",
+      "passed": true
+    },
+    {
+      "name": "exact_recipient_phone",
+      "passed": true
+    },
+    {
+      "name": "native_pin_order",
+      "passed": true
+    },
+    {
+      "name": "other_recipient_email_rejected",
+      "passed": true
+    },
+    {
+      "name": "stale_build_rejected",
+      "passed": true
+    },
+    {
+      "name": "additional_recipient_email_rejected",
       "passed": true
     },
     {

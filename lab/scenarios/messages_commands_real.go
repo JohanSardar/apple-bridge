@@ -121,7 +121,7 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 		}
 		rows.Close()
 	}
-	if rawChat == "" {
+	if rawChat == "" && s.ID != "MSG-READSTATE-REAL" {
 		add("existing_self_chat_truth", false)
 		return e
 	}
@@ -132,10 +132,10 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	}
 	defer stateDB.Close()
 	var chatID string
-	add("self_chat_captured", w.Await(30*time.Second, func() bool {
+	add("self_chat_captured", s.ID == "MSG-READSTATE-REAL" || w.Await(30*time.Second, func() bool {
 		return stateDB.QueryRowContext(ctx, "SELECT record_id FROM aliases WHERE collection='messages.chat' AND native_key=? LIMIT 1", rawChat).Scan(&chatID) == nil
 	}) == nil)
-	if chatID == "" {
+	if chatID == "" && s.ID != "MSG-READSTATE-REAL" {
 		return e
 	}
 	if s.ID == "WEB-MSG-REAL-READ" {

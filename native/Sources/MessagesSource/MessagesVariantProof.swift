@@ -6,6 +6,7 @@ import AVFoundation
 import SourceSupport
 
 public enum MessagesVariantProof {
+    public static func requiresSelfEcho(_ kind: String) -> Bool { kind != "schedule" }
     public static func run(_ kind: String) async throws -> JSON {
         guard ["audio", "formatting", "mention", "effect", "schedule"].contains(kind) else { throw SourceFailure.invalid }
         try MessagesSendVariants.invalidateProof(kind)
@@ -115,21 +116,32 @@ public enum MessagesVariantProof {
             let prepared = try await prepare(text, variant: variant)
             preparedVariant = prepared
             try await commands.validate(prepared)
+            let variantBaseline = try reader.maximum()
             writes += 1
             outcome = try await commands.dispatch(prepared)
             lateEffectPossible = lateEffectPossible || outcome["disposition"].string == "indeterminate"
             reason = outcome["reason"].string
             if outcome["observed"].bool, outcome["disposition"].string == "locally_observed" {
+                echoVerified = !requiresSelfEcho(kind)
                 let deadline = ContinuousClock.now.advanced(by: .seconds(10))
-                repeat {
-                    let echoes = try reader.query("SELECT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE m.ROWID>? AND m.is_from_me=0 AND c.guid=? AND (m.text=? OR instr(m.attributedBody,CAST(? AS BLOB))>0)", [String(baseline), chat, text, text])
-                    if echoes.count == 1, let row = try reader.message(echoes[0]["guid"]), let captured = try reader.messageObservations(row).first {
-                        let data = try JSONDecoder().decode(JSON.self, from: JSONSerialization.data(withJSONObject: captured.2))
-                        echoVerified = MessagesSendVariants.matchesEcho(prepared.action["messages"], data: data)
-                        if echoVerified { break }
+                while requiresSelfEcho(kind), ContinuousClock.now < deadline {
+                    let echoText = kind == "mention" ? tag : text
+                    let echoes: [SQLiteRow]
+                    if kind == "audio" {
+                        echoes = try reader.query("SELECT DISTINCT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id JOIN message_attachment_join a ON a.message_id=m.ROWID JOIN attachment f ON f.ROWID=a.attachment_id WHERE m.ROWID>? AND m.is_from_me=0 AND c.guid=? AND (instr(f.filename,?)>0 OR instr(f.transfer_name,?)>0)", [String(variantBaseline), chat, "ab-" + run + ".caf", "ab-" + run + ".caf"])
+                    } else {
+                        echoes = try reader.query("SELECT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE m.ROWID>? AND m.is_from_me=0 AND c.guid=? AND (instr(m.text,?)>0 OR instr(m.attributedBody,CAST(? AS BLOB))>0)", [String(variantBaseline), chat, echoText, echoText])
                     }
+                    var matches = 0
+                    for echo in echoes {
+                        guard let row = try reader.message(echo["guid"]), let captured = try reader.messageObservations(row).first else { continue }
+                        let data = try JSONDecoder().decode(JSON.self, from: JSONSerialization.data(withJSONObject: captured.2))
+                        if MessagesSendVariants.matchesEcho(prepared.action["messages"], data: data) { matches += 1 }
+                    }
+                    echoVerified = matches == 1
+                    if echoVerified { break }
                     try await Task.sleep(for: .milliseconds(100))
-                } while ContinuousClock.now < deadline
+                }
                 if !echoVerified { reason = "self_echo_variant_attributes_unverified" }
             }
         } catch { reason = (error as? SendVariantFailure)?.rawValue ?? (error as? MessagesUIFailure)?.rawValue ?? (error is SourceFailure ? String(describing: error) : "native_variant_probe_failed") }
