@@ -603,6 +603,7 @@ features:
     depends_on: [web.frontdoor, web.remote]
     status: done
     scenarios:
+      - {id: SEC-REMOTE-ACCESS, levels: [sim, real]}
       - {id: WEB-AGENT-CREDENTIALS, levels: [sim]}
       - {id: WEB-AGENT-ACTIVITY, levels: [sim]}
       - {id: WEB-AGENT-LEVELS, levels: [sim]}

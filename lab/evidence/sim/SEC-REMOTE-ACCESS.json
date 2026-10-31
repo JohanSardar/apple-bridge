@@ -1,0 +1,388 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[10.5 11.07 12.47] cpu_idle=33% cpus=10 other_heavy=0"
+  },
+  "run_id": "security_01M69Y5K4W0YPCM0GEEY9C9ESC",
+  "network_path": "isolated Mac gateway adversarial HTTP and trust checks",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "SEC-REMOTE-ACCESS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-31T21:34:36.700625Z",
+  "assertions": [
+    {
+      "name": "isolated_gateway",
+      "passed": true
+    },
+    {
+      "name": "authority",
+      "passed": true
+    },
+    {
+      "name": "owner_local_socket",
+      "passed": true
+    },
+    {
+      "name": "registered_client",
+      "passed": true
+    },
+    {
+      "name": "authorize_without_passkey",
+      "passed": true
+    },
+    {
+      "name": "pending_matching_code_and_requested_data",
+      "passed": true
+    },
+    {
+      "name": "pending_matching_code_and_requested_data",
+      "passed": true
+    },
+    {
+      "name": "wrong_code_refused",
+      "passed": true
+    },
+    {
+      "name": "another_requests_code_refused",
+      "passed": true
+    },
+    {
+      "name": "mac_allow",
+      "passed": true
+    },
+    {
+      "name": "one_request_never_approves_another",
+      "passed": true
+    },
+    {
+      "name": "decision_single_use",
+      "passed": true
+    },
+    {
+      "name": "approval_redirect_with_state_and_code",
+      "passed": true
+    },
+    {
+      "name": "poll_single_use",
+      "passed": true
+    },
+    {
+      "name": "oauth_token",
+      "passed": true
+    },
+    {
+      "name": "token_calls_records_query",
+      "passed": true
+    },
+    {
+      "name": "agent_listed_with_requested_scopes",
+      "passed": true
+    },
+    {
+      "name": "mac_deny",
+      "passed": true
+    },
+    {
+      "name": "deny_access_denied",
+      "passed": true
+    },
+    {
+      "name": "pending_matching_code_and_requested_data",
+      "passed": true
+    },
+    {
+      "name": "expired_request_refused",
+      "passed": true
+    },
+    {
+      "name": "pending_matching_code_and_requested_data",
+      "passed": true
+    },
+    {
+      "name": "wrong_code_attempt_refused",
+      "passed": true
+    },
+    {
+      "name": "wrong_code_attempt_refused",
+      "passed": true
+    },
+    {
+      "name": "wrong_code_attempt_refused",
+      "passed": true
+    },
+    {
+      "name": "wrong_code_attempt_refused",
+      "passed": true
+    },
+    {
+      "name": "wrong_code_attempt_refused",
+      "passed": true
+    },
+    {
+      "name": "code_attempts_rate_limited",
+      "passed": true
+    },
+    {
+      "name": "creation_rate_limited",
+      "passed": true
+    },
+    {
+      "name": "relay_fixture",
+      "passed": true
+    },
+    {
+      "name": "relay_signed_enrollment",
+      "passed": true
+    },
+    {
+      "name": "relay_enrollment_replay_refused",
+      "passed": true
+    },
+    {
+      "name": "relay_proof_valid_once",
+      "passed": true
+    },
+    {
+      "name": "relay_proof_wrong_action_refused",
+      "passed": true
+    },
+    {
+      "name": "relay_proof_wrong_device_refused",
+      "passed": true
+    },
+    {
+      "name": "relay_wrong_credential_refused",
+      "passed": true
+    },
+    {
+      "name": "relay_credential_without_private_key_refused",
+      "passed": true
+    },
+    {
+      "name": "relay_revoked_credential_refused",
+      "passed": true
+    },
+    {
+      "name": "isolated_gateway",
+      "passed": true
+    },
+    {
+      "name": "authority",
+      "passed": true
+    },
+    {
+      "name": "all_protected_endpoints_refuse_unauthenticated_requests",
+      "passed": true
+    },
+    {
+      "name": "public_bootstrap_/",
+      "passed": true
+    },
+    {
+      "name": "public_bootstrap_/.well-known/oauth-authorization-server",
+      "passed": true
+    },
+    {
+      "name": "public_bootstrap_/.well-known/oauth-protected-resource",
+      "passed": true
+    },
+    {
+      "name": "security_oauth_client",
+      "passed": true
+    },
+    {
+      "name": "security_agent_created",
+      "passed": true
+    },
+    {
+      "name": "security_code_created",
+      "passed": true
+    },
+    {
+      "name": "mismatched_oauth_binding_refused",
+      "passed": true
+    },
+    {
+      "name": "mismatched_oauth_binding_refused",
+      "passed": true
+    },
+    {
+      "name": "mismatched_oauth_binding_refused",
+      "passed": true
+    },
+    {
+      "name": "mismatched_oauth_binding_refused",
+      "passed": true
+    },
+    {
+      "name": "mismatched_oauth_binding_refused",
+      "passed": true
+    },
+    {
+      "name": "valid_oauth_access",
+      "passed": true
+    },
+    {
+      "name": "wrong_scope_refused",
+      "passed": true
+    },
+    {
+      "name": "garbage_token_refused",
+      "passed": true
+    },
+    {
+      "name": "expired_access_refused",
+      "passed": true
+    },
+    {
+      "name": "refresh_rotation_works",
+      "passed": true
+    },
+    {
+      "name": "replayed_refresh_refused_and_family_revoked",
+      "passed": true
+    },
+    {
+      "name": "security_agent_created",
+      "passed": true
+    },
+    {
+      "name": "security_code_created",
+      "passed": true
+    },
+    {
+      "name": "replayed_code_refused_and_family_revoked",
+      "passed": true
+    },
+    {
+      "name": "security_agent_created",
+      "passed": true
+    },
+    {
+      "name": "security_code_created",
+      "passed": true
+    },
+    {
+      "name": "expired_code_refused",
+      "passed": true
+    },
+    {
+      "name": "security_agent_created",
+      "passed": true
+    },
+    {
+      "name": "security_code_created",
+      "passed": true
+    },
+    {
+      "name": "connector_works_before_revocation",
+      "passed": true
+    },
+    {
+      "name": "revocation_stops_public_token_within_seconds",
+      "passed": true
+    },
+    {
+      "name": "revoked_refresh_refused",
+      "passed": true
+    },
+    {
+      "name": "oauth_codes_and_tokens_absent_from_storage_and_logs",
+      "passed": true
+    },
+    {
+      "name": "owner_session",
+      "passed": true
+    },
+    {
+      "name": "approve_csrf_and_cross_origin_refused",
+      "passed": true
+    },
+    {
+      "name": "approve_csrf_and_cross_origin_refused",
+      "passed": true
+    },
+    {
+      "name": "approve_csrf_and_cross_origin_refused",
+      "passed": true
+    },
+    {
+      "name": "approve_csrf_and_cross_origin_refused",
+      "passed": true
+    },
+    {
+      "name": "approve_csrf_and_cross_origin_refused",
+      "passed": true
+    },
+    {
+      "name": "approve_csrf_and_cross_origin_refused",
+      "passed": true
+    },
+    {
+      "name": "approve_csrf_and_cross_origin_refused",
+      "passed": true
+    },
+    {
+      "name": "approve_csrf_and_cross_origin_refused",
+      "passed": true
+    },
+    {
+      "name": "approve_csrf_and_cross_origin_refused",
+      "passed": true
+    },
+    {
+      "name": "approve_csrf_and_cross_origin_refused",
+      "passed": true
+    },
+    {
+      "name": "approve_csrf_and_cross_origin_refused",
+      "passed": true
+    },
+    {
+      "name": "approve_csrf_and_cross_origin_refused",
+      "passed": true
+    },
+    {
+      "name": "session_cookie_flags_and_response_redaction",
+      "passed": true
+    },
+    {
+      "name": "expired_owner_session_cannot_enroll_passkey",
+      "passed": true
+    },
+    {
+      "name": "expired_agent_cannot_mint_oauth_token",
+      "passed": true
+    },
+    {
+      "name": "delegated_scope_cannot_expand_to_replica_scope",
+      "passed": true
+    },
+    {
+      "name": "inactive_replica_certificate_refused",
+      "passed": true
+    },
+    {
+      "name": "inactive_replica_certificate_refused",
+      "passed": true
+    },
+    {
+      "name": "owner_token_absent_from_storage_and_logs",
+      "passed": true
+    },
+    {
+      "name": "evidence_contains_only_security_results",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

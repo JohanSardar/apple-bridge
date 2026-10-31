@@ -590,6 +590,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 		}
 		return runRelayAuth(ctx, s, level)
 	}
+	if s.ID == "SEC-REMOTE-ACCESS" {
+		return runRemoteSecurity(ctx, s, level)
+	}
 	if s.ID == "CONN-CLAUDE-CODE" && level == "real" {
 		return runRelayService(ctx, s, level)
 	}
@@ -1258,7 +1261,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		ran++
 		fmt.Fprintln(os.Stderr, "running", s.ID, level)
 		duration := 3 * time.Minute
-		if level == "real" && (s.ID == "CONN-CLAUDE-AI" || s.ID == "CONN-CHATGPT") {
+		if level == "real" && (s.ID == "CONN-CLAUDE-AI" || s.ID == "CONN-CHATGPT" || s.ID == "SEC-REMOTE-ACCESS") {
 			duration = 6 * time.Minute
 		}
 		if isIPhoneRealScenario(s.ID, level) || level == "real" && isIPhoneSensorReal(s.ID) {

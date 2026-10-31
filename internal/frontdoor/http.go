@@ -231,7 +231,7 @@ func Handler(deps Deps, descriptors []contracts.OperationDescriptor) http.Handle
 			}
 			return
 		}
-		if r.URL.Path == "/v1/health" {
+		if r.URL.Path == "/v1/health" && !public {
 			mux.ServeHTTP(w, r)
 			return
 		}

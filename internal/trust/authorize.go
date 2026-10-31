@@ -6,6 +6,9 @@ import (
 )
 
 func (a *Authority) Authorize(p Principal, grant contracts.Grant) error {
+	if p.Kind == "delegated" && !Subset([]contracts.Grant{grant}, p.Grants) {
+		return contracts.ErrUnauthorized
+	}
 	if p.IsAgent() && p.Level == AgentRead && strings.HasSuffix(string(grant), ":write") {
 		return contracts.ErrUnauthorized
 	}
