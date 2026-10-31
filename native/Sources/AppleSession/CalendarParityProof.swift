@@ -2,7 +2,7 @@
 import Foundation
 import AppKit
 import ApplicationServices
-import Carbon
+import CoreLocation
 import CryptoKit
 import EventKit
 import CalendarSource
@@ -12,17 +12,14 @@ import SourceSupport
 enum CalendarParityProof {
     static func run() async throws -> JSON {
         var checks: [String: JSON] = [:], reasons: [String: JSON] = [:], controls: [String: JSON] = [:]
-        let target = NSAppleEventDescriptor(bundleIdentifier: "com.apple.iCal")
-        let permission = AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false)
-        checks["automation_granted"] = .bool(permission == noErr)
         checks["accessibility_granted"] = .bool(AXIsProcessTrusted())
         checks["calendar_granted"] = .bool(EKEventStore.authorizationStatus(for: .event) == .fullAccess)
         guard checks.values.allSatisfy(\.bool) else {
-            reasons["permissions"] = .string("The signed Helper needs Calendar, Calendar Automation and Accessibility access in System Settings before this test can run.")
+            reasons["permissions"] = .string("Calendar full access and Accessibility must already be enabled for the signed Helper. This check never requests access.")
             return report(checks, reasons, controls)
         }
         let store = EKEventStore()
-        let title = "[ab-test " + UUID().uuidString + "]"
+        let title = "[ab-test] " + UUID().uuidString
         let calendar = EKCalendar(for: .event, eventStore: store)
         guard let source = store.defaultCalendarForNewEvents?.source else { throw SourceFailure.unavailable }
         calendar.title = title; calendar.source = source
@@ -35,6 +32,10 @@ enum CalendarParityProof {
         let event = EKEvent(eventStore: store)
         event.calendar = calendar; event.title = title + " event"
         event.startDate = Date().addingTimeInterval(86400); event.endDate = event.startDate.addingTimeInterval(3600)
+        let location = EKStructuredLocation(title: "[ab-test] location")
+        location.geoLocation = CLLocation(latitude: 41.88, longitude: -87.63)
+        location.radius = 100
+        event.structuredLocation = location
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("ab-test-calendar-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
@@ -55,33 +56,37 @@ enum CalendarParityProof {
                 return false
             }
             stage = "show_owned_event"
-            var error: NSDictionary?
-            let script = "with timeout of 5 seconds\ntell application \"Calendar\"\nset matches to every calendar whose name is \"" + title + "\"\nif (count matches) is not 1 then error number -2700\nset eventsFound to every event of item 1 of matches whose summary is \"" + eventTitle + "\"\nif (count eventsFound) is not 1 then error number -2700\nshow item 1 of eventsFound\nactivate\nend tell\nend timeout"
-            _ = NSAppleScript(source: script)?.executeAndReturnError(&error)
-            guard error == nil else { throw SourceFailure.unavailable }
-            try await Task.sleep(for: .milliseconds(500))
-            guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.iCal").first else { throw SourceFailure.unavailable }
+            store.reset()
+            let saved = store.calendarItem(withIdentifier: identifier) as? EKEvent
+            checks["structured_location_readback"] = .bool(saved?.structuredLocation?.title == location.title && saved?.structuredLocation?.geoLocation?.coordinate.latitude == 41.88 && saved?.structuredLocation?.geoLocation?.coordinate.longitude == -87.63 && saved?.structuredLocation?.radius == 100)
+            let identities = ownIdentities(store: store)
+            controls["own_account_identity_count"] = .number(Double(identities.count))
+            guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.iCal") else { throw SourceFailure.unavailable }
+            let configuration = NSWorkspace.OpenConfiguration()
+            configuration.activates = true
+            let app = try await NSWorkspace.shared.openApplication(at: url, configuration: configuration)
+            try await Task.sleep(for: .seconds(1))
             let ui = CalendarFixtureUI(app: app, title: eventTitle)
-            if !ui.hasOwnedInspector() {
-                try ui.navigationInfo()
-                try await Task.sleep(for: .milliseconds(400))
-            }
+            try await ui.openOwnedEvent()
             checks["owned_event_inspector"] = .bool(ui.hasOwnedInspector())
             try ui.fence()
-            for name in ["travel time", "travel time:", "Travel Time", "Add Attachment…", "Add notes, URL or attachments", "Remove Attachment", "Accept", "Maybe", "Decline"] {
+            for name in ["travel time", "travel time:", "Travel Time", "Add Attachment…", "Add notes, URL or attachments", "Remove Attachment", "Accept", "Maybe", "Decline", "Add Invitees", "Add Invitees…", "Add Alert, Repeat, or Travel Time", "None", "Done", "Send"] {
                 controls[name] = .bool(!ui.find(name).isEmpty)
             }
             checks["invitation_response_readback"] = .bool(false)
             reasons["invitation"] = .string("This run has no owned incoming invitation. EventKit creates ordinary events and exposes attendees and response status as read-only; existing invitations were left untouched.")
             stage = "travel_time"
+            try await ui.revealTravel()
             try ui.travelPopup()
             try ui.pressAny(["15 minutes", "15 Minutes"], role: kAXMenuItemRole)
             try ui.key(48)
+            try await ui.commit()
             checks["travel_time_readback"] = .bool(try await observed { current in
                 let value = current["travel_time"] ?? .null
                 return value == .number(900) || value == .number(15)
             })
             stage = "attachment_add"
+            try await ui.openOwnedEvent()
             let filename = "ab-test-" + UUID().uuidString + ".txt"
             let file = root.appendingPathComponent(filename)
             let bytes = Data("[ab-test] calendar attachment".utf8)
@@ -96,7 +101,8 @@ enum CalendarParityProof {
             try ui.setFocused(file.path)
             try ui.key(36)
             try await Task.sleep(for: .milliseconds(200))
-            try ui.press("Open", role: kAXButtonRole)
+            try ui.dialogPress("Open")
+            try await ui.commit()
             let reader = CalendarStoreEnrichment()
             let observation: [String: JSON] = ["event": .object(["collection": .string("calendar.event"), "native_key": .string(identifier), "data": .object(["calendar_id": .object(["$ref": .object(["native_key": .string(calendarID)])])])])]
             let lookups: [String: JSON] = [identifier: .object(["external": .string(external)])]
@@ -109,8 +115,10 @@ enum CalendarParityProof {
             }
             checks["attachment_add_readback"] = .bool(attached)
             stage = "attachment_remove"
+            try await ui.openOwnedEvent()
             try ui.contextMenu(filename)
             try ui.pressAny(["Remove Attachment", "Delete Attachment"], role: kAXMenuItemRole)
+            try await ui.commit()
             var removed = false
             for _ in 0..<60 {
                 let captured = await reader.enrich(observation, lookups: lookups, force: true)
@@ -121,7 +129,13 @@ enum CalendarParityProof {
             }
             checks["attachment_remove_readback"] = .bool(removed)
         } catch {
-            reasons[stage] = .string("Calendar could not verify " + stage + " on the test event. The action remains unavailable until this native check passes.")
+            reasons[stage] = .string("Calendar could not verify " + stage + " on the test event (" + String(describing: error) + ").")
+            if let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.iCal").first {
+                let ui = CalendarFixtureUI(app: app, title: title + " event")
+                for name in [title + " event", "travel time", "travel time:", "Travel Time", "Add Alert, Repeat, or Travel Time", "Add Attachment…", "Add notes, URL or attachments", "Accept", "Maybe", "Decline", "None", "Done", "Send", "Open", "Cancel"] {
+                    controls[name == title + " event" ? "owned_title_visible" : name] = .number(Double(ui.find(name).count))
+                }
+            }
         }
         if let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.iCal").first {
             let ui = CalendarFixtureUI(app: app, title: title + " event")
@@ -134,8 +148,20 @@ enum CalendarParityProof {
         return report(checks, reasons, controls)
     }
 
+    private static func ownIdentities(store: EKEventStore) -> Set<String> {
+        let now = Date()
+        let predicate = store.predicateForEvents(withStart: now.addingTimeInterval(-180 * 86400), end: now.addingTimeInterval(180 * 86400), calendars: nil)
+        var identities: Set<String> = []
+        for event in store.events(matching: predicate) {
+            for participant in (event.attendees ?? []) + [event.organizer].compactMap({ $0 }) where participant.isCurrentUser && participant.url.scheme?.lowercased() == "mailto" {
+                identities.insert(participant.url.resourceSpecifier.removingPercentEncoding?.lowercased() ?? "")
+            }
+        }
+        return identities.filter { !$0.isEmpty && !$0.contains("\n") && !$0.contains("\r") }
+    }
+
     private static func report(_ checks: [String: JSON], _ reasons: [String: JSON], _ controls: [String: JSON]) -> JSON {
-        let required = ["invitation_response_readback", "travel_time_readback", "attachment_add_readback", "attachment_remove_readback", "owned_calendar_cleanup"]
+        let required = ["accessibility_granted", "calendar_granted", "structured_location_readback", "invitation_response_readback", "travel_time_readback", "attachment_add_readback", "attachment_remove_readback", "owned_calendar_cleanup"]
         return .object(["passed": .bool(required.allSatisfy { checks[$0]?.bool == true }), "checks": .object(checks), "reasons": .object(reasons), "controls": .object(controls)])
     }
 }
@@ -171,6 +197,62 @@ final class CalendarFixtureUI {
         return walk(root)
     }
 
+    func openOwnedEvent() async throws {
+        app.activate()
+        try await Task.sleep(for: .milliseconds(200))
+        if hasOwnedInspector() { return }
+        try post(3, flags: .maskCommand)
+        try await Task.sleep(for: .milliseconds(150))
+        try setFocused(title, requireInspector: false)
+        try post(36, flags: [])
+        try await Task.sleep(for: .seconds(1))
+        let matches = find(title)
+        guard !matches.isEmpty else { throw SourceFailure.unavailable }
+        let result = matches.first { value($0, kAXRoleAttribute) != kAXTextFieldRole } ?? matches[0]
+        var position: CFTypeRef?, size: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(result, kAXPositionAttribute as CFString, &position) == .success,
+              AXUIElementCopyAttributeValue(result, kAXSizeAttribute as CFString, &size) == .success,
+              let position, let size else { throw SourceFailure.unsupported }
+        var point = CGPoint.zero, dimensions = CGSize.zero
+        guard AXValueGetValue(unsafeDowncast(position, to: AXValue.self), .cgPoint, &point),
+              AXValueGetValue(unsafeDowncast(size, to: AXValue.self), .cgSize, &dimensions) else { throw SourceFailure.unsupported }
+        point.x += dimensions.width / 2; point.y += dimensions.height / 2
+        for type in [CGEventType.leftMouseDown, .leftMouseUp] {
+            guard let event = CGEvent(mouseEventSource: nil, mouseType: type, mouseCursorPosition: point, mouseButton: .left) else { throw SourceFailure.unavailable }
+            event.setIntegerValueField(.mouseEventClickState, value: 2)
+            event.post(tap: .cghidEventTap)
+        }
+        try await Task.sleep(for: .milliseconds(400))
+        if !hasOwnedInspector() { try post(34, flags: .maskCommand); try await Task.sleep(for: .milliseconds(400)) }
+        try fence()
+    }
+
+    func commit() async throws {
+        try fence()
+        if find("Done", role: kAXButtonRole).count == 1 { try press("Done", role: kAXButtonRole) }
+        else { try post(53, flags: []) }
+        try await Task.sleep(for: .milliseconds(500))
+    }
+
+    func revealTravel() async throws {
+        try fence()
+        if !find("travel time", role: kAXStaticTextRole).isEmpty || !find("travel time:", role: kAXStaticTextRole).isEmpty { return }
+        for name in ["Add Alert, Repeat, or Travel Time", "Add Alert, Repeat or Travel Time"] {
+            let matches = find(name)
+            if matches.count == 1 {
+                guard AXUIElementPerformAction(matches[0], kAXPressAction as CFString) == .success else { throw SourceFailure.unsupported }
+                try await Task.sleep(for: .milliseconds(200))
+                return
+            }
+        }
+    }
+
+    func dialogPress(_ name: String) throws {
+        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier else { throw SourceFailure.conflict }
+        let matches = find(name, role: kAXButtonRole)
+        guard matches.count == 1, AXUIElementPerformAction(matches[0], kAXPressAction as CFString) == .success else { throw SourceFailure.unsupported }
+    }
+
     func hasOwnedInspector() -> Bool { find(title, role: kAXTextFieldRole).count + find(title, role: kAXTextAreaRole).count == 1 }
 
     func fence() throws {
@@ -182,7 +264,7 @@ final class CalendarFixtureUI {
         try post(34, flags: .maskCommand)
     }
 
-    private func post(_ code: CGKeyCode, flags: CGEventFlags) throws {
+    func post(_ code: CGKeyCode, flags: CGEventFlags) throws {
         guard let down = CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: true), let up = CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: false) else { throw SourceFailure.unavailable }
         down.flags = flags; up.flags = flags
         down.post(tap: .cghidEventTap); up.post(tap: .cghidEventTap)
@@ -208,8 +290,9 @@ final class CalendarFixtureUI {
         try pressAny(items, role: kAXMenuItemRole)
     }
 
-    func setFocused(_ text: String) throws {
-        try fence()
+    func setFocused(_ text: String, requireInspector: Bool = true) throws {
+        if requireInspector { try fence() }
+        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier else { throw SourceFailure.conflict }
         var focused: CFTypeRef?
         guard AXUIElementCopyAttributeValue(root, kAXFocusedUIElementAttribute as CFString, &focused) == .success, let focused, CFGetTypeID(focused) == AXUIElementGetTypeID() else { throw SourceFailure.conflict }
         let field = unsafeDowncast(focused, to: AXUIElement.self)

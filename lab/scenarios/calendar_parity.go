@@ -72,7 +72,7 @@ func runCalendarParity(ctx context.Context, scenario Scenario, level string) (e 
 		Passed   bool              `json:"passed"`
 		Checks   map[string]bool   `json:"checks"`
 		Reasons  map[string]string `json:"reasons"`
-		Controls map[string]bool   `json:"controls"`
+		Controls map[string]any    `json:"controls"`
 	}
 	valid := err == nil && readErr == nil && json.Unmarshal(data, &proof) == nil
 	add("native_parity_report", valid)
@@ -84,7 +84,7 @@ func runCalendarParity(ctx context.Context, scenario Scenario, level string) (e 
 	for _, name := range names {
 		add(name, proof.Checks[name])
 	}
-	for _, name := range []string{"invitation_response_readback", "travel_time_readback", "attachment_add_readback", "attachment_remove_readback", "owned_calendar_cleanup"} {
+	for _, name := range []string{"accessibility_granted", "calendar_granted", "structured_location_readback", "invitation_response_readback", "travel_time_readback", "attachment_add_readback", "attachment_remove_readback", "owned_calendar_cleanup"} {
 		if _, exists := proof.Checks[name]; !exists {
 			add(name, false)
 		}

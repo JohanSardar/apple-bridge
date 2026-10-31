@@ -1,7 +1,6 @@
 #if LAB
 import Foundation
 import AppKit
-import Carbon
 import Darwin
 import ApplicationServices
 import SourceSupport
@@ -22,19 +21,17 @@ enum CalendarParityProbe {
         let application = try await NSWorkspace.shared.openApplication(at: url, configuration: configuration)
         defer { if !wasRunning { _ = application.terminate() } }
         try await Task.sleep(for: .seconds(2))
-        let target = NSAppleEventDescriptor(bundleIdentifier: "com.apple.iCal")
-        let permission = AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), requestConsent)
         let trusted = AXIsProcessTrusted()
         let root = AXUIElementCreateApplication(application.processIdentifier)
         AXUIElementSetMessagingTimeout(root, 0.25)
         var windows: CFTypeRef?
         let result = trusted ? AXUIElementCopyAttributeValue(root, kAXWindowsAttribute as CFString, &windows) : .apiDisabled
         let count = (windows as? [AXUIElement])?.count ?? 0
-        let reason = !trusted ? "calendar_accessibility_permission_missing" : permission == -1744 ? "calendar_navigation_apple_events_consent_pending" : permission == -1743 ? "calendar_navigation_apple_events_denied" : result != .success || count == 0 ? "calendar_accessibility_window_target_missing" : "calendar_exact_event_navigation_and_effect_not_proven"
+        let reason = !trusted ? "calendar_accessibility_permission_missing" : result != .success || count == 0 ? "calendar_accessibility_window_target_missing" : "calendar_exact_event_navigation_and_effect_not_proven"
         let operations = ["calendar.respond_invitation", "calendar.set_travel_time", "calendar.add_attachment", "calendar.remove_attachment"].map { operation in
             JSON.object(["operation": .string(operation), "proven": .bool(false), "reason": .string(reason)])
         }
-        return .object(["status": .string("limited"), "os_build": .string(osBuild), "accessibility_trusted": .bool(trusted), "calendar_automation_code": .number(Double(permission)), "calendar_ax_code": .number(Double(result.rawValue)), "calendar_window_count": .number(Double(count)), "operations": .array(operations), "fixture_created": .bool(false), "effects_attempted": .bool(false), "consent_requested": .bool(requestConsent), "calendar_opened_by_probe": .bool(!wasRunning)])
+        return .object(["status": .string("limited"), "os_build": .string(osBuild), "accessibility_trusted": .bool(trusted), "calendar_ax_code": .number(Double(result.rawValue)), "calendar_window_count": .number(Double(count)), "operations": .array(operations), "fixture_created": .bool(false), "effects_attempted": .bool(false), "consent_requested": .bool(false), "calendar_opened_by_probe": .bool(!wasRunning)])
     }
 }
 #endif
