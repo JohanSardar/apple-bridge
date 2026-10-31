@@ -1274,7 +1274,7 @@ features:
     depends_on: [core.queries]
     status: limited
     scenarios:
-      - {id: QUERY-AGENT, levels: [agent]}
+      - {id: QUERY-AGENT, levels: [sim, real, agent]}
       - {id: LOC-IDLE, levels: [real]}
       - {id: MAP-IDLE, levels: [real]}
       - {id: LOC-CURRENT-REAL, levels: [real]}
@@ -1284,9 +1284,8 @@ features:
       - {id: MAP-SEARCH-REAL, levels: [real]}
       - {id: MAP-DIRECTIONS-REAL, levels: [real]}
       - {id: MAP-SNAPSHOT-REAL, levels: [real]}
-    notes: Transit route geometry is unsupported by MKDirections (ETA is supported); real maps.open remains unverified. Whole-Helper idle qualification is blocked by T53.
+    notes: Transit route geometry is unsupported by MKDirections (ETA is supported); real maps.open remains unverified. Whole-Helper idle qualification is blocked by T53. QUERY-AGENT qualifies Codex and MCP against synthetic Maps results, not live traffic.
     limits:
-      - {"scenario": "QUERY-AGENT", "level": "agent", "reason": "Decision 39: Ubuntu Codex OAuth token is revoked (HTTP 401 token_revoked); agent runner not executed. Reauthentication required for MCP-only qualification."}
       - {"scenario": "LOC-IDLE", "level": "real", "reason": "Failed assertions: helper_reached_idle, five_minute_idle_cpu_under_2_percent"}
       - {"scenario": "MAP-IDLE", "level": "real", "reason": "limited: T99 locked Air rerun: needs Full Disk Access for the current signed AppleBridgeHelper on the Air; non-prompting status=denied; capture cannot settle, so no CPU measurement was taken"}
   - id: safari.capture

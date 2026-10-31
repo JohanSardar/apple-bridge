@@ -117,6 +117,9 @@ func OperationSchema(d OperationDescriptor) map[string]any {
 		props["id"] = map[string]any{"type": "string", "pattern": "^qry_[A-Za-z0-9._:-]+$", "maxLength": 128}
 		props["deadline_ms"] = map[string]any{"type": "integer", "minimum": 0, "maximum": 60000}
 		props["op"] = map[string]any{"type": "string", "enum": []string{d.Name}}
+		if d.Name == "maps.eta" {
+			props["args"] = mapsETAArgsSchema()
+		}
 		if (MacExtrasQuery(d.Name) && d.Name != "mac.recognize_song") || d.Name == "helper.version" || d.Name == "mac.clipboard_read" || d.Name == "mac.network_check" {
 			props["args"] = map[string]any{"type": "object", "additionalProperties": false}
 		}

@@ -358,6 +358,9 @@ func convergence(w *world.World) bool {
 }
 
 func runScenario(ctx context.Context, s Scenario, level string) Evidence {
+	if s.ID == "QUERY-AGENT" {
+		return runQueryAgent(ctx, s, level)
+	}
 	if level == "real" && isIPhoneSensorReal(s.ID) {
 		return runIPhoneSensorReal(ctx, s)
 	}
@@ -1261,6 +1264,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		ran++
 		fmt.Fprintln(os.Stderr, "running", s.ID, level)
 		duration := 3 * time.Minute
+		if s.ID == "QUERY-AGENT" {
+			duration = 5 * time.Minute
+		}
 		if level == "real" && (s.ID == "CONN-CLAUDE-AI" || s.ID == "CONN-CHATGPT" || s.ID == "SEC-REMOTE-ACCESS") {
 			duration = 6 * time.Minute
 		}

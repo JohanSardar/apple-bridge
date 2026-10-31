@@ -5,26 +5,39 @@ import (
 	"testing"
 )
 
-func TestQueryTools(t *testing.T) {
-	weather := `{"type":"item.completed","item":{"type":"mcp_tool_call","server":"apple_bridge","tool":"weather_current","arguments":{"args":{"latitude":37.7955,"longitude":-122.3937}},"result":{"isError":false}}}`
-	eta := `{"type":"item.completed","item":{"type":"mcp_tool_call","server":"apple_bridge","tool":"maps_eta","arguments":{"args":{"from":{"lat":37.7955,"lon":-122.3937},"to":{"lat":37.8024,"lon":-122.4058},"mode":"driving"}},"result":{"isError":false}}}`
-	valid := weather + "\n" + eta
+func TestQueryChecks(t *testing.T) {
+	valid := `{"type":"item.completed","item":{"type":"mcp_tool_call","server":"apple_bridge","tool":"maps_eta","arguments":{"args":{"from":{"lat":37.7955,"lon":-122.3937},"to":{"lat":37.8024,"lon":-122.4058},"mode":"driving"}},"result":{"isError":false,"structuredContent":{"result_json":{"distance":1800,"duration":600000}}}}}`
+	answer := "maps.eta synthetic: 600,000 milliseconds, 1,800 meters"
 	cases := []struct {
-		name, transcript string
-		want             bool
+		name, transcript, answer string
+		tools, used              bool
 	}{
-		{"both", valid, true},
-		{"missing_eta", weather, false},
-		{"wrong_destination", strings.ReplaceAll(valid, "37.8024", "37.9"), false},
-		{"wrong_mode", strings.ReplaceAll(valid, "driving", "walking"), false},
-		{"wrong_server", strings.ReplaceAll(valid, "apple_bridge", "other"), false},
-		{"tool_error", strings.ReplaceAll(valid, `"isError":false`, `"isError":true`), false},
-		{"missing_result", strings.ReplaceAll(valid, `{"isError":false}`, `null`), false},
+		{"valid", valid, answer, true, true},
+		{"markdown_numbers", valid, "`maps.eta` synthetic: **600,000** ms, **1,800** m", true, true},
+		{"codex_structured_content", strings.ReplaceAll(valid, "structuredContent", "structured_content"), answer, true, true},
+		{"codex_failed_status", strings.ReplaceAll(valid, `"type":"mcp_tool_call"`, `"type":"mcp_tool_call","status":"failed"`), answer, false, false},
+		{"coordinate_aliases", strings.ReplaceAll(strings.ReplaceAll(valid, `"lat":`, `"latitude":`), `"lon":`, `"longitude":`), answer, false, false},
+		{"missing_call", "", answer, false, false},
+		{"wrong_destination", strings.ReplaceAll(valid, "37.8024", "37.9"), answer, false, false},
+		{"wrong_mode", strings.ReplaceAll(valid, "driving", "walking"), answer, false, false},
+		{"wrong_server", strings.ReplaceAll(valid, "apple_bridge", "other"), answer, false, false},
+		{"tool_error", strings.ReplaceAll(valid, `"isError":false`, `"isError":true`), answer, false, false},
+		{"execution_error", strings.ReplaceAll(valid, `"result":`, `"error":{"message":"failed"},"result":`), answer, false, false},
+		{"started_call", strings.ReplaceAll(valid, "item.completed", "item.started"), answer, false, false},
+		{"missing_result", strings.ReplaceAll(valid, `"result_json"`, `"missing"`), answer, false, false},
+		{"changed_duration", strings.ReplaceAll(valid, "600000", "700000"), answer, true, false},
+		{"changed_distance", strings.ReplaceAll(valid, "1800", "2000"), answer, true, false},
+		{"wrong_units", valid, strings.ReplaceAll(answer, "milliseconds", "seconds"), true, false},
+		{"missing_citation", valid, "synthetic: 600000 ms, 1800 m", true, false},
+		{"missing_synthetic", valid, "maps.eta: 600000 ms, 1800 m", true, false},
+		{"short_units", valid, "maps.eta synthetic: 600000 ms, 1800 m", true, true},
+		{"text_result", strings.ReplaceAll(valid, `"structuredContent":{"result_json":{"distance":1800,"duration":600000}}`, `"content":[{"type":"text","text":"{\"result_json\":{\"distance\":1800,\"duration\":600000}}"}]`), answer, true, true},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			if got := queryTools([]byte(c.transcript)); got != c.want {
-				t.Fatalf("tools=%t want=%t", got, c.want)
+			tools, used := queryChecks([]byte(c.transcript), c.answer)
+			if tools != c.tools || used != c.used {
+				t.Fatalf("tools=%t answer=%t want tools=%t answer=%t", tools, used, c.tools, c.used)
 			}
 		})
 	}
