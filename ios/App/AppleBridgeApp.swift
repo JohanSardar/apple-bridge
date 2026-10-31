@@ -55,7 +55,7 @@ struct BridgeSettings: View {
                 if let job = approval.job { ApprovalReviewScreen(job: job) }
             }
             .onChange(of: scenePhase) { _, phase in
-                if phase == .active {
+                if phase == .active && !RealQualification.active {
                     LocationCapability.resume()
                     WidgetsCapability.resume()
                     Task { await PushDelivery.shared.drain(); await HealthReadController.shared.resume() }

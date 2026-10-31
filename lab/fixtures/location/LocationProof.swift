@@ -29,6 +29,17 @@ final class FakeLocation: LocationAdapter {
 struct LocationProof {
     @MainActor
     static func main() async throws {
+        var permission = false
+        let authorization = Task { @MainActor in
+            try await Task.sleep(for: .milliseconds(10))
+            permission = true
+        }
+        let authorized = await QualificationWait.until(timeout: 1, interval: .milliseconds(1)) { permission }
+        try await authorization.value
+        precondition(authorized)
+        let denied = await QualificationWait.until(timeout: 0) { false }
+        precondition(!denied)
+
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let url = directory.appendingPathComponent("records.json")

@@ -1,0 +1,441 @@
+{
+  "checks": {
+    "signed_device_build": true,
+    "device_install": false,
+    "device_launch": false,
+    "device_available": false,
+    "intent_dispatch": true,
+    "intent_metadata": true,
+    "lint": true,
+    "feature_graph": true,
+    "go_scenarios_tests": true,
+    "hardware_qualified": false,
+    "shell_sim_acceptance_qualified": false
+  },
+  "counts": {
+    "real_scenarios": 14,
+    "real_passed": 0,
+    "sim_harnesses_passed": 11,
+    "intent_commands": 29,
+    "intent_shortcuts": 10,
+    "phone_test_writes": 0
+  },
+  "digests": {
+    "ios/App/RealQualification.swift": "30b0f6ef188bfbb7d418e04e00340cae15d56911d1fb716912285a8acba87168",
+    "ios/App/QualificationWait.swift": "f42a6fb3a771addb25072d46908e182c39637694cd218e0a2054742cdfea1758",
+    "ios/Capabilities/Alarms/AlarmCommands.swift": "69c26efa2e6f2d923500fd28512f3545ae13f3c7ef777204109cd836577ef675",
+    "ios/Capabilities/Capture/DeviceCapture.swift": "6da9f5b64ad44d97c31d7f24c986681a2bceb23d472017194b86e67bfb7dbb9f",
+    "ios/Capabilities/Location/CoreLocationAdapter.swift": "0fe0d40dd7603e4496c2abfadbbc9f53d54eb845b6614e18dfdeb4705569557d",
+    "ios/Delivery/PushDelivery.swift": "6551bb77bf3486126cbb5d25c591781484780b4cb3d07301d09ff5298d7d3ea5"
+  },
+  "real": [
+    {
+      "scenario": "APP-HEALTH-REAL",
+      "passed": false,
+      "checks": {
+        "device_launch": false,
+        "redacted_observation": true,
+        "credential_backend_override_restored": true
+      }
+    },
+    {
+      "scenario": "APP-HEALTH-WRITE-REAL",
+      "passed": false,
+      "checks": {
+        "device_launch": false,
+        "redacted_observation": true,
+        "credential_backend_override_restored": true
+      }
+    },
+    {
+      "scenario": "APP-MOTION-REAL",
+      "passed": false,
+      "checks": {
+        "device_launch": false,
+        "redacted_observation": true,
+        "credential_backend_override_restored": true
+      }
+    },
+    {
+      "scenario": "APP-ALARM-REAL",
+      "passed": false,
+      "checks": {
+        "device_launch": false,
+        "redacted_observation": true,
+        "credential_backend_override_restored": true
+      }
+    },
+    {
+      "scenario": "APP-DEVICE-REAL",
+      "passed": false,
+      "checks": {
+        "device_launch": false,
+        "redacted_observation": true,
+        "credential_backend_override_restored": true
+      }
+    },
+    {
+      "scenario": "APP-SCREENTIME-REAL",
+      "passed": false,
+      "checks": {
+        "device_launch": false,
+        "redacted_observation": true,
+        "credential_backend_override_restored": true
+      }
+    },
+    {
+      "scenario": "APP-LOC-REAL",
+      "passed": false,
+      "checks": {
+        "device_launch": false,
+        "redacted_observation": true,
+        "credential_backend_override_restored": true
+      }
+    },
+    {
+      "scenario": "APP-CAPTURE-REAL",
+      "passed": false,
+      "checks": {
+        "device_launch": false,
+        "redacted_observation": true,
+        "credential_backend_override_restored": true
+      }
+    },
+    {
+      "scenario": "APP-NOTIFY-REAL",
+      "passed": false,
+      "checks": {
+        "copy_request": false,
+        "restoration_receipt": false,
+        "credential_backend_override_restored": true
+      }
+    },
+    {
+      "scenario": "APP-APPROVE-REAL",
+      "passed": false,
+      "checks": {
+        "copy_request": false,
+        "restoration_receipt": false,
+        "credential_backend_override_restored": true
+      }
+    },
+    {
+      "scenario": "APP-INTENTS-REAL",
+      "passed": false,
+      "checks": {
+        "copy_request": false,
+        "restoration_receipt": false,
+        "credential_backend_override_restored": true
+      }
+    },
+    {
+      "scenario": "APP-LIVE-REAL",
+      "passed": false,
+      "checks": {
+        "copy_request": false,
+        "restoration_receipt": false,
+        "credential_backend_override_restored": true
+      }
+    },
+    {
+      "scenario": "APP-SHELL-REAL",
+      "passed": false,
+      "checks": {
+        "copy_request": false,
+        "restoration_receipt": false,
+        "credential_backend_override_restored": true
+      }
+    },
+    {
+      "scenario": "FOC-PHONE-SYNC",
+      "passed": false,
+      "checks": {
+        "credential_backend_override_restored": true
+      }
+    }
+  ],
+  "sim": [
+    {
+      "scenario": "APP-ALARM-SIM",
+      "passed": true,
+      "checks": {
+        "swift_handler_build": true,
+        "alarm_timer_lifecycle_and_permission": true,
+        "credential_backend_override_restored": true
+      }
+    },
+    {
+      "scenario": "APP-APPROVE-SIM",
+      "passed": true,
+      "checks": {
+        "isolated_home": true,
+        "authority": true,
+        "state": true,
+        "ledger": true,
+        "pair_code": true,
+        "phone": true,
+        "paired": true,
+        "command_token": true,
+        "principal": true,
+        "offline_admitted_without_helper": true,
+        "restart_state": true,
+        "restart_ledger": true,
+        "recover_preserves_queue": true,
+        "durable_offline_queue": true,
+        "relay_store": true,
+        "relay_enrollment": true,
+        "signed_push_registration": true,
+        "encrypted_relay_push": true,
+        "gateway_signature_and_decryption": true,
+        "tampered_ciphertext_rejected": true,
+        "command_payload": true,
+        "wrong_result_hash_rejected": true,
+        "signed_result": true,
+        "ledger_observed": true,
+        "duplicate_result_idempotent": true,
+        "command_retry_not_redispatched": true,
+        "expired_offline_fixture": true,
+        "pending_after_completion": true,
+        "offline_expiry": true,
+        "read_agent": true,
+        "read_agent_principal": true,
+        "read_agent_cannot_dispatch": true,
+        "approve_agent": true,
+        "approve_agent_principal": true,
+        "iphone_requires_owner_approval": true,
+        "encrypted_approval_notification": true,
+        "wrong_approval_hash_rejected": true,
+        "signed_phone_rejection": true,
+        "ledger_rejected_by_owner": true,
+        "decision_replay_idempotent": true,
+        "replay_cannot_reverse_rejection": true,
+        "second_approval_pending": true,
+        "signed_phone_approval": true,
+        "ledger_admitted_by_phone": true,
+        "credential_backend_override_restored": true
+      }
+    },
+    {
+      "scenario": "APP-CAPTURE-SIM",
+      "passed": true,
+      "checks": {
+        "isolated_home": true,
+        "swift_capture_build": true,
+        "face_id_denial_and_memory_upload_paths": true,
+        "authority": true,
+        "state": true,
+        "ledger": true,
+        "blob_store": true,
+        "pair_code": true,
+        "phone": true,
+        "paired": true,
+        "token": true,
+        "principal": true,
+        "audio_duration_bound_rejected": true,
+        "photo_admitted": true,
+        "photo_undispatched_upload_rejected": true,
+        "photo_dispatched": true,
+        "photo_wrong_hash_rejected": true,
+        "photo_signed_blob_upload": true,
+        "photo_caller_blob_grant": true,
+        "photo_gateway_bytes_match": true,
+        "photo_upload_retry_idempotent": true,
+        "photo_changed_retry_rejected": true,
+        "photo_signed_completion": true,
+        "photo_ledger_observed": true,
+        "audio_admitted": true,
+        "audio_undispatched_upload_rejected": true,
+        "audio_dispatched": true,
+        "audio_wrong_hash_rejected": true,
+        "audio_signed_blob_upload": true,
+        "audio_caller_blob_grant": true,
+        "audio_gateway_bytes_match": true,
+        "audio_upload_retry_idempotent": true,
+        "audio_changed_retry_rejected": true,
+        "audio_signed_completion": true,
+        "audio_ledger_observed": true,
+        "delegated_principal_has_no_local_credential": true,
+        "delegated_command_hash": true,
+        "delegated_admission_era": true,
+        "delegated_admitted_fixture": true,
+        "delegated_prepared_fixture": true,
+        "delegated_dispatched_fixture": true,
+        "delegated_reauthorized_upload": true,
+        "delegated_caller_blob_grant": true,
+        "delegated_revoked_upload_rejected": true,
+        "credential_backend_override_restored": true
+      }
+    },
+    {
+      "scenario": "APP-DEVICE-SIM",
+      "passed": true,
+      "checks": {
+        "swift_adapter_build": true,
+        "fake_adapter_functional": true,
+        "signed_result_upload_then_next_command": true,
+        "credential_backend_override_restored": true
+      }
+    },
+    {
+      "scenario": "APP-HEALTH-SIM",
+      "passed": true,
+      "checks": {
+        "isolated_home": true,
+        "swift_capture_build": true,
+        "anchored_retry_restart_deletion": true,
+        "state": true,
+        "authority": true,
+        "pair_code": true,
+        "phone": true,
+        "paired": true,
+        "signed_capture": true,
+        "retry_deduplicated": true,
+        "altered_retry_rejected": true,
+        "sequence_gap_rejected": true,
+        "sample_record": true,
+        "summary_scope_denied": true,
+        "day_summary": true,
+        "week_summary": true,
+        "sleep_stage_capture": true,
+        "sleep_stage_clipped_to_day": true,
+        "sleep_deletion": true,
+        "signed_deletion": true,
+        "deletion_record": true,
+        "deleted_excluded": true,
+        "workouts_capture": true,
+        "day_unitless_workouts_accumulate": true,
+        "week_unitless_workouts_accumulate": true,
+        "digest": true,
+        "credential_backend_override_restored": true
+      }
+    },
+    {
+      "scenario": "APP-HEALTH-WRITE-SIM",
+      "passed": true,
+      "checks": {
+        "swift_write_build": true,
+        "four_tagged_samples_written_read_deleted": true,
+        "gateway_admission": true,
+        "signed_health_command_roundtrip": true,
+        "credential_backend_override_restored": true
+      }
+    },
+    {
+      "scenario": "APP-LIVE-SIM",
+      "passed": true,
+      "checks": {
+        "pair": true,
+        "signed_start_and_task_token_registration": true,
+        "start_admitted": true,
+        "update_admitted": true,
+        "end_admitted": true,
+        "three_apns_lifecycle_events_without_duplicate_start": true,
+        "disable_revokes_live_tokens": true,
+        "credential_backend_override_restored": true
+      }
+    },
+    {
+      "scenario": "APP-LOC-SIM",
+      "passed": true,
+      "checks": {
+        "isolated_home": true,
+        "swift_adapter_build": true,
+        "fake_adapter_current_geofence_events_significant_restart_permission": true,
+        "authority": true,
+        "state": true,
+        "pair_code": true,
+        "phone": true,
+        "paired": true,
+        "fixture": true,
+        "signed_records_accepted": true,
+        "durable_deduplicated_location_records": true,
+        "geofence_command_registered": true,
+        "invalid_geofence_rejected": true,
+        "command_ledger": true,
+        "command_grant": true,
+        "command_principal": true,
+        "location_command_admitted": true,
+        "encrypted_location_command": true,
+        "location_command_decrypted": true,
+        "coordinate_bearing_receipt_rejected": true,
+        "location_completion_accepted": true,
+        "location_completion_observed": true,
+        "coordinate_free_receipt": true,
+        "credential_backend_override_restored": true
+      }
+    },
+    {
+      "scenario": "APP-MOTION-SIM",
+      "passed": true,
+      "checks": {
+        "swift_adapter_build": true,
+        "fake_adapter_functional": true,
+        "signed_result_upload_then_next_command": true,
+        "credential_backend_override_restored": true
+      }
+    },
+    {
+      "scenario": "APP-NOTIFY-SIM",
+      "passed": true,
+      "checks": {
+        "isolated_home": true,
+        "authority": true,
+        "state": true,
+        "ledger": true,
+        "pair_code": true,
+        "phone": true,
+        "paired": true,
+        "command_token": true,
+        "principal": true,
+        "duplicate_button_rejected": true,
+        "offline_admitted_without_helper": true,
+        "restart_state": true,
+        "restart_ledger": true,
+        "recover_preserves_queue": true,
+        "durable_offline_queue": true,
+        "relay_store": true,
+        "relay_enrollment": true,
+        "signed_push_registration": true,
+        "encrypted_relay_push": true,
+        "gateway_signature_and_decryption": true,
+        "tampered_ciphertext_rejected": true,
+        "command_payload": true,
+        "notification_fields_preserved": true,
+        "wrong_result_hash_rejected": true,
+        "signed_result": true,
+        "ledger_observed": true,
+        "button_result_returned": true,
+        "duplicate_result_idempotent": true,
+        "command_retry_not_redispatched": true,
+        "expired_offline_fixture": true,
+        "pending_after_completion": true,
+        "offline_expiry": true,
+        "read_agent": true,
+        "read_agent_principal": true,
+        "read_agent_cannot_dispatch": true,
+        "approve_agent": true,
+        "approve_agent_principal": true,
+        "iphone_requires_owner_approval": true,
+        "owner_device": true,
+        "owner_authenticated": true,
+        "iphone_owner_approval_without_helper": true,
+        "credential_backend_override_restored": true
+      }
+    },
+    {
+      "scenario": "APP-SCREENTIME-SIM",
+      "passed": true,
+      "checks": {
+        "isolated_fixture": true,
+        "swift_policy_compiled": true,
+        "fake_managed_settings_shield_unshield_downtime_isolation": true,
+        "gateway_shield": true,
+        "gateway_unshield": true,
+        "gateway_cancel": true,
+        "gateway_schedule": true,
+        "invalid_schedule_rejected": true,
+        "credential_backend_override_restored": true
+      }
+    }
+  ]
+}

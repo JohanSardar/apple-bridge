@@ -9,7 +9,15 @@ import UIKit
 
 @MainActor
 enum RealQualification {
+    static var active: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("--real-qualification")
+        #else
+        false
+        #endif
+    }
     static func runIfRequested() async -> Bool {
+        #if DEBUG
         let args = ProcessInfo.processInfo.arguments
         guard let index = args.firstIndex(of: "--real-qualification"), args.count > index + 2 else { return false }
         let scenario = args[index + 1]
@@ -20,15 +28,20 @@ enum RealQualification {
         var counts: [String: Int] = [:]
         var checks: [String: Bool] = [:]
         var digests: [String: String] = [:]
+        var phase = 0
+        var instruction = ""
         func save(_ final: Bool) {
-            let object: [String: Any] = ["scenario": scenario, "run": run.uuidString, "final": final, "checks": checks, "counts": counts, "digests": digests]
+            let object: [String: Any] = ["scenario": scenario, "run": run.uuidString, "final": final, "checks": checks, "counts": counts, "digests": digests, "phase": phase, "prompt": instruction]
             if let data = try? JSONSerialization.data(withJSONObject: object, options: [.sortedKeys]) { try? data.write(to: url, options: [.atomic, .completeFileProtection]) }
         }
         func prompt(_ name: String) {
-            print(">>> JOHAN: tap Allow on \(name) now (up to 3 minutes)")
+            phase += 1
+            instruction = "tap Allow on \(name) on the iPhone; keep Apple Bridge open (up to 3 minutes)"
+            save(false)
         }
         save(false)
         do {
+            guard await QualificationWait.until({ UIApplication.shared.applicationState == .active }) else { throw CocoaError(.userCancelled) }
             switch scenario {
             case "APP-HEALTH-REAL":
                 let reader = HealthKitReader()
@@ -71,15 +84,7 @@ enum RealQualification {
                 try await adapter.authorize()
                 let id = UUID()
                 let alarm = BridgeAlarm(id: id, fire_at: Date().addingTimeInterval(3600).timeIntervalSince1970, duration_seconds: nil, snooze_seconds: 540, title: "[ab-test] " + run.uuidString, state: "scheduled")
-                do {
-                    _ = try await adapter.schedule(alarm)
-                    checks["created_and_read"] = try adapter.list().contains { $0.id == id && $0.title == alarm.title }
-                } catch {
-                    try adapter.cancel(id)
-                    throw error
-                }
-                try adapter.cancel(id)
-                checks["deleted_and_absent"] = try !adapter.list().contains { $0.id == id }
+                try await AlarmQualification.run(alarm, adapter: adapter) { checks[$0] = $1 }
                 counts["created"] = 1
                 counts["deleted"] = 1
             case "APP-DEVICE-REAL":
@@ -121,8 +126,9 @@ enum RealQualification {
                 prompt("Location; choose Always and Precise in Settings when offered")
                 adapter.requestPermission()
                 let manager = CLLocationManager()
-                let deadline = Date().addingTimeInterval(180)
-                while Date() < deadline && manager.authorizationStatus == .notDetermined { try await Task.sleep(for: .seconds(1)) }
+                _ = await QualificationWait.until {
+                    manager.authorizationStatus == .authorizedAlways || manager.authorizationStatus == .denied || manager.authorizationStatus == .restricted
+                }
                 let fix = try await adapter.current()
                 checks["precise_fix_observed"] = fix.accuracy >= 0
                 checks["always_authorized"] = manager.authorizationStatus == .authorizedAlways
@@ -130,9 +136,9 @@ enum RealQualification {
                     let name = "[ab-test] " + run.uuidString
                     defer { adapter.remove(name) }
                     try await adapter.monitor(NamedGeofence(name: name, latitude: fix.latitude, longitude: fix.longitude, radius: 100))
-                    checks["geofence_registered"] = true
+                    checks["geofence_registered"] = adapter.isMonitoring(name)
                     adapter.remove(name)
-                    checks["geofence_removed"] = true
+                    checks["geofence_removed"] = !adapter.isMonitoring(name)
                 }
             case "APP-CAPTURE-REAL":
                 let previous = UserDefaults.standard.object(forKey: "capability.capture.enabled")
@@ -155,9 +161,12 @@ enum RealQualification {
             }
         } catch {
             checks["operation_completed"] = false
-            counts["error_code"] = (error as NSError).code
+            digests["failure"] = SHA256.hash(data: Data("\((error as NSError).domain):\((error as NSError).code)".utf8)).map { String(format: "%02x", $0) }.joined()
         }
         save(true)
         return true
+        #else
+        return false
+        #endif
     }
 }

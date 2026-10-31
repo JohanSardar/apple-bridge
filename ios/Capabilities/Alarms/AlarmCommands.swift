@@ -63,3 +63,21 @@ enum AlarmCommandError: Error {
     case invalid
     case permission
 }
+
+@MainActor
+enum AlarmQualification {
+    static func run(_ alarm: BridgeAlarm, adapter: any AlarmAdapter, check: (String, Bool) -> Void) async throws {
+        do {
+            _ = try await adapter.schedule(alarm)
+            check("created_and_read", try adapter.list().contains { $0.id == alarm.id && $0.title == alarm.title })
+        } catch {
+            do {
+                if try adapter.list().contains(where: { $0.id == alarm.id }) { try adapter.cancel(alarm.id) }
+                check("cleanup_after_failure", try !adapter.list().contains { $0.id == alarm.id })
+            } catch { check("cleanup_after_failure", false) }
+            throw error
+        }
+        try adapter.cancel(alarm.id)
+        check("deleted_and_absent", try !adapter.list().contains { $0.id == alarm.id })
+    }
+}

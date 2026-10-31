@@ -113,6 +113,7 @@ final class PushDelivery {
     }
 
     func drain() async {
+        guard !RealQualification.active else { return }
         guard !running else { drainAgain = true; return }
         running = true
         defer {
@@ -201,7 +202,7 @@ final class PushDelivery {
 final class BridgeAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         #if DEBUG
-        let qualifying = ShellDeliveryQualification.active
+        let qualifying = ShellDeliveryQualification.active || RealQualification.active
         #else
         let qualifying = false
         #endif
@@ -218,7 +219,7 @@ final class BridgeAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificati
         UNUserNotificationCenter.current().delegate = self
         PushDelivery.shared.status = "Registering"
         #if DEBUG
-        if !ProcessInfo.processInfo.arguments.contains("--ab-real-restore") { application.registerForRemoteNotifications() }
+        if !RealQualification.active && !ProcessInfo.processInfo.arguments.contains("--ab-real-restore") { application.registerForRemoteNotifications() }
         #else
         application.registerForRemoteNotifications()
         #endif

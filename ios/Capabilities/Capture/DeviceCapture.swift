@@ -12,13 +12,15 @@ final class DeviceCapture: NSObject, CaptureAdapter, AVCapturePhotoCaptureDelega
 
     func approve(kind: String, seconds: Int) async throws -> Bool {
         guard UIApplication.shared.applicationState == .active else { return false }
-        return try await LAContext().evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: kind == "photo" ? "Approve one Apple Bridge photo" : "Approve \(seconds) seconds of Apple Bridge audio")
+        let approved = try await LAContext().evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: kind == "photo" ? "Approve one Apple Bridge photo" : "Approve \(seconds) seconds of Apple Bridge audio")
+        guard approved else { return false }
+        return await QualificationWait.until { UIApplication.shared.applicationState == .active }
     }
 
     func capture(kind: String, seconds: Int) async throws -> CaptureBytes {
         guard UIApplication.shared.applicationState == .active, expires > Int64(Date().timeIntervalSince1970), UserDefaults.standard.bool(forKey: "capability.capture.enabled") else { throw CaptureError.denied }
         let media: AVMediaType = kind == "photo" ? .video : .audio
-        guard await AVCaptureDevice.requestAccess(for: media), UIApplication.shared.applicationState == .active, expires > Int64(Date().timeIntervalSince1970), UserDefaults.standard.bool(forKey: "capability.capture.enabled") else { throw CaptureError.denied }
+        guard await AVCaptureDevice.requestAccess(for: media), await QualificationWait.until({ UIApplication.shared.applicationState == .active }), expires > Int64(Date().timeIntervalSince1970), UserDefaults.standard.bool(forKey: "capability.capture.enabled") else { throw CaptureError.denied }
         if kind == "photo" { return try await takePhoto() }
         let audio = AVAudioSession.sharedInstance()
         try audio.setCategory(.record, mode: .default)
