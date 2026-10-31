@@ -115,10 +115,6 @@ func (s *querySession) receive(f contracts.IPCFrame) bool {
 			}
 		case "mac.bluetooth_devices":
 			out.ResultJSON = json.RawMessage(`{"devices":[{"name":"Bridge Test Headphones","connected":true,"battery_percent":75}]}`)
-		case "mac.airplay_routes":
-			s.fake.mu.Lock()
-			out.ResultJSON, _ = json.Marshal(map[string]any{"routes": []any{map[string]any{"device": "bridge-test-airplay", "name": "Bridge Test Speaker", "selected": s.fake.airplayDevice == "bridge-test-airplay"}}})
-			s.fake.mu.Unlock()
 		case "mac.time_machine_status":
 			out.ResultJSON = json.RawMessage(`{"running":false,"phase":"idle"}`)
 		case "mac.recognize_song":

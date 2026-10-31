@@ -22,7 +22,7 @@ public final class MacSource: Source {
     public func open() async -> SourceReadiness {
         var missing: [JSON] = [.string("Night Shift has no supported public API"), .string("SSID requires Location authorization")]
         if NSPasteboard.general.accessBehavior != .alwaysAllow { missing.append(.string("Clipboard requires Always Allow in Paste from Other Apps")) }
-        return SourceReadiness(state: "ready", coverage: .object(["fields": .string("partial"), "missing": .array(missing)]), capabilities: ["mac.set_volume", "mac.set_mute", "mac.set_output_device", "mac.set_appearance", "mac.launch_app", "mac.activate_app", "mac.quit_app", "mac.keep_awake", "mac.clipboard_write", "mac.clipboard_read", "mac.notify", "mac.open_settings", "mac.set_wallpaper", "mac.network_check", "mac.bluetooth_devices", "mac.airplay_routes", "mac.time_machine_status", "mac.recognize_song"])
+        return SourceReadiness(state: "ready", coverage: .object(["fields": .string("partial"), "missing": .array(missing)]), capabilities: ["mac.set_volume", "mac.set_mute", "mac.set_output_device", "mac.set_appearance", "mac.launch_app", "mac.activate_app", "mac.quit_app", "mac.keep_awake", "mac.clipboard_write", "mac.clipboard_read", "mac.notify", "mac.open_settings", "mac.set_wallpaper", "mac.network_check", "mac.bluetooth_devices", "mac.time_machine_status", "mac.recognize_song"])
     }
     private func power() -> JSON {
         var value: [String: JSON] = ["source": .string("unknown"), "charging": .bool(false), "low_power_mode": .bool(ProcessInfo.processInfo.isLowPowerModeEnabled), "keep_awake_held": .bool(false)]
@@ -183,7 +183,7 @@ public final class MacSource: Source {
         switch prepared.action["op"].string {
         case "mac.lock_screen", "mac.sleep_display", "mac.restart", "mac.shutdown":
             throw SourceFailure.unsupported
-        case "mac.airplay_select", "mac.iwork_export":
+        case "mac.iwork_export":
  throw SourceFailure.unsupported
  case "mac.notify":
             let center = UNUserNotificationCenter.current()

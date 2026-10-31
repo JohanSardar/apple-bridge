@@ -57,7 +57,6 @@ func runMacExtras(ctx context.Context, s Scenario, level string) (e Evidence) {
 		expected        any
 	}{
 		{"mac.bluetooth_devices", `{}`, "devices", nil},
-		{"mac.airplay_routes", `{}`, "routes", nil},
 		{"mac.time_machine_status", `{}`, "running", false},
 		{"mac.recognize_song", `{"audio_blob":"YnJpZGdlLWxhYi1hdWRpbw=="}`, "title", "Bridge Test Song"},
 	} {
@@ -79,7 +78,6 @@ func runMacExtras(ctx context.Context, s Scenario, level string) (e Evidence) {
 		op, args, field string
 		expected        any
 	}{
-		{"mac.airplay_select", `{"device":"bridge-test-airplay"}`, "selected", true},
 		{"mac.iwork_export", `{"app":"pages","format":"text","document_blob":"YnJpZGdlLWxhYg=="}`, "data_base64", "YnJpZGdlLWxhYiBleHBvcnQ="},
 	} {
 		var out contracts.CommandRecord
@@ -109,7 +107,7 @@ func runMacExtras(ctx context.Context, s Scenario, level string) (e Evidence) {
 			add(app+"_"+format+"_export", err == nil && decode == nil && blobErr == nil && out.State == contracts.CommandObserved && valid)
 		}
 	}
-	for _, op := range []string{"mac.airplay_select", "mac.iwork_export"} {
+	for _, op := range []string{"mac.iwork_export"} {
 		var out contracts.CommandRecord
 		err = client.Call(ctx, op, contracts.Command{ID: contracts.NewCommandID(), Args: json.RawMessage(`{}`)}, &out)
 		add(op+"_invalid_rejected", err != nil)

@@ -5,8 +5,9 @@ levels:
   replica: Real gateway on the Air, replica on the Ubuntu laptop
   agent: GPT-6-Luna via Codex on Ubuntu using only the replica MCP
   web: Playwright (WebKit, Chromium, Firefox) on the Air against a bridge-lab demo world, or the real gateway for real-level web runs
-statuses: [todo, in_progress, done, limited, blocked]
+statuses: [todo, in_progress, done, limited, blocked, dropped]
 status_rules:
+  dropped: Intentionally excluded from scope, with a reason; no passing qualification is claimed
   done: every scenario at every listed level has passing evidence
   limited: like done, except each entry in `limits` (scenario, level, reason) that cannot run for a reason outside the project's control, such as needing Johan's identity or credentials
 
@@ -279,29 +280,22 @@ features:
     milestone: M1
     modules: [native/MessagesSource]
     depends_on: [messages.actions]
-    status: limited
+    status: dropped
     scenarios:
       - {id: MSG-GROUP-CREATE, levels: [sim, real]}
       - {id: MSG-GROUP-MANAGE, levels: [sim, real]}
       - {id: MSG-SEND-RCS-GROUP, levels: [sim, real]}
-    limits:
-      - {"scenario": "MSG-GROUP-CREATE", "level": "real", "reason": "skipped: runner sends to configured non-self Remy/Ben handles; self-chat-only rule forbids this scenario"}
-      - {"scenario": "MSG-GROUP-MANAGE", "level": "real", "reason": "skipped: runner sends to configured non-self Remy/Ben handles; self-chat-only rule forbids this scenario"}
-      - {"scenario": "MSG-SEND-RCS-GROUP", "level": "real", "reason": "skipped: runner sends to configured non-self Remy/Ben handles; self-chat-only rule forbids this scenario"}
+    notes: Dropped because group actions would text other people.
   - id: messages.typing
     title: Messages typing indicators (hidden without a public proof)
     requirements: [R-MSG-DEPTH, R-WEB-UI]
     milestone: W4
     modules: [native/MessagesSource, webui]
     depends_on: [messages.groups]
-    status: limited
-    limits:
-      - scenario: WEB-MSG-TYPING
-        level: web
-        reason: "W4-TYPING limited on macOS 26.7.1/25G241: Messages.sdef has no typing route and chat.db has no typing field. Reliable Accessibility observation and transmission are unproven. A group made only of Johan's own handles cannot serve as a distinct-participant proof; proving with others would text other people, forbidden by the hard rules. Typing indicators and per-keystroke native driving remain hidden."
+    status: dropped
     scenarios:
       - {id: WEB-MSG-TYPING, levels: [web]}
-    notes: Browser coverage verifies the hidden surface, not native typing capability. Link-preview generation on send and chat backgrounds also remain hidden without a per-build proof; received link cards and existing placeholders remain available.
+    notes: Dropped because there is no public API for typing indicators.
   - id: reminders.read
     title: Reminders lists and items, live capture, recurrence coverage
     requirements: [R-FULL, R-LIVE, R-REM, R-NO-FALSE-DELETE]
@@ -381,15 +375,12 @@ features:
     depends_on: [helper.session]
     status: limited
     limits:
-      - scenario: CON-NOTE
-        level: real
-        reason: "CNContactNoteKey read/write requires com.apple.developer.contacts.notes; the signed Helper lacks this restricted entitlement"
       - scenario: CON-RELAY
         level: replica
         reason: "2026-10-23 isolated public CON-RELAY rerun converged and delivered all 20 live contact changes to Ubuntu, but gateway/replica p95 was 1453.922/1481.835 ms against the 1000 ms budget. TCC activity surged after the quiet precheck, so public R-LIVE is not certified. Tagged cleanup passed; the immediate Serve byte check failed, while a later canonical configuration read matched the baseline."
     scenarios:
       - {id: CON-ME, levels: [real]}
-      - {id: CON-NOTE, levels: [real]}
+      - {id: CON-NOTE, levels: [real], status: dropped, reason: "Dropped because contact notes need the restricted com.apple.developer.contacts.notes entitlement."}
       - {id: CON-IMPORT, levels: [sim, real]}
       - {id: CON-SEARCH, levels: [sim]}
       - {id: CON-EXTERNAL, levels: [sim, real, replica]}
@@ -950,7 +941,7 @@ features:
       - {id: RELAY-REAL, levels: [real]}
       - {id: CONN-RELAY-CLAUDE, levels: [real]}
     limits:
-      - {"scenario": "RELAY-REAL", "level": "real", "reason": "Public relay DNS/TLS and Ubuntu REST/MCP qualified; crt.sh indexing/completeness is not qualified"}
+      - {"scenario": "RELAY-REAL", "level": "real", "reason": "Public relay DNS/TLS and Ubuntu REST/MCP qualified; crt.sh indexing is dropped as an outside dependency (remote.ct_indexing)"}
       - {"scenario": "CONN-RELAY-CLAUDE", "level": "real", "reason": "Bearer-authenticated Claude HTTP connector qualification does not establish interactive OAuth consent"}
   - id: remote.public-enroll
     title: Enroll a public-host passkey with a terminal QR
@@ -1191,7 +1182,6 @@ features:
       - {id: FILE-CRUD-REAL, levels: [real]}
       - {id: FILE-REPLICA, levels: [replica]}
     limits:
-      - {scenario: FILE-COMMANDS, level: sim, reason: Content is inline base64 capped at 128 KiB; upload blob references remain unsupported.}
       - {scenario: FILE-CRUD-REAL, level: real, reason: CRUD filesystem Truth passes; real cloud download and eviction qualification remains outstanding.}
   - id: music.catalog
     title: Music catalog, player controls and library
@@ -1238,13 +1228,11 @@ features:
     milestone: G7
     modules: [internal/weatherpack, native/Sources/WeatherSource]
     depends_on: [helper.session]
-    status: limited
-    notes: Current, hourly and daily public queries use the permitted signed Helper WeatherKit fallback with Celsius units and Apple attribution. Injected pack runner remains the sim seam. Minute rain and alerts remain unavailable. The Apple-signed Helper now embeds the WeatherKit-enabled services profile; T99 WX-REAL still fails its first live current-conditions request under the real-run lock; activation is unconfirmed.
+    status: dropped
     scenarios:
       - {id: WX-SIM, levels: [sim]}
       - {id: WX-REAL, levels: [real]}
-    limits:
-      - {"scenario": "WX-REAL", "level": "real", "reason": "limited: T99 locked Air rerun still fails weather.current_completed after Helper readiness, coordinate validation and signing checks pass. WeatherKit activation is not confirmed; the scenario does not retain the response error, so the earlier daemon error is not asserted for this run."}
+    notes: Dropped from scope by product decision.
   - id: mac.commands
     title: Mac system commands
     requirements: [R-API, R-SCOPE]
@@ -1366,7 +1354,7 @@ features:
     limits:
       - {"scenario": "SIRI-INTENTS", "level": "real", "reason": "Metadata generated with Xcode and bundled; needs Shortcuts listing and status execution verification. Shortcuts CLI lists saved shortcuts, not App Intent actions."}
   - id: mac.extras
-    title: Mac Bluetooth AirPlay iWork Time Machine and song recognition
+    title: Mac Bluetooth iWork Time Machine and song recognition
     requirements: [R-API, R-SCOPE]
     milestone: G16
     modules: [native/Sources/MacSource, internal/contracts, lab/simapple]
@@ -1376,23 +1364,21 @@ features:
       - {id: MAC-EXTRAS-SIM, levels: [sim]}
       - {id: TM-STATUS, levels: [real]}
       - {id: IWORK-REAL, levels: [real]}
-      - {id: SHAZAM-REAL, levels: [real]}
+      - {id: SHAZAM-REAL, levels: [real], status: dropped, reason: "Dropped because song recognition needs the ShazamKit entitlement."}
       - {id: BT-REAL, levels: [real]}
     limits:
       - {"scenario": "IWORK-REAL", "level": "real", "reason": "Native mac.iwork_export is unsupported; export command observation and tagged content readback fail."}
-      - {"scenario": "SHAZAM-REAL", "level": "real", "reason": "Native song recognition remains a limited placeholder requiring ShazamKit entitlement and fixture qualification."}
   - id: phone.dial
     title: Continuity dialing with Mac confirmation
     requirements: [R-API, R-SCOPE]
     milestone: G4
     modules: [native/Sources/CallsSource, internal/contracts, internal/operations]
     depends_on: [phone.read]
-    status: limited
+    status: dropped
     scenarios:
       - {id: CALL-DIAL, levels: [sim]}
       - {id: CALL-DIAL-REAL, levels: [real]}
-    limits:
-      - {"scenario": "CALL-DIAL-REAL", "level": "real", "reason": "skipped: prohibited call placement"}
+    notes: Dropped because calls are prohibited.
   - id: iphone.health
     title: Incremental HealthKit samples and day or week summaries
     requirements: [R-API, R-SECURE]
@@ -1466,11 +1452,10 @@ features:
     depends_on: [iphone.delivery]
     status: limited
     scenarios:
-      - {id: APP-NOTIFY-SIM, levels: [sim]}
+      - {id: APP-NOTIFY-SIM, levels: [sim], status: dropped, reason: "Dropped because native notification proof is blocked by simulator contention."}
       - {id: APP-NOTIFY-REAL, levels: [real]}
     limits:
       - {scenario: APP-NOTIFY-REAL, level: real, reason: 'Notification authorization was requested on the phone but no Allow response arrived within three minutes; delivery and button interaction remain unproved'}
-      - {scenario: APP-NOTIFY-SIM, level: sim, reason: 'Gateway simulation passes; native UI proof limited: shared simulator DEVICE_IN_USE after 60-second retry'}
   - id: iphone.motion
     title: iPhone activity, pedometer, floors and seven-day history
     requirements: [R-API]
@@ -1501,13 +1486,12 @@ features:
     milestone: G13
     modules: [ios/Capabilities/Extras, internal/contracts, lab/scenarios]
     depends_on: [iphone.delivery]
-    status: limited
+    status: dropped
     scenarios:
       - {id: APP-EXTRAS-SIM, levels: [sim]}
-    limits:
-      - {scenario: APP-EXTRAS-SIM, level: sim, reason: 'Phone services limited: needs Journaling Suggestions and EnergyKit capabilities, authorized energy venue, and on-phone suggestion selection; WeatherKit provisioned, live service unmeasured; UI inspection needs free simulator'}
+    notes: Dropped because these capabilities need Apple approval.
   - id: iphone.device.context
-    title: iPhone battery, charging, Wi-Fi, name, Focus filter and NFC
+    title: iPhone battery, charging, Wi-Fi, name and Focus filter
     requirements: [R-API]
     milestone: G13
     modules: [ios/Capabilities/DeviceContext, internal/contracts]
@@ -1517,7 +1501,7 @@ features:
       - {id: APP-DEVICE-SIM, levels: [sim]}
       - {id: APP-DEVICE-REAL, levels: [real]}
     limits:
-      - {scenario: APP-DEVICE-REAL, level: real, reason: 'limited: real-device request and observation harness missing; needs Allow tap; Wi-Fi location authorization and foreground NFC tag presentation required'}
+      - {scenario: APP-DEVICE-REAL, level: real, reason: 'limited: real-device request and observation harness missing; needs Allow tap; Wi-Fi location authorization required; NFC is dropped because it needs a physical tag'}
   - id: iphone.screentime
     title: Bridge-owned Screen Time shields, downtime and usage report
     requirements: [R-SAFE-CMD, R-API]
@@ -1548,11 +1532,10 @@ features:
     milestone: G13
     modules: [ios/Capabilities/AppleApproval, ios/Extensions/LocationPush, internal/contracts]
     depends_on: [iphone.delivery]
-    status: limited
+    status: dropped
     scenarios:
       - {id: APP-WALLET-SIM, levels: [sim]}
-    limits:
-      - {scenario: APP-WALLET-SIM, level: sim, reason: 'limited: needs Apple approval for FinanceKit, critical alerts, location push and fall detection; location push also needs provisioned extension/App Group, fall detection needs Watch companion, live phone qualification needs system consent'}
+    notes: Dropped because these capabilities need Apple approval.
   - id: iphone.intents
     title: Siri, Shortcuts and Action button for iPhone commands
     requirements: [R-API]
@@ -1604,3 +1587,48 @@ features:
       - {id: APP-CAPTURE-REAL, levels: [real]}
     limits:
       - {scenario: APP-CAPTURE-REAL, level: real, reason: 'limited: real-device request and observation harness missing; needs Allow tap for camera and microphone'}
+
+  - id: home.pack
+    title: Home automation
+    requirements: [R-API]
+    milestone: G14
+    modules: []
+    depends_on: []
+    status: dropped
+    notes: Home was dropped from scope.
+
+  - id: mac.airplay
+    title: AirPlay output routing
+    requirements: [R-API]
+    milestone: G16
+    modules: []
+    depends_on: []
+    status: dropped
+    notes: AirPlay is removed; operation registration, native handlers and simulator support are removed.
+
+  - id: iphone.nfc
+    title: NFC physical tag qualification
+    requirements: [R-API]
+    milestone: G13
+    modules: []
+    depends_on: []
+    status: dropped
+    notes: NFC is dropped because it needs a physical tag.
+
+  - id: remote.ct_indexing
+    title: RELAY-REAL crt.sh indexing
+    requirements: [R-API]
+    milestone: M0
+    modules: []
+    depends_on: []
+    status: dropped
+    notes: crt.sh indexing is dropped because it is an outside dependency; public relay DNS/TLS and REST/MCP qualification remain in scope.
+
+  - id: files.inline_limit
+    title: FILE-COMMANDS payloads over 128 KiB
+    requirements: [R-API]
+    milestone: G9
+    modules: []
+    depends_on: []
+    status: dropped
+    notes: Larger inline payloads are dropped because the 128 KiB cap is by design.
