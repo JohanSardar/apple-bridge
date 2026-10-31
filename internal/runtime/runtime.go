@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -221,7 +222,6 @@ func Start(ctx context.Context, cfg Config) error {
 		iphoneDelivery.Decide = gateway.DecidePhoneApproval
 		iphoneDelivery.Push = remote.IPhonePush(cfg.Home)
 		gateway.IPhone = iphoneDelivery
-		go iphoneDelivery.Run(ctx)
 		relayFeed = feed.RelayHandler()
 		service.LocalStatus = func() contracts.ReplicaStatus {
 			return contracts.ReplicaStatus{Role: "gateway", State: "ready", Cursor: store.Head(), GatewayHead: store.Head().Sequence, Blobs: blobStore.Progress(), DialReplicas: feed.DialStatus()}
@@ -340,12 +340,49 @@ func Start(ctx context.Context, cfg Config) error {
 			go func() { failures <- client.Follow(ctx) }()
 		}
 	}
+	connectorApprovals := bridgeweb.NewConnectorApprovals(authority)
+	if cfg.Role == "gateway" {
+		closeApprovals, err := bridgeweb.ServeConnectorApprovals(cfg.Home, connectorApprovals)
+		if err != nil {
+			return err
+		}
+		defer closeApprovals()
+	}
+	if iphoneDelivery != nil {
+		iphoneDelivery.ConnectorPending = func() []iphone.ConnectorApproval {
+			out := []iphone.ConnectorApproval{}
+			for _, p := range connectorApprovals.Pending() {
+				out = append(out, iphone.ConnectorApproval{ID: p.ID, Code: p.Code, Name: p.ClientName, Scopes: p.Scopes, Expires: p.ExpiresAt})
+			}
+			return out
+		}
+		iphoneDelivery.ConnectorDecide = connectorApprovals.Decide
+	}
+	var connectorWindow sync.Mutex
+	connectorApprovals.Wake = func() {
+		if iphoneDelivery != nil {
+			iphoneDelivery.Wake()
+		}
+		if cfg.HelperApp != "" && connectorWindow.TryLock() {
+			go func() {
+				defer connectorWindow.Unlock()
+				executable, err := os.Executable()
+				if err != nil {
+					return
+				}
+				exec.CommandContext(ctx, "open", "-n", "-W", "-a", cfg.HelperApp, "--args", "connector-approvals", cfg.Home, executable).Run()
+			}()
+		}
+	}
+	if iphoneDelivery != nil {
+		go iphoneDelivery.Run(ctx)
+	}
 	go service.MaintainAgentAccess(ctx)
 	apiHandler := frontdoor.Handler(frontdoor.Deps{IPhone: iphoneDelivery, Operations: service, Authority: authority, Address: cfg.APIAddress, Blobs: blobStore}, contracts.Operations)
-	privateWeb := bridgeweb.Handler(bridgeweb.Deps{Operations: service, Authority: authority, Address: "127.0.0.1:7780", Blobs: blobStore, FrameWritten: func(cursor contracts.Cursor, at time.Time) { webFrameWritten(cfg.Home, cursor, at) }})
+	privateWeb := bridgeweb.Handler(bridgeweb.Deps{ConnectorApprovals: connectorApprovals, Operations: service, Authority: authority, Address: "127.0.0.1:7780", Blobs: blobStore, FrameWritten: func(cursor contracts.Cursor, at time.Time) { webFrameWritten(cfg.Home, cursor, at) }})
 	privateAPI := frontdoor.Handler(frontdoor.Deps{IPhone: iphoneDelivery, Operations: service, Authority: authority, Address: "127.0.0.1:7780", Blobs: blobStore}, contracts.Operations)
 	public := remote.NewWithOptions(cfg.Home, remote.Options{PrivateWeb: privateWeb, PrivateAPI: privateAPI})
-	webHandler := bridgeweb.Handler(bridgeweb.Deps{PublicHost: public.Host, Operations: service, Authority: authority, Address: cfg.APIAddress, Blobs: blobStore, FrameWritten: func(cursor contracts.Cursor, at time.Time) { webFrameWritten(cfg.Home, cursor, at) }})
+	webHandler := bridgeweb.Handler(bridgeweb.Deps{ConnectorApprovals: connectorApprovals, PublicHost: public.Host, Operations: service, Authority: authority, Address: cfg.APIAddress, Blobs: blobStore, FrameWritten: func(cursor contracts.Cursor, at time.Time) { webFrameWritten(cfg.Home, cursor, at) }})
 	publicAPI := frontdoor.Handler(frontdoor.Deps{IPhone: iphoneDelivery, Operations: service, Authority: authority, Address: cfg.APIAddress, PublicHost: public.Host, Blobs: blobStore}, contracts.Operations)
 	remoteCtx, stopRemote := context.WithCancel(ctx)
 	remoteDone := make(chan struct{})

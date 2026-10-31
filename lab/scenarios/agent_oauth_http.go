@@ -56,8 +56,8 @@ func runAgentOAuth(ctx context.Context, w *world.World, c *webClient, e *Evidenc
 		raw, _ := io.ReadAll(resp.Body)
 		return resp.StatusCode, raw
 	}
-	code, _, header := agentRequest(ctx, c.origin, "", "GET", "/oauth/authorize?"+q.Encode(), nil)
-	add("authorize_requires_device_session", code == 303 && strings.HasPrefix(header.Get("Location"), "/signin?return_to="))
+	code, _, _ = agentRequest(ctx, c.origin, "", "GET", "/oauth/authorize?"+q.Encode(), nil)
+	add("authorize_offers_local_approval", code == 200)
 	for _, bad := range []string{"plain", ""} {
 		v := cloneValues(q)
 		v.Set("code_challenge_method", bad)

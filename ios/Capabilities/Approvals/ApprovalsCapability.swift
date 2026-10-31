@@ -18,12 +18,12 @@ enum ApprovalsCapability {
         guard enabled else { return }
         if let previous = stored(job.command.command_id), previous.request_hash == job.request_hash, previous.command.op == job.command.op { return }
         let center = UNUserNotificationCenter.current()
-        let actions = [UNNotificationAction(identifier: "approve", title: "Approve", options: [.foreground]), UNNotificationAction(identifier: "reject", title: "Reject", options: [.foreground, .destructive])]
+        let actions = [UNNotificationAction(identifier: "approve", title: "Allow", options: [.foreground]), UNNotificationAction(identifier: "reject", title: "Deny", options: [.foreground, .destructive])]
         var categories = await center.notificationCategories()
         categories.insert(UNNotificationCategory(identifier: "bridge.approval", actions: actions, intentIdentifiers: []))
         center.setNotificationCategories(categories)
         let content = UNMutableNotificationContent()
-        content.title = "Apple Bridge approval"
+        content.title = job.command.command_id.hasPrefix("connector:") ? "Connect to Apple Bridge" : "Apple Bridge approval"
         if case .string(let op) = job.command.args["body"] { content.body = op }
         else { content.body = job.command.op }
         content.categoryIdentifier = "bridge.approval"
@@ -90,7 +90,7 @@ struct ApprovalReviewScreen: View {
                 }
                 Text(status)
                 ForEach(["approve", "reject"], id: \.self) { action in
-                    Button(action.capitalized, role: action == "reject" ? .destructive : nil) {
+                    Button(job.command.command_id.hasPrefix("connector:") ? (action == "approve" ? "Allow" : "Deny") : action.capitalized, role: action == "reject" ? .destructive : nil) {
                         busy = true
                         Task {
                             do {
@@ -101,7 +101,7 @@ struct ApprovalReviewScreen: View {
                         }
                     }.disabled(busy || !ApprovalsCapability.enabled)
                 }
-            }.navigationTitle("Review command")
+            }.navigationTitle(job.command.command_id.hasPrefix("connector:") ? "Review connection" : "Review command")
         }
     }
 }

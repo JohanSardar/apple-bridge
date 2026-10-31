@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,15 +19,25 @@ import (
 
 type Push func(context.Context, string, Packet, time.Time) error
 
+type ConnectorApproval struct {
+	ID      string
+	Code    string
+	Name    string
+	Scopes  []contracts.Grant
+	Expires time.Time
+}
+
 type Delivery struct {
-	Blobs     *blobs.Store
-	State     *state.Store
-	Authority *trust.Authority
-	Push      Push
-	Authorize func(context.Context, contracts.CommandRecord) error
-	Decide    func(context.Context, string, string, bool) (contracts.CommandRecord, error)
-	mu        sync.Mutex
-	wake      chan struct{}
+	ConnectorPending func() []ConnectorApproval
+	ConnectorDecide  func(string, string, bool) error
+	Blobs            *blobs.Store
+	State            *state.Store
+	Authority        *trust.Authority
+	Push             Push
+	Authorize        func(context.Context, contracts.CommandRecord) error
+	Decide           func(context.Context, string, string, bool) (contracts.CommandRecord, error)
+	mu               sync.Mutex
+	wake             chan struct{}
 }
 
 type Job struct {
@@ -92,6 +104,17 @@ func (d *Delivery) packets(ctx context.Context, p trust.Principal, dispatch bool
 		}
 	}
 	packets := []Packet{}
+	if d.ConnectorPending != nil {
+		for _, approval := range d.ConnectorPending() {
+			args, _ := json.Marshal(map[string]string{"device_id": p.ID, "body": fmt.Sprintf("%s\nCode %s\nRequested data: %s", approval.Name, approval.Code, approval.Scopes)})
+			plain, _ := json.Marshal(Job{Command: contracts.Command{ID: approval.ID, Op: "bridge.approval", Args: args}, Hash: approval.Code, Expires: approval.Expires.Unix()})
+			packet, err := Seal(p.IPhoneEncryptionKey, p.ID, plain, d.Authority.SignIPhone)
+			if err != nil {
+				return nil, err
+			}
+			packets = append(packets, packet)
+		}
+	}
 	for _, r := range rows {
 		if r.State == contracts.CommandAwaitingApproval && time.Now().Before(r.ExpiresAt) {
 			args, _ := json.Marshal(map[string]string{"device_id": p.ID, "title": "Apple Bridge approval", "body": r.Command.Op + "\nAgent: " + r.Principal + "\n" + string(r.Command.Args)})
@@ -305,8 +328,16 @@ func (d *Delivery) Handler() http.Handler {
 				Hash    string `json:"request_hash"`
 				Approve *bool  `json:"approve"`
 			}
-			if contracts.DecodeInput(request.Payload, &decision) != nil || decision.Approve == nil || d.Decide == nil {
+			if contracts.DecodeInput(request.Payload, &decision) != nil || decision.Approve == nil {
 				err = contracts.ErrInvalid
+			} else if strings.HasPrefix(decision.ID, "connector:") {
+				if d.ConnectorDecide == nil {
+					err = contracts.ErrUnavailable
+				} else {
+					err = d.ConnectorDecide(decision.ID, decision.Hash, *decision.Approve)
+				}
+			} else if d.Decide == nil {
+				err = contracts.ErrUnavailable
 			} else {
 				_, err = d.Decide(r.Context(), decision.ID, decision.Hash, *decision.Approve)
 			}

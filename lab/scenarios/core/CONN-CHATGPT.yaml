@@ -1,6 +1,6 @@
 id: CONN-CHATGPT
 feature: web.remote
-levels: [real]
+levels: [sim, real]
 given: []
 when: []
 then: []

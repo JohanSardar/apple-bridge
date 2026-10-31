@@ -584,8 +584,11 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "CONN-CLAUDE-CODE" && level == "real" {
 		return runRelayService(ctx, s, level)
 	}
-	if s.ID == "CONN-CHATGPT" || s.ID == "CONN-CLAUDE-AI" {
-		return Evidence{Scenario: s.ID, Level: level, Status: "limited", At: time.Now().UTC(), Assertions: []Assertion{{Name: "connector_login", Status: "limited", Detail: "needs connector login"}}}
+	if (s.ID == "CONN-CHATGPT" || s.ID == "CONN-CLAUDE-AI") && level == "sim" {
+		return runConnectorApproval(ctx, s, level)
+	}
+	if (s.ID == "CONN-CHATGPT" || s.ID == "CONN-CLAUDE-AI") && level == "real" {
+		return runConnectorReal(ctx, s, level)
 	}
 	if strings.HasPrefix(s.ID, "RMT-") || strings.HasPrefix(s.ID, "CONN-") {
 		return runRemoteFlow(ctx, s, level)
@@ -1221,7 +1224,8 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 	}
 	packagingOnly := true
 	for _, scenario := range scenarios {
-		packagingOnly = packagingOnly && (isIPhoneRealScenario(scenario.ID, level) || level == "real" && isIPhoneSensorReal(scenario.ID) || scenario.Feature == "iphone.location" || scenario.Feature == "iphone.health" || scenario.Feature == "packaging.app" || scenario.Feature == "packaging.release" || scenario.Feature == "core.shortcuts" || scenario.Feature == "core.permissions" || scenario.Feature == "usage.action_probe" || scenario.Feature == "helper.siri_intents")
+		packagingOnly = packagingOnly && (level == "real" && (scenario.ID == "CONN-CLAUDE-AI" || scenario.ID == "CONN-CHATGPT") || isIPhoneRealScenario(scenario.ID, level) || level == "real" && isIPhoneSensorReal(scenario.ID) || scenario.Feature == "iphone.location" || scenario.Feature == "iphone.health" || scenario.Feature == "packaging.app" || scenario.Feature == "packaging.release" || scenario.Feature == "core.shortcuts" || scenario.Feature == "core.permissions" || scenario.Feature == "usage.action_probe" || scenario.Feature == "helper.siri_intents")
+
 	}
 	if !packagingOnly {
 		if err = world.Build(ctx, level); err != nil {
@@ -1245,6 +1249,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		ran++
 		fmt.Fprintln(os.Stderr, "running", s.ID, level)
 		duration := 3 * time.Minute
+		if level == "real" && (s.ID == "CONN-CLAUDE-AI" || s.ID == "CONN-CHATGPT") {
+			duration = 6 * time.Minute
+		}
 		if isIPhoneRealScenario(s.ID, level) || level == "real" && isIPhoneSensorReal(s.ID) {
 			duration = 70 * time.Minute
 		}
