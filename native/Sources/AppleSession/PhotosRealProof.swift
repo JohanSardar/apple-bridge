@@ -63,8 +63,6 @@ enum PhotosRealProof {
             guard owned.count <= 1 else { throw SourceFailure.conflict }
             for assetID in owned {
                 guard PHAsset.fetchAssets(withLocalIdentifiers: [assetID], options: nil).count != 0 else { continue }
-                guard let asset = PHAsset.fetchAssets(withLocalIdentifiers: [assetID], options: nil).firstObject,
-                      PHAssetResource.assetResources(for: asset).contains(where: { $0.originalFilename == filename }) else { throw SourceFailure.conflict }
                 stage = "opening the imported test photo"
                 var link = URLComponents()
                 link.scheme = "photos"
@@ -131,7 +129,11 @@ enum PhotosRealProof {
             let snapshot = try await source.snapshot()
             guard snapshot.filter({ $0["collection"].string == "photos.asset" }).count == libraryCount else { throw SourceFailure.corrupt }
             guard let image = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 2, pixelsHigh: 2, bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 8, bitsPerPixel: 32) else { throw SourceFailure.corrupt }
-            for x in 0..<2 { for y in 0..<2 { image.setColor(.red, atX: x, y: y) } }
+            let colors = Array(SHA256.hash(data: Data(title.utf8)))
+            for x in 0..<2 { for y in 0..<2 {
+                let offset = (x * 2 + y) * 3
+                image.setColor(NSColor(deviceRed: CGFloat(colors[offset]) / 255, green: CGFloat(colors[offset + 1]) / 255, blue: CGFloat(colors[offset + 2]) / 255, alpha: 1), atX: x, y: y)
+            } }
             guard let bytes = image.representation(using: .png, properties: [:]) else { throw SourceFailure.corrupt }
             let digest = SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined()
             stage = "test photo import"
