@@ -81,7 +81,7 @@ The best value × feasibility rows that iMCP lacks, grouped into features:
 | C9 | **Mail actions**: send, reply, forward, organize | C06, P01 | Mail AppleScript; evidence = message appears in Sent or the target mailbox | M |
 | C10 | **Audio transcription and an on-device model** | M21, A03 | Speech and Foundation Models frameworks | S each |
 | C11 | **Screen Time app and website data** via Apple's new public action, to compare with Biome | F07 | Shortcuts action (macOS 26) | S probe |
-| C12 | **Bluetooth devices and battery; AirPlay output** | H12–H14 | IOBluetooth, AVRoutePicker | S–M |
+| C12 | **Bluetooth devices and battery** | H13–H14 | IOBluetooth | S–M |
 | C13 | **Notes extras**: checklists, folders, tags, pins, move | P04–P05, P27 | Existing NotesSource plus AppleScript | M |
 | C14 | **iWork, printing, text to speech, music recognition, Time Machine status** | X10, X13–X16 | AppleScript, PDFKit, AVSpeechSynthesizer, ShazamKit, `tmutil` | S each |
 
