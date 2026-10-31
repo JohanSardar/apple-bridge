@@ -1,17 +1,17 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[13.37 16 15.37] cpu_idle=14% cpus=10 other_heavy=0"
+    "summary": "air: load=[9.65 10.52 11.56] cpu_idle=12% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M69XFNCA37WKKXV57HCWAC29",
+  "run_id": "run_01M69YJ04P80K4RMVGR03B3SJB",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "R1-RELEASE-SIM",
   "level": "sim",
   "passed": true,
-  "git_sha": "76629c420cf6509bda485082962b80b3c03d86ac",
-  "at": "2026-10-31T21:22:38.090235Z",
+  "git_sha": "634abc1a53fec28784d3ee4309758c7ac3098f55",
+  "at": "2026-10-31T21:41:23.222197Z",
   "assertions": [
     {
       "name": "release_unit_checks",

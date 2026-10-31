@@ -40,6 +40,12 @@ def validate_profiles(paths, team):
     return settings, decoded
 
 
+def xcode_environment():
+    environment = {k: v for k, v in os.environ.items() if k != "SDKROOT"}
+    environment["PATH"] = "/usr/bin:/bin:/usr/sbin:/sbin:" + environment.get("PATH", "")
+    return environment
+
+
 def main():
     parser = argparse.ArgumentParser(description="Archive/export iOS for TestFlight; upload requires --upload-internal. Never adds testers.")
     parser.add_argument("--profiles", required=True, help="Private JSON mapping bundle IDs to App Store profile paths")
@@ -56,6 +62,9 @@ def main():
             raise ValueError("Choose a new TestFlight output directory.")
         settings, profiles = validate_profiles(json.loads(Path(args.profiles).read_text()), team)
         identity = require("IOS_DISTRIBUTION_IDENTITY")
+        keychain = Path(require("RELEASE_KEYCHAIN")).expanduser().resolve()
+        if not keychain.is_file() or keychain.name == "login.keychain-db":
+            raise ValueError("Use the dedicated release keychain prepared by signing.py.")
         for name in ["ASC_KEY_PATH", "ASC_KEY_ID", "ASC_ISSUER_ID"]:
             require(name)
         destination.mkdir(parents=True)
@@ -65,14 +74,16 @@ def main():
             shutil.copy2(path, installed / (data["UUID"] + ".mobileprovision"))
         run("xcodegen", "generate", "--spec", ROOT / "ios/project.yml", "--project", ROOT / "ios")
         archive = destination / "AppleBridge.xcarchive"
-        run("xcodebuild", "-quiet", "-project", ROOT / "ios/AppleBridge.xcodeproj", "-scheme", "AppleBridge", "-configuration", "Release", "-destination", "generic/platform=iOS", "-archivePath", archive, "-derivedDataPath", ROOT / ".build/ios/DerivedData", f"DEVELOPMENT_TEAM={team}", "CODE_SIGN_STYLE=Manual", f"CODE_SIGN_IDENTITY={identity}", "APPLE_BRIDGE_APNS_ENVIRONMENT=production", f"MARKETING_VERSION={marketing}", f"CURRENT_PROJECT_VERSION={build}", *[f"{k}={v}" for k, v in settings.items()], "archive", env={k: v for k, v in os.environ.items() if k != "SDKROOT"})
+        run("xcodebuild", "-quiet", "-project", ROOT / "ios/AppleBridge.xcodeproj", "-scheme", "AppleBridge", "-configuration", "Release", "-destination", "generic/platform=iOS", "-archivePath", archive, "-derivedDataPath", ROOT / ".build/ios/DerivedData", f"DEVELOPMENT_TEAM={team}", "CODE_SIGN_STYLE=Manual", f"CODE_SIGN_IDENTITY={identity}", f"OTHER_CODE_SIGN_FLAGS=--keychain {keychain}", "APPLE_BRIDGE_APNS_ENVIRONMENT=production", f"MARKETING_VERSION={marketing}", f"CURRENT_PROJECT_VERSION={build}", *[f"{k}={v}" for k, v in settings.items()], "archive", env=xcode_environment())
+        print("R1-TESTFLIGHT-ARCHIVE passed=true", flush=True)
         options = dict(method="app-store-connect", destination="export", teamID=team, signingStyle="manual", signingCertificate=identity, provisioningProfiles={bundle: data["Name"] for bundle, (_, data) in profiles.items()}, manageAppVersionAndBuildNumber=False, testFlightInternalTestingOnly=True)
         export = destination / "ExportOptions.plist"
         export.write_bytes(plistlib.dumps(options))
-        run("xcodebuild", "-exportArchive", "-archivePath", archive, "-exportOptionsPlist", export, "-exportPath", destination / "export")
+        run("xcodebuild", "-exportArchive", "-archivePath", archive, "-exportOptionsPlist", export, "-exportPath", destination / "export", env=xcode_environment())
         ipa = destination / "export/AppleBridge.ipa"
         if not ipa.is_file():
             raise ValueError("Xcode did not export AppleBridge.ipa. Inspect the export log before retrying.")
+        print("R1-TESTFLIGHT-EXPORT passed=true", flush=True)
         if args.upload_internal:
             from tempfile import TemporaryDirectory
             with TemporaryDirectory(prefix="ab-test-asc-") as temp:
