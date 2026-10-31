@@ -4,6 +4,7 @@ import SourceSupport
 public actor RemindersStoreEnrichment {
     private var sessions: [String: RemindersStoreSession] = [:]
     private var manualOrders: [String: [Int64: StoreManualOrder]] = [:]
+    private var sectionStates: [String: [Int64: StoreSections]] = [:]
     private var snapshots: [String: TypedStoreSnapshot] = [:]
     private var fields: [String: [String: JSON]] = [:]
     private var base: [String: JSON] = [:]
@@ -33,6 +34,7 @@ public actor RemindersStoreEnrichment {
                 touched.formUnion(fields[path]?.keys.map { $0 } ?? [])
                 fields.removeValue(forKey: path)
                 snapshots.removeValue(forKey: path)
+                sectionStates.removeValue(forKey: path)
                 manualOrders.removeValue(forKey: path)
                 sessions.removeValue(forKey: path)
             }
@@ -67,17 +69,37 @@ public actor RemindersStoreEnrichment {
                                     changed.contains(identifier) { changedReminders.insert(row.identity.key) }
                         }
                     }
+                    var sectionLists = Set(result.listKeys.filter { previous.lists[$0]?.sectionOrder != snapshot.lists[$0]?.sectionOrder || previous.lists[$0]?.sectionMembership != snapshot.lists[$0]?.sectionMembership })
+                    for key in result.reminderKeys where previous.reminders[key]?.list != snapshot.reminders[key]?.list || RemindersStoreProjection.reminderIdentifier(previous.reminders[key]) != RemindersStoreProjection.reminderIdentifier(snapshot.reminders[key]) {
+                        if let list = previous.reminders[key]?.list { sectionLists.insert(list) }
+                        if let list = snapshot.reminders[key]?.list { sectionLists.insert(list) }
+                    }
+                    for key in result.sectionKeys {
+                        if let list = previous.sections[key]?.list { sectionLists.insert(list) }
+                        if let list = snapshot.sections[key]?.list { sectionLists.insert(list) }
+                    }
+                    for key in result.listKeys.union(sectionLists) {
+                        sectionStates[path, default: [:]][key] = snapshot.lists[key].flatMap { StoreSections.validated($0, snapshot: snapshot) }
+                    }
+                    changedReminders.formUnion(snapshot.reminders.values.filter { $0.list.map(sectionLists.contains) == true }.map { $0.identity.key })
                     let changedParents = result.reminderKeys.filter { RemindersStoreProjection.reminderIdentifier(previous.reminders[$0]) != RemindersStoreProjection.reminderIdentifier(snapshot.reminders[$0]) }
                     if !changedParents.isEmpty {
                         changedReminders.formUnion(snapshot.reminders.values.filter { $0.parent.map(changedParents.contains) == true }.map { $0.identity.key })
                     }
+                    if !result.objectKeys.isEmpty || !result.labelKeys.isEmpty {
+                        for key in result.objectKeys.union(Set(snapshot.objects.values.filter { $0.hashtagLabel.map(result.labelKeys.contains) == true }.map { $0.identity.key })) {
+                            for object in [previous.objects[key], snapshot.objects[key]].compactMap({ $0 }) {
+                                changedReminders.formUnion([object.reminder, object.reminder1, object.reminder2, object.reminder3, object.reminder4, object.reminder5].compactMap { $0 })
+                            }
+                        }
+                    }
                     for key in changedReminders {
                         let old = RemindersStoreProjection.reminderIdentifier(previous.reminders[key]).map { "reminders.reminder/" + $0 }
                         let native = RemindersStoreProjection.reminderIdentifier(snapshot.reminders[key]).map { "reminders.reminder/" + $0 }
-                        let value = snapshot.reminders[key].map { RemindersStoreProjection.reminder($0, snapshot: snapshot, columns: result.columns["ZREMCDREMINDER"] ?? [], manualOrder: $0.list.flatMap { manualOrders[path]?[$0] } ?? .unsupported) }
+                        let value = snapshot.reminders[key].map { RemindersStoreProjection.reminder($0, snapshot: snapshot, columns: result.columns["ZREMCDREMINDER"] ?? [], manualOrder: $0.list.flatMap { manualOrders[path]?[$0] } ?? .unsupported, sections: $0.list.flatMap { sectionStates[path]?[$0] }, tagColumns: result.columns) }
                         update(path: path, old: old, native: native, value: value, touched: &touched)
                     }
-                    var changedLists = result.listKeys
+                    var changedLists = result.listKeys.union(sectionLists)
                     let changedGroups = result.listKeys.filter { previous.lists[$0].flatMap { RemindersStoreProjection.identifier($0.identity) } != snapshot.lists[$0].flatMap { RemindersStoreProjection.identifier($0.identity) } }
                     if !changedGroups.isEmpty {
                         changedLists.formUnion(snapshot.lists.values.filter { $0.parent.map(changedGroups.contains) == true || $0.alternateParent.map(changedGroups.contains) == true }.map { $0.identity.key })
@@ -94,13 +116,14 @@ public actor RemindersStoreEnrichment {
                     touched.formUnion(fields[path]?.keys.map { $0 } ?? [])
                     fields.removeValue(forKey: path)
                     snapshots.removeValue(forKey: path)
+                    sectionStates.removeValue(forKey: path)
                     manualOrders.removeValue(forKey: path)
                     sessions.removeValue(forKey: path)
                 }
             }
         } catch {
             touched.formUnion(base.keys)
-            fields = [:]; snapshots = [:]; manualOrders = [:]; sessions = [:]
+            fields = [:]; snapshots = [:]; manualOrders = [:]; sectionStates = [:]; sessions = [:]
         }
         var outgoing: [String: JSON] = [:]
         for observation in observations {

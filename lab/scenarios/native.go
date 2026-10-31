@@ -54,6 +54,9 @@ func runNativeScenario(ctx context.Context, s Scenario, level string) Evidence {
 func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) (result Evidence) {
 	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
 	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Assertions: []Assertion{}, Latency: map[string]Latency{}, Hosts: []string{"air"}}
+	if s.ID == "REM-SECTIONS" {
+		return runRemindersSections(ctx, level, e)
+	}
 	if level == "replica" {
 		e.Hosts = append(e.Hosts, "ubuntu")
 	}
@@ -457,9 +460,6 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 			add("post_burst_bulk_truth_cleanup", cleanupErr == nil)
 			add("post_cleanup_forwarded_delete", nativeForwardedDelete(ctx, w, &e, commandTargets[cleanupTitle], "post_cleanup_forwarded_delete"))
 			add("post_cleanup_native_blob_stage", nativeBlobStage(w, &e, "post_cleanup_native_blob_stage"))
-		case "REM-SECTIONS":
-			e.Status = "limited"
-			e.Assertions = append(e.Assertions, Assertion{Name: "section_membership_supported_path", Status: "limited", Detail: "EventKit has no sections API; existing store reader marks section order and membership decoders unverified"})
 		case "REM-LIST-MANAGE":
 			name := "Bridge Test " + tag
 			if submit("reminders.create_list", map[string]any{"title": name}, 0) != nil {
@@ -870,7 +870,7 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 	}
 	e.Passed = true
 	for _, assertion := range e.Assertions {
-		if !assertion.Passed && !(s.ID == "REM-SECTIONS" && assertion.Status == "limited") {
+		if !assertion.Passed {
 			e.Passed = false
 		}
 	}

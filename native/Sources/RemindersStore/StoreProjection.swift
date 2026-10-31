@@ -33,7 +33,7 @@ public enum RemindersStoreProjection {
     private static let reminderFields = ["store_identifier", "flagged", "parent_id", "section_id", "tags", "manual_order", "created_at", "early_reminders", "assignment", "store_alarms", "store_recurrence", "attachment_ids"]
     private static let listFields = ["store_identifier", "parent_id", "badge_emblem", "is_group", "display_order", "pinned", "pinned_at", "sorting_style", "categorize_groceries", "grocery_locale", "sharing_status", "shared_owner_name", "smart_list_type", "smart_filter", "sections", "store_color"]
 
-    static func reminder(_ row: StoreReminderRow, snapshot: TypedStoreSnapshot, columns: Set<String>, manualOrder: StoreManualOrder = .unsupported) -> JSON {
+    static func reminder(_ row: StoreReminderRow, snapshot: TypedStoreSnapshot, columns: Set<String>, manualOrder: StoreManualOrder = .unsupported, sections: StoreSections? = nil, tagColumns: [String: Set<String>] = [:]) -> JSON {
         let parent = row.parent.flatMap { snapshot.reminders[$0] }.flatMap(reminderIdentifier)
         var fields: [String: JSON] = ["store_identifier": value(identifier(row.identity)), "flagged": row.flagged.map(JSON.bool) ?? .null, "parent_id": parent.map { RemindersStoreSnapshot.reference("reminders.reminder", $0) } ?? .null, "created_at": row.created.map { .string(timestamp(Date(timeIntervalSinceReferenceDate: $0))) } ?? .null, "store_status": .string("partial")]
         var coverage: [String: JSON] = [:]
@@ -48,6 +48,16 @@ public enum RemindersStoreProjection {
            let identity = identifier(row.identity).flatMap(UUID.init(uuidString:)) {
             fields["manual_order"] = positions[identity].map { .number(Double($0)) } ?? .null
             coverage["manual_order"] = RemindersStoreSnapshot.coverage(positions[identity] == nil ? "partial" : "complete", reason: positions[identity] == nil ? "reminder_not_in_ordering" : "")
+        }
+        if let sections, let id = reminderIdentifier(row).flatMap(UUID.init(uuidString:)) {
+            fields["section_id"] = sections.membership[id].map { .string($0.uuidString) } ?? .null
+            coverage["section_id"] = RemindersStoreSnapshot.coverage("complete")
+        }
+        if Set(["ZHASHTAGLABEL", "ZREMINDER3"]).isSubset(of: tagColumns["ZREMCDOBJECT"] ?? []),
+           (tagColumns["ZREMCDHASHTAGLABEL"] ?? []).contains("ZNAME"),
+           let tags = StoreTags.names(for: row.identity.key, snapshot: snapshot) {
+            fields["tags"] = .array(tags.map(JSON.string))
+            coverage["tags"] = RemindersStoreSnapshot.coverage("complete")
         }
         if row.flagged == nil, columns.contains("ZFLAGGED") { coverage["flagged"] = RemindersStoreSnapshot.coverage("unavailable") }
         if let key = row.parent, key != 0, parent == nil { coverage["parent_id"] = RemindersStoreSnapshot.coverage("partial", reason: "parent_identity_unavailable") }
@@ -67,6 +77,10 @@ public enum RemindersStoreProjection {
         }
         for (field, column) in [("store_identifier", "ZIDENTIFIER"), ("badge_emblem", "ZBADGEEMBLEM"), ("display_order", "ZDADISPLAYORDER"), ("sorting_style", "ZSORTINGSTYLE"), ("grocery_locale", "ZGROCERYLOCALEID"), ("sharing_status", "ZSHARINGSTATUS"), ("shared_owner_name", "ZSHAREDOWNERNAME"), ("smart_list_type", "ZSMARTLISTTYPE"), ("is_group", "ZISGROUP"), ("pinned", "ZISPINNEDBYCURRENTUSER"), ("categorize_groceries", "ZSHOULDCATEGORIZEGROCERYITEMS"), ("pinned_at", "ZPINNEDDATE")] {
             coverage[field] = RemindersStoreSnapshot.coverage(columns.contains(column) ? "complete" : "unsupported")
+        }
+        if let sections = StoreSections.fields(row, snapshot: snapshot) {
+            fields["sections"] = sections
+            coverage["sections"] = RemindersStoreSnapshot.coverage("complete")
         }
         coverage["parent_id"] = RemindersStoreSnapshot.coverage(candidates.count > 1 ? "unsupported" : !candidates.isEmpty && parent == nil ? "partial" : columns.contains("ZPARENTLIST") || columns.contains("ZPARENTLIST1") ? "complete" : "unsupported")
         fields["store_coverage"] = .object(coverage)

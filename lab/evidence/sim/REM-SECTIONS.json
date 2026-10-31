@@ -1,43 +1,24 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[16.13 11.51 9.48] cpu_idle=67% cpus=8 other_heavy=1"
+    "summary": "air: load=[7.32 10.56 12.96] cpu_idle=31% cpus=10 other_heavy=0"
   },
-  "status": "limited",
-  "run_id": "run_01M61MHRMJFWM0287R8QSRH4TS",
+  "run_id": "run_01M69XVQQ2P26TX5SPK62QQ6VS",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "REM-SECTIONS",
   "level": "sim",
   "passed": true,
-  "git_sha": "41b438a2a449dd82d7e06384fbe3cf2911023352",
-  "at": "2026-10-28T16:12:34.323266Z",
+  "git_sha": "ed4d3a9875b3cfe568e5a11e0603207b0e3ce26f",
+  "at": "2026-10-31T21:29:13.698586Z",
   "assertions": [
     {
-      "name": "reminders_ready",
+      "name": "native_sections_build",
       "passed": true
     },
     {
-      "name": "section_membership_supported_path",
-      "passed": false,
-      "status": "limited",
-      "detail": "EventKit has no sections API; existing store reader marks section order and membership decoders unverified"
-    },
-    {
-      "name": "independent_simtruth_convergence",
-      "passed": true
-    },
-    {
-      "name": "replica_convergence",
-      "passed": true
-    },
-    {
-      "name": "no_scope_leak",
-      "passed": true
-    },
-    {
-      "name": "no_scope_leak",
+      "name": "store_effects_and_invalidation",
       "passed": true
     },
     {

@@ -334,8 +334,7 @@ features:
       - {id: REM-NATIVE-LIST-RACE, levels: [sim]}
     notes: "Tagged list create, rename and delete verified at sim and real; AppleTruth confirms the renamed list is absent after deletion."
     limits:
-      - {scenario: REM-SECTIONS, level: sim, reason: EventKit has no sections API; section order and membership decoders remain unverified.}
-      - {scenario: REM-SECTIONS, level: real, reason: EventKit has no sections API; section order and membership decoders remain unverified.}
+      - {scenario: REM-SECTIONS, level: real, reason: Section decoding and invalidation pass in sim. The scoped native section proof could not run because all three Air runner slots remained occupied; real order and membership effects remain unverified.}
   - id: calendar.read
     title: Calendar window capture, identity, recurrence, time zones, window slide
     requirements: [R-FULL, R-LIVE, R-CAL, R-NO-FALSE-DELETE]
@@ -825,34 +824,34 @@ features:
         reason: "Native warm-full and unchanged modes pass; changed-set modes require native fixtures and remain unproven. Synthetic changed 1/10/100/1000 modes pass."
       - scenario: WEB-REM-PARITY
         level: real
-        reason: "Flag: limited: Reminders Automation consent pending on this Air (macOS 26.7.1, build 25G241)."
+        reason: "Flag: native effect proof could not run because all three Air runner slots remained occupied. Controls stay hidden until real readback and cleanup pass."
       - scenario: WEB-REM-PARITY
         level: real
-        reason: "Subtasks (indent/outdent): limited: Reminders Automation consent pending on this Air (macOS 26.7.1, build 25G241)."
+        reason: "Subtasks (indent/outdent): native effect proof could not run because all three Air runner slots remained occupied. Controls stay hidden until real readback and cleanup pass."
       - scenario: WEB-REM-PARITY
         level: real
-        reason: "Sections (create/move): limited: Reminders Automation consent pending on this Air (macOS 26.7.1, build 25G241)."
+        reason: "Sections (create/move): native effect proof could not run because all three Air runner slots remained occupied. Controls stay hidden until real readback and cleanup pass."
       - scenario: WEB-REM-PARITY
         level: real
-        reason: "Tags: limited: Reminders Automation consent pending on this Air (macOS 26.7.1, build 25G241)."
+        reason: "Tags: native effect proof could not run because all three Air runner slots remained occupied. Controls stay hidden until real readback and cleanup pass."
       - scenario: WEB-REM-PARITY
         level: real
-        reason: "List icon, emoji and group: limited: Reminders Automation consent pending on this Air (macOS 26.7.1, build 25G241)."
+        reason: "List icon, emoji and group: native effect proof could not run because all three Air runner slots remained occupied. Controls stay hidden until real readback and cleanup pass."
       - scenario: WEB-REM-PARITY
         level: real
-        reason: "Manual reorder: limited: Reminders Automation consent pending on this Air (macOS 26.7.1, build 25G241)."
+        reason: "Manual reorder: native effect proof could not run because all three Air runner slots remained occupied. Controls stay hidden until real readback and cleanup pass."
       - scenario: WEB-REM-PARITY
         level: real
-        reason: "Images: limited: Reminders Automation consent pending on this Air (macOS 26.7.1, build 25G241)."
+        reason: "Images: native effect proof could not run because all three Air runner slots remained occupied. Controls stay hidden until real readback and cleanup pass."
       - scenario: WEB-REM-PARITY
         level: real
-        reason: "Custom smart lists: limited: Reminders Automation consent pending on this Air (macOS 26.7.1, build 25G241)."
+        reason: "Custom smart lists: native effect proof could not run because all three Air runner slots remained occupied. Controls stay hidden until real readback and cleanup pass."
     scenarios:
       - {id: WEB-REM-READ, levels: [web]}
       - {id: WEB-REM-DETAILS, levels: [web]}
       - {id: WEB-REM-WRITE, levels: [web, real]}
       - {id: WEB-REM-ENTRY, levels: [web]}
-      - {id: WEB-REM-PARITY, levels: [web]}
+      - {id: WEB-REM-PARITY, levels: [sim, real, web]}
       - {id: WEB-REM-ACTIONS, levels: [web]}
       - {id: WEB-RM-REMINDERS-HARDENING, levels: [sim]}
       - {id: WEB-RM-REMINDERS-LISTS, levels: [sim]}
@@ -862,7 +861,7 @@ features:
       - {id: REM-STORE-DECODE, levels: [sim]}
       - {id: REM-STORE-PERF, levels: [sim, real]}
     notes: >-
-      Core milestone green with explicit limits: browser 192/204 configured, with 12 not-applicable; all six phone projects prove trusted touch through the details and delete-cancel route. The focused actions matrix passes 72 cases with 12 layout exclusions and no failures or flakes. Quiet exclusive PERF-SHELL passes 12/12 after #303; Chromium navigation/input long tasks are absent and CLS is zero. Native first visibility passes 200/200, gateway/replica p95 560/563 ms; isolated create 372/386 ms and both forwarded deletes pass. Latest-update timing is descriptive only. Parity stays hidden pending consent; real changed-set modes and app-specific UI timings remain limited. The signed Helper authorize-reminders path requested ordinary OS consent once; its report remained not_determined and a subsequent non-prompting status returned unknown while consent was unresolved. Status now includes automation_reminders. Parity commands have explicit unproven coverage and remain hidden; WEB-REM-PARITY checks captured read affordances and absent mutation controls. Gateway reminders.lists and reminders.items provide scoped counts, groups, sections, tags and recursive subtasks. The read-only web/1 UI renders the sidebar, sections and nested items, with completed visibility, sorts, search, details and live updates. Basic writes use trusted input events, identity-based optimistic reconciliation and completion motion; store-only parity remains limited. Views over 2 MiB fail explicitly; item paging remains a follow-up. Store WAL FSEvents hints and bounded burst coalescing supplement EventKit notifications after #267. The real flag-only gateway propagation check is limited until the Helper has Reminders Apple Events authorization. The native V2 UUID-array manual-order decoder is verified; early reminders, section blobs and custom filters remain unsupported pending positive fixtures at unlock. Native tags, attachment IDs, assignment and store alarm/recurrence projections also remain unsupported; EventKit alarms and recurrence stay available. Remaining store decoders and unverified parity mutations stay hidden.
+      Core milestone green with explicit limits: browser 192/204 configured, with 12 not-applicable; all six phone projects prove trusted touch through the details and delete-cancel route. The focused actions matrix passes 72 cases with 12 layout exclusions and no failures or flakes. Quiet exclusive PERF-SHELL passes 12/12 after #303; Chromium navigation/input long tasks are absent and CLS is zero. Native first visibility passes 200/200, gateway/replica p95 560/563 ms; isolated create 372/386 ms and both forwarded deletes pass. Latest-update timing is descriptive only. Parity stays hidden pending native effect proof; real changed-set modes and app-specific UI timings remain limited. The signed Helper authorize-reminders path requested ordinary OS consent once; its report remained not_determined and a subsequent non-prompting status returned unknown while consent was unresolved. Status now includes automation_reminders. Parity commands have explicit unproven coverage and remain hidden; WEB-REM-PARITY checks captured read affordances and absent mutation controls. Gateway reminders.lists and reminders.items provide scoped counts, groups, sections, tags and recursive subtasks. The read-only web/1 UI renders the sidebar, sections and nested items, with completed visibility, sorts, search, details and live updates. Basic writes use trusted input events, identity-based optimistic reconciliation and completion motion; store-only parity remains limited. Views over 2 MiB fail explicitly; item paging remains a follow-up. Store WAL FSEvents hints and bounded burst coalescing supplement EventKit notifications after #267. The real flag-only gateway propagation check is limited until the Helper has Reminders Apple Events authorization. The native V2 UUID-array manual-order decoder is verified; early reminders, section blobs and custom filters remain unsupported pending positive fixtures at unlock. Native tags, attachment IDs, assignment and store alarm/recurrence projections also remain unsupported; EventKit alarms and recurrence stay available. F7 adds scoped native parity qualification and verified synthetic tag-change invalidation. Both native checks were blocked before scenario execution by the Air runner slots; no current permission failure or successful native parity effect is claimed. Remaining store decoders and unverified parity mutations stay hidden.
   - id: web.calendar
     title: Calendar web app (read, write, parity)
     requirements: [R-WEB-UI, R-WEB-FAST, R-RW]
