@@ -21,6 +21,13 @@ func runNotesExtrasReal(ctx context.Context, s Scenario, level string) (e Eviden
 			e.Passed = e.Passed && a.Passed
 		}
 	}()
+	ctx = world.WithOptions(ctx, world.Options{Scope: "notes:read,notes:write,system:read"})
+	w, err := world.NewReal(ctx, level, 0)
+	if err != nil {
+		add("world", false)
+		return
+	}
+	defer w.Close()
 	before, err := cleanupSnapshot(ctx, "notes")
 	if err != nil {
 		add("cleanup_baseline", false)
@@ -32,13 +39,6 @@ func runNotesExtrasReal(ctx context.Context, s Scenario, level string) (e Eviden
 		return
 	}
 	defer func() { finishCleanupAudit(context.Background(), audit, "notes", &e) }()
-	ctx = world.WithOptions(ctx, world.Options{Scope: "notes:read,notes:write,system:read"})
-	w, err := world.NewReal(ctx, level, 0)
-	if err != nil {
-		add("world", false)
-		return
-	}
-	defer w.Close()
 	tag := "[ab-test " + e.RunID + "]"
 	title := "Bridge Test " + tag
 	folders := map[string]string{}

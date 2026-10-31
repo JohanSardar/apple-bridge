@@ -78,20 +78,6 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		add("gzip_protobuf_scrubbed_fixtures", err == nil)
 		return
 	}
-	if level == "real" && s.ID == "NOTE-CRUD" {
-		before, problem := cleanupSnapshot(ctx, "notes")
-		if problem != nil {
-			e.Status = "limited"
-			e.Assertions = append(e.Assertions, Assertion{Name: "cleanup_baseline", Status: "limited", Detail: "needs Notes Full Disk Access"})
-			return
-		}
-		audit, problem := newRunCleanup(e.RunID, before)
-		if problem != nil {
-			add("cleanup_baseline", false)
-			return
-		}
-		defer func() { finishCleanupAudit(context.Background(), audit, "notes", &e) }()
-	}
 	ctx = world.WithOptions(ctx, world.Options{GatewayDials: level == "replica", Scope: "notes:read,notes:write,reminders:read,system:read"})
 	var w *world.World
 	var err error
@@ -106,6 +92,20 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		return
 	}
 	defer w.Close()
+	if level == "real" && s.ID == "NOTE-CRUD" {
+		before, problem := cleanupSnapshot(ctx, "notes")
+		if problem != nil {
+			e.Status = "limited"
+			e.Assertions = append(e.Assertions, Assertion{Name: "cleanup_baseline", Status: "limited", Detail: "needs Notes Full Disk Access"})
+			return
+		}
+		audit, problem := newRunCleanup(e.RunID, before)
+		if problem != nil {
+			add("cleanup_baseline", false)
+			return
+		}
+		defer func() { finishCleanupAudit(context.Background(), audit, "notes", &e) }()
+	}
 	if (s.ID == "NOTE-IMPORT" || s.ID == "NOTE-DECODE-FULL") && level == "real" {
 		response, truthErr := w.Truth("observe", map[string]any{"source": "notes", "sqlite": true})
 		if truthErr != nil {
