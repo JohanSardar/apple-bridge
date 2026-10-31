@@ -584,6 +584,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "CONN-CLAUDE-CODE" && level == "real" {
 		return runRelayService(ctx, s, level)
 	}
+	if (s.ID == "CONN-CHATGPT" || s.ID == "CONN-CLAUDE-AI") && level == "sim" {
+		return runConnectorApproval(ctx, s, level)
+	}
 	if (s.ID == "CONN-CHATGPT" || s.ID == "CONN-CLAUDE-AI") && level == "real" {
 		return runConnectorReal(ctx, s, level)
 	}

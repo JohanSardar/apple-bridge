@@ -1,0 +1,136 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[19.52 18.97 12.37] cpu_idle=45% cpus=10 other_heavy=0"
+  },
+  "run_id": "connector-approval_01M69WS1CBQVXNRY9AD7P0C65W",
+  "network_path": "isolated authorization HTTP handler, owner-only Mac socket, OAuth and MCP gateway",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "CONN-CLAUDE-AI",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-31T21:10:16.715747Z",
+  "assertions": [
+    {
+      "name": "isolated_gateway",
+      "passed": true
+    },
+    {
+      "name": "authority",
+      "passed": true
+    },
+    {
+      "name": "owner_local_socket",
+      "passed": true
+    },
+    {
+      "name": "registered_client",
+      "passed": true
+    },
+    {
+      "name": "authorize_without_passkey",
+      "passed": true
+    },
+    {
+      "name": "pending_matching_code_and_requested_data",
+      "passed": true
+    },
+    {
+      "name": "pending_matching_code_and_requested_data",
+      "passed": true
+    },
+    {
+      "name": "wrong_code_refused",
+      "passed": true
+    },
+    {
+      "name": "mac_allow",
+      "passed": true
+    },
+    {
+      "name": "one_request_never_approves_another",
+      "passed": true
+    },
+    {
+      "name": "decision_single_use",
+      "passed": true
+    },
+    {
+      "name": "approval_redirect_with_state_and_code",
+      "passed": true
+    },
+    {
+      "name": "poll_single_use",
+      "passed": true
+    },
+    {
+      "name": "oauth_token",
+      "passed": true
+    },
+    {
+      "name": "token_calls_records_query",
+      "passed": true
+    },
+    {
+      "name": "agent_listed_with_requested_scopes",
+      "passed": true
+    },
+    {
+      "name": "mac_deny",
+      "passed": true
+    },
+    {
+      "name": "deny_access_denied",
+      "passed": true
+    },
+    {
+      "name": "pending_matching_code_and_requested_data",
+      "passed": true
+    },
+    {
+      "name": "expired_request_refused",
+      "passed": true
+    },
+    {
+      "name": "pending_matching_code_and_requested_data",
+      "passed": true
+    },
+    {
+      "name": "wrong_code_attempt_refused",
+      "passed": true
+    },
+    {
+      "name": "wrong_code_attempt_refused",
+      "passed": true
+    },
+    {
+      "name": "wrong_code_attempt_refused",
+      "passed": true
+    },
+    {
+      "name": "wrong_code_attempt_refused",
+      "passed": true
+    },
+    {
+      "name": "wrong_code_attempt_refused",
+      "passed": true
+    },
+    {
+      "name": "code_attempts_rate_limited",
+      "passed": true
+    },
+    {
+      "name": "creation_rate_limited",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

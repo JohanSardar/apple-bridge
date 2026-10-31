@@ -13,7 +13,7 @@ struct AppleBridgeHelper {
         app.finishLaunching()
         do {
             let arguments = Array(CommandLine.arguments.dropFirst())
-            if arguments.isEmpty || ["install", "uninstall", "service-status"].contains(arguments[0]) {
+            if arguments.isEmpty || ["install", "uninstall", "service-status", "connector-approvals"].contains(arguments[0]) {
                 try PackagedApp.run(arguments)
             } else {
                 try HelperCommand.run(arguments)

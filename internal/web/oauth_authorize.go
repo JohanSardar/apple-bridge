@@ -11,6 +11,35 @@ import (
 )
 
 func (s *server) oauthAuthorizationRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("POST /oauth/pending", func(w http.ResponseWriter, r *http.Request) {
+		if !s.allow("connector-create:"+clientIP(r), true) {
+			reject(w, 429, "Too many requests. Wait a minute and try again.")
+			return
+		}
+		client, code, err := s.authorizationRequest(r)
+		if err != nil {
+			reject(w, 400, "This connection request is invalid. Start again from your connector.")
+			return
+		}
+		pending, err := s.deps.ConnectorApprovals.begin(client, code, r.URL.Query().Get("state"), servingOrigin(r), toGrants(requestedScopes(r.URL.Query())))
+		if err != nil {
+			reject(w, 503, "Approval is unavailable. Try again in a few minutes.")
+			return
+		}
+		respond(w, 201, pending)
+	})
+	mux.HandleFunc("GET /oauth/pending/{id}", func(w http.ResponseWriter, r *http.Request) {
+		if !s.allowRate("connector-poll:"+clientIP(r), false, 10) {
+			reject(w, 429, "Wait a moment and try again.")
+			return
+		}
+		redirect, err := s.deps.ConnectorApprovals.poll(r.PathValue("id"), servingOrigin(r))
+		if err != nil {
+			reject(w, 410, "This approval has expired or was already used. Start again from your connector.")
+			return
+		}
+		respond(w, 200, map[string]string{"redirect": redirect})
+	})
 	mux.HandleFunc("GET /oauth/authorize", func(w http.ResponseWriter, r *http.Request) {
 		c, _, err := s.authorizationRequest(r)
 		if err != nil {
@@ -23,7 +52,7 @@ func (s *server) oauthAuthorizationRoutes(mux *http.ServeMux) {
 				respond(w, 400, map[string]string{"error": "invalid_request"})
 				return
 			}
-			respond(w, 200, map[string]any{"client_name": c.Name, "redirect_host": u.Host, "scopes": requestedScopes(r.URL.Query()), "groups": contracts.GrantGroups(true)})
+			respond(w, 200, map[string]any{"client_name": c.Name, "redirect_host": u.Host, "scopes": requestedScopes(r.URL.Query()), "groups": contracts.GrantGroups(true), "owner": current(r).Principal.ID != ""})
 			return
 		}
 		s.static(w, r)
@@ -43,50 +72,20 @@ func (s *server) oauthAuthorizationRoutes(mux *http.ServeMux) {
 			respond(w, 400, map[string]string{"error": "invalid_request"})
 			return
 		}
-		dest, err := url.Parse(code.RedirectURI)
-		if err != nil {
-			respond(w, 400, map[string]string{"error": "invalid_request"})
+		if in.Level == "" {
+			in.Level = trust.AgentApprove
+		}
+		grants, err := trust.AgentGrants(in.Level, in.Scopes)
+		if in.Decision == "approve" && (err != nil || !trust.Subset(grants, toGrants(requestedScopes(r.URL.Query())))) {
+			respond(w, 400, map[string]string{"error": "invalid_scope"})
 			return
 		}
-		q := dest.Query()
-		q.Set("state", r.URL.Query().Get("state"))
-		q.Set("iss", servingOrigin(r))
-		if in.Decision == "reject" {
-			q.Set("error", "access_denied")
-		} else {
-			if in.Level == "" {
-				in.Level = trust.AgentApprove
-			}
-			grants, err := trust.AgentGrants(in.Level, in.Scopes)
-			if err != nil {
-				respond(w, 400, map[string]string{"error": "invalid_scope"})
-				return
-			}
-			requested := requestedScopes(r.URL.Query())
-			ceiling := []contracts.Grant{}
-			for _, v := range requested {
-				ceiling = append(ceiling, contracts.Grant(v))
-			}
-			if !trust.Subset(grants, ceiling) {
-				respond(w, 400, map[string]string{"error": "invalid_scope"})
-				return
-			}
-			agent, _, err := s.deps.Authority.CreateAgent(c.Name, in.Level, grants)
-			if err != nil {
-				reject(w, 503, "unavailable")
-				return
-			}
-			code.Principal = agent.ID
-			raw, err := s.deps.Authority.IssueOAuthCode(code)
-			if err != nil {
-				s.deps.Authority.Revoke(agent.ID)
-				reject(w, 503, "unavailable")
-				return
-			}
-			q.Set("code", raw)
+		redirect, err := issueConnectorDecision(s.deps.Authority, c, code, r.URL.Query().Get("state"), servingOrigin(r), in.Decision, in.Level, grants)
+		if err != nil {
+			reject(w, 503, "unavailable")
+			return
 		}
-		dest.RawQuery = q.Encode()
-		respond(w, 200, map[string]string{"redirect": dest.String()})
+		respond(w, 200, map[string]string{"redirect": redirect})
 	})
 }
 

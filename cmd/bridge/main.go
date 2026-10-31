@@ -22,6 +22,7 @@ import (
 	"github.com/JohanSardar/apple-bridge/internal/shortcut"
 	"github.com/JohanSardar/apple-bridge/internal/state"
 	"github.com/JohanSardar/apple-bridge/internal/trust"
+	bridgeweb "github.com/JohanSardar/apple-bridge/internal/web"
 )
 
 func run(ctx context.Context, args []string) error {
@@ -78,7 +79,7 @@ func run(ctx context.Context, args []string) error {
 		args = args[1:]
 	}
 	webAction := ""
-	if verb == "web" || verb == "remote" {
+	if verb == "web" || verb == "remote" || verb == "connector" {
 		if len(args) == 0 {
 			return contracts.ErrInvalid
 		}
@@ -105,6 +106,8 @@ func run(ctx context.Context, args []string) error {
 	api := set.String("api-addr", "", "loopback API address")
 	helperApp := set.String("helper-app", "", "signed Helper app for real mode")
 	helperLabCommands := set.Bool("helper-lab-commands", false, "enable unproven native commands in isolated lab worlds")
+	approvalID := set.String("request", "", "connector approval request ID")
+	approvalCode := set.String("code", "", "four-digit connector matching code")
 	socket := set.String("socket", "", "ApplePeer socket path")
 	blobCap := set.Int64("blob-cap", 0, "machine blob cap in bytes")
 	blobGrace := set.Int64("blob-grace-ms", 0, "unreferenced blob grace in milliseconds")
@@ -141,6 +144,9 @@ func run(ctx context.Context, args []string) error {
 			fmt.Fprintln(os.Stdout, string(data))
 		}
 		return err
+	}
+	if verb == "connector" {
+		return bridgeweb.ConnectorCommand(ctx, *home, webAction, *approvalID, *approvalCode, os.Stdout)
 	}
 	if verb == "connect" {
 		return remote.Connect(ctx, *home, code, os.Stdout)

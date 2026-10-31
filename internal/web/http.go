@@ -8,7 +8,6 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
-	"net/url"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -26,15 +25,16 @@ const LocalSessionCookie = "ab_session_local"
 const CSP = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
 
 type Deps struct {
-	ClientMetadata *ClientMetadataFetcher
-	RateClock      func() time.Time
-	FrameWritten   func(contracts.Cursor, time.Time)
-	Operations     *operations.Service
-	Authority      *trust.Authority
-	Blobs          *blobs.Store
-	PublicHost     func() string
-	Address        string
-	Assets         fs.FS
+	ConnectorApprovals *ConnectorApprovals
+	ClientMetadata     *ClientMetadataFetcher
+	RateClock          func() time.Time
+	FrameWritten       func(contracts.Cursor, time.Time)
+	Operations         *operations.Service
+	Authority          *trust.Authority
+	Blobs              *blobs.Store
+	PublicHost         func() string
+	Address            string
+	Assets             fs.FS
 }
 
 type server struct {
@@ -132,6 +132,9 @@ func current(r *http.Request) identity {
 }
 
 func Handler(deps Deps) http.Handler {
+	if deps.ConnectorApprovals == nil {
+		deps.ConnectorApprovals = NewConnectorApprovals(deps.Authority)
+	}
 	if deps.ClientMetadata == nil {
 		deps.ClientMetadata = &ClientMetadataFetcher{}
 	}
@@ -229,6 +232,9 @@ func Handler(deps Deps) http.Handler {
 		}
 		r = r.WithContext(context.WithValue(r.Context(), servingKey{}, servingValue))
 
+		if strings.HasPrefix(r.URL.Path, "/oauth/") {
+			w.Header().Set("Cache-Control", "no-store")
+		}
 		oauthPublic := r.URL.Path == "/oauth/register" || r.URL.Path == "/oauth/token"
 		if oauthPublic {
 			w.Header().Set("Cache-Control", "no-store")
@@ -253,8 +259,21 @@ func Handler(deps Deps) http.Handler {
 		}
 		if strings.HasPrefix(r.URL.Path, "/web/v1/") || r.URL.Path == "/oauth/authorize" {
 			w.Header().Set("Cache-Control", "no-store")
-			public := strings.HasPrefix(r.URL.Path, "/web/v1/login/") || strings.HasPrefix(r.URL.Path, "/web/v1/enroll/")
+			public := (r.Method == "GET" && r.URL.Path == "/oauth/authorize") || strings.HasPrefix(r.URL.Path, "/web/v1/login/") || strings.HasPrefix(r.URL.Path, "/web/v1/enroll/")
 			if public {
+				if r.URL.Path == "/oauth/authorize" {
+					if !s.allowRate("connector-authorize:"+clientIP(r), false, 10) {
+						reject(w, 429, "Too many requests. Wait a moment and try again.")
+						return
+					}
+					if cookie, err := r.Cookie(sessionCookie(r)); err == nil {
+						if p, session, err := deps.Authority.AuthenticateDevice(cookie.Value); err == nil {
+							r = r.WithContext(context.WithValue(r.Context(), identityKey{}, identity{p, session, cookie.Value}))
+						}
+					}
+					mux.ServeHTTP(w, r)
+					return
+				}
 				ip := clientIP(r)
 				if !s.allow("auth:"+ip, true) {
 					w.Header().Set("Retry-After", "60")
@@ -264,19 +283,11 @@ func Handler(deps Deps) http.Handler {
 			} else {
 				cookie, err := r.Cookie(sessionCookie(r))
 				if err != nil {
-					if r.Method == "GET" && r.URL.Path == "/oauth/authorize" {
-						http.Redirect(w, r, "/signin?return_to="+url.QueryEscape(r.URL.RequestURI()), http.StatusSeeOther)
-						return
-					}
 					reject(w, 401, "unauthorized")
 					return
 				}
 				p, session, err := deps.Authority.AuthenticateDevice(cookie.Value)
 				if err != nil {
-					if r.Method == "GET" && r.URL.Path == "/oauth/authorize" {
-						http.Redirect(w, r, "/signin?return_to="+url.QueryEscape(r.URL.RequestURI()), http.StatusSeeOther)
-						return
-					}
 					reject(w, 401, "unauthorized")
 					return
 				}
