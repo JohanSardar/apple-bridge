@@ -328,10 +328,16 @@ func (d *Delivery) Handler() http.Handler {
 				Hash    string `json:"request_hash"`
 				Approve *bool  `json:"approve"`
 			}
-			if contracts.DecodeInput(request.Payload, &decision) != nil || decision.Approve == nil || d.Decide == nil {
+			if contracts.DecodeInput(request.Payload, &decision) != nil || decision.Approve == nil {
 				err = contracts.ErrInvalid
-			} else if strings.HasPrefix(decision.ID, "connector:") && d.ConnectorDecide != nil {
-				err = d.ConnectorDecide(decision.ID, decision.Hash, *decision.Approve)
+			} else if strings.HasPrefix(decision.ID, "connector:") {
+				if d.ConnectorDecide == nil {
+					err = contracts.ErrUnavailable
+				} else {
+					err = d.ConnectorDecide(decision.ID, decision.Hash, *decision.Approve)
+				}
+			} else if d.Decide == nil {
+				err = contracts.ErrUnavailable
 			} else {
 				_, err = d.Decide(r.Context(), decision.ID, decision.Hash, *decision.Approve)
 			}

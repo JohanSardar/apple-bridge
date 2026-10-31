@@ -222,7 +222,6 @@ func Start(ctx context.Context, cfg Config) error {
 		iphoneDelivery.Decide = gateway.DecidePhoneApproval
 		iphoneDelivery.Push = remote.IPhonePush(cfg.Home)
 		gateway.IPhone = iphoneDelivery
-		go iphoneDelivery.Run(ctx)
 		relayFeed = feed.RelayHandler()
 		service.LocalStatus = func() contracts.ReplicaStatus {
 			return contracts.ReplicaStatus{Role: "gateway", State: "ready", Cursor: store.Head(), GatewayHead: store.Head().Sequence, Blobs: blobStore.Progress(), DialReplicas: feed.DialStatus()}
@@ -359,17 +358,24 @@ func Start(ctx context.Context, cfg Config) error {
 		}
 		iphoneDelivery.ConnectorDecide = connectorApprovals.Decide
 	}
+	var connectorWindow sync.Mutex
 	connectorApprovals.Wake = func() {
 		if iphoneDelivery != nil {
 			iphoneDelivery.Wake()
 		}
-		if cfg.HelperApp != "" {
+		if cfg.HelperApp != "" && connectorWindow.TryLock() {
 			go func() {
-				bounded, cancel := context.WithTimeout(ctx, 10*time.Second)
-				defer cancel()
-				exec.CommandContext(bounded, "open", "-a", cfg.HelperApp, "--args", "connector-approvals", cfg.Home).Run()
+				defer connectorWindow.Unlock()
+				executable, err := os.Executable()
+				if err != nil {
+					return
+				}
+				exec.CommandContext(ctx, "open", "-n", "-W", "-a", cfg.HelperApp, "--args", "connector-approvals", cfg.Home, executable).Run()
 			}()
 		}
+	}
+	if iphoneDelivery != nil {
+		go iphoneDelivery.Run(ctx)
 	}
 	go service.MaintainAgentAccess(ctx)
 	apiHandler := frontdoor.Handler(frontdoor.Deps{IPhone: iphoneDelivery, Operations: service, Authority: authority, Address: cfg.APIAddress, Blobs: blobStore}, contracts.Operations)

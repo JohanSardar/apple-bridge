@@ -9,11 +9,12 @@ final class PackagedApp: NSObject {
     var window: NSWindow?
     var details: NSTextField?
     var connectorHome: String?
+    var connectorExecutable: String?
     var connectorTask: Task<Void, Never>?
 
-    nonisolated static func connectorCommand(_ arguments: [String]) -> Data? {
+    nonisolated static func connectorCommand(_ arguments: [String], executable: String?) -> Data? {
         let process = Process()
-        process.executableURL = Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/bridge")
+        process.executableURL = executable.map { URL(fileURLWithPath: $0) } ?? Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/bridge")
         process.arguments = ["connector"] + arguments
         let pipe = Pipe()
         process.standardOutput = pipe
@@ -43,9 +44,13 @@ final class PackagedApp: NSObject {
             if let data = try? Data(contentsOf: plist), let values = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any], let arguments = values["ProgramArguments"] as? [String], let index = arguments.firstIndex(of: "--home"), index + 1 < arguments.count { homeArguments = ["--home", arguments[index + 1]] }
         }
         let options = homeArguments
+        let executable = connectorExecutable
         connectorTask = Task { @MainActor [weak self] in
+            var failures = 0
             while !Task.isCancelled {
-                let data = await Task.detached { Self.connectorCommand(["pending"] + options) }.value
+                let data = await Task.detached { Self.connectorCommand(["pending"] + options, executable: executable) }.value
+                failures = data == nil ? failures + 1 : 0
+                if self?.connectorHome != nil, failures >= 3 { NSApplication.shared.terminate(nil); return }
                 if let self, let data, let requests = try? JSONDecoder().decode([ConnectorRequest].self, from: data), let request = requests.first, let window = self.window, window.attachedSheet == nil {
                     let alert = NSAlert()
                     alert.messageText = "Allow \(request.client_name) to connect?"
@@ -58,7 +63,7 @@ final class PackagedApp: NSObject {
                     alert.beginSheetModal(for: window) { response in
                         let action = response == .alertFirstButtonReturn ? "allow" : "deny"
                         Task { @MainActor in
-                            let result = await Task.detached { Self.connectorCommand([action, "--request", request.id, "--code", request.code] + options) }.value
+                            let result = await Task.detached { Self.connectorCommand([action, "--request", request.id, "--code", request.code] + options, executable: executable) }.value
                             if result == nil { self.details?.stringValue = "Approval was refused or expired. Start again from your connector." }
                         }
                     }
@@ -70,7 +75,10 @@ final class PackagedApp: NSObject {
 
     static func run(_ arguments: [String]) throws {
         let controller = PackagedApp()
-        if arguments.first == "connector-approvals", arguments.count == 2 { controller.connectorHome = arguments[1] }
+        if arguments.first == "connector-approvals", arguments.count >= 2 {
+            controller.connectorHome = arguments[1]
+            if arguments.count == 3 { controller.connectorExecutable = arguments[2] }
+        }
         switch arguments.first {
         case "uninstall":
             try controller.service.unregister()
