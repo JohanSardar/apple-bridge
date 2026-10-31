@@ -127,7 +127,7 @@ actor MessagesParitySelfTest {
             registration["created_by_run"] = selected.chat.isEmpty
             registration["existing_self_chat"] = !selected.chat.isEmpty
             try PrivateReport.write(registration, to: ledger)
-            let target = Prepared(nativeState: .object(["service": .string(chats.first?["service_name"] ?? ""), "conversation_target": .bool(true), "message_guid": .string(guid), "target": .object(["text": .string(text), "is_from_me": .bool(true)])]), fingerprint: UUID().uuidString, action: .object(["native_key": .string(chat)]))
+            let target = Prepared(nativeState: .object(["existing_self_chat": .bool(!selected.chat.isEmpty), "service": .string(chats.first?["service_name"] ?? ""), "conversation_target": .bool(true), "message_guid": .string(guid), "target": .object(["text": .string(text), "is_from_me": .bool(true)])]), fingerprint: UUID().uuidString, action: .object(["native_key": .string(chat)]))
             steps = try await MessagesParity.probe(target)
         } catch { blocked(prerequisiteReason ?? "isolated_fixture_" + MessagesParity.failureReason(error)) }
         do {
