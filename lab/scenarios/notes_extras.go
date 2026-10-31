@@ -25,7 +25,7 @@ func runNotesExtras(ctx context.Context, s Scenario, level string) (e Evidence) 
 		}
 	}()
 	if level != "sim" {
-		return runNotesExtrasReal(ctx, s, level)
+		return runNotesExtrasReal(ctx, s, level, e.GitSHA)
 	}
 	ctx = world.WithOptions(ctx, world.Options{Scope: "notes:read,notes:write,reminders:read,system:read"})
 	w, err := world.New(ctx, level, 0, 0)

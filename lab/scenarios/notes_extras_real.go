@@ -12,8 +12,8 @@ import (
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
-func runNotesExtrasReal(ctx context.Context, s Scenario, level string) (e Evidence) {
-	e = Evidence{RunID: contracts.NewID("notes-extras"), Scenario: s.ID, Level: level, At: time.Now().UTC(), Metrics: map[string]any{}}
+func runNotesExtrasReal(ctx context.Context, s Scenario, level, gitSHA string) (e Evidence) {
+	e = Evidence{GitSHA: gitSHA, Hosts: []string{"air"}, RunID: contracts.NewID("notes-extras"), Scenario: s.ID, Level: level, At: time.Now().UTC(), Metrics: map[string]any{}}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	defer func() {
 		e.Passed = len(e.Assertions) > 0

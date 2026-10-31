@@ -1,17 +1,17 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[8.51 8.21 7.6] cpu_idle=0% cpus=10 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[9.23 10.62 12.61] cpu_idle=57% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M67DKYXE1CQ0H7SVHV6702E6",
+  "run_id": "run_01M69Y0SZFA6GV08XSQZEN6EX7",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "NOTE-EXTRAS",
   "level": "sim",
   "passed": true,
-  "git_sha": "3bd923a1af4751bbdf11f7c731c75e8fcbb7a183",
-  "at": "2026-10-30T22:06:52.84681Z",
+  "git_sha": "d050b54798ba543b7c56f2ac7b12f32863c56260",
+  "at": "2026-10-31T21:31:59.855868Z",
   "assertions": [
     {
       "name": "tagged_fixture_visible",
@@ -43,6 +43,22 @@
     },
     {
       "name": "untagged_rename_rejected",
+      "passed": true
+    },
+    {
+      "name": "mcp_rename_observed",
+      "passed": true
+    },
+    {
+      "name": "mcp_rename_readback",
+      "passed": true
+    },
+    {
+      "name": "mcp_move_observed",
+      "passed": true
+    },
+    {
+      "name": "mcp_move_readback",
       "passed": true
     },
     {
