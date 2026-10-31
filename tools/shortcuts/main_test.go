@@ -39,6 +39,10 @@ func compiledActions(t *testing.T, source string) []struct {
 }
 
 func TestBundledEchoOutput(t *testing.T) {
+	raw, err := compile("../../packaging/shortcuts/ab-echo.json")
+	if err != nil || !bytes.Contains(raw, []byte("<key>WFWorkflowHasShortcutInputVariables</key>\n<true/>")) {
+		t.Fatal("echo must declare its Shortcut Input variable to the importer", err)
+	}
 	actions := compiledActions(t, "../../packaging/shortcuts/ab-echo.json")
 	if len(actions) != 2 || actions[0].Identifier != "is.workflow.actions.gettext" || actions[1].Identifier != "is.workflow.actions.output" {
 		t.Fatal("echo must convert Shortcut Input to text and explicitly return it")

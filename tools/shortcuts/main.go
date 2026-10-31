@@ -186,6 +186,7 @@ func compile(path string) ([]byte, error) {
 	}
 	outputs := map[string]string{}
 	actions := make([]any, 0, len(source.Actions))
+	hasInput := false
 	for _, a := range source.Actions {
 		if !safeName.MatchString(a.Key) || a.Identifier == "" || outputs[a.Key] != "" {
 			return nil, fmt.Errorf("unique action key and identifier required")
@@ -203,10 +204,16 @@ func compile(path string) ([]byte, error) {
 		}
 		id := stableID(source.Name + "/action/" + a.Key)
 		converted.(map[string]any)["UUID"] = id
+		serialized, err := json.Marshal(converted)
+		if err != nil {
+			return nil, err
+		}
+		hasInput = hasInput || bytes.Contains(serialized, []byte(`"Type":"ExtensionInput"`))
 		outputs[a.Key] = id
 		actions = append(actions, map[string]any{"WFWorkflowActionIdentifier": a.Identifier, "WFWorkflowActionParameters": converted})
 	}
 	plist := map[string]any{"WFWorkflowName": source.Name, "WFWorkflowActions": actions, "WFWorkflowClientVersion": "2600.0.0", "WFWorkflowMinimumClientVersion": 900, "WFWorkflowMinimumClientVersionString": "900", "WFWorkflowIcon": map[string]any{"WFWorkflowIconStartColor": 4282601983, "WFWorkflowIconGlyphNumber": 59511}, "WFWorkflowTypes": []any{}, "WFWorkflowInputContentItemClasses": []any{"WFStringContentItem", "WFDictionaryContentItem"}, "WFWorkflowImportQuestions": []any{}}
+	plist["WFWorkflowHasShortcutInputVariables"] = hasInput
 	var b bytes.Buffer
 	b.WriteString("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n")
 	if err = plistValue(&b, plist); err != nil {

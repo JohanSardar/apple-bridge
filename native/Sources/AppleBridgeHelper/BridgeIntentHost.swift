@@ -45,32 +45,38 @@ enum BridgeIntentHost {
     }
 
     private static func shortcutDialog() -> String? {
-        guard AXIsProcessTrusted(), let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.shortcuts").first else { return nil }
-        let root = AXUIElementCreateApplication(app.processIdentifier)
-        AXUIElementSetMessagingTimeout(root, 0.2)
-        func attribute(_ element: AXUIElement, _ key: String) -> CFTypeRef? {
-            var value: CFTypeRef?
-            AXUIElementCopyAttributeValue(element, key as CFString, &value)
-            return value
+        guard AXIsProcessTrusted() else { return nil }
+        let applications = NSWorkspace.shared.runningApplications.filter {
+            let identifier = $0.bundleIdentifier ?? ""
+            return identifier.hasPrefix("com.apple.shortcuts") || identifier.hasPrefix("com.apple.WorkflowKit")
         }
-        for window in attribute(root, kAXWindowsAttribute) as? [AXUIElement] ?? [] {
-            var texts: [String] = [], buttons: [String] = [], budget = 1000
-            func visit(_ element: AXUIElement, _ depth: Int) {
-                guard budget > 0, depth < 16 else { return }
-                budget -= 1
-                let role = attribute(element, kAXRoleAttribute) as? String ?? ""
-                if role == kAXStaticTextRole || role == kAXButtonRole {
-                    var text = ""
-                    for key in [kAXValueAttribute, kAXTitleAttribute, kAXDescriptionAttribute] {
-                        if let value = attribute(element, key) as? String, !value.isEmpty { text = value; break }
-                    }
-                    if !text.isEmpty { texts.append(text); if role == kAXButtonRole { buttons.append(text) } }
-                }
-                for child in attribute(element, kAXChildrenAttribute) as? [AXUIElement] ?? [] { visit(child, depth + 1) }
+        for app in applications {
+            let root = AXUIElementCreateApplication(app.processIdentifier)
+            AXUIElementSetMessagingTimeout(root, 0.2)
+            func attribute(_ element: AXUIElement, _ key: String) -> CFTypeRef? {
+                var value: CFTypeRef?
+                AXUIElementCopyAttributeValue(element, key as CFString, &value)
+                return value
             }
-            visit(window, 0)
-            if buttons.contains(where: { ["Always Allow", "Allow", "Don’t Allow", "Don't Allow", "Add Shortcut", "Replace"].contains($0) }) {
-                return texts.joined(separator: " | ")
+            for window in attribute(root, kAXWindowsAttribute) as? [AXUIElement] ?? [] {
+                var texts: [String] = [], buttons: [String] = [], budget = 1000
+                func visit(_ element: AXUIElement, _ depth: Int) {
+                    guard budget > 0, depth < 16 else { return }
+                    budget -= 1
+                    let role = attribute(element, kAXRoleAttribute) as? String ?? ""
+                    if role == kAXStaticTextRole || role == kAXButtonRole {
+                        var text = ""
+                        for key in [kAXValueAttribute, kAXTitleAttribute, kAXDescriptionAttribute] {
+                            if let value = attribute(element, key) as? String, !value.isEmpty { text = value; break }
+                        }
+                        if !text.isEmpty { texts.append(text); if role == kAXButtonRole { buttons.append(text) } }
+                    }
+                    for child in attribute(element, kAXChildrenAttribute) as? [AXUIElement] ?? [] { visit(child, depth + 1) }
+                }
+                visit(window, 0)
+                if buttons.contains(where: { ["Always Allow", "Allow", "Don’t Allow", "Don't Allow", "Add Shortcut", "Replace"].contains($0) }) {
+                    return texts.joined(separator: " | ")
+                }
             }
         }
         return nil

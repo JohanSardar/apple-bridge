@@ -71,7 +71,8 @@ public enum ClockTimers {
 }
 
 private struct ClockTimerFailure: Error, CustomStringConvertible {
-    var description: String { "Clock could not read or update its timer. Open Clock, allow Apple Bridge Accessibility access in System Settings, and retry. Only tagged test timers can be changed." }
+    var step: String = "read or update its timer"
+    var description: String { "Clock could not \(step). Open Clock, allow Apple Bridge Accessibility access in System Settings, and retry. Only tagged test timers can be changed." }
 }
 
 @MainActor
@@ -89,7 +90,7 @@ private struct ClockTimerUI {
         root = AXUIElementCreateApplication(app.processIdentifier)
         AXUIElementSetMessagingTimeout(root, 0.5)
         app.activate()
-        try press(find(root, role: kAXRadioButtonRole).filter { name($0) == "Timers" || name($0) == "Timer" })
+        try press(find(root, role: kAXRadioButtonRole).filter { name($0) == "Timers" || name($0) == "Timer" }, step: "open the Timers tab")
     }
 
     private func attribute(_ element: AXUIElement, _ key: String) -> CFTypeRef? {
@@ -120,8 +121,8 @@ private struct ClockTimerUI {
         return visit(element, depth: 0)
     }
 
-    private func press(_ elements: [AXUIElement]) throws {
-        guard elements.count == 1, AXUIElementPerformAction(elements[0], kAXPressAction as CFString) == .success else { throw ClockTimerFailure() }
+    private func press(_ elements: [AXUIElement], step: String = "press the timer control") throws {
+        guard elements.count == 1, AXUIElementPerformAction(elements[0], kAXPressAction as CFString) == .success else { throw ClockTimerFailure(step: step) }
         RunLoop.current.run(until: Date().addingTimeInterval(0.25))
     }
 
@@ -154,19 +155,19 @@ private struct ClockTimerUI {
         }
         let add = find(root, role: kAXMenuButtonRole).filter { name($0) == "Add" || name($0) == "Add a timer" }
         if add.count == 1 {
-            try press(add)
-            try press(find(root, identifier: "addTimer:"))
+            try press(add, step: "open the timer menu")
+            try press(find(root, identifier: "addTimer:"), step: "choose a new timer")
         }
         let picker = find(root, identifier: "TimePicker")
-        guard picker.count == 1 else { throw ClockTimerFailure() }
+        guard picker.count == 1 else { throw ClockTimerFailure(step: "find the timer duration picker") }
         let sliders = find(picker[0], role: kAXSliderRole)
-        guard sliders.count == 3 else { throw ClockTimerFailure() }
+        guard sliders.count == 3 else { throw ClockTimerFailure(step: "find the three timer duration controls") }
         for (element, number) in zip(sliders, [duration / 3600, duration / 60 % 60, duration % 60]) { try type(String(format: "%02d", number), into: element) }
         let sheet = find(root, role: kAXSheetRole)
         let scope = sheet.count == 1 ? sheet[0] : root
         let fields = find(scope, role: kAXTextFieldRole).filter { attribute($0, kAXPlaceholderValueAttribute) as? String == "Timer" }
-        guard fields.count == 1, AXUIElementSetAttributeValue(fields[0], kAXValueAttribute as CFString, label as CFString) == .success else { throw ClockTimerFailure() }
-        try press(find(scope, identifier: "PauseResumeButton").filter { name($0) == "Start" })
+        guard fields.count == 1, AXUIElementSetAttributeValue(fields[0], kAXValueAttribute as CFString, label as CFString) == .success else { throw ClockTimerFailure(step: "set the timer label") }
+        try press(find(scope, identifier: "PauseResumeButton").filter { name($0) == "Start" }, step: "start the labeled timer")
         started = true
     }
 
