@@ -1335,7 +1335,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) (resu
 		if level == "real" && (s.ID == "CORE-LIVE-LATENCY" || s.ID == "REM-CRUD" || s.ID == "WEB-REM-WRITE") {
 			duration = 8 * time.Minute
 		}
-		if (s.Feature == "web.relay" || s.ID == "CON-RELAY") && level == "replica" {
+		if s.Feature == "web.relay" && level == "replica" || s.ID == "CON-RELAY" && (level == "replica" || level == "real") {
 			duration = 5 * time.Minute
 		}
 		if s.ID == "WEB-RELAY-REPLICA" {
