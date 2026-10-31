@@ -31,6 +31,8 @@ func runConnectorReal(ctx context.Context, s Scenario, level string) Evidence {
 	for _, args := range [][]string{{"install", "--frozen-lockfile"}, {"build:release"}} {
 		command := exec.CommandContext(ctx, "pnpm", args...)
 		command.Dir = "web"
+		command.Stdout = os.Stderr
+		command.Stderr = os.Stderr
 		if command.Run() != nil {
 			webBuilt = false
 			break

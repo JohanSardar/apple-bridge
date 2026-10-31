@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"io"
+	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
@@ -19,7 +20,7 @@ import (
 )
 
 func runConnectorApproval(ctx context.Context, s Scenario, level string) Evidence {
-	e := Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), RunID: contracts.NewID("connector-approval"), NetworkPath: "isolated authorization HTTP handler, owner-only Mac socket, OAuth and MCP gateway"}
+	e := Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), RunID: contracts.NewID("connector-approval"), NetworkPath: "isolated gateway HTTP, owner-only Mac socket, OAuth and MCP; controlled expiry clock"}
 	add := func(name string, passed bool) {
 		e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: passed})
 	}
@@ -50,12 +51,27 @@ func runConnectorApproval(ctx context.Context, s Scenario, level string) Evidenc
 	verifier := strings.Repeat("a", 43)
 	challenge := sha256.Sum256([]byte(verifier))
 	q := url.Values{"client_id": {client.ID}, "response_type": {"code"}, "redirect_uri": {"https://connector.example/callback"}, "scope": {"messages:read"}, "resource": {w.Gateway.URL + "/mcp"}, "state": {"[ab-test]"}, "code_challenge": {base64.RawURLEncoding.EncodeToString(challenge[:])}, "code_challenge_method": {"S256"}}
+	useRuntime := true
+	socketHome := w.Gateway.Home
 	request := func(method, path string) *httptest.ResponseRecorder {
 		req := httptest.NewRequest(method, w.Gateway.URL+path, strings.NewReader("{}"))
 		req.RemoteAddr = "127.0.0.1:12345"
 		req.Header.Set("Origin", w.Gateway.URL)
 		recorder := httptest.NewRecorder()
-		handler.ServeHTTP(recorder, req)
+		if useRuntime {
+			networkRequest, _ := http.NewRequestWithContext(ctx, method, w.Gateway.URL+path, strings.NewReader("{}"))
+			networkRequest.Header.Set("Origin", w.Gateway.URL)
+			response, err := http.DefaultClient.Do(networkRequest)
+			if err != nil {
+				recorder.WriteHeader(503)
+				return recorder
+			}
+			defer response.Body.Close()
+			recorder.WriteHeader(response.StatusCode)
+			io.Copy(recorder, response.Body)
+		} else {
+			handler.ServeHTTP(recorder, req)
+		}
 		return recorder
 	}
 	add("authorize_without_passkey", request("GET", "/oauth/authorize?"+q.Encode()).Code == 200)
@@ -63,11 +79,11 @@ func runConnectorApproval(ctx context.Context, s Scenario, level string) Evidenc
 		response := request("POST", "/oauth/pending?"+q.Encode())
 		var pending bridgeweb.ConnectorApproval
 		json.Unmarshal(response.Body.Bytes(), &pending)
-		add("pending_matching_code_and_requested_data", response.Code == 201 && len(pending.Code) == 4 && pending.ClientName == client.Name && len(pending.Scopes) == 1 && pending.Scopes[0] == "messages:read" && pending.ExpiresAt.Sub(now) == 5*time.Minute)
+		add("pending_matching_code_and_requested_data", response.Code == 201 && len(pending.Code) == 4 && pending.ClientName == client.Name && len(pending.Scopes) == 1 && pending.Scopes[0] == "messages:read" && pending.ExpiresAt.Sub(now) >= 5*time.Minute && pending.ExpiresAt.Sub(now) < 5*time.Minute+10*time.Second)
 		return pending
 	}
 	decide := func(p bridgeweb.ConnectorApproval, code, action string) error {
-		return bridgeweb.ConnectorCommand(ctx, w.Dir, action, p.ID, code, io.Discard)
+		return bridgeweb.ConnectorCommand(ctx, socketHome, action, p.ID, code, io.Discard)
 	}
 	poll := func(p bridgeweb.ConnectorApproval) *httptest.ResponseRecorder {
 		return request("GET", "/oauth/pending/"+p.ID)
@@ -78,8 +94,13 @@ func runConnectorApproval(ctx context.Context, s Scenario, level string) Evidenc
 		wrong = "0001"
 	}
 	add("wrong_code_refused", decide(first, wrong, "allow") != nil && !bytes.Contains(poll(first).Body.Bytes(), []byte("?code=")))
+	add("another_requests_code_refused", decide(first, other.Code, "allow") != nil)
 	add("mac_allow", decide(first, first.Code, "allow") == nil)
-	add("one_request_never_approves_another", len(approvals.Pending()) == 1 && approvals.Pending()[0].ID == other.ID && !bytes.Contains(poll(other).Body.Bytes(), []byte("code=")))
+	var pendingList bytes.Buffer
+	listErr := bridgeweb.ConnectorCommand(ctx, socketHome, "pending", "", "", &pendingList)
+	var remaining []bridgeweb.ConnectorApproval
+	json.Unmarshal(pendingList.Bytes(), &remaining)
+	add("one_request_never_approves_another", listErr == nil && len(remaining) == 1 && remaining[0].ID == other.ID && !bytes.Contains(poll(other).Body.Bytes(), []byte("code=")))
 	add("decision_single_use", decide(first, first.Code, "allow") != nil)
 	response := poll(first)
 	var result struct {
@@ -102,6 +123,8 @@ func runConnectorApproval(ctx context.Context, s Scenario, level string) Evidenc
 	json.Unmarshal(poll(other).Body.Bytes(), &result)
 	denied, _ := url.Parse(result.Redirect)
 	add("deny_access_denied", denied != nil && denied.Query().Get("error") == "access_denied" && denied.Query().Get("code") == "")
+	useRuntime = false
+	socketHome = w.Dir
 	expired := begin()
 	now = now.Add(5 * time.Minute)
 	add("expired_request_refused", decide(expired, expired.Code, "allow") != nil && poll(expired).Code == 410)

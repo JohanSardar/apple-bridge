@@ -1,10 +1,10 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[21.79 21.13 16.06] cpu_idle=3% cpus=10 other_heavy=0"
+    "summary": "air: load=[21.49 20.32 16.49] cpu_idle=31% cpus=10 other_heavy=0"
   },
-  "run_id": "connector-approval_01M69X50BE46ECSWWBK8W06QES",
-  "network_path": "isolated authorization HTTP handler, owner-only Mac socket, OAuth and MCP gateway",
+  "run_id": "connector-approval_01M69X9QQYZWMXFTREEN7CXJWQ",
+  "network_path": "isolated gateway HTTP, owner-only Mac socket, OAuth and MCP; controlled expiry clock",
   "metrics": {
     "capture_observer_resets": 0
   },
@@ -12,7 +12,7 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-31T21:16:48.878974Z",
+  "at": "2026-10-31T21:19:23.902337Z",
   "assertions": [
     {
       "name": "isolated_gateway",
@@ -44,6 +44,10 @@
     },
     {
       "name": "wrong_code_refused",
+      "passed": true
+    },
+    {
+      "name": "another_requests_code_refused",
       "passed": true
     },
     {
