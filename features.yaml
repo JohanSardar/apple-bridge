@@ -1331,7 +1331,7 @@ features:
     limits:
       - scenario: CAP-SIM
         level: real
-        reason: Helper screen-capture preflight remains denied, and the Air built-in camera is unavailable with its lid closed; audio recording and PDF output pass over REST and MCP.
+        reason: Screen Recording for the Helper can only be enabled with the owner's Mac password; audio recording and PDF output pass over REST and MCP. Camera capture is dropped from scope by the owner.
     notes: Capture providers fail closed without prompting. Real screenshot and screen recording require Screen Recording for the Helper; camera requires Camera and audio requires Microphone. ScreenCaptureKit screenshot and screen video, AVFoundation camera, and AVAudioRecorder audio providers are implemented. Named printers submit through the system print spooler. PDF output copies a validated PDF without UI. Evidence contains only digest, size, duration and dimensions.
 
 
@@ -1364,15 +1364,13 @@ features:
     milestone: G16
     modules: [native/Sources/MacSource, internal/contracts, lab/simapple]
     depends_on: [mac.capture]
-    status: limited
+    status: done
     scenarios:
       - {id: MAC-EXTRAS-SIM, levels: [sim]}
       - {id: TM-STATUS, levels: [real]}
-      - {id: IWORK-REAL, levels: [sim, real]}
+      - {id: IWORK-REAL, levels: [sim, real], status: dropped, reason: "Dropped by the owner: iWork (Pages) export is out of scope."}
       - {id: SHAZAM-REAL, levels: [real], status: dropped, reason: "Dropped because song recognition needs the ShazamKit entitlement."}
       - {id: BT-REAL, levels: [real]}
-    limits:
-      - {"scenario": "IWORK-REAL", "level": "real", "reason": "Pages is not installed on the Air; install Pages and grant Helper Automation access before real export qualification."}
   - id: phone.dial
     title: Continuity dialing with Mac confirmation
     requirements: [R-API, R-SCOPE]
