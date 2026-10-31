@@ -1,0 +1,31 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[13.62 11.12 11.9] cpu_idle=61% cpus=10 other_heavy=0"
+  },
+  "run_id": "calendar-parity_01M69YEPVB9BC5KHS3S5VBEPVB",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "WEB-CAL-PARITY",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "f1fbda8211f8bbcfcfba6a54d57b8aec2d556d30",
+  "at": "2026-10-31T21:39:35.403818Z",
+  "assertions": [
+    {
+      "name": "calendar_checks_build",
+      "passed": true
+    },
+    {
+      "name": "calendar_parity_store_effects_and_cleanup",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}
