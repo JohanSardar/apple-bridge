@@ -1004,7 +1004,7 @@ features:
       - {id: SC-RUN-REAL, levels: [sim, real]}
       - {id: SC-IDLE, levels: [real]}
     limits:
-      - {"scenario": "SC-RUN-REAL", "level": "real", "reason": "AB Echo is installed, but its input-file run timed out after 20 seconds. The installed Text action uses older input serialization; owner Shortcuts import/run qualification is required, and SSH lacks Accessibility access to inspect pending prompts."}
+      - {"scenario": "SC-RUN-REAL", "level": "real", "reason": "AB Echo output approval is granted, but the installed old Text attachment returns zero bytes through stdout and output-file modes. The corrected signed Echo replacement awaits owner import; SSH cannot inspect or approve its dialog."}
       - {"scenario": "SC-IDLE", "level": "real", "reason": "Failed assertions: five_minute_helper_cpu_under_two_percent"}
   - id: clock.pack
     title: Clock helper pack qualification
@@ -1348,7 +1348,7 @@ features:
     scenarios:
       - {id: USE-ACTION-PROBE, levels: [sim, real]}
     limits:
-      - {"scenario": "USE-ACTION-PROBE", "level": "real", "reason": "Dedicated AB Screen Time shortcut and its approved signed export are missing. Owner setup and Screen Time approval are required; retain Biome. No shortcut was run."}
+      - {"scenario": "USE-ACTION-PROBE", "level": "real", "reason": "The Air builtin action catalog and installed system app metadata do not expose Get App & Website Data. A verified executable AB Screen Time pack cannot be built until the Apple action or a qualified owner export is available; retain Biome. No shortcut was run."}
   - id: helper.siri_intents
     title: Read-only Apple Bridge status App Intent
     requirements: [R-PKG]
@@ -1359,7 +1359,7 @@ features:
     scenarios:
       - {id: SIRI-INTENTS, levels: [sim, real]}
     limits:
-      - {"scenario": "SIRI-INTENTS", "level": "real", "reason": "App Intent metadata matches source, but the dedicated AB Bridge Status wrapper and qualified signed export are missing. Owner Shortcuts setup is required; no shortcut was run."}
+      - {"scenario": "SIRI-INTENTS", "level": "real", "reason": "The dedicated AB Bridge Status wrapper source and signed archive are supplied, but owner import is pending and the Air action registry has not resolved the Helper intent. No shortcut was run."}
   - id: mac.extras
     title: Mac Bluetooth iWork Time Machine and song recognition
     requirements: [R-API, R-SCOPE]

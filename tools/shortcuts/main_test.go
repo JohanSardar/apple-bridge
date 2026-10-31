@@ -1,6 +1,77 @@
 package main
 
-import "testing"
+import (
+	"bytes"
+	"encoding/json"
+	"os/exec"
+	"runtime"
+	"testing"
+)
+
+func compiledActions(t *testing.T, source string) []struct {
+	Identifier string         `json:"WFWorkflowActionIdentifier"`
+	Parameters map[string]any `json:"WFWorkflowActionParameters"`
+} {
+	t.Helper()
+	if runtime.GOOS != "darwin" {
+		t.Skip("Apple's plist validation requires macOS")
+	}
+	raw, err := compile(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	command := exec.Command("/usr/bin/plutil", "-convert", "json", "-o", "-", "-")
+	command.Stdin = bytes.NewReader(raw)
+	data, err := command.Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var workflow struct {
+		Actions []struct {
+			Identifier string         `json:"WFWorkflowActionIdentifier"`
+			Parameters map[string]any `json:"WFWorkflowActionParameters"`
+		} `json:"WFWorkflowActions"`
+	}
+	if err := json.Unmarshal(data, &workflow); err != nil {
+		t.Fatal(err)
+	}
+	return workflow.Actions
+}
+
+func TestBundledEchoOutput(t *testing.T) {
+	actions := compiledActions(t, "../../packaging/shortcuts/ab-echo.json")
+	if len(actions) != 2 || actions[0].Identifier != "is.workflow.actions.gettext" || actions[1].Identifier != "is.workflow.actions.output" {
+		t.Fatal("echo must convert Shortcut Input to text and explicitly return it")
+	}
+	text := actions[0].Parameters["WFTextActionText"].(map[string]any)
+	if text["WFSerializationType"] != "WFTextTokenString" {
+		t.Fatal("Shortcut Input must be embedded in a text token string")
+	}
+	value := text["Value"].(map[string]any)
+	attachment := value["attachmentsByRange"].(map[string]any)["{0, 1}"].(map[string]any)
+	if value["string"] != "\ufffc" || attachment["Type"] != "ExtensionInput" {
+		t.Fatal("echo lost its Shortcut Input attachment")
+	}
+	output := actions[1].Parameters["WFOutput"].(map[string]any)["Value"].(map[string]any)
+	if output["Type"] != "ActionOutput" || output["OutputUUID"] != actions[0].Parameters["UUID"] {
+		t.Fatal("echo output must reference the converted text")
+	}
+}
+
+func TestBundledStatusOutput(t *testing.T) {
+	actions := compiledActions(t, "../../packaging/shortcuts/ab-bridge-status.json")
+	if len(actions) != 2 || actions[0].Identifier != "com.johansardar.applebridge.services.BridgeStatusIntent" || actions[1].Identifier != "is.workflow.actions.output" {
+		t.Fatal("status wrapper must invoke the installed Helper intent and return its result")
+	}
+	descriptor := actions[0].Parameters["AppIntentDescriptor"].(map[string]any)
+	if descriptor["BundleIdentifier"] != "com.johansardar.applebridge.services" || descriptor["AppIntentIdentifier"] != "BridgeStatusIntent" {
+		t.Fatal("status wrapper must target the services-signed Helper")
+	}
+	output := actions[1].Parameters["WFOutput"].(map[string]any)["Value"].(map[string]any)
+	if output["Type"] != "ActionOutput" || output["OutputUUID"] != actions[0].Parameters["UUID"] {
+		t.Fatal("status output must come from the real intent")
+	}
+}
 
 func TestTextOutputReference(t *testing.T) {
 	output, err := resolve(map[string]any{"$output": "alarm", "$text": true, "$property": "label"}, "Clock", map[string]string{"alarm": "alarm-uuid"})

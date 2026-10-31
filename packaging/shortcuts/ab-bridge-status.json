@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "name": "AB Bridge Status",
+  "actions": [
+    {
+      "key": "status",
+      "identifier": "com.johansardar.applebridge.services.BridgeStatusIntent",
+      "parameters": {
+        "AppIntentDescriptor": {
+          "AppIntentIdentifier": "BridgeStatusIntent",
+          "BundleIdentifier": "com.johansardar.applebridge.services",
+          "Name": "AppleBridgeHelper",
+          "TeamIdentifier": "AX3C2B78YD"
+        }
+      }
+    },
+    {
+      "key": "output",
+      "identifier": "is.workflow.actions.output",
+      "parameters": {
+        "WFOutput": {
+          "$output": "status"
+        }
+      }
+    }
+  ]
+}
