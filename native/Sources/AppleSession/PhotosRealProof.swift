@@ -64,6 +64,7 @@ enum PhotosRealProof {
             return matches(panels[0], 0)
         }
         var stage = "library read"
+        var cleanupDiagnostics: [String: JSON] = [:]
         var recoveryComplete = recoveryPath == nil && recoveryDigest == nil
         func deleteVerifiedAsset(_ assetID: String, filename: String) async throws {
             guard PHAsset.fetchAssets(withLocalIdentifiers: [assetID], options: nil).count != 0 else { return }
@@ -72,14 +73,29 @@ enum PhotosRealProof {
             link.scheme = "photos"
             link.host = "asset"
             link.queryItems = [URLQueryItem(name: "identifier", value: assetID)]
-            guard let url = link.url, NSWorkspace.shared.open(url) else { throw SourceFailure.unavailable }
-            try await Task.sleep(for: .seconds(1))
-            guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.Photos").first,
-                  app.activate() else { throw SourceFailure.unavailable }
-            let root = AXUIElementCreateApplication(app.processIdentifier)
-            let windows = attribute(root, kAXWindowsAttribute) as? [AXUIElement] ?? []
-            guard windows.count == 1 else { throw SourceFailure.conflict }
-            let mainWindow = windows[0]
+            guard let url = link.url else { throw SourceFailure.invalid }
+            let opened = NSWorkspace.shared.open(url)
+            cleanupDiagnostics["url_opened"] = .bool(opened)
+            guard opened else { throw SourceFailure.unavailable }
+            var ready: (AXUIElement, AXUIElement)?
+            for _ in 0..<100 {
+                if let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.Photos").first {
+                    cleanupDiagnostics["app_running"] = .bool(true)
+                    let activated = app.activate()
+                    cleanupDiagnostics["app_activated"] = .bool(activated)
+                    let root = AXUIElementCreateApplication(app.processIdentifier)
+                    let windows = attribute(root, kAXWindowsAttribute) as? [AXUIElement] ?? []
+                    cleanupDiagnostics["window_count"] = .number(Double(windows.count))
+                    if activated && windows.count == 1 {
+                        ready = (root, windows[0])
+                        break
+                    }
+                }
+                try await Task.sleep(for: .milliseconds(150))
+            }
+            guard let (root, mainWindow) = ready else { throw SourceFailure.unavailable }
+            guard NSWorkspace.shared.open(url) else { throw SourceFailure.unavailable }
+            try await Task.sleep(for: .milliseconds(300))
             stage = "identifying the imported test photo"
             _ = try script("""
             tell application "System Events" to tell process "Photos"
@@ -101,6 +117,7 @@ enum PhotosRealProof {
                 if identified { break }
                 try await Task.sleep(for: .milliseconds(150))
             }
+            cleanupDiagnostics["info_matched"] = .bool(identified)
             guard identified else { throw SourceFailure.conflict }
             _ = try script("""
             tell application "System Events" to tell process "Photos"
@@ -197,7 +214,7 @@ enum PhotosRealProof {
             let failedStage = stage
             let currentCleaned = (try? await cleanup()) != nil
             let cleaned = currentCleaned && recoveryComplete
-            return .object(["failure": .string("Photos \(failedStage) failed. Check Helper Photos access and close any Photos dialog before retrying."), "grant_passed": .bool(true), "cleanup_passed": .bool(cleaned), "library_asset_count": .number(Double(PHAsset.fetchAssets(with: nil).count))])
+            return .object(["failure": .string("Photos \(failedStage) failed. Check Helper Photos access and close any Photos dialog before retrying."), "grant_passed": .bool(true), "cleanup_passed": .bool(cleaned), "cleanup_diagnostics": .object(cleanupDiagnostics), "library_asset_count": .number(Double(PHAsset.fetchAssets(with: nil).count))])
         }
     }
 }
