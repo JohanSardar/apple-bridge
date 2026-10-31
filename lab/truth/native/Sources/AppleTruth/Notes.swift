@@ -92,7 +92,8 @@ extension AppleTruth {
         if (folders.length === 0) {
             const folder = app.Folder({name:folderName});
             app.folders.push(folder);
-            folders = [folder];
+            folders = app.folders.whose({name:folderName})();
+            require(folders.length === 1);
             created = true;
         }
         const folder = folders[0];
