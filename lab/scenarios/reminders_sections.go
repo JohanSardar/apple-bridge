@@ -42,7 +42,7 @@ func runRemindersSections(ctx context.Context, level string, e Evidence) Evidenc
 	} else {
 		report = filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "AppleBridgeDev", "sections-"+e.RunID+".json")
 		defer os.Remove(report)
-		err = exec.CommandContext(ctx, "open", "-n", "-W", "-g", "-a", filepath.Join(dir, "AppleBridgeHelper.app"), "--args", "reminders-sections-proof", "--report", report).Run()
+		err = exec.CommandContext(ctx, "open", "-n", "-W", "-g", "-a", filepath.Join(dir, "AppleBridgeHelper.app"), "--args", remindersProofCommand(e.Scenario), "--report", report).Run()
 		data, problem := os.ReadFile(report)
 		var proof struct {
 			Passed bool            `json:"passed"`
@@ -64,4 +64,11 @@ func runRemindersSections(ctx context.Context, level string, e Evidence) Evidenc
 		e.Passed = e.Passed && check.Passed
 	}
 	return e
+}
+
+func remindersProofCommand(scenario string) string {
+	if scenario == "WEB-REM-PARITY" {
+		return "reminders-parity-proof"
+	}
+	return "reminders-sections-proof"
 }

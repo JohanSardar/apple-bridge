@@ -551,6 +551,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "WEB-RM-REMINDERS-DEMO" {
 		return runRemindersDemo(ctx, s, level)
 	}
+	if s.ID == "WEB-REM-PARITY" && level != "web" {
+		return runRemindersSections(ctx, level, Evidence{RunID: contracts.NewID("reminders-parity"), Scenario: s.ID, Level: level, At: time.Now().UTC()})
+	}
 	if level == "web" {
 		return runWeb(ctx, s)
 	}
