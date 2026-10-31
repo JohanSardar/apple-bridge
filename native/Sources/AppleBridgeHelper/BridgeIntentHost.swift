@@ -60,10 +60,12 @@ enum BridgeIntentHost {
             }
             for window in attribute(root, kAXWindowsAttribute) as? [AXUIElement] ?? [] {
                 var texts: [String] = [], buttons: [String] = [], budget = 1000
+                var hasDialog = false
                 func visit(_ element: AXUIElement, _ depth: Int) {
                     guard budget > 0, depth < 16 else { return }
                     budget -= 1
                     let role = attribute(element, kAXRoleAttribute) as? String ?? ""
+                    if role == kAXSheetRole || attribute(element, kAXSubroleAttribute) as? String == kAXDialogSubrole { hasDialog = true }
                     if role == kAXStaticTextRole || role == kAXButtonRole {
                         var text = ""
                         for key in [kAXValueAttribute, kAXTitleAttribute, kAXDescriptionAttribute] {
@@ -74,7 +76,7 @@ enum BridgeIntentHost {
                     for child in attribute(element, kAXChildrenAttribute) as? [AXUIElement] ?? [] { visit(child, depth + 1) }
                 }
                 visit(window, 0)
-                if buttons.contains(where: { ["Always Allow", "Allow", "Don’t Allow", "Don't Allow", "Add Shortcut", "Replace"].contains($0) }) {
+                if !texts.isEmpty && !buttons.isEmpty && (hasDialog || buttons.contains(where: { ["Always Allow", "Allow", "Don’t Allow", "Don't Allow", "Add Shortcut", "Replace", "Continue", "OK"].contains($0) })) {
                     return texts.joined(separator: " | ")
                 }
             }
