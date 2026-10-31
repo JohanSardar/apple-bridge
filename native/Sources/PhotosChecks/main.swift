@@ -47,6 +47,16 @@ struct Checks {
         let future = try await source.search(.object(["from": .string("2027-01-01T00:00:00Z")]))
         let past = try await source.search(.object(["to": .string("2025-01-01T00:00:00Z")]))
         guard future["items"].array.isEmpty, past["items"].array.isEmpty else { throw SourceFailure.corrupt }
+        if CommandLine.arguments.contains("PHO-CAPTURE") {
+            let large = (0..<10_816).map { index in
+                JSON.object(["kind": .string("upsert"), "collection": .string("photos.asset"), "native_key": .string("large-\(index)"), "data": .object(["local_id": .string("large-\(index)"), "albums": .array([.string("large-album")])])])
+            }
+            let largeSource = PhotosSource(fixture: large)
+            guard try await largeSource.snapshot().count == 10_816 else { throw SourceFailure.corrupt }
+            let last = try await largeSource.search(.object(["limit": .number(1000), "album": .string("large-album")]))
+            guard last["truncated"].bool, last["items"].array.count == 1000 else { throw SourceFailure.corrupt }
+            print("large_library_asset_count=10816")
+        }
         let sink = Sink()
         let task = Task { try await source.capture(.null, into: sink) }
         let initialDeadline = Date().addingTimeInterval(15)

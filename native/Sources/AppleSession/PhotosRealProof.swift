@@ -53,14 +53,13 @@ enum PhotosRealProof {
             for assetID in owned {
                 guard PHAsset.fetchAssets(withLocalIdentifiers: [assetID], options: nil).count != 0 else { continue }
                 let identity = quoted(assetID)
-                let shown = try script("""
+                _ = try script("""
                 tell application "Photos"
                     activate
                     set targetPhoto to media item id \(identity)
                     spotlight targetPhoto
                 end tell
                 """)
-                _ = shown
                 var selected = false
                 for _ in 0..<40 {
                     selected = try script("""
