@@ -1,5 +1,5 @@
 import { dateLabel } from './date-label';
-import { createEffect, createSignal, onCleanup, type Accessor } from 'solid-js';
+import { createEffect, createMemo, createSignal, onCleanup, type Accessor } from 'solid-js';
 import { auth } from '../auth/session';
 import type { BridgeRecord, Cursor, ViewData, ViewName } from '../data/types';
 export type CalendarView = 'day' | 'week' | 'month' | 'year' | 'list';
@@ -36,10 +36,11 @@ export function eventsOn(events: CalendarEntry[], date: Date) {
 }
 export function useCalendarView<T extends ViewData>(name: ViewName, args: Accessor<Record<string, unknown> | undefined>) {
     const [data, setData] = createSignal<T>({} as T);
+    const key = createMemo(() => { const query = args(); return query === undefined ? undefined : JSON.stringify(query); });
     createEffect(() => {
-        const live = auth.live(), query = args(); setData(() => ({} as T));
-        if (!live || !query) return;
-        const subscription = live.subscribe(name, query, { resetOnReconnect: true });
+        const live = auth.live(), encoded = key(); setData(() => ({} as T));
+        if (!live || encoded === undefined) return;
+        const subscription = live.subscribe(name, JSON.parse(encoded), { resetOnReconnect: true });
         createEffect(() => { const value = subscription.data() as T; setData(() => ({ ...value, _cursor: subscription.cursor() })); });
         onCleanup(subscription.dispose);
     });

@@ -9,10 +9,12 @@ test('WEB-CAL-READ repeated inspector inputs measure native main-thread paint', 
     await page.goto('/calendar/list/2026-10-20');
     const target = page.getByRole('button', { name: 'Project check-in', exact: true }).first();
     await expect(target).toBeVisible();
+    await target.evaluate(element => { (window as any).__calendarPerfRow = element; });
     await appInputPerformance(page, info, 'WEB-CAL-READ', target, '[data-event-id]', '.calendar-inspector[open] h3', async () => {
         await page.getByRole('button', { name: 'Close event details' }).click();
         await expect(page.getByRole('dialog', { name: 'Event details' })).toHaveCount(0);
     });
+    expect(await target.evaluate(element => element === (window as any).__calendarPerfRow)).toBe(true);
 });
 
 test('WEB-REM-ACTIONS repeated read-only details measure native main-thread paint', async ({ page, context, request }, info) => {

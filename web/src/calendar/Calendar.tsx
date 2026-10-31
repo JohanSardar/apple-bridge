@@ -28,7 +28,7 @@ export default function Calendar() {
     const hidden = () => new Set(calendarPreferences.hidden());
     const setHidden = (update: (previous: Set<string>) => Set<string>) => calendarPreferences.setHidden([...update(hidden())]);
     const eventID = createMemo(() => parts()[1] === 'event' ? parts()[2] : undefined);
-    createEffect(() => { if (!eventID()) { setView(routeView()); setDate(routeDate()); } });
+    createEffect(() => { if (!eventID()) { setView(routeView()); const next = routeDate(); setDate(previous => previous.getTime() === next.getTime() ? previous : next); } });
     const [calendarIDs, setCalendarIDs] = createSignal<string[]>([]);
     const bounds = createMemo(() => range(view(), search().trim() ? day(now()) : date(), Boolean(search().trim())));
     const page = useCalendarView<CalendarPage>('calendar.range', () => ({ start: bounds()[0].toISOString(), end: bounds()[1].toISOString(), time_zone: zone, text: search().trim(), calendars: calendarIDs().filter(id => !hidden().has(id)) }));
