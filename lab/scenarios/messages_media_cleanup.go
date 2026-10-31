@@ -23,6 +23,7 @@ func runMediaCleanupProof(ctx context.Context, s Scenario, level string) Evidenc
 	}
 	defer os.RemoveAll(directory)
 	build := exec.CommandContext(ctx, "packaging/dev/build-native.sh")
+	build.WaitDelay = 2 * time.Second
 	build.Env = append(os.Environ(), "APPLE_BRIDGE_NATIVE_TARGET=MessagesVariantChecks")
 	if output, err := build.CombinedOutput(); err != nil {
 		os.Stderr.Write(output)

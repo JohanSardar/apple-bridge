@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 func messageSendVariant(id string) string {
@@ -32,7 +33,9 @@ func runMessagesVariantReal(ctx context.Context, s Scenario, e Evidence) (result
 	}
 	defer os.RemoveAll(dir)
 	app := filepath.Join(dir, "AppleBridgeHelper.app")
-	output, err := exec.CommandContext(ctx, "packaging/dev/build-helper.sh", app).CombinedOutput()
+	build := exec.CommandContext(ctx, "packaging/dev/build-helper.sh", app)
+	build.WaitDelay = 2 * time.Second
+	output, err := build.CombinedOutput()
 	if err != nil {
 		os.Stderr.Write(output)
 		result.Assertions = append(result.Assertions, Assertion{Name: "signed_helper_build", Passed: false})
@@ -72,6 +75,7 @@ func runMessagesVariantReadback(ctx context.Context, kind string, add func(strin
 	binary := filepath.Join(strings.TrimSpace(string(directory)), "MessagesVariantChecks")
 	if !messagesVariantChecksFresh(binary) {
 		build := exec.CommandContext(ctx, "packaging/dev/build-native.sh")
+		build.WaitDelay = 2 * time.Second
 		build.Env = append(os.Environ(), "APPLE_BRIDGE_NATIVE_TARGET=MessagesVariantChecks")
 		output, err := build.CombinedOutput()
 		add("native_readback_checks_build", err == nil)
