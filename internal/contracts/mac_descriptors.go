@@ -54,10 +54,6 @@ func ValidateMacCommand(c Command) error {
 		return ErrInvalid
 	}
 	switch c.Op {
-	case "mac.airplay_select":
-		if a.Device == "" {
-			return ErrInvalid
-		}
 	case "mac.iwork_export":
 		b, err := base64.StdEncoding.DecodeString(a.DocumentBlob)
 		if err != nil || len(b) == 0 || len(b) > 8*1024*1024 || (a.Format != "pdf" && a.Format != "text") || (a.App != "pages" && a.App != "numbers" && a.App != "keynote") {
@@ -133,10 +129,10 @@ func MacDescriptors() []OperationDescriptor {
 	}
 	out = append(out, OperationDescriptor{Name: "mac.clipboard_read", Version: 1, Kind: QueryOp, Source: "mac", Scope: "mac:read", Capability: "mac.clipboard_read", Input: Query{}, Output: QueryResult{}, Description: "Read transient clipboard text without capturing contents"})
 	out = append(out, OperationDescriptor{Name: "mac.network_check", Version: 1, Kind: QueryOp, Source: "mac", Scope: "mac:read", Capability: "mac.network_check", Input: Query{}, Output: QueryResult{}, Description: "Check default network reachability, DNS and interface counters"})
-	for _, name := range []string{"mac.bluetooth_devices", "mac.airplay_routes", "mac.time_machine_status", "mac.recognize_song"} {
+	for _, name := range []string{"mac.bluetooth_devices", "mac.time_machine_status", "mac.recognize_song"} {
 		out = append(out, OperationDescriptor{Name: name, Version: 1, Kind: QueryOp, Source: "mac", Scope: "mac:read", Capability: name, Input: Query{}, Output: QueryResult{}, Description: "Read Mac extras; native availability is explicit"})
 	}
-	for _, name := range []string{"mac.airplay_select", "mac.iwork_export"} {
+	for _, name := range []string{"mac.iwork_export"} {
 		out = append(out, OperationDescriptor{Name: name, Version: 1, Kind: CommandOp, Source: "mac", Scope: "mac:write", Capability: name, Input: Command{}, Output: CommandRecord{}, Description: "Mac extras action with native readback"})
 	}
 
@@ -167,13 +163,10 @@ func RedactMacCommand(c Command) Command {
 }
 
 func macSchema(d OperationDescriptor, schema map[string]any) map[string]any {
-	if d.Name == "mac.airplay_select" || d.Name == "mac.iwork_export" {
+	if d.Name == "mac.iwork_export" {
 		args := JSONSchema(MacArgs{})
 		fields := args["properties"].(map[string]any)
-		required := []string{"device"}
-		if d.Name == "mac.iwork_export" {
-			required = []string{"document_blob", "format", "app"}
-		}
+		required := []string{"document_blob", "format", "app"}
 		for k := range fields {
 			keep := false
 			for _, name := range required {

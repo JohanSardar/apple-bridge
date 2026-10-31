@@ -14,6 +14,8 @@ import (
 )
 
 type scenarioRef struct {
+	Status string   `yaml:"status,omitempty"`
+	Reason string   `yaml:"reason,omitempty"`
 	ID     string   `yaml:"id"`
 	Levels []string `yaml:"levels"`
 }
@@ -62,6 +64,8 @@ type levelResult struct {
 }
 
 type scenarioView struct {
+	Status  string
+	Reason  string
 	ID      string
 	File    string
 	HasFile bool
@@ -143,7 +147,10 @@ func (c *checker) check() []featureView {
 		if !statuses[f.Status] {
 			c.fail("%s: unknown status %q", f.ID, f.Status)
 		}
-		if len(f.Scenarios) == 0 {
+		if f.Status == "dropped" && strings.TrimSpace(f.Notes) == "" {
+			c.fail("%s: dropped feature has no reason", f.ID)
+		}
+		if len(f.Scenarios) == 0 && f.Status != "dropped" {
 			c.fail("%s: no scenarios", f.ID)
 		}
 		if len(f.Requirements) == 0 {
@@ -160,11 +167,17 @@ func (c *checker) check() []featureView {
 			}
 		}
 		for _, s := range f.Scenarios {
+			if s.Status != "" && s.Status != "dropped" {
+				c.fail("%s: scenario %s has unknown status %q", f.ID, s.ID, s.Status)
+			}
+			if s.Status == "dropped" && strings.TrimSpace(s.Reason) == "" {
+				c.fail("%s: dropped scenario %s has no reason", f.ID, s.ID)
+			}
 			if prev, ok := owner[s.ID]; ok {
 				c.fail("scenario %s owned by both %s and %s", s.ID, prev, f.ID)
 			}
 			owner[s.ID] = f.ID
-			sv := scenarioView{ID: s.ID, File: scenarioFiles[s.ID]}
+			sv := scenarioView{ID: s.ID, File: scenarioFiles[s.ID], Status: s.Status, Reason: s.Reason}
 			sv.HasFile = sv.File != ""
 			if !sv.HasFile && f.Status != "todo" {
 				c.fail("%s: scenario %s has no file under lab/scenarios", f.ID, s.ID)
@@ -173,7 +186,11 @@ func (c *checker) check() []featureView {
 				if _, ok := c.graph.Levels[l]; !ok {
 					c.fail("%s: scenario %s has unknown level %s", f.ID, s.ID, l)
 				}
-				sv.Results = append(sv.Results, c.result(s.ID, l))
+				result := c.result(s.ID, l)
+				if s.Status == "dropped" || f.Status == "dropped" {
+					result.State = "dropped"
+				}
+				sv.Results = append(sv.Results, result)
 			}
 			v.Views = append(v.Views, sv)
 		}
@@ -190,7 +207,7 @@ func (c *checker) check() []featureView {
 		if f.Status == "done" || f.Status == "limited" {
 			for _, sv := range v.Views {
 				for _, r := range sv.Results {
-					if r.State != "passed" && !(f.Status == "limited" && limited[sv.ID+"/"+r.Level]) {
+					if r.State != "passed" && r.State != "dropped" && !(f.Status == "limited" && limited[sv.ID+"/"+r.Level]) {
 						c.fail("%s is %s but %s at %s is %s", f.ID, f.Status, sv.ID, r.Level, r.State)
 					}
 				}
@@ -318,8 +335,8 @@ func summarize(views []featureView) {
 			}
 		}
 	}
-	fmt.Printf("features: %d (done %d, limited %d, in_progress %d, todo %d, blocked %d); scenario-levels passing %d/%d\n",
-		len(views), counts["done"], counts["limited"], counts["in_progress"], counts["todo"], counts["blocked"], passed, total)
+	fmt.Printf("features: %d (done %d, limited %d, in_progress %d, todo %d, blocked %d, dropped %d); scenario-levels passing %d/%d\n",
+		len(views), counts["done"], counts["limited"], counts["in_progress"], counts["todo"], counts["blocked"], counts["dropped"], passed, total)
 }
 
 var page = template.Must(template.New("page").Parse(`<!doctype html>
@@ -330,6 +347,7 @@ h1{font-size:20px}h2{font-size:15px;margin:0 0 4px}
 .f{background:#fff;border:1px solid #e3e3e8;border-radius:10px;padding:12px 14px;margin:10px 0}
 .meta{color:#6e6e73;font-size:12px}
 .st{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;margin-left:6px}
+.st-dropped{background:#eee;color:#666}.dropped{color:#666}
 .st-done{background:#d9f5df}.st-in_progress{background:#fff1c7}.st-todo{background:#eee}.st-blocked{background:#ffd9d6}.st-limited{background:#e5dcff}
 table{border-collapse:collapse;margin-top:6px}td,th{padding:2px 10px 2px 0;font-size:12px;text-align:left}
 .passed{color:#137333}.failed,.corrupt{color:#b3261e}.missing{color:#8e8e93}
@@ -338,9 +356,10 @@ table{border-collapse:collapse;margin-top:6px}td,th{padding:2px 10px 2px 0;font-
 {{range .Views}}<div class="f" id="{{.ID}}">
 <h2>{{.ID}}<span class="st st-{{.Status}}">{{.Status}}</span></h2>
 <div>{{.Title}}</div>
+{{if .Notes}}<div>{{.Notes}}</div>{{end}}
 <div class="meta">{{.Milestone}} · requirements: {{range .Requirements}}{{.}} {{end}}· modules: {{range .Modules}}{{.}} {{end}}{{if .DependsOn}}· depends on: {{range .DependsOn}}<a href="#{{.}}">{{.}}</a> {{end}}{{end}}</div>
 <table><tr><th>scenario</th><th>file</th><th>levels</th></tr>
-{{range .Views}}<tr><td>{{.ID}}</td><td>{{if .HasFile}}{{.File}}{{else}}<span class="missing">not written</span>{{end}}</td>
+{{range .Views}}<tr><td>{{.ID}}{{if .Reason}} — {{.Reason}}{{end}}</td><td>{{if .HasFile}}{{.File}}{{else}}<span class="missing">not written</span>{{end}}</td>
 <td>{{range .Results}}<span class="{{.State}}">{{.Level}}:{{.State}}</span> {{end}}</td></tr>{{end}}
 </table></div>{{end}}
 </body></html>`))

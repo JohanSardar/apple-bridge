@@ -117,7 +117,6 @@ Generated from every `level: real` limit in `features.yaml` for T99. Grants are 
 - **IWORK-REAL** — Failed assertions: real_qualification_batched_at_end
 - **SHAZAM-REAL** — Failed assertions: real_qualification_batched_at_end
 - **BT-REAL** — Failed assertions: real_qualification_batched_at_end
-- **AIRPLAY-REAL** — Failed assertions: real_qualification_batched_at_end
 - **CALL-DIAL-REAL** — skipped: prohibited call placement
 
 ## Additional capability prerequisites without a real scenario entry

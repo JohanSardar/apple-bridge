@@ -47,9 +47,6 @@ func (f *fakeApple) macCommand(wire *applepeer.Wire, frame contracts.IPCFrame, f
 	}
 	var readback any
 	switch t.Action.Op {
-	case "mac.airplay_select":
-		f.airplayDevice = args.Device
-		readback = map[string]any{"device": args.Device, "selected": true}
 	case "mac.iwork_export":
 		readback = map[string]any{"app": args.App, "format": args.Format, "data_base64": fakeIWorkExport(args.Format)}
 	case "mac.notify":

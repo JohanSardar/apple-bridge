@@ -24,5 +24,5 @@ func ValidateMacExtrasQuery(q Query) error {
 }
 
 func MacExtrasQuery(op string) bool {
-	return op == "mac.bluetooth_devices" || op == "mac.airplay_routes" || op == "mac.time_machine_status" || op == "mac.recognize_song"
+	return op == "mac.bluetooth_devices" || op == "mac.time_machine_status" || op == "mac.recognize_song"
 }

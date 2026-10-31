@@ -1,9 +1,9 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[9.9 8.98 15.38] cpu_idle=53% cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[12.33 17.94 15.88] cpu_idle=25% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M638W0QJH90SAPQRFY8QF3KV",
+  "run_id": "run_01M69XBST64EX0EVQPA90C8W4G",
   "metrics": {
     "capture_observer_resets": 0
   },
@@ -11,7 +11,7 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-29T07:26:56.242223Z",
+  "at": "2026-10-31T21:20:31.558467Z",
   "assertions": [
     {
       "name": "world_started",
@@ -38,19 +38,11 @@
       "passed": true
     },
     {
-      "name": "mac.airplay_routes_fixture",
-      "passed": true
-    },
-    {
       "name": "mac.time_machine_status_fixture",
       "passed": true
     },
     {
       "name": "mac.recognize_song_fixture",
-      "passed": true
-    },
-    {
-      "name": "mac.airplay_select_readback",
       "passed": true
     },
     {
@@ -79,10 +71,6 @@
     },
     {
       "name": "keynote_text_export",
-      "passed": true
-    },
-    {
-      "name": "mac.airplay_select_invalid_rejected",
       "passed": true
     },
     {

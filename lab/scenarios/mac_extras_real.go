@@ -75,7 +75,7 @@ func runMacExtrasReal(ctx context.Context, s Scenario, level string) (e Evidence
 		}
 		return
 	}
-	op := map[string]string{"TM-STATUS": "mac.time_machine_status", "BT-REAL": "mac.bluetooth_devices", "AIRPLAY-REAL": "mac.airplay_routes", "SHAZAM-REAL": "mac.recognize_song"}[s.ID]
+	op := map[string]string{"TM-STATUS": "mac.time_machine_status", "BT-REAL": "mac.bluetooth_devices", "SHAZAM-REAL": "mac.recognize_song"}[s.ID]
 	args := json.RawMessage(`{}`)
 	if s.ID == "SHAZAM-REAL" {
 		args = json.RawMessage(`{"audio_blob":"W2FiLXRlc3Rd"}`)
@@ -88,7 +88,7 @@ func runMacExtrasReal(ctx context.Context, s Scenario, level string) (e Evidence
 	add("native_operation_available", err == nil && decode == nil && result["limited"] != true)
 	if result["limited"] == true {
 		e.Status = "limited"
-		reasons := map[string]string{"SHAZAM-REAL": "ShazamKit entitlement and fixture qualification required", "BT-REAL": "Native Bluetooth discovery is not implemented", "AIRPLAY-REAL": "Native AirPlay route discovery is not implemented"}
+		reasons := map[string]string{"SHAZAM-REAL": "ShazamKit entitlement and fixture qualification required", "BT-REAL": "Native Bluetooth discovery is not implemented"}
 		e.Conditions = map[string]string{"reason": reasons[s.ID]}
 		return
 	}
@@ -103,48 +103,6 @@ func runMacExtrasReal(ctx context.Context, s Scenario, level string) (e Evidence
 	case "BT-REAL":
 		_, ok := result["devices"].([]any)
 		add("devices_returned", ok)
-	case "AIRPLAY-REAL":
-		routes, ok := result["routes"].([]any)
-		add("routes_returned", ok)
-		e.Metrics = map[string]any{"route_count": len(routes)}
-		add("airplay_route_available", ok && len(routes) > 0)
-		if !ok || len(routes) == 0 {
-			e.Status = "limited"
-			e.Conditions = map[string]string{"reason": "No AirPlay output route is available on the qualification host; selection remains unqualified"}
-			return
-		}
-		original, originalOK := result["current_device"].(string)
-		route, routeOK := routes[0].(map[string]any)
-		device, deviceOK := route["device"].(string)
-		add("restorable_route_identified", originalOK && original != "" && routeOK && deviceOK && device != "")
-		if !originalOK || original == "" || !routeOK || !deviceOK || device == "" {
-			return
-		}
-		command := func(callCtx context.Context, op, device string) bool {
-			args, _ := json.Marshal(map[string]string{"device": device})
-			var record contracts.CommandRecord
-			err := client.Call(callCtx, op, contracts.Command{ID: contracts.NewCommandID(), Args: args, WaitMS: 15000}, &record)
-			return err == nil && record.State == contracts.CommandObserved && contracts.MacCompletionEvidence(record.Evidence, record.RequestHash)
-		}
-		current := func(callCtx context.Context) (string, bool) {
-			var response contracts.QueryResult
-			callErr := client.Call(callCtx, "mac.airplay_routes", contracts.Query{Args: json.RawMessage(`{}`), DeadlineMS: 20000}, &response)
-			var state struct {
-				Device string `json:"current_device"`
-			}
-			decodeErr := json.Unmarshal(response.ResultJSON, &state)
-			return state.Device, callErr == nil && decodeErr == nil
-		}
-		defer func() {
-			cleanup, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-			defer cancel()
-			add("output_device_restored", command(cleanup, "mac.set_output_device", original))
-			actual, readOK := current(cleanup)
-			add("output_restore_truth", readOK && actual == original)
-		}()
-		add("airplay_selection_observed", command(ctx, "mac.airplay_select", device))
-		actual, readOK := current(ctx)
-		add("airplay_selection_truth", readOK && actual == device)
 	case "SHAZAM-REAL":
 		title, ok := result["title"].(string)
 		add("recognized_fixture", ok && title != "")
