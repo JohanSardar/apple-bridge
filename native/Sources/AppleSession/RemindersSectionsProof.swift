@@ -44,6 +44,7 @@ enum RemindersSectionsProof {
             let app = try await NSWorkspace.shared.openApplication(at: url, configuration: configuration)
             try await Task.sleep(for: .seconds(1))
             let root = AXUIElementCreateApplication(app.processIdentifier)
+            AXUIElementSetMessagingTimeout(root, 0.1)
             var ownedSelection: AXUIElement?
             @MainActor func fence() throws {
                 guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier else { throw SourceFailure.conflict }
@@ -58,9 +59,10 @@ enum RemindersSectionsProof {
                 return (result as? NSAttributedString)?.string ?? result as? String ?? ""
             }
             @MainActor func find(_ name: String, role: String? = nil) -> [AXUIElement] {
-                var budget = 6000
+                var budget = 3000
+                let deadline = ContinuousClock.now.advanced(by: .seconds(2))
                 @MainActor func walk(_ element: AXUIElement) -> [AXUIElement] {
-                    guard budget > 0 else { return [] }; budget -= 1
+                    guard budget > 0, ContinuousClock.now < deadline else { return [] }; budget -= 1
                     let actualRole = value(element, kAXRoleAttribute)
                     let labels = [value(element, kAXTitleAttribute), value(element, kAXValueAttribute), value(element, kAXDescriptionAttribute)]
                     if role == nil || actualRole == role {
