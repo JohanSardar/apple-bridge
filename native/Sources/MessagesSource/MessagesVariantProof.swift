@@ -21,7 +21,7 @@ public enum MessagesVariantProof {
         let handle = selected.handle
         let existingBaseline: MessagesSelfTestBaseline?
         do { existingBaseline = selected.chat.isEmpty ? nil : try await MessagesSelfTestBaseline.capture(selected.chat) }
-        catch { return limited("The self conversation baseline could not be verified. Keep Messages available and rerun the check.") }
+        catch { return limited((error as? MessagesSelfTestBaselineFailure)?.description ?? "The self conversation baseline could not be verified. Keep Messages available and rerun the check.") }
         var chat = ""
         let run = "variant_" + UUID().uuidString.replacingOccurrences(of: "-", with: "")
         let tag = "[ab-test " + run + "]"

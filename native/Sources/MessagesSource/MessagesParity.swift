@@ -7,6 +7,7 @@ import SourceSupport
 public enum MessagesParity {
     public static let operations = ["pin", "mute", "set_read_receipts", "recover_chat", "delete_chat_permanently"].map { "messages." + $0 }
     public static func failureReason(_ error: Error) -> String {
+        if let failure = error as? MessagesSelfTestBaselineFailure { return failure.description }
         if let failure = error as? SourceFailure { return String(describing: failure) }
         if let failure = error as? ProbeFailure { return String(describing: failure) }
         if let failure = error as? MessagesUIFailure { return failure.rawValue }

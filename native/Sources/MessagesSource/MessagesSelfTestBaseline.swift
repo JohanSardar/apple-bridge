@@ -3,6 +3,14 @@ import ApplicationServices
 import SourceSupport
 import Decoders
 
+public enum MessagesSelfTestBaselineFailure: Error, CustomStringConvertible {
+    case unreadMessages
+
+    public var description: String {
+        "The self conversation contains unread existing messages. This check cannot open it without changing their read state. Read those messages in Messages before rerunning the check."
+    }
+}
+
 public struct MessagesSelfTestBaseline: Sendable {
     public let chat: String
     public let lastMessageROWID: Int64
@@ -39,7 +47,7 @@ public struct MessagesSelfTestBaseline: Sendable {
     @UIActor
     public static func capture(_ chat: String) throws -> MessagesSelfTestBaseline {
         let reader = try reader()
-        guard try reader.query("SELECT 1 FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? AND m.is_from_me=0 AND m.is_read=0 AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=m.ROWID) LIMIT 1", [chat]).isEmpty else { throw SourceFailure.capabilityUnproven }
+        guard try reader.query("SELECT 1 FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? AND m.is_from_me=0 AND m.is_read=0 AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=m.ROWID) LIMIT 1", [chat]).isEmpty else { throw MessagesSelfTestBaselineFailure.unreadMessages }
         let last = try reader.maximum()
         let digest = try digest(chat, through: last)
         let prepared = try target(chat)
