@@ -98,6 +98,7 @@ type World struct {
 
 func commandOutput(ctx context.Context, name string, args ...string) (string, error) {
 	cmd := exec.CommandContext(ctx, name, args...)
+	cmd.WaitDelay = 2 * time.Second
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	var stderr bytes.Buffer
