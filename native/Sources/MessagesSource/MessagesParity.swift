@@ -52,7 +52,7 @@ public enum MessagesParity {
     static func dismiss(_ session: MessagesUISession) throws { try session.press(MessagesUISession.escape) }
     @UIActor
     static func conversationMenu(_ prepared: Prepared) throws -> (MessagesUISession, [AXUIElement]) {
-        try MessagesAccessibility.openMessage(prepared.nativeState["message_guid"].string, settle: 0.5)
+        try MessagesAccessibility.openMessage(prepared.nativeState["message_guid"].string, settle: 0.5, resetEditor: false)
         let session = try MessagesAccessibility.uiSession()
         var state = prepared.nativeState.object
         state["conversation_target"] = .bool(false)
@@ -155,7 +155,7 @@ public enum MessagesParity {
             operations.map { .object(["operation": .string($0), "proven": .bool(false), "reason": .string(reason)]) }
         }
         do {
-            try MessagesAccessibility.openMessage(prepared.nativeState["message_guid"].string)
+            try MessagesAccessibility.openMessage(prepared.nativeState["message_guid"].string, resetEditor: false)
             let session = try MessagesAccessibility.uiSession(), root = session.root
             let row = try MessagesAccessibility.target(root, prepared: prepared)
             try MessagesAccessibility.contextMenu(row, session: session)

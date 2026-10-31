@@ -6,7 +6,7 @@ import SourceSupport
 extension MessagesParity {
     @UIActor
     static func receiptControl(_ prepared: Prepared) throws -> (MessagesUISession, AXUIElement, Bool) {
-        try MessagesAccessibility.openMessage(prepared.nativeState["message_guid"].string, settle: 0.5)
+        try MessagesAccessibility.openMessage(prepared.nativeState["message_guid"].string, settle: 0.5, resetEditor: false)
         let session = try MessagesAccessibility.uiSession()
         var state = prepared.nativeState.object
         state["conversation_target"] = .bool(false)

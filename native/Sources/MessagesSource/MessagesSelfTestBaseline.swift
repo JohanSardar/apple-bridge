@@ -17,7 +17,7 @@ public struct MessagesSelfTestBaseline: Sendable {
 
     static func target(_ chat: String) throws -> Prepared {
         let reader = try reader()
-        let members = try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [chat]).map { $0["id"] }
+        let members = try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID LEFT JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [chat]).map { $0["id"] }
         guard MessagesSelfTestIsolation.isSelfChat(members, own: try MessagesSelfTestIsolation.accountHandles(database: MessagesDatabase())),
               let row = try reader.query("SELECT c.service_name,m.guid FROM chat c JOIN chat_message_join j ON j.chat_id=c.ROWID JOIN message m ON m.ROWID=j.message_id WHERE c.guid=? AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=m.ROWID) ORDER BY m.ROWID DESC LIMIT 1", [chat]).first,
               let message = try reader.message(row["guid"]), let observation = try reader.messageObservations(message).first else { throw SourceFailure.conflict }
@@ -38,10 +38,12 @@ public struct MessagesSelfTestBaseline: Sendable {
 
     @UIActor
     public static func capture(_ chat: String) throws -> MessagesSelfTestBaseline {
-        let last = try reader().maximum()
+        let reader = try reader()
+        guard try reader.query("SELECT 1 FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? AND m.is_from_me=0 AND m.is_read=0 AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=m.ROWID) LIMIT 1", [chat]).isEmpty else { throw SourceFailure.capabilityUnproven }
+        let last = try reader.maximum()
         let digest = try digest(chat, through: last)
         let prepared = try target(chat)
-        try MessagesAccessibility.openMessage(prepared.nativeState["message_guid"].string, settle: 0.5)
+        try MessagesAccessibility.openMessage(prepared.nativeState["message_guid"].string, settle: 0.5, resetEditor: false)
         let (session, titles) = try MessagesParity.menu(prepared)
         try MessagesParity.dismiss(session)
         guard titles.contains("Show Alerts") != titles.contains("Hide Alerts") else { throw SourceFailure.capabilityUnproven }

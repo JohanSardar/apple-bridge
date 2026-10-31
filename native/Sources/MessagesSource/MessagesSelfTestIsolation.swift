@@ -42,6 +42,10 @@ public enum MessagesSelfTestIsolation {
         tag.range(of: #"^\[ab-test [A-Za-z0-9_-]+\]$"#, options: .regularExpression) != nil && rowID > baseline && text.hasPrefix(tag + " ")
     }
 
+    public static func ownsDeletedSelection(_ deleted: [String], created: [String]) -> Bool {
+        !created.isEmpty && Set(deleted).count == deleted.count && Set(created).count == created.count && Set(deleted) == Set(created)
+    }
+
     public static func accountHandles(database: MessagesDatabase) throws -> [String] {
         let columns = Set(try database.rows("PRAGMA table_info(message)").compactMap { $0["name"] })
         var handles: Set<String> = []
@@ -60,7 +64,7 @@ public enum MessagesSelfTestIsolation {
         let chats = try database.rows("SELECT c.guid,c.chat_identifier FROM chat c WHERE c.service_name='iMessage' AND EXISTS(SELECT 1 FROM chat_message_join j WHERE j.chat_id=c.ROWID) ORDER BY c.ROWID DESC")
         for chat in chats {
             guard let guid = chat["guid"], let identifier = chat["chat_identifier"], !pins.contains(identifier) || pins.last == identifier else { continue }
-            let peers = try database.rows("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", bindings: [guid]).compactMap { $0["id"] }
+            let peers = try database.rows("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID LEFT JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", bindings: [guid]).map { $0["id"] ?? "" }
             guard isSelfChat(peers, own: own), let peer = peers.first,
                   let handle = own.first(where: { isSelfChat([peer], own: [$0]) }) else { continue }
             return (handle, guid)
@@ -69,7 +73,7 @@ public enum MessagesSelfTestIsolation {
     }
 
     public static func unused(_ own: [String], database: MessagesDatabase) throws -> [String] {
-        let participants = try database.rows("SELECT DISTINCT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id").compactMap { $0["id"] }
+        let participants = try database.rows("SELECT DISTINCT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID LEFT JOIN handle h ON h.ROWID=j.handle_id").compactMap { $0["id"] }
         return unused(own, participants: participants)
     }
 }
