@@ -1,5 +1,6 @@
 import Foundation
 import CaptureSource
+import MacSource
 import SourceSupport
 import PDFKit
 
@@ -26,7 +27,9 @@ actor Fake: CaptureProvider {
 }
 
 @main struct Checks {
-    static func main() async throws {
+    @MainActor static func main() async throws {
+        let mac = MacSource()
+        _ = try await mac.prepare(.object(["action": .object(["op": .string("mac.iwork_export"), "args": .object(["app": .string("pages"), "format": .string("text"), "document_blob": .string(Data("[ab-test]".utf8).base64EncodedString())])])]))
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let provider = Fake()

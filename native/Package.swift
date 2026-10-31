@@ -37,7 +37,7 @@ let package = Package(
         .target(name: "SourceSupport"),
         .executableTarget(name: "MusicChecks", dependencies: ["MusicSource", "SourceSupport"]),
         .executableTarget(name: "FocusChecks", dependencies: ["FocusSource", "SourceSupport"]),
-        .executableTarget(name: "CaptureChecks", dependencies: ["CaptureSource", "SourceSupport"]),
+        .executableTarget(name: "CaptureChecks", dependencies: ["CaptureSource", "MacSource", "SourceSupport"]),
         .executableTarget(name: "PhotosChecks", dependencies: ["PhotosSource", "SourceSupport"]),
         .executableTarget(name: "MailChecks", dependencies: ["MailSource", "SourceSupport"]),
         .executableTarget(name: "FilesChecks", dependencies: ["FilesSource", "SourceSupport"]),

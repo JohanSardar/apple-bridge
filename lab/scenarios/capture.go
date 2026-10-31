@@ -132,7 +132,7 @@ func captureChecksFresh(binary string) bool {
 		return false
 	}
 	fresh := true
-	for _, root := range []string{"native/Package.swift", "native/Sources/CaptureSource", "native/Sources/CaptureChecks", "native/Sources/SourceSupport"} {
+	for _, root := range []string{"native/Package.swift", "native/Sources/CaptureSource", "native/Sources/CaptureChecks", "native/Sources/MacSource", "native/Sources/SourceSupport"} {
 		err := filepath.Walk(root, func(_ string, item os.FileInfo, err error) error {
 			if err != nil {
 				return err
