@@ -498,7 +498,7 @@ features:
       - {id: R1-RELEASE-SIM, levels: [sim]}
       - {id: R1-DMG-REAL, levels: [real]}
     limits:
-      - {scenario: R1-DMG-REAL, level: real, reason: 'Dedicated keychain signing, real Sparkle build 2-to-3 installation, temporary-HOME install/uninstall including TCC reset, and TestFlight archive/export pass. Both ASC API keys reject Developer ID Application issuance as Account Holder only, blocking notarization, staple, Gatekeeper and fresh-account first open. TestFlight upload requires creation of the missing ASC app record; all five App Store profiles and the IPA are ready.'}
+      - {scenario: R1-DMG-REAL, level: real, reason: 'Developer ID signing with hardened runtime and secure timestamp passes. TestFlight 0.1.2 build 4 is VALID and INTERNAL_ONLY with no beta groups. Apple notarization submissions for the signed app ZIP and DMG remain In Progress; staple and Gatekeeper qualification await an accepted ticket.'}
   - id: agent.suite
     title: Full MCP agent suite graded by Truth
     requirements: [R-AGENT, R-API]

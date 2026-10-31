@@ -1,21 +1,49 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[13.98 16.08 15.41] cpu_idle=32% cpus=10 other_heavy=0"
+    "summary": "pro: load=[10.73 11.69 18.57] cpu_idle=21% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M69XFTXC7JVMWWHP5NBSR74V",
+  "run_id": "run_01M6A0VNRPW4MSDGRE3NK5EVXJ",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "R1-DMG-REAL",
   "level": "real",
   "passed": false,
-  "git_sha": "76629c420cf6509bda485082962b80b3c03d86ac",
-  "at": "2026-10-31T21:22:43.756792Z",
+  "git_sha": "e585e685680f7629b6c93fdb6f12440961651c34",
+  "at": "2026-10-31T22:21:37.430744Z",
   "assertions": [
     {
       "name": "local_notarized_dmg_available",
+      "passed": true
+    },
+    {
+      "name": "stapled_dmg",
       "passed": false
+    },
+    {
+      "name": "gatekeeper_accepts_dmg",
+      "passed": false
+    },
+    {
+      "name": "private_mount_directory",
+      "passed": true
+    },
+    {
+      "name": "readonly_dmg_mount",
+      "passed": true
+    },
+    {
+      "name": "bundled_app_signature",
+      "passed": true
+    },
+    {
+      "name": "drag_to_applications",
+      "passed": true
+    },
+    {
+      "name": "dmg_unmounted",
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",
@@ -24,6 +52,6 @@
   ],
   "latency": {},
   "hosts": [
-    "air"
+    "pro"
   ]
 }
