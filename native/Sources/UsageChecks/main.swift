@@ -58,6 +58,13 @@ struct UsageChecks {
         guard let createdWAL = UsageInputs(biome, power: 0, zone: zone, previous: removed), createdWAL != removed else { throw SourceFailure.corrupt }
         try FileManager.default.removeItem(at: wal)
         guard UsageInputs(biome, power: 0, zone: zone, previous: createdWAL) != createdWAL else { throw SourceFailure.corrupt }
+        let beforeRewrite = UsageInputs(biome, power: 0, zone: zone)!
+        try Data([9, 8]).write(to: local.appendingPathComponent("1"))
+        guard let rewritten = UsageInputs(biome, power: 0, zone: zone, previous: beforeRewrite), rewritten != beforeRewrite else { throw SourceFailure.corrupt }
+        try FileManager.default.moveItem(at: local.appendingPathComponent("1"), to: local.appendingPathComponent("2"))
+        guard let moved = UsageInputs(biome, power: 0, zone: zone, previous: rewritten), moved != rewritten else { throw SourceFailure.corrupt }
+        try Data([7]).write(to: biome.appendingPathComponent("sync/sync.db"))
+        guard let syncOnly = UsageInputs(biome, power: 0, zone: zone, previous: moved), syncOnly != moved, UsageInputs(biome, power: 0, zone: zone, previous: syncOnly) == syncOnly else { throw SourceFailure.corrupt }
         print("usage decoder, day math and scan inputs: pass")
     }
 }

@@ -50,9 +50,9 @@ public final class UsageSource: Source {
         guard !failure else { throw SourceFailure.unavailable }
         return events
     }
-    private func scan(_ sink: any ObservationSink, live: Bool) async throws {
+    private func scan(_ sink: any ObservationSink, live: Bool, inputs: UsageInputs? = nil) async throws {
         let started = timestamp()
-        let inputs = UsageInputs(root, power: power.count, previous: scanned)
+        let inputs = inputs ?? UsageInputs(root, power: power.count, previous: scanned)
         let base = root.appendingPathComponent("streams/restricted/App.InFocus")
         var current: [String: JSON] = [:]
         let peers = try peers()
@@ -94,17 +94,19 @@ public final class UsageSource: Source {
         }
         let polling = Task {
             while !Task.isCancelled {
-                do { try await Task.sleep(for: .seconds(30)); continuation.yield(()) } catch { return }
+                do { try await Task.sleep(for: .seconds(300)); continuation.yield(()) } catch { return }
             }
         }
         defer { polling.cancel(); watching.cancel(); observers.forEach { center.removeObserver($0) }; continuation.finish() }
         try await scan(sink, live: false)
         for await _ in changes {
             try Task.checkCancellation()
-            if let inputs = UsageInputs(root, power: power.count, previous: scanned), inputs == scanned {
+            try await Task.sleep(for: .seconds(1))
+            let inputs = UsageInputs(root, power: power.count, previous: scanned)
+            if let inputs, inputs == scanned {
                 continue
             }
-            try await scan(sink, live: true)
+            try await scan(sink, live: true, inputs: inputs)
         }
     }
     public func prepare(_ command: JSON) async throws -> Prepared { throw SourceFailure.unsupported }

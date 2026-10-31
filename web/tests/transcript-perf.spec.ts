@@ -1,3 +1,4 @@
+import {timingFloor} from './timing-floor';
 import {test,expect,type WebSocket as Socket} from '@playwright/test';
 import {mkdir,writeFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
@@ -23,7 +24,7 @@ test('WEB-MSG-PERF WEB-MSG-PERF-FRAME a 100k-message transcript fling records bo
     await expect(transcript).toHaveAttribute('aria-busy','false');await expect.poll(async()=>Number(await transcript.getAttribute('data-window-size'))).toBeGreaterThanOrEqual(200);
     expect(population).toBe(100000);page.off('websocket',observe);releases.forEach(release=>release());
     await expect(page.locator('.transcript')).toHaveCSS('transform','none');await page.waitForTimeout(300);await installProbe(page,true,page.context().browser()?.browserType().name()!=='chromium');
-    const stageProfile=Boolean(process.env.AB_WEB_STAGE_PROFILE||process.env.AB_WEB_CPU_PROFILE);
+    const stageProfile=Boolean(process.env.AB_WEB_STAGE_PROFILE);
     if(stageProfile)await page.evaluate(()=>{(window as any).__abWork={phase:'fling',samples:[]};});
     const tracing=await startTrace(page),profileCPU=Boolean(process.env.AB_WEB_CPU_PROFILE&&tracing);
     if(profileCPU){await tracing!.send('Profiler.enable');await tracing!.send('Profiler.start');}
@@ -35,9 +36,9 @@ test('WEB-MSG-PERF WEB-MSG-PERF-FRAME a 100k-message transcript fling records bo
     });
     const cpu=profileCPU?await tracing!.send('Profiler.stop'):undefined;
     const trace=await stopTrace(tracing,'scroll',true),probe=await page.evaluate(()=>(window as any).__listProbe),work=await page.evaluate(()=>(window as any).__abWork?.samples??[]);
-    const {trace:raw,...chromium}=trace??{},metrics={population,stage_profiling:stageProfile,playwright_recording:false,cpu_sampling:profileCPU,frame_work:trace?.frame_work??stats(probe.frames.map((frame:any)=>frame.work)),in_page_frame_work:stats(probe.frames.map((frame:any)=>frame.work)),frame_intervals:stats(probe.frames.slice(1).map((frame:any,index:number)=>frame.at-probe.frames[index].at)),chromium:trace?chromium:null,product_work:work,observer_work:probe.observers??[],long_tasks:probe.longTasks,window_size:Number(await transcript.getAttribute('data-window-size')),rendered:await transcript.locator('[data-message]').count(),endpoint:'script, style and layout during an upward fling in the bounded window over the 100000-message synthetic chat'};
+    const {trace:raw,...chromium}=trace??{},metrics={population,stage_profiling:stageProfile,playwright_recording:false,cpu_sampling:profileCPU,frame_work:trace?.frame_work??stats(probe.frames.map((frame:any)=>frame.work)),in_page_frame_work:stats(probe.frames.map((frame:any)=>frame.work)),frame_intervals:stats(probe.frames.slice(1).map((frame:any,index:number)=>frame.at-probe.frames[index].at)),chromium:trace?chromium:null,product_work:work,observer_work:probe.observers??[],long_tasks:probe.longTasks,window_size:Number(await transcript.getAttribute('data-window-size')),rendered:await transcript.locator('[data-message]').count(),endpoint:'main-thread script, style, layout and paint during an upward fling in the bounded window over the 100000-message synthetic chat'};
     await mkdir('../lab/evidence/web/metrics',{recursive:true});await mkdir('../lab/evidence/private/web',{recursive:true});
-    await writeFile(`../lab/evidence/web/metrics/WEB-MSG-PERF-fling-${info.project.name}.json`,JSON.stringify({digest:createHash('sha256').update(JSON.stringify(metrics)).digest('hex'),counts:{population,frames:metrics.frame_work.samples,window_size:metrics.window_size,rendered:metrics.rendered,long_tasks:metrics.long_tasks.length},frame_budget_pass:metrics.frame_work.p95_ms<=4&&metrics.frame_work.max_ms<=8&&metrics.long_tasks.length===0,complete_frame_budget_proven:false,app_paint_budget_proven:false,native_layout_observed:Boolean(trace)},null,2)+'\n');if(raw)await writeFile(`../lab/evidence/private/web/transcript-fling-${info.project.name}.json`,raw);if(cpu)await writeFile(`../lab/evidence/private/web/transcript-cpu-${info.project.name}.json`,JSON.stringify(cpu));
+    await writeFile(`../lab/evidence/web/metrics/WEB-MSG-PERF-fling-${info.project.name}.json`,JSON.stringify({digest:createHash('sha256').update(JSON.stringify(metrics)).digest('hex'),counts:{population,frames:metrics.frame_work.samples,window_size:metrics.window_size,rendered:metrics.rendered,long_tasks:metrics.long_tasks.length},frame_budget_pass:metrics.frame_work.p95_ms<=4&&metrics.frame_work.max_ms<=8&&metrics.long_tasks.length===0,main_thread_frame_work:metrics.frame_work,timing_floor:await timingFloor(page),complete_frame_budget_proven:false,app_paint_budget_proven:false,native_layout_observed:Boolean(trace)},null,2)+'\n');if(raw)await writeFile(`../lab/evidence/private/web/transcript-fling-${info.project.name}.json`,raw);if(cpu)await writeFile(`../lab/evidence/private/web/transcript-cpu-${info.project.name}.json`,JSON.stringify(cpu));
     expect(metrics.frame_work.samples).toBeGreaterThanOrEqual(100);expect(metrics.window_size).toBeLessThanOrEqual(500);expect(metrics.rendered).toBeLessThan(100);
 });
 

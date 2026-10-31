@@ -1,9 +1,10 @@
 import { expect, type Page } from '@playwright/test';
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { timingFloor } from './timing-floor';
 export async function observeApp(page: Page, root: string) {
     await page.addInitScript(root => {
-        const probe = { trustedInputs: 0, events: [] as { processing: number, presentation: number }[], longTasks: [] as number[], paints: [] as number[], supported: PerformanceObserver.supportedEntryTypes, warmContentAt: null as number | null };
+        const probe = { trustedInputs: 0, events: [] as { name: string, processing: number, presentation: number }[], longTasks: [] as number[], paints: [] as number[], supported: PerformanceObserver.supportedEntryTypes, warmContentAt: null as number | null };
         (window as any).__appPerformance = probe;
         const content = new MutationObserver(() => {
             if (probe.warmContentAt !== null || !document.querySelector('.calendar-inspector[open] h3')) return;
@@ -17,7 +18,7 @@ export async function observeApp(page: Page, root: string) {
         if (probe.supported.includes('event')) new PerformanceObserver(list => {
             for (const entry of list.getEntries()) {
                 const event = entry as PerformanceEventTiming;
-                if (event.target instanceof Element && event.target.closest(root)) probe.events.push({ processing: event.processingEnd - event.startTime, presentation: event.duration });
+                if (event.target instanceof Element && event.target.closest(root)) probe.events.push({ name: event.name, processing: event.processingEnd - event.startTime, presentation: event.duration });
             }
         }).observe({ type: 'event', durationThreshold: 16 } as PerformanceObserverInit);
         if (probe.supported.includes('longtask')) new PerformanceObserver(list => probe.longTasks.push(...list.getEntries().map(entry => entry.duration))).observe({ type: 'longtask' });
@@ -34,6 +35,9 @@ export async function recordApp(page: Page, scenario: string, project: string) {
         trusted_inputs: probe.trustedInputs,
         event_timing_supported: probe.supported.includes('event'),
         event_timing_samples: processing.length,
+        reported_clicks: probe.events.filter((value: any) => value.name === 'click').length,
+        minimum_reported_duration_ms: probe.events.length ? Math.min(...probe.events.map((value: any) => value.presentation)) : null,
+        timing_floor: await timingFloor(page),
         observed_event_processing_budget_pass: processing.length > 0 && processing[Math.ceil(processing.length * .95) - 1] <= 8,
         event_presentation_over_8ms: probe.events.filter((value: any) => value.presentation > 8).length,
         long_tasks_supported: probe.supported.includes('longtask'),

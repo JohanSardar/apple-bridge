@@ -1237,6 +1237,10 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 	if len(scenarios) == 0 {
 		return fmt.Errorf("no scenarios")
 	}
+	scenarios, err = expandIdleSuite(scenarios)
+	if err != nil {
+		return err
+	}
 	packagingOnly := true
 	for _, scenario := range scenarios {
 		directShortcut := scenario.ID == "SC-RUN-REAL" || scenario.Feature == "clock.pack"
@@ -1253,6 +1257,15 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 				return err
 			}
 			break
+		}
+	}
+	if level == "real" {
+		allIdle := true
+		for _, s := range scenarios {
+			allIdle = allIdle && idleScenario(s.ID)
+		}
+		if allIdle {
+			return idleSuite(ctx, scenarios, asJSON)
 		}
 	}
 	failed := false

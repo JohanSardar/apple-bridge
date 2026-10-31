@@ -57,13 +57,13 @@ export function traceWork(raw:string,phase:'scroll'|'input'|'action'='scroll',na
     const ranges=phase==='scroll'?marks.slice(0,-1).map((mark,index)=>[mark,marks[index+1]]):marks.map((mark,index)=>[phase==='action'?{...mark,ts:dispatches[index].ts+dispatches[index].dur!}:mark,events.find(event=>event.name===mark.name.replace('-start-','-end-'))!]);
     if(ranges.some(range=>!range[1]))throw new Error('Chromium input frame endpoint missing');
     const first=ranges[0][0],last=ranges.at(-1)![1];
-    const names=new Set(['FunctionCall','EvaluateScript','EventDispatch','RunMicrotasks','TimerFire','FireAnimationFrame','UpdateLayoutTree','Layout']);
+    const names=new Set(['FunctionCall','EvaluateScript','EventDispatch','RunMicrotasks','TimerFire','FireAnimationFrame','UpdateLayoutTree','Layout','PrePaint','Paint','Layerize','UpdateLayerTree','HitTest']);
     const spans=events.filter(event=>event.pid===first.pid&&event.tid===first.tid&&event.ph==='X'&&event.dur&&names.has(event.name)&&event.ts+event.dur!>first.ts&&event.ts<last.ts).map(event=>[event.ts,event.ts+event.dur!] as const).sort((a,b)=>a[0]-b[0]);
     const merged:number[][]=[];
     for(const [start,end] of spans){const previous=merged.at(-1);if(previous&&previous[1]>=start)previous[1]=Math.max(previous[1],end);else merged.push([start,end]);}
     const work=ranges.map(([begin,finish])=>merged.reduce((sum,[start,end])=>sum+Math.max(0,Math.min(end,finish.ts)-Math.max(start,begin.ts)),0)/1000);
     const category=(name:string)=>events.filter(event=>event.pid===first.pid&&event.tid===first.tid&&event.name===name&&event.ph==='X'&&event.ts>=first.ts&&event.ts<=last.ts).reduce((sum,event)=>sum+(event.dur??0),0)/1000;
-    return {frame_work:stats(work),frames:work,dispatch_processing_ms:dispatches.map(event=>event.dur!/1000),script_style_layout_ms:{layout:category('Layout'),style:category('UpdateLayoutTree'),function_calls:category('FunctionCall')},endpoint:phase==='action'?'union of Chromium main-thread script/style/layout after input dispatch through the result frame':nativeFrames?'union of Chromium main-thread script/style/layout spans between completed native frames':'union of Chromium main-thread script/style/layout spans between rAF marks',trace:raw};
+    return {frame_work:stats(work),frames:work,dispatch_processing_ms:dispatches.map(event=>event.dur!/1000),script_style_layout_ms:{layout:category('Layout'),style:category('UpdateLayoutTree'),function_calls:category('FunctionCall'),prepaint:category('PrePaint'),paint:category('Paint'),layerize:category('Layerize')},endpoint:phase==='action'?'union of Chromium main-thread script/style/layout/paint after input dispatch through the result frame':nativeFrames?'union of Chromium main-thread script/style/layout/paint spans between completed native frames':'union of Chromium main-thread script/style/layout/paint spans between rAF marks',trace:raw};
 }
 
 export function resultFrames(raw:string){
