@@ -99,7 +99,10 @@ private struct ClockTimerUI {
     }
 
     private func name(_ element: AXUIElement) -> String {
-        attribute(element, kAXTitleAttribute) as? String ?? attribute(element, kAXDescriptionAttribute) as? String ?? ""
+        for key in [kAXTitleAttribute, kAXDescriptionAttribute] {
+            if let value = attribute(element, key) as? String, !value.isEmpty { return value }
+        }
+        return ""
     }
 
     private func find(_ element: AXUIElement, role: String? = nil, identifier: String? = nil) -> [AXUIElement] {

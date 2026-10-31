@@ -60,7 +60,10 @@ enum BridgeIntentHost {
                 budget -= 1
                 let role = attribute(element, kAXRoleAttribute) as? String ?? ""
                 if role == kAXStaticTextRole || role == kAXButtonRole {
-                    let text = (attribute(element, kAXValueAttribute) as? String).flatMap { $0.isEmpty ? nil : $0 } ?? attribute(element, kAXTitleAttribute) as? String ?? ""
+                    var text = ""
+                    for key in [kAXValueAttribute, kAXTitleAttribute, kAXDescriptionAttribute] {
+                        if let value = attribute(element, key) as? String, !value.isEmpty { text = value; break }
+                    }
                     if !text.isEmpty { texts.append(text); if role == kAXButtonRole { buttons.append(text) } }
                 }
                 for child in attribute(element, kAXChildrenAttribute) as? [AXUIElement] ?? [] { visit(child, depth + 1) }
