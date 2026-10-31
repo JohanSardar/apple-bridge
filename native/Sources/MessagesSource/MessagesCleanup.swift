@@ -2,6 +2,10 @@ import Foundation
 import SourceSupport
 
 public enum MessagesCleanup {
+    public static func allowsLateEcho(rowID: Int64, baseline: Int64, text: String, tag: String) -> Bool {
+        rowID > baseline && tag.range(of: #"^\[ab-test [A-Za-z0-9_-]+\]$"#, options: .regularExpression) != nil && text.hasPrefix(tag)
+    }
+    public static func removedOwnedIDs(before: Set<String>, after: Set<String>) -> Set<String> { before.subtracting(after) }
     public static func run(_ arguments: [String]) async throws -> Data {
         var tag = ""
         if let index = arguments.firstIndex(of: "--tag") {
@@ -108,7 +112,7 @@ public enum MessagesCleanup {
             var result: [(String, JSON)] = []
             for key in rows {
                 if ownedOnly {
-                    guard (ownedIDs.contains(key["guid"]) || mediaByMessage[key["guid"]] != nil), let baseline = ownedBaseline,
+                    guard let baseline = ownedBaseline,
                           let position = try reader.query("SELECT ROWID AS position FROM message WHERE guid=?", [key["guid"]]).first,
                           position.integer("position") > baseline else { continue }
                 }
@@ -120,6 +124,7 @@ public enum MessagesCleanup {
                 if ownedOnly {
                     let allPeers = try reader.query("SELECT DISTINCT h.id FROM message m JOIN chat_message_join cm ON cm.message_id=m.ROWID JOIN chat_handle_join j ON j.chat_id=cm.chat_id JOIN handle h ON h.ROWID=j.handle_id WHERE m.guid=?", [key["guid"]])
                     guard !allPeers.isEmpty, allPeers.allSatisfy({ own.contains(MessagesProbes.normalize($0["id"])) }) else { continue }
+                    guard ownedIDs.contains(key["guid"]) || mediaByMessage[key["guid"]] != nil || Self.allowsLateEcho(rowID: row.integer("row_position"), baseline: ownedBaseline ?? Int64.max, text: item.2["text"] as? String ?? "", tag: tag) else { continue }
                 }
                 var fields = item.2
                 if let names = mediaByMessage[row["guid"]], peers.allSatisfy({ own.contains(MessagesProbes.normalize($0["id"])) }) {
@@ -168,15 +173,18 @@ public enum MessagesCleanup {
                 _ = try await MessagesAccessibility.perform(prepared)
             } catch { failure = phase + ":" + String(describing: error); break }
             let deadline = ContinuousClock.now.advanced(by: .seconds(ownedOnly ? 10 : 2))
-            var after = remaining.count
+            let beforeIDs = Set(remaining.map { $0.0 })
+            var after = remaining
+            var removed: Set<String> = []
             repeat {
-                after = try candidates().count
-                if after < remaining.count { break }
+                after = try candidates()
+                removed = Self.removedOwnedIDs(before: beforeIDs, after: Set(after.map { $0.0 }))
+                if !removed.isEmpty { break }
                 try await Task.sleep(for: .milliseconds(50))
             } while ContinuousClock.now < deadline
-            guard after < remaining.count else { failure = "native_deletion_not_observed"; break }
-            deleted += remaining.count - after
-            progress(after,"deleting")
+            guard !removed.isEmpty else { failure = "native_deletion_not_observed"; break }
+            deleted += removed.count
+            progress(after.count,"deleting")
         }
         let remaining = try candidates().count
         progress(remaining,failure.isEmpty ? "finished" : failure)

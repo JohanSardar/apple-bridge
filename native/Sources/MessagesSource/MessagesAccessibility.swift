@@ -96,7 +96,8 @@ enum MessagesAccessibility {
             throw MessagesUIFailure.targetUnavailable
         }
         guard targets.count == 1 || prepared.nativeState["cleanup_authorized"].bool else { throw MessagesUIFailure.targetAmbiguous }
-        return targets[0]
+        let directed = targets.filter { value($0, kAXDescriptionAttribute).hasPrefix(outgoing ? "Your iMessage," : "iMessage,") }
+        return directed.first ?? targets[0]
     }
     private static func focus(_ root: AXUIElement) -> String {
         var result: CFTypeRef?

@@ -18,6 +18,9 @@ func messageSendVariant(id string) string {
 
 func runMessagesVariantReal(ctx context.Context, s Scenario, e Evidence) (result Evidence) {
 	result = e
+	if s.ID == "MSG-AUDIO-MESSAGE" && os.Getenv("APPLE_BRIDGE_MESSAGE_CLEANUP_RUN") != "" {
+		return runMessagesCleanupRecovery(ctx, e)
+	}
 	before, err := cleanupSnapshot(ctx, "messages")
 	if err != nil {
 		result.Status = "limited"

@@ -99,6 +99,11 @@ struct MessagesVariantChecks {
             sent["text"] = .string("")
             sent["audio"] = .object(["is_audio_message": .bool(true)])
             checks["native_audio_flag_required"] = MessagesSendVariants.matches(args, data: .object(sent))
+            checks["late_echo_does_not_hide_deletion"] = MessagesCleanup.removedOwnedIDs(before: ["owned-a", "owned-b"], after: ["owned-b", "owned-echo"]) == ["owned-a"]
+            checks["new_echo_alone_is_not_deletion"] = MessagesCleanup.removedOwnedIDs(before: ["owned-a"], after: ["owned-a", "owned-echo"]).isEmpty
+            checks["late_tagged_echo_owned"] = MessagesCleanup.allowsLateEcho(rowID: 11, baseline: 10, text: "[ab-test run_current] fixture", tag: "[ab-test run_current]")
+            checks["earlier_residue_refused"] = !MessagesCleanup.allowsLateEcho(rowID: 9, baseline: 10, text: "[ab-test run_current] fixture", tag: "[ab-test run_current]")
+            checks["other_run_echo_refused"] = !MessagesCleanup.allowsLateEcho(rowID: 11, baseline: 10, text: "[ab-test run_earlier] fixture", tag: "[ab-test run_current]")
             sent["audio"] = .object(["is_audio_message": .bool(false)])
             checks["ordinary_attachment_rejected"] = !MessagesSendVariants.matches(args, data: .object(sent))
             sent["audio"] = .object(["is_audio_message": .bool(true)])
