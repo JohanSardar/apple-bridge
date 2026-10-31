@@ -86,7 +86,8 @@ public final class CalendarStoreEnrichment {
             } else {
                 for field in Self.fields.subtracting(["store_status", "store_coverage"]) {
                     if field == "structured_location", let native = data[field] { set(field, native); continue }
-                    set(field, .null, status: "unsupported", reason: ready ? "calendar_store_identity_unverified" : "calendar_store_unavailable_or_schema_unverified") }
+                    set(field, .null, status: "unsupported", reason: ready ? "calendar_store_identity_unverified" : "calendar_store_unavailable_or_schema_unverified")
+                }
                 data["store_status"] = .string("unsupported")
             }
             data["store_coverage"] = .object(coverage)

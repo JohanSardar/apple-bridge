@@ -44,6 +44,7 @@ enum CalendarParityProof {
             try store.save(event, span: .thisEvent, commit: true)
             let identifier = event.calendarItemIdentifier, external = event.calendarItemExternalIdentifier ?? ""
             let eventTitle = event.title ?? ""
+            let eventStart = event.startDate!, eventEnd = event.endDate!
             let database = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Group Containers/group.com.apple.calendar/Calendar.sqlitedb")
             func row() throws -> [String: JSON]? {
                 try CalendarStoreSnapshot.read(path: database.path).event(identifier: identifier, external: external, calendar: calendarID, detached: false)
@@ -76,65 +77,65 @@ enum CalendarParityProof {
             checks["invitation_response_readback"] = .bool(false)
             reasons["invitation"] = .string("This run has no owned incoming invitation. EventKit creates ordinary events and exposes attendees and response status as read-only; existing invitations were left untouched.")
             do {
-            stage = "travel_time"
-            try await ui.revealTravel()
-            try ui.travelPopup()
-            try ui.pressAny(["15 minutes", "15 Minutes"], role: kAXMenuItemRole)
-            try ui.key(48)
-            try await ui.commit()
-            checks["travel_time_readback"] = .bool(try await observed { current in
-                let value = current["travel_time"] ?? .null
-                return value == .number(900) || value == .number(15)
-            })
+                stage = "travel_time"
+                try await ui.revealTravel()
+                try ui.travelPopup()
+                try ui.pressAny(["15 minutes", "15 Minutes"], role: kAXMenuItemRole)
+                try ui.key(48)
+                try await ui.commit()
+                checks["travel_time_readback"] = .bool(try await observed { current in
+                    let value = current["travel_time"] ?? .null
+                    return value == .number(900) || value == .number(15)
+                })
             } catch {
-                reasons["travel_time"] = .string("Calendar could not change travel time on the run-owned event (" + String(describing: error) + ").")
+                reasons["travel_time"] = .string("Calendar could not change travel time on the test event. Keep Calendar open and retry this check.")
             }
             do {
-            stage = "attachment_add"
-            try await ui.openOwnedEvent()
-            let filename = "ab-test-" + UUID().uuidString + ".txt"
-            let file = root.appendingPathComponent(filename)
-            let bytes = Data("[ab-test] calendar attachment".utf8)
-            try bytes.write(to: file)
-            let digest = SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined()
-            if ui.find("Add Attachment…", role: kAXButtonRole).isEmpty {
-                try await ui.menu("Edit", ["Attach File…", "Add Attachment…", "Attach File..."])
-            } else { try ui.press("Add Attachment…", role: kAXButtonRole) }
-            try await Task.sleep(for: .milliseconds(200))
-            try ui.key(5, flags: [.maskCommand, .maskShift])
-            try await Task.sleep(for: .milliseconds(200))
-            try ui.setFocused(file.path)
-            try ui.key(36)
-            try await Task.sleep(for: .milliseconds(200))
-            try ui.dialogPress("Open")
-            try await ui.commit()
-            let reader = CalendarStoreEnrichment()
-            let observation: [String: JSON] = ["event": .object(["collection": .string("calendar.event"), "native_key": .string(identifier), "data": .object(["calendar_id": .object(["$ref": .object(["native_key": .string(calendarID)])])])])]
-            let lookups: [String: JSON] = [identifier: .object(["external": .string(external)])]
-            var attached = false
-            for _ in 0..<60 {
-                let captured = await reader.enrich(observation, lookups: lookups, force: true)
-                attached = captured["event"]?["data"]["attachments"].array.contains { $0["filename"].string == filename && $0["blob"]["digest"].string == digest } == true
-                if attached { break }
-                try await Task.sleep(for: .milliseconds(100))
-            }
-            checks["attachment_add_readback"] = .bool(attached)
-            stage = "attachment_remove"
-            try await ui.openOwnedEvent()
-            try ui.contextMenu(filename)
-            try ui.pressAny(["Remove Attachment", "Delete Attachment"], role: kAXMenuItemRole)
-            try await ui.commit()
-            var removed = false
-            for _ in 0..<60 {
-                let captured = await reader.enrich(observation, lookups: lookups, force: true)
-                let current = try row()
-                removed = captured["event"]?["data"]["attachments"] == .array([]) && current != nil
-                if removed { break }
-                try await Task.sleep(for: .milliseconds(100))
-            }
-            checks["attachment_remove_readback"] = .bool(removed)
+                stage = "attachment_add"
+                try await ui.openOwnedEvent()
+                let filename = "ab-test-" + UUID().uuidString + ".txt"
+                let file = root.appendingPathComponent(filename)
+                let bytes = Data("[ab-test] calendar attachment".utf8)
+                try bytes.write(to: file)
+                let digest = SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined()
+                if ui.find("Add Attachment…", role: kAXButtonRole).isEmpty {
+                    try await ui.menu("Edit", ["Attach File…", "Add Attachment…", "Attach File..."])
+                } else { try ui.press("Add Attachment…", role: kAXButtonRole) }
+                try await Task.sleep(for: .milliseconds(200))
+                try ui.key(5, flags: [.maskCommand, .maskShift])
+                try await Task.sleep(for: .milliseconds(200))
+                try ui.setFocused(file.path)
+                try ui.key(36)
+                try await Task.sleep(for: .milliseconds(200))
+                try ui.dialogPress("Open")
+                try await ui.commit()
+                let reader = CalendarStoreEnrichment()
+                let observation: [String: JSON] = ["event": .object(["collection": .string("calendar.event"), "native_key": .string(identifier), "data": .object(["calendar_id": .object(["$ref": .object(["native_key": .string(calendarID)])])])])]
+                let lookups: [String: JSON] = [identifier: .object(["external": .string(external)])]
+                var attached = false
+                for _ in 0..<60 {
+                    let captured = await reader.enrich(observation, lookups: lookups, force: true)
+                    attached = captured["event"]?["data"]["attachments"].array.contains { $0["filename"].string == filename && $0["blob"]["digest"].string == digest } == true
+                    if attached { break }
+                    try await Task.sleep(for: .milliseconds(100))
+                }
+                checks["attachment_add_readback"] = .bool(attached)
+                stage = "attachment_remove"
+                try await ui.openOwnedEvent()
+                try ui.contextMenu(filename)
+                try ui.pressAny(["Remove Attachment", "Delete Attachment"], role: kAXMenuItemRole)
+                try await ui.commit()
+                var removed = false
+                for _ in 0..<60 {
+                    let captured = await reader.enrich(observation, lookups: lookups, force: true)
+                    let current = try row()
+                    removed = captured["event"]?["data"]["attachments"] == .array([]) && current != nil
+                    if removed { break }
+                    try await Task.sleep(for: .milliseconds(100))
+                }
+                checks["attachment_remove_readback"] = .bool(removed)
             } catch {
-                reasons["attachments"] = .string("Calendar could not change attachments on the run-owned event (" + String(describing: error) + ").")
+                reasons["attachments"] = .string("Calendar could not change attachments on the test event. Keep Calendar open and retry this check.")
             }
             stage = "invitation"
             if let attendee = identities.sorted().last, let organizer = identities.sorted().first {
@@ -143,13 +144,13 @@ enum CalendarParityProof {
                 let invitationUI = CalendarFixtureUI(app: app, title: invitationTitle)
                 let date = DateFormatter()
                 date.locale = Locale(identifier: "en_US_POSIX"); date.timeZone = TimeZone(secondsFromGMT: 0); date.dateFormat = "yyyyMMdd'T'HHmmss'Z'"
-                let lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//AppleBridge//Calendar parity//EN", "METHOD:REQUEST", "BEGIN:VEVENT", "UID:" + UUID().uuidString, "DTSTAMP:" + date.string(from: Date()), "DTSTART:" + date.string(from: event.startDate), "DTEND:" + date.string(from: event.endDate), "SUMMARY:" + invitationTitle, "ORGANIZER:mailto:" + organizer, "ATTENDEE;RSVP=TRUE;PARTSTAT=NEEDS-ACTION:mailto:" + attendee, "END:VEVENT", "END:VCALENDAR", ""]
+                let lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//AppleBridge//Calendar parity//EN", "METHOD:REQUEST", "BEGIN:VEVENT", "UID:" + UUID().uuidString, "DTSTAMP:" + date.string(from: Date()), "DTSTART:" + date.string(from: eventStart), "DTEND:" + date.string(from: eventEnd), "SUMMARY:" + invitationTitle, "ORGANIZER:mailto:" + organizer, "ATTENDEE;RSVP=TRUE;PARTSTAT=NEEDS-ACTION:mailto:" + attendee, "END:VEVENT", "END:VCALENDAR", ""]
                 let invitationFile = root.appendingPathComponent("[ab-test]-invitation.ics")
                 try Data(lines.joined(separator: "\r\n").utf8).write(to: invitationFile)
                 try await ui.importInvitation(invitationFile, calendarTitle: title)
                 store.reset()
                 guard let importedCalendar = store.calendar(withIdentifier: calendarID) else { throw SourceFailure.unavailable }
-                let query = store.predicateForEvents(withStart: event.startDate.addingTimeInterval(-1), end: event.endDate.addingTimeInterval(1), calendars: [importedCalendar])
+                let query = store.predicateForEvents(withStart: eventStart.addingTimeInterval(-1), end: eventEnd.addingTimeInterval(1), calendars: [importedCalendar])
                 let invitations = store.events(matching: query).filter { $0.title == invitationTitle }
                 guard invitations.count == 1, let invitation = invitations.first,
                       let participants = invitation.attendees, participants.count == 1,
@@ -177,7 +178,7 @@ enum CalendarParityProof {
                 reasons["invitation"] = .string("EventKit could not identify Johan's own account attendee address. No invitation was created or sent.")
             }
         } catch {
-            reasons[stage] = .string("Calendar could not verify " + stage + " on the test event (" + String(describing: error) + ").")
+            reasons[stage] = .string("Calendar could not verify " + stage + " on the test event. Keep Calendar open and retry this check.")
             if let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.iCal").first {
                 let ui = CalendarFixtureUI(app: app, title: title + " event")
                 for name in [title + " event", "travel time", "travel time:", "Travel Time", "Add Alert, Repeat, or Travel Time", "Add Attachment…", "Add notes, URL or attachments", "Accept", "Maybe", "Decline", "None", "Done", "Send", "Open", "Cancel"] {
@@ -333,7 +334,10 @@ final class CalendarFixtureUI {
         guard matches.count == 1, AXUIElementPerformAction(matches[0], kAXPressAction as CFString) == .success else { throw SourceFailure.unsupported }
     }
 
-    func hasOwnedInspector() -> Bool { find(title, role: kAXTextFieldRole).count + find(title, role: kAXTextAreaRole).count == 1 }
+    func hasOwnedInspector() -> Bool {
+        let fields = find(title, role: kAXTextFieldRole).filter { value($0, kAXSubroleAttribute) != kAXSearchFieldSubrole }
+        return fields.count + find(title, role: kAXTextAreaRole).count == 1
+    }
 
     func fence() throws {
         guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier, hasOwnedInspector() else { throw SourceFailure.conflict }
