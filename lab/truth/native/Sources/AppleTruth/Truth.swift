@@ -53,7 +53,11 @@ struct AppleTruth {
                     if verb == "observe", let ids = request["verify_deleted_ids"] as? [String] {
                         response = ["status":"verified", "deletion_verified":try notesDeletionVerified(ids, path: request["snapshot_path"] as? String)]
                     } else {
-                        response = request["sqlite"] as? Bool == true ? try notesSQLite(path: request["snapshot_path"] as? String) : try notes(verb, request)
+                        if request["sqlite"] as? Bool == true {
+                            response = try notesSQLite(path: request["snapshot_path"] as? String)
+                        } else {
+                            response = try await notes(verb, request)
+                        }
                     }
                 } else if request["source"] as? String == "messages" {
                     guard verb == "observe" else { throw TruthFailure.invalid }

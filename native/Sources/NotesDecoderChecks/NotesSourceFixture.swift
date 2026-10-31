@@ -95,16 +95,26 @@ enum NotesSourceFixture {
         guard zeroIndent["data"]["editable"].string == "plain", indented["data"]["editable"].string == "none" else { throw Invalid.projection }
         let plainAction = JSON.object(["op": .string("notes.update"), "native_key": plain["native_key"], "note_args": .object(["mode": .string("append"), "plain_text": .string("[ab-test] append")])])
         let beforeSync = try await source.prepare(.object(["action": plainAction, "expected_state": plain["data"]]))
-        try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZSERVERRECORDDATA=X'010203' WHERE ZIDENTIFIER='native-plain'")
+        try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZSERVERRECORDDATA=X'010203',ZGENERATION='cloud-generation' WHERE ZIDENTIFIER='native-plain'")
         try source.validate(beforeSync)
         _ = try await source.prepare(.object(["action": plainAction, "expected_state": plain["data"]]))
         try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZTITLE1='[ab-test] Changed' WHERE ZIDENTIFIER='native-plain'")
         do { try source.validate(beforeSync); throw Invalid.boundary }
         catch SourceFailure.conflict {}
         try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZTITLE1='[ab-test] Synthetic' WHERE ZIDENTIFIER='native-plain'")
+        for (field, changed, restored) in [("ZFOLDER", "10", "12"), ("ZISPASSWORDPROTECTED", "1", "0")] {
+            try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET \(field)=\(changed) WHERE ZIDENTIFIER='native-plain'")
+            do { try source.validate(beforeSync); throw Invalid.boundary }
+            catch SourceFailure.conflict {}
+            try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET \(field)=\(restored) WHERE ZIDENTIFIER='native-plain'")
+        }
+        try sql("UPDATE ZICNOTEDATA SET ZDATA=? WHERE Z_PK=3", blob: body)
+        do { try source.validate(beforeSync); throw Invalid.boundary }
+        catch SourceFailure.conflict {}
+        try sql("UPDATE ZICNOTEDATA SET ZDATA=? WHERE Z_PK=3", blob: Data(contentsOf: fixtures.appendingPathComponent("native-plain.gz")))
         try await source.reconcile(into: sink)
         try await source.waitForHydration()
-        print("Notes conflict checks ignore cloud bookkeeping and reject changed titles")
+        print("Notes conflict checks ignore cloud bookkeeping and reject changed titles, bodies, folders and locks")
         for candidate in [plain, zeroIndent, rich, indented] {
             let action = JSON.object(["op": .string("notes.update"), "native_key": candidate["native_key"], "mode": .string("append"), "plain_text": .string("[ab-test] append")])
             do {

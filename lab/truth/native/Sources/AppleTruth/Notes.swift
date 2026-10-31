@@ -5,7 +5,7 @@ import Carbon
 
 extension AppleTruth {
     @MainActor
-    static func notes(_ verb: String, _ request: [String: Any]) throws -> [String: Any] {
+    static func notes(_ verb: String, _ request: [String: Any]) async throws -> [String: Any] {
         guard verb == "fixture" || verb == "observe", let language = OSALanguage(forName: "JavaScript") else { throw NotesTruthFailure.invalid }
         let target = NSAppleEventDescriptor(bundleIdentifier: "com.apple.Notes")
         guard AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false) == noErr else { throw TruthFailure.permissionMissing }
@@ -124,7 +124,7 @@ extension AppleTruth {
             var verified = false
             for _ in 0..<600 {
                 if try notesDeletionVerified(ids) { verified = true; break }
-                Thread.sleep(forTimeInterval: 0.05)
+                try await Task.sleep(for: .milliseconds(50))
             }
             guard verified else { throw NSError(domain: "NotesCleanup", code: 1, userInfo: [NSLocalizedDescriptionKey: "notestore_deletion_unverified"]) }
         }
