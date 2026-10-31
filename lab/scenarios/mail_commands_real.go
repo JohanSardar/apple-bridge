@@ -45,7 +45,10 @@ func mailRealProof(ctx context.Context, w *world.World, scenario, tag string) (m
 				return nil, err
 			}
 			if !proof["cleanup_passed"] {
-				return nil, fmt.Errorf("Mail could not finish cleaning up the selected earlier test run. Open Mail and try again")
+				if !proof["cleanup_outgoing_clear"] {
+					return nil, fmt.Errorf("Mail still has an earlier test draft open. Open Mail, close the tagged test draft, and try again")
+				}
+				return nil, fmt.Errorf("Mail still has an earlier test message in a mailbox. Open Mail, let mailbox sync finish, and try again")
 			}
 		}
 	}
