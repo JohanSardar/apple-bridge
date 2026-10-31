@@ -21,7 +21,7 @@ func runClockReal(ctx context.Context, s Scenario, initial Evidence, pack clockp
 		e.Conditions = map[string]string{"reason": reason}
 		return e
 	}
-	stop, hostErr := startBridgeIntentHost(ctx)
+	app, stop, hostErr := startBridgeIntentHost(ctx)
 	add("current_helper_intent_host_ready", hostErr == nil)
 	if hostErr != nil {
 		return e
@@ -42,6 +42,9 @@ func runClockReal(ctx context.Context, s Scenario, initial Evidence, pack clockp
 	add("unique_clock_pack_installed", matches == 1)
 	if matches != 1 {
 		return limited("Install exactly one AB Clock shortcut before retrying. No Clock changes were made.")
+	}
+	if s.ID == "CLK-TIMER-REAL" {
+		pack.Runner = clockTimerNativeRunner{app: app}
 	}
 	return runClockSession(ctx, s, e, pack)
 }

@@ -36,7 +36,7 @@ enum BridgeIntentHost {
         let line = text.replacingOccurrences(of: "\n", with: " ") + "\n"
         if let handle = try? FileHandle(forWritingTo: file) {
             defer { try? handle.close() }
-            try? handle.seekToEnd()
+            _ = try? handle.seekToEnd()
             try? handle.write(contentsOf: Data(line.utf8))
         } else { try? Data(line.utf8).write(to: file, options: .atomic) }
     }

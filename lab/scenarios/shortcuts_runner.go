@@ -30,7 +30,7 @@ func runShortcutsRunner(ctx context.Context, s Scenario, level string) Evidence 
 		e.Passed = e.Passed && passed
 	}
 	if s.ID == "SC-RUN-REAL" && level != "sim" {
-		stop, hostErr := startBridgeIntentHost(ctx)
+		_, stop, hostErr := startBridgeIntentHost(ctx)
 		add("current_helper_intent_host_ready", hostErr == nil)
 		if hostErr != nil {
 			return e

@@ -19,7 +19,7 @@ let sourceTargets: [Target] = [
     .target(name: "VoicemailSource", dependencies: ["SourceSupport"]),
     .target(name: "VisionSource", dependencies: ["SourceSupport"]),
     .target(name: "PDFSource", dependencies: ["SourceSupport"]),
-    .target(name: "ShortcutsSource", dependencies: ["SourceSupport"]),
+    .target(name: "ShortcutsSource", dependencies: ["SourceSupport", "ClockNative"]),
     .target(name: "ContactsSource", dependencies: ["SourceSupport", "ContactsHistory", "MediaDerivatives"]),
     .target(name: "UsageSource", dependencies: ["SourceSupport", "Decoders"]),
     .target(name: "CalendarSource", dependencies: ["AgendaGate", "SourceSupport"]),
@@ -35,6 +35,7 @@ let package = Package(
     products: [.executable(name: "AppleBridgeHelper", targets: ["AppleBridgeHelper"])],
     targets: sourceTargets + [
         .target(name: "SourceSupport"),
+        .target(name: "ClockNative", publicHeadersPath: "include"),
         .executableTarget(name: "MusicChecks", dependencies: ["MusicSource", "SourceSupport"]),
         .executableTarget(name: "FocusChecks", dependencies: ["FocusSource", "SourceSupport"]),
         .executableTarget(name: "CaptureChecks", dependencies: ["CaptureSource", "MacSource", "SourceSupport"]),
@@ -64,6 +65,6 @@ let package = Package(
         .target(name: "AppleSession", dependencies: sourceTargets.map { .target(name: $0.name) } + ["RemindersStore", "AgendaGate", "SourceSupport"]),
         .executableTarget(name: "CalendarChecks", dependencies: ["CalendarSource"], path: "Tests/CalendarChecks"),
         .executableTarget(name: "CommandOriginChecks", dependencies: ["SourceSupport"], path: "Tests/CommandOriginChecks"),
-        .executableTarget(name: "AppleBridgeHelper", dependencies: ["AppleSession"])
+        .executableTarget(name: "AppleBridgeHelper", dependencies: ["AppleSession", "ShortcutsSource"])
     ]
 )

@@ -48,7 +48,7 @@ func runSiriIntents(ctx context.Context, s Scenario, level string) Evidence {
 		artifact, err := os.ReadFile("packaging/shortcuts/AB Bridge Status.shortcut")
 		qualified = emitted && err == nil && len(artifact) >= 4 && string(artifact[:4]) == "AEA1"
 		if qualified {
-			stop, hostErr := startBridgeIntentHost(ctx)
+			_, stop, hostErr := startBridgeIntentHost(ctx)
 			if hostErr != nil {
 				return Evidence{Scenario: s.ID, Level: level, Assertions: []Assertion{{Name: "current_helper_intent_host_ready", Passed: false}}}
 			}
@@ -61,22 +61,22 @@ func runSiriIntents(ctx context.Context, s Scenario, level string) Evidence {
 	return e
 }
 
-func startBridgeIntentHost(ctx context.Context) (func(), error) {
+func startBridgeIntentHost(ctx context.Context) (string, func(), error) {
 	directory, err := os.MkdirTemp("", "ab-f9-intent-")
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
 	app := filepath.Join(directory, "AppleBridgeHelper.app")
 	if output, buildErr := exec.CommandContext(ctx, "packaging/dev/build-helper.sh", app).CombinedOutput(); buildErr != nil {
 		os.RemoveAll(directory)
 		os.Stderr.Write(output)
-		return nil, buildErr
+		return "", nil, buildErr
 	}
 	ready := filepath.Join(directory, "pid")
 	process := exec.CommandContext(ctx, "open", "-n", "-W", "-g", "-a", app, "--args", "intent-host", strconv.Itoa(os.Getpid()), ready)
 	if err = process.Start(); err != nil {
 		os.RemoveAll(directory)
-		return nil, err
+		return "", nil, err
 	}
 	done := make(chan error, 1)
 	go func() { done <- process.Wait() }()
@@ -96,19 +96,19 @@ func startBridgeIntentHost(ctx context.Context) (func(), error) {
 		select {
 		case <-ctx.Done():
 			stop()
-			return nil, ctx.Err()
+			return "", nil, ctx.Err()
 		case <-deadline.C:
 			stop()
-			return nil, fmt.Errorf("Apple Bridge could not start its background intent host")
+			return "", nil, fmt.Errorf("Apple Bridge could not start its background intent host")
 		case err = <-done:
 			stop()
-			return nil, fmt.Errorf("Apple Bridge intent host exited before becoming ready: %v", err)
+			return "", nil, fmt.Errorf("Apple Bridge intent host exited before becoming ready: %v", err)
 		case <-tick.C:
 			data, readErr := os.ReadFile(ready)
 			if readErr == nil {
 				pid, err = strconv.Atoi(string(data))
 				if err == nil && pid > 1 && syscall.Kill(pid, 0) == nil {
-					return stop, nil
+					return app, stop, nil
 				}
 			}
 		}
