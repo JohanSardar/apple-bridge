@@ -1,15 +1,15 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[4.95 6.34 9.95] cpu_idle=70% cpus=8 other_heavy=0"
+    "summary": "air: load=[4.9 4.95 5.59] cpu_idle=71% cpus=8 other_heavy=0"
   },
   "status": "limited",
-  "run_id": "run_01M6A0NSS64ZRGWAQ156WHB9EP",
+  "run_id": "run_01M6A4H5V8RVQHZTXE6BJ70QZA",
   "metrics": {
     "capture_observer_resets": 0,
     "cleanup_counts": {
-      "after_count": 160352,
-      "before_count": 160352,
+      "after_count": 160349,
+      "before_count": 160349,
       "created_count": 0,
       "passed": true
     },
@@ -18,8 +18,8 @@
   "scenario": "MSG-FORMATTING-SEND",
   "level": "real",
   "passed": false,
-  "git_sha": "6a645dcd12d8f9503e57b5fdb3b5816eeb7f3fe9",
-  "at": "2026-10-31T22:18:24.934786Z",
+  "git_sha": "c4df3f7dc167d52fab15ac448f4727d17aa5e01e",
+  "at": "2026-10-31T23:25:47.752781Z",
   "assertions": [
     {
       "name": "cleanup_baseline_restored",
@@ -35,6 +35,6 @@
     "air"
   ],
   "conditions": {
-    "reason": "No unused self address is available for an isolated test conversation. Add a self address in Messages before running this check."
+    "reason": "The self conversation contains unread existing messages. This check cannot open it without changing their read state. Read those messages in Messages before rerunning the check."
   }
 }

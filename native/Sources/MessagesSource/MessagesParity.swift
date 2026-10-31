@@ -7,6 +7,7 @@ import SourceSupport
 public enum MessagesParity {
     public static let operations = ["pin", "mute", "set_read_receipts", "recover_chat", "delete_chat_permanently"].map { "messages." + $0 }
     public static func failureReason(_ error: Error) -> String {
+        if let failure = error as? MessagesSelfTestBaselineFailure { return failure.description }
         if let failure = error as? SourceFailure { return String(describing: failure) }
         if let failure = error as? ProbeFailure { return String(describing: failure) }
         if let failure = error as? MessagesUIFailure { return failure.rawValue }
@@ -52,7 +53,7 @@ public enum MessagesParity {
     static func dismiss(_ session: MessagesUISession) throws { try session.press(MessagesUISession.escape) }
     @UIActor
     static func conversationMenu(_ prepared: Prepared) throws -> (MessagesUISession, [AXUIElement]) {
-        try MessagesAccessibility.openMessage(prepared.nativeState["message_guid"].string, settle: 0.5)
+        try MessagesAccessibility.openMessage(prepared.nativeState["message_guid"].string, settle: 0.5, resetEditor: false)
         let session = try MessagesAccessibility.uiSession()
         var state = prepared.nativeState.object
         state["conversation_target"] = .bool(false)
@@ -78,29 +79,32 @@ public enum MessagesParity {
     static func provePin(_ prepared: Prepared) -> JSON {
         var changed = false
         var before: [String] = []
+        var original = false
         do {
             before = try MessagesPins.read()
             let chat = prepared.action["native_key"].string
             let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/chat.db").path
             guard let row = try MessagesReader(path: path).query("SELECT chat_identifier FROM chat WHERE guid=?", [chat]).first,
-                  !row["chat_identifier"].isEmpty, !before.contains(row["chat_identifier"]), before.count < 9 else { throw SourceFailure.capabilityUnproven }
+                  !row["chat_identifier"].isEmpty else { throw SourceFailure.capabilityUnproven }
+            original = before.contains(row["chat_identifier"])
+            guard original ? before.last == row["chat_identifier"] : before.count < 9 else { throw SourceFailure.capabilityUnproven }
             changed = true
-            try pin(prepared, value: true)
+            try pin(prepared, value: !original)
             let deadline = Date().addingTimeInterval(5)
             var after = try MessagesPins.read()
-            while !after.contains(row["chat_identifier"]), Date() < deadline {
+            while after.contains(row["chat_identifier"]) == original, Date() < deadline {
                 RunLoop.current.run(until: Date().addingTimeInterval(0.1))
                 after = try MessagesPins.read()
             }
-            guard after.filter({ $0 != row["chat_identifier"] }) == before, after.contains(row["chat_identifier"]) else { throw SourceFailure.conflict }
-            try pin(prepared, value: false)
+            guard after.filter({ $0 != row["chat_identifier"] }) == before.filter({ $0 != row["chat_identifier"] }), after.contains(row["chat_identifier"]) != original else { throw SourceFailure.conflict }
+            try pin(prepared, value: original)
             let restoreDeadline = Date().addingTimeInterval(5)
             while try MessagesPins.read() != before, Date() < restoreDeadline { RunLoop.current.run(until: Date().addingTimeInterval(0.1)) }
             guard try MessagesPins.read() == before else { throw SourceFailure.conflict }
             changed = false
             return .object(["operation": .string("messages.pin"), "proven": .bool(true), "restored": .bool(true), "reason": .string("native_pin_order_roundtrip"), "service": prepared.nativeState["service"]])
         } catch {
-            if changed { try? pin(prepared, value: false) }
+            if changed { try? pin(prepared, value: original) }
             return .object(["operation": .string("messages.pin"), "proven": .bool(false), "restored": .bool(!changed || (try? MessagesPins.read()) == before), "reason": .string("pin_roundtrip_" + failureReason(error))])
         }
     }
@@ -152,7 +156,7 @@ public enum MessagesParity {
             operations.map { .object(["operation": .string($0), "proven": .bool(false), "reason": .string(reason)]) }
         }
         do {
-            try MessagesAccessibility.openMessage(prepared.nativeState["message_guid"].string)
+            try MessagesAccessibility.openMessage(prepared.nativeState["message_guid"].string, resetEditor: false)
             let session = try MessagesAccessibility.uiSession(), root = session.root
             let row = try MessagesAccessibility.target(root, prepared: prepared)
             try MessagesAccessibility.contextMenu(row, session: session)

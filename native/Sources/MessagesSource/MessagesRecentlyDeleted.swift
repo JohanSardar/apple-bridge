@@ -143,6 +143,9 @@ extension MessagesParity {
                   let position = try reader.query("SELECT ROWID AS position FROM chat WHERE guid=?", [chat]).first else { throw SourceFailure.invalid }
             let run = String(text[range].dropFirst(9).dropLast())
             let ledger = try JSONDecoder().decode(JSON.self, from: Data(contentsOf: PrivateReport.directory.appendingPathComponent("messages-command-cleanup/" + run + ".json")))
+            if ledger["existing_self_chat"].bool {
+                return try proveOwnedDeletedMessages(prepared, ledger: ledger, reader: reader, tag: String(text[range]))
+            }
             guard ledger["run_id"].string == run, ledger["created_by_run"].bool, ledger["created_chat_key"].string == chat,
                   position.integer("position") > Int64(ledger["baseline_max_chat_row_id"].number) else { throw SourceFailure.invalid }
             let handles = try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [chat]).map { MessagesProbes.normalize($0["id"]) }

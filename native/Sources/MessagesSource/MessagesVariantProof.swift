@@ -17,8 +17,11 @@ public enum MessagesVariantProof {
         await MessagesUISession.activate()
         let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/chat.db").path
         let reader = try MessagesReader(path: path)
-        let own = try MessagesProbes.discoverSelfHandles().handles
-        guard let handle = try MessagesSelfTestIsolation.unused(own, database: MessagesDatabase()).first else { return limited("No unused self address is available for an isolated test conversation. Add a self address in Messages before running this check.") }
+        guard let selected = try MessagesSelfTestIsolation.target(database: MessagesDatabase()) else { return limited("No verified self conversation is available. Check the Messages account's own addresses and self conversation.") }
+        let handle = selected.handle
+        let existingBaseline: MessagesSelfTestBaseline?
+        do { existingBaseline = selected.chat.isEmpty ? nil : try await MessagesSelfTestBaseline.capture(selected.chat) }
+        catch { return limited((error as? MessagesSelfTestBaselineFailure)?.description ?? "The self conversation baseline could not be verified. Keep Messages available and rerun the check.") }
         var chat = ""
         let run = "variant_" + UUID().uuidString.replacingOccurrences(of: "-", with: "")
         let tag = "[ab-test " + run + "]"
@@ -60,15 +63,16 @@ public enum MessagesVariantProof {
         do {
             writes += 1
             lateEffectPossible = true
-            let initial = try await MessagesParityFixture.send(text: tag + " fixture", handle: handle)
+            let initial = try await MessagesParityFixture.send(text: tag + " fixture", handle: handle, existingChat: selected.chat)
             lateEffectPossible = initial["disposition"].string == "indeterminate"
             try capture()
             guard initial["observed"].bool else { throw SourceFailure.capabilityUnproven }
             chat = initial["chat_key"].string
             guard let created = try reader.query("SELECT ROWID AS position FROM chat WHERE guid=?", [chat]).first,
-                  created.integer("position") > baselineChat else { throw SourceFailure.conflict }
+                  (selected.chat.isEmpty ? created.integer("position") > baselineChat : chat == selected.chat) else { throw SourceFailure.conflict }
             registration["created_chat_key"] = chat
-            registration["created_by_run"] = true
+            registration["created_by_run"] = selected.chat.isEmpty
+            registration["existing_self_chat"] = !selected.chat.isEmpty
             try capture()
             let text = tag + " variant"
             let variant: JSON = kind == "effect" ? .object(["kind": .string(kind), "effect": .string("loud")]) : .object(["kind": .string(kind), "formatting": .array([.object(["utf16_location": .number(Double(tag.utf16.count + 1)), "utf16_length": .number(7), "styles": .array([.string("bold")])])])])
@@ -105,7 +109,8 @@ public enum MessagesVariantProof {
             try await Task.sleep(for: .milliseconds(500))
         }
         let remaining = try reader.query("SELECT DISTINCT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE m.ROWID>? AND (instr(m.text,?)>0 OR instr(m.attributedBody,CAST(? AS BLOB))>0) AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=j.chat_id)", [String(baseline), tag, tag])
-        let cleanupPassed = ownershipCaptured && cleanup["passed"].bool && remaining.isEmpty
+        let baselineRestored = (try? await existingBaseline?.restoreAndVerify()) ?? (existingBaseline == nil)
+        let cleanupPassed = baselineRestored && ownershipCaptured && cleanup["passed"].bool && remaining.isEmpty
         let passed = cleanupPassed && !lateEffectPossible && echoVerified && outcome["observed"].bool && outcome["disposition"].string == "locally_observed"
         registration["late_effect_possible"] = lateEffectPossible
         registration["cleanup_state"] = cleanupPassed ? (lateEffectPossible ? "pending_reconciliation" : "verified_clean") : "pending_native_cleanup"

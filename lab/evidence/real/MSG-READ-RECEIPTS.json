@@ -1,10 +1,10 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[4.64 6.36 10.02] cpu_idle=56% cpus=8 other_heavy=0"
+    "summary": "air: load=[5.07 4.98 5.62] cpu_idle=62% cpus=8 other_heavy=0"
   },
   "status": "environment-limited",
-  "run_id": "run_01M6A0N6PCS8WF1T5CM7ZCNG0X",
+  "run_id": "run_01M6A4GN4FZA67V3H8GECY93SY",
   "metrics": {
     "baseline_captured": false,
     "capture_observer_resets": 0,
@@ -14,8 +14,8 @@
   "scenario": "MSG-READ-RECEIPTS",
   "level": "real",
   "passed": false,
-  "git_sha": "6a645dcd12d8f9503e57b5fdb3b5816eeb7f3fe9",
-  "at": "2026-10-31T22:18:05.388048Z",
+  "git_sha": "c4df3f7dc167d52fab15ac448f4727d17aa5e01e",
+  "at": "2026-10-31T23:25:30.639176Z",
   "assertions": [
     {
       "name": "run_only_cleanup",
@@ -24,7 +24,7 @@
     {
       "name": "messages.set_read_receipts",
       "passed": false,
-      "detail": "isolated_test_chat_unavailable"
+      "detail": "self_chat_baseline_The self conversation contains unread existing messages. This check cannot open it without changing their read state. Read those messages in Messages before rerunning the check."
     },
     {
       "name": "credential_backend_override_restored",
