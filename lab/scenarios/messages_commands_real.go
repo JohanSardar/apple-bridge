@@ -20,13 +20,17 @@ import (
 	"time"
 )
 
-func nativeMessagesCleanupGate(id string, e Evidence, accessibility bool) (Evidence, bool) {
-	if id == "WEB-MSG-REAL-READ" || accessibility {
+func nativeMessagesCleanupGate(id string, e Evidence, accessibility, unlocked bool) (Evidence, bool) {
+	if id == "WEB-MSG-REAL-READ" || accessibility && unlocked {
 		return e, true
 	}
 	e.Status = "environment-limited"
 	e.Metrics = map[string]any{"writes_submitted": 0}
-	e.Assertions = append(e.Assertions, Assertion{Name: "cleanup_accessibility", Status: "unverified", Detail: "Messages cleanup needs Accessibility access. Enable it for AppleBridgeHelper in System Settings before running this write check; no send was attempted."})
+	if !accessibility {
+		e.Assertions = append(e.Assertions, Assertion{Name: "cleanup_accessibility", Status: "unverified", Detail: "Messages cleanup needs Accessibility access. Enable it for AppleBridgeHelper in System Settings before running this write check; no send was attempted."})
+	} else {
+		e.Assertions = append(e.Assertions, Assertion{Name: "cleanup_unlocked", Status: "unverified", Detail: "Messages cleanup needs an unlocked Mac. Unlock the Air before running this write check; no send was attempted."})
+	}
 	return e, false
 }
 
@@ -60,6 +64,7 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 		Handles              []string `json:"handles"`
 		State                string   `json:"state"`
 		CleanupAccessibility bool     `json:"cleanup_accessibility"`
+		CleanupUnlocked      bool     `json:"cleanup_unlocked"`
 	}
 	data, readErr := os.ReadFile(report)
 	json.Unmarshal(data, &own)
@@ -69,7 +74,7 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 		return e
 	}
 	var cleanupReady bool
-	e, cleanupReady = nativeMessagesCleanupGate(s.ID, e, own.CleanupAccessibility)
+	e, cleanupReady = nativeMessagesCleanupGate(s.ID, e, own.CleanupAccessibility, own.CleanupUnlocked)
 	if !cleanupReady {
 		return e
 	}
