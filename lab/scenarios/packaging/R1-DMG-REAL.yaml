@@ -1,0 +1,7 @@
+id: R1-DMG-REAL
+feature: packaging.release
+levels: [real]
+given: []
+when: [{robustness: {case: release}}]
+then: [{converge: {}}]
+cleanup: []

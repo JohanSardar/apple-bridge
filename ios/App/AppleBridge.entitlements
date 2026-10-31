@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>aps-environment</key>
-	<string>development</string>
+	<string>$(APPLE_BRIDGE_APNS_ENVIRONMENT)</string>
 	<key>com.apple.developer.family-controls</key>
 	<true/>
 	<key>com.apple.developer.family-controls.app-and-website-usage</key>

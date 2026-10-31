@@ -1,0 +1,7 @@
+id: R1-RELEASE-SIM
+feature: packaging.release
+levels: [sim]
+given: []
+when: [{robustness: {case: release}}]
+then: [{converge: {}}]
+cleanup: []
