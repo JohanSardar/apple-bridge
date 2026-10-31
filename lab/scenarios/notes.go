@@ -466,7 +466,11 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		var out contracts.CommandRecord
 		err := client.Call(ctx, "notes.update", contracts.Command{ID: contracts.NewCommandID(), Args: args, ExpectedVersion: note.Version, WaitMS: 15000}, &out)
 		add("rich_rejected_before_dispatch", errors.Is(err, contracts.ErrUnsupported) || (out.Error != nil && out.Error.Code == "unsupported"))
-		add("rich_rejection_explains_recovery", out.Error != nil && strings.Contains(out.Error.Message, "Notes") && strings.Contains(out.Error.Message, "plain-text"))
+		problem := out.Error
+		if problem == nil {
+			errors.As(err, &problem)
+		}
+		add("rich_rejection_explains_recovery", problem != nil && strings.Contains(problem.Message, "Notes") && strings.Contains(problem.Message, "plain-text"))
 		if level == "sim" {
 			effects, _ := w.Effects()
 			add("no_dispatch_effect", len(effects) == 0)
