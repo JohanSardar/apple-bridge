@@ -8,6 +8,7 @@ final class PackagedApp: NSObject, NSApplicationDelegate {
     let service = SMAppService.agent(plistName: "dev.applebridge.gateway.plist")
     var window: NSWindow?
     var setup: SetupModel?
+    var approvalDetails: NSTextField?
     var setupHome: URL?
     var snapshotDirectory: URL?
     var connectorHome: String?
@@ -66,7 +67,7 @@ final class PackagedApp: NSObject, NSApplicationDelegate {
                         let action = response == .alertFirstButtonReturn ? "allow" : "deny"
                         Task { @MainActor in
                             let result = await Task.detached { Self.connectorCommand([action, "--request", request.id, "--code", request.code] + options, executable: executable) }.value
-                            if result == nil { self.setup?.message = "Approval was refused or expired. Start again from your connector." }
+                            if result == nil { self.approvalDetails?.stringValue = "Approval was refused or expired. Start again from your connector." }
                             await self.setup?.refresh()
                         }
                     }
@@ -121,7 +122,23 @@ final class PackagedApp: NSObject, NSApplicationDelegate {
         }
     }
 
+    func showApprovals() {
+        NSApplication.shared.setActivationPolicy(.regular)
+        let panel = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 540, height: 230), styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        panel.title = "Apple Bridge Approvals"
+        panel.isReleasedWhenClosed = false
+        let text = NSTextField(wrappingLabelWithString: "Match the code in your browser before allowing a connector to use your data.")
+        text.frame = NSRect(x: 24, y: 100, width: 492, height: 90)
+        panel.contentView?.addSubview(text)
+        approvalDetails = text
+        window = panel
+        panel.center()
+        panel.makeKeyAndOrderFront(nil)
+        watchConnectors()
+    }
+
     func show() {
+        if connectorHome != nil { showApprovals(); return }
         NSApplication.shared.setActivationPolicy(.regular)
         let menu = NSMenu()
         let item = NSMenuItem()
@@ -148,7 +165,7 @@ final class PackagedApp: NSObject, NSApplicationDelegate {
         window.minSize = NSSize(width: 860, height: 740)
         self.window = window
         self.setup = model
-        if snapshotDirectory == nil { model.start(); watchConnectors() }
+        if snapshotDirectory == nil { model.start() }
         window.center()
         window.makeKeyAndOrderFront(nil)
         NSApplication.shared.activate()

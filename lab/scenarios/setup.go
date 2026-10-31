@@ -25,7 +25,7 @@ func runSetup(ctx context.Context, s Scenario, level string) (e Evidence) {
 	if level == "sim" {
 		output, err := exec.CommandContext(ctx, "packaging/setup/check.sh").CombinedOutput()
 		add("setup_sim_checks", err == nil)
-		for _, name := range []string{"CATALOG", "FRESH", "COMPLETE", "ALL-SKIPPED", "PERSIST", "REOPEN", "UNKNOWN", "LIMITED"} {
+		for _, name := range []string{"CATALOG", "FRESH", "COMPLETE", "ALL-SKIPPED", "PERSIST", "REOPEN", "UNKNOWN", "LIMITED", "NO-PROMPTS", "SYNC", "ONLY-CLICKED-ROWS", "REMOTE", "QR", "CONNECT", "FLOW", "EXPIRED-QR", "PAIR-FAILURE", "CONNECT-FAILURE", "DENIED-CONTINUE", "MODEL-RESUME"} {
 			add(strings.ToLower(name), strings.Contains(string(output), "Q1-"+name+" passed=true"))
 		}
 		if err != nil {

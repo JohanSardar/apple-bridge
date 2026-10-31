@@ -18,6 +18,12 @@ final class SetupModel: ObservableObject {
     var syncStatus: (() -> Bool)?
     var refreshTask: Task<Void, Never>?
     var pairingExpiry: Date?
+    var runCommand: @Sendable ([String], String) -> Data? = { arguments, home in SetupModel.command(arguments, home: home) }
+    var openURL: (URL) -> Void = { NSWorkspace.shared.open($0) }
+    var copyURL: (String) -> Void = { value in
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(value, forType: .string)
+    }
     let testing: Bool
 
     init(home: URL, testing: Bool = false) {
@@ -114,9 +120,10 @@ final class SetupModel: ObservableObject {
     func enableSync() {
         guard !testing, busy.insert("sync").inserted else { return }
         let path = home.path
+        let run = runCommand
         Task { @MainActor in
             defer { busy.remove("sync") }
-            let data = await Task.detached { Self.command(["install-credentials"], home: path) }.value
+            let data = await Task.detached { run(["install-credentials"], path) }.value
             do {
                 guard data != nil else { throw CocoaError(.fileWriteUnknown) }
                 try install?()
@@ -129,8 +136,9 @@ final class SetupModel: ObservableObject {
         guard !testing, busy.insert("remote").inserted else { return }
         message = "Follow the browser link to enable Remote. You can continue while it connects."
         let path = home.path
+        let run = runCommand
         Task { @MainActor in
-            let data = await Task.detached { Self.command(["remote", "on"], home: path) }.value
+            let data = await Task.detached { run(["remote", "on"], path) }.value
             busy.remove("remote")
             await refresh()
             message = data == nil ? "Remote did not connect. Check your internet connection and try Enable Remote again. Local features still work." : "Remote is ready."
@@ -139,9 +147,10 @@ final class SetupModel: ObservableObject {
     func pair() {
         guard !testing, busy.insert("pair").inserted else { return }
         let path = home.path
+        let run = runCommand
         Task { @MainActor in
             defer { busy.remove("pair") }
-            guard let data = await Task.detached(operation: { Self.command(["pair", "--iphone", "--via-remote"], home: path) }).value,
+            guard let data = await Task.detached(operation: { run(["pair", "--iphone", "--via-remote"], path) }).value,
                   let code = String(data: data, encoding: .utf8)?.components(separatedBy: .newlines).first, !code.isEmpty else {
                 message = "Pairing is not ready. Enable Remote, then try Show Pairing QR again. You can continue without a phone."
                 return
@@ -156,10 +165,9 @@ final class SetupModel: ObservableObject {
     }
     func connect(_ provider: String) {
         guard !testing, remoteReady, !connectorURL.isEmpty else { message = "Enable Remote first. Then try Connect again. Local features still work."; return }
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(connectorURL, forType: .string)
+        copyURL(connectorURL)
         let page = provider == "Claude.ai" ? "https://claude.ai/settings/connectors" : "https://chatgpt.com/#settings/Connectors"
-        NSWorkspace.shared.open(URL(string: page)!)
+        openURL(URL(string: page)!)
         message = "Connector URL copied. Add a custom connector in \(provider) and paste it. Match the four-digit code, then click Allow on this Mac. Return here after connecting."
     }
 }

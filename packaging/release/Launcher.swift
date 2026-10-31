@@ -10,6 +10,15 @@ final class ReleaseApplication: NSObject, NSApplicationDelegate, SPUUpdaterDeleg
     let agent = SMAppService.agent(plistName: "dev.applebridge.gateway.plist")
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        let arguments = Array(CommandLine.arguments.dropFirst())
+        if arguments.first == "connector-approvals" {
+            let process = Process()
+            process.executableURL = Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/AppleBridgeHelper")
+            process.arguments = arguments
+            process.terminationHandler = { _ in Task { @MainActor in NSApplication.shared.terminate(nil) } }
+            do { try process.run(); onboarding = process } catch { showError(error); NSApplication.shared.terminate(nil) }
+            return
+        }
         updater = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: self, userDriverDelegate: nil)
         if UserDefaults.standard.bool(forKey: "R1RestartGateway") {
             do {

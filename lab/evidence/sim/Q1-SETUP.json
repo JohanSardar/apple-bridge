@@ -1,9 +1,9 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[11.9 11.35 12.6] cpu_idle=52% cpus=10 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[12.59 10.66 11.79] cpu_idle=6% cpus=10 other_heavy=0"
   },
-  "run_id": "setup_01M69Y4Z1T0SGFFEGRGTWXCXXX",
+  "run_id": "setup_01M69YDC70QS2RCJ6GVJ1Y4GV8",
   "metrics": {
     "capture_observer_resets": 0
   },
@@ -11,7 +11,7 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-31T21:34:16.122298Z",
+  "at": "2026-10-31T21:38:51.744517Z",
   "assertions": [
     {
       "name": "setup_sim_checks",
@@ -47,6 +47,54 @@
     },
     {
       "name": "limited",
+      "passed": true
+    },
+    {
+      "name": "no-prompts",
+      "passed": true
+    },
+    {
+      "name": "sync",
+      "passed": true
+    },
+    {
+      "name": "only-clicked-rows",
+      "passed": true
+    },
+    {
+      "name": "remote",
+      "passed": true
+    },
+    {
+      "name": "qr",
+      "passed": true
+    },
+    {
+      "name": "connect",
+      "passed": true
+    },
+    {
+      "name": "flow",
+      "passed": true
+    },
+    {
+      "name": "expired-qr",
+      "passed": true
+    },
+    {
+      "name": "pair-failure",
+      "passed": true
+    },
+    {
+      "name": "connect-failure",
+      "passed": true
+    },
+    {
+      "name": "denied-continue",
+      "passed": true
+    },
+    {
+      "name": "model-resume",
       "passed": true
     },
     {
