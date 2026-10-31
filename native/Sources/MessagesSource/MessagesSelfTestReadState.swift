@@ -62,8 +62,13 @@ public struct MessagesSelfTestReadState: Sendable, Codable {
     @UIActor
     func restore(_ prepared: Prepared, through baseline: Int64) throws {
         let chat = prepared.action["native_key"].string
-        let current = try Self.capture(chat, through: baseline)
-        if matches(current) { return }
+        func verified() throws -> Bool {
+            let current = try Self.capture(chat, through: baseline)
+            let restored = matches(current)
+            try PrivateReport.write(["before_unread_message_count": unreadIDs.count, "after_unread_message_count": current.unreadIDs.count, "before_chat_unread_count": unreadCount, "after_chat_unread_count": current.unreadCount, "unread_identities_restored": unreadIDs == current.unreadIDs, "passed": restored], to: PrivateReport.directory.appendingPathComponent("messages-unread-restore-result.json"))
+            return restored
+        }
+        if try verified() { return }
         guard unreadCount > 0 || !unreadIDs.isEmpty else { throw MessagesSelfTestBaselineFailure.unreadRestoreFailed }
         let (session, items) = try MessagesParity.conversationMenu(prepared)
         let targets = items.filter { MessagesAccessibility.value($0, kAXTitleAttribute) == "Mark as Unread" }
@@ -72,7 +77,7 @@ public struct MessagesSelfTestReadState: Sendable, Codable {
         try MessagesVariantUI.press(targets[0])
         let deadline = Date().addingTimeInterval(5)
         repeat {
-            if try matches(Self.capture(chat, through: baseline)) { return }
+            if try verified() { return }
             RunLoop.current.run(until: Date().addingTimeInterval(0.1))
         } while Date() < deadline
         throw MessagesSelfTestBaselineFailure.unreadRestoreFailed
