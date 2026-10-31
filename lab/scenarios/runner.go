@@ -1300,8 +1300,8 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		if s.ID == "NOTE-EXTERNAL" && level != "sim" {
 			duration = 5 * time.Minute
 		}
-		if s.ID == "NOTE-EDIT-PARITY" {
-			duration = 10 * time.Minute
+		if level == "real" && slices.Contains([]string{"NOTE-CRUD", "NOTE-EXTRAS", "NOTE-EDIT-PARITY"}, s.ID) {
+			duration = 7 * time.Minute
 		}
 		if s.ID == "CORE-SEARCH-UPDATE-PERF" {
 			duration = 10 * time.Minute
