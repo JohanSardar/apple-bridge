@@ -78,6 +78,10 @@ public struct MessagesSelfTestBaseline: Sendable {
     public func restoreAndVerify() throws -> Bool {
         try readState.save(chat, through: lastMessageROWID)
         let prepared = try Self.target(chat)
+        var readRestored = false
+        defer {
+            if !readRestored { try? readState.restore(prepared, through: lastMessageROWID) }
+        }
         let (session, titles) = try MessagesParity.menu(prepared)
         try MessagesParity.dismiss(session)
         guard titles.contains("Show Alerts") != titles.contains("Hide Alerts") else { throw SourceFailure.conflict }
@@ -93,6 +97,7 @@ public struct MessagesSelfTestBaseline: Sendable {
         let (verifiedReceiptSession, _, verifiedReceipts) = try MessagesParity.receiptControl(prepared)
         try MessagesParity.dismiss(verifiedReceiptSession)
         try readState.restore(prepared, through: lastMessageROWID)
+        readRestored = true
         let restored = try MessagesPins.read() == pins && verifiedTitles.contains("Show Alerts") == muted && verifiedTitles.contains("Hide Alerts") != muted && verifiedReceipts == receipts && Self.receiptSetting(chat) == receiptsSetting && Self.digest(chat, through: lastMessageROWID) == messagesDigest
         if restored { try MessagesSelfTestReadState.complete(chat) }
         return restored
