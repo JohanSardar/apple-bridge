@@ -1,8 +1,8 @@
 import { createSignal, untrack } from 'solid-js';
-import { viewCache } from './cache';
-import { requireInput } from './input';
-import { mergeCommandParts, commandPartsStatus } from './commandParts';
-import { parseSession, type Cursor, type ViewData, type ViewChange, type ViewName, type DeviceSession, type CommandState } from './types';
+import { viewCache } from './cache.ts';
+import { requireInput } from './input.ts';
+import { mergeCommandParts, commandPartsStatus } from './commandParts.ts';
+import { parseSession, type Cursor, type ViewData, type ViewChange, type ViewName, type DeviceSession, type CommandState } from './types.ts';
 function ulid() { const alphabet = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'; let time = Date.now(), id = ''; for (let i = 0; i < 10; i++) {
     id = alphabet[time % 32] + id;
     time = Math.floor(time / 32);
@@ -81,7 +81,9 @@ export class LiveClient {
     private commandRevision = createSignal(0);
     readonly status = this.connection[0];
     readonly pending = () => { this.commandRevision[0](); return [...this.commands.values()]; };
-    constructor(private revoked: () => void, private event?: (frame: Record<string, unknown>) => void) { this.connect(); }
+    private revoked: () => void;
+    private event?: (frame: Record<string, unknown>) => void;
+    constructor(revoked: () => void, event?: (frame: Record<string, unknown>) => void) { this.revoked = revoked; this.event = event; this.connect(); }
     private send(frame: unknown) { if (this.socket?.readyState !== WebSocket.OPEN)
         throw new Error('Unavailable'); this.socket.send(JSON.stringify(frame)); }
     private connect() {
@@ -171,10 +173,13 @@ export class LiveClient {
             }
             if (frame.t === 'snap' && (!frame.data || typeof frame.data !== 'object') || frame.t === 'delta' && !Array.isArray(frame.changes))
                 throw new Error('Invalid data');
+            const unchanged = frame.t === 'snap' && sub.view === 'thread' && Array.isArray(sub.data().items) && !sub.data().error && sub.cursor?.epoch === cursor.epoch && sub.cursor.subscription_revision === cursor.subscription_revision && sub.cursor.sequence === cursor.sequence;
             sub.generation++;
             sub.cursor = cursor;
-            sub.update(frame.t === 'snap' ? frame.data as ViewData : { ...reduceView(sub.data(), frame.changes as ViewChange[]), ...(frame.page && typeof frame.page === 'object' ? { next: undefined, before: undefined, after: undefined, unread_anchor: undefined, ...frame.page } : {}) });
-            if(sub.cache!==false)void viewCache.write(sub.cacheKey, sub.data(), cursor).catch(() => { });
+            if (!unchanged) {
+                sub.update(frame.t === 'snap' ? frame.data as ViewData : { ...reduceView(sub.data(), frame.changes as ViewChange[]), ...(frame.page && typeof frame.page === 'object' ? { next: undefined, before: undefined, after: undefined, unread_anchor: undefined, ...frame.page } : {}) });
+                if(sub.cache!==false)void viewCache.write(sub.cacheKey, sub.data(), cursor).catch(() => { });
+            }
         }
         else if (frame.t === 'ack' || frame.t === 'cmd_status') {
             if (typeof frame.id !== 'string' || typeof frame.status !== 'string')

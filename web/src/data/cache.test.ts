@@ -44,6 +44,12 @@ test('queued view snapshots persist the latest data and cursor once per key and 
     assert.equal(saved[0].data.older, 99);
     assert.equal(saved[0].cursor.sequence, 99);
     assert.equal(saved[1].key, 'other-thread');
+    const cached = await viewCache.read('thread');
+    assert.equal(cached?.data.older, 99);
+    assert.equal(cached?.cursor?.sequence, 99);
+    await viewCache.write('thread', { older: 101 }, { epoch: 'epoch', subscription_revision: 1, sequence: 101 });
+    assert.equal((await viewCache.read('thread'))?.data.older, 101);
+    saved.pop();
     const stale = viewCache.write('thread', { older: 200 });
     viewCache.disable();
     viewCache.enable('second-device');
@@ -56,4 +62,5 @@ test('queued view snapshots persist the latest data and cursor once per key and 
     assert.equal(saved.length, 4);
     assert.equal(saved[3].data.older, 400);
     viewCache.disable();
+    assert.equal(await viewCache.read('thread'), undefined);
 });

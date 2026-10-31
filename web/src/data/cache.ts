@@ -9,6 +9,12 @@ export type CachedView = {
 let database: IDBDatabase | undefined, opening: Promise<IDBDatabase> | undefined, owner: string | undefined, generation = 0;
 let writes: Promise<unknown> = Promise.resolve(), presentation: Promise<void> | undefined;
 const pending = new Map<string, { data: ViewData; cursor?: Cursor; version: number; promise: Promise<unknown> }>();
+const memory = new Map<string, CachedView>();
+function remember(value: CachedView) {
+    memory.delete(value.key); memory.set(value.key, value);
+    while (memory.size > 32) memory.delete(memory.keys().next().value!);
+    return value;
+}
 function afterPaint() {
     return presentation??=new Promise<void>(resolve=>{
         let frame=0,finished=false;
@@ -33,14 +39,25 @@ function open() {
 }
 function request<T>(value: IDBRequest<T>) { return new Promise<T>((resolve, reject) => { value.onsuccess = () => resolve(value.result); value.onerror = () => reject(value.error); }); }
 export const viewCache = {
-    enable(device: string) { owner = device; generation++; },
-    disable() { owner = undefined; generation++; },
-    async read(key: string) { const device = owner, version = generation; if (!device)
-        return; const db = await open(); if (version !== generation)
-        return; const value = await request(db.transaction('views').objectStore('views').get(key)) as CachedView | undefined; return owner === device && value?.owner === device ? value : undefined; },
+    enable(device: string) { owner = device; generation++; memory.clear(); },
+    disable() { owner = undefined; generation++; memory.clear(); },
+    async read(key: string) {
+        const device = owner, version = generation;
+        if (!device) return;
+        const cached = memory.get(key);
+        if (cached) return remember(cached);
+        const db = await open();
+        if (version !== generation) return;
+        const value = await request(db.transaction('views').objectStore('views').get(key)) as CachedView | undefined;
+        if (version !== generation || owner !== device) return;
+        const current = memory.get(key);
+        if (current) return remember(current);
+        return value?.owner === device ? remember(value) : undefined;
+    },
     write(key: string, data: ViewData, cursor?: Cursor) {
         const device = owner, version = generation;
         if (!device) return Promise.resolve();
+        remember({ key, owner: device, data, cursor, at: Date.now() });
         const queued = pending.get(key);
         if (queued?.version === version) {
             queued.data = data; queued.cursor = cursor;
