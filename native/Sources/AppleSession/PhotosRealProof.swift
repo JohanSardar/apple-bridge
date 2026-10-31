@@ -58,6 +58,7 @@ enum PhotosRealProof {
             return matches(panels[0], 0)
         }
         var stage = "library read"
+        var recoveryComplete = recoveryPath == nil && recoveryDigest == nil
         func deleteVerifiedAsset(_ assetID: String, filename: String) async throws {
             guard PHAsset.fetchAssets(withLocalIdentifiers: [assetID], options: nil).count != 0 else { return }
             stage = "opening the imported test photo"
@@ -156,6 +157,7 @@ enum PhotosRealProof {
                     try await deleteVerifiedAsset(assetID, filename: expectedFilename)
                     recovered += 1
                 }
+                recoveryComplete = true
             } else if recoveryPath != nil || recoveryDigest != nil { throw SourceFailure.invalid }
             let options = PHFetchOptions()
             options.includeHiddenAssets = true
@@ -187,7 +189,8 @@ enum PhotosRealProof {
             return .object(result)
         } catch {
             let failedStage = stage
-            let cleaned = (try? await cleanup()) != nil
+            let currentCleaned = (try? await cleanup()) != nil
+            let cleaned = currentCleaned && recoveryComplete
             return .object(["failure": .string("Photos \(failedStage) failed. Check Helper Photos access and close any Photos dialog before retrying."), "grant_passed": .bool(true), "cleanup_passed": .bool(cleaned), "library_asset_count": .number(Double(PHAsset.fetchAssets(with: nil).count))])
         }
     }
