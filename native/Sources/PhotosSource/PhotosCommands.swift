@@ -137,6 +137,9 @@ extension PhotosSource {
             temporary = url
         }
         defer { if let temporary { try? FileManager.default.removeItem(at: temporary) } }
+        #if LAB
+        let importFilename = proofImportFilename
+        #endif
         try PHPhotoLibrary.shared().performChangesAndWait {
             switch op {
             case "photos.create_album": key = PHAssetCollectionChangeRequest.creationRequestForAssetCollection(withTitle: args["name"].string).placeholderForCreatedAssetCollection.localIdentifier
@@ -146,7 +149,7 @@ extension PhotosSource {
                 else {
                     let options = PHAssetResourceCreationOptions()
                     #if LAB
-                    options.originalFilename = proofImportFilename
+                    options.originalFilename = importFilename
                     #endif
                     request.addResource(with: .photo, data: Data(base64Encoded: args["data"].string)!, options: options)
                 }
