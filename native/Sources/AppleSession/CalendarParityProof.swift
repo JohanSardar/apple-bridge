@@ -19,9 +19,16 @@ enum CalendarParityProof {
             return report(checks, reasons, controls)
         }
         let store = EKEventStore()
+        let accountIdentities = ownIdentities(store: store)
+        let identities = Set(accountIdentities.values.flatMap { $0 })
         let title = "[ab-test] " + UUID().uuidString
         let calendar = EKCalendar(for: .event, eventStore: store)
-        guard let source = store.defaultCalendarForNewEvents?.source else { throw SourceFailure.unavailable }
+        let defaultSource = store.defaultCalendarForNewEvents?.source
+        let invitationSource = store.sources.first { source in
+            [.calDAV, .exchange].contains(source.sourceType) && !(accountIdentities[source.sourceIdentifier] ?? []).isEmpty
+        }
+        guard let source = defaultSource.flatMap({ (accountIdentities[$0.sourceIdentifier] ?? []).isEmpty ? nil : $0 }) ?? invitationSource ?? defaultSource else { throw SourceFailure.unavailable }
+        let sourceIdentities = accountIdentities[source.sourceIdentifier] ?? []
         calendar.title = title; calendar.source = source
         try store.saveCalendar(calendar, commit: true)
         let calendarID = calendar.calendarIdentifier
@@ -53,8 +60,8 @@ enum CalendarParityProof {
             store.reset()
             let saved = store.calendarItem(withIdentifier: identifier) as? EKEvent
             checks["structured_location_readback"] = .bool(saved?.structuredLocation?.title == location.title && saved?.structuredLocation?.geoLocation?.coordinate.latitude == 41.88 && saved?.structuredLocation?.geoLocation?.coordinate.longitude == -87.63 && saved?.structuredLocation?.radius == 100)
-            let identities = ownIdentities(store: store)
             controls["own_account_identity_count"] = .number(Double(identities.count))
+            controls["own_source_identity_count"] = .number(Double(sourceIdentities.count))
             guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.iCal") else { throw SourceFailure.unavailable }
             let configuration = NSWorkspace.OpenConfiguration()
             configuration.activates = true
@@ -132,7 +139,8 @@ enum CalendarParityProof {
                 reasons["attachments"] = .string("Calendar could not change attachments on the test event. Keep Calendar open and retry this check.")
             }
             stage = "invitation"
-            if let attendee = identities.sorted().last, let organizer = identities.sorted().first {
+            if let attendee = sourceIdentities.sorted().first {
+                let organizer = identities.sorted().first(where: { $0 != attendee }) ?? attendee
                 try await ui.openOwnedEvent()
                 let invitationTitle = title + " invitation"
                 let invitationUI = CalendarFixtureUI(app: app, title: invitationTitle)
@@ -202,16 +210,19 @@ enum CalendarParityProof {
         return report(checks, reasons, controls)
     }
 
-    private static func ownIdentities(store: EKEventStore) -> Set<String> {
+    private static func ownIdentities(store: EKEventStore) -> [String: Set<String>] {
         let now = Date()
         let predicate = store.predicateForEvents(withStart: now.addingTimeInterval(-180 * 86400), end: now.addingTimeInterval(180 * 86400), calendars: nil)
-        var identities: Set<String> = []
+        var identities: [String: Set<String>] = [:]
         for event in store.events(matching: predicate) {
             for participant in (event.attendees ?? []) + [event.organizer].compactMap({ $0 }) where participant.isCurrentUser && participant.url.scheme?.lowercased() == "mailto" {
-                identities.insert(String(participant.url.absoluteString.dropFirst(7)).removingPercentEncoding?.lowercased() ?? "")
+                let address = String(participant.url.absoluteString.dropFirst(7)).removingPercentEncoding?.lowercased() ?? ""
+                if !address.isEmpty, !address.contains("\n"), !address.contains("\r") {
+                    identities[event.calendar.source.sourceIdentifier, default: []].insert(address)
+                }
             }
         }
-        return identities.filter { !$0.isEmpty && !$0.contains("\n") && !$0.contains("\r") }
+        return identities
     }
 
     private static func report(_ checks: [String: JSON], _ reasons: [String: JSON], _ controls: [String: JSON]) -> JSON {
