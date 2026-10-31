@@ -26,7 +26,7 @@ func (g *LocalGateway) executeNote(r contracts.CommandRecord, p trust.Principal,
 	}
 	defer release()
 	reject := func(problem *contracts.Error) (contracts.CommandRecord, error) {
-		return g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, problem)
+		return g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, noteCommandFailure(problem))
 	}
 	action := contracts.NativeAction{Op: c.Op, NoteArgs: &a, Origin: c.Origin}
 	var expected json.RawMessage
@@ -127,7 +127,32 @@ func (g *LocalGateway) executeNote(r contracts.CommandRecord, p trust.Principal,
 	if err != nil {
 		return g.transition(g.Context, r, "indeterminate", "indeterminate", nil, nil)
 	}
+	outcome.Error = noteCommandFailure(outcome.Error)
 	return g.outcome(g.Context, r, outcome)
+}
+
+func noteCommandFailure(problem *contracts.Error) *contracts.Error {
+	if problem == nil {
+		return nil
+	}
+	result := *problem
+	switch problem.Code {
+	case "unsupported":
+		result.Message = "Notes can't apply this change to locked, read-only, or richly formatted content. Edit it in Notes, or use a plain-text note in a writable folder."
+	case "conflict":
+		result.Message = "This note or folder changed. Refresh it and try again."
+	case "unavailable":
+		result.Message = "Notes didn't respond. Open Notes, check its Automation access, and try again."
+	case "capability_unproven":
+		result.Message = "Notes couldn't confirm this change. Check the result in Notes before trying again."
+	case "not_found":
+		result.Message = "This note or folder is no longer available. Refresh Notes and try again."
+	case "unauthorized":
+		result.Message = "This connection can't change Notes. Reconnect with Notes write access."
+	case "invalid":
+		result.Message = "The Notes request is incomplete or invalid. Check the note or folder details and try again."
+	}
+	return &result
 }
 
 func (g *LocalGateway) writableNoteFolder(ctx context.Context, p trust.Principal, id string) *contracts.Error {
