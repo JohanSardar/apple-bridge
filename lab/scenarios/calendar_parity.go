@@ -47,6 +47,7 @@ func runCalendarParity(ctx context.Context, scenario Scenario, level string) (e 
 		}
 		output, err = exec.CommandContext(ctx, filepath.Join(strings.TrimSpace(string(directory)), "CalendarChecks"), "--parity").CombinedOutput()
 		add("calendar_parity_store_effects_and_cleanup", err == nil && strings.Contains(string(output), "calendar parity checks passed"))
+		add("invitation_shaped_response_readback", err == nil && strings.Contains(string(output), "calendar invitation response checks passed"))
 		if err != nil {
 			os.Stderr.Write(output)
 		}
