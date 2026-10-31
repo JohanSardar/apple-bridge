@@ -49,6 +49,22 @@ func checkMailCommandCapture(_ path: String) async throws {
     try require(!failure["observed"].bool && failure["disposition"].string == "indeterminate" && failure["reason"].string == MailCommandFailure.permission.localizedDescription)
 }
 func checkMailCommands() async throws {
+    try await MailCommands.requireAutomationPermission { 0 }
+    do { try await MailCommands.requireAutomationPermission { -1743 }; throw SourceFailure.corrupt }
+    catch MailCommandFailure.permission {}
+    let release = DispatchSemaphore(value: 0)
+    let started = ContinuousClock.now
+    do {
+        try await MailCommands.requireAutomationPermission(after: 0.02) {
+            _ = release.wait(timeout: .now() + 2)
+            return 0
+        }
+        throw SourceFailure.corrupt
+    } catch MailCommandFailure.timeout {}
+    release.signal()
+    try require(ContinuousClock.now - started < .seconds(1))
+    try await MailCommands.requireAutomationPermission { 0 }
+
     try require(MailCommandFailure.appleEvent(-1712) == .timeout)
     try require(MailCommandFailure.appleEvent(-1743) == .permission && MailCommandFailure.appleEvent(-1744) == .permission)
     try require(MailCommandFailure.appleEvent(-600) == .rejected)
