@@ -1,0 +1,139 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[5.07 7.15 8.82] cpu_idle=50% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M6A1PP45YRWACFYSJPPPVC4Y",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "CAP-SIM",
+  "level": "real",
+  "passed": false,
+  "git_sha": "",
+  "at": "2026-10-31T22:36:22.533514Z",
+  "assertions": [
+    {
+      "name": "native_build",
+      "passed": true
+    },
+    {
+      "name": "native_output",
+      "passed": true
+    },
+    {
+      "name": "provider_lifecycle_and_artifact_verification",
+      "passed": true
+    },
+    {
+      "name": "public_gateway_start",
+      "passed": true
+    },
+    {
+      "name": "public_helper_ready",
+      "passed": true
+    },
+    {
+      "name": "rest_capture.screenshot_observed",
+      "passed": false
+    },
+    {
+      "name": "rest_capture.screenshot_blob_download",
+      "passed": false
+    },
+    {
+      "name": "rest_capture.camera_photo_observed",
+      "passed": false
+    },
+    {
+      "name": "rest_capture.camera_photo_blob_download",
+      "passed": false
+    },
+    {
+      "name": "rest_capture.record_audio_observed",
+      "passed": true
+    },
+    {
+      "name": "rest_capture.record_audio_blob_download",
+      "passed": true
+    },
+    {
+      "name": "rest_mac.screen_record_observed",
+      "passed": false
+    },
+    {
+      "name": "rest_mac.screen_record_blob_download",
+      "passed": false
+    },
+    {
+      "name": "print_fixture_path",
+      "passed": true
+    },
+    {
+      "name": "rest_print.document_observed",
+      "passed": true
+    },
+    {
+      "name": "rest_print.document_blob_download",
+      "passed": true
+    },
+    {
+      "name": "mcp_capture.screenshot_observed",
+      "passed": false
+    },
+    {
+      "name": "mcp_capture.screenshot_blob_download",
+      "passed": false
+    },
+    {
+      "name": "mcp_capture.camera_photo_observed",
+      "passed": false
+    },
+    {
+      "name": "mcp_capture.camera_photo_blob_download",
+      "passed": false
+    },
+    {
+      "name": "mcp_capture.record_audio_observed",
+      "passed": true
+    },
+    {
+      "name": "mcp_capture.record_audio_blob_download",
+      "passed": true
+    },
+    {
+      "name": "mcp_mac.screen_record_observed",
+      "passed": false
+    },
+    {
+      "name": "mcp_mac.screen_record_blob_download",
+      "passed": false
+    },
+    {
+      "name": "print_fixture_path",
+      "passed": true
+    },
+    {
+      "name": "mcp_print.document_observed",
+      "passed": true
+    },
+    {
+      "name": "mcp_print.document_blob_download",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null,
+  "conditions": {
+    "mcp_capture.camera_photo": "state=indeterminate; code=; native=unavailable",
+    "mcp_capture.screenshot": "state=; code=unavailable; native=",
+    "mcp_mac.screen_record": "state=; code=unavailable; native=",
+    "rest_capture.camera_photo": "state=indeterminate; code=; native=unavailable",
+    "rest_capture.screenshot": "state=; code=unavailable; native=",
+    "rest_mac.screen_record": "state=; code=unavailable; native="
+  }
+}
