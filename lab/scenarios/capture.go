@@ -5,6 +5,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/JohanSardar/apple-bridge/lab/scripted"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 	"io"
@@ -81,6 +83,25 @@ func runCapture(ctx context.Context, s Scenario, level string) Evidence {
 			}
 			var command contracts.CommandRecord
 			err := client.Call(ctx, op, contracts.Command{ID: contracts.NewCommandID(), Args: args, WaitMS: 15000}, &command)
+			if err != nil || command.State != contracts.CommandObserved {
+				code := ""
+				var problem *contracts.Error
+				if errors.As(err, &problem) {
+					code = problem.Code
+				}
+				if command.Error != nil {
+					code = command.Error.Code
+				}
+				var native struct {
+					Code string `json:"native_error_code"`
+				}
+				json.Unmarshal(command.Evidence, &native)
+				fmt.Fprintf(os.Stderr, "%s %s state=%s code=%s native=%s\n", protocol, op, command.State, code, native.Code)
+				if e.Conditions == nil {
+					e.Conditions = map[string]string{}
+				}
+				e.Conditions[protocol+"_"+op] = "state=" + string(command.State) + "; code=" + code + "; native=" + native.Code
+			}
 			add(protocol+"_"+op+"_observed", err == nil && command.State == "observed")
 			var result struct {
 				Digest string `json:"digest"`
