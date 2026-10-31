@@ -6,6 +6,9 @@ public enum SendVariantFailure: String, Error {
     case invalidVariant, capabilityUnproven, scheduleDateControlsMissing, scheduleDateControlsUnverified, mentionSuggestionMissing, mentionSuggestionIdentityUnverified, audioConsentPending, audioMessageFlagUnverified, keptReadbackUnavailable, formatMenuUnavailable, effectPickerUnavailable, composerUnavailable, draftPresent, draftChanged, automationDenied, sendReceiptUnknown, effectReadbackUnverified, formattingReadbackUnverified
 }
 public enum MessagesSendVariants {
+    public static func dispatchFailure(_ error: any Error, sendStarted: Bool) -> any Error {
+        sendStarted ? SendVariantFailure.sendReceiptUnknown : error
+    }
     public static let operations = ["messages.send_later", "messages.send_effect", "messages.send_formatted", "messages.send_mention", "messages.send_audio", "messages.keep_audio"]
     public static let styles = ["bold", "italic", "underline", "strikethrough"]
     public static let textEffects = ["big", "small", "shake", "nod", "explode", "ripple", "bloom", "jitter"]

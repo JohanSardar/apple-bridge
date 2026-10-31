@@ -105,6 +105,8 @@ struct MessagesVariantChecks {
             checks["personal_draft_preserved"] = !MessagesUISession.canReplaceDraft("personal draft", with: "[ab-test current] reply")
             checks["current_draft_replace_allowed"] = MessagesUISession.canReplaceDraft("[ab-test current] draft", with: "[ab-test current] reply")
             checks["scheduled_send_does_not_require_early_delivery"] = !MessagesVariantProof.requiresSelfEcho("schedule") && MessagesVariantProof.requiresSelfEcho("mention") && MessagesVariantProof.requiresSelfEcho("audio")
+            checks["date_commit_failure_retains_cleanup_obligation"] = MessagesSendVariants.dispatchFailure(SendVariantFailure.draftChanged, sendStarted: true) as? SendVariantFailure == .sendReceiptUnknown
+            checks["pre_send_failure_remains_rejected"] = MessagesSendVariants.dispatchFailure(SendVariantFailure.draftPresent, sendStarted: false) as? SendVariantFailure == .draftPresent
             checks["late_tagged_echo_owned"] = MessagesCleanup.allowsLateEcho(rowID: 11, baseline: 10, text: "[ab-test run_current] fixture", tag: "[ab-test run_current]")
             checks["earlier_residue_refused"] = !MessagesCleanup.allowsLateEcho(rowID: 9, baseline: 10, text: "[ab-test run_current] fixture", tag: "[ab-test run_current]")
             checks["other_run_echo_refused"] = !MessagesCleanup.allowsLateEcho(rowID: 11, baseline: 10, text: "[ab-test run_earlier] fixture", tag: "[ab-test run_current]")

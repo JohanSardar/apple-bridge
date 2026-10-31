@@ -46,6 +46,11 @@ enum MessagesVariantUI {
         try press(try unique(find(application,role:kAXMenuItemRole,name:title),failure:.formatMenuUnavailable))
     }
     static func send(_ args: JSON, target: String, targetData: JSON = .null, expiresAt: Date = Date().addingTimeInterval(30)) throws {
+        var sendStarted = false
+        do { try prepareAndSend(args, target: target, targetData: targetData, expiresAt: expiresAt, sendStarted: &sendStarted) }
+        catch { throw MessagesSendVariants.dispatchFailure(error, sendStarted: sendStarted) }
+    }
+    private static func prepareAndSend(_ args: JSON, target: String, targetData: JSON, expiresAt: Date, sendStarted: inout Bool) throws {
         let variant=args["variant"],kind=variant["kind"].string
         if kind=="audio" {
             guard AVCaptureDevice.authorizationStatus(for:.audio) == .authorized else { throw SendVariantFailure.audioConsentPending }
@@ -58,7 +63,6 @@ enum MessagesVariantUI {
         try MessagesAccessibility.validate(Prepared(nativeState:.object(["target":targetData]),fingerprint:"",action:.object(["op":.string("messages.send"),"native_key":.string(target)])))
         let session=try uiSession(),application=session.root,editor=try unique(find(application,identifier:"messageBodyField"),failure:.composerUnavailable)
         guard value(editor,kAXValueAttribute).isEmpty else { throw SendVariantFailure.draftPresent }
-        var sendStarted=false
         defer {
             if !sendStarted,(try? session.fence()) != nil,value(editor,kAXValueAttribute)==args["text"].string,(try? session.focus(editor,failure:SendVariantFailure.composerUnavailable)) != nil {
                 if (try? session.press(0,command:true)) != nil,session.focused(editor),value(editor,kAXValueAttribute)==args["text"].string { try? session.press(51) }
@@ -79,6 +83,10 @@ enum MessagesVariantUI {
             for field in fields {
                 guard AXUIElementSetAttributeValue(field, kAXValueAttribute as CFString, date as NSDate) == .success || AXUIElementSetAttributeValue(field, kAXValueAttribute as CFString, formatted as CFString) == .success else { throw SendVariantFailure.scheduleDateControlsUnverified }
             }
+            guard let field = fields.last else { throw SendVariantFailure.scheduleDateControlsMissing }
+            try session.focus(field, failure: SendVariantFailure.scheduleDateControlsUnverified)
+            guard Date() < expiresAt else { throw SourceFailure.expired }
+            sendStarted = true
             try session.press(MessagesUISession.enter)
         }
         if kind=="mention" {
