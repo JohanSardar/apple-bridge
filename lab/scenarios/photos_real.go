@@ -48,7 +48,7 @@ func runPhotosReal(ctx context.Context, s Scenario, e Evidence) Evidence {
 		out, err = exec.CommandContext(ctx, "open", "-n", "-W", "-a", app, "--args", "photos-real-checks", s.ID, "--report", report).CombinedOutput()
 		add("signed_helper_probe", err == nil)
 		if err == nil {
-			err = os.WriteFile(report+".sha256", []byte(identity), 0600)
+			_ = os.WriteFile(report+".sha256", []byte(identity), 0600)
 		}
 	}
 	if err != nil {
