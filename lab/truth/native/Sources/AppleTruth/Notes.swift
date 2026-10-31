@@ -56,9 +56,10 @@ extension AppleTruth {
         }
         if (action === 'cleanup_created_folder') {
             require(request.created_by_run === true && (request.native_key || request.folder_id) && (request.title === 'Bridge Test ' + tag || request.title.startsWith('Bridge Test ' + tag + ' ')));
-            const folders = app.folders.whose({name:request.title})();
+            const folders = request.folder_id ? [app.folders.byId(request.folder_id)] : app.folders.whose({name:request.title})();
             require(folders.length === 1);
             const folder = folders[0];
+            require(folder.name() === 'Bridge Test ' + tag || folder.name().startsWith('Bridge Test ' + tag + ' '));
             require((!request.folder_id || folder.id() === request.folder_id) && folder.folders().length === 0 && (request.folder_id ? folder.notes().length === 0 : folder.notes().every(n => n.name().startsWith(tag))));
             const folderID = folder.id();
             app.delete(folder);
