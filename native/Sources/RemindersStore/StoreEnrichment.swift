@@ -96,7 +96,7 @@ public actor RemindersStoreEnrichment {
                     for key in changedReminders {
                         let old = RemindersStoreProjection.reminderIdentifier(previous.reminders[key]).map { "reminders.reminder/" + $0 }
                         let native = RemindersStoreProjection.reminderIdentifier(snapshot.reminders[key]).map { "reminders.reminder/" + $0 }
-                        let value = snapshot.reminders[key].map { RemindersStoreProjection.reminder($0, snapshot: snapshot, columns: result.columns["ZREMCDREMINDER"] ?? [], manualOrder: $0.list.flatMap { manualOrders[path]?[$0] } ?? .unsupported, sections: $0.list.flatMap { sectionStates[path]?[$0] }) }
+                        let value = snapshot.reminders[key].map { RemindersStoreProjection.reminder($0, snapshot: snapshot, columns: result.columns["ZREMCDREMINDER"] ?? [], manualOrder: $0.list.flatMap { manualOrders[path]?[$0] } ?? .unsupported, sections: $0.list.flatMap { sectionStates[path]?[$0] }, tagColumns: result.columns) }
                         update(path: path, old: old, native: native, value: value, touched: &touched)
                     }
                     var changedLists = result.listKeys.union(sectionLists)

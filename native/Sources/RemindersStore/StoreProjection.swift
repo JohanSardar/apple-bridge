@@ -33,7 +33,7 @@ public enum RemindersStoreProjection {
     private static let reminderFields = ["store_identifier", "flagged", "parent_id", "section_id", "tags", "manual_order", "created_at", "early_reminders", "assignment", "store_alarms", "store_recurrence", "attachment_ids"]
     private static let listFields = ["store_identifier", "parent_id", "badge_emblem", "is_group", "display_order", "pinned", "pinned_at", "sorting_style", "categorize_groceries", "grocery_locale", "sharing_status", "shared_owner_name", "smart_list_type", "smart_filter", "sections", "store_color"]
 
-    static func reminder(_ row: StoreReminderRow, snapshot: TypedStoreSnapshot, columns: Set<String>, manualOrder: StoreManualOrder = .unsupported, sections: StoreSections? = nil) -> JSON {
+    static func reminder(_ row: StoreReminderRow, snapshot: TypedStoreSnapshot, columns: Set<String>, manualOrder: StoreManualOrder = .unsupported, sections: StoreSections? = nil, tagColumns: [String: Set<String>] = [:]) -> JSON {
         let parent = row.parent.flatMap { snapshot.reminders[$0] }.flatMap(reminderIdentifier)
         var fields: [String: JSON] = ["store_identifier": value(identifier(row.identity)), "flagged": row.flagged.map(JSON.bool) ?? .null, "parent_id": parent.map { RemindersStoreSnapshot.reference("reminders.reminder", $0) } ?? .null, "created_at": row.created.map { .string(timestamp(Date(timeIntervalSinceReferenceDate: $0))) } ?? .null, "store_status": .string("partial")]
         var coverage: [String: JSON] = [:]
@@ -53,7 +53,9 @@ public enum RemindersStoreProjection {
             fields["section_id"] = sections.membership[id].map { .string($0.uuidString) } ?? .null
             coverage["section_id"] = RemindersStoreSnapshot.coverage("complete")
         }
-        if let tags = StoreTags.names(for: row.identity.key, snapshot: snapshot) {
+        if Set(["ZHASHTAGLABEL", "ZREMINDER3"]).isSubset(of: tagColumns["ZREMCDOBJECT"] ?? []),
+           (tagColumns["ZREMCDHASHTAGLABEL"] ?? []).contains("ZNAME"),
+           let tags = StoreTags.names(for: row.identity.key, snapshot: snapshot) {
             fields["tags"] = .array(tags.map(JSON.string))
             coverage["tags"] = RemindersStoreSnapshot.coverage("complete")
         }

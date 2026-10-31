@@ -70,6 +70,16 @@ enum RemindersParityProof {
             let expected = ["File", "Edit", "View", "New Section", "Indent Reminders", "Outdent Reminders", "Add Tags…", "Add Image", "New List…", "Show List Info", "Sort By", "Manual", "Add Image…", "Choose File…"]
             checks["owned_list_visible"] = .bool(!ui.find(title).isEmpty)
             for name in expected { checks["control_" + name] = .bool(!ui.find(name).isEmpty) }
+            stage = "tags"
+            let tag = "abtest" + UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
+            try script("show (first reminder of fixtureList whose name is \"" + first.title + "\")\nactivate")
+            try await Task.sleep(for: .milliseconds(300))
+            let fields = ui.find(first.title, role: kAXTextFieldRole) + ui.find(first.title, role: kAXTextAreaRole)
+            if fields.count == 1 {
+                try ui.set(fields[0], text: first.title + " #" + tag)
+                try ui.key(36)
+                checks["tags_readback"] = .bool(try await observe { snapshot, _, parent, _ in StoreTags.names(for: parent.identity.key, snapshot: snapshot)?.contains(tag) == true })
+            }
             stage = "subtasks"
             try script("show (first reminder of fixtureList whose name is \"" + second.title + "\")\nactivate")
             try await Task.sleep(for: .milliseconds(400))
@@ -124,6 +134,19 @@ final class RemindersFixtureUI {
         guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier, !find(title).isEmpty else { throw SourceFailure.conflict }
         let matches = find(name, role: role)
         guard matches.count == 1, AXUIElementPerformAction(matches[0], kAXPressAction as CFString) == .success else { throw SourceFailure.unsupported }
+    }
+
+    func set(_ element: AXUIElement, text: String) throws {
+        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier, !find(title).isEmpty else { throw SourceFailure.conflict }
+        guard AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, kCFBooleanTrue) == .success,
+              AXUIElementSetAttributeValue(element, kAXValueAttribute as CFString, text as CFString) == .success else { throw SourceFailure.unsupported }
+    }
+
+    func key(_ code: CGKeyCode, flags: CGEventFlags = []) throws {
+        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier, !find(title).isEmpty else { throw SourceFailure.conflict }
+        guard let down = CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: true), let up = CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: false) else { throw SourceFailure.unavailable }
+        down.flags = flags; up.flags = flags
+        down.post(tap: .cghidEventTap); up.post(tap: .cghidEventTap)
     }
 
     func menu(_ menu: String, _ items: [String]) async throws {
