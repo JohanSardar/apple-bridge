@@ -108,7 +108,9 @@ private struct ClockTimerUI {
             guard depth < 20, budget > 0 else { return [] }
             budget -= 1
             var result: [AXUIElement] = []
-            if (role == nil || attribute(item, kAXRoleAttribute) as? String == role) && (identifier == nil || attribute(item, kAXIdentifierAttribute) as? String == identifier) { result.append(item) }
+            let actualRole = attribute(item, kAXRoleAttribute) as? String
+            let actualIdentifier = attribute(item, kAXIdentifierAttribute) as? String
+            if (role == nil || actualRole == role) && (identifier == nil || actualIdentifier == identifier) { result.append(item) }
             for child in attribute(item, kAXChildrenAttribute) as? [AXUIElement] ?? [] { result += visit(child, depth: depth + 1) }
             return result
         }

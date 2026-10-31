@@ -62,7 +62,15 @@ func runSiriIntents(ctx context.Context, s Scenario, level string) Evidence {
 }
 
 func startBridgeIntentHost(ctx context.Context) (string, func(), error) {
-	directory, err := os.MkdirTemp("", "ab-f9-intent-")
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", nil, err
+	}
+	parent := filepath.Join(home, "Applications", "AppleBridgeDev")
+	if err = os.MkdirAll(parent, 0700); err != nil {
+		return "", nil, err
+	}
+	directory, err := os.MkdirTemp(parent, ".f9-intent-")
 	if err != nil {
 		return "", nil, err
 	}
@@ -72,6 +80,18 @@ func startBridgeIntentHost(ctx context.Context) (string, func(), error) {
 		os.Stderr.Write(output)
 		return "", nil, buildErr
 	}
+	installed := filepath.Join(parent, "AppleBridgeHelper.app")
+	previous := filepath.Join(directory, "previous.app")
+	if err = os.Rename(installed, previous); err != nil && !os.IsNotExist(err) {
+		os.RemoveAll(directory)
+		return "", nil, err
+	}
+	if err = os.Rename(app, installed); err != nil {
+		os.Rename(previous, installed)
+		os.RemoveAll(directory)
+		return "", nil, err
+	}
+	app = installed
 	ready := filepath.Join(directory, "pid")
 	process := exec.CommandContext(ctx, "open", "-n", "-W", "-g", "-a", app, "--args", "intent-host", strconv.Itoa(os.Getpid()), ready)
 	if err = process.Start(); err != nil {
