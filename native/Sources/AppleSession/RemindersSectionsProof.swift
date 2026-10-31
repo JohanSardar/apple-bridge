@@ -30,6 +30,7 @@ enum RemindersSectionsProof {
             throw error
         }
         var checks: [String: JSON] = [:]
+        var diagnostics: [String: JSON] = [:]
         var failure = ""
         var stage = "fixture"
         do {
@@ -47,7 +48,9 @@ enum RemindersSectionsProof {
             AXUIElementSetMessagingTimeout(root, 0.1)
             var ownedSelection: AXUIElement?
             @MainActor func fence() throws {
-                guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier else { throw SourceFailure.conflict }
+                let foreground = NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier
+                diagnostics[stage + "_foreground"] = .number(foreground ? 1 : 0)
+                guard foreground else { throw SourceFailure.conflict }
                 if let ownedSelection {
                     var selected: CFTypeRef?
                     guard AXUIElementCopyAttributeValue(ownedSelection, kAXSelectedAttribute as CFString, &selected) == .success, (selected as? Bool) == true else { throw SourceFailure.conflict }
@@ -78,6 +81,7 @@ enum RemindersSectionsProof {
             }
             @MainActor func unique(_ name: String, role: String? = nil) throws -> AXUIElement {
                 let matches = find(name, role: role)
+                diagnostics[stage + "_unique_matches"] = .number(Double(matches.count))
                 guard matches.count == 1 else { throw SourceFailure.conflict }
                 return matches[0]
             }
@@ -123,7 +127,9 @@ enum RemindersSectionsProof {
             }
             @MainActor func ownedRow() -> AXUIElement? {
                 var rows: [AXUIElement] = []
-                for match in find(title) {
+                let matches = find(title)
+                diagnostics["selection_title_matches"] = .number(Double(matches.count))
+                for match in matches {
                     var current = match
                     for _ in 0..<16 {
                         if value(current, kAXRoleAttribute) == kAXRowRole {
@@ -135,6 +141,7 @@ enum RemindersSectionsProof {
                         current = unsafeDowncast(parent, to: AXUIElement.self)
                     }
                 }
+                diagnostics["selection_row_matches"] = .number(Double(rows.count))
                 return rows.count == 1 ? rows[0] : nil
             }
             let selectionDeadline = ContinuousClock.now.advanced(by: .seconds(10))
@@ -197,7 +204,7 @@ enum RemindersSectionsProof {
         store.reset()
         checks["owned_list_cleanup"] = .bool(store.calendar(withIdentifier: identifier) == nil)
         try PrivateReport.write(["list_id": identifier, "title": title, "cleanup_state": checks["owned_list_cleanup"]?.bool == true ? "verified_clean" : "pending"], to: ledger)
-        return .object(["passed": .bool(failure.isEmpty && checks.count == 4 && checks.values.allSatisfy(\.bool)), "checks": .object(checks), "reason": .string(failure)])
+        return .object(["passed": .bool(failure.isEmpty && checks.count == 4 && checks.values.allSatisfy(\.bool)), "checks": .object(checks), "diagnostics": .object(diagnostics), "reason": .string(failure)])
     }
 }
 #endif
