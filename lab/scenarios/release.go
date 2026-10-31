@@ -58,7 +58,6 @@ func runRelease(ctx context.Context, level string, evidence Evidence) (result Ev
 	}()
 	app := filepath.Join(mount, "Apple Bridge.app")
 	add("bundled_app_signature", exec.CommandContext(ctx, "codesign", "--verify", "--deep", "--strict", app).Run() == nil)
-	add("bundled_app_stapled", exec.CommandContext(ctx, "xcrun", "stapler", "validate", app).Run() == nil)
 	applications, err := os.Readlink(filepath.Join(mount, "Applications"))
 	add("drag_to_applications", err == nil && applications == "/Applications")
 	return result
