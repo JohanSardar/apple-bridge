@@ -38,6 +38,11 @@ struct MessagesVariantChecks {
         checks["untagged_message_protected"] = !MessagesSelfTestIsolation.ownsMessage(rowID: 101, text: "new", tag: "[ab-test synthetic]", baseline: 100)
         checks["quoted_tag_protected"] = !MessagesSelfTestIsolation.ownsMessage(rowID: 101, text: "quoted [ab-test synthetic] new", tag: "[ab-test synthetic]", baseline: 100)
         checks["invalid_tag_rejected"] = !MessagesSelfTestIsolation.ownsMessage(rowID: 101, text: " new", tag: "", baseline: 100)
+        let unreadBaseline = MessagesSelfTestReadState(unreadIDs: ["old-a", "old-b"], unreadCount: 2)
+        checks["unread_exact_restore"] = unreadBaseline.matches(unreadBaseline)
+        checks["unread_count_restore"] = unreadBaseline.matches(MessagesSelfTestReadState(unreadIDs: ["old-c"], unreadCount: 2))
+        checks["unread_count_mismatch_rejected"] = !unreadBaseline.matches(MessagesSelfTestReadState(unreadIDs: [], unreadCount: 0))
+        checks["unread_read_flags_mismatch_rejected"] = !MessagesSelfTestReadState(unreadIDs: [], unreadCount: 0).matches(MessagesSelfTestReadState(unreadIDs: ["old-a"], unreadCount: 0))
         let pins = try PropertyListSerialization.data(fromPropertyList: ["pD": ["pP": ["synthetic-a", "synthetic-b"]]], format: .binary, options: 0)
         checks["native_pin_order"] = try MessagesPins.identifiers(pins) == ["synthetic-a", "synthetic-b"]
         checks["valid_pin_indices"] = try [-1, 0, 8].allSatisfy { try MessagesPins.requestedIndex(.number(Double($0))) == $0 }

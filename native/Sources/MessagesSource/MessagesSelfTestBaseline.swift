@@ -4,10 +4,10 @@ import SourceSupport
 import Decoders
 
 public enum MessagesSelfTestBaselineFailure: Error, CustomStringConvertible {
-    case unreadMessages
+    case unreadRestoreFailed
 
     public var description: String {
-        "The self conversation contains unread existing messages. This check cannot open it without changing their read state. Read those messages in Messages before rerunning the check."
+        "The self conversation unread state could not be restored. Keep Messages open and rerun the restoration check."
     }
 }
 
@@ -19,6 +19,7 @@ public struct MessagesSelfTestBaseline: Sendable {
     private let receipts: Bool
     private let receiptsSetting: String
     private let messagesDigest: String
+    private let readState: MessagesSelfTestReadState
 
     static func reader() throws -> MessagesReader {
         try MessagesReader(path: FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/chat.db").path)
@@ -39,6 +40,8 @@ public struct MessagesSelfTestBaseline: Sendable {
         let rows = try reader.query("SELECT m.*,j.chat_id AS baseline_chat_id,r.delete_date AS baseline_delete_date FROM message m JOIN (SELECT chat_id,message_id FROM chat_message_join UNION SELECT chat_id,message_id FROM chat_recoverable_message_join) j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id LEFT JOIN chat_recoverable_message_join r ON r.chat_id=j.chat_id AND r.message_id=m.ROWID WHERE c.guid=? AND m.ROWID<=? ORDER BY m.ROWID", [chat, String(baseline)])
         let values = rows.map { row -> [String: String] in
             var fields = row.values
+            fields.removeValue(forKey: "is_read")
+            fields.removeValue(forKey: "date_read")
             for (key, bytes) in row.blobs { fields[key] = BodyDigest.hash(bytes) }
             return fields
         }
@@ -53,21 +56,27 @@ public struct MessagesSelfTestBaseline: Sendable {
     @UIActor
     public static func capture(_ chat: String) throws -> MessagesSelfTestBaseline {
         let reader = try reader()
-        guard try reader.query("SELECT 1 FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? AND m.is_from_me=0 AND m.is_read=0 AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=m.ROWID) LIMIT 1", [chat]).isEmpty else { throw MessagesSelfTestBaselineFailure.unreadMessages }
-        let last = try reader.maximum()
+        let (readState, last) = try MessagesSelfTestReadState.baseline(chat, through: reader.maximum())
         let digest = try digest(chat, through: last)
         let prepared = try target(chat)
-        try MessagesAccessibility.openMessage(prepared.nativeState["message_guid"].string, settle: 0.5, resetEditor: false)
-        let (session, titles) = try MessagesParity.menu(prepared)
-        try MessagesParity.dismiss(session)
-        guard titles.contains("Show Alerts") != titles.contains("Hide Alerts") else { throw SourceFailure.capabilityUnproven }
-        let (receiptSession, _, receiptValue) = try MessagesParity.receiptControl(prepared)
-        try MessagesParity.dismiss(receiptSession)
-        return MessagesSelfTestBaseline(chat: chat, lastMessageROWID: last, pins: try MessagesPins.read(), muted: titles.contains("Show Alerts"), receipts: receiptValue, receiptsSetting: try receiptSetting(chat), messagesDigest: digest)
+        do {
+            try MessagesAccessibility.openMessage(prepared.nativeState["message_guid"].string, settle: 0.5, resetEditor: false)
+            let (session, titles) = try MessagesParity.menu(prepared)
+            try MessagesParity.dismiss(session)
+            guard titles.contains("Show Alerts") != titles.contains("Hide Alerts") else { throw SourceFailure.capabilityUnproven }
+            let (receiptSession, _, receiptValue) = try MessagesParity.receiptControl(prepared)
+            try MessagesParity.dismiss(receiptSession)
+            return MessagesSelfTestBaseline(chat: chat, lastMessageROWID: last, pins: try MessagesPins.read(), muted: titles.contains("Show Alerts"), receipts: receiptValue, receiptsSetting: try receiptSetting(chat), messagesDigest: digest, readState: readState)
+        } catch {
+            try readState.restore(prepared, through: last)
+            try MessagesSelfTestReadState.complete(chat)
+            throw error
+        }
     }
 
     @UIActor
     public func restoreAndVerify() throws -> Bool {
+        try readState.save(chat, through: lastMessageROWID)
         let prepared = try Self.target(chat)
         let (session, titles) = try MessagesParity.menu(prepared)
         try MessagesParity.dismiss(session)
@@ -83,6 +92,9 @@ public struct MessagesSelfTestBaseline: Sendable {
         try MessagesParity.dismiss(verifiedSession)
         let (verifiedReceiptSession, _, verifiedReceipts) = try MessagesParity.receiptControl(prepared)
         try MessagesParity.dismiss(verifiedReceiptSession)
-        return try MessagesPins.read() == pins && verifiedTitles.contains("Show Alerts") == muted && verifiedTitles.contains("Hide Alerts") != muted && verifiedReceipts == receipts && Self.receiptSetting(chat) == receiptsSetting && Self.digest(chat, through: lastMessageROWID) == messagesDigest
+        try readState.restore(prepared, through: lastMessageROWID)
+        let restored = try MessagesPins.read() == pins && verifiedTitles.contains("Show Alerts") == muted && verifiedTitles.contains("Hide Alerts") != muted && verifiedReceipts == receipts && Self.receiptSetting(chat) == receiptsSetting && Self.digest(chat, through: lastMessageROWID) == messagesDigest
+        if restored { try MessagesSelfTestReadState.complete(chat) }
+        return restored
     }
 }
