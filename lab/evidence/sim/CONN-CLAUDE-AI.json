@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[22.49 20.5 16.53] cpu_idle=1% cpus=10 other_heavy=0"
+    "summary": "air: load=[13.8 14.7 14.91] cpu_idle=25% cpus=10 other_heavy=0"
   },
-  "run_id": "connector-approval_01M69X9JHNRDM94CVKY41V5GA4",
+  "run_id": "connector-approval_01M69XKGYKATH8Z5WXCD4HT3T6",
   "network_path": "isolated gateway HTTP, owner-only Mac socket, OAuth and MCP; controlled expiry clock",
   "metrics": {
     "capture_observer_resets": 0
@@ -12,7 +12,7 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-31T21:19:18.581412Z",
+  "at": "2026-10-31T21:24:44.627233Z",
   "assertions": [
     {
       "name": "isolated_gateway",
