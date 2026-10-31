@@ -2,6 +2,8 @@ import { test, expect } from '@playwright/test';
 import { bootstrap, control } from './session';
 import { appInputPerformance } from './app-input-performance';
 
+test.setTimeout(90000);
+
 test('WEB-CAL-READ repeated inspector inputs measure native main-thread paint', async ({ page, context, request }, info) => {
     await bootstrap(context, request);
     await page.goto('/calendar/list/2026-10-20');

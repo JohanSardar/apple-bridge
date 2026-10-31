@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {traceWork} from '../tests/list-performance.ts';
+import {traceWork,resultFrames} from '../tests/list-performance.ts';
 import test from 'node:test';
 test('paint costs are attributed once to the correct main-thread frame',()=>{
 const events=[];
@@ -15,4 +15,23 @@ events.push(...[
 ]);
 const result=traceWork(JSON.stringify({traceEvents:events}));
 assert.equal(result.frames[0],2.1);assert.equal(result.frames[1],.2);assert.equal(result.frame_work.samples,100);
+});
+test('result frames include rendered work and exclude the already measured input dispatch',()=>{
+const events=[];
+for(let index=0;index<=48;index++)events.push({name:'AnimationFrame',ts:index*10000,pid:1,tid:1,ph:'e'});
+for(let index=0;index<24;index++){
+ const at=index*20000;
+ events.push(...[
+  {name:'list-input-event-'+index,ts:at+1100,pid:1,tid:1,ph:'I'},
+  {name:'list-input-frame-start-'+index,ts:at+2500,pid:1,tid:1,ph:'I'},
+  {name:'list-input-result-'+index,ts:at+3000,pid:1,tid:1,ph:'I'},
+  {name:'list-input-frame-end-'+index,ts:at+15000,pid:1,tid:1,ph:'I'},
+  {name:'EventDispatch',ts:at+1000,dur:1000,pid:1,tid:1,ph:'X'},
+  {name:'FunctionCall',ts:at+5000,dur:2000,pid:1,tid:1,ph:'X'},
+  {name:'Layout',ts:at+6000,dur:500,pid:1,tid:1,ph:'X'},
+  {name:'Paint',ts:at+8000,dur:500,pid:1,tid:1,ph:'X'},
+ ]);
+}
+assert.deepEqual(resultFrames(JSON.stringify({traceEvents:events})).frames,Array(24).fill(2.5));
+assert.throws(()=>resultFrames(JSON.stringify({traceEvents:events.filter(event=>event.name!=='list-input-result-23')})),/result marks missing/);
 });
