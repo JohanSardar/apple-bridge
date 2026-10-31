@@ -10,6 +10,15 @@ final class ReleaseApplication: NSObject, NSApplicationDelegate, SPUUpdaterDeleg
     let agent = SMAppService.agent(plistName: "dev.applebridge.gateway.plist")
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        let arguments = Array(CommandLine.arguments.dropFirst())
+        if arguments.first == "connector-approvals" {
+            let process = Process()
+            process.executableURL = Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/AppleBridgeHelper")
+            process.arguments = arguments
+            process.terminationHandler = { _ in Task { @MainActor in NSApplication.shared.terminate(nil) } }
+            do { try process.run(); onboarding = process } catch { showError(error); NSApplication.shared.terminate(nil) }
+            return
+        }
         updater = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: self, userDriverDelegate: nil)
         if UserDefaults.standard.bool(forKey: "R1RestartGateway") {
             do {
@@ -22,6 +31,7 @@ final class ReleaseApplication: NSObject, NSApplicationDelegate, SPUUpdaterDeleg
         let menu = NSMenu()
         let appItem = NSMenuItem()
         let actions = NSMenu()
+        actions.addItem(withTitle: "Open Setup…", action: #selector(setup), keyEquivalent: "s").target = self
         actions.addItem(withTitle: "Check for Updates…", action: #selector(checkUpdates), keyEquivalent: "u").target = self
         actions.addItem(withTitle: "Quit Apple Bridge", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appItem.submenu = actions
@@ -41,6 +51,7 @@ final class ReleaseApplication: NSObject, NSApplicationDelegate, SPUUpdaterDeleg
         panel.center()
         panel.makeKeyAndOrderFront(nil)
         NSApplication.shared.activate()
+        if !UserDefaults.standard.bool(forKey: "Q1SetupOpened") { setup(); UserDefaults.standard.set(true, forKey: "Q1SetupOpened") }
     }
     func updater(_ updater: SPUUpdater, willInstallUpdate item: SUAppcastItem) {
         UserDefaults.standard.set(agent.status == .enabled, forKey: "R1RestartGateway")
@@ -63,10 +74,10 @@ final class ReleaseApplication: NSObject, NSApplicationDelegate, SPUUpdaterDeleg
         alert.runModal()
     }
     @objc func setup() {
-        if let onboarding, onboarding.isRunning { return }
+        if let onboarding, onboarding.isRunning { DistributedNotificationCenter.default().postNotificationName(Notification.Name("dev.applebridge.setup.\(onboarding.processIdentifier)"), object: nil, userInfo: nil, deliverImmediately: true); NSRunningApplication(processIdentifier: onboarding.processIdentifier)?.activate(); return }
         let process = Process()
         process.executableURL = Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/AppleBridgeHelper")
-        do { try process.run(); onboarding = process } catch { showError(error) }
+        do { try process.run(); onboarding = process; window?.orderOut(nil) } catch { showError(error) }
     }
     @objc func checkUpdates() { updater?.checkForUpdates(nil) }
     @objc func toggleLogin() {

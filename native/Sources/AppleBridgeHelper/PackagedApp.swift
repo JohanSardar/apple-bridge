@@ -1,13 +1,16 @@
 import AppKit
 import AppleSession
 import ServiceManagement
+import SwiftUI
 
 @MainActor
-final class PackagedApp: NSObject {
-    let permissions = PermissionSession()
+final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
     let service = SMAppService.agent(plistName: "dev.applebridge.gateway.plist")
     var window: NSWindow?
-    var details: NSTextField?
+    var setup: SetupModel?
+    var approvalDetails: NSTextField?
+    var setupHome: URL?
+    var snapshotDirectory: URL?
     var connectorHome: String?
     var connectorExecutable: String?
     var connectorTask: Task<Void, Never>?
@@ -64,7 +67,8 @@ final class PackagedApp: NSObject {
                         let action = response == .alertFirstButtonReturn ? "allow" : "deny"
                         Task { @MainActor in
                             let result = await Task.detached { Self.connectorCommand([action, "--request", request.id, "--code", request.code] + options, executable: executable) }.value
-                            if result == nil { self.details?.stringValue = "Approval was refused or expired. Start again from your connector." }
+                            if result == nil { self.approvalDetails?.stringValue = "Approval was refused or expired. Start again from your connector." }
+                            await self.setup?.refresh()
                         }
                     }
                 }
@@ -78,6 +82,10 @@ final class PackagedApp: NSObject {
         if arguments.first == "connector-approvals", arguments.count >= 2 {
             controller.connectorHome = arguments[1]
             if arguments.count == 3 { controller.connectorExecutable = arguments[2] }
+        }
+        if arguments.first == "setup-snapshot", arguments.count == 3 {
+            controller.setupHome = URL(fileURLWithPath: arguments[1])
+            controller.snapshotDirectory = URL(fileURLWithPath: arguments[2])
         }
         switch arguments.first {
         case "uninstall":
@@ -114,7 +122,23 @@ final class PackagedApp: NSObject {
         }
     }
 
+    func showApprovals() {
+        NSApplication.shared.setActivationPolicy(.regular)
+        let panel = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 540, height: 230), styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        panel.title = "Apple Bridge Approvals"
+        panel.isReleasedWhenClosed = false
+        let text = NSTextField(wrappingLabelWithString: "Match the code in your browser before allowing a connector to use your data.")
+        text.frame = NSRect(x: 24, y: 100, width: 492, height: 90)
+        panel.contentView?.addSubview(text)
+        approvalDetails = text
+        window = panel
+        panel.center()
+        panel.makeKeyAndOrderFront(nil)
+        watchConnectors()
+    }
+
     func show() {
+        if connectorHome != nil { showApprovals(); return }
         NSApplication.shared.setActivationPolicy(.regular)
         let menu = NSMenu()
         let item = NSMenuItem()
@@ -122,45 +146,76 @@ final class PackagedApp: NSObject {
         application.addItem(withTitle: "Quit Apple Bridge", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         item.submenu = application
         menu.addItem(item)
+        let setupItem = NSMenuItem()
+        let setupMenu = NSMenu(title: "Setup")
+        setupMenu.addItem(withTitle: "Open Setup", action: #selector(reopenSetup), keyEquivalent: "s").target = self
+        setupItem.submenu = setupMenu
+        menu.addItem(setupItem)
         NSApplication.shared.mainMenu = menu
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 580, height: 410), styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
-        window.title = "Apple Bridge"
-        let details = NSTextField(wrappingLabelWithString: "")
-        details.frame = NSRect(x: 24, y: 100, width: 532, height: 285)
-        window.contentView?.addSubview(details)
-        let button = NSButton(title: "Enable Background Sync and Permissions", target: self, action: #selector(enable))
-        button.frame = NSRect(x: 24, y: 45, width: 390, height: 35)
-        window.contentView?.addSubview(button)
-        let refresh = NSButton(title: "Refresh", target: self, action: #selector(update))
-        refresh.frame = NSRect(x: 435, y: 45, width: 110, height: 35)
-        window.contentView?.addSubview(refresh)
+        NSApplication.shared.delegate = self
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 860, height: 740), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
+        window.title = "Apple Bridge Setup"
+        window.isReleasedWhenClosed = false
+        let home = setupHome ?? gatewayHome()
+        let model = SetupModel(home: home, testing: snapshotDirectory != nil)
+        model.install = { [weak self] in try self?.service.register() }
+        model.syncStatus = { [weak self] in self?.service.status == .enabled }
+        DistributedNotificationCenter.default().addObserver(self, selector: #selector(reopenSetup), name: Notification.Name("dev.applebridge.setup.\(getpid())"), object: nil)
+        window.contentView = NSHostingView(rootView: SetupView(model: model))
+        window.minSize = NSSize(width: 860, height: 740)
         self.window = window
-        self.details = details
-        update()
-        watchConnectors()
+        window.delegate = self
+        self.setup = model
+        if snapshotDirectory == nil { model.start() }
         window.center()
         window.makeKeyAndOrderFront(nil)
         NSApplication.shared.activate()
-    }
-
-    @objc func update() {
-        permissions.refresh()
-        details?.stringValue = "Apple Bridge runs in the background after you quit.\n\n" + permissions.report.snapshot().sorted(by: { $0.key < $1.key }).map { "\($0.key.replacingOccurrences(of: "_", with: " ")): \($0.value)" }.joined(separator: "\n") + "\n\nBackground service: \(service.status == .enabled ? "enabled" : "not enabled")"
-    }
-
-    @objc func enable() {
-        do { try install() } catch {
-            details?.stringValue = String(describing: error)
-            if service.status == .requiresApproval { SMAppService.openSystemSettingsLoginItems() }
-            return
-        }
-        Task { @MainActor in
-            await permissions.onboard()
-            for (name, pane) in [("full_disk_access", "Privacy_AllFiles"), ("accessibility", "Privacy_Accessibility"), ("contacts", "Privacy_Contacts"), ("calendar", "Privacy_Calendars"), ("reminders", "Privacy_Reminders"), ("automation_messages", "Privacy_Automation"), ("automation_system_events", "Privacy_Automation")] {
-                if permissions.report.snapshot()[name] != "granted", let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?\(pane)") { NSWorkspace.shared.open(url) }
+        if let directory = snapshotDirectory {
+            Task { @MainActor in
+                do { try await self.captureSetup(model, directory: directory) }
+                catch { FileHandle.standardError.write(Data("Setup snapshot failed.\n".utf8)); exit(1) }
+                NSApplication.shared.terminate(nil)
             }
-            NSApplication.shared.setActivationPolicy(.regular)
-            update()
         }
+    }
+
+    func gatewayHome() -> URL {
+        if let connectorHome { return URL(fileURLWithPath: connectorHome) }
+        let plist = Bundle.main.bundleURL.appendingPathComponent("Contents/Library/LaunchAgents/dev.applebridge.gateway.plist")
+        if let data = try? Data(contentsOf: plist), let values = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any], let arguments = values["ProgramArguments"] as? [String], let index = arguments.firstIndex(of: "--home"), index + 1 < arguments.count { return URL(fileURLWithPath: arguments[index + 1]) }
+        return FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/AppleBridge")
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        reopenSetup()
+        return true
+    }
+
+    func windowWillClose(_ notification: Notification) { setup?.stop() }
+
+    @objc func reopenSetup() {
+        setup?.state.step = 0
+        setup?.start()
+        window?.makeKeyAndOrderFront(nil)
+        NSApplication.shared.activate()
+    }
+
+    func captureSetup(_ model: SetupModel, directory: URL) async throws {
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        await model.refresh()
+        let before = model.statuses
+        for step in 0..<5 {
+            model.state.step = step
+            window?.contentView?.layoutSubtreeIfNeeded()
+            try await Task.sleep(for: .milliseconds(400))
+            guard let view = window?.contentView, let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { throw CocoaError(.fileWriteUnknown) }
+            view.cacheDisplay(in: view.bounds, to: bitmap)
+            guard let data = bitmap.representation(using: .png, properties: [:]) else { throw CocoaError(.fileWriteUnknown) }
+            try data.write(to: directory.appendingPathComponent("step-\(step + 1).png"), options: .atomic)
+        }
+        await model.refresh()
+        let tcc = model.permissions.compareTCC(model.statuses)
+        let report: [String: Any] = ["tcc_matches": tcc.matches, "tcc_compared": tcc.count, "status_matches": before == model.statuses, "permission_count": model.statuses.count, "snapshot_count": 5, "request_calls": NewPermissions.requestAPICalls, "fresh_setup": !FileManager.default.fileExists(atPath: model.home.appendingPathComponent("setup.json").path)]
+        try JSONSerialization.data(withJSONObject: report, options: [.sortedKeys]).write(to: directory.appendingPathComponent("report.json"), options: .atomic)
     }
 }

@@ -476,6 +476,17 @@ features:
     scenarios:
       - {id: PKG-INSTALL, levels: [real]}
       - {id: PKG-BACKGROUND, levels: [real]}
+  - id: packaging.setup
+    title: First-run permission checklist, iPhone QR pairing and AI connectors
+    requirements: [R-PKG, R-SECURE]
+    milestone: M5
+    modules: [packaging/setup, native/AppleBridgeHelper]
+    depends_on: [packaging.app]
+    status: limited
+    scenarios:
+      - {id: Q1-SETUP, levels: [sim, real]}
+    limits:
+      - {scenario: Q1-SETUP, level: real, reason: 'Air Q1-SETUP could not start: the shared app-none lock is held by an unrelated Q2 MAC-IDLE run beyond its seven-minute cap. No other ticket was interrupted and no real grants were changed. Five local setup snapshots and the complete simulated flow pass; Air snapshots and TCC comparison remain unproved.'}
   - id: packaging.release
     title: Notarized DMG, signed Sparkle updates, login and TestFlight pipeline
     requirements: [R-PKG, R-SECURE]
