@@ -302,6 +302,7 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 	}
 	var owned *runCleanup
 	ownedFolders := map[string]string{}
+	var fixtureID, fixtureFolderID string
 	observeCleanup := func() ([]cleanupItem, error) {
 		response, err := w.RecoverTruth("observe", map[string]any{"source": "notes", "tag": "", "active_only": true})
 		if err != nil {
@@ -370,9 +371,12 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		if level != "sim" {
 			extra["folder_title"] = "Bridge Test " + tag
 			result, problem := w.Truth("fixture", extra)
-			if problem == nil && action == "create" && result["folder_created"] == true {
-				folder, _ := result["folder_id"].(string)
-				ownedFolders[folder] = "Bridge Test " + tag
+			if problem == nil && action == "create" {
+				fixtureID, _ = result["id"].(string)
+				fixtureFolderID, _ = result["folder_id"].(string)
+				if result["folder_created"] == true {
+					ownedFolders[fixtureFolderID] = "Bridge Test " + tag
+				}
 			}
 			if problem == nil && owned != nil && action == "create" {
 				id, _ := result["id"].(string)
@@ -399,8 +403,10 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 	}
 	if level != "sim" && owned == nil {
 		defer func() {
-			_, err := w.RecoverTruth("fixture", map[string]any{"source": "notes", "tag": tag, "action": "cleanup"})
-			add("tagged_notes_cleaned", err == nil)
+			if fixtureID != "" {
+				_, err := w.RecoverTruth("fixture", map[string]any{"source": "notes", "tag": tag, "action": "cleanup_owned", "id": fixtureID, "folder_id": fixtureFolderID})
+				add("tagged_notes_cleaned", err == nil)
+			}
 			for id, title := range ownedFolders {
 				_, problem := w.RecoverTruth("fixture", map[string]any{"source": "notes", "tag": tag, "action": "cleanup_created_folder", "created_by_run": true, "folder_id": id, "title": title})
 				add("run_created_folder_cleaned", problem == nil)
