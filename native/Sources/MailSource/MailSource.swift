@@ -20,14 +20,17 @@ public actor MailSource: Source {
         let reader = try SQLiteSnapshot(path: path, generationSQL: "SELECT 'mail-v10'")
         let scan = try CompleteScan.read(reader: reader, sql: "SELECT CAST(m.ROWID AS TEXT) AS native_key, m.mailbox, b.url, coalesce(s.subject,'') AS subject, coalesce(a.address,'') AS sender, m.date_received, m.read, coalesce(m.message_id,'') AS message_id FROM messages m LEFT JOIN mailboxes b ON b.ROWID=m.mailbox LEFT JOIN subjects s ON s.ROWID=m.subject LEFT JOIN addresses a ON a.ROWID=m.sender ORDER BY m.ROWID", keyColumn: "native_key", scope: "mail.message", previousScope: "mail.message", previousGeneration: generation, previousKeys: keys, maxRows: maxRows, timeout: 5)
         var observations: [JSON] = []
+        let observedAt = timestamp()
+        var mailboxAccounts: [String: String] = [:]
         let mailboxes = try reader.query("SELECT CAST(b.ROWID AS TEXT) AS native_key,b.url,COUNT(m.ROWID) AS message_count,SUM(CASE WHEN m.read=0 THEN 1 ELSE 0 END) AS unread_count FROM mailboxes b LEFT JOIN messages m ON m.mailbox=b.ROWID GROUP BY b.ROWID ORDER BY b.ROWID")
         guard mailboxes.complete else { throw SourceFailure.unavailable }
         var accounts = Set<String>()
         for row in mailboxes.rows {
             guard let raw = row["url"]?.text, let url = URL(string: raw), url.host != nil else { throw SourceFailure.corrupt }
             let account = Self.account(raw)
+            mailboxAccounts[row["native_key"]?.text ?? ""] = account
             func append(_ collection: String, _ key: String, _ data: JSON) {
-                observations.append(.object(["kind": .string("upsert"), "collection": .string(collection), "native_key": .string(key), "data": data, "observed_at": .string(timestamp())]))
+                observations.append(.object(["kind": .string("upsert"), "collection": .string(collection), "native_key": .string(key), "data": data, "observed_at": .string(observedAt)]))
             }
             if accounts.insert(account).inserted {
                 append("mail.account", account, .object(["name": .string(account), "kind": .string((url.scheme ?? "unknown").uppercased()), "addresses": .array([.string(account)])]))
@@ -40,13 +43,15 @@ public actor MailSource: Source {
             guard row["url"]?.text != nil else { throw SourceFailure.corrupt }
             let key = row["native_key"]?.text ?? ""
             let alias = row["message_id"]?.text ?? ""
-            let data: JSON = .object(["subject": .string(row["subject"]?.text ?? ""), "from": .string(row["sender"]?.text ?? ""), "received_at": .string(timestamp(Date(timeIntervalSince1970: Self.numeric(row["date_received"])))), "read": .bool(Self.numeric(row["read"]) != 0), "message_id": .string(alias), "mailbox_ids": .array([.string("mailbox/" + String(Int(Self.numeric(row["mailbox"]))))]), "account_id": .string(Self.account(row["url"]?.text ?? "")), "to": .null, "cc": .null, "sent_at": .null, "flagged": .null, "flag_color": .null, "has_attachments": .null, "size": .null, "snippet": .null, "body_state": .null])
-            var observation: [String: JSON] = ["kind": .string("upsert"), "collection": .string("mail.message"), "native_key": .string(key), "data": data, "observed_at": .string(timestamp())]
+            let mailbox = String(Int(Self.numeric(row["mailbox"])))
+            guard let account = mailboxAccounts[mailbox] else { throw SourceFailure.corrupt }
+            let data: JSON = .object(["subject": .string(row["subject"]?.text ?? ""), "from": .string(row["sender"]?.text ?? ""), "received_at": .string(timestamp(Date(timeIntervalSince1970: Self.numeric(row["date_received"])))), "read": .bool(Self.numeric(row["read"]) != 0), "message_id": .string(alias), "mailbox_ids": .array([.string("mailbox/" + mailbox)]), "account_id": .string(account), "to": .null, "cc": .null, "sent_at": .null, "flagged": .null, "flag_color": .null, "has_attachments": .null, "size": .null, "snippet": .null, "body_state": .null])
+            var observation: [String: JSON] = ["kind": .string("upsert"), "collection": .string("mail.message"), "native_key": .string(key), "data": data, "observed_at": .string(observedAt)]
             if alias.hasPrefix("<"), alias.hasSuffix(">"), alias.contains("@") { observation["scoped_alias"] = .string("mail/" + data["account_id"].string + "/" + alias) }
             observations.append(.object(observation))
         }
         if scan.complete {
-            for key in scan.absentKeys { observations.append(.object(["kind": .string("absent"), "revalidated": .bool(true), "collection": .string("mail.message"), "native_key": .string(key), "observed_at": .string(timestamp())])) }
+            for key in scan.absentKeys { observations.append(.object(["kind": .string("absent"), "revalidated": .bool(true), "collection": .string("mail.message"), "native_key": .string(key), "observed_at": .string(observedAt)])) }
             keys = Set(scan.rows.compactMap { $0["native_key"]?.text })
             generation = reader.generation
         }

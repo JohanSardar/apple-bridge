@@ -43,6 +43,12 @@ struct MailChecks {
         try require(complete && records.count == 1000)
         try require(captured.filter { $0["collection"].string == "mail.account" }.count == 3)
         try require(captured.filter { $0["collection"].string == "mail.mailbox" }.count == 3)
+        try require(Set(captured.map { $0["observed_at"].string }).count == 1)
+        try require(records.allSatisfy { value in
+            let mailbox = value["data"]["mailbox_ids"].array.first?.string
+            let account = ["mailbox/1": "one@example.com", "mailbox/2": "two@example.com", "mailbox/3": "three@example.com"][mailbox ?? ""]
+            return value["data"]["account_id"].string == account
+        })
         try require(records.allSatisfy { $0["data"]["subject"].string == "synthetic subject" && $0["data"]["from"].string == "sender@example.com" && !$0["scoped_alias"].string.isEmpty })
         let scenario = CommandLine.arguments.last ?? ""
         if scenario == "MAIL-COMMANDS" {

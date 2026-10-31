@@ -1,6 +1,6 @@
 import type { BridgeRecord, ThreadItem } from '../../data/types';
 import { array, fields, text, type Handles, type Part } from '../store/types';
-import { messageParts, messageService, nativeParts, sender } from '../store/message';
+import { messageParts, messageService, nativeParts, sender, commandPartIndex } from '../store/message';
 import { groupEvent, headerParts, name, time, wording, type HeaderParts } from '../format';
 import { attachmentHasAlpha } from '../media/source';
 import {pendingGeometryKnown,type PendingAttachment} from '../media/pending';
@@ -53,7 +53,7 @@ function partSize(item:ThreadItem,part:Part,maxWidth:number,lineHeight:number,pr
     if(card)return {width:Math.min(maxWidth,280),height:card.hasImage?180:88};
     return {width:Math.min(maxWidth,260),height:88};
 }
-export function commandPartIndex(item:ThreadItem){const index=item.data.command_part_index;return typeof index==='number'&&Number.isSafeInteger(index)&&index>=0?index:undefined;}
+export { commandPartIndex } from '../store/message';
 export function commandRenderKey(item:ThreadItem){const id=text(item.data.command_id),index=commandPartIndex(item);return id?'command:'+id+(index===undefined?'':':part:'+index):item.id;}
 const presentationTime=(item:ThreadItem)=>text(item.data.command_sent_at)||item.data.sent_at;
 function sameRun(a: ThreadItem|undefined,b: ThreadItem|undefined) { return !!a&&!!b&&a.data.kind!=='group_event'&&b.data.kind!=='group_event'&&!array(a.data.retracted_parts).length&&!array(b.data.retracted_parts).length&&Boolean(a.data.is_from_me)===Boolean(b.data.is_from_me)&&(a.data.is_from_me||sender(a)===sender(b))&&Math.abs(Date.parse(presentationTime(b))-Date.parse(presentationTime(a)))<=60000; }

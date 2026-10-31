@@ -8,6 +8,7 @@ export type CachedView = {
 };
 let database: IDBDatabase | undefined, opening: Promise<IDBDatabase> | undefined, owner: string | undefined, generation = 0;
 let writes: Promise<unknown> = Promise.resolve(), presentation: Promise<void> | undefined;
+const pending = new Map<string, { data: ViewData; cursor?: Cursor; version: number; promise: Promise<unknown> }>();
 function afterPaint() {
     return presentation??=new Promise<void>(resolve=>{
         let frame=0,finished=false;
@@ -37,11 +38,33 @@ export const viewCache = {
     async read(key: string) { const device = owner, version = generation; if (!device)
         return; const db = await open(); if (version !== generation)
         return; const value = await request(db.transaction('views').objectStore('views').get(key)) as CachedView | undefined; return owner === device && value?.owner === device ? value : undefined; },
-    write(key: string, data: ViewData, cursor?: Cursor) { const device = owner, version = generation; if (!device)
-        return Promise.resolve(); const painted=afterPaint(); writes = writes.catch(() => { }).then(async () => { await painted; if (version !== generation)
-        return; const db = await open(); if (version !== generation)
-        return; await new Promise<void>((resolve, reject) => { const transaction = db.transaction('views', 'readwrite'), store = transaction.objectStore('views'); store.put({ key, owner: device, data, cursor, at: Date.now() }); const keys = store.index('at').getAllKeys(); keys.onsuccess = () => { for (const key of keys.result.slice(0,-100))
-        store.delete(key); }; transaction.oncomplete = () => resolve(); transaction.onerror = () => reject(transaction.error); }); }); return writes; },
+    write(key: string, data: ViewData, cursor?: Cursor) {
+        const device = owner, version = generation;
+        if (!device) return Promise.resolve();
+        const queued = pending.get(key);
+        if (queued?.version === version) {
+            queued.data = data; queued.cursor = cursor;
+            return queued.promise;
+        }
+        const entry = { data, cursor, version, promise: Promise.resolve() as Promise<unknown> }, painted = afterPaint();
+        pending.set(key, entry);
+        entry.promise = writes.catch(() => {}).then(async () => {
+            await painted;
+            if (version !== generation) return;
+            const db = await open();
+            if (version !== generation) return;
+            if (pending.get(key) === entry) pending.delete(key);
+            await new Promise<void>((resolve, reject) => {
+                const transaction = db.transaction('views', 'readwrite'), store = transaction.objectStore('views');
+                store.put({ key, owner: device, data: entry.data, cursor: entry.cursor, at: Date.now() });
+                const keys = store.index('at').getAllKeys();
+                keys.onsuccess = () => { for (const key of keys.result.slice(0,-100)) store.delete(key); };
+                transaction.oncomplete = () => resolve(); transaction.onerror = () => reject(transaction.error);
+            });
+        }).finally(() => { if (pending.get(key) === entry) pending.delete(key); });
+        writes = entry.promise;
+        return writes;
+    },
     async wipe() { this.disable(); await writes.catch(() => { }); if (opening)
         await opening.catch(() => { }); database?.close(); database = undefined; opening = undefined; await new Promise<void>((resolve, reject) => { const deletion = indexedDB.deleteDatabase('ab.views'); deletion.onsuccess = () => resolve(); deletion.onerror = () => reject(deletion.error); deletion.onblocked = () => reject(new Error('Cache deletion blocked')); }); }
 };

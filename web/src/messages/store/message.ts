@@ -31,3 +31,5 @@ export function messageParts(item: ThreadItem): Part[] {
     if (!parts.length) parts.push({index:0,kind:item.data.balloon?'balloon':'unknown'});
     return parts;
 }
+
+export function commandPartIndex(item:ThreadItem){const index=item.data.command_part_index;return typeof index==='number'&&Number.isSafeInteger(index)&&index>=0?index:undefined;}
