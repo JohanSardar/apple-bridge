@@ -7,6 +7,8 @@ public actor PhotosSource: Source {
     public nonisolated let name = "photos"
     var fixture: [JSON]?
     #if LAB
+    var proofImportFilename: String?
+    public func setImportFilenameForProof(_ filename: String) { proofImportFilename = filename }
     var fixtureObservationDelay = 0
     var pendingFixtureObservation: (rows: [JSON], remaining: Int)?
     public func delayNextFixtureObservationForProof(_ reads: Int) { fixtureObservationDelay = max(0, reads) }
