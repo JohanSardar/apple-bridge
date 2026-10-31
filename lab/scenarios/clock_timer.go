@@ -27,7 +27,7 @@ func runClockTimer(ctx context.Context, initial Evidence, pack clockpack.Pack) (
 	}
 	add("timer_readback_and_cleanup_qualified", qualified)
 	if !qualified {
-		return limited("AB Clock cannot inspect and remove a tagged timer yet. Install a pack supporting timers, start_timer and delete_timer with structured readback; no timer was started.")
+		return limited("Clock timer readback and cleanup are unavailable. Open Clock, allow the signed Apple Bridge Helper Accessibility access in System Settings, and retry. No timer was started.")
 	}
 	before, err := pack.Exchange(ctx, clockpack.Request{Operation: "timers"})
 	add("timer_baseline_readback", err == nil)
