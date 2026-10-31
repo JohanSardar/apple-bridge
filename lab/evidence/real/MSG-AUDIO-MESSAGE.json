@@ -1,20 +1,41 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[5.83 4.91 6.55] cpu_idle=68% cpus=8 other_heavy=0"
+    "summary": "air: load=[4.29 5.84 6.83] cpu_idle=82% cpus=8 other_heavy=0"
   },
   "status": "limited",
-  "run_id": "run_01M650NFB0868WXWWTBWPDTJQS",
+  "run_id": "run_01M6A2H2MS5NY1F30MF0GG7257",
   "metrics": {
     "capture_observer_resets": 0,
+    "cleanup_counts": {
+      "after_count": 160349,
+      "before_count": 160349,
+      "created_count": 0,
+      "passed": true
+    },
+    "cleanup_recovery_only": true,
+    "deleted_owned_messages": 3,
+    "remaining_owned_messages": 0,
     "writes_submitted": 0
   },
   "scenario": "MSG-AUDIO-MESSAGE",
   "level": "real",
   "passed": false,
-  "git_sha": "cd736b6bdf6f556b3e7a7dd514fbc4f7d2d45c78",
-  "at": "2026-10-29T23:42:02.080271Z",
+  "git_sha": "6c0cadfc3b3b9a85ee2333a82967c23409a371f7",
+  "at": "2026-10-31T22:50:47.321742Z",
   "assertions": [
+    {
+      "name": "owned_messages_cleanup",
+      "passed": true
+    },
+    {
+      "name": "cleanup_baseline_restored",
+      "passed": true
+    },
+    {
+      "name": "recovery_ledger_saved",
+      "passed": true
+    },
     {
       "name": "credential_backend_override_restored",
       "passed": true
@@ -25,6 +46,6 @@
     "air"
   ],
   "conditions": {
-    "reason": "needs native media cleanup qualification; audio remains fail-closed"
+    "reason": "The CAF attachment did not have the native audio-message flag. This recovery sends no new messages and removes only the explicitly selected run's rows."
   }
 }

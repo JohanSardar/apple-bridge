@@ -1,17 +1,17 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[4.33 5.31 6.46] cpu_idle=62% cpus=10 other_heavy=0"
+    "summary": "air: load=[8.27 8.99 11.41] cpu_idle=44% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M67E5R9C9MH31FPM6Z7RN1W8",
+  "run_id": "run_01M639JTSY9W4R33VBDFR9JH45",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MSG-DELETE-VISIBILITY",
   "level": "sim",
   "passed": true,
-  "git_sha": "3bd923a1af4751bbdf11f7c731c75e8fcbb7a183",
-  "at": "2026-10-30T22:16:35.884742Z",
+  "git_sha": "00bec53fae5775c9416a570a8816be56de74f747",
+  "at": "2026-10-29T07:39:23.838714Z",
   "assertions": [
     {
       "name": "native_capture_visibility_and_restore",
