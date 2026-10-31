@@ -14,7 +14,7 @@ func TestDecodeMailProof(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "Mail did not answer") || !strings.Contains(err.Error(), "Cleanup did not finish") || len(proof) != 2 || proof["fixture_and_commands"] || proof["cleanup_passed"] {
 		t.Fatalf("proof=%v err=%v", proof, err)
 	}
-	for _, data := range []string{`broken`, `{"command_error":true}`, `{"cleanup_passed":"true"}`} {
+	for _, data := range []string{`broken`, `{}`, `null`, `{"command_error":true}`, `{"command_error":null}`, `{"cleanup_passed":null}`, `{"cleanup_passed":"true"}`} {
 		if _, err := decodeMailProof([]byte(data)); err == nil {
 			t.Fatalf("accepted invalid proof: %s", data)
 		}

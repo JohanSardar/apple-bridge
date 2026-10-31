@@ -33,28 +33,29 @@ func mailRealProof(ctx context.Context, w *world.World, scenario, tag string) (m
 }
 
 func decodeMailProof(data []byte) (map[string]bool, error) {
+	invalid := fmt.Errorf("Mail qualification returned an unreadable report. Run the Mail check again")
 	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(data, &fields); err != nil {
-		return nil, err
+	if err := json.Unmarshal(data, &fields); err != nil || len(fields) == 0 {
+		return nil, invalid
 	}
 	proof := make(map[string]bool)
 	var problems []string
 	for _, name := range []string{"command_error", "cleanup_error"} {
 		if raw, ok := fields[name]; ok {
 			var message string
-			if err := json.Unmarshal(raw, &message); err != nil {
-				return nil, err
+			if err := json.Unmarshal(raw, &message); err != nil || strings.TrimSpace(message) == "" {
+				return nil, invalid
 			}
 			problems = append(problems, message)
 			delete(fields, name)
 		}
 	}
 	for name, raw := range fields {
-		var passed bool
-		if err := json.Unmarshal(raw, &passed); err != nil {
-			return nil, err
+		var passed *bool
+		if err := json.Unmarshal(raw, &passed); err != nil || passed == nil {
+			return nil, invalid
 		}
-		proof[name] = passed
+		proof[name] = *passed
 	}
 	if len(problems) > 0 {
 		return proof, fmt.Errorf("%s", strings.Join(problems, " "))
