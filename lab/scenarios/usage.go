@@ -98,6 +98,8 @@ func runUsageData(ctx context.Context, s Scenario, level string) Evidence {
 		if err != nil {
 			return fail("independent_usage_truth_access")
 		}
+		e.Metrics["truth_devices"] = truth["device_count"]
+		e.Metrics["unmapped_truth_devices"] = truth["unmapped_device_count"]
 		expected := map[string]map[string]float64{}
 		raw, _ := json.Marshal(truth["rows"])
 		if json.Unmarshal(raw, &expected) != nil || len(expected) == 0 {
