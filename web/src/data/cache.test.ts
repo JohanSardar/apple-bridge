@@ -37,12 +37,12 @@ test('queued view snapshots persist the latest data and cursor once per key and 
     });
     viewCache.enable('first-device');
     const pending: Promise<unknown>[] = [];
-    for (let index = 0; index < 100; index++) pending.push(viewCache.write('thread', { older: index }, { epoch: 'epoch', seq: index }));
+    for (let index = 0; index < 100; index++) pending.push(viewCache.write('thread', { older: index }, { epoch: 'epoch', subscription_revision: 1, sequence: index }));
     pending.push(viewCache.write('other-thread', { older: 10 }));
     await Promise.all(pending);
     assert.equal(saved.length, 2);
     assert.equal(saved[0].data.older, 99);
-    assert.equal(saved[0].cursor.seq, 99);
+    assert.equal(saved[0].cursor.sequence, 99);
     assert.equal(saved[1].key, 'other-thread');
     const stale = viewCache.write('thread', { older: 200 });
     viewCache.disable();

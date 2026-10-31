@@ -1,4 +1,4 @@
-import { sampleSpring, type Spring } from './spring';
+import { sampleSpring, type Spring } from './spring.ts';
 export const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 export function springAnimation(update: (value: number) => void, from: number, target: number, spring: Spring, velocity = 0, finished?: () => void) {
     let state = { value: from, velocity }, start = performance.now(), origin = from, initialVelocity = velocity, destination = target, frame = 0, stopped = false;
@@ -31,8 +31,23 @@ export function enterPane(element: HTMLElement, phone: boolean, direction: numbe
         return () => animation.cancel();
     }
     const distance = phone ? width * direction : 8;
-    const animation = springAnimation(value => { element.style.transform = phone ? `translateX(${value}px)` : `translateY(${value}px)`; element.style.opacity = String(1 - Math.min(1, Math.abs(value / distance)) * .15); }, distance, 0, { response: .35, damping: 1 }, 0, () => { element.style.transform = ''; element.style.opacity = ''; });
-    return () => animation.cancel();
+    element.style.transform = ''; element.style.opacity = '';
+    const frames: Keyframe[] = [];
+    for (let index = 0; index <= 240; index++) {
+        const state = sampleSpring(distance, 0, 0, index / 120, { response: .35, damping: 1 });
+        const settled = Math.abs(state.value) < .001 && Math.abs(state.velocity) < .01;
+        const value = settled ? 0 : state.value;
+        frames.push({ transform: phone ? `translateX(${value}px)` : `translateY(${value}px)`, opacity: 1 - Math.min(1, Math.abs(value / (distance || 1))) * .15 });
+        if (settled) break;
+    }
+    const animation = element.animate(frames, { duration: (frames.length - 1) / 120 * 1000, easing: 'linear' });
+    return () => {
+        if (animation.playState === 'running' || animation.playState === 'paused') {
+            const style = getComputedStyle(element);
+            element.style.transform = style.transform; element.style.opacity = style.opacity;
+        }
+        animation.cancel();
+    };
 }
 export function sharedElement(element: HTMLElement, mutate: () => void) {
     const before = element.getBoundingClientRect();
