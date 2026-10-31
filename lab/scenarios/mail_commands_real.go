@@ -85,11 +85,11 @@ func decodeMailProof(data []byte) (map[string]bool, error) {
 	}
 	for _, name := range []string{"command_error_number", "cleanup_error_number"} {
 		if raw, ok := fields[name]; ok {
-			var code int32
-			if json.Unmarshal(raw, &code) != nil || len(problems) == 0 {
+			var code *int32
+			if json.Unmarshal(raw, &code) != nil || code == nil || len(problems) == 0 {
 				return nil, invalid
 			}
-			fmt.Fprintf(os.Stderr, "Mail qualification diagnostic %s=%d\n", name, code)
+			fmt.Fprintf(os.Stderr, "Mail qualification diagnostic %s=%d\n", name, *code)
 			delete(fields, name)
 		}
 	}
