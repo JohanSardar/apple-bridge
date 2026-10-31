@@ -6,8 +6,11 @@ struct AppleBridgeApp: App {
     var body: some Scene {
         WindowGroup {
             #if DEBUG
-            if ShellDeliveryQualification.active { ShellDeliveryQualificationScreen() }
-            else { BridgeSettings() }
+            Group {
+                if ShellDeliveryQualification.active { ShellDeliveryQualificationScreen() }
+                else { BridgeSettings() }
+            }
+            .onAppear { UIApplication.shared.isIdleTimerDisabled = true }
             #else
             BridgeSettings()
             #endif
