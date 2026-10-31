@@ -206,7 +206,7 @@ final class ShellDeliveryQualification {
                 await activity?.end(nil, dismissalPolicy: .immediate)
                 receipt?.checks["activity_ended"] = activity?.activityState == .ended || activity?.activityState == .dismissed
             case "APP-INTENTS-REAL":
-                instruction = "In Shortcuts save [ab-test] Ping iPhone using Apple Bridge’s Ping iPhone action, run it, then return here. Delete the test shortcut afterward."
+                instruction = "In Shortcuts save [ab-test] Ping iPhone using Apple Bridge’s Check Bridge Status action, run it, then return here. Delete the test shortcut afterward."
                 try await wait { self.intentCount > 0 }
                 receipt?.checks["saved_shortcut_invoked"] = intentCount > 0
                 receipt?.counts["intent_invocations"] = intentCount

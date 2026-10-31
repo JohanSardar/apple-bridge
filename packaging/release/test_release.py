@@ -33,6 +33,16 @@ class ReleaseTests(unittest.TestCase):
                 release.https(url)
 
 class TestFlightTests(unittest.TestCase):
+    def test_siri_metadata_has_no_reserved_device_name(self):
+        import re
+        root = Path(__file__).resolve().parents[2]
+        descriptions = []
+        for source in (root / "ios/Capabilities").rglob("*Intents.swift"):
+            descriptions.extend(re.findall(r'IntentDescription\("([^"]+)"\)', source.read_text()))
+        self.assertGreater(len(descriptions), 0)
+        for description in descriptions:
+            self.assertNotIn("iphone", description.lower())
+
     def test_upload_refuses_ipa_without_internal_only_marker(self):
         import sys
         import plistlib

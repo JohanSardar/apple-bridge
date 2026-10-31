@@ -2,7 +2,7 @@ import AppIntents
 
 struct CreateAlarmIntent: AppIntent {
     static let title: LocalizedStringResource = "Create Alarm"
-    static let description = IntentDescription("Run iphone.alarm.create on this iPhone.")
+    static let description = IntentDescription("Create an alarm with the requested time and label.")
     static let openAppWhenRun = false
 
     @Parameter(title: "Arguments JSON")
@@ -15,7 +15,7 @@ struct CreateAlarmIntent: AppIntent {
 
 struct ListAlarmsIntent: AppIntent {
     static let title: LocalizedStringResource = "List Alarms"
-    static let description = IntentDescription("Run iphone.alarm.list on this iPhone.")
+    static let description = IntentDescription("List the current alarms.")
     static let openAppWhenRun = false
 
     func perform() async throws -> some IntentResult & ReturnsValue<String> {
@@ -25,7 +25,7 @@ struct ListAlarmsIntent: AppIntent {
 
 struct UpdateAlarmIntent: AppIntent {
     static let title: LocalizedStringResource = "Update Alarm"
-    static let description = IntentDescription("Run iphone.alarm.update on this iPhone.")
+    static let description = IntentDescription("Update the selected alarm.")
     static let openAppWhenRun = false
 
     @Parameter(title: "Arguments JSON")
@@ -38,7 +38,7 @@ struct UpdateAlarmIntent: AppIntent {
 
 struct CancelAlarmIntent: AppIntent {
     static let title: LocalizedStringResource = "Cancel Alarm"
-    static let description = IntentDescription("Run iphone.alarm.cancel on this iPhone.")
+    static let description = IntentDescription("Cancel the selected alarm.")
     static let openAppWhenRun = false
 
     @Parameter(title: "Arguments JSON")
@@ -51,7 +51,7 @@ struct CancelAlarmIntent: AppIntent {
 
 struct StartTimerIntent: AppIntent {
     static let title: LocalizedStringResource = "Start Timer"
-    static let description = IntentDescription("Run iphone.timer.start on this iPhone.")
+    static let description = IntentDescription("Start a timer with the requested duration.")
     static let openAppWhenRun = false
 
     @Parameter(title: "Arguments JSON")
@@ -64,7 +64,7 @@ struct StartTimerIntent: AppIntent {
 
 struct CancelTimerIntent: AppIntent {
     static let title: LocalizedStringResource = "Cancel Timer"
-    static let description = IntentDescription("Run iphone.timer.cancel on this iPhone.")
+    static let description = IntentDescription("Cancel the selected timer.")
     static let openAppWhenRun = false
 
     @Parameter(title: "Arguments JSON")
