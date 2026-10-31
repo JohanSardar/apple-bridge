@@ -1,3 +1,3 @@
 id: QUERY-AGENT
 feature: maps.queries
-levels: [agent]
+levels: [sim, real, agent]
