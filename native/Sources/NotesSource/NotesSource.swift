@@ -59,9 +59,9 @@ public final class NotesSource: Source {
         let readable = (try? NotesDatabase(path: store.path).query("SELECT Z_ENT FROM Z_PRIMARYKEY WHERE Z_NAME=?", ["ICNote"])) != nil
         let proven = deletionCapabilities(), extras = extrasCapabilities()
         let operationCoverage = (Self.deletionOperations + Self.extrasOperations).map { operation in
-            JSON.object(["operation": .string(operation), "proven": .bool(proven.contains(operation) || extras.contains(operation)), "reason": .string(proven.contains(operation) ? "os_build_notestore_deletion_verified" : extras.contains(operation) ? "public_script_move_rename" : "capability_unproven")])
+            JSON.object(["operation": .string(operation), "proven": .bool(proven.contains(operation) || extras.contains(operation)), "reason": .string(operation == "notes.delete" ? "public_script_notestore_verified" : proven.contains(operation) ? "os_build_notestore_deletion_verified" : extras.contains(operation) ? "public_script_move_rename" : "capability_unproven")])
         }
-        return SourceReadiness(state: readable ? "ready" : "permission_missing", coverage: .object(["fields": .string("partial"), "operations": .array(operationCoverage), "missing": .array([.string("unknown protobuf fields and unavailable attachment bytes are explicit; rich edits and deletion require per-build proof")])]), capabilities: readable ? Self.operations.filter { (!Self.deletionOperations.contains($0) || proven.contains($0)) && (!Self.extrasOperations.contains($0) || extras.contains($0)) } : [], reason: readable ? "" : "notes_database_access_required")
+        return SourceReadiness(state: readable ? "ready" : "permission_missing", coverage: .object(["fields": .string("partial"), "operations": .array(operationCoverage), "missing": .array([.string("unknown protobuf fields and unavailable attachment bytes are explicit; rich edits remain unsupported; folder deletion requires per-build proof")])]), capabilities: readable ? Self.operations.filter { (!Self.deletionOperations.contains($0) || proven.contains($0)) && (!Self.extrasOperations.contains($0) || extras.contains($0)) } : [], reason: readable ? "" : "notes_database_access_required")
     }
     public func reconcile(into sink: any ObservationSink, assetPaths: Set<String> = []) async throws {
         while scanning { try await Task.sleep(for: .milliseconds(5)) }
@@ -318,9 +318,7 @@ public final class NotesSource: Source {
                 let folder = try find(action["folder_key"].string, collection: "notes.folder")
                 _ = try NotesScript.run("move note id " + NotesScript.quote(scriptID) + " to folder id " + NotesScript.quote(folder["scoped_alias"].string))
             } else if op == "notes.delete" {
-                let folderKey = note["data"]["folder_id"]["$ref"]["native_key"].string
-                let folder = try find(folderKey, collection: "notes.folder")
-                _ = try NotesScript.run("delete note id " + NotesScript.quote(scriptID) + " of folder id " + NotesScript.quote(folder["scoped_alias"].string))
+                _ = try NotesScript.run("delete note id " + NotesScript.quote(scriptID))
             }
             else {
                 let content = args["mode"].string == "append" ? note["data"]["plain_text"].string + args["plain_text"].string : args["plain_text"].string
@@ -345,10 +343,6 @@ public final class NotesSource: Source {
                 }
             }
             try await Task.sleep(for: .milliseconds(50))
-        }
-        if op == "notes.delete" {
-            try? FileManager.default.removeItem(at: deletionProofURL)
-            throw SourceFailure.capabilityUnproven
         }
         throw SourceFailure.unavailable
     }

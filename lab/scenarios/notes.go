@@ -368,10 +368,12 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		extra["tag"] = tag
 		extra["action"] = action
 		if level != "sim" {
-			if owned != nil {
-				extra["folder_title"] = "Bridge Test " + tag
-			}
+			extra["folder_title"] = "Bridge Test " + tag
 			result, problem := w.Truth("fixture", extra)
+			if problem == nil && action == "create" && result["folder_created"] == true {
+				folder, _ := result["folder_id"].(string)
+				ownedFolders[folder] = "Bridge Test " + tag
+			}
 			if problem == nil && owned != nil && action == "create" {
 				id, _ := result["id"].(string)
 				folder, _ := result["folder_id"].(string)
@@ -399,6 +401,10 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		defer func() {
 			_, err := w.RecoverTruth("fixture", map[string]any{"source": "notes", "tag": tag, "action": "cleanup"})
 			add("tagged_notes_cleaned", err == nil)
+			for id, title := range ownedFolders {
+				_, problem := w.RecoverTruth("fixture", map[string]any{"source": "notes", "tag": tag, "action": "cleanup_created_folder", "created_by_run": true, "folder_id": id, "title": title})
+				add("run_created_folder_cleaned", problem == nil)
+			}
 		}()
 	} else if level == "sim" {
 		err = w.ControlAction("/external-change", map[string]any{"key": "note-folder", "collection": "notes.folder", "data": map[string]any{"title": "Bridge Test", "account": "sim"}})
@@ -706,6 +712,12 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 			}
 			e.Assertions = append(e.Assertions, Assertion{Name: protocol + "_delete_observed", Passed: err == nil && command.State == "observed", Detail: string(command.State) + ":" + deleteCode})
 			add(protocol+"_delete_replicated", w.Await(5*time.Second, func() bool { _, ok := find("notes.note", newTitle); return !ok }) == nil)
+			_, fixturePresent := find("notes.note", title)
+			add(protocol+"_delete_preserves_other_note", fixturePresent)
+			if level == "sim" {
+				effects, problem := w.Effects()
+				add(protocol+"_delete_applied_once", problem == nil && effects[command.ID] == 1)
+			}
 		}
 	}
 	return
