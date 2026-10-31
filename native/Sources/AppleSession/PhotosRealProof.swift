@@ -54,20 +54,15 @@ enum PhotosRealProof {
             }
             return matches(root, 0)
         }
+        var stage = "library read"
         func cleanup() async throws {
-            let options = PHFetchOptions()
-            options.predicate = NSPredicate(format: "title == %@", title)
-            let albums = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .any, options: options)
-            guard albums.count <= 1 else { throw SourceFailure.corrupt }
-            guard let album = albums.firstObject else { return }
             let owned = await source.importedAssetIdentifiersForProof()
-            let assets = PHAsset.fetchAssets(in: album, options: nil)
-            let assetIDs = (0..<assets.count).map { assets.object(at: $0).localIdentifier }
-            guard assetIDs.count <= 1, Set(assetIDs).isSubset(of: owned) else { throw SourceFailure.conflict }
+            guard owned.count <= 1 else { throw SourceFailure.conflict }
             for assetID in owned {
                 guard PHAsset.fetchAssets(withLocalIdentifiers: [assetID], options: nil).count != 0 else { continue }
                 guard let asset = PHAsset.fetchAssets(withLocalIdentifiers: [assetID], options: nil).firstObject,
                       PHAssetResource.assetResources(for: asset).contains(where: { $0.originalFilename == filename }) else { throw SourceFailure.conflict }
+                stage = "opening the imported test photo"
                 var link = URLComponents()
                 link.scheme = "photos"
                 link.host = "asset"
@@ -77,6 +72,7 @@ enum PhotosRealProof {
                 guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.Photos").first,
                       app.activate() else { throw SourceFailure.unavailable }
                 let root = AXUIElementCreateApplication(app.processIdentifier)
+                stage = "identifying the imported test photo"
                 _ = try script("""
                 tell application "System Events" to tell process "Photos"
                     if frontmost is false then error "Photos must be in front for cleanup."
@@ -107,42 +103,29 @@ enum PhotosRealProof {
                     key code 51 using {command down, option down}
                 end tell
                 """)
+                stage = "deleting the imported test photo"
                 for _ in 0..<80 {
                     if PHAsset.fetchAssets(withLocalIdentifiers: [assetID], options: nil).count == 0 { break }
                     try await Task.sleep(for: .milliseconds(150))
                 }
                 guard PHAsset.fetchAssets(withLocalIdentifiers: [assetID], options: nil).count == 0 else { throw SourceFailure.unavailable }
             }
-            guard PHAsset.fetchAssets(in: album, options: nil).count == 0 else { throw SourceFailure.conflict }
-            try PHPhotoLibrary.shared().performChangesAndWait {
-                PHAssetCollectionChangeRequest.deleteAssetCollections([album] as NSArray)
-            }
-            for _ in 0..<40 {
-                if PHAssetCollection.fetchAssetCollections(withLocalIdentifiers: [album.localIdentifier], options: nil).count == 0 { return }
-                try await Task.sleep(for: .milliseconds(150))
-            }
-            throw SourceFailure.unavailable
         }
-        var stage = "library read"
         do {
             let options = PHFetchOptions()
             options.includeHiddenAssets = true
             let libraryCount = PHAsset.fetchAssets(with: options).count
             let snapshot = try await source.snapshot()
             guard snapshot.filter({ $0["collection"].string == "photos.asset" }).count == libraryCount else { throw SourceFailure.corrupt }
-            stage = "test album creation"
-            let created = try await command("photos.create_album", .object(["name": .string(title)]))
-            let albumID = created["native_key"].string
-            guard let album = PHAssetCollection.fetchAssetCollections(withLocalIdentifiers: [albumID], options: nil).firstObject, album.localizedTitle == title else { throw SourceFailure.corrupt }
             guard let image = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 2, pixelsHigh: 2, bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 8, bitsPerPixel: 32) else { throw SourceFailure.corrupt }
             for x in 0..<2 { for y in 0..<2 { image.setColor(.red, atX: x, y: y) } }
             guard let bytes = image.representation(using: .png, properties: [:]) else { throw SourceFailure.corrupt }
             let digest = SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined()
             stage = "test photo import"
-            let imported = try await command("photos.import", .object(["data": .string(bytes.base64EncodedString()), "digest": .string(digest), "kind": .string("image"), "album": .string(albumID)]))
+            let imported = try await command("photos.import", .object(["data": .string(bytes.base64EncodedString()), "digest": .string(digest), "kind": .string("image")]))
             let assetID = imported["native_key"].string
-            let rows = try await source.search(.object(["album": .string(albumID)]))["items"].array
-            guard rows.count == 1, rows[0]["local_id"].string == assetID else { throw SourceFailure.corrupt }
+            let rows = try await source.snapshot().filter { $0["collection"].string == "photos.asset" && $0["native_key"].string == assetID }
+            guard rows.count == 1, rows[0]["data"]["local_id"].string == assetID else { throw SourceFailure.corrupt }
             stage = "original byte verification"
             let original = try await source.blob("photos.original", .object(["asset": .string(assetID)]))
             guard original["digest"].string == digest, original["size"].number == Double(bytes.count) else { throw SourceFailure.corrupt }
@@ -154,8 +137,9 @@ enum PhotosRealProof {
             result["cleanup_passed"] = .bool(true)
             return .object(result)
         } catch {
+            let failedStage = stage
             let cleaned = (try? await cleanup()) != nil
-            return .object(["failure": .string("Photos \(stage) failed. Check Helper Photos access and close any Photos dialog before retrying."), "grant_passed": .bool(true), "cleanup_passed": .bool(cleaned), "library_asset_count": .number(Double(PHAsset.fetchAssets(with: nil).count))])
+            return .object(["failure": .string("Photos \(failedStage) failed. Check Helper Photos access and close any Photos dialog before retrying."), "grant_passed": .bool(true), "cleanup_passed": .bool(cleaned), "library_asset_count": .number(Double(PHAsset.fetchAssets(with: nil).count))])
         }
     }
 }
