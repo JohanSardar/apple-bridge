@@ -121,18 +121,27 @@ enum RemindersSectionsProof {
                 _ = NSAppleScript(source: "with timeout of 5 seconds\ntell application \"Reminders\"\nset matches to every list whose name is \"" + title + "\"\nif (count matches) is not 1 then error number -2700\nshow item 1 of matches\nactivate\nend tell\nend timeout")?.executeAndReturnError(&error)
                 guard error == nil else { throw SourceFailure.unavailable }
             }
-            for _ in 0..<30 {
-                if find(title).count == 1 { break }
+            @MainActor func ownedRow() -> AXUIElement? {
+                var rows: [AXUIElement] = []
+                for match in find(title) {
+                    var current = match
+                    for _ in 0..<16 {
+                        if value(current, kAXRoleAttribute) == kAXRowRole {
+                            if !rows.contains(where: { CFEqual($0, current) }) { rows.append(current) }
+                            break
+                        }
+                        var parent: CFTypeRef?
+                        guard AXUIElementCopyAttributeValue(current, kAXParentAttribute as CFString, &parent) == .success, let parent, CFGetTypeID(parent) == AXUIElementGetTypeID() else { break }
+                        current = unsafeDowncast(parent, to: AXUIElement.self)
+                    }
+                }
+                return rows.count == 1 ? rows[0] : nil
+            }
+            let selectionDeadline = ContinuousClock.now.advanced(by: .seconds(10))
+            while ownedRow() == nil, ContinuousClock.now < selectionDeadline {
                 try await Task.sleep(for: .milliseconds(100))
             }
-            var listElement = try unique(title)
-            for _ in 0..<12 {
-                if value(listElement, kAXRoleAttribute) == kAXRowRole { break }
-                var parent: CFTypeRef?
-                guard AXUIElementCopyAttributeValue(listElement, kAXParentAttribute as CFString, &parent) == .success, let parent, CFGetTypeID(parent) == AXUIElementGetTypeID() else { throw SourceFailure.conflict }
-                listElement = unsafeDowncast(parent, to: AXUIElement.self)
-            }
-            guard value(listElement, kAXRoleAttribute) == kAXRowRole else { throw SourceFailure.conflict }
+            guard let listElement = ownedRow() else { throw SourceFailure.conflict }
             if AXUIElementPerformAction(listElement, kAXPressAction as CFString) != .success {
                 try fence()
                 guard AXUIElementSetAttributeValue(listElement, kAXSelectedAttribute as CFString, kCFBooleanTrue) == .success else { throw SourceFailure.unsupported }

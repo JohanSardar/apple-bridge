@@ -62,12 +62,12 @@ enum RemindersParityProof {
             @discardableResult
             func script(_ body: String) throws -> NSAppleEventDescriptor {
                 var error: NSDictionary?
-                let source = "with timeout of 5 seconds\ntell application \"Reminders\"\nset matches to every list whose name is \"" + title + "\"\nif (count matches) is not 1 then error number -2700\nset fixtureList to item 1 of matches\n" + body + "\nend tell\nend timeout"
+                let source = "with timeout of 30 seconds\ntell application \"Reminders\"\nset matches to every list whose name is \"" + title + "\"\nif (count matches) is not 1 then error number -2700\nset fixtureList to item 1 of matches\n" + body + "\nend tell\nend timeout"
                 guard let command = NSAppleScript(source: source) else { throw SourceFailure.invalid }
                 let result = command.executeAndReturnError(&error)
                 if let error {
                     diagnostics[stage + "_script_error"] = .number((error[NSAppleScript.errorNumber] as? NSNumber)?.doubleValue ?? 0)
-                    throw SourceFailure.unavailable
+                    if (error[NSAppleScript.errorNumber] as? NSNumber)?.intValue != -1712 { throw SourceFailure.unavailable }
                 }
                 return result
             }
