@@ -581,8 +581,8 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "CONN-CLAUDE-CODE" && level == "real" {
 		return runRelayService(ctx, s, level)
 	}
-	if s.ID == "CONN-CHATGPT" || s.ID == "CONN-CLAUDE-AI" {
-		return Evidence{Scenario: s.ID, Level: level, Status: "limited", At: time.Now().UTC(), Assertions: []Assertion{{Name: "connector_login", Status: "limited", Detail: "needs connector login"}}}
+	if (s.ID == "CONN-CHATGPT" || s.ID == "CONN-CLAUDE-AI") && level == "real" {
+		return runConnectorReal(ctx, s, level)
 	}
 	if strings.HasPrefix(s.ID, "RMT-") || strings.HasPrefix(s.ID, "CONN-") {
 		return runRemoteFlow(ctx, s, level)
