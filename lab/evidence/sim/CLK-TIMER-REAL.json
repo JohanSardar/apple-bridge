@@ -1,0 +1,42 @@
+{
+  "scenario": "CLK-TIMER-REAL",
+  "level": "sim",
+  "passed": true,
+  "assertions": [
+    {
+      "name": "timer_readback_and_cleanup_qualified",
+      "passed": true
+    },
+    {
+      "name": "timer_baseline_readback",
+      "passed": true
+    },
+    {
+      "name": "timer_running_duration_label_readback",
+      "passed": true
+    },
+    {
+      "name": "created_timer_list_readback",
+      "passed": true
+    },
+    {
+      "name": "cleanup_timer_inventory",
+      "passed": true
+    },
+    {
+      "name": "cleanup_timer_deleted",
+      "passed": true
+    },
+    {
+      "name": "cleanup_timer_baseline_restored",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "metrics": {
+    "capture_observer_resets": 0
+  }
+}

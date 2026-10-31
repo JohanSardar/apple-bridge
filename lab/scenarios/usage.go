@@ -71,32 +71,7 @@ func runUsage(ctx context.Context, s Scenario, level string) Evidence {
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	fail := func(name string) Evidence { add(name, false); return e }
 	if s.ID == "USE-ACTION-PROBE" {
-		probe, cancel := context.WithTimeout(ctx, 15*time.Second)
-		defer cancel()
-		output, err := exec.CommandContext(probe, "/usr/bin/shortcuts", "list").Output()
-		add("inventory_available", err == nil)
-		if err != nil {
-			return e
-		}
-		names := strings.Split(strings.TrimSpace(string(output)), "\n")
-		installed := false
-		for _, name := range names {
-			installed = installed || name == "AB Screen Time"
-		}
-		e.Metrics["installed_shortcut_count"] = len(names)
-		e.Metrics["probe_pack_installed"] = installed
-		root, err := os.UserHomeDir()
-		add("home_available", err == nil)
-		if err != nil {
-			return e
-		}
-		for _, scope := range []string{"local", "remote"} {
-			files, _ := filepath.Glob(filepath.Join(root, "Library/Biome/streams/restricted/App.InFocus", scope, "*"))
-			e.Metrics["biome_"+scope+"_entry_count"] = len(files)
-		}
-		e.Status = "limited"
-		e.Conditions = map[string]string{"reason": "Screen Time action output unmeasured; pack setup: packaging/shortcuts/screen-time-probe.md. No shortcuts executed; retain Biome pending owner-qualified pack."}
-		return e
+		return runUsageActionProbe(ctx, s, level)
 	}
 	if s.ID == "USE-SEGB-DECODE" {
 		output, err := os.ReadFile("native/.build/native-output-1")

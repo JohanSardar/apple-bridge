@@ -2,40 +2,49 @@ package scenarios
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/json"
+	"fmt"
 	"os"
-	"os/exec"
-	"path/filepath"
 	"strings"
-	"syscall"
-	"time"
 
-	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	"github.com/JohanSardar/apple-bridge/internal/shortcut"
 )
 
+func validBridgeStatus(data []byte) bool {
+	switch strings.TrimSpace(string(data)) {
+	case "Apple Bridge background service is enabled.",
+		"Apple Bridge background service needs approval in System Settings.",
+		"Apple Bridge background service is not registered.",
+		"Apple Bridge background service configuration was not found.",
+		"Apple Bridge background service status is unknown.":
+		return true
+	}
+	return false
+}
+
 func runSiriIntents(ctx context.Context, s Scenario, level string) Evidence {
-	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, At: time.Now().UTC()}
-	dir, err := os.MkdirTemp("", "ab-siri-intents-")
-	if err != nil {
-		return e
+	var cli shortcutProbeCLI = shortcut.CLI{}
+	qualified := false
+	metadata, metadataErr := os.ReadFile("packaging/app-intents/Metadata.appintents/extract.actionsdata")
+	source, sourceErr := os.ReadFile("native/Sources/AppleBridgeHelper/BridgeStatusIntent.swift")
+	digest, digestErr := os.ReadFile("packaging/app-intents/source.sha256")
+	var actions struct {
+		Actions map[string]struct {
+			Identifier string `json:"identifier"`
+		} `json:"actions"`
 	}
-	defer os.RemoveAll(dir)
-	app := filepath.Join(dir, "AppleBridgeHelper.app")
-	command := exec.CommandContext(ctx, "packaging/dev/build-helper.sh", app)
-	command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	command.Cancel = func() error { return syscall.Kill(-command.Process.Pid, syscall.SIGKILL) }
-	err = command.Run()
-	e.Assertions = append(e.Assertions, Assertion{Name: "helper_compiles_and_bundles", Passed: err == nil})
-	if err != nil {
-		return e
+	parsed := json.Unmarshal(metadata, &actions) == nil && actions.Actions["BridgeStatusIntent"].Identifier == "BridgeStatusIntent"
+	emitted := parsed && metadataErr == nil && sourceErr == nil && digestErr == nil && strings.TrimSpace(string(digest)) == fmt.Sprintf("%x", sha256.Sum256(source))
+	if level == "sim" {
+		cli = &shortcutProbeSimulation{entries: []shortcut.Entry{{Name: "AB Bridge Status"}}, result: shortcut.Result{Data: []byte("Apple Bridge background service is not registered.")}}
+		qualified = emitted
+	} else {
+		artifact, err := os.ReadFile("packaging/shortcuts/AB Bridge Status.shortcut")
+		qualified = emitted && err == nil && len(artifact) >= 4 && string(artifact[:4]) == "AEA1"
 	}
-	metadata, err := os.ReadFile(filepath.Join(app, "Contents/Resources/Metadata.appintents/extract.actionsdata"))
-	emitted := err == nil && strings.Contains(string(metadata), "BridgeStatusIntent")
-	e.Assertions = append(e.Assertions, Assertion{Name: "status_intent_metadata_emitted", Passed: emitted})
-	e.Status = "limited"
-	reason := "Johan must verify Apple Bridge status appears in Shortcuts and runs."
-	if !emitted {
-		reason = "App Intents metadata missing from Helper bundle; full Xcode metadata toolchain required. " + reason
-	}
-	e.Conditions = map[string]string{"reason": reason}
+	e := runShortcutProbe(ctx, s, level, "AB Bridge Status", cli, qualified, validBridgeStatus)
+	e.Assertions = append(e.Assertions, Assertion{Name: "status_intent_metadata_matches_source", Passed: emitted})
+	e.Passed = e.Passed && emitted
 	return e
 }

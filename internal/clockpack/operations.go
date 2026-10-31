@@ -18,23 +18,33 @@ type Alarm struct {
 	Enabled    bool   `json:"enabled"`
 }
 
+type Timer struct {
+	ID       string `json:"id"`
+	Label    string `json:"label"`
+	Duration int    `json:"duration"`
+	Running  bool   `json:"running"`
+}
+
 type Request struct {
 	Operation string `json:"operation"`
 	Alarm     *Alarm `json:"alarm,omitempty"`
+	Timer     *Timer `json:"timer,omitempty"`
 	Duration  int    `json:"duration,omitempty"`
 	Label     string `json:"label,omitempty"`
 	City      string `json:"city,omitempty"`
 }
 
 type Readback struct {
-	Version      int     `json:"version"`
-	Operation    string  `json:"operation"`
-	Alarms       []Alarm `json:"alarms"`
-	TimerRunning bool    `json:"timer_running"`
-	Duration     int     `json:"duration"`
-	Label        string  `json:"label"`
-	City         string  `json:"city"`
-	LocalTime    string  `json:"local_time"`
+	Version      int      `json:"version"`
+	Capabilities []string `json:"capabilities"`
+	Timers       []Timer  `json:"timers"`
+	Operation    string   `json:"operation"`
+	Alarms       []Alarm  `json:"alarms"`
+	TimerRunning bool     `json:"timer_running"`
+	Duration     int      `json:"duration"`
+	Label        string   `json:"label"`
+	City         string   `json:"city"`
+	LocalTime    string   `json:"local_time"`
 }
 
 func validAlarm(a Alarm) bool {
@@ -57,7 +67,11 @@ func validAlarm(a Alarm) bool {
 func (p Pack) Exchange(ctx context.Context, request Request) (Readback, error) {
 	var out Readback
 	switch request.Operation {
-	case "alarms":
+	case "alarms", "timers", "capabilities":
+	case "delete_timer":
+		if request.Timer == nil || request.Timer.ID == "" || !strings.HasPrefix(request.Timer.Label, "[ab-test]") {
+			return out, fmt.Errorf("valid tagged timer required")
+		}
 	case "create_alarm", "toggle_alarm", "delete_alarm":
 		if request.Alarm == nil || !strings.HasPrefix(request.Alarm.Label, "[ab-test]") || !validAlarm(*request.Alarm) {
 			return out, fmt.Errorf("valid tagged alarm required")
@@ -92,6 +106,7 @@ func (p Pack) Exchange(ctx context.Context, request Request) (Readback, error) {
 	}
 	var fields struct {
 		Alarms []map[string]json.RawMessage `json:"alarms"`
+		Timers []map[string]json.RawMessage `json:"timers"`
 	}
 	if json.Unmarshal(result.Data, &fields) != nil {
 		return Readback{}, ErrUnqualified
@@ -104,6 +119,15 @@ func (p Pack) Exchange(ctx context.Context, request Request) (Readback, error) {
 			}
 		}
 	}
+	for _, timer := range fields.Timers {
+		for _, field := range []string{"id", "label", "duration", "running"} {
+			value, ok := timer[field]
+			if !ok || string(value) == "null" {
+				return Readback{}, ErrUnqualified
+			}
+		}
+	}
+
 	ids := map[string]bool{}
 	for _, a := range out.Alarms {
 		if !validAlarm(a) || ids[a.ID] {
@@ -112,6 +136,24 @@ func (p Pack) Exchange(ctx context.Context, request Request) (Readback, error) {
 		ids[a.ID] = true
 	}
 	switch request.Operation {
+	case "capabilities":
+		if out.Capabilities == nil {
+			return Readback{}, ErrUnqualified
+		}
+	case "timers", "delete_timer":
+		if out.Timers == nil {
+			return Readback{}, ErrUnqualified
+		}
+		seen := map[string]bool{}
+		for _, timer := range out.Timers {
+			if timer.ID == "" || seen[timer.ID] || timer.Duration < 1 || timer.Duration > 86400 {
+				return Readback{}, ErrUnqualified
+			}
+			seen[timer.ID] = true
+			if request.Operation == "delete_timer" && timer.ID == request.Timer.ID {
+				return Readback{}, ErrUnqualified
+			}
+		}
 	case "alarms":
 		if out.Alarms == nil {
 			return Readback{}, ErrUnqualified

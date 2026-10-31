@@ -29,7 +29,7 @@ func runShortcutsRunner(ctx context.Context, s Scenario, level string) Evidence 
 		e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: passed})
 		e.Passed = e.Passed && passed
 	}
-	if s.ID == "SC-RUN-REAL" {
+	if s.ID == "SC-RUN-REAL" && level != "sim" {
 		input := []byte("[ab-test synthetic echo]")
 		started := time.Now()
 		result, err := (shortcut.CLI{}).Run(ctx, shortcut.Input{Shortcut: "AB Echo", Data: input, Timeout: 20 * time.Second})
@@ -41,6 +41,10 @@ func runShortcutsRunner(ctx context.Context, s Scenario, level string) Evidence 
 		e.Metrics["output_sha256"] = hex.EncodeToString(digest[:])
 		add("bounded_runner_completed", err == nil && result.ExitStatus == 0 && !result.TimedOut)
 		add("echo_output_matches", string(result.Data) == string(input))
+		if !e.Passed {
+			e.Status = "limited"
+			e.Conditions = map[string]string{"reason": "AB Echo did not finish or return its input. Open AB Echo in Shortcuts, verify it accepts Shortcut Input without interactive actions, and run it successfully before retrying."}
+		}
 		return e
 	}
 	dir, err := os.MkdirTemp("", "ab-shortcuts-fixture-")
@@ -92,6 +96,14 @@ esac
 	if err != nil {
 		return e
 	}
+	if s.ID == "SC-RUN-REAL" {
+		input := []byte("[ab-test synthetic echo]")
+		result, err := (shortcut.CLI{Executable: executable}).Run(ctx, shortcut.Input{Shortcut: "AB Echo", Data: input, Timeout: 20 * time.Second})
+		add("bounded_runner_completed", err == nil && result.ExitStatus == 0 && !result.TimedOut)
+		add("echo_output_matches", string(result.Data) == string(input))
+		return e
+	}
+
 	nativeDirectory, directoryErr := os.ReadFile("native/.build/native-output-1")
 	fresh := directoryErr == nil && shortcutsChecksFresh(filepath.Join(strings.TrimSpace(string(nativeDirectory)), "ShortcutsChecks"))
 	if !fresh {

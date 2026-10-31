@@ -1,6 +1,6 @@
 id: SIRI-INTENTS
 feature: helper.siri_intents
-levels: [real]
+levels: [sim, real]
 given: []
 when: []
 then: []

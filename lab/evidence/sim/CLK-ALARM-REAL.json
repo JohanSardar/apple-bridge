@@ -1,0 +1,44 @@
+{
+  "scenario": "CLK-ALARM-REAL",
+  "level": "sim",
+  "passed": true,
+  "assertions": [
+    {
+      "name": "alarm_baseline_readback",
+      "passed": true
+    },
+    {
+      "name": "create_alarm_fields",
+      "passed": true
+    },
+    {
+      "name": "created_alarm_list_fields",
+      "passed": true
+    },
+    {
+      "name": "toggle_alarm_fields",
+      "passed": true
+    },
+    {
+      "name": "toggled_alarm_list_fields",
+      "passed": true
+    },
+    {
+      "name": "cleanup_delete_readback",
+      "passed": true
+    },
+    {
+      "name": "cleanup_restores_baseline",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "metrics": {
+    "alarms_after": 1,
+    "alarms_before": 1,
+    "capture_observer_resets": 0
+  }
+}

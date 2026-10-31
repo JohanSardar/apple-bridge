@@ -1,0 +1,30 @@
+{
+  "scenario": "SC-RUN-REAL",
+  "level": "sim",
+  "passed": true,
+  "assertions": [
+    {
+      "name": "fixture_directory",
+      "passed": true
+    },
+    {
+      "name": "fake_cli",
+      "passed": true
+    },
+    {
+      "name": "bounded_runner_completed",
+      "passed": true
+    },
+    {
+      "name": "echo_output_matches",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "metrics": {
+    "capture_observer_resets": 0
+  }
+}

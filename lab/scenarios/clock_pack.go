@@ -34,6 +34,10 @@ func runClockPack(ctx context.Context, s Scenario, level string) Evidence {
 	if level != "sim" {
 		return runClockReal(ctx, s, e, clockpack.Pack{Runner: shortcut.CLI{}})
 	}
+	if s.ID == "CLK-ALARM-REAL" || s.ID == "CLK-TIMER-REAL" {
+		return runClockSession(ctx, s, e, clockpack.Pack{Runner: newClockSimulation()})
+	}
+
 	fixture := &clockPackFixture{result: shortcut.Result{ExitStatus: 0, Data: []byte("synthetic")}}
 	pack := clockpack.Pack{Runner: fixture}
 	raw, err := pack.Inspect(ctx)

@@ -15,5 +15,14 @@
       "name": "credential_backend_override_restored",
       "passed": true
     }
-  ]
+  ],
+  "metrics": {
+    "capture_observer_resets": 0,
+    "elapsed_ms": 20019,
+    "exit_status": -1,
+    "output_bytes": 0,
+    "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "timed_out": true
+  },
+  "git_sha": "987bf04a7b0c10e3d73445fd59ba20c44cf59e49"
 }
