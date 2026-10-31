@@ -17,6 +17,7 @@ public struct MessagesSelfTestBaseline: Sendable {
     private let pins: [String]
     private let muted: Bool
     private let receipts: Bool
+    private let receiptsSetting: String
     private let messagesDigest: String
 
     static func reader() throws -> MessagesReader {
@@ -44,6 +45,11 @@ public struct MessagesSelfTestBaseline: Sendable {
         return BodyDigest.hash(try JSONSerialization.data(withJSONObject: values, options: [.sortedKeys]))
     }
 
+    static func receiptSetting(_ chat: String) throws -> String {
+        guard let value = try MessagesParity.properties(chat)["EnableReadReceiptForChat"] as? NSNumber else { return "default" }
+        return value.boolValue ? "on" : "off"
+    }
+
     @UIActor
     public static func capture(_ chat: String) throws -> MessagesSelfTestBaseline {
         let reader = try reader()
@@ -57,7 +63,7 @@ public struct MessagesSelfTestBaseline: Sendable {
         guard titles.contains("Show Alerts") != titles.contains("Hide Alerts") else { throw SourceFailure.capabilityUnproven }
         let (receiptSession, _, receiptValue) = try MessagesParity.receiptControl(prepared)
         try MessagesParity.dismiss(receiptSession)
-        return MessagesSelfTestBaseline(chat: chat, lastMessageROWID: last, pins: try MessagesPins.read(), muted: titles.contains("Show Alerts"), receipts: receiptValue, messagesDigest: digest)
+        return MessagesSelfTestBaseline(chat: chat, lastMessageROWID: last, pins: try MessagesPins.read(), muted: titles.contains("Show Alerts"), receipts: receiptValue, receiptsSetting: try receiptSetting(chat), messagesDigest: digest)
     }
 
     @UIActor
@@ -77,6 +83,6 @@ public struct MessagesSelfTestBaseline: Sendable {
         try MessagesParity.dismiss(verifiedSession)
         let (verifiedReceiptSession, _, verifiedReceipts) = try MessagesParity.receiptControl(prepared)
         try MessagesParity.dismiss(verifiedReceiptSession)
-        return try MessagesPins.read() == pins && verifiedTitles.contains("Show Alerts") == muted && verifiedTitles.contains("Hide Alerts") != muted && verifiedReceipts == receipts && Self.digest(chat, through: lastMessageROWID) == messagesDigest
+        return try MessagesPins.read() == pins && verifiedTitles.contains("Show Alerts") == muted && verifiedTitles.contains("Hide Alerts") != muted && verifiedReceipts == receipts && Self.receiptSetting(chat) == receiptsSetting && Self.digest(chat, through: lastMessageROWID) == messagesDigest
     }
 }

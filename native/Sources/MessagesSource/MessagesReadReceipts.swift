@@ -49,6 +49,9 @@ extension MessagesParity {
     static func proveReceipts(_ prepared: Prepared) -> JSON {
         var original: Bool?
         do {
+            guard try MessagesSelfTestBaseline.receiptSetting(prepared.action["native_key"].string) != "default" else {
+                return .object(["operation": .string("messages.set_read_receipts"), "proven": .bool(false), "restored": .bool(true), "reason": .string("Read receipts inherit the account setting. The Messages checkbox cannot restore inheritance after a test toggle, so the existing setting was preserved."), "service": prepared.nativeState["service"]])
+            }
             let (session, _, current) = try receiptControl(prepared)
             original = current
             try dismiss(session)
