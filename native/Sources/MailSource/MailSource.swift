@@ -75,6 +75,11 @@ public actor MailSource: Source {
         for await _ in watcher.changes { try Task.checkCancellation(); try await publish() }
     }
     public func prepare(_ command: JSON) async throws -> Prepared { return try MailCommands().prepare(command) }
-    public func dispatch(_ prepared: Prepared) async throws -> JSON { try await MailCommands().dispatch(prepared) }
+    public func dispatch(_ prepared: Prepared) async throws -> JSON {
+        do { return try await MailCommands().dispatch(prepared) }
+        catch let error as MailCommandFailure {
+            return .object(["observed": .bool(false), "disposition": .string("indeterminate"), "reason": .string(error.localizedDescription)])
+        }
+    }
     public func resolve(_ command: String, evidence: JSON) async -> JSON { .null }
 }

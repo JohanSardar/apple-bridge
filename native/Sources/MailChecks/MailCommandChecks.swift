@@ -44,6 +44,12 @@ func checkMailCommands() async throws {
     let prepared = try commands.prepare(.object(["action": .object(["op": .string("mail.set_flag"), "native_key": .string("123"), "args": .object(["flagged": .bool(true)])])]))
     try require(try await commands.dispatch(prepared)["observed"].bool)
     try require(await delayed.scripts().count == 4)
+    let broken = MailCommands(script: { body in
+        if body.contains("return (") { throw MailCommandFailure.timeout }
+        return ""
+    })
+    do { _ = try await broken.dispatch(prepared); throw SourceFailure.corrupt }
+    catch MailCommandFailure.timeout {}
     #if LAB
     try await checkMailQualification()
     #endif

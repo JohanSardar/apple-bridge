@@ -27,7 +27,10 @@ public struct MailQualification: Sendable {
         set remaining to remaining + (count (outgoing messages whose subject is \(q(tag))))
         return (remaining is 0) as string
         """
-        if scenario == "MAIL-CLEANUP" { return .object(["cleanup_passed": .bool(try await script(cleanup) == "true")]) }
+        if scenario == "MAIL-CLEANUP" {
+            do { return .object(["cleanup_passed": .bool(try await script(cleanup) == "true")]) }
+            catch { return .object(["cleanup_passed": .bool(false), "cleanup_error": .string(MailCommands.failureMessage(error))]) }
+        }
         var checks: [String: JSON] = [:]
         do {
             let own = try await script("""
@@ -75,10 +78,16 @@ public struct MailQualification: Sendable {
                     checks["flag_restored"] = .bool(try await apply("mail.set_flag", ["flagged": .bool(false)], key: key))
                 }
             }
-        } catch { checks["fixture_and_commands"] = .bool(false) }
+        } catch {
+            checks["fixture_and_commands"] = .bool(false)
+            checks["command_error"] = .string(MailCommands.failureMessage(error))
+        }
         if scenario != "MAIL-BODY-FIXTURE" {
             do { checks["cleanup_passed"] = .bool(try await script(cleanup) == "true") }
-            catch { checks["cleanup_passed"] = .bool(false) }
+            catch {
+                checks["cleanup_passed"] = .bool(false)
+                checks["cleanup_error"] = .string(MailCommands.failureMessage(error))
+            }
         }
         return .object(checks)
     }
