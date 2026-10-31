@@ -44,7 +44,10 @@ enum PhotosRealProof {
             guard AXUIElementCopyAttributeValue(element, key as CFString, &value) == .success else { return nil }
             return value
         }
-        func displaysFilename(_ root: AXUIElement) -> Bool {
+        func displaysFilename(_ root: AXUIElement, excluding mainWindow: AXUIElement) -> Bool {
+            let windows = attribute(root, kAXWindowsAttribute) as? [AXUIElement] ?? []
+            let panels = windows.filter { !CFEqual($0, mainWindow) }
+            guard windows.count == 2, panels.count == 1 else { return false }
             var budget = 4000
             func matches(_ node: AXUIElement, _ depth: Int) -> Bool {
                 budget -= 1
@@ -52,7 +55,7 @@ enum PhotosRealProof {
                 if [kAXTitleAttribute, kAXValueAttribute, kAXDescriptionAttribute].contains(where: { (attribute(node, $0) as? String ?? "").contains(filename) }) { return true }
                 return (attribute(node, kAXChildrenAttribute) as? [AXUIElement] ?? []).contains { matches($0, depth + 1) }
             }
-            return matches(root, 0)
+            return matches(panels[0], 0)
         }
         var stage = "library read"
         func cleanup() async throws {
@@ -72,6 +75,9 @@ enum PhotosRealProof {
                 guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.Photos").first,
                       app.activate() else { throw SourceFailure.unavailable }
                 let root = AXUIElementCreateApplication(app.processIdentifier)
+                let windows = attribute(root, kAXWindowsAttribute) as? [AXUIElement] ?? []
+                guard windows.count == 1 else { throw SourceFailure.conflict }
+                let mainWindow = windows[0]
                 stage = "identifying the imported test photo"
                 _ = try script("""
                 tell application "System Events" to tell process "Photos"
@@ -89,7 +95,7 @@ enum PhotosRealProof {
                 }
                 var identified = false
                 for _ in 0..<40 {
-                    identified = displaysFilename(root)
+                    identified = displaysFilename(root, excluding: mainWindow)
                     if identified { break }
                     try await Task.sleep(for: .milliseconds(150))
                 }
