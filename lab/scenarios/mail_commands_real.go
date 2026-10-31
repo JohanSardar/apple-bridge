@@ -15,7 +15,40 @@ import (
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
+func mailRecoveryRuns(value string) ([]string, error) {
+	runs := strings.Fields(value)
+	if len(runs) > 10 {
+		return nil, fmt.Errorf("Select at most ten earlier Mail test runs to clean up")
+	}
+	for _, run := range runs {
+		if len(run) != 30 || !strings.HasPrefix(run, "run_") {
+			return nil, fmt.Errorf("Mail cleanup requires an earlier test run ID")
+		}
+		for _, ch := range run[4:] {
+			if !strings.ContainsRune("0123456789ABCDEFGHJKMNPQRSTVWXYZ", ch) {
+				return nil, fmt.Errorf("Mail cleanup requires an earlier test run ID")
+			}
+		}
+	}
+	return runs, nil
+}
+
 func mailRealProof(ctx context.Context, w *world.World, scenario, tag string) (map[string]bool, error) {
+	if scenario != "MAIL-CLEANUP" {
+		runs, err := mailRecoveryRuns(os.Getenv("APPLE_BRIDGE_MAIL_RECOVERY_RUNS"))
+		if err != nil {
+			return nil, err
+		}
+		for _, run := range runs {
+			proof, err := mailRealProof(ctx, w, "MAIL-CLEANUP", "[ab-test] "+run)
+			if err != nil {
+				return nil, err
+			}
+			if !proof["cleanup_passed"] {
+				return nil, fmt.Errorf("Mail could not finish cleaning up the selected earlier test run. Open Mail and try again")
+			}
+		}
+	}
 	report := filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "AppleBridgeDev", contracts.NewID("mail-proof")+".json")
 	defer os.Remove(report)
 	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
@@ -47,6 +80,16 @@ func decodeMailProof(data []byte) (map[string]bool, error) {
 				return nil, invalid
 			}
 			problems = append(problems, message)
+			delete(fields, name)
+		}
+	}
+	for _, name := range []string{"command_error_number", "cleanup_error_number"} {
+		if raw, ok := fields[name]; ok {
+			var code int32
+			if json.Unmarshal(raw, &code) != nil || len(problems) == 0 {
+				return nil, invalid
+			}
+			fmt.Fprintf(os.Stderr, "Mail qualification diagnostic %s=%d\n", name, code)
 			delete(fields, name)
 		}
 	}
