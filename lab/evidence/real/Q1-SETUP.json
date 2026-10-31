@@ -1,0 +1,79 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[5.22 5.13 7.08] cpu_idle=42% cpus=8 other_heavy=0"
+  },
+  "run_id": "setup_01M6A2307D3FKZ6S7RT6WMYYW9",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "permission_count": 24,
+    "request_calls": 0,
+    "snapshot_count": 5,
+    "tcc_compared": 16
+  },
+  "scenario": "Q1-SETUP",
+  "level": "real",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-31T22:43:06.093193Z",
+  "assertions": [
+    {
+      "name": "incremental_signed_helper",
+      "passed": true
+    },
+    {
+      "name": "setup_window_launched",
+      "passed": true
+    },
+    {
+      "name": "snapshot_report",
+      "passed": true
+    },
+    {
+      "name": "fresh_setup_data_without_home_override",
+      "passed": true
+    },
+    {
+      "name": "no_permission_requests",
+      "passed": true
+    },
+    {
+      "name": "live_native_status_stable",
+      "passed": true
+    },
+    {
+      "name": "real_tcc_matches_checklist",
+      "passed": true
+    },
+    {
+      "name": "step_1_snapshot",
+      "passed": true
+    },
+    {
+      "name": "step_2_snapshot",
+      "passed": true
+    },
+    {
+      "name": "step_3_snapshot",
+      "passed": true
+    },
+    {
+      "name": "step_4_snapshot",
+      "passed": true
+    },
+    {
+      "name": "step_5_snapshot",
+      "passed": true
+    },
+    {
+      "name": "five_steps_shown",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

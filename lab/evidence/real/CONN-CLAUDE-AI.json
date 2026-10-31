@@ -1,24 +1,50 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[178.96 86.81 46.99] cpu_idle=49% cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[13.56 20.5 34.65] cpu_idle=28% cpus=8 other_heavy=0"
   },
-  "status": "limited",
-  "run_id": "",
+  "run_id": "connector-real_01M69YJ035CQC5DKRR5XWBR6B9",
+  "network_path": "browser connector through ab-relay ciphertext tunnel to isolated Mac gateway",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "CONN-CLAUDE-AI",
   "level": "real",
-  "passed": false,
+  "passed": true,
   "git_sha": "",
-  "at": "2026-10-29T21:34:24.508926Z",
+  "at": "2026-10-31T21:41:23.173481Z",
   "assertions": [
     {
-      "name": "connector_login",
-      "passed": false,
-      "status": "limited",
-      "detail": "needs connector login"
+      "name": "approval_web_built",
+      "passed": true
+    },
+    {
+      "name": "gateway_embeds_approval_web",
+      "passed": true
+    },
+    {
+      "name": "isolated_mac_gateway",
+      "passed": true
+    },
+    {
+      "name": "relay_public_origin",
+      "passed": true
+    },
+    {
+      "name": "handoff_written",
+      "passed": true
+    },
+    {
+      "name": "authority",
+      "passed": true
+    },
+    {
+      "name": "owner_local_mac_approval",
+      "passed": true
+    },
+    {
+      "name": "oauth_agent_authorized_and_called_tool",
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",
@@ -26,5 +52,8 @@
     }
   ],
   "latency": null,
-  "hosts": null
+  "hosts": [
+    "air",
+    "ab-relay"
+  ]
 }

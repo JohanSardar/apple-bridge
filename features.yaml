@@ -482,11 +482,9 @@ features:
     milestone: M5
     modules: [packaging/setup, native/AppleBridgeHelper]
     depends_on: [packaging.app]
-    status: limited
+    status: done
     scenarios:
       - {id: Q1-SETUP, levels: [sim, real]}
-    limits:
-      - {scenario: Q1-SETUP, level: real, reason: 'Air Q1-SETUP could not start: the shared app-none lock is held by an unrelated Q2 MAC-IDLE run beyond its seven-minute cap. No other ticket was interrupted and no real grants were changed. Five local setup snapshots and the complete simulated flow pass; Air snapshots and TCC comparison remain unproved.'}
   - id: packaging.release
     title: Notarized DMG, signed Sparkle updates, login and TestFlight pipeline
     requirements: [R-PKG, R-SECURE]
@@ -593,7 +591,6 @@ features:
       - {id: WEB-LOCAL-SAFARI, levels: [web]}
     notes: A1 connector sim checks now prove five-minute code matching, owner-local approval, denial, expiry, replay refusal, request isolation, OAuth token exchange and records_query. RMT-ONECOMMAND-FLOW sim covers ephemeral approval-link delivery, token-free status and logs, redacted client failures, and cancellation before Funnel approval. System Funnel passes the public Ubuntu path with a valid certificate, REST and MCP SSE, spoofed-forwarding rejection and Serve-config preservation (real evidence 2026-10-21). WEB-LOCAL-SAFARI passes. T76 live private embedded runners validate on/private status and invitation shape through the Air system tailnet path; remote off and private restoration pass. With the tailnet grant tcp:7780 to the bridge node in place, invitation redemption and the session-gated bridge challenge pass for real (2026-10-30).
     limits:
-      - {"scenario": "CONN-CLAUDE-AI", "level": "real", "reason": "needs the logged-in Air browser to add the custom connector and call a tool"}
       - {"scenario": "CONN-CHATGPT", "level": "real", "reason": "needs the logged-in Air browser to add the custom connector and call a tool"}
   - id: web.agents
     title: Agent tokens with read, approve-first and full levels; MCP OAuth for connectors
