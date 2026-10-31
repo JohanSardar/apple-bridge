@@ -4,6 +4,9 @@ import CryptoKit
 import SourceSupport
 
 extension PhotosSource {
+    #if LAB
+    public func importedAssetIdentifiersForProof() -> Set<String> { importedAssets }
+    #endif
     public static let commands = ["photos.import", "photos.create_album", "photos.add_to_album", "photos.remove_from_album", "photos.set_favorite", "photos.delete"]
     public func prepare(_ command: JSON) async throws -> Prepared {
         guard await open().state == "ready" else { throw SourceFailure.permissionMissing }
