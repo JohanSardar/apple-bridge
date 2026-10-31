@@ -1,4 +1,5 @@
 import AppKit
+import Darwin
 import SpeechSource
 import Foundation
 import CryptoKit
@@ -72,7 +73,7 @@ public actor CaptureSource: Source {
         let evidence: JSON
         do { evidence = try verify(artifact, action: prepared.action) }
         catch {
-            if artifact.url.deletingLastPathComponent().standardizedFileURL == directory.standardizedFileURL {
+            if owns(artifact.url) {
                 try? FileManager.default.removeItem(at: artifact.url)
             }
             throw error
@@ -80,8 +81,17 @@ public actor CaptureSource: Source {
         artifacts[evidence["digest"].string] = artifact
         return evidence
     }
+    func owns(_ url: URL) -> Bool {
+        func canonical(_ directory: URL) -> String? {
+            guard let resolved = realpath(directory.path, nil) else { return nil }
+            defer { free(resolved) }
+            return String(cString: resolved)
+        }
+        guard let expected = canonical(directory), let actual = canonical(url.deletingLastPathComponent()) else { return false }
+        return expected == actual
+    }
     func verify(_ artifact: CaptureArtifact, action: JSON) throws -> JSON {
-        guard artifact.url.deletingLastPathComponent().standardizedFileURL == directory.standardizedFileURL else { throw SourceFailure.corrupt }
+        guard owns(artifact.url) else { throw SourceFailure.corrupt }
         let values = try artifact.url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey])
         guard values.isRegularFile == true, values.isSymbolicLink != true, let size = values.fileSize, size > 0, size <= 128 << 20 else { throw SourceFailure.corrupt }
         guard artifact.duration.isFinite, artifact.duration >= 0 else { throw SourceFailure.corrupt }

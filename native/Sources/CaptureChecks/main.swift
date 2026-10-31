@@ -9,6 +9,8 @@ actor Fake: CaptureProvider {
     var broken = false
     var wrongDuration = false
     func changeDuration() { wrongDuration = true }
+    var outside = false
+    func escapeOutput() { outside = true }
     var calls = 0
     var last: URL?
     func removeLast() throws { if let last { try FileManager.default.removeItem(at: last) } }
@@ -19,7 +21,8 @@ actor Fake: CaptureProvider {
     func authorized(_ operation: String) async -> Bool { allowed }
     func produce(_ operation: String, args: JSON, directory: URL) async throws -> CaptureArtifact {
         calls += 1
-        let url = directory.appendingPathComponent(UUID().uuidString)
+        let target = outside ? directory.deletingLastPathComponent() : directory
+        let url = target.appendingPathComponent("[ab-test] capture " + UUID().uuidString)
         try Data(broken ? [] : [1, 2, 3]).write(to: url)
         last = url
         return CaptureArtifact(url: url, duration: wrongDuration ? 100 : args["seconds"].number, width: 2, height: 2)
@@ -65,6 +68,13 @@ actor Fake: CaptureProvider {
         let ticket = try await other.prepare(.object(["action": action]))
         do { _ = try await other.dispatch(ticket); throw SourceFailure.invalid } catch SourceFailure.corrupt {}
         guard !(await broken.outputExists()) else { throw SourceFailure.corrupt }
+        let escaped = Fake()
+        await escaped.escapeOutput()
+        let confined = CaptureSource(directory: directory, provider: escaped)
+        let escapeTicket = try await confined.prepare(.object(["action": action]))
+        do { _ = try await confined.dispatch(escapeTicket); throw SourceFailure.invalid } catch SourceFailure.corrupt {}
+        guard await escaped.outputExists() else { throw SourceFailure.corrupt }
+        try await escaped.removeLast()
         let mistimed = Fake()
         await mistimed.changeDuration()
         let timed = CaptureSource(directory: directory, provider: mistimed)
@@ -82,6 +92,11 @@ actor Fake: CaptureProvider {
         let printTicket = try await real.prepare(.object(["action": printAction]))
         let printed = try await real.dispatch(printTicket)
         guard printed["size"].number > 0 else { throw SourceFailure.corrupt }
+        let freshDirectory = URL(fileURLWithPath: "/tmp").appendingPathComponent("[ab-test] capture " + UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: freshDirectory) }
+        let fresh = CaptureSource(directory: freshDirectory)
+        let freshTicket = try await fresh.prepare(.object(["action": printAction]))
+        guard try await fresh.dispatch(freshTicket)["size"].number > 0 else { throw SourceFailure.corrupt }
         print("CAP-SIM provider lifecycle passed")
     }
 }
