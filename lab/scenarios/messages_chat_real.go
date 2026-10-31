@@ -11,6 +11,12 @@ import (
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
+func isolatedReadStateFixture(ctx context.Context, native *sql.DB, guid, text string, baselineChat int64) bool {
+	var chats, foreign int
+	err := native.QueryRowContext(ctx, `SELECT COUNT(DISTINCT c.ROWID), COALESCE(SUM(CASE WHEN COALESCE(m.text,'')=? OR instr(m.attributedBody,CAST(? AS BLOB))>0 THEN 0 ELSE 1 END),0) FROM message fixture JOIN chat_message_join f ON f.message_id=fixture.ROWID JOIN chat c ON c.ROWID=f.chat_id JOIN chat_message_join j ON j.chat_id=c.ROWID JOIN message m ON m.ROWID=j.message_id WHERE fixture.guid=? AND c.ROWID>? AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=m.ROWID)`, text, text, guid, baselineChat).Scan(&chats, &foreign)
+	return err == nil && chats == 1 && foreign == 0
+}
+
 func runNativeChatProof(ctx context.Context, s Scenario, e Evidence, w *world.World, native string, state *sql.DB, registerChild func(string) error) Evidence {
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	var messageID string

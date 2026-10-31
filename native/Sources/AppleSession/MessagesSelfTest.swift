@@ -42,8 +42,8 @@ actor MessagesSelfTest {
         let handles = try MessagesProbes.discoverSelfHandles().handles
         let database = try MessagesDatabase()
         let unused = try MessagesSelfTestIsolation.unused(handles, database: database)
-        guard uiAllowed, let handle = unused.first ?? handles.first else {
-            let reason = uiAllowed ? "no own self-chat handle available" : "ui_deferred_until_unlock"
+        guard uiAllowed, let handle = unused.first else {
+            let reason = uiAllowed ? "no unused own-handle alias on this Air; self-chat fallback refused to avoid touching personal conversations" : "ui_deferred_until_unlock"
             let result = JSON.object(["os_build": .string(build), "run_id": .string(run), "state": .string("limited"), "writes_submitted": .number(0), "steps": .array([.object(["name": .string("isolated_test_self_chat"), "proven": .bool(false), "reason": .string(reason)])])])
             try JSONEncoder().encode(result).write(to: reportURL, options: .atomic)
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
@@ -119,10 +119,10 @@ actor MessagesSelfTest {
         let target = initial["native_key"].string
         if uiAllowed, initial["observed"].bool {
             if let conversation = try? database.rows("SELECT c.guid,c.ROWID AS row_position FROM chat c JOIN chat_message_join j ON j.chat_id=c.ROWID JOIN message m ON m.ROWID=j.message_id WHERE m.guid=?", bindings: [target]).first,
-               let chat = conversation["guid"], let position = Int64(conversation["row_position"] ?? "") {
+               let chat = conversation["guid"], let position = Int64(conversation["row_position"] ?? ""), position > baselineChat {
                 registration["baseline_max_chat_row_id"] = baselineChat
                 registration["created_chat_key"] = chat
-                registration["created_by_run"] = position > baselineChat
+                registration["created_by_run"] = true
                 try PrivateReport.write(registration, to: ledger)
                 _ = await execute("mark_unread", "mark_unread", args: [:], native: chat)
                 _ = await execute("mark_read", "mark_read", args: [:], native: chat)

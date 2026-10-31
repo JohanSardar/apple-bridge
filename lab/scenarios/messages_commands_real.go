@@ -62,6 +62,7 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	cancel()
 	var own struct {
 		Handles              []string `json:"handles"`
+		UnusedHandles        []string `json:"unused_handles"`
 		State                string   `json:"state"`
 		CleanupAccessibility bool     `json:"cleanup_accessibility"`
 		CleanupUnlocked      bool     `json:"cleanup_unlocked"`
@@ -76,6 +77,12 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	var cleanupReady bool
 	e, cleanupReady = nativeMessagesCleanupGate(s.ID, e, own.CleanupAccessibility, own.CleanupUnlocked)
 	if !cleanupReady {
+		return e
+	}
+	if s.ID == "MSG-READSTATE-REAL" && len(own.UnusedHandles) == 0 {
+		e.Status = "environment-limited"
+		e.Metrics = map[string]any{"writes_submitted": 0}
+		e.Conditions = map[string]string{"reason": "No unused self address is available for an isolated read-state check. Add a self address in Messages before running this check; existing conversations were left unchanged."}
 		return e
 	}
 	if strings.HasPrefix(s.ID, "MSG-GROUP-") || s.ID == "MSG-SEND-RCS-GROUP" {
@@ -140,6 +147,10 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 		text = "Apple Bridge interactive self-check " + e.RunID
 	}
 	args := map[string]any{"chat_id": chatID, "text": text}
+	if s.ID == "MSG-READSTATE-REAL" {
+		args = map[string]any{"handles": []string{own.UnusedHandles[0]}, "service": "iMessage", "text": text}
+		rawChat = ""
+	}
 	if failedNative != "" {
 		var failedID string
 		if w.Await(30*time.Second, func() bool {
@@ -204,6 +215,11 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	defer func() { finishCleanupAudit(context.Background(), ownedCleanup, "messages", &result) }()
 	var maximum int64
 	native.QueryRowContext(ctx, "SELECT COALESCE(MAX(ROWID),0) FROM message").Scan(&maximum)
+	var maximumChat int64
+	if err := native.QueryRowContext(ctx, "SELECT COALESCE(MAX(ROWID),0) FROM chat").Scan(&maximumChat); err != nil {
+		add("chat_baseline", false)
+		return e
+	}
 	raw, _ := json.Marshal(args)
 	c := contracts.Command{ID: contracts.NewCommandID(), Op: "messages.send", Args: raw, WaitMS: 15000}
 	cleanupDirectory := filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "AppleBridgeDev", "messages-command-cleanup")
@@ -285,7 +301,7 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	go func() {
 		for watchCtx.Err() == nil {
 			var guid string
-			err := native.QueryRowContext(watchCtx, "SELECT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE m.ROWID>? AND m.is_from_me=0 AND c.guid=? AND (m.text=? OR instr(m.attributedBody,CAST(? AS BLOB))>0) ORDER BY m.ROWID LIMIT 1", maximum, rawChat, text, text).Scan(&guid)
+			err := native.QueryRowContext(watchCtx, "SELECT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE m.ROWID>? AND m.is_from_me=0 AND (?='' OR c.guid=?) AND (m.text=? OR instr(m.attributedBody,CAST(? AS BLOB))>0) ORDER BY m.ROWID LIMIT 1", maximum, rawChat, rawChat, text, text).Scan(&guid)
 			if err == nil {
 				echoes <- seen{time.Now(), guid}
 				return
@@ -428,6 +444,10 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 		return e
 	}
 	if s.ID != "MSG-SEND-SELF-TEXT" && s.ID != "MSG-SEND-FILES" && s.ID != "MSG-INTERACTIVE-GATE" && s.ID != "MSG-RESEND" {
+		if s.ID == "MSG-READSTATE-REAL" && !isolatedReadStateFixture(ctx, native, evidence.NativeKey, text, maximumChat) {
+			add("isolated_read_state_fixture", false)
+			return e
+		}
 		return runNativeMessageAction(ctx, s, e, w, evidence.NativeKey, text, stateDB, func(id string) error {
 			ids, _ := cleanup["additional_command_ids"].([]string)
 			cleanup["additional_command_ids"] = append(ids, id)
