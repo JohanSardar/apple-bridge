@@ -58,14 +58,28 @@ func Query(ctx context.Context, level string, asJSON bool) error {
 	if !passed {
 		evidence["failure"] = "agent_execution_or_answer"
 	}
-	raw, err := json.MarshalIndent(evidence, "", "  ")
+	levels := []string{level}
+	if level == "real" {
+		levels = append(levels, "agent")
+	}
+	var raw []byte
+	for _, proofLevel := range levels {
+		evidence["level"] = proofLevel
+		raw, err = json.MarshalIndent(evidence, "", "  ")
+		if err != nil {
+			return err
+		}
+		directory := filepath.Join("lab/evidence", proofLevel)
+		if err = os.MkdirAll(directory, 0700); err != nil {
+			return err
+		}
+		if err = os.WriteFile(filepath.Join(directory, "QUERY-AGENT.json"), append(raw, '\n'), 0600); err != nil {
+			return err
+		}
+	}
+	evidence["level"] = level
+	raw, err = json.MarshalIndent(evidence, "", "  ")
 	if err != nil {
-		return err
-	}
-	if err = os.MkdirAll(filepath.Join("lab/evidence", level), 0700); err != nil {
-		return err
-	}
-	if err = os.WriteFile(filepath.Join("lab/evidence", level, "QUERY-AGENT.json"), append(raw, '\n'), 0600); err != nil {
 		return err
 	}
 	if asJSON {
