@@ -54,6 +54,9 @@ func runMailBodyReal(ctx context.Context, s Scenario, level string) (e Evidence)
 			e.Conditions = map[string]string{"reason": problem.Error()}
 			fmt.Fprintln(os.Stderr, problem)
 		}
+		for _, step := range []string{"mail_responsive", "self_address_available", "sent_to_self", "self_mail_received"} {
+			check("fixture_"+step, proof[step])
+		}
 		if !check("self_sent_fixture_created", problem == nil && proof["sent_to_self"] && proof["self_mail_received"]) {
 			return e
 		}
