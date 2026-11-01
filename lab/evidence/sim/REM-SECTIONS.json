@@ -1,17 +1,17 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[5.25 5.93 5.75] cpu_idle=76% cpus=10 other_heavy=3"
+    "quiet": true,
+    "summary": "air: load=[4.29 3.63 4.04] cpu_idle=74% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M6AR1NMQ3QV8MQAZJPZAMQ91",
+  "run_id": "run_01M6ASSRX7JBY8P5H9TD6Z4D95",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "REM-SECTIONS",
   "level": "sim",
   "passed": true,
-  "git_sha": "6d12e2fb4a79a7cb9ca5265e243d1f0083c259f8",
-  "at": "2026-11-01T05:06:51.159074Z",
+  "git_sha": "8a398c9ecc83967d1cd372a6b25658e37d1f055a",
+  "at": "2026-11-01T05:37:29.511875Z",
   "assertions": [
     {
       "name": "native_sections_build",

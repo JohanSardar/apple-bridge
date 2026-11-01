@@ -45,6 +45,7 @@ enum RemindersParityProof {
         second.calendar = list; second.title = title + " child"
         let smartTitle = title + " smart"
         var smartAttempted = false
+        var fixtureUI: RemindersFixtureUI?
         var stage = "fixture"
         do {
             try store.save(first, commit: true)
@@ -121,6 +122,7 @@ enum RemindersParityProof {
             try await Task.sleep(for: .seconds(1))
             guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.reminders").first else { throw SourceFailure.unavailable }
             let ui = RemindersFixtureUI(app: app, title: title)
+            fixtureUI = ui
             try await ui.prepare()
             for (key, value) in ui.accessibilityDiagnostics { diagnostics["ui_" + key] = .number(value) }
             try ui.requireReady()
@@ -266,9 +268,16 @@ enum RemindersParityProof {
             reasons["cleanup"] = .string("The test smart list could not be removed; rerun cleanup for this run before testing again.")
           }
         }
-        if let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.reminders").first {
-            let ui = RemindersFixtureUI(app: app, title: title)
-            if ui.find("Cancel", role: kAXButtonRole).count == 1 { try? ui.press("Cancel", role: kAXButtonRole) }
+        if let ui = fixtureUI, let sheet = ui.ownedSheet {
+            if ui.sheets().contains(where: { CFEqual($0, sheet) }), ui.find("Cancel", role: kAXButtonRole, within: sheet).count == 1 {
+                try? await ui.activate()
+                try? ui.press("Cancel", role: kAXButtonRole)
+                let deadline = ContinuousClock.now.advanced(by: .seconds(3))
+                while ui.sheets().contains(where: { CFEqual($0, sheet) }), ContinuousClock.now < deadline {
+                    try await Task.sleep(for: .milliseconds(100))
+                }
+            }
+            checks["owned_sheet_cleanup"] = .bool(!ui.sheets().contains(where: { CFEqual($0, sheet) }))
         }
         store.reset()
         if let owned = store.calendar(withIdentifier: listID), owned.title == title { try store.removeCalendar(owned, commit: true) }
@@ -276,7 +285,7 @@ enum RemindersParityProof {
         checks["owned_list_cleanup"] = .bool(store.calendar(withIdentifier: listID) == nil)
         try PrivateReport.write(["list_id": listID, "title": title, "smart_title": smartTitle, "cleanup_state": checks["owned_list_cleanup"]?.bool == true && (!smartAttempted || checks["owned_smart_list_cleanup"]?.bool == true) ? "verified_clean" : "pending"], to: ledger)
         let required = ["flag_readback", "flag_clear_readback", "list_icon_readback", "indent_readback", "outdent_readback", "tags_readback", "reorder_readback", "image_readback", "smart_list_readback", "owned_list_cleanup"]
-        return .object(["passed": .bool(required.allSatisfy { checks[$0]?.bool == true } && (!smartAttempted || checks["owned_smart_list_cleanup"]?.bool == true)), "checks": .object(checks.filter { !$0.key.hasPrefix("control_") }), "controls": .object(checks.filter { $0.key.hasPrefix("control_") }), "diagnostics": .object(diagnostics), "reasons": .object(reasons)])
+        return .object(["passed": .bool(required.allSatisfy { checks[$0]?.bool == true } && checks["owned_sheet_cleanup"]?.bool != false && (!smartAttempted || checks["owned_smart_list_cleanup"]?.bool == true)), "checks": .object(checks.filter { !$0.key.hasPrefix("control_") }), "controls": .object(checks.filter { $0.key.hasPrefix("control_") }), "diagnostics": .object(diagnostics), "reasons": .object(reasons)])
     }
 }
 
@@ -317,6 +326,33 @@ final class RemindersFixtureUI {
 
     func prepare() async throws {
         _ = app.activate()
+        let recoveryURL = PrivateReport.directory.appendingPathComponent("reminders-owned-new-list-sheet.json")
+        if FileManager.default.fileExists(atPath: recoveryURL.path) {
+            let registration = try JSONDecoder().decode(JSON.self, from: Data(contentsOf: recoveryURL))
+            guard registration["scenario"].string == "WEB-REM-PARITY", registration["run_id"].string.hasPrefix("reminders-parity_"), registration["process_id"].number == Double(app.processIdentifier) else { throw SourceFailure.conflict }
+            let candidates = sheets()
+            guard candidates.count == 1 else { throw SourceFailure.conflict }
+            let sheet = candidates[0]
+            let cancel = find("Cancel", role: kAXButtonRole, within: sheet)
+            let standard = find("Standard", role: kAXPopUpButtonRole, within: sheet)
+            var fields: [AXUIElement] = []
+            for field in find("New List", role: kAXTextFieldRole, within: sheet) + find("", role: kAXTextFieldRole, within: sheet) {
+                guard ["", "New List"].contains(value(field, kAXValueAttribute)), !fields.contains(where: { CFEqual($0, field) }) else { continue }
+                fields.append(field)
+            }
+            accessibilityDiagnostics["recovery_cancel_buttons"] = Double(cancel.count)
+            accessibilityDiagnostics["recovery_standard_controls"] = Double(standard.count)
+            accessibilityDiagnostics["recovery_default_name_fields"] = Double(fields.count)
+            guard cancel.count == 1, standard.count == 1, fields.count == 1 else { throw SourceFailure.conflict }
+            guard AXUIElementPerformAction(cancel[0], kAXPressAction as CFString) == .success else { throw SourceFailure.unavailable }
+            let deadline = ContinuousClock.now.advanced(by: .seconds(3))
+            while sheets().contains(where: { CFEqual($0, sheet) }), ContinuousClock.now < deadline {
+                try await Task.sleep(for: .milliseconds(100))
+            }
+            guard !sheets().contains(where: { CFEqual($0, sheet) }) else { throw SourceFailure.conflict }
+            try FileManager.default.removeItem(at: recoveryURL)
+            accessibilityDiagnostics["recovered_owned_new_list_sheet"] = 1
+        }
         let introduction = find("Continue", role: kAXButtonRole)
         if introduction.count == 1, (searchDiagnostics["introduction_heading"] ?? 0) > 0 {
             guard AXUIElementPerformAction(introduction[0], kAXPressAction as CFString) == .success else { throw SourceFailure.unavailable }
