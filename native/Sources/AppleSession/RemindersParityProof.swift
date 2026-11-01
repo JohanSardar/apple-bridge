@@ -288,10 +288,15 @@ enum RemindersParityProof {
                 }
                 try ui.press("Delete", role: kAXButtonRole)
                 try await Task.sleep(for: .milliseconds(500))
-                absent = true
-                for session in sessions {
-                    let snapshot = try await session.read().snapshot
-                    if snapshot.lists.values.contains(where: { $0.name == smartTitle }) { absent = false }
+                absent = false
+                for _ in 0..<60 {
+                    var present = false
+                    for session in sessions {
+                        let snapshot = try await session.read().snapshot
+                        if snapshot.lists.values.contains(where: { $0.name == smartTitle }) { present = true }
+                    }
+                    if !present { absent = true; break }
+                    try await Task.sleep(for: .milliseconds(100))
                 }
             }
             checks["owned_smart_list_cleanup"] = .bool(absent)
