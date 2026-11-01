@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[32.82 51.95 47.02] cpu_idle=79% cpus=8 other_heavy=0"
+    "summary": "air: load=[11.88 17.58 14.17] cpu_idle=64% cpus=8 other_heavy=0"
   },
-  "run_id": "reminders-parity_01M6AZD30BGB77TEF9HENY8GG5",
+  "run_id": "reminders-parity_01M6BH4T8JCY346TMYZWHPVB5F",
   "metrics": {
     "capture_observer_resets": 0,
     "controls": {
@@ -23,6 +23,9 @@
       "control_View": true
     },
     "diagnostics": {
+      "cleanup_delete_dialog_closed": 1,
+      "cleanup_delete_press_result": 0,
+      "cleanup_menu_returned": 1,
       "fixture_icloud_source": 1,
       "fixture_source_type": 2,
       "flag_clear_parent_matches": 1,
@@ -31,14 +34,21 @@
       "flag_parent_matches": 1,
       "flag_script_readback": 1,
       "flag_store_flag": 1,
+      "image_child_attachments": 1,
+      "image_fixture_attachments": 1,
+      "image_fixture_reminders": 2,
+      "image_parent_attachments": 0,
       "images_active_sheets": 0,
       "images_foreground": 1,
-      "images_full_store_flag": 0,
       "images_owned_list_selected": 1,
       "images_parent_matches": 1,
+      "images_paste_enabled": 1,
       "images_row_matches": 1,
-      "images_select_result": 0,
       "images_selected": 1,
+      "images_selected_rows_after": 1,
+      "images_selected_rows_before": 1,
+      "images_selection_before_contains_target": 1,
+      "images_selection_set_result": 0,
       "images_sheet_candidates": 0,
       "images_store_flag": 0,
       "list_icon_parent_matches": 1,
@@ -46,21 +56,22 @@
       "reorder_active_sheets": 0,
       "reorder_child_binary_uuid": 1,
       "reorder_child_is_subtask": 0,
-      "reorder_child_position": 1,
+      "reorder_child_position": 0,
       "reorder_foreground": 1,
-      "reorder_full_store_flag": 0,
+      "reorder_native_move_matches": 3,
       "reorder_owned_list_selected": 1,
       "reorder_parent_binary_uuid": 1,
       "reorder_parent_matches": 1,
-      "reorder_parent_position": 0,
+      "reorder_parent_position": 1,
       "reorder_row_matches": 1,
-      "reorder_select_result": 0,
       "reorder_selected": 1,
+      "reorder_selected_rows_after": 1,
+      "reorder_selected_rows_before": 1,
+      "reorder_selection_before_contains_target": 1,
+      "reorder_selection_set_result": 0,
       "reorder_sheet_candidates": 0,
       "reorder_store_flag": 0,
       "selection_control_All": 2,
-      "selection_control_Cancel": 1,
-      "selection_control_Done": 1,
       "selection_control_Flagged": 2,
       "selection_control_New List": 1,
       "selection_control_Reminders": 5,
@@ -68,12 +79,12 @@
       "selection_control_Today": 4,
       "selection_nonempty_search_fields": 0,
       "selection_partial_labels": 8,
-      "selection_role_AXButton": 42,
-      "selection_role_AXCell": 24,
+      "selection_role_AXButton": 38,
+      "selection_role_AXCell": 22,
       "selection_role_AXCheckBox": 2,
-      "selection_role_AXColumn": 4,
+      "selection_role_AXColumn": 3,
       "selection_role_AXGrid": 1,
-      "selection_role_AXGroup": 9,
+      "selection_role_AXGroup": 7,
       "selection_role_AXHeading": 1,
       "selection_role_AXImage": 11,
       "selection_role_AXLayoutArea": 1,
@@ -81,39 +92,38 @@
       "selection_role_AXMenuBar": 1,
       "selection_role_AXMenuBarItem": 7,
       "selection_role_AXMenuButton": 1,
-      "selection_role_AXMenuItem": 262,
+      "selection_role_AXMenuItem": 261,
       "selection_role_AXOutline": 2,
-      "selection_role_AXRow": 24,
-      "selection_role_AXScrollArea": 3,
+      "selection_role_AXRow": 22,
+      "selection_role_AXScrollArea": 2,
       "selection_role_AXScrollBar": 1,
       "selection_role_AXSplitGroup": 1,
       "selection_role_AXSplitter": 1,
-      "selection_role_AXStaticText": 14,
-      "selection_role_AXTable": 2,
+      "selection_role_AXStaticText": 13,
+      "selection_role_AXTable": 1,
       "selection_role_AXTextArea": 1,
-      "selection_role_AXTextField": 14,
+      "selection_role_AXTextField": 12,
       "selection_role_AXToolbar": 1,
       "selection_role_AXUnknown": 11,
       "selection_role_AXValueIndicator": 1,
-      "selection_role_AXWindow": 2,
-      "selection_rows": 24,
-      "selection_subrole_AXCloseButton": 2,
+      "selection_role_AXWindow": 1,
+      "selection_rows": 22,
+      "selection_subrole_AXCloseButton": 1,
       "selection_subrole_AXDecrementArrow": 1,
       "selection_subrole_AXDecrementPage": 1,
       "selection_subrole_AXFullScreenButton": 1,
       "selection_subrole_AXHostingView": 1,
       "selection_subrole_AXIncrementArrow": 1,
       "selection_subrole_AXIncrementPage": 1,
-      "selection_subrole_AXMinimizeButton": 2,
+      "selection_subrole_AXMinimizeButton": 1,
       "selection_subrole_AXOutlineRow": 21,
       "selection_subrole_AXSearchField": 2,
-      "selection_subrole_AXStandardWindow": 2,
-      "selection_subrole_AXTableRow": 2,
+      "selection_subrole_AXStandardWindow": 1,
       "selection_subrole_AXToggle": 2,
-      "selection_subrole_AXZoomButton": 1,
       "selection_truncated": 0,
-      "selection_visited": 465,
+      "selection_visited": 447,
       "smart_list_active_sheets": 1,
+      "smart_list_confirmation_sheet_remains": 0,
       "smart_list_foreground": 1,
       "smart_list_name_default": 1,
       "smart_list_name_focus_AXTextField": 1,
@@ -122,10 +132,10 @@
       "smart_list_owned_list_selected": 1,
       "smart_list_sheet_candidates": 1,
       "smart_list_smart_type_selected": 1,
-      "smart_list_tag_checkbox_matches": 0,
-      "smart_list_tag_matches_AXButton": 0,
-      "smart_list_tag_matches_AXMenuItem": 1,
-      "smart_list_tag_matches_AXPopUpButton": 0,
+      "smart_list_store_filter_matches": 0,
+      "smart_list_store_name_matches": 0,
+      "smart_list_store_type_matches": 0,
+      "smart_list_tag_input_matches": 1,
       "smart_list_type_menu_opened": 1,
       "store_visibility_parent_matches": 1,
       "store_visibility_store_flag": 0,
@@ -134,8 +144,11 @@
       "subtasks_owned_list_selected": 1,
       "subtasks_parent_matches": 1,
       "subtasks_row_matches": 1,
-      "subtasks_select_result": 0,
       "subtasks_selected": 1,
+      "subtasks_selected_rows_after": 1,
+      "subtasks_selected_rows_before": 1,
+      "subtasks_selection_before_contains_target": 1,
+      "subtasks_selection_set_result": 0,
       "subtasks_sheet_candidates": 0,
       "subtasks_store_flag": 0,
       "tags_active_sheets": 0,
@@ -143,21 +156,24 @@
       "tags_owned_list_selected": 1,
       "tags_parent_matches": 1,
       "tags_row_matches": 1,
-      "tags_select_result": 0,
       "tags_selected": 1,
+      "tags_selected_rows_after": 1,
+      "tags_selected_rows_before": 1,
+      "tags_selection_before_contains_target": 0,
+      "tags_selection_set_result": 0,
       "tags_sheet_candidates": 0,
       "tags_store_flag": 0,
       "tags_title_fields": 1,
       "ui_minimized_windows": 0,
       "ui_sheet_count": 0,
-      "ui_windows": 2
+      "ui_windows": 1
     }
   },
   "scenario": "WEB-REM-PARITY",
   "level": "real",
-  "passed": false,
-  "git_sha": "07020ae9230809548e2623268367f3e1410755a9",
-  "at": "2026-11-01T07:15:25.323836Z",
+  "passed": true,
+  "git_sha": "af7abebeaacb9ee3c1af75e93f25c94ebc87de47",
+  "at": "2026-11-01T12:25:28.594754Z",
   "assertions": [
     {
       "name": "native_sections_build",
@@ -189,7 +205,7 @@
     },
     {
       "name": "image_readback",
-      "passed": false
+      "passed": true
     },
     {
       "name": "indent_readback",
@@ -213,7 +229,7 @@
     },
     {
       "name": "owned_sheet_cleanup",
-      "passed": false
+      "passed": true
     },
     {
       "name": "owned_smart_list_cleanup",
@@ -225,7 +241,11 @@
     },
     {
       "name": "reorder_readback",
-      "passed": false
+      "passed": true
+    },
+    {
+      "name": "smart_list_readback",
+      "passed": true
     },
     {
       "name": "store_fixture_visible",
@@ -236,12 +256,8 @@
       "passed": true
     },
     {
-      "name": "smart_list_readback",
-      "passed": false
-    },
-    {
       "name": "native_sections_proof",
-      "passed": false
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",
@@ -249,8 +265,5 @@
     }
   ],
   "latency": null,
-  "hosts": null,
-  "conditions": {
-    "smart_list": "The smart_list action could not be verified on the test list: conflict"
-  }
+  "hosts": null
 }
