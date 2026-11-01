@@ -2,6 +2,7 @@ import Foundation
 import ObjectiveC
 import Darwin
 import SourceSupport
+import Decoders
 
 @MainActor
 enum MessagesNativeSession {
