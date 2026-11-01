@@ -20,6 +20,10 @@ import (
 )
 
 func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
+	if level != "sim" {
+		restore := notesNativeBuildLock("native/.build")
+		defer restore()
+	}
 	if s.ID == "NOTE-EDIT-PARITY" {
 		return runNotesParity(ctx, s, level)
 	}
@@ -755,4 +759,27 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		}
 	}
 	return
+}
+
+func notesNativeBuildLock(path string) func() {
+	previous, present := os.LookupEnv("APPLE_BRIDGE_NATIVE_LOCK")
+	if previous != "" {
+		return func() {}
+	}
+	target, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return func() {}
+	}
+	lane := filepath.Base(target)
+	if lane != "ab-swift-build-1" && lane != "ab-swift-build-2" {
+		return func() {}
+	}
+	os.Setenv("APPLE_BRIDGE_NATIVE_LOCK", "/tmp/ab-native-lane-"+strings.TrimPrefix(lane, "ab-swift-build-")+".lock")
+	return func() {
+		if present {
+			os.Setenv("APPLE_BRIDGE_NATIVE_LOCK", previous)
+		} else {
+			os.Unsetenv("APPLE_BRIDGE_NATIVE_LOCK")
+		}
+	}
 }
