@@ -127,6 +127,11 @@ private struct ClockTimerUI {
         root = AXUIElementCreateApplication(app.processIdentifier)
         AXUIElementSetMessagingTimeout(root, 0.5)
         app.activate()
+        for window in attribute(root, kAXWindowsAttribute) as? [AXUIElement] ?? [] {
+            _ = AXUIElementSetAttributeValue(window, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
+            _ = AXUIElementPerformAction(window, kAXRaiseAction as CFString)
+            _ = AXUIElementSetAttributeValue(root, kAXFocusedWindowAttribute as CFString, window)
+        }
         try press(find(root, role: kAXRadioButtonRole).filter { name($0) == "Timers" || name($0) == "Timer" }, step: "open the Timers tab")
     }
 
@@ -173,37 +178,29 @@ private struct ClockTimerUI {
         RunLoop.current.run(until: Date().addingTimeInterval(0.25))
     }
 
-    private func key(_ code: CGKeyCode) -> Bool {
-        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier else { return false }
-        for down in [true, false] {
-            guard let event = CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: down) else { return false }
-            event.flags = []
-            event.post(tap: .cghidEventTap)
-        }
-        RunLoop.current.run(until: Date().addingTimeInterval(0.1))
-        return true
-    }
-
     private func focus(_ element: AXUIElement) throws {
         app.activate()
-        try click(element, button: .left)
+        _ = AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, kCFBooleanTrue)
+        _ = AXUIElementSetAttributeValue(element, kAXSelectedAttribute as CFString, kCFBooleanTrue)
+        if AXUIElementPerformAction(element, kAXPressAction as CFString) != .success { try click(element, button: .left) }
         RunLoop.current.run(until: Date().addingTimeInterval(0.1))
     }
 
     private func click(_ element: AXUIElement, button: CGMouseButton) throws {
         app.activate()
         RunLoop.current.run(until: Date().addingTimeInterval(0.1))
-        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier else { throw ClockTimerFailure(step: "bring its timer controls to the foreground") }
         guard let position = attribute(element, kAXPositionAttribute), let size = attribute(element, kAXSizeAttribute), CFGetTypeID(position) == AXValueGetTypeID(), CFGetTypeID(size) == AXValueGetTypeID() else { throw ClockTimerFailure(step: "locate the timer control") }
         var point = CGPoint.zero, extent = CGSize.zero
         guard AXValueGetValue(unsafeDowncast(position, to: AXValue.self), .cgPoint, &point), AXValueGetValue(unsafeDowncast(size, to: AXValue.self), .cgSize, &extent), extent.width > 0, extent.height > 0 else { throw ClockTimerFailure(step: "locate the timer control") }
         point.x += extent.width / 2
         point.y += extent.height / 2
+        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier, let source = CGEventSource(stateID: .privateState) else { throw ClockTimerFailure(step: "bring its timer controls to the foreground") }
         let types: [CGEventType] = button == .right ? [.rightMouseDown, .rightMouseUp] : [.leftMouseDown, .leftMouseUp]
         for type in types {
-            guard let event = CGEvent(mouseEventSource: nil, mouseType: type, mouseCursorPosition: point, mouseButton: button) else { throw ClockTimerFailure(step: "select its timer control") }
+            guard let event = CGEvent(mouseEventSource: source, mouseType: type, mouseCursorPosition: point, mouseButton: button) else { throw ClockTimerFailure(step: "select its timer control") }
             event.flags = []
             event.post(tap: .cghidEventTap)
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
         }
         RunLoop.current.run(until: Date().addingTimeInterval(0.25))
     }
@@ -224,44 +221,20 @@ private struct ClockTimerUI {
             let sliders = find(picker[0], role: kAXSliderRole)
             return sliders.count == 3 ? sliders[index] : nil
         }
-        func inputState(_ index: Int, phase: Int) {
-            guard let element = slider(index) else { return }
-            let windows = find(root, role: kAXWindowRole)
-            var details = ["timer_probe_phase": phase, "timer_probe_component": index + 1, "timer_probe_value": ClockTimers.durationComponent(attribute(element, kAXValueAttribute)) ?? -1, "timer_probe_selected": attribute(element, kAXSelectedAttribute) as? Bool == true ? 1 : 0, "timer_probe_focused": attribute(element, kAXFocusedAttribute) as? Bool == true ? 1 : 0, "timer_probe_windows": windows.count, "timer_probe_minimized_windows": windows.filter { attribute($0, kAXMinimizedAttribute) as? Bool == true }.count, "timer_probe_sheets": find(root, role: kAXSheetRole).count, "timer_probe_display_asleep": CGDisplayIsAsleep(CGMainDisplayID()) != 0 ? 1 : 0, "timer_probe_hidden": app.isHidden ? 1 : 0]
-            if let position = attribute(element, kAXPositionAttribute), let size = attribute(element, kAXSizeAttribute), CFGetTypeID(position) == AXValueGetTypeID(), CFGetTypeID(size) == AXValueGetTypeID() {
-                var point = CGPoint.zero, extent = CGSize.zero
-                if AXValueGetValue(unsafeDowncast(position, to: AXValue.self), .cgPoint, &point), AXValueGetValue(unsafeDowncast(size, to: AXValue.self), .cgSize, &extent) {
-                    details["timer_probe_x"] = Int(point.x)
-                    details["timer_probe_y"] = Int(point.y)
-                    details["timer_probe_width"] = Int(extent.width)
-                    details["timer_probe_height"] = Int(extent.height)
-                }
-            }
-            if let data = try? JSONSerialization.data(withJSONObject: details, options: [.sortedKeys]) { FileHandle.standardError.write(data + Data("\n".utf8)) }
-        }
         for (index, number) in [duration / 3600, duration / 60 % 60, duration % 60].enumerated() {
             guard let element = slider(index) else { throw ClockTimerFailure(step: "find the three timer duration controls") }
-            inputState(index, phase: 0)
+            if ClockTimers.durationComponent(attribute(element, kAXValueAttribute)) == number { continue }
             try focus(element)
-            inputState(index, phase: 1)
-            var adjustments = 0
             do {
                 try ClockTimers.adjustDurationComponent(to: number, value: {
-                    guard let current = slider(index) else { return nil }
+                    guard let current = slider(index), attribute(current, kAXSelectedAttribute) as? Bool == true else { return nil }
                     return ClockTimers.durationComponent(attribute(current, kAXValueAttribute))
                 }, adjust: { increasing in
-                    let posted = key(increasing ? 126 : 125)
-                    adjustments += 1
-                    if adjustments < 3 { inputState(index, phase: adjustments + 1) }
-                    return posted
+                    guard let current = slider(index), AXUIElementPerformAction(current, (increasing ? kAXIncrementAction : kAXDecrementAction) as CFString) == .success else { return false }
+                    RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+                    return true
                 })
-            } catch {
-                let observed = slider(index).flatMap { ClockTimers.durationComponent(attribute($0, kAXValueAttribute)) } ?? -1
-                let details = ["timer_component": index + 1, "timer_component_observed": observed, "timer_component_target": number, "timer_input_access": CGPreflightPostEventAccess() ? 1 : 0, "timer_clock_frontmost": NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier ? 1 : 0]
-                if let data = try? JSONSerialization.data(withJSONObject: details, options: [.sortedKeys]) { FileHandle.standardError.write(data + Data("\n".utf8)) }
-                throw ClockTimerFailure(step: "set timer duration component \(index + 1)")
-            }
-            guard key(48) else { throw ClockTimerFailure(step: "commit its timer duration") }
+            } catch { throw ClockTimerFailure(step: "set timer duration component \(index + 1)") }
         }
         let sheet = find(root, role: kAXSheetRole)
         let scope = sheet.count == 1 ? sheet[0] : root
@@ -303,6 +276,7 @@ private struct ClockTimerUI {
                 return attribute(unsafeDowncast(parent, to: AXUIElement.self), kAXRoleAttribute) as? String != kAXMenuBarItemRole
             }.flatMap { find($0, role: kAXMenuItemRole) }.filter { name($0) == "Delete" }
         }
+        _ = AXUIElementSetAttributeValue(rows[0], kAXFocusedAttribute as CFString, kCFBooleanTrue)
         _ = AXUIElementPerformAction(rows[0], kAXShowMenuAction as CFString)
         RunLoop.current.run(until: Date().addingTimeInterval(0.25))
         if deleteItems().isEmpty { try click(rows[0], button: .right) }
