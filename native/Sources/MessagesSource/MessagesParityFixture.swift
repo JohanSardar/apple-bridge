@@ -17,6 +17,8 @@ public enum MessagesParityFixture {
     }
     @UIActor
     static func sendExisting(_ text: String, chat: String) throws {
+        var report: [String: Any] = ["passed": false, "typed": false, "send_submitted": false]
+        defer { try? PrivateReport.write(report, to: PrivateReport.directory.appendingPathComponent("messages-fixture-editor-controls.json")) }
         let baseline = try MessagesSelfTestBaseline.target(chat)
         var state = baseline.nativeState.object
         state["conversation_target"] = .bool(false)
@@ -25,12 +27,21 @@ public enum MessagesParityFixture {
         try MessagesAccessibility.validateConversation(target)
         let session = try MessagesAccessibility.uiSession()
         let fields = MessagesVariantUI.find(session.root, identifier: "messageBodyField")
+        report["composer_count"] = fields.count
+        report["initial_empty_count"] = fields.filter { MessagesVariantUI.value($0, kAXValueAttribute).isEmpty }.count
+        report["initial_test_draft_count"] = fields.filter { MessagesVariantUI.value($0, kAXValueAttribute).hasPrefix("[ab-test ") }.count
         guard fields.count == 1, MessagesVariantUI.value(fields[0], kAXValueAttribute).isEmpty else { throw MessagesUIFailure.draftPresent }
+        report["imessage_placeholder"] = MessagesVariantUI.value(fields[0], kAXPlaceholderValueAttribute).contains("iMessage")
         guard MessagesVariantUI.value(fields[0], kAXPlaceholderValueAttribute).contains("iMessage") else { throw MessagesUIFailure.wrongService }
         try session.type(text, into: fields[0], value: { MessagesVariantUI.value($0, kAXValueAttribute) })
+        report["typed"] = true
         try MessagesAccessibility.validateConversation(target)
+        report["final_focused"] = session.focused(fields[0])
+        report["final_text_matches"] = MessagesVariantUI.value(fields[0], kAXValueAttribute) == text
         guard session.focused(fields[0]), MessagesVariantUI.value(fields[0], kAXValueAttribute) == text else { throw MessagesUIFailure.draftPresent }
         try session.press(MessagesUISession.enter)
+        report["send_submitted"] = true
+        report["passed"] = true
     }
     public static func send(text: String, handle: String, existingChat: String = "") async throws -> JSON {
         guard text.range(of: #"^\[ab-test [A-Za-z0-9_-]+\] .+"#, options: .regularExpression) != nil,
