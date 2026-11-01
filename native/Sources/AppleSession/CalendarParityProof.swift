@@ -80,9 +80,12 @@ enum CalendarParityProof {
                 stage = "travel_time"
                 try await ui.revealTravel()
                 try ui.travelPopup()
+                controls["travel_menu_opened"] = .bool(true)
                 try ui.pressAny(["15 minutes", "15 Minutes"], role: kAXMenuItemRole)
+                controls["travel_duration_selected"] = .bool(true)
                 try ui.key(48)
                 try await ui.commit()
+                controls["travel_edit_committed"] = .bool(true)
                 try await ui.openOwnedEvent()
                 try await ui.revealTravel()
                 try ui.fence()
@@ -102,6 +105,7 @@ enum CalendarParityProof {
                 if ui.find("Add Attachment…", role: kAXButtonRole).isEmpty {
                     try await ui.menu("Edit", ["Attach File…", "Add Attachment…", "Attach File..."])
                 } else { try ui.press("Add Attachment…", role: kAXButtonRole) }
+                controls["attachment_dialog_opened"] = .bool(true)
                 try await Task.sleep(for: .milliseconds(200))
                 try ui.post(5, flags: [.maskCommand, .maskShift])
                 try await Task.sleep(for: .milliseconds(200))
@@ -109,6 +113,7 @@ enum CalendarParityProof {
                 try ui.post(36, flags: [])
                 try await Task.sleep(for: .milliseconds(200))
                 try ui.dialogPress("Open")
+                controls["attachment_file_selected"] = .bool(true)
                 try await ui.commit()
                 let reader = CalendarStoreEnrichment()
                 let observation: [String: JSON] = ["event": .object(["collection": .string("calendar.event"), "native_key": .string(identifier), "data": .object(["calendar_id": .object(["$ref": .object(["native_key": .string(calendarID)])])])])]
@@ -137,6 +142,7 @@ enum CalendarParityProof {
                 checks["attachment_remove_readback"] = .bool(removed)
             } catch {
                 reasons["attachments"] = .string("Calendar could not change attachments on the test event. Keep Calendar open and retry this check.")
+                if controls["attachment_dialog_opened"]?.bool == true, ui.find("Cancel", role: kAXButtonRole).count == 1 { try? ui.dialogPress("Cancel") }
             }
             stage = "invitation"
             if let attendee = sourceIdentities.sorted().first {
@@ -149,11 +155,17 @@ enum CalendarParityProof {
                 let lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//AppleBridge//Calendar parity//EN", "METHOD:REQUEST", "BEGIN:VEVENT", "UID:" + UUID().uuidString, "DTSTAMP:" + date.string(from: Date()), "DTSTART:" + date.string(from: eventStart), "DTEND:" + date.string(from: eventEnd), "SUMMARY:" + invitationTitle, "ORGANIZER:mailto:" + organizer, "ATTENDEE;RSVP=TRUE;PARTSTAT=NEEDS-ACTION:mailto:" + attendee, "END:VEVENT", "END:VCALENDAR", ""]
                 let invitationFile = root.appendingPathComponent("[ab-test]-invitation.ics")
                 try Data(lines.joined(separator: "\r\n").utf8).write(to: invitationFile)
+                stage = "invitation_import"
                 try await ui.importInvitation(invitationFile, calendarTitle: title)
+                controls["invitation_import_completed"] = .bool(true)
+                stage = "invitation_participants"
                 store.reset()
                 guard let importedCalendar = store.calendar(withIdentifier: calendarID) else { throw SourceFailure.unavailable }
                 let query = store.predicateForEvents(withStart: eventStart.addingTimeInterval(-1), end: eventEnd.addingTimeInterval(1), calendars: [importedCalendar])
                 let invitations = store.events(matching: query).filter { $0.title == invitationTitle }
+                controls["owned_invitation_count"] = .number(Double(invitations.count))
+                controls["invitation_attendee_count"] = .number(Double(invitations.first?.attendees?.count ?? 0))
+                controls["invitation_current_user_count"] = .number(Double(invitations.first?.attendees?.filter(\.isCurrentUser).count ?? 0))
                 guard invitations.count == 1, let invitation = invitations.first,
                       let participants = invitation.attendees, participants.count == 1,
                       participants[0].isCurrentUser,
@@ -161,6 +173,8 @@ enum CalendarParityProof {
                 checks["invitation_self_attendee_only"] = .bool(true)
                 let invitationID = invitation.calendarItemIdentifier
                 let before = participants[0].participantStatus
+                controls["invitation_already_accepted"] = .bool(before == .accepted)
+                stage = "invitation_response"
                 try await invitationUI.openOwnedEvent()
                 for name in ["Accept", "Maybe", "Decline", "Reply", "OK"] { controls[name] = .bool(!invitationUI.find(name).isEmpty) }
                 try invitationUI.press("Accept", role: kAXButtonRole)
@@ -183,14 +197,15 @@ enum CalendarParityProof {
             reasons[stage] = .string("Calendar could not verify " + stage + " on the test event. Keep Calendar open and retry this check.")
             if let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.iCal").first {
                 let ui = CalendarFixtureUI(app: app, title: title + " event")
-                for name in [title + " event", "travel time", "travel time:", "Travel Time", "Add Alert, Repeat, or Travel Time", "Add Attachment…", "Add notes, URL or attachments", "Accept", "Maybe", "Decline", "None", "Done", "Send", "Open", "Cancel"] {
+                for name in [title + " event", "travel time", "travel time:", "Travel Time", "Add Alert, Repeat, or Travel Time", "Add Attachment…", "Add notes, URL or attachments", "Accept", "Maybe", "Decline", "None", "Done", "Send", "Open", "Cancel", "Import", "OK"] {
                     controls[name == title + " event" ? "owned_title_visible" : name] = .number(Double(ui.find(name).count))
                 }
+                controls["popup_count"] = .number(Double(ui.findRole(kAXPopUpButtonRole).count))
             }
         }
         if let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.iCal").first {
             let ui = CalendarFixtureUI(app: app, title: title + " event")
-            if ui.find("Cancel", role: kAXButtonRole).count == 1 { try? ui.press("Cancel", role: kAXButtonRole) }
+            if ui.find("Cancel", role: kAXButtonRole).count == 1 { try? ui.dialogPress("Cancel") }
         }
         do {
             store.reset()
