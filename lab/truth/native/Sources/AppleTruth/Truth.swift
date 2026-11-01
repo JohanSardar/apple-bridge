@@ -51,7 +51,7 @@ struct AppleTruth {
                     guard verb == "observe" else { throw TruthFailure.invalid }; response = try UsageTruth.observe(root: request["biome_root"] as? String)
                 } else if request["source"] as? String == "notes" {
                     if verb == "observe", let ids = request["verify_deleted_ids"] as? [String] {
-                        response = ["status":"verified", "deletion_verified":try notesDeletionVerified(ids, path: request["snapshot_path"] as? String)]
+                        response = ["status":"verified", "deletion_verified":try notesDeletionVerified(ids, path: request["snapshot_path"] as? String, permanent: request["permanent"] as? Bool == true)]
                     } else {
                         if request["sqlite"] as? Bool == true {
                             response = try notesSQLite(path: request["snapshot_path"] as? String)

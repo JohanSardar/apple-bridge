@@ -66,8 +66,11 @@ func (g *LocalGateway) executeNote(r contracts.CommandRecord, p trust.Principal,
 		if c.ExpectedVersion < contentVersion || c.ExpectedVersion > current.Version {
 			return reject(&contracts.Error{Code: "conflict", Message: "expected_version differs from current content", Current: &current})
 		}
-		if c.Op == "notes.update" && (data.Editable != "plain" || data.Locked) {
+		if c.Op == "notes.update" && (a.HTML == nil && data.Editable != "plain" || data.Locked) {
 			return reject(&contracts.Error{Code: "unsupported", Message: "rich_content"})
+		}
+		if c.Op == "notes.update" && a.HTML != nil && !contracts.NoteHTMLCompatible(current.Data, *a.HTML) {
+			return reject(contracts.ErrUnsupported)
 		}
 		if data.RecentlyDeleted {
 			return reject(contracts.ErrUnsupported)

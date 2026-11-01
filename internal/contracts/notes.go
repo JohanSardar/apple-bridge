@@ -7,12 +7,16 @@ type NoteArgs struct {
 	FolderID  string  `json:"folder_id,omitempty"`
 	Title     *string `json:"title,omitempty"`
 	PlainText *string `json:"plain_text,omitempty"`
+	HTML      *string `json:"html,omitempty"`
 	Mode      string  `json:"mode,omitempty"`
 }
 
 func ValidateNoteCommand(c Command) (NoteArgs, error) {
 	var a NoteArgs
 	if !ValidCommandID(c.ID) || c.WaitMS < 0 || c.WaitMS > 15000 || DecodeInput(c.Args, &a) != nil {
+		return a, ErrInvalid
+	}
+	if a.HTML != nil && (c.Op != "notes.update" || a.PlainText != nil || a.Mode == "append" || strings.TrimSpace(*a.HTML) == "") {
 		return a, ErrInvalid
 	}
 	switch c.Op {
@@ -25,7 +29,7 @@ func ValidateNoteCommand(c Command) (NoteArgs, error) {
 			return a, ErrInvalid
 		}
 	case "notes.update":
-		if a.ID == "" || c.ExpectedVersion == 0 || a.FolderID != "" || a.Title != nil || a.PlainText == nil || (a.Mode != "" && a.Mode != "replace" && a.Mode != "append") {
+		if a.ID == "" || c.ExpectedVersion == 0 || a.FolderID != "" || a.Title != nil || (a.PlainText == nil && a.HTML == nil) || (a.Mode != "" && a.Mode != "replace" && a.Mode != "append") {
 			return a, ErrInvalid
 		}
 	case "notes.rename_folder":

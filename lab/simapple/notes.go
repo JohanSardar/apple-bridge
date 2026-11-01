@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"github.com/JohanSardar/apple-bridge/internal/applepeer"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	"golang.org/x/net/html"
+	"io"
 	"reflect"
 	"strings"
 	"time"
@@ -43,7 +45,7 @@ func (f *fakeApple) noteCommand(wire *applepeer.Wire, frame contracts.IPCFrame, 
 
 			var data map[string]any
 			json.Unmarshal(before, &data)
-			if action.Op == "notes.update" && data["editable"] != "plain" {
+			if action.Op == "notes.update" && (action.NoteArgs.HTML == nil && data["editable"] != "plain" || action.NoteArgs.HTML != nil && !contracts.NoteHTMLCompatible(before, *action.NoteArgs.HTML)) {
 				f.mu.Unlock()
 				return reject(contracts.ErrUnsupported)
 			}
@@ -94,7 +96,31 @@ func (f *fakeApple) noteCommand(wire *applepeer.Wire, frame contracts.IPCFrame, 
 		} else if t.Action.Op == "notes.move" {
 			data["folder_id"] = map[string]any{"$ref": map[string]string{"collection": "notes.folder", "native_key": t.Action.FolderKey}}
 		} else if t.Action.Op == "notes.update" {
-			text := *a.PlainText
+			text := ""
+			if a.HTML != nil {
+				data["html"] = *a.HTML
+				tokenizer := html.NewTokenizer(strings.NewReader(*a.HTML))
+				for {
+					token := tokenizer.Next()
+					if token == html.ErrorToken {
+						if tokenizer.Err() != io.EOF {
+							return tokenizer.Err()
+						}
+						break
+					}
+					if token == html.TextToken {
+						text += string(tokenizer.Text())
+					}
+					if token == html.EndTagToken {
+						name, _ := tokenizer.TagName()
+						if string(name) == "div" {
+							text += "\n"
+						}
+					}
+				}
+			} else {
+				text = *a.PlainText
+			}
 			if a.Mode == "append" {
 				text = data["plain_text"].(string) + text
 			}

@@ -261,7 +261,11 @@ public final class NotesSource: Source {
         if !action["native_key"].string.isEmpty {
             let note = try find(action["native_key"].string, collection: action["op"].string == "notes.rename_folder" ? "notes.folder" : "notes.note")
             before = note["data"]
-            if action["op"].string == "notes.update", before["editable"].string != "plain" { throw SourceFailure.unsupported }
+            if action["op"].string == "notes.update" {
+                if action["note_args"]["html"] != .null {
+                    try NotesRichEdit.validate(before, html: action["note_args"]["html"].string)
+                } else if before["editable"].string != "plain" { throw SourceFailure.unsupported }
+            }
             guard !before["locked"].bool, !before["read_only"].bool, !before["recently_deleted"].bool else { throw SourceFailure.unsupported }
             if action["op"].string == "notes.rename_folder" {
                 guard before["title"].string.hasPrefix("Bridge Test [ab-test"), argsTitle(action).hasPrefix("Bridge Test [ab-test"), command["expected_state"]["title"] == before["title"] else { throw SourceFailure.conflict }
@@ -304,7 +308,7 @@ public final class NotesSource: Source {
         if op == "notes.rename_folder" {
             let folder = try find(action["native_key"].string, collection: "notes.folder")
             scriptID = folder["scoped_alias"].string
-            _ = try NotesScript.run("set targetFolder to folder id " + NotesScript.quote(scriptID) + "\nset targetContainer to container of targetFolder\nset name of targetFolder to " + NotesScript.quote(args["title"].string) + "\nmove targetFolder to targetContainer")
+            _ = try NotesScript.run("set name of folder id " + NotesScript.quote(scriptID) + " to " + NotesScript.quote(args["title"].string))
         } else if op == "notes.create_folder" {
             scriptID = try NotesScript.run("return id of (make new folder with properties {name:" + NotesScript.quote(args["title"].string) + "})")
         } else if op == "notes.create" {
@@ -325,7 +329,8 @@ public final class NotesSource: Source {
             }
             else {
                 let content = args["mode"].string == "append" ? note["data"]["plain_text"].string + args["plain_text"].string : args["plain_text"].string
-                _ = try NotesScript.run("set body of note id " + NotesScript.quote(scriptID) + " to " + NotesScript.quote(NotesScript.html(content)))
+                let html = args["html"] == .null ? NotesScript.html(content) : args["html"].string
+                _ = try NotesScript.run("set body of note id " + NotesScript.quote(scriptID) + " to " + NotesScript.quote(html))
             }
         }
         for _ in 0..<100 {
@@ -342,7 +347,11 @@ public final class NotesSource: Source {
                 if op == "notes.move", observed["data"]["folder_id"]["$ref"]["native_key"] != action["folder_key"] {
                     try await Task.sleep(for: .milliseconds(50)); continue
                 }
-                if op != "notes.update" || observed["data"]["plain_text"] != prepared.nativeState["plain_text"] {
+                if op == "notes.update", args["html"] != .null {
+                    if observed["data"]["html"] == args["html"] {
+                        return .object(["native_key": observed["native_key"], "observed": .bool(true)])
+                    }
+                } else if op != "notes.update" || observed["data"]["plain_text"] != prepared.nativeState["plain_text"] {
                     return .object(["native_key": observed["native_key"], "observed": .bool(true)])
                 }
             }

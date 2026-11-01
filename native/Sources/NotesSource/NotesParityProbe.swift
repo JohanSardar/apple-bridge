@@ -106,9 +106,12 @@ public enum NotesParityProbe {
                 guard name.hasPrefix(tag) else { throw SourceFailure.conflict }
                 let trash = try store.trashFolder(forFolder: key)
                 _ = try script(NotesScript.deleteNote(id, folderID: folderID, trashFolderID: trash?["scoped_alias"].string))
+                if let trashID = trash?["scoped_alias"].string {
+                    _ = try script("set matches to (every note of folder id " + NotesScript.quote(trashID) + " whose id is " + NotesScript.quote(id) + ")\nif (count of matches) is not 1 then error \"Test note missing.\"\nset targetNote to item 1 of matches\nif name of targetNote does not start with " + NotesScript.quote(tag) + " then error \"Test note changed.\"\ndelete targetNote")
+                }
             }
             for attempt in 0..<50 {
-                let remaining = try notes.contains { try !["gone", "marked", "trashed"].contains(store.deletionState($0["native_key"].string, collection: "notes.note")) }
+                let remaining = try notes.contains { try !["gone", "marked"].contains(store.deletionState($0["native_key"].string, collection: "notes.note")) }
                 if !remaining { break }
                 if attempt == 49 { cleanup = false }
                 try await Task.sleep(for: .milliseconds(100))

@@ -100,7 +100,7 @@ extension AppleTruth {
         return ids
     }
 
-    static func notesDeletionVerified(_ ids: [String], path: String? = nil) throws -> Bool {
+    static func notesDeletionVerified(_ ids: [String], path: String? = nil, permanent: Bool = false) throws -> Bool {
         let path = path ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Group Containers/group.com.apple.notes/NoteStore.sqlite").path
         var db: OpaquePointer?
         guard sqlite3_open_v2(path, &db, SQLITE_OPEN_READONLY, nil) == SQLITE_OK else {
@@ -132,7 +132,7 @@ extension AppleTruth {
               UNION ALL SELECT f.ZPARENT,a.depth+1 FROM ZICCLOUDSYNCINGOBJECT f JOIN ancestors a ON a.pk=f.Z_PK WHERE a.depth<128
             ) SELECT CASE WHEN NOT EXISTS(SELECT 1 FROM target)
               OR EXISTS(SELECT 1 FROM target WHERE COALESCE(ZMARKEDFORDELETION,0)<>0)
-              OR EXISTS(SELECT 1 FROM ancestors a JOIN ZICCLOUDSYNCINGOBJECT f ON a.pk=f.Z_PK WHERE f.ZFOLDERTYPE=1 OR COALESCE(f.ZMARKEDFORDELETION,0)<>0)
+              OR (\(permanent ? "0" : "1")=1 AND EXISTS(SELECT 1 FROM ancestors a JOIN ZICCLOUDSYNCINGOBJECT f ON a.pk=f.Z_PK WHERE f.ZFOLDERTYPE=1 OR COALESCE(f.ZMARKEDFORDELETION,0)<>0))
               THEN 'deleted' ELSE 'active' END
             """)
             if state != "deleted" { return false }
