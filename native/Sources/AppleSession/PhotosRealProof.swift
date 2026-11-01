@@ -75,7 +75,8 @@ enum PhotosRealProof {
                 }
                 try await Task.sleep(for: .milliseconds(150))
             }
-            guard let (pid, root, mainWindow) = ready else { throw SourceFailure.unavailable }
+            guard let (pid, root, _) = ready else { throw SourceFailure.unavailable }
+            _ = AXUIElementSetAttributeValue(root, "AXEnhancedUserInterface" as CFString, kCFBooleanTrue)
             guard NSWorkspace.shared.open(url) else { throw SourceFailure.unavailable }
             try await Task.sleep(for: .milliseconds(300))
             stage = "identifying the imported test photo"
@@ -89,13 +90,30 @@ enum PhotosRealProof {
                 down.postToPid(pid)
                 up.postToPid(pid)
             }
-            func verifyNoSheet() throws {
-                guard let children = attribute(mainWindow, kAXChildrenAttribute) as? [AXUIElement] else { throw SourceFailure.unavailable }
-                let count = children.filter { (attribute($0, kAXRoleAttribute) as? String) == kAXSheetRole }.count
-                cleanupDiagnostics["sheet_count"] = .number(Double(count))
-                guard count == 0 else { throw SourceFailure.conflict }
+            func readableMainWindow() async throws -> AXUIElement {
+                for _ in 0..<60 {
+                    let windows = attribute(root, kAXWindowsAttribute) as? [AXUIElement] ?? []
+                    cleanupDiagnostics["window_count"] = .number(Double(windows.count))
+                    guard windows.count == 1 else { throw SourceFailure.conflict }
+                    let window = windows[0]
+                    cleanupDiagnostics["window_role_valid"] = .bool((attribute(window, kAXRoleAttribute) as? String) == kAXWindowRole)
+                    var names: CFArray?
+                    _ = AXUIElementCopyAttributeNames(window, &names)
+                    cleanupDiagnostics["children_supported"] = .bool((names as? [String] ?? []).contains(kAXChildrenAttribute))
+                    if let children = attribute(window, kAXChildrenAttribute) as? [AXUIElement] {
+                        cleanupDiagnostics["children_read"] = .bool(true)
+                        cleanupDiagnostics["child_count"] = .number(Double(children.count))
+                        let count = children.filter { (attribute($0, kAXRoleAttribute) as? String) == kAXSheetRole }.count
+                        cleanupDiagnostics["sheet_count"] = .number(Double(count))
+                        guard count == 0 else { throw SourceFailure.conflict }
+                        return window
+                    }
+                    cleanupDiagnostics["children_read"] = .bool(false)
+                    try await Task.sleep(for: .milliseconds(150))
+                }
+                throw SourceFailure.unavailable
             }
-            try verifyNoSheet()
+            let mainWindow = try await readableMainWindow()
             try pressKey(34, flags: .maskCommand)
             var infoOpen = true
             defer {
@@ -118,7 +136,7 @@ enum PhotosRealProof {
             infoOpen = false
             try await Task.sleep(for: .milliseconds(200))
             guard (attribute(root, kAXWindowsAttribute) as? [AXUIElement] ?? []).count == 1 else { throw SourceFailure.conflict }
-            try verifyNoSheet()
+            _ = try await readableMainWindow()
             try pressKey(51, flags: [.maskCommand, .maskAlternate])
             stage = "deleting the imported test photo"
             for _ in 0..<80 {
