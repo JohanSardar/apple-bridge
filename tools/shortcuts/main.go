@@ -214,6 +214,11 @@ func compile(path string) ([]byte, error) {
 	}
 	plist := map[string]any{"WFWorkflowName": source.Name, "WFWorkflowActions": actions, "WFWorkflowClientVersion": "2600.0.0", "WFWorkflowMinimumClientVersion": 900, "WFWorkflowMinimumClientVersionString": "900", "WFWorkflowIcon": map[string]any{"WFWorkflowIconStartColor": 4282601983, "WFWorkflowIconGlyphNumber": 59511}, "WFWorkflowTypes": []any{}, "WFWorkflowInputContentItemClasses": []any{"WFStringContentItem", "WFDictionaryContentItem"}, "WFWorkflowImportQuestions": []any{}}
 	plist["WFWorkflowHasShortcutInputVariables"] = hasInput
+	for _, a := range source.Actions {
+		if a.Identifier == "is.workflow.actions.output" {
+			plist["WFWorkflowHasOutputAction"] = true
+		}
+	}
 	var b bytes.Buffer
 	b.WriteString("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n")
 	if err = plistValue(&b, plist); err != nil {

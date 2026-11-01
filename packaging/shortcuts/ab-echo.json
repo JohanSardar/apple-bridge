@@ -24,7 +24,8 @@
       "identifier": "is.workflow.actions.output",
       "parameters": {
         "WFOutput": {
-          "$output": "echo"
+          "$output": "echo",
+          "$text": true
         }
       }
     }

@@ -56,7 +56,11 @@ func TestBundledEchoOutput(t *testing.T) {
 	if value["string"] != "\ufffc" || attachment["Type"] != "ExtensionInput" {
 		t.Fatal("echo lost its Shortcut Input attachment")
 	}
-	output := actions[1].Parameters["WFOutput"].(map[string]any)["Value"].(map[string]any)
+	token := actions[1].Parameters["WFOutput"].(map[string]any)
+	if token["WFSerializationType"] != "WFTextTokenString" {
+		t.Fatal("Stop and Output requires a text token string")
+	}
+	output := token["Value"].(map[string]any)["attachmentsByRange"].(map[string]any)["{0, 1}"].(map[string]any)
 	if output["Type"] != "ActionOutput" || output["OutputUUID"] != actions[0].Parameters["UUID"] {
 		t.Fatal("echo output must reference the converted text")
 	}
@@ -71,7 +75,11 @@ func TestBundledStatusOutput(t *testing.T) {
 	if descriptor["BundleIdentifier"] != "com.johansardar.applebridge.services" || descriptor["AppIntentIdentifier"] != "BridgeStatusIntent" {
 		t.Fatal("status wrapper must target the services-signed Helper")
 	}
-	output := actions[1].Parameters["WFOutput"].(map[string]any)["Value"].(map[string]any)
+	token := actions[1].Parameters["WFOutput"].(map[string]any)
+	if token["WFSerializationType"] != "WFTextTokenString" {
+		t.Fatal("Stop and Output requires a text token string")
+	}
+	output := token["Value"].(map[string]any)["attachmentsByRange"].(map[string]any)["{0, 1}"].(map[string]any)
 	if output["Type"] != "ActionOutput" || output["OutputUUID"] != actions[0].Parameters["UUID"] {
 		t.Fatal("status output must come from the real intent")
 	}
