@@ -69,7 +69,7 @@ func runNativeMessagesCommands(ctx context.Context, s Scenario, level string, e 
 	if s.ID == "WEB-MSG-REAL-READ" {
 		scope = "messages:read,system:read"
 	}
-	w, err := world.NewRealWithSetup(ctx, level, replicas, world.NativeSetup{IndependentTruth: s.ID == "WEB-MSG-REAL-READ"}, world.BlobOptions{Scope: scope})
+	w, err := world.NewRealWithSetup(ctx, level, replicas, world.NativeSetup{IndependentTruth: true}, world.BlobOptions{Scope: scope})
 	if err != nil {
 		os.WriteFile("/tmp/ablab/messages-real-world-error.log", []byte(err.Error()), 0600)
 		add("real_world_start", false)
@@ -179,6 +179,10 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	}
 	if s.ID == "WEB-MSG-REAL-READ" {
 		return runNativeWebMessagesRead(ctx, e, w, native, stateDB, rawChat, chatID)
+	}
+	if err := exec.CommandContext(ctx, "packaging/dev/build-truth.sh", w.TruthApp).Run(); err != nil {
+		add("independent_truth_build_before_send", false)
+		return e
 	}
 	client := scripted.Client{Endpoint: w.Gateway}
 	text := "[ab-test " + e.RunID + "] self command"
