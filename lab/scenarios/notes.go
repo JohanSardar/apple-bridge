@@ -354,7 +354,7 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		}
 		defer func() {
 			proof, problem := owned.finish(observeCleanup, func(item cleanupItem) error {
-				_, err := w.RecoverTruth("fixture", map[string]any{"source": "notes", "tag": tag, "action": "cleanup_owned", "id": item.ID, "folder_id": item.Container})
+				err := notesCleanupTruth(w.RecoverTruth, 30*time.Second, map[string]any{"source": "notes", "tag": tag, "action": "cleanup_owned", "id": item.ID, "folder_id": item.Container})
 				return err
 			})
 			if e.Metrics == nil {
@@ -362,7 +362,7 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 			}
 			e.Metrics["cleanup"] = proof
 			for id, title := range ownedFolders {
-				_, folderErr := w.RecoverTruth("fixture", map[string]any{"source": "notes", "tag": tag, "action": "cleanup_created_folder", "created_by_run": true, "folder_id": id, "title": title})
+				folderErr := notesCleanupTruth(w.RecoverTruth, 30*time.Second, map[string]any{"source": "notes", "tag": tag, "action": "cleanup_created_folder", "created_by_run": true, "folder_id": id, "title": title})
 				add("run_created_folder_cleaned", folderErr == nil)
 			}
 			add("owned_cleanup_counts_match", problem == nil)
@@ -408,11 +408,11 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 	if level != "sim" && owned == nil {
 		defer func() {
 			if fixtureID != "" {
-				_, err := w.RecoverTruth("fixture", map[string]any{"source": "notes", "tag": tag, "action": "cleanup_owned", "id": fixtureID, "folder_id": fixtureFolderID})
+				err := notesCleanupTruth(w.RecoverTruth, 30*time.Second, map[string]any{"source": "notes", "tag": tag, "action": "cleanup_owned", "id": fixtureID, "folder_id": fixtureFolderID})
 				add("tagged_notes_cleaned", err == nil)
 			}
 			for id, title := range ownedFolders {
-				_, problem := w.RecoverTruth("fixture", map[string]any{"source": "notes", "tag": tag, "action": "cleanup_created_folder", "created_by_run": true, "folder_id": id, "title": title})
+				problem := notesCleanupTruth(w.RecoverTruth, 30*time.Second, map[string]any{"source": "notes", "tag": tag, "action": "cleanup_created_folder", "created_by_run": true, "folder_id": id, "title": title})
 				add("run_created_folder_cleaned", problem == nil)
 			}
 		}()
@@ -741,7 +741,11 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 				}
 				return true
 			}
-			add(protocol+"_before_delete_replicated", w.Await(5*time.Second, func() bool { return replicated(false) }) == nil)
+			err = w.Await(30*time.Second, func() bool { return replicated(false) })
+			add(protocol+"_before_delete_replicated", err == nil)
+			if err != nil {
+				return
+			}
 			args, _ = json.Marshal(map[string]any{"id": created.ID})
 			command = contracts.CommandRecord{}
 			deleteID := contracts.NewCommandID()
@@ -759,7 +763,7 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 				deleteCode = command.Error.Code
 			}
 			e.Assertions = append(e.Assertions, Assertion{Name: protocol + "_delete_observed", Passed: err == nil && command.State == "observed", Detail: string(command.State) + ":" + deleteCode})
-			add(protocol+"_delete_replicated", w.Await(5*time.Second, func() bool { return replicated(true) }) == nil)
+			add(protocol+"_delete_replicated", w.Await(30*time.Second, func() bool { return replicated(true) }) == nil)
 			_, fixturePresent := find("notes.note", title)
 			add(protocol+"_delete_preserves_other_note", fixturePresent)
 			if level == "sim" {

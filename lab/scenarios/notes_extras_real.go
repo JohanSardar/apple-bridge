@@ -45,7 +45,7 @@ func runNotesExtrasReal(ctx context.Context, s Scenario, level, gitSHA string) (
 	noteID := ""
 	defer func() {
 		if noteID != "" {
-			_, problem := w.RecoverTruth("fixture", map[string]any{"source": "notes", "tag": tag, "action": "cleanup_owned", "id": noteID, "folder_id": func() string {
+			problem := notesCleanupTruth(w.RecoverTruth, 30*time.Second, map[string]any{"source": "notes", "tag": tag, "action": "cleanup_owned", "id": noteID, "folder_id": func() string {
 				observed, _ := w.RecoverTruth("observe", map[string]any{"source": "notes", "tag": tag})
 				rows, _ := observed["records"].([]any)
 				for _, raw := range rows {
@@ -60,7 +60,7 @@ func runNotesExtrasReal(ctx context.Context, s Scenario, level, gitSHA string) (
 			add("owned_note_cleaned", problem == nil)
 		}
 		for id, name := range folders {
-			_, problem := w.RecoverTruth("fixture", map[string]any{"source": "notes", "tag": tag, "action": "cleanup_created_folder", "created_by_run": true, "folder_id": id, "title": name})
+			problem := notesCleanupTruth(w.RecoverTruth, 30*time.Second, map[string]any{"source": "notes", "tag": tag, "action": "cleanup_created_folder", "created_by_run": true, "folder_id": id, "title": name})
 			add("owned_folder_cleaned", problem == nil)
 		}
 	}()
