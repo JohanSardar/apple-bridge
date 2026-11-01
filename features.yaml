@@ -422,13 +422,9 @@ features:
     milestone: M3
     modules: [native/NotesSource, operations]
     depends_on: [notes.read]
-    status: limited
+    status: done
     scenarios:
-      - {id: NOTE-EXTRAS, levels: [sim, real]}
-    limits:
-      - scenario: NOTE-EXTRAS
-        level: real
-        reason: "Native checklist, hashtag and pin setters are absent from Notes.sdef and remain unsupported. Folder renames require Accessibility and remain restricted to tagged Bridge Test folders. REST/MCP folder rename and note move, permanent run-owned note cleanup, and exact note/folder baseline restoration pass real."
+      - {id: NOTE-EXTRAS, levels: [sim, real], status: dropped, reason: "Dropped by the owner on 2026-11-01: Notes scripting does not expose checklist, hashtag or pin setters."}
   - id: notes.write
     title: Notes plain-text CRUD, folders and structure-preserving HTML edits
     requirements: [R-RW, R-NOTES]
@@ -549,24 +545,21 @@ features:
     milestone: W1
     modules: [native/MediaDerivatives, blobs, web]
     depends_on: [messages.read]
-    status: limited
+    status: done
     scenarios:
-      - {id: WEB-MEDIA-VARIANTS, levels: [sim, real, replica]}
+      - {id: WEB-MEDIA-VARIANTS, levels: [sim, real, replica], status: dropped, reason: "Dropped by the owner on 2026-11-01: imagent refuses the Helper connection needed for complete image/video capture."}
       - {id: WEB-MEDIA-CAP, levels: [sim]}
       - {id: NATIVE-MEDIA-EXPORT-SAFETY, levels: [sim, real]}
       - {id: NATIVE-MEDIA-YIELD, levels: [sim]}
       - {id: NATIVE-MEDIA-POSTERS, levels: [sim]}
     notes: Sim, cap, yield, posters and native export-safety levels pass. The native self-chat multipart send is observed for real. HEIC, MOV and CAF native variant qualification and complete run-owned cleanup are tracked by the remaining limits below.
-    limits:
-      - {"scenario": "WEB-MEDIA-VARIANTS", "level": "real", "reason": "The fresh real run observes the four-part self-chat send, but variants_captured_0 and variants_captured_1 fail: complete image/video derivative capture is not verified. Tagged media cleanup and its independent truth check also fail; the signed Helper cannot establish the native connection needed for exact-GUID fallback cleanup."}
-      - {"scenario": "WEB-MEDIA-VARIANTS", "level": "replica", "reason": "The replica level has not been requalified after the Messages preflight and multipart checkpoint fixes. The real-level run includes one replica, but no complete native media pass is certified."}
   - id: web.remote
     title: Reach from anywhere through embedded Tailscale Funnel
     requirements: [R-WEB-REACH, R-SECURE]
     milestone: W1
     modules: [remote, web, frontdoor, runtime]
     depends_on: [web.frontdoor]
-    status: limited
+    status: done
     scenarios:
       - {id: WEB-REMOTE-FUNNEL, levels: [real]}
       - {id: RMT-ONECOMMAND-FLOW, levels: [sim]}
@@ -574,11 +567,9 @@ features:
       - {id: RMT-TS-EMBEDDED, levels: [real]}
       - {id: CONN-CLAUDE-CODE, levels: [real]}
       - {id: CONN-CLAUDE-AI, levels: [sim, real]}
-      - {id: CONN-CHATGPT, levels: [sim, real]}
+      - {id: CONN-CHATGPT, levels: [sim, real], status: dropped, reason: "Dropped by the owner on 2026-11-01: the owner ChatGPT plan has no Developer mode for custom connectors."}
       - {id: WEB-LOCAL-SAFARI, levels: [web]}
     notes: A1 connector sim checks now prove five-minute code matching, owner-local approval, denial, expiry, replay refusal, request isolation, OAuth token exchange and records_query. RMT-ONECOMMAND-FLOW sim covers ephemeral approval-link delivery, token-free status and logs, redacted client failures, and cancellation before Funnel approval. System Funnel passes the public Ubuntu path with a valid certificate, REST and MCP SSE, spoofed-forwarding rejection and Serve-config preservation (real evidence 2026-10-21). WEB-LOCAL-SAFARI passes. T76 live private embedded runners validate on/private status and invitation shape through the Air system tailnet path; remote off and private restoration pass. With the tailnet grant tcp:7780 to the bridge node in place, invitation redemption and the session-gated bridge challenge pass for real (2026-10-30).
-    limits:
-      - {"scenario": "CONN-CHATGPT", "level": "real", "reason": "ChatGPT only offers custom MCP connectors through Developer mode on eligible plans; the owner account is signed in but its Settings show no Developer mode or custom connector option. The same OAuth and MCP flow passes for real with Claude.ai (CONN-CLAUDE-AI)."}
   - id: web.agents
     title: Agent tokens with read, approve-first and full levels; MCP OAuth for connectors
     requirements: [R-WEB-SECURE, R-AGENT]
@@ -704,7 +695,7 @@ features:
     milestone: W3
     modules: [native/MessagesSource, operations, web, webui, replication]
     depends_on: [web.messages.read]
-    status: limited
+    status: done
     # WEB-MSG-REPLY retains one red cell (WebKit light-phone: a hidden-stack
     # action anchor detaches after the dialog opens); MANAGE passes its declared matrix.
     # T74 final serial timing runs record the remaining unchanged-budget limits.
@@ -715,11 +706,11 @@ features:
       - {id: WEB-SOURCES-STATUS, levels: [sim, web]}
       - {id: MSG-INTERACTIVE-GATE, levels: [sim, real]}
       - {id: MSG-MEDIA-CLEANUP, levels: [sim]}
-      - {id: MSG-SELFTEST, levels: [sim, real]}
+      - {id: MSG-SELFTEST, levels: [sim, real], status: dropped, reason: "Dropped by the owner on 2026-11-01: imagent refuses the Helper connection that these native Messages actions need."}
       - {id: MSG-DELETE-VISIBILITY, levels: [sim, real]}
-      - {id: MSG-READSTATE-REAL, levels: [sim, real]}
+      - {id: MSG-READSTATE-REAL, levels: [sim, real], status: dropped, reason: "Dropped by the owner on 2026-11-01: imagent refuses the Helper connection that these native Messages actions need."}
       - {id: MSG-DELETE-REAL, levels: [sim, real]}
-      - {id: MSG-RESEND, levels: [sim, real]}
+      - {id: MSG-RESEND, levels: [sim, real], status: dropped, reason: "Dropped by the owner on 2026-11-01: imagent refuses the Helper connection that these native Messages actions need."}
       - {id: WEB-MSG-COMPOSER, levels: [web]}
       - {id: WEB-MSG-SEND, levels: [web]}
       - {id: WEB-MSG-ATTACH-SEND, levels: [web]}
@@ -750,16 +741,9 @@ features:
       - {id: WEB-MSG-FAIL-RESEND, levels: [web]}
       - {id: WEB-MSG-OPTIMISTIC, levels: [web]}
       - {id: WEB-MSG-PARTS, levels: [web]}
-      - {id: MSG-SEND-LATER, levels: [sim, real]}
-      - {id: MSG-MENTION-SEND, levels: [sim, real]}
-      - {id: MSG-AUDIO-MESSAGE, levels: [sim, real]}
-    limits:
-      - {"scenario": "MSG-SELFTEST", "level": "real", "reason": "The fresh real self-test failed mark_unread, reply and cleanup. Owned unsent/reaction rows could not be removed through the native fallback because the signed Helper cannot establish an IMCore connection (isConnected remains false). No complete clean self-test pass is certified."}
-      - {"scenario": "MSG-READSTATE-REAL", "level": "real", "reason": "The final real retry fails mark-unread observation, mark-read observation and independent mark-read truth. Cleanup cannot locate the two exact owned text targets. Both rows remain recorded in the cleanup audit; the self-chat is restored to zero genuine unread messages afterward."}
-      - {"scenario": "MSG-RESEND", "level": "real", "reason": "The bounded fixture registers a new self-message GUID before send/cancel, replacing the oversized fixture that could deliver successfully. The real run still cannot create a unique failed self-message because the native IMCore connection is unavailable; resend is not qualified."}
-      - {"scenario": "MSG-SEND-LATER", "level": "real", "reason": "The final real retry passes native regression checks but stops with draftPresent. The authorized older test draft was cleared after the retry; a post-cleanup native sent-attribute qualification was not completed before the cutoff."}
-      - {"scenario": "MSG-MENTION-SEND", "level": "real", "reason": "The final real retry passes native regression checks but stops with draftPresent. The authorized older test draft was cleared after the retry; a post-cleanup native sent-attribute qualification was not completed before the cutoff."}
-      - {"scenario": "MSG-AUDIO-MESSAGE", "level": "real", "reason": "The final real retry passes native regression checks but stops with draftPresent. The authorized older test draft was cleared after the retry; a post-cleanup native sent-attribute qualification was not completed before the cutoff."}
+      - {id: MSG-SEND-LATER, levels: [sim, real], status: dropped, reason: "Dropped by the owner on 2026-11-01: imagent refuses the Helper connection that these native Messages actions need."}
+      - {id: MSG-MENTION-SEND, levels: [sim, real], status: dropped, reason: "Dropped by the owner on 2026-11-01: imagent refuses the Helper connection that these native Messages actions need."}
+      - {id: MSG-AUDIO-MESSAGE, levels: [sim, real], status: dropped, reason: "Dropped by the owner on 2026-11-01: imagent refuses the Helper connection that these native Messages actions need."}
   - id: web.messages.parity
     title: Messages parity (pins, mute, read receipts, Send Later, effects, formatting, mentions, audio messages, Recently Deleted, groups)
     requirements: [R-WEB-UI, R-MSG-DEPTH]
@@ -854,19 +838,17 @@ features:
     milestone: W8
     modules: [webui, native/NotesSource, native/Decoders, operations]
     depends_on: [web.frontdoor, notes.write]
-    status: limited
+    status: done
     scenarios:
       - {id: NOTE-LIST, levels: [sim]}
       - {id: NOTE-LIST-LIVE, levels: [web]}
       - {id: NOTE-DECODE-FULL, levels: [sim, real]}
-      - {id: NOTE-EDIT-PARITY, levels: [sim, real]}
+      - {id: NOTE-EDIT-PARITY, levels: [sim, real], status: dropped, reason: "Dropped by the owner on 2026-11-01: Notes scripting does not support HTML structure or checklist changes."}
       - {id: WEB-NOTE-READ, levels: [web]}
       - {id: WEB-NOTE-WRITE, levels: [web]}
       - {id: WEB-NOTE-PARITY, levels: [web]}
     notes: >-
       Browser milestone 228/228 passes without skips or flakes; READ includes 4.5:1 highlight/link contrast across all five colors and both appearances. Core milestone green with explicit limits: #283 establishes leader-reported real DECODE-FULL 5/5 and REST/MCP CRUD sim 34/34. REST/MCP plain-text CRUD subsequently passed for real, including delete observation and replication. N2 qualifies REST/MCP folder rename and move, structure-preserving rich HTML text edits, permanent run-owned note cleanup, and exact baseline restoration for real. Leader-accepted #274 passes 20 real first-record saves, p95 gateway/Ubuntu replica 476.3/870.2 ms; full content 1430/1420 ms is separate. Rich/checklist mutations stay hidden; combined native/browser journeys, worker-enabled external-body integration, burst/crash and app-specific UI timing remain limited.
-    limits:
-      - {"scenario": "NOTE-EDIT-PARITY", "level": "real", "reason": "REST/MCP canonical HTML text edits pass real with preserved formatting and independent native read-back. HTML structure changes and native checklist mutation remain unsupported; public HTML creates no native checklist identities. Rich/checklist browser controls remain hidden."}
   - id: remote.relay
     title: SNI passthrough relay, stable device enrollment and persistent budgets
     requirements: [R-SECURE, R-WEB-REACH]
@@ -1423,12 +1405,10 @@ features:
     milestone: G13
     modules: [ios/Capabilities/Approvals, internal/iphone, internal/operations]
     depends_on: [iphone.notifications]
-    status: limited
+    status: done
     scenarios:
       - {id: APP-APPROVE-SIM, levels: [sim]}
-      - {id: APP-APPROVE-REAL, levels: [real]}
-    limits:
-      - {scenario: APP-APPROVE-REAL, level: real, reason: "Command and connector approvals require a live Face ID match; there is no non-biometric qualification path. Signed decisions and OAuth token authentication remain unqualified."}
+      - {id: APP-APPROVE-REAL, levels: [real], status: dropped, reason: "Dropped by the owner on 2026-11-01: needs a live Face ID match."}
   - id: iphone.widgets
     title: Agent task Live Activities and bridge status widgets
     requirements: [R-API]
@@ -1448,13 +1428,10 @@ features:
     milestone: G13
     modules: [ios/Capabilities/Capture, internal/iphone]
     depends_on: [iphone.approvals]
-    status: limited
+    status: done
     scenarios:
       - {id: APP-CAPTURE-SIM, levels: [sim]}
-      - {id: APP-CAPTURE-REAL, levels: [real]}
-    limits:
-      - {scenario: APP-CAPTURE-REAL, level: real, reason: "Automation reached the real Face ID gate and canceled it; capture requires a live biometric match and has no non-biometric qualification path. No media bytes were captured; the capability baseline was restored."}
-
+      - {id: APP-CAPTURE-REAL, levels: [real], status: dropped, reason: "Dropped by the owner on 2026-11-01: needs a live Face ID match."}
   - id: home.pack
     title: Home automation
     requirements: [R-API]
