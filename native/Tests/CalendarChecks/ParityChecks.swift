@@ -32,6 +32,12 @@ enum CalendarParityChecks {
         let native = CalendarEventKitFields.structuredLocation(location)
         guard native["title"] == .string("[ab-test] location"), native["latitude"] == .number(41.88), native["longitude"] == .number(-87.63), native["radius"] == .number(100), CalendarEventKitFields.structuredLocation(nil) == .null, CalendarEventKitFields.participants(nil) == .array([]) else { throw SourceFailure.invalid }
         guard CalendarEventKitFields.ownerParticipationStatus(nil) == .null else { throw SourceFailure.invalid }
+        guard CalendarEventKitFields.selfInvitationOrganizer(from: ["ab.test.owner+old@gmail.com", "other@example.invalid"], token: "run123") == "ab.test.owner+ab-test-run123@gmail.com",
+              CalendarEventKitFields.selfInvitationOrganizer(from: ["ab.test.owner@example.invalid"], token: "run123") == nil,
+              CalendarEventKitFields.selfInvitationOrganizer(from: ["@gmail.com"], token: "run123") == nil,
+              CalendarEventKitFields.selfInvitationOrganizer(from: ["ab.test.owner@gmail.com"], token: "") == nil,
+              CalendarEventKitFields.selfInvitationOrganizer(from: ["ab.test.owner@gmail.com"], token: "bad\r\nATTENDEE") == nil,
+              CalendarEventKitFields.selfInvitationOrganizer(from: ["ab.test.owner@gmail.com.other.invalid", "ab.test.owner\r\n@gmail.com"], token: "run123") == nil else { throw SourceFailure.invalid }
         let now = Date(timeIntervalSince1970: 1793448000)
         let identityWindows = CalendarEventKitFields.identitySearchIntervals(around: now)
         guard identityWindows.contains(where: { $0.contains(now.addingTimeInterval(-2 * 365 * 86400)) }),

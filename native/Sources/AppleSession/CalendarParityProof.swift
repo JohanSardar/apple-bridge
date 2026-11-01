@@ -161,7 +161,8 @@ enum CalendarParityProof {
             }
             stage = "invitation"
             if let attendee = participantIdentities[source.sourceIdentifier]?.sorted().first ?? sourceIdentities.sorted().first {
-                let organizer = identities.sorted().first(where: { $0 != attendee }) ?? attendee
+                let organizer = CalendarEventKitFields.selfInvitationOrganizer(from: identities, token: String(UUID().uuidString.prefix(8))) ?? identities.sorted().first(where: { $0 != attendee }) ?? attendee
+                controls["invitation_same_mailbox_organizer"] = .bool(!identities.contains(organizer))
                 try await ui.openOwnedEvent()
                 let invitationTitle = title + " invitation"
                 let invitationUI = CalendarFixtureUI(app: app, title: invitationTitle, calendarTitle: title)
@@ -182,10 +183,13 @@ enum CalendarParityProof {
                 controls["owned_invitation_count"] = .number(Double(invitations.count))
                 controls["invitation_attendee_count"] = .number(Double(invitations.first?.attendees?.count ?? 0))
                 controls["invitation_current_user_count"] = .number(Double(invitations.first?.attendees?.filter(\.isCurrentUser).count ?? 0))
+                controls["invitation_organizer_is_current_user"] = .bool(invitations.first?.organizer?.isCurrentUser == true)
+                controls["invitation_organizer_matches_owned_address"] = .bool(invitations.first?.organizer?.url.absoluteString.removingPercentEncoding?.lowercased() == "mailto:" + organizer)
                 guard invitations.count == 1, let invitation = invitations.first,
                       let participants = invitation.attendees, participants.count == 1,
                       participants[0].isCurrentUser,
-                      participants[0].url.absoluteString.lowercased() == "mailto:" + attendee else { throw SourceFailure.conflict }
+                      participants[0].url.absoluteString.removingPercentEncoding?.lowercased() == "mailto:" + attendee,
+                      invitation.organizer?.url.absoluteString.removingPercentEncoding?.lowercased() == "mailto:" + organizer else { throw SourceFailure.conflict }
                 checks["invitation_self_attendee_only"] = .bool(true)
                 let invitationID = invitation.calendarItemIdentifier
                 let before = participants[0].participantStatus

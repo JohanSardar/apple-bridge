@@ -3,6 +3,20 @@ import Foundation
 import SourceSupport
 
 public enum CalendarEventKitFields {
+    public static func selfInvitationOrganizer(from verifiedAddresses: Set<String>, token: String) -> String? {
+        guard !token.isEmpty, token.count <= 20,
+              token.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-") }) else { return nil }
+        for address in verifiedAddresses.sorted() {
+            let parts = address.lowercased().split(separator: "@", omittingEmptySubsequences: false)
+            guard parts.count == 2, parts[1] == "gmail.com" else { continue }
+            guard let local = parts[0].split(separator: "+", maxSplits: 1, omittingEmptySubsequences: false).first,
+                  !local.isEmpty, local.count <= 30,
+                  local.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == ".") }) else { continue }
+            return String(local) + "+ab-test-" + token + "@gmail.com"
+        }
+        return nil
+    }
+
     public static func identitySearchIntervals(around now: Date) -> [DateInterval] {
         let calendar = Calendar(identifier: .gregorian)
         return stride(from: -12, through: 0, by: 3).compactMap { years in
