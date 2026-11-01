@@ -53,19 +53,19 @@ public struct MessagesMediaCleanupProof: Sendable {
 
     public static func direction(_ description: String, names: Set<String>) -> Bool? {
         let fields = description.components(separatedBy: ", ")
-        guard fields.count >= 3, !fields[0].isEmpty, fields.dropFirst().contains(where: names.contains) else { return nil }
+        guard fields.count >= 2, !fields[0].isEmpty else { return nil }
         if ["Your iMessage", "Your SMS", "Your RCS"].contains(fields[0]) { return true }
         guard !fields[0].hasPrefix("Your ") else { return nil }
         return false
     }
 
-    public static func targetIndex(_ candidates: [JSON], names: Set<String>, outgoing: Bool, allowSelfEcho: Bool = false) -> Int? {
+    public static func targetIndex(_ candidates: [JSON], names: Set<String>, outgoing: Bool, allowSelfEcho: Bool = false, ownedCopies: Int = 1) -> Int? {
         let targets = candidates.enumerated().filter { _, candidate in
             candidate["outgoing"] == .bool(outgoing) && candidate["values"].array.contains { Self.matches($0.string, names: names) }
         }
-        if targets.count == 1 { return targets.first?.offset }
+        if !targets.isEmpty, targets.count <= ownedCopies { return targets.first?.offset }
         guard targets.isEmpty, allowSelfEcho else { return nil }
         let echoes = candidates.enumerated().filter { _, candidate in candidate["values"].array.contains { Self.matches($0.string, names: names) } }
-        return echoes.count == 1 ? echoes.first?.offset : nil
+        return !echoes.isEmpty && echoes.count <= ownedCopies ? echoes.first?.offset : nil
     }
 }

@@ -80,13 +80,14 @@ public enum MessagesCleanup {
             }
             var rows = try reader.query("SELECT DISTINCT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=j.chat_id AND r.message_id=m.ROWID) AND (instr(m.text,'[ab-test ')>0 OR instr(m.attributedBody,CAST('[ab-test ' AS BLOB))>0) ORDER BY m.ROWID DESC", [])
             var mediaByMessage: [String: [String]] = [:]
+            var mediaCopiesByMessage: [String: Int] = [:]
             if !interactiveText.isEmpty, interactiveBaseline > 0 {
                 rows += try reader.query("SELECT DISTINCT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE m.ROWID>? AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=j.chat_id) AND (m.text=? OR instr(m.attributedBody,CAST(? AS BLOB))>0)", [String(interactiveBaseline), interactiveText, interactiveText])
             }
             if let proof = mediaProof {
                 var attachmentNames: [String: [String]] = [:]
                 var positions: [String: Int64] = [:]
-                for row in try reader.query("SELECT m.guid,m.ROWID AS native_row_id,a.filename FROM message m JOIN message_attachment_join j ON j.message_id=m.ROWID JOIN attachment a ON a.ROWID=j.attachment_id JOIN chat_message_join c ON c.message_id=m.ROWID WHERE m.ROWID>? AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=c.chat_id)", [String(proof.baseline)]) {
+                for row in try reader.query("SELECT m.guid,m.ROWID AS native_row_id,a.filename FROM message m JOIN message_attachment_join j ON j.message_id=m.ROWID JOIN attachment a ON a.ROWID=j.attachment_id JOIN chat_message_join c ON c.message_id=m.ROWID WHERE instr(a.filename,?)>0 AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=c.chat_id)", ["ab-" + String(tag.dropFirst(9).dropLast()) + "."]) {
                     attachmentNames[row["guid"], default: []].append(row["filename"])
                     positions[row["guid"]] = row.integer("native_row_id")
                 }
@@ -94,6 +95,10 @@ public enum MessagesCleanup {
                     guard try reader.message(guid) != nil else { continue }
                     let peers = try reader.query("SELECT DISTINCT h.id FROM message m JOIN chat_message_join cm ON cm.message_id=m.ROWID JOIN chat c ON c.ROWID=cm.chat_id JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE m.guid=? AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=c.ROWID)", [guid]).map { $0["id"] }
                     if proof.authorizes(rowID: positions[guid] ?? 0, attachments: names, peers: peers, own: own) { mediaByMessage[guid] = proof.targetNames(names) }
+                }
+                for (guid, names) in mediaByMessage {
+                    let matching = attachmentNames.filter { $0.value.contains { names.contains(URL(fileURLWithPath: $0).lastPathComponent) } }
+                    if matching.keys.allSatisfy({ mediaByMessage[$0] != nil }) { mediaCopiesByMessage[guid] = matching.count }
                 }
                 rows += try reader.query("SELECT guid FROM message WHERE ROWID>?", [String(proof.baseline)]).filter { mediaByMessage[$0["guid"]] != nil && !rows.map({ $0["guid"] }).contains($0["guid"]) }
             }
@@ -118,8 +123,9 @@ public enum MessagesCleanup {
                     guard mediaByMessage[row["guid"]] != nil || (mediaProof != nil && (fields["text"] as? String)?.contains(tag) == true) else { continue }
                     ownedIDs.insert(row["guid"])
                 }
-                if let names = mediaByMessage[row["guid"]], peers.allSatisfy({ own.contains(MessagesProbes.normalize($0["id"])) }) {
+                if let names = mediaByMessage[row["guid"]], let copies = mediaCopiesByMessage[row["guid"]], peers.allSatisfy({ own.contains(MessagesProbes.normalize($0["id"])) }) {
                     fields["cleanup_media_names"] = names
+                    fields["cleanup_media_owned_copies"] = copies
                     fields["cleanup_self_echo"] = ownedOnly
                     let target = try JSONDecoder().decode(JSON.self, from: JSONSerialization.data(withJSONObject: fields))
                     result.append((row["guid"], target))
@@ -139,13 +145,14 @@ public enum MessagesCleanup {
         let initial = try candidates().count
         var deleted = 0
         var failure = ""
+        var unavailable: Set<String> = []
         func progress(_ remaining: Int, _ phase: String) {
             try? PrivateReport.write(["initial_tagged_self_messages": initial, "deleted": deleted, "remaining_tagged_self_messages": remaining, "phase": phase], to: PrivateReport.validate(PrivateReport.directory.appendingPathComponent("messages-cleanup-progress.json").path))
         }
         progress(initial,"starting")
         for _ in 0..<200 {
             let remaining = try candidates()
-            guard let (guid, target) = remaining.first else { break }
+            guard let (guid, target) = remaining.first(where: { !unavailable.contains($0.0) }) else { break }
             let prepared = Prepared(nativeState: .object(["target": target, "cleanup_authorized": .bool(true)]), fingerprint: "authorized-tagged-self-cleanup", action: .object(["op": .string("messages.delete_message"), "native_key": .string(guid)]))
             var phase = "open"
             do {
@@ -155,7 +162,11 @@ public enum MessagesCleanup {
                 try await MessagesAccessibility.validate(prepared)
                 phase = "delete"
                 _ = try await MessagesAccessibility.perform(prepared)
-            } catch { failure = phase + ":" + String(describing: error); break }
+            } catch {
+                failure = phase + ":" + String(describing: error)
+                if phase == "validate", error as? MessagesUIFailure == .targetUnavailable { unavailable.insert(guid); continue }
+                break
+            }
             let deadline = ContinuousClock.now.advanced(by: .seconds(ownedOnly ? 10 : 2))
             var after = remaining.count
             repeat {
