@@ -34,6 +34,7 @@ enum RemindersSectionsProof {
         var fixture: [String: Any] = [:]
         var failure = ""
         var stage = "fixture"
+        var fixtureUI: RemindersFixtureUI?
         do {
             let item = EKReminder(eventStore: store)
             item.calendar = list
@@ -46,6 +47,7 @@ enum RemindersSectionsProof {
             let app = try await NSWorkspace.shared.openApplication(at: url, configuration: configuration)
             try await Task.sleep(for: .seconds(1))
             let ui = RemindersFixtureUI(app: app, title: title)
+            fixtureUI = ui
             let root = ui.root
             try await ui.prepare()
             for (key, value) in ui.accessibilityDiagnostics { diagnostics["ui_" + key] = .number(value) }
@@ -227,9 +229,38 @@ enum RemindersSectionsProof {
             stage = "reorder_sections"
             _ = app.activate()
             try await Task.sleep(for: .milliseconds(200))
-            try await drag(try unique(names[1]), to: unique(names[0]), before: true)
+            try await ui.menu("File", ["Edit Sections…", "Edit Sections...", "Edit Sections"])
+            guard let editor = ui.ownedSheet else { throw SourceFailure.unsupported }
+            @MainActor func editorRow(_ name: String) throws -> AXUIElement {
+                let matches = ui.find(name, within: editor)
+                diagnostics["section_editor_title_matches"] = .number(Double(matches.count))
+                guard matches.count == 1 else { throw SourceFailure.conflict }
+                var current = matches[0]
+                for _ in 0..<12 {
+                    if value(current, kAXRoleAttribute) == kAXRowRole { return current }
+                    let parents = ui.elements(current, kAXParentAttribute)
+                    guard parents.count == 1, !CFEqual(parents[0], editor) else { break }
+                    current = parents[0]
+                }
+                return matches[0]
+            }
+            try await drag(try editorRow(names[1]), to: editorRow(names[0]), before: true)
+            let done = ui.find("Done", role: kAXButtonRole, within: editor)
+            guard done.count == 1 else { throw SourceFailure.conflict }
+            try press(done[0])
+            try await Task.sleep(for: .milliseconds(500))
             checks["section_move_readback"] = .bool(try await observed(true, member: true))
         } catch { failure = "The test stopped at " + stage + ": " + String(describing: error) }
+        if let ui = fixtureUI, let sheet = ui.ownedSheet {
+            if ui.sheets().contains(where: { CFEqual($0, sheet) }), NSWorkspace.shared.frontmostApplication?.processIdentifier == ui.app.processIdentifier {
+                for name in ["Done", "Cancel"] {
+                    let buttons = ui.find(name, role: kAXButtonRole, within: sheet)
+                    if buttons.count == 1, AXUIElementPerformAction(buttons[0], kAXPressAction as CFString) == .success { break }
+                }
+                try await Task.sleep(for: .milliseconds(500))
+            }
+            checks["owned_sheet_cleanup"] = .bool(!ui.sheets().contains(where: { CFEqual($0, sheet) }))
+        }
         for path in (try? RemindersStore.paths()) ?? [] {
             if let captured = try? RemindersStore(path: path).sectionFixture(identifier: identifier, title: title),
                let data = try? JSONEncoder().encode(captured), let object = try? JSONSerialization.jsonObject(with: data) {
@@ -244,7 +275,8 @@ enum RemindersSectionsProof {
         store.reset()
         checks["owned_list_cleanup"] = .bool(store.calendar(withIdentifier: identifier) == nil)
         try PrivateReport.write(["list_id": identifier, "title": title, "cleanup_state": checks["owned_list_cleanup"]?.bool == true ? "verified_clean" : "pending", "fixture": fixture], to: ledger)
-        return .object(["passed": .bool(failure.isEmpty && checks.count == 4 && checks.values.allSatisfy(\.bool)), "checks": .object(checks), "diagnostics": .object(diagnostics), "reason": .string(failure)])
+        let required = ["section_order_readback", "section_membership_readback", "section_move_readback", "owned_list_cleanup"]
+        return .object(["passed": .bool(failure.isEmpty && required.allSatisfy { checks[$0]?.bool == true } && checks.values.allSatisfy(\.bool)), "checks": .object(checks), "diagnostics": .object(diagnostics), "reason": .string(failure)])
     }
 }
 #endif
