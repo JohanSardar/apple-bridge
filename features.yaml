@@ -328,7 +328,7 @@ features:
       - {id: REM-NATIVE-LIST-RACE, levels: [sim]}
     notes: "Tagged list create, rename and delete verified at sim and real; AppleTruth confirms the renamed list is absent after deletion."
     limits:
-      - {scenario: REM-SECTIONS, level: real, reason: Native section order and membership readback passed, but File > Edit Sections opens a separate AXWindow rather than an AXSheet. The proof never adopts or closes that editor; the next section creation focuses its AXTable and fails at section_name before an editable field appears.}
+      - {scenario: REM-SECTIONS, level: real, reason: "Native section order and membership readback passed, but File > Edit Sections opens a separate AXWindow rather than an AXSheet. The proof never adopts or closes that editor; the next section creation focuses its AXTable and fails at section_name before an editable field appears."}
   - id: calendar.read
     title: Calendar window capture, identity, recurrence, time zones, window slide
     requirements: [R-FULL, R-LIVE, R-CAL, R-NO-FALSE-DELETE]
@@ -807,7 +807,7 @@ features:
         reason: "Custom smart lists: the tag is exposed as AXMenuItem rather than AXCheckBox. After correcting the role, the global confirmation search matches both the leftover section editor and the new-list sheet, so pressAny fails with conflict before smart-list readback. The same unscoped duplicate Cancel controls prevent owned_sheet_cleanup."
       - scenario: WEB-REM-PARITY
         level: real
-        reason: "Images: image attachment readback passed previously, but fails with the leftover Edit Sections AXWindow active. Paste targets the editor rather than the reminder and no REMCDImageAttachment owned by the test reminder appears."
+        reason: "Images: image attachment readback passed previously, but fails with the leftover Edit Sections AXWindow active. Paste is issued with that separate editor still present, and no REMCDImageAttachment owned by the test reminder appears; the exact paste target is unverified."
     scenarios:
       - {id: WEB-REM-READ, levels: [web]}
       - {id: WEB-REM-DETAILS, levels: [web]}
