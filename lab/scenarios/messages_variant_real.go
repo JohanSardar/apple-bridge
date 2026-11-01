@@ -26,7 +26,9 @@ func runMessagesVariantReal(ctx context.Context, s Scenario, e Evidence) (result
 		result.Assertions = append(result.Assertions, Assertion{Name: name, Passed: passed})
 		checksPassed = checksPassed && passed
 	})
-	if !checksPassed { return }
+	if !checksPassed {
+		return
+	}
 	before, err := cleanupSnapshot(ctx, "messages")
 	if err != nil {
 		result.Status = "limited"

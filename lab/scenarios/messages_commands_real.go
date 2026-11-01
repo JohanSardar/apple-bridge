@@ -61,7 +61,9 @@ func runNativeMessagesCommands(ctx context.Context, s Scenario, level string, e 
 	if s.ID == "WEB-MEDIA-VARIANTS" {
 		proof := runMediaCleanupProof(ctx, s, level)
 		e.Assertions = append(e.Assertions, proof.Assertions...)
-		if !proof.Passed { return e }
+		if !proof.Passed {
+			return e
+		}
 	}
 	replicas := 0
 	if level == "replica" || s.ID == "WEB-MEDIA-VARIANTS" {
