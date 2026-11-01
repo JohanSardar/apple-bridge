@@ -81,7 +81,7 @@ func checkMailQualification() async throws {
     try require(cancelledResult)
     for scenario in ["MAIL-SEND-SELF-REAL", "MAIL-DRAFT-REAL", "MAIL-ORGANIZE-REAL", "MAIL-BODY-FIXTURE"] {
         let fake = QualificationMailFake()
-        let proof = try await MailQualification(script: { try await fake.run($0) }, fixtureIDs: { _ in await fake.ids() }, selectDisplayed: { _ in await fake.select() }, removeSelected: { await fake.remove() }).run(scenario: scenario, tag: "[ab-test] fixture")
+        let proof = try await MailQualification(script: { try await fake.run($0) }, readBody: { _ in .object(["state": .string("downloaded")]) }, fixtureIDs: { _ in await fake.ids() }, selectDisplayed: { _ in await fake.select() }, removeSelected: { await fake.remove() }).run(scenario: scenario, tag: "[ab-test] fixture")
         try require(!proof.object.isEmpty && proof.object.values.allSatisfy { $0 == .bool(true) })
         let scripts = await fake.scripts()
         for body in scripts {

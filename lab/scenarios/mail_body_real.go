@@ -54,6 +54,11 @@ func runMailBodyReal(ctx context.Context, s Scenario, level string) (e Evidence)
 			e.Conditions = map[string]string{"reason": problem.Error()}
 			fmt.Fprintln(os.Stderr, problem)
 		}
+		for _, step := range []string{"local_body_downloaded", "local_body_corrupt", "local_body_conflict", "local_body_unavailable", "local_body_invalid", "local_body_other", "local_body_io_error"} {
+			if proof[step] {
+				e.Metrics[step+"_count"] = 1
+			}
+		}
 		for _, step := range []string{"mail_responsive", "self_address_available", "sent_to_self", "self_mail_received"} {
 			check("fixture_"+step, proof[step])
 		}

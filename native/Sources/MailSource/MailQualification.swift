@@ -19,12 +19,14 @@ public struct MailQualification: Sendable {
             try await Task.sleep(for: .milliseconds(100))
         }
     }
+    private let readBody: @Sendable (String) async throws -> JSON
     private let restart: @Sendable () async throws -> Void
     private let selectDisplayed: @Sendable (String) async throws -> Void
     private let fixtureIDs: MailFixtureCleanup.FixtureIDs
     private let script: MailCommands.Script
     private let removeSelected: @Sendable () async throws -> Void
-    public init(script: @escaping MailCommands.Script = MailCommands.run, fixtureIDs: @escaping MailFixtureCleanup.FixtureIDs = { try MailFixtureCleanup.fixtureIDs(tag: $0) }, selectDisplayed: @escaping @Sendable (String) async throws -> Void = MailFixtureCleanup.selectDisplayed, removeSelected: @escaping @Sendable () async throws -> Void = MailFixtureCleanup.removeSelected, restart: @escaping @Sendable () async throws -> Void = Self.restartUnresponsiveMail) {
+    public init(script: @escaping MailCommands.Script = MailCommands.run, readBody: @escaping @Sendable (String) async throws -> JSON = { try MailBody.read(.object(["message_id": .string($0)])) }, fixtureIDs: @escaping MailFixtureCleanup.FixtureIDs = { try MailFixtureCleanup.fixtureIDs(tag: $0) }, selectDisplayed: @escaping @Sendable (String) async throws -> Void = MailFixtureCleanup.selectDisplayed, removeSelected: @escaping @Sendable () async throws -> Void = MailFixtureCleanup.removeSelected, restart: @escaping @Sendable () async throws -> Void = Self.restartUnresponsiveMail) {
+        self.readBody = readBody
         self.selectDisplayed = selectDisplayed
         self.fixtureIDs = fixtureIDs
         self.script = script
@@ -110,6 +112,23 @@ public struct MailQualification: Sendable {
                     try await Task.sleep(for: .milliseconds(500))
                 }
                 checks["self_mail_received"] = .bool(UInt64(key) != nil)
+                if scenario == "MAIL-BODY-FIXTURE", UInt64(key) != nil {
+                    do {
+                        let body = try await readBody(key)
+                        checks["local_body_downloaded"] = .bool(body["state"].string == "downloaded")
+                    } catch {
+                        checks["local_body_downloaded"] = .bool(false)
+                        if let failure = error as? SourceFailure {
+                            switch failure {
+                            case .corrupt: checks["local_body_corrupt"] = .bool(true)
+                            case .conflict: checks["local_body_conflict"] = .bool(true)
+                            case .unavailable: checks["local_body_unavailable"] = .bool(true)
+                            case .invalid: checks["local_body_invalid"] = .bool(true)
+                            default: checks["local_body_other"] = .bool(true)
+                            }
+                        } else { checks["local_body_io_error"] = .bool(true) }
+                    }
+                }
                 if scenario == "MAIL-ORGANIZE-REAL", UInt64(key) != nil {
                     checks["flag_set"] = .bool(try await apply("mail.set_flag", ["flagged": .bool(true)], key: key))
                     checks["flag_restored"] = .bool(try await apply("mail.set_flag", ["flagged": .bool(false)], key: key))
