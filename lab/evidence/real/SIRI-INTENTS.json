@@ -42,6 +42,7 @@
     "output_bytes": 0,
     "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "probe_pack_matches": 1,
-    "timed_out": true
+    "timed_out": false,
+    "tagged_shortcut_count_at_cleanup": 0
   }
 }
