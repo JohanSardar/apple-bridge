@@ -17,6 +17,19 @@ struct MessagesVariantChecks {
         let args = JSON.object(["text": .string("test"), "variant": variant])
         let data: [String: JSON] = ["text": .string("test"), "is_from_me": .bool(true), "error_code": .number(0), "effect": .string("com.apple.messages.effect.loud"), "formatting": .array([range])]
         var checks = try await AccessibilityInputChecks.run()
+        let deleteButton = JSON.object(["AXRole": .string("AXButton"), "AXTitle": .string("Delete")])
+        let cancelButton = JSON.object(["AXRole": .string("AXButton"), "AXTitle": .string("Cancel")])
+        let confirmation = JSON.object(["AXRole": .string("AXSheet"), "children": .array([deleteButton, cancelButton])])
+        let appAlert = JSON.object(["AXRole": .string("AXApplication"), "children": .array([confirmation])])
+        func deletionButtons(_ root: JSON) -> [JSON] {
+            MessagesUIActions.buttons(in: root, title: "Delete", children: { $0["children"].array }, value: { $0[$1].string })
+        }
+        checks["app_root_confirmation_is_actionable"] = deletionButtons(appAlert) == [deleteButton]
+        checks["direct_sheet_confirmation_is_actionable"] = deletionButtons(confirmation) == [deleteButton]
+        let nestedAlert = JSON.object(["AXRole": .string("AXWindow"), "children": .array([confirmation])])
+        checks["window_sheet_confirmation_is_actionable"] = deletionButtons(nestedAlert) == [deleteButton]
+        let menu = JSON.object(["AXRole": .string("AXMenuBar"), "children": .array([deleteButton])])
+        checks["unrelated_menu_delete_is_ignored"] = deletionButtons(menu).isEmpty
         let conversationPreferences: [String: Any] = ["EnableReadReceiptForChat": true, "shouldForceToSMS": false, "lastSeenMessageGuid": "earlier", "LSMD": Date(timeIntervalSinceReferenceDate: 1), "numberOfTimesRespondedtoThread": 0]
         var afterSend = conversationPreferences
         afterSend["lastSeenMessageGuid"] = "owned-send"

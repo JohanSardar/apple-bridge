@@ -3,6 +3,23 @@ import AppKit
 import ApplicationServices
 import SourceSupport
 
+public enum MessagesUIActions {
+    public static func buttons<Element>(in root: Element, title: String, children: (Element) -> [Element], value: (Element, String) -> String) -> [Element] {
+        var budget = 4000
+        func visit(_ node: Element) -> [Element] {
+            guard budget > 0, value(node, kAXRoleAttribute) != kAXMenuBarRole else { return [] }
+            budget -= 1
+            let labels = [title, title.replacingOccurrences(of: "…", with: "")]
+            let matches = [kAXMenuItemRole, kAXButtonRole].contains(value(node, kAXRoleAttribute)) && (labels.contains(value(node, kAXTitleAttribute)) || value(node, kAXDescriptionAttribute) == title)
+            var result = matches ? [node] : []
+            for child in children(node) { result += visit(child) }
+            return result
+        }
+        let result = visit(root)
+        return budget > 0 ? result : []
+    }
+}
+
 public enum MessagesUIInput: Sendable, Equatable {
     case click(CGPoint), controlClick(CGPoint, dismissFirst: Bool), keys([Int], command: Bool), replaceText(String), clearText
     var script: String {
