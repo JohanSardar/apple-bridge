@@ -50,13 +50,18 @@ enum MessagesAccessibility {
         defer { try? session.press(MessagesUISession.escape) }
         let deadline = Date().addingTimeInterval(1)
         var found: Set<String> = []
+        var windowCount = 0
+        var stemMatches = 0
+        let stems = Set(names.map { URL(fileURLWithPath: $0).deletingPathExtension().lastPathComponent })
         repeat {
             let windows = children(session.root).filter { window in value(window, kAXRoleAttribute) == kAXWindowRole && !previous.contains(where: { CFEqual($0, window) }) }
+            windowCount = max(windowCount, windows.count)
             var budget = 1000
             for window in windows {
                 _ = matching(window, budget: &budget) { node in
                     for attribute in [kAXTitleAttribute, kAXValueAttribute, kAXDescriptionAttribute, "AXURL", "AXFilename"] {
                         let text = value(node, attribute)
+                        if stems.contains(text) { stemMatches += 1 }
                         if MessagesMediaCleanupProof.matches(text, names: names) { found.insert(text) }
                     }
                     return false
@@ -65,6 +70,8 @@ enum MessagesAccessibility {
             if !found.isEmpty { break }
             RunLoop.current.run(until: Date().addingTimeInterval(0.05))
         } while Date() < deadline
+        let digest = BodyDigest.hash(Data(value(bubble, kAXDescriptionAttribute).utf8))
+        try? PrivateReport.write(["new_window_count": windowCount, "filename_matches": found.count, "stem_matches": stemMatches, "messages_frontmost": NSWorkspace.shared.frontmostApplication?.bundleIdentifier == "com.apple.MobileSMS"], to: PrivateReport.validate(PrivateReport.directory.appendingPathComponent("messages-media-preview-" + digest + ".json").path))
         return found.map(JSON.string)
     }
     static func target(_ root: AXUIElement, prepared: Prepared) throws -> AXUIElement {
