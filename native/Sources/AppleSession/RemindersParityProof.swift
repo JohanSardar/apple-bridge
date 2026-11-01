@@ -701,10 +701,15 @@ final class RemindersFixtureUI {
         return rows[0]
     }
 
+    static func ownsReminderPopover(_ values: [String], title: String) -> Bool {
+        values.contains { $0.hasPrefix(title + " ") }
+    }
+
     func dismissOwnedPopover(_ name: String) async throws {
         guard name.hasPrefix(title + " ") else { throw SourceFailure.invalid }
         for popover in find("", role: kAXPopoverRole) {
-            guard !find(name, within: popover).isEmpty else { throw SourceFailure.conflict }
+            let fields = find("", role: kAXTextFieldRole, within: popover) + find("", role: kAXTextAreaRole, within: popover)
+            guard Self.ownsReminderPopover(fields.map { value($0, kAXValueAttribute) }, title: title) else { throw SourceFailure.conflict }
             try await focusApplication()
             _ = AXUIElementPerformAction(popover, kAXCancelAction as CFString)
             let deadline = ContinuousClock.now.advanced(by: .seconds(3))

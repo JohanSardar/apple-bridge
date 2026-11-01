@@ -32,6 +32,10 @@ enum RemindersFixtureChecks {
         precondition(!RemindersFixtureUI.smartListDeleteConfirmation(["Delete Smart List “Unrelated List”?"], title: title + " smart"))
         precondition(!RemindersFixtureUI.smartListDeleteConfirmation(["Delete Reminder “" + title + " smart”?"], title: title + " smart"))
         precondition(RemindersFixtureUI.matches(["Title", "Value", "Description"], name: "", title: title))
+        precondition(RemindersFixtureUI.ownsReminderPopover([parent], title: title))
+        precondition(RemindersFixtureUI.ownsReminderPopover([title + " child"], title: title))
+        precondition(!RemindersFixtureUI.ownsReminderPopover(["[ab-test another-run] child"], title: title))
+        precondition(!RemindersFixtureUI.ownsReminderPopover([title], title: title))
         print("reminders fixture checks passed")
     }
 }
