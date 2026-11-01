@@ -253,7 +253,7 @@ enum MessagesAccessibility {
     static func press(_ session: MessagesUISession, title: String) throws {
         let deadline = Date().addingTimeInterval(2)
         repeat {
-            let matches = MessagesUIActions.buttons(in: session.root, title: title, children: children, value: value)
+            let matches = MessagesUIActions.buttons(in: session.root, title: title, children: { children($0) }, value: { value($0, $1) })
             if matches.count == 1 {
                 try session.fence()
                 guard AXUIElementPerformAction(matches[0], kAXPressAction as CFString) == .success else { throw SourceFailure.conflict }
