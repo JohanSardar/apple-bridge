@@ -164,6 +164,12 @@ func runRelayWorld(ctx context.Context, s Scenario, level string, native bool) (
 		os.WriteFile(filepath.Join(w.Dir, "relay-probe-build.log"), output, 0600)
 		return
 	}
+	output, err = relayGatewayBuild(ctx, filepath.Join("bin", "bridge-linux-amd64"))
+	add("relay_gateway_cross_compiled_on_air", err == nil)
+	if err != nil {
+		os.WriteFile(filepath.Join(w.Dir, "relay-probe-build.log"), output, 0600)
+		return
+	}
 	err = w.AddRelayReplica(scope, ip, probe)
 	add("ubuntu_joins_and_starts_through_remote", err == nil)
 	if err != nil {
@@ -243,4 +249,10 @@ type relayQuery struct {
 	Status            contracts.ReplicaStatus `json:"status"`
 	Enrollment        *trust.Enrollment       `json:"enrollment"`
 	PublicConnections int                     `json:"public_connections"`
+}
+
+func relayGatewayBuild(ctx context.Context, output string) ([]byte, error) {
+	build := exec.CommandContext(ctx, "go", "build", "-tags", "lab", "-p", "2", "-o", output, "./cmd/bridge")
+	build.Env = append(os.Environ(), "GOOS=linux", "GOARCH=amd64", "CGO_ENABLED=0")
+	return build.CombinedOutput()
 }

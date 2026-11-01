@@ -1,0 +1,35 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[8.14 5.28 4.53] cpu_idle=89% cpus=10 other_heavy=0"
+  },
+  "run_id": "run_01M6AFXWC5CF8GN5HEXXRBMYM4",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "CON-RELAY",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "f5a9e57ce43fa27dd8d4fc0a2f2fc92b3e71c3a2",
+  "at": "2026-11-01T02:44:58.37346Z",
+  "assertions": [
+    {
+      "name": "contacts_lookup_checks_build",
+      "passed": true
+    },
+    {
+      "name": "single_fetch_missing_permission_and_transient_errors",
+      "passed": true
+    },
+    {
+      "name": "relay_replica_linux_amd64_built",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

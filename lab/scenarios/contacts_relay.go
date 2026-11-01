@@ -2,6 +2,7 @@ package scenarios
 
 import (
 	"context"
+	"debug/elf"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -29,6 +30,21 @@ func contactsRelayLookupChecks(ctx context.Context, s Scenario) Evidence {
 		}
 	}
 	e.Assertions = append(e.Assertions, Assertion{Name: "single_fetch_missing_permission_and_transient_errors", Passed: e.Passed})
+	directory, err := os.MkdirTemp("", "ab-relay-build-")
+	compiled := false
+	if err == nil {
+		defer os.RemoveAll(directory)
+		path := filepath.Join(directory, "bridge")
+		if _, err = relayGatewayBuild(ctx, path); err == nil {
+			binary, problem := elf.Open(path)
+			if problem == nil {
+				compiled = binary.Machine == elf.EM_X86_64 && binary.Class == elf.ELFCLASS64
+				binary.Close()
+			}
+		}
+	}
+	e.Assertions = append(e.Assertions, Assertion{Name: "relay_replica_linux_amd64_built", Passed: compiled})
+	e.Passed = e.Passed && compiled
 	return e
 }
 
