@@ -14,6 +14,11 @@ struct MessagesVariantChecks {
         checks["unchecked_alert_menu_is_unmuted"] = MessagesParity.alertMenuTitles(["Hide Alerts"], checked: []) == ["Hide Alerts"]
         checks["checked_alert_menu_is_muted"] = MessagesParity.alertMenuTitles(["Hide Alerts", "Pin"], checked: ["Hide Alerts"]) == ["Show Alerts", "Pin"]
         checks["other_checked_menu_items_preserved"] = MessagesParity.alertMenuTitles(["Hide Alerts", "Pin"], checked: ["Pin"]) == ["Hide Alerts", "Pin"]
+        checks["conversation_self_echo_pair_accepted"] = MessagesSelfTestIsolation.matchesConversation(chat: "self", memberships: ["self"], expected: "fixture", visibleTexts: ["fixture", "fixture"])
+        checks["conversation_wrong_chat_rejected"] = !MessagesSelfTestIsolation.matchesConversation(chat: "self", memberships: ["other"], expected: "fixture", visibleTexts: ["fixture"])
+        checks["conversation_shared_message_rejected"] = !MessagesSelfTestIsolation.matchesConversation(chat: "self", memberships: ["self", "other"], expected: "fixture", visibleTexts: ["fixture"])
+        checks["conversation_wrong_text_rejected"] = !MessagesSelfTestIsolation.matchesConversation(chat: "self", memberships: ["self"], expected: "fixture", visibleTexts: ["other"])
+        checks["conversation_empty_target_rejected"] = !MessagesSelfTestIsolation.matchesConversation(chat: "self", memberships: ["self"], expected: "", visibleTexts: [""])
         let proof = JSON.object(["os_build": .string("synthetic-os"), "version": .number(1), "complete": .bool(true), "helper_digest": .string("synthetic-helper")])
         checks["current_build_qualified"] = MessagesSendVariants.validProof(proof, osBuild: "synthetic-os", helperDigest: "synthetic-helper")
         checks["stale_build_rejected"] = !MessagesSendVariants.validProof(proof, osBuild: "synthetic-os", helperDigest: "other-helper")

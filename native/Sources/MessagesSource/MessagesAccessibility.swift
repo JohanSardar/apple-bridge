@@ -117,6 +117,30 @@ enum MessagesAccessibility {
                   (actions as? [String] ?? []).contains(where: { $0.hasPrefix("Name:" + prepared.action["messages"]["emoji"].string + "\n") }) else { throw SourceFailure.capabilityUnproven }
         }
     }
+    static func validateConversation(_ prepared: Prepared) throws {
+        let chat = prepared.action["native_key"].string
+        let message = prepared.nativeState["message_guid"].string
+        let expected = prepared.nativeState["target"]["text"].string
+        let reader = try MessagesSelfTestBaseline.reader()
+        let memberships = try reader.query("SELECT c.guid FROM chat c JOIN chat_message_join j ON j.chat_id=c.ROWID JOIN message m ON m.ROWID=j.message_id WHERE m.guid=? AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=m.ROWID)", [message]).map { $0["guid"] }
+        var controls: [String: Any] = ["membership_count": memberships.count, "membership_matches": !chat.isEmpty && memberships == [chat], "passed": false]
+        defer { try? PrivateReport.write(controls, to: PrivateReport.directory.appendingPathComponent("messages-conversation-target-controls.json")) }
+        let deadline = Date().addingTimeInterval(4)
+        repeat {
+            let root = try uiSession().root
+            var budget = 4000
+            let texts = matching(root, budget: &budget) { value($0, kAXIdentifierAttribute) == "CKBalloonTextView" }.map { textValue($0) }
+            controls["visible_text_count"] = texts.count
+            controls["visible_match_count"] = texts.filter { $0 == expected }.count
+            controls["budget_remaining"] = budget
+            if budget > 0, MessagesSelfTestIsolation.matchesConversation(chat: chat, memberships: memberships, expected: expected, visibleTexts: texts) {
+                controls["passed"] = true
+                return
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        } while Date() < deadline
+        throw MessagesUIFailure.targetUnavailable
+    }
     static func press(_ session: MessagesUISession, title: String) throws {
         let deadline = Date().addingTimeInterval(2)
         repeat {

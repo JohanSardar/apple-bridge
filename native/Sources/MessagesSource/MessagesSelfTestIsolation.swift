@@ -1,6 +1,9 @@
 import Foundation
 
 public enum MessagesSelfTestIsolation {
+    public static func matchesConversation(chat: String, memberships: [String], expected: String, visibleTexts: [String]) -> Bool {
+        !chat.isEmpty && memberships == [chat] && !expected.isEmpty && visibleTexts.contains(expected)
+    }
     private static func identity(_ raw: String) -> (email: Bool, value: String)? {
         var value = (raw.removingPercentEncoding ?? raw).trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let prefixes = ["imessage:", "sms:", "rcs:", "mailto:", "tel:", "p:", "e:", "imessage;-;", "sms;-;", "rcs;-;"]

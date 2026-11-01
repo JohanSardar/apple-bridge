@@ -140,7 +140,7 @@ public enum MessagesSendVariants {
         guard let row=try reader.message(target),let item=try reader.messageObservations(row).first else { throw SourceFailure.conflict }
         let targetData=try JSONDecoder().decode(JSON.self,from:JSONSerialization.data(withJSONObject:item.2))
         guard let expiresAt=parseTimestamp(prepared.nativeState["expires_at"].string),expiresAt>Date() else { throw SourceFailure.expired }
-        do { try await MessagesVariantUI.send(args,target:target,targetData:targetData,expiresAt:expiresAt) }
+        do { try await MessagesVariantUI.send(args,target:target,targetData:targetData,chat:chat,expiresAt:expiresAt) }
         catch let failure as SendVariantFailure {
             return .object(["source":.string("messages"),"observed":.bool(false),"disposition":.string(failure == .sendReceiptUnknown ? "indeterminate":"failed_no_effect"),"reason":.string(failure.rawValue)])
         }

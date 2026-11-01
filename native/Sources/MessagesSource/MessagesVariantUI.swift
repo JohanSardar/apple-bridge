@@ -45,7 +45,7 @@ enum MessagesVariantUI {
         try press(try unique(find(application,role:kAXMenuBarItemRole,name:"Format"),failure:.formatMenuUnavailable))
         try press(try unique(find(application,role:kAXMenuItemRole,name:title),failure:.formatMenuUnavailable))
     }
-    static func send(_ args: JSON, target: String, targetData: JSON = .null, expiresAt: Date = Date().addingTimeInterval(30)) throws {
+    static func send(_ args: JSON, target: String, targetData: JSON = .null, chat: String = "", expiresAt: Date = Date().addingTimeInterval(30)) throws {
         let variant=args["variant"],kind=variant["kind"].string
         if kind=="audio" {
             guard AVCaptureDevice.authorizationStatus(for:.audio) == .authorized else { throw SendVariantFailure.audioConsentPending }
@@ -55,7 +55,14 @@ enum MessagesVariantUI {
         guard let destination=url.url else { throw MessagesUIFailure.navigationUnavailable }
         try MessagesNavigation.open(destination)
         RunLoop.current.run(until:Date().addingTimeInterval(1))
-        try MessagesAccessibility.validate(Prepared(nativeState:.object(["target":targetData]),fingerprint:"",action:.object(["op":.string("messages.send"),"native_key":.string(target)])))
+        func validateTarget() throws {
+            if chat.isEmpty {
+                try MessagesAccessibility.validate(Prepared(nativeState:.object(["target":targetData]),fingerprint:"",action:.object(["op":.string("messages.send"),"native_key":.string(target)])))
+            } else {
+                try MessagesAccessibility.validateConversation(Prepared(nativeState:.object(["target":targetData,"message_guid":.string(target)]),fingerprint:"",action:.object(["native_key":.string(chat)])))
+            }
+        }
+        try validateTarget()
         let session=try uiSession(),application=session.root,editor=try unique(find(application,identifier:"messageBodyField"),failure:.composerUnavailable)
         guard value(editor,kAXValueAttribute).isEmpty else { throw SendVariantFailure.draftPresent }
         var sendStarted=false
@@ -95,7 +102,7 @@ enum MessagesVariantUI {
             try press(try unique(find(application,name:label),failure:.effectPickerUnavailable))
         } else { throw SendVariantFailure.invalidVariant }
         guard (try? session.fence()) != nil,value(editor,kAXValueAttribute)==args["text"].string else { throw SendVariantFailure.draftChanged }
-        try MessagesAccessibility.validate(Prepared(nativeState:.object(["target":targetData]),fingerprint:"",action:.object(["op":.string("messages.send"),"native_key":.string(target)])))
+        try validateTarget()
         try session.focus(editor,failure:SendVariantFailure.composerUnavailable)
         guard Date()<expiresAt else { throw SourceFailure.expired }
         try session.fence()

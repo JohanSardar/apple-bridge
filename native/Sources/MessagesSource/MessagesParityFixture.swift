@@ -22,13 +22,13 @@ public enum MessagesParityFixture {
         state["conversation_target"] = .bool(false)
         let target = Prepared(nativeState: .object(state), fingerprint: baseline.fingerprint, action: baseline.action)
         try MessagesAccessibility.openMessage(target.nativeState["message_guid"].string, settle: 0.5, resetEditor: false)
-        try MessagesAccessibility.validate(target)
+        try MessagesAccessibility.validateConversation(target)
         let session = try MessagesAccessibility.uiSession()
         let fields = MessagesVariantUI.find(session.root, identifier: "messageBodyField")
         guard fields.count == 1, MessagesVariantUI.value(fields[0], kAXValueAttribute).isEmpty else { throw MessagesUIFailure.draftPresent }
         guard MessagesVariantUI.value(fields[0], kAXPlaceholderValueAttribute).contains("iMessage") else { throw MessagesUIFailure.wrongService }
         try session.type(text, into: fields[0], value: { MessagesVariantUI.value($0, kAXValueAttribute) })
-        try MessagesAccessibility.validate(target)
+        try MessagesAccessibility.validateConversation(target)
         guard session.focused(fields[0]), MessagesVariantUI.value(fields[0], kAXValueAttribute) == text else { throw MessagesUIFailure.draftPresent }
         try session.press(MessagesUISession.enter)
     }

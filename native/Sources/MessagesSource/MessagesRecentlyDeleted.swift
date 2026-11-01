@@ -35,7 +35,7 @@ extension MessagesParity {
     @UIActor
     static func validate(_ prepared: Prepared) throws {
         if prepared.nativeState["deleted_target"].bool { _ = try openDeleted(prepared) }
-        else { try MessagesAccessibility.validate(prepared) }
+        else { try MessagesAccessibility.validateConversation(prepared) }
     }
     static func dispatchDeleted(_ prepared: Prepared, path: String) async throws -> JSON {
         let reader = try MessagesReader(path: path), chat = prepared.action["native_key"].string

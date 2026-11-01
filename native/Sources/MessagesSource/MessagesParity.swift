@@ -56,9 +56,7 @@ public enum MessagesParity {
     static func conversationMenu(_ prepared: Prepared) throws -> (MessagesUISession, [AXUIElement]) {
         try MessagesAccessibility.openMessage(prepared.nativeState["message_guid"].string, settle: 0.5, resetEditor: false)
         let session = try MessagesAccessibility.uiSession()
-        var state = prepared.nativeState.object
-        state["conversation_target"] = .bool(false)
-        try MessagesAccessibility.validate(Prepared(nativeState: .object(state), fingerprint: prepared.fingerprint, action: prepared.action))
+        try MessagesAccessibility.validateConversation(prepared)
         let menus = MessagesVariantUI.find(session.root, role: kAXMenuBarItemRole, name: "Conversation")
         guard menus.count == 1 else { throw MessagesUIFailure.menuUnavailable }
         try session.fence()
@@ -232,7 +230,7 @@ extension MessagesParity {
         let state = JSON.object(fields)
         let prepared = Prepared(nativeState: state, fingerprint: command["request_hash"].string, action: command["action"])
         try await MessagesAccessibility.openMessage(guid)
-        try await MessagesAccessibility.validate(prepared)
+        try await MessagesAccessibility.validateConversation(prepared)
         return prepared
     }
     static func dispatch(_ prepared: Prepared, path: String) async throws -> JSON {

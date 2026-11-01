@@ -8,9 +8,7 @@ extension MessagesParity {
     static func receiptControl(_ prepared: Prepared) throws -> (MessagesUISession, AXUIElement, Bool) {
         try MessagesAccessibility.openMessage(prepared.nativeState["message_guid"].string, settle: 0.5, resetEditor: false)
         let session = try MessagesAccessibility.uiSession()
-        var state = prepared.nativeState.object
-        state["conversation_target"] = .bool(false)
-        try MessagesAccessibility.validate(Prepared(nativeState: .object(state), fingerprint: prepared.fingerprint, action: prepared.action))
+        try MessagesAccessibility.validateConversation(prepared)
         let controls = MessagesVariantUI.find(session.root, role: kAXCheckBoxRole, name: "Send Read Receipts")
         if controls.isEmpty {
             let buttons = MessagesVariantUI.find(session.root, role: kAXButtonRole).filter { ["Details", "Show Details", "Conversation Details"].contains(MessagesAccessibility.value($0, kAXDescriptionAttribute)) }
