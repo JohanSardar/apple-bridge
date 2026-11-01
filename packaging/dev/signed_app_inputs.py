@@ -5,6 +5,10 @@ from pathlib import Path
 import shutil
 import subprocess
 
+def cache_directory(root, environment):
+    default = root / "bin/.signed-app-cache" if environment.get("AB_TICKET") else Path.home() / "Library/Caches/AppleBridgeDev/signed-apps"
+    return Path(environment.get("APPLE_BRIDGE_SIGNED_APP_CACHE", str(default)))
+
 def require(condition, message):
     if not condition:
         raise RuntimeError(message)
