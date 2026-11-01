@@ -44,6 +44,14 @@ func runRemindersSections(ctx context.Context, level string, e Evidence) Evidenc
 		}
 		output, err = exec.CommandContext(ctx, filepath.Join(strings.TrimSpace(string(directory)), "RemindersStoreChecks"), flag).CombinedOutput()
 		add("store_effects_and_invalidation", err == nil && strings.Contains(string(output), marker))
+		command = exec.CommandContext(ctx, "packaging/dev/build-native.sh")
+		command.Env = append(os.Environ(), "APPLE_BRIDGE_NATIVE_TARGET=AppleBridgeHelper")
+		output, err = command.CombinedOutput()
+		add("native_fixture_checks_build", err == nil)
+		if err == nil {
+			output, err = exec.CommandContext(ctx, filepath.Join(strings.TrimSpace(string(directory)), "AppleBridgeHelper"), "reminders-fixture-checks").CombinedOutput()
+			add("owned_fixture_accessibility_regressions", err == nil && strings.Contains(string(output), "reminders fixture checks passed"))
+		}
 	} else {
 		report = filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "AppleBridgeDev", "sections-"+e.RunID+".json")
 		defer os.Remove(report)

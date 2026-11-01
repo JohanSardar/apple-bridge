@@ -180,7 +180,7 @@ enum RemindersParityProof {
                 }
             }
             await attempt("subtasks") {
-                try script("show (first reminder of fixtureList whose name is \"" + second.title + "\")\nactivate")
+                try script("show fixtureList\nactivate")
                 try await Task.sleep(for: .milliseconds(400))
                 _ = try await ui.selectReminder(second.title)
                 try await ui.menu("Edit", ["Indent Reminder", "Indent Reminders"])
@@ -192,6 +192,8 @@ enum RemindersParityProof {
                 checks["outdent_readback"] = .bool(try await observe { _, _, _, child in child.parent == nil || child.parent == 0 })
             }
             await attempt("reorder") {
+                try script("show fixtureList\nactivate")
+                try await Task.sleep(for: .milliseconds(300))
                 try await ui.drag(second.title, to: first.title)
                 checks["reorder_readback"] = .bool(try await observe { _, row, parent, child in
                     guard case .supported(let positions) = StoreManualOrder.decode(row.orderingJSON), let parentID = parent.identity.uuid, let childID = child.identity.uuid, let parentIndex = positions[parentID], let childIndex = positions[childID] else { return false }
@@ -200,7 +202,7 @@ enum RemindersParityProof {
             }
             await attempt("smart_list") {
                 guard checks["tags_readback"]?.bool == true else { throw SourceFailure.unavailable }
-                try await ui.menu("File", ["New List…", "New List..."])
+                try await ui.menu("File", ["New List", "New List…", "New List..."])
                 try ui.setFocused(text: smartTitle)
                 try ui.press("Standard", role: kAXPopUpButtonRole)
                 try ui.press("Smart List", role: kAXMenuItemRole)
@@ -278,6 +280,14 @@ final class RemindersFixtureUI {
     var accessibilityDiagnostics: [String: Double] = [:]
     var ownedSheet: AXUIElement?
     var selectionDiagnostics: [String: Double] = [:]
+
+    static func editableRole(_ role: String) -> Bool {
+        [kAXTextFieldRole, kAXTextAreaRole].contains(role)
+    }
+
+    static func matches(_ labels: [String], name: String, title: String) -> Bool {
+        labels.contains(name) || (name.hasPrefix(title) && labels.contains { $0.hasPrefix(name + ",") || $0.hasPrefix(name + "\n") || $0.hasPrefix(name + " #") })
+    }
 
     init(app: NSRunningApplication, title: String) {
         self.app = app; self.title = title
@@ -406,7 +416,7 @@ final class RemindersFixtureUI {
             }
             if subrole == kAXSearchFieldSubrole { roles["nonempty_search_fields", default: 0] += value(element, kAXValueAttribute).isEmpty ? 0 : 1 }
             if labels.contains(where: { $0.contains(name) }) { partialLabels += 1 }
-            let matches = labels.contains(name) || (name.hasPrefix(title) && labels.contains { $0.hasPrefix(name + ",") || $0.hasPrefix(name + "\n") })
+            let matches = Self.matches(labels, name: name, title: title)
             if (role == nil || role == actualRole), matches, ![kAXApplicationRole, kAXWindowRole, kAXScrollAreaRole, kAXSplitGroupRole].contains(actualRole) { return [element] }
             let children = [kAXChildrenAttribute, kAXContentsAttribute, kAXRowsAttribute, kAXVisibleChildrenAttribute].flatMap { elements(element, $0) }
             return children.flatMap { walk($0, inSheet: sheet) }
@@ -444,13 +454,20 @@ final class RemindersFixtureUI {
     func fence() throws {
         let activeSheets = sheets()
         guard activeSheets.allSatisfy({ sheet in ownedSheet.map { CFEqual($0, sheet) } == true }) else { throw SourceFailure.conflict }
-        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier else { throw SourceFailure.conflict }
+        let foreground = NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier
+        selectionDiagnostics["foreground"] = foreground ? 1 : 0
+        guard foreground else { throw SourceFailure.conflict }
+        var rows = 0
         for match in find(title) {
             var current = match
             for _ in 0..<12 {
                 if value(current, kAXRoleAttribute) == kAXRowRole {
+                    rows += 1
                     var selected: CFTypeRef?
-                    if AXUIElementCopyAttributeValue(current, kAXSelectedAttribute as CFString, &selected) == .success, (selected as? Bool) == true { return }
+                    if AXUIElementCopyAttributeValue(current, kAXSelectedAttribute as CFString, &selected) == .success, (selected as? Bool) == true {
+                        selectionDiagnostics["owned_list_selected"] = 1
+                        return
+                    }
                     break
                 }
                 var parent: CFTypeRef?
@@ -458,6 +475,8 @@ final class RemindersFixtureUI {
                 current = unsafeDowncast(parent, to: AXUIElement.self)
             }
         }
+        selectionDiagnostics["owned_list_row_matches"] = Double(rows)
+        selectionDiagnostics["owned_list_selected"] = 0
         throw SourceFailure.conflict
     }
 

@@ -160,12 +160,28 @@ enum RemindersSectionsProof {
                 stage = "section_create_menu"
                 try press(try unique("New Section", role: kAXMenuItemRole))
                 try await Task.sleep(for: .milliseconds(300))
-                var focused: CFTypeRef?
-                guard AXUIElementCopyAttributeValue(root, kAXFocusedUIElementAttribute as CFString, &focused) == .success, let focused, CFGetTypeID(focused) == AXUIElementGetTypeID() else { throw SourceFailure.conflict }
-                let field = unsafeDowncast(focused, to: AXUIElement.self)
                 stage = "section_name"
                 try fence()
-                diagnostics["section_name_text_field"] = .number(value(field, kAXRoleAttribute) == kAXTextFieldRole ? 1 : 0)
+                var editable: AXUIElement?
+                let editingDeadline = ContinuousClock.now.advanced(by: .seconds(5))
+                repeat {
+                    if let focused = ui.elements(root, kAXFocusedUIElementAttribute).first {
+                        let role = value(focused, kAXRoleAttribute)
+                        diagnostics["section_name_focus_" + role] = .number(1)
+                        if RemindersFixtureUI.editableRole(role) { editable = focused }
+                    }
+                    if editable == nil {
+                        let fields = find("New Section", role: kAXTextFieldRole) + find("New Section", role: kAXTextAreaRole)
+                        diagnostics["section_name_field_matches"] = .number(Double(fields.count))
+                        if fields.count == 1 { editable = fields[0] }
+                    }
+                    if editable != nil { break }
+                    try await Task.sleep(for: .milliseconds(100))
+                } while ContinuousClock.now < editingDeadline
+                guard let field = editable else { throw SourceFailure.conflict }
+                diagnostics["section_name_text_field"] = .number(1)
+                try fence()
+                _ = AXUIElementSetAttributeValue(field, kAXFocusedAttribute as CFString, kCFBooleanTrue)
                 let result = AXUIElementSetAttributeValue(field, kAXValueAttribute as CFString, name as CFString)
                 diagnostics["section_name_set_result"] = .number(Double(result.rawValue))
                 guard result == .success else { throw SourceFailure.unsupported }

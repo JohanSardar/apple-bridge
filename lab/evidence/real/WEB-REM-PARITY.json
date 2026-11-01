@@ -1,11 +1,27 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[9.23 12.19 16.67] cpu_idle=44% cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[26.41 21.86 18.91] cpu_idle=21% cpus=8 other_heavy=0"
   },
-  "run_id": "reminders-parity_01M6AM5H8J06GJSKJHEA1YHVHN",
+  "run_id": "reminders-parity_01M6ANP4EJH5RPQXFZHQHHVBWC",
   "metrics": {
     "capture_observer_resets": 0,
+    "controls": {
+      "control_Add Image": false,
+      "control_Add Image…": false,
+      "control_Add Tags…": false,
+      "control_Choose File…": false,
+      "control_Edit": true,
+      "control_File": true,
+      "control_Indent Reminders": false,
+      "control_Manual": true,
+      "control_New List…": false,
+      "control_New Section": true,
+      "control_Outdent Reminders": false,
+      "control_Show List Info": true,
+      "control_Sort By": true,
+      "control_View": true
+    },
     "diagnostics": {
       "fixture_icloud_source": 1,
       "fixture_source_type": 2,
@@ -15,25 +31,95 @@
       "flag_parent_matches": 1,
       "flag_script_readback": 1,
       "flag_store_flag": 1,
+      "images_active_sheets": 0,
+      "images_parent_matches": 1,
+      "images_row_matches": 1,
+      "images_select_result": 0,
+      "images_selected": 1,
+      "images_sheet_candidates": 0,
+      "images_store_flag": 0,
       "list_icon_parent_matches": 1,
       "list_icon_store_flag": 0,
+      "reorder_active_sheets": 0,
+      "reorder_row_matches": 0,
+      "reorder_select_result": 0,
+      "reorder_selected": 1,
+      "reorder_sheet_candidates": 0,
+      "selection_control_All": 2,
+      "selection_control_Flagged": 2,
+      "selection_control_New List": 1,
+      "selection_control_Reminders": 5,
+      "selection_control_Scheduled": 2,
+      "selection_control_Today": 4,
+      "selection_nonempty_search_fields": 0,
+      "selection_partial_labels": 8,
+      "selection_role_AXButton": 37,
+      "selection_role_AXCell": 22,
+      "selection_role_AXCheckBox": 2,
+      "selection_role_AXColumn": 3,
+      "selection_role_AXGrid": 1,
+      "selection_role_AXGroup": 7,
+      "selection_role_AXHeading": 1,
+      "selection_role_AXImage": 11,
+      "selection_role_AXLayoutArea": 1,
+      "selection_role_AXMenu": 21,
+      "selection_role_AXMenuBar": 1,
+      "selection_role_AXMenuBarItem": 7,
+      "selection_role_AXMenuButton": 1,
+      "selection_role_AXMenuItem": 251,
+      "selection_role_AXOutline": 2,
+      "selection_role_AXRow": 22,
+      "selection_role_AXScrollArea": 2,
+      "selection_role_AXScrollBar": 1,
+      "selection_role_AXSplitGroup": 1,
+      "selection_role_AXSplitter": 1,
+      "selection_role_AXStaticText": 13,
+      "selection_role_AXTable": 1,
+      "selection_role_AXTextArea": 1,
+      "selection_role_AXTextField": 12,
+      "selection_role_AXToolbar": 1,
+      "selection_role_AXUnknown": 11,
+      "selection_role_AXValueIndicator": 1,
+      "selection_role_AXWindow": 1,
+      "selection_rows": 22,
+      "selection_subrole_AXCloseButton": 1,
+      "selection_subrole_AXDecrementArrow": 1,
+      "selection_subrole_AXDecrementPage": 1,
+      "selection_subrole_AXFullScreenButton": 1,
+      "selection_subrole_AXHostingView": 1,
+      "selection_subrole_AXIncrementArrow": 1,
+      "selection_subrole_AXIncrementPage": 1,
+      "selection_subrole_AXMinimizeButton": 1,
+      "selection_subrole_AXOutlineRow": 21,
+      "selection_subrole_AXSearchField": 2,
+      "selection_subrole_AXStandardWindow": 1,
+      "selection_subrole_AXToggle": 2,
+      "selection_truncated": 0,
+      "selection_visited": 436,
+      "smart_list_active_sheets": 0,
+      "smart_list_sheet_candidates": 0,
       "store_visibility_parent_matches": 1,
       "store_visibility_store_flag": 0,
-      "ui_location_cancel_action": 0,
-      "ui_location_command_period_sent": 1,
-      "ui_location_consent_blocked": 1,
-      "ui_location_consent_sheet": 1,
-      "ui_location_decline_buttons": 0,
-      "ui_location_escape_sent": 1,
+      "subtasks_active_sheets": 0,
+      "subtasks_sheet_candidates": 0,
+      "tags_active_sheets": 0,
+      "tags_parent_matches": 1,
+      "tags_row_matches": 1,
+      "tags_select_result": 0,
+      "tags_selected": 1,
+      "tags_sheet_candidates": 0,
+      "tags_store_flag": 0,
+      "tags_title_fields": 1,
       "ui_minimized_windows": 0,
-      "ui_sheet_count": 1
+      "ui_sheet_count": 0,
+      "ui_windows": 1
     }
   },
   "scenario": "WEB-REM-PARITY",
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-11-01T03:59:03.442813Z",
+  "at": "2026-11-01T04:25:35.954157Z",
   "assertions": [
     {
       "name": "native_sections_build",
@@ -64,11 +150,19 @@
       "passed": true
     },
     {
+      "name": "image_readback",
+      "passed": true
+    },
+    {
       "name": "list_icon_readback",
       "passed": true
     },
     {
       "name": "owned_list_cleanup",
+      "passed": true
+    },
+    {
+      "name": "owned_list_visible",
       "passed": true
     },
     {
@@ -80,6 +174,10 @@
       "passed": true
     },
     {
+      "name": "tags_readback",
+      "passed": true
+    },
+    {
       "name": "indent_readback",
       "passed": false
     },
@@ -88,15 +186,7 @@
       "passed": false
     },
     {
-      "name": "tags_readback",
-      "passed": false
-    },
-    {
       "name": "reorder_readback",
-      "passed": false
-    },
-    {
-      "name": "image_readback",
       "passed": false
     },
     {
@@ -115,6 +205,8 @@
   "latency": null,
   "hosts": null,
   "conditions": {
-    "navigation": "The navigation action could not be verified on the test list: Open Reminders and finish its Location consent screen before retrying. No Location permission was requested by this test."
+    "reorder": "The reorder action could not be verified on the test list: conflict",
+    "smart_list": "The smart_list action could not be verified on the test list: unsupported",
+    "subtasks": "The subtasks action could not be verified on the test list: conflict"
   }
 }
