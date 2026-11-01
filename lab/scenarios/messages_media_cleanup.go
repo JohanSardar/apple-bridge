@@ -22,11 +22,18 @@ func runMediaCleanupProof(ctx context.Context, s Scenario, level string) Evidenc
 		return e
 	}
 	defer os.RemoveAll(directory)
-	app := filepath.Join(directory, "AppleBridgeHelper.app")
-	if _, err = exec.CommandContext(ctx, "packaging/dev/build-helper.sh", app).CombinedOutput(); err != nil {
-		add("signed_helper_build", false)
+	build := exec.CommandContext(ctx, "packaging/dev/build-native.sh")
+	build.Env = append(os.Environ(), "APPLE_BRIDGE_NATIVE_TARGET=AppleBridgeHelper")
+	if _, err = build.CombinedOutput(); err != nil {
+		add("native_cleanup_fixture_build", false)
 		return e
 	}
+	output, err := os.ReadFile("native/.build/native-output-1")
+	if err != nil {
+		add("native_cleanup_fixture_binary", false)
+		return e
+	}
+	helper := filepath.Join(strings.TrimSpace(string(output)), "AppleBridgeHelper")
 	filename := "ab-run_media.heic"
 	fixture := map[string]any{"tag": "[ab-test run_media]", "registration": map[string]any{"scenario": "WEB-MEDIA-VARIANTS", "run_id": "run_media", "baseline_max_row_id": 30, "media_attachment_names": []string{filename}}, "own": []string{"self@example.com"}, "row": map[string]any{"row_id": 31, "attachments": []string{filename}, "peers": []string{"self@example.com"}, "is_from_me": true}, "candidates": []any{map[string]any{"outgoing": true, "values": []string{"file:///private/test/" + filename}}, map[string]any{"outgoing": false, "values": []string{filename}}}}
 	run := func(name string, patch func(map[string]any), authorized, target bool) {
@@ -38,7 +45,7 @@ func runMediaCleanupProof(ctx context.Context, s Scenario, level string) Evidenc
 		path := filepath.Join(directory, "fixture.json")
 		os.WriteFile(path, bytes, 0600)
 		started := time.Now()
-		output, problem := exec.CommandContext(ctx, filepath.Join(app, "Contents", "MacOS", "AppleBridgeHelper"), "media-cleanup-checks", "--fixtures", path).Output()
+		output, problem := exec.CommandContext(ctx, helper, "media-cleanup-checks", "--fixtures", path).Output()
 		var result struct {
 			Authorized bool `json:"authorized"`
 			Target     bool `json:"target_verified"`
