@@ -327,6 +327,19 @@ final class RemindersFixtureUI {
                     try await Task.sleep(for: .milliseconds(100))
                 }
             }
+            let cancellations: [(CGKeyCode, CGEventFlags, String)] = [(53, [], "escape"), (47, .maskCommand, "command_period")]
+            for (code, flags, name) in cancellations {
+                guard sheets().contains(where: { CFEqual($0, sheet) }), NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier else { break }
+                if let down = CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: true), let up = CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: false) {
+                    down.flags = flags; up.flags = flags
+                    down.post(tap: .cghidEventTap); up.post(tap: .cghidEventTap)
+                    accessibilityDiagnostics["location_" + name + "_sent"] = 1
+                    let deadline = ContinuousClock.now.advanced(by: .seconds(3))
+                    while sheets().contains(where: { CFEqual($0, sheet) }), ContinuousClock.now < deadline {
+                        try await Task.sleep(for: .milliseconds(100))
+                    }
+                }
+            }
             if sheets().contains(where: { CFEqual($0, sheet) }) { accessibilityDiagnostics["location_consent_blocked"] = 1 }
         }
         var minimizedCount = 0
