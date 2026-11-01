@@ -11,6 +11,18 @@ enum StoreSectionChecks {
         precondition(StoreSections.decode(order: order, membership: membership)?.order == [first, second])
         precondition(StoreSections.decode(order: order, membership: nil)?.membership == [:])
         precondition(StoreSections.decode(order: order, membership: membership)?.membership == [item: first])
+        let nativeMembership = try JSONSerialization.data(withJSONObject: ["memberships": [["groupID": second.uuidString, "memberID": item.uuidString, "modifiedOn": 815202026.752328]], "minimumSupportedVersion": 20230430])
+        precondition(StoreSections.decode(order: order, membership: nativeMembership)?.membership == [item: second])
+        for entries in [
+            [["groupID": UUID().uuidString, "memberID": item.uuidString]],
+            [["groupID": first.uuidString, "memberID": item.uuidString], ["groupID": second.uuidString, "memberID": item.uuidString]],
+            [["groupID": second.uuidString, "memberID": "invalid"]]
+        ] {
+            let invalid = try JSONSerialization.data(withJSONObject: ["memberships": entries, "minimumSupportedVersion": 20230430])
+            precondition(StoreSections.decode(order: order, membership: invalid) == nil)
+        }
+        let futureMembership = try JSONSerialization.data(withJSONObject: ["memberships": [], "minimumSupportedVersion": 99999999])
+        precondition(StoreSections.decode(order: order, membership: futureMembership) == nil)
         let plistOrder = try PropertyListSerialization.data(fromPropertyList: [first.uuidString, second.uuidString], format: .binary, options: 0)
         let archive = try NSKeyedArchiver.archivedData(withRootObject: [item.uuidString: second.uuidString], requiringSecureCoding: true)
         precondition(StoreSections.decode(order: plistOrder, membership: archive)?.membership == [item: second])

@@ -51,15 +51,13 @@ enum RemindersSectionsProof {
             for (key, value) in ui.accessibilityDiagnostics { diagnostics["ui_" + key] = .number(value) }
             try ui.requireReady()
             diagnostics["ui_windows"] = .number(Double(ui.elements(ui.root, kAXWindowsAttribute).count))
-            var ownedSelection: AXUIElement?
+            var selectedFixture = false
             @MainActor func fence() throws {
                 let foreground = NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier
                 diagnostics[stage + "_foreground"] = .number(foreground ? 1 : 0)
                 guard foreground else { throw SourceFailure.conflict }
-                if let ownedSelection {
+                if selectedFixture {
                     try ui.fence()
-                    var selected: CFTypeRef?
-                    guard AXUIElementCopyAttributeValue(ownedSelection, kAXSelectedAttribute as CFString, &selected) == .success, (selected as? Bool) == true else { throw SourceFailure.conflict }
                 }
             }
             @MainActor func value(_ element: AXUIElement, _ key: String) -> String {
@@ -87,17 +85,17 @@ enum RemindersSectionsProof {
                 guard let down = CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: true), let up = CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: false) else { throw SourceFailure.unavailable }
                 down.post(tap: .cghidEventTap); up.post(tap: .cghidEventTap)
             }
-            @MainActor func point(_ element: AXUIElement) throws -> CGPoint {
+            @MainActor func point(_ element: AXUIElement, before: Bool = false) throws -> CGPoint {
                 var position: CFTypeRef?, size: CFTypeRef?
                 guard AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &position) == .success,
                       AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &size) == .success,
                       let position, let size, CFGetTypeID(position) == AXValueGetTypeID(), CFGetTypeID(size) == AXValueGetTypeID() else { throw SourceFailure.conflict }
                 var origin = CGPoint.zero, dimensions = CGSize.zero
                 guard AXValueGetValue(unsafeDowncast(position, to: AXValue.self), .cgPoint, &origin), AXValueGetValue(unsafeDowncast(size, to: AXValue.self), .cgSize, &dimensions), dimensions.width > 0, dimensions.height > 0 else { throw SourceFailure.conflict }
-                return CGPoint(x: origin.x + dimensions.width / 2, y: origin.y + dimensions.height / 2)
+                return CGPoint(x: origin.x + dimensions.width / 2, y: origin.y + (before ? 2 : dimensions.height / 2))
             }
-            @MainActor func drag(_ from: AXUIElement, to: AXUIElement) async throws {
-                let start = try point(from), end = try point(to)
+            @MainActor func drag(_ from: AXUIElement, to: AXUIElement, before: Bool = false) async throws {
+                let start = try point(from), end = try point(to, before: before)
                 try fence()
                 defer { CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: end, mouseButton: .left)?.post(tap: .cghidEventTap) }
                 CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: start, mouseButton: .left)?.post(tap: .cghidEventTap)
@@ -151,7 +149,7 @@ enum RemindersSectionsProof {
                 guard AXUIElementSetAttributeValue(listElement, kAXSelectedAttribute as CFString, kCFBooleanTrue) == .success else { throw SourceFailure.unsupported }
             }
             try await Task.sleep(for: .milliseconds(500))
-            ownedSelection = listElement
+            selectedFixture = true
             try fence()
             let names = [title + " first", title + " second"]
             stage = "create_sections"
@@ -193,7 +191,8 @@ enum RemindersSectionsProof {
                 let deadline = ContinuousClock.now.advanced(by: .seconds(10))
                 repeat {
                     for session in sessions {
-                        let snapshot = try await session.read().snapshot
+                        let read = try await session.read()
+                        let snapshot = read.snapshot
                         guard let row = snapshot.lists.values.first(where: { $0.identity.uuid?.uuidString == identifier || $0.identity.textIdentifier == identifier }) else { continue }
                         let sections = snapshot.sections.values.filter { $0.list == row.identity.key }
                         diagnostics[stage + "_section_count"] = .number(Double(sections.count))
@@ -201,6 +200,7 @@ enum RemindersSectionsProof {
                         diagnostics[stage + "_order_bytes"] = .number(Double(row.sectionOrder?.count ?? 0))
                         diagnostics[stage + "_membership_bytes"] = .number(Double(row.sectionMembership?.count ?? 0))
                         fixture = ["order": row.sectionOrder?.base64EncodedString() ?? "", "membership": row.sectionMembership?.base64EncodedString() ?? "", "reminder_id": item.calendarItemIdentifier, "section_ids": sections.map { $0.identity.uuid?.uuidString ?? $0.identity.textIdentifier ?? "" }]
+                        fixture["section_columns"] = (read.columns["ZREMCDBASELIST"] ?? []).filter { $0.contains("SECTION") }.sorted()
                         let decoded = StoreSections.decode(order: row.sectionOrder, membership: row.sectionMembership)
                         diagnostics[stage + "_decoded"] = .number(decoded == nil ? 0 : 1)
                         guard let decoded else { continue }
@@ -224,7 +224,7 @@ enum RemindersSectionsProof {
             stage = "reorder_sections"
             _ = app.activate()
             try await Task.sleep(for: .milliseconds(200))
-            try await drag(try unique(names[1]), to: unique(names[0]))
+            try await drag(try unique(names[1]), to: unique(names[0]), before: true)
             checks["section_move_readback"] = .bool(try await observed(true, member: true))
         } catch { failure = "The test stopped at " + stage + ": " + String(describing: error) }
         store.reset()

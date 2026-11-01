@@ -6,6 +6,7 @@ import Carbon
 import EventKit
 import RemindersStore
 import SourceSupport
+import MessagesSource
 
 @MainActor
 enum RemindersParityProof {
@@ -22,7 +23,8 @@ enum RemindersParityProof {
             return .object(["passed": .bool(false), "checks": .object(checks), "reason": .string(permission != noErr ? "Reminders Automation is unavailable to the signed Helper; grant it in System Settings before retrying." : "The signed Helper needs Reminders and Accessibility access in System Settings.")])
         }
         let store = EKEventStore()
-        let title = "[ab-test " + UUID().uuidString + "]"
+        let run = UUID().uuidString
+        let title = "[ab-test " + run + "]"
         let list = EKCalendar(for: .reminder, eventStore: store)
         guard let source = store.defaultCalendarForNewReminders()?.source else { throw SourceFailure.unavailable }
         diagnostics["fixture_source_type"] = .number(Double(source.sourceType.rawValue))
@@ -35,6 +37,9 @@ enum RemindersParityProof {
             store.reset()
             if let owned = store.calendar(withIdentifier: listID), owned.title == title { try? store.removeCalendar(owned, commit: true) }
         }
+        let ledger = PrivateReport.directory.appendingPathComponent("reminders-parity-cleanup/" + run + ".json")
+        try FileManager.default.createDirectory(at: ledger.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        try PrivateReport.write(["list_id": listID, "title": title, "smart_title": title + " smart", "cleanup_state": "pending"], to: ledger)
         let first = EKReminder(eventStore: store), second = EKReminder(eventStore: store)
         first.calendar = list; first.title = title + " parent"
         second.calendar = list; second.title = title + " child"
@@ -206,7 +211,7 @@ enum RemindersParityProof {
             await attempt("smart_list") {
                 guard checks["tags_readback"]?.bool == true else { throw SourceFailure.unavailable }
                 try await ui.menu("File", ["New List", "New List…", "New List..."])
-                try ui.setFocused(text: smartTitle)
+                try await ui.setFocused(text: smartTitle)
                 try ui.press("Standard", role: kAXPopUpButtonRole)
                 try ui.press("Smart List", role: kAXMenuItemRole)
                 try await Task.sleep(for: .milliseconds(300))
@@ -269,6 +274,7 @@ enum RemindersParityProof {
         if let owned = store.calendar(withIdentifier: listID), owned.title == title { try store.removeCalendar(owned, commit: true) }
         store.reset()
         checks["owned_list_cleanup"] = .bool(store.calendar(withIdentifier: listID) == nil)
+        try PrivateReport.write(["list_id": listID, "title": title, "smart_title": smartTitle, "cleanup_state": checks["owned_list_cleanup"]?.bool == true && (!smartAttempted || checks["owned_smart_list_cleanup"]?.bool == true) ? "verified_clean" : "pending"], to: ledger)
         let required = ["flag_readback", "flag_clear_readback", "list_icon_readback", "indent_readback", "outdent_readback", "tags_readback", "reorder_readback", "image_readback", "smart_list_readback", "owned_list_cleanup"]
         return .object(["passed": .bool(required.allSatisfy { checks[$0]?.bool == true } && (!smartAttempted || checks["owned_smart_list_cleanup"]?.bool == true)), "checks": .object(checks.filter { !$0.key.hasPrefix("control_") }), "controls": .object(checks.filter { $0.key.hasPrefix("control_") }), "diagnostics": .object(diagnostics), "reasons": .object(reasons)])
     }
@@ -540,17 +546,19 @@ final class RemindersFixtureUI {
     func drag(_ from: String, to: String) async throws {
         guard from.hasPrefix(title), to.hasPrefix(title) else { throw SourceFailure.invalid }
         _ = try await selectReminder(from)
-        func point(_ name: String) throws -> CGPoint {
+        func point(_ name: String, before: Bool) throws -> CGPoint {
             let row = try reminderRow(name)
+            let fields = find(name, role: kAXTextFieldRole, within: row) + find(name, role: kAXTextAreaRole, within: row)
+            let target = !before && fields.count == 1 ? fields[0] : row
             var position: CFTypeRef?, size: CFTypeRef?
-            guard AXUIElementCopyAttributeValue(row, kAXPositionAttribute as CFString, &position) == .success,
-                  AXUIElementCopyAttributeValue(row, kAXSizeAttribute as CFString, &size) == .success,
+            guard AXUIElementCopyAttributeValue(target, kAXPositionAttribute as CFString, &position) == .success,
+                  AXUIElementCopyAttributeValue(target, kAXSizeAttribute as CFString, &size) == .success,
                   let position, let size, CFGetTypeID(position) == AXValueGetTypeID(), CFGetTypeID(size) == AXValueGetTypeID() else { throw SourceFailure.conflict }
             var origin = CGPoint.zero, dimensions = CGSize.zero
             guard AXValueGetValue(unsafeDowncast(position, to: AXValue.self), .cgPoint, &origin), AXValueGetValue(unsafeDowncast(size, to: AXValue.self), .cgSize, &dimensions), dimensions.width > 0, dimensions.height > 0 else { throw SourceFailure.conflict }
-            return CGPoint(x: origin.x + dimensions.width / 2, y: origin.y + dimensions.height / 2)
+            return CGPoint(x: origin.x + min(60, dimensions.width / 2), y: origin.y + (before ? 2 : dimensions.height / 2))
         }
-        let start = try point(from), end = try point(to)
+        let start = try point(from, before: false), end = try point(to, before: true)
         try await activate()
         try fence()
         defer { CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: end, mouseButton: .left)?.post(tap: .cghidEventTap) }
@@ -572,13 +580,24 @@ final class RemindersFixtureUI {
         guard matches.count == 1, AXUIElementPerformAction(matches[0], kAXPressAction as CFString) == .success else { throw SourceFailure.unsupported }
     }
 
-    func setFocused(text: String) throws {
+    func setFocused(text: String) async throws {
         try fence()
-        var focused: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(root, kAXFocusedUIElementAttribute as CFString, &focused) == .success, let focused, CFGetTypeID(focused) == AXUIElementGetTypeID() else { throw SourceFailure.conflict }
-        let field = unsafeDowncast(focused, to: AXUIElement.self)
-        guard value(field, kAXRoleAttribute) == kAXTextFieldRole, value(field, kAXValueAttribute).isEmpty else { throw SourceFailure.conflict }
-        try set(field, text: text)
+        guard let sheet = ownedSheet else { throw SourceFailure.conflict }
+        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+        repeat {
+            let fields = elements(root, kAXFocusedUIElementAttribute) + find("New List", role: kAXTextFieldRole, within: sheet)
+            for field in fields {
+                let role = value(field, kAXRoleAttribute), textValue = value(field, kAXValueAttribute)
+                selectionDiagnostics["name_focus_" + role] = 1
+                selectionDiagnostics["name_default"] = textValue.isEmpty || ["New List", "Untitled"].contains(textValue) ? 1 : 0
+                if Self.editableRole(role), textValue.isEmpty || ["New List", "Untitled"].contains(textValue) {
+                    try set(field, text: text)
+                    return
+                }
+            }
+            try await Task.sleep(for: .milliseconds(100))
+        } while ContinuousClock.now < deadline
+        throw SourceFailure.conflict
     }
 
     func pressAny(_ names: [String], role: String) throws {

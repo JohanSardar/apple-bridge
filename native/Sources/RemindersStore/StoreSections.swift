@@ -30,7 +30,12 @@ public struct StoreSections: Equatable, Sendable {
             return true
         }
         if membership == nil { return Self(order: identifiers, membership: [:]) }
-        if let dictionary = object(membership) as? [AnyHashable: Any] {
+        if let wrapper = object(membership) as? [String: Any], wrapper["memberships"] != nil {
+            guard wrapper["minimumSupportedVersion"] as? Int == 20230430, let entries = wrapper["memberships"] as? [[String: Any]] else { return nil }
+            for entry in entries {
+                guard let reminder = entry["memberID"], let section = entry["groupID"], insert(reminder, section) else { return nil }
+            }
+        } else if let dictionary = object(membership) as? [AnyHashable: Any] {
             for (key, value) in dictionary {
                 if let reminders = value as? [Any] {
                     guard reminders.allSatisfy({ insert($0, key) }) else { return nil }

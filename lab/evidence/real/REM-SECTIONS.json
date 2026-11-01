@@ -1,17 +1,22 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[18.62 25.46 21.95] cpu_idle=21% cpus=8 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[10.99 17.78 21.21] cpu_idle=45% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M6APZXWPM858MS7ZG154ZSP8",
+  "run_id": "run_01M6AQMGZ48TPAT1PNGTTGFBMN",
   "metrics": {
     "capture_observer_resets": 0,
     "diagnostics": {
       "fixture_icloud_source": 1,
       "fixture_source_type": 2,
+      "move_item_to_section_decoded": 0,
+      "move_item_to_section_expected_names": 2,
       "move_item_to_section_foreground": 1,
+      "move_item_to_section_membership_bytes": 185,
+      "move_item_to_section_order_bytes": 0,
+      "move_item_to_section_section_count": 2,
       "move_item_to_section_unique_matches": 1,
-      "reorder_sections_foreground": 0,
+      "reorder_sections_foreground": 1,
       "reorder_sections_unique_matches": 1,
       "section_create_menu_foreground": 1,
       "section_create_menu_press_result": 0,
@@ -23,6 +28,11 @@
       "section_name_foreground": 1,
       "section_name_set_result": 0,
       "section_name_text_field": 1,
+      "section_order_readback_decoded": 0,
+      "section_order_readback_expected_names": 2,
+      "section_order_readback_membership_bytes": 0,
+      "section_order_readback_order_bytes": 0,
+      "section_order_readback_section_count": 2,
       "select_test_list_foreground": 1,
       "selection_control_All": 2,
       "selection_control_Flagged": 2,
@@ -32,7 +42,7 @@
       "selection_control_Today": 4,
       "selection_nonempty_search_fields": 0,
       "selection_partial_labels": 5,
-      "selection_role_AXButton": 37,
+      "selection_role_AXButton": 38,
       "selection_role_AXCell": 21,
       "selection_role_AXCheckBox": 1,
       "selection_role_AXColumn": 3,
@@ -76,7 +86,7 @@
       "selection_subrole_AXToggle": 1,
       "selection_title_matches": 1,
       "selection_truncated": 0,
-      "selection_visited": 431,
+      "selection_visited": 432,
       "ui_minimized_windows": 0,
       "ui_sheet_count": 0,
       "ui_windows": 1
@@ -85,8 +95,8 @@
   "scenario": "REM-SECTIONS",
   "level": "real",
   "passed": false,
-  "git_sha": "f3d345bbb9aa91c60c8fd60ea6eee31a0299c418",
-  "at": "2026-11-01T04:48:25.495814Z",
+  "git_sha": "6d12e2fb4a79a7cb9ca5265e243d1f0083c259f8",
+  "at": "2026-11-01T04:59:40.388763Z",
   "assertions": [
     {
       "name": "native_sections_build",
