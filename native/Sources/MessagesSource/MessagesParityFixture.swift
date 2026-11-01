@@ -24,16 +24,14 @@ public enum MessagesParityFixture {
         let reader = try MessagesSelfTestBaseline.reader()
         let peers = try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [chat])
         guard peers.count == 1 else { throw MessagesUIFailure.recipientMismatch }
-        try MessagesNavigation.open(MessagesNavigation.addressURL(peers[0]["id"]))
-        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
         try MessagesAccessibility.openMessage(target.nativeState["message_guid"].string, settle: 0.5, resetEditor: false)
-        try MessagesAccessibility.validate(target)
+        try MessagesAccessibility.validateConversation(target)
         let session = try MessagesAccessibility.uiSession()
         let fields = MessagesVariantUI.find(session.root, identifier: "messageBodyField")
         guard fields.count == 1, MessagesVariantUI.value(fields[0], kAXValueAttribute).isEmpty else { throw MessagesUIFailure.draftPresent }
         guard MessagesVariantUI.value(fields[0], kAXPlaceholderValueAttribute).contains("iMessage") else { throw MessagesUIFailure.wrongService }
         try session.type(text, into: fields[0], value: { MessagesVariantUI.value($0, kAXValueAttribute) })
-        try MessagesAccessibility.validate(target)
+        try MessagesAccessibility.validateConversation(target)
         guard session.focused(fields[0]), MessagesVariantUI.value(fields[0], kAXValueAttribute) == text else { throw MessagesUIFailure.draftPresent }
         try session.press(MessagesUISession.enter)
     }
@@ -44,11 +42,9 @@ public enum MessagesParityFixture {
         var state = baseline.nativeState.object
         state["conversation_target"] = .bool(false)
         let target = Prepared(nativeState: .object(state), fingerprint: baseline.fingerprint, action: baseline.action)
-        try MessagesNavigation.open(MessagesNavigation.addressURL(selected.handle))
-        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
         try MessagesAccessibility.openMessage(target.nativeState["message_guid"].string, settle: 0.5, resetEditor: false)
         var result: [String: JSON] = [:]
-        do { try MessagesAccessibility.validate(target); result["message_target_passed"] = .bool(true) }
+        do { try MessagesAccessibility.validateConversation(target); result["message_target_passed"] = .bool(true) }
         catch { result["message_target_passed"] = .bool(false); result["message_target_error"] = .string(String(describing: error)) }
         do { try MessagesAccessibility.validate(baseline); result["conversation_target_passed"] = .bool(true) }
         catch { result["conversation_target_passed"] = .bool(false); result["conversation_target_error"] = .string(String(describing: error)) }

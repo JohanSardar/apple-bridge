@@ -268,6 +268,9 @@ enum MessagesAccessibility {
             try MessagesVariantUI.press(items[0])
             menuOpen = false
         }
+        if prepared.action["op"].string == "messages.mark_unread" {
+            try session.press(45, command: true)
+        }
         return .object(["target_verified": .bool(true)])
     }
     static func press(_ session: MessagesUISession, title: String) throws {

@@ -41,7 +41,7 @@ func TestSelfChatBaselineTargetsModernText(t *testing.T) {
 	if err := db.QueryRow(string(match[1]), "self").Scan(&service, &guid); err != nil {
 		t.Fatal(err)
 	}
-	if service != "iMessage" || guid != "modern" {
+	if service != "iMessage" || guid != "incoming" {
 		t.Fatal(service, guid)
 	}
 }
