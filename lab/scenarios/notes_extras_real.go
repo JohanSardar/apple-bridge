@@ -35,7 +35,7 @@ func runNotesExtrasReal(ctx context.Context, s Scenario, level, gitSHA string) (
 	if problem != nil {
 		return
 	}
-	for _, path := range []string{"lab/evidence/notes-predecessor-cleanup.json", "lab/evidence/real/NOTE-EXTRAS.json"} {
+	for _, path := range []string{"lab/evidence/notes-predecessor-cleanup.json", "lab/evidence/notes-baseline-cleanup.json", "lab/evidence/real/NOTE-EXTRAS.json"} {
 		recorded, _ := os.ReadFile(path)
 		problem = notesCleanupRecordedExtras(w.RecoverTruth, recorded)
 		add("recorded_run_empty_folder_cleaned", problem == nil)

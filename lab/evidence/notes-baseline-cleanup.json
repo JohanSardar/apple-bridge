@@ -1,0 +1,13 @@
+{
+  "scenario": "NOTE-EXTRAS",
+  "level": "real",
+  "run_id": "notes-extras_01M6B83GFTRK0RAZYPV6EQAADK",
+  "git_sha": "924c501cd10c27fba508aa4b72597c28ded534af",
+  "passed": false,
+  "assertions": [
+    {
+      "name": "tagged_fixture_created",
+      "passed": true
+    }
+  ]
+}
