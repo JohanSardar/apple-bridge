@@ -66,6 +66,9 @@ func runSiriIntents(ctx context.Context, s Scenario, level string) (e Evidence) 
 	}
 	e = runShortcutProbe(ctx, s, level, "AB Bridge Status", cli, qualified, validBridgeStatus)
 	e.Assertions = append(e.Assertions, Assertion{Name: "status_intent_metadata_matches_source", Passed: emitted})
+	if level == "real" {
+		e.Assertions = append(e.Assertions, Assertion{Name: "status_intent_appkit_session_dispatch", Passed: e.Passed})
+	}
 	e.Assertions = append(e.Assertions, Assertion{Name: "status_intent_returns_without_dialog", Passed: noninteractive})
 	e.Passed = e.Passed && emitted && noninteractive
 	if level == "sim" {

@@ -37,7 +37,7 @@ enum BridgeIntentHost {
         lifetime.setEventHandler { NSApplication.shared.terminate(nil) }
         lifetime.resume()
         defer { lifetime.cancel() }
-        if kill(parent, 0) == 0 { runApplication() }
+        if kill(parent, 0) == 0 { NSApplication.shared.run() }
     }
 
     private static func publish(_ text: String) {
