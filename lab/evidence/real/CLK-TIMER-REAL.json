@@ -52,6 +52,38 @@
       "passed": false
     },
     {
+      "name": "tagged_timer_history_inventory",
+      "passed": true
+    },
+    {
+      "name": "tagged_timer_history_deleted",
+      "passed": false
+    },
+    {
+      "name": "tagged_timer_history_deleted",
+      "passed": false
+    },
+    {
+      "name": "tagged_timer_history_deleted",
+      "passed": false
+    },
+    {
+      "name": "tagged_timer_history_deleted",
+      "passed": false
+    },
+    {
+      "name": "tagged_timer_history_deleted",
+      "passed": false
+    },
+    {
+      "name": "tagged_timer_history_deleted",
+      "passed": false
+    },
+    {
+      "name": "tagged_timer_history_absent",
+      "passed": false
+    },
+    {
       "name": "credential_backend_override_restored",
       "passed": true
     }
@@ -59,6 +91,7 @@
   "metrics": {
     "capture_observer_resets": 0,
     "created_timer_duration": 120,
-    "created_timer_running": true
+    "created_timer_running": true,
+    "tagged_recent_timers_remaining": 6
   }
 }

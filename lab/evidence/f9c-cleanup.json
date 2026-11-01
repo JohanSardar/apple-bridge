@@ -1,0 +1,9 @@
+{
+  "passed": false,
+  "metrics": {
+    "tagged_alarms_remaining": 0,
+    "all_alarms_remaining": 0,
+    "tagged_active_timers_remaining": 0,
+    "tagged_recent_timers_remaining": 6
+  }
+}

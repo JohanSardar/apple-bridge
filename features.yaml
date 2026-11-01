@@ -961,7 +961,7 @@ features:
       - {id: CLK-ALARM-REAL, levels: [sim, real]}
       - {id: CLK-TIMER-REAL, levels: [sim, real]}
     limits:
-      - {"scenario": "CLK-TIMER-REAL", "level": "real", "reason": "Timer creation and active-timer cancellation pass, but the Recents card context menu does not open. The Accessibility tree exposes only a disabled Delete item from the main menu, so tagged history remains. Card visibility qualification is awaiting the next real run."}
+      - {"scenario": "CLK-TIMER-REAL", "level": "real", "reason": "Native timer creation, duration, label, running-state readback and cancellation pass. Recents cards are on-screen and AXScrollToVisible and AXShowMenu return success, but focus and selection remain false and no enabled context Delete action appears. Six tagged Recents entries remain; the native Accessibility adapter cannot remove them."}
   - id: mac.capture
     title: Mac system state capture
     requirements: [R-API, R-SCOPE]
@@ -1252,12 +1252,10 @@ features:
     milestone: M4
     modules: [lab/scenarios]
     depends_on: [usage.read]
-    status: limited
-    notes: Real Biome usage capture returns output and replicates through MCP with provenance and device freshness. The independent comparison must wait for complete historical backfill.
+    status: done
+    notes: Real Biome usage capture returns output, matches independent day totals after bounded historical backfill, and replicates through MCP with provenance and device freshness.
     scenarios:
       - {id: USE-ACTION-PROBE, levels: [sim, real]}
-    limits:
-      - {"scenario": "USE-ACTION-PROBE", "level": "real", "reason": "The probe compares immediately after process readiness, before historical native backfill has finished. Its 45-second comparison expired with 37 gateway app-day rows versus 1378 independent rows; all compared fields matched. The bounded complete-backfill wait is awaiting real qualification."}
   - id: helper.siri_intents
     title: Read-only Apple Bridge status App Intent
     requirements: [R-PKG]

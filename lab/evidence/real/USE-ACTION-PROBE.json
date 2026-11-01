@@ -1,11 +1,11 @@
 {
   "scenario": "USE-ACTION-PROBE",
   "level": "real",
-  "passed": false,
+  "passed": true,
   "assertions": [
     {
       "name": "independent_day_totals_match",
-      "passed": false
+      "passed": true
     },
     {
       "name": "replica_converged",
@@ -21,14 +21,14 @@
     }
   ],
   "metrics": {
-    "app_days": 37,
+    "app_days": 1401,
     "capture_observer_resets": 0,
     "devices": 3,
     "different_fields": {},
-    "gateway_rows": 37,
+    "gateway_rows": 1401,
     "truth_devices": 3,
-    "truth_rows": 1378,
+    "truth_rows": 1401,
     "unmapped_truth_devices": 1,
-    "unmatched_keys": 1341
+    "unmatched_keys": 0
   }
 }
