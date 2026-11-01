@@ -148,7 +148,16 @@ public enum MailFixtureCleanup {
                 try await closeCompose()
                 if !(try await fixtureIDs(tag)).isEmpty { continue }
                 let outgoing = try await script("return count (outgoing messages whose subject is \(q(tag)))")
-                return try MailQualification.cleanupResult("0|" + outgoing)
+                let visible = try await script("return count (outgoing messages whose subject is \(q(tag)) and visible is true)")
+                let windows = try await script("return count (windows whose name contains \(q(tag)) and visible is true)")
+                guard let retained = Int(outgoing), retained >= 0, let open = Int(visible), open >= 0, let windowCount = Int(windows), windowCount >= 0 else { throw MailCommandFailure.unconfirmed }
+                let closed = open == 0 && windowCount == 0
+                var result = try MailQualification.cleanupResult("0|" + visible)
+                result["cleanup_outgoing_clear"] = .bool(closed)
+                result["cleanup_windows_clear"] = .bool(windowCount == 0)
+                result["cleanup_passed"] = .bool(closed)
+                if retained > 0 { result["cleanup_closed_compose_cache_verified"] = .bool(closed) }
+                return result
             }
             if selected.hasPrefix("select|") {
                 guard ids.contains(String(selected.dropFirst(7))) else { throw MailCommandFailure.unconfirmed }

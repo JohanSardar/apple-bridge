@@ -11,7 +11,9 @@ private actor QualificationMailFake {
     var selectionMismatch = false
     var outgoing = false
     let outgoingAfterDelete: Bool
-    init(fail: Bool = false, stalled: Bool = false, selectionMismatch: Bool = false, outgoingAfterDelete: Bool = false) { self.fail = fail; self.stalled = stalled; self.selectionMismatch = selectionMismatch; self.outgoingAfterDelete = outgoingAfterDelete }
+    let retainsClosedBackend: Bool
+    var visibleOutgoing = false
+    init(fail: Bool = false, stalled: Bool = false, selectionMismatch: Bool = false, outgoingAfterDelete: Bool = false, retainsClosedBackend: Bool = false) { self.fail = fail; self.stalled = stalled; self.selectionMismatch = selectionMismatch; self.outgoingAfterDelete = outgoingAfterDelete; self.retainsClosedBackend = retainsClosedBackend }
     func run(_ body: String) throws -> String {
         calls.append(body)
         if body == "return name" {
@@ -21,8 +23,9 @@ private actor QualificationMailFake {
         if body.hasPrefix("set matched to"), !body.contains("return count of matched") { return "123" }
         if body.contains("set cleanupStage") { return created ? "select|123" : "clear" }
         if body.contains("set chosen to selected messages") { return created && !selectionMismatch ? "123" : "" }
-        if body.hasPrefix("set ownedIDs") { outgoing = false; return "" }
-        if body.hasPrefix("return count (outgoing") { return outgoing ? "1" : "0" }
+        if body.hasPrefix("set ownedIDs") { if !retainsClosedBackend { outgoing = false }; visibleOutgoing = false; return "" }
+        if body.hasPrefix("return count (outgoing") { return (body.contains("visible is true") ? visibleOutgoing : outgoing) ? "1" : "0" }
+        if body.hasPrefix("return count (windows") { return visibleOutgoing ? "1" : "0" }
         if body.contains("extract address from sender") { return "self@example.invalid" }
         if body.contains("set found to") { return created ? "123" : "" }
         if body.hasPrefix("return count") || body.contains("return count of matched") { return created ? "1" : "0" }
@@ -33,7 +36,7 @@ private actor QualificationMailFake {
         if body.contains("return (flagged status") { return "true" }
         return ""
     }
-    func remove() { created = false; outgoing = outgoingAfterDelete }
+    func remove() { created = false; outgoing = outgoingAfterDelete; visibleOutgoing = outgoingAfterDelete }
     func ids() -> [String] { created ? ["123"] : [] }
     func select() { selectionMismatch = false }
     func restart() { stalled = false }
@@ -128,6 +131,17 @@ func checkMailQualification() async throws {
     let reopenedProof = try await MailQualification(script: { try await reopened.run($0) }, fixtureIDs: { _ in await reopened.ids() }, selectDisplayed: { _ in await reopened.select() }, removeSelected: { await reopened.remove() }).run(scenario: "MAIL-DRAFT-REAL", tag: "[ab-test] reopened")
     try require(reopenedProof["cleanup_passed"].bool && reopenedProof["cleanup_outgoing_clear"].bool)
     try require(await !reopened.outgoing)
+    let cached = QualificationMailFake(outgoingAfterDelete: true, retainsClosedBackend: true)
+    let cachedProof = try await MailQualification(script: { try await cached.run($0) }, fixtureIDs: { _ in await cached.ids() }, selectDisplayed: { _ in await cached.select() }, removeSelected: { await cached.remove() }).run(scenario: "MAIL-DRAFT-REAL", tag: "[ab-test] cached")
+    try require(cachedProof["cleanup_passed"].bool && cachedProof["cleanup_closed_compose_cache_verified"].bool)
+    let openWindow = MailQualification(script: { body in
+        if body.contains("set cleanupStage") { return "clear" }
+        if body.hasPrefix("return count (windows") { return "1" }
+        if body.hasPrefix("return count") { return "0" }
+        return ""
+    }, fixtureIDs: { _ in [] }, removeSelected: { throw SourceFailure.corrupt })
+    let windowProof = try await openWindow.run(scenario: "MAIL-CLEANUP", tag: "[ab-test] window")
+    try require(!windowProof["cleanup_passed"].bool && !windowProof["cleanup_outgoing_clear"].bool && !windowProof["cleanup_windows_clear"].bool)
     let staleSelection = MailQualification(script: { body in
         if body.contains("set cleanupStage") { return "select|123" }
         if body.contains("set chosen") { return "456" }
