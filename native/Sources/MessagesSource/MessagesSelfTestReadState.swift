@@ -67,16 +67,13 @@ public struct MessagesSelfTestReadState: Sendable, Codable {
     @UIActor
     func restore(_ prepared: Prepared, through baseline: Int64) throws {
         let chat = prepared.action["native_key"].string
-        func verified() throws -> Bool {
+        func verified(requireMarker: Bool = false) throws -> Bool {
             let current = try Self.capture(chat, through: baseline)
-            let restored = matches(current)
+            let restored = requireMarker ? !needsUnreadRestore(current) : matches(current)
             try PrivateReport.write(["before_unread_message_count": unreadIDs.count, "after_unread_message_count": current.unreadIDs.count, "before_chat_unread_count": unreadCount, "after_chat_unread_count": current.unreadCount, "unread_identities_restored": unreadIDs == current.unreadIDs, "passed": restored], to: PrivateReport.directory.appendingPathComponent("messages-unread-restore-result.json"))
             return restored
         }
-        if try !needsUnreadRestore(Self.capture(chat, through: baseline)) {
-            _ = try verified()
-            return
-        }
+        if try verified(requireMarker: true) { return }
         guard unreadCount > 0 || !unreadIDs.isEmpty else { throw MessagesSelfTestBaselineFailure.unreadRestoreFailed }
         let (session, items) = try MessagesParity.conversationMenu(prepared)
         let targets = items.filter { MessagesAccessibility.value($0, kAXTitleAttribute) == "Mark as Unread" }
