@@ -901,8 +901,8 @@ features:
     milestone: M0
     modules: [relay]
     depends_on: []
-    status: limited
-    notes: Device-signed outbound smux TLS tunnel, reconnect and health pings; Mac ACME DNS-01, custom-domain checks, CT warnings and VM service deployment. Public apex control TLS and the live Mac health endpoint are reachable through ab-relay. ACME control renewal, public TXT propagation, explicit device addressing and startup retries are implemented. Ubuntu REST/MCP checks and the isolated Claude Code HTTP connector pass. CONN-RELAY-CLAUDE real transport evidence (2026-10-29) is complemented by CONN-CLAUDE-AI real (2026-10-31, PR https://github.com/JohanSardar/apple-bridge/pull/476), which proves interactive Claude.ai OAuth through the public relay, owner-local Mac approval and an authorized tool call; CT aggregator completeness remains limited.
+    status: done
+    notes: Device-signed outbound smux TLS tunnel, reconnect and health pings; Mac ACME DNS-01, custom-domain checks, CT warnings and VM service deployment. Public apex control TLS and the live Mac health endpoint are reachable through ab-relay. ACME control renewal, public TXT propagation, explicit device addressing and startup retries are implemented. Ubuntu REST/MCP checks and the isolated Claude Code HTTP connector pass. CONN-RELAY-CLAUDE real transport evidence (2026-10-29) is complemented by CONN-CLAUDE-AI real (2026-10-31, PR https://github.com/JohanSardar/apple-bridge/pull/476), which proves interactive Claude.ai OAuth through the public relay, owner-local Mac approval and an authorized tool call. CT aggregator completeness is out of scope (remote.ct_indexing is dropped).
     scenarios:
       - {id: RELAY-PASSTHROUGH, levels: [sim]}
       - {id: RELAY-ENROLL, levels: [sim]}
@@ -912,8 +912,6 @@ features:
       - {id: RELAY-OWN-DOMAIN, levels: [sim]}
       - {id: RELAY-REAL, levels: [real]}
       - {id: CONN-RELAY-CLAUDE, levels: [real]}
-    limits:
-      - {"scenario": "RELAY-REAL", "level": "real", "reason": "Public relay DNS/TLS and Ubuntu REST/MCP qualified; crt.sh indexing is dropped as an outside dependency (remote.ct_indexing)"}
   - id: remote.public-enroll
     title: Enroll a public-host passkey with a terminal QR
     requirements: [R-SECURE, R-WEB-REACH]
