@@ -1,7 +1,23 @@
 {
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[22.97 18.19 29.21] cpu_idle=22% cpus=8 other_heavy=0"
+  },
+  "status": "limited",
+  "run_id": "run_01M6B96706RV3XQGE8GEPPHMCP",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "installed_shortcut_count": 30,
+    "output_bytes": 0,
+    "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "probe_pack_matches": 1,
+    "timed_out": false
+  },
   "scenario": "SIRI-INTENTS",
   "level": "real",
   "passed": false,
+  "git_sha": "",
+  "at": "2026-11-01T10:06:25.79958Z",
   "assertions": [
     {
       "name": "inventory_available",
@@ -36,12 +52,9 @@
       "passed": true
     }
   ],
-  "metrics": {
-    "capture_observer_resets": 0,
-    "installed_shortcut_count": 30,
-    "output_bytes": 0,
-    "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "probe_pack_matches": 1,
-    "timed_out": true
+  "latency": null,
+  "hosts": null,
+  "conditions": {
+    "reason": "The dedicated AB Bridge Status shortcut did not return valid output. Open it in Shortcuts, check its actions and existing permissions, and retry after it runs successfully."
   }
 }

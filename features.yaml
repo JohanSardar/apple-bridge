@@ -1262,11 +1262,11 @@ features:
     modules: [native/AppleBridgeHelper]
     depends_on: [helper.session]
     status: limited
-    notes: The implemented status intent passed warm and cold execution in isolation. Current execution cannot be qualified while older Helper instances with the same bundle identifier are running.
+    notes: Status intent metadata and simulation pass. Current warm execution returns no status alongside Johan's live session Helper, even after stale test-copy cleanup and signed-host registration.
     scenarios:
       - {id: SIRI-INTENTS, levels: [sim, real]}
     limits:
-      - {"scenario": "SIRI-INTENTS", "level": "real", "reason": "The status shortcut addresses com.johansardar.applebridge.services by bundle identifier. Older running test and session Helpers share that identifier and do not enter the new App Intents application lifecycle; registering a fresh host does not isolate dispatch. The latest run timed out after 300 seconds without a dialog or returned status."}
+      - {"scenario": "SIRI-INTENTS", "level": "real", "reason": "AB Bridge Status still timed out with zero output after stale tagged test Helpers were stopped and unregistered and the current signed Helper was registered. Johan's live session Helper remained running with the shared bundle identifier com.johansardar.applebridge.services. PR #498 remains open; reliable status dispatch alongside the live session is not qualified."}
   - id: mac.extras
     title: Mac Bluetooth iWork Time Machine and song recognition
     requirements: [R-API, R-SCOPE]

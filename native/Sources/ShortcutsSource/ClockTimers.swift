@@ -29,6 +29,15 @@ public enum ClockTimers {
         throw failure()
     }
 
+    public static func acquireForeground(activate: () -> Void, current: () -> Bool, wait: () -> Void) throws {
+        for _ in 0..<20 {
+            if current() { return }
+            activate()
+            wait()
+        }
+        guard current() else { throw ClockTimerFailure(step: "bring its timer controls to the foreground") }
+    }
+
     public static func exchange(_ request: Data) throws -> Data {
         guard request.count <= 32768, let value = try JSONSerialization.jsonObject(with: request) as? [String: Any], let operation = value["operation"] as? String else { throw failure() }
         let before = try snapshot()
@@ -187,8 +196,9 @@ private struct ClockTimerUI {
     }
 
     private func click(_ element: AXUIElement, button: CGMouseButton) throws {
-        app.activate()
-        RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        try ClockTimers.acquireForeground(activate: { app.activate() }, current: {
+            NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier
+        }, wait: { RunLoop.current.run(until: Date().addingTimeInterval(0.1)) })
         guard let position = attribute(element, kAXPositionAttribute), let size = attribute(element, kAXSizeAttribute), CFGetTypeID(position) == AXValueGetTypeID(), CFGetTypeID(size) == AXValueGetTypeID() else { throw ClockTimerFailure(step: "locate the timer control") }
         var point = CGPoint.zero, extent = CGSize.zero
         guard AXValueGetValue(unsafeDowncast(position, to: AXValue.self), .cgPoint, &point), AXValueGetValue(unsafeDowncast(size, to: AXValue.self), .cgSize, &extent), extent.width > 0, extent.height > 0 else { throw ClockTimerFailure(step: "locate the timer control") }
