@@ -1,0 +1,31 @@
+{
+  "at": "2026-11-01T13:29:26.629672+00:00",
+  "earlier_pair_ownership": {
+    "run_id": "selftest_969E5414562046FDB242C7C680E5AA46",
+    "ledger_sha256": "b819ac7b45ef21ef73410322ba15849a6ac921f03616b2d651e7788d9159b7db",
+    "self_only_peer_verified": true,
+    "all_rows_after_registered_baseline": true,
+    "live_row_types": [
+      0,
+      3006
+    ],
+    "tagged_reaction_verified": false,
+    "timestamps_utc": [
+      "2026-11-01T05:34:10.736385+00:00",
+      "2026-11-01T05:34:27.626000+00:00"
+    ]
+  },
+  "live_owned_rows_remaining": {
+    "earlier_owned_pair": 2,
+    "initial_owned_orphan": 1,
+    "latest_selftest_owned_orphans": 2,
+    "latest_readstate_owned_text": 2
+  },
+  "genuine_unread_messages": 0,
+  "unread_reaction_event_rows": 0,
+  "composer_empty_verified_after_focus_change": true,
+  "private_draft_backup_retained": true,
+  "ordinary_owned_media_rows_deleted_through_messages": 9,
+  "native_connection": "isConnected=false",
+  "limits": "Orphan rows and the final retry text pair remain; no permanent purge or direct Messages database write was performed."
+}

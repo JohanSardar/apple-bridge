@@ -1,32 +1,32 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[9.9 10.68 10.61] cpu_idle=33% cpus=8 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[4.75 5.75 8.48] cpu_idle=80% cpus=8 other_heavy=0"
   },
   "status": "environment-limited",
-  "run_id": "run_01M6BJR6ZBG39DFMA1TQX1T1MK",
+  "run_id": "run_01M6BMAKQKFN1FKKHW4QZ6W7AQ",
   "metrics": {
     "capture_observer_resets": 0,
     "cleanup": {
       "all_dates": true,
-      "appletruth_active_remaining": 0,
+      "appletruth_active_remaining": 2,
       "appletruth_verified": true,
-      "appletruth_visible_remaining": 0,
+      "appletruth_visible_remaining": 2,
       "approved_contacts_included": false,
-      "deleted": 2,
+      "deleted": 0,
       "drafts_cleared": 0,
-      "failure": "",
+      "failure": "validate:targetUnavailable",
       "initial_tagged_self_messages": 2,
       "only_tagged_self_messages": true,
-      "passed": true,
-      "remaining_tagged_self_messages": 0,
+      "passed": false,
+      "remaining_tagged_self_messages": 2,
       "tag_filtered": true
     },
     "cleanup_counts": {
-      "after_count": 160356,
-      "before_count": 160356,
+      "after_count": 160363,
+      "before_count": 160361,
       "created_count": 0,
-      "passed": true
+      "passed": false
     },
     "command_state": "observed",
     "disposition": "locally_observed",
@@ -34,13 +34,15 @@
     "initial_command_state": "observed",
     "messages.mark_read": {
       "context_live": true,
-      "disposition": "locally_observed",
+      "disposition": "indeterminate",
+      "native_reason": "dispatch_evidence_unavailable",
       "request_completed": true,
-      "state": "observed"
+      "state": "indeterminate"
     },
     "messages.mark_unread": {
       "context_live": true,
       "disposition": "indeterminate",
+      "native_reason": "dispatch_evidence_unavailable",
       "request_completed": true,
       "state": "indeterminate"
     },
@@ -50,8 +52,8 @@
   "scenario": "MSG-READSTATE-REAL",
   "level": "real",
   "passed": false,
-  "git_sha": "9517281dad9faa07c576b342579b46ab687deda0",
-  "at": "2026-11-01T12:53:32.779969Z",
+  "git_sha": "b7a719be31ac7403430862399e617e53ab0a1e31",
+  "at": "2026-11-01T13:21:04.243741Z",
   "assertions": [
     {
       "name": "self_chat_captured",
@@ -75,19 +77,19 @@
     },
     {
       "name": "messages.mark_unread_independent_native_truth",
-      "passed": false
+      "passed": true
     },
     {
       "name": "messages.mark_read_observed",
-      "passed": true
+      "passed": false
     },
     {
       "name": "messages.mark_read_independent_native_truth",
-      "passed": true
+      "passed": false
     },
     {
       "name": "tagged_messages_cleanup",
-      "passed": true
+      "passed": false
     },
     {
       "name": "existing_read_state_preserved",
@@ -95,7 +97,7 @@
     },
     {
       "name": "cleanup_baseline_restored",
-      "passed": true
+      "passed": false
     },
     {
       "name": "credential_backend_override_restored",
@@ -105,16 +107,16 @@
   "latency": {
     "messages.mark_read": {
       "samples": 1,
-      "p50_ms": 15738.481458,
-      "p95_ms": 15738.481458,
-      "max_ms": 15738.481458,
+      "p50_ms": 4989.457,
+      "p95_ms": 4989.457,
+      "max_ms": 4989.457,
       "timeouts": 0
     },
     "messages.mark_unread": {
       "samples": 1,
-      "p50_ms": 15777.044666,
-      "p95_ms": 15777.044666,
-      "max_ms": 15777.044666,
+      "p50_ms": 7234.399417,
+      "p95_ms": 7234.399417,
+      "max_ms": 7234.399417,
       "timeouts": 0
     }
   },
