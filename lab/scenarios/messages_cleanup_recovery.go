@@ -32,9 +32,10 @@ func runMessagesCleanupRecovery(ctx context.Context, e Evidence) (result Evidenc
 	data, err := os.ReadFile(ledger)
 	digest := sha256.Sum256(data)
 	var manifest struct {
-		RunID    string `json:"run_id"`
-		Scenario string `json:"scenario"`
-		Baseline int64  `json:"baseline_max_row_id"`
+		RunID    string   `json:"run_id"`
+		Scenario string   `json:"scenario"`
+		Baseline int64    `json:"baseline_max_row_id"`
+		Created  []string `json:"created_message_ids"`
 	}
 	if err != nil || hex.EncodeToString(digest[:]) != os.Getenv("APPLE_BRIDGE_MESSAGE_CLEANUP_LEDGER_SHA256") || json.Unmarshal(data, &manifest) != nil || manifest.RunID != run || manifest.Scenario != e.Scenario || (manifest.Scenario != "MSG-AUDIO-MESSAGE" && manifest.Scenario != "MSG-SELFTEST") || manifest.Baseline <= 0 {
 		add("unchanged_current_run_ledger", false)
@@ -66,8 +67,32 @@ func runMessagesCleanupRecovery(ctx context.Context, e Evidence) (result Evidenc
 	}
 	err = rows.Err()
 	rows.Close()
+	for _, id := range manifest.Created {
+		var newer bool
+		if db.QueryRowContext(ctx, "SELECT ROWID>? FROM message WHERE guid=?", manifest.Baseline, id).Scan(&newer) == nil && newer {
+			owned[id] = true
+		}
+	}
 	if err != nil || len(owned) == 0 {
 		add("recovery_owned_identity_truth", false)
+		return
+	}
+	unread, err := db.QueryContext(ctx, "SELECT DISTINCT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE m.is_from_me=0 AND m.is_read=0 AND j.chat_id IN (SELECT cm.chat_id FROM message parent JOIN chat_message_join cm ON cm.message_id=parent.ROWID WHERE parent.ROWID>? AND (instr(parent.text,?)>0 OR instr(parent.attributedBody,CAST(? AS BLOB))>0)) AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=j.chat_id AND r.message_id=m.ROWID)", manifest.Baseline, tag, tag)
+	if err != nil {
+		add("recovery_unread_ownership", false)
+		return
+	}
+	foreignUnread := false
+	for unread.Next() {
+		var id string
+		if unread.Scan(&id) != nil || !owned[id] {
+			foreignUnread = true
+		}
+	}
+	err = unread.Err()
+	unread.Close()
+	if err != nil || foreignUnread {
+		add("recovery_unread_ownership", false)
 		return
 	}
 	baseline := []cleanupItem{}
