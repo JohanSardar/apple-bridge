@@ -11,6 +11,9 @@ struct MessagesVariantChecks {
         let args = JSON.object(["text": .string("test"), "variant": variant])
         let data: [String: JSON] = ["text": .string("test"), "is_from_me": .bool(true), "error_code": .number(0), "effect": .string("com.apple.messages.effect.loud"), "formatting": .array([range])]
         var checks = try await AccessibilityInputChecks.run()
+        checks["unchecked_alert_menu_is_unmuted"] = MessagesParity.alertMenuTitles(["Hide Alerts"], checked: []) == ["Hide Alerts"]
+        checks["checked_alert_menu_is_muted"] = MessagesParity.alertMenuTitles(["Hide Alerts", "Pin"], checked: ["Hide Alerts"]) == ["Show Alerts", "Pin"]
+        checks["other_checked_menu_items_preserved"] = MessagesParity.alertMenuTitles(["Hide Alerts", "Pin"], checked: ["Pin"]) == ["Hide Alerts", "Pin"]
         let proof = JSON.object(["os_build": .string("synthetic-os"), "version": .number(1), "complete": .bool(true), "helper_digest": .string("synthetic-helper")])
         checks["current_build_qualified"] = MessagesSendVariants.validProof(proof, osBuild: "synthetic-os", helperDigest: "synthetic-helper")
         checks["stale_build_rejected"] = !MessagesSendVariants.validProof(proof, osBuild: "synthetic-os", helperDigest: "other-helper")

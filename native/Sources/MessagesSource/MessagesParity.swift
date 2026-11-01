@@ -6,6 +6,10 @@ import SourceSupport
 
 public enum MessagesParity {
     public static let operations = ["pin", "mute", "set_read_receipts", "recover_chat", "delete_chat_permanently"].map { "messages." + $0 }
+    public static func alertMenuTitles(_ titles: Set<String>, checked: Set<String>) -> Set<String> {
+        guard titles.contains("Hide Alerts"), checked.contains("Hide Alerts") else { return titles }
+        return titles.subtracting(["Hide Alerts"]).union(["Show Alerts"])
+    }
     public static func failureReason(_ error: Error) -> String {
         if let failure = error as? MessagesSelfTestBaselineFailure { return failure.description }
         if let failure = error as? SourceFailure { return String(describing: failure) }
@@ -41,13 +45,10 @@ public enum MessagesParity {
     }
     @UIActor
     static func menu(_ prepared: Prepared) throws -> (MessagesUISession, Set<String>) {
-        let session = try MessagesAccessibility.uiSession(), root = session.root
-        let row = try MessagesAccessibility.target(root, prepared: prepared)
-        try MessagesAccessibility.contextMenu(row, session: session)
-        var budget = 4000
-        let items = MessagesAccessibility.matching(root, budget: &budget) { MessagesAccessibility.value($0, kAXRoleAttribute) == kAXMenuItemRole }
-        guard budget > 0 else { throw SourceFailure.conflict }
-        return (session, Set(items.map { MessagesAccessibility.value($0, kAXTitleAttribute) }))
+        let (session, items) = try conversationMenu(prepared)
+        let titles = Set(items.map { MessagesAccessibility.value($0, kAXTitleAttribute) })
+        let checked = Set(items.filter { !MessagesAccessibility.value($0, kAXMenuItemMarkCharAttribute).isEmpty }.map { MessagesAccessibility.value($0, kAXTitleAttribute) })
+        return (session, alertMenuTitles(titles, checked: checked))
     }
     @UIActor
     static func dismiss(_ session: MessagesUISession) throws { try session.press(MessagesUISession.escape) }
@@ -114,7 +115,12 @@ public enum MessagesParity {
         let action = value ? "Hide Alerts" : "Show Alerts"
         let opposite = value ? "Show Alerts" : "Hide Alerts"
         guard titles.contains(action) != titles.contains(opposite) else { try? dismiss(session); throw SourceFailure.capabilityUnproven }
-        if titles.contains(action) { try MessagesAccessibility.press(session, title: action) } else { try dismiss(session) }
+        if titles.contains(action) {
+            let controls = MessagesVariantUI.find(session.root, role: kAXMenuItemRole).filter { ["Hide Alerts", "Show Alerts"].contains(MessagesAccessibility.value($0, kAXTitleAttribute)) }
+            guard controls.count == 1 else { try? dismiss(session); throw MessagesUIFailure.menuUnavailable }
+            try session.fence()
+            try MessagesVariantUI.press(controls[0])
+        } else { try dismiss(session) }
         let deadline = Date().addingTimeInterval(3)
         repeat {
             RunLoop.current.run(until: Date().addingTimeInterval(0.1))
@@ -156,14 +162,7 @@ public enum MessagesParity {
             operations.map { .object(["operation": .string($0), "proven": .bool(false), "reason": .string(reason)]) }
         }
         do {
-            try MessagesAccessibility.openMessage(prepared.nativeState["message_guid"].string, resetEditor: false)
-            let session = try MessagesAccessibility.uiSession(), root = session.root
-            let row = try MessagesAccessibility.target(root, prepared: prepared)
-            try MessagesAccessibility.contextMenu(row, session: session)
-            var budget = 4000
-            let items = MessagesAccessibility.matching(root, budget: &budget) { MessagesAccessibility.value($0, kAXRoleAttribute) == kAXMenuItemRole }
-            let titles = Set(items.map { MessagesAccessibility.value($0, kAXTitleAttribute) })
-            guard budget > 0 else { throw SourceFailure.conflict }
+            let (session, titles) = try menu(prepared)
             try dismiss(session)
             var steps = [provePin(prepared), proveMute(prepared, titles: titles)]
             steps.append(proveReceipts(prepared))
@@ -219,7 +218,7 @@ extension MessagesParity {
                 guard let item = try reader.message(member["guid"]), let decoded = try reader.messageObservations(item).first, (decoded.2["text"] as? String)?.contains(tag) == true else { throw SourceFailure.invalid }
             }
         }
-        var fields: [String: JSON] = ["conversation_target": .bool(operation == "messages.mute"), "target": target, "message_guid": .string(guid), "members": .array(messages.map { .string($0["guid"]) }), "properties_digest": .string(BodyDigest.hash(conversation.blobs["properties"] ?? Data())), "service": .string(conversation["service_name"])]
+        var fields: [String: JSON] = ["conversation_target": .bool(false), "target": target, "message_guid": .string(guid), "members": .array(messages.map { .string($0["guid"]) }), "properties_digest": .string(BodyDigest.hash(conversation.blobs["properties"] ?? Data())), "service": .string(conversation["service_name"])]
         if operation == "messages.mute" {
             guard capturedFields(conversation.blobs["properties"], service: conversation["service_name"])["muted"] is Bool else { throw SourceFailure.capabilityUnproven }
         }
