@@ -57,6 +57,9 @@ func nativeMessagesExistingChatGate(ctx context.Context, db *sql.DB, id, chat st
 }
 
 func runNativeMessagesCommands(ctx context.Context, s Scenario, level string, e Evidence) Evidence {
+	if os.Getenv("APPLE_BRIDGE_MESSAGE_CLEANUP_RUN") != "" {
+		return runMessagesCleanupRecovery(ctx, e)
+	}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	if s.ID == "WEB-MEDIA-VARIANTS" {
 		proof := runMediaCleanupProof(ctx, s, level)

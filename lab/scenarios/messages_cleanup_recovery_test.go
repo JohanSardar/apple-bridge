@@ -116,3 +116,16 @@ func TestCleanupRecoveryIgnoresReactionEventsWithoutChangingReadState(t *testing
 		}
 	}
 }
+
+func TestCleanupRecoveryScopeIsLimitedToOwnedMessagesScenarios(t *testing.T) {
+	for _, id := range []string{"MSG-READSTATE-REAL", "MSG-RESEND", "WEB-UPLOAD-NATIVE-STAGING"} {
+		if !messagesRecoveryScenario(id) {
+			t.Fatal("owned Messages cleanup refused", id)
+		}
+	}
+	for _, id := range []string{"MAIL-SEND-SELF-REAL", "WEB-MSG-REAL-READ", "", "MSG-GROUP-ADD"} {
+		if messagesRecoveryScenario(id) {
+			t.Fatal("foreign cleanup scope accepted", id)
+		}
+	}
+}
