@@ -562,23 +562,29 @@ final class CalendarFixtureUI {
             diagnostics["inspector_focused_" + value(element, kAXRoleAttribute)] = .bool(true)
             seeds.append(element)
         }
-        seeds += find(title, role: kAXTextFieldRole)
-        seeds += find(title, role: kAXStaticTextRole)
+        seeds += find(title, role: kAXTextFieldRole, containing: true)
+        seeds += find(title, role: kAXStaticTextRole, containing: true)
+        seeds += discoveryRoots().filter { value($0, kAXRoleAttribute) == kAXWindowRole && value($0, kAXSubroleAttribute) != kAXStandardWindowSubrole }
         for seed in seeds {
-            let titleField = value(seed, kAXRoleAttribute) == kAXTextFieldRole && value(seed, kAXSubroleAttribute) != kAXSearchFieldSubrole && [kAXTitleAttribute, kAXValueAttribute].contains { value(seed, $0) == title }
+            let titleField = value(seed, kAXRoleAttribute) == kAXTextFieldRole && value(seed, kAXSubroleAttribute) != kAXSearchFieldSubrole && [kAXTitleAttribute, kAXValueAttribute].contains { value(seed, $0).contains(title) }
             var current = seed
             for _ in 0..<8 {
                 let role = value(current, kAXRoleAttribute)
                 if role == kAXApplicationRole { break }
-                let floating = role == kAXWindowRole && value(current, kAXSubroleAttribute) == kAXFloatingWindowSubrole
+                let floating = role == kAXWindowRole && value(current, kAXSubroleAttribute) != kAXStandardWindowSubrole
                 let titledWindow = role == kAXWindowRole && value(current, kAXTitleAttribute).contains(title)
-                if role == kAXWindowRole && !floating && !titledWindow { break }
+                let ownedTitle = !find(title, containing: true, within: current).isEmpty
+                if floating {
+                    diagnostics["inspector_window_owned_title"] = .bool(ownedTitle)
+                    for anchor in anchors { diagnostics["inspector_anchor_" + anchor] = .bool(!find(anchor, within: current).isEmpty) }
+                }
                 if (titleField || floating || titledWindow || role == "AXPopover"),
-                   !find(title, within: current).isEmpty,
+                   ownedTitle,
                    anchors.contains(where: { !find($0, within: current).isEmpty }) {
                     inspectorCache = current
                     return current
                 }
+                if role == kAXWindowRole { break }
                 var parent: CFTypeRef?
                 guard AXUIElementCopyAttributeValue(current, kAXParentAttribute as CFString, &parent) == .success,
                       let parent, CFGetTypeID(parent) == AXUIElementGetTypeID() else { break }
