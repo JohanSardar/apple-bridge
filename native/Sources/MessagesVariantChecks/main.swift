@@ -114,6 +114,7 @@ struct MessagesVariantChecks {
             checks["other_mention_rejected"] = !MessagesSendVariants.matches(args, data: .object(sent))
             checks["plain_send_rejected"] = !MessagesSendVariants.matches(args, data: .object(data))
         } else if kind == "audio" {
+            checks["native_audio_factory_sets_flag"] = MessagesSendVariants.syntheticNativeAudioFlag()
             let args = JSON.object(["text": .string(""), "files": .array([.object(["name": .string("synthetic.caf")])]), "variant": .object(["kind": .string(kind)])])
             var sent = data
             sent["text"] = .string("")

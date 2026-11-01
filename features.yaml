@@ -642,7 +642,7 @@ features:
     milestone: W2
     modules: [webui, web, operations, native/MessagesSource, lab/demo]
     depends_on: [web.frontdoor, web.demo, web.media]
-    status: limited
+    status: done
     scenarios:
       - {id: MSG-DECODE-BALLOON, levels: [sim, real]}
       - {id: MSG-DECODE-FORMATTING, levels: [sim, real]}

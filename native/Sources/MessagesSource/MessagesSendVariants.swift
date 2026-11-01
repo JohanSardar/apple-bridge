@@ -154,21 +154,20 @@ public enum MessagesSendVariants {
         let peers = try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [route["chat"].string])
         guard peers.count == 1, peers.allSatisfy({ own.contains(MessagesProbes.normalize($0["id"])) }) else { throw SourceFailure.invalid }
         if operation == "messages.send_audio" {
-            var action = prepared.action.object
-            var plain = args.object
-            plain.removeValue(forKey: "variant")
-            action["messages"] = .object(plain)
             let sender = MessagesCommands(path: path, labCommands: true)
-            let sent = try await sender.dispatch(Prepared(nativeState: prepared.nativeState, fingerprint: prepared.fingerprint, action: .object(action)))
-            if let row = try reader.message(sent["native_key"].string), let captured = try reader.messageObservations(row).first {
-                let data = try JSONDecoder().decode(JSON.self, from: JSONSerialization.data(withJSONObject: captured.2))
-                if matches(args, data: data) { return sent }
-            }
-            var result = sent.object
-            result["observed"] = .bool(false)
-            result["disposition"] = .string("indeterminate")
-            result["reason"] = .string("audioMessageFlagUnverified")
-            return .object(result)
+            let part = try await sender.stagedAudioPart(prepared)
+            let native = try await MessagesNativeAudio.send(part, chat: route["chat"].string)
+            let deadline = ContinuousClock.now.advanced(by: .seconds(10))
+            repeat {
+                if let row = try reader.message(native), let captured = try reader.messageObservations(row).first {
+                    let data = try JSONDecoder().decode(JSON.self, from: JSONSerialization.data(withJSONObject: captured.2))
+                    if matches(args, data: data) {
+                        return .object(["source": .string("messages"), "collection": .string("messages.message"), "native_key": .string(native), "observed": .bool(true), "disposition": .string("locally_observed"), "parts": .array([.object(["kind": .string("attachment"), "native_key": .string(native), "observed": .bool(true)])])])
+                    }
+                }
+                try await Task.sleep(for: .milliseconds(100))
+            } while ContinuousClock.now < deadline
+            return .object(["source": .string("messages"), "native_key": .string(native), "observed": .bool(false), "disposition": .string("indeterminate"), "reason": .string("audioMessageFlagUnverified")])
         }
         let chat=route["chat"].string
         guard !chat.isEmpty,let target=try reader.query("SELECT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? ORDER BY m.ROWID DESC LIMIT 1",[chat]).first?["guid"] else { throw SourceFailure.capabilityUnproven }

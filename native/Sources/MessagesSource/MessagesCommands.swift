@@ -357,6 +357,11 @@ public actor MessagesCommands {
         evidence["source"] = .string("messages"); evidence["observed"] = .bool(false); evidence["disposition"] = .string("indeterminate")
         return .object(evidence)
     }
+    func stagedAudioPart(_ prepared: Prepared) throws -> JSON {
+        let staged = try parts(prepared)
+        guard staged.count == 1, staged[0]["kind"].string == "attachment" else { throw SourceFailure.invalid }
+        return staged[0]
+    }
     private func parts(_ prepared: Prepared) throws -> [JSON] {
         let args = prepared.action["messages"]
         var parts: [JSON] = []
