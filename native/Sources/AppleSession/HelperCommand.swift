@@ -78,14 +78,13 @@ public enum HelperCommand {
             defer { lifetime.cancel() }
             if kill(gatewayPID, 0) != 0 { return }
             let peer = try AppleSession(socket: socket, secretFile: secretFile, home: home, gatewayPID: gatewayPID, commandsEnabled: arguments.contains("--lab-commands"))
-            var finished = false
             Task { @MainActor in
                 if !arguments.contains("--lab-commands") { _ = try? await MessagesSelfTest.shared.run() }
                 await SessionSources.register(into: peer, home: home, labEnabled: arguments.contains("--lab-commands"))
                 try? await peer.run()
-                finished = true
+                NSApplication.shared.terminate(nil)
             }
-            while !finished { RunLoop.current.run(until: Date().addingTimeInterval(1)) }
+            NSApplication.shared.run()
             return
         }
         guard let command = arguments.first, ["selftest", "status", "onboard", "authorize-reminders"].contains(command) else { throw HelperCommandFailure.unknownCommand }
