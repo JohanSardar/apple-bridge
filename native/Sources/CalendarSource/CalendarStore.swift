@@ -5,6 +5,28 @@ public struct CalendarStoreSnapshot: Sendable {
     var events: [String: [[String: JSON]]] = [:]
     var attachments: [Int: [[String: JSON]]] = [:]
 
+    public static func ownerAddresses(path: String) throws -> [String: Set<String>] {
+        let connection = try CalendarStoreConnection(path: path)
+        let rows = try connection.rows("SELECT c.UUID AS calendar_uuid,hex(s.cached_external_info) AS info FROM Calendar c JOIN Store s ON s.ROWID=c.store_id WHERE s.cached_external_info IS NOT NULL")
+        var result: [String: Set<String>] = [:]
+        for row in rows {
+            let hex = Array((row["info"]?.string ?? "").utf8)
+            guard !hex.isEmpty, hex.count.isMultiple(of: 2) else { continue }
+            let bytes = stride(from: 0, to: hex.count, by: 2).compactMap { UInt8(String(decoding: hex[$0..<($0 + 2)], as: UTF8.self), radix: 16) }
+            guard bytes.count * 2 == hex.count,
+                  let metadata = try? PropertyListSerialization.propertyList(from: Data(bytes), format: nil) as? [String: Any],
+                  let owners = metadata["ownerAddresses"] as? [String] else { continue }
+            let calendar = row["calendar_uuid"]?.string ?? ""
+            let key = UUID(uuidString: calendar)?.uuidString ?? calendar
+            for owner in owners where owner.lowercased().hasPrefix("mailto:") {
+                let address = String(owner.dropFirst(7)).removingPercentEncoding?.lowercased() ?? ""
+                guard address.contains("@"), !address.contains(where: { $0.isWhitespace || $0.isNewline || ";:,<>\\\"".contains($0) }) else { continue }
+                result[key, default: []].insert(address)
+            }
+        }
+        return result
+    }
+
     public static func read(path: String) throws -> CalendarStoreSnapshot {
         let connection = try CalendarStoreConnection(path: path)
         let required: [String: Set<String>] = [

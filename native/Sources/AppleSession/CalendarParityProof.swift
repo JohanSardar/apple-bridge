@@ -19,7 +19,7 @@ enum CalendarParityProof {
             return report(checks, reasons, controls)
         }
         let store = EKEventStore()
-        let accountIdentities = ownIdentities(store: store)
+        let (accountIdentities, participantIdentities) = ownIdentities(store: store)
         let identities = Set(accountIdentities.values.flatMap { $0 })
         let title = "[ab-test] " + UUID().uuidString
         let calendar = EKCalendar(for: .event, eventStore: store)
@@ -63,7 +63,10 @@ enum CalendarParityProof {
             for _ in 0..<30 {
                 store.reset()
                 saved = store.calendarItem(withIdentifier: identifier) as? EKEvent
-                if saved != nil { break }
+                if saved?.structuredLocation?.title == locationTitle,
+                   saved?.structuredLocation?.geoLocation?.coordinate.latitude == 41.88,
+                   saved?.structuredLocation?.geoLocation?.coordinate.longitude == -87.63,
+                   saved?.structuredLocation?.radius == 100 { break }
                 try await Task.sleep(for: .milliseconds(100))
             }
             controls["saved_event_found"] = .bool(saved != nil)
@@ -159,7 +162,7 @@ enum CalendarParityProof {
                 if controls["attachment_dialog_opened"]?.bool == true, ui.find("Cancel", role: kAXButtonRole).count == 1 { try? ui.dialogPress("Cancel") }
             }
             stage = "invitation"
-            if let attendee = sourceIdentities.sorted().first {
+            if let attendee = participantIdentities[source.sourceIdentifier]?.sorted().first ?? sourceIdentities.sorted().first {
                 let organizer = identities.sorted().first(where: { $0 != attendee }) ?? attendee
                 try await ui.openOwnedEvent()
                 let invitationTitle = title + " invitation"
@@ -240,8 +243,14 @@ enum CalendarParityProof {
         return report(checks, reasons, controls)
     }
 
-    private static func ownIdentities(store: EKEventStore) -> [String: Set<String>] {
-        var identities: [String: Set<String>] = [:]
+    private static func ownIdentities(store: EKEventStore) -> ([String: Set<String>], [String: Set<String>]) {
+        var identities: [String: Set<String>] = [:], participantIdentities: [String: Set<String>] = [:]
+        let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Group Containers/group.com.apple.calendar/Calendar.sqlitedb").path
+        let owners = (try? CalendarStoreSnapshot.ownerAddresses(path: path)) ?? [:]
+        for calendar in store.calendars(for: .event) where !calendar.source.isDelegate && [.calDAV, .exchange].contains(calendar.source.sourceType) {
+            let key = UUID(uuidString: calendar.calendarIdentifier)?.uuidString ?? calendar.calendarIdentifier
+            identities[calendar.source.sourceIdentifier, default: []].formUnion(owners[key] ?? [])
+        }
         for interval in CalendarEventKitFields.identitySearchIntervals(around: Date()) {
             let predicate = store.predicateForEvents(withStart: interval.start, end: interval.end, calendars: nil)
             for event in store.events(matching: predicate) {
@@ -249,11 +258,12 @@ enum CalendarParityProof {
                     let address = String(participant.url.absoluteString.dropFirst(7)).removingPercentEncoding?.lowercased() ?? ""
                     if !address.isEmpty, !address.contains("\n"), !address.contains("\r") {
                         identities[event.calendar.source.sourceIdentifier, default: []].insert(address)
+                        participantIdentities[event.calendar.source.sourceIdentifier, default: []].insert(address)
                     }
                 }
             }
         }
-        return identities
+        return (identities, participantIdentities)
     }
 
     private static func report(_ checks: [String: JSON], _ reasons: [String: JSON], _ controls: [String: JSON]) -> JSON {
