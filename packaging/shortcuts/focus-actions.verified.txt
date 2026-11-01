@@ -17,7 +17,10 @@ The installed pack exits with a missing-parameter error before enabling Focus.
 The If subject must use WFInput.Type = Variable with its variable attachment
 under WFInput.Variable. A raw variable attachment at WFInput is invalid.
 FOC-SIM compiles the pack and verifies this binding points to the until output.
-The signed AB Focus.shortcut contains the corrected binding. FOC-SET-REAL backs
-up and repairs only this binding in the known eight-action installed pack,
+The Time field requires a WFTextTokenString containing the until attachment;
+WFDateFieldParameterState rejects a bare WFTextTokenAttachment as its value.
+FOC-SIM proves the rejection and acceptance through Apple's parameter parser.
+The compiled source pack contains both corrected bindings. FOC-SET-REAL backs
+up and repairs only these bindings in the known eight-action installed pack,
 then verifies the saved actions through Apple's workflow database API.
 No import dialog is opened by tests.

@@ -120,7 +120,17 @@ func runFocusPack(ctx context.Context, s Scenario, level string) Evidence {
 					UUID            string
 					DictionaryKey   string `json:"WFDictionaryKey"`
 					ControlFlowMode int    `json:"WFControlFlowMode"`
-					Input           struct {
+					Time            struct {
+						SerializationType string `json:"WFSerializationType"`
+						Value             struct {
+							String      string
+							Attachments map[string]struct {
+								Type       string
+								OutputUUID string
+							} `json:"attachmentsByRange"`
+						}
+					}
+					Input struct {
 						Type     string
 						Variable struct {
 							SerializationType string `json:"WFSerializationType"`
@@ -153,6 +163,17 @@ func runFocusPack(ctx context.Context, s Scenario, level string) Evidence {
 			bound = bound && input.Type == "Variable" && input.Variable.SerializationType == "WFTextTokenAttachment" && input.Variable.Value.Type == "ActionOutput" && until != "" && input.Variable.Value.OutputUUID == until
 		}
 		add("pack_conditional_input_bound", bound && conditions == 1)
+		dates, dateBound := 0, true
+		for _, action := range compiled.Actions {
+			if action.Parameters.Time.SerializationType == "" {
+				continue
+			}
+			dates++
+			date := action.Parameters.Time
+			attachment := date.Value.Attachments["{0, 1}"]
+			dateBound = dateBound && date.SerializationType == "WFTextTokenString" && date.Value.String == "\ufffc" && len(date.Value.Attachments) == 1 && attachment.Type == "ActionOutput" && attachment.OutputUUID == until
+		}
+		add("pack_expiry_text_bound", dateBound && dates == 1)
 	}
 	build := exec.CommandContext(ctx, "packaging/dev/build-native.sh")
 	build.Env = append(os.Environ(), "APPLE_BRIDGE_NATIVE_TARGET=FocusChecks")

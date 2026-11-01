@@ -16,6 +16,19 @@ public enum FocusPackRepair {
         return .object(["Type": .string("Variable"), "Variable": attachment])
     }
 
+    public static func dateBinding(_ input: JSON, output: String) throws -> JSON {
+        let attachment: JSON
+        if input["WFSerializationType"].string == "WFTextTokenString" {
+            guard input["Value"]["string"].string == "\u{fffc}", input["Value"]["attachmentsByRange"].object.count == 1 else { throw SourceFailure.invalid }
+            attachment = input["Value"]["attachmentsByRange"]["{0, 1}"]
+        } else {
+            guard input["WFSerializationType"].string == "WFTextTokenAttachment" else { throw SourceFailure.invalid }
+            attachment = input["Value"]
+        }
+        guard !output.isEmpty, attachment["Type"].string == "ActionOutput", attachment["OutputUUID"].string == output else { throw SourceFailure.invalid }
+        return .object(["WFSerializationType": .string("WFTextTokenString"), "Value": .object(["string": .string("\u{fffc}"), "attachmentsByRange": .object(["{0, 1}": attachment])])])
+    }
+
     private static func method(_ target: AnyObject, _ name: String, arguments: UInt32) throws -> (Selector, IMP) {
         let selector = NSSelectorFromString(name)
         guard let method = class_getInstanceMethod(object_getClass(target), selector), method_getNumberOfArguments(method) == arguments else { throw SourceFailure.unsupported }
@@ -80,16 +93,24 @@ public enum FocusPackRepair {
             let until = value.array[2]["WFWorkflowActionParameters"]["UUID"].string
             let original = value.array[3]["WFWorkflowActionParameters"]["WFInput"]
             let corrected = try binding(original, output: until)
+            let originalDate = value.array[4]["WFWorkflowActionParameters"]["Time"]
+            let correctedDate = try dateBinding(originalDate, output: until)
             var updated = value.array
             var action = updated[3].object
             var parameters = updated[3]["WFWorkflowActionParameters"].object
             parameters["WFInput"] = corrected
             action["WFWorkflowActionParameters"] = .object(parameters)
             updated[3] = .object(action)
+            var timed = updated[4].object
+            var timedParameters = updated[4]["WFWorkflowActionParameters"].object
+            timedParameters["Time"] = correctedDate
+            timed["WFWorkflowActionParameters"] = .object(timedParameters)
+            updated[4] = .object(timed)
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.sortedKeys]
             let changed = try encoder.encode(JSON.array(updated))
-            if original != corrected {
+            let needsRepair = original != corrected || originalDate != correctedDate
+            if needsRepair {
                 phase = "backup"
                 let directory = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/AppleBridgeDev/focus-pack-backups")
                 try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
@@ -111,7 +132,7 @@ public enum FocusPackRepair {
             guard let readback = try object(database, "recordWithDescriptor:error:", argument: reference, errorArgument: true),
                   let readActions = try object(readback, "actions"),
                   (readActions as? NSArray)?.isEqual(to: try JSONSerialization.jsonObject(with: changed) as? [Any] ?? []) == true else { throw SourceFailure.unavailable }
-            return .object(["passed": .bool(true), "changed": .bool(original != corrected), "action_count": .number(Double(actions.count))])
+            return .object(["passed": .bool(true), "changed": .bool(needsRepair), "action_count": .number(Double(actions.count))])
         } catch {
             return .object(["passed": .bool(false), "phase": .string(phase)])
         }

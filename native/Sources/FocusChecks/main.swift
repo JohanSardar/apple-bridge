@@ -1,6 +1,7 @@
 import Foundation
 import SourceSupport
 import FocusSource
+import ObjectiveC
 
 @MainActor
 final class Fixture {
@@ -52,6 +53,22 @@ struct Checks {
         guard repaired["Type"] == .string("Variable"), repaired["Variable"] == attachment,
               try FocusPackRepair.binding(repaired, output: "synthetic-until") == repaired else { throw SourceFailure.corrupt }
         do { _ = try FocusPackRepair.binding(attachment, output: "foreign"); throw SourceFailure.corrupt } catch SourceFailure.invalid {}
+        let repairedDate = try FocusPackRepair.dateBinding(attachment, output: "synthetic-until")
+        guard repairedDate["WFSerializationType"] == .string("WFTextTokenString"),
+              repairedDate["Value"]["attachmentsByRange"]["{0, 1}"] == attachment["Value"],
+              try FocusPackRepair.dateBinding(repairedDate, output: "synthetic-until") == repairedDate else { throw SourceFailure.corrupt }
+        do { _ = try FocusPackRepair.dateBinding(attachment, output: "foreign"); throw SourceFailure.corrupt } catch SourceFailure.invalid {}
+        guard let dateClass = NSClassFromString("WFDateFieldParameterState") else { throw SourceFailure.unavailable }
+        let dateSelector = NSSelectorFromString("initWithSerializedRepresentation:variableProvider:parameter:")
+        guard let dateMethod = class_getInstanceMethod(dateClass, dateSelector) else { throw SourceFailure.unavailable }
+        typealias ParseDate = @convention(c) (AnyObject, Selector, AnyObject, AnyObject?, AnyObject?) -> Unmanaged<AnyObject>?
+        let parseDate = unsafeBitCast(method_getImplementation(dateMethod), to: ParseDate.self)
+        func dateState(_ value: JSON) throws -> AnyObject? {
+            let serialized = try JSONSerialization.jsonObject(with: JSONEncoder().encode(value)) as AnyObject
+            let allocated = (dateClass as AnyObject).perform(NSSelectorFromString("alloc"))!.takeUnretainedValue()
+            return parseDate(allocated, dateSelector, serialized, nil, nil)?.takeRetainedValue()
+        }
+        guard try dateState(attachment) == nil, try dateState(repairedDate) != nil else { throw SourceFailure.corrupt }
         guard FocusQualification.failureCategory("An action could not be found") == "missing_action", FocusQualification.failureCategory("Cannot convert private input to a dictionary") == "dictionary_input", FocusQualification.failureCategory("opaque private contents") == "shortcut_execution" else { throw SourceFailure.corrupt }
         let proofFixture = Fixture()
         let proofStatus: @MainActor () -> JSON = { .object(["focused": .bool(proofFixture.focused), "authorization": .string("authorized")]) }

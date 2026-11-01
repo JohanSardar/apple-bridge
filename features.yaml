@@ -1083,7 +1083,7 @@ features:
       - {id: FOC-STATUS-REAL, levels: [real]}
       - {id: FOC-PHONE-SYNC, levels: [real]}
     limits:
-      - {"scenario": "FOC-SET-REAL", "level": "real", "reason": "The installed AB Focus exits with a missing-parameter error. The corrected compiled binding is sim-qualified; set and restoration still require real proof."}
+      - {scenario: FOC-SET-REAL, level: real, reason: "Timed DND activation times out because the installed AB Focus Time field is a bare variable attachment, which Apple's date parser rejects. The corrected text token binding awaits real proof; restoration passes."}
       - {scenario: FOC-PHONE-SYNC, level: real, reason: "Phone Focus permission and inactive baseline passed; the Pro AppleBridgeHelper has no Focus-status grant. No Mac Focus mutation was attempted, and phone restoration was acknowledged."}
   - id: recordings.read
     title: Voice Memos assets and voicemail metadata
