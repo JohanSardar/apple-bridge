@@ -955,13 +955,13 @@ features:
     modules: [internal/clockpack, packaging/shortcuts/ab-clock.json]
     depends_on: [shortcuts.runner]
     status: limited
-    notes: Real alarm creation, field readback, toggling and deletion pass through the corrected AB Clock pack. Timer lifecycle and baseline restoration pass in simulation; native timer inspection works, while duration adjustment remains under real qualification. Clock operations remain unadvertised.
+    notes: Real alarm creation, field readback, toggling and deletion pass through the corrected AB Clock pack. Native timer creation returns the requested duration, label and running state; deleting its Recents entry remains under real qualification. Clock operations remain unadvertised.
     scenarios:
       - {id: CLK-SIM, levels: [sim]}
       - {id: CLK-ALARM-REAL, levels: [sim, real]}
       - {id: CLK-TIMER-REAL, levels: [sim, real]}
     limits:
-      - {"scenario": "CLK-TIMER-REAL", "level": "real", "reason": "Clock exposes its timer duration wheels through Accessibility, but earlier keyboard adjustment left the minute value unchanged at 15. Native active-timer and Recents readback work; selected-segment Accessibility adjustment is awaiting real qualification."}
+      - {"scenario": "CLK-TIMER-REAL", "level": "real", "reason": "Timer creation and active-timer cancellation pass, but Recents cleanup fails because the menu-parent filter excludes Clock's Delete action. The selected-row enabled Delete action fix is awaiting real qualification."}
   - id: mac.capture
     title: Mac system state capture
     requirements: [R-API, R-SCOPE]
@@ -1262,10 +1262,12 @@ features:
     milestone: M5
     modules: [native/AppleBridgeHelper]
     depends_on: [helper.session]
-    status: done
-    notes: The implemented Helper status intent returns through Shortcuts with the host running and after a cold launch, without an interactive result dialog.
+    status: limited
+    notes: The implemented status intent passed warm and cold execution in isolation. Current execution cannot be qualified while older Helper instances with the same bundle identifier are running.
     scenarios:
       - {id: SIRI-INTENTS, levels: [sim, real]}
+    limits:
+      - {"scenario": "SIRI-INTENTS", "level": "real", "reason": "The status shortcut addresses com.johansardar.applebridge.services by bundle identifier. Older running test and session Helpers share that identifier and do not enter the new App Intents application lifecycle; registering a fresh host does not isolate dispatch. The latest run timed out after 300 seconds without a dialog or returned status."}
   - id: mac.extras
     title: Mac Bluetooth iWork Time Machine and song recognition
     requirements: [R-API, R-SCOPE]

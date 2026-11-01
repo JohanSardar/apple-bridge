@@ -22,7 +22,7 @@
   ],
   "metrics": {
     "capture_observer_resets": 0,
-    "elapsed_ms": 1821,
+    "elapsed_ms": 1389,
     "exit_status": 0,
     "output_bytes": 24,
     "output_sha256": "41dce0f6a4b0bd1381a4dbd332d6a5ddc69d82c21e4d6b176cd25b670ee32432",
