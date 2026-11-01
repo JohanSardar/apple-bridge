@@ -21,8 +21,8 @@ func relayIngressReady(ctx context.Context, status remote.Status, u *url.URL, ip
 	}
 	ready := false
 	for {
-		attempt, stop := context.WithTimeout(bounded, 1500*time.Millisecond)
-		cmd := exec.CommandContext(attempt, "ssh", "ubuntu", "curl", "--noproxy", "'*'", "--fail", "--silent", "--show-error", "--max-time", "1", "--resolve", u.Hostname()+":"+port+":"+ip, status.URL+"/v1/health")
+		attempt, stop := context.WithTimeout(bounded, 12*time.Second)
+		cmd := exec.CommandContext(attempt, "ssh", "ubuntu", "curl", "--noproxy", "'*'", "--fail", "--silent", "--show-error", "--max-time", "10", "--resolve", u.Hostname()+":"+port+":"+ip, status.URL+"/.well-known/oauth-authorization-server")
 		output, err := cmd.Output()
 		stop()
 		if err == nil && len(output) > 0 {

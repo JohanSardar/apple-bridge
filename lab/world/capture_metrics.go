@@ -4,6 +4,8 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -11,12 +13,13 @@ import (
 
 type captureMetricsKey struct{}
 type CaptureMetrics struct {
-	mu     sync.Mutex
-	counts map[string]int
+	mu         sync.Mutex
+	counts     map[string]int
+	helperPIDs map[string]bool
 }
 
 func WithCaptureMetrics(ctx context.Context) (context.Context, *CaptureMetrics) {
-	metrics := &CaptureMetrics{counts: map[string]int{}}
+	metrics := &CaptureMetrics{counts: map[string]int{}, helperPIDs: map[string]bool{}}
 	return context.WithValue(ctx, captureMetricsKey{}, metrics), metrics
 }
 func (m *CaptureMetrics) Resets() int {
@@ -28,10 +31,30 @@ func (m *CaptureMetrics) Resets() int {
 	}
 	return total
 }
+func (m *CaptureMetrics) HelperPIDs() []string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	result := make([]string, 0, len(m.helperPIDs))
+	for pid := range m.helperPIDs {
+		result = append(result, pid)
+	}
+	sort.Strings(result)
+	return result
+}
+
 func (w *World) recordCaptureMetrics() {
 	metrics, ok := w.ctx.Value(captureMetricsKey{}).(*CaptureMetrics)
 	if !ok {
 		return
+	}
+	if w.Native {
+		raw, _ := os.ReadFile(filepath.Join(w.Gateway.Home, "helper", "helper.pid"))
+		pid := strings.TrimSpace(string(raw))
+		if value, err := strconv.Atoi(pid); err == nil && value > 0 {
+			metrics.mu.Lock()
+			metrics.helperPIDs[pid] = true
+			metrics.mu.Unlock()
+		}
 	}
 	endpoints := append([]Endpoint{w.Gateway}, w.Replicas...)
 	for _, endpoint := range endpoints {

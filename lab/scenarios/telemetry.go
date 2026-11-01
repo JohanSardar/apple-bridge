@@ -101,7 +101,7 @@ func Run(ctx context.Context, s Scenario, level string) (e Evidence) {
 	before, reportsErr := helperCrashReports(reports)
 	e = runScenario(ctx, s, level)
 	if reportsErr == nil {
-		e = failOnHelperCrashes(e, reports, before)
+		e = failOnHelperCrashes(e, reports, before, captureMetrics.HelperPIDs()...)
 	}
 	e.HostConditions = &conditions
 	if e.Metrics == nil {

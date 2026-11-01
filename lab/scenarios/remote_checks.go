@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -103,9 +104,13 @@ func remotePublicHTTPChecks(ctx context.Context, status remote.Status, u *url.UR
 		port = "443"
 	}
 	resolve := u.Hostname() + ":" + port + ":" + ip
-	for _, path := range []string{"/", "/v1/health"} {
-		cmd := exec.CommandContext(ctx, "ssh", "ubuntu", "curl", "--noproxy", "'*'", "--fail", "--silent", "--show-error", "--max-time", "10", "--resolve", resolve, status.URL+path)
+	for _, check := range []struct {
+		path string
+		code int
+	}{{"/", 200}, {"/v1/health", 401}} {
+		path := check.path
+		cmd := exec.CommandContext(ctx, "ssh", "ubuntu", "curl", "--noproxy", "'*'", "--silent", "--show-error", "--max-time", "10", "--resolve", resolve, "--output", "/dev/null", "--write-out", "%{http_code}", status.URL+path)
 		output, err := cmd.Output()
-		add("ubuntu_curl_public_tls"+path, err == nil && len(output) > 0)
+		add("ubuntu_curl_public_tls"+path, err == nil && strings.TrimSpace(string(output)) == strconv.Itoa(check.code))
 	}
 }

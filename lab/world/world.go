@@ -498,6 +498,7 @@ func newEnvironment(ctx context.Context, level string, replicas, seed int, nativ
 	}); err != nil {
 		return nil, err
 	}
+	w.recordCaptureMetrics()
 	success = true
 	return w, nil
 }
