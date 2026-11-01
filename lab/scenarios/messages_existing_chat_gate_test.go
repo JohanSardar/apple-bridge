@@ -156,7 +156,7 @@ func TestNativeBaselineSkipsReactionAndUnsentAnchors(t *testing.T) {
 	}
 	defer db.Close()
 	for _, query := range []string{
-		`CREATE TABLE message(guid TEXT,text TEXT,associated_message_type INTEGER DEFAULT 0,item_type INTEGER DEFAULT 0,date_retracted INTEGER DEFAULT 0)`,
+		`CREATE TABLE message(guid TEXT,text TEXT,is_from_me INTEGER DEFAULT 1,associated_message_type INTEGER DEFAULT 0,item_type INTEGER DEFAULT 0,date_retracted INTEGER DEFAULT 0)`,
 		`CREATE TABLE chat(guid TEXT,service_name TEXT)`,
 		`CREATE TABLE chat_message_join(chat_id INTEGER,message_id INTEGER)`,
 		`CREATE TABLE chat_recoverable_message_join(chat_id INTEGER,message_id INTEGER)`,
@@ -166,6 +166,8 @@ func TestNativeBaselineSkipsReactionAndUnsentAnchors(t *testing.T) {
 		`INSERT INTO chat_message_join VALUES(1,1),(1,2),(1,3),(1,4),(1,5)`,
 		`INSERT INTO message_attachment_join VALUES(4,1)`,
 		`INSERT INTO chat_recoverable_message_join VALUES(1,5)`,
+		`INSERT INTO message(guid,text,is_from_me) VALUES('incoming','[ab-test] incoming',0)`,
+		`INSERT INTO chat_message_join VALUES(1,6)`,
 	} {
 		if _, err := db.Exec(query); err != nil {
 			t.Fatal(err)
