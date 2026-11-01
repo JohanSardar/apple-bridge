@@ -89,7 +89,7 @@ func runNotesExtrasReal(ctx context.Context, s Scenario, level, gitSHA string) (
 		w.Await(10*time.Second, func() bool {
 			rows, _ := w.Records(w.Gateway)
 			for _, row := range rows {
-				if !row.Deleted && recordTitle(row) == name {
+				if !row.Deleted && recordTitle(row) == name && (row.Collection != "notes.note" || notesContentReady(row, false)) {
 					r = row
 					return true
 				}
