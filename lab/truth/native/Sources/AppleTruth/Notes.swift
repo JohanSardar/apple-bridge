@@ -6,6 +6,7 @@ import Carbon
 extension AppleTruth {
     @MainActor
     static func notes(_ verb: String, _ request: [String: Any]) async throws -> [String: Any] {
+        if verb == "observe", request["active_only"] as? Bool == true { return try notesActiveIdentities(path: request["snapshot_path"] as? String) }
         guard verb == "fixture" || verb == "observe", let language = OSALanguage(forName: "JavaScript") else { throw NotesTruthFailure.invalid }
         let target = NSAppleEventDescriptor(bundleIdentifier: "com.apple.Notes")
         guard AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false) == noErr else { throw TruthFailure.permissionMissing }
@@ -17,6 +18,7 @@ extension AppleTruth {
         let storeTargets = cleanup && request["folder_id"] == nil ? try notesDeletionTargets(tag: tag, folderKey: request["action"] as? String == "cleanup_created_folder" ? request["native_key"] as? String : nil) : []
         var input = request
         input["verb"] = verb
+        if verb == "observe", !tag.isEmpty { input["note_ids"] = try notesDeletionTargets(tag: tag, folderKey: nil) }
         let encoded = try JSONSerialization.data(withJSONObject: input, options: [.sortedKeys])
         guard let argument = String(data: encoded, encoding: .utf8) else { throw NotesTruthFailure.invalid }
         let source = "JSON.stringify((function(request) {\n" + #"""
@@ -29,6 +31,7 @@ extension AppleTruth {
             return name === 'Bridge Test' || name === 'Bridge Test ' + tag || name.startsWith('Bridge Test ' + tag + ' ');
         }
         function taggedNotes() {
+            if (request.note_ids) return request.note_ids.map(id => app.notes.byId(id));
             return app.folders().filter(fixtureFolder).reduce((notes, folder) => notes.concat(folder.notes().filter(note => note.name().startsWith(tag))), []);
         }
         function html(text) {
@@ -103,12 +106,6 @@ extension AppleTruth {
         let result = OSAScript(source: source, language: language).executeAndReturnError(&error)
         if let error { throw NSError(domain: "NotesJavaScript", code: error[OSAScriptErrorNumber] as? Int ?? 0, userInfo: [NSLocalizedDescriptionKey: error[OSAScriptErrorMessage] as? String ?? "automation_failed"]) }
         guard let text = result?.stringValue, let bytes = text.data(using: .utf8), var response = try JSONSerialization.jsonObject(with: bytes) as? [String: Any] else { throw NotesTruthFailure.invalid }
-        if verb == "observe", request["active_only"] as? Bool == true, let records = response["records"] as? [[String: Any]] {
-            response["records"] = try records.filter { record in
-                guard let id = record["id"] as? String else { throw NotesTruthFailure.invalid }
-                return try !notesDeletionVerified([id])
-            }
-        }
         if cleanup {
             let deletedIDs = response.removeValue(forKey: "deleted_ids") as? [String] ?? []
             for id in deletedIDs {

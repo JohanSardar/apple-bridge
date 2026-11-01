@@ -28,7 +28,8 @@ struct NotesStore {
               try query("PRAGMA table_info(ZICCLOUDSYNCINGOBJECT)").contains(where: { $0["name"]?.string == "ZISPASSWORDPROTECTED" }) else { throw SourceFailure.unsupported }
         let selected = keys.map { $0.sorted() } ?? []
         let filter = keys == nil ? "" : " AND o.ZIDENTIFIER IN (" + (selected.isEmpty ? "NULL" : Array(repeating: "?", count: selected.count).joined(separator: ",")) + ")"
-        let noteRows = try query("SELECT o.*,d.ZDATA AS BODY FROM ZICCLOUDSYNCINGOBJECT o LEFT JOIN ZICNOTEDATA d ON d.Z_PK=o.ZNOTEDATA WHERE o.Z_ENT=\(Int(noteEntity)) AND COALESCE(o.ZMARKEDFORDELETION,0)=0" + filter + " ORDER BY o.Z_PK", selected)
+        let excludedFolders = "WITH RECURSIVE excluded(pk) AS (SELECT Z_PK FROM ZICCLOUDSYNCINGOBJECT WHERE Z_ENT=\(Int(folderEntity)) AND (ZFOLDERTYPE=1 OR COALESCE(ZMARKEDFORDELETION,0)<>0) UNION SELECT f.Z_PK FROM ZICCLOUDSYNCINGOBJECT f JOIN excluded p ON f.ZPARENT=p.pk WHERE f.Z_ENT=\(Int(folderEntity))) "
+        let noteRows = try query(excludedFolders + "SELECT o.*,d.ZDATA AS BODY FROM ZICCLOUDSYNCINGOBJECT o LEFT JOIN ZICNOTEDATA d ON d.Z_PK=o.ZNOTEDATA WHERE o.Z_ENT=\(Int(noteEntity)) AND COALESCE(o.ZMARKEDFORDELETION,0)=0 AND o.ZFOLDER NOT IN (SELECT pk FROM excluded)" + filter + " ORDER BY o.Z_PK", selected)
         let objects = noteRows + (try query("SELECT * FROM ZICCLOUDSYNCINGOBJECT WHERE Z_ENT=\(Int(folderEntity)) AND COALESCE(ZMARKEDFORDELETION,0)=0 ORDER BY Z_PK"))
         let accountRows = try query("SELECT * FROM ZICCLOUDSYNCINGOBJECT WHERE Z_ENT=(SELECT Z_ENT FROM Z_PRIMARYKEY WHERE Z_NAME='ICAccount') AND COALESCE(ZMARKEDFORDELETION,0)=0")
         let accounts = Dictionary(uniqueKeysWithValues: accountRows.map { (Int($0["Z_PK"]?.number ?? 0), $0) })

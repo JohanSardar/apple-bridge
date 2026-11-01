@@ -23,7 +23,7 @@ extension NotesStore {
         SELECT CASE WHEN NOT EXISTS(SELECT 1 FROM Z_PRIMARYKEY WHERE Z_NAME='\(entity)') THEN 'unknown'
           WHEN NOT EXISTS(SELECT 1 FROM target) THEN 'gone'
           WHEN EXISTS(SELECT 1 FROM target WHERE COALESCE(ZMARKEDFORDELETION,0)<>0) THEN 'marked'
-          WHEN EXISTS(SELECT 1 FROM ancestors a JOIN ZICCLOUDSYNCINGOBJECT f ON f.Z_PK=a.pk WHERE f.ZFOLDERTYPE=1) THEN 'trashed'
+          WHEN EXISTS(SELECT 1 FROM ancestors a JOIN ZICCLOUDSYNCINGOBJECT f ON f.Z_PK=a.pk WHERE f.ZFOLDERTYPE=1 OR COALESCE(f.ZMARKEDFORDELETION,0)<>0) THEN 'trashed'
           ELSE 'active' END
         """
         var statement: OpaquePointer?

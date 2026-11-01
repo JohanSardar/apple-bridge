@@ -143,7 +143,7 @@ enum NotesSourceFixture {
         guard note["data"]["pinned"].bool, note["data"]["blocks"].array.first?["type"].string == "title",
               locked["data"]["content_status"].string == "locked", locked["data"]["plain_text"].string.isEmpty,
               locked["data"]["attachments"].array.isEmpty, locked["data"]["blocks"] == .null,
-              deleted["data"]["read_only"].bool, deleted["data"]["editable"].string == "none",
+              deleted == .null,
               (await sink.record("nested"))["data"]["account_name"].string == "Bridge Test Account" else { throw Invalid.projection }
         if let executable = ProcessInfo.processInfo.environment["APPLE_BRIDGE_NOTES_TRUTH"], !executable.isEmpty {
             let request = root.appendingPathComponent("truth-request.json"), report = root.appendingPathComponent("truth-report.json")
@@ -165,6 +165,18 @@ enum NotesSourceFixture {
                       truth["structure_counts"]["titles"].number == Double(titles),
                       projection["data"]["blocks"].array.filter({ $0["type"].string == "title" }).count == titles else { throw Invalid.projection }
             }
+            guard !response["records"].array.contains(where: { $0["id"].string == "deleted" }) else { throw Invalid.projection }
+            try JSONSerialization.data(withJSONObject: ["source": "notes", "active_only": true, "snapshot_path": database.path]).write(to: request)
+            let identities = Process()
+            identities.executableURL = URL(fileURLWithPath: executable)
+            identities.arguments = ["observe", "--request-file", request.path, "--report", report.path]
+            identities.standardOutput = FileHandle.nullDevice; identities.standardError = FileHandle.nullDevice
+            try identities.run(); identities.waitUntilExit()
+            let active = try JSONDecoder().decode(JSON.self, from: Data(contentsOf: report))
+            guard identities.terminationStatus == 0, active["status"].string == "verified",
+                  active["records"].array.count == response["records"].array.count,
+                  active["records"].array.allSatisfy({ $0["plain_text"] == .null && !$0["id"].string.hasSuffix("/p22") }),
+                  active["records"].array.contains(where: { $0["id"].string == "x-coredata://ab-test-notes-store/ICNote/p20" }) else { throw Invalid.projection }
             print("Independent AppleTruth: 13 block paragraphs, 2 checklist states, 4 table cells")
         }
         let attachment = note["data"]["attachments"].array.first { $0["id"].string == "fixture-image" } ?? .null
@@ -176,8 +188,7 @@ enum NotesSourceFixture {
         let attrs = try FileManager.default.attributesOfItem(atPath: staged.path)
         guard (attrs[.posixPermissions] as? NSNumber)?.intValue == 0o600,
               (attrs[.ownerAccountID] as? NSNumber)?.uint32Value == geteuid() else { throw Invalid.boundary }
-        guard deleted["data"]["attachments"].array.allSatisfy({ $0["blob"] == .null }) else { throw Invalid.boundary }
-        for protected in [locked, deleted] {
+        for protected in [locked] {
             let action = JSON.object(["op": .string("notes.update"), "native_key": protected["native_key"]])
             do { _ = try await source.prepare(.object(["action": action, "expected_state": protected["data"]])); throw Invalid.boundary }
             catch SourceFailure.unsupported {}
@@ -192,7 +203,7 @@ enum NotesSourceFixture {
         try await source.qualifyDeletion("notes.delete", nativeKey: "delete-proof") { try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZMARKEDFORDELETION=1 WHERE Z_PK=60") }
         guard try source.deletionState(nativeKey: "delete-proof", collection: "notes.note") == "marked",
               (await source.open()).capabilities.contains("notes.delete") else { throw Invalid.boundary }
-        for protected in [locked, deleted] {
+        for protected in [locked] {
             let action = JSON.object(["op": .string("notes.delete"), "native_key": protected["native_key"]])
             do { _ = try await source.prepare(.object(["action": action, "expected_state": protected["data"]])); throw Invalid.boundary }
             catch SourceFailure.unsupported {}
@@ -225,6 +236,23 @@ enum NotesSourceFixture {
             }
         }
         print("Notes deletion: public note delete available; no-op cannot qualify folder deletion; marked/trash/gone states verified")
+        for operation in ["notes.update", "notes.delete"] {
+            let action = JSON.object(["op": .string(operation), "native_key": .string("deleted")])
+            do { _ = try await source.prepare(.object(["action": action])); throw Invalid.boundary }
+            catch SourceFailure.conflict {}
+        }
+        for change in ["ZFOLDER=11", "ZMARKEDFORDELETION=1"] {
+            try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET \(change) WHERE Z_PK=47")
+            try await source.reconcile(into: sink)
+            try await source.waitForHydration()
+            guard (await sink.record("native-indent-0"))["kind"].string == "absent",
+                  (await sink.record("native-plain"))["kind"].string == "upsert" else { throw Invalid.projection }
+            try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZFOLDER=12,ZMARKEDFORDELETION=0 WHERE Z_PK=47")
+            try await source.reconcile(into: sink)
+            try await source.waitForHydration()
+            guard (await sink.record("native-indent-0"))["kind"].string == "upsert" else { throw Invalid.projection }
+        }
+        print("Notes soft deletion: trash and marked rows emit absence, preserve other notes and restore on undelete")
         do { _ = try source.readBlob("notes-blob:" + String(repeating: "0", count: 64), offset: 0, length: 1); throw Invalid.boundary }
         catch SourceFailure.unavailable {}
         let hold = home.appendingPathComponent("lab-notes-hold-hydration")
@@ -282,7 +310,14 @@ enum NotesSourceFixture {
         try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZPARENT=11 WHERE Z_PK=12")
         try await source.reconcile(into: sink)
         try await source.waitForHydration()
-        guard (await sink.record("note"))["data"]["read_only"].bool, (await sink.record("locked"))["data"]["read_only"].bool else { throw Invalid.boundary }
+        guard (await sink.record("note"))["kind"].string == "absent", (await sink.record("locked"))["kind"].string == "absent" else { throw Invalid.boundary }
+        try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZPARENT=10 WHERE Z_PK=12")
+        try await source.reconcile(into: sink)
+        try await source.waitForHydration()
+        try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZMARKEDFORDELETION=1 WHERE Z_PK=10")
+        try await source.reconcile(into: sink)
+        try await source.waitForHydration()
+        guard (await sink.record("note"))["kind"].string == "absent", (await sink.record("locked"))["kind"].string == "absent" else { throw Invalid.boundary }
         let moved = root.appendingPathComponent("unavailable.sqlite")
         try FileManager.default.moveItem(at: database, to: moved)
         defer { try? FileManager.default.moveItem(at: moved, to: database) }

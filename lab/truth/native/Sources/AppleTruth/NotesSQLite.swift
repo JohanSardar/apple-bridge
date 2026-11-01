@@ -49,7 +49,7 @@ extension AppleTruth {
         let columns = Set(try rows("PRAGMA table_info(ZICCLOUDSYNCINGOBJECT)").compactMap { $0["name"] as? String })
         let owners = ["ZNOTE", "ZNOTE1"].filter { columns.contains($0) }
         let tableColumn = ["ZMERGEABLEDATA1", "ZMERGEABLEDATA"].first { columns.contains($0) }
-        let objects = try rows("SELECT o.Z_PK AS native_pk,o.ZIDENTIFIER AS id,o.ZTITLE1 AS title,o.ZISPASSWORDPROTECTED AS locked,o.ZFOLDER,d.ZDATA FROM ZICCLOUDSYNCINGOBJECT o LEFT JOIN ZICNOTEDATA d ON d.Z_PK=o.ZNOTEDATA WHERE o.Z_ENT=\(note) AND COALESCE(o.ZMARKEDFORDELETION,0)=0")
+        let objects = try rows("WITH RECURSIVE excluded(pk) AS (SELECT Z_PK FROM ZICCLOUDSYNCINGOBJECT WHERE Z_ENT=\(folder) AND (ZFOLDERTYPE=1 OR COALESCE(ZMARKEDFORDELETION,0)<>0) UNION SELECT f.Z_PK FROM ZICCLOUDSYNCINGOBJECT f JOIN excluded p ON f.ZPARENT=p.pk WHERE f.Z_ENT=\(folder)) SELECT o.Z_PK AS native_pk,o.ZIDENTIFIER AS id,o.ZTITLE1 AS title,o.ZISPASSWORDPROTECTED AS locked,o.ZFOLDER,d.ZDATA FROM ZICCLOUDSYNCINGOBJECT o LEFT JOIN ZICNOTEDATA d ON d.Z_PK=o.ZNOTEDATA WHERE o.Z_ENT=\(note) AND COALESCE(o.ZMARKEDFORDELETION,0)=0 AND o.ZFOLDER NOT IN (SELECT pk FROM excluded)")
         var notes: [[String: Any]] = []
         for object in objects {
             guard let folderKey = folderKeys[object["ZFOLDER"] as? Int64 ?? 0], !folderKey.isEmpty else { continue }

@@ -31,7 +31,7 @@ final class NotesChangeStore {
               let accountEntity = entities.first(where: { $0["Z_NAME"]?.string == "ICAccount" })?["Z_ENT"]?.number,
               let uuid = try db.query("SELECT Z_UUID FROM Z_METADATA").first?["Z_UUID"]?.string else { throw SourceFailure.unsupported }
         let schema = uuid + ":" + String(try db.query("PRAGMA schema_version").first?["schema_version"]?.number ?? 0)
-        let fields = ["Z_PK", "Z_ENT", "Z_OPT", "ZIDENTIFIER", "ZNOTEDATA", "ZFOLDER", "ZPARENT", "ZACCOUNT8", "ZNOTE", "ZNOTE1", "ZPARENTATTACHMENT", "ZMEDIA", "ZMARKEDFORDELETION"].filter { columns.contains($0) }
+        let fields = ["Z_PK", "Z_ENT", "Z_OPT", "ZIDENTIFIER", "ZNOTEDATA", "ZFOLDER", "ZFOLDERTYPE", "ZPARENT", "ZACCOUNT8", "ZNOTE", "ZNOTE1", "ZPARENTATTACHMENT", "ZMEDIA", "ZMARKEDFORDELETION"].filter { columns.contains($0) }
         let rows = try db.query("SELECT " + fields.joined(separator: ",") + " FROM ZICCLOUDSYNCINGOBJECT")
         let objects = Dictionary(uniqueKeysWithValues: rows.map { (Int($0["Z_PK"]?.number ?? 0), $0) })
         let bodies = Dictionary(uniqueKeysWithValues: try db.query("SELECT Z_PK,Z_OPT FROM ZICNOTEDATA").map { (Int($0["Z_PK"]?.number ?? 0), $0) })
