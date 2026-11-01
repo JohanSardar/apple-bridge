@@ -254,10 +254,9 @@ enum MessagesAccessibility {
         let deadline = Date().addingTimeInterval(2)
         repeat {
             var budget = 4000
-            let windows = children(session.root).filter { value($0, kAXRoleAttribute) == kAXWindowRole }
-            let matches = windows.flatMap { window in matching(window, budget: &budget) {
+            let matches = matching(session.root, budget: &budget) {
                 [kAXMenuItemRole, kAXButtonRole].contains(value($0, kAXRoleAttribute)) && ([title, title.replacingOccurrences(of: "…", with: "")].contains(value($0, kAXTitleAttribute)) || value($0, kAXDescriptionAttribute) == title)
-            } }
+            }
             if matches.count == 1 {
                 try session.fence()
                 guard AXUIElementPerformAction(matches[0], kAXPressAction as CFString) == .success else { throw SourceFailure.conflict }
@@ -493,7 +492,11 @@ enum MessagesAccessibility {
             try session.press(MessagesUISession.enter)
         case .react: break
         case .deleteMessage, .deleteChat:
-            try press(session, title: "Delete")
+            do { try press(session, title: "Delete") }
+            catch {
+                try? press(session, title: "Cancel")
+                throw error
+            }
             RunLoop.current.run(until: Date().addingTimeInterval(0.25))
             _ = try acknowledgeDeletedInfo()
         case .renameGroup: try replace(session, text: args["name"].string); try session.press(MessagesUISession.enter)
