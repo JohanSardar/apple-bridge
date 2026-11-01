@@ -123,17 +123,43 @@ final class PhotosProofUI {
         }
     }
 
+    private func select(_ node: AXUIElement) async throws {
+        guard let position = attribute(node, kAXPositionAttribute), let size = attribute(node, kAXSizeAttribute),
+              CFGetTypeID(position) == AXValueGetTypeID(), CFGetTypeID(size) == AXValueGetTypeID() else { throw SourceFailure.unavailable }
+        var origin = CGPoint.zero
+        var extent = CGSize.zero
+        guard AXValueGetValue(unsafeDowncast(position, to: AXValue.self), .cgPoint, &origin),
+              AXValueGetValue(unsafeDowncast(size, to: AXValue.self), .cgSize, &extent),
+              extent.width > 0, extent.height > 0, app.activate() else { throw SourceFailure.unavailable }
+        try await Task.sleep(for: .milliseconds(200))
+        let center = CGPoint(x: origin.x + extent.width / 2, y: origin.y + extent.height / 2)
+        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier,
+              let source = CGEventSource(stateID: .privateState),
+              let down = CGEvent(mouseEventSource: source, mouseType: .leftMouseDown, mouseCursorPosition: center, mouseButton: .left),
+              let up = CGEvent(mouseEventSource: source, mouseType: .leftMouseUp, mouseCursorPosition: center, mouseButton: .left) else { throw SourceFailure.unavailable }
+        down.setIntegerValueField(.mouseEventClickState, value: 1)
+        up.setIntegerValueField(.mouseEventClickState, value: 1)
+        down.post(tap: .cghidEventTap); up.post(tap: .cghidEventTap)
+        diagnostics["selection_click_passed"] = .bool(true)
+    }
+
     private func inspectSelection(_ node: AXUIElement, assets: [PhotosProofAsset]) async throws -> Bool {
+        stage = "selecting the verified search result"
         guard dateMatches(node, assets), elements(kAXSheetRole).isEmpty else { throw SourceFailure.conflict }
-        guard AXUIElementPerformAction(node, kAXPressAction as CFString) == .success else { throw SourceFailure.unavailable }
+        try await select(node)
         try await Task.sleep(for: .milliseconds(350))
+        stage = "checking the selected test photo in Info"
         try await key(34, flags: .maskCommand)
         for _ in 0..<20 {
             let panels = elements(kAXWindowRole).filter { values($0).contains("Info") }
+            diagnostics["info_panel_count"] = .number(Double(panels.count))
             if panels.count == 1 {
                 let texts = elements(below: panels[0]).flatMap(values)
                 let named = texts.contains { text in assets.contains { text == $0.filename } }
                 let tiny = texts.contains { $0.range(of: "(?<![0-9])2\\s*[×xX]\\s*2(?![0-9])", options: .regularExpression) != nil }
+                diagnostics["info_value_count"] = .number(Double(texts.count))
+                diagnostics["info_filename_passed"] = .bool(named)
+                diagnostics["info_dimensions_passed"] = .bool(tiny)
                 if named && tiny {
                     diagnostics["selection_filename_passed"] = .bool(true)
                     diagnostics["selection_dimensions_passed"] = .bool(true)
