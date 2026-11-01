@@ -542,6 +542,7 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 			var folderCommand contracts.CommandRecord
 			err = client.Call(ctx, "notes.create_folder", contracts.Command{ID: contracts.NewCommandID(), Args: folderArgs, WaitMS: 15000}, &folderCommand)
 			add(protocol+"_create_folder_observed", err == nil && folderCommand.State == "observed")
+			e.Assertions[len(e.Assertions)-1].Detail = notesCommandDetail(err, folderCommand)
 			if err != nil || folderCommand.State != "observed" {
 				return
 			}
@@ -589,6 +590,7 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 			var command contracts.CommandRecord
 			err = client.Call(ctx, "notes.create", contracts.Command{ID: contracts.NewCommandID(), Args: args, WaitMS: 15000}, &command)
 			add(protocol+"_create_observed", err == nil && command.State == "observed")
+			e.Assertions[len(e.Assertions)-1].Detail = notesCommandDetail(err, command)
 			if err != nil || command.State != "observed" {
 				return
 			}
@@ -676,14 +678,7 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 				err = client.Call(ctx, "notes.update", contracts.Command{ID: contracts.NewCommandID(), Args: args, ExpectedVersion: created.Version, WaitMS: 15000}, &command)
 				add(protocol+"_"+mode+"_observed", err == nil && command.State == "observed")
 				if err != nil || command.State != "observed" {
-					reason := "state_not_observed"
-					for _, known := range []*contracts.Error{contracts.ErrUnsupported, contracts.ErrUnauthorized, contracts.ErrUnavailable, contracts.ErrConflict, contracts.ErrExpired, contracts.ErrCorrupt, contracts.ErrCapacity, contracts.ErrIndeterminate, contracts.ErrInvalid, contracts.ErrNotFound} {
-						if errors.Is(err, known) || command.Error != nil && command.Error.Code == known.Code {
-							reason = known.Code
-							break
-						}
-					}
-					e.Assertions[len(e.Assertions)-1].Detail = "command:" + reason
+					e.Assertions[len(e.Assertions)-1].Detail = notesCommandDetail(err, command)
 					return
 				}
 				err = w.Await(5*time.Second, func() bool {
@@ -759,6 +754,25 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		}
 	}
 	return
+}
+
+func notesCommandDetail(err error, command contracts.CommandRecord) string {
+	code := ""
+	var problem *contracts.Error
+	if errors.As(err, &problem) {
+		code = problem.Code
+	} else if err != nil {
+		code = "transport"
+	}
+	if command.Error != nil {
+		code = command.Error.Code
+	}
+	var evidence struct {
+		Reason      string `json:"reason"`
+		NativeError string `json:"native_error_code"`
+	}
+	json.Unmarshal(command.Evidence, &evidence)
+	return string(command.State) + ":" + code + ":" + evidence.Reason + ":" + evidence.NativeError
 }
 
 func notesNativeBuildLock(path string) func() {

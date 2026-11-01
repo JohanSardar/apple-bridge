@@ -69,7 +69,7 @@ func runNotesExtrasReal(ctx context.Context, s Scenario, level, gitSHA string) (
 		bytes, _ := json.Marshal(args)
 		var out contracts.CommandRecord
 		problem := client.Call(ctx, op, contracts.Command{ID: contracts.NewCommandID(), Args: bytes, ExpectedVersion: version, WaitMS: 15000}, &out)
-		e.Assertions = append(e.Assertions, Assertion{Name: client.Protocol + "_" + strings.TrimPrefix(op, "notes.") + "_observed", Passed: problem == nil && out.State == "observed", Detail: string(out.State)})
+		e.Assertions = append(e.Assertions, Assertion{Name: client.Protocol + "_" + strings.TrimPrefix(op, "notes.") + "_observed", Passed: problem == nil && out.State == "observed", Detail: notesCommandDetail(problem, out)})
 		return problem == nil && out.State == "observed"
 	}
 	find := func(name string) (r contracts.Record) {

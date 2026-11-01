@@ -1,17 +1,17 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[3.31 3.38 3.92] cpu_idle=83% cpus=10 other_heavy=0"
+    "summary": "air: load=[5.84 4.29 3.84] cpu_idle=64% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M6ACZFVDKM3YY2RZF09JZ0H5",
+  "run_id": "run_01M6AEF0G7A43Q4WJPT5FBE89J",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "NOTE-EXTRAS",
   "level": "sim",
   "passed": true,
-  "git_sha": "491b7a78015c29951817fc1144197f7f5cd8bec8",
-  "at": "2026-11-01T01:53:25.357539Z",
+  "git_sha": "83c60e8f37cf7657314e48f737f0804029df5c46",
+  "at": "2026-11-01T02:19:22.503812Z",
   "assertions": [
     {
       "name": "tagged_fixture_visible",
