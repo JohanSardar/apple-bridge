@@ -1,20 +1,81 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[7.71 12.27 17.13] cpu_idle=40% cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[82.13 42.22 41.6] cpu_idle=13% cpus=8 other_heavy=0"
   },
   "status": "environment-limited",
-  "run_id": "run_01M6AM2YV8NC1MXCXA75WQZV3R",
+  "run_id": "run_01M6AZ7DRES68PCQQ9V9D8SMJ1",
   "metrics": {
+    "apple_event_errors": [
+      0,
+      0
+    ],
     "capture_observer_resets": 0,
-    "writes_submitted": 0
+    "cleanup": {
+      "all_dates": true,
+      "appletruth_active_remaining": 0,
+      "appletruth_verified": true,
+      "appletruth_visible_remaining": 0,
+      "approved_contacts_included": false,
+      "deleted": 4,
+      "drafts_cleared": 0,
+      "failure": "",
+      "initial_tagged_self_messages": 3,
+      "only_tagged_self_messages": true,
+      "passed": true,
+      "remaining_tagged_self_messages": 0,
+      "tag_filtered": true
+    },
+    "cleanup_counts": {
+      "after_count": 160346,
+      "before_count": 160346,
+      "created_count": 0,
+      "passed": true
+    },
+    "command_state": "indeterminate",
+    "disposition": "indeterminate",
+    "initial_command_state": "indeterminate",
+    "parts_requested": 2,
+    "send_commands": 1
   },
   "scenario": "WEB-UPLOAD-NATIVE-STAGING",
   "level": "real",
   "passed": false,
-  "git_sha": "d14c5dac5d97a5ed2264772c5d69a2b4423a0b98",
-  "at": "2026-11-01T03:57:39.049444Z",
+  "git_sha": "2e4c51f363699cfd288eab536078b65beefab244",
+  "at": "2026-11-01T07:12:19.726072Z",
   "assertions": [
+    {
+      "name": "self_chat_captured",
+      "passed": true
+    },
+    {
+      "name": "web_upload_verified_ready",
+      "passed": true
+    },
+    {
+      "name": "cleanup_registered_before_submit",
+      "passed": true
+    },
+    {
+      "name": "web_command_channel",
+      "passed": true
+    },
+    {
+      "name": "native_send_observed_with_fingerprint_checkpoint",
+      "passed": false
+    },
+    {
+      "name": "tagged_messages_cleanup",
+      "passed": true
+    },
+    {
+      "name": "tagged_media_cleanup_readonly_truth",
+      "passed": true
+    },
+    {
+      "name": "cleanup_baseline_restored",
+      "passed": true
+    },
     {
       "name": "credential_backend_override_restored",
       "passed": true
@@ -23,8 +84,5 @@
   "latency": {},
   "hosts": [
     "air"
-  ],
-  "conditions": {
-    "reason": "The self-chat contains unread existing messages. Cleanup cannot open it without changing their read state. Read those messages in Messages before rerunning this check; no send was attempted."
-  }
+  ]
 }

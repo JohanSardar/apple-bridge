@@ -1,30 +1,101 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[15.72 40.33 32.53] cpu_idle=64% cpus=8 other_heavy=0"
+    "summary": "air: load=[9.84 29.8 39.55] cpu_idle=61% cpus=8 other_heavy=0"
   },
-  "status": "environment-limited",
-  "run_id": "run_01M6AG8C91TCFZJA7HD5MEEZX9",
+  "run_id": "run_01M6AZ0X6033GFEMHB52VNMCAX",
   "metrics": {
     "capture_observer_resets": 0,
-    "writes_submitted": 0
+    "cleanup": {
+      "all_dates": true,
+      "appletruth_active_remaining": 0,
+      "appletruth_verified": true,
+      "appletruth_visible_remaining": 0,
+      "approved_contacts_included": false,
+      "deleted": 2,
+      "drafts_cleared": 0,
+      "failure": "delete:conflict",
+      "initial_tagged_self_messages": 3,
+      "only_tagged_self_messages": true,
+      "passed": true,
+      "remaining_tagged_self_messages": 0,
+      "tag_filtered": true
+    },
+    "cleanup_counts": {
+      "after_count": 160346,
+      "before_count": 160346,
+      "created_count": 0,
+      "passed": true
+    },
+    "command_state": "observed",
+    "disposition": "locally_observed",
+    "initial_command_state": "observed",
+    "messages.delete_message": {
+      "context_live": true,
+      "disposition": "locally_observed",
+      "request_completed": true,
+      "state": "observed"
+    },
+    "parts_requested": 1,
+    "send_commands": 1
   },
   "scenario": "MSG-DELETE-REAL",
   "level": "real",
-  "passed": false,
-  "git_sha": "b980e2216463fa6d89d076e5d5a283d3ff0e3362",
-  "at": "2026-11-01T02:50:42.337897Z",
+  "passed": true,
+  "git_sha": "2e4c51f363699cfd288eab536078b65beefab244",
+  "at": "2026-11-01T07:08:46.144064Z",
   "assertions": [
+    {
+      "name": "self_chat_captured",
+      "passed": true
+    },
+    {
+      "name": "cleanup_registered_before_submit",
+      "passed": true
+    },
+    {
+      "name": "native_send_observed_with_fingerprint_checkpoint",
+      "passed": true
+    },
+    {
+      "name": "message_captured",
+      "passed": true
+    },
+    {
+      "name": "second_owned_message_retains_test_chat",
+      "passed": true
+    },
+    {
+      "name": "messages.delete_message_observed",
+      "passed": true
+    },
+    {
+      "name": "message_deletion_independent_truth",
+      "passed": true
+    },
+    {
+      "name": "tagged_messages_cleanup",
+      "passed": true
+    },
+    {
+      "name": "cleanup_baseline_restored",
+      "passed": true
+    },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
   ],
-  "latency": {},
+  "latency": {
+    "messages.delete_message": {
+      "samples": 1,
+      "p50_ms": 15661.026458,
+      "p95_ms": 15661.026458,
+      "max_ms": 15661.026458,
+      "timeouts": 0
+    }
+  },
   "hosts": [
     "air"
-  ],
-  "conditions": {
-    "reason": "The self-chat contains unread existing messages. Cleanup cannot open it without changing their read state. Read those messages in Messages before rerunning this check; no send was attempted."
-  }
+  ]
 }
