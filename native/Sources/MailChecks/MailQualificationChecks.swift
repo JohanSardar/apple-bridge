@@ -7,9 +7,14 @@ private actor QualificationMailFake {
     var calls: [String] = []
     var created = false
     var fail = false
-    init(fail: Bool = false) { self.fail = fail }
+    var stalled = false
+    init(fail: Bool = false, stalled: Bool = false) { self.fail = fail; self.stalled = stalled }
     func run(_ body: String) throws -> String {
         calls.append(body)
+        if body == "return name" {
+            if stalled { throw MailCommandFailure.timeout }
+            return "Mail"
+        }
         if body.hasPrefix("set matched to"), !body.contains("return count of matched") { return "123" }
         if body.contains("set chosen to selected messages") { return created ? "123" : "clear" }
         if body.hasPrefix("return count (outgoing") { return "0" }
@@ -24,6 +29,7 @@ private actor QualificationMailFake {
         return ""
     }
     func remove() { created = false }
+    func restart() { stalled = false }
     func scripts() -> [String] { calls }
 }
 
@@ -62,6 +68,10 @@ func checkMailQualification() async throws {
         try require(scripts.contains { $0.contains("extract address from sender") && $0.contains("close m saving no") })
         if scenario == "MAIL-ORGANIZE-REAL" { try require(scripts.contains { $0.contains("set flagged status of m to false") }) }
     }
+    let stalled = QualificationMailFake(stalled: true)
+    let recovered = try await MailQualification(script: { try await stalled.run($0) }, removeSelected: { await stalled.remove() }, restart: { await stalled.restart() }).run(scenario: "MAIL-DRAFT-REAL", tag: "[ab-test] recovered")
+    try require(recovered["unresponsive_mail_recovered"].bool && recovered["draft_created"].bool && recovered["cleanup_passed"].bool)
+    try require(await stalled.scripts().filter { $0.contains("save m") }.count == 1)
     let failed = QualificationMailFake(fail: true)
     let runner = MailQualification(script: { try await failed.run($0) }, removeSelected: { await failed.remove() })
     let proof = try await runner.run(scenario: "MAIL-DRAFT-REAL", tag: "[ab-test] failed")

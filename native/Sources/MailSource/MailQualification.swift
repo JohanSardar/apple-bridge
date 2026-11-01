@@ -1,5 +1,6 @@
 #if LAB
 import Foundation
+import AppKit
 import SourceSupport
 
 public struct MailQualification: Sendable {
@@ -8,11 +9,23 @@ public struct MailQualification: Sendable {
         DispatchQueue.global().asyncAfter(deadline: .now() + interval, execute: deadline)
         return deadline
     }
+    @MainActor public static func restartUnresponsiveMail() async throws {
+        for app in NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.mail") {
+            guard app.forceTerminate() else { throw MailCommandFailure.connectionLost }
+        }
+        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+        while !NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.mail").isEmpty {
+            guard ContinuousClock.now < deadline else { throw MailCommandFailure.connectionLost }
+            try await Task.sleep(for: .milliseconds(100))
+        }
+    }
+    private let restart: @Sendable () async throws -> Void
     private let script: MailCommands.Script
     private let removeSelected: @Sendable () async throws -> Void
-    public init(script: @escaping MailCommands.Script = MailCommands.run, removeSelected: @escaping @Sendable () async throws -> Void = MailFixtureCleanup.removeSelected) {
+    public init(script: @escaping MailCommands.Script = MailCommands.run, removeSelected: @escaping @Sendable () async throws -> Void = MailFixtureCleanup.removeSelected, restart: @escaping @Sendable () async throws -> Void = Self.restartUnresponsiveMail) {
         self.script = script
         self.removeSelected = removeSelected
+        self.restart = restart
     }
     public static func cleanupResult(_ raw: String) throws -> [String: JSON] {
         let counts = raw.split(separator: "|", omittingEmptySubsequences: false)
@@ -36,6 +49,12 @@ public struct MailQualification: Sendable {
         }
         var checks: [String: JSON] = [:]
         do {
+            do { _ = try await script("return name") }
+            catch MailCommandFailure.timeout {
+                try await restart()
+                _ = try await script("return name")
+                checks["unresponsive_mail_recovered"] = .bool(true)
+            }
             let own = try await script("""
             set m to make new outgoing message with properties {subject:\(q(tag)), visible:false}
             set own to extract address from sender of m
