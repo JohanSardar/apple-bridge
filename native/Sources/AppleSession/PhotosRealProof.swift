@@ -198,6 +198,8 @@ enum PhotosRealProof {
             return .object(result)
         } catch {
             let failedStage = stage
+            ui.inspect()
+            cleanupDiagnostics.merge(ui.diagnostics) { _, new in new }
             let currentCleaned = (try? await cleanup()) != nil
             let cleaned = currentCleaned && recoveryComplete
             let failure = ui.diagnostics["recently_deleted_locked_passed"] == .bool(true)

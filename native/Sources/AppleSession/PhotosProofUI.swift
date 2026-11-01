@@ -55,6 +55,22 @@ final class PhotosProofUI {
         return result
     }
 
+    func inspect() {
+        var roles: [String: Int] = [:]
+        var controls: [String: JSON] = [:]
+        let known = ["Delete", "Delete Photo", "Delete Photos", "Delete 1 Photo", "Delete All", "Cancel", "Search", "View Album", "Unlock", "Info", "Recently Deleted", "Library"]
+        for node in elements() {
+            roles[attribute(node, kAXRoleAttribute) as? String ?? "unknown", default: 0] += 1
+            for text in values(node) where known.contains(text) { controls[text] = .bool(true) }
+        }
+        diagnostics["roles"] = .object(roles.mapValues { .number(Double($0)) })
+        diagnostics["controls"] = .object(controls)
+    }
+
+    private func deleteButtons(_ sheet: AXUIElement) -> [AXUIElement] {
+        elements(kAXButtonRole, below: sheet).filter { node in values(node).contains { $0.hasPrefix("Delete") && !$0.localizedCaseInsensitiveContains("all") } }
+    }
+
     private func key(_ code: CGKeyCode, flags: CGEventFlags = []) async throws {
         guard app.activate() else { throw SourceFailure.unavailable }
         for _ in 0..<20 {
@@ -79,8 +95,18 @@ final class PhotosProofUI {
 
     private func chooseSidebar(_ name: String) async throws {
         try await closeInfo()
+        let sheets = elements(kAXSheetRole)
+        diagnostics["pending_sheet_count"] = .number(Double(sheets.count))
+        if sheets.count == 1, deleteButtons(sheets[0]).count == 1 {
+            let cancel = elements(kAXButtonRole, below: sheets[0]).filter { values($0).contains("Cancel") }
+            if cancel.count == 1, AXUIElementPerformAction(cancel[0], kAXPressAction as CFString) == .success {
+                diagnostics["pending_delete_cancelled_passed"] = .bool(true)
+                try await Task.sleep(for: .milliseconds(500))
+            }
+        }
         guard elements(kAXSheetRole).isEmpty else { throw SourceFailure.conflict }
         let rows = elements(kAXRowRole).filter { row in elements(below: row).contains { values($0).contains(name) } }
+        diagnostics[name == "Library" ? "library_row_count" : "trash_row_count"] = .number(Double(rows.count))
         guard rows.count == 1, AXUIElementSetAttributeValue(rows[0], kAXSelectedAttribute as CFString, kCFBooleanTrue) == .success else { throw SourceFailure.unavailable }
         try await Task.sleep(for: .milliseconds(500))
     }
@@ -98,6 +124,7 @@ final class PhotosProofUI {
             try await Task.sleep(for: .milliseconds(300))
         }
         let fields = elements(kAXTextFieldRole).filter { (attribute($0, kAXSubroleAttribute) as? String) == "AXSearchField" }
+        diagnostics["search_field_count"] = .number(Double(fields.count))
         guard fields.count == 1 else { throw SourceFailure.unavailable }
         _ = AXUIElementSetAttributeValue(fields[0], kAXFocusedAttribute as CFString, kCFBooleanTrue)
         try await key(0, flags: .maskCommand)
@@ -186,7 +213,7 @@ final class PhotosProofUI {
             diagnostics["delete_sheet_count"] = .number(Double(sheets.count))
             guard sheets.count <= 1 else { throw SourceFailure.conflict }
             if let sheet = sheets.first {
-                let buttons = elements(kAXButtonRole, below: sheet).filter { values($0).contains("Delete") }
+                let buttons = deleteButtons(sheet)
                 diagnostics["delete_button_count"] = .number(Double(buttons.count))
                 guard buttons.count == 1, attribute(buttons[0], kAXEnabledAttribute) as? Bool == true,
                       AXUIElementPerformAction(buttons[0], kAXPressAction as CFString) == .success else { throw SourceFailure.unavailable }
