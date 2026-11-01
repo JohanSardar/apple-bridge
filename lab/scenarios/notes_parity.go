@@ -24,7 +24,19 @@ func runNotesParity(ctx context.Context, s Scenario, level string) (e Evidence) 
 			e.Passed = e.Passed && assertion.Passed
 		}
 	}()
-	for _, id := range []string{"NOTE-CRUD", "NOTE-RICH-REJECT"} {
+	scenarios := []string{"NOTE-CRUD", "NOTE-RICH-REJECT"}
+	if level == "real" {
+		bytes, err := os.ReadFile("lab/evidence/real/NOTE-CRUD.json")
+		var previous Evidence
+		proven := err == nil && json.Unmarshal(bytes, &previous) == nil && previous.Scenario == "NOTE-CRUD" && previous.Level == "real" && previous.Passed
+		add("plain_crud_prior_real_proof", proven)
+		if !proven {
+			return
+		}
+		e.Metrics["plain_crud_prior_source"] = previous.GitSHA
+		scenarios = []string{"NOTE-RICH-REJECT"}
+	}
+	for _, id := range scenarios {
 		result := runNotes(ctx, Scenario{ID: id}, level)
 		if ids, ok := result.Metrics["notes_helper_binary_uuids"].([]string); ok {
 			for _, id := range ids {
