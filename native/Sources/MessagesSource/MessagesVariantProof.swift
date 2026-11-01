@@ -98,7 +98,7 @@ public enum MessagesVariantProof {
             guard initial["observed"].bool else { throw SourceFailure.capabilityUnproven }
             chat = initial["chat_key"].string
             guard let created = try reader.query("SELECT ROWID AS position FROM chat WHERE guid=?", [chat]).first,
-                  (selected.chat.isEmpty ? created.integer("position") > baselineChat : chat == selected.chat) else { throw SourceFailure.conflict }
+                  MessagesSelfTestIsolation.qualifiesFixtureChat(chat, rowID: created.integer("position"), baseline: baselineChat, existing: selected.chat) else { throw SourceFailure.conflict }
             registration["created_chat_key"] = chat
             registration["created_by_run"] = selected.chat.isEmpty
             registration["existing_self_chat"] = !selected.chat.isEmpty

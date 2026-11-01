@@ -42,6 +42,10 @@ public enum MessagesSelfTestIsolation {
         tag.range(of: #"^\[ab-test [A-Za-z0-9_-]+\]$"#, options: .regularExpression) != nil && rowID > baseline && text.hasPrefix(tag + " ")
     }
 
+    public static func qualifiesFixtureChat(_ chat: String, rowID: Int64, baseline: Int64, existing: String) -> Bool {
+        !chat.isEmpty && (existing.isEmpty ? rowID > baseline : chat == existing)
+    }
+
     public static func ownsDeletedSelection(_ deleted: [String], created: [String]) -> Bool {
         !created.isEmpty && Set(deleted).count == deleted.count && Set(created).count == created.count && Set(deleted) == Set(created)
     }

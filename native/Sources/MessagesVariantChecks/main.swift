@@ -104,6 +104,11 @@ struct MessagesVariantChecks {
             checks["earlier_draft_preserved"] = !MessagesUISession.canReplaceDraft("[ab-test old] draft", with: "[ab-test current] reply")
             checks["personal_draft_preserved"] = !MessagesUISession.canReplaceDraft("personal draft", with: "[ab-test current] reply")
             checks["current_draft_replace_allowed"] = MessagesUISession.canReplaceDraft("[ab-test current] draft", with: "[ab-test current] reply")
+            checks["verified_existing_fixture_chat_allowed"] = MessagesSelfTestIsolation.qualifiesFixtureChat("self", rowID: 5, baseline: 10, existing: "self")
+            checks["different_existing_fixture_chat_refused"] = !MessagesSelfTestIsolation.qualifiesFixtureChat("other", rowID: 5, baseline: 10, existing: "self")
+            checks["unregistered_existing_fixture_chat_refused"] = !MessagesSelfTestIsolation.qualifiesFixtureChat("self", rowID: 5, baseline: 10, existing: "")
+            checks["new_fixture_chat_allowed"] = MessagesSelfTestIsolation.qualifiesFixtureChat("new", rowID: 11, baseline: 10, existing: "")
+            checks["empty_fixture_chat_refused"] = !MessagesSelfTestIsolation.qualifiesFixtureChat("", rowID: 11, baseline: 10, existing: "")
             checks["scheduled_send_does_not_require_early_delivery"] = !MessagesVariantProof.requiresSelfEcho("schedule") && MessagesVariantProof.requiresSelfEcho("mention") && MessagesVariantProof.requiresSelfEcho("audio")
             checks["date_commit_failure_retains_cleanup_obligation"] = MessagesSendVariants.dispatchFailure(SendVariantFailure.draftChanged, sendStarted: true) as? SendVariantFailure == .sendReceiptUnknown
             checks["pre_send_failure_remains_rejected"] = MessagesSendVariants.dispatchFailure(SendVariantFailure.draftPresent, sendStarted: false) as? SendVariantFailure == .draftPresent
