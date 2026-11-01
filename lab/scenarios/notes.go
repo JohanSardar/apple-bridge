@@ -110,7 +110,7 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		if path := os.Getenv("APPLE_BRIDGE_NOTES_RECOVERY_FILE"); path != "" {
 			raw, problem := os.ReadFile(path)
 			if problem == nil {
-				problem = notesCleanupCapturedRun(w.RecoverTruth, raw)
+				problem = notesCleanupCapturedRun(notesFolderRecovery(w.RecoverTruth, w.HelperApp), raw)
 			}
 			add("captured_run_notes_permanently_cleaned", problem == nil)
 			if problem != nil {
