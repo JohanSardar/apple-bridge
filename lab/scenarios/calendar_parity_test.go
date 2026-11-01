@@ -9,12 +9,12 @@ import (
 )
 
 func TestCalendarParityCannotPassWithoutEffectsAndCleanup(t *testing.T) {
-	for _, missing := range []string{"invitation_self_attendee_only", "invitation_response_readback", "travel_time_readback", "attachment_add_readback", "attachment_remove_readback", "owned_calendar_cleanup", "structured_location_readback"} {
+	for _, missing := range []string{"invitation_self_attendee_only", "invitation_response_readback", "travel_time_readback", "attachment_add_readback", "attachment_remove_readback", "owned_calendar_cleanup", "owned_events_cleanup", "structured_location_readback"} {
 		t.Run(missing, func(t *testing.T) {
 			proof := calendarParityProof{Passed: true, Checks: map[string]bool{
 				"accessibility_granted": true, "calendar_granted": true, "structured_location_readback": true,
 				"invitation_self_attendee_only": true, "invitation_response_readback": true, "travel_time_readback": true,
-				"attachment_add_readback": true, "attachment_remove_readback": true, "owned_calendar_cleanup": true,
+				"attachment_add_readback": true, "attachment_remove_readback": true, "owned_calendar_cleanup": true, "owned_events_cleanup": true,
 			}}
 			delete(proof.Checks, missing)
 			for _, check := range calendarParityAssertions(proof, true) {

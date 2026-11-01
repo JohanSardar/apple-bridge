@@ -30,7 +30,7 @@ func calendarParityAssertions(proof calendarParityProof, valid bool) []Assertion
 	for _, name := range names {
 		checks = append(checks, Assertion{Name: name, Passed: proof.Checks[name]})
 	}
-	for _, name := range []string{"accessibility_granted", "calendar_granted", "structured_location_readback", "invitation_self_attendee_only", "invitation_response_readback", "travel_time_readback", "attachment_add_readback", "attachment_remove_readback", "owned_calendar_cleanup"} {
+	for _, name := range []string{"accessibility_granted", "calendar_granted", "structured_location_readback", "invitation_self_attendee_only", "invitation_response_readback", "travel_time_readback", "attachment_add_readback", "attachment_remove_readback", "owned_calendar_cleanup", "owned_events_cleanup"} {
 		if _, exists := proof.Checks[name]; !exists {
 			checks = append(checks, Assertion{Name: name, Passed: false})
 		}

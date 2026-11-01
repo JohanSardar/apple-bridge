@@ -226,7 +226,7 @@ enum CalendarParityProof {
     }
 
     private static func report(_ checks: [String: JSON], _ reasons: [String: JSON], _ controls: [String: JSON]) -> JSON {
-        let required = ["accessibility_granted", "calendar_granted", "structured_location_readback", "invitation_self_attendee_only", "invitation_response_readback", "travel_time_readback", "attachment_add_readback", "attachment_remove_readback", "owned_calendar_cleanup"]
+        let required = ["accessibility_granted", "calendar_granted", "structured_location_readback", "invitation_self_attendee_only", "invitation_response_readback", "travel_time_readback", "attachment_add_readback", "attachment_remove_readback", "owned_calendar_cleanup", "owned_events_cleanup"]
         return .object(["passed": .bool(required.allSatisfy { checks[$0]?.bool == true }), "checks": .object(checks), "reasons": .object(reasons), "controls": .object(controls)])
     }
 }
