@@ -52,17 +52,31 @@ public struct MessagesSelfTestBaseline: Sendable {
 
     @UIActor
     public static func capture(_ chat: String) throws -> MessagesSelfTestBaseline {
+        var checkpoints: [String: Any] = ["capture_started": true]
+        func checkpoint(_ name: String, _ value: Any = true) {
+            checkpoints[name] = value
+            try? PrivateReport.write(checkpoints, to: PrivateReport.directory.appendingPathComponent("messages-baseline-diagnostic.json"))
+        }
+        checkpoint("capture_started")
         let reader = try reader()
         guard try reader.query("SELECT 1 FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? AND m.is_from_me=0 AND m.is_read=0 AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=m.ROWID) LIMIT 1", [chat]).isEmpty else { throw MessagesSelfTestBaselineFailure.unreadMessages }
+        checkpoint("unread_preflight_passed")
         let last = try reader.maximum()
         let digest = try digest(chat, through: last)
         let prepared = try target(chat)
+        checkpoint("target_resolved")
         try MessagesAccessibility.openMessage(prepared.nativeState["message_guid"].string, settle: 0.5, resetEditor: false)
+        checkpoint("navigation_completed")
         let (session, titles) = try MessagesParity.menu(prepared)
+        checkpoint("conversation_menu_count", titles.count)
         try MessagesParity.dismiss(session)
+        checkpoint("conversation_menu_dismissed")
         guard titles.contains("Show Alerts") != titles.contains("Hide Alerts") else { throw SourceFailure.capabilityUnproven }
+        checkpoint("alert_state_verified")
         let (receiptSession, _, receiptValue) = try MessagesParity.receiptControl(prepared)
+        checkpoint("receipts_control_verified")
         try MessagesParity.dismiss(receiptSession)
+        checkpoint("capture_completed")
         return MessagesSelfTestBaseline(chat: chat, lastMessageROWID: last, pins: try MessagesPins.read(), muted: titles.contains("Show Alerts"), receipts: receiptValue, receiptsSetting: try receiptSetting(chat), messagesDigest: digest)
     }
 
