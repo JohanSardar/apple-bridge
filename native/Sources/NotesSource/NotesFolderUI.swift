@@ -105,15 +105,6 @@ public enum NotesFolderUI {
                       !snapshot.contains(where: { $0["data"]["folder_id"]["$ref"]["native_key"].string == key || $0["data"]["parent_id"]["$ref"]["native_key"].string == key }) else { throw Failure(stage: "owned_folder_not_empty") }
                 targets.append((id, title, key))
             }
-            if !targets.isEmpty, request["refresh_notes"].bool {
-                stage = "refresh_notes_quit"
-                _ = try NotesScript.run("quit")
-                stage = "refresh_notes_launch"
-                guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.Notes") else { throw Failure(stage: "notes_application_missing") }
-                let configuration = NSWorkspace.OpenConfiguration()
-                configuration.activates = false
-                _ = try await NSWorkspace.shared.openApplication(at: url, configuration: configuration)
-            }
             for (id, title, key) in targets {
                 if try ["gone", "marked", "trashed"].contains(store.deletionState(key, collection: "notes.folder")) { removed += 1; continue }
                 stage = "revalidate_owned_folder"

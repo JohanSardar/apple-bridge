@@ -83,6 +83,13 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		return
 	}
 	ctx = world.WithOptions(ctx, world.Options{GatewayDials: level == "replica", Scope: "notes:read,notes:write,reminders:read,system:read"})
+	if level != "sim" {
+		problem := notesEnsureRunning(ctx)
+		add("notes_application_running", problem == nil)
+		if problem != nil {
+			return
+		}
+	}
 	var w *world.World
 	var err error
 	if level == "sim" {

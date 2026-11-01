@@ -23,6 +23,11 @@ func runNotesExtrasReal(ctx context.Context, s Scenario, level, gitSHA string) (
 		}
 	}()
 	ctx = world.WithOptions(ctx, world.Options{Scope: "notes:read,notes:write,system:read"})
+	problem := notesEnsureRunning(ctx)
+	add("notes_application_running", problem == nil)
+	if problem != nil {
+		return
+	}
 	w, err := world.NewRealWithSetup(ctx, level, 0, notesNativeSetup(ctx))
 	if err != nil {
 		add("world", false)
@@ -31,7 +36,7 @@ func runNotesExtrasReal(ctx context.Context, s Scenario, level, gitSHA string) (
 	defer w.Close()
 	recover := notesFolderRecovery(w.RecoverTruth, w.HelperApp)
 	notesRecordHelperBinary(&e, w.HelperApp)
-	problem := notesAwaitInitialCapture(w)
+	problem = notesAwaitInitialCapture(w)
 	add("native_notes_capture_ready", problem == nil)
 	if problem != nil {
 		return

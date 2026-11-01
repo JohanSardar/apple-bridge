@@ -30,5 +30,5 @@ func notesCleanupRecordedExtras(recover func(string, map[string]any) (map[string
 	if id == "" {
 		return nil
 	}
-	return notesCleanupTruth(recover, 30*time.Second, map[string]any{"source": "notes", "tag": tag, "action": "cleanup_created_folders", "created_by_run": true, "refresh_notes": true, "folders": []map[string]any{{"id": id, "title": title}}})
+	return notesCleanupTruth(recover, 30*time.Second, map[string]any{"source": "notes", "tag": tag, "action": "cleanup_created_folders", "created_by_run": true, "folders": []map[string]any{{"id": id, "title": title}}})
 }
