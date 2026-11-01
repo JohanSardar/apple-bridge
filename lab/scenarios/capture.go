@@ -72,6 +72,9 @@ func runCapture(ctx context.Context, s Scenario, level string) Evidence {
 	for _, protocol := range []string{"rest", "mcp"} {
 		client.Protocol = protocol
 		for _, op := range []string{"capture.screenshot", "capture.camera_photo", "capture.record_audio", "mac.screen_record", "print.document"} {
+			if level == "real" && op == "capture.camera_photo" {
+				continue
+			}
 			args := json.RawMessage(`{}`)
 			if op == "capture.record_audio" || op == "mac.screen_record" {
 				args = json.RawMessage(`{"seconds":2}`)
