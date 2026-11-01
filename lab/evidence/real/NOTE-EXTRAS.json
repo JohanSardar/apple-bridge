@@ -1,29 +1,45 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[8.23 7.71 9.3] cpu_idle=72% cpus=8 other_heavy=0"
+    "summary": "air: load=[4.48 6.13 8.52] cpu_idle=79% cpus=8 other_heavy=0"
   },
-  "run_id": "notes-extras_01M6B1AGPTZVNDWPEDN4M6Z4JH",
+  "run_id": "notes-extras_01M6BJ9WDGM29CGC6Y7EMPZX0W",
   "metrics": {
     "capture_observer_resets": 0,
     "cleanup_counts": {
       "after_count": 134,
-      "before_count": 133,
+      "before_count": 134,
       "created_count": 0,
-      "passed": false
+      "passed": true
     },
     "notes_helper_binary_uuids": [
-      "9de3109c-94a5-3347-afcc-92d39c3a5416"
+      "d4361e11-c810-386c-8da8-0ee21416c992"
     ]
   },
   "scenario": "NOTE-EXTRAS",
   "level": "real",
-  "passed": false,
-  "git_sha": "96569284d7c9f5167a97c7c31e86dff182e4d89e",
-  "at": "2026-11-01T07:48:58.20915Z",
+  "passed": true,
+  "git_sha": "b5e1e45c264d0aa17ea9a2d267456e18f24f1563",
+  "at": "2026-11-01T12:45:43.216742Z",
   "assertions": [
     {
+      "name": "notes_application_running",
+      "passed": true
+    },
+    {
       "name": "native_notes_capture_ready",
+      "passed": true
+    },
+    {
+      "name": "recorded_run_empty_folder_cleaned",
+      "passed": true
+    },
+    {
+      "name": "recorded_run_empty_folder_cleaned",
+      "passed": true
+    },
+    {
+      "name": "recorded_run_empty_folder_cleaned",
       "passed": true
     },
     {
@@ -45,8 +61,51 @@
     },
     {
       "name": "rest_rename_folder_observed",
-      "passed": false,
-      "detail": "indeterminate::dispatch_evidence_unavailable:unavailable"
+      "passed": true,
+      "detail": "observed:::"
+    },
+    {
+      "name": "rename_readback",
+      "passed": true
+    },
+    {
+      "name": "rest_move_observed",
+      "passed": true,
+      "detail": "observed:::"
+    },
+    {
+      "name": "move_readback",
+      "passed": true
+    },
+    {
+      "name": "stale_move_rejected",
+      "passed": true
+    },
+    {
+      "name": "independent_move_readback",
+      "passed": true
+    },
+    {
+      "name": "mcp_rename_folder_observed",
+      "passed": true,
+      "detail": "observed:::"
+    },
+    {
+      "name": "mcp_rename_readback",
+      "passed": true
+    },
+    {
+      "name": "mcp_move_observed",
+      "passed": true,
+      "detail": "observed:::"
+    },
+    {
+      "name": "mcp_move_readback",
+      "passed": true
+    },
+    {
+      "name": "mcp_independent_move_readback",
+      "passed": true
     },
     {
       "name": "owned_note_cleaned",
@@ -54,15 +113,15 @@
     },
     {
       "name": "owned_folder_cleaned",
-      "passed": false
+      "passed": true
     },
     {
       "name": "owned_folder_cleaned",
-      "passed": false
+      "passed": true
     },
     {
       "name": "cleanup_baseline_restored",
-      "passed": false
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",

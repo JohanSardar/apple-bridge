@@ -55,7 +55,7 @@ public enum NotesFolderUI {
         let owned = matches.isEmpty && initiated && visible.count == 1 ? visible : matches
         if owned.isEmpty { return false }
         guard owned.count == 1 else { throw Failure(stage: "ambiguous_owned_dialog") }
-        let buttons = all(owned[0]).filter { value($0, kAXRoleAttribute) == kAXButtonRole && named($0, ["Delete", "Delete Folder"]) && enabled($0) }
+        let buttons = all(owned[0]).filter { value($0, kAXRoleAttribute) == kAXButtonRole && named($0, ["Delete", "Delete Folder", "Delete Note", "Delete Permanently"]) && enabled($0) }
         guard buttons.count == 1, AXUIElementPerformAction(buttons[0], kAXPressAction as CFString) == .success else { throw Failure(stage: "owned_delete_confirmation") }
         return true
     }
@@ -151,7 +151,51 @@ public enum NotesFolderUI {
         }
     }
     #if LAB
+    private static func purgeCapturedNote(_ request: JSON) async -> JSON {
+        deadline = Date().addingTimeInterval(30)
+        var stage = "validate_captured_note"
+        do {
+            guard available, request["notes"].array.count == 1 else { throw Failure(stage: "captured_note_request_unavailable") }
+            let id = request["notes"].array[0]["id"].string, tag = request["tag"].string
+            guard tag.hasPrefix("[ab-test "), tag.hasSuffix("]"), !tag.contains("\n"), let tail = id.split(separator: "/").last, tail.first == "p", let pk = Int(tail.dropFirst()) else { throw Failure(stage: "invalid_captured_note") }
+            let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Group Containers/group.com.apple.notes/NoteStore.sqlite").path
+            let db = try NotesDatabase(path: path)
+            let uuid = try db.query("SELECT Z_UUID FROM Z_METADATA", []).first?["Z_UUID"]?.string ?? ""
+            guard id == "x-coredata://" + uuid + "/ICNote/p" + String(pk) else { throw Failure(stage: "captured_note_store_changed") }
+            guard let note = try db.query("SELECT * FROM ZICCLOUDSYNCINGOBJECT WHERE Z_PK=? AND Z_ENT=(SELECT Z_ENT FROM Z_PRIMARYKEY WHERE Z_NAME='ICNote')", [String(pk)]).first else { return .object(["passed": .bool(true)]) }
+            if note["ZMARKEDFORDELETION"]?.number != 0 { return .object(["passed": .bool(true)]) }
+            let title = note["ZTITLE1"]?.string ?? "", key = note["ZIDENTIFIER"]?.string ?? ""
+            guard title.hasPrefix(tag), !key.isEmpty, note["ZISPASSWORDPROTECTED"]?.number != 1,
+                  let folder = try db.query("SELECT * FROM ZICCLOUDSYNCINGOBJECT WHERE Z_PK=? AND ZFOLDERTYPE=1", [String(Int(note["ZFOLDER"]?.number ?? 0))]).first else { throw Failure(stage: "captured_note_is_not_owned_trash") }
+            let trash = "x-coredata://" + uuid + "/ICFolder/p" + String(Int(folder["Z_PK"]?.number ?? 0))
+            guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.Notes").first else { throw Failure(stage: "notes_not_running") }
+            let root = AXUIElementCreateApplication(app.processIdentifier)
+            AXUIElementSetMessagingTimeout(root, 0.5)
+            _ = app.activate()
+            try cancelBlockingDialog(root)
+            stage = "select_captured_trash_note"
+            let result = try NotesScript.run("set targetNote to first note of folder id " + NotesScript.quote(trash) + " whose id is " + NotesScript.quote(id) + "\nshow targetNote\nset selection to {targetNote}\nif (count of selection) is not 1 then error \"Test note selection changed.\"\nreturn id of item 1 of selection")
+            guard result == id else { throw Failure(stage: "captured_note_selection_changed") }
+            try await Task.sleep(for: .milliseconds(250))
+            let rows = all(root).filter { value($0, kAXRoleAttribute) == kAXRowRole && all($0).contains { named($0, [title]) } }
+            guard rows.count == 1, await openContext(rows[0], app: app) else { throw Failure(stage: "captured_trash_note_row") }
+            try await Task.sleep(for: .milliseconds(200))
+            stage = "delete_captured_trash_note"
+            let menus = all(root).filter { value($0, kAXRoleAttribute) == kAXMenuItemRole && named($0, ["Delete Note", "Delete Note…", "Delete Note...", "Delete Permanently", "Delete"]) && enabled($0) }
+            guard menus.count == 1, AXUIElementPerformAction(menus[0], kAXPressAction as CFString) == .success else { throw Failure(stage: "captured_note_delete_menu") }
+            try await Task.sleep(for: .milliseconds(250))
+            _ = try confirm(root, tag: title, initiated: true)
+            let store = NotesStore(path: path)
+            stage = "verify_permanent_captured_note"
+            for _ in 0..<200 {
+                if try ["gone", "marked"].contains(store.deletionState(key, collection: "notes.note")) { return .object(["passed": .bool(true)]) }
+                try await Task.sleep(for: .milliseconds(50))
+            }
+            throw Failure(stage: "captured_note_permanent_deletion_unverified")
+        } catch { return .object(["passed": .bool(false), "stage": .string((error as? Failure)?.stage ?? stage + "_unavailable")]) }
+    }
     public static func run(_ request: JSON) async -> JSON {
+        if !request["notes"].array.isEmpty { return await purgeCapturedNote(request) }
         deadline = Date().addingTimeInterval(30)
         guard AXIsProcessTrusted() else { return .object(["passed": .bool(false), "stage": .string("accessibility_permission_missing")]) }
         let tag = request["tag"].string, folders = request["folders"].array

@@ -13,8 +13,16 @@ import (
 
 func notesFolderRecovery(truth func(string, map[string]any) (map[string]any, error), helper string) func(string, map[string]any) (map[string]any, error) {
 	return func(verb string, request map[string]any) (map[string]any, error) {
+		note := verb == "fixture" && request["action"] == "cleanup_owned"
 		if verb != "fixture" || request["action"] != "cleanup_created_folders" {
-			return truth(verb, request)
+			response, err := truth(verb, request)
+			if !note || err == nil {
+				return response, err
+			}
+		}
+		payload := request
+		if note {
+			payload = map[string]any{"tag": request["tag"], "notes": []map[string]any{{"id": request["id"]}}}
 		}
 		root, problem := os.MkdirTemp("", "ab-test-notes-cleanup-")
 		if problem != nil {
@@ -28,7 +36,7 @@ func notesFolderRecovery(truth func(string, map[string]any) (map[string]any, err
 		input := filepath.Join(root, "request.json")
 		output := filepath.Join(home, "Library", "Application Support", "AppleBridgeDev", contracts.NewID("notes-owned-cleanup")+".json")
 		defer os.Remove(output)
-		raw, problem := json.Marshal(request)
+		raw, problem := json.Marshal(payload)
 		if problem != nil {
 			return nil, problem
 		}
@@ -61,7 +69,13 @@ func notesFolderRecovery(truth func(string, map[string]any) (map[string]any, err
 			}
 			ids = append(ids, id)
 		}
-		proof, problem := truth("observe", map[string]any{"source": "notes", "verify_deleted_ids": ids})
+		verification := map[string]any{"source": "notes", "verify_deleted_ids": ids}
+		if note {
+			id, _ := request["id"].(string)
+			verification["verify_deleted_ids"] = []string{id}
+			verification["permanent"] = true
+		}
+		proof, problem := truth("observe", verification)
 		if problem != nil || proof["status"] != "verified" || proof["deletion_verified"] != true {
 			return nil, fmt.Errorf("Notes cleanup UI: independent_deletion_unverified")
 		}
