@@ -128,7 +128,11 @@ func runNativeChatProof(ctx context.Context, s Scenario, e Evidence, w *world.Wo
 			return e
 		}
 		var created contracts.CommandRecord
-		problem := client.Call(ctx, remainder.Op, remainder, &created)
+		_ = client.Call(ctx, remainder.Op, remainder, &created)
+		problem := w.Await(30*time.Second, func() bool {
+			_, err := world.Request(ctx, w.Gateway, "/v1/op/commands.status", contracts.CommandQuery{ID: remainder.ID}, &created)
+			return err == nil && (created.State == contracts.CommandObserved || created.State == contracts.CommandDelivered)
+		})
 		add("second_owned_message_retains_test_chat", problem == nil && (created.State == contracts.CommandObserved || created.State == contracts.CommandDelivered))
 		if problem != nil || created.State != contracts.CommandObserved && created.State != contracts.CommandDelivered {
 			e.Metrics["command_state"] = created.State

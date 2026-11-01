@@ -148,3 +148,42 @@ func TestNativeUnreadPreflightQueriesPreserveGenuineUnreadMessages(t *testing.T)
 		t.Fatal("native unread query coverage changed", count)
 	}
 }
+
+func TestNativeBaselineSkipsReactionAndUnsentAnchors(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	for _, query := range []string{
+		`CREATE TABLE message(guid TEXT,text TEXT,associated_message_type INTEGER DEFAULT 0,item_type INTEGER DEFAULT 0,date_retracted INTEGER DEFAULT 0)`,
+		`CREATE TABLE chat(guid TEXT,service_name TEXT)`,
+		`CREATE TABLE chat_message_join(chat_id INTEGER,message_id INTEGER)`,
+		`CREATE TABLE chat_recoverable_message_join(chat_id INTEGER,message_id INTEGER)`,
+		`CREATE TABLE message_attachment_join(message_id INTEGER,attachment_id INTEGER)`,
+		`INSERT INTO chat VALUES('self','iMessage')`,
+		`INSERT INTO message(guid,text,associated_message_type) VALUES('visible','[ab-test] baseline',0),('reaction','removed',3006),('unsent','',0),('file',char(65532),0),('deleted','[ab-test] deleted',0)`,
+		`INSERT INTO chat_message_join VALUES(1,1),(1,2),(1,3),(1,4),(1,5)`,
+		`INSERT INTO message_attachment_join VALUES(4,1)`,
+		`INSERT INTO chat_recoverable_message_join VALUES(1,5)`,
+	} {
+		if _, err := db.Exec(query); err != nil {
+			t.Fatal(err)
+		}
+	}
+	source, err := os.ReadFile("../../native/Sources/MessagesSource/MessagesSelfTestBaseline.swift")
+	if err != nil {
+		t.Fatal(err)
+	}
+	match := regexp.MustCompile(`"(SELECT c\.service_name,m\.guid [^"\n]+)"`).FindStringSubmatch(string(source))
+	if len(match) != 2 {
+		t.Fatal("native baseline query missing")
+	}
+	var service, guid string
+	if err := db.QueryRow(match[1], "self").Scan(&service, &guid); err != nil {
+		t.Fatal(err)
+	}
+	if service != "iMessage" || guid != "visible" {
+		t.Fatal("baseline navigation did not choose visible text")
+	}
+}
