@@ -88,7 +88,7 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 	if level == "sim" {
 		w, err = world.New(ctx, level, 1, 0)
 	} else {
-		w, err = world.NewReal(ctx, level, 1)
+		w, err = world.NewRealWithSetup(ctx, level, 1, notesNativeSetup(ctx))
 	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "notes world:", err)

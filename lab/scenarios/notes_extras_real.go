@@ -22,7 +22,7 @@ func runNotesExtrasReal(ctx context.Context, s Scenario, level, gitSHA string) (
 		}
 	}()
 	ctx = world.WithOptions(ctx, world.Options{Scope: "notes:read,notes:write,system:read"})
-	w, err := world.NewReal(ctx, level, 0)
+	w, err := world.NewRealWithSetup(ctx, level, 0, notesNativeSetup(ctx))
 	if err != nil {
 		add("world", false)
 		return
