@@ -42,8 +42,8 @@ public struct MailQualification: Sendable {
         if scenario == "MAIL-CLEANUP" {
             do { return .object(try await cleanup()) }
             catch {
-                var result: [String: JSON] = ["cleanup_passed": .bool(false), "cleanup_error": .string(MailCommands.failureMessage(error))]
-                if let failure = error as? MailCommandFailure, case .script(let code) = failure { result["cleanup_error_number"] = .number(Double(code)) }
+                var result: [String: JSON] = ["cleanup_passed": .bool(false), "cleanup_error": .string((error as? MailFixtureCleanup.Failure)?.localizedDescription ?? MailCommands.failureMessage(error))]
+                if let failure = ((error as? MailFixtureCleanup.Failure)?.cause ?? error) as? MailCommandFailure, case .script(let code) = failure { result["cleanup_error_number"] = .number(Double(code)) }
                 return .object(result)
             }
         }
@@ -113,8 +113,8 @@ public struct MailQualification: Sendable {
             do { checks.merge(try await cleanup()) { _, value in value } }
             catch {
                 checks["cleanup_passed"] = .bool(false)
-                checks["cleanup_error"] = .string(MailCommands.failureMessage(error))
-                if let failure = error as? MailCommandFailure, case .script(let code) = failure { checks["cleanup_error_number"] = .number(Double(code)) }
+                checks["cleanup_error"] = .string((error as? MailFixtureCleanup.Failure)?.localizedDescription ?? MailCommands.failureMessage(error))
+                if let failure = ((error as? MailFixtureCleanup.Failure)?.cause ?? error) as? MailCommandFailure, case .script(let code) = failure { checks["cleanup_error_number"] = .number(Double(code)) }
             }
         }
         return .object(checks)

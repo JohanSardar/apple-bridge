@@ -4,6 +4,11 @@ import ApplicationServices
 import SourceSupport
 
 public enum MailFixtureCleanup {
+    public struct Failure: Error, LocalizedError, Sendable {
+        public let step: String
+        public let cause: any Error
+        public var errorDescription: String? { "Mail could not " + step + ". Open Mail, let mailbox sync finish, and try again." }
+    }
     @MainActor public static func removeSelected() async throws {
         guard AXIsProcessTrusted(), let mail = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.mail").first else { throw MailCommandFailure.rejected }
         let app = AXUIElementCreateApplication(mail.processIdentifier)
@@ -31,7 +36,11 @@ public enum MailFixtureCleanup {
     }
     public static func run(tag: String, script: MailCommands.Script, removeSelected: @Sendable () async throws -> Void) async throws -> [String: JSON] {
         let q = MailCommands.quote
-        _ = try await script("""
+        func perform(_ step: String, _ body: String) async throws -> String {
+            do { return try await script(body) }
+            catch { throw Failure(step: step, cause: error) }
+        }
+        _ = try await perform("close the tagged compose window", """
         set ownedIDs to id of (outgoing messages whose subject is \(q(tag)))
         repeat with ownedID in ownedIDs
             set m to outgoing message id (contents of ownedID)
@@ -43,7 +52,9 @@ public enum MailFixtureCleanup {
         return ""
         """)
         for _ in 0..<8 {
-            let selected = try await script("""
+            let selected = try await perform("select the tagged test message", """
+            set cleanupStage to 1
+            try
             set m to missing value
             repeat with b in {inbox, sent mailbox, drafts mailbox}
                 set owned to (messages of b whose subject is \(q(tag)) and deleted status is false)
@@ -52,22 +63,34 @@ public enum MailFixtureCleanup {
                     exit repeat
                 end if
             end repeat
+            set cleanupStage to 2
             if m is missing value then return "clear"
             if subject of m is not \(q(tag)) then error "Test message selection changed"
             if (count message viewers) is 0 then make new message viewer
+            set cleanupStage to 3
             set v to front message viewer
             set selected mailboxes of v to {mailbox of m}
+            set cleanupStage to 4
             set selected messages of v to {m}
             set index of window of v to 1
             activate
+            set cleanupStage to 5
             set chosen to selected messages of v
             if (count chosen) is not 1 then error "Test message selection is not unique"
             if subject of item 1 of chosen is not \(q(tag)) then error "Test message selection changed"
             return (id of item 1 of chosen) as string
+            on error errorText number errorNumber
+                return "failure|" & cleanupStage & "|" & errorNumber
+            end try
             """)
             if selected == "clear" {
                 let outgoing = try await script("return count (outgoing messages whose subject is \(q(tag)))")
                 return try MailQualification.cleanupResult("0|" + outgoing)
+            }
+            if selected.hasPrefix("failure|") {
+                let parts = selected.split(separator: "|")
+                let steps = ["find the tagged test message", "read the tagged test message", "show the tagged mailbox", "select the tagged test message", "confirm the tagged test selection"]
+                if parts.count == 3, let stage = Int(parts[1]), steps.indices.contains(stage - 1), let code = Int(parts[2]) { throw Failure(step: steps[stage - 1], cause: MailCommandFailure.script(code)) }
             }
             guard UInt64(selected) != nil else { throw MailCommandFailure.unconfirmed }
             try await removeSelected()

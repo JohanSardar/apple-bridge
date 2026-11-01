@@ -79,7 +79,7 @@ func checkMailQualification() async throws {
     try require(proof["command_error"].string == MailCommandFailure.timeout.localizedDescription)
     let cleanupFailure = MailQualification(script: { _ in throw MailCommandFailure.permission })
     let cleanup = try await cleanupFailure.run(scenario: "MAIL-CLEANUP", tag: "[ab-test] failed")
-    try require(cleanup["cleanup_passed"] == .bool(false) && cleanup["cleanup_error"].string == MailCommandFailure.permission.localizedDescription)
+    try require(cleanup["cleanup_passed"] == .bool(false) && cleanup["cleanup_error"].string.contains("close the tagged compose window"))
     for (raw, mailbox, outgoing) in [("1|0", false, true), ("0|1", true, false)] {
         let proof = try MailQualification.cleanupResult(raw)
         try require(!proof["cleanup_passed"]!.bool && proof["cleanup_mailbox_clear"]!.bool == mailbox && proof["cleanup_outgoing_clear"]!.bool == outgoing)
