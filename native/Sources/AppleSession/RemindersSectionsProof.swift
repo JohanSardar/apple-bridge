@@ -30,7 +30,7 @@ enum RemindersSectionsProof {
             throw error
         }
         var checks: [String: JSON] = [:]
-        var diagnostics: [String: JSON] = [:]
+        var diagnostics: [String: JSON] = ["fixture_source_type": .number(Double(source.sourceType.rawValue)), "fixture_icloud_source": .number(source.title.caseInsensitiveCompare("iCloud") == .orderedSame ? 1 : 0)]
         var failure = ""
         var stage = "fixture"
         do {
@@ -55,6 +55,7 @@ enum RemindersSectionsProof {
                 diagnostics[stage + "_foreground"] = .number(foreground ? 1 : 0)
                 guard foreground else { throw SourceFailure.conflict }
                 if let ownedSelection {
+                    try ui.fence()
                     var selected: CFTypeRef?
                     guard AXUIElementCopyAttributeValue(ownedSelection, kAXSelectedAttribute as CFString, &selected) == .success, (selected as? Bool) == true else { throw SourceFailure.conflict }
                 }
@@ -75,7 +76,9 @@ enum RemindersSectionsProof {
             }
             @MainActor func press(_ element: AXUIElement) throws {
                 try fence()
-                guard AXUIElementPerformAction(element, kAXPressAction as CFString) == .success else { throw SourceFailure.unsupported }
+                let result = AXUIElementPerformAction(element, kAXPressAction as CFString)
+                diagnostics[stage + "_press_result"] = .number(Double(result.rawValue))
+                guard result == .success else { throw SourceFailure.unsupported }
             }
             @MainActor func key(_ code: CGKeyCode) throws {
                 try fence()
@@ -149,14 +152,20 @@ enum RemindersSectionsProof {
             let names = [title + " first", title + " second"]
             stage = "create_sections"
             for name in names {
+                stage = "section_file_menu"
                 try press(try unique("File", role: kAXMenuBarItemRole))
+                stage = "section_create_menu"
                 try press(try unique("New Section", role: kAXMenuItemRole))
                 try await Task.sleep(for: .milliseconds(300))
                 var focused: CFTypeRef?
                 guard AXUIElementCopyAttributeValue(root, kAXFocusedUIElementAttribute as CFString, &focused) == .success, let focused, CFGetTypeID(focused) == AXUIElementGetTypeID() else { throw SourceFailure.conflict }
                 let field = unsafeDowncast(focused, to: AXUIElement.self)
+                stage = "section_name"
                 try fence()
-                guard AXUIElementSetAttributeValue(field, kAXValueAttribute as CFString, name as CFString) == .success else { throw SourceFailure.unsupported }
+                diagnostics["section_name_text_field"] = .number(value(field, kAXRoleAttribute) == kAXTextFieldRole ? 1 : 0)
+                let result = AXUIElementSetAttributeValue(field, kAXValueAttribute as CFString, name as CFString)
+                diagnostics["section_name_set_result"] = .number(Double(result.rawValue))
+                guard result == .success else { throw SourceFailure.unsupported }
                 try key(36)
                 try await Task.sleep(for: .milliseconds(400))
             }

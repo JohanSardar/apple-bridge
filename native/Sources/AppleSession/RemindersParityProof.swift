@@ -25,6 +25,8 @@ enum RemindersParityProof {
         let title = "[ab-test " + UUID().uuidString + "]"
         let list = EKCalendar(for: .reminder, eventStore: store)
         guard let source = store.defaultCalendarForNewReminders()?.source else { throw SourceFailure.unavailable }
+        diagnostics["fixture_source_type"] = .number(Double(source.sourceType.rawValue))
+        diagnostics["fixture_icloud_source"] = .number(source.title.caseInsensitiveCompare("iCloud") == .orderedSame ? 1 : 0)
         list.source = source
         list.title = title
         try store.saveCalendar(list, commit: true)
@@ -126,12 +128,15 @@ enum RemindersParityProof {
             let tag = "abtest" + UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
             @MainActor func attempt(_ name: String, _ action: @MainActor () async throws -> Void) async {
                 stage = name
+                ui.selectionDiagnostics = [:]
                 do { try await action() }
                 catch { reasons[name] = .string("The " + name + " action could not be verified on the test list: " + String(describing: error)) }
+                for (key, value) in ui.selectionDiagnostics { diagnostics[name + "_" + key] = .number(value) }
             }
             await attempt("images") {
                 try script("show (first reminder of fixtureList whose name is \"" + second.title + "\")\nactivate")
                 try await Task.sleep(for: .milliseconds(300))
+                _ = try await ui.selectReminder(second.title)
                 let pasteboard = NSPasteboard.general
                 let saved = (pasteboard.pasteboardItems ?? []).map { item in item.types.compactMap { type in item.data(forType: type).map { (type, $0) } } }
                 guard let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 2, pixelsHigh: 2, bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 8, bitsPerPixel: 32) else { throw SourceFailure.unavailable }
@@ -164,7 +169,9 @@ enum RemindersParityProof {
             await attempt("tags") {
                 try script("show (first reminder of fixtureList whose name is \"" + first.title + "\")\nactivate")
                 try await Task.sleep(for: .milliseconds(300))
-                let fields = ui.find(first.title, role: kAXTextFieldRole) + ui.find(first.title, role: kAXTextAreaRole)
+                let row = try await ui.selectReminder(first.title)
+                let fields = ui.find(first.title, role: kAXTextFieldRole, within: row) + ui.find(first.title, role: kAXTextAreaRole, within: row)
+                ui.selectionDiagnostics["title_fields"] = Double(fields.count)
                 if fields.count == 1 {
                     try ui.set(fields[0], text: first.title + " #" + tag)
                     try ui.key(36)
@@ -174,8 +181,12 @@ enum RemindersParityProof {
             await attempt("subtasks") {
                 try script("show (first reminder of fixtureList whose name is \"" + second.title + "\")\nactivate")
                 try await Task.sleep(for: .milliseconds(400))
+                _ = try await ui.selectReminder(second.title)
                 try await ui.menu("Edit", ["Indent Reminder", "Indent Reminders"])
-                checks["indent_readback"] = .bool(try await observe { _, _, parent, child in child.parent == parent.identity.key })
+                let indented = try await observe { _, _, parent, child in child.parent == parent.identity.key }
+                checks["indent_readback"] = .bool(indented)
+                guard indented else { throw SourceFailure.unavailable }
+                _ = try await ui.selectReminder(second.title)
                 try await ui.menu("Edit", ["Outdent Reminder", "Outdent Reminders"])
                 checks["outdent_readback"] = .bool(try await observe { _, _, _, child in child.parent == nil || child.parent == 0 })
             }
@@ -264,6 +275,8 @@ final class RemindersFixtureUI {
     let title: String
     var searchDiagnostics: [String: Double] = [:]
     var accessibilityDiagnostics: [String: Double] = [:]
+    var ownedSheet: AXUIElement?
+    var selectionDiagnostics: [String: Double] = [:]
 
     init(app: NSRunningApplication, title: String) {
         self.app = app; self.title = title
@@ -290,6 +303,7 @@ final class RemindersFixtureUI {
             _ = AXUIElementPerformAction(window, kAXRaiseAction as CFString)
         }
         accessibilityDiagnostics["minimized_windows"] = Double(minimizedCount)
+        accessibilityDiagnostics["sheet_count"] = Double(sheets().count)
         let sidebar = find("Show Sidebar", role: kAXMenuItemRole)
         if sidebar.count == 1 {
             accessibilityDiagnostics["show_sidebar_result"] = Double(AXUIElementPerformAction(sidebar[0], kAXPressAction as CFString).rawValue)
@@ -311,14 +325,14 @@ final class RemindersFixtureUI {
         return []
     }
 
-    func find(_ name: String, role: String? = nil) -> [AXUIElement] {
+    func find(_ name: String, role: String? = nil, within: AXUIElement? = nil) -> [AXUIElement] {
         var budget = 3000
         var visited: [AXUIElement] = []
         var partialLabels = 0
         var rows = 0
         var roles: [String: Double] = [:]
         let deadline = ContinuousClock.now.advanced(by: .seconds(3))
-        func walk(_ element: AXUIElement) -> [AXUIElement] {
+        func walk(_ element: AXUIElement, inSheet: Bool = false) -> [AXUIElement] {
             guard budget > 0, ContinuousClock.now < deadline, !visited.contains(where: { CFEqual($0, element) }) else { return [] }
             visited.append(element)
             budget -= 1
@@ -328,6 +342,12 @@ final class RemindersFixtureUI {
             let subrole = value(element, kAXSubroleAttribute)
             if !subrole.isEmpty { roles["subrole_" + subrole, default: 0] += 1 }
             let labels = [kAXTitleAttribute, kAXValueAttribute, kAXDescriptionAttribute].map { value(element, $0) }
+            let sheet = inSheet || actualRole == kAXSheetRole
+            if sheet {
+                for word in ["iCloud", "Apple Intelligence", "Reminders", "Notifications", "Location", "Upgrade", "Permission", "Account", "Welcome", "What’s New", "Siri", "Suggested", "Suggestions", "Templates", "Shared", "Share", "Groceries", "Devices", "Default", "Continue", "Allow", "Cancel", "Not Now", "Enable", "Turn On"] where labels.contains(where: { $0.localizedCaseInsensitiveContains(word) }) {
+                    roles["sheet_word_" + word, default: 0] += 1
+                }
+            }
             if actualRole == kAXStaticTextRole {
                 let headings = ["welcome to reminders", "what’s new in reminders", "what's new in reminders", "what’s new", "what's new"]
                 if labels.contains(where: { headings.contains($0.split(whereSeparator: { $0.isWhitespace }).joined(separator: " ").lowercased()) }) { roles["introduction_heading", default: 0] += 1 }
@@ -340,18 +360,41 @@ final class RemindersFixtureUI {
             let matches = labels.contains(name) || (name.hasPrefix(title) && labels.contains { $0.hasPrefix(name + ",") || $0.hasPrefix(name + "\n") })
             if (role == nil || role == actualRole), matches, ![kAXApplicationRole, kAXWindowRole, kAXScrollAreaRole, kAXSplitGroupRole].contains(actualRole) { return [element] }
             let children = [kAXChildrenAttribute, kAXContentsAttribute, kAXRowsAttribute, kAXVisibleChildrenAttribute].flatMap { elements(element, $0) }
-            return children.flatMap(walk)
+            return children.flatMap { walk($0, inSheet: sheet) }
         }
         let windows = elements(root, kAXWindowsAttribute)
         let menus = elements(root, kAXMenuBarAttribute)
-        let roots = role == kAXMenuBarItemRole || role == kAXMenuItemRole ? menus + windows : windows + menus
-        let matches = (roots.isEmpty ? [root] : roots).flatMap(walk)
+        let roots = within.map { [$0] } ?? (role == kAXMenuBarItemRole || role == kAXMenuItemRole ? menus + windows : windows + menus)
+        let matches = (roots.isEmpty ? [root] : roots).flatMap { walk($0) }
         searchDiagnostics = ["visited": Double(visited.count), "rows": Double(rows), "partial_labels": Double(partialLabels), "truncated": budget == 0 || ContinuousClock.now >= deadline ? 1 : 0]
         searchDiagnostics.merge(roles) { _, new in new }
         return matches
     }
 
+    func sheets() -> [AXUIElement] {
+        let candidates = elements(root, kAXWindowsAttribute).flatMap { elements($0, kAXChildrenAttribute) }.filter { value($0, kAXRoleAttribute) == kAXSheetRole }
+        var focusedSheets: [AXUIElement] = []
+        if var current = elements(root, kAXFocusedUIElementAttribute).first {
+            for _ in 0..<20 {
+                if value(current, kAXRoleAttribute) == kAXSheetRole { focusedSheets.append(current); break }
+                guard let parent = elements(current, kAXParentAttribute).first else { break }
+                current = parent
+            }
+        }
+        var active = focusedSheets
+        for candidate in candidates {
+            var modal: CFTypeRef?
+            if AXUIElementCopyAttributeValue(candidate, kAXModalAttribute as CFString, &modal) == .success, modal as? Bool == true,
+               !active.contains(where: { CFEqual($0, candidate) }) { active.append(candidate) }
+        }
+        selectionDiagnostics["active_sheets"] = Double(active.count)
+        selectionDiagnostics["sheet_candidates"] = Double(candidates.count)
+        return active
+    }
+
     func fence() throws {
+        let activeSheets = sheets()
+        guard activeSheets.allSatisfy({ sheet in ownedSheet.map { CFEqual($0, sheet) } == true }) else { throw SourceFailure.conflict }
         guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier else { throw SourceFailure.conflict }
         for match in find(title) {
             var current = match
@@ -369,14 +412,55 @@ final class RemindersFixtureUI {
         throw SourceFailure.conflict
     }
 
+    func reminderRow(_ name: String) throws -> AXUIElement {
+        guard name.hasPrefix(title + " ") else { throw SourceFailure.invalid }
+        let direct = find(name, role: kAXRowRole)
+        var rows = direct
+        if rows.isEmpty {
+            for match in find(name) {
+                var current = match
+                for _ in 0..<12 {
+                    if value(current, kAXRoleAttribute) == kAXRowRole {
+                        if !rows.contains(where: { CFEqual($0, current) }) { rows.append(current) }
+                        break
+                    }
+                    let parents = elements(current, kAXParentAttribute)
+                    guard parents.count == 1 else { break }
+                    current = parents[0]
+                }
+            }
+        }
+        selectionDiagnostics["row_matches"] = Double(rows.count)
+        guard rows.count == 1 else { throw SourceFailure.conflict }
+        return rows[0]
+    }
+
+    @discardableResult
+    func selectReminder(_ name: String) async throws -> AXUIElement {
+        try fence()
+        let row = try reminderRow(name)
+        let result = AXUIElementSetAttributeValue(row, kAXSelectedAttribute as CFString, kCFBooleanTrue)
+        selectionDiagnostics["select_result"] = Double(result.rawValue)
+        if result != .success {
+            guard AXUIElementPerformAction(row, kAXPressAction as CFString) == .success else { throw SourceFailure.unsupported }
+        }
+        try await Task.sleep(for: .milliseconds(200))
+        let selectedRow = try reminderRow(name)
+        var selected: CFTypeRef?
+        let read = AXUIElementCopyAttributeValue(selectedRow, kAXSelectedAttribute as CFString, &selected)
+        selectionDiagnostics["selected"] = read == .success && selected as? Bool == true ? 1 : 0
+        guard read == .success, selected as? Bool == true else { throw SourceFailure.conflict }
+        return selectedRow
+    }
+
     func drag(_ from: String, to: String) async throws {
         guard from.hasPrefix(title), to.hasPrefix(title) else { throw SourceFailure.invalid }
+        _ = try await selectReminder(from)
         func point(_ name: String) throws -> CGPoint {
-            let matches = find(name)
-            guard matches.count == 1 else { throw SourceFailure.conflict }
+            let row = try reminderRow(name)
             var position: CFTypeRef?, size: CFTypeRef?
-            guard AXUIElementCopyAttributeValue(matches[0], kAXPositionAttribute as CFString, &position) == .success,
-                  AXUIElementCopyAttributeValue(matches[0], kAXSizeAttribute as CFString, &size) == .success,
+            guard AXUIElementCopyAttributeValue(row, kAXPositionAttribute as CFString, &position) == .success,
+                  AXUIElementCopyAttributeValue(row, kAXSizeAttribute as CFString, &size) == .success,
                   let position, let size, CFGetTypeID(position) == AXValueGetTypeID(), CFGetTypeID(size) == AXValueGetTypeID() else { throw SourceFailure.conflict }
             var origin = CGPoint.zero, dimensions = CGSize.zero
             guard AXValueGetValue(unsafeDowncast(position, to: AXValue.self), .cgPoint, &origin), AXValueGetValue(unsafeDowncast(size, to: AXValue.self), .cgSize, &dimensions), dimensions.width > 0, dimensions.height > 0 else { throw SourceFailure.conflict }
@@ -438,6 +522,8 @@ final class RemindersFixtureUI {
         guard available.count == 1 else { throw SourceFailure.unsupported }
         try press(available[0], role: kAXMenuItemRole)
         try await Task.sleep(for: .milliseconds(300))
+        let activeSheets = sheets()
+        if activeSheets.count == 1 { ownedSheet = activeSheets[0] }
     }
 }
 #endif
