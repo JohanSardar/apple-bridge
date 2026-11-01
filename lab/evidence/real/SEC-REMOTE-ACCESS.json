@@ -1,0 +1,257 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[12.35 15.78 17.02] cpu_idle=52% cpus=8 other_heavy=0"
+  },
+  "run_id": "security_01M6AT466ME3RJA9YBNAYCG2C6",
+  "network_path": "public HTTPS through ab-relay ciphertext tunnel to isolated Mac gateway",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "protected_endpoint_count": 223,
+    "revocation_ms": 67
+  },
+  "scenario": "SEC-REMOTE-ACCESS",
+  "level": "real",
+  "passed": true,
+  "git_sha": "4203c92cd69a2e79a3336cd03e9d479e6d247051",
+  "at": "2026-11-01T05:43:10.802444Z",
+  "assertions": [
+    {
+      "name": "isolated_gateway",
+      "passed": true
+    },
+    {
+      "name": "authority",
+      "passed": true
+    },
+    {
+      "name": "public_relay_gateway_ready",
+      "passed": true
+    },
+    {
+      "name": "public_https_origin",
+      "passed": true
+    },
+    {
+      "name": "all_protected_endpoints_refuse_unauthenticated_requests",
+      "passed": true
+    },
+    {
+      "name": "public_bootstrap_/",
+      "passed": true
+    },
+    {
+      "name": "public_bootstrap_/.well-known/oauth-authorization-server",
+      "passed": true
+    },
+    {
+      "name": "public_bootstrap_/.well-known/oauth-protected-resource",
+      "passed": true
+    },
+    {
+      "name": "security_oauth_client",
+      "passed": true
+    },
+    {
+      "name": "pkce_downgrade_and_open_redirect_refused",
+      "passed": true
+    },
+    {
+      "name": "pkce_downgrade_and_open_redirect_refused",
+      "passed": true
+    },
+    {
+      "name": "pkce_downgrade_and_open_redirect_refused",
+      "passed": true
+    },
+    {
+      "name": "pkce_downgrade_and_open_redirect_refused",
+      "passed": true
+    },
+    {
+      "name": "pkce_downgrade_and_open_redirect_refused",
+      "passed": true
+    },
+    {
+      "name": "security_agent_created",
+      "passed": true
+    },
+    {
+      "name": "security_code_created",
+      "passed": true
+    },
+    {
+      "name": "mismatched_oauth_binding_refused",
+      "passed": true
+    },
+    {
+      "name": "mismatched_oauth_binding_refused",
+      "passed": true
+    },
+    {
+      "name": "mismatched_oauth_binding_refused",
+      "passed": true
+    },
+    {
+      "name": "mismatched_oauth_binding_refused",
+      "passed": true
+    },
+    {
+      "name": "mismatched_oauth_binding_refused",
+      "passed": true
+    },
+    {
+      "name": "valid_oauth_access",
+      "passed": true
+    },
+    {
+      "name": "wrong_scope_refused",
+      "passed": true
+    },
+    {
+      "name": "garbage_token_refused",
+      "passed": true
+    },
+    {
+      "name": "relay_credential_cannot_authenticate_as_connector",
+      "passed": true
+    },
+    {
+      "name": "expired_access_refused",
+      "passed": true
+    },
+    {
+      "name": "refresh_rotation_works",
+      "passed": true
+    },
+    {
+      "name": "replayed_refresh_refused_and_family_revoked",
+      "passed": true
+    },
+    {
+      "name": "security_agent_created",
+      "passed": true
+    },
+    {
+      "name": "security_code_created",
+      "passed": true
+    },
+    {
+      "name": "replayed_code_refused_and_family_revoked",
+      "passed": true
+    },
+    {
+      "name": "security_agent_created",
+      "passed": true
+    },
+    {
+      "name": "security_code_created",
+      "passed": true
+    },
+    {
+      "name": "expired_code_refused",
+      "passed": true
+    },
+    {
+      "name": "security_agent_created",
+      "passed": true
+    },
+    {
+      "name": "security_code_created",
+      "passed": true
+    },
+    {
+      "name": "connector_works_before_revocation",
+      "passed": true
+    },
+    {
+      "name": "revocation_stops_public_token_within_seconds",
+      "passed": true
+    },
+    {
+      "name": "revoked_refresh_refused",
+      "passed": true
+    },
+    {
+      "name": "oauth_codes_and_tokens_absent_from_storage_and_logs",
+      "passed": true
+    },
+    {
+      "name": "owner_session",
+      "passed": true
+    },
+    {
+      "name": "approve_csrf_and_cross_origin_refused",
+      "passed": true
+    },
+    {
+      "name": "approve_csrf_and_cross_origin_refused",
+      "passed": true
+    },
+    {
+      "name": "approve_csrf_and_cross_origin_refused",
+      "passed": true
+    },
+    {
+      "name": "approve_csrf_and_cross_origin_refused",
+      "passed": true
+    },
+    {
+      "name": "approve_csrf_and_cross_origin_refused",
+      "passed": true
+    },
+    {
+      "name": "approve_csrf_and_cross_origin_refused",
+      "passed": true
+    },
+    {
+      "name": "approve_csrf_and_cross_origin_refused",
+      "passed": true
+    },
+    {
+      "name": "approve_csrf_and_cross_origin_refused",
+      "passed": true
+    },
+    {
+      "name": "approve_csrf_and_cross_origin_refused",
+      "passed": true
+    },
+    {
+      "name": "approve_csrf_and_cross_origin_refused",
+      "passed": true
+    },
+    {
+      "name": "approve_csrf_and_cross_origin_refused",
+      "passed": true
+    },
+    {
+      "name": "approve_csrf_and_cross_origin_refused",
+      "passed": true
+    },
+    {
+      "name": "session_cookie_flags_and_response_redaction",
+      "passed": true
+    },
+    {
+      "name": "owner_token_absent_from_storage_and_logs",
+      "passed": true
+    },
+    {
+      "name": "evidence_contains_only_security_results",
+      "passed": true
+    },
+    {
+      "name": "public_relay_test_credentials_revoked_and_tunnel_closed",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": [
+    "air",
+    "ab-relay"
+  ]
+}

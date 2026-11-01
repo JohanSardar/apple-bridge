@@ -1,20 +1,20 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[62.65 40.44 24.72] cpu_idle=0% cpus=10 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[3.11 4.27 4.39] cpu_idle=89% cpus=10 other_heavy=0"
   },
-  "run_id": "security_01M69Z36Q4VX56GEYYGAKCDRB3",
+  "run_id": "security_01M6AT8Y0R0H457X5Q4RFB5ZQY",
   "network_path": "isolated Mac gateway adversarial HTTP and trust checks",
   "metrics": {
     "capture_observer_resets": 0,
     "protected_endpoint_count": 222,
-    "revocation_ms": 8
+    "revocation_ms": 10
   },
   "scenario": "SEC-REMOTE-ACCESS",
   "level": "sim",
   "passed": true,
-  "git_sha": "9cd96cf44a9148ba120561081ea1c8da5d83516f",
-  "at": "2026-10-31T21:50:47.01189Z",
+  "git_sha": "4203c92cd69a2e79a3336cd03e9d479e6d247051",
+  "at": "2026-11-01T05:45:46.264621Z",
   "assertions": [
     {
       "name": "isolated_gateway",
