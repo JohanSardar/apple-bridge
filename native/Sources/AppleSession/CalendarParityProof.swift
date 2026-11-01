@@ -228,6 +228,7 @@ enum CalendarParityProof {
         }
         if let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.iCal").first {
             let ui = CalendarFixtureUI(app: app, title: title + " event")
+            try? ui.focus()
             if ui.find("Cancel", role: kAXButtonRole).count == 1 { try? ui.dialogPress("Cancel") }
         }
         controls.merge(fixtureUI?.diagnostics ?? [:]) { _, latest in latest }
@@ -300,6 +301,7 @@ final class CalendarFixtureUI {
     }
 
     func discoveryRoots() -> [AXUIElement] {
+        try? focus()
         var raw: CFTypeRef?
         AXUIElementCopyAttributeValue(root, kAXWindowsAttribute as CFString, &raw)
         let windows = raw as? [AXUIElement] ?? []
@@ -309,7 +311,8 @@ final class CalendarFixtureUI {
         for subrole in Set(windows.map({ value($0, kAXSubroleAttribute) })) {
             diagnostics["calendar_window_" + subrole + "_count"] = .number(Double(windows.filter { value($0, kAXSubroleAttribute) == subrole }.count))
         }
-        return floating + windows.filter { value($0, kAXSubroleAttribute) != kAXFloatingWindowSubrole } + [root]
+        let otherPanels = windows.filter { ![kAXFloatingWindowSubrole, kAXStandardWindowSubrole].contains(value($0, kAXSubroleAttribute)) }
+        return floating + otherPanels + windows.filter { value($0, kAXSubroleAttribute) == kAXStandardWindowSubrole } + [root]
     }
 
     func find(_ name: String, role: String? = nil, containing: Bool = false, within: AXUIElement? = nil) -> [AXUIElement] {
@@ -346,6 +349,7 @@ final class CalendarFixtureUI {
             try await Task.sleep(for: .milliseconds(100))
         }
         diagnostics["calendar_window_count"] = .number(Double((windows as? [AXUIElement])?.count ?? 0))
+        try await dismissOwnedFileDialogs()
         if hasOwnedInspector() { return }
         if let calendarTitle {
             var calendars = find(calendarTitle, role: kAXCheckBoxRole, containing: true)
@@ -471,6 +475,23 @@ final class CalendarFixtureUI {
             try await Task.sleep(for: .milliseconds(50))
         }
         try await Task.sleep(for: .milliseconds(600))
+    }
+
+    func dismissOwnedFileDialogs() async throws {
+        try focus()
+        let dialogs = discoveryRoots().filter { value($0, kAXRoleAttribute) == kAXWindowRole && value($0, kAXSubroleAttribute) == kAXDialogSubrole }
+        diagnostics["existing_dialog_count"] = .number(Double(dialogs.count))
+        for dialog in dialogs {
+            let marked = ["ab-test-calendar-", "ab-test-", "[ab-test]"].contains { !find($0, containing: true, within: dialog).isEmpty }
+            diagnostics["existing_dialog_has_test_marker"] = .bool(marked)
+            let filePicker = ["Import", "Open"].contains { find($0, role: kAXButtonRole, within: dialog).count == 1 }
+            diagnostics["existing_dialog_is_file_picker"] = .bool(filePicker)
+            guard marked || filePicker else { continue }
+            let cancel = find("Cancel", role: kAXButtonRole, within: dialog)
+            guard cancel.count == 1, AXUIElementPerformAction(cancel[0], kAXPressAction as CFString) == .success else { throw SourceFailure.conflict }
+            try await Task.sleep(for: .milliseconds(200))
+            diagnostics["owned_file_dialog_dismissed"] = .bool(true)
+        }
     }
 
     func commit() async throws {
@@ -691,8 +712,8 @@ final class CalendarFixtureUI {
         for item in items {
             for element in find(item, role: kAXMenuItemRole) where !matches.contains(where: { CFEqual($0, element) }) { matches.append(element) }
         }
-        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier,
-              matches.count == 1, AXUIElementPerformAction(matches[0], kAXPressAction as CFString) == .success else { throw SourceFailure.unsupported }
+        try focus()
+        guard matches.count == 1, AXUIElementPerformAction(matches[0], kAXPressAction as CFString) == .success else { throw SourceFailure.unsupported }
     }
 
     func setFocused(_ text: String, requireInspector: Bool = true) throws {
