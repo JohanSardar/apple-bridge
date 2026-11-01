@@ -92,7 +92,7 @@ public enum MailFixtureCleanup {
             repeat with ownedID in {\(ids.map(q).joined(separator: ","))}
                 repeat with b in {drafts mailbox, inbox, sent mailbox}
                     try
-                        set matching to (messages of b whose message id is (contents of ownedID))
+                        set matching to (messages of b whose message id is (contents of ownedID) and deleted status is false)
                         if (count matching) > 0 then
                             set candidate to item 1 of matching
                             if subject of candidate is \(q(tag)) and deleted status of candidate is false then
@@ -136,6 +136,7 @@ public enum MailFixtureCleanup {
             }
             if selected.hasPrefix("select|") {
                 let header = String(selected.dropFirst(7))
+                guard ids.contains(header) else { throw MailCommandFailure.unconfirmed }
                 try await selectDisplayed(header)
                 selected = try await perform("confirm the test message opened by Message-ID", """
                 repeat 20 times
