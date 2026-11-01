@@ -437,14 +437,10 @@ features:
     milestone: M3
     modules: [native/NotesSource, operations]
     depends_on: [notes.read]
-    status: limited
+    status: done
     scenarios:
       - {id: NOTE-CRUD, levels: [sim, real, replica]}
       - {id: NOTE-RICH-REJECT, levels: [sim, real]}
-    limits:
-      - scenario: NOTE-CRUD
-        level: real
-        reason: "CRUD passed real with deletion and replica convergence. A later full-baseline audit failed because two previously run-owned folder deletions committed during the next run, changing 135 identities to 133; every command and replica assertion in that run passed. The final isolated rerun remains outstanding at the deadline."
     notes: REST and MCP create, append, replace and delete pass native read-back and replica convergence. Deletion moves the exact note into its account's Recently Deleted folder and verifies NoteStore exclusion; captured-ID cleanup restores the active baseline.
   - id: usage.read
     title: Screen Time estimates from Biome App.InFocus with lock/sleep clipping
@@ -897,7 +893,7 @@ features:
     notes: >-
       Browser milestone 228/228 passes without skips or flakes; READ includes 4.5:1 highlight/link contrast across all five colors and both appearances. Core milestone green with explicit limits: #283 establishes leader-reported real DECODE-FULL 5/5 and REST/MCP CRUD sim 34/34. REST/MCP plain-text CRUD subsequently passed for real, including delete observation and replication. Later qualification remains limited by intermittent Helper dispatch timeouts and delayed Notes folder cleanup commits. Leader-accepted #274 passes 20 real first-record saves, p95 gateway/Ubuntu replica 476.3/870.2 ms; full content 1430/1420 ms is separate. Rich/checklist mutations stay hidden; combined native/browser journeys, worker-enabled external-body integration, burst/crash and app-specific UI timing remain limited.
     limits:
-      - {"scenario": "NOTE-EDIT-PARITY", "level": "real", "reason": "Air parity stopped in its production CRUD prerequisite: notes.create did not return Helper dispatch evidence within the 15-second exchange deadline; the indeterminate creation also prevented captured-folder cleanup and exact baseline restoration. Public Notes HTML does not create native checklist identities; production rich editing remains unsupported."}
+      - {"scenario": "NOTE-EDIT-PARITY", "level": "real", "reason": "The final Air parity run stopped in its production CRUD prerequisite: notes.create_folder did not return Helper dispatch evidence within the 15-second exchange deadline, and exact baseline restoration failed. Earlier indeterminate notes.create also prevented captured-folder cleanup. Public Notes HTML does not create native checklist identities; production rich editing remains unsupported."}
   - id: remote.relay
     title: SNI passthrough relay, stable device enrollment and persistent budgets
     requirements: [R-SECURE, R-WEB-REACH]

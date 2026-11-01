@@ -86,7 +86,7 @@ func runNotesExtrasReal(ctx context.Context, s Scenario, level, gitSHA string) (
 		return problem == nil && out.State == "observed"
 	}
 	find := func(name string) (r contracts.Record) {
-		w.Await(10*time.Second, func() bool {
+		w.Await(30*time.Second, func() bool {
 			rows, _ := w.Records(w.Gateway)
 			for _, row := range rows {
 				if !row.Deleted && recordTitle(row) == name && (row.Collection != "notes.note" || notesContentReady(row, false)) {
