@@ -75,8 +75,6 @@ extension AppleTruth {
             const matches = folder.container().folders.whose({id:id})();
             require(matches.length === 1 && matches[0].id() === id && fixtureFolder(matches[0]) && matches[0].folders().length === 0 && matches[0].notes().length === 0);
             app.delete(matches[0]);
-            app.quit();
-            app.launch();
         }
         if (request.verb === 'observe') {
             const selected = tag ? taggedNotes() : app.notes();

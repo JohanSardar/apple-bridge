@@ -29,6 +29,7 @@ func runNotesExtrasReal(ctx context.Context, s Scenario, level, gitSHA string) (
 		return
 	}
 	defer w.Close()
+	recover := notesFolderRecovery(w.RecoverTruth, w.HelperApp)
 	notesRecordHelperBinary(&e, w.HelperApp)
 	problem := notesAwaitInitialCapture(w)
 	add("native_notes_capture_ready", problem == nil)
@@ -37,8 +38,12 @@ func runNotesExtrasReal(ctx context.Context, s Scenario, level, gitSHA string) (
 	}
 	for _, path := range []string{"lab/evidence/notes-predecessor-cleanup.json", "lab/evidence/notes-baseline-cleanup.json", "lab/evidence/real/NOTE-EXTRAS.json"} {
 		recorded, _ := os.ReadFile(path)
-		problem = notesCleanupRecordedExtras(w.RecoverTruth, recorded)
-		add("recorded_run_empty_folder_cleaned", problem == nil)
+		problem = notesCleanupRecordedExtras(recover, recorded)
+		detail := ""
+		if problem != nil {
+			detail = problem.Error()
+		}
+		e.Assertions = append(e.Assertions, Assertion{Name: "recorded_run_empty_folder_cleaned", Passed: problem == nil, Detail: detail})
 		if problem != nil {
 			return
 		}
@@ -61,7 +66,7 @@ func runNotesExtrasReal(ctx context.Context, s Scenario, level, gitSHA string) (
 	destinationID, pendingRename := "", ""
 	defer func() {
 		if noteID != "" {
-			problem := notesCleanupTruth(w.RecoverTruth, 30*time.Second, map[string]any{"source": "notes", "tag": tag, "action": "cleanup_owned", "id": noteID, "folder_id": func() string {
+			problem := notesCleanupTruth(recover, 30*time.Second, map[string]any{"source": "notes", "tag": tag, "action": "cleanup_owned", "id": noteID, "folder_id": func() string {
 				observed, _ := w.RecoverTruth("observe", map[string]any{"source": "notes", "tag": tag})
 				rows, _ := observed["records"].([]any)
 				for _, raw := range rows {
@@ -81,7 +86,7 @@ func runNotesExtrasReal(ctx context.Context, s Scenario, level, gitSHA string) (
 				folders[destinationID] = pendingRename
 			}
 		}
-		problem := notesCleanupFolders(w.RecoverTruth, tag, folders)
+		problem := notesCleanupFolders(recover, tag, folders)
 		for range folders {
 			add("owned_folder_cleaned", problem == nil)
 		}
