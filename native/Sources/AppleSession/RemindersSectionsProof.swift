@@ -47,6 +47,8 @@ enum RemindersSectionsProof {
             let root = AXUIElementCreateApplication(app.processIdentifier)
             AXUIElementSetMessagingTimeout(root, 0.1)
             let ui = RemindersFixtureUI(app: app, title: title)
+            try await ui.prepare()
+            for (key, value) in ui.accessibilityDiagnostics { diagnostics["ui_" + key] = .number(value) }
             diagnostics["ui_windows"] = .number(Double(ui.elements(ui.root, kAXWindowsAttribute).count))
             var ownedSelection: AXUIElement?
             @MainActor func fence() throws {

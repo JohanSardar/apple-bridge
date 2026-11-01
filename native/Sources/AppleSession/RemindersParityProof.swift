@@ -113,7 +113,9 @@ enum RemindersParityProof {
             try await Task.sleep(for: .seconds(1))
             guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.reminders").first else { throw SourceFailure.unavailable }
             let ui = RemindersFixtureUI(app: app, title: title)
+            try await ui.prepare()
             let expected = ["File", "Edit", "View", "New Section", "Indent Reminders", "Outdent Reminders", "Add Tags…", "Add Image", "New List…", "Show List Info", "Sort By", "Manual", "Add Image…", "Choose File…"]
+            for (key, value) in ui.accessibilityDiagnostics { diagnostics["ui_" + key] = .number(value) }
             diagnostics["ui_windows"] = .number(Double(ui.elements(ui.root, kAXWindowsAttribute).count))
             checks["owned_list_visible"] = .bool(!ui.find(title).isEmpty)
             for (key, value) in ui.searchDiagnostics { diagnostics["selection_" + key] = .number(value) }
@@ -248,11 +250,34 @@ final class RemindersFixtureUI {
     let root: AXUIElement
     let title: String
     var searchDiagnostics: [String: Double] = [:]
+    var accessibilityDiagnostics: [String: Double] = [:]
 
     init(app: NSRunningApplication, title: String) {
         self.app = app; self.title = title
         root = AXUIElementCreateApplication(app.processIdentifier)
-        AXUIElementSetMessagingTimeout(root, 0.1)
+        AXUIElementSetMessagingTimeout(root, 0.25)
+        let enhanced = "AXEnhancedUserInterface" as CFString
+        var settable = DarwinBoolean(false)
+        let supported = AXUIElementIsAttributeSettable(root, enhanced, &settable)
+        accessibilityDiagnostics["enhanced_settable"] = supported == .success && settable.boolValue ? 1 : 0
+        if supported == .success, settable.boolValue {
+            accessibilityDiagnostics["enhanced_result"] = Double(AXUIElementSetAttributeValue(root, enhanced, kCFBooleanTrue).rawValue)
+        }
+    }
+
+    func prepare() async throws {
+        _ = app.activate()
+        var minimizedCount = 0
+        for window in elements(root, kAXWindowsAttribute) {
+            var minimized: CFTypeRef?
+            if AXUIElementCopyAttributeValue(window, kAXMinimizedAttribute as CFString, &minimized) == .success, minimized as? Bool == true {
+                minimizedCount += 1
+                guard AXUIElementSetAttributeValue(window, kAXMinimizedAttribute as CFString, kCFBooleanFalse) == .success else { throw SourceFailure.unavailable }
+            }
+            _ = AXUIElementPerformAction(window, kAXRaiseAction as CFString)
+        }
+        accessibilityDiagnostics["minimized_windows"] = Double(minimizedCount)
+        try await Task.sleep(for: .milliseconds(500))
     }
 
     func value(_ element: AXUIElement, _ key: String) -> String {
@@ -274,6 +299,7 @@ final class RemindersFixtureUI {
         var visited: [AXUIElement] = []
         var partialLabels = 0
         var rows = 0
+        var roles: [String: Double] = [:]
         let deadline = ContinuousClock.now.advanced(by: .seconds(3))
         func walk(_ element: AXUIElement) -> [AXUIElement] {
             guard budget > 0, ContinuousClock.now < deadline, !visited.contains(where: { CFEqual($0, element) }) else { return [] }
@@ -281,17 +307,20 @@ final class RemindersFixtureUI {
             budget -= 1
             let actualRole = value(element, kAXRoleAttribute)
             if actualRole == kAXRowRole { rows += 1 }
+            roles["role_" + actualRole, default: 0] += 1
             let labels = [kAXTitleAttribute, kAXValueAttribute, kAXDescriptionAttribute].map { value(element, $0) }
             if labels.contains(where: { $0.contains(name) }) { partialLabels += 1 }
             let matches = labels.contains(name) || (name.hasPrefix(title) && labels.contains { $0.hasPrefix(name + ",") || $0.hasPrefix(name + "\n") })
             if (role == nil || role == actualRole), matches, ![kAXApplicationRole, kAXWindowRole, kAXScrollAreaRole, kAXSplitGroupRole].contains(actualRole) { return [element] }
-            return elements(element, kAXChildrenAttribute).flatMap(walk)
+            let children = [kAXChildrenAttribute, kAXContentsAttribute, kAXRowsAttribute, kAXVisibleChildrenAttribute].flatMap { elements(element, $0) }
+            return children.flatMap(walk)
         }
         let windows = elements(root, kAXWindowsAttribute)
         let menus = elements(root, kAXMenuBarAttribute)
         let roots = role == kAXMenuBarItemRole || role == kAXMenuItemRole ? menus + windows : windows + menus
         let matches = (roots.isEmpty ? [root] : roots).flatMap(walk)
         searchDiagnostics = ["visited": Double(visited.count), "rows": Double(rows), "partial_labels": Double(partialLabels), "truncated": budget == 0 || ContinuousClock.now >= deadline ? 1 : 0]
+        searchDiagnostics.merge(roles) { _, new in new }
         return matches
     }
 
