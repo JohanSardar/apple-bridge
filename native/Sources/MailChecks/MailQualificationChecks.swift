@@ -39,8 +39,8 @@ private actor QualificationMailFake {
     }
     func remove() { created = false; outgoing = outgoingAfterDelete; visibleOutgoing = outgoingAfterDelete }
     func ids() -> [String] {
-        if !created, staleIndexReads > 0 { staleIndexReads -= 1; return ["123"] }
-        return created ? ["123"] : []
+        if !created, staleIndexReads > 0 { staleIndexReads -= 1; return ["fixture@example.invalid"] }
+        return created ? ["fixture@example.invalid"] : []
     }
     func lagIndex() { staleIndexReads = 2 }
     func select() { selectionMismatch = false }
@@ -53,11 +53,11 @@ func checkMailQualification() async throws {
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: directory) }
     let path = directory.appendingPathComponent("Envelope Index").path
-    try execute(path, "CREATE TABLE subjects(subject TEXT); CREATE TABLE mailboxes(url TEXT); CREATE TABLE messages(subject INTEGER,mailbox INTEGER,deleted INTEGER); INSERT INTO subjects VALUES('[ab-test] fixture'),('[ab-test] other'); INSERT INTO mailboxes VALUES('imap://synthetic/INBOX'),('imap://synthetic/Trash'),('imap://synthetic/Drafts'); INSERT INTO messages VALUES(1,1,0),(2,1,0),(1,2,0),(1,1,1),(1,3,0);")
-    try require(try MailFixtureCleanup.fixtureIDs(tag: "[ab-test] fixture", path: path) == ["1", "5"])
+    try execute(path, "CREATE TABLE subjects(subject TEXT); CREATE TABLE mailboxes(url TEXT); CREATE TABLE message_global_data(message_id INTEGER,message_id_header TEXT); INSERT INTO message_global_data VALUES(1,'one@example.invalid'),(5,'five@example.invalid'); CREATE TABLE messages(subject INTEGER,mailbox INTEGER,deleted INTEGER,message_id INTEGER); INSERT INTO subjects VALUES('[ab-test] fixture'),('[ab-test] other'); INSERT INTO mailboxes VALUES('imap://synthetic/INBOX'),('imap://synthetic/Trash'),('imap://synthetic/Drafts'); INSERT INTO messages VALUES(1,1,0,1),(2,1,0,2),(1,2,0,3),(1,1,1,4),(1,3,0,5);")
+    try require(try MailFixtureCleanup.fixtureIDs(tag: "[ab-test] fixture", path: path) == ["one@example.invalid", "five@example.invalid"])
     try require(try MailFixtureCleanup.fixtureIDs(tag: "[ab-test] absent", path: path).isEmpty)
 
-    try execute(path, "INSERT INTO subjects VALUES('[ab-test] orphan'); INSERT INTO messages VALUES(3,999,0);")
+    try execute(path, "INSERT INTO subjects VALUES('[ab-test] orphan'); INSERT INTO messages VALUES(3,999,0,6);")
     do { _ = try MailFixtureCleanup.fixtureIDs(tag: "[ab-test] orphan", path: path); throw MailCommandFailure.rejected }
     catch SourceFailure.corrupt {}
     let fired = DispatchSemaphore(value: 0)
@@ -125,18 +125,18 @@ func checkMailQualification() async throws {
         let proof = try MailQualification.cleanupResult(raw)
         try require(!proof["cleanup_passed"]!.bool && proof["cleanup_mailbox_clear"]!.bool == mailbox && proof["cleanup_outgoing_clear"]!.bool == outgoing)
     }
-    let unsafe = MailQualification(script: { body in body.contains("set chosen") ? "wrong" : "" }, fixtureIDs: { _ in ["123"] }, removeSelected: { throw SourceFailure.corrupt })
+    let unsafe = MailQualification(script: { body in body.contains("set chosen") ? "wrong" : "" }, fixtureIDs: { _ in ["fixture@example.invalid"] }, removeSelected: { throw SourceFailure.corrupt })
     let refused = try await unsafe.run(scenario: "MAIL-CLEANUP", tag: "[ab-test] refused")
     try require(!refused["cleanup_passed"].bool && refused["cleanup_error"].string == MailCommandFailure.unconfirmed.localizedDescription)
     for (stage, step) in [(1, "find the tagged"), (2, "read the tagged"), (3, "show the tagged"), (4, "choose the tagged"), (10, "indexed test message")] {
-        let selectionFailure = MailQualification(script: { body in body.contains("set cleanupStage") ? "failure|\(stage)|-2700" : "" }, fixtureIDs: { _ in ["123"] }, removeSelected: { throw SourceFailure.corrupt })
+        let selectionFailure = MailQualification(script: { body in body.contains("set cleanupStage") ? "failure|\(stage)|-2700" : "" }, fixtureIDs: { _ in ["fixture@example.invalid"] }, removeSelected: { throw SourceFailure.corrupt })
         let proof = try await selectionFailure.run(scenario: "MAIL-CLEANUP", tag: "[ab-test] selection")
         try require(!proof["cleanup_passed"].bool && proof["cleanup_error"].string.contains(step) && proof["cleanup_error_number"] == .number(-2700))
     }
     let mismatch = QualificationMailFake(selectionMismatch: true)
     let selected = try await MailQualification(script: { try await mismatch.run($0) }, fixtureIDs: { _ in await mismatch.ids() }, selectDisplayed: { _ in await mismatch.select() }, removeSelected: { await mismatch.remove() }).run(scenario: "MAIL-DRAFT-REAL", tag: "[ab-test] selection")
     try require(selected["draft_created"].bool && selected["cleanup_passed"].bool)
-    let unsafeSelection = MailQualification(script: { body in body.contains("set cleanupStage") ? "select|123" : "" }, fixtureIDs: { _ in ["123"] }, selectDisplayed: { _ in }, removeSelected: { throw SourceFailure.corrupt })
+    let unsafeSelection = MailQualification(script: { body in body.contains("set cleanupStage") ? "select|123" : "" }, fixtureIDs: { _ in ["fixture@example.invalid"] }, selectDisplayed: { _ in }, removeSelected: { throw SourceFailure.corrupt })
     let unconfirmedSelection = try await unsafeSelection.run(scenario: "MAIL-CLEANUP", tag: "[ab-test] selection")
     try require(!unconfirmedSelection["cleanup_passed"].bool && unconfirmedSelection["cleanup_error"].string == MailCommandFailure.unconfirmed.localizedDescription)
     let reopened = QualificationMailFake(outgoingAfterDelete: true)
@@ -166,7 +166,7 @@ func checkMailQualification() async throws {
         if body.contains("set cleanupStage") { return "select|123" }
         if body.contains("set chosen") { return "456" }
         return ""
-    }, fixtureIDs: { _ in ["123"] }, selectDisplayed: { _ in }, removeSelected: { throw SourceFailure.corrupt })
+    }, fixtureIDs: { _ in ["fixture@example.invalid"] }, selectDisplayed: { _ in }, removeSelected: { throw SourceFailure.corrupt })
     let stale = try await staleSelection.run(scenario: "MAIL-CLEANUP", tag: "[ab-test] selection")
     try require(!stale["cleanup_passed"].bool && stale["cleanup_error"].string == MailCommandFailure.unconfirmed.localizedDescription)
     let count = await failed.scripts().count
