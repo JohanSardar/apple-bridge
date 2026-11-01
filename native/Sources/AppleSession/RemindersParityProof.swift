@@ -115,88 +115,100 @@ enum RemindersParityProof {
             guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.reminders").first else { throw SourceFailure.unavailable }
             let ui = RemindersFixtureUI(app: app, title: title)
             try await ui.prepare()
+            try script("show fixtureList\nactivate")
+            try await Task.sleep(for: .milliseconds(500))
             let expected = ["File", "Edit", "View", "New Section", "Indent Reminders", "Outdent Reminders", "Add Tags…", "Add Image", "New List…", "Show List Info", "Sort By", "Manual", "Add Image…", "Choose File…"]
             for (key, value) in ui.accessibilityDiagnostics { diagnostics["ui_" + key] = .number(value) }
             diagnostics["ui_windows"] = .number(Double(ui.elements(ui.root, kAXWindowsAttribute).count))
             checks["owned_list_visible"] = .bool(!ui.find(title).isEmpty)
             for (key, value) in ui.searchDiagnostics { diagnostics["selection_" + key] = .number(value) }
             for name in expected { checks["control_" + name] = .bool(!ui.find(name).isEmpty) }
-            stage = "images"
-            try script("show (first reminder of fixtureList whose name is \"" + second.title + "\")\nactivate")
-            try await Task.sleep(for: .milliseconds(300))
-            let pasteboard = NSPasteboard.general
-            let saved = (pasteboard.pasteboardItems ?? []).map { item in item.types.compactMap { type in item.data(forType: type).map { (type, $0) } } }
-            guard let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 2, pixelsHigh: 2, bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 8, bitsPerPixel: 32) else { throw SourceFailure.unavailable }
-            for x in 0..<2 { for y in 0..<2 { bitmap.setColor(.systemBlue, atX: x, y: y) } }
-            guard let bytes = bitmap.representation(using: .png, properties: [:]) else { throw SourceFailure.unavailable }
-            pasteboard.clearContents()
-            guard pasteboard.setData(bytes, forType: .png) else { throw SourceFailure.unavailable }
-            let installedChange = pasteboard.changeCount
-            do {
-                defer {
-                    if pasteboard.changeCount == installedChange {
-                        pasteboard.clearContents()
-                        let items = saved.map { values -> NSPasteboardItem in
-                            let item = NSPasteboardItem()
-                            for (type, bytes) in values { item.setData(bytes, forType: type) }
-                            return item
+            let tag = "abtest" + UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
+            @MainActor func attempt(_ name: String, _ action: @MainActor () async throws -> Void) async {
+                stage = name
+                do { try await action() }
+                catch { reasons[name] = .string("The " + name + " action could not be verified on the test list: " + String(describing: error)) }
+            }
+            await attempt("images") {
+                try script("show (first reminder of fixtureList whose name is \"" + second.title + "\")\nactivate")
+                try await Task.sleep(for: .milliseconds(300))
+                let pasteboard = NSPasteboard.general
+                let saved = (pasteboard.pasteboardItems ?? []).map { item in item.types.compactMap { type in item.data(forType: type).map { (type, $0) } } }
+                guard let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 2, pixelsHigh: 2, bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 8, bitsPerPixel: 32) else { throw SourceFailure.unavailable }
+                for x in 0..<2 { for y in 0..<2 { bitmap.setColor(.systemBlue, atX: x, y: y) } }
+                guard let bytes = bitmap.representation(using: .png, properties: [:]) else { throw SourceFailure.unavailable }
+                pasteboard.clearContents()
+                guard pasteboard.setData(bytes, forType: .png) else { throw SourceFailure.unavailable }
+                let installedChange = pasteboard.changeCount
+                do {
+                    defer {
+                        if pasteboard.changeCount == installedChange {
+                            pasteboard.clearContents()
+                            let items = saved.map { values -> NSPasteboardItem in
+                                let item = NSPasteboardItem()
+                                for (type, bytes) in values { item.setData(bytes, forType: type) }
+                                return item
+                            }
+                            pasteboard.writeObjects(items)
                         }
-                        pasteboard.writeObjects(items)
                     }
+                    try ui.key(9, flags: .maskCommand)
+                    checks["image_readback"] = .bool(try await observe { snapshot, _, _, child in
+                        snapshot.objects.values.contains { object in
+                            let owners = Set([object.reminder, object.reminder1, object.reminder2, object.reminder3, object.reminder4, object.reminder5].compactMap { $0 }.filter { $0 != 0 })
+                            return entityNames[object.identity.entity] == "REMCDImageAttachment" && owners == [child.identity.key]
+                        }
+                    })
                 }
-                try ui.key(9, flags: .maskCommand)
-                checks["image_readback"] = .bool(try await observe { snapshot, _, _, child in
-                    snapshot.objects.values.contains { object in
-                        let owners = Set([object.reminder, object.reminder1, object.reminder2, object.reminder3, object.reminder4, object.reminder5].compactMap { $0 }.filter { $0 != 0 })
-                        return entityNames[object.identity.entity] == "REMCDImageAttachment" && owners == [child.identity.key]
-                    }
+            }
+            await attempt("tags") {
+                try script("show (first reminder of fixtureList whose name is \"" + first.title + "\")\nactivate")
+                try await Task.sleep(for: .milliseconds(300))
+                let fields = ui.find(first.title, role: kAXTextFieldRole) + ui.find(first.title, role: kAXTextAreaRole)
+                if fields.count == 1 {
+                    try ui.set(fields[0], text: first.title + " #" + tag)
+                    try ui.key(36)
+                    checks["tags_readback"] = .bool(try await observe { snapshot, _, parent, _ in StoreTags.names(for: parent.identity.key, snapshot: snapshot)?.contains(tag) == true })
+                }
+            }
+            await attempt("subtasks") {
+                try script("show (first reminder of fixtureList whose name is \"" + second.title + "\")\nactivate")
+                try await Task.sleep(for: .milliseconds(400))
+                try await ui.menu("Edit", ["Indent Reminder", "Indent Reminders"])
+                checks["indent_readback"] = .bool(try await observe { _, _, parent, child in child.parent == parent.identity.key })
+                try await ui.menu("Edit", ["Outdent Reminder", "Outdent Reminders"])
+                checks["outdent_readback"] = .bool(try await observe { _, _, _, child in child.parent == nil || child.parent == 0 })
+            }
+            await attempt("reorder") {
+                try await ui.drag(second.title, to: first.title)
+                checks["reorder_readback"] = .bool(try await observe { _, row, parent, child in
+                    guard case .supported(let positions) = StoreManualOrder.decode(row.orderingJSON), let parentID = parent.identity.uuid, let childID = child.identity.uuid, let parentIndex = positions[parentID], let childIndex = positions[childID] else { return false }
+                    return childIndex < parentIndex
                 })
             }
-            stage = "tags"
-            let tag = "abtest" + UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
-            try script("show (first reminder of fixtureList whose name is \"" + first.title + "\")\nactivate")
-            try await Task.sleep(for: .milliseconds(300))
-            let fields = ui.find(first.title, role: kAXTextFieldRole) + ui.find(first.title, role: kAXTextAreaRole)
-            if fields.count == 1 {
-                try ui.set(fields[0], text: first.title + " #" + tag)
-                try ui.key(36)
-                checks["tags_readback"] = .bool(try await observe { snapshot, _, parent, _ in StoreTags.names(for: parent.identity.key, snapshot: snapshot)?.contains(tag) == true })
-            }
-            stage = "subtasks"
-            try script("show (first reminder of fixtureList whose name is \"" + second.title + "\")\nactivate")
-            try await Task.sleep(for: .milliseconds(400))
-            try await ui.menu("Edit", ["Indent Reminder", "Indent Reminders"])
-            checks["indent_readback"] = .bool(try await observe { _, _, parent, child in child.parent == parent.identity.key })
-            try await ui.menu("Edit", ["Outdent Reminder", "Outdent Reminders"])
-            checks["outdent_readback"] = .bool(try await observe { _, _, _, child in child.parent == nil || child.parent == 0 })
-            stage = "reorder"
-            try await ui.drag(second.title, to: first.title)
-            checks["reorder_readback"] = .bool(try await observe { _, row, parent, child in
-                guard case .supported(let positions) = StoreManualOrder.decode(row.orderingJSON), let parentID = parent.identity.uuid, let childID = child.identity.uuid, let parentIndex = positions[parentID], let childIndex = positions[childID] else { return false }
-                return childIndex < parentIndex
-            })
-            stage = "smart_list"
-            guard checks["tags_readback"]?.bool == true else { throw SourceFailure.unavailable }
-            try await ui.menu("File", ["New List…", "New List..."])
-            try ui.setFocused(text: smartTitle)
-            try ui.press("Standard", role: kAXPopUpButtonRole)
-            try ui.press("Smart List", role: kAXMenuItemRole)
-            try await Task.sleep(for: .milliseconds(300))
-            let tagChoices = ui.find(tag, role: kAXCheckBoxRole)
-            guard tagChoices.count == 1 else { throw SourceFailure.unsupported }
-            try ui.press(tag, role: kAXCheckBoxRole)
-            smartAttempted = true
-            try ui.pressAny(["OK", "Add List", "Done"], role: kAXButtonRole)
-            var found = false
-            for _ in 0..<60 {
-                for session in sessions {
-                    let snapshot = try await session.read().snapshot
-                    found = found || snapshot.lists.values.contains { $0.name == smartTitle && $0.filter != nil && $0.smartType != nil }
+            await attempt("smart_list") {
+                guard checks["tags_readback"]?.bool == true else { throw SourceFailure.unavailable }
+                try await ui.menu("File", ["New List…", "New List..."])
+                try ui.setFocused(text: smartTitle)
+                try ui.press("Standard", role: kAXPopUpButtonRole)
+                try ui.press("Smart List", role: kAXMenuItemRole)
+                try await Task.sleep(for: .milliseconds(300))
+                let tagChoices = ui.find(tag, role: kAXCheckBoxRole)
+                guard tagChoices.count == 1 else { throw SourceFailure.unsupported }
+                try ui.press(tag, role: kAXCheckBoxRole)
+                smartAttempted = true
+                try ui.pressAny(["OK", "Add List", "Done"], role: kAXButtonRole)
+                var found = false
+                for _ in 0..<60 {
+                    for session in sessions {
+                        let snapshot = try await session.read().snapshot
+                        found = found || snapshot.lists.values.contains { $0.name == smartTitle && $0.filter != nil && $0.smartType != nil }
+                    }
+                    if found { break }
+                    try await Task.sleep(for: .milliseconds(100))
                 }
-                if found { break }
-                try await Task.sleep(for: .milliseconds(100))
+                checks["smart_list_readback"] = .bool(found)
             }
-            checks["smart_list_readback"] = .bool(found)
         } catch {
             reasons[stage] = .string("The " + stage + " action could not be verified on the test list: " + String(describing: error))
         }
@@ -262,6 +274,12 @@ final class RemindersFixtureUI {
 
     func prepare() async throws {
         _ = app.activate()
+        let introduction = find("Continue", role: kAXButtonRole)
+        if introduction.count == 1, (searchDiagnostics["introduction_heading"] ?? 0) > 0 {
+            guard AXUIElementPerformAction(introduction[0], kAXPressAction as CFString) == .success else { throw SourceFailure.unavailable }
+            accessibilityDiagnostics["introduction_dismissed"] = 1
+            try await Task.sleep(for: .seconds(1))
+        }
         var minimizedCount = 0
         for window in elements(root, kAXWindowsAttribute) {
             var minimized: CFTypeRef?
@@ -310,6 +328,10 @@ final class RemindersFixtureUI {
             let subrole = value(element, kAXSubroleAttribute)
             if !subrole.isEmpty { roles["subrole_" + subrole, default: 0] += 1 }
             let labels = [kAXTitleAttribute, kAXValueAttribute, kAXDescriptionAttribute].map { value(element, $0) }
+            if actualRole == kAXStaticTextRole {
+                let headings = ["welcome to reminders", "what’s new in reminders", "what's new in reminders", "what’s new", "what's new"]
+                if labels.contains(where: { headings.contains($0.split(whereSeparator: { $0.isWhitespace }).joined(separator: " ").lowercased()) }) { roles["introduction_heading", default: 0] += 1 }
+            }
             for control in ["Reminders", "Templates", "Search", "New List", "Welcome to Reminders", "Get Started", "Continue", "Upgrade", "Sign In", "iCloud", "Done", "Cancel", "Today", "All", "Scheduled", "Flagged", "No Reminders"] where labels.contains(control) {
                 roles["control_" + control, default: 0] += 1
             }
