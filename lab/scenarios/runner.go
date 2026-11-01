@@ -1333,6 +1333,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		if (strings.HasPrefix(s.ID, "CAL-") || s.ID == "WEB-CAL-WRITE") && level != "sim" {
 			duration = 6 * time.Minute
 		}
+		if s.ID == "WEB-CAL-PARITY" && level == "real" {
+			duration = 7 * time.Minute
+		}
 		if s.ID == "CORE-BENCH" {
 			duration = 10 * time.Minute
 			if os.Getenv("APPLE_BRIDGE_LAB_CONTENDED_BENCH") == "1" {
