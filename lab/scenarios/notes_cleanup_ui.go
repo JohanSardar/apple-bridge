@@ -13,9 +13,8 @@ import (
 
 func notesFolderRecovery(truth func(string, map[string]any) (map[string]any, error), helper string) func(string, map[string]any) (map[string]any, error) {
 	return func(verb string, request map[string]any) (map[string]any, error) {
-		response, err := truth(verb, request)
-		if err == nil || verb != "fixture" || request["action"] != "cleanup_created_folders" {
-			return response, err
+		if verb != "fixture" || request["action"] != "cleanup_created_folders" {
+			return truth(verb, request)
 		}
 		root, problem := os.MkdirTemp("", "ab-test-notes-cleanup-")
 		if problem != nil {
