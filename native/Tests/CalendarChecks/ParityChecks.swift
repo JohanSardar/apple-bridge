@@ -32,6 +32,10 @@ enum CalendarParityChecks {
         let native = CalendarEventKitFields.structuredLocation(location)
         guard native["title"] == .string("[ab-test] location"), native["latitude"] == .number(41.88), native["longitude"] == .number(-87.63), native["radius"] == .number(100), CalendarEventKitFields.structuredLocation(nil) == .null, CalendarEventKitFields.participants(nil) == .array([]) else { throw SourceFailure.invalid }
         guard CalendarEventKitFields.ownerParticipationStatus(nil) == .null else { throw SourceFailure.invalid }
+        guard CalendarEventKitFields.invitationAddress(URL(string: "mailto:AB.TEST+owner@example.invalid")!) == "ab.test+owner@example.invalid" else { throw SourceFailure.invalid }
+        for address in ["mailto:owner@example.invalid?to=other@example.invalid", "mailto:owner@example.invalid,other@example.invalid", "mailto:owner@example.invalid%0d%0aATTENDEE:other@example.invalid", "mailto:owner@example.invalid#other", "mailto:owner@", "https://example.invalid/owner"] {
+            guard CalendarEventKitFields.invitationAddress(URL(string: address)!) == nil else { throw SourceFailure.invalid }
+        }
         guard CalendarEventKitFields.selfInvitationOrganizer(from: ["ab.test.owner+old@gmail.com", "other@example.invalid"], token: "run123") == "ab.test.owner+ab-test-run123@gmail.com",
               CalendarEventKitFields.selfInvitationOrganizer(from: ["ab.test.owner@example.invalid"], token: "run123") == nil,
               CalendarEventKitFields.selfInvitationOrganizer(from: ["@gmail.com"], token: "run123") == nil,

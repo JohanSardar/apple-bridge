@@ -19,8 +19,7 @@ public struct CalendarStoreSnapshot: Sendable {
             let calendar = row["calendar_uuid"]?.string ?? ""
             let key = UUID(uuidString: calendar)?.uuidString ?? calendar
             for owner in owners where owner.lowercased().hasPrefix("mailto:") {
-                let address = String(owner.dropFirst(7)).removingPercentEncoding?.lowercased() ?? ""
-                guard address.contains("@"), !address.contains(where: { $0.isWhitespace || $0.isNewline || ";:,<>\\\"".contains($0) }) else { continue }
+                guard let url = URL(string: owner), let address = CalendarEventKitFields.invitationAddress(url) else { continue }
                 result[key, default: []].insert(address)
             }
         }

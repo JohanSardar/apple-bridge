@@ -9,7 +9,7 @@ private enum CalendarCaptureInvalidation: Error { case invalidated }
 public final class CalendarSource: Source {
     public nonisolated let name = "calendar"
     public static let operations = ["calendar.create_event", "calendar.update_event", "calendar.delete_event", "calendar.create_calendar"]
-    public static let coverage: JSON = .object(["operations": CalendarParity.coverage, "fields": .string("partial"), "missing": .array(["travel_time: positive native units unverified", "structured_location: coordinate units unverified", "detached store identities", "calendar attachment derivatives", "start location, proposals, comments and extra store alarms: positive native fixtures pending"].map(JSON.string))])
+    public static let coverage: JSON = .object(["operations": CalendarParity.coverage, "fields": .string("partial"), "missing": .array(["travel_time: positive native units unverified", "detached store identities", "calendar attachment derivatives", "start location, proposals, comments and extra store alarms: positive native fixtures pending"].map(JSON.string))])
     private let gate: AgendaGate
     private let baselineURL: URL
     private let commandsEnabled: Bool

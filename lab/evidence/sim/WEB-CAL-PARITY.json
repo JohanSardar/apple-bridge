@@ -1,17 +1,17 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[5.48 5.41 5.33] cpu_idle=40% cpus=10 other_heavy=3"
+    "summary": "air: load=[5.23 5.62 5.69] cpu_idle=77% cpus=10 other_heavy=3"
   },
-  "run_id": "calendar-parity_01M6AMKP31SQAN7N1GYN22GBTH",
+  "run_id": "calendar-parity_01M6ARG39YAJ1Z9X0RQ0W6AXMA",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "WEB-CAL-PARITY",
   "level": "sim",
   "passed": true,
-  "git_sha": "b83de419c4dfc641d0a85225271d27ab4a81cbee",
-  "at": "2026-11-01T04:06:47.137182Z",
+  "git_sha": "9355ab47d4757fce4903bc803ef2ed67ae4de031",
+  "at": "2026-11-01T05:14:43.902319Z",
   "assertions": [
     {
       "name": "calendar_checks_build",

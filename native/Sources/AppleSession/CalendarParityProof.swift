@@ -256,8 +256,7 @@ enum CalendarParityProof {
             let predicate = store.predicateForEvents(withStart: interval.start, end: interval.end, calendars: nil)
             for event in store.events(matching: predicate) {
                 for participant in (event.attendees ?? []) + [event.organizer].compactMap({ $0 }) where participant.isCurrentUser && participant.url.scheme?.lowercased() == "mailto" && !event.calendar.source.isDelegate {
-                    let address = String(participant.url.absoluteString.dropFirst(7)).removingPercentEncoding?.lowercased() ?? ""
-                    if !address.isEmpty, !address.contains("\n"), !address.contains("\r") {
+                    if let address = CalendarEventKitFields.invitationAddress(participant.url) {
                         identities[event.calendar.source.sourceIdentifier, default: []].insert(address)
                         participantIdentities[event.calendar.source.sourceIdentifier, default: []].insert(address)
                     }

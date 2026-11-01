@@ -3,6 +3,16 @@ import Foundation
 import SourceSupport
 
 public enum CalendarEventKitFields {
+    public static func invitationAddress(_ url: URL) -> String? {
+        guard url.scheme?.lowercased() == "mailto", url.query == nil, url.fragment == nil,
+              let address = String(url.absoluteString.dropFirst(7)).removingPercentEncoding?.lowercased() else { return nil }
+        let parts = address.split(separator: "@", omittingEmptySubsequences: false)
+        guard parts.count == 2, !parts[0].isEmpty, !parts[1].isEmpty,
+              parts[0].allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || ".-_+".contains($0)) }),
+              parts[1].allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || ".-".contains($0)) }) else { return nil }
+        return address
+    }
+
     public static func selfInvitationOrganizer(from verifiedAddresses: Set<String>, token: String) -> String? {
         guard !token.isEmpty, token.count <= 20,
               token.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-") }) else { return nil }
