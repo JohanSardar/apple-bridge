@@ -7,12 +7,13 @@ public enum NotesScript {
     public static func quote(_ value: String) -> String {
         "\"" + value.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"").replacingOccurrences(of: "\r", with: "\\r").replacingOccurrences(of: "\n", with: "\\n") + "\""
     }
-    public static func run(_ body: String) throws -> String {
+    public static func run(_ body: String, trace: CaptureTrace? = nil) throws -> String {
         let target = NSAppleEventDescriptor(bundleIdentifier: "com.apple.Notes")
         guard AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false) == noErr else { throw SourceFailure.permissionMissing }
         var error: NSDictionary?
         guard let script = NSAppleScript(source: "with timeout of 5 seconds\ntell application id \"com.apple.Notes\"\n" + body + "\nend tell\nend timeout") else { throw SourceFailure.invalid }
         let result = script.executeAndReturnError(&error)
+        trace?.record("notes_script_completed", fields: ["source": .string("notes"), "apple_event_error": .number(Double(error?["NSAppleScriptErrorNumber"] as? Int ?? 0))])
         guard error == nil else { throw SourceFailure.unavailable }
         return result.stringValue ?? ""
     }

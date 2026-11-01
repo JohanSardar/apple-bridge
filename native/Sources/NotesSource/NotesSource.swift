@@ -318,7 +318,8 @@ public final class NotesSource: Source {
                 let folder = try find(action["folder_key"].string, collection: "notes.folder")
                 _ = try NotesScript.run("move note id " + NotesScript.quote(scriptID) + " to folder id " + NotesScript.quote(folder["scoped_alias"].string))
             } else if op == "notes.delete" {
-                _ = try NotesScript.run("delete note id " + NotesScript.quote(scriptID))
+                trace.record("notes_delete_started", keys: [action["native_key"].string], fields: ["source": .string(name)])
+                _ = try NotesScript.run("delete note id " + NotesScript.quote(scriptID), trace: trace)
             }
             else {
                 let content = args["mode"].string == "append" ? note["data"]["plain_text"].string + args["plain_text"].string : args["plain_text"].string
@@ -329,6 +330,7 @@ public final class NotesSource: Source {
             let snapshot = try store.read(nativeID: scriptID)
             let observed = snapshot.observations.first { $0["scoped_alias"].string == scriptID }
             if op == "notes.delete", try ["gone", "marked", "trashed"].contains(store.deletionState(action["native_key"].string, collection: "notes.note")) {
+                trace.record("notes_delete_verified", keys: [action["native_key"].string], fields: ["source": .string(name)])
                 return .object(["native_key": action["native_key"], "observed": .bool(true), "absent": .bool(observed == nil)])
             }
             if let observed, op != "notes.delete" {
@@ -344,6 +346,7 @@ public final class NotesSource: Source {
             }
             try await Task.sleep(for: .milliseconds(50))
         }
+        if op == "notes.delete" { trace.record("notes_delete_unverified", keys: [action["native_key"].string], fields: ["source": .string(name)]) }
         throw SourceFailure.unavailable
     }
     public func resolve(_ command: String, evidence: JSON) async -> JSON { .null }
