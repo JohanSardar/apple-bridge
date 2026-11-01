@@ -91,7 +91,7 @@ enum MessagesNativeSession {
         return chat
     }
     static func deleteOwnedItem(_ guid: String, chat chatGUID: String) throws {
-        guard UUID(uuidString: guid) != nil, !MessagesSelfTestIsolation.nativeChatCandidates(chatGUID).isEmpty,
+        guard UUID(uuidString: guid) != nil, !chatGUID.isEmpty,
               dlopen("/System/Library/PrivateFrameworks/IMCore.framework/IMCore", RTLD_LAZY) != nil,
               let type = NSClassFromString("IMDaemonController"), let controller = try object(type, "sharedInstance") else { throw SourceFailure.invalid }
         _ = try flag(controller, "connectToDaemon")
