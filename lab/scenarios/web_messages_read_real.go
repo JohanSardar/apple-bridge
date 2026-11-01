@@ -40,10 +40,12 @@ func runWebMessagesRead(ctx context.Context, s Scenario, level string) Evidence 
 	return proveWebSelfRead(ctx, e, w, aliases[aliasKey(contracts.Messages, "messages.chat", "message-chat")], aliases[aliasKey(contracts.Messages, "messages.message", "message-000000")], "self@example.com", "[ab-test] Unicode 🧪 שלום e\u0301", true)
 }
 
+const nativeWebSelfTextQuery = `SELECT m.guid,m.text,m.is_from_me,h.id FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id JOIN chat_handle_join p ON p.chat_id=c.ROWID JOIN handle h ON h.ROWID=p.handle_id WHERE c.guid=? AND m.item_type=0 AND COALESCE(m.associated_message_type,0)=0 AND COALESCE(m.date_retracted,0)=0 AND length(m.text)>0 AND NOT EXISTS(SELECT 1 FROM message_attachment_join a WHERE a.message_id=m.ROWID) AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=m.ROWID) ORDER BY m.ROWID DESC LIMIT 1`
+
 func runNativeWebMessagesRead(ctx context.Context, e Evidence, w *world.World, native, state *sql.DB, rawChat, chatID string) Evidence {
 	var guid, text, peer string
 	var outgoing bool
-	err := native.QueryRowContext(ctx, `SELECT m.guid,m.text,m.is_from_me,h.id FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id JOIN chat_handle_join p ON p.chat_id=c.ROWID JOIN handle h ON h.ROWID=p.handle_id WHERE c.guid=? AND m.item_type=0 AND COALESCE(m.associated_message_type,0)=0 AND COALESCE(m.date_retracted,0)=0 AND length(m.text)>0 AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=m.ROWID) ORDER BY m.ROWID DESC LIMIT 1`, rawChat).Scan(&guid, &text, &outgoing, &peer)
+	err := native.QueryRowContext(ctx, nativeWebSelfTextQuery, rawChat).Scan(&guid, &text, &outgoing, &peer)
 	e.Assertions = append(e.Assertions, Assertion{Name: "independent_visible_self_message", Passed: err == nil})
 	if err != nil {
 		return e
