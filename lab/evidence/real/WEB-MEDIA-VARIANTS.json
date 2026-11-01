@@ -1,30 +1,195 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[32.48 26.12 34.66] cpu_idle=24% cpus=8 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[14.8 13.15 11.77] cpu_idle=56% cpus=8 other_heavy=0"
   },
-  "status": "environment-limited",
-  "run_id": "run_01M6AHNXEFTD45CJ4472VQC60E",
+  "run_id": "run_01M6BK85KD24BAFSH6QZR3HF2Q",
   "metrics": {
+    "browser_playback": "Cross-engine playback is owned by the later UI unit",
     "capture_observer_resets": 0,
-    "writes_submitted": 0
+    "cleanup": {
+      "appletruth_active_remaining": 0,
+      "appletruth_verified": true,
+      "appletruth_visible_remaining": 0,
+      "state": "running"
+    },
+    "cleanup_counts": {
+      "after_count": 160364,
+      "before_count": 160359,
+      "created_count": 0,
+      "passed": false
+    },
+    "command_state": "observed",
+    "disposition": "locally_observed",
+    "initial_command_state": "observed",
+    "parts_requested": 4,
+    "send_commands": 1
   },
   "scenario": "WEB-MEDIA-VARIANTS",
   "level": "real",
   "passed": false,
-  "git_sha": "b980e2216463fa6d89d076e5d5a283d3ff0e3362",
-  "at": "2026-11-01T03:15:34.482573Z",
+  "git_sha": "9517281dad9faa07c576b342579b46ab687deda0",
+  "at": "2026-11-01T13:02:15.661446Z",
   "assertions": [
+    {
+      "name": "attachment_only_target",
+      "passed": true
+    },
+    {
+      "name": "attachment_only_mov",
+      "passed": true
+    },
+    {
+      "name": "attachment_only_caf",
+      "passed": true
+    },
+    {
+      "name": "empty_database_baseline_is_valid",
+      "passed": true
+    },
+    {
+      "name": "incoming_echo_is_separate_target",
+      "passed": true
+    },
+    {
+      "name": "native_file_description_outgoing",
+      "passed": true
+    },
+    {
+      "name": "native_file_description_incoming",
+      "passed": true
+    },
+    {
+      "name": "native_file_description_substring_denied",
+      "passed": true
+    },
+    {
+      "name": "native_file_description_ambiguous_denied",
+      "passed": true
+    },
+    {
+      "name": "photo_preview_filename_with_generic_description",
+      "passed": true
+    },
+    {
+      "name": "duplicate_copies_require_complete_ownership",
+      "passed": true
+    },
+    {
+      "name": "unaccounted_duplicate_is_denied",
+      "passed": true
+    },
+    {
+      "name": "baseline_data_denied",
+      "passed": true
+    },
+    {
+      "name": "other_chat_denied",
+      "passed": true
+    },
+    {
+      "name": "unregistered_attachment_denied",
+      "passed": true
+    },
+    {
+      "name": "mixed_attachment_bubble_denied",
+      "passed": true
+    },
+    {
+      "name": "similar_filename_denied",
+      "passed": true
+    },
+    {
+      "name": "other_registered_file_is_not_the_target",
+      "passed": true
+    },
+    {
+      "name": "ambiguous_ui_target_denied",
+      "passed": true
+    },
+    {
+      "name": "self_chat_captured",
+      "passed": true
+    },
+    {
+      "name": "synthetic_heic_mov_caf_staged",
+      "passed": true
+    },
+    {
+      "name": "cleanup_registered_before_submit",
+      "passed": true
+    },
+    {
+      "name": "native_send_observed_with_fingerprint_checkpoint",
+      "passed": true
+    },
+    {
+      "name": "variants_captured_0",
+      "passed": false
+    },
+    {
+      "name": "variants_captured_1",
+      "passed": false
+    },
+    {
+      "name": "audio_native_appearance_measured",
+      "passed": true
+    },
+    {
+      "name": "audio_original_preserved",
+      "passed": true
+    },
+    {
+      "name": "audio_duration_and_64_bounded_peaks",
+      "passed": true
+    },
+    {
+      "name": "private_handles_removed",
+      "passed": true
+    },
+    {
+      "name": "audio_authorized_blob_1",
+      "passed": true
+    },
+    {
+      "name": "variant_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "audio_avfoundation_truth",
+      "passed": true
+    },
+    {
+      "name": "audio_aac_truth",
+      "passed": true
+    },
+    {
+      "name": "tagged_messages_cleanup",
+      "passed": false
+    },
+    {
+      "name": "tagged_media_cleanup_readonly_truth",
+      "passed": false
+    },
+    {
+      "name": "cleanup_baseline_restored",
+      "passed": false
+    },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
   ],
-  "latency": {},
+  "latency": {
+    "audio_appearance_to_variants_1": {
+      "samples": 1,
+      "p50_ms": 69404.235292,
+      "p95_ms": 69404.235292,
+      "max_ms": 69404.235292,
+      "timeouts": 0
+    }
+  },
   "hosts": [
     "air"
-  ],
-  "conditions": {
-    "reason": "The self-chat contains unread existing messages. Cleanup cannot open it without changing their read state. Read those messages in Messages before rerunning this check; no send was attempted."
-  }
+  ]
 }

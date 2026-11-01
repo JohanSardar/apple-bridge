@@ -1,15 +1,13 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[82.13 42.22 41.6] cpu_idle=13% cpus=8 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[10.08 10.38 10.5] cpu_idle=46% cpus=8 other_heavy=0"
   },
-  "status": "environment-limited",
-  "run_id": "run_01M6AZ7DRES68PCQQ9V9D8SMJ1",
+  "run_id": "run_01M6BJY7BZMWX8KXQVQGRDTETD",
   "metrics": {
-    "apple_event_errors": [
-      0,
-      0
-    ],
+    "attachment_transfer_state_after_cleanup": 5,
+    "attachment_transfer_state_at_handoff_cleanup": 5,
+    "attachment_transfer_wait_ms": 92.233459,
     "capture_observer_resets": 0,
     "cleanup": {
       "all_dates": true,
@@ -20,29 +18,29 @@
       "deleted": 4,
       "drafts_cleared": 0,
       "failure": "",
-      "initial_tagged_self_messages": 3,
+      "initial_tagged_self_messages": 4,
       "only_tagged_self_messages": true,
       "passed": true,
       "remaining_tagged_self_messages": 0,
       "tag_filtered": true
     },
     "cleanup_counts": {
-      "after_count": 160346,
-      "before_count": 160346,
+      "after_count": 160356,
+      "before_count": 160356,
       "created_count": 0,
       "passed": true
     },
-    "command_state": "indeterminate",
-    "disposition": "indeterminate",
-    "initial_command_state": "indeterminate",
+    "command_state": "observed",
+    "disposition": "locally_observed",
+    "initial_command_state": "observed",
     "parts_requested": 2,
     "send_commands": 1
   },
   "scenario": "WEB-UPLOAD-NATIVE-STAGING",
   "level": "real",
-  "passed": false,
-  "git_sha": "2e4c51f363699cfd288eab536078b65beefab244",
-  "at": "2026-11-01T07:12:19.726072Z",
+  "passed": true,
+  "git_sha": "9517281dad9faa07c576b342579b46ab687deda0",
+  "at": "2026-11-01T12:56:49.791763Z",
   "assertions": [
     {
       "name": "self_chat_captured",
@@ -62,7 +60,51 @@
     },
     {
       "name": "native_send_observed_with_fingerprint_checkpoint",
-      "passed": false
+      "passed": true
+    },
+    {
+      "name": "two_native_part_outcomes",
+      "passed": true
+    },
+    {
+      "name": "truth_native_part_once",
+      "passed": true
+    },
+    {
+      "name": "truth_native_part_once",
+      "passed": true
+    },
+    {
+      "name": "handoff_removed_before_transfer_check",
+      "passed": true
+    },
+    {
+      "name": "native_transfer_finished_after_handoff_cleanup",
+      "passed": true
+    },
+    {
+      "name": "native_attachment_is_in_messages_store",
+      "passed": true
+    },
+    {
+      "name": "native_attachment_bytes_exact_after_handoff_cleanup",
+      "passed": true
+    },
+    {
+      "name": "exactly_one_native_attachment",
+      "passed": true
+    },
+    {
+      "name": "native_attachment_effect_exactly_one",
+      "passed": true
+    },
+    {
+      "name": "native_tagged_text_effect_exactly_one",
+      "passed": true
+    },
+    {
+      "name": "verified_upload_reference_persisted",
+      "passed": true
     },
     {
       "name": "tagged_messages_cleanup",

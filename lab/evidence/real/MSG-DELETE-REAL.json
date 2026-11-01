@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[9.84 29.8 39.55] cpu_idle=61% cpus=8 other_heavy=0"
+    "summary": "air: load=[10.64 10.81 10.67] cpu_idle=62% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M6AZ0X6033GFEMHB52VNMCAX",
+  "run_id": "run_01M6BJVFAGEHGSG98M7NWZ1GTB",
   "metrics": {
     "capture_observer_resets": 0,
     "cleanup": {
@@ -12,9 +12,9 @@
       "appletruth_verified": true,
       "appletruth_visible_remaining": 0,
       "approved_contacts_included": false,
-      "deleted": 2,
+      "deleted": 3,
       "drafts_cleared": 0,
-      "failure": "delete:conflict",
+      "failure": "",
       "initial_tagged_self_messages": 3,
       "only_tagged_self_messages": true,
       "passed": true,
@@ -22,8 +22,8 @@
       "tag_filtered": true
     },
     "cleanup_counts": {
-      "after_count": 160346,
-      "before_count": 160346,
+      "after_count": 160356,
+      "before_count": 160356,
       "created_count": 0,
       "passed": true
     },
@@ -42,8 +42,8 @@
   "scenario": "MSG-DELETE-REAL",
   "level": "real",
   "passed": true,
-  "git_sha": "2e4c51f363699cfd288eab536078b65beefab244",
-  "at": "2026-11-01T07:08:46.144064Z",
+  "git_sha": "9517281dad9faa07c576b342579b46ab687deda0",
+  "at": "2026-11-01T12:55:19.632288Z",
   "assertions": [
     {
       "name": "self_chat_captured",
@@ -89,9 +89,9 @@
   "latency": {
     "messages.delete_message": {
       "samples": 1,
-      "p50_ms": 15661.026458,
-      "p95_ms": 15661.026458,
-      "max_ms": 15661.026458,
+      "p50_ms": 8472.384916,
+      "p95_ms": 8472.384916,
+      "max_ms": 8472.384916,
       "timeouts": 0
     }
   },
