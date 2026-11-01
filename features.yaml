@@ -955,14 +955,13 @@ features:
     modules: [internal/clockpack, packaging/shortcuts/ab-clock.json]
     depends_on: [shortcuts.runner]
     status: limited
-    notes: Alarm and timer lifecycle, lost-reply cleanup, and complete baseline restoration pass in simulation. The installed Air AB Clock actions match the repo by digest, but live alarm readback remains unqualified, so no alarm was changed. Timer creation requires qualified inspection and deletion first; macOS timer fields and signed inspection remain unavailable. Clock operations remain unadvertised.
+    notes: Real alarm creation, field readback, toggling and deletion pass through the corrected AB Clock pack. Timer lifecycle and baseline restoration pass in simulation; native timer inspection works, while duration adjustment remains under real qualification. Clock operations remain unadvertised.
     scenarios:
       - {id: CLK-SIM, levels: [sim]}
       - {id: CLK-ALARM-REAL, levels: [sim, real]}
       - {id: CLK-TIMER-REAL, levels: [sim, real]}
     limits:
-      - {"scenario": "CLK-ALARM-REAL", "level": "real", "reason": "Installed AB Clock matches the repo actions but did not return structured alarm readback. Owner foreground Shortcuts qualification is required; no alarm was changed."}
-      - {"scenario": "CLK-TIMER-REAL", "level": "real", "reason": "The installed pack cannot qualify timer inspection and deletion. macOS timer label/running-state readback and signed inspection remain unavailable; no timer was started."}
+      - {"scenario": "CLK-TIMER-REAL", "level": "real", "reason": "Clock exposes its timer duration wheels through Accessibility, but earlier keyboard adjustment left the minute value unchanged at 15. Native active-timer and Recents readback work; selected-segment Accessibility adjustment is awaiting real qualification."}
   - id: mac.capture
     title: Mac system state capture
     requirements: [R-API, R-SCOPE]
