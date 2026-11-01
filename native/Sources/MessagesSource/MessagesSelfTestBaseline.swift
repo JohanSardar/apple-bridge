@@ -73,6 +73,7 @@ public struct MessagesSelfTestBaseline: Sendable {
         let rows = try reader.query("SELECT m.*,j.chat_id AS baseline_chat_id,r.delete_date AS baseline_delete_date FROM message m JOIN (SELECT chat_id,message_id FROM chat_message_join UNION SELECT chat_id,message_id FROM chat_recoverable_message_join) j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id LEFT JOIN chat_recoverable_message_join r ON r.chat_id=j.chat_id AND r.message_id=m.ROWID WHERE c.guid=? AND m.ROWID<=? ORDER BY m.ROWID", [chat, String(baseline)])
         let values = rows.map { row -> [String: String] in
             var fields = row.values
+            if row.integer("associated_message_type") != 0 { fields.removeValue(forKey: "is_read"); fields.removeValue(forKey: "date_read") }
             for (key, bytes) in row.blobs { fields[key] = BodyDigest.hash(bytes) }
             return fields
         }

@@ -44,6 +44,21 @@ func nativeMessagesChatDigests(ctx context.Context, native *sql.DB, chat string,
 		if err := rows.Scan(targets...); err != nil {
 			return "", nil, err
 		}
+		reaction := false
+		for i, column := range columns {
+			if column == "associated_message_type" {
+				if kind, ok := values[i].(int64); ok {
+					reaction = kind != 0
+				}
+			}
+		}
+		if reaction {
+			for i, column := range columns {
+				if column == "is_read" || column == "date_read" {
+					values[i] = nil
+				}
+			}
+		}
 		for i, column := range columns {
 			if err := json.NewEncoder(columnHashes[column]).Encode(values[i]); err != nil {
 				return "", nil, err

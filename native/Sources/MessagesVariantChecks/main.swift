@@ -2,6 +2,15 @@ import Foundation
 import MessagesSource
 import SourceSupport
 
+private final class ForwardedNativeFlagReceiver: NSObject {
+    @objc func readyForNativeFlag() -> Bool { true }
+}
+private final class ForwardedNativeFlagProxy: NSObject {
+    private let receiver = ForwardedNativeFlagReceiver()
+    override func responds(to selector: Selector!) -> Bool { receiver.responds(to: selector) || super.responds(to: selector) }
+    override func forwardingTarget(for selector: Selector!) -> Any? { receiver.responds(to: selector) ? receiver : super.forwardingTarget(for: selector) }
+}
+
 @main
 struct MessagesVariantChecks {
     static func main() async throws {
@@ -17,6 +26,7 @@ struct MessagesVariantChecks {
         let args = JSON.object(["text": .string("test"), "variant": variant])
         let data: [String: JSON] = ["text": .string("test"), "is_from_me": .bool(true), "error_code": .number(0), "effect": .string("com.apple.messages.effect.loud"), "formatting": .array([range])]
         var checks = try await AccessibilityInputChecks.run()
+        checks["forwarded_native_receiver_supported"] = await MainActor.run { MessagesSendVariants.syntheticForwardedNativeFlag(ForwardedNativeFlagProxy(), selector: "readyForNativeFlag") }
         checks["already_read_timestamp_is_observed"] = MessagesReadStateFixture.matches(timestamp: 20, latest: 20, unread: false)
         checks["unread_timestamp_is_observed"] = MessagesReadStateFixture.matches(timestamp: 19, latest: 20, unread: true)
         checks["read_state_mismatch_rejected"] = !MessagesReadStateFixture.matches(timestamp: 19, latest: 20, unread: false)

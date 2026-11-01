@@ -6,16 +6,20 @@ import Decoders
 
 @MainActor
 enum MessagesNativeSession {
+    private static let forwardedImplementation: IMP? = {
+        guard let runtime = dlopen("/usr/lib/libobjc.A.dylib", RTLD_LAZY), let implementation = dlsym(runtime, "objc_msgSend") else { return nil }
+        return unsafeBitCast(implementation, to: IMP.self)
+    }()
     private static func method(_ object: AnyObject, _ name: String) throws -> (Selector, IMP) {
         let selector = NSSelectorFromString(name)
         let type: AnyClass? = object_getClass(object)
-        guard let type, let method = class_getInstanceMethod(type, selector) else {
-            let receiver = type.map { BodyDigest.hash(Data(NSStringFromClass($0).utf8)) } ?? ""
-            try? PrivateReport.write(["selector_digest": BodyDigest.hash(Data(name.utf8)), "receiver_digest": receiver, "selector_available": false], to: PrivateReport.directory.appendingPathComponent("messages-native-method-diagnostic.json"))
-            throw SendVariantFailure.audioMessageFlagUnverified
-        }
-        return (selector, method_getImplementation(method))
+        if let type, let method = class_getInstanceMethod(type, selector) { return (selector, method_getImplementation(method)) }
+        if (object as? NSObjectProtocol)?.responds(to: selector) == true, let implementation = forwardedImplementation { return (selector, implementation) }
+        let receiver = type.map { BodyDigest.hash(Data(NSStringFromClass($0).utf8)) } ?? ""
+        try? PrivateReport.write(["selector_digest": BodyDigest.hash(Data(name.utf8)), "receiver_digest": receiver, "selector_available": false], to: PrivateReport.directory.appendingPathComponent("messages-native-method-diagnostic.json"))
+        throw SendVariantFailure.audioMessageFlagUnverified
     }
+    static func syntheticForwardedFlag(_ receiver: NSObject, selector: String) -> Bool { (try? flag(receiver, selector)) == true }
     private static func object(_ receiver: AnyObject, _ name: String, argument: AnyObject? = nil) throws -> AnyObject? {
         let (selector, implementation) = try method(receiver, name)
         if name.contains(":") {
@@ -99,4 +103,6 @@ enum MessagesNativeSession {
 public extension MessagesSendVariants {
     @MainActor
     static func syntheticNativeAudioFlag() -> Bool { MessagesNativeSession.syntheticFlag() }
+    @MainActor
+    static func syntheticForwardedNativeFlag(_ receiver: NSObject, selector: String) -> Bool { MessagesNativeSession.syntheticForwardedFlag(receiver, selector: selector) }
 }
