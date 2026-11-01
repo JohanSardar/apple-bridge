@@ -1,9 +1,9 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[3.75 4.23 4.92] cpu_idle=53% cpus=10 other_heavy=3"
+    "quiet": true,
+    "summary": "air: load=[3.23 3.81 4.52] cpu_idle=89% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M6AK006AY8NE9G122QZ4WP1G",
+  "run_id": "run_01M6APK358FTE6QS9HQ104VFVH",
   "metrics": {
     "capture_observer_resets": 0
   },
@@ -11,7 +11,7 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-11-01T03:38:33.546803Z",
+  "at": "2026-11-01T04:41:24.904306Z",
   "assertions": [
     {
       "name": "descriptor_photos.search",
@@ -27,14 +27,6 @@
     },
     {
       "name": "source_grants",
-      "passed": true
-    },
-    {
-      "name": "native_build",
-      "passed": true
-    },
-    {
-      "name": "native_output",
       "passed": true
     },
     {
