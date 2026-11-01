@@ -69,7 +69,13 @@ func runNativeMessagesCommands(ctx context.Context, s Scenario, level string, e 
 	if s.ID == "WEB-MSG-REAL-READ" {
 		scope = "messages:read,system:read"
 	}
-	w, err := world.NewRealWithSetup(ctx, level, replicas, world.NativeSetup{IndependentTruth: true}, world.BlobOptions{Scope: scope})
+	w, err := world.NewRealWithSetup(ctx, level, replicas, world.NativeSetup{IndependentTruth: true, BeforeStart: func(w *world.World) error {
+		home := filepath.Join(w.Dir, "gateway", "helper")
+		if err := os.MkdirAll(home, 0700); err != nil {
+			return err
+		}
+		return os.WriteFile(filepath.Join(home, "lab-capture-source"), []byte("messages"), 0600)
+	}}, world.BlobOptions{Scope: scope})
 	if err != nil {
 		os.WriteFile("/tmp/ablab/messages-real-world-error.log", []byte(err.Error()), 0600)
 		add("real_world_start", false)

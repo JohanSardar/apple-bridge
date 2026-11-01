@@ -137,9 +137,10 @@ public actor AppleSession: ObservationSink {
                 try connected.send(.object(["t": .string("Ready"), "protocol": .string("ipc/1"), "coverage": .object(coverage), "capabilities": .object(capabilities), "helper_build": .string("m1-session"), "os_build": .string(ProcessInfo.processInfo.operatingSystemVersionString)]))
                 try await publishReadiness()
                 for outcome in await guardLog.outcomes.values where outcome["disposition"].string == "indeterminate" { try connected.send(outcome) }
-                captureTasks.append(Task { await self.capture() })
- captureTasks.append(Task {await self.captureAdditional(calendar)})
-                for source in additionalSources.values { captureTasks.append(Task { await self.captureAdditional(source) }) }
+                let captureSource = labEnabled ? (try? String(contentsOf: home.appendingPathComponent("lab-capture-source"), encoding: .utf8)) : nil
+                if captureSource == nil || captureSource == "reminders" { captureTasks.append(Task { await self.capture() }) }
+                if captureSource == nil || captureSource == "calendar" { captureTasks.append(Task { await self.captureAdditional(calendar) }) }
+                for source in additionalSources.values where captureSource == nil || captureSource == source.name { captureTasks.append(Task { await self.captureAdditional(source) }) }
                 let watchdog = Task {
                     var delay = Duration.seconds(1)
                     while !Task.isCancelled {
