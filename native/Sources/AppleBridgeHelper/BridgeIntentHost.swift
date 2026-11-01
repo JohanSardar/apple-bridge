@@ -82,6 +82,7 @@ enum BridgeIntentHost {
                     for child in attribute(element, kAXChildrenAttribute) as? [AXUIElement] ?? [] { visit(child, depth + 1) }
                 }
                 visit(window, 0)
+                if app.bundleIdentifier == "com.apple.clock" && !buttons.contains(where: { $0 == "Done" || $0.hasPrefix("Delete") }) { continue }
                 if !texts.isEmpty && !buttons.isEmpty && (hasDialog || buttons.contains(where: { ["Always Allow", "Allow", "Don’t Allow", "Don't Allow", "Add Shortcut", "Replace", "Continue", "OK"].contains($0) })) {
                     return texts.joined(separator: " | ")
                 }
