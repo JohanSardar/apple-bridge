@@ -32,15 +32,21 @@ enum MessagesNativeSession {
         let receiver: AnyObject = type
         let (selector, implementation) = try method(receiver, "instantMessageWithText:messageSubject:fileTransferGUIDs:flags:threadIdentifier:")
         typealias Call = @convention(c) (AnyObject, Selector, NSAttributedString, NSString?, NSArray, UInt64, NSString?) -> Unmanaged<AnyObject>?
-        guard let message = unsafeBitCast(implementation, to: Call.self)(receiver, selector, body, nil, [transfer] as NSArray, 0x100005 | (1 << 21), nil)?.takeUnretainedValue(), try flag(message, "isAudioMessage") else { throw SendVariantFailure.audioMessageFlagUnverified }
+        guard let message = unsafeBitCast(implementation, to: Call.self)(receiver, selector, body, nil, [transfer] as NSArray, 0x100005 | (1 << 21), nil)?.takeUnretainedValue(), try flag(message, "isAudioMessage"), try flag(message, "isFromMe") else { throw SendVariantFailure.audioMessageFlagUnverified }
         return message
     }
     static func syntheticFlag() -> Bool { (try? message("synthetic-transfer")) != nil }
+    private static func checkpoint(_ stage: String) {
+        try? PrivateReport.write(["stage": stage], to: PrivateReport.directory.appendingPathComponent("messages-native-session-diagnostic.json"))
+    }
     private static func chat(_ guid: String) throws -> AnyObject {
+        checkpoint("framework_requested")
         guard !guid.isEmpty, dlopen("/System/Library/PrivateFrameworks/IMCore.framework/IMCore", RTLD_LAZY) != nil,
               let controllerType = NSClassFromString("IMDaemonController"), let registryType = NSClassFromString("IMChatRegistry"),
-              let controller = try object(controllerType, "sharedInstance"), let registry = try object(registryType, "sharedInstance"),
-              try flag(controller, "connectToDaemon") else { throw SendVariantFailure.audioMessageFlagUnverified }
+              let controller = try object(controllerType, "sharedInstance"), let registry = try object(registryType, "sharedInstance") else { throw SendVariantFailure.audioMessageFlagUnverified }
+        checkpoint("connection_requested")
+        guard try flag(controller, "connectToDaemon") else { throw SendVariantFailure.audioMessageFlagUnverified }
+        checkpoint("connection_established")
         let deadline = Date().addingTimeInterval(5)
         var chat: AnyObject?
         repeat {
@@ -49,6 +55,7 @@ enum MessagesNativeSession {
             RunLoop.current.run(until: Date().addingTimeInterval(0.05))
         } while Date() < deadline
         guard let chat, try object(chat, "guid") as? String == guid else { throw SendVariantFailure.audioMessageFlagUnverified }
+        checkpoint("self_chat_resolved")
         return chat
     }
     static func deletePlaceholder(_ guid: String, chat chatGUID: String) throws {
@@ -57,6 +64,7 @@ enum MessagesNativeSession {
               let item = try object(message, "_imMessageItem"), try object(item, "guid") as? String == guid else { throw SourceFailure.conflict }
         let (selector, implementation) = try method(chat, "deleteIMMessageItems:")
         typealias Call = @convention(c) (AnyObject, Selector, NSArray) -> Void
+        checkpoint("owned_placeholder_delete_requested")
         unsafeBitCast(implementation, to: Call.self)(chat, selector, [item] as NSArray)
     }
     static func send(_ part: JSON, chat guid: String) throws -> String {
@@ -67,6 +75,7 @@ enum MessagesNativeSession {
         guard let native = try object(message, "guid") as? String, !native.isEmpty else { throw SendVariantFailure.audioMessageFlagUnverified }
         let (selector, implementation) = try method(chat, "sendMessage:")
         typealias Call = @convention(c) (AnyObject, Selector, AnyObject) -> Void
+        checkpoint("audio_send_requested")
         unsafeBitCast(implementation, to: Call.self)(chat, selector, message)
         return native
     }
