@@ -260,12 +260,29 @@ private struct ClockTimerUI {
 
     func removeRecent(label: String) throws {
         try dismissTimerForm()
-        let candidates = find(root).filter { (attribute($0, kAXIdentifierAttribute) as? String ?? "").hasPrefix("recent-timer-") }
-        let rows = candidates.filter { element in
-            find(element).contains { name($0).contains(label) || (attribute($0, kAXValueAttribute) as? String ?? "").contains(label) }
+        func candidates() -> [AXUIElement] {
+            find(root).filter { (attribute($0, kAXIdentifierAttribute) as? String ?? "").hasPrefix("recent-timer-") }
+        }
+        func matches() -> [AXUIElement] {
+            candidates().filter { element in
+                find(element).contains { name($0) == label || attribute($0, kAXValueAttribute) as? String == label }
+            }
+        }
+        var rows = matches()
+        for action in ["AXScrollDown", "AXScrollUp"] {
+            for _ in 0..<20 where rows.isEmpty {
+                let scrollable = find(root).filter { element in
+                    var actions: CFArray?
+                    AXUIElementCopyActionNames(element, &actions)
+                    return (actions as? [String] ?? []).contains(action)
+                }
+                guard let scroll = scrollable.last, AXUIElementPerformAction(scroll, action as CFString) == .success else { break }
+                RunLoop.current.run(until: Date().addingTimeInterval(0.15))
+                rows = matches()
+            }
         }
         guard rows.count == 1 else {
-            if let data = try? JSONSerialization.data(withJSONObject: ["recent_timer_controls": candidates.count, "matching_fixture_controls": rows.count], options: [.sortedKeys]) {
+            if let data = try? JSONSerialization.data(withJSONObject: ["recent_timer_controls": candidates().count, "matching_fixture_controls": rows.count], options: [.sortedKeys]) {
                 FileHandle.standardError.write(data + Data("\n".utf8))
             }
             throw ClockTimerFailure(step: "find the tagged recent timer")
@@ -274,7 +291,9 @@ private struct ClockTimerUI {
             name($0) == "Close" && attribute($0, kAXEnabledAttribute) as? Bool == true
         }
         if close.count == 1 {
-            try press(close, step: "remove the tagged recent timer")
+            _ = AXUIElementPerformAction(rows[0], "AXScrollToVisible" as CFString)
+            RunLoop.current.run(until: Date().addingTimeInterval(0.15))
+            try click(close[0], button: .left)
             return
         }
         func frame(_ element: AXUIElement) -> CGRect? {
