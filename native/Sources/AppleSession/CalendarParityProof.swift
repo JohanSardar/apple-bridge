@@ -213,6 +213,7 @@ enum CalendarParityProof {
         } catch {
             reasons[stage] = .string("Calendar could not complete the test event action. Keep Calendar open and retry this check.")
             if let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.iCal").first {
+                controls["calendar_frontmost_at_failure"] = .bool(NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier)
                 let ui = CalendarFixtureUI(app: app, title: title + " event")
                 for name in [title + " event", "travel time", "travel time:", "Travel Time", "Add Alert, Repeat, or Travel Time", "Add Attachment…", "Add notes, URL or attachments", "Accept", "Maybe", "Decline", "None", "Done", "Send", "Open", "Cancel", "Import", "OK"] {
                     controls[name == title + " event" ? "owned_title_visible" : name] = .number(Double(ui.find(name).count))
@@ -303,7 +304,10 @@ final class CalendarFixtureUI {
             AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children)
             return (children as? [AXUIElement] ?? []).flatMap(walk)
         }
-        return walk(within ?? root)
+        let found = walk(within ?? root)
+        diagnostics["accessibility_walk_count"] = .number((diagnostics["accessibility_walk_count"]?.number ?? 0) + 1)
+        if ContinuousClock.now >= deadline { diagnostics["accessibility_walk_timeout_count"] = .number((diagnostics["accessibility_walk_timeout_count"]?.number ?? 0) + 1) }
+        return found
     }
 
     func openOwnedEvent() async throws {
@@ -322,12 +326,12 @@ final class CalendarFixtureUI {
         diagnostics["calendar_window_count"] = .number(Double((windows as? [AXUIElement])?.count ?? 0))
         if hasOwnedInspector() { return }
         if let calendarTitle {
-            var calendars = find(calendarTitle, role: kAXCheckBoxRole)
+            var calendars = find(calendarTitle, role: kAXCheckBoxRole, containing: true)
             let toggles = find("Calendars", role: kAXButtonRole)
             if calendars.isEmpty, toggles.count == 1, value(toggles[0], kAXValueAttribute) == "0" {
                 try dialogPress("Calendars")
                 try await Task.sleep(for: .milliseconds(200))
-                calendars = find(calendarTitle, role: kAXCheckBoxRole)
+                calendars = find(calendarTitle, role: kAXCheckBoxRole, containing: true)
             }
             diagnostics["owned_calendar_checkbox_count"] = .number(Double(calendars.count))
             if calendars.count == 1, value(calendars[0], kAXValueAttribute) == "0" {
@@ -363,14 +367,20 @@ final class CalendarFixtureUI {
         }
         guard let result = results.first(where: { value($0, kAXRoleAttribute) == kAXStaticTextRole }) ?? results.first else { throw SourceFailure.unavailable }
         diagnostics["owned_result_text_target"] = .bool(value(result, kAXRoleAttribute) == kAXStaticTextRole)
-        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier else { throw SourceFailure.conflict }
-        try await doubleClick(result)
-        diagnostics["owned_result_double_clicked"] = .bool(true)
+        do {
+            try await doubleClick(result)
+            diagnostics["owned_result_double_clicked"] = .bool(true)
+        } catch { diagnostics["owned_result_double_clicked"] = .bool(false) }
         diagnostics["opened_title_count"] = .number(Double(find(title, containing: true).count))
         diagnostics["opened_fixture_prefix_count"] = .number(Double(find(String(title.prefix(18)), containing: true).count))
         if hasOwnedInspector() { try fence(); return }
         var candidate = result
-        for _ in 0..<4 {
+        for depth in 0..<4 {
+            diagnostics["owned_result_parent_" + String(depth) + "_" + value(candidate, kAXRoleAttribute)] = .bool(true)
+            var actions: CFArray?
+            if AXUIElementCopyActionNames(candidate, &actions) == .success {
+                for action in actions as? [String] ?? [] { diagnostics["owned_result_action_" + String(depth) + "_" + action] = .bool(true) }
+            }
             if AXUIElementSetAttributeValue(candidate, kAXSelectedAttribute as CFString, kCFBooleanTrue) == .success {
                 diagnostics["owned_result_selected"] = .bool(true)
             }
@@ -398,22 +408,38 @@ final class CalendarFixtureUI {
             candidate = unsafeDowncast(parent, to: AXUIElement.self)
             if [kAXWindowRole, kAXApplicationRole, kAXTableRole, kAXOutlineRole, kAXScrollAreaRole].contains(value(candidate, kAXRoleAttribute)) { break }
         }
-        try await doubleClick(result)
+        if let current = find(title, role: kAXStaticTextRole, containing: true).first { try? await doubleClick(current) }
         if !hasOwnedInspector() { try post(34, flags: .maskCommand); try await Task.sleep(for: .milliseconds(400)) }
         try fence()
     }
 
     func doubleClick(_ element: AXUIElement) async throws {
+        diagnostics["click_calendar_frontmost"] = .bool(NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier)
+        app.activate()
+        for _ in 0..<20 {
+            if NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier { break }
+            try await Task.sleep(for: .milliseconds(100))
+        }
         guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier else { throw SourceFailure.conflict }
         var position: CFTypeRef?, size: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &position) == .success,
-              AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &size) == .success,
+        let positioned = AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &position) == .success
+        let sized = AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &size) == .success
+        diagnostics["click_position_available"] = .bool(positioned)
+        diagnostics["click_size_available"] = .bool(sized)
+        guard positioned, sized,
               let position, let size else { throw SourceFailure.unsupported }
         var point = CGPoint.zero, dimensions = CGSize.zero
         guard AXValueGetValue(unsafeDowncast(position, to: AXValue.self), .cgPoint, &point),
               AXValueGetValue(unsafeDowncast(size, to: AXValue.self), .cgSize, &dimensions) else { throw SourceFailure.unsupported }
         point.x += dimensions.width / 2; point.y += dimensions.height / 2
-        guard dimensions.width > 0, dimensions.height > 0, CGDisplayBounds(CGMainDisplayID()).contains(point) else { throw SourceFailure.conflict }
+        let visible = NSScreen.screens.contains { screen in
+            guard let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else { return false }
+            return CGDisplayBounds(number.uint32Value).contains(point)
+        }
+        diagnostics["click_width_positive"] = .bool(dimensions.width > 0)
+        diagnostics["click_height_positive"] = .bool(dimensions.height > 0)
+        diagnostics["click_on_display"] = .bool(visible)
+        guard dimensions.width > 0, dimensions.height > 0, visible else { throw SourceFailure.conflict }
         for count in 1...2 {
             for type in [CGEventType.leftMouseDown, .leftMouseUp] {
                 guard let event = CGEvent(mouseEventSource: nil, mouseType: type, mouseCursorPosition: point, mouseButton: .left) else { throw SourceFailure.unavailable }
