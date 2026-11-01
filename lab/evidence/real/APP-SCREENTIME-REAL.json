@@ -1,17 +1,65 @@
 {
-  "status": "limited",
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[3.54 3.93 5.13] cpu_idle=78% cpus=10 other_heavy=0"
+  },
+  "status": "passed",
+  "run_id": "",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
   "scenario": "APP-SCREENTIME-REAL",
   "level": "real",
-  "passed": false,
+  "passed": true,
   "git_sha": "",
+  "at": "2026-11-01T00:18:13.836287Z",
   "assertions": [
     {
-      "name": "authorization",
-      "passed": false
+      "name": "authorized",
+      "passed": true
+    },
+    {
+      "name": "foreground_active",
+      "passed": true
+    },
+    {
+      "name": "monitor_callback_observed",
+      "passed": true
+    },
+    {
+      "name": "monitor_registered",
+      "passed": true
+    },
+    {
+      "name": "monitor_removed",
+      "passed": true
+    },
+    {
+      "name": "nonempty_shield_observed",
+      "passed": true
+    },
+    {
+      "name": "resources_cleaned",
+      "passed": true
+    },
+    {
+      "name": "shield_ui_observed",
+      "passed": true
+    },
+    {
+      "name": "usage_report_observed",
+      "passed": true
+    },
+    {
+      "name": "redacted_observation",
+      "passed": true,
+      "detail": "{\"counts\":{\"authorization_status_after\":3,\"authorization_status_before\":0,\"recovered_screen_time_runs\":1,\"selected_tokens\":1},\"digests\":{}}"
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
-  ]
+  ],
+  "latency": null,
+  "hosts": null
 }

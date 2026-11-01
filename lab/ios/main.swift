@@ -1,5 +1,11 @@
 import Foundation
 
+precondition(!BridgeShieldPolicy.authorized(status: 0))
+precondition(!BridgeShieldPolicy.authorized(status: 1))
+precondition(BridgeShieldPolicy.authorized(status: 2))
+precondition(BridgeShieldPolicy.authorized(status: 3))
+precondition(!BridgeShieldPolicy.authorized(status: 4))
+
 final class FakeManagedSettings: BridgeShieldAdapter {
     var apps: Set<String>?
     var categories: Set<String>?

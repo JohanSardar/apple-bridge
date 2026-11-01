@@ -1,17 +1,49 @@
 {
-  "status": "limited",
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[6.49 8.11 10.72] cpu_idle=42% cpus=10 other_heavy=0"
+  },
+  "status": "passed",
+  "run_id": "",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
   "scenario": "APP-LOC-REAL",
   "level": "real",
-  "passed": false,
+  "passed": true,
   "git_sha": "",
+  "at": "2026-10-31T23:21:30.64365Z",
   "assertions": [
     {
-      "name": "location_permission",
-      "passed": false
+      "name": "always_authorized",
+      "passed": true
+    },
+    {
+      "name": "foreground_active",
+      "passed": true
+    },
+    {
+      "name": "geofence_registered",
+      "passed": true
+    },
+    {
+      "name": "geofence_removed",
+      "passed": true
+    },
+    {
+      "name": "precise_fix_observed",
+      "passed": true
+    },
+    {
+      "name": "redacted_observation",
+      "passed": true,
+      "detail": "{\"counts\":{},\"digests\":{}}"
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
-  ]
+  ],
+  "latency": null,
+  "hosts": null
 }

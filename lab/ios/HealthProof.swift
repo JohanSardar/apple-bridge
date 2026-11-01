@@ -18,6 +18,14 @@ final class FakeHealth: HealthReading {
 @main
 struct HealthProof {
     @MainActor static func main() async throws {
+        var bulk: [String] = []
+        var individual: [String] = []
+        try await HealthReadAuthorization.request(["steps", "medication_dose", "medications", "sleep"], indirect: { $0 == "medication_dose" }, perObject: { $0 == "medications" }, bulk: { bulk = $0 }, individual: { individual.append($0) })
+        precondition(bulk == ["steps", "sleep"] && individual == ["medications"])
+        do {
+            try await HealthReadAuthorization.request(["steps", "medications"], perObject: { $0 == "medications" }, bulk: { _ in throw CocoaError(.userCancelled) }, individual: { _ in preconditionFailure() })
+            preconditionFailure()
+        } catch {}
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: dir) }

@@ -1,12 +1,12 @@
 import Foundation
 
-struct MotionSample: Codable {
+struct MotionSample: Codable, Sendable {
     let activity: String
     let confidence: String
     let start: Date
 }
 
-struct MotionDay: Codable {
+struct MotionDay: Codable, Sendable {
     let start: Date
     let end: Date
     let steps: Int

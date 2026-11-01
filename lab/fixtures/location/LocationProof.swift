@@ -40,6 +40,19 @@ struct LocationProof {
         let denied = await QualificationWait.until(timeout: 0) { false }
         precondition(!denied)
 
+        var monitored = true
+        var removedName = ""
+        let cleanup = await LocationQualification.remove("[ab-test] delayed", timeout: 1, remove: { name in
+            removedName = name
+            Task { @MainActor in
+                try await Task.sleep(for: .milliseconds(10))
+                monitored = false
+            }
+        }, isMonitoring: { _ in monitored })
+        precondition(cleanup && removedName == "[ab-test] delayed" && !monitored)
+        let stuck = await LocationQualification.remove("[ab-test] stuck", timeout: 0, remove: { _ in }, isMonitoring: { _ in true })
+        precondition(!stuck)
+
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let url = directory.appendingPathComponent("records.json")

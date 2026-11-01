@@ -58,6 +58,27 @@ final class HealthKitWriter: HealthWriting {
         }
     }
 
+    func cleanupTaggedSamples() async throws -> Int {
+        guard retainForProof else { throw CocoaError(.fileWriteNoPermission) }
+        var deleted = 0
+        for kind in ["water", "weight", "mindful", "workout"] {
+            let sampleType = try type(kind)
+            func tagged() async throws -> [HKSample] {
+                let values: [HKSample] = try await withCheckedThrowingContinuation { continuation in
+                    store.execute(HKSampleQuery(sampleType: sampleType, predicate: HKQuery.predicateForObjects(from: HKSource.default()), limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, error in
+                        if let error { continuation.resume(throwing: error) }
+                        else { continuation.resume(returning: samples ?? []) }
+                    })
+                }
+                return values.filter { ($0.metadata?[HKMetadataKeyExternalUUID] as? String)?.hasPrefix("[ab-test]") == true && $0.sourceRevision.source.bundleIdentifier == Bundle.main.bundleIdentifier }
+            }
+            let matches = try await tagged()
+            if !matches.isEmpty { try await store.delete(matches); deleted += matches.count }
+            guard try await tagged().isEmpty else { throw CocoaError(.fileWriteUnknown) }
+        }
+        return deleted
+    }
+
     func contains(id: String, log: HealthLog) async throws -> Bool {
         try await !samples(id: id, log: log).isEmpty
     }
@@ -66,7 +87,6 @@ final class HealthKitWriter: HealthWriting {
         guard log.tag.hasPrefix("[ab-test]") else { throw CocoaError(.fileWriteNoPermission) }
         let matches = proofSamples[id].map { [$0] } ?? []
         guard matches.allSatisfy({ $0.metadata?[HKMetadataKeyExternalUUID] as? String == log.tag }) else { throw CocoaError(.fileWriteNoPermission) }
-        guard matches.allSatisfy({ $0.sourceRevision.source.bundleIdentifier == Bundle.main.bundleIdentifier }) else { throw CocoaError(.fileWriteNoPermission) }
         if !matches.isEmpty { try await store.delete(matches) }
         proofSamples.removeValue(forKey: id)
     }

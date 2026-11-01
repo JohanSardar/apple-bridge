@@ -1,4 +1,18 @@
 {
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[7.36 7.51 7.51] cpu_idle=38% cpus=10 other_heavy=0"
+  },
+  "run_id": "",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "phase": 1
+  },
+  "scenario": "APP-LIVE-REAL",
+  "level": "real",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-31T23:53:41.913276Z",
   "assertions": [
     {
       "name": "fresh_completed_phone_receipt",
@@ -30,26 +44,22 @@
     },
     {
       "name": "live_and_widget_observed",
-      "passed": false
-    },
-    {
-      "name": "activity_ended",
       "passed": true
     },
     {
       "name": "activity_ended",
-      "passed": true
-    },
-    {
-      "name": "resources_cleaned",
       "passed": true
     },
     {
       "name": "live_and_widget_observed",
-      "passed": false
+      "passed": true
     },
     {
-      "name": "widget_shared_status",
+      "name": "state_restored",
+      "passed": true
+    },
+    {
+      "name": "activity_ended",
       "passed": true
     },
     {
@@ -57,7 +67,7 @@
       "passed": true
     },
     {
-      "name": "activity_updated",
+      "name": "resources_cleaned",
       "passed": true
     },
     {
@@ -65,7 +75,11 @@
       "passed": true
     },
     {
-      "name": "state_restored",
+      "name": "activity_updated",
+      "passed": true
+    },
+    {
+      "name": "widget_shared_status",
       "passed": true
     },
     {
@@ -77,11 +91,6 @@
       "passed": true
     }
   ],
-  "level": "real",
-  "metrics": {
-    "capture_observer_resets": 0,
-    "phase": 1
-  },
-  "passed": false,
-  "scenario": "APP-LIVE-REAL"
+  "latency": null,
+  "hosts": null
 }

@@ -1,6 +1,7 @@
 import CryptoKit
 import Foundation
 import HealthKit
+import UIKit
 
 @MainActor
 final class HealthKitReader: HealthReading {
@@ -32,8 +33,15 @@ final class HealthKitReader: HealthReading {
     }
     var streams: [String] { types.map(\.identifier) + ["medications"] }
 
-    func authorize() async throws {
-        try await store.requestAuthorization(toShare: [], read: Set(types.map { $0 as HKObjectType } + [HKObjectType.userAnnotatedMedicationType()]))
+    func authorize(onPerObject: () -> Void = {}) async throws {
+        let requested = types.map { $0 as HKObjectType } + [HKObjectType.userAnnotatedMedicationType()]
+        try await HealthReadAuthorization.request(requested, indirect: { $0 == HKObjectType.medicationDoseEventType() }, perObject: { $0.requiresPerObjectAuthorization() }, bulk: { types in
+            try await store.requestAuthorization(toShare: [], read: Set(types))
+        }, individual: { type in
+            guard await QualificationWait.until({ UIApplication.shared.applicationState == .active }) else { throw HealthReadError.invalid }
+            onPerObject()
+            try await store.requestPerObjectReadAuthorization(for: type, predicate: nil)
+        })
     }
 
     func observe(wake: @escaping @MainActor () async -> Void) async throws {

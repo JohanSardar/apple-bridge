@@ -1,4 +1,19 @@
 {
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[4.48 4.1 5.1] cpu_idle=86% cpus=10 other_heavy=0"
+  },
+  "run_id": "",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "intent_invocations": 1,
+    "phase": 2
+  },
+  "scenario": "APP-INTENTS-REAL",
+  "level": "real",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-11-01T00:19:22.432605Z",
   "assertions": [
     {
       "name": "fresh_completed_phone_receipt",
@@ -14,15 +29,23 @@
     },
     {
       "name": "saved_shortcut_invoked",
-      "passed": false
+      "passed": true
     },
     {
       "name": "shortcut_pong",
-      "passed": false
+      "passed": true
     },
     {
       "name": "shortcut_cleaned_up",
-      "passed": false
+      "passed": true
+    },
+    {
+      "name": "shortcut_pong",
+      "passed": true
+    },
+    {
+      "name": "saved_shortcut_invoked",
+      "passed": true
     },
     {
       "name": "state_restored",
@@ -34,11 +57,7 @@
     },
     {
       "name": "shortcut_cleaned_up",
-      "passed": false
-    },
-    {
-      "name": "saved_shortcut_invoked",
-      "passed": false
+      "passed": true
     },
     {
       "name": "restoration_receipt",
@@ -49,12 +68,6 @@
       "passed": true
     }
   ],
-  "level": "real",
-  "metrics": {
-    "capture_observer_resets": 0,
-    "intent_invocations": 0,
-    "phase": 2
-  },
-  "passed": false,
-  "scenario": "APP-INTENTS-REAL"
+  "latency": null,
+  "hosts": null
 }

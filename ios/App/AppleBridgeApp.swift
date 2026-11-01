@@ -7,7 +7,8 @@ struct AppleBridgeApp: App {
         WindowGroup {
             #if DEBUG
             Group {
-                if ShellDeliveryQualification.active { ShellDeliveryQualificationScreen() }
+                if RealQualification.active { RealQualificationScreen() }
+                else if ShellDeliveryQualification.active { ShellDeliveryQualificationScreen() }
                 else { BridgeSettings() }
             }
             .onAppear { UIApplication.shared.isIdleTimerDisabled = true }

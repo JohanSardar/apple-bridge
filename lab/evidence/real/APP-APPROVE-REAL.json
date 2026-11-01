@@ -1,24 +1,43 @@
 {
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[8.25 5.08 5.09] cpu_idle=57% cpus=10 other_heavy=0"
+  },
+  "status": "failed",
+  "run_id": "",
+  "metrics": {
+    "apns_accepted_count": 2,
+    "apns_failure_count": 17,
+    "apns_wakes": 2,
+    "capture_observer_resets": 0,
+    "notification_prompt_requested": 0,
+    "phase": 3
+  },
+  "scenario": "APP-APPROVE-REAL",
+  "level": "real",
+  "passed": false,
+  "git_sha": "",
+  "at": "2026-11-01T00:25:05.0453Z",
   "assertions": [
     {
       "name": "fresh_completed_phone_receipt",
-      "passed": false
+      "passed": true
     },
     {
       "name": "state_restored",
-      "passed": false
+      "passed": true
     },
     {
       "name": "resources_cleaned",
-      "passed": false
+      "passed": true
     },
     {
       "name": "notification_authorized",
-      "passed": false
+      "passed": true
     },
     {
       "name": "ready",
-      "passed": false
+      "passed": true
     },
     {
       "name": "face_id_succeeded",
@@ -30,10 +49,50 @@
     },
     {
       "name": "identity_restored",
+      "passed": true
+    },
+    {
+      "name": "connector_prompt_code_and_scopes",
       "passed": false
     },
     {
+      "name": "connector_face_id_succeeded",
+      "passed": false
+    },
+    {
+      "name": "connector_decision_uploaded",
+      "passed": false
+    },
+    {
+      "name": "resources_cleaned",
+      "passed": true
+    },
+    {
+      "name": "signed_result_uploaded",
+      "passed": false
+    },
+    {
+      "name": "ready",
+      "passed": true
+    },
+    {
+      "name": "state_restored",
+      "passed": true
+    },
+    {
       "name": "signed_pair_status",
+      "passed": true
+    },
+    {
+      "name": "face_id_succeeded",
+      "passed": false
+    },
+    {
+      "name": "identity_restored",
+      "passed": true
+    },
+    {
+      "name": "notification_authorized",
       "passed": true
     },
     {
@@ -42,7 +101,7 @@
     },
     {
       "name": "identity_restored",
-      "passed": false
+      "passed": true
     },
     {
       "name": "gateway_observed_signed_result",
@@ -53,12 +112,16 @@
       "passed": false
     },
     {
+      "name": "connector_oauth_token_authenticated",
+      "passed": false
+    },
+    {
       "name": "face_id_succeeded",
       "passed": false
     },
     {
       "name": "apns_accepted",
-      "passed": false
+      "passed": true
     },
     {
       "name": "restoration_receipt",
@@ -69,14 +132,6 @@
       "passed": true
     }
   ],
-  "level": "real",
-  "metrics": {
-    "apns_accepted_count": 0,
-    "apns_failure_count": 0,
-    "capture_observer_resets": 0,
-    "notification_prompt_requested": 1,
-    "phase": 1
-  },
-  "passed": false,
-  "scenario": "APP-APPROVE-REAL"
+  "latency": null,
+  "hosts": null
 }

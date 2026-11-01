@@ -1,4 +1,19 @@
 {
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[7.24 6.93 9.19] cpu_idle=22% cpus=10 other_heavy=0"
+  },
+  "run_id": "",
+  "metrics": {
+    "capabilities": 21,
+    "capture_observer_resets": 0,
+    "phase": 1
+  },
+  "scenario": "APP-SHELL-REAL",
+  "level": "real",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-31T23:27:30.869852Z",
   "assertions": [
     {
       "name": "fresh_completed_phone_receipt",
@@ -14,27 +29,27 @@
     },
     {
       "name": "capability_fields_observed",
-      "passed": false
+      "passed": true
     },
     {
       "name": "diagnostics_observed",
-      "passed": false
+      "passed": true
+    },
+    {
+      "name": "diagnostics_observed",
+      "passed": true
+    },
+    {
+      "name": "capability_fields_observed",
+      "passed": true
     },
     {
       "name": "resources_cleaned",
       "passed": true
     },
     {
-      "name": "capability_fields_observed",
-      "passed": false
-    },
-    {
       "name": "state_restored",
       "passed": true
-    },
-    {
-      "name": "diagnostics_observed",
-      "passed": false
     },
     {
       "name": "restoration_receipt",
@@ -45,12 +60,6 @@
       "passed": true
     }
   ],
-  "level": "real",
-  "metrics": {
-    "capabilities": 21,
-    "capture_observer_resets": 0,
-    "phase": 1
-  },
-  "passed": false,
-  "scenario": "APP-SHELL-REAL"
+  "latency": null,
+  "hosts": null
 }

@@ -112,3 +112,11 @@ final class LocationStore {
         try save()
     }
 }
+
+@MainActor
+enum LocationQualification {
+    static func remove(_ name: String, timeout: TimeInterval = 20, remove: (String) -> Void, isMonitoring: (String) -> Bool) async -> Bool {
+        remove(name)
+        return await QualificationWait.until(timeout: timeout) { !isMonitoring(name) }
+    }
+}

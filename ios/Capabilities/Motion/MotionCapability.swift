@@ -40,7 +40,7 @@ final class CoreMotionAdapter: MotionAdapter {
     func pedometer(from: Date, to: Date) async throws -> MotionDay {
         guard CMPedometer.isStepCountingAvailable(), CMPedometer.authorizationStatus() != .denied, CMPedometer.authorizationStatus() != .restricted else { throw CocoaError(.featureUnsupported) }
         return try await withCheckedThrowingContinuation { continuation in
-            pedometer.queryPedometerData(from: from, to: to) { value, error in
+            pedometer.queryPedometerData(from: from, to: to) { @Sendable value, error in
                 if let error { continuation.resume(throwing: error); return }
                 guard let value else { continuation.resume(throwing: CocoaError(.coderReadCorrupt)); return }
                 continuation.resume(returning: MotionDay(start: value.startDate, end: value.endDate, steps: value.numberOfSteps.intValue, floorsUp: value.floorsAscended?.intValue, floorsDown: value.floorsDescended?.intValue))

@@ -53,6 +53,18 @@ struct Checks {
         })
         let failedProof = try await FocusQualification.run("FOC-SET-REAL", source: proofSource, status: proofStatus)
         guard failedProof["set_passed"] == .bool(false), failedProof["restore_passed"] == .bool(true), proofFixture.calls == 2, !proofFixture.focused else { throw SourceFailure.corrupt }
+        let phoneFixture = Fixture()
+        let phoneStatus: @MainActor () -> JSON = { .object(["focused": .bool(phoneFixture.focused), "authorization": .string("authorized")]) }
+        let phoneSource = FocusSource(status: phoneStatus, runner: { args in
+            phoneFixture.calls += 1
+            phoneFixture.focused = args["on"].bool
+            return .object(["exit_status": .number(0), "timed_out": .bool(false)])
+        })
+        var observed = false
+        let phoneProof = try await FocusQualification.run("FOC-PHONE-SYNC", source: phoneSource, status: phoneStatus, observePhone: { observed = phoneFixture.focused })
+        guard observed, phoneProof["set_passed"].bool, phoneProof["restore_passed"].bool, !phoneFixture.focused, phoneFixture.calls == 2 else { throw SourceFailure.corrupt }
+        let interruptedPhone = try await FocusQualification.run("FOC-PHONE-SYNC", source: phoneSource, status: phoneStatus, observePhone: { throw SourceFailure.unavailable })
+        guard interruptedPhone["restore_passed"].bool, !phoneFixture.focused, phoneFixture.calls == 4 else { throw SourceFailure.corrupt }
         #endif
         fixture.authorized = false
         do { _ = try await source.prepare(command(on: true)); throw SourceFailure.corrupt } catch SourceFailure.permissionMissing {}

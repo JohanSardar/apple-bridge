@@ -1,17 +1,45 @@
 {
-  "status": "limited",
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[4.94 7.86 10.66] cpu_idle=45% cpus=10 other_heavy=0"
+  },
+  "status": "passed",
+  "run_id": "",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
   "scenario": "APP-ALARM-REAL",
   "level": "real",
-  "passed": false,
+  "passed": true,
   "git_sha": "",
+  "at": "2026-10-31T23:21:24.155285Z",
   "assertions": [
     {
-      "name": "alarmkit_permission",
-      "passed": false
+      "name": "alarm_authorization_completed",
+      "passed": true
+    },
+    {
+      "name": "created_and_read",
+      "passed": true
+    },
+    {
+      "name": "deleted_and_absent",
+      "passed": true
+    },
+    {
+      "name": "foreground_active",
+      "passed": true
+    },
+    {
+      "name": "redacted_observation",
+      "passed": true,
+      "detail": "{\"counts\":{\"created\":1,\"deleted\":1},\"digests\":{}}"
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
-  ]
+  ],
+  "latency": null,
+  "hosts": null
 }

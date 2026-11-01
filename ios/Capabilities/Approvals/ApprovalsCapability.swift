@@ -29,6 +29,9 @@ enum ApprovalsCapability {
         content.categoryIdentifier = "bridge.approval"
         content.sound = .default
         content.userInfo = ["command_id": job.command.command_id, "request_hash": job.request_hash, "approval": true, "expires": job.expires]
+        #if DEBUG
+        if ShellDeliveryQualification.active { try ShellDeliveryQualification.shared.registerConnector(job) }
+        #endif
         try await center.add(UNNotificationRequest(identifier: "approval." + job.command.command_id, content: content, trigger: nil))
         UserDefaults.standard.set(try JSONEncoder().encode(job), forKey: "approval." + job.command.command_id)
     }
@@ -46,7 +49,19 @@ enum ApprovalsCapability {
             return
         }
         let context = LAContext()
-        guard try await context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: "Confirm \(action) for this Apple Bridge command") else { return }
+        do {
+            guard try await context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: "Confirm \(action) for this Apple Bridge command") else { throw LAError(.authenticationFailed) }
+        } catch {
+            #if DEBUG
+            if ShellDeliveryQualification.active {
+                let proof = ShellDeliveryQualification.shared
+                if proof.request?.command == id { proof.receipt?.checks["face_id_succeeded"] = false }
+                if proof.connectorID == id { proof.receipt?.checks["connector_face_id_succeeded"] = false }
+                try? proof.save()
+            }
+            #endif
+            throw error
+        }
         #if DEBUG
         if ShellDeliveryQualification.active, ShellDeliveryQualification.shared.request?.command == id {
             ShellDeliveryQualification.shared.receipt?.checks["face_id_succeeded"] = true
@@ -63,6 +78,13 @@ enum ApprovalsCapability {
         }
         let payload = try JSONSerialization.data(withJSONObject: ["command_id": id, "request_hash": hash, "approve": action == "approve"])
         _ = try await PairingClient.signedRequest(identity: DeviceIdentity.load(), path: "/v1/iphone/approval", payload: payload)
+        #if DEBUG
+        if ShellDeliveryQualification.active, ShellDeliveryQualification.shared.connectorID == id {
+            ShellDeliveryQualification.shared.receipt?.checks["connector_face_id_succeeded"] = true
+            ShellDeliveryQualification.shared.receipt?.checks["connector_decision_uploaded"] = true
+            try ShellDeliveryQualification.shared.save()
+        }
+        #endif
         UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: ["approval." + id])
     }
 }

@@ -2,6 +2,9 @@ import DeviceActivity
 
 final class BridgeMonitor: DeviceActivityMonitor {
     override func intervalDidStart(for activity: DeviceActivityName) {
+        #if DEBUG
+        QualificationMonitor.record(activity.rawValue)
+        #endif
         guard activity.rawValue == "bridge.downtime" else { return }
         ScreenTimeState.apply(ScreenTimeState.downtime)
     }

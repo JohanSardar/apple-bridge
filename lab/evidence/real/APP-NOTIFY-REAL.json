@@ -1,35 +1,49 @@
 {
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[4.27 4.18 4.8] cpu_idle=66% cpus=10 other_heavy=0"
+  },
+  "run_id": "",
+  "metrics": {
+    "apns_accepted_count": 1,
+    "apns_failure_count": 0,
+    "apns_wakes": 1,
+    "capture_observer_resets": 0,
+    "notification_prompt_requested": 0,
+    "phase": 2
+  },
+  "scenario": "APP-NOTIFY-REAL",
+  "level": "real",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-11-01T00:24:16.401854Z",
   "assertions": [
     {
       "name": "fresh_completed_phone_receipt",
-      "passed": false
+      "passed": true
     },
     {
       "name": "state_restored",
-      "passed": false
+      "passed": true
     },
     {
       "name": "resources_cleaned",
-      "passed": false
+      "passed": true
     },
     {
       "name": "notification_authorized",
-      "passed": false
+      "passed": true
     },
     {
       "name": "ready",
-      "passed": false
+      "passed": true
     },
     {
       "name": "signed_result_uploaded",
-      "passed": false
+      "passed": true
     },
     {
       "name": "identity_restored",
-      "passed": false
-    },
-    {
-      "name": "signed_pair_status",
       "passed": true
     },
     {
@@ -38,19 +52,47 @@
     },
     {
       "name": "identity_restored",
-      "passed": false
+      "passed": true
+    },
+    {
+      "name": "state_restored",
+      "passed": true
+    },
+    {
+      "name": "ready",
+      "passed": true
+    },
+    {
+      "name": "notification_authorized",
+      "passed": true
+    },
+    {
+      "name": "resources_cleaned",
+      "passed": true
+    },
+    {
+      "name": "signed_result_uploaded",
+      "passed": true
+    },
+    {
+      "name": "signed_pair_status",
+      "passed": true
+    },
+    {
+      "name": "identity_restored",
+      "passed": true
     },
     {
       "name": "gateway_observed_signed_result",
-      "passed": false
+      "passed": true
     },
     {
       "name": "notification_action_observed",
-      "passed": false
+      "passed": true
     },
     {
       "name": "apns_accepted",
-      "passed": false
+      "passed": true
     },
     {
       "name": "restoration_receipt",
@@ -61,14 +103,6 @@
       "passed": true
     }
   ],
-  "level": "real",
-  "metrics": {
-    "apns_accepted_count": 0,
-    "apns_failure_count": 0,
-    "capture_observer_resets": 0,
-    "notification_prompt_requested": 1,
-    "phase": 1
-  },
-  "passed": false,
-  "scenario": "APP-NOTIFY-REAL"
+  "latency": null,
+  "hosts": null
 }

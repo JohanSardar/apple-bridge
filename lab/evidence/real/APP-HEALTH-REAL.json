@@ -1,17 +1,269 @@
 {
-  "status": "limited",
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[9.55 17.88 14.73] cpu_idle=44% cpus=10 other_heavy=0"
+  },
+  "status": "passed",
+  "run_id": "",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
   "scenario": "APP-HEALTH-REAL",
   "level": "real",
-  "passed": false,
+  "passed": true,
   "git_sha": "",
+  "at": "2026-10-31T23:12:53.390634Z",
   "assertions": [
     {
-      "name": "health_permission",
-      "passed": false
+      "name": "foreground_active",
+      "passed": true
+    },
+    {
+      "name": "health_authorization_completed",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKCategoryTypeIdentifierMindfulSession",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKCategoryTypeIdentifierSleepAnalysis",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKMedicationDoseEventTypeIdentifierMedicationDoseEvent",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierAppleWalkingSteadiness",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierBodyFatPercentage",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierBodyMass",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryBiotin",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryCaffeine",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryCalcium",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryCarbohydrates",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryChloride",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryCholesterol",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryChromium",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryCopper",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryEnergyConsumed",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryFatMonounsaturated",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryFatPolyunsaturated",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryFatSaturated",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryFatTotal",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryFiber",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryFolate",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryIodine",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryIron",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryMagnesium",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryManganese",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryMolybdenum",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryNiacin",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryPantothenicAcid",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryPhosphorus",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryPotassium",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryProtein",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryRiboflavin",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietarySelenium",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietarySodium",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietarySugar",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryThiamin",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryVitaminA",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryVitaminB12",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryVitaminB6",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryVitaminC",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryVitaminD",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryVitaminE",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryVitaminK",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryWater",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDietaryZinc",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierDistanceWalkingRunning",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierFlightsClimbed",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierHeartRate",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierHeartRateVariabilitySDNN",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierRestingHeartRate",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierStepCount",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierVO2Max",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierWalkingAsymmetryPercentage",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKQuantityTypeIdentifierWalkingSpeed",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKWorkoutRouteTypeIdentifier",
+      "passed": true
+    },
+    {
+      "name": "incremental_HKWorkoutTypeIdentifier",
+      "passed": true
+    },
+    {
+      "name": "incremental_medications",
+      "passed": true
+    },
+    {
+      "name": "nonempty_read_observed",
+      "passed": true
+    },
+    {
+      "name": "redacted_observation",
+      "passed": true,
+      "detail": "{\"counts\":{\"anchors\":57,\"completed_streams\":57,\"samples\":613},\"digests\":{}}"
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
-  ]
+  ],
+  "latency": null,
+  "hosts": null
 }

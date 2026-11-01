@@ -1,7 +1,7 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[30.73 28.95 23.48] cpu_idle=15% cpus=10 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[11.59 10.67 9.68] cpu_idle=50% cpus=10 other_heavy=0"
   },
   "run_id": "",
   "metrics": {
@@ -11,7 +11,7 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-30T00:23:03.590114Z",
+  "at": "2026-10-31T23:05:52.913428Z",
   "assertions": [
     {
       "name": "pair",

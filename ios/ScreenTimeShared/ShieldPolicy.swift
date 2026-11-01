@@ -8,6 +8,8 @@ protocol BridgeShieldAdapter {
 }
 
 enum BridgeShieldPolicy {
+    static func authorized(status: Int) -> Bool { status == 2 || status == 3 }
+
     static func apply<A: BridgeShieldAdapter>(_ adapter: A, apps: Set<A.App>, categories: Set<A.Category>, domains: Set<A.Domain>) {
         adapter.set(apps: apps.isEmpty ? nil : apps, categories: categories.isEmpty ? nil : categories, domains: domains.isEmpty ? nil : domains)
     }
