@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
-	"github.com/JohanSardar/apple-bridge/internal/runtime"
 	"github.com/JohanSardar/apple-bridge/lab/scripted"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
@@ -42,7 +41,7 @@ func expandIdleSuite(scenarios []Scenario) ([]Scenario, error) {
 
 func saveIdleGroup(level string, asJSON bool, result error) error {
 	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
-	e := Evidence{RunID: contracts.NewID("run"), Scenario: "Q2-IDLE", Level: level, GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Passed: result == nil, Assertions: []Assertion{{Name: "all_eleven_idle_scenarios_pass", Passed: result == nil}}}
+	e := Evidence{RunID: contracts.NewID("run"), Scenario: "Q2-IDLE", Level: level, GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Passed: result == nil, Assertions: []Assertion{{Name: "all_supported_idle_scenarios_pass", Passed: result == nil}}}
 	if err := Save(e); err != nil {
 		return fmt.Errorf("save shared idle result: %w", err)
 	}
@@ -108,9 +107,25 @@ func idleSuite(ctx context.Context, scenarios []Scenario, asJSON bool) error {
 		case "MAIL-IDLE":
 			collection = "mail.message"
 		case "VIS-IDLE":
-			add("doctor_document_sources_ready", w.Await(15*time.Second, func() bool {
-				r, err := runtime.Doctor(ctx, w.Gateway.Home)
-				return err == nil && r.DocumentChecks["vision"] == "ready" && r.DocumentChecks["pdf"] == "ready"
+			add("document_sources_ready", w.Await(15*time.Second, func() bool {
+				bounded, stop := context.WithTimeout(ctx, 2*time.Second)
+				defer stop()
+				var statuses contracts.ReadResult
+				if client.Call(bounded, "sources.status", struct{}{}, &statuses) != nil {
+					return false
+				}
+				ready := map[string]bool{}
+				for _, record := range statuses.Records {
+					var status struct {
+						Source   string
+						State    string
+						Coverage struct{ Fields string }
+					}
+					if json.Unmarshal(record.Data, &status) == nil {
+						ready[status.Source] = status.State == "ready" && status.Coverage.Fields == "complete"
+					}
+				}
+				return ready["vision"] && ready["pdf"]
 			}) == nil)
 		case "FOC-IDLE":
 			report := filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "AppleBridgeDev", e.RunID+"-focus.json")

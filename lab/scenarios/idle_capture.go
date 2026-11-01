@@ -19,10 +19,32 @@ func awaitIdleCapture(ctx context.Context, w *world.World, e *Evidence) bool {
 	defer os.Remove(report)
 	statusCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
-	err = exec.CommandContext(statusCtx, "open", "-n", "-W", "-g", "-a", w.HelperApp, "--args", "status", "--report", report).Run()
+	output, statusErr := exec.CommandContext(statusCtx, "open", "-n", "-W", "-g", "-a", w.HelperApp, "--args", "status", "--report", report).CombinedOutput()
+	err = statusErr
 	data, readErr := os.ReadFile(report)
 	var permissions map[string]string
 	if err != nil || readErr != nil || json.Unmarshal(data, &permissions) != nil {
+		if e.Metrics == nil {
+			e.Metrics = map[string]any{}
+		}
+		e.Metrics["idle_status_command_succeeded"] = err == nil
+		e.Metrics["idle_status_report_present"] = readErr == nil
+		e.Metrics["idle_status_context_cancelled"] = ctx.Err() != nil
+		e.Assertions = append(e.Assertions, Assertion{Name: "non_prompting_idle_permission_status", Passed: false})
+		directory := filepath.Join("lab/evidence/private", "idle")
+		if os.MkdirAll(directory, 0700) == nil {
+			detail := string(output)
+			if err != nil {
+				detail += "\ncommand: " + err.Error()
+			}
+			if readErr != nil {
+				detail += "\nreport: " + readErr.Error()
+			}
+			if ctx.Err() != nil {
+				detail += "\ncontext: " + ctx.Err().Error()
+			}
+			os.WriteFile(filepath.Join(directory, e.RunID+"-status.log"), []byte(detail), 0600)
+		}
 		return false
 	}
 	if permissions["full_disk_access"] != "granted" {
