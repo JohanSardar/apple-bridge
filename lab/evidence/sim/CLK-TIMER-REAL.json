@@ -4,6 +4,18 @@
   "passed": true,
   "assertions": [
     {
+      "name": "native_timer_snapshot_build",
+      "passed": true
+    },
+    {
+      "name": "native_timer_snapshot_output",
+      "passed": true
+    },
+    {
+      "name": "native_timer_snapshot_states_and_readonly",
+      "passed": true
+    },
+    {
       "name": "timer_readback_and_cleanup_qualified",
       "passed": true
     },
@@ -37,6 +49,8 @@
     }
   ],
   "metrics": {
-    "capture_observer_resets": 0
+    "capture_observer_resets": 0,
+    "created_timer_duration": 120,
+    "created_timer_running": true
   }
 }

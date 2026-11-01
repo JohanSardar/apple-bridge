@@ -1,19 +1,7 @@
 {
-  "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[8.26 7.35 8.43] cpu_idle=72% cpus=10 other_heavy=0"
-  },
-  "run_id": "run_01M6A358GTYW9SF6Z0Q6NXSVV3",
-  "metrics": {
-    "app_days": 1,
-    "capture_observer_resets": 0,
-    "devices": 1
-  },
   "scenario": "USE-ACTION-PROBE",
   "level": "sim",
   "passed": true,
-  "git_sha": "18e3c4d0b659d55370ac99c4e94b05df28a7496a",
-  "at": "2026-10-31T23:01:48.698071Z",
   "assertions": [
     {
       "name": "mac_lock_clipped",
@@ -28,12 +16,17 @@
       "passed": true
     },
     {
+      "name": "independent_truth_handles_retired_peers",
+      "passed": true
+    },
+    {
       "name": "credential_backend_override_restored",
       "passed": true
     }
   ],
-  "latency": {},
-  "hosts": [
-    "air"
-  ]
+  "metrics": {
+    "app_days": 1,
+    "capture_observer_resets": 0,
+    "devices": 1
+  }
 }
