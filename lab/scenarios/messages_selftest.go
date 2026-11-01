@@ -25,15 +25,20 @@ func runNativeMessagesSelfTest(ctx context.Context, e Evidence) (result Evidence
 	}
 	defer func() { finishCleanupAudit(context.Background(), owned, "messages", &result) }()
 
-	w, err := world.NewReal(ctx, "real", 0, world.BlobOptions{Scope: "messages:read,messages:write,system:read"})
+	dir, err := os.MkdirTemp("", "ab-messages-selftest-")
 	if err != nil {
-		e.Assertions = append(e.Assertions, Assertion{Name: "real_world", Passed: false})
+		e.Assertions = append(e.Assertions, Assertion{Name: "private_helper_directory", Passed: false})
 		return e
 	}
-	defer w.Close()
+	defer os.RemoveAll(dir)
+	app := filepath.Join(dir, "AppleBridgeHelper.app")
+	if err = world.BuildHelper(ctx, app); err != nil {
+		e.Assertions = append(e.Assertions, Assertion{Name: "signed_helper_build", Passed: false})
+		return e
+	}
 	bounded, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
-	args := []string{"selftest", "messages", "--helper-app", w.HelperApp, "--force"}
+	args := []string{"selftest", "messages", "--helper-app", app, "--force"}
 	if os.Getenv("APPLE_BRIDGE_SELFTEST_NO_UI") == "1" {
 		args = append(args, "--no-ui")
 	}
@@ -65,25 +70,16 @@ func runNativeMessagesSelfTest(ctx context.Context, e Evidence) (result Evidence
 		e.Assertions = append(e.Assertions, Assertion{Name: "required_" + name, Passed: proven[name]})
 	}
 	if report.RunID != "" {
-		truth, err := w.Truth("observe", map[string]any{"source": "messages", "tag": "[ab-test " + report.RunID + "]"})
-		remaining := 0
-		rows, _ := truth["records"].([]any)
-		for _, value := range rows {
-			row, _ := value.(map[string]any)
-			if row["visible"] == true {
-				remaining++
-			}
-		}
-		e.Metrics["remaining_text_messages"] = remaining
 		database, problem := sql.Open("sqlite", "file:"+filepath.Join(os.Getenv("HOME"), "Library", "Messages", "chat.db")+"?mode=ro")
-		fileCount := -1
+		remaining, fileCount := -1, -1
 		if problem == nil {
-			problem = database.QueryRowContext(ctx, "SELECT COUNT(DISTINCT m.ROWID) FROM message m JOIN message_attachment_join j ON j.message_id=m.ROWID JOIN attachment a ON a.ROWID=j.attachment_id JOIN chat_message_join c ON c.message_id=m.ROWID WHERE instr(a.filename,?)>0 AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=c.chat_id)", "ab-"+report.RunID+".").Scan(&fileCount)
+			remaining, fileCount, problem = nativeMessagesSelfTestRemaining(ctx, database, report.RunID)
 			database.Close()
 		}
+		e.Metrics["remaining_text_messages"] = remaining
 		e.Metrics["remaining_file_messages"] = fileCount
 		e.Assertions = append(e.Assertions, Assertion{Name: "independent_file_cleanup", Passed: problem == nil && fileCount == 0})
-		e.Assertions = append(e.Assertions, Assertion{Name: "independent_tagged_cleanup", Passed: err == nil && truth["status"] == "verified" && remaining == 0})
+		e.Assertions = append(e.Assertions, Assertion{Name: "independent_tagged_cleanup", Passed: problem == nil && remaining == 0})
 	}
 	e.Passed = problem == nil && err == nil && report.State == "proven"
 	for _, a := range e.Assertions {
@@ -93,4 +89,15 @@ func runNativeMessagesSelfTest(ctx context.Context, e Evidence) (result Evidence
 		e.Status = "environment-limited"
 	}
 	return e
+}
+
+func nativeMessagesSelfTestRemaining(ctx context.Context, database *sql.DB, run string) (int, int, error) {
+	var texts, files int
+	tag := "[ab-test " + run + "]"
+	err := database.QueryRowContext(ctx, "SELECT COUNT(DISTINCT m.ROWID) FROM message m JOIN chat_message_join c ON c.message_id=m.ROWID WHERE (instr(m.text,?)>0 OR instr(m.attributedBody,CAST(? AS BLOB))>0) AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=c.chat_id)", tag, tag).Scan(&texts)
+	if err != nil {
+		return 0, 0, err
+	}
+	err = database.QueryRowContext(ctx, "SELECT COUNT(DISTINCT m.ROWID) FROM message m JOIN message_attachment_join j ON j.message_id=m.ROWID JOIN attachment a ON a.ROWID=j.attachment_id JOIN chat_message_join c ON c.message_id=m.ROWID WHERE instr(a.filename,?)>0 AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=c.chat_id)", "ab-"+run+".").Scan(&files)
+	return texts, files, err
 }

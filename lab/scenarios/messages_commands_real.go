@@ -69,7 +69,7 @@ func runNativeMessagesCommands(ctx context.Context, s Scenario, level string, e 
 	if s.ID == "WEB-MSG-REAL-READ" {
 		scope = "messages:read,system:read"
 	}
-	w, err := world.NewReal(ctx, level, replicas, world.BlobOptions{Scope: scope})
+	w, err := world.NewRealWithSetup(ctx, level, replicas, world.NativeSetup{IndependentTruth: s.ID == "WEB-MSG-REAL-READ"}, world.BlobOptions{Scope: scope})
 	if err != nil {
 		os.WriteFile("/tmp/ablab/messages-real-world-error.log", []byte(err.Error()), 0600)
 		add("real_world_start", false)
