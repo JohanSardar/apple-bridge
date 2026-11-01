@@ -84,7 +84,7 @@ func runClockSession(ctx context.Context, s Scenario, initial Evidence, pack clo
 	}
 	request := clockpack.Request{Alarm: &alarm}
 	cleanup := func() {
-		cleanupCtx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+		cleanupCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 		defer cancel()
 		observed, readErr := pack.Exchange(cleanupCtx, clockpack.Request{Operation: "alarms"})
 		if readErr != nil {
