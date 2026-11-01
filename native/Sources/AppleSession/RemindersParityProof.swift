@@ -231,8 +231,9 @@ enum RemindersParityProof {
                 for role in [kAXButtonRole, kAXMenuItemRole, kAXPopUpButtonRole] {
                     ui.selectionDiagnostics["tag_matches_" + role] = Double(ui.find(tag, role: role).count)
                 }
-                guard tagChoices.count == 1 else { throw SourceFailure.unsupported }
-                try ui.press(tag, role: kAXCheckBoxRole)
+                let tagRole = tagChoices.count == 1 ? kAXCheckBoxRole : kAXMenuItemRole
+                guard ui.find(tag, role: tagRole).count == 1 else { throw SourceFailure.unsupported }
+                try ui.press(tag, role: tagRole)
                 smartAttempted = true
                 try ui.pressAny(["OK", "Add List", "Done"], role: kAXButtonRole)
                 var found = false
