@@ -4,6 +4,16 @@ import ApplicationServices
 import SourceSupport
 
 public enum MessagesUIActions {
+    public static func resolve<Element>(until deadline: Date, now: () -> Date = { Date() }, wait: () -> Void, attempt: () throws -> Element) throws -> Element {
+        repeat {
+            do { return try attempt() }
+            catch MessagesUIFailure.targetUnavailable {
+                guard now() < deadline else { throw MessagesUIFailure.targetUnavailable }
+                wait()
+            }
+        } while now() <= deadline
+        throw MessagesUIFailure.targetUnavailable
+    }
     public static func buttons<Element>(in root: Element, title: String, children: (Element) -> [Element], value: (Element, String) -> String) -> [Element] {
         var budget = 4000
         func visit(_ node: Element) -> [Element] {
@@ -128,7 +138,7 @@ public struct MessagesUISession {
         self.pid = pid
         self.driver = driver
         root = AXUIElementCreateApplication(pid)
-        AXUIElementSetMessagingTimeout(root, 0.25)
+        AXUIElementSetMessagingTimeout(root, 1)
     }
     public static func frontmost(_ driver: any MessagesUIDriver = LiveMessagesUIDriver(), trusted: Bool = AXIsProcessTrusted()) throws -> MessagesUISession {
         guard trusted, let pid = driver.messagesProcess(), driver.frontmostProcess() == pid else { throw SourceFailure.conflict }

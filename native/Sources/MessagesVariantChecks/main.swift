@@ -17,6 +17,26 @@ struct MessagesVariantChecks {
         let args = JSON.object(["text": .string("test"), "variant": variant])
         let data: [String: JSON] = ["text": .string("test"), "is_from_me": .bool(true), "error_code": .number(0), "effect": .string("com.apple.messages.effect.loud"), "formatting": .array([range])]
         var checks = try await AccessibilityInputChecks.run()
+        var readinessTime = Date(timeIntervalSince1970: 0)
+        var readinessAttempts = 0
+        let readyTarget: String = try MessagesUIActions.resolve(until: readinessTime.addingTimeInterval(1), now: { readinessTime }, wait: { readinessTime.addTimeInterval(0.1) }, attempt: {
+            readinessAttempts += 1
+            if readinessAttempts == 1 { throw MessagesUIFailure.targetUnavailable }
+            return "owned"
+        })
+        checks["transient_empty_tree_is_retried"] = readyTarget == "owned" && readinessAttempts == 2
+        var ambiguousAttempts = 0
+        do {
+            let _: String = try MessagesUIActions.resolve(until: Date().addingTimeInterval(1), wait: {}, attempt: {
+                ambiguousAttempts += 1
+                throw MessagesUIFailure.targetAmbiguous
+            })
+            checks["ambiguous_target_is_never_retried"] = false
+        } catch { checks["ambiguous_target_is_never_retried"] = error as? MessagesUIFailure == .targetAmbiguous && ambiguousAttempts == 1 }
+        do {
+            let _: String = try MessagesUIActions.resolve(until: readinessTime, now: { readinessTime }, wait: {}, attempt: { throw MessagesUIFailure.targetUnavailable })
+            checks["target_readiness_deadline_is_bounded"] = false
+        } catch { checks["target_readiness_deadline_is_bounded"] = error as? MessagesUIFailure == .targetUnavailable }
         let deleteButton = JSON.object(["AXRole": .string("AXButton"), "AXTitle": .string("Delete")])
         let cancelButton = JSON.object(["AXRole": .string("AXButton"), "AXTitle": .string("Cancel")])
         let confirmation = JSON.object(["AXRole": .string("AXSheet"), "children": .array([deleteButton, cancelButton])])

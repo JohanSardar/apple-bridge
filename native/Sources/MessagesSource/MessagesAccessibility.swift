@@ -88,6 +88,11 @@ enum MessagesAccessibility {
         return found.map(JSON.string)
     }
     static func target(_ root: AXUIElement, prepared: Prepared) throws -> AXUIElement {
+        try MessagesUIActions.resolve(until: Date().addingTimeInterval(3), wait: {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }, attempt: { try targetNow(root, prepared: prepared) })
+    }
+    private static func targetNow(_ root: AXUIElement, prepared: Prepared) throws -> AXUIElement {
         let guid = prepared.action["native_key"].string
         guard !guid.isEmpty else { throw SourceFailure.capabilityUnproven }
         var budget = 4000
