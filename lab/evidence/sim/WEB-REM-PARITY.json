@@ -1,17 +1,17 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[8.98 8.62 5.95] cpu_idle=80% cpus=10 other_heavy=0"
+    "summary": "air: load=[6.82 8.75 10.36] cpu_idle=81% cpus=8 other_heavy=0"
   },
-  "run_id": "reminders-parity_01M6B52HBF31XJWF31D99EBRGX",
+  "run_id": "reminders-parity_01M6BHX2VZH2HHH2X56D9XYS96",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "WEB-REM-PARITY",
   "level": "sim",
   "passed": true,
-  "git_sha": "f185ad4dea7b92d8f03ef8dc0f416b6638a2ec46",
-  "at": "2026-11-01T08:54:31.023537Z",
+  "git_sha": "016bbd252baf3413e6e99d579752eb51b428a093",
+  "at": "2026-11-01T12:38:43.840188Z",
   "assertions": [
     {
       "name": "native_sections_build",
@@ -22,7 +22,7 @@
       "passed": true
     },
     {
-      "name": "native_fixture_checks_build",
+      "name": "native_fixture_checks_helper_available",
       "passed": true
     },
     {
