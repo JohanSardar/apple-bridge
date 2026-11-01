@@ -11,7 +11,7 @@ public enum NotesFolderUI {
         guard Date() < deadline else { return "" }
         var result: CFTypeRef?
         guard AXUIElementCopyAttributeValue(node, key as CFString, &result) == .success else { return "" }
-        return result as? String ?? ""
+        return (result as? NSAttributedString)?.string ?? result as? String ?? ""
     }
     private static func children(_ node: AXUIElement) -> [AXUIElement] {
         guard Date() < deadline else { return [] }
@@ -63,7 +63,8 @@ public enum NotesFolderUI {
         let visible = dialogs(root)
         if visible.isEmpty { return }
         guard visible.count == 1 else { throw Failure(stage: "unrelated_notes_dialogs") }
-        let cancel = all(visible[0]).filter { value($0, kAXRoleAttribute) == kAXButtonRole && named($0, ["Cancel"]) && enabled($0) }
+        let buttons = all(visible[0]).filter { value($0, kAXRoleAttribute) == kAXButtonRole }
+        let cancel = buttons.filter { (named($0, ["Cancel"]) || buttons.count == 1 && named($0, ["OK"])) && enabled($0) }
         guard cancel.count == 1 else {
             let buttons = all(visible[0]).filter { value($0, kAXRoleAttribute) == kAXButtonRole }
             let titles = buttons.filter { value($0, kAXTitleAttribute) == "Cancel" }.count
