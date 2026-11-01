@@ -21,6 +21,7 @@ The Time field requires a WFTextTokenString containing the until attachment;
 WFDateFieldParameterState rejects a bare WFTextTokenAttachment as its value.
 FOC-SIM proves the rejection and acceptance through Apple's parameter parser.
 The compiled source pack contains both corrected bindings. FOC-SET-REAL backs
-up and repairs only these bindings in the known eight-action installed pack,
+up and repairs only these bindings in the known eight-action installed pack
+(also accepting and preserving a trailing output action),
 then verifies the saved actions through Apple's workflow database API.
 No import dialog is opened by tests.

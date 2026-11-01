@@ -7,6 +7,11 @@ import SourceSupport
 
 @MainActor
 public enum FocusPackRepair {
+    public static func supportedShape(_ identifiers: [String]) -> Bool {
+        let prefix = "is.workflow.actions."
+        let expected = ["detect.dictionary", "getvalueforkey", "getvalueforkey", "conditional", "dnd.set", "conditional", "dnd.set", "conditional"].map { prefix + $0 }
+        return identifiers == expected || identifiers == expected + [prefix + "output"]
+    }
     public static func binding(_ input: JSON, output: String) throws -> JSON {
         let attachment: JSON
         if input["Type"].string == "Variable" { attachment = input["Variable"] }
@@ -82,9 +87,8 @@ public enum FocusPackRepair {
             let bytes = try JSONSerialization.data(withJSONObject: actions, options: [.sortedKeys])
             let value = try JSONDecoder().decode(JSON.self, from: bytes)
             let identifiers = value.array.map { $0["WFWorkflowActionIdentifier"].string }
-            let prefix = "is.workflow.actions."
             phase = "shape"
-            guard identifiers == ["detect.dictionary", "getvalueforkey", "getvalueforkey", "conditional", "dnd.set", "conditional", "dnd.set", "conditional"].map({ prefix + $0 }),
+            guard supportedShape(identifiers),
                   value.array[1]["WFWorkflowActionParameters"]["WFDictionaryKey"].string == "on",
                   value.array[2]["WFWorkflowActionParameters"]["WFDictionaryKey"].string == "until",
                   value.array[3]["WFWorkflowActionParameters"]["WFControlFlowMode"] == .number(0),

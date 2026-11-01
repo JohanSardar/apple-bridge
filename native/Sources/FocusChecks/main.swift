@@ -44,6 +44,11 @@ struct Checks {
         do { _ = try await cleanup.restoreInactive(cleanupOff); throw SourceFailure.corrupt } catch SourceFailure.unavailable {}
         guard !lost.focused, lost.calls == 2 else { throw SourceFailure.corrupt }
         #if LAB
+        let focusActions = ["detect.dictionary", "getvalueforkey", "getvalueforkey", "conditional", "dnd.set", "conditional", "dnd.set", "conditional"].map { "is.workflow.actions." + $0 }
+        guard FocusPackRepair.supportedShape(focusActions),
+              FocusPackRepair.supportedShape(focusActions + ["is.workflow.actions.output"]),
+              !FocusPackRepair.supportedShape(focusActions + ["is.workflow.actions.runworkflow"]),
+              !FocusPackRepair.supportedShape(Array(focusActions.dropLast())) else { throw SourceFailure.corrupt }
         let databaseDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: databaseDirectory, withIntermediateDirectories: false)
         defer { try? FileManager.default.removeItem(at: databaseDirectory) }
