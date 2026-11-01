@@ -1,0 +1,95 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[5.86 4.65 4.49] cpu_idle=83% cpus=10 other_heavy=0"
+  },
+  "run_id": "run_01M6A9AJRQ4EZ5ZHSK03E4Z53V",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "FOC-PHONE-SYNC",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-11-01T00:49:34.48773Z",
+  "assertions": [
+    {
+      "name": "set_readback",
+      "passed": true
+    },
+    {
+      "name": "bounded_pack",
+      "passed": true
+    },
+    {
+      "name": "restore_readback",
+      "passed": true
+    },
+    {
+      "name": "timeout_not_success",
+      "passed": true
+    },
+    {
+      "name": "unknown_status_never_dispatches",
+      "passed": true
+    },
+    {
+      "name": "set_contract",
+      "passed": true
+    },
+    {
+      "name": "explicit_state_required",
+      "passed": true
+    },
+    {
+      "name": "gateway",
+      "passed": true
+    },
+    {
+      "name": "authority",
+      "passed": true
+    },
+    {
+      "name": "agent",
+      "passed": true
+    },
+    {
+      "name": "agent_requires_approval",
+      "passed": true
+    },
+    {
+      "name": "agent",
+      "passed": true
+    },
+    {
+      "name": "agent_requires_approval",
+      "passed": true
+    },
+    {
+      "name": "build_directory",
+      "passed": true
+    },
+    {
+      "name": "pack_compiles",
+      "passed": true
+    },
+    {
+      "name": "native_build",
+      "passed": true
+    },
+    {
+      "name": "native_output",
+      "passed": true
+    },
+    {
+      "name": "native_set_readback_restore",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}
