@@ -1246,7 +1246,13 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		packagingOnly = packagingOnly && (scenario.ID == "APP-SHELL-SIM" && level == "sim" || directShortcut || level == "real" && (scenario.ID == "CONN-CLAUDE-AI" || scenario.ID == "CONN-CHATGPT") || isIPhoneRealScenario(scenario.ID, level) || level == "real" && isIPhoneSensorReal(scenario.ID) || scenario.Feature == "iphone.location" || scenario.Feature == "iphone.health" || scenario.Feature == "packaging.app" || scenario.Feature == "packaging.release" || scenario.Feature == "packaging.setup" || scenario.Feature == "core.shortcuts" || scenario.Feature == "core.permissions" || scenario.Feature == "usage.action_probe" || scenario.Feature == "helper.siri_intents")
 	}
 	if !packagingOnly {
-		if err = world.Build(ctx, level); err != nil {
+		buildLevel := level
+		for _, scenario := range scenarios {
+			if scenario.ID == "CON-RELAY" && level == "real" {
+				buildLevel = "replica"
+			}
+		}
+		if err = world.Build(ctx, buildLevel); err != nil {
 			return err
 		}
 	}
