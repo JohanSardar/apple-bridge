@@ -1,16 +1,16 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[144.98 77.16 49.21] cpu_idle=13% cpus=8 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[8.23 7.71 9.3] cpu_idle=72% cpus=8 other_heavy=0"
   },
-  "run_id": "notes-extras_01M6AY9MHA3C10XFV5TZWXNPWE",
+  "run_id": "notes-extras_01M6B1AGPTZVNDWPEDN4M6Z4JH",
   "metrics": {
     "capture_observer_resets": 0,
     "cleanup_counts": {
-      "after_count": 136,
-      "before_count": 136,
+      "after_count": 134,
+      "before_count": 133,
       "created_count": 0,
-      "passed": true
+      "passed": false
     },
     "notes_helper_binary_uuids": [
       "9de3109c-94a5-3347-afcc-92d39c3a5416"
@@ -19,8 +19,8 @@
   "scenario": "NOTE-EXTRAS",
   "level": "real",
   "passed": false,
-  "git_sha": "6cb36ce90f9e079650bdc04a6d521334f1216584",
-  "at": "2026-11-01T06:56:03.62905Z",
+  "git_sha": "96569284d7c9f5167a97c7c31e86dff182e4d89e",
+  "at": "2026-11-01T07:48:58.20915Z",
   "assertions": [
     {
       "name": "native_notes_capture_ready",
@@ -32,7 +32,21 @@
     },
     {
       "name": "tagged_fixture_visible",
-      "passed": false
+      "passed": true
+    },
+    {
+      "name": "rest_create_folder_observed",
+      "passed": true,
+      "detail": "observed:::"
+    },
+    {
+      "name": "destination_identity_captured",
+      "passed": true
+    },
+    {
+      "name": "rest_rename_folder_observed",
+      "passed": false,
+      "detail": "indeterminate::dispatch_evidence_unavailable:unavailable"
     },
     {
       "name": "owned_note_cleaned",
@@ -40,11 +54,15 @@
     },
     {
       "name": "owned_folder_cleaned",
-      "passed": true
+      "passed": false
+    },
+    {
+      "name": "owned_folder_cleaned",
+      "passed": false
     },
     {
       "name": "cleanup_baseline_restored",
-      "passed": true
+      "passed": false
     },
     {
       "name": "credential_backend_override_restored",

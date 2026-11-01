@@ -430,7 +430,7 @@ features:
     limits:
       - scenario: NOTE-EXTRAS
         level: real
-        reason: "The final Air attempt failed tagged_fixture_visible: the run-created note did not reach complete content hydration within the 10-second read-back window. Earlier attempts timed out waiting 15 seconds for Helper folder-create dispatch evidence, and folder rename committed after observation expired. Native checklist, hashtag and pin setters are absent from Notes.sdef; folder deletion remains unqualified."
+        reason: "Final real run reaches folder rename, but Notes returns unavailable dispatch evidence before NoteStore observes the rename. The renamed destination then remains active after scoped folder deletion, failing exact baseline restoration (133 before, 134 after). Native checklist, hashtag and pin setters are absent from Notes.sdef; folder deletion remains unqualified."
   - id: notes.write
     title: Notes plain-text create, update, delete, folders; rich edits reject
     requirements: [R-RW, R-NOTES]
@@ -893,7 +893,7 @@ features:
     notes: >-
       Browser milestone 228/228 passes without skips or flakes; READ includes 4.5:1 highlight/link contrast across all five colors and both appearances. Core milestone green with explicit limits: #283 establishes leader-reported real DECODE-FULL 5/5 and REST/MCP CRUD sim 34/34. REST/MCP plain-text CRUD subsequently passed for real, including delete observation and replication. Later qualification remains limited by intermittent Helper dispatch timeouts and delayed Notes folder cleanup commits. Leader-accepted #274 passes 20 real first-record saves, p95 gateway/Ubuntu replica 476.3/870.2 ms; full content 1430/1420 ms is separate. Rich/checklist mutations stay hidden; combined native/browser journeys, worker-enabled external-body integration, burst/crash and app-specific UI timing remain limited.
     limits:
-      - {"scenario": "NOTE-EDIT-PARITY", "level": "real", "reason": "The final Air parity run stopped in its production CRUD prerequisite: notes.create_folder did not return Helper dispatch evidence within the 15-second exchange deadline, and exact baseline restoration failed. Earlier indeterminate notes.create also prevented captured-folder cleanup. Public Notes HTML does not create native checklist identities; production rich editing remains unsupported."}
+      - {"scenario": "NOTE-EDIT-PARITY", "level": "real", "reason": "Plain-text production CRUD, rich-write rejection and exact cleanup pass real. Native rich HTML round-trip preserves structure but production rich mutation commands remain unqualified; public HTML creates no native checklist identities, so rich/checklist editing remains unsupported."}
   - id: remote.relay
     title: SNI passthrough relay, stable device enrollment and persistent budgets
     requirements: [R-SECURE, R-WEB-REACH]
