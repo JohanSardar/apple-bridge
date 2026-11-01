@@ -51,6 +51,38 @@ enum MessagesVariantUI {
         }
         try? PrivateReport.write(["stage": stage, "controls": counts], to: PrivateReport.directory.appendingPathComponent("messages-variant-diagnostic.json"))
     }
+    static func configureModernSchedule(_ date: Date, application: AXUIElement, editor: AXUIElement, session: MessagesUISession) throws {
+        let entry = try unique(find(application, identifier: "MessageEntryView"), failure: .scheduleDateControlsMissing)
+        func group(_ count: Int) throws -> AXUIElement {
+            try unique(find(entry, role: kAXPopUpButtonRole).filter { find($0, role: kAXTextFieldRole).count == count }, failure: .scheduleDateControlsMissing)
+        }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        let parts = calendar.dateComponents([.month, .day, .hour, .minute], from: date)
+        guard let month = parts.month, let day = parts.day, let hour = parts.hour, let minute = parts.minute else { throw SendVariantFailure.invalidVariant }
+        let values = [[String(month), String(day)], [String(hour % 12 == 0 ? 12 : hour % 12), String(format: "%02d", minute), hour < 12 ? "AM" : "PM"]]
+        for segments in values {
+            for (index, text) in segments.enumerated() {
+                let field = find(try group(segments.count), role: kAXTextFieldRole)[index]
+                guard AXUIElementSetAttributeValue(field, kAXValueAttribute as CFString, text as CFString) == .success else { throw SendVariantFailure.scheduleDateControlsUnverified }
+                RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+            }
+        }
+        try session.focus(editor, failure: SendVariantFailure.composerUnavailable)
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "MMMM d, yyyy"
+        let expectedDate = formatter.string(from: date)
+        formatter.dateFormat = "h:mm a"
+        let expectedTime = formatter.string(from: date)
+        func normalized(_ text: String) -> String { text.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }.joined(separator: " ") }
+        let deadline = Date().addingTimeInterval(2)
+        repeat {
+            if normalized(value(try group(2), kAXDescriptionAttribute)) == expectedDate, normalized(value(try group(3), kAXDescriptionAttribute)) == expectedTime { return }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        } while Date() < deadline
+        throw SendVariantFailure.scheduleDateControlsUnverified
+    }
     static func menu(_ title: String) throws {
         let application=try uiSession().root
         try press(try unique(find(application,role:kAXMenuBarItemRole,name:"Format"),failure:.formatMenuUnavailable))
@@ -95,7 +127,9 @@ enum MessagesVariantUI {
             checkpoint("schedule_opened", root: application)
             guard let date = parseTimestamp(variant["scheduled_for"].string) else { throw SendVariantFailure.invalidVariant }
             let fields = find(application, role: "AXDateField")
-            guard !fields.isEmpty else { throw SendVariantFailure.scheduleDateControlsMissing }
+            if fields.isEmpty {
+                try configureModernSchedule(date, application: application, editor: editor, session: session)
+            } else {
             let formatter = DateFormatter()
             formatter.locale = Locale(identifier: "en_US_POSIX")
             formatter.dateFormat = "MM/dd/yyyy h:mm a"
@@ -108,6 +142,7 @@ enum MessagesVariantUI {
             guard Date() < expiresAt else { throw SourceFailure.expired }
             sendStarted = true
             try session.press(MessagesUISession.enter)
+            }
         }
         if kind=="mention" {
             let own = Set(try MessagesProbes.discoverSelfHandles().handles.map(MessagesProbes.normalize))
