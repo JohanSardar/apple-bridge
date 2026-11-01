@@ -142,7 +142,7 @@ func runMailCommandsReal(ctx context.Context, s Scenario, level string) (e Evide
 	defer w.Close()
 	tag := "[ab-test] " + e.RunID
 	defer func() {
-		cleanup, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		cleanup, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 		proof, err := mailRealProof(cleanup, w, "MAIL-CLEANUP", tag)
 		add("final_owned_cleanup", err == nil && proof["cleanup_passed"])

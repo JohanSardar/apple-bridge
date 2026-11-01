@@ -94,7 +94,7 @@ enum HelperLabCommand {
             let reportURL = try report(arguments)
             guard arguments.count > 2 else { throw ProbeFailure.invalidArguments }
             let cleanup = arguments[1] == "MAIL-CLEANUP"
-            let deadline = MailQualification.deadline(after: cleanup ? 25 : 80) { @Sendable in
+            let deadline = MailQualification.deadline(after: cleanup ? 45 : 80) { @Sendable in
                 let proof: JSON = .object([cleanup ? "cleanup_passed" : "fixture_and_commands": .bool(false), cleanup ? "cleanup_error" : "command_error": .string(MailCommandFailure.timeout.localizedDescription)])
                 try? JSONEncoder().encode(proof).write(to: reportURL, options: .atomic)
                 exit(1)

@@ -18,7 +18,7 @@ private actor QualificationMailFake {
         if body.hasPrefix("set matched to"), !body.contains("return count of matched") { return "123" }
         if body.contains("set chosen to selected messages") { return created ? "123" : "clear" }
         if body.hasPrefix("return count (outgoing") { return "0" }
-        if body.contains("extract address from primary email") { return "self@example.invalid" }
+        if body.contains("extract address from sender") { return "self@example.invalid" }
         if body.contains("set found to") { return created ? "123" : "" }
         if body.hasPrefix("return count") || body.contains("return count of matched") { return created ? "1" : "0" }
         if body.contains("make new outgoing message") {
@@ -65,7 +65,7 @@ func checkMailQualification() async throws {
             try require(scripts.contains { $0.contains("{inbox, sent mailbox, drafts mailbox}") && $0.contains("if subject of item 1 of chosen is not") })
             try require(!scripts.contains { $0.contains("delete m") || $0.contains("move m") || $0.contains("set deleted status") })
         }
-        try require(scripts.contains { $0.contains("extract address from primary email") && !$0.contains("make new outgoing message") })
+        try require(scripts.contains { $0.contains("extract address from sender") && $0.contains("visible:true") && $0.contains("close m saving no") })
         if scenario == "MAIL-ORGANIZE-REAL" { try require(scripts.contains { $0.contains("set flagged status of m to false") }) }
     }
     let stalled = QualificationMailFake(stalled: true)

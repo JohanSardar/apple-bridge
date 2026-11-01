@@ -32,8 +32,9 @@ public enum MailFixtureCleanup {
     public static func run(tag: String, script: MailCommands.Script, removeSelected: @Sendable () async throws -> Void) async throws -> [String: JSON] {
         let q = MailCommands.quote
         _ = try await script("""
-        repeat with i from (count outgoing messages) to 1 by -1
-            set m to outgoing message i
+        set ownedIDs to id of (outgoing messages whose subject is \(q(tag)))
+        repeat with ownedID in ownedIDs
+            set m to outgoing message id (contents of ownedID)
             if subject of m is \(q(tag)) then
                 set visible of m to true
                 close m saving no

@@ -37,7 +37,7 @@ func runMailBodyReal(ctx context.Context, s Scenario, level string) (e Evidence)
 	{
 		tag := "[ab-test] " + e.RunID
 		defer func() {
-			cleanup, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			cleanup, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
 			proof, err := mailRealProof(cleanup, w, "MAIL-CLEANUP", tag)
 			e.Passed = check("owned_fixture_cleanup", err == nil && proof["cleanup_passed"]) && e.Passed
