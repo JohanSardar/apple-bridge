@@ -46,6 +46,8 @@ enum RemindersSectionsProof {
             try await Task.sleep(for: .seconds(1))
             let root = AXUIElementCreateApplication(app.processIdentifier)
             AXUIElementSetMessagingTimeout(root, 0.1)
+            let ui = RemindersFixtureUI(app: app, title: title)
+            diagnostics["ui_windows"] = .number(Double(ui.elements(ui.root, kAXWindowsAttribute).count))
             var ownedSelection: AXUIElement?
             @MainActor func fence() throws {
                 let foreground = NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier
@@ -62,22 +64,7 @@ enum RemindersSectionsProof {
                 return (result as? NSAttributedString)?.string ?? result as? String ?? ""
             }
             @MainActor func find(_ name: String, role: String? = nil) -> [AXUIElement] {
-                var budget = 3000
-                let deadline = ContinuousClock.now.advanced(by: .seconds(2))
-                @MainActor func walk(_ element: AXUIElement) -> [AXUIElement] {
-                    guard budget > 0, ContinuousClock.now < deadline else { return [] }; budget -= 1
-                    let actualRole = value(element, kAXRoleAttribute)
-                    let labels = [value(element, kAXTitleAttribute), value(element, kAXValueAttribute), value(element, kAXDescriptionAttribute)]
-                    if role == nil || actualRole == role {
-                        if labels.contains(name), ![kAXApplicationRole, kAXWindowRole, kAXScrollAreaRole, kAXSplitGroupRole].contains(actualRole) { return [element] }
-                    }
-                    var result: [AXUIElement] = []
-                    var children: CFTypeRef?
-                    AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children)
-                    for child in children as? [AXUIElement] ?? [] { result += walk(child) }
-                    return result
-                }
-                return walk(root)
+                ui.find(name, role: role)
             }
             @MainActor func unique(_ name: String, role: String? = nil) throws -> AXUIElement {
                 let matches = find(name, role: role)
@@ -128,6 +115,7 @@ enum RemindersSectionsProof {
             @MainActor func ownedRow() -> AXUIElement? {
                 var rows: [AXUIElement] = []
                 let matches = find(title)
+                for (key, value) in ui.searchDiagnostics { diagnostics["selection_" + key] = .number(value) }
                 diagnostics["selection_title_matches"] = .number(Double(matches.count))
                 for match in matches {
                     var current = match

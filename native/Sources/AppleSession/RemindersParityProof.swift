@@ -51,11 +51,21 @@ enum RemindersParityProof {
                         let read = try await session.read()
                         let snapshot = read.snapshot
                         entityNames = read.entities
+                        diagnostics[stage + "_parent_matches"] = .number(max(diagnostics[stage + "_parent_matches"]?.number ?? 0, Double(snapshot.reminders.values.filter { $0.calendarItemIdentifier == firstID }.count)))
+                        if let parent = snapshot.reminders.values.first(where: { $0.calendarItemIdentifier == firstID }) {
+                            diagnostics[stage + "_store_flag"] = .number(parent.flagged.map { $0 ? 1 : 0 } ?? -1)
+                        }
                         if let row = snapshot.lists.values.first(where: { $0.identity.uuid?.uuidString == listID || $0.identity.textIdentifier == listID }),
                            let parent = snapshot.reminders.values.first(where: { $0.calendarItemIdentifier == firstID }),
                            let child = snapshot.reminders.values.first(where: { $0.calendarItemIdentifier == secondID }), predicate(snapshot, row, parent, child) { return true }
                     }
                     try await Task.sleep(for: .milliseconds(100))
+                }
+                for path in try RemindersStore.paths() {
+                    let snapshot = try await RemindersStoreSession(path: path).read().snapshot
+                    if let parent = snapshot.reminders.values.first(where: { $0.calendarItemIdentifier == firstID }) {
+                        diagnostics[stage + "_full_store_flag"] = .number(parent.flagged.map { $0 ? 1 : 0 } ?? -1)
+                    }
                 }
                 return false
             }
@@ -85,10 +95,15 @@ enum RemindersParityProof {
             } while ContinuousClock.now < visibilityDeadline
             checks["fixture_visible"] = .bool(visible)
             guard visible else { throw SourceFailure.unavailable }
+            stage = "store_visibility"
+            checks["store_fixture_visible"] = .bool(try await observe { _, _, _, _ in true })
             stage = "flag"
             try script("set fixtureItems to every reminder of fixtureList whose name is \"" + first.title + "\"\nif (count fixtureItems) is not 1 then error number -2701\nignoring application responses\nset flagged of item 1 of fixtureItems to true\nend ignoring")
+            diagnostics["flag_script_readback"] = .number(Double((try? script("return flagged of (first reminder of fixtureList whose name is \"" + first.title + "\")").int32Value) ?? -2))
             checks["flag_readback"] = .bool(try await observe { _, _, parent, _ in parent.flagged == true })
             try script("set fixtureItems to every reminder of fixtureList whose name is \"" + first.title + "\"\nif (count fixtureItems) is not 1 then error number -2701\nignoring application responses\nset flagged of item 1 of fixtureItems to false\nend ignoring")
+            stage = "flag_clear"
+            diagnostics["flag_clear_script_readback"] = .number(Double((try? script("return flagged of (first reminder of fixtureList whose name is \"" + first.title + "\")").int32Value) ?? -2))
             checks["flag_clear_readback"] = .bool(try await observe { _, _, parent, _ in parent.flagged == false })
             stage = "list_icon"
             try script("ignoring application responses\nset emblem of fixtureList to \"star\"\nend ignoring")
@@ -99,7 +114,9 @@ enum RemindersParityProof {
             guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.reminders").first else { throw SourceFailure.unavailable }
             let ui = RemindersFixtureUI(app: app, title: title)
             let expected = ["File", "Edit", "View", "New Section", "Indent Reminders", "Outdent Reminders", "Add Tags…", "Add Image", "New List…", "Show List Info", "Sort By", "Manual", "Add Image…", "Choose File…"]
+            diagnostics["ui_windows"] = .number(Double(ui.elements(ui.root, kAXWindowsAttribute).count))
             checks["owned_list_visible"] = .bool(!ui.find(title).isEmpty)
+            for (key, value) in ui.searchDiagnostics { diagnostics["selection_" + key] = .number(value) }
             for name in expected { checks["control_" + name] = .bool(!ui.find(name).isEmpty) }
             stage = "images"
             try script("show (first reminder of fixtureList whose name is \"" + second.title + "\")\nactivate")
@@ -230,6 +247,7 @@ final class RemindersFixtureUI {
     let app: NSRunningApplication
     let root: AXUIElement
     let title: String
+    var searchDiagnostics: [String: Double] = [:]
 
     init(app: NSRunningApplication, title: String) {
         self.app = app; self.title = title
@@ -243,18 +261,38 @@ final class RemindersFixtureUI {
         return (result as? NSAttributedString)?.string ?? result as? String ?? ""
     }
 
+    func elements(_ element: AXUIElement, _ attribute: String) -> [AXUIElement] {
+        var result: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, attribute as CFString, &result) == .success else { return [] }
+        if let values = result as? [AXUIElement] { return values }
+        if let result, CFGetTypeID(result) == AXUIElementGetTypeID() { return [unsafeDowncast(result, to: AXUIElement.self)] }
+        return []
+    }
+
     func find(_ name: String, role: String? = nil) -> [AXUIElement] {
         var budget = 3000
-        let deadline = ContinuousClock.now.advanced(by: .seconds(2))
+        var visited: [AXUIElement] = []
+        var partialLabels = 0
+        var rows = 0
+        let deadline = ContinuousClock.now.advanced(by: .seconds(3))
         func walk(_ element: AXUIElement) -> [AXUIElement] {
-            guard budget > 0, ContinuousClock.now < deadline else { return [] }; budget -= 1
+            guard budget > 0, ContinuousClock.now < deadline, !visited.contains(where: { CFEqual($0, element) }) else { return [] }
+            visited.append(element)
+            budget -= 1
             let actualRole = value(element, kAXRoleAttribute)
-            if (role == nil || role == actualRole), [kAXTitleAttribute, kAXValueAttribute, kAXDescriptionAttribute].contains(where: { value(element, $0) == name }) { return [element] }
-            var children: CFTypeRef?
-            AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children)
-            return (children as? [AXUIElement] ?? []).flatMap(walk)
+            if actualRole == kAXRowRole { rows += 1 }
+            let labels = [kAXTitleAttribute, kAXValueAttribute, kAXDescriptionAttribute].map { value(element, $0) }
+            if labels.contains(where: { $0.contains(name) }) { partialLabels += 1 }
+            let matches = labels.contains(name) || (name.hasPrefix(title) && labels.contains { $0.hasPrefix(name + ",") || $0.hasPrefix(name + "\n") })
+            if (role == nil || role == actualRole), matches, ![kAXApplicationRole, kAXWindowRole, kAXScrollAreaRole, kAXSplitGroupRole].contains(actualRole) { return [element] }
+            return elements(element, kAXChildrenAttribute).flatMap(walk)
         }
-        return walk(root)
+        let windows = elements(root, kAXWindowsAttribute)
+        let menus = elements(root, kAXMenuBarAttribute)
+        let roots = role == kAXMenuBarItemRole || role == kAXMenuItemRole ? menus + windows : windows + menus
+        let matches = (roots.isEmpty ? [root] : roots).flatMap(walk)
+        searchDiagnostics = ["visited": Double(visited.count), "rows": Double(rows), "partial_labels": Double(partialLabels), "truncated": budget == 0 || ContinuousClock.now >= deadline ? 1 : 0]
+        return matches
     }
 
     func fence() throws {
