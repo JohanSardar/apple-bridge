@@ -12,7 +12,7 @@ public enum SafariCleanup {
         let run = request["run_id"].string
         guard run.range(of: #"^[A-Za-z0-9_-]+$"#, options: .regularExpression) != nil else { throw SourceFailure.invalid }
         let tabs = SafariTabs()
-        guard await tabs.permitted(fresh: true) else { throw SourceFailure.permissionMissing }
+        guard tabs.permitted(fresh: true) else { throw SourceFailure.permissionMissing }
         let tag = "[ab-test " + run + "]"
         let url = "https://example.com/?ab-test=" + run
         func reading() async throws -> [JSON] {
@@ -22,7 +22,7 @@ public enum SafariCleanup {
                 return .object(["ID": .string("reading:" + row["native_key"].string), "Tag": .string(value == url ? tag : ""), "Container": .string("reading:" + SHA256.hash(data: Data(value.utf8)).map { String(format: "%02x", $0) }.joined())])
             }
         }
-        let currentTabs = try await tabs.tabs()
+        let currentTabs = try tabs.tabs()
         var items = try await reading()
         items += currentTabs.map { row in
             let value = row["data"]["url"].string

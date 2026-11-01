@@ -3,9 +3,10 @@ import AppKit
 import Carbon
 import SourceSupport
 
-public actor SafariTabs {
+@MainActor
+public final class SafariTabs {
     private let execute: (@Sendable (String) throws -> NSAppleEventDescriptor)?
-    public init(execute: (@Sendable (String) throws -> NSAppleEventDescriptor)? = nil) { self.execute = execute }
+    public nonisolated init(execute: (@Sendable (String) throws -> NSAppleEventDescriptor)? = nil) { self.execute = execute }
     private var permission: (Bool, ContinuousClock.Instant)?
     public func permitted(fresh: Bool = false) -> Bool {
         if execute != nil { return true }
