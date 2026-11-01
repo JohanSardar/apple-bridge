@@ -271,12 +271,10 @@ private struct ClockTimerUI {
             throw ClockTimerFailure(step: "find the tagged recent timer")
         }
         func deleteItems() -> [AXUIElement] {
-            find(root, role: kAXMenuRole).filter { menu in
-                guard let parent = attribute(menu, kAXParentAttribute) else { return true }
-                return attribute(unsafeDowncast(parent, to: AXUIElement.self), kAXRoleAttribute) as? String != kAXMenuBarItemRole
-            }.flatMap { find($0, role: kAXMenuItemRole) }.filter { name($0) == "Delete" }
+            find(root, role: kAXMenuItemRole).filter { name($0) == "Delete" && attribute($0, kAXEnabledAttribute) as? Bool == true }
         }
         _ = AXUIElementSetAttributeValue(rows[0], kAXFocusedAttribute as CFString, kCFBooleanTrue)
+        _ = AXUIElementSetAttributeValue(rows[0], kAXSelectedAttribute as CFString, kCFBooleanTrue)
         _ = AXUIElementPerformAction(rows[0], kAXShowMenuAction as CFString)
         RunLoop.current.run(until: Date().addingTimeInterval(0.25))
         if deleteItems().isEmpty { try click(rows[0], button: .right) }
