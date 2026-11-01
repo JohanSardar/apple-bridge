@@ -8,6 +8,17 @@ import SourceSupport
 public enum ClockTimers {
     private static func failure() -> any Error { ClockTimerFailure() }
 
+    public static func durationComponent(_ value: Any?) -> Int? {
+        let number: Int?
+        if let value = value as? NSNumber {
+            number = value.doubleValue == Double(value.intValue) ? value.intValue : nil
+        } else if let value = value as? String, let prefix = value.split(whereSeparator: \.isWhitespace).first {
+            number = Int(prefix)
+        } else { number = nil }
+        guard let number, (0...59).contains(number) else { return nil }
+        return number
+    }
+
     public static func adjustDurationComponent(to target: Int, value: () -> Int?, adjust: (Bool) -> Bool) throws {
         guard (0...59).contains(target) else { throw failure() }
         for _ in 0...60 {
@@ -198,9 +209,7 @@ private struct ClockTimerUI {
             try focus(element)
             do {
                 try ClockTimers.adjustDurationComponent(to: number, value: {
-                    if let value = attribute(element, kAXValueAttribute) as? NSNumber { return value.intValue }
-                    if let value = attribute(element, kAXValueAttribute) as? String { return Int(value) }
-                    return nil
+                    ClockTimers.durationComponent(attribute(element, kAXValueAttribute))
                 }, adjust: { increasing in
                     key(increasing ? 126 : 125)
                     return true

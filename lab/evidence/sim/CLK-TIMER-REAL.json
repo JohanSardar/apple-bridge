@@ -20,6 +20,10 @@
       "passed": true
     },
     {
+      "name": "native_timer_localized_component_values",
+      "passed": true
+    },
+    {
       "name": "native_timer_recent_snapshot_readonly",
       "passed": true
     },

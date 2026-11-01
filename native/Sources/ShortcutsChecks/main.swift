@@ -79,6 +79,13 @@ struct Checks {
 
     @MainActor
     static func clockTimerSnapshotChecks() throws {
+        for (value, expected) in [("3 hours", 3), ("0 minutes", 0), ("12 seconds", 12), ("02", 2), ("9\u{202F}minutes", 9)] {
+            guard ClockTimers.durationComponent(value) == expected else { throw SourceFailure.corrupt }
+        }
+        guard ClockTimers.durationComponent(NSNumber(value: 15)) == 15,
+              ClockTimers.durationComponent("unknown") == nil,
+              ClockTimers.durationComponent("60 minutes") == nil,
+              ClockTimers.durationComponent(NSNumber(value: 1.5)) == nil else { throw SourceFailure.corrupt }
         var component = 15, adjustments = 0
         try ClockTimers.adjustDurationComponent(to: 2, value: { component }, adjust: { increasing in
             component += increasing ? 1 : -1
