@@ -1,17 +1,17 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[8.42 10.3 12.04] cpu_idle=17% cpus=10 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[3.31 3.38 3.92] cpu_idle=82% cpus=10 other_heavy=0"
   },
-  "run_id": "notes-parity_01M6A433304D9QJKXJ00Y4NC1H",
+  "run_id": "notes-parity_01M6ACZJKJBEQVMWRTFK2TRHXQ",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "NOTE-EDIT-PARITY",
   "level": "sim",
   "passed": true,
-  "git_sha": "c7042fbf90ae670390799266ccd2a8f378413964",
-  "at": "2026-10-31T23:18:06.176435Z",
+  "git_sha": "491b7a78015c29951817fc1144197f7f5cd8bec8",
+  "at": "2026-11-01T01:53:28.178983Z",
   "assertions": [
     {
       "name": "NOTE-CRUD/external_note_imported",
@@ -71,6 +71,10 @@
     },
     {
       "name": "NOTE-CRUD/rest_replace_content",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_before_delete_replicated",
       "passed": true
     },
     {
@@ -144,6 +148,10 @@
     },
     {
       "name": "NOTE-CRUD/mcp_replace_content",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_before_delete_replicated",
       "passed": true
     },
     {

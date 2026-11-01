@@ -1,18 +1,17 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[3.24 3.76 4.2] cpu_idle=77% cpus=8 other_heavy=0"
+    "summary": "air: load=[3.29 3.38 3.91] cpu_idle=81% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M5JR08WARVAWRD7H2TTENTT1",
+  "run_id": "run_01M6ACZRE9ZG1V9VWX2RF62VCW",
   "metrics": {
-    "capture_observer_resets": 0,
-    "summary_only": true
+    "capture_observer_resets": 0
   },
   "scenario": "NOTE-DECODE-FULL",
   "level": "sim",
   "passed": true,
-  "git_sha": "bbb1b7d8ba25976736adc2ed81df999498ec4b55",
-  "at": "2026-10-22T21:24:18.954862Z",
+  "git_sha": "491b7a78015c29951817fc1144197f7f5cd8bec8",
+  "at": "2026-11-01T01:53:34.153277Z",
   "assertions": [
     {
       "name": "independent_truth_counts",

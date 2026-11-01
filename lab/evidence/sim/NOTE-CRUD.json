@@ -1,17 +1,17 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[5.61 9.86 11.91] cpu_idle=82% cpus=10 other_heavy=0"
+    "summary": "air: load=[3.17 3.35 3.91] cpu_idle=71% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M6A42VBWQVPSNAJYSC0AD92B",
+  "run_id": "run_01M6ACZBFBR590Q8NHQ9XQ6SGD",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "NOTE-CRUD",
   "level": "sim",
   "passed": true,
-  "git_sha": "c7042fbf90ae670390799266ccd2a8f378413964",
-  "at": "2026-10-31T23:17:58.268176Z",
+  "git_sha": "491b7a78015c29951817fc1144197f7f5cd8bec8",
+  "at": "2026-11-01T01:53:20.875109Z",
   "assertions": [
     {
       "name": "external_note_imported",
@@ -71,6 +71,10 @@
     },
     {
       "name": "rest_replace_content",
+      "passed": true
+    },
+    {
+      "name": "rest_before_delete_replicated",
       "passed": true
     },
     {
@@ -144,6 +148,10 @@
     },
     {
       "name": "mcp_replace_content",
+      "passed": true
+    },
+    {
+      "name": "mcp_before_delete_replicated",
       "passed": true
     },
     {
