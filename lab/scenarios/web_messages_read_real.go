@@ -50,13 +50,21 @@ func runNativeWebMessagesRead(ctx context.Context, e Evidence, w *world.World, n
 	}
 	var messageID string
 	err = w.Await(180*time.Second, func() bool {
-		return state.QueryRowContext(ctx, "SELECT record_id FROM aliases WHERE collection='messages.message' AND native_key=?", guid).Scan(&messageID) == nil
+		var captured bool
+		messageID, captured = capturedNativeMessagesRecord(ctx, state, "messages.message", guid)
+		return captured
 	})
 	e.Assertions = append(e.Assertions, Assertion{Name: "native_self_message_captured", Passed: err == nil})
 	if err != nil {
 		return e
 	}
 	return proveWebSelfRead(ctx, e, w, chatID, messageID, peer, text, outgoing)
+}
+
+func capturedNativeMessagesRecord(ctx context.Context, state *sql.DB, collection, native string) (string, bool) {
+	var id string
+	err := state.QueryRowContext(ctx, "SELECT a.record_id FROM aliases a JOIN records r ON r.collection=a.collection AND r.id=a.record_id WHERE a.collection=? AND a.native_key=? AND r.deleted=0 LIMIT 1", collection, native).Scan(&id)
+	return id, err == nil
 }
 
 func proveWebSelfRead(ctx context.Context, e Evidence, w *world.World, chatID, messageID, peer, text string, outgoing bool) Evidence {
@@ -101,6 +109,8 @@ func proveWebSelfRead(ctx context.Context, e Evidence, w *world.World, chatID, m
 			}
 			err = wsjson.Read(bounded, conn, &frame)
 			if err != nil || frame.Type == "error" {
+				e.Metrics["web_"+view+"_error_frame"] = frame.Type == "error"
+				e.Metrics["web_"+view+"_read_failed"] = err != nil
 				break
 			}
 			if frame.Type != "snap" || frame.Sub != view {
@@ -109,6 +119,7 @@ func proveWebSelfRead(ctx context.Context, e Evidence, w *world.World, chatID, m
 			if view == "chats" {
 				var result contracts.ChatsResult
 				if json.Unmarshal(frame.Data, &result) == nil {
+					e.Metrics["web_chats_count"] = len(result.Chats)
 					for _, chat := range result.Chats {
 						found = found || chat.Chat.ID == chatID
 					}

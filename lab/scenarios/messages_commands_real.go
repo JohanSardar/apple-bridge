@@ -166,7 +166,9 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 		captureTimeout = 180 * time.Second
 	}
 	add("self_chat_captured", readStateFresh || w.Await(captureTimeout, func() bool {
-		return stateDB.QueryRowContext(ctx, "SELECT record_id FROM aliases WHERE collection='messages.chat' AND native_key=? LIMIT 1", rawChat).Scan(&chatID) == nil
+		var captured bool
+		chatID, captured = capturedNativeMessagesRecord(ctx, stateDB, "messages.chat", rawChat)
+		return captured
 	}) == nil)
 	if chatID == "" && !readStateFresh {
 		if s.ID == "WEB-MSG-REAL-READ" {
