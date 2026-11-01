@@ -1017,7 +1017,7 @@ features:
       - {id: MAIL-BODY, levels: [sim]}
       - {id: MAIL-BODY-REAL, levels: [real]}
     limits:
-      - {"scenario": "MAIL-BODY-REAL", "level": "real", "reason": "needs locally downloaded plain-text [ab-test] self-sent mail; creating it needs Automation grant AppleBridgeHelper → Mail"}
+      - {"scenario": "MAIL-BODY-REAL", "level": "real", "reason": "Latest real qualification cannot select an earlier tagged fixture through Mail Accessibility during recovery, so body fixture creation and cleanup are not proved; Automation is granted"}
   - id: photos.capture
     title: Photos metadata capture and filtered search
     requirements: [R-API, R-SCOPE]
@@ -1055,9 +1055,7 @@ features:
       - {id: MAIL-DRAFT-REAL, levels: [real]}
       - {id: MAIL-ORGANIZE-REAL, levels: [real]}
     limits:
-      - {"scenario": "MAIL-SEND-SELF-REAL", "level": "real", "reason": "needs Automation grant AppleBridgeHelper → Mail"}
-      - {"scenario": "MAIL-DRAFT-REAL", "level": "real", "reason": "needs Automation grant AppleBridgeHelper → Mail"}
-      - {"scenario": "MAIL-ORGANIZE-REAL", "level": "real", "reason": "needs Automation grant AppleBridgeHelper → Mail"}
+      - {"scenario": "MAIL-ORGANIZE-REAL", "level": "real", "reason": "Sent-message body readback is not confirmed and Mail can retain a stale indexed fixture identity after deletion; signed Helper reports message-unavailable during cleanup"}
   - id: phone.read
     title: Local call history capture
     requirements: [R-API, R-SCOPE]

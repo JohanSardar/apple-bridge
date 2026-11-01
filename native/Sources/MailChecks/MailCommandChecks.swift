@@ -90,7 +90,7 @@ func checkMailCommands() async throws {
     for op in MailCommands.operations {
         for observed in [true, false] {
             let fake = MailFake(observed ? "1" : "")
-            let commands = MailCommands(script: { await fake.run($0) })
+            let commands = MailCommands(script: { await fake.run($0) }, pollInterval: .milliseconds(1))
             let action: JSON = .object(["op": .string(op), "native_key": .string("123"), "args": .object(["to": .array([.string("self@example.invalid")]), "subject": .string("[ab-test synthetic]"), "body": .string("synthetic"), "account": .string("synthetic"), "mailbox": .string("Archive"), "flagged": .bool(true), "read": .bool(true)])])
             let prepared = try commands.prepare(.object(["action": action]))
             let result = try await commands.dispatch(prepared)
@@ -115,7 +115,7 @@ func checkMailCommands() async throws {
     }
     for expected in ["synthetic body", "\nsynthetic body"] {
         let fake = MailFake("1")
-        let commands = MailCommands(script: { await fake.run($0) })
+        let commands = MailCommands(script: { await fake.run($0) }, pollInterval: .milliseconds(1))
         let action: JSON = .object(["op": .string("mail.send"), "args": .object(["to": .array([.string("self@example.invalid")]), "subject": .string("synthetic subject"), "body": .string(expected)])])
         _ = try await commands.dispatch(commands.prepare(.object(["action": action])))
         let scripts = await fake.scripts()
@@ -133,7 +133,7 @@ func checkMailCommands() async throws {
         }
     }
     let delayed = MailFake("true", lag: 2)
-    let commands = MailCommands(script: { await delayed.run($0) })
+    let commands = MailCommands(script: { await delayed.run($0) }, pollInterval: .milliseconds(1))
     let prepared = try commands.prepare(.object(["action": .object(["op": .string("mail.set_flag"), "native_key": .string("123"), "args": .object(["flagged": .bool(true)])])]))
     try require(try await commands.dispatch(prepared)["observed"].bool)
     try require(await delayed.scripts().count == 4)

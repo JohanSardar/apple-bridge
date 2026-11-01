@@ -46,8 +46,9 @@ public struct MailCommands: Sendable {
     private static let permissionQueue = DispatchQueue(label: "apple-bridge.mail-automation-permission")
     public typealias Script = @Sendable (String) async throws -> String
     private let script: Script
+    private let pollInterval: Duration
     public static let operations = ["mail.create_draft", "mail.send", "mail.move", "mail.set_flag", "mail.mark_read", "mail.delete"]
-    public init(script: @escaping Script = MailCommands.run) { self.script = script }
+    public init(script: @escaping Script = MailCommands.run, pollInterval: Duration = .milliseconds(200)) { self.script = script; self.pollInterval = pollInterval }
     @MainActor public static func run(_ body: String) async throws -> String {
         try Task.checkCancellation()
         if NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.mail").isEmpty {
@@ -162,7 +163,7 @@ public struct MailCommands: Sendable {
                 guard UInt64(key) != nil else { throw MailCommandFailure.unconfirmed }
                 return .object(["observed": .bool(true), "native_key": .string(key), "fingerprint": .string(prepared.fingerprint)])
             }
-            try await Task.sleep(for: .milliseconds(200))
+            try await Task.sleep(for: pollInterval)
         }
         return .object(["observed": .bool(false), "disposition": .string("indeterminate"), "reason": .string(MailCommandFailure.unconfirmed.localizedDescription)])
     }
