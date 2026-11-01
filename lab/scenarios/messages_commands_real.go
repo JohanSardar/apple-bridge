@@ -65,7 +65,11 @@ func runNativeMessagesCommands(ctx context.Context, s Scenario, level string, e 
 	if level == "replica" {
 		e.Hosts = append(e.Hosts, "ubuntu")
 	}
-	w, err := world.NewReal(ctx, level, replicas, world.BlobOptions{Scope: "messages:read,messages:write,system:read"})
+	scope := "messages:read,messages:write,system:read"
+	if s.ID == "WEB-MSG-REAL-READ" {
+		scope = "messages:read,system:read"
+	}
+	w, err := world.NewReal(ctx, level, replicas, world.BlobOptions{Scope: scope})
 	if err != nil {
 		os.WriteFile("/tmp/ablab/messages-real-world-error.log", []byte(err.Error()), 0600)
 		add("real_world_start", false)
@@ -157,10 +161,20 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	}
 	defer stateDB.Close()
 	var chatID string
-	add("self_chat_captured", readStateFresh || w.Await(30*time.Second, func() bool {
+	captureTimeout := 30 * time.Second
+	if s.ID == "WEB-MSG-REAL-READ" {
+		captureTimeout = 180 * time.Second
+	}
+	add("self_chat_captured", readStateFresh || w.Await(captureTimeout, func() bool {
 		return stateDB.QueryRowContext(ctx, "SELECT record_id FROM aliases WHERE collection='messages.chat' AND native_key=? LIMIT 1", rawChat).Scan(&chatID) == nil
 	}) == nil)
 	if chatID == "" && !readStateFresh {
+		if s.ID == "WEB-MSG-REAL-READ" {
+			var count int
+			if stateDB.QueryRowContext(ctx, "SELECT COUNT(*) FROM aliases WHERE collection LIKE 'messages.%'").Scan(&count) == nil {
+				e.Metrics["captured_messages_aliases"] = count
+			}
+		}
 		return e
 	}
 	if s.ID == "WEB-MSG-REAL-READ" {

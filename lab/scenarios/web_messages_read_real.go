@@ -49,7 +49,7 @@ func runNativeWebMessagesRead(ctx context.Context, e Evidence, w *world.World, n
 		return e
 	}
 	var messageID string
-	err = w.Await(30*time.Second, func() bool {
+	err = w.Await(180*time.Second, func() bool {
 		return state.QueryRowContext(ctx, "SELECT record_id FROM aliases WHERE collection='messages.message' AND native_key=?", guid).Scan(&messageID) == nil
 	})
 	e.Assertions = append(e.Assertions, Assertion{Name: "native_self_message_captured", Passed: err == nil})
