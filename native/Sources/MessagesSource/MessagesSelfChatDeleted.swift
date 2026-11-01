@@ -1,8 +1,33 @@
 import Foundation
 import AppKit
+import ApplicationServices
 import SourceSupport
 
 extension MessagesParity {
+    @UIActor
+    static func inspectDeletedSelection(_ prepared: Prepared, existingCount: Int) throws {
+        let session = try openDeleted(prepared)
+        defer { try? dismiss(session) }
+        let row = try deletedTarget(prepared, session: session)
+        let nodes = MessagesVariantUI.find(session.root)
+        let rowNodes = MessagesVariantUI.find(row)
+        let report: [String: Any] = [
+            "inspection_passed": true,
+            "truncated": nodes.count >= 5000,
+            "existing_deleted_count": existingCount,
+            "target_row_node_count": rowNodes.count,
+            "target_row_checkbox_count": rowNodes.filter { MessagesAccessibility.value($0, kAXRoleAttribute) == kAXCheckBoxRole }.count,
+            "transcript_count": nodes.filter { MessagesAccessibility.value($0, kAXIdentifierAttribute) == "TranscriptCollectionView" }.count,
+            "message_bubble_count": nodes.filter { MessagesAccessibility.value($0, kAXIdentifierAttribute) == "Sticker" }.count,
+            "message_text_count": nodes.filter { MessagesAccessibility.value($0, kAXIdentifierAttribute) == "CKBalloonTextView" }.count,
+            "disclosure_count": nodes.filter { MessagesAccessibility.value($0, kAXRoleAttribute) == kAXDisclosureTriangleRole }.count,
+            "checkbox_count": nodes.filter { MessagesAccessibility.value($0, kAXRoleAttribute) == kAXCheckBoxRole }.count,
+            "recover_button_count": MessagesVariantUI.find(session.root, role: kAXButtonRole, name: "Recover").count,
+            "delete_button_count": MessagesVariantUI.find(session.root, role: kAXButtonRole, name: "Delete").count
+        ]
+        try PrivateReport.write(report, to: PrivateReport.directory.appendingPathComponent("messages-deleted-selection-controls.json"))
+    }
+
     @UIActor
     static func proveOwnedDeletedMessages(_ prepared: Prepared, ledger: JSON, reader: MessagesReader, tag: String) throws -> [JSON] {
         let chat = prepared.action["native_key"].string
@@ -27,16 +52,18 @@ extension MessagesParity {
         }
         let ids = try owned()
         guard !ids.isEmpty else { throw SourceFailure.conflict }
+        var state = prepared.nativeState.object
+        state["handles"] = .array(try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID LEFT JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [chat]).map { .string(MessagesProbes.normalize($0["id"])) })
+        let deletedTarget = Prepared(nativeState: .object(state), fingerprint: prepared.fingerprint, action: prepared.action)
         let existingDeleted = try deletedMembers(chat, reader: reader)
         guard existingDeleted.isEmpty else {
+            do { try inspectDeletedSelection(deletedTarget, existingCount: existingDeleted.count) }
+            catch { try? PrivateReport.write(["inspection_passed": false, "existing_deleted_count": existingDeleted.count], to: PrivateReport.directory.appendingPathComponent("messages-deleted-selection-controls.json")) }
             return ["messages.recover_chat", "messages.delete_chat_permanently"].map {
                 .object(["operation": .string($0), "proven": .bool(false), "reason": .string("existing_deleted_messages_protected"), "protected_count": .number(Double(existingDeleted.count)), "service": prepared.nativeState["service"]])
             }
         }
         let baselineDigest = try MessagesSelfTestBaseline.digest(chat, through: baseline)
-        var state = prepared.nativeState.object
-        state["handles"] = .array(try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID LEFT JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [chat]).map { .string(MessagesProbes.normalize($0["id"])) })
-        let deletedTarget = Prepared(nativeState: .object(state), fingerprint: prepared.fingerprint, action: prepared.action)
         func wait(_ condition: () throws -> Bool) throws {
             let deadline = Date().addingTimeInterval(5)
             repeat {

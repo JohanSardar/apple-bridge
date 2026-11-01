@@ -59,16 +59,24 @@ public struct MessagesSelfTestBaseline: Sendable {
         let (readState, last) = try MessagesSelfTestReadState.baseline(chat, through: reader.maximum())
         let digest = try digest(chat, through: last)
         let prepared = try target(chat)
+        var stages = ["message_opened": false, "conversation_menu_read": false, "receipt_control_read": false, "baseline_captured": false, "unread_restored_after_failure": false]
+        defer { try? PrivateReport.write(stages, to: PrivateReport.directory.appendingPathComponent("messages-self-chat-baseline-controls.json")) }
         do {
             try MessagesAccessibility.openMessage(prepared.nativeState["message_guid"].string, settle: 0.5, resetEditor: false)
+            stages["message_opened"] = true
             let (session, titles) = try MessagesParity.menu(prepared)
             try MessagesParity.dismiss(session)
+            stages["conversation_menu_read"] = true
             guard titles.contains("Show Alerts") != titles.contains("Hide Alerts") else { throw SourceFailure.capabilityUnproven }
             let (receiptSession, _, receiptValue) = try MessagesParity.receiptControl(prepared)
             try MessagesParity.dismiss(receiptSession)
-            return MessagesSelfTestBaseline(chat: chat, lastMessageROWID: last, pins: try MessagesPins.read(), muted: titles.contains("Show Alerts"), receipts: receiptValue, receiptsSetting: try receiptSetting(chat), messagesDigest: digest, readState: readState)
+            stages["receipt_control_read"] = true
+            let baseline = MessagesSelfTestBaseline(chat: chat, lastMessageROWID: last, pins: try MessagesPins.read(), muted: titles.contains("Show Alerts"), receipts: receiptValue, receiptsSetting: try receiptSetting(chat), messagesDigest: digest, readState: readState)
+            stages["baseline_captured"] = true
+            return baseline
         } catch {
             try readState.restore(prepared, through: last)
+            stages["unread_restored_after_failure"] = true
             try MessagesSelfTestReadState.complete(chat)
             throw error
         }
