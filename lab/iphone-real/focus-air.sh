@@ -8,6 +8,10 @@ if ! /usr/bin/plutil -extract grant_passed raw "$report" | /usr/bin/grep -qx tru
     cat "$report"
     exit 0
 fi
+if [ "$(shortcuts list | /usr/bin/grep -xc 'AB Focus')" -ne 1 ]; then
+    printf '{"pack_passed":false}\n'
+    exit 0
+fi
 if [ -n "${2:-}" ]; then
     rm -f "$report"
     open -n -W -g -a "$app" --args focus-phone-pack "$2" --report "$report"
@@ -15,10 +19,6 @@ if [ -n "${2:-}" ]; then
         cat "$report"
         exit 0
     fi
-fi
-if [ "$(shortcuts list | /usr/bin/grep -xc 'AB Focus')" -ne 1 ]; then
-    printf '{"pack_passed":false}\n'
-    exit 0
 fi
 rm -f "$report"
 open -n -W -g -a "$app" --args focus-real-checks FOC-PHONE-SYNC --report "$report"

@@ -79,6 +79,9 @@ esac
 	if err != nil {
 		t.Fatal(err)
 	}
+	if strings.Index(string(step), "shortcuts list") > strings.Index(string(step), "focus-phone-pack") {
+		t.Fatal("pack replacement did not require an existing unique AB Focus")
+	}
 	if !strings.Contains(string(step), "FOC-PHONE-SYNC") || strings.Contains(string(step), "build-helper") || strings.Contains(string(step), "requestAuthorization") {
 		t.Fatal("remote step did not reuse the granted helper")
 	}
