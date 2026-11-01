@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[5.86 4.65 4.49] cpu_idle=83% cpus=10 other_heavy=0"
+    "summary": "air: load=[3.95 3.66 4.29] cpu_idle=58% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M6A9AJRQ4EZ5ZHSK03E4Z53V",
+  "run_id": "run_01M6ACME4VGB0BV2C6BZJWWT6H",
   "metrics": {
     "capture_observer_resets": 0
   },
@@ -11,7 +11,7 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-11-01T00:49:34.48773Z",
+  "at": "2026-11-01T01:47:23.163717Z",
   "assertions": [
     {
       "name": "set_readback",
@@ -71,6 +71,14 @@
     },
     {
       "name": "pack_compiles",
+      "passed": true
+    },
+    {
+      "name": "compiled_pack_read",
+      "passed": true
+    },
+    {
+      "name": "pack_conditional_input_bound",
       "passed": true
     },
     {
