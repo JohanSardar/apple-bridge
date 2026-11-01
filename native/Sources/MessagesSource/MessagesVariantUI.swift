@@ -53,7 +53,7 @@ enum MessagesVariantUI {
     }
     static func configureModernSchedule(_ date: Date, application: AXUIElement, editor: AXUIElement, session: MessagesUISession) throws {
         let entry = try unique(find(application, identifier: "MessageEntryView"), failure: .scheduleDateControlsMissing)
-        func group(_ count: Int) throws -> AXUIElement {
+        @UIActor func group(_ count: Int) throws -> AXUIElement {
             try unique(find(entry, role: kAXPopUpButtonRole).filter { find($0, role: kAXTextFieldRole).count == count }, failure: .scheduleDateControlsMissing)
         }
         var calendar = Calendar(identifier: .gregorian)
@@ -64,8 +64,12 @@ enum MessagesVariantUI {
         for segments in values {
             for (index, text) in segments.enumerated() {
                 let field = find(try group(segments.count), role: kAXTextFieldRole)[index]
-                guard AXUIElementSetAttributeValue(field, kAXValueAttribute as CFString, text as CFString) == .success else { throw SendVariantFailure.scheduleDateControlsUnverified }
-                RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+                try session.focus(field, failure: SendVariantFailure.scheduleDateControlsUnverified)
+                var range = CFRange(location: 0, length: value(field, kAXValueAttribute).utf16.count)
+                guard let selected = AXValueCreate(.cfRange, &range), AXUIElementSetAttributeValue(field, kAXSelectedTextRangeAttribute as CFString, selected) == .success else { throw SendVariantFailure.scheduleDateControlsUnverified }
+                try session.fence()
+                guard session.driver.input(.replaceText(text)) == 0 else { throw SendVariantFailure.automationDenied }
+                RunLoop.current.run(until: Date().addingTimeInterval(0.1))
             }
         }
         try session.focus(editor, failure: SendVariantFailure.composerUnavailable)
