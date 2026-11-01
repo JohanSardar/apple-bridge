@@ -23,9 +23,18 @@ public enum MailFixtureCleanup {
     }
     @MainActor public static func selectDisplayed(tag: String) async throws {
         guard !tag.isEmpty, !tag.contains("\n"), !tag.contains("\r"), tag.contains("@") else { throw MailCommandFailure.unconfirmed }
-        let header = tag.hasPrefix("<") ? tag : "<" + tag + ">"
-        guard let encoded = header.addingPercentEncoding(withAllowedCharacters: .alphanumerics),
-              let url = URL(string: "message://" + encoded), NSWorkspace.shared.open(url) else { throw MailCommandFailure.rejected }
+        let opened = try await MailCommands.run("""
+        repeat with b in {drafts mailbox, inbox, sent mailbox}
+            set found to (messages of b whose message id is \(MailCommands.quote(tag)) and deleted status is false)
+            if (count found) > 0 then
+                open item 1 of found
+                activate
+                return "opened"
+            end if
+        end repeat
+        return ""
+        """)
+        guard opened == "opened" else { throw MailCommandFailure.unconfirmed }
         try await Task.sleep(for: .milliseconds(500))
     }
     @MainActor public static func removeSelected() async throws {
