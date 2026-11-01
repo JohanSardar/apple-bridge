@@ -588,7 +588,7 @@ features:
     milestone: W1
     modules: [trust, operations, web, frontdoor]
     depends_on: [web.frontdoor, web.remote]
-    status: limited
+    status: done
     scenarios:
       - {id: SEC-REMOTE-ACCESS, levels: [sim, real]}
       - {id: WEB-AGENT-CREDENTIALS, levels: [sim]}
@@ -596,9 +596,7 @@ features:
       - {id: WEB-AGENT-LEVELS, levels: [sim]}
       - {id: WEB-AGENT-OAUTH, levels: [sim, web]}
       - {id: WEB-AGENT-OAUTH-CIMD, levels: [sim, web]}
-    notes: Agent credentials and levels, durable gateway approvals, redacted 90-day activity, public-client OAuth and grouped settings/consent screens pass sim and browser coverage. CIMD rejects malformed redirects and client URLs, oversized metadata, private redirects and DNS rebinding before connections. Replica agent delegation is covered by web.relay.
-    limits:
-      - {scenario: SEC-REMOTE-ACCESS, level: real, reason: "Air security check could not start: the shared connector app lock was held by an unrelated queued Q2 relay job for 39 minutes. S1 waited 14 minutes, then cancelled its own queued request without interrupting other tickets. Public endpoint denial and revocation timing remain unproved; the complete adversarial sim and local race checks pass."}
+    notes: Agent credentials and levels, durable gateway approvals, redacted 90-day activity, public-client OAuth and grouped settings/consent screens pass sim and browser coverage. CIMD rejects malformed redirects and client URLs, oversized metadata, private redirects and DNS rebinding before connections. Replica agent delegation is covered by web.relay. SEC-REMOTE-ACCESS passes sim and Air real (2026-11-01), proving public relay endpoint denial, OAuth binding and replay defenses, connector revocation within three seconds, token redaction and test tunnel credential cleanup.
   - id: web.demo
     title: Synthetic demo world serving the web app (bridge-lab demo)
     requirements: [R-WEB-UI]
@@ -904,7 +902,7 @@ features:
     modules: [relay]
     depends_on: []
     status: limited
-    notes: Device-signed outbound smux TLS tunnel, reconnect and health pings; Mac ACME DNS-01, custom-domain checks, CT warnings and VM service deployment. Public apex control TLS and the live Mac health endpoint are reachable through ab-relay. ACME control renewal, public TXT propagation, explicit device addressing and startup retries are implemented. Ubuntu REST/MCP checks and the isolated Claude Code HTTP connector pass; CT aggregator completeness remains limited.
+    notes: Device-signed outbound smux TLS tunnel, reconnect and health pings; Mac ACME DNS-01, custom-domain checks, CT warnings and VM service deployment. Public apex control TLS and the live Mac health endpoint are reachable through ab-relay. ACME control renewal, public TXT propagation, explicit device addressing and startup retries are implemented. Ubuntu REST/MCP checks and the isolated Claude Code HTTP connector pass. CONN-RELAY-CLAUDE real transport evidence (2026-10-29) is complemented by CONN-CLAUDE-AI real (2026-10-31, PR https://github.com/JohanSardar/apple-bridge/pull/476), which proves interactive Claude.ai OAuth through the public relay, owner-local Mac approval and an authorized tool call; CT aggregator completeness remains limited.
     scenarios:
       - {id: RELAY-PASSTHROUGH, levels: [sim]}
       - {id: RELAY-ENROLL, levels: [sim]}
@@ -916,7 +914,6 @@ features:
       - {id: CONN-RELAY-CLAUDE, levels: [real]}
     limits:
       - {"scenario": "RELAY-REAL", "level": "real", "reason": "Public relay DNS/TLS and Ubuntu REST/MCP qualified; crt.sh indexing is dropped as an outside dependency (remote.ct_indexing)"}
-      - {"scenario": "CONN-RELAY-CLAUDE", "level": "real", "reason": "Bearer-authenticated Claude HTTP connector qualification does not establish interactive OAuth consent"}
   - id: remote.public-enroll
     title: Enroll a public-host passkey with a terminal QR
     requirements: [R-SECURE, R-WEB-REACH]
