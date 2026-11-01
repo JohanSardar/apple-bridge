@@ -6,6 +6,11 @@ import ApplicationServices
 
 @MainActor
 enum BridgeIntentHost {
+    static func runApplication(_ launch: @escaping @MainActor () -> Void = {}) {
+        BridgeIntentApplicationDelegate.launch = launch
+        BridgeIntentApplication.main()
+    }
+
     static func run(_ arguments: [String]) {
         guard arguments.count == 3, let parent = Int32(arguments[1]), parent > 1 else { return }
         let report = URL(fileURLWithPath: arguments[2])
@@ -32,7 +37,7 @@ enum BridgeIntentHost {
         lifetime.setEventHandler { NSApplication.shared.terminate(nil) }
         lifetime.resume()
         defer { lifetime.cancel() }
-        if kill(parent, 0) == 0 { BridgeIntentApplication.main() }
+        if kill(parent, 0) == 0 { runApplication() }
     }
 
     private static func publish(_ text: String) {
@@ -87,7 +92,19 @@ enum BridgeIntentHost {
 }
 
 private struct BridgeIntentApplication: App {
+    @NSApplicationDelegateAdaptor(BridgeIntentApplicationDelegate.self) private var delegate
+
     var body: some Scene {
         Settings { EmptyView() }
+    }
+}
+
+@MainActor
+private final class BridgeIntentApplicationDelegate: NSObject, NSApplicationDelegate {
+    static var launch: (@MainActor () -> Void)?
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        Self.launch?()
+        Self.launch = nil
     }
 }

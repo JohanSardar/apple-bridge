@@ -95,9 +95,9 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
         case "install":
             try controller.install()
         default:
-            controller.show()
-            NSApplication.shared.run()
-            withExtendedLifetime(controller) {}
+            withExtendedLifetime(controller) {
+                BridgeIntentHost.runApplication { controller.show() }
+            }
         }
     }
 

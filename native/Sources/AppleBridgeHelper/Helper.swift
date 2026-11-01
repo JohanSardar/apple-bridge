@@ -13,7 +13,8 @@ struct AppleBridgeHelper {
         app.setActivationPolicy(.accessory)
         do {
             let arguments = Array(CommandLine.arguments.dropFirst())
-            if arguments.first != "intent-host" { app.finishLaunching() }
+            let applicationLifecycle = arguments.isEmpty || ["intent-host", "connector-approvals", "setup-snapshot"].contains(arguments[0])
+            if !applicationLifecycle { app.finishLaunching() }
             if arguments.first == "clock-timers", arguments.count == 3 {
                 let request = try Data(contentsOf: URL(fileURLWithPath: arguments[1]))
                 let result = try ClockTimers.exchange(request)
