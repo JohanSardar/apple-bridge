@@ -115,7 +115,7 @@ public struct MailCommands: Sendable {
             for (field, kind) in [("to", "to"), ("cc", "cc")] {
                 for address in args[field].array { body += "tell m to make new " + kind + " recipient at end of " + kind + " recipients with properties {address:" + q(address.string) + "}\n" }
             }
-            body += op == "mail.send" ? "send m\n" : "save m\n"
+            body += op == "mail.send" ? "send m\n" : "save m\nclose m saving yes\n"
             let selection = "messages of " + (op == "mail.send" ? "sent mailbox" : "drafts mailbox") + " whose subject is " + q(args["subject"].string)
             let matches = """
             set matched to {}

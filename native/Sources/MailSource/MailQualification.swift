@@ -22,7 +22,7 @@ public struct MailQualification: Sendable {
         let cleanup = """
         repeat with i from (count outgoing messages) to 1 by -1
             set m to outgoing message i
-            if subject of m is \(q(tag)) then delete m
+            if subject of m is \(q(tag)) then close m saving no
         end repeat
         repeat 2 times
             set trashed to id of (messages of trash mailbox whose subject is \(q(tag)))
@@ -30,7 +30,7 @@ public struct MailQualification: Sendable {
                 repeat with b in mailboxes of a
                     set owned to (every message of b whose subject is \(q(tag)))
                     repeat with m in owned
-                        if (id of m) is not in trashed then delete m
+                        if subject of m is \(q(tag)) and (id of m) is not in trashed then delete m
                     end repeat
                 end repeat
             end repeat
@@ -61,7 +61,7 @@ public struct MailQualification: Sendable {
             let own = try await script("""
             set m to make new outgoing message with properties {subject:\(q(tag)), visible:false}
             set own to extract address from sender of m
-            delete m
+            close m saving no
             return own
             """)
             guard own.contains("@"), !own.contains("\n") else { throw SourceFailure.unavailable }
