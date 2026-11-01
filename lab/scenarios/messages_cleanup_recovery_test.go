@@ -56,7 +56,7 @@ func TestCleanupRecoveryRecognizesCurrentTextAttachmentEchoOnly(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	rows, err := db.Query(nativeMessagesRecoveryOwnershipSQL, 1, "[ab-test selftest_CURRENT]", "[ab-test selftest_CURRENT]", "ab-selftest_CURRENT.", "ab-selftest_CURRENT.")
+	rows, err := nativeMessagesRecoveryOwnedRows(context.Background(), db, 1, "selftest_CURRENT")
 	if err != nil {
 		t.Fatal(err)
 	}

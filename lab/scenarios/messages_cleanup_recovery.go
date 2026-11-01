@@ -15,7 +15,10 @@ import (
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
-const nativeMessagesRecoveryOwnershipSQL = `SELECT DISTINCT m.guid FROM message m WHERE m.ROWID>? AND (instr(m.text,?)>0 OR instr(m.attributedBody,CAST(? AS BLOB))>0 OR EXISTS(SELECT 1 FROM message_attachment_join j JOIN attachment a ON a.ROWID=j.attachment_id WHERE j.message_id=m.ROWID AND (instr(a.filename,?)>0 OR instr(a.transfer_name,?)>0)))`
+func nativeMessagesRecoveryOwnedRows(ctx context.Context, db *sql.DB, baseline int64, run string) (*sql.Rows, error) {
+	tag := "[ab-test " + run + "]"
+	return db.QueryContext(ctx, `SELECT DISTINCT m.guid FROM message m WHERE m.ROWID>? AND (instr(m.text,?)>0 OR instr(m.attributedBody,CAST(? AS BLOB))>0 OR EXISTS(SELECT 1 FROM message_attachment_join j JOIN attachment a ON a.ROWID=j.attachment_id WHERE j.message_id=m.ROWID AND (instr(a.filename,?)>0 OR instr(a.transfer_name,?)>0)))`, baseline, tag, tag, "ab-"+run+".", "ab-"+run+".")
+}
 
 func runMessagesCleanupRecovery(ctx context.Context, e Evidence) (result Evidence) {
 	result = e
@@ -55,7 +58,7 @@ func runMessagesCleanupRecovery(ctx context.Context, e Evidence) (result Evidenc
 	}
 	defer db.Close()
 	tag := "[ab-test " + run + "]"
-	rows, err := db.QueryContext(ctx, nativeMessagesRecoveryOwnershipSQL, manifest.Baseline, tag, tag, "ab-"+run+".", "ab-"+run+".")
+	rows, err := nativeMessagesRecoveryOwnedRows(ctx, db, manifest.Baseline, run)
 	if err != nil {
 		add("recovery_owned_identity_truth", false)
 		return
