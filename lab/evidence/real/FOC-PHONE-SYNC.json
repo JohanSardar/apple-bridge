@@ -1,9 +1,8 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[5.25 5.7 6.4] cpu_idle=64% cpus=10 other_heavy=0"
+    "summary": "air: load=[4.57 4.43 4.02] cpu_idle=79% cpus=10 other_heavy=0"
   },
-  "status": "failed",
   "run_id": "",
   "metrics": {
     "capture_observer_resets": 0,
@@ -11,37 +10,49 @@
   },
   "scenario": "FOC-PHONE-SYNC",
   "level": "real",
-  "passed": false,
+  "passed": true,
   "git_sha": "",
-  "at": "2026-11-01T00:05:04.990289Z",
+  "at": "2026-11-01T21:24:30.35251Z",
   "assertions": [
     {
-      "name": "helper_directory",
+      "name": "air_focus_lock",
       "passed": true
     },
     {
-      "name": "signed_helper_build",
+      "name": "air_focus_step",
       "passed": true
     },
     {
-      "name": "signed_helper_probe",
+      "name": "air_signed_set_restore_probe",
       "passed": true
     },
     {
-      "name": "helper_report",
+      "name": "air_helper_report",
       "passed": true
     },
     {
-      "name": "grant_probe",
+      "name": "air_focus_status_authorized",
       "passed": true
     },
     {
-      "name": "focus_status_authorized",
-      "passed": false
+      "name": "air_focus_initially_inactive",
+      "passed": true
+    },
+    {
+      "name": "air_focus_set_readback",
+      "passed": true
+    },
+    {
+      "name": "air_focus_restore_readback",
+      "passed": true
     },
     {
       "name": "mac_focus_set_and_restore",
-      "passed": false
+      "passed": true
+    },
+    {
+      "name": "mac_focus_step_submitted",
+      "passed": true
     },
     {
       "name": "fresh_completed_phone_receipt",
@@ -65,22 +76,10 @@
     },
     {
       "name": "phone_focus_enabled",
-      "passed": false
-    },
-    {
-      "name": "phone_focus_restored",
-      "passed": false
-    },
-    {
-      "name": "focus_authorized",
       "passed": true
     },
     {
       "name": "phone_focus_restored",
-      "passed": false
-    },
-    {
-      "name": "ready",
       "passed": true
     },
     {
@@ -88,15 +87,27 @@
       "passed": true
     },
     {
+      "name": "focus_authorized",
+      "passed": true
+    },
+    {
+      "name": "phone_focus_restored",
+      "passed": true
+    },
+    {
+      "name": "ready",
+      "passed": true
+    },
+    {
       "name": "resources_cleaned",
       "passed": true
     },
     {
-      "name": "phone_focus_enabled",
-      "passed": false
+      "name": "state_restored",
+      "passed": true
     },
     {
-      "name": "state_restored",
+      "name": "phone_focus_enabled",
       "passed": true
     },
     {

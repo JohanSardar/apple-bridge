@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[8.21 8.71 9.44] cpu_idle=66% cpus=8 other_heavy=0"
+    "summary": "air: load=[5.76 4.51 3.44] cpu_idle=70% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M6B1GWXW1GNZTJ3SN9J9W287",
+  "run_id": "run_01M6C64YV1HRSA9H643C19XDE1",
   "metrics": {
     "capture_observer_resets": 0,
     "pack_count": 1
@@ -12,7 +12,7 @@
   "level": "real",
   "passed": true,
   "git_sha": "",
-  "at": "2026-11-01T07:52:27.325025Z",
+  "at": "2026-11-01T18:32:33.377973Z",
   "assertions": [
     {
       "name": "helper_directory",

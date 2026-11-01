@@ -1,3 +1,3 @@
 id: FOC-PHONE-SYNC
 feature: focus.pack
-levels: [real]
+levels: [sim, real]

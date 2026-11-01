@@ -57,6 +57,16 @@ func runIPhoneReal(ctx context.Context, s Scenario, level string) (e Evidence) {
 	if os.Getenv("APPLE_BRIDGE_SECRET_STORE") != "file" {
 		return fail("isolated_file_secret_store", nil)
 	}
+	if s.ID == "FOC-PHONE-SYNC" {
+		logPhoneInstruction("waiting for the Air Focus lock before starting phone observation")
+		release, err := lockAirFocus(ctx)
+		if err != nil {
+			return fail("air_focus_lock", err)
+		}
+		defer release()
+		check("air_focus_lock", true)
+		logPhoneInstruction("Air app locks acquired; waiting for the paired physical iPhone")
+	}
 	if err := exec.CommandContext(ctx, "python3", "lab/iphone-real/device.py", device).Run(); err != nil {
 		return fail("physical_device_available", err)
 	}
@@ -264,7 +274,7 @@ func runIPhoneReal(ctx context.Context, s Scenario, level string) (e Evidence) {
 				}
 				if s.ID == "FOC-PHONE-SYNC" && receipt.Checks["ready"] && !focusSubmitted {
 					focusSubmitted = true
-					focus := runFocusReal(ctx, s, Evidence{RunID: commandID, Scenario: s.ID, Level: level, Passed: true, Metrics: map[string]any{}})
+					focus := runAirFocusReal(ctx)
 					e.Assertions = append(e.Assertions, focus.Assertions...)
 					check("mac_focus_set_and_restore", focus.Passed)
 				}
@@ -316,6 +326,9 @@ func runIPhoneReal(ctx context.Context, s Scenario, level string) (e Evidence) {
 			return fail("run_context", ctx.Err())
 		case <-time.After(time.Second):
 		}
+	}
+	if s.ID == "FOC-PHONE-SYNC" {
+		check("mac_focus_step_submitted", focusSubmitted)
 	}
 	check("fresh_completed_phone_receipt", receipt.Run == run && receipt.Done)
 	check("state_restored", receipt.Checks["state_restored"])
@@ -390,7 +403,7 @@ func phonePhaseInstruction(s string, phase int) string {
 func phoneInstruction(s string) string {
 	switch s {
 	case "FOC-PHONE-SYNC":
-		return "tap Allow on Share Focus Status if prompted; keep Apple Bridge open while the Pro enables and restores Do Not Disturb"
+		return "observe the existing phone Focus grant while the Air enables and restores Do Not Disturb; no taps required"
 	case "APP-SHELL-REAL":
 		return "tap Capability, inspect its fields and tap Back; tap Diagnostics, inspect its fields and tap Back, then tap Confirm observations"
 	case "APP-PAIR-REAL":

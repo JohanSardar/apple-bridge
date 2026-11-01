@@ -1030,16 +1030,14 @@ features:
     milestone: G5
     modules: [internal/focuspack, native/Sources/FocusSource]
     depends_on: [shortcuts.runner]
-    status: limited
+    status: done
     notes: focus.set runs AB Focus for Do Not Disturb on/off and optional RFC3339 expiry, with independent authorized status readback and approval for every agent. Named Focus identity remains unavailable. Tests require an inactive prior state and restore it after dispatch, including failures.
     scenarios:
       - {id: FOC-SIM, levels: [sim]}
       - {id: FOC-SET-REAL, levels: [real]}
       - {id: FOC-IDLE, levels: [real], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
       - {id: FOC-STATUS-REAL, levels: [real]}
-      - {id: FOC-PHONE-SYNC, levels: [real]}
-    limits:
-      - {scenario: FOC-PHONE-SYNC, level: real, reason: "Phone Focus permission and inactive baseline passed; the Pro AppleBridgeHelper has no Focus-status grant. No Mac Focus mutation was attempted, and phone restoration was acknowledged."}
+      - {id: FOC-PHONE-SYNC, levels: [sim, real]}
   - id: recordings.read
     title: Voice Memos assets and voicemail metadata
     requirements: [R-API, R-SCOPE]

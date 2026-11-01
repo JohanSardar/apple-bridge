@@ -1,0 +1,107 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[4.95 3.44 2.88] cpu_idle=57% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M6C5YYVD46DVZTTZ56X3B4WA",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "FOC-PHONE-SYNC",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-11-01T18:29:16.782316Z",
+  "assertions": [
+    {
+      "name": "set_readback",
+      "passed": true
+    },
+    {
+      "name": "bounded_pack",
+      "passed": true
+    },
+    {
+      "name": "restore_readback",
+      "passed": true
+    },
+    {
+      "name": "timeout_not_success",
+      "passed": true
+    },
+    {
+      "name": "unknown_status_never_dispatches",
+      "passed": true
+    },
+    {
+      "name": "set_contract",
+      "passed": true
+    },
+    {
+      "name": "explicit_state_required",
+      "passed": true
+    },
+    {
+      "name": "gateway",
+      "passed": true
+    },
+    {
+      "name": "authority",
+      "passed": true
+    },
+    {
+      "name": "agent",
+      "passed": true
+    },
+    {
+      "name": "agent_requires_approval",
+      "passed": true
+    },
+    {
+      "name": "agent",
+      "passed": true
+    },
+    {
+      "name": "agent_requires_approval",
+      "passed": true
+    },
+    {
+      "name": "build_directory",
+      "passed": true
+    },
+    {
+      "name": "pack_compiles",
+      "passed": true
+    },
+    {
+      "name": "compiled_pack_read",
+      "passed": true
+    },
+    {
+      "name": "pack_conditional_input_bound",
+      "passed": true
+    },
+    {
+      "name": "pack_expiry_text_bound",
+      "passed": true
+    },
+    {
+      "name": "native_build",
+      "passed": true
+    },
+    {
+      "name": "native_output",
+      "passed": true
+    },
+    {
+      "name": "native_set_readback_restore",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}
