@@ -28,7 +28,7 @@ enum CommandCaptureChecks {
         defer { sqlite3_close(database) }
         let sql = "CREATE TABLE message(guid TEXT,text TEXT,is_from_me INTEGER,date INTEGER); CREATE TABLE chat(guid TEXT); CREATE TABLE chat_message_join(chat_id INTEGER,message_id INTEGER); CREATE TABLE chat_recoverable_message_join(chat_id INTEGER,message_id INTEGER,delete_date INTEGER); CREATE TABLE attachment(guid TEXT,filename TEXT); CREATE TABLE message_attachment_join(message_id INTEGER,attachment_id INTEGER); INSERT INTO chat VALUES('self'); INSERT INTO message VALUES('first','[ab-test] first',1,100),('second','[ab-test] second',1,200); INSERT INTO chat_message_join VALUES(1,1),(1,2);"
         guard sqlite3_exec(database, sql, nil, nil, nil) == SQLITE_OK else { throw SourceFailure.invalid }
-        let source = Messages(path: path, watcherEventsEnabled: false)
+        let source = Messages(path: path, watcherEventsEnabled: false, pinsURL: root.appendingPathComponent("pins.plist"))
         let sink = CommandCaptureSink()
         let evidence = JSON.object(["native_key": .string("first"), "parts": .array([.object(["native_key": .string("first")]), .object(["native_key": .string("second")])])])
         try await source.captureCommand(evidence, into: sink)
