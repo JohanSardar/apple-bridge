@@ -247,12 +247,16 @@ enum MessagesAccessibility {
         guard menus.count == 1 else { throw MessagesUIFailure.menuUnavailable }
         try session.fence()
         try MessagesVariantUI.press(menus[0])
-        defer { try? session.press(MessagesUISession.escape) }
+        var menuOpen = true
+        defer { if menuOpen { try? session.press(MessagesUISession.escape) } }
         let action: String = try MessagesUIActions.resolve(until: Date().addingTimeInterval(3), wait: {
             RunLoop.current.run(until: Date().addingTimeInterval(0.1))
         }, attempt: {
             let items = MessagesVariantUI.find(menus[0], role: kAXMenuItemRole)
-            let titles = items.map { value($0, kAXTitleAttribute) }
+            let titles = items.map { item in
+                let title = value(item, kAXTitleAttribute)
+                return title.isEmpty ? value(item, kAXDescriptionAttribute) : title
+            }
             guard let action = MessagesUIActions.readStateAction(unread: prepared.action["op"].string == "messages.mark_unread", titles: titles) else { throw MessagesUIFailure.targetUnavailable }
             return action
         })
@@ -261,6 +265,7 @@ enum MessagesAccessibility {
             guard items.count == 1 else { throw MessagesUIFailure.menuUnavailable }
             try session.fence()
             try MessagesVariantUI.press(items[0])
+            menuOpen = false
         }
         return .object(["target_verified": .bool(true)])
     }
