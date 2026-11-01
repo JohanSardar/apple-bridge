@@ -798,9 +798,6 @@ features:
         reason: "Sections: the Edit Sections editor is a separate AXWindow, but the proof only adopts AXSheet. Its reorder gesture never persists section order, and the leftover editor redirects the next run to an AXTable instead of the new section field."
       - scenario: WEB-REM-PARITY
         level: real
-        reason: "Manual reorder: the selected row-background drag does not persist a native order change; Store readback remains parent position 0 and child position 1 with no subtask relationship."
-      - scenario: WEB-REM-PARITY
-        level: real
         reason: "Custom smart lists: the tag is exposed as AXMenuItem rather than AXCheckBox. After correcting the role, the global confirmation search matches both the leftover section editor and the new-list sheet, so pressAny fails with conflict before smart-list readback. The same unscoped duplicate Cancel controls prevent owned_sheet_cleanup."
       - scenario: WEB-REM-PARITY
         level: real
