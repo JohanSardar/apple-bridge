@@ -99,5 +99,6 @@ extension NotesSource {
         throw SourceFailure.capabilityUnproven
     }
     public func deletionState(nativeKey: String, collection: String) throws -> String { try store.deletionState(nativeKey, collection: collection) }
+    public func deletionTrashFolder(nativeKey: String) throws -> String { try store.trashFolder(forFolder: nativeKey)?["native_key"].string ?? "" }
     #endif
 }
