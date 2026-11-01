@@ -20,11 +20,19 @@
       "passed": true
     },
     {
+      "name": "native_timer_recent_snapshot_readonly",
+      "passed": true
+    },
+    {
       "name": "timer_readback_and_cleanup_qualified",
       "passed": true
     },
     {
       "name": "timer_baseline_readback",
+      "passed": true
+    },
+    {
+      "name": "recent_timer_baseline_readback",
       "passed": true
     },
     {
@@ -45,6 +53,18 @@
     },
     {
       "name": "cleanup_timer_baseline_restored",
+      "passed": true
+    },
+    {
+      "name": "cleanup_recent_timer_inventory",
+      "passed": true
+    },
+    {
+      "name": "cleanup_recent_timer_deleted",
+      "passed": true
+    },
+    {
+      "name": "cleanup_recent_timer_baseline_restored",
       "passed": true
     },
     {

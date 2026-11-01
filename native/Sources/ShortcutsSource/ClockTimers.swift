@@ -25,8 +25,11 @@ public enum ClockTimers {
         var result: [String: Any] = ["version": 1, "operation": operation, "capabilities": ["timers", "start_timer", "delete_timer"]]
         switch operation {
         case "capabilities", "timers": break
+        case "recent_timers": result["timers"] = try snapshot(recent: true)
         case "start_timer":
             guard let label = value["label"] as? String, label.hasPrefix("[ab-test]"), label.utf8.count <= 256, let duration = value["duration"] as? Int, (1...86399).contains(duration), !before.contains(where: { $0["label"] as? String == label }) else { throw failure() }
+            let recent = try snapshot(recent: true)
+            guard !recent.contains(where: { $0["label"] as? String == label }) else { throw failure() }
             let ui = try ClockTimerUI()
             try ui.create(label: label, duration: duration)
             let rows = try awaitSnapshot { rows in rows.filter { $0["label"] as? String == label && $0["duration"] as? Int == duration && $0["running"] as? Bool == true }.count == 1 }
@@ -37,10 +40,22 @@ public enum ClockTimers {
         case "delete_timer":
             guard let timer = value["timer"] as? [String: Any], let identifier = timer["id"] as? String, let label = timer["label"] as? String, label.hasPrefix("[ab-test]") else { throw failure() }
             if let existing = before.first(where: { $0["id"] as? String == identifier }) {
-                guard existing["label"] as? String == label else { throw failure() }
+                guard existing["label"] as? String == label, before.filter({ $0["label"] as? String == label }).count == 1 else { throw failure() }
                 try ClockTimerUI().remove(label: label)
             }
             result["timers"] = try awaitSnapshot { !$0.contains(where: { $0["id"] as? String == identifier }) }
+            if try snapshot(recent: true).contains(where: { $0["label"] as? String == label }) {
+                try ClockTimerUI().removeRecent(label: label)
+                _ = try awaitSnapshot(recent: true) { !$0.contains(where: { $0["label"] as? String == label }) }
+            }
+        case "delete_recent_timer":
+            guard let timer = value["timer"] as? [String: Any], let identifier = timer["id"] as? String, let label = timer["label"] as? String, label.hasPrefix("[ab-test]"), identifier.hasPrefix("recent:") else { throw failure() }
+            let recent = try snapshot(recent: true)
+            if let existing = recent.first(where: { $0["id"] as? String == identifier }) {
+                guard existing["label"] as? String == label, recent.filter({ $0["label"] as? String == label }).count == 1 else { throw failure() }
+                try ClockTimerUI().removeRecent(label: label)
+            }
+            result["timers"] = try awaitSnapshot(recent: true) { !$0.contains(where: { $0["id"] as? String == identifier }) }
         default: throw failure()
         }
         if result["timers"] == nil { result["timers"] = try snapshot() }
@@ -49,24 +64,25 @@ public enum ClockTimers {
         return output
     }
 
-    private static func awaitSnapshot(_ accepts: ([[String: Any]]) -> Bool) throws -> [[String: Any]] {
+    private static func awaitSnapshot(recent: Bool = false, _ accepts: ([[String: Any]]) -> Bool) throws -> [[String: Any]] {
         let deadline = Date().addingTimeInterval(10)
         repeat {
-            let rows = try snapshot()
+            let rows = try snapshot(recent: recent)
             if accepts(rows) { return rows }
             RunLoop.current.run(until: Date().addingTimeInterval(0.1))
         } while Date() < deadline
         throw failure()
     }
 
-    public static func snapshot(at location: URL? = nil) throws -> [[String: Any]] {
+    public static func snapshot(at location: URL? = nil, recent: Bool = false) throws -> [[String: Any]] {
         let path = (location ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Group Containers/group.com.apple.mobiletimerd/local.sqlite")).path
         var database: OpaquePointer?
         guard sqlite3_open_v2(path, &database, SQLITE_OPEN_READONLY, nil) == SQLITE_OK else { if let database { sqlite3_close(database) }; throw failure() }
         defer { sqlite3_close(database) }
         sqlite3_busy_timeout(database, 1000)
         var statement: OpaquePointer?
-        guard sqlite3_prepare_v2(database, "SELECT hex(ZMTID), COALESCE(ZTITLE, ''), ZDURATION, ZSTATE FROM ZMTCDTIMER WHERE ZSTATE IN (2, 3) ORDER BY Z_PK", -1, &statement, nil) == SQLITE_OK else { throw failure() }
+        let query = recent ? "SELECT 'recent:' || Z_PK, COALESCE(ZTITLE, ''), ZDURATION, 1 FROM ZMTCDTIMERDURATION WHERE ZVALIDRECENT = 1 ORDER BY Z_PK" : "SELECT hex(ZMTID), COALESCE(ZTITLE, ''), ZDURATION, ZSTATE FROM ZMTCDTIMER WHERE ZSTATE IN (2, 3) ORDER BY Z_PK"
+        guard sqlite3_prepare_v2(database, query, -1, &statement, nil) == SQLITE_OK else { throw failure() }
         defer { sqlite3_finalize(statement) }
         var rows: [[String: Any]] = []
         var step = sqlite3_step(statement)
@@ -145,14 +161,20 @@ private struct ClockTimerUI {
         app.activate()
         _ = AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, kCFBooleanTrue)
         if attribute(element, kAXFocusedAttribute) as? Bool != true {
-            guard let position = attribute(element, kAXPositionAttribute), let size = attribute(element, kAXSizeAttribute), CFGetTypeID(position) == AXValueGetTypeID(), CFGetTypeID(size) == AXValueGetTypeID() else { throw ClockTimerFailure(step: "focus the timer duration control") }
-            var point = CGPoint.zero, extent = CGSize.zero
-            guard AXValueGetValue(unsafeDowncast(position, to: AXValue.self), .cgPoint, &point), AXValueGetValue(unsafeDowncast(size, to: AXValue.self), .cgSize, &extent), extent.width > 0, extent.height > 0 else { throw ClockTimerFailure(step: "find the timer duration control") }
-            point.x += extent.width / 2
-            point.y += extent.height / 2
-            for type in [CGEventType.leftMouseDown, .leftMouseUp] { CGEvent(mouseEventSource: nil, mouseType: type, mouseCursorPosition: point, mouseButton: .left)?.postToPid(app.processIdentifier) }
+            try click(element, button: .left)
         }
         RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+    }
+
+    private func click(_ element: AXUIElement, button: CGMouseButton) throws {
+        guard let position = attribute(element, kAXPositionAttribute), let size = attribute(element, kAXSizeAttribute), CFGetTypeID(position) == AXValueGetTypeID(), CFGetTypeID(size) == AXValueGetTypeID() else { throw ClockTimerFailure(step: "locate the timer control") }
+        var point = CGPoint.zero, extent = CGSize.zero
+        guard AXValueGetValue(unsafeDowncast(position, to: AXValue.self), .cgPoint, &point), AXValueGetValue(unsafeDowncast(size, to: AXValue.self), .cgSize, &extent), extent.width > 0, extent.height > 0 else { throw ClockTimerFailure(step: "locate the timer control") }
+        point.x += extent.width / 2
+        point.y += extent.height / 2
+        let types: [CGEventType] = button == .right ? [.rightMouseDown, .rightMouseUp] : [.leftMouseDown, .leftMouseUp]
+        for type in types { CGEvent(mouseEventSource: nil, mouseType: type, mouseCursorPosition: point, mouseButton: button)?.postToPid(app.processIdentifier) }
+        RunLoop.current.run(until: Date().addingTimeInterval(0.25))
     }
 
     func create(label: String, duration: Int) throws {
@@ -201,5 +223,23 @@ private struct ClockTimerUI {
         }
         guard let row = rows.last else { throw ClockTimerFailure() }
         try press(find(row, identifier: "CancelButton"))
+    }
+
+    func removeRecent(label: String) throws {
+        let rows = find(root).filter { element in
+            guard (attribute(element, kAXIdentifierAttribute) as? String ?? "").hasPrefix("recent-timer-") else { return false }
+            return find(element).contains { name($0) == label || attribute($0, kAXValueAttribute) as? String == label }
+        }
+        guard rows.count == 1 else { throw ClockTimerFailure(step: "find the tagged recent timer") }
+        func deleteItems() -> [AXUIElement] {
+            find(root, role: kAXMenuRole).filter { menu in
+                guard let parent = attribute(menu, kAXParentAttribute) else { return false }
+                return attribute(unsafeDowncast(parent, to: AXUIElement.self), kAXRoleAttribute) as? String != kAXMenuBarItemRole
+            }.flatMap { find($0, role: kAXMenuItemRole) }.filter { name($0) == "Delete" }
+        }
+        _ = AXUIElementPerformAction(rows[0], kAXShowMenuAction as CFString)
+        RunLoop.current.run(until: Date().addingTimeInterval(0.25))
+        if deleteItems().isEmpty { try click(rows[0], button: .right) }
+        try press(deleteItems(), step: "delete the tagged recent timer")
     }
 }

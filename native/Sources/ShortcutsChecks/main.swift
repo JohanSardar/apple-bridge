@@ -101,8 +101,12 @@ struct Checks {
         defer { sqlite3_close(database) }
         let sql = "CREATE TABLE ZMTCDTIMER (Z_PK INTEGER, ZMTID BLOB, ZTITLE TEXT, ZDURATION REAL, ZSTATE INTEGER); INSERT INTO ZMTCDTIMER VALUES (1,x'01','synthetic stopped',120,1),(2,x'02','synthetic paused',240,2),(3,x'03','[ab-test] running',120,3),(4,x'04','synthetic fired',120,4);"
         guard sqlite3_exec(database, sql, nil, nil, nil) == SQLITE_OK else { throw SourceFailure.unavailable }
+        let recentSQL = "CREATE TABLE ZMTCDTIMERDURATION (Z_PK INTEGER, ZTITLE TEXT, ZDURATION REAL, ZVALIDRECENT INTEGER); INSERT INTO ZMTCDTIMERDURATION VALUES (1,'synthetic recent',120,1),(2,'synthetic retired',240,0);"
+        guard sqlite3_exec(database, recentSQL, nil, nil, nil) == SQLITE_OK else { throw SourceFailure.unavailable }
         let rows = try ClockTimers.snapshot(at: file)
         guard rows.count == 2, rows[0]["id"] as? String == "02", rows[0]["running"] as? Bool == false, rows[0]["duration"] as? Int == 240, rows[1]["id"] as? String == "03", rows[1]["running"] as? Bool == true, rows[1]["label"] as? String == "[ab-test] running" else { throw SourceFailure.corrupt }
+        let recent = try ClockTimers.snapshot(at: file, recent: true)
+        guard recent.count == 1, recent[0]["id"] as? String == "recent:1", recent[0]["label"] as? String == "synthetic recent", recent[0]["duration"] as? Int == 120, recent[0]["running"] as? Bool == false else { throw SourceFailure.corrupt }
         var rejected = false
         do {
             _ = try ClockTimers.snapshot(at: directory.appendingPathComponent("missing.sqlite"))

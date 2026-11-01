@@ -68,8 +68,8 @@ func validAlarm(a Alarm) bool {
 func (p Pack) Exchange(ctx context.Context, request Request) (Readback, error) {
 	var out Readback
 	switch request.Operation {
-	case "alarms", "timers", "capabilities":
-	case "delete_timer":
+	case "alarms", "timers", "recent_timers", "capabilities":
+	case "delete_timer", "delete_recent_timer":
 		if request.Timer == nil || request.Timer.ID == "" || !strings.HasPrefix(request.Timer.Label, "[ab-test]") {
 			return out, fmt.Errorf("valid tagged timer required")
 		}
@@ -150,7 +150,7 @@ func (p Pack) Exchange(ctx context.Context, request Request) (Readback, error) {
 		if out.Capabilities == nil {
 			return Readback{}, ErrUnqualified
 		}
-	case "timers", "delete_timer":
+	case "timers", "delete_timer", "recent_timers", "delete_recent_timer":
 		if out.Timers == nil {
 			return Readback{}, ErrUnqualified
 		}
@@ -160,7 +160,7 @@ func (p Pack) Exchange(ctx context.Context, request Request) (Readback, error) {
 				return Readback{}, ErrUnqualified
 			}
 			seen[timer.ID] = true
-			if request.Operation == "delete_timer" && timer.ID == request.Timer.ID {
+			if (request.Operation == "delete_timer" || request.Operation == "delete_recent_timer") && timer.ID == request.Timer.ID {
 				return Readback{}, ErrUnqualified
 			}
 		}
