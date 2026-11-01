@@ -110,7 +110,7 @@ func runMailBodyReal(ctx context.Context, s Scenario, level string) (e Evidence)
 				e.Metrics["expected_body_digest"] = sample.Body
 				args, _ := json.Marshal(map[string]string{"message_id": r.ID})
 				var result contracts.QueryResult
-				_, err = world.Request(ctx, w.Gateway, "/v1/op/mail.body", contracts.Query{Args: args}, &result)
+				_, err = world.Request(ctx, w.Gateway, "/v1/op/mail.body", contracts.Query{Args: args, DeadlineMS: 60000}, &result)
 				var body struct {
 					State string `json:"state"`
 					Text  string `json:"plain_text"`
