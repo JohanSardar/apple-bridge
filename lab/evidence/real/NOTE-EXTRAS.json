@@ -1,9 +1,9 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[4.48 6.13 8.52] cpu_idle=79% cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[14.08 14.74 12.96] cpu_idle=38% cpus=8 other_heavy=0"
   },
-  "run_id": "notes-extras_01M6BJ9WDGM29CGC6Y7EMPZX0W",
+  "run_id": "notes-extras_01M6BKK8E5GVQ3YNS8KXCGNGSJ",
   "metrics": {
     "capture_observer_resets": 0,
     "cleanup_counts": {
@@ -13,14 +13,14 @@
       "passed": true
     },
     "notes_helper_binary_uuids": [
-      "d4361e11-c810-386c-8da8-0ee21416c992"
+      "d120f4b0-732b-3496-a774-cc2281b30979"
     ]
   },
   "scenario": "NOTE-EXTRAS",
   "level": "real",
   "passed": true,
-  "git_sha": "b5e1e45c264d0aa17ea9a2d267456e18f24f1563",
-  "at": "2026-11-01T12:45:43.216742Z",
+  "git_sha": "68c7f5445b1be9f42b5edf660fb6ec9e63682ec1",
+  "at": "2026-11-01T13:08:19.013294Z",
   "assertions": [
     {
       "name": "notes_application_running",

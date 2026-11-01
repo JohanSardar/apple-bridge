@@ -1,21 +1,21 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[6.37 10.16 10.43] cpu_idle=54% cpus=8 other_heavy=0"
+    "summary": "air: load=[15.23 15.11 13.24] cpu_idle=63% cpus=8 other_heavy=0"
   },
-  "run_id": "notes-parity_01M6BJQBWD82TD4D0RXSFVK98F",
+  "run_id": "notes-parity_01M6BKN6848JFWJX15RW29ZXGR",
   "metrics": {
     "capture_observer_resets": 0,
     "checklist": {
-      "identities_preserved": false,
       "reason": "public_html_did_not_create_native_checklists",
       "before_count": 0,
+      "identities_preserved": false,
       "state": "limited",
       "after_count": 0
     },
     "cleanup_counts": {
-      "after_count": 134,
-      "before_count": 134,
+      "after_count": 133,
+      "before_count": 133,
       "created_count": 0,
       "passed": true
     },
@@ -23,23 +23,23 @@
     "native_cleanup_reported_complete": true,
     "native_cleanup_stage": "delete_owned_folder",
     "notes_helper_binary_uuids": [
-      "d4361e11-c810-386c-8da8-0ee21416c992"
+      "d120f4b0-732b-3496-a774-cc2281b30979"
     ],
     "os": "Version 26.7.1 (Build 25G241)",
     "plain_crud_prior_source": "994e8fd23c932dd82f97786211695ddbed75d9d2",
     "simple_rich": {
       "reason": "native_html_structure_preserved",
       "effect_observed": true,
-      "unknown_attributes": [],
       "structure_preserved": true,
+      "unknown_attributes": [],
       "state": "candidate"
     }
   },
   "scenario": "NOTE-EDIT-PARITY",
   "level": "real",
   "passed": true,
-  "git_sha": "b5e1e45c264d0aa17ea9a2d267456e18f24f1563",
-  "at": "2026-11-01T12:53:05.037072Z",
+  "git_sha": "68c7f5445b1be9f42b5edf660fb6ec9e63682ec1",
+  "at": "2026-11-01T13:09:22.308489Z",
   "assertions": [
     {
       "name": "plain_crud_prior_real_proof",
@@ -51,6 +51,10 @@
     },
     {
       "name": "NOTE-RICH-REJECT/native_notes_capture_ready",
+      "passed": true
+    },
+    {
+      "name": "NOTE-RICH-REJECT/captured_run_notes_permanently_cleaned",
       "passed": true
     },
     {

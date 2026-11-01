@@ -1,17 +1,17 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[10.04 13.79 16.42] cpu_idle=64% cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[15.41 13.42 12.1] cpu_idle=29% cpus=8 other_heavy=0"
   },
-  "run_id": "notes-parity_01M6BDN0DP7Z0HT95T3RBJWY55",
+  "run_id": "notes-parity_01M6BKDYDFNH0YS2AM3X589WPF",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "NOTE-EDIT-PARITY",
   "level": "sim",
   "passed": true,
-  "git_sha": "e2b99d44a4dbee63170446f2d5019978ad3ce6cc",
-  "at": "2026-11-01T11:24:24.886451Z",
+  "git_sha": "68c7f5445b1be9f42b5edf660fb6ec9e63682ec1",
+  "at": "2026-11-01T13:05:24.912758Z",
   "assertions": [
     {
       "name": "NOTE-CRUD/external_note_imported",
