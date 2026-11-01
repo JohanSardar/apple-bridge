@@ -17,6 +17,10 @@ public struct MessagesSelfTestReadState: Sendable, Codable {
         return unreadCount == current.unreadCount && (unreadIDs == current.unreadIDs || unreadCount > 0)
     }
 
+    public func needsUnreadRestore(_ current: MessagesSelfTestReadState) -> Bool {
+        unreadCount != current.unreadCount || !matches(current)
+    }
+
     static func savedURL(_ chat: String) -> URL {
         PrivateReport.directory.appendingPathComponent("messages-unread-restore/" + BodyDigest.hash(Data(chat.utf8)) + ".json")
     }
@@ -69,7 +73,10 @@ public struct MessagesSelfTestReadState: Sendable, Codable {
             try PrivateReport.write(["before_unread_message_count": unreadIDs.count, "after_unread_message_count": current.unreadIDs.count, "before_chat_unread_count": unreadCount, "after_chat_unread_count": current.unreadCount, "unread_identities_restored": unreadIDs == current.unreadIDs, "passed": restored], to: PrivateReport.directory.appendingPathComponent("messages-unread-restore-result.json"))
             return restored
         }
-        if try verified() { return }
+        if try !needsUnreadRestore(Self.capture(chat, through: baseline)) {
+            _ = try verified()
+            return
+        }
         guard unreadCount > 0 || !unreadIDs.isEmpty else { throw MessagesSelfTestBaselineFailure.unreadRestoreFailed }
         let (session, items) = try MessagesParity.conversationMenu(prepared)
         let targets = items.filter { MessagesAccessibility.value($0, kAXTitleAttribute) == "Mark as Unread" }

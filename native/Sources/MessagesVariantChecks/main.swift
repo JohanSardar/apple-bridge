@@ -40,6 +40,8 @@ struct MessagesVariantChecks {
         checks["invalid_tag_rejected"] = !MessagesSelfTestIsolation.ownsMessage(rowID: 101, text: " new", tag: "", baseline: 100)
         let unreadBaseline = MessagesSelfTestReadState(unreadIDs: ["old-a", "old-b"], unreadCount: 2)
         checks["unread_exact_restore"] = unreadBaseline.matches(unreadBaseline)
+        checks["unread_marker_requires_native_restore"] = unreadBaseline.needsUnreadRestore(MessagesSelfTestReadState(unreadIDs: ["old-a", "old-b"], unreadCount: 0))
+        checks["unread_unchanged_needs_no_action"] = !unreadBaseline.needsUnreadRestore(unreadBaseline)
         checks["unread_exact_identities_restore"] = unreadBaseline.matches(MessagesSelfTestReadState(unreadIDs: ["old-b", "old-a"], unreadCount: 1))
         checks["unread_count_restore"] = unreadBaseline.matches(MessagesSelfTestReadState(unreadIDs: ["old-c"], unreadCount: 2))
         checks["unread_count_mismatch_rejected"] = !unreadBaseline.matches(MessagesSelfTestReadState(unreadIDs: [], unreadCount: 0))
