@@ -47,6 +47,30 @@ public enum NotesFolderUI {
         guard buttons.count == 1, AXUIElementPerformAction(buttons[0], kAXPressAction as CFString) == .success else { throw Failure(stage: "owned_delete_confirmation") }
         return true
     }
+    private static func openContext(_ row: AXUIElement, app: NSRunningApplication) async -> Bool {
+        if AXUIElementPerformAction(row, kAXShowMenuAction as CFString) == .success { return true }
+        for _ in 0..<10 where Date() < deadline {
+            if NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier { break }
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+        var position: CFTypeRef?, size: CFTypeRef?
+        var point = CGPoint.zero, dimensions = CGSize.zero, pid: pid_t = 0
+        guard Date() < deadline, NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier,
+              AXUIElementGetPid(row, &pid) == .success, pid == app.processIdentifier,
+              AXUIElementCopyAttributeValue(row, kAXPositionAttribute as CFString, &position) == .success,
+              AXUIElementCopyAttributeValue(row, kAXSizeAttribute as CFString, &size) == .success,
+              let position, let size, CFGetTypeID(position) == AXValueGetTypeID(), CFGetTypeID(size) == AXValueGetTypeID(),
+              AXValueGetValue(unsafeBitCast(position, to: AXValue.self), .cgPoint, &point),
+              AXValueGetValue(unsafeBitCast(size, to: AXValue.self), .cgSize, &dimensions),
+              dimensions.width > 0, dimensions.height > 0 else { return false }
+        point.x += dimensions.width * 0.55
+        point.y += dimensions.height * 0.5
+        guard let down = CGEvent(mouseEventSource: nil, mouseType: .rightMouseDown, mouseCursorPosition: point, mouseButton: .right),
+              let up = CGEvent(mouseEventSource: nil, mouseType: .rightMouseUp, mouseCursorPosition: point, mouseButton: .right) else { return false }
+        down.post(tap: .cghidEventTap)
+        up.post(tap: .cghidEventTap)
+        return true
+    }
     public static var available: Bool { AXIsProcessTrusted() }
     public static func rename(id: String, from oldTitle: String, to newTitle: String, trace: CaptureTrace? = nil) async throws {
         var stage = "permission"
@@ -63,7 +87,7 @@ public enum NotesFolderUI {
         try await Task.sleep(for: .milliseconds(250))
         stage = "find_row"
         let rows = all(root).filter { node in value(node, kAXRoleAttribute) == kAXRowRole && all(node).contains { child in [kAXTitleAttribute, kAXValueAttribute, kAXDescriptionAttribute].contains { [oldTitle, newTitle].contains(value(child, $0)) } } }
-        guard rows.count == 1, AXUIElementPerformAction(rows[0], kAXShowMenuAction as CFString) == .success else { throw SourceFailure.unavailable }
+        guard rows.count == 1, await openContext(rows[0], app: app) else { throw SourceFailure.unavailable }
         try await Task.sleep(for: .milliseconds(200))
         stage = "find_rename_menu"
         let menus = all(root).filter { value($0, kAXRoleAttribute) == kAXMenuItemRole && ["Rename Folder", "Rename Folder…", "Rename Folder...", "Rename"].contains(value($0, kAXTitleAttribute)) && enabled($0) }
@@ -126,7 +150,7 @@ public enum NotesFolderUI {
                     }
                     guard rows.count == 1 else { throw Failure(stage: "owned_sidebar_row_" + String(rows.count)) }
                     stage = "open_owned_context_menu"
-                    guard AXUIElementPerformAction(rows[0], kAXShowMenuAction as CFString) == .success else { throw Failure(stage: "owned_folder_context_menu") }
+                    guard await openContext(rows[0], app: app) else { throw Failure(stage: "owned_folder_context_menu") }
                     try await Task.sleep(for: .milliseconds(200))
                     stage = "find_owned_delete_menu"
                     let items = all(root).filter { node in
