@@ -60,7 +60,6 @@ func runCapture(ctx context.Context, s Scenario, level string) Evidence {
 	}
 	add("public_gateway_start", worldErr == nil)
 	if worldErr != nil {
-		fmt.Fprintln(os.Stderr, "capture gateway startup:", worldErr)
 		return e
 	}
 	defer w.Close()

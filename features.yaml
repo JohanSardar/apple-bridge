@@ -1324,14 +1324,10 @@ features:
     milestone: G8
     modules: [native/Sources/CaptureSource]
     depends_on: [core.queries]
-    status: limited
+    status: done
     scenarios:
       - {id: CAP-SIM, levels: [sim, real]}
-    limits:
-      - scenario: CAP-SIM
-        level: real
-        reason: Screen Recording for the Helper can only be enabled with the owner's Mac password; audio recording and PDF output pass over REST and MCP. Camera capture is dropped from scope by the owner.
-    notes: Camera capture is dropped from scope by the owner; camera provider coverage is retained in sim only. Capture providers fail closed without prompting. Real screenshot and screen recording require Screen Recording for the Helper; audio requires Microphone. ScreenCaptureKit screenshot and screen video and AVAudioRecorder audio providers are implemented. Named printers submit through the system print spooler. PDF output copies a validated PDF without UI. Evidence contains only digest, size, duration and dimensions.
+    notes: Camera capture is dropped from scope by the owner; camera provider coverage is retained in sim only. Capture providers fail closed without prompting. Real screenshot and screen recording require Screen Recording for the Helper; audio requires Microphone. Screenshot and screen video use ScreenCaptureKit; audio uses AVAudioRecorder. Named printers submit through the system print spooler. PDF output copies a validated PDF without UI. Evidence contains only digest, size, duration and dimensions.
 
 
 
