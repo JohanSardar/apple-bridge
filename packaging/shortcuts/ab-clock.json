@@ -290,7 +290,8 @@
         "repeats": {
           "$output": "created_days"
         },
-        "allowsSnooze": true
+        "allowsSnooze": true,
+        "ShowWhenRun": false
       }
     },
     {
@@ -314,7 +315,8 @@
         },
         "alarm": {
           "$output": "create"
-        }
+        },
+        "ShowWhenRun": false
       }
     },
     {
@@ -342,7 +344,8 @@
           "Name": "Clock",
           "TeamIdentifier": "0000000000",
           "ActionRequiresAppInstallation": true
-        }
+        },
+        "ShowWhenRun": false
       }
     },
     {
@@ -444,7 +447,8 @@
         },
         "alarm": {
           "$output": "target"
-        }
+        },
+        "ShowWhenRun": false
       }
     },
     {
@@ -503,7 +507,8 @@
         },
         "entities": {
           "$output": "target"
-        }
+        },
+        "ShowWhenRun": false
       }
     },
     {
@@ -621,7 +626,8 @@
           "Name": "Clock",
           "TeamIdentifier": "0000000000",
           "ActionRequiresAppInstallation": true
-        }
+        },
+        "ShowWhenRun": false
       }
     },
     {

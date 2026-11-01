@@ -54,7 +54,7 @@ enum BridgeIntentHost {
         guard AXIsProcessTrusted() else { return nil }
         let applications = NSWorkspace.shared.runningApplications.filter {
             let identifier = $0.bundleIdentifier ?? ""
-            return identifier.hasPrefix("com.apple.shortcuts") || identifier.hasPrefix("com.apple.WorkflowKit")
+            return identifier.hasPrefix("com.apple.shortcuts") || identifier.hasPrefix("com.apple.WorkflowKit") || identifier == "com.apple.clock"
         }
         for app in applications {
             let root = AXUIElementCreateApplication(app.processIdentifier)

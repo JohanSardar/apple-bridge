@@ -165,13 +165,21 @@ func TestAlarmTimeUsesNativeHourAndMinuteProperties(t *testing.T) {
 	t.Fatal("alarm time must come from observed native hour and minute properties")
 }
 
-func TestClockAppActionsDoNotReceiveTheImplicitRequestDictionary(t *testing.T) {
+func TestClockAppActionsHaveExplicitInputBoundaries(t *testing.T) {
 	actions := compiledActions(t, "../../packaging/shortcuts/ab-clock.json")
 	for i, action := range actions {
 		if strings.HasPrefix(action.Identifier, "com.apple.") || action.Identifier == "is.workflow.actions.timer.start" {
 			if i == 0 || actions[i-1].Identifier != "is.workflow.actions.nothing" {
 				t.Fatal("Clock actions must receive only their explicit parameters")
 			}
+		}
+	}
+}
+
+func TestClockIntentsDoNotPresentBlockingResultDialogs(t *testing.T) {
+	for _, action := range compiledActions(t, "../../packaging/shortcuts/ab-clock.json") {
+		if strings.HasPrefix(action.Identifier, "com.apple.") && action.Parameters["ShowWhenRun"] != false {
+			t.Fatal("Clock intent results must return without a Done sheet")
 		}
 	}
 }
