@@ -51,38 +51,10 @@ enum PhotosRealProof {
         var recoveryComplete = recoveryPath == nil && recoveryDigest == nil
         func deleteVerifiedAsset(_ assetID: String, filename: String) async throws {
             guard PHAsset.fetchAssets(withLocalIdentifiers: [assetID], options: nil).count != 0 else { return }
-            stage = "selecting the verified test photo"
-            guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.Photos").first else { throw SourceFailure.unavailable }
-            app.activate()
-            try await Task.sleep(for: .milliseconds(400))
-            let root = AXUIElementCreateApplication(app.processIdentifier)
-            _ = AXUIElementSetAttributeValue(root, "AXManualAccessibility" as CFString, kCFBooleanTrue)
-            _ = AXUIElementSetAttributeValue(root, "AXEnhancedUserInterface" as CFString, kCFBooleanTrue)
-            var names: CFArray?
-            let namesError = AXUIElementCopyAttributeNames(root, &names)
-            cleanupDiagnostics["root_attributes_error"] = .number(Double(namesError.rawValue))
-            cleanupDiagnostics["root_attribute_count"] = .number(Double((names as? [String] ?? []).count))
-            let windows = attribute(root, kAXWindowsAttribute) as? [AXUIElement] ?? []
-            cleanupDiagnostics["window_count"] = .number(Double(windows.count))
-            var counts: [String: Int] = [:]
-            var known: Set<String> = []
-            var budget = 1000
-            func visit(_ node: AXUIElement, _ depth: Int) {
-                guard depth < 12, budget > 0 else { return }
-                budget -= 1
-                let role = attribute(node, kAXRoleAttribute) as? String ?? "unknown"
-                counts[role, default: 0] += 1
-                for key in [kAXTitleAttribute, kAXDescriptionAttribute, kAXValueAttribute] {
-                    if let text = attribute(node, key) as? String,
-                       ["Photos", "Search", "Recently Deleted", "Library", "Albums", "Delete", "Delete All", "Use Touch ID", "Unlock"].contains(text) { known.insert(text) }
-                }
-                for child in attribute(node, kAXChildrenAttribute) as? [AXUIElement] ?? [] { visit(child, depth + 1) }
-            }
-            visit(root, 0)
-            cleanupDiagnostics["roles"] = .object(counts.mapValues { .number(Double($0)) })
-            cleanupDiagnostics["controls"] = .object(Dictionary(uniqueKeysWithValues: known.map { ($0, .bool(true)) }))
-            let target = NSAppleEventDescriptor(bundleIdentifier: "com.apple.Photos")
-            cleanupDiagnostics["photos_automation_granted"] = .bool(AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false) == noErr)
+            stage = "Photos search UI inspection"
+            guard let created = PHAsset.fetchAssets(withLocalIdentifiers: [assetID], options: nil).firstObject?.creationDate else { throw SourceFailure.invalid }
+            let probe = try PhotosUIProbe(assetID: assetID, filename: filename, created: created)
+            try await probe.run()
             throw SourceFailure.unavailable
         }
         func cleanup() async throws {
