@@ -768,7 +768,7 @@ features:
     milestone: W4
     modules: [native/MessagesSource, operations, webui]
     depends_on: [web.messages.write]
-    status: limited
+    status: dropped
     # Native variants without per-build proof stay hidden. Browser PARITY-UI
     # passed its 12-project cohort; native status is independent of that pass.
     # Per-variant sim checks prove fail-closed rejection without plain fallback.
@@ -786,17 +786,7 @@ features:
       - {id: MSG-AUDIO-MESSAGE, levels: [sim, real]}
       - {id: MSG-RECENTLY-DELETED, levels: [sim, real]}
       - {id: WEB-MSG-PARITY-UI, levels: [web]}
-    notes: Group management (W4-GROUPS) completes the existing messages.groups feature and its scenarios instead of duplicating them. T74 adds long-name-safe pinned mute indicators with accessible descriptions, a visible Recently Deleted heading and trailing swipe-width settlement. Five parity checks pass after T73 integration; native send variants retain their per-build qualification gates.
-    limits:
-      - {"scenario": "MSG-PINS", "level": "real", "reason": "The fallback found a strictly verified existing one-participant self conversation, but it contains unread pre-existing messages. Opening it would change their read state, which Messages Accessibility cannot restore per message. All six checks stopped before writes; the independent active-identity baseline remained 160349. Read the existing messages in Messages before rerunning; native qualification stays fail-closed."}
-      - {"scenario": "MSG-MUTE", "level": "real", "reason": "The fallback found a strictly verified existing one-participant self conversation, but it contains unread pre-existing messages. Opening it would change their read state, which Messages Accessibility cannot restore per message. All six checks stopped before writes; the independent active-identity baseline remained 160349. Read the existing messages in Messages before rerunning; native qualification stays fail-closed."}
-      - {"scenario": "MSG-READ-RECEIPTS", "level": "real", "reason": "The fallback found a strictly verified existing one-participant self conversation, but it contains unread pre-existing messages. Opening it would change their read state, which Messages Accessibility cannot restore per message. All six checks stopped before writes; the independent active-identity baseline remained 160349. Read the existing messages in Messages before rerunning; native qualification stays fail-closed."}
-      - {"scenario": "MSG-SEND-LATER", "level": "real", "reason": "needs verified Send Later date controls and cancellation cleanup; fail-closed"}
-      - {"scenario": "MSG-SEND-EFFECT", "level": "real", "reason": "The fallback found a strictly verified existing one-participant self conversation, but it contains unread pre-existing messages. Opening it would change their read state, which Messages Accessibility cannot restore per message. All six checks stopped before writes; the independent active-identity baseline remained 160349. Read the existing messages in Messages before rerunning; native qualification stays fail-closed."}
-      - {"scenario": "MSG-FORMATTING-SEND", "level": "real", "reason": "The fallback found a strictly verified existing one-participant self conversation, but it contains unread pre-existing messages. Opening it would change their read state, which Messages Accessibility cannot restore per message. All six checks stopped before writes; the independent active-identity baseline remained 160349. Read the existing messages in Messages before rerunning; native qualification stays fail-closed."}
-      - {"scenario": "MSG-MENTION-SEND", "level": "real", "reason": "needs self-chat mention suggestion identity and attribute qualification; fail-closed"}
-      - {"scenario": "MSG-AUDIO-MESSAGE", "level": "real", "reason": "needs native media cleanup qualification; audio remains fail-closed"}
-      - {"scenario": "MSG-RECENTLY-DELETED", "level": "real", "reason": "The fallback found a strictly verified existing one-participant self conversation, but it contains unread pre-existing messages. Opening it would change their read state, which Messages Accessibility cannot restore per message. All six checks stopped before writes; the independent active-identity baseline remained 160349. Read the existing messages in Messages before rerunning; native qualification stays fail-closed."}
+    notes: "Dropped from scope by the owner on 2026-11-01. Group management (W4-GROUPS) completes the existing messages.groups feature and its scenarios instead of duplicating them. T74 adds long-name-safe pinned mute indicators with accessible descriptions, a visible Recently Deleted heading and trailing swipe-width settlement. Five parity checks pass after T73 integration; native send variants retain their per-build qualification gates."
   - id: web.reminders
     title: Reminders web app (read, write, parity)
     requirements: [R-WEB-UI, R-WEB-FAST, R-RW]
@@ -868,14 +858,10 @@ features:
     milestone: W6
     modules: [webui, native/CalendarSource, operations]
     depends_on: [web.calendar]
-    status: limited
-    limits:
-      - scenario: WEB-CAL-PARITY
-        level: real
-        reason: "Native Calendar qualification could not start because all three Air runner slots remained occupied. No fixture was created and the queued run was cancelled. Invitation response proof also requires an incoming run-owned invitation; ordinary EventKit fixtures expose attendee/status fields as read-only. No current permission failure is inferred, and controls remain hidden."
+    status: dropped
     scenarios:
       - {id: WEB-CAL-PARITY, levels: [sim, real, web]}
-    notes: "WEB-CAL-PARITY now has synthetic store mutation/readback and native Helper qualification in addition to the existing browser coverage. Missing travel time stays unsupported; only numeric zero is verified without positive native unit proof. The scoped native check creates its own tagged calendar/event, attempts travel-time and attachment add/remove with digest readback, and verifies cleanup. Incoming invitation response effects remain unproven; existing invitations are never used. Native parity operations remain unregistered and controls stay hidden until real effects pass."
+    notes: "Dropped from scope by the owner on 2026-11-01. WEB-CAL-PARITY now has synthetic store mutation/readback and native Helper qualification in addition to the existing browser coverage. Missing travel time stays unsupported; only numeric zero is verified without positive native unit proof. The scoped native check creates its own tagged calendar/event, attempts travel-time and attachment add/remove with digest readback, and verifies cleanup. Incoming invitation response effects remain unproven; existing invitations are never used. Native parity operations remain unregistered and controls stay hidden until real effects pass."
 
   - id: web.contacts
     title: Contacts web app (read, write, parity)
@@ -1054,29 +1040,24 @@ features:
     milestone: G10
     modules: [native/Sources/PhotosSource, internal/contracts]
     depends_on: [core.queries]
-    status: limited
+    status: dropped
     scenarios:
       - {id: PHO-CAPTURE, levels: [sim]}
       - {id: PHO-IDLE, levels: [sim, real], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
       - {id: PHO-READ-REAL, levels: [real]}
-    notes: "Photos real scenarios now probe inside the signed Helper identity and use a synthetic Bridge Test album when authorized. Real qualification is limited: needs Photos grant (Full Access for dev.applebridge.helper). No prompt is requested."
-    limits:
-      - {"scenario": "PHO-READ-REAL", "level": "real", "reason": "needs Photos grant"}
+    notes: "Dropped from scope by the owner on 2026-11-01. Photos real scenarios now probe inside the signed Helper identity and use a synthetic Bridge Test album when authorized. Real qualification is limited: needs Photos grant (Full Access for dev.applebridge.helper). No prompt is requested."
   - id: photos.commands
     title: Photos import and library commands
     requirements: [R-API, R-SCOPE]
     milestone: G10
     modules: [native/Sources/PhotosSource, internal/contracts, internal/operations]
     depends_on: [photos.capture]
-    status: limited
+    status: dropped
     scenarios:
       - {id: PHO-COMMANDS, levels: [sim]}
       - {id: PHO-IMPORT-REAL, levels: [real]}
       - {id: PHO-ORIGINAL-REAL, levels: [real]}
-    notes: "Signed Helper qualification imports a synthetic PNG into a unique Bridge Test album, checks readback and original digests, and cleans up. Real runs limited: needs Photos grant (Full Access). Deleted synthetic imports remain in Recently Deleted for 30 days."
-    limits:
-      - {"scenario": "PHO-IMPORT-REAL", "level": "real", "reason": "needs Photos grant"}
-      - {"scenario": "PHO-ORIGINAL-REAL", "level": "real", "reason": "needs Photos grant"}
+    notes: "Dropped from scope by the owner on 2026-11-01. Signed Helper qualification imports a synthetic PNG into a unique Bridge Test album, checks readback and original digests, and cleans up. Real runs limited: needs Photos grant (Full Access). Deleted synthetic imports remain in Recently Deleted for 30 days."
   - id: mail.commands
     title: Mail commands with readback
     requirements: [R-RW]
@@ -1162,17 +1143,14 @@ features:
     milestone: G7
     modules: [native/Sources/MusicSource, internal/contracts]
     depends_on: [core.queries]
-    status: limited
+    status: dropped
     scenarios:
       - {id: MUS-SIM, levels: [sim]}
       - {id: MUS-CATALOG-REAL, levels: [real]}
       - {id: MUS-CONTROL-REAL, levels: [real]}
       - {id: MUS-PLAYLIST-REAL, levels: [real]}
       - {id: MUS-IDLE, levels: [sim, real], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
-    notes: "Tagged silent-track fixtures and exact playback restore implemented; real qualification requires a nonprompting Music Automation grant and restorable unshuffled playlist context. Library capture bounded to 500 tracks / 50 playlists / 1000 memberships; Automation dev.applebridge.helper → com.apple.Music missing. Public API has no playlist search. Prior whole Helper idle measured 2.063240% CPU-time over 300.014 idle seconds. T71 MAC-IDLE measured 2.016546% over 300.018 idle seconds under the global real-run lock; T99 MUS-IDLE remains unqualified: the current signed Helper reports Full Disk Access denied; no idle CPU sample was taken."
-    limits:
-      - {"scenario": "MUS-CONTROL-REAL", "level": "real", "reason": "needs Music Automation grant (T79); consent not requested"}
-      - {"scenario": "MUS-PLAYLIST-REAL", "level": "real", "reason": "needs Music Automation grant (T79); consent not requested"}
+    notes: "Dropped from scope by the owner on 2026-11-01. Tagged silent-track fixtures and exact playback restore implemented; real qualification requires a nonprompting Music Automation grant and restorable unshuffled playlist context. Library capture bounded to 500 tracks / 50 playlists / 1000 memberships; Automation dev.applebridge.helper → com.apple.Music missing. Public API has no playlist search. Prior whole Helper idle measured 2.063240% CPU-time over 300.014 idle seconds. T71 MAC-IDLE measured 2.016546% over 300.018 idle seconds under the global real-run lock; T99 MUS-IDLE remains unqualified: the current signed Helper reports Full Disk Access denied; no idle CPU sample was taken."
   - id: files.transform
     title: Native image and PDF blob transforms
     requirements: [R-API, R-SCOPE]
@@ -1271,15 +1249,12 @@ features:
     milestone: G11
     modules: [native/Sources/SafariSource, internal/contracts, internal/operations, internal/publichttp, lab/simapple]
     depends_on: [safari.capture]
-    status: limited
-    notes: Public page text has no Safari cookies; logged-in pages are limited. safari.close_tab is limited. Safari exposes no stable tab identity; closing could hit a user tab
+    status: dropped
+    notes: "Dropped from scope by the owner on 2026-11-01. Public page text has no Safari cookies; logged-in pages are limited. safari.close_tab is limited. Safari exposes no stable tab identity; closing could hit a user tab"
     scenarios:
       - {id: SAF-COMMANDS, levels: [sim]}
       - {id: SAF-TABS-REAL, levels: [real]}
       - {id: SAF-READINGLIST-REAL, levels: [real]}
-    limits:
-      - {"scenario": "SAF-TABS-REAL", "level": "real", "reason": "limited: needs Safari Automation for dev.applebridge.helper; non-prompting cleanup preflight stopped before fixtures were created."}
-      - {"scenario": "SAF-READINGLIST-REAL", "level": "real", "reason": "limited: needs Safari Automation for dev.applebridge.helper; non-prompting cleanup preflight stopped before fixtures were created."}
   - id: capture.commands
     title: Capture and PDF print provider lifecycle
     requirements: [R-API, R-SCOPE]
