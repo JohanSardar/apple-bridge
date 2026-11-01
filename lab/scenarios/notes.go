@@ -706,6 +706,28 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 				}
 
 			}
+			replicated := func(deleted bool) bool {
+				for _, target := range append([]world.Endpoint{w.Gateway}, w.Replicas...) {
+					rows, problem := w.Records(target)
+					if problem != nil {
+						return false
+					}
+					present := false
+					for _, row := range rows {
+						if row.ID == created.ID && !row.Deleted {
+							if !deleted && row.Version < created.Version {
+								return false
+							}
+							present = true
+						}
+					}
+					if present == deleted {
+						return false
+					}
+				}
+				return true
+			}
+			add(protocol+"_before_delete_replicated", w.Await(5*time.Second, func() bool { return replicated(false) }) == nil)
 			args, _ = json.Marshal(map[string]any{"id": created.ID})
 			command = contracts.CommandRecord{}
 			deleteID := contracts.NewCommandID()
@@ -723,7 +745,7 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 				deleteCode = command.Error.Code
 			}
 			e.Assertions = append(e.Assertions, Assertion{Name: protocol + "_delete_observed", Passed: err == nil && command.State == "observed", Detail: string(command.State) + ":" + deleteCode})
-			add(protocol+"_delete_replicated", w.Await(5*time.Second, func() bool { _, ok := find("notes.note", newTitle); return !ok }) == nil)
+			add(protocol+"_delete_replicated", w.Await(5*time.Second, func() bool { return replicated(true) }) == nil)
 			_, fixturePresent := find("notes.note", title)
 			add(protocol+"_delete_preserves_other_note", fixturePresent)
 			if level == "sim" {
