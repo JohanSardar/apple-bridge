@@ -54,6 +54,16 @@ func runMediaVariants(ctx context.Context, s Scenario, level string) Evidence {
 		return runNativeMessagesCommands(ctx, s, level, e)
 	}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
+	if s.ID == "WEB-MEDIA-VARIANTS" {
+		proof := runMediaCleanupProof(ctx, s, level)
+		for _, assertion := range proof.Assertions {
+			assertion.Name = "cleanup_" + assertion.Name
+			e.Assertions = append(e.Assertions, assertion)
+		}
+		if !proof.Passed {
+			return e
+		}
+	}
 	options := world.BlobOptions{Scope: "messages:read,messages:write,system:read"}
 	if s.ID == "WEB-MEDIA-CAP" {
 		options.Cap = 9 * 1024 * 1024
