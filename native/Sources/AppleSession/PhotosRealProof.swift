@@ -2,6 +2,7 @@
 import Foundation
 import AppKit
 import ApplicationServices
+import Carbon
 @preconcurrency import Photos
 import CryptoKit
 import PhotosSource
@@ -50,100 +51,39 @@ enum PhotosRealProof {
         var recoveryComplete = recoveryPath == nil && recoveryDigest == nil
         func deleteVerifiedAsset(_ assetID: String, filename: String) async throws {
             guard PHAsset.fetchAssets(withLocalIdentifiers: [assetID], options: nil).count != 0 else { return }
-            stage = "opening the imported test photo"
-            var link = URLComponents()
-            link.scheme = "photos"
-            link.host = "asset"
-            link.queryItems = [URLQueryItem(name: "identifier", value: assetID)]
-            guard let url = link.url else { throw SourceFailure.invalid }
-            let opened = NSWorkspace.shared.open(url)
-            cleanupDiagnostics["url_opened"] = .bool(opened)
-            guard opened else { throw SourceFailure.unavailable }
-            var ready: (pid_t, AXUIElement, AXUIElement)?
-            for _ in 0..<100 {
-                if let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.Photos").first {
-                    cleanupDiagnostics["app_running"] = .bool(true)
-                    let activated = app.activate()
-                    cleanupDiagnostics["app_activated"] = .bool(activated)
-                    let root = AXUIElementCreateApplication(app.processIdentifier)
-                    let windows = attribute(root, kAXWindowsAttribute) as? [AXUIElement] ?? []
-                    cleanupDiagnostics["window_count"] = .number(Double(windows.count))
-                    if activated && windows.count == 1 {
-                        ready = (app.processIdentifier, root, windows[0])
-                        break
-                    }
-                }
-                try await Task.sleep(for: .milliseconds(150))
-            }
-            guard let (pid, root, _) = ready else { throw SourceFailure.unavailable }
+            stage = "selecting the verified test photo"
+            guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.Photos").first else { throw SourceFailure.unavailable }
+            app.activate()
+            try await Task.sleep(for: .milliseconds(400))
+            let root = AXUIElementCreateApplication(app.processIdentifier)
+            _ = AXUIElementSetAttributeValue(root, "AXManualAccessibility" as CFString, kCFBooleanTrue)
             _ = AXUIElementSetAttributeValue(root, "AXEnhancedUserInterface" as CFString, kCFBooleanTrue)
-            guard NSWorkspace.shared.open(url) else { throw SourceFailure.unavailable }
-            try await Task.sleep(for: .milliseconds(300))
-            stage = "identifying the imported test photo"
-            func pressKey(_ key: CGKeyCode, flags: CGEventFlags) throws {
-                guard NSWorkspace.shared.frontmostApplication?.processIdentifier == pid,
-                      let source = CGEventSource(stateID: .privateState),
-                      let down = CGEvent(keyboardEventSource: source, virtualKey: key, keyDown: true),
-                      let up = CGEvent(keyboardEventSource: source, virtualKey: key, keyDown: false) else { throw SourceFailure.unavailable }
-                down.flags = flags
-                up.flags = flags
-                down.postToPid(pid)
-                up.postToPid(pid)
-            }
-            func readableMainWindow() async throws -> AXUIElement {
-                for _ in 0..<60 {
-                    let windows = attribute(root, kAXWindowsAttribute) as? [AXUIElement] ?? []
-                    cleanupDiagnostics["window_count"] = .number(Double(windows.count))
-                    guard windows.count == 1 else { throw SourceFailure.conflict }
-                    let window = windows[0]
-                    cleanupDiagnostics["window_role_valid"] = .bool((attribute(window, kAXRoleAttribute) as? String) == kAXWindowRole)
-                    var names: CFArray?
-                    _ = AXUIElementCopyAttributeNames(window, &names)
-                    cleanupDiagnostics["children_supported"] = .bool((names as? [String] ?? []).contains(kAXChildrenAttribute))
-                    if let children = attribute(window, kAXChildrenAttribute) as? [AXUIElement] {
-                        cleanupDiagnostics["children_read"] = .bool(true)
-                        cleanupDiagnostics["child_count"] = .number(Double(children.count))
-                        let count = children.filter { (attribute($0, kAXRoleAttribute) as? String) == kAXSheetRole }.count
-                        cleanupDiagnostics["sheet_count"] = .number(Double(count))
-                        guard count == 0 else { throw SourceFailure.conflict }
-                        return window
-                    }
-                    cleanupDiagnostics["children_read"] = .bool(false)
-                    try await Task.sleep(for: .milliseconds(150))
+            var names: CFArray?
+            let namesError = AXUIElementCopyAttributeNames(root, &names)
+            cleanupDiagnostics["root_attributes_error"] = .number(Double(namesError.rawValue))
+            cleanupDiagnostics["root_attribute_count"] = .number(Double((names as? [String] ?? []).count))
+            let windows = attribute(root, kAXWindowsAttribute) as? [AXUIElement] ?? []
+            cleanupDiagnostics["window_count"] = .number(Double(windows.count))
+            var counts: [String: Int] = [:]
+            var known: Set<String> = []
+            var budget = 1000
+            func visit(_ node: AXUIElement, _ depth: Int) {
+                guard depth < 12, budget > 0 else { return }
+                budget -= 1
+                let role = attribute(node, kAXRoleAttribute) as? String ?? "unknown"
+                counts[role, default: 0] += 1
+                for key in [kAXTitleAttribute, kAXDescriptionAttribute, kAXValueAttribute] {
+                    if let text = attribute(node, key) as? String,
+                       ["Photos", "Search", "Recently Deleted", "Library", "Albums", "Delete", "Delete All", "Use Touch ID", "Unlock"].contains(text) { known.insert(text) }
                 }
-                throw SourceFailure.unavailable
+                for child in attribute(node, kAXChildrenAttribute) as? [AXUIElement] ?? [] { visit(child, depth + 1) }
             }
-            let mainWindow = try await readableMainWindow()
-            try pressKey(34, flags: .maskCommand)
-            var infoOpen = true
-            defer {
-                if infoOpen {
-                    try? pressKey(34, flags: .maskCommand)
-                }
-            }
-            var identified = false
-            for _ in 0..<40 {
-                identified = displaysFilename(root, excluding: mainWindow, filename: filename)
-                if identified { break }
-                try await Task.sleep(for: .milliseconds(150))
-            }
-            cleanupDiagnostics["info_matched"] = .bool(identified)
-            cleanupDiagnostics["info_window_count"] = .number(Double((attribute(root, kAXWindowsAttribute) as? [AXUIElement] ?? []).count))
-            cleanupDiagnostics["info_case_matched"] = .bool(displaysFilename(root, excluding: mainWindow, filename: filename, caseInsensitive: true))
-            cleanupDiagnostics["info_stem_matched"] = .bool(displaysFilename(root, excluding: mainWindow, filename: (filename as NSString).deletingPathExtension, caseInsensitive: true))
-            guard identified else { throw SourceFailure.conflict }
-            try pressKey(34, flags: .maskCommand)
-            infoOpen = false
-            try await Task.sleep(for: .milliseconds(200))
-            guard (attribute(root, kAXWindowsAttribute) as? [AXUIElement] ?? []).count == 1 else { throw SourceFailure.conflict }
-            _ = try await readableMainWindow()
-            try pressKey(51, flags: [.maskCommand, .maskAlternate])
-            stage = "deleting the imported test photo"
-            for _ in 0..<80 {
-                if PHAsset.fetchAssets(withLocalIdentifiers: [assetID], options: nil).count == 0 { break }
-                try await Task.sleep(for: .milliseconds(150))
-            }
-            guard PHAsset.fetchAssets(withLocalIdentifiers: [assetID], options: nil).count == 0 else { throw SourceFailure.unavailable }
+            visit(root, 0)
+            cleanupDiagnostics["roles"] = .object(counts.mapValues { .number(Double($0)) })
+            cleanupDiagnostics["controls"] = .object(Dictionary(uniqueKeysWithValues: known.map { ($0, .bool(true)) }))
+            let target = NSAppleEventDescriptor(bundleIdentifier: "com.apple.Photos")
+            cleanupDiagnostics["photos_automation_granted"] = .bool(AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false) == noErr)
+            throw SourceFailure.unavailable
         }
         func cleanup() async throws {
             let owned = await source.importedAssetIdentifiersForProof()
