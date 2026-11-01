@@ -1,23 +1,28 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[25.87 21.49 18.69] cpu_idle=28% cpus=8 other_heavy=0"
+    "summary": "air: load=[18.62 25.46 21.95] cpu_idle=21% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M6ANN8PXWJ740AJE0JYY7A6W",
+  "run_id": "run_01M6APZXWPM858MS7ZG154ZSP8",
   "metrics": {
     "capture_observer_resets": 0,
     "diagnostics": {
       "fixture_icloud_source": 1,
       "fixture_source_type": 2,
+      "move_item_to_section_foreground": 1,
+      "move_item_to_section_unique_matches": 1,
+      "reorder_sections_foreground": 0,
+      "reorder_sections_unique_matches": 1,
       "section_create_menu_foreground": 1,
       "section_create_menu_press_result": 0,
       "section_create_menu_unique_matches": 1,
       "section_file_menu_foreground": 1,
       "section_file_menu_press_result": 0,
       "section_file_menu_unique_matches": 1,
+      "section_name_focus_AXTextField": 1,
       "section_name_foreground": 1,
-      "section_name_set_result": -25205,
-      "section_name_text_field": 0,
+      "section_name_set_result": 0,
+      "section_name_text_field": 1,
       "select_test_list_foreground": 1,
       "selection_control_All": 2,
       "selection_control_Flagged": 2,
@@ -80,8 +85,8 @@
   "scenario": "REM-SECTIONS",
   "level": "real",
   "passed": false,
-  "git_sha": "3af38aceb62d8d7ca1a80d1ae0fd5de8850cac85",
-  "at": "2026-11-01T04:25:07.550633Z",
+  "git_sha": "f3d345bbb9aa91c60c8fd60ea6eee31a0299c418",
+  "at": "2026-11-01T04:48:25.495814Z",
   "assertions": [
     {
       "name": "native_sections_build",
@@ -94,6 +99,14 @@
     {
       "name": "owned_list_cleanup",
       "passed": true
+    },
+    {
+      "name": "section_membership_readback",
+      "passed": false
+    },
+    {
+      "name": "section_order_readback",
+      "passed": false
     },
     {
       "name": "native_sections_proof",
@@ -109,6 +122,6 @@
     "air"
   ],
   "conditions": {
-    "reason": "The test stopped at section_name: unsupported"
+    "reason": "The test stopped at reorder_sections: conflict"
   }
 }

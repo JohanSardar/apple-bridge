@@ -130,7 +130,10 @@ enum RemindersParityProof {
             @MainActor func attempt(_ name: String, _ action: @MainActor () async throws -> Void) async {
                 stage = name
                 ui.selectionDiagnostics = [:]
-                do { try await action() }
+                do {
+                    try await ui.activate()
+                    try await action()
+                }
                 catch { reasons[name] = .string("The " + name + " action could not be verified on the test list: " + String(describing: error)) }
                 for (key, value) in ui.selectionDiagnostics { diagnostics[name + "_" + key] = .number(value) }
             }
@@ -452,11 +455,7 @@ final class RemindersFixtureUI {
     }
 
     func fence() throws {
-        let activeSheets = sheets()
-        guard activeSheets.allSatisfy({ sheet in ownedSheet.map { CFEqual($0, sheet) } == true }) else { throw SourceFailure.conflict }
-        let foreground = NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier
-        selectionDiagnostics["foreground"] = foreground ? 1 : 0
-        guard foreground else { throw SourceFailure.conflict }
+        try gestureFence()
         var rows = 0
         for match in find(title) {
             var current = match
@@ -478,6 +477,23 @@ final class RemindersFixtureUI {
         selectionDiagnostics["owned_list_row_matches"] = Double(rows)
         selectionDiagnostics["owned_list_selected"] = 0
         throw SourceFailure.conflict
+    }
+
+    func activate() async throws {
+        _ = app.activate()
+        let deadline = ContinuousClock.now.advanced(by: .seconds(3))
+        while NSWorkspace.shared.frontmostApplication?.processIdentifier != app.processIdentifier, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        try fence()
+    }
+
+    func gestureFence() throws {
+        let activeSheets = sheets()
+        guard activeSheets.allSatisfy({ sheet in ownedSheet.map { CFEqual($0, sheet) } == true }) else { throw SourceFailure.conflict }
+        let foreground = NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier
+        selectionDiagnostics["foreground"] = foreground ? 1 : 0
+        guard foreground else { throw SourceFailure.conflict }
     }
 
     func reminderRow(_ name: String) throws -> AXUIElement {
@@ -535,11 +551,12 @@ final class RemindersFixtureUI {
             return CGPoint(x: origin.x + dimensions.width / 2, y: origin.y + dimensions.height / 2)
         }
         let start = try point(from), end = try point(to)
+        try await activate()
         try fence()
         defer { CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: end, mouseButton: .left)?.post(tap: .cghidEventTap) }
         CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: start, mouseButton: .left)?.post(tap: .cghidEventTap)
         for index in 1...20 {
-            try fence()
+            try gestureFence()
             let fraction = Double(index) / 20
             let location = CGPoint(x: start.x + (end.x - start.x) * fraction, y: start.y + (end.y - start.y) * fraction)
             CGEvent(mouseEventSource: nil, mouseType: .leftMouseDragged, mouseCursorPosition: location, mouseButton: .left)?.post(tap: .cghidEventTap)

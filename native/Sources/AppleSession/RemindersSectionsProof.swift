@@ -31,6 +31,7 @@ enum RemindersSectionsProof {
         }
         var checks: [String: JSON] = [:]
         var diagnostics: [String: JSON] = ["fixture_source_type": .number(Double(source.sourceType.rawValue)), "fixture_icloud_source": .number(source.title.caseInsensitiveCompare("iCloud") == .orderedSame ? 1 : 0)]
+        var fixture: [String: Any] = [:]
         var failure = ""
         var stage = "fixture"
         do {
@@ -101,7 +102,7 @@ enum RemindersSectionsProof {
                 defer { CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: end, mouseButton: .left)?.post(tap: .cghidEventTap) }
                 CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: start, mouseButton: .left)?.post(tap: .cghidEventTap)
                 for index in 1...20 {
-                    try fence()
+                    try ui.gestureFence()
                     let fraction = Double(index) / 20
                     let location = CGPoint(x: start.x + (end.x - start.x) * fraction, y: start.y + (end.y - start.y) * fraction)
                     CGEvent(mouseEventSource: nil, mouseType: .leftMouseDragged, mouseCursorPosition: location, mouseButton: .left)?.post(tap: .cghidEventTap)
@@ -193,9 +194,16 @@ enum RemindersSectionsProof {
                 repeat {
                     for session in sessions {
                         let snapshot = try await session.read().snapshot
-                        guard let row = snapshot.lists.values.first(where: { $0.identity.uuid?.uuidString == identifier || $0.identity.textIdentifier == identifier }),
-                              let decoded = StoreSections.decode(order: row.sectionOrder, membership: row.sectionMembership) else { continue }
+                        guard let row = snapshot.lists.values.first(where: { $0.identity.uuid?.uuidString == identifier || $0.identity.textIdentifier == identifier }) else { continue }
                         let sections = snapshot.sections.values.filter { $0.list == row.identity.key }
+                        diagnostics[stage + "_section_count"] = .number(Double(sections.count))
+                        diagnostics[stage + "_expected_names"] = .number(Double(sections.filter { names.contains($0.name ?? "") }.count))
+                        diagnostics[stage + "_order_bytes"] = .number(Double(row.sectionOrder?.count ?? 0))
+                        diagnostics[stage + "_membership_bytes"] = .number(Double(row.sectionMembership?.count ?? 0))
+                        fixture = ["order": row.sectionOrder?.base64EncodedString() ?? "", "membership": row.sectionMembership?.base64EncodedString() ?? "", "reminder_id": item.calendarItemIdentifier, "section_ids": sections.map { $0.identity.uuid?.uuidString ?? $0.identity.textIdentifier ?? "" }]
+                        let decoded = StoreSections.decode(order: row.sectionOrder, membership: row.sectionMembership)
+                        diagnostics[stage + "_decoded"] = .number(decoded == nil ? 0 : 1)
+                        guard let decoded else { continue }
                         let ordered = decoded.order.compactMap { id in sections.first(where: { $0.identity.uuid == id || $0.identity.textIdentifier.flatMap(UUID.init(uuidString:)) == id })?.name }
                         let expected = reversed ? Array(names.reversed()) : names
                         guard ordered == expected else { continue }
@@ -209,9 +217,13 @@ enum RemindersSectionsProof {
             stage = "section_order_readback"
             checks["section_order_readback"] = .bool(try await observed(false, member: false))
             stage = "move_item_to_section"
+            _ = app.activate()
+            try await Task.sleep(for: .milliseconds(200))
             try await drag(try unique(item.title), to: unique(names[1]))
             checks["section_membership_readback"] = .bool(try await observed(false, member: true))
             stage = "reorder_sections"
+            _ = app.activate()
+            try await Task.sleep(for: .milliseconds(200))
             try await drag(try unique(names[1]), to: unique(names[0]))
             checks["section_move_readback"] = .bool(try await observed(true, member: true))
         } catch { failure = "The test stopped at " + stage + ": " + String(describing: error) }
@@ -221,7 +233,7 @@ enum RemindersSectionsProof {
         }
         store.reset()
         checks["owned_list_cleanup"] = .bool(store.calendar(withIdentifier: identifier) == nil)
-        try PrivateReport.write(["list_id": identifier, "title": title, "cleanup_state": checks["owned_list_cleanup"]?.bool == true ? "verified_clean" : "pending"], to: ledger)
+        try PrivateReport.write(["list_id": identifier, "title": title, "cleanup_state": checks["owned_list_cleanup"]?.bool == true ? "verified_clean" : "pending", "fixture": fixture], to: ledger)
         return .object(["passed": .bool(failure.isEmpty && checks.count == 4 && checks.values.allSatisfy(\.bool)), "checks": .object(checks), "diagnostics": .object(diagnostics), "reason": .string(failure)])
     }
 }

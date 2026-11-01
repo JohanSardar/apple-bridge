@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[26.41 21.86 18.91] cpu_idle=21% cpus=8 other_heavy=0"
+    "summary": "air: load=[36 27.83 23.09] cpu_idle=26% cpus=8 other_heavy=0"
   },
-  "run_id": "reminders-parity_01M6ANP4EJH5RPQXFZHQHHVBWC",
+  "run_id": "reminders-parity_01M6AQ2JQMSC3S4G68BR5FJM76",
   "metrics": {
     "capture_observer_resets": 0,
     "controls": {
@@ -18,7 +18,7 @@
       "control_New List…": false,
       "control_New Section": true,
       "control_Outdent Reminders": false,
-      "control_Show List Info": true,
+      "control_Show List Info": false,
       "control_Sort By": true,
       "control_View": true
     },
@@ -32,6 +32,8 @@
       "flag_script_readback": 1,
       "flag_store_flag": 1,
       "images_active_sheets": 0,
+      "images_foreground": 1,
+      "images_owned_list_selected": 1,
       "images_parent_matches": 1,
       "images_row_matches": 1,
       "images_select_result": 0,
@@ -41,7 +43,9 @@
       "list_icon_parent_matches": 1,
       "list_icon_store_flag": 0,
       "reorder_active_sheets": 0,
-      "reorder_row_matches": 0,
+      "reorder_foreground": 0,
+      "reorder_owned_list_selected": 1,
+      "reorder_row_matches": 1,
       "reorder_select_result": 0,
       "reorder_selected": 1,
       "reorder_sheet_candidates": 0,
@@ -97,12 +101,22 @@
       "selection_truncated": 0,
       "selection_visited": 436,
       "smart_list_active_sheets": 0,
+      "smart_list_foreground": 0,
       "smart_list_sheet_candidates": 0,
       "store_visibility_parent_matches": 1,
       "store_visibility_store_flag": 0,
       "subtasks_active_sheets": 0,
+      "subtasks_foreground": 1,
+      "subtasks_owned_list_selected": 1,
+      "subtasks_parent_matches": 1,
+      "subtasks_row_matches": 1,
+      "subtasks_select_result": 0,
+      "subtasks_selected": 1,
       "subtasks_sheet_candidates": 0,
+      "subtasks_store_flag": 0,
       "tags_active_sheets": 0,
+      "tags_foreground": 1,
+      "tags_owned_list_selected": 1,
       "tags_parent_matches": 1,
       "tags_row_matches": 1,
       "tags_select_result": 0,
@@ -119,7 +133,7 @@
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-11-01T04:25:35.954157Z",
+  "at": "2026-11-01T04:49:52.373692Z",
   "assertions": [
     {
       "name": "native_sections_build",
@@ -154,7 +168,15 @@
       "passed": true
     },
     {
+      "name": "indent_readback",
+      "passed": true
+    },
+    {
       "name": "list_icon_readback",
+      "passed": true
+    },
+    {
+      "name": "outdent_readback",
       "passed": true
     },
     {
@@ -178,14 +200,6 @@
       "passed": true
     },
     {
-      "name": "indent_readback",
-      "passed": false
-    },
-    {
-      "name": "outdent_readback",
-      "passed": false
-    },
-    {
       "name": "reorder_readback",
       "passed": false
     },
@@ -198,6 +212,11 @@
       "passed": false
     },
     {
+      "name": "helper_crash_free",
+      "passed": false,
+      "detail": "new Helper crash reports: AppleBridgeHelper-2026-10-31-235128.ips"
+    },
+    {
       "name": "credential_backend_override_restored",
       "passed": true
     }
@@ -206,7 +225,6 @@
   "hosts": null,
   "conditions": {
     "reorder": "The reorder action could not be verified on the test list: conflict",
-    "smart_list": "The smart_list action could not be verified on the test list: unsupported",
-    "subtasks": "The subtasks action could not be verified on the test list: conflict"
+    "smart_list": "The smart_list action could not be verified on the test list: conflict"
   }
 }
