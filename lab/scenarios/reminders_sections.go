@@ -11,6 +11,10 @@ import (
 )
 
 func runRemindersSections(ctx context.Context, level string, e Evidence) Evidence {
+	if e.GitSHA == "" {
+		sha, _ := exec.CommandContext(ctx, "git", "rev-parse", "HEAD").Output()
+		e.GitSHA = strings.TrimSpace(string(sha))
+	}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	dir, err := os.MkdirTemp("", "ab-sections-")
 	if err != nil {
@@ -44,22 +48,37 @@ func runRemindersSections(ctx context.Context, level string, e Evidence) Evidenc
 		}
 		output, err = exec.CommandContext(ctx, filepath.Join(strings.TrimSpace(string(directory)), "RemindersStoreChecks"), flag).CombinedOutput()
 		add("store_effects_and_invalidation", err == nil && strings.Contains(string(output), marker))
+		command = exec.CommandContext(ctx, "packaging/dev/build-native.sh")
+		command.Env = append(os.Environ(), "APPLE_BRIDGE_NATIVE_TARGET=AppleBridgeHelper")
+		output, err = command.CombinedOutput()
+		add("native_fixture_checks_build", err == nil)
+		if err == nil {
+			output, err = exec.CommandContext(ctx, filepath.Join(strings.TrimSpace(string(directory)), "AppleBridgeHelper"), "reminders-fixture-checks").CombinedOutput()
+			add("owned_fixture_accessibility_regressions", err == nil && strings.Contains(string(output), "reminders fixture checks passed"))
+		}
 	} else {
 		report = filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "AppleBridgeDev", "sections-"+e.RunID+".json")
 		defer os.Remove(report)
 		err = exec.CommandContext(ctx, "open", "-n", "-W", "-g", "-a", filepath.Join(dir, "AppleBridgeHelper.app"), "--args", remindersProofCommand(e.Scenario), "--report", report).Run()
 		data, problem := os.ReadFile(report)
 		var proof struct {
-			Passed   bool              `json:"passed"`
-			Checks   map[string]bool   `json:"checks"`
-			Reason   string            `json:"reason"`
-			Reasons  map[string]string `json:"reasons"`
-			Controls map[string]bool   `json:"controls"`
+			Passed      bool               `json:"passed"`
+			Checks      map[string]bool    `json:"checks"`
+			Reason      string             `json:"reason"`
+			Reasons     map[string]string  `json:"reasons"`
+			Controls    map[string]bool    `json:"controls"`
+			Diagnostics map[string]float64 `json:"diagnostics"`
 		}
 		valid := err == nil && problem == nil && json.Unmarshal(data, &proof) == nil
 		add("native_sections_report", valid)
 		if len(proof.Controls) > 0 {
 			e.Metrics = map[string]any{"controls": proof.Controls}
+		}
+		if len(proof.Diagnostics) > 0 {
+			if e.Metrics == nil {
+				e.Metrics = map[string]any{}
+			}
+			e.Metrics["diagnostics"] = proof.Diagnostics
 		}
 		names := make([]string, 0, len(proof.Checks))
 		for name := range proof.Checks {

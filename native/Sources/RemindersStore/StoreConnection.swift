@@ -24,7 +24,7 @@ enum StoreTable: String, CaseIterable {
         switch self {
         case .reminder: return common + ["ZDACALENDARITEMUNIQUEIDENTIFIER", "ZEXTERNALIDENTIFIER", "ZFLAGGED", "ZPARENTREMINDER", "ZLIST", "ZCREATIONDATE", "ZDUEDATEDELTAALERTSDATA"]
         case .list: return common + ["ZNAME", "ZBADGEEMBLEM", "ZISGROUP", "ZPARENTLIST", "ZPARENTLIST1", "ZDADISPLAYORDER", "ZISPINNEDBYCURRENTUSER", "ZPINNEDDATE", "ZSORTINGSTYLE", "ZSHOULDCATEGORIZEGROCERYITEMS", "ZGROCERYLOCALEID", "ZSHARINGSTATUS", "ZSHAREDOWNERNAME", "ZSMARTLISTTYPE", "ZFILTERDATA", "ZSECTIONIDSORDERINGASDATA", "ZMEMBERSHIPSOFREMINDERSINSECTIONSASDATA", "ZREMINDERIDSMERGEABLEORDERING", "ZREMINDERIDSMERGEABLEORDERING_V2_JSON"]
-        case .section: return common + ["ZDISPLAYNAME", "ZLIST", "ZSMARTLIST"]
+        case .section: return common + ["ZDISPLAYNAME", "ZLIST", "ZSMARTLIST", "ZCREATIONDATE"]
         case .object: return common + ["ZREMINDER", "ZREMINDER1", "ZREMINDER2", "ZREMINDER3", "ZREMINDER4", "ZREMINDER5", "ZHASHTAGLABEL", "ZLIST"]
         case .label: return ["Z_PK", "ZNAME"]
         }
@@ -141,7 +141,7 @@ final class StoreConnection {
                 snapshot.lists[id.key] = StoreListRow(identity: id, name: row.text(4), emblem: row.text(5), isGroup: row.bool(6), parent: row.integer(7), alternateParent: row.integer(8), displayOrder: row.number(9), pinned: row.bool(10), pinnedDate: row.number(11), sortingStyle: row.scalar(12), groceries: row.bool(13), groceryLocale: row.text(14), sharingStatus: row.integer(15), sharedOwner: row.text(16), smartType: row.scalar(17), filter: row.data(18), sectionOrder: row.data(19), sectionMembership: row.data(20), ordering: row.data(21), orderingJSON: row.data(22))
             case .section:
                 let id = row.identity
-                snapshot.sections[id.key] = StoreSectionRow(identity: id, name: row.text(4), list: row.integer(5), smartList: row.integer(6))
+                snapshot.sections[id.key] = StoreSectionRow(identity: id, name: row.text(4), list: row.integer(5), smartList: row.integer(6), created: row.number(7))
             case .object:
                 let id = row.identity
                 snapshot.objects[id.key] = StoreObjectRow(identity: id, reminder: row.integer(4), reminder1: row.integer(5), reminder2: row.integer(6), reminder3: row.integer(7), reminder4: row.integer(8), reminder5: row.integer(9), hashtagLabel: row.integer(10), list: row.integer(11))

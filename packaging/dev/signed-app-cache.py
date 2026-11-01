@@ -9,10 +9,10 @@ import subprocess
 import sys
 import tempfile
 import time
-from signed_app_inputs import digest_bundle, require, source_key
+from signed_app_inputs import cache_directory, digest_bundle, require, source_key
 
 root = Path(__file__).resolve().parents[2]
-cache = Path(os.environ.get("APPLE_BRIDGE_SIGNED_APP_CACHE", str(Path.home() / "Library/Caches/AppleBridgeDev/signed-apps")))
+cache = cache_directory(root, os.environ)
 cache.mkdir(parents=True, exist_ok=True, mode=0o700)
 
 @contextmanager

@@ -30,8 +30,11 @@ enum RemindersSectionsProof {
             throw error
         }
         var checks: [String: JSON] = [:]
+        var diagnostics: [String: JSON] = ["fixture_source_type": .number(Double(source.sourceType.rawValue)), "fixture_icloud_source": .number(source.title.caseInsensitiveCompare("iCloud") == .orderedSame ? 1 : 0)]
+        var fixture: [String: Any] = [:]
         var failure = ""
         var stage = "fixture"
+        var fixtureUI: RemindersFixtureUI?
         do {
             let item = EKReminder(eventStore: store)
             item.calendar = list
@@ -43,14 +46,20 @@ enum RemindersSectionsProof {
             configuration.activates = true
             let app = try await NSWorkspace.shared.openApplication(at: url, configuration: configuration)
             try await Task.sleep(for: .seconds(1))
-            let root = AXUIElementCreateApplication(app.processIdentifier)
-            AXUIElementSetMessagingTimeout(root, 0.1)
-            var ownedSelection: AXUIElement?
+            let ui = RemindersFixtureUI(app: app, title: title)
+            fixtureUI = ui
+            let root = ui.root
+            try await ui.prepare()
+            for (key, value) in ui.accessibilityDiagnostics { diagnostics["ui_" + key] = .number(value) }
+            try ui.requireReady()
+            diagnostics["ui_windows"] = .number(Double(ui.elements(ui.root, kAXWindowsAttribute).count))
+            var selectedFixture = false
             @MainActor func fence() throws {
-                guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier else { throw SourceFailure.conflict }
-                if let ownedSelection {
-                    var selected: CFTypeRef?
-                    guard AXUIElementCopyAttributeValue(ownedSelection, kAXSelectedAttribute as CFString, &selected) == .success, (selected as? Bool) == true else { throw SourceFailure.conflict }
+                let foreground = NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier
+                diagnostics[stage + "_foreground"] = .number(foreground ? 1 : 0)
+                guard foreground else { throw SourceFailure.conflict }
+                if selectedFixture {
+                    try ui.fence()
                 }
             }
             @MainActor func value(_ element: AXUIElement, _ key: String) -> String {
@@ -59,53 +68,41 @@ enum RemindersSectionsProof {
                 return (result as? NSAttributedString)?.string ?? result as? String ?? ""
             }
             @MainActor func find(_ name: String, role: String? = nil) -> [AXUIElement] {
-                var budget = 3000
-                let deadline = ContinuousClock.now.advanced(by: .seconds(2))
-                @MainActor func walk(_ element: AXUIElement) -> [AXUIElement] {
-                    guard budget > 0, ContinuousClock.now < deadline else { return [] }; budget -= 1
-                    let actualRole = value(element, kAXRoleAttribute)
-                    let labels = [value(element, kAXTitleAttribute), value(element, kAXValueAttribute), value(element, kAXDescriptionAttribute)]
-                    if role == nil || actualRole == role {
-                        if labels.contains(name), ![kAXApplicationRole, kAXWindowRole, kAXScrollAreaRole, kAXSplitGroupRole].contains(actualRole) { return [element] }
-                    }
-                    var result: [AXUIElement] = []
-                    var children: CFTypeRef?
-                    AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children)
-                    for child in children as? [AXUIElement] ?? [] { result += walk(child) }
-                    return result
-                }
-                return walk(root)
+                ui.find(name, role: role)
             }
             @MainActor func unique(_ name: String, role: String? = nil) throws -> AXUIElement {
                 let matches = find(name, role: role)
+                diagnostics[stage + "_unique_matches"] = .number(Double(matches.count))
                 guard matches.count == 1 else { throw SourceFailure.conflict }
                 return matches[0]
             }
             @MainActor func press(_ element: AXUIElement) throws {
                 try fence()
-                guard AXUIElementPerformAction(element, kAXPressAction as CFString) == .success else { throw SourceFailure.unsupported }
+                let result = AXUIElementPerformAction(element, kAXPressAction as CFString)
+                diagnostics[stage + "_press_result"] = .number(Double(result.rawValue))
+                guard result == .success else { throw SourceFailure.unsupported }
             }
             @MainActor func key(_ code: CGKeyCode) throws {
                 try fence()
                 guard let down = CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: true), let up = CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: false) else { throw SourceFailure.unavailable }
                 down.post(tap: .cghidEventTap); up.post(tap: .cghidEventTap)
             }
-            @MainActor func point(_ element: AXUIElement) throws -> CGPoint {
+            @MainActor func point(_ element: AXUIElement, before: Bool = false) throws -> CGPoint {
                 var position: CFTypeRef?, size: CFTypeRef?
                 guard AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &position) == .success,
                       AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &size) == .success,
                       let position, let size, CFGetTypeID(position) == AXValueGetTypeID(), CFGetTypeID(size) == AXValueGetTypeID() else { throw SourceFailure.conflict }
                 var origin = CGPoint.zero, dimensions = CGSize.zero
                 guard AXValueGetValue(unsafeDowncast(position, to: AXValue.self), .cgPoint, &origin), AXValueGetValue(unsafeDowncast(size, to: AXValue.self), .cgSize, &dimensions), dimensions.width > 0, dimensions.height > 0 else { throw SourceFailure.conflict }
-                return CGPoint(x: origin.x + dimensions.width / 2, y: origin.y + dimensions.height / 2)
+                return CGPoint(x: origin.x + dimensions.width / 2, y: origin.y + (before ? 2 : dimensions.height / 2))
             }
-            @MainActor func drag(_ from: AXUIElement, to: AXUIElement) async throws {
-                let start = try point(from), end = try point(to)
+            @MainActor func drag(_ from: AXUIElement, to: AXUIElement, before: Bool = false) async throws {
+                let start = try point(from), end = try point(to, before: before)
                 try fence()
                 defer { CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: end, mouseButton: .left)?.post(tap: .cghidEventTap) }
                 CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: start, mouseButton: .left)?.post(tap: .cghidEventTap)
                 for index in 1...20 {
-                    try fence()
+                    try ui.gestureFence()
                     let fraction = Double(index) / 20
                     let location = CGPoint(x: start.x + (end.x - start.x) * fraction, y: start.y + (end.y - start.y) * fraction)
                     CGEvent(mouseEventSource: nil, mouseType: .leftMouseDragged, mouseCursorPosition: location, mouseButton: .left)?.post(tap: .cghidEventTap)
@@ -118,39 +115,77 @@ enum RemindersSectionsProof {
             let target = NSAppleEventDescriptor(bundleIdentifier: "com.apple.reminders")
             if AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false) == noErr {
                 var error: NSDictionary?
-                _ = NSAppleScript(source: "with timeout of 5 seconds\ntell application \"Reminders\"\nset matches to every list whose name is \"" + title + "\"\nif (count matches) is not 1 then error number -2700\nshow item 1 of matches\nactivate\nend tell\nend timeout")?.executeAndReturnError(&error)
+                _ = NSAppleScript(source: "with timeout of 30 seconds\ntell application \"Reminders\"\nset matches to every list whose name is \"" + title + "\"\nif (count matches) is not 1 then error number -2700\nreopen\nshow item 1 of matches\nactivate\nend tell\nend timeout")?.executeAndReturnError(&error)
                 guard error == nil else { throw SourceFailure.unavailable }
             }
-            for _ in 0..<30 {
-                if find(title).count == 1 { break }
+            try await ui.prepare()
+            for (key, value) in ui.accessibilityDiagnostics { diagnostics["ui_" + key] = .number(value) }
+            try ui.requireReady()
+            @MainActor func ownedRow() -> AXUIElement? {
+                var rows: [AXUIElement] = []
+                let matches = find(title)
+                for (key, value) in ui.searchDiagnostics { diagnostics["selection_" + key] = .number(value) }
+                diagnostics["selection_title_matches"] = .number(Double(matches.count))
+                for match in matches {
+                    var current = match
+                    for _ in 0..<16 {
+                        if value(current, kAXRoleAttribute) == kAXRowRole {
+                            if !rows.contains(where: { CFEqual($0, current) }) { rows.append(current) }
+                            break
+                        }
+                        var parent: CFTypeRef?
+                        guard AXUIElementCopyAttributeValue(current, kAXParentAttribute as CFString, &parent) == .success, let parent, CFGetTypeID(parent) == AXUIElementGetTypeID() else { break }
+                        current = unsafeDowncast(parent, to: AXUIElement.self)
+                    }
+                }
+                diagnostics["selection_row_matches"] = .number(Double(rows.count))
+                return rows.count == 1 ? rows[0] : nil
+            }
+            let selectionDeadline = ContinuousClock.now.advanced(by: .seconds(10))
+            while ownedRow() == nil, ContinuousClock.now < selectionDeadline {
                 try await Task.sleep(for: .milliseconds(100))
             }
-            var listElement = try unique(title)
-            for _ in 0..<12 {
-                if value(listElement, kAXRoleAttribute) == kAXRowRole { break }
-                var parent: CFTypeRef?
-                guard AXUIElementCopyAttributeValue(listElement, kAXParentAttribute as CFString, &parent) == .success, let parent, CFGetTypeID(parent) == AXUIElementGetTypeID() else { throw SourceFailure.conflict }
-                listElement = unsafeDowncast(parent, to: AXUIElement.self)
-            }
-            guard value(listElement, kAXRoleAttribute) == kAXRowRole else { throw SourceFailure.conflict }
+            guard let listElement = ownedRow() else { throw SourceFailure.conflict }
             if AXUIElementPerformAction(listElement, kAXPressAction as CFString) != .success {
                 try fence()
                 guard AXUIElementSetAttributeValue(listElement, kAXSelectedAttribute as CFString, kCFBooleanTrue) == .success else { throw SourceFailure.unsupported }
             }
             try await Task.sleep(for: .milliseconds(500))
-            ownedSelection = listElement
+            selectedFixture = true
             try fence()
             let names = [title + " first", title + " second"]
             stage = "create_sections"
             for name in names {
+                stage = "section_file_menu"
                 try press(try unique("File", role: kAXMenuBarItemRole))
+                stage = "section_create_menu"
                 try press(try unique("New Section", role: kAXMenuItemRole))
                 try await Task.sleep(for: .milliseconds(300))
-                var focused: CFTypeRef?
-                guard AXUIElementCopyAttributeValue(root, kAXFocusedUIElementAttribute as CFString, &focused) == .success, let focused, CFGetTypeID(focused) == AXUIElementGetTypeID() else { throw SourceFailure.conflict }
-                let field = unsafeDowncast(focused, to: AXUIElement.self)
+                stage = "section_name"
                 try fence()
-                guard AXUIElementSetAttributeValue(field, kAXValueAttribute as CFString, name as CFString) == .success else { throw SourceFailure.unsupported }
+                var editable: AXUIElement?
+                let editingDeadline = ContinuousClock.now.advanced(by: .seconds(5))
+                repeat {
+                    if let focused = ui.elements(root, kAXFocusedUIElementAttribute).first {
+                        let role = value(focused, kAXRoleAttribute)
+                        diagnostics["section_name_focus_" + role] = .number(1)
+                        if RemindersFixtureUI.editableRole(role) { editable = focused }
+                    }
+                    if editable == nil {
+                        let fields = find("New Section", role: kAXTextFieldRole) + find("New Section", role: kAXTextAreaRole)
+                        diagnostics["section_name_field_matches"] = .number(Double(fields.count))
+                        if fields.count == 1 { editable = fields[0] }
+                    }
+                    if editable != nil { break }
+                    try await Task.sleep(for: .milliseconds(100))
+                } while ContinuousClock.now < editingDeadline
+                guard let field = editable else { throw SourceFailure.conflict }
+                diagnostics["section_name_text_field"] = .number(1)
+                try fence()
+                _ = AXUIElementSetAttributeValue(field, kAXFocusedAttribute as CFString, kCFBooleanTrue)
+                let result = AXUIElementSetAttributeValue(field, kAXValueAttribute as CFString, name as CFString)
+                diagnostics["section_name_set_result"] = .number(Double(result.rawValue))
+                guard result == .success else { throw SourceFailure.unsupported }
                 try key(36)
                 try await Task.sleep(for: .milliseconds(400))
             }
@@ -158,13 +193,25 @@ enum RemindersSectionsProof {
                 let deadline = ContinuousClock.now.advanced(by: .seconds(10))
                 repeat {
                     for session in sessions {
-                        let snapshot = try await session.read().snapshot
-                        guard let row = snapshot.lists.values.first(where: { $0.identity.uuid?.uuidString == identifier || $0.identity.textIdentifier == identifier }),
-                              let decoded = StoreSections.decode(order: row.sectionOrder, membership: row.sectionMembership) else { continue }
+                        let read = try await session.read()
+                        let snapshot = read.snapshot
+                        guard let row = snapshot.lists.values.first(where: { $0.identity.uuid?.uuidString == identifier || $0.identity.textIdentifier == identifier }) else { continue }
                         let sections = snapshot.sections.values.filter { $0.list == row.identity.key }
+                        diagnostics[stage + "_section_count"] = .number(Double(sections.count))
+                        diagnostics[stage + "_expected_names"] = .number(Double(sections.filter { names.contains($0.name ?? "") }.count))
+                        diagnostics[stage + "_order_bytes"] = .number(Double(row.sectionOrder?.count ?? 0))
+                        diagnostics[stage + "_membership_bytes"] = .number(Double(row.sectionMembership?.count ?? 0))
+                        fixture = ["order": row.sectionOrder?.base64EncodedString() ?? "", "membership": row.sectionMembership?.base64EncodedString() ?? "", "reminder_id": item.calendarItemIdentifier, "section_ids": sections.map { $0.identity.uuid?.uuidString ?? $0.identity.textIdentifier ?? "" }]
+                        fixture["section_columns"] = (read.columns["ZREMCDBASELIST"] ?? []).filter { $0.contains("SECTION") }.sorted()
+                        let decoded = StoreSections.validated(row, snapshot: snapshot)
+                        diagnostics[stage + "_decoded"] = .number(decoded == nil ? 0 : 1)
+                        guard let decoded else { continue }
                         let ordered = decoded.order.compactMap { id in sections.first(where: { $0.identity.uuid == id || $0.identity.textIdentifier.flatMap(UUID.init(uuidString:)) == id })?.name }
                         let expected = reversed ? Array(names.reversed()) : names
                         guard ordered == expected else { continue }
+                        let firstPoint = try point(unique(expected[0])), secondPoint = try point(unique(expected[1]))
+                        diagnostics[stage + "_ui_order_matches"] = .number(firstPoint.y < secondPoint.y ? 1 : 0)
+                        guard firstPoint.y < secondPoint.y else { continue }
                         if !member { return true }
                         if let itemID = UUID(uuidString: item.calendarItemIdentifier), let sectionID = decoded.membership[itemID], sections.first(where: { $0.identity.uuid == sectionID || $0.identity.textIdentifier.flatMap(UUID.init(uuidString:)) == sectionID })?.name == names[1] { return true }
                     }
@@ -175,20 +222,67 @@ enum RemindersSectionsProof {
             stage = "section_order_readback"
             checks["section_order_readback"] = .bool(try await observed(false, member: false))
             stage = "move_item_to_section"
+            _ = app.activate()
+            try await Task.sleep(for: .milliseconds(200))
             try await drag(try unique(item.title), to: unique(names[1]))
             checks["section_membership_readback"] = .bool(try await observed(false, member: true))
             stage = "reorder_sections"
-            try await drag(try unique(names[1]), to: unique(names[0]))
+            _ = app.activate()
+            try await Task.sleep(for: .milliseconds(200))
+            try await ui.menu("File", ["Edit Sections…", "Edit Sections...", "Edit Sections"])
+            let editorDeadline = ContinuousClock.now.advanced(by: .seconds(5))
+            while ui.ownedSheet == nil, ContinuousClock.now < editorDeadline {
+                let candidates = ui.sheets()
+                if candidates.count == 1 { ui.ownedSheet = candidates[0]; break }
+                try await Task.sleep(for: .milliseconds(100))
+            }
+            guard let editor = ui.ownedSheet else { throw SourceFailure.unsupported }
+            @MainActor func editorRow(_ name: String) throws -> AXUIElement {
+                let matches = ui.find(name, within: editor)
+                diagnostics["section_editor_title_matches"] = .number(Double(matches.count))
+                guard matches.count == 1 else { throw SourceFailure.conflict }
+                var current = matches[0]
+                for _ in 0..<12 {
+                    if value(current, kAXRoleAttribute) == kAXRowRole { return current }
+                    let parents = ui.elements(current, kAXParentAttribute)
+                    guard parents.count == 1, !CFEqual(parents[0], editor) else { break }
+                    current = parents[0]
+                }
+                return matches[0]
+            }
+            try await drag(try editorRow(names[1]), to: editorRow(names[0]), before: true)
+            let done = ui.find("Done", role: kAXButtonRole, within: editor)
+            guard done.count == 1 else { throw SourceFailure.conflict }
+            try press(done[0])
+            try await Task.sleep(for: .milliseconds(500))
             checks["section_move_readback"] = .bool(try await observed(true, member: true))
         } catch { failure = "The test stopped at " + stage + ": " + String(describing: error) }
+        if let ui = fixtureUI, let sheet = ui.ownedSheet {
+            if ui.sheets().contains(where: { CFEqual($0, sheet) }), NSWorkspace.shared.frontmostApplication?.processIdentifier == ui.app.processIdentifier {
+                for name in ["Done", "Cancel"] {
+                    let buttons = ui.find(name, role: kAXButtonRole, within: sheet)
+                    if buttons.count == 1, AXUIElementPerformAction(buttons[0], kAXPressAction as CFString) == .success { break }
+                }
+                try await Task.sleep(for: .milliseconds(500))
+            }
+            checks["owned_sheet_cleanup"] = .bool(!ui.sheets().contains(where: { CFEqual($0, sheet) }))
+        }
+        for path in (try? RemindersStore.paths()) ?? [] {
+            if let captured = try? RemindersStore(path: path).sectionFixture(identifier: identifier, title: title),
+               let data = try? JSONEncoder().encode(captured), let object = try? JSONSerialization.jsonObject(with: data) {
+                fixture["native"] = object
+                break
+            }
+        }
         store.reset()
         if let owned = store.calendar(withIdentifier: identifier), owned.title == title {
             try store.removeCalendar(owned, commit: true)
         }
         store.reset()
         checks["owned_list_cleanup"] = .bool(store.calendar(withIdentifier: identifier) == nil)
-        try PrivateReport.write(["list_id": identifier, "title": title, "cleanup_state": checks["owned_list_cleanup"]?.bool == true ? "verified_clean" : "pending"], to: ledger)
-        return .object(["passed": .bool(failure.isEmpty && checks.count == 4 && checks.values.allSatisfy(\.bool)), "checks": .object(checks), "reason": .string(failure)])
+        try PrivateReport.write(["list_id": identifier, "title": title, "cleanup_state": checks["owned_list_cleanup"]?.bool == true ? "verified_clean" : "pending", "fixture": fixture], to: ledger)
+        let required = ["section_order_readback", "section_membership_readback", "section_move_readback", "owned_list_cleanup"]
+        return .object(["passed": .bool(failure.isEmpty && required.allSatisfy { checks[$0]?.bool == true } && checks.values.allSatisfy(\.bool)), "checks": .object(checks), "diagnostics": .object(diagnostics), "reason": .string(failure)])
     }
 }
 #endif

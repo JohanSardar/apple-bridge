@@ -5,12 +5,30 @@ import SourceSupport
 @MainActor
 enum StoreSectionChecks {
     static func run(path: String, execute: (String) -> Void) async throws {
+        func check(_ name: String, _ passed: Bool) {
+            if !passed {
+                FileHandle.standardError.write(Data((name + " failed\n").utf8))
+                exit(1)
+            }
+        }
         let first = UUID(), second = UUID(), item = UUID()
         let order = try JSONEncoder().encode([first.uuidString, second.uuidString])
         let membership = try JSONEncoder().encode([item.uuidString: first.uuidString])
         precondition(StoreSections.decode(order: order, membership: membership)?.order == [first, second])
         precondition(StoreSections.decode(order: order, membership: nil)?.membership == [:])
         precondition(StoreSections.decode(order: order, membership: membership)?.membership == [item: first])
+        let nativeMembership = try JSONSerialization.data(withJSONObject: ["memberships": [["groupID": second.uuidString, "memberID": item.uuidString, "modifiedOn": 815202026.752328]], "minimumSupportedVersion": 20230430])
+        precondition(StoreSections.decode(order: order, membership: nativeMembership)?.membership == [item: second])
+        for entries in [
+            [["groupID": UUID().uuidString, "memberID": item.uuidString]],
+            [["groupID": first.uuidString, "memberID": item.uuidString], ["groupID": second.uuidString, "memberID": item.uuidString]],
+            [["groupID": second.uuidString, "memberID": "invalid"]]
+        ] {
+            let invalid = try JSONSerialization.data(withJSONObject: ["memberships": entries, "minimumSupportedVersion": 20230430])
+            precondition(StoreSections.decode(order: order, membership: invalid) == nil)
+        }
+        let futureMembership = try JSONSerialization.data(withJSONObject: ["memberships": [], "minimumSupportedVersion": 99999999])
+        precondition(StoreSections.decode(order: order, membership: futureMembership) == nil)
         let plistOrder = try PropertyListSerialization.data(fromPropertyList: [first.uuidString, second.uuidString], format: .binary, options: 0)
         let archive = try NSKeyedArchiver.archivedData(withRootObject: [item.uuidString: second.uuidString], requiringSecureCoding: true)
         precondition(StoreSections.decode(order: plistOrder, membership: archive)?.membership == [item: second])
@@ -21,6 +39,7 @@ enum StoreSectionChecks {
         let foreign = try JSONEncoder().encode([item.uuidString: UUID().uuidString])
         precondition(StoreSections.decode(order: order, membership: foreign) == nil)
         execute("ALTER TABLE ZREMCDBASELIST ADD COLUMN ZSECTIONIDSORDERINGASDATA BLOB")
+        execute("ALTER TABLE ZREMCDBASESECTION ADD COLUMN ZCREATIONDATE REAL")
         execute("DELETE FROM ZREMCDBASESECTION WHERE ZLIST=1")
         execute("INSERT INTO ZREMCDBASESECTION(Z_PK,Z_ENT,ZIDENTIFIER,ZDISPLAYNAME,ZLIST) VALUES(200,605,'\(first)','first',1),(201,605,'\(second)','second',1)")
         execute("INSERT INTO ZREMCDREMINDER(Z_PK,Z_ENT,ZIDENTIFIER,ZDACALENDARITEMUNIQUEIDENTIFIER,ZFLAGGED,ZLIST) VALUES(202,101,'\(item)','\(item)',0,1)")
@@ -30,6 +49,7 @@ enum StoreSectionChecks {
             execute("UPDATE ZREMCDBASELIST SET ZSECTIONIDSORDERINGASDATA=X'\(orderHex)',ZMEMBERSHIPSOFREMINDERSINSECTIONSASDATA=X'\(membersHex)',Z_OPT=Z_OPT+1 WHERE Z_PK=1")
         }
         set(order,membership)
+        execute("UPDATE ZREMCDBASESECTION SET ZCREATIONDATE=CASE Z_PK WHEN 200 THEN 100 ELSE 200 END WHERE ZLIST=1")
         let enrichment = RemindersStoreEnrichment(paths: { [path] })
         let observations: [JSON] = [
             .object(["kind": .string("upsert"), "collection": .string("reminders.list"), "native_key": .string("list"), "data": .object([:])]),
@@ -38,6 +58,14 @@ enum StoreSectionChecks {
         let initial = await enrichment.refresh(observations, generation: "sections")
         precondition(initial.first { $0["collection"].string == "reminders.list" }?["data"]["sections"].array.map { $0["id"].string } == [first.uuidString,second.uuidString])
         precondition(initial.first { $0["collection"].string == "reminders.reminder" }?["data"]["section_id"].string == first.uuidString)
+        execute("UPDATE ZREMCDBASELIST SET ZSECTIONIDSORDERINGASDATA=NULL,Z_OPT=Z_OPT+1 WHERE Z_PK=1")
+        let implicit = await enrichment.refresh(observations, generation: "sections")
+        check("implicit section order", implicit.first { $0["collection"].string == "reminders.list" }?["data"]["sections"].array.map { $0["id"].string } == [first.uuidString, second.uuidString])
+        check("implicit section membership", implicit.first { $0["collection"].string == "reminders.reminder" }?["data"]["section_id"].string == first.uuidString)
+        execute("UPDATE ZREMCDBASESECTION SET ZCREATIONDATE=100,Z_OPT=Z_OPT+1 WHERE Z_PK=201")
+        let ambiguous = await enrichment.refresh([], generation: "sections")
+        check("ambiguous section order", ambiguous.first { $0["collection"].string == "reminders.list" }?["data"]["sections"] == .null)
+        execute("UPDATE ZREMCDBASESECTION SET ZCREATIONDATE=200,Z_OPT=Z_OPT+1 WHERE Z_PK=201")
         set(try JSONEncoder().encode([second.uuidString,first.uuidString]),try JSONEncoder().encode([item.uuidString:second.uuidString]))
         let moved = await enrichment.refresh([],generation: "sections")
         precondition(moved.first { $0["collection"].string == "reminders.reminder" }?["data"]["section_id"].string == second.uuidString)

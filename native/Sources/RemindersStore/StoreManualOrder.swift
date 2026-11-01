@@ -4,6 +4,11 @@ public enum StoreManualOrder: Equatable, Sendable {
     case supported([UUID: Int])
     case unsupported
 
+    public static func position(of identity: StoreIdentity, in positions: [UUID: Int]) -> Int? {
+        guard let identifier = identity.uuid ?? identity.textIdentifier.flatMap(UUID.init(uuidString:)) else { return nil }
+        return positions[identifier]
+    }
+
     public func changedIdentifiers(from previous: Self) -> Set<UUID>? {
         switch (previous, self) {
         case (.unsupported, .unsupported): return []

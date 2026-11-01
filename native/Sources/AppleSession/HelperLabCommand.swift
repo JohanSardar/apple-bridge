@@ -15,6 +15,9 @@ enum HelperLabCommand {
     @MainActor
     static func run(_ arguments: [String]) throws -> Bool {
         switch arguments.first {
+        case "reminders-fixture-checks":
+            RemindersFixtureChecks.run()
+            return true
         case "reminders-sections-proof", "reminders-parity-proof":
             let reportURL = try report(arguments)
             var result: Result<JSON, any Error>?

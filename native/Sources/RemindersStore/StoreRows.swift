@@ -52,6 +52,7 @@ public struct StoreSectionRow: Equatable, Sendable {
     public let name: String?
     public let list: Int64?
     public let smartList: Int64?
+    public let created: Double?
 }
 
 public struct StoreObjectRow: Equatable, Sendable {
