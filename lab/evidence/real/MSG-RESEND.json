@@ -1,25 +1,58 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[7.12 11.25 11.88] cpu_idle=52% cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[11.83 11.23 10.83] cpu_idle=32% cpus=8 other_heavy=0"
   },
-  "status": "environment-limited",
-  "run_id": "run_01M6AEVJ63JPQ7MTE9PDSQCVQZ",
+  "run_id": "run_01M6BK1GEBW89045BM5TWXE4BK",
   "metrics": {
     "capture_observer_resets": 0,
-    "writes_submitted": 0
+    "cleanup": {
+      "all_dates": true,
+      "appletruth_active_remaining": 0,
+      "appletruth_verified": true,
+      "appletruth_visible_remaining": 0,
+      "approved_contacts_included": false,
+      "deleted": 0,
+      "drafts_cleared": 0,
+      "failure": "",
+      "initial_tagged_self_messages": 0,
+      "only_tagged_self_messages": true,
+      "passed": true,
+      "remaining_tagged_self_messages": 0,
+      "tag_filtered": true
+    },
+    "cleanup_counts": {
+      "after_count": 160356,
+      "before_count": 160356,
+      "created_count": 0,
+      "passed": true
+    }
   },
   "scenario": "MSG-RESEND",
   "level": "real",
   "passed": false,
-  "git_sha": "ced302551f4cb488b3534c217d16918131e97c1a",
-  "at": "2026-11-01T02:26:13.827135Z",
+  "git_sha": "9517281dad9faa07c576b342579b46ab687deda0",
+  "at": "2026-11-01T12:58:37.387911Z",
   "assertions": [
     {
-      "name": "safe_failed_self_fixture",
-      "passed": false,
-      "status": "unverified",
-      "detail": "This check needs a failed self-message created and registered by the current run. No native failure was induced; existing failed messages were left untouched."
+      "name": "self_chat_captured",
+      "passed": true
+    },
+    {
+      "name": "cleanup_registered_before_submit",
+      "passed": true
+    },
+    {
+      "name": "current_run_native_failed_self_fixture",
+      "passed": false
+    },
+    {
+      "name": "tagged_messages_cleanup",
+      "passed": true
+    },
+    {
+      "name": "cleanup_baseline_restored",
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",

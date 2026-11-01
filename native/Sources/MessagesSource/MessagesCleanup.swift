@@ -8,6 +8,9 @@ public enum MessagesCleanup {
     public static func canDeleteRetracted(rowID: Int64, baseline: Int64, guid: String, owned: Set<String>, parts: [JSON], text: String) -> Bool {
         rowID > baseline && !guid.isEmpty && owned.contains(guid) && !parts.isEmpty && text.isEmpty
     }
+    public static func canDeleteReaction(rowID: Int64, baseline: Int64, guid: String, parent: String, owned: Set<String>, tagged: Bool) -> Bool {
+        rowID > baseline && !guid.isEmpty && (owned.contains(guid) || (tagged && !parent.isEmpty && owned.contains(parent)))
+    }
     public static func removedOwnedIDs(before: Set<String>, after: Set<String>) -> Set<String> { before.subtracting(after) }
     public static func run(_ arguments: [String]) async throws -> Data {
         var tag = ""
@@ -58,7 +61,9 @@ public enum MessagesCleanup {
             let run = String(tag.dropFirst(9).dropLast())
             let ledger = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/AppleBridgeDev/messages-command-cleanup/" + run + ".json")
             if let bytes = try? Data(contentsOf: ledger), let registration = try? JSONDecoder().decode(JSON.self, from: bytes) {
-                mediaProof = try? MessagesMediaCleanupProof(registration: registration, tag: tag)
+                if !registration["media_attachment_names"].array.isEmpty {
+                    mediaProof = try MessagesMediaCleanupProof(registration: registration, tag: tag)
+                }
                 if registration["run_id"].string == run {
                     ownedBaseline = Int64(registration["baseline_max_row_id"].number)
                     ownedIDs = Set(registration["created_message_ids"].array.map { $0.string }.filter { !$0.isEmpty })
@@ -78,6 +83,16 @@ public enum MessagesCleanup {
             if try await MessagesAccessibility.clearTaggedDraft(tag, groupHandles: [remy, ben]) { draftsCleared += 1 }
         }
         var inaccessibleOwned: Set<String> = []
+        func removeNativeOwned(_ guid: String, chat: String) async throws {
+            guard inaccessibleOwned.insert(guid).inserted else { return }
+            try? await MessagesNativeSession.deleteOwnedItem(guid, chat: chat)
+            let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+            repeat {
+                let live = try reader.query("SELECT 1 FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE m.guid=? AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=j.chat_id)", [guid])
+                if live.isEmpty { inaccessibleOwned.remove(guid); break }
+                try await Task.sleep(for: .milliseconds(100))
+            } while ContinuousClock.now < deadline
+        }
         func candidates() async throws -> [(String, JSON)] {
             if ownedOnly {
                 let run = String(tag.dropFirst(9).dropLast())
@@ -92,6 +107,7 @@ public enum MessagesCleanup {
                 rows += try reader.query("SELECT DISTINCT m.guid FROM message m JOIN chat_message_join c ON c.message_id=m.ROWID WHERE m.ROWID>? AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=c.chat_id)", [String(baseline)]).filter { ownedIDs.contains($0["guid"]) && !known.contains($0["guid"]) }
             }
             var mediaByMessage: [String: [String]] = [:]
+            var mediaCopiesByMessage: [String: Int] = [:]
             if !interactiveText.isEmpty, interactiveBaseline > 0 {
                 rows += try reader.query("SELECT DISTINCT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE m.ROWID>? AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=j.chat_id) AND (m.text=? OR instr(m.attributedBody,CAST(? AS BLOB))>0)", [String(interactiveBaseline), interactiveText, interactiveText])
             }
@@ -112,6 +128,10 @@ public enum MessagesCleanup {
                     let peers = try reader.query("SELECT DISTINCT h.id FROM message m JOIN chat_message_join cm ON cm.message_id=m.ROWID JOIN chat c ON c.ROWID=cm.chat_id JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE m.guid=? AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=c.ROWID)", [guid]).map { $0["id"] }
                     if proof.authorizes(rowID: positions[guid] ?? 0, attachments: names, peers: peers, own: own) { mediaByMessage[guid] = proof.targetNames(names) }
                 }
+                for (guid, names) in mediaByMessage {
+                    let matching = attachmentNames.filter { $0.value.contains { names.contains(URL(fileURLWithPath: $0).lastPathComponent) } }
+                    if matching.keys.allSatisfy({ mediaByMessage[$0] != nil }) { mediaCopiesByMessage[guid] = matching.count }
+                }
                 rows += try reader.query("SELECT guid FROM message WHERE ROWID>?", [String(proof.baseline)]).filter { mediaByMessage[$0["guid"]] != nil && !rows.map({ $0["guid"] }).contains($0["guid"]) }
             }
             var result: [(String, JSON)] = []
@@ -123,17 +143,29 @@ public enum MessagesCleanup {
                 }
                 if let scopedGUID, key["guid"] != scopedGUID { continue }
                 if let scopedChat, try reader.query("SELECT 1 FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE m.guid=? AND j.chat_id=? AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=j.chat_id AND r.message_id=m.ROWID)", [key["guid"], String(scopedChat)]).isEmpty { continue }
-                guard let row = try reader.message(key["guid"]), let item = try reader.messageObservations(row).first, item.0 == "messages.message" else { continue }
+                guard let row = try reader.message(key["guid"]), let item = try reader.messageObservations(row).first else { continue }
                 let peers = try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [row["capture_chat_guid"]])
                 guard !peers.isEmpty, peers.allSatisfy({ (ownedOnly ? own : own.union(approved)).contains(MessagesProbes.normalize($0["id"])) }) else { continue }
+                if item.0 == "messages.reaction" {
+                    let parent = String(row["associated_message_guid"].split(separator: "/").last ?? "")
+                    let allPeers = try reader.query("SELECT DISTINCT h.id FROM message m JOIN chat_message_join cm ON cm.message_id=m.ROWID JOIN chat_handle_join j ON j.chat_id=cm.chat_id JOIN handle h ON h.ROWID=j.handle_id WHERE m.guid=?", [key["guid"]])
+                    if ownedOnly, Self.canDeleteReaction(rowID: row.integer("row_position"), baseline: ownedBaseline ?? Int64.max, guid: row["guid"], parent: parent, owned: ownedIDs, tagged: row["text"].contains(tag)), MessagesSelfTestIsolation.isSelfChat(peers.map { $0["id"] }, own: Array(own)), !allPeers.isEmpty, allPeers.allSatisfy({ own.contains(MessagesProbes.normalize($0["id"])) }) {
+                        ownedIDs.insert(row["guid"])
+                        try await removeNativeOwned(row["guid"], chat: row["capture_chat_guid"])
+                    }
+                    continue
+                }
+                guard item.0 == "messages.message" else { continue }
                 if ownedOnly {
                     let allPeers = try reader.query("SELECT DISTINCT h.id FROM message m JOIN chat_message_join cm ON cm.message_id=m.ROWID JOIN chat_handle_join j ON j.chat_id=cm.chat_id JOIN handle h ON h.ROWID=j.handle_id WHERE m.guid=?", [key["guid"]])
                     guard !allPeers.isEmpty, allPeers.allSatisfy({ own.contains(MessagesProbes.normalize($0["id"])) }) else { continue }
                     guard ownedIDs.contains(key["guid"]) || mediaByMessage[key["guid"]] != nil || Self.allowsLateEcho(rowID: row.integer("row_position"), baseline: ownedBaseline ?? Int64.max, text: item.2["text"] as? String ?? "", tag: tag) else { continue }
                 }
                 var fields = item.2
-                if let names = mediaByMessage[row["guid"]], peers.allSatisfy({ own.contains(MessagesProbes.normalize($0["id"])) }) {
+                if ownedOnly { ownedIDs.insert(row["guid"]) }
+                if let names = mediaByMessage[row["guid"]], let copies = mediaCopiesByMessage[row["guid"]], peers.allSatisfy({ own.contains(MessagesProbes.normalize($0["id"])) }) {
                     fields["cleanup_media_names"] = names
+                    fields["cleanup_media_owned_copies"] = copies
                     fields["cleanup_self_echo"] = ownedOnly
                     fields["cleanup_equivalent_owned_media"] = ownedOnly && equivalentOwnedMedia
                     let target = try JSONDecoder().decode(JSON.self, from: JSONSerialization.data(withJSONObject: fields))
@@ -148,16 +180,7 @@ public enum MessagesCleanup {
                 guard target["text"].string.range(of: #"\[ab-test [A-Za-z0-9_-]+\]"#, options: .regularExpression) != nil else {
                     if ownedOnly, row.integer("date_retracted") == 0 {
                         if Self.canDeleteRetracted(rowID: row.integer("row_position"), baseline: ownedBaseline ?? Int64.max, guid: row["guid"], owned: ownedIDs, parts: target["retracted_parts"].array, text: target["text"].string), MessagesSelfTestIsolation.isSelfChat(peers.map { $0["id"] }, own: Array(own)) {
-                            if inaccessibleOwned.insert(row["guid"]).inserted {
-                                try await MessagesAccessibility.inspectRetractedTarget(row["guid"])
-                                try? await MessagesNativeSession.deletePlaceholder(row["guid"], chat: row["capture_chat_guid"])
-                                let deadline = ContinuousClock.now.advanced(by: .seconds(5))
-                                repeat {
-                                    let live = try reader.query("SELECT 1 FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE m.guid=? AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=j.chat_id)", [row["guid"]])
-                                    if live.isEmpty { inaccessibleOwned.remove(row["guid"]); break }
-                                    try await Task.sleep(for: .milliseconds(100))
-                                } while ContinuousClock.now < deadline
-                            }
+                            try await removeNativeOwned(row["guid"], chat: row["capture_chat_guid"])
                             continue
                         }
                         throw SourceFailure.conflict
@@ -175,13 +198,14 @@ public enum MessagesCleanup {
         let initial = try await candidates().count
         var deleted = 0
         var failure = ""
+        var unavailable: Set<String> = []
         func progress(_ remaining: Int, _ phase: String) {
             try? PrivateReport.write(["initial_tagged_self_messages": initial, "deleted": deleted, "remaining_tagged_self_messages": remaining, "phase": phase], to: PrivateReport.validate(PrivateReport.directory.appendingPathComponent("messages-cleanup-progress.json").path))
         }
         progress(initial,"starting")
         for _ in 0..<200 {
             let remaining = try await candidates()
-            guard let (guid, target) = remaining.first else { break }
+            guard let (guid, target) = remaining.first(where: { !unavailable.contains($0.0) }) else { break }
             let prepared = Prepared(nativeState: .object(["target": target, "cleanup_authorized": .bool(true)]), fingerprint: "authorized-tagged-self-cleanup", action: .object(["op": .string("messages.delete_message"), "native_key": .string(guid)]))
             var phase = "open"
             do {
@@ -191,7 +215,23 @@ public enum MessagesCleanup {
                 try await MessagesAccessibility.validate(prepared)
                 phase = "delete"
                 _ = try await MessagesAccessibility.perform(prepared)
-            } catch { failure = phase + ":" + String(describing: error); break }
+            } catch {
+                let live = try reader.query("SELECT 1 FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE m.guid=? AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=j.chat_id)", [guid])
+                if !live.isEmpty {
+                    if ownedOnly, mediaProof != nil, phase == "validate", error as? MessagesUIFailure == .targetUnavailable,
+                       let row = try reader.message(guid) {
+                        try await removeNativeOwned(guid, chat: row["capture_chat_guid"])
+                        if inaccessibleOwned.contains(guid) {
+                            failure = "owned_media_native_item_not_removed"
+                            unavailable.insert(guid)
+                            continue
+                        }
+                    } else {
+                        failure = phase + ":" + String(describing: error)
+                        break
+                    }
+                }
+            }
             let deadline = ContinuousClock.now.advanced(by: .seconds(ownedOnly ? 10 : 2))
             let beforeIDs = Set(remaining.map { $0.0 })
             var after = remaining
@@ -206,8 +246,15 @@ public enum MessagesCleanup {
             deleted += removed.count
             progress(after.count,"deleting")
         }
-        let remaining = try await candidates().count + inaccessibleOwned.count
-        if !inaccessibleOwned.isEmpty, failure.isEmpty { failure = "owned_unsent_placeholder_not_removed" }
+        let remainingCandidates = try await candidates().count + inaccessibleOwned.count
+        var remainingOwned = 0
+        if ownedOnly {
+            for guid in ownedIDs {
+                remainingOwned += try reader.query("SELECT 1 FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE m.guid=? AND m.ROWID>? AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=j.chat_id) LIMIT 1", [guid, String(ownedBaseline ?? 0)]).count
+            }
+        }
+        let remaining = max(remainingCandidates, remainingOwned)
+        if !inaccessibleOwned.isEmpty, failure.isEmpty { failure = "owned_native_item_not_removed" }
         progress(remaining,failure.isEmpty ? "finished" : failure)
         return try JSONSerialization.data(withJSONObject: ["initial_tagged_self_messages": initial, "deleted": deleted, "remaining_tagged_self_messages": remaining, "all_dates": true, "drafts_cleared": draftsCleared, "only_tagged_self_messages": approved.isEmpty, "approved_contacts_included": !approved.isEmpty, "tag_filtered": !tag.isEmpty, "failure": failure, "passed": remaining == 0])
     }

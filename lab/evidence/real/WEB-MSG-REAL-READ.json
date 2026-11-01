@@ -1,9 +1,9 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[17.31 16.58 19.79] cpu_idle=21% cpus=8 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[14.06 11.6 10.95] cpu_idle=56% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M6AKV57R27CHQWQHFRST7Y6X",
+  "run_id": "run_01M6BK106T9HFSMP509SF1XYVE",
   "metrics": {
     "capture_observer_resets": 0,
     "web_chats_count": 1,
@@ -12,8 +12,8 @@
   "scenario": "WEB-MSG-REAL-READ",
   "level": "real",
   "passed": true,
-  "git_sha": "d14c5dac5d97a5ed2264772c5d69a2b4423a0b98",
-  "at": "2026-11-01T03:53:23.448994Z",
+  "git_sha": "9517281dad9faa07c576b342579b46ab687deda0",
+  "at": "2026-11-01T12:58:20.762197Z",
   "assertions": [
     {
       "name": "self_chat_captured",

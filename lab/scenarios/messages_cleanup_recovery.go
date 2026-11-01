@@ -20,6 +20,29 @@ func nativeMessagesRecoveryOwnedRows(ctx context.Context, db *sql.DB, baseline i
 	return db.QueryContext(ctx, `SELECT DISTINCT m.guid FROM message m WHERE m.ROWID>? AND (instr(m.text,?)>0 OR instr(m.attributedBody,CAST(? AS BLOB))>0 OR EXISTS(SELECT 1 FROM message_attachment_join j JOIN attachment a ON a.ROWID=j.attachment_id WHERE j.message_id=m.ROWID AND (instr(a.filename,?)>0 OR instr(a.transfer_name,?)>0)))`, baseline, tag, tag, "ab-"+run+".", "ab-"+run+".")
 }
 
+func nativeMessagesRecoveryUnreadRows(ctx context.Context, db *sql.DB, baseline int64, tag string) (*sql.Rows, error) {
+	return db.QueryContext(ctx, "SELECT DISTINCT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE m.is_from_me=0 AND m.is_read=0 AND COALESCE(m.associated_message_type,0)=0 AND j.chat_id IN (SELECT cm.chat_id FROM message parent JOIN chat_message_join cm ON cm.message_id=parent.ROWID WHERE parent.ROWID>? AND (instr(parent.text,?)>0 OR instr(parent.attributedBody,CAST(? AS BLOB))>0)) AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=j.chat_id AND r.message_id=m.ROWID)", baseline, tag, tag)
+}
+
+func messagesRecoveryScenario(id string) bool {
+	switch id {
+	case "MSG-SELFTEST", "MSG-READSTATE-REAL", "MSG-DELETE-REAL", "MSG-RESEND", "MSG-SEND-LATER", "MSG-MENTION-SEND", "MSG-AUDIO-MESSAGE", "WEB-MEDIA-VARIANTS", "WEB-UPLOAD-NATIVE-STAGING":
+		return true
+	default:
+		return false
+	}
+}
+
+func finishMessagesRecovery(result *Evidence, cleaned bool) {
+	result.Passed = cleaned && len(result.Assertions) > 0
+	for _, assertion := range result.Assertions {
+		result.Passed = result.Passed && assertion.Passed
+	}
+	if result.Passed {
+		result.Status = ""
+	}
+}
+
 func runMessagesCleanupRecovery(ctx context.Context, e Evidence) (result Evidence) {
 	result = e
 	result.Status = "limited"
@@ -29,7 +52,7 @@ func runMessagesCleanupRecovery(ctx context.Context, e Evidence) (result Evidenc
 	}
 	run := os.Getenv("APPLE_BRIDGE_MESSAGE_CLEANUP_RUN")
 	key := os.Getenv("APPLE_BRIDGE_MESSAGE_CLEANUP_CACHE")
-	if !regexp.MustCompile(`^(variant|selftest)_[A-F0-9]{32}$`).MatchString(run) || !regexp.MustCompile(`^[a-f0-9]{64}$`).MatchString(key) {
+	if !regexp.MustCompile(`^((variant|variants|selftest)_[A-F0-9]{32}|run_[A-Z0-9]{26})$`).MatchString(run) || !regexp.MustCompile(`^[a-f0-9]{64}$`).MatchString(key) {
 		add("explicit_current_run_recovery", false)
 		return
 	}
@@ -42,7 +65,7 @@ func runMessagesCleanupRecovery(ctx context.Context, e Evidence) (result Evidenc
 		Baseline int64    `json:"baseline_max_row_id"`
 		Created  []string `json:"created_message_ids"`
 	}
-	if err != nil || hex.EncodeToString(digest[:]) != os.Getenv("APPLE_BRIDGE_MESSAGE_CLEANUP_LEDGER_SHA256") || json.Unmarshal(data, &manifest) != nil || manifest.RunID != run || manifest.Scenario != e.Scenario || (manifest.Scenario != "MSG-AUDIO-MESSAGE" && manifest.Scenario != "MSG-SELFTEST") || manifest.Baseline <= 0 {
+	if err != nil || hex.EncodeToString(digest[:]) != os.Getenv("APPLE_BRIDGE_MESSAGE_CLEANUP_LEDGER_SHA256") || json.Unmarshal(data, &manifest) != nil || manifest.RunID != run || manifest.Scenario != e.Scenario || !messagesRecoveryScenario(manifest.Scenario) || manifest.Baseline <= 0 {
 		add("unchanged_current_run_ledger", false)
 		return
 	}
@@ -82,7 +105,7 @@ func runMessagesCleanupRecovery(ctx context.Context, e Evidence) (result Evidenc
 		add("recovery_owned_identity_truth", false)
 		return
 	}
-	unread, err := db.QueryContext(ctx, "SELECT DISTINCT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE m.is_from_me=0 AND m.is_read=0 AND j.chat_id IN (SELECT cm.chat_id FROM message parent JOIN chat_message_join cm ON cm.message_id=parent.ROWID WHERE parent.ROWID>? AND (instr(parent.text,?)>0 OR instr(parent.attributedBody,CAST(? AS BLOB))>0)) AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=j.chat_id AND r.message_id=m.ROWID)", manifest.Baseline, tag, tag)
+	unread, err := nativeMessagesRecoveryUnreadRows(ctx, db, manifest.Baseline, tag)
 	if err != nil {
 		add("recovery_unread_ownership", false)
 		return
@@ -127,6 +150,7 @@ func runMessagesCleanupRecovery(ctx context.Context, e Evidence) (result Evidenc
 			}
 			add("recovery_ledger_saved", saved)
 		}
+		finishMessagesRecovery(&result, cleaned)
 	}()
 	dir, err := os.MkdirTemp("", "ab-message-recovery-")
 	if err != nil {

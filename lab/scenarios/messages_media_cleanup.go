@@ -22,20 +22,24 @@ func runMediaCleanupProof(ctx context.Context, s Scenario, level string) Evidenc
 		return e
 	}
 	defer os.RemoveAll(directory)
-	build := exec.CommandContext(ctx, "packaging/dev/build-native.sh")
-	build.WaitDelay = 2 * time.Second
-	build.Env = append(os.Environ(), "APPLE_BRIDGE_NATIVE_TARGET=MessagesVariantChecks")
-	if output, err := build.CombinedOutput(); err != nil {
-		os.Stderr.Write(output)
-		add("native_cleanup_checks_build", false)
-		return e
-	}
-	nativeOutput, err := os.ReadFile("native/.build/native-output-1")
-	if err != nil {
-		add("native_cleanup_checks_binary", false)
-		return e
-	}
+	nativeOutput, _ := os.ReadFile("native/.build/native-output-1")
 	binary := filepath.Join(strings.TrimSpace(string(nativeOutput)), "MessagesVariantChecks")
+	if !messagesVariantChecksFresh(binary) {
+		build := exec.CommandContext(ctx, "packaging/dev/build-native.sh")
+		build.WaitDelay = 2 * time.Second
+		build.Env = append(os.Environ(), "APPLE_BRIDGE_NATIVE_TARGET=MessagesVariantChecks")
+		if output, err := build.CombinedOutput(); err != nil {
+			os.Stderr.Write(output)
+			add("native_cleanup_checks_build", false)
+			return e
+		}
+		nativeOutput, err = os.ReadFile("native/.build/native-output-1")
+		if err != nil {
+			add("native_cleanup_checks_binary", false)
+			return e
+		}
+		binary = filepath.Join(strings.TrimSpace(string(nativeOutput)), "MessagesVariantChecks")
+	}
 	filename := "ab-run_media.heic"
 	fixture := map[string]any{"tag": "[ab-test run_media]", "registration": map[string]any{"scenario": "WEB-MEDIA-VARIANTS", "run_id": "run_media", "baseline_max_row_id": 30, "media_attachment_names": []string{filename}}, "own": []string{"self@example.com"}, "row": map[string]any{"row_id": 31, "attachments": []string{filename}, "peers": []string{"self@example.com"}, "is_from_me": true}, "candidates": []any{map[string]any{"outgoing": true, "values": []string{"file:///private/test/" + filename}}, map[string]any{"outgoing": false, "values": []string{filename}}}}
 	run := func(name string, patch func(map[string]any), authorized, target bool) {
@@ -83,6 +87,19 @@ func runMediaCleanupProof(ctx context.Context, s Scenario, level string) Evidenc
 	run("native_file_description_ambiguous_denied", func(input map[string]any) {
 		candidate := map[string]any{"description": "Your iMessage, 0-" + filename + ", Text Document · 66 bytes, 3:45 PM"}
 		input["candidates"] = []any{candidate, candidate}
+	}, true, false)
+	run("photo_preview_filename_with_generic_description", func(input map[string]any) {
+		input["candidates"] = []any{map[string]any{"description": "Your iMessage, Photo, 3:45 PM", "values": []string{filename}}}
+	}, true, true)
+	run("duplicate_copies_require_complete_ownership", func(input map[string]any) {
+		candidate := map[string]any{"outgoing": true, "values": []string{filename}}
+		input["candidates"] = []any{candidate, candidate}
+		input["owned_copies"] = 2
+	}, true, true)
+	run("unaccounted_duplicate_is_denied", func(input map[string]any) {
+		candidate := map[string]any{"outgoing": true, "values": []string{filename}}
+		input["candidates"] = []any{candidate, candidate, candidate}
+		input["owned_copies"] = 2
 	}, true, false)
 	run("baseline_data_denied", func(input map[string]any) { input["row"].(map[string]any)["row_id"] = 30 }, false, false)
 	run("other_chat_denied", func(input map[string]any) { input["row"].(map[string]any)["peers"] = []string{"other@example.com"} }, false, false)

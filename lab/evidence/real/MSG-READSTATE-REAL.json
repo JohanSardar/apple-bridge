@@ -1,30 +1,126 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[17.3 41.47 32.84] cpu_idle=37% cpus=8 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[4.75 5.75 8.48] cpu_idle=80% cpus=8 other_heavy=0"
   },
   "status": "environment-limited",
-  "run_id": "run_01M6AG817SHBY16XG9JTPH2PTA",
+  "run_id": "run_01M6BMAKQKFN1FKKHW4QZ6W7AQ",
   "metrics": {
     "capture_observer_resets": 0,
-    "writes_submitted": 0
+    "cleanup": {
+      "all_dates": true,
+      "appletruth_active_remaining": 2,
+      "appletruth_verified": true,
+      "appletruth_visible_remaining": 2,
+      "approved_contacts_included": false,
+      "deleted": 0,
+      "drafts_cleared": 0,
+      "failure": "validate:targetUnavailable",
+      "initial_tagged_self_messages": 2,
+      "only_tagged_self_messages": true,
+      "passed": false,
+      "remaining_tagged_self_messages": 2,
+      "tag_filtered": true
+    },
+    "cleanup_counts": {
+      "after_count": 160363,
+      "before_count": 160361,
+      "created_count": 0,
+      "passed": false
+    },
+    "command_state": "observed",
+    "disposition": "locally_observed",
+    "existing_read_state_changed_columns": {},
+    "initial_command_state": "observed",
+    "messages.mark_read": {
+      "context_live": true,
+      "disposition": "indeterminate",
+      "native_reason": "dispatch_evidence_unavailable",
+      "request_completed": true,
+      "state": "indeterminate"
+    },
+    "messages.mark_unread": {
+      "context_live": true,
+      "disposition": "indeterminate",
+      "native_reason": "dispatch_evidence_unavailable",
+      "request_completed": true,
+      "state": "indeterminate"
+    },
+    "parts_requested": 1,
+    "send_commands": 1
   },
   "scenario": "MSG-READSTATE-REAL",
   "level": "real",
   "passed": false,
-  "git_sha": "b980e2216463fa6d89d076e5d5a283d3ff0e3362",
-  "at": "2026-11-01T02:50:31.033252Z",
+  "git_sha": "b7a719be31ac7403430862399e617e53ab0a1e31",
+  "at": "2026-11-01T13:21:04.243741Z",
   "assertions": [
+    {
+      "name": "self_chat_captured",
+      "passed": true
+    },
+    {
+      "name": "cleanup_registered_before_submit",
+      "passed": true
+    },
+    {
+      "name": "native_send_observed_with_fingerprint_checkpoint",
+      "passed": true
+    },
+    {
+      "name": "message_captured",
+      "passed": true
+    },
+    {
+      "name": "messages.mark_unread_observed",
+      "passed": false
+    },
+    {
+      "name": "messages.mark_unread_independent_native_truth",
+      "passed": true
+    },
+    {
+      "name": "messages.mark_read_observed",
+      "passed": false
+    },
+    {
+      "name": "messages.mark_read_independent_native_truth",
+      "passed": false
+    },
+    {
+      "name": "tagged_messages_cleanup",
+      "passed": false
+    },
+    {
+      "name": "existing_read_state_preserved",
+      "passed": true
+    },
+    {
+      "name": "cleanup_baseline_restored",
+      "passed": false
+    },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
   ],
-  "latency": {},
+  "latency": {
+    "messages.mark_read": {
+      "samples": 1,
+      "p50_ms": 4989.457,
+      "p95_ms": 4989.457,
+      "max_ms": 4989.457,
+      "timeouts": 0
+    },
+    "messages.mark_unread": {
+      "samples": 1,
+      "p50_ms": 7234.399417,
+      "p95_ms": 7234.399417,
+      "max_ms": 7234.399417,
+      "timeouts": 0
+    }
+  },
   "hosts": [
     "air"
-  ],
-  "conditions": {
-    "reason": "The self-chat contains unread existing messages. Cleanup cannot open it without changing their read state. Read those messages in Messages before rerunning this check; no send was attempted."
-  }
+  ]
 }

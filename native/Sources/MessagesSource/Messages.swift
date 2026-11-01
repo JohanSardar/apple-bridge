@@ -6,6 +6,9 @@ import SourceSupport
 
 public actor Messages: Source {
     public nonisolated let name = "messages"
+    public static func shouldPreemptMedia(activeDigest: String, incomingDigest: String, activeLive: Bool, incomingImage: Bool) -> Bool {
+        activeDigest != incomingDigest && (!activeLive || incomingImage)
+    }
     private let path: String
     private let pinsURL: URL?
     private let diagnostics: URL?
@@ -144,12 +147,12 @@ public actor Messages: Source {
         let value = try JSONDecoder().decode(JSON.self, from: raw)
         return .object(["kind": .string(kind), "collection": .string(collection), "native_key": .string(key), "data": value, "observed_at": .string(at), "revalidated": .bool(true), "scoped_alias": .string(collection + "/" + key)])
     }
-    private func emit(_ items: [(String, String, [String: Any])], sink: any ObservationSink, live: Bool, scanID: String = "", started: String = "", completion: String = "", observedAt: String? = nil) async throws {
+    private func emit(_ items: [(String, String, [String: Any])], sink: any ObservationSink, live: Bool, scanID: String = "", started: String = "", completion: String = "", observedAt: String? = nil, force: Bool = false) async throws {
         try Task.checkCancellation()
         if items.count > 64 {
             for offset in stride(from: 0, to: items.count, by: 64) {
                 let end = min(offset + 64, items.count)
-                try await emit(Array(items[offset..<end]), sink: sink, live: live, scanID: scanID, started: started, completion: end == items.count ? completion : "", observedAt: observedAt)
+                try await emit(Array(items[offset..<end]), sink: sink, live: live, scanID: scanID, started: started, completion: end == items.count ? completion : "", observedAt: observedAt, force: force)
             }
             return
         }
@@ -186,7 +189,7 @@ public actor Messages: Source {
                                     pendingMedia[key] = job
                                     workTrace.record("media_queued", fields: ["pending_media": .number(Double(pendingMedia.count))])
                                 }
-                                if live, let activeMedia, !activeMedia.0.live || (UTType(filenameExtension: url.pathExtension) ?? UTType(row["uti"]))?.conforms(to: .image) == true {
+                                if live, let activeMedia, Self.shouldPreemptMedia(activeDigest: activeMedia.0.digest, incomingDigest: job.digest, activeLive: activeMedia.0.live, incomingImage: (UTType(filenameExtension: url.pathExtension) ?? UTType(row["uti"]))?.conforms(to: .image) == true) {
                                     workTrace.record("media_preempted_by_live")
                                     activeMedia.1.cancel()
                                 }
@@ -215,7 +218,7 @@ public actor Messages: Source {
             let identity = collection + "/" + key
             if let newer = hashTimes[identity], newer > at { continue }
             let conflicting = pendingHashes[identity]?.values.contains(where: { $0 != digest }) == true
-            if hashes[identity] == digest && !conflicting {
+            if !force && hashes[identity] == digest && !conflicting {
                 hashTimes[identity] = at
                 continue
             }
@@ -458,7 +461,7 @@ public actor Messages: Source {
             }
         }
     }
-    private func emitMessages(_ rows: [SQLiteRow], sink: any ObservationSink, live: Bool, scanID: String = "", started: String = "", observedAt: String? = nil) async throws {
+    private func emitMessages(_ rows: [SQLiteRow], sink: any ObservationSink, live: Bool, scanID: String = "", started: String = "", observedAt: String? = nil, force: Bool = false) async throws {
         guard let reader else { throw SourceFailure.unavailable }
         let at = observedAt ?? observationTime()
         let outputGeneration = generation
@@ -479,7 +482,7 @@ public actor Messages: Source {
             let key = row["guid"]
             if let newer = nativeHashTimes[key], newer > at { continue }
             let conflicting = pendingNativeHashes[key]?.values.contains(where: { $0 != hash }) == true
-            if nativeHashes[key] == hash && !conflicting { nativeHashTimes[key] = at; continue }
+            if !force && nativeHashes[key] == hash && !conflicting { nativeHashTimes[key] = at; continue }
             items += try reader.messageObservations(row)
             updates[row["guid"]] = hash
         }
@@ -490,7 +493,7 @@ public actor Messages: Source {
                 if pendingNativeHashes[key]?.isEmpty == true { pendingNativeHashes.removeValue(forKey: key) }
             }
         }
-        try await emit(items, sink: sink, live: live, scanID: scanID, started: started, observedAt: at)
+        try await emit(items, sink: sink, live: live, scanID: scanID, started: started, observedAt: at, force: force)
         guard outputGeneration == generation else { throw SourceFailure.corrupt }
         for (key, hash) in updates where (nativeHashTimes[key] ?? "") <= at { nativeHashes[key] = hash; nativeHashTimes[key] = at }
     }
@@ -762,7 +765,7 @@ public actor Messages: Source {
         if evidence["collection"].string == "messages.chat" {
             let key = evidence["native_key"].string
             let rows = try reader.smallObservations().filter { $0.0 == "messages.chat" && $0.1 == key }
-            if !rows.isEmpty { try await emit(rows, sink: sink, live: true) }
+            if !rows.isEmpty { try await emit(rows, sink: sink, live: true, force: true) }
             else {
                 guard evidence["absent"].bool, try reader.query("SELECT guid FROM chat WHERE guid=?", [key]).isEmpty else { throw SourceFailure.conflict }
                 let at = observationTime()
@@ -771,11 +774,11 @@ public actor Messages: Source {
             }
             return
         }
-        for part in evidence["parts"].array {
-            if let row=try reader.message(part["native_key"].string) {try await emitMessages([row],sink:sink,live:true)}
-        }
-        if let row=try reader.message(evidence["native_key"].string) {try await emitMessages([row],sink:sink,live:true)}
-        else if evidence["absent"].bool {
+        var keys = Set(evidence["parts"].array.map { $0["native_key"].string }.filter { !$0.isEmpty })
+        if !evidence["native_key"].string.isEmpty { keys.insert(evidence["native_key"].string) }
+        let rows = try keys.sorted().compactMap { try reader.message($0) }
+        if !rows.isEmpty { try await emitMessages(rows, sink: sink, live: true, force: true) }
+        if try reader.message(evidence["native_key"].string) == nil, evidence["absent"].bool {
             let at=observationTime()
             let absent=try observation("messages.message",evidence["native_key"].string,[:],at,kind:"absent")
             try await sink.emit(source:name,generation:generation,observations:[absent],scanID:UUID().uuidString,scanStartedAt:at,scope:["messages.message"],completionEvidence:"complete",blobHandles:[:],live:true)

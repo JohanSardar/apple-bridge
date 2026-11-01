@@ -57,7 +57,17 @@ func nativeMessagesExistingChatGate(ctx context.Context, db *sql.DB, id, chat st
 }
 
 func runNativeMessagesCommands(ctx context.Context, s Scenario, level string, e Evidence) Evidence {
+	if os.Getenv("APPLE_BRIDGE_MESSAGE_CLEANUP_RUN") != "" {
+		return runMessagesCleanupRecovery(ctx, e)
+	}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
+	if s.ID == "WEB-MEDIA-VARIANTS" {
+		proof := runMediaCleanupProof(ctx, s, level)
+		e.Assertions = append(e.Assertions, proof.Assertions...)
+		if !proof.Passed {
+			return e
+		}
+	}
 	replicas := 0
 	if level == "replica" || s.ID == "WEB-MEDIA-VARIANTS" {
 		replicas = 1
@@ -251,14 +261,24 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 		return e
 	}
 	if s.ID == "MSG-READSTATE-REAL" && !readStateFresh {
-		baselineDigest, problem := nativeMessagesChatDigest(ctx, native, rawChat, maximum)
+		baselineDigest, baselineColumns, problem := nativeMessagesChatDigests(ctx, native, rawChat, maximum)
 		if problem != nil {
 			add("existing_read_state_baseline", false)
 			return e
 		}
 		defer func() {
-			digest, problem := nativeMessagesChatDigest(context.Background(), native, rawChat, maximum)
+			digest, columns, problem := nativeMessagesChatDigests(context.Background(), native, rawChat, maximum)
 			preserved := problem == nil && digest == baselineDigest
+			changed := map[string]int{}
+			for column, before := range baselineColumns {
+				if columns[column] != before {
+					changed[column] = 1
+				}
+			}
+			if result.Metrics == nil {
+				result.Metrics = map[string]any{}
+			}
+			result.Metrics["existing_read_state_changed_columns"] = changed
 			result.Assertions = append(result.Assertions, Assertion{Name: "existing_read_state_preserved", Passed: preserved})
 			result.Passed = result.Passed && preserved
 		}()

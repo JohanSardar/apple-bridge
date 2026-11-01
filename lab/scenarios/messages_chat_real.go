@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
+	"hash"
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
@@ -14,17 +15,26 @@ import (
 )
 
 func nativeMessagesChatDigest(ctx context.Context, native *sql.DB, chat string, maximum int64) (string, error) {
+	digest, _, err := nativeMessagesChatDigests(ctx, native, chat, maximum)
+	return digest, err
+}
+
+func nativeMessagesChatDigests(ctx context.Context, native *sql.DB, chat string, maximum int64) (string, map[string]string, error) {
 	rows, err := native.QueryContext(ctx, `SELECT m.*,j.chat_id,r.delete_date FROM message m JOIN (SELECT chat_id,message_id FROM chat_message_join UNION SELECT chat_id,message_id FROM chat_recoverable_message_join) j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id LEFT JOIN chat_recoverable_message_join r ON r.chat_id=j.chat_id AND r.message_id=m.ROWID WHERE c.guid=? AND m.ROWID<=? ORDER BY m.ROWID,j.chat_id`, chat, maximum)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	defer rows.Close()
 	columns, err := rows.Columns()
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
-	hash := sha256.New()
-	encoder := json.NewEncoder(hash)
+	columnHashes := map[string]hash.Hash{}
+	for _, column := range columns {
+		columnHashes[column] = sha256.New()
+	}
+	digest := sha256.New()
+	encoder := json.NewEncoder(digest)
 	for rows.Next() {
 		values := make([]any, len(columns))
 		targets := make([]any, len(columns))
@@ -32,13 +42,37 @@ func nativeMessagesChatDigest(ctx context.Context, native *sql.DB, chat string, 
 			targets[i] = &values[i]
 		}
 		if err := rows.Scan(targets...); err != nil {
-			return "", err
+			return "", nil, err
+		}
+		reaction := false
+		for i, column := range columns {
+			if column == "associated_message_type" {
+				if kind, ok := values[i].(int64); ok {
+					reaction = kind != 0
+				}
+			}
+		}
+		if reaction {
+			for i, column := range columns {
+				if column == "is_read" || column == "date_read" {
+					values[i] = nil
+				}
+			}
+		}
+		for i, column := range columns {
+			if err := json.NewEncoder(columnHashes[column]).Encode(values[i]); err != nil {
+				return "", nil, err
+			}
 		}
 		if err := encoder.Encode(values); err != nil {
-			return "", err
+			return "", nil, err
 		}
 	}
-	return hex.EncodeToString(hash.Sum(nil)), rows.Err()
+	columnDigests := map[string]string{}
+	for column, digest := range columnHashes {
+		columnDigests[column] = hex.EncodeToString(digest.Sum(nil))
+	}
+	return hex.EncodeToString(digest.Sum(nil)), columnDigests, rows.Err()
 }
 
 func isolatedReadStateFixture(ctx context.Context, native *sql.DB, guid, text string, baselineChat int64) bool {
@@ -109,7 +143,11 @@ func runNativeChatProof(ctx context.Context, s Scenario, e Evidence, w *world.Wo
 			return e
 		}
 		var created contracts.CommandRecord
-		problem := client.Call(ctx, remainder.Op, remainder, &created)
+		_ = client.Call(ctx, remainder.Op, remainder, &created)
+		problem := w.Await(30*time.Second, func() bool {
+			_, err := world.Request(ctx, w.Gateway, "/v1/op/commands.status", contracts.CommandQuery{ID: remainder.ID}, &created)
+			return err == nil && (created.State == contracts.CommandObserved || created.State == contracts.CommandDelivered)
+		})
 		add("second_owned_message_retains_test_chat", problem == nil && (created.State == contracts.CommandObserved || created.State == contracts.CommandDelivered))
 		if problem != nil || created.State != contracts.CommandObserved && created.State != contracts.CommandDelivered {
 			e.Metrics["command_state"] = created.State

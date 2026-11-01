@@ -38,7 +38,61 @@ enum MessagesAccessibility {
             throw error
         }
     }
+    static func mediaPreviewNames(_ bubble: AXUIElement, names: Set<String>) throws -> [JSON] {
+        var actions: CFArray?
+        guard AXUIElementCopyActionNames(bubble, &actions) == .success else { return [] }
+        let preview = (actions as? [String] ?? []).filter { $0.hasPrefix("Name:Quick Look\n") }
+        guard preview.count == 1 else { return [] }
+        let session = try uiSession()
+        func previewWindows() -> [AXUIElement] {
+            let services = NSWorkspace.shared.runningApplications.filter { $0.bundleIdentifier == "com.apple.quicklook.QuickLookUIService" }.map { AXUIElementCreateApplication($0.processIdentifier) }
+            return ([session.root] + services).flatMap { root in
+                var windows: CFTypeRef?
+                AXUIElementCopyAttributeValue(root, kAXWindowsAttribute as CFString, &windows)
+                return windows as? [AXUIElement] ?? children(root).filter { value($0, kAXRoleAttribute) == kAXWindowRole }
+            }
+        }
+        let previous = previewWindows()
+        try session.fence()
+        guard AXUIElementPerformAction(bubble, preview[0] as CFString) == .success else { return [] }
+        defer {
+            try? session.press(MessagesUISession.escape)
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+        let deadline = Date().addingTimeInterval(1)
+        var found: Set<String> = []
+        var windowCount = 0
+        var stemMatches = 0
+        let stems = Set(names.map { URL(fileURLWithPath: $0).deletingPathExtension().lastPathComponent })
+        repeat {
+            let windows = previewWindows().filter { window in !previous.contains(where: { CFEqual($0, window) }) }
+            windowCount = max(windowCount, windows.count)
+            var budget = 1000
+            for window in windows {
+                _ = matching(window, budget: &budget) { node in
+                    var attributes: CFArray?
+                    AXUIElementCopyAttributeNames(node, &attributes)
+                    for attribute in attributes as? [String] ?? [] {
+                        let text = value(node, attribute)
+                        if stems.contains(text) { stemMatches += 1 }
+                        if MessagesMediaCleanupProof.matches(text, names: names) { found.insert(text) }
+                    }
+                    return false
+                }
+            }
+            if !found.isEmpty { break }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+        } while Date() < deadline
+        let digest = BodyDigest.hash(Data(value(bubble, kAXDescriptionAttribute).utf8))
+        try? PrivateReport.write(["new_window_count": windowCount, "filename_matches": found.count, "stem_matches": stemMatches, "messages_frontmost": NSWorkspace.shared.frontmostApplication?.bundleIdentifier == "com.apple.MobileSMS"], to: PrivateReport.validate(PrivateReport.directory.appendingPathComponent("messages-media-preview-" + digest + ".json").path))
+        return found.map(JSON.string)
+    }
     static func target(_ root: AXUIElement, prepared: Prepared) throws -> AXUIElement {
+        try MessagesUIActions.resolve(until: Date().addingTimeInterval(3), wait: {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }, attempt: { try targetNow(root, prepared: prepared) })
+    }
+    private static func targetNow(_ root: AXUIElement, prepared: Prepared) throws -> AXUIElement {
         let guid = prepared.action["native_key"].string
         guard !guid.isEmpty else { throw SourceFailure.capabilityUnproven }
         var budget = 4000
@@ -85,7 +139,44 @@ enum MessagesAccessibility {
                 let direction = MessagesMediaCleanupProof.direction(description, names: Set(mediaNames)).map(JSON.bool) ?? .null
                 candidates.append(.object(["outgoing": direction, "values": nested > 0 ? .array(values) : .array([])]))
             }
-            guard budget > 0, let index = MessagesMediaCleanupProof.targetIndex(candidates, names: Set(mediaNames), outgoing: outgoing, allowSelfEcho: prepared.nativeState["target"]["cleanup_self_echo"].bool, equivalentOwned: prepared.nativeState["target"]["cleanup_equivalent_owned_media"].bool) else { throw MessagesUIFailure.targetUnavailable }
+            let ownedCopies = max(1, Int(prepared.nativeState["target"]["cleanup_media_owned_copies"].number))
+            let selfEcho = prepared.nativeState["target"]["cleanup_self_echo"].bool
+            var selected = MessagesMediaCleanupProof.targetIndex(candidates, names: Set(mediaNames), outgoing: outgoing, allowSelfEcho: selfEcho, equivalentOwned: prepared.nativeState["target"]["cleanup_equivalent_owned_media"].bool, ownedCopies: ownedCopies)
+            if selected == nil, budget > 0 {
+                let deadline = Date().addingTimeInterval(6)
+                for (index, bubble) in bubbles.enumerated() {
+                    guard Date() < deadline else { throw MessagesUIFailure.targetUnavailable }
+                    let names = try mediaPreviewNames(bubble, names: Set(mediaNames))
+                    if !names.isEmpty {
+                        var candidate = candidates[index].object
+                        candidate["values"] = .array(candidates[index]["values"].array + names)
+                        candidates[index] = .object(candidate)
+                        selected = MessagesMediaCleanupProof.targetIndex(candidates, names: Set(mediaNames), outgoing: outgoing, allowSelfEcho: selfEcho, ownedCopies: ownedCopies)
+                        if selected != nil { break }
+                    }
+                }
+                selected = MessagesMediaCleanupProof.targetIndex(candidates, names: Set(mediaNames), outgoing: outgoing, allowSelfEcho: selfEcho, equivalentOwned: prepared.nativeState["target"]["cleanup_equivalent_owned_media"].bool, ownedCopies: ownedCopies)
+            }
+            guard budget > 0, let index = selected else {
+                var diagnosticBudget = 4000
+                var nodes: [[String: Any]] = []
+                _ = matching(root, budget: &diagnosticBudget) { node in
+                    var attributes: CFArray?
+                    AXUIElementCopyAttributeNames(node, &attributes)
+                    let names = attributes as? [String] ?? []
+                    let guidMatches = names.filter { value(node, $0).contains(guid) }
+                    let filenameMatches = names.filter { attribute in mediaNames.contains(where: value(node, attribute).contains) }
+                    let identifier = value(node, kAXIdentifierAttribute)
+                    if identifier == "Sticker" || !guidMatches.isEmpty || !filenameMatches.isEmpty {
+                        var selected: CFTypeRef?
+                        AXUIElementCopyAttributeValue(node, kAXSelectedAttribute as CFString, &selected)
+                        nodes.append(["media_bubble": identifier == "Sticker", "guid_attribute_matches": guidMatches.count, "filename_attribute_matches": filenameMatches.count, "attribute_count": names.count, "selected": (selected as? NSNumber)?.boolValue ?? false, "outgoing_description": value(node, kAXDescriptionAttribute).hasPrefix("Your iMessage,"), "incoming_description": value(node, kAXDescriptionAttribute).hasPrefix("iMessage,"), "description_length": value(node, kAXDescriptionAttribute).count])
+                    }
+                    return false
+                }
+                try? PrivateReport.write(["budget_remaining": budget, "nodes": nodes, "candidate_value_matches": candidates.map { $0["values"].array.filter { MessagesMediaCleanupProof.matches($0.string, names: Set(mediaNames)) }.count }], to: PrivateReport.validate(PrivateReport.directory.appendingPathComponent("messages-media-target-diagnostic.json").path))
+                throw MessagesUIFailure.targetUnavailable
+            }
             return bubbles[index]
         }
         let targets = matching(root, budget: &budget) { element in
@@ -152,26 +243,36 @@ enum MessagesAccessibility {
         try openMessage(prepared.nativeState["message_guid"].string, settle: 0.5, resetEditor: false)
         try validateConversation(prepared)
         let session = try uiSession()
-        if prepared.action["op"].string == "messages.mark_unread" {
-            let menus = MessagesVariantUI.find(session.root, role: kAXMenuBarItemRole, name: "Conversation")
-            guard menus.count == 1 else { throw MessagesUIFailure.menuUnavailable }
-            try session.fence()
-            try MessagesVariantUI.press(menus[0])
-            let items = MessagesVariantUI.find(menus[0], role: kAXMenuItemRole, name: "Mark as Unread")
-            guard items.count == 1 else { try? session.press(MessagesUISession.escape); throw MessagesUIFailure.menuUnavailable }
+        let menus = MessagesVariantUI.find(session.root, role: kAXMenuBarItemRole, name: "Conversation")
+        guard menus.count == 1 else { throw MessagesUIFailure.menuUnavailable }
+        try session.fence()
+        try MessagesVariantUI.press(menus[0])
+        var menuOpen = true
+        defer { if menuOpen { try? session.press(MessagesUISession.escape) } }
+        let action: String = try MessagesUIActions.resolve(until: Date().addingTimeInterval(3), wait: {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }, attempt: {
+            let items = MessagesVariantUI.find(menus[0], role: kAXMenuItemRole)
+            let titles = items.map { item in
+                let title = value(item, kAXTitleAttribute)
+                return title.isEmpty ? value(item, kAXDescriptionAttribute) : title
+            }
+            guard let action = MessagesUIActions.readStateAction(unread: prepared.action["op"].string == "messages.mark_unread", titles: titles) else { throw MessagesUIFailure.targetUnavailable }
+            return action
+        })
+        if !action.isEmpty {
+            let items = MessagesVariantUI.find(menus[0], role: kAXMenuItemRole, name: action)
+            guard items.count == 1 else { throw MessagesUIFailure.menuUnavailable }
             try session.fence()
             try MessagesVariantUI.press(items[0])
+            menuOpen = false
         }
         return .object(["target_verified": .bool(true)])
     }
     static func press(_ session: MessagesUISession, title: String) throws {
         let deadline = Date().addingTimeInterval(2)
         repeat {
-            var budget = 4000
-            let windows = children(session.root).filter { value($0, kAXRoleAttribute) == kAXWindowRole }
-            let matches = windows.flatMap { window in matching(window, budget: &budget) {
-                [kAXMenuItemRole, kAXButtonRole].contains(value($0, kAXRoleAttribute)) && ([title, title.replacingOccurrences(of: "…", with: "")].contains(value($0, kAXTitleAttribute)) || value($0, kAXDescriptionAttribute) == title)
-            } }
+            let matches = MessagesUIActions.buttons(in: session.root, title: title, children: { children($0) }, value: { value($0, $1) })
             if matches.count == 1 {
                 try session.fence()
                 guard AXUIElementPerformAction(matches[0], kAXPressAction as CFString) == .success else { throw SourceFailure.conflict }
@@ -273,7 +374,7 @@ enum MessagesAccessibility {
     static func openMessage(_ guid: String, settle: TimeInterval = 3, resetEditor: Bool = true, ownedTag: String = "") throws {
         var components = URLComponents()
         components.scheme = "imessage"
-        components.path = "open"
+        components.host = "open"
         components.queryItems = [URLQueryItem(name: "message-guid", value: guid)]
         guard let url = components.url else { throw MessagesUIFailure.navigationUnavailable }
         MessagesUISession.activate()
@@ -386,6 +487,7 @@ enum MessagesAccessibility {
         default: throw SourceFailure.capabilityUnproven
         }
         try session.fence()
+        guard start.duration(to: ContinuousClock.now) < .seconds(10) else { throw SourceFailure.conflict }
         var actionNames: CFArray?
         let copied = AXUIElementCopyActionNames(bubble, &actionNames)
         let normalized = menu.replacingOccurrences(of: "…", with: "")
@@ -407,7 +509,11 @@ enum MessagesAccessibility {
             try session.press(MessagesUISession.enter)
         case .react: break
         case .deleteMessage, .deleteChat:
-            try press(session, title: "Delete")
+            do { try press(session, title: "Delete") }
+            catch {
+                try? press(session, title: "Cancel")
+                throw error
+            }
             RunLoop.current.run(until: Date().addingTimeInterval(0.25))
             _ = try acknowledgeDeletedInfo()
         case .renameGroup: try replace(session, text: args["name"].string); try session.press(MessagesUISession.enter)
@@ -416,7 +522,6 @@ enum MessagesAccessibility {
         }
         let after = snapshot(root, prepared: prepared)
         try session.fence()
-        guard start.duration(to: ContinuousClock.now) < .seconds(10) else { throw SourceFailure.conflict }
         return .object(["before_accessibility": before, "after_accessibility": after, "target_verified": .bool(true)])
     }
 }

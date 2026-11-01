@@ -3,6 +3,39 @@ import AppKit
 import ApplicationServices
 import SourceSupport
 
+public enum MessagesUIActions {
+    public static func readStateAction(unread: Bool, titles: [String]) -> String? {
+        let desired = unread ? "Mark as Unread" : "Mark as Read"
+        let opposite = unread ? "Mark as Read" : "Mark as Unread"
+        guard titles.filter({ $0 == desired || $0 == opposite }).count == 1 else { return nil }
+        return titles.contains(desired) ? desired : ""
+    }
+    public static func resolve<Element>(until deadline: Date, now: () -> Date = { Date() }, wait: () -> Void, attempt: () throws -> Element) throws -> Element {
+        repeat {
+            do { return try attempt() }
+            catch MessagesUIFailure.targetUnavailable {
+                guard now() < deadline else { throw MessagesUIFailure.targetUnavailable }
+                wait()
+            }
+        } while now() <= deadline
+        throw MessagesUIFailure.targetUnavailable
+    }
+    public static func buttons<Element>(in root: Element, title: String, children: (Element) -> [Element], value: (Element, String) -> String) -> [Element] {
+        var budget = 4000
+        func visit(_ node: Element) -> [Element] {
+            guard budget > 0, value(node, kAXRoleAttribute) != kAXMenuBarRole else { return [] }
+            budget -= 1
+            let labels = [title, title.replacingOccurrences(of: "…", with: "")]
+            let matches = [kAXMenuItemRole, kAXButtonRole].contains(value(node, kAXRoleAttribute)) && (labels.contains(value(node, kAXTitleAttribute)) || value(node, kAXDescriptionAttribute) == title)
+            var result = matches ? [node] : []
+            for child in children(node) { result += visit(child) }
+            return result
+        }
+        let result = visit(root)
+        return budget > 0 ? result : []
+    }
+}
+
 public enum MessagesUIInput: Sendable, Equatable {
     case click(CGPoint), controlClick(CGPoint, dismissFirst: Bool), keys([Int], command: Bool), replaceText(String), clearText
     var script: String {
@@ -111,7 +144,7 @@ public struct MessagesUISession {
         self.pid = pid
         self.driver = driver
         root = AXUIElementCreateApplication(pid)
-        AXUIElementSetMessagingTimeout(root, 0.25)
+        AXUIElementSetMessagingTimeout(root, 1)
     }
     public static func frontmost(_ driver: any MessagesUIDriver = LiveMessagesUIDriver(), trusted: Bool = AXIsProcessTrusted()) throws -> MessagesUISession {
         guard trusted, let pid = driver.messagesProcess(), driver.frontmostProcess() == pid else { throw SourceFailure.conflict }

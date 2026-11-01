@@ -86,3 +86,42 @@ func TestReadStateBaselineDetectsChangesAndExcludesOwnedRows(t *testing.T) {
 		}
 	}
 }
+
+func TestReadStateBaselineIgnoresReactionReadBookkeepingOnly(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	for _, query := range []string{
+		`CREATE TABLE message(guid TEXT,is_read INTEGER,date_read INTEGER,associated_message_type INTEGER)`,
+		`CREATE TABLE chat(guid TEXT)`,
+		`CREATE TABLE chat_message_join(chat_id INTEGER,message_id INTEGER)`,
+		`CREATE TABLE chat_recoverable_message_join(chat_id INTEGER,message_id INTEGER,delete_date INTEGER)`,
+		`INSERT INTO chat VALUES('self')`,
+		`INSERT INTO message VALUES('message',1,10,0),('reaction',0,0,3006)`,
+		`INSERT INTO chat_message_join VALUES(1,1),(1,2)`,
+	} {
+		if _, err := db.Exec(query); err != nil {
+			t.Fatal(err)
+		}
+	}
+	before, err := nativeMessagesChatDigest(context.Background(), db, "self", 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`UPDATE message SET is_read=1,date_read=20 WHERE guid='reaction'`); err != nil {
+		t.Fatal(err)
+	}
+	after, err := nativeMessagesChatDigest(context.Background(), db, "self", 2)
+	if err != nil || before != after {
+		t.Fatal("reaction read bookkeeping changed message baseline", err)
+	}
+	if _, err := db.Exec(`UPDATE message SET associated_message_type=2006 WHERE guid='reaction'`); err != nil {
+		t.Fatal(err)
+	}
+	after, err = nativeMessagesChatDigest(context.Background(), db, "self", 2)
+	if err != nil || before == after {
+		t.Fatal("reaction content change was ignored", err)
+	}
+}

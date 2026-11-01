@@ -1,17 +1,17 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[4.6 7.45 7.38] cpu_idle=79% cpus=10 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[13.98 13.03 11.75] cpu_idle=34% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M67EG8Z34TS67YSM7TYENV4M",
+  "run_id": "run_01M6BK8HZ3K2H9ZR3ZV4VD2FSM",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MSG-MEDIA-CLEANUP",
   "level": "sim",
   "passed": true,
-  "git_sha": "3bd923a1af4751bbdf11f7c731c75e8fcbb7a183",
-  "at": "2026-10-30T22:22:20.643801Z",
+  "git_sha": "9517281dad9faa07c576b342579b46ab687deda0",
+  "at": "2026-11-01T13:02:28.323802Z",
   "assertions": [
     {
       "name": "attachment_only_target",
@@ -50,6 +50,18 @@
       "passed": true
     },
     {
+      "name": "photo_preview_filename_with_generic_description",
+      "passed": true
+    },
+    {
+      "name": "duplicate_copies_require_complete_ownership",
+      "passed": true
+    },
+    {
+      "name": "unaccounted_duplicate_is_denied",
+      "passed": true
+    },
+    {
       "name": "baseline_data_denied",
       "passed": true
     },
@@ -85,114 +97,135 @@
   "latency": {
     "ambiguous_ui_target_denied": {
       "samples": 1,
-      "p50_ms": 3.792833,
-      "p95_ms": 3.792833,
-      "max_ms": 3.792833,
+      "p50_ms": 22.633625,
+      "p95_ms": 22.633625,
+      "max_ms": 22.633625,
       "timeouts": 0
     },
     "attachment_only_caf": {
       "samples": 1,
-      "p50_ms": 6.640542,
-      "p95_ms": 6.640542,
-      "max_ms": 6.640542,
+      "p50_ms": 19.117958,
+      "p95_ms": 19.117958,
+      "max_ms": 19.117958,
       "timeouts": 0
     },
     "attachment_only_mov": {
       "samples": 1,
-      "p50_ms": 7.806167,
-      "p95_ms": 7.806167,
-      "max_ms": 7.806167,
+      "p50_ms": 17.189291,
+      "p95_ms": 17.189291,
+      "max_ms": 17.189291,
       "timeouts": 0
     },
     "attachment_only_target": {
       "samples": 1,
-      "p50_ms": 209.806375,
-      "p95_ms": 209.806375,
-      "max_ms": 209.806375,
+      "p50_ms": 30.75225,
+      "p95_ms": 30.75225,
+      "max_ms": 30.75225,
       "timeouts": 0
     },
     "baseline_data_denied": {
       "samples": 1,
-      "p50_ms": 4.205042,
-      "p95_ms": 4.205042,
-      "max_ms": 4.205042,
+      "p50_ms": 38.419125,
+      "p95_ms": 38.419125,
+      "max_ms": 38.419125,
+      "timeouts": 0
+    },
+    "duplicate_copies_require_complete_ownership": {
+      "samples": 1,
+      "p50_ms": 23.659666,
+      "p95_ms": 23.659666,
+      "max_ms": 23.659666,
       "timeouts": 0
     },
     "empty_database_baseline_is_valid": {
       "samples": 1,
-      "p50_ms": 5.809125,
-      "p95_ms": 5.809125,
-      "max_ms": 5.809125,
+      "p50_ms": 18.648166,
+      "p95_ms": 18.648166,
+      "max_ms": 18.648166,
       "timeouts": 0
     },
     "incoming_echo_is_separate_target": {
       "samples": 1,
-      "p50_ms": 5.250333,
-      "p95_ms": 5.250333,
-      "max_ms": 5.250333,
+      "p50_ms": 17.861125,
+      "p95_ms": 17.861125,
+      "max_ms": 17.861125,
       "timeouts": 0
     },
     "mixed_attachment_bubble_denied": {
       "samples": 1,
-      "p50_ms": 3.843541,
-      "p95_ms": 3.843541,
-      "max_ms": 3.843541,
+      "p50_ms": 21.913916,
+      "p95_ms": 21.913916,
+      "max_ms": 21.913916,
       "timeouts": 0
     },
     "native_file_description_ambiguous_denied": {
       "samples": 1,
-      "p50_ms": 4.553208,
-      "p95_ms": 4.553208,
-      "max_ms": 4.553208,
+      "p50_ms": 17.406375,
+      "p95_ms": 17.406375,
+      "max_ms": 17.406375,
       "timeouts": 0
     },
     "native_file_description_incoming": {
       "samples": 1,
-      "p50_ms": 4.636666,
-      "p95_ms": 4.636666,
-      "max_ms": 4.636666,
+      "p50_ms": 20.312416,
+      "p95_ms": 20.312416,
+      "max_ms": 20.312416,
       "timeouts": 0
     },
     "native_file_description_outgoing": {
       "samples": 1,
-      "p50_ms": 4.940375,
-      "p95_ms": 4.940375,
-      "max_ms": 4.940375,
+      "p50_ms": 18.699459,
+      "p95_ms": 18.699459,
+      "max_ms": 18.699459,
       "timeouts": 0
     },
     "native_file_description_substring_denied": {
       "samples": 1,
-      "p50_ms": 4.904542,
-      "p95_ms": 4.904542,
-      "max_ms": 4.904542,
+      "p50_ms": 17.517834,
+      "p95_ms": 17.517834,
+      "max_ms": 17.517834,
       "timeouts": 0
     },
     "other_chat_denied": {
       "samples": 1,
-      "p50_ms": 3.976709,
-      "p95_ms": 3.976709,
-      "max_ms": 3.976709,
+      "p50_ms": 38.973833,
+      "p95_ms": 38.973833,
+      "max_ms": 38.973833,
       "timeouts": 0
     },
     "other_registered_file_is_not_the_target": {
       "samples": 1,
-      "p50_ms": 3.780667,
-      "p95_ms": 3.780667,
-      "max_ms": 3.780667,
+      "p50_ms": 31.014375,
+      "p95_ms": 31.014375,
+      "max_ms": 31.014375,
+      "timeouts": 0
+    },
+    "photo_preview_filename_with_generic_description": {
+      "samples": 1,
+      "p50_ms": 18.169,
+      "p95_ms": 18.169,
+      "max_ms": 18.169,
       "timeouts": 0
     },
     "similar_filename_denied": {
       "samples": 1,
-      "p50_ms": 3.819417,
-      "p95_ms": 3.819417,
-      "max_ms": 3.819417,
+      "p50_ms": 26.872166,
+      "p95_ms": 26.872166,
+      "max_ms": 26.872166,
+      "timeouts": 0
+    },
+    "unaccounted_duplicate_is_denied": {
+      "samples": 1,
+      "p50_ms": 26.984709,
+      "p95_ms": 26.984709,
+      "max_ms": 26.984709,
       "timeouts": 0
     },
     "unregistered_attachment_denied": {
       "samples": 1,
-      "p50_ms": 4.221625,
-      "p95_ms": 4.221625,
-      "max_ms": 4.221625,
+      "p50_ms": 29.655,
+      "p95_ms": 29.655,
+      "max_ms": 29.655,
       "timeouts": 0
     }
   },

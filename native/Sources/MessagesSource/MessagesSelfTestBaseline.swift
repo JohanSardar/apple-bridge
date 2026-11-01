@@ -62,7 +62,7 @@ public struct MessagesSelfTestBaseline: Sendable {
         let reader = try reader()
         let members = try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID LEFT JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [chat]).map { $0["id"] }
         guard MessagesSelfTestIsolation.isSelfChat(members, own: try MessagesSelfTestIsolation.accountHandles(database: MessagesDatabase())),
-              let row = try reader.query("SELECT c.service_name,m.guid FROM chat c JOIN chat_message_join j ON j.chat_id=c.ROWID JOIN message m ON m.ROWID=j.message_id WHERE c.guid=? AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=m.ROWID) ORDER BY m.ROWID DESC LIMIT 1", [chat]).first,
+              let row = try reader.query("SELECT c.service_name,m.guid FROM chat c JOIN chat_message_join j ON j.chat_id=c.ROWID JOIN message m ON m.ROWID=j.message_id WHERE c.guid=? AND m.is_from_me=1 AND COALESCE(m.associated_message_type,0)=0 AND m.item_type=0 AND COALESCE(m.date_retracted,0)=0 AND length(m.text)>0 AND NOT EXISTS(SELECT 1 FROM message_attachment_join a WHERE a.message_id=m.ROWID) AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=m.ROWID) ORDER BY m.ROWID DESC LIMIT 1", [chat]).first,
               let message = try reader.message(row["guid"]), let observation = try reader.messageObservations(message).first else { throw SourceFailure.conflict }
         let data = try JSONDecoder().decode(JSON.self, from: JSONSerialization.data(withJSONObject: observation.2))
         return Prepared(nativeState: .object(["conversation_target": .bool(true), "service": .string(row["service_name"]), "message_guid": .string(row["guid"]), "target": data]), fingerprint: "self-chat-baseline", action: .object(["native_key": .string(chat)]))
@@ -73,6 +73,7 @@ public struct MessagesSelfTestBaseline: Sendable {
         let rows = try reader.query("SELECT m.*,j.chat_id AS baseline_chat_id,r.delete_date AS baseline_delete_date FROM message m JOIN (SELECT chat_id,message_id FROM chat_message_join UNION SELECT chat_id,message_id FROM chat_recoverable_message_join) j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id LEFT JOIN chat_recoverable_message_join r ON r.chat_id=j.chat_id AND r.message_id=m.ROWID WHERE c.guid=? AND m.ROWID<=? ORDER BY m.ROWID", [chat, String(baseline)])
         let values = rows.map { row -> [String: String] in
             var fields = row.values
+            if row.integer("associated_message_type") != 0 { fields.removeValue(forKey: "is_read"); fields.removeValue(forKey: "date_read") }
             for (key, bytes) in row.blobs { fields[key] = BodyDigest.hash(bytes) }
             return fields
         }
