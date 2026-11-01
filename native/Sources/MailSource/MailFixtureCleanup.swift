@@ -72,8 +72,11 @@ public enum MailFixtureCleanup {
             repeat with ownedID in {\(ids.joined(separator: ","))}
                 repeat with b in {drafts mailbox, inbox, sent mailbox}
                     try
-                        set candidate to message id (contents of ownedID) of b
-                        if subject of candidate is \(q(tag)) and deleted status of candidate is false then set m to candidate
+                        set matching to (messages of b whose id is (contents of ownedID))
+                        if (count matching) > 0 then
+                            set candidate to item 1 of matching
+                            if subject of candidate is \(q(tag)) and deleted status of candidate is false then set m to candidate
+                        end if
                     on error errorText number errorNumber
                         if errorNumber is not -1728 then error errorText number errorNumber
                     end try

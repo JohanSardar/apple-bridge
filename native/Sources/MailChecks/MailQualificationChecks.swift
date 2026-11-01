@@ -66,6 +66,13 @@ func checkMailQualification() async throws {
         let proof = try await MailQualification(script: { try await fake.run($0) }, fixtureIDs: { _ in ["123"] }, removeSelected: { await fake.remove() }).run(scenario: scenario, tag: "[ab-test] fixture")
         try require(!proof.object.isEmpty && proof.object.values.allSatisfy { $0 == .bool(true) })
         let scripts = await fake.scripts()
+        for body in scripts {
+            let valid = await MainActor.run {
+                var error: NSDictionary?
+                return NSAppleScript(source: "with timeout of 15 seconds\ntell application id \"com.apple.mail\"\n" + body + "\nend tell\nend timeout")?.compileAndReturnError(&error) == true
+            }
+            try require(valid)
+        }
         try require(scripts.contains { $0.contains("set chosen to selected messages") } == (scenario != "MAIL-BODY-FIXTURE"))
         if scenario == "MAIL-BODY-FIXTURE" { try require(scripts.contains { $0.contains("set default message format to priorFormat") }) }
         if scenario != "MAIL-BODY-FIXTURE" {
