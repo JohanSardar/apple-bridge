@@ -112,6 +112,68 @@ func runFocusPack(ctx context.Context, s Scenario, level string) Evidence {
 			os.Stderr.Write(output)
 			return e
 		}
+		compiledJSON, err := exec.CommandContext(ctx, "plutil", "-convert", "json", "-o", "-", filepath.Join(dir, "ab-focus.unsigned.shortcut")).Output()
+		var compiled struct {
+			Actions []struct {
+				Identifier string `json:"WFWorkflowActionIdentifier"`
+				Parameters struct {
+					UUID            string
+					DictionaryKey   string `json:"WFDictionaryKey"`
+					ControlFlowMode int    `json:"WFControlFlowMode"`
+					Time            struct {
+						SerializationType string `json:"WFSerializationType"`
+						Value             struct {
+							String      string
+							Attachments map[string]struct {
+								Type       string
+								OutputUUID string
+							} `json:"attachmentsByRange"`
+						}
+					}
+					Input struct {
+						Type     string
+						Variable struct {
+							SerializationType string `json:"WFSerializationType"`
+							Value             struct {
+								Type       string
+								OutputUUID string
+							}
+						}
+					} `json:"WFInput"`
+				} `json:"WFWorkflowActionParameters"`
+			} `json:"WFWorkflowActions"`
+		}
+		if err == nil {
+			err = json.Unmarshal(compiledJSON, &compiled)
+		}
+		add("compiled_pack_read", err == nil)
+		until := ""
+		for _, action := range compiled.Actions {
+			if action.Identifier == "is.workflow.actions.getvalueforkey" && action.Parameters.DictionaryKey == "until" {
+				until = action.Parameters.UUID
+			}
+		}
+		bound, conditions := true, 0
+		for _, action := range compiled.Actions {
+			if action.Identifier != "is.workflow.actions.conditional" || action.Parameters.ControlFlowMode != 0 {
+				continue
+			}
+			conditions++
+			input := action.Parameters.Input
+			bound = bound && input.Type == "Variable" && input.Variable.SerializationType == "WFTextTokenAttachment" && input.Variable.Value.Type == "ActionOutput" && until != "" && input.Variable.Value.OutputUUID == until
+		}
+		add("pack_conditional_input_bound", bound && conditions == 1)
+		dates, dateBound := 0, true
+		for _, action := range compiled.Actions {
+			if action.Parameters.Time.SerializationType == "" {
+				continue
+			}
+			dates++
+			date := action.Parameters.Time
+			attachment := date.Value.Attachments["{0, 1}"]
+			dateBound = dateBound && date.SerializationType == "WFTextTokenString" && date.Value.String == "\ufffc" && len(date.Value.Attachments) == 1 && attachment.Type == "ActionOutput" && attachment.OutputUUID == until
+		}
+		add("pack_expiry_text_bound", dateBound && dates == 1)
 	}
 	build := exec.CommandContext(ctx, "packaging/dev/build-native.sh")
 	build.Env = append(os.Environ(), "APPLE_BRIDGE_NATIVE_TARGET=FocusChecks")

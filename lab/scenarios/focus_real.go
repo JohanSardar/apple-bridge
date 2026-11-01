@@ -120,12 +120,26 @@ func runFocusReal(ctx context.Context, s Scenario, e Evidence) Evidence {
 	}
 	add("set_readback", result["set_passed"] == true)
 	add("restore_readback", result["restore_passed"] == true)
-	for _, stage := range []string{"prepare_error", "set_error", "restore_error"} {
+	for _, name := range []string{"pack_binding_readback", "set_shortcut_completed", "set_shortcut_not_timed_out", "restore_shortcut_completed", "restore_shortcut_not_timed_out", "set_status_after_shortcut", "restore_status_after_shortcut"} {
+		if passed, exists := result[name].(bool); exists {
+			add(name, passed)
+		}
+	}
+	for _, stage := range []string{"pack_repair_error", "prepare_error", "set_error", "restore_error"} {
 		if detail, ok := result[stage].(string); ok {
 			if e.Conditions == nil {
 				e.Conditions = map[string]string{}
 			}
 			e.Conditions[stage] = detail
+		}
+	}
+	for _, prefix := range []string{"set_", "restore_"} {
+		if detail, ok := result[prefix+"cli_error_category"].(string); ok {
+			if e.Conditions == nil {
+				e.Conditions = map[string]string{}
+			}
+			e.Conditions[prefix+"cli_error_category"] = detail
+			e.Metrics[prefix+"cli_error_bytes"] = result[prefix+"cli_error_bytes"]
 		}
 	}
 	return e

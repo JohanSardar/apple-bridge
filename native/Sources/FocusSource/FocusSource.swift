@@ -11,20 +11,35 @@ public final class FocusSource: Source {
     private let run: @MainActor (JSON) async throws -> JSON
     public init(status: (@MainActor () -> JSON)? = nil, runner: (@MainActor (JSON) async throws -> JSON)? = nil) {
         readStatus = status ?? Self.status
-        run = runner ?? { request in
-            let source = ShortcutsSource()
-            var normalized = request.object
-            normalized["until"] = .string(request["until"].string)
-            let input = try JSONEncoder().encode(JSON.object(normalized))
-            let prepared = try await source.prepare(.object(["request_hash": .string(UUID().uuidString), "action": .object(["op": .string("shortcuts.run"), "args": .object(["shortcut": .string("AB Focus"), "input": .string(String(decoding: input, as: UTF8.self)), "timeout_ms": .number(15000)])])]))
-            return try await source.dispatch(prepared)
-        }
+        run = runner ?? Self.runShortcut
+    }
+    static func runShortcut(_ request: JSON) async throws -> JSON {
+        try await runShortcut(request, source: ShortcutsSource())
+    }
+    static func runShortcut(_ request: JSON, source: ShortcutsSource) async throws -> JSON {
+        var normalized = request.object
+        normalized["until"] = .string(request["until"].string)
+        let input = try JSONEncoder().encode(JSON.object(normalized))
+        let prepared = try await source.prepare(.object(["request_hash": .string(UUID().uuidString), "action": .object(["op": .string("shortcuts.run"), "args": .object(["shortcut": .string("AB Focus"), "input": .string(String(decoding: input, as: UTF8.self)), "timeout_ms": .number(15000)])])]))
+        return try await source.dispatch(prepared)
     }
     private static func expiry(_ value: String) -> Date? {
         let formatter = ISO8601DateFormatter()
         if let date = formatter.date(from: value) { return date }
         formatter.formatOptions.insert(.withFractionalSeconds)
         return formatter.date(from: value)
+    }
+    public static func assertedFocus(_ data: Data) -> Bool? {
+        guard data.count <= 2 * 1024 * 1024,
+              let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let header = root["header"] as? [String: Any], header["version"] as? Int == 8,
+              let stores = root["data"] as? [[String: Any]], stores.count == 1 else { return nil }
+        let store = stores[0]
+        let keys: Set<String> = ["storeAssertionRecords", "storeInvalidationRecords", "storeInvalidationRequestRecords"]
+        guard Set(store.keys).isSubset(of: keys) else { return nil }
+        guard let value = store["storeAssertionRecords"] else { return false }
+        guard let records = value as? [[String: Any]] else { return nil }
+        return !records.isEmpty
     }
     public static func status() -> JSON {
         let center = INFocusStatusCenter.default
@@ -35,7 +50,12 @@ public final class FocusSource: Source {
         case .restricted: authorization = "restricted"
         default: authorization = "not_determined"
         }
-        let focused: JSON = center.authorizationStatus == .authorized ? center.focusStatus.isFocused.map { .bool($0) } ?? .null : .null
+        var active: Bool?
+        if center.authorizationStatus == .authorized {
+            let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/DoNotDisturb/DB/Assertions.json")
+            active = (try? Data(contentsOf: path)).flatMap(assertedFocus) ?? center.focusStatus.isFocused
+        }
+        let focused: JSON = active.map { .bool($0) } ?? .null
         return .object(["focused": focused, "name": .null, "authorization": .string(authorization)])
     }
     private var coverage: JSON { .object(["fields": .string("partial"), "missing": .array([.string("named Focus identity and restoration unavailable")])]) }
