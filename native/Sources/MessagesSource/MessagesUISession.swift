@@ -90,8 +90,8 @@ public struct LiveMessagesUIDriver: MessagesUIDriver {
                     }
                 }
             }
-            down.postToPid(pid)
-            up.postToPid(pid)
+            down.post(tap: .cghidEventTap)
+            up.post(tap: .cghidEventTap)
             Thread.sleep(forTimeInterval: 0.03)
             return true
         }
@@ -101,8 +101,8 @@ public struct LiveMessagesUIDriver: MessagesUIDriver {
                   let up = CGEvent(mouseEventSource: source, mouseType: .leftMouseUp, mouseCursorPosition: point, mouseButton: .left) else { return false }
             down.flags = control ? .maskControl : []
             up.flags = control ? .maskControl : []
-            down.postToPid(pid)
-            up.postToPid(pid)
+            down.post(tap: .cghidEventTap)
+            up.post(tap: .cghidEventTap)
             Thread.sleep(forTimeInterval: 0.05)
             return true
         }
@@ -178,6 +178,15 @@ public struct MessagesUISession {
     }
     public func focus(_ element: AXUIElement, failure: any Error) throws {
         try fence()
+        var position: CFTypeRef?
+        var size: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &position) == .success,
+              AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &size) == .success,
+              let position, let size else { throw failure }
+        var point = CGPoint.zero
+        var dimensions = CGSize.zero
+        guard AXValueGetValue(position as! AXValue, .cgPoint, &point), AXValueGetValue(size as! AXValue, .cgSize, &dimensions), dimensions.width > 0, dimensions.height > 0 else { throw failure }
+        try click(at: CGPoint(x: point.x + dimensions.width / 2, y: point.y + dimensions.height / 2))
         guard AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, kCFBooleanTrue) == .success, focused(element) else { throw failure }
     }
     public func type(_ text: String, into element: AXUIElement, value: (AXUIElement) -> String) throws {

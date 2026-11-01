@@ -156,7 +156,7 @@ func TestNativeBaselineSkipsReactionAndUnsentAnchors(t *testing.T) {
 	}
 	defer db.Close()
 	for _, query := range []string{
-		`CREATE TABLE message(guid TEXT,text TEXT,is_from_me INTEGER DEFAULT 1,associated_message_type INTEGER DEFAULT 0,item_type INTEGER DEFAULT 0,date_retracted INTEGER DEFAULT 0)`,
+		`CREATE TABLE message(guid TEXT,text TEXT,attributedBody BLOB,is_from_me INTEGER DEFAULT 1,associated_message_type INTEGER DEFAULT 0,item_type INTEGER DEFAULT 0,date_retracted INTEGER DEFAULT 0)`,
 		`CREATE TABLE chat(guid TEXT,service_name TEXT)`,
 		`CREATE TABLE chat_message_join(chat_id INTEGER,message_id INTEGER)`,
 		`CREATE TABLE chat_recoverable_message_join(chat_id INTEGER,message_id INTEGER)`,
