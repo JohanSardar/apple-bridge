@@ -36,9 +36,18 @@ public enum NotesFolderUI {
     private static func text(_ node: AXUIElement, contains tag: String) -> Bool {
         [kAXTitleAttribute, kAXValueAttribute, kAXDescriptionAttribute].contains { value(node, $0).contains(tag) }
     }
+    private static func named(_ node: AXUIElement, _ names: [String]) -> Bool {
+        [kAXTitleAttribute, kAXDescriptionAttribute, kAXValueAttribute].contains { names.contains(value(node, $0)) }
+    }
     private static func dialogs(_ root: AXUIElement) -> [AXUIElement] {
-        func dialog(_ node: AXUIElement) -> Bool { value(node, kAXRoleAttribute) == kAXSheetRole || value(node, kAXSubroleAttribute) == "AXDialog" }
-        return all(root).filter(dialog).filter { node in !all(node).dropFirst().contains(where: dialog) }
+        func find(_ node: AXUIElement, depth: Int) -> [AXUIElement] {
+            guard Date() < deadline, depth > 0 else { return [] }
+            let role = value(node, kAXRoleAttribute)
+            if role == kAXSheetRole || role == "AXDialog" || value(node, kAXSubroleAttribute) == "AXDialog" { return [node] }
+            if role == kAXMenuBarRole { return [] }
+            return children(node).flatMap { find($0, depth: depth - 1) }
+        }
+        return find(root, depth: 5)
     }
     private static func confirm(_ root: AXUIElement, tag: String, initiated: Bool = false) throws -> Bool {
         let visible = dialogs(root)
@@ -46,7 +55,7 @@ public enum NotesFolderUI {
         let owned = matches.isEmpty && initiated && visible.count == 1 ? visible : matches
         if owned.isEmpty { return false }
         guard owned.count == 1 else { throw Failure(stage: "ambiguous_owned_dialog") }
-        let buttons = all(owned[0]).filter { value($0, kAXRoleAttribute) == kAXButtonRole && ["Delete", "Delete Folder"].contains(value($0, kAXTitleAttribute)) && enabled($0) }
+        let buttons = all(owned[0]).filter { value($0, kAXRoleAttribute) == kAXButtonRole && named($0, ["Delete", "Delete Folder"]) && enabled($0) }
         guard buttons.count == 1, AXUIElementPerformAction(buttons[0], kAXPressAction as CFString) == .success else { throw Failure(stage: "owned_delete_confirmation") }
         return true
     }
@@ -54,8 +63,14 @@ public enum NotesFolderUI {
         let visible = dialogs(root)
         if visible.isEmpty { return }
         guard visible.count == 1 else { throw Failure(stage: "unrelated_notes_dialogs") }
-        let cancel = all(visible[0]).filter { value($0, kAXRoleAttribute) == kAXButtonRole && value($0, kAXTitleAttribute) == "Cancel" && enabled($0) }
-        guard cancel.count == 1, AXUIElementPerformAction(cancel[0], kAXPressAction as CFString) == .success else { throw Failure(stage: "notes_dialog_cannot_be_cancelled") }
+        let cancel = all(visible[0]).filter { value($0, kAXRoleAttribute) == kAXButtonRole && named($0, ["Cancel"]) && enabled($0) }
+        guard cancel.count == 1 else {
+            let buttons = all(visible[0]).filter { value($0, kAXRoleAttribute) == kAXButtonRole }
+            let titles = buttons.filter { value($0, kAXTitleAttribute) == "Cancel" }.count
+            let descriptions = buttons.filter { value($0, kAXDescriptionAttribute) == "Cancel" }.count
+            throw Failure(stage: "cancel_buttons_" + String(buttons.count) + "_title_" + String(titles) + "_description_" + String(descriptions) + "_deadline_" + String(Date() >= deadline))
+        }
+        guard AXUIElementPerformAction(cancel[0], kAXPressAction as CFString) == .success else { throw Failure(stage: "notes_dialog_cancel_failed") }
     }
     private static func openContext(_ row: AXUIElement, app: NSRunningApplication) async -> Bool {
         if AXUIElementPerformAction(row, kAXShowMenuAction as CFString) == .success { return true }
