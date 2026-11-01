@@ -75,7 +75,7 @@ test('WEB-MSG-PERF WEB-MSG-PERF-INPUT reactions record complete input coverage',
 });
 test('WEB-MSG-PERF WEB-MSG-PERF-INPUT opening media records complete input coverage',async({page,request},info)=>{
     await prepareSession(page);const ids=await control(request,'/demo-fixtures');await page.goto('/messages/'+encodeURIComponent(ids['message-chat'])+'/'+encodeURIComponent(ids['demo-message-00-000032']));await expect(page.locator('.messages-transcript')).toHaveAttribute('aria-busy','false');const source=page.locator('[data-message="'+ids['demo-message-00-000032']+'"] .media-open');await expect(source).toBeVisible();await expect(page.getByRole('listbox',{name:'Messages transcript'})).toHaveAttribute('aria-busy','false');await expect.poll(()=>source.locator('..').locator('img').evaluate((image:HTMLImageElement)=>image.complete)).toBe(true);
-    await page.waitForTimeout(300);
+    await source.scrollIntoViewIfNeeded();await page.waitForTimeout(300);
     await page.evaluate(()=>window.addEventListener('click',event=>{if(event.isTrusted&&(event.target as Element).closest('.media-open'))(window as any).__mediaBackgroundRows=Array.from(document.querySelectorAll('.messages-transcript .virtual-row'));},true));
     let image:import('@playwright/test').ElementHandle<HTMLElement|SVGElement>|null=null;
     await transcriptInputs(page,info,'open-media',async()=>{
