@@ -1,5 +1,5 @@
 set -eu
-app="$HOME/Applications/AppleBridgeDev/AppleBridgeHelper.app"
+app=${1:-"$HOME/Applications/AppleBridgeDev/AppleBridgeHelper.app"}
 report=$(mktemp "$HOME/Library/Application Support/AppleBridgeDev/focus-phone-XXXXXXXX")
 trap 'rm -f "$report"' EXIT
 codesign --verify --strict -R '=identifier "com.johansardar.applebridge.services"' "$app" >&2

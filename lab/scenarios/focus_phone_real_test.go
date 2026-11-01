@@ -57,12 +57,19 @@ esac
 	if e := runAirFocusReal(context.Background()); !e.Passed {
 		t.Fatalf("remote proof failed: %+v", e)
 	}
+	t.Setenv("AB_REAL_FOCUS_AIR_HELPER", "/Air's [ab-test] Helper.app")
+	if e := runAirFocusReal(context.Background()); !e.Passed {
+		t.Fatalf("selected Air helper failed: %+v", e)
+	}
 	raw, err := os.ReadFile(log)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(string(raw), `-o BatchMode=yes air lockf -k "$HOME/.ab-locks/app-focus"`) || !strings.Contains(string(raw), "-o BatchMode=yes air sh -s") {
 		t.Fatalf("wrong Air routing: %s", raw)
+	}
+	if !strings.Contains(string(raw), `sh -s -- '/Air'"'"'s [ab-test] Helper.app'`) {
+		t.Fatalf("Air helper argument was not shell quoted: %s", raw)
 	}
 	step, err := os.ReadFile(log + ".step")
 	if err != nil {
