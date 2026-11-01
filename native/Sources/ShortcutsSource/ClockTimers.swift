@@ -191,12 +191,10 @@ private struct ClockTimerUI {
     func create(label: String, duration: Int) throws {
         var started = false
         defer {
-            if !started, find(root, role: kAXSheetRole).count == 1, NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier {
-                for down in [true, false] { CGEvent(keyboardEventSource: nil, virtualKey: 53, keyDown: down)?.postToPid(app.processIdentifier) }
-            }
+            if !started { try? dismissTimerForm() }
         }
-        let add = find(root, role: kAXMenuButtonRole).filter { name($0) == "Add" || name($0) == "Add a timer" }
-        if add.count == 1 {
+        if find(root, identifier: "TimePicker").isEmpty {
+            let add = find(root, role: kAXMenuButtonRole).filter { name($0) == "Add" || name($0) == "Add a timer" }
             try press(add, step: "open the timer menu")
             try press(find(root, identifier: "addTimer:"), step: "choose a new timer")
         }
@@ -234,12 +232,23 @@ private struct ClockTimerUI {
         try press(find(row, identifier: "CancelButton"))
     }
 
+    private func dismissTimerForm() throws {
+        let sheets = find(root, role: kAXSheetRole).filter { find($0, identifier: "TimePicker").count == 1 }
+        if sheets.count == 1 { try press(find(sheets[0], identifier: "CancelButton"), step: "close the unused timer form") }
+    }
+
     func removeRecent(label: String) throws {
-        let rows = find(root).filter { element in
-            guard (attribute(element, kAXIdentifierAttribute) as? String ?? "").hasPrefix("recent-timer-") else { return false }
-            return find(element).contains { name($0) == label || attribute($0, kAXValueAttribute) as? String == label }
+        try dismissTimerForm()
+        let candidates = find(root).filter { (attribute($0, kAXIdentifierAttribute) as? String ?? "").hasPrefix("recent-timer-") }
+        let rows = candidates.filter { element in
+            find(element).contains { name($0).contains(label) || (attribute($0, kAXValueAttribute) as? String ?? "").contains(label) }
         }
-        guard rows.count == 1 else { throw ClockTimerFailure(step: "find the tagged recent timer") }
+        guard rows.count == 1 else {
+            if let data = try? JSONSerialization.data(withJSONObject: ["recent_timer_controls": candidates.count, "matching_fixture_controls": rows.count], options: [.sortedKeys]) {
+                FileHandle.standardError.write(data + Data("\n".utf8))
+            }
+            throw ClockTimerFailure(step: "find the tagged recent timer")
+        }
         func deleteItems() -> [AXUIElement] {
             find(root, role: kAXMenuRole).filter { menu in
                 guard let parent = attribute(menu, kAXParentAttribute) else { return false }
