@@ -3,6 +3,9 @@ package scenarios
 import (
 	"context"
 	"database/sql"
+	"os"
+	"regexp"
+	"strings"
 	"testing"
 )
 
@@ -78,5 +81,63 @@ func TestMessagesWritePreflightIgnoresUnreadTapbackEvent(t *testing.T) {
 	}
 	if _, allowed := nativeMessagesExistingChatGate(context.Background(), db, "MSG-DELETE-REAL", "self", Evidence{}); allowed {
 		t.Fatal("genuine unread message allowed")
+	}
+}
+
+func TestNativeUnreadPreflightQueriesPreserveGenuineUnreadMessages(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	for _, query := range []string{
+		`CREATE TABLE message(is_from_me INTEGER,is_read INTEGER,associated_message_type INTEGER)`,
+		`CREATE TABLE chat(guid TEXT)`,
+		`CREATE TABLE chat_message_join(chat_id INTEGER,message_id INTEGER)`,
+		`CREATE TABLE chat_recoverable_message_join(chat_id INTEGER,message_id INTEGER)`,
+		`INSERT INTO chat(guid) VALUES('self')`,
+		`INSERT INTO message VALUES(0,1,0),(0,0,3006)`,
+		`INSERT INTO chat_message_join VALUES(1,1),(1,2)`,
+	} {
+		if _, err := db.Exec(query); err != nil {
+			t.Fatal(err)
+		}
+	}
+	pattern := regexp.MustCompile(`"(SELECT 1[^"\n]*m\.is_read=0[^"\n]*)"`)
+	count := 0
+	for _, name := range []string{"MessagesSelfTestBaseline.swift", "MessagesReadStateFixture.swift", "MessagesResendFixture.swift"} {
+		source, err := os.ReadFile("../../native/Sources/MessagesSource/" + name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, match := range pattern.FindAllStringSubmatch(string(source), -1) {
+			count++
+			args := []any{"self"}
+			if strings.Count(match[1], "?") == 2 {
+				args = append(args, 10)
+			}
+			for _, unread := range []bool{false, true} {
+				read := 1
+				if unread {
+					read = 0
+				}
+				if _, err := db.Exec("UPDATE message SET is_read=? WHERE ROWID=1", read); err != nil {
+					t.Fatal(err)
+				}
+				rows, err := db.Query(match[1], args...)
+				if err != nil {
+					t.Fatal(name, err)
+				}
+				found := rows.Next()
+				problem := rows.Err()
+				rows.Close()
+				if problem != nil || found != unread {
+					t.Fatal(name, "unread", unread, "found", found, problem)
+				}
+			}
+		}
+	}
+	if count != 4 {
+		t.Fatal("native unread query coverage changed", count)
 	}
 }

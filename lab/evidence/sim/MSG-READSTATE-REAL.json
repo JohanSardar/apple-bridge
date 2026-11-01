@@ -1,17 +1,17 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[3.32 4.54 4.48] cpu_idle=67% cpus=10 other_heavy=0"
+    "summary": "air: load=[1.55 2.11 2.71] cpu_idle=56% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M6AT6NFRZCG5SJN54A6ZS79G",
+  "run_id": "run_01M6AYC3DYVZHJJDC7Q0VKZ6ZW",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MSG-READSTATE-REAL",
   "level": "sim",
   "passed": true,
-  "git_sha": "0956711e22de2eb3c038d07f72cdbb9f8fb66fd5",
-  "at": "2026-11-01T05:44:31.992102Z",
+  "git_sha": "2e4c51f363699cfd288eab536078b65beefab244",
+  "at": "2026-11-01T06:57:24.414791Z",
   "assertions": [
     {
       "name": "seed_self_chat",

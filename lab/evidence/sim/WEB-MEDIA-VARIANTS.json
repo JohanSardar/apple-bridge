@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[3.92 4.59 4.5] cpu_idle=76% cpus=10 other_heavy=0"
+    "summary": "air: load=[2.5 2.29 2.75] cpu_idle=75% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M6AT78ZNKZ25E6NMW4QRV7B2",
+  "run_id": "run_01M6AYCYC9N3D0RMGAT28849RR",
   "metrics": {
     "browser_playback": "Cross-engine playback is owned by the later UI unit",
     "capture_observer_resets": 0
@@ -11,8 +11,8 @@
   "scenario": "WEB-MEDIA-VARIANTS",
   "level": "sim",
   "passed": true,
-  "git_sha": "0956711e22de2eb3c038d07f72cdbb9f8fb66fd5",
-  "at": "2026-11-01T05:44:51.957314Z",
+  "git_sha": "2e4c51f363699cfd288eab536078b65beefab244",
+  "at": "2026-11-01T06:57:52.009054Z",
   "assertions": [
     {
       "name": "seed_self",
@@ -51,18 +51,6 @@
       "passed": true
     },
     {
-      "name": "video_authorized_blob_0",
-      "passed": true
-    },
-    {
-      "name": "variant_digest_verified",
-      "passed": true
-    },
-    {
-      "name": "private_handles_removed",
-      "passed": true
-    },
-    {
       "name": "poster_authorized_blob_0",
       "passed": true
     },
@@ -79,23 +67,11 @@
       "passed": true
     },
     {
-      "name": "audio_native_appearance_measured",
-      "passed": true
-    },
-    {
-      "name": "audio_original_preserved",
-      "passed": true
-    },
-    {
-      "name": "audio_duration_and_64_bounded_peaks",
-      "passed": true
-    },
-    {
       "name": "private_handles_removed",
       "passed": true
     },
     {
-      "name": "audio_authorized_blob_0",
+      "name": "video_authorized_blob_0",
       "passed": true
     },
     {
@@ -123,26 +99,6 @@
       "passed": true
     },
     {
-      "name": "thumb_authorized_blob_0",
-      "passed": true
-    },
-    {
-      "name": "variant_digest_verified",
-      "passed": true
-    },
-    {
-      "name": "thumb_browser_image",
-      "passed": true
-    },
-    {
-      "name": "thumb_dimensions_bounded",
-      "passed": true
-    },
-    {
-      "name": "private_handles_removed",
-      "passed": true
-    },
-    {
       "name": "display_authorized_blob_0",
       "passed": true
     },
@@ -159,31 +115,11 @@
       "passed": true
     },
     {
-      "name": "variants_captured_1",
-      "passed": true
-    },
-    {
-      "name": "video_native_appearance_measured",
-      "passed": true
-    },
-    {
-      "name": "video_original_preserved",
-      "passed": true
-    },
-    {
-      "name": "source_video_metadata_landscape",
-      "passed": true
-    },
-    {
-      "name": "video_dimensions_and_thumbhash",
-      "passed": true
-    },
-    {
       "name": "private_handles_removed",
       "passed": true
     },
     {
-      "name": "video_authorized_blob_1",
+      "name": "thumb_authorized_blob_0",
       "passed": true
     },
     {
@@ -191,23 +127,11 @@
       "passed": true
     },
     {
-      "name": "private_handles_removed",
+      "name": "thumb_browser_image",
       "passed": true
     },
     {
-      "name": "poster_authorized_blob_1",
-      "passed": true
-    },
-    {
-      "name": "variant_digest_verified",
-      "passed": true
-    },
-    {
-      "name": "poster_browser_image",
-      "passed": true
-    },
-    {
-      "name": "poster_dimensions_bounded",
+      "name": "thumb_dimensions_bounded",
       "passed": true
     },
     {
@@ -227,11 +151,15 @@
       "passed": true
     },
     {
-      "name": "audio_authorized_blob_1",
+      "name": "audio_authorized_blob_0",
       "passed": true
     },
     {
       "name": "variant_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "variants_captured_1",
       "passed": true
     },
     {
@@ -284,6 +212,78 @@
     },
     {
       "name": "display_dimensions_bounded",
+      "passed": true
+    },
+    {
+      "name": "audio_native_appearance_measured",
+      "passed": true
+    },
+    {
+      "name": "audio_original_preserved",
+      "passed": true
+    },
+    {
+      "name": "audio_duration_and_64_bounded_peaks",
+      "passed": true
+    },
+    {
+      "name": "private_handles_removed",
+      "passed": true
+    },
+    {
+      "name": "audio_authorized_blob_1",
+      "passed": true
+    },
+    {
+      "name": "variant_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "video_native_appearance_measured",
+      "passed": true
+    },
+    {
+      "name": "video_original_preserved",
+      "passed": true
+    },
+    {
+      "name": "source_video_metadata_landscape",
+      "passed": true
+    },
+    {
+      "name": "video_dimensions_and_thumbhash",
+      "passed": true
+    },
+    {
+      "name": "private_handles_removed",
+      "passed": true
+    },
+    {
+      "name": "poster_authorized_blob_1",
+      "passed": true
+    },
+    {
+      "name": "variant_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "poster_browser_image",
+      "passed": true
+    },
+    {
+      "name": "poster_dimensions_bounded",
+      "passed": true
+    },
+    {
+      "name": "private_handles_removed",
+      "passed": true
+    },
+    {
+      "name": "video_authorized_blob_1",
+      "passed": true
+    },
+    {
+      "name": "variant_digest_verified",
       "passed": true
     },
     {
@@ -341,44 +341,44 @@
   "latency": {
     "audio_appearance_to_variants_0": {
       "samples": 1,
-      "p50_ms": 118.019708,
-      "p95_ms": 118.019708,
-      "max_ms": 118.019708,
+      "p50_ms": 180.30425,
+      "p95_ms": 180.30425,
+      "max_ms": 180.30425,
       "timeouts": 0
     },
     "audio_appearance_to_variants_1": {
       "samples": 1,
-      "p50_ms": 133.136417,
-      "p95_ms": 133.136417,
-      "max_ms": 133.136417,
+      "p50_ms": 197.459375,
+      "p95_ms": 197.459375,
+      "max_ms": 197.459375,
       "timeouts": 0
     },
     "image_appearance_to_variants_0": {
       "samples": 1,
-      "p50_ms": 118.019708,
-      "p95_ms": 118.019708,
-      "max_ms": 118.019708,
+      "p50_ms": 180.30425,
+      "p95_ms": 180.30425,
+      "max_ms": 180.30425,
       "timeouts": 0
     },
     "image_appearance_to_variants_1": {
       "samples": 1,
-      "p50_ms": 133.136417,
-      "p95_ms": 133.136417,
-      "max_ms": 133.136417,
+      "p50_ms": 197.459375,
+      "p95_ms": 197.459375,
+      "max_ms": 197.459375,
       "timeouts": 0
     },
     "video_appearance_to_variants_0": {
       "samples": 1,
-      "p50_ms": 118.019708,
-      "p95_ms": 118.019708,
-      "max_ms": 118.019708,
+      "p50_ms": 180.30425,
+      "p95_ms": 180.30425,
+      "max_ms": 180.30425,
       "timeouts": 0
     },
     "video_appearance_to_variants_1": {
       "samples": 1,
-      "p50_ms": 133.136417,
-      "p95_ms": 133.136417,
-      "max_ms": 133.136417,
+      "p50_ms": 197.459375,
+      "p95_ms": 197.459375,
+      "max_ms": 197.459375,
       "timeouts": 0
     }
   },
