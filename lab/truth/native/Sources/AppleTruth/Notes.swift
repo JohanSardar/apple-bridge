@@ -54,6 +54,7 @@ extension AppleTruth {
             require(request.id && request.folder_id);
             const note = app.notes.byId(request.id);
             require(note.name().startsWith(tag) && note.container().id() === request.folder_id && fixtureFolder(note.container()));
+            app.delete(note.container().notes.byId(request.id));
             return {status:'verified', deleted_ids:[request.id]};
         }
         if (action === 'cleanup_created_folder') {
@@ -64,6 +65,7 @@ extension AppleTruth {
             require(folder.name() === 'Bridge Test ' + tag || folder.name().startsWith('Bridge Test ' + tag + ' '));
             require((!request.folder_id || folder.id() === request.folder_id) && folder.folders().length === 0 && (request.folder_id ? folder.notes().length === 0 : folder.notes().every(n => n.name().startsWith(tag))));
             const folderID = folder.id();
+            app.delete(folder.container().folders.byId(folderID));
             return {status:'verified', deleted_ids:[folderID]};
         }
         if (action === 'cleanup_created_folders') {
@@ -75,6 +77,10 @@ extension AppleTruth {
                 return owned.id;
             });
             require(new Set(ids).size === ids.length);
+            ids.forEach(id => {
+                const folder = app.folders.byId(id);
+                app.delete(folder.container().folders.byId(id));
+            });
             return {status:'verified', deleted_ids:ids};
         }
         if (action === 'cleanup' || action === 'delete') {
@@ -85,6 +91,7 @@ extension AppleTruth {
                 const folder = note.container();
                 require(fixtureFolder(folder));
             });
+            selected.forEach(note => app.delete(note.container().notes.byId(note.id())));
             return {status:'verified', deleted_ids:deletedIDs};
         }
         if (action === 'modify') {
@@ -119,15 +126,6 @@ extension AppleTruth {
         guard let text = result?.stringValue, let bytes = text.data(using: .utf8), var response = try JSONSerialization.jsonObject(with: bytes) as? [String: Any] else { throw NotesTruthFailure.invalid }
         if cleanup {
             let deletedIDs = response.removeValue(forKey: "deleted_ids") as? [String] ?? []
-            for id in deletedIDs {
-                _ = try notesDeletionVerified([id])
-                let kind = id.contains("/ICNote/") ? "note" : "folder"
-                let quoted = "\"" + id.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") + "\""
-                guard let script = NSAppleScript(source: "with timeout of 5 seconds\ntell application id \"com.apple.Notes\" to delete " + kind + " id " + quoted + "\nend timeout") else { throw NotesTruthFailure.invalid }
-                var failure: NSDictionary?
-                script.executeAndReturnError(&failure)
-                if let failure { throw NSError(domain: "NotesAppleScript", code: failure[OSAScriptErrorNumber] as? Int ?? 0, userInfo: [NSLocalizedDescriptionKey: "owned_cleanup_failed"]) }
-            }
             let ids = Array(Set(storeTargets + deletedIDs))
             var verified = false
             for _ in 0..<600 {
