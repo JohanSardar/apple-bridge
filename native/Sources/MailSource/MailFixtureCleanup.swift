@@ -19,7 +19,7 @@ public enum MailFixtureCleanup {
         public let step: String
         public let cause: any Error
         public var recovery = "Open Mail, let mailbox sync finish, and try again."
-        public var errorDescription: String? { "Mail could not " + step + ". " + recovery }
+        public var errorDescription: String? { "Mail could not " + step + ". " + MailCommands.failureMessage(cause) + " " + recovery }
     }
     @MainActor public static func selectDisplayed(tag: String) async throws {
         guard AXIsProcessTrusted() else { throw Failure(step: "access its Accessibility controls", cause: MailCommandFailure.rejected, recovery: "Enable Apple Bridge in System Settings > Privacy & Security > Accessibility, then try again.") }
@@ -95,8 +95,7 @@ public enum MailFixtureCleanup {
             set ownedIDs to id of (outgoing messages whose subject is \(q(tag)))
             repeat with ownedID in ownedIDs
                 set m to outgoing message id (contents of ownedID)
-                if subject of m is \(q(tag)) then
-                    set visible of m to true
+                if subject of m is \(q(tag)) and (count (windows whose name contains \(q(tag)) and visible is true)) > 0 then
                     close m saving no
                 end if
             end repeat
@@ -151,7 +150,7 @@ public enum MailFixtureCleanup {
                 let visible = try await script("return count (outgoing messages whose subject is \(q(tag)) and visible is true)")
                 let windows = try await script("return count (windows whose name contains \(q(tag)) and visible is true)")
                 guard let retained = Int(outgoing), retained >= 0, let open = Int(visible), open >= 0, let windowCount = Int(windows), windowCount >= 0 else { throw MailCommandFailure.unconfirmed }
-                let closed = open == 0 && windowCount == 0
+                let closed = windowCount == 0
                 var result = try MailQualification.cleanupResult("0|" + visible)
                 result["cleanup_outgoing_clear"] = .bool(closed)
                 result["cleanup_windows_clear"] = .bool(windowCount == 0)

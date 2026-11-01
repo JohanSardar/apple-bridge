@@ -89,7 +89,7 @@ func checkMailQualification() async throws {
         try require(scripts.contains { $0.contains("set chosen to selected messages") } == (scenario != "MAIL-BODY-FIXTURE"))
         if scenario == "MAIL-BODY-FIXTURE" { try require(scripts.contains { $0.contains("set default message format to priorFormat") }) }
         if scenario != "MAIL-BODY-FIXTURE" {
-            try require(scripts.contains { $0.contains("set visible of m to true") && $0.contains("close m saving no") })
+            try require(scripts.contains { $0.contains("windows whose name contains") && $0.contains("close m saving no") && !$0.contains("set visible of m to true") })
             try require(scripts.contains { $0.contains("{drafts mailbox, inbox, sent mailbox}") && $0.contains("set selected mailboxes of v") })
             try require(scripts.contains { $0.contains("if subject of item 1 of chosen is") })
             try require(!scripts.contains { $0.contains("delete m") || $0.contains("move m") || $0.contains("set deleted status") || $0.contains("set selected messages") })
@@ -134,6 +134,14 @@ func checkMailQualification() async throws {
     let cached = QualificationMailFake(outgoingAfterDelete: true, retainsClosedBackend: true)
     let cachedProof = try await MailQualification(script: { try await cached.run($0) }, fixtureIDs: { _ in await cached.ids() }, selectDisplayed: { _ in await cached.select() }, removeSelected: { await cached.remove() }).run(scenario: "MAIL-DRAFT-REAL", tag: "[ab-test] cached")
     try require(cachedProof["cleanup_passed"].bool && cachedProof["cleanup_closed_compose_cache_verified"].bool)
+    let staleVisible = MailQualification(script: { body in
+        if body.contains("set cleanupStage") { return "clear" }
+        if body.hasPrefix("return count (outgoing") { return "1" }
+        if body.hasPrefix("return count (windows") { return "0" }
+        return ""
+    }, fixtureIDs: { _ in [] }, removeSelected: { throw SourceFailure.corrupt })
+    let staleVisibleProof = try await staleVisible.run(scenario: "MAIL-CLEANUP", tag: "[ab-test] cached")
+    try require(staleVisibleProof["cleanup_passed"].bool && staleVisibleProof["cleanup_closed_compose_cache_verified"].bool)
     let openWindow = MailQualification(script: { body in
         if body.contains("set cleanupStage") { return "clear" }
         if body.hasPrefix("return count (windows") { return "1" }
