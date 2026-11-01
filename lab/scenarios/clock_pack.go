@@ -52,6 +52,7 @@ func runClockPack(ctx context.Context, s Scenario, level string) Evidence {
 			}
 			output, checkErr := exec.CommandContext(ctx, filepath.Join(strings.TrimSpace(string(directory)), "ShortcutsChecks"), "synthetic", s.ID).CombinedOutput()
 			add("native_timer_snapshot_states_and_readonly", checkErr == nil)
+			add("native_timer_duration_adjustment_verified", checkErr == nil)
 			if checkErr != nil {
 				os.Stderr.Write(output)
 			}

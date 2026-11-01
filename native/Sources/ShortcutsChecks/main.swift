@@ -79,6 +79,19 @@ struct Checks {
 
     @MainActor
     static func clockTimerSnapshotChecks() throws {
+        var component = 15, adjustments = 0
+        try ClockTimers.adjustDurationComponent(to: 2, value: { component }, adjust: { increasing in
+            component += increasing ? 1 : -1
+            adjustments += 1
+            return true
+        })
+        guard component == 2, adjustments == 13 else { throw SourceFailure.corrupt }
+        adjustments = 0
+        var stuckRejected = false
+        do {
+            try ClockTimers.adjustDurationComponent(to: 2, value: { 15 }, adjust: { _ in adjustments += 1; return true })
+        } catch { stuckRejected = true }
+        guard stuckRejected, adjustments <= 61 else { throw SourceFailure.corrupt }
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
         defer { try? FileManager.default.removeItem(at: directory) }

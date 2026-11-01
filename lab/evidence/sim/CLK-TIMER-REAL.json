@@ -16,6 +16,10 @@
       "passed": true
     },
     {
+      "name": "native_timer_duration_adjustment_verified",
+      "passed": true
+    },
+    {
       "name": "timer_readback_and_cleanup_qualified",
       "passed": true
     },

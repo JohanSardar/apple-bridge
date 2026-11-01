@@ -8,6 +8,16 @@ import SourceSupport
 public enum ClockTimers {
     private static func failure() -> any Error { ClockTimerFailure() }
 
+    public static func adjustDurationComponent(to target: Int, value: () -> Int?, adjust: (Bool) -> Bool) throws {
+        guard (0...59).contains(target) else { throw failure() }
+        for _ in 0...60 {
+            guard let current = value(), (0...59).contains(current) else { throw failure() }
+            if current == target { return }
+            guard adjust(current < target) else { throw failure() }
+        }
+        throw failure()
+    }
+
     public static func exchange(_ request: Data) throws -> Data {
         guard request.count <= 32768, let value = try JSONSerialization.jsonObject(with: request) as? [String: Any], let operation = value["operation"] as? String else { throw failure() }
         let before = try snapshot()
@@ -126,26 +136,6 @@ private struct ClockTimerUI {
         RunLoop.current.run(until: Date().addingTimeInterval(0.25))
     }
 
-    private func type(_ text: String, into element: AXUIElement) throws {
-        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier else { throw ClockTimerFailure() }
-        var position: CFTypeRef?, size: CFTypeRef?
-        AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &position)
-        AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &size)
-        guard let position, let size else { throw ClockTimerFailure() }
-        var point = CGPoint.zero, dimensions = CGSize.zero
-        AXValueGetValue(unsafeDowncast(position, to: AXValue.self), .cgPoint, &point)
-        AXValueGetValue(unsafeDowncast(size, to: AXValue.self), .cgSize, &dimensions)
-        point.x += dimensions.width / 2; point.y += dimensions.height / 2
-        for kind in [CGEventType.leftMouseDown, .leftMouseUp] { CGEvent(mouseEventSource: nil, mouseType: kind, mouseCursorPosition: point, mouseButton: .left)?.post(tap: .cghidEventTap) }
-        for down in [true, false] { let event = CGEvent(keyboardEventSource: nil, virtualKey: 0, keyDown: down); event?.flags = .maskCommand; event?.postToPid(app.processIdentifier) }
-        let units = Array(text.utf16)
-        let event = CGEvent(keyboardEventSource: nil, virtualKey: 0, keyDown: true)
-        event?.keyboardSetUnicodeString(stringLength: units.count, unicodeString: units)
-        event?.postToPid(app.processIdentifier)
-        CGEvent(keyboardEventSource: nil, virtualKey: 0, keyDown: false)?.postToPid(app.processIdentifier)
-        RunLoop.current.run(until: Date().addingTimeInterval(0.1))
-    }
-
     func create(label: String, duration: Int) throws {
         var started = false
         defer {
@@ -163,9 +153,16 @@ private struct ClockTimerUI {
         let sliders = find(picker[0], role: kAXSliderRole)
         guard sliders.count == 3 else { throw ClockTimerFailure(step: "find the three timer duration controls") }
         for (element, number) in zip(sliders, [duration / 3600, duration / 60 % 60, duration % 60]) {
-            if AXUIElementSetAttributeValue(element, kAXValueAttribute as CFString, NSNumber(value: number)) != .success {
-                try type(String(format: "%02d", number), into: element)
-            }
+            try ClockTimers.adjustDurationComponent(to: number, value: {
+                if let value = attribute(element, kAXValueAttribute) as? NSNumber { return value.intValue }
+                if let value = attribute(element, kAXValueAttribute) as? String { return Int(value) }
+                return nil
+            }, adjust: { increasing in
+                let action = increasing ? kAXIncrementAction : kAXDecrementAction
+                guard AXUIElementPerformAction(element, action as CFString) == .success else { return false }
+                RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+                return true
+            })
         }
         let sheet = find(root, role: kAXSheetRole)
         let scope = sheet.count == 1 ? sheet[0] : root
