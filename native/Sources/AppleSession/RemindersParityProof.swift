@@ -521,7 +521,7 @@ final class RemindersFixtureUI {
             if visited.contains(where: { CFEqual($0, element) }) { continue }
             visited.append(element)
             if value(element, kAXRoleAttribute) == kAXSheetRole { result.append(element) }
-            pending += elements(element, kAXChildrenAttribute) + elements(element, kAXSheetsAttribute)
+            pending += elements(element, kAXChildrenAttribute)
         }
         sheetScanComplete = pending.isEmpty
         return result
