@@ -1,44 +1,45 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[7.35 5.34 5.19] cpu_idle=49% cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[10.29 12.57 16.91] cpu_idle=51% cpus=8 other_heavy=0"
   },
-  "status": "limited",
-  "run_id": "run_01M61Q3QKMFYCWCSNKC8B3PDQV",
+  "run_id": "run_01M6AM4ZDA9Y8G5BP9HCGN7TJS",
   "metrics": {
-    "capture_observer_resets": 0
+    "capture_observer_resets": 0,
+    "diagnostics": {
+      "fixture_icloud_source": 1,
+      "fixture_source_type": 2,
+      "ui_location_cancel_action": 0,
+      "ui_location_command_period_sent": 1,
+      "ui_location_consent_blocked": 1,
+      "ui_location_consent_sheet": 1,
+      "ui_location_decline_buttons": 0,
+      "ui_location_escape_sent": 1,
+      "ui_minimized_windows": 0,
+      "ui_sheet_count": 1
+    }
   },
   "scenario": "REM-SECTIONS",
   "level": "real",
-  "passed": true,
-  "git_sha": "ac85a625c1f94e92d338556412cf7b71ffc83020",
-  "at": "2026-10-28T16:57:20.244249Z",
+  "passed": false,
+  "git_sha": "3208ff2f951879522f79850a43ff1ab74bfe8085",
+  "at": "2026-11-01T03:58:45.16249Z",
   "assertions": [
     {
-      "name": "reminders_ready",
+      "name": "native_sections_build",
       "passed": true
     },
     {
-      "name": "section_membership_supported_path",
-      "passed": false,
-      "status": "limited",
-      "detail": "EventKit has no sections API; existing store reader marks section order and membership decoders unverified"
-    },
-    {
-      "name": "independent_appletruth",
+      "name": "native_sections_report",
       "passed": true
     },
     {
-      "name": "replica_convergence",
+      "name": "owned_list_cleanup",
       "passed": true
     },
     {
-      "name": "no_scope_leak",
-      "passed": true
-    },
-    {
-      "name": "no_scope_leak",
-      "passed": true
+      "name": "native_sections_proof",
+      "passed": false
     },
     {
       "name": "credential_backend_override_restored",
@@ -48,5 +49,8 @@
   "latency": {},
   "hosts": [
     "air"
-  ]
+  ],
+  "conditions": {
+    "reason": "The test stopped at fixture: Open Reminders and finish its Location consent screen before retrying. No Location permission was requested by this test."
+  }
 }

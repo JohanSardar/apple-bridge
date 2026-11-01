@@ -1,0 +1,120 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[9.23 12.19 16.67] cpu_idle=44% cpus=8 other_heavy=0"
+  },
+  "run_id": "reminders-parity_01M6AM5H8J06GJSKJHEA1YHVHN",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "diagnostics": {
+      "fixture_icloud_source": 1,
+      "fixture_source_type": 2,
+      "flag_clear_parent_matches": 1,
+      "flag_clear_script_readback": 0,
+      "flag_clear_store_flag": 0,
+      "flag_parent_matches": 1,
+      "flag_script_readback": 1,
+      "flag_store_flag": 1,
+      "list_icon_parent_matches": 1,
+      "list_icon_store_flag": 0,
+      "store_visibility_parent_matches": 1,
+      "store_visibility_store_flag": 0,
+      "ui_location_cancel_action": 0,
+      "ui_location_command_period_sent": 1,
+      "ui_location_consent_blocked": 1,
+      "ui_location_consent_sheet": 1,
+      "ui_location_decline_buttons": 0,
+      "ui_location_escape_sent": 1,
+      "ui_minimized_windows": 0,
+      "ui_sheet_count": 1
+    }
+  },
+  "scenario": "WEB-REM-PARITY",
+  "level": "real",
+  "passed": false,
+  "git_sha": "",
+  "at": "2026-11-01T03:59:03.442813Z",
+  "assertions": [
+    {
+      "name": "native_sections_build",
+      "passed": true
+    },
+    {
+      "name": "native_sections_report",
+      "passed": true
+    },
+    {
+      "name": "accessibility_granted",
+      "passed": true
+    },
+    {
+      "name": "automation_granted",
+      "passed": true
+    },
+    {
+      "name": "fixture_visible",
+      "passed": true
+    },
+    {
+      "name": "flag_clear_readback",
+      "passed": true
+    },
+    {
+      "name": "flag_readback",
+      "passed": true
+    },
+    {
+      "name": "list_icon_readback",
+      "passed": true
+    },
+    {
+      "name": "owned_list_cleanup",
+      "passed": true
+    },
+    {
+      "name": "reminders_granted",
+      "passed": true
+    },
+    {
+      "name": "store_fixture_visible",
+      "passed": true
+    },
+    {
+      "name": "indent_readback",
+      "passed": false
+    },
+    {
+      "name": "outdent_readback",
+      "passed": false
+    },
+    {
+      "name": "tags_readback",
+      "passed": false
+    },
+    {
+      "name": "reorder_readback",
+      "passed": false
+    },
+    {
+      "name": "image_readback",
+      "passed": false
+    },
+    {
+      "name": "smart_list_readback",
+      "passed": false
+    },
+    {
+      "name": "native_sections_proof",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null,
+  "conditions": {
+    "navigation": "The navigation action could not be verified on the test list: Open Reminders and finish its Location consent screen before retrying. No Location permission was requested by this test."
+  }
+}
