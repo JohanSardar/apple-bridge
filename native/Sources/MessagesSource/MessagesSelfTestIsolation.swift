@@ -1,6 +1,12 @@
 import Foundation
 
 public enum MessagesSelfTestIsolation {
+    public static func nativeChatCandidates(_ guid: String) -> [String] {
+        guard !guid.isEmpty else { return [] }
+        let parts = guid.split(separator: ";", maxSplits: 2, omittingEmptySubsequences: false).map(String.init)
+        guard parts.count == 3, ["iMessage", "any"].contains(parts[0]), parts[1] == "-", !parts[2].isEmpty else { return [guid] }
+        return [guid, (parts[0] == "iMessage" ? "any" : "iMessage") + ";-;" + parts[2]]
+    }
     private static func identity(_ raw: String) -> (email: Bool, value: String)? {
         var value = (raw.removingPercentEncoding ?? raw).trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let prefixes = ["imessage:", "sms:", "rcs:", "mailto:", "tel:", "p:", "e:", "imessage;-;", "sms;-;", "rcs;-;"]

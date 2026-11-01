@@ -66,21 +66,44 @@ enum MessagesNativeSession {
             throw SendVariantFailure.audioMessageFlagUnverified
         }
         checkpoint("connection_established")
+        let candidates = MessagesSelfTestIsolation.nativeChatCandidates(guid)
+        let components = guid.split(separator: ";", maxSplits: 2, omittingEmptySubsequences: false).map(String.init)
+        let identifier = candidates.count == 2 ? components[2] : ""
         let deadline = Date().addingTimeInterval(5)
         var chat: AnyObject?
         repeat {
-            chat = try object(registry, "existingChatWithGUID:", argument: guid as NSString)
+            for candidate in candidates {
+                chat = try object(registry, "existingChatWithGUID:", argument: candidate as NSString)
+                if chat != nil { break }
+            }
+            if chat == nil, !identifier.isEmpty { chat = try object(registry, "existingChatWithChatIdentifier:", argument: identifier as NSString) }
             if chat != nil { break }
             RunLoop.current.run(until: Date().addingTimeInterval(0.05))
         } while Date() < deadline
-        guard let chat, try object(chat, "guid") as? String == guid else { throw SendVariantFailure.audioMessageFlagUnverified }
+        guard let chat, let actual = try object(chat, "guid") as? String, candidates.contains(where: { $0.caseInsensitiveCompare(actual) == .orderedSame }) else {
+            let known = try? object(registry, "allExistingChats")
+            let count = (known as? NSArray)?.count ?? (known as? NSSet)?.count ?? -1
+            try? PrivateReport.write(["registry_chat_count": count, "route_candidate_count": candidates.count, "chat_resolved": false], to: PrivateReport.directory.appendingPathComponent("messages-native-chat-diagnostic.json"))
+            throw SourceFailure.conflict
+        }
         checkpoint("self_chat_resolved")
         return chat
     }
     static func deleteOwnedItem(_ guid: String, chat chatGUID: String) throws {
         let chat = try chat(chatGUID)
-        guard let message = try object(chat, "messageForGUID:", argument: guid as NSString), try object(message, "guid") as? String == guid,
-              let item = try object(message, "_imMessageItem"), try object(item, "guid") as? String == guid else { throw SourceFailure.conflict }
+        var item = try object(chat, "messageItemForGUID:", argument: guid as NSString)
+        if item == nil {
+            let (selector, implementation) = try method(chat, "loadMessagesUpToGUID:date:limit:loadImmediately:")
+            typealias Load = @convention(c) (AnyObject, Selector, NSString, NSDate?, UInt64, Bool) -> Unmanaged<AnyObject>?
+            _ = unsafeBitCast(implementation, to: Load.self)(chat, selector, guid as NSString, nil, 1, true)
+            let deadline = Date().addingTimeInterval(3)
+            repeat {
+                item = try object(chat, "messageItemForGUID:", argument: guid as NSString)
+                if item != nil { break }
+                RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+            } while Date() < deadline
+        }
+        guard let item, try object(item, "guid") as? String == guid else { throw SourceFailure.conflict }
         let (selector, implementation) = try method(chat, "deleteIMMessageItems:")
         typealias Call = @convention(c) (AnyObject, Selector, NSArray) -> Void
         checkpoint("owned_item_delete_requested")

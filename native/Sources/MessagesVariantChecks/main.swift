@@ -27,6 +27,9 @@ struct MessagesVariantChecks {
         let data: [String: JSON] = ["text": .string("test"), "is_from_me": .bool(true), "error_code": .number(0), "effect": .string("com.apple.messages.effect.loud"), "formatting": .array([range])]
         var checks = try await AccessibilityInputChecks.run()
         checks["multipart_capture_repeats_all_parts_in_one_batch"] = try await CommandCaptureChecks.run()
+        checks["native_chat_namespace_alias_is_same_direct_address"] = MessagesSelfTestIsolation.nativeChatCandidates("iMessage;-;self@example.com") == ["iMessage;-;self@example.com", "any;-;self@example.com"]
+        checks["native_chat_namespace_never_changes_group_or_service"] = MessagesSelfTestIsolation.nativeChatCandidates("SMS;-;self@example.com") == ["SMS;-;self@example.com"] && MessagesSelfTestIsolation.nativeChatCandidates("iMessage;+;group") == ["iMessage;+;group"]
+        checks["native_chat_namespace_never_adds_other_address"] = !MessagesSelfTestIsolation.nativeChatCandidates("iMessage;-;self@example.com").contains("any;-;other@example.com")
         checks["forwarded_native_receiver_supported"] = await MainActor.run { MessagesSendVariants.syntheticForwardedNativeFlag(ForwardedNativeFlagProxy(), selector: "readyForNativeFlag") }
         checks["already_read_timestamp_is_observed"] = MessagesReadStateFixture.matches(timestamp: 20, latest: 20, unread: false)
         checks["unread_timestamp_is_observed"] = MessagesReadStateFixture.matches(timestamp: 19, latest: 20, unread: true)
