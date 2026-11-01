@@ -58,6 +58,11 @@ func nativeMessagesExistingChatGate(ctx context.Context, db *sql.DB, id, chat st
 
 func runNativeMessagesCommands(ctx context.Context, s Scenario, level string, e Evidence) Evidence {
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
+	if s.ID == "WEB-MEDIA-VARIANTS" {
+		proof := runMediaCleanupProof(ctx, s, level)
+		e.Assertions = append(e.Assertions, proof.Assertions...)
+		if !proof.Passed { return e }
+	}
 	replicas := 0
 	if level == "replica" || s.ID == "WEB-MEDIA-VARIANTS" {
 		replicas = 1
