@@ -100,7 +100,6 @@ enum CalendarParityProof {
                 controls["travel_menu_opened"] = .bool(true)
                 try ui.pressAny(["15 minutes", "15 Minutes"], role: kAXMenuItemRole)
                 controls["travel_duration_selected"] = .bool(true)
-                try ui.key(48)
                 try await ui.commit()
                 controls["travel_edit_committed"] = .bool(true)
                 try await ui.openOwnedEvent()
@@ -294,6 +293,19 @@ final class CalendarFixtureUI {
         return (result as? NSAttributedString)?.string ?? result as? String ?? (result as? NSNumber)?.stringValue ?? ""
     }
 
+    func discoveryRoots() -> [AXUIElement] {
+        var raw: CFTypeRef?
+        AXUIElementCopyAttributeValue(root, kAXWindowsAttribute as CFString, &raw)
+        let windows = raw as? [AXUIElement] ?? []
+        diagnostics["calendar_ax_window_count"] = .number(Double(windows.count))
+        let floating = windows.filter { value($0, kAXSubroleAttribute) == kAXFloatingWindowSubrole }
+        diagnostics["calendar_floating_window_count"] = .number(Double(floating.count))
+        for subrole in Set(windows.map({ value($0, kAXSubroleAttribute) })) {
+            diagnostics["calendar_window_" + subrole + "_count"] = .number(Double(windows.filter { value($0, kAXSubroleAttribute) == subrole }.count))
+        }
+        return floating + windows.filter { value($0, kAXSubroleAttribute) != kAXFloatingWindowSubrole } + [root]
+    }
+
     func find(_ name: String, role: String? = nil, containing: Bool = false, within: AXUIElement? = nil) -> [AXUIElement] {
         var budget = 3000
         let deadline = ContinuousClock.now.advanced(by: .seconds(2))
@@ -304,13 +316,17 @@ final class CalendarFixtureUI {
             AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children)
             return (children as? [AXUIElement] ?? []).flatMap(walk)
         }
-        let found = walk(within ?? root)
+        var found: [AXUIElement] = []
+        for source in within.map({ [$0] }) ?? discoveryRoots() {
+            for element in walk(source) where !found.contains(where: { CFEqual($0, element) }) { found.append(element) }
+        }
         diagnostics["accessibility_walk_count"] = .number((diagnostics["accessibility_walk_count"]?.number ?? 0) + 1)
         if ContinuousClock.now >= deadline { diagnostics["accessibility_walk_timeout_count"] = .number((diagnostics["accessibility_walk_timeout_count"]?.number ?? 0) + 1) }
         return found
     }
 
     func openOwnedEvent() async throws {
+        inspectorCache = nil
         app.activate()
         for _ in 0..<20 {
             if NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier { break }
@@ -452,6 +468,7 @@ final class CalendarFixtureUI {
     }
 
     func commit() async throws {
+        defer { inspectorCache = nil }
         try fence()
         if inspectorFind("Done", role: kAXButtonRole).count == 1 { try press("Done", role: kAXButtonRole) }
         else { try post(53, flags: []) }
@@ -516,7 +533,11 @@ final class CalendarFixtureUI {
             let descendants = (children as? [AXUIElement] ?? []).flatMap(walk)
             return (value(element, kAXRoleAttribute) == role ? [element] : []) + descendants
         }
-        return walk(root)
+        var found: [AXUIElement] = []
+        for source in discoveryRoots() {
+            for element in walk(source) where !found.contains(where: { CFEqual($0, element) }) { found.append(element) }
+        }
+        return found
     }
 
     func dialogPress(_ name: String) throws {
@@ -528,15 +549,32 @@ final class CalendarFixtureUI {
     func ownedInspector() -> AXUIElement? {
         if let cached = inspectorCache, !find(title, containing: true, within: cached).isEmpty { return cached }
         inspectorCache = nil
-        let fields = find(title, containing: true).filter { value($0, kAXSubroleAttribute) != kAXSearchFieldSubrole }
-        for field in fields {
-            var current = field
-            for _ in 0..<6 {
+        let anchors = ["Done", "Accept", "Maybe", "Decline", "Add Invitees", "Add Invitees…", "Add Attachment…", "Add Attachments", "Add Alert, Repeat, or Travel Time", "Add Alert or Travel Time", "Add Notes, URL, or Attachments", "Add Notes or Attachments", "Add notes, URL or attachments"]
+        var seeds: [AXUIElement] = []
+        var focused: CFTypeRef?
+        if AXUIElementCopyAttributeValue(root, kAXFocusedUIElementAttribute as CFString, &focused) == .success,
+           let focused, CFGetTypeID(focused) == AXUIElementGetTypeID() {
+            let element = unsafeDowncast(focused, to: AXUIElement.self)
+            diagnostics["inspector_focused_" + value(element, kAXRoleAttribute)] = .bool(true)
+            seeds.append(element)
+        }
+        seeds += find(title, role: kAXTextFieldRole)
+        seeds += find(title, role: kAXStaticTextRole)
+        for seed in seeds {
+            let titleField = value(seed, kAXRoleAttribute) == kAXTextFieldRole && value(seed, kAXSubroleAttribute) != kAXSearchFieldSubrole && [kAXTitleAttribute, kAXValueAttribute].contains { value(seed, $0) == title }
+            var current = seed
+            for _ in 0..<8 {
                 let role = value(current, kAXRoleAttribute)
                 if role == kAXApplicationRole { break }
-                if role == kAXWindowRole, !value(current, kAXTitleAttribute).contains(title) { break }
-                let anchors = ["Done", "Accept", "Maybe", "Decline", "Add Invitees", "Add Invitees…", "Add Attachment…", "Add Attachments", "Add Alert, Repeat, or Travel Time", "Add Alert or Travel Time", "Add Notes, URL, or Attachments", "Add Notes or Attachments", "Add notes, URL or attachments"]
-                if anchors.contains(where: { !find($0, within: current).isEmpty }) { inspectorCache = current; return current }
+                let floating = role == kAXWindowRole && value(current, kAXSubroleAttribute) == kAXFloatingWindowSubrole
+                let titledWindow = role == kAXWindowRole && value(current, kAXTitleAttribute).contains(title)
+                if role == kAXWindowRole && !floating && !titledWindow { break }
+                if (titleField || floating || titledWindow || role == "AXPopover"),
+                   !find(title, within: current).isEmpty,
+                   anchors.contains(where: { !find($0, within: current).isEmpty }) {
+                    inspectorCache = current
+                    return current
+                }
                 var parent: CFTypeRef?
                 guard AXUIElementCopyAttributeValue(current, kAXParentAttribute as CFString, &parent) == .success,
                       let parent, CFGetTypeID(parent) == AXUIElementGetTypeID() else { break }
@@ -554,7 +592,7 @@ final class CalendarFixtureUI {
     }
 
     func fence() throws {
-        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier, hasOwnedInspector() else { throw SourceFailure.conflict }
+        guard hasOwnedInspector() else { throw SourceFailure.conflict }
     }
 
     func navigationInfo() throws {
