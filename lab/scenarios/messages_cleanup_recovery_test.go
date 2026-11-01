@@ -76,3 +76,43 @@ func TestCleanupRecoveryRecognizesCurrentTextAttachmentEchoOnly(t *testing.T) {
 		t.Fatal(ids)
 	}
 }
+
+func TestCleanupRecoveryIgnoresReactionEventsWithoutChangingReadState(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	for _, query := range []string{
+		`CREATE TABLE message(guid TEXT,text TEXT,attributedBody BLOB,is_from_me INTEGER,is_read INTEGER,associated_message_type INTEGER)`,
+		`CREATE TABLE chat_message_join(chat_id INTEGER,message_id INTEGER)`,
+		`CREATE TABLE chat_recoverable_message_join(chat_id INTEGER,message_id INTEGER)`,
+		`INSERT INTO message VALUES('reaction',NULL,NULL,0,0,3006),('owned','[ab-test current] fixture',NULL,1,1,0)`,
+		`INSERT INTO chat_message_join VALUES(1,1),(1,2)`,
+	} {
+		if _, err := db.Exec(query); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, genuine := range []bool{false, true} {
+		if genuine {
+			if _, err := db.Exec(`UPDATE message SET associated_message_type=0 WHERE ROWID=1`); err != nil {
+				t.Fatal(err)
+			}
+		}
+		rows, err := nativeMessagesRecoveryUnreadRows(context.Background(), db, 1, "[ab-test current]")
+		if err != nil {
+			t.Fatal(err)
+		}
+		found := rows.Next()
+		problem := rows.Err()
+		rows.Close()
+		if found != genuine || problem != nil {
+			t.Fatal("genuine", genuine, "found", found, problem)
+		}
+		var read int
+		if err := db.QueryRow(`SELECT is_read FROM message WHERE ROWID=1`).Scan(&read); err != nil || read != 0 {
+			t.Fatal("read state changed", read, err)
+		}
+	}
+}
