@@ -44,22 +44,35 @@ enum MessagesAccessibility {
         let preview = (actions as? [String] ?? []).filter { $0.hasPrefix("Name:Quick Look\n") }
         guard preview.count == 1 else { return [] }
         let session = try uiSession()
-        let previous = children(session.root).filter { value($0, kAXRoleAttribute) == kAXWindowRole }
+        func previewWindows() -> [AXUIElement] {
+            let services = NSWorkspace.shared.runningApplications.filter { $0.bundleIdentifier == "com.apple.quicklook.QuickLookUIService" }.map { AXUIElementCreateApplication($0.processIdentifier) }
+            return ([session.root] + services).flatMap { root in
+                var windows: CFTypeRef?
+                AXUIElementCopyAttributeValue(root, kAXWindowsAttribute as CFString, &windows)
+                return windows as? [AXUIElement] ?? children(root).filter { value($0, kAXRoleAttribute) == kAXWindowRole }
+            }
+        }
+        let previous = previewWindows()
         try session.fence()
         guard AXUIElementPerformAction(bubble, preview[0] as CFString) == .success else { return [] }
-        defer { try? session.press(MessagesUISession.escape) }
+        defer {
+            try? session.press(MessagesUISession.escape)
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
         let deadline = Date().addingTimeInterval(1)
         var found: Set<String> = []
         var windowCount = 0
         var stemMatches = 0
         let stems = Set(names.map { URL(fileURLWithPath: $0).deletingPathExtension().lastPathComponent })
         repeat {
-            let windows = children(session.root).filter { window in value(window, kAXRoleAttribute) == kAXWindowRole && !previous.contains(where: { CFEqual($0, window) }) }
+            let windows = previewWindows().filter { window in !previous.contains(where: { CFEqual($0, window) }) }
             windowCount = max(windowCount, windows.count)
             var budget = 1000
             for window in windows {
                 _ = matching(window, budget: &budget) { node in
-                    for attribute in [kAXTitleAttribute, kAXValueAttribute, kAXDescriptionAttribute, "AXURL", "AXFilename"] {
+                    var attributes: CFArray?
+                    AXUIElementCopyAttributeNames(node, &attributes)
+                    for attribute in attributes as? [String] ?? [] {
                         let text = value(node, attribute)
                         if stems.contains(text) { stemMatches += 1 }
                         if MessagesMediaCleanupProof.matches(text, names: names) { found.insert(text) }
@@ -133,6 +146,8 @@ enum MessagesAccessibility {
                         var candidate = candidates[index].object
                         candidate["values"] = .array(candidates[index]["values"].array + names)
                         candidates[index] = .object(candidate)
+                        selected = MessagesMediaCleanupProof.targetIndex(candidates, names: Set(mediaNames), outgoing: outgoing, allowSelfEcho: selfEcho, ownedCopies: ownedCopies)
+                        if selected != nil { break }
                     }
                 }
                 selected = MessagesMediaCleanupProof.targetIndex(candidates, names: Set(mediaNames), outgoing: outgoing, allowSelfEcho: selfEcho, equivalentOwned: prepared.nativeState["target"]["cleanup_equivalent_owned_media"].bool, ownedCopies: ownedCopies)
