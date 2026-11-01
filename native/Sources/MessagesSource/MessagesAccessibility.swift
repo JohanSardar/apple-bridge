@@ -52,7 +52,19 @@ enum MessagesAccessibility {
                 var textBudget = 100
                 return matching(element, budget: &textBudget) { node in [kAXValueAttribute, kAXTitleAttribute, kAXDescriptionAttribute].contains { [expected, "You: " + expected].contains(value(node, $0)) } }.count > 0 && textBudget > 0
             }
-            guard budget > 0, rows.count == 1 else { throw MessagesUIFailure.targetUnavailable }
+            guard budget > 0, rows.count == 1 else {
+                var diagnosticBudget = 4000
+                let candidates = matching(root, budget: &diagnosticBudget) { value($0, kAXRoleAttribute) == kAXRowRole }
+                let samples = candidates.map { row -> [String: Any] in
+                    var nested = 100
+                    let exact = matching(row, budget: &nested) { node in
+                        [kAXValueAttribute, kAXTitleAttribute, kAXDescriptionAttribute].contains { value(node, $0).contains(expected) }
+                    }.count
+                    return ["contains_expected_count": exact, "budget_remaining": nested]
+                }
+                try? PrivateReport.write(["stage": "conversation_target", "matching_rows": rows.count, "budget_remaining": budget, "rows": samples], to: PrivateReport.directory.appendingPathComponent("messages-target-diagnostic.json"))
+                throw MessagesUIFailure.targetUnavailable
+            }
             return rows[0]
         }
         if !mediaNames.isEmpty {

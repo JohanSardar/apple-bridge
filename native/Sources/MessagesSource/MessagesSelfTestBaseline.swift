@@ -15,7 +15,7 @@ public struct MessagesContentBaseline: Sendable {
     public let chat: String
     private let lastMessageROWID: Int64
     private let messagesDigest: String
-    private let propertiesDigest: String
+    private let preferencesDigest: String
     private let pins: [String]
 
     public static func capture(_ chat: String) throws -> MessagesContentBaseline {
@@ -24,16 +24,24 @@ public struct MessagesContentBaseline: Sendable {
         guard MessagesSelfTestIsolation.isSelfChat(peers, own: try MessagesSelfTestIsolation.accountHandles(database: MessagesDatabase())) else { throw SourceFailure.invalid }
         guard try reader.query("SELECT 1 FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? AND m.is_from_me=0 AND m.is_read=0 AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=m.ROWID) LIMIT 1", [chat]).isEmpty else { throw MessagesSelfTestBaselineFailure.unreadMessages }
         let maximum = try reader.maximum()
-        return MessagesContentBaseline(chat: chat, lastMessageROWID: maximum, messagesDigest: try MessagesSelfTestBaseline.digest(chat, through: maximum), propertiesDigest: try properties(chat, reader: reader), pins: try MessagesPins.read())
+        return MessagesContentBaseline(chat: chat, lastMessageROWID: maximum, messagesDigest: try MessagesSelfTestBaseline.digest(chat, through: maximum), preferencesDigest: try preferenceDigest(MessagesParity.properties(chat)), pins: try MessagesPins.read())
     }
 
-    private static func properties(_ chat: String, reader: MessagesReader) throws -> String {
-        guard let row = try reader.query("SELECT properties FROM chat WHERE guid=?", [chat]).first else { throw SourceFailure.conflict }
-        return BodyDigest.hash(row.blobs["properties"] ?? Data())
+    public static func preferenceDigest(_ properties: [String: Any]) throws -> String {
+        func canonical(_ value: Any) -> Any {
+            if let date = value as? Date { return ["date": date.timeIntervalSinceReferenceDate] }
+            if let bytes = value as? Data { return ["data_digest": BodyDigest.hash(bytes)] }
+            if let fields = value as? [String: Any] { return fields.mapValues(canonical) }
+            if let items = value as? [Any] { return items.map(canonical) }
+            return value
+        }
+        let transient = Set(["lastSeenMessageGuid", "LSMD", "numberOfTimesRespondedtoThread"])
+        let preferences = properties.filter { !transient.contains($0.key) }.mapValues(canonical)
+        return BodyDigest.hash(try JSONSerialization.data(withJSONObject: preferences, options: [.sortedKeys]))
     }
 
     public func restoreAndVerify() throws -> Bool {
-        try MessagesSelfTestBaseline.digest(chat, through: lastMessageROWID) == messagesDigest && Self.properties(chat, reader: MessagesSelfTestBaseline.reader()) == propertiesDigest && MessagesPins.read() == pins
+        try MessagesSelfTestBaseline.digest(chat, through: lastMessageROWID) == messagesDigest && Self.preferenceDigest(MessagesParity.properties(chat)) == preferencesDigest && MessagesPins.read() == pins
     }
 }
 

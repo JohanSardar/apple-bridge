@@ -17,6 +17,17 @@ struct MessagesVariantChecks {
         let args = JSON.object(["text": .string("test"), "variant": variant])
         let data: [String: JSON] = ["text": .string("test"), "is_from_me": .bool(true), "error_code": .number(0), "effect": .string("com.apple.messages.effect.loud"), "formatting": .array([range])]
         var checks = try await AccessibilityInputChecks.run()
+        let conversationPreferences: [String: Any] = ["EnableReadReceiptForChat": true, "shouldForceToSMS": false, "lastSeenMessageGuid": "earlier", "LSMD": Date(timeIntervalSinceReferenceDate: 1), "numberOfTimesRespondedtoThread": 0]
+        var afterSend = conversationPreferences
+        afterSend["lastSeenMessageGuid"] = "owned-send"
+        afterSend["LSMD"] = Date(timeIntervalSinceReferenceDate: 2)
+        afterSend["numberOfTimesRespondedtoThread"] = 1
+        checks["owned_send_housekeeping_preserves_preferences"] = try MessagesContentBaseline.preferenceDigest(conversationPreferences) == MessagesContentBaseline.preferenceDigest(afterSend)
+        afterSend["EnableReadReceiptForChat"] = false
+        checks["receipt_preference_change_detected"] = try MessagesContentBaseline.preferenceDigest(conversationPreferences) != MessagesContentBaseline.preferenceDigest(afterSend)
+        afterSend = conversationPreferences
+        afterSend["new_preference"] = true
+        checks["new_conversation_preference_detected"] = try MessagesContentBaseline.preferenceDigest(conversationPreferences) != MessagesContentBaseline.preferenceDigest(afterSend)
         let readState = JSON.object(["run_id": .string("current"), "scenario": .string("MSG-READSTATE-REAL"), "baseline_max_row_id": .number(10), "created_chat_key": .string("self")])
         checks["current_read_state_fixture_allowed"] = MessagesReadStateFixture.authorizes(readState, chat: "self", rowID: 11, text: "[ab-test current] fixture")
         checks["older_read_state_target_refused"] = !MessagesReadStateFixture.authorizes(readState, chat: "self", rowID: 10, text: "[ab-test current] fixture")

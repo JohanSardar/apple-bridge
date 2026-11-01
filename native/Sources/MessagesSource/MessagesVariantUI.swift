@@ -40,6 +40,16 @@ enum MessagesVariantUI {
     static func unique(_ elements: [AXUIElement], failure: SendVariantFailure) throws -> AXUIElement {
         guard elements.count==1 else { throw failure };return elements[0]
     }
+    static func checkpoint(_ stage: String, root: AXUIElement) {
+        let labels = ["Apps", "Add", "Show Apps", "Send Later", "Record Audio", "Stop", "Send", "Cancel"]
+        var counts = Dictionary(uniqueKeysWithValues: (labels + ["date_fields", "composer_fields"]).map { ($0, 0) })
+        for node in find(root) {
+            for label in labels where value(node, kAXTitleAttribute) == label || value(node, kAXDescriptionAttribute) == label { counts[label, default: 0] += 1 }
+            if value(node, kAXRoleAttribute) == "AXDateField" { counts["date_fields", default: 0] += 1 }
+            if value(node, kAXIdentifierAttribute) == "messageBodyField" { counts["composer_fields", default: 0] += 1 }
+        }
+        try? PrivateReport.write(["stage": stage, "controls": counts], to: PrivateReport.directory.appendingPathComponent("messages-variant-diagnostic.json"))
+    }
     static func menu(_ title: String) throws {
         let application=try uiSession().root
         try press(try unique(find(application,role:kAXMenuBarItemRole,name:"Format"),failure:.formatMenuUnavailable))
@@ -62,6 +72,7 @@ enum MessagesVariantUI {
         RunLoop.current.run(until:Date().addingTimeInterval(1))
         try MessagesAccessibility.validate(Prepared(nativeState:.object(["target":targetData]),fingerprint:"",action:.object(["op":.string("messages.send"),"native_key":.string(target)])))
         let session=try uiSession(),application=session.root,editor=try unique(find(application,identifier:"messageBodyField"),failure:.composerUnavailable)
+        checkpoint("composer_resolved", root: application)
         guard value(editor,kAXValueAttribute).isEmpty else { throw SendVariantFailure.draftPresent }
         defer {
             if !sendStarted,(try? session.fence()) != nil,value(editor,kAXValueAttribute)==args["text"].string,(try? session.focus(editor,failure:SendVariantFailure.composerUnavailable)) != nil {
@@ -72,7 +83,9 @@ enum MessagesVariantUI {
         if kind=="schedule" {
             let buttons=find(application,role:kAXButtonRole).filter { ["Apps","Add","Show Apps"].contains(value($0,kAXDescriptionAttribute)) || ["AppsButton","AppDrawerButton"].contains(value($0,kAXIdentifierAttribute)) }
             try press(try unique(buttons,failure:.scheduleDateControlsUnverified))
+            checkpoint("apps_opened", root: application)
             try press(try unique(find(application,name:"Send Later"),failure:.scheduleDateControlsUnverified))
+            checkpoint("schedule_opened", root: application)
             guard let date = parseTimestamp(variant["scheduled_for"].string) else { throw SendVariantFailure.invalidVariant }
             let fields = find(application, role: "AXDateField")
             guard !fields.isEmpty else { throw SendVariantFailure.scheduleDateControlsMissing }
