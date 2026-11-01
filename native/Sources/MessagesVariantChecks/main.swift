@@ -17,6 +17,11 @@ struct MessagesVariantChecks {
         let args = JSON.object(["text": .string("test"), "variant": variant])
         let data: [String: JSON] = ["text": .string("test"), "is_from_me": .bool(true), "error_code": .number(0), "effect": .string("com.apple.messages.effect.loud"), "formatting": .array([range])]
         var checks = try await AccessibilityInputChecks.run()
+        checks["already_read_timestamp_is_observed"] = MessagesReadStateFixture.matches(timestamp: 20, latest: 20, unread: false)
+        checks["unread_timestamp_is_observed"] = MessagesReadStateFixture.matches(timestamp: 19, latest: 20, unread: true)
+        checks["read_state_mismatch_rejected"] = !MessagesReadStateFixture.matches(timestamp: 19, latest: 20, unread: false)
+        checks["read_state_mixed_timestamp_units"] = MessagesReadStateFixture.matches(timestamp: 2_000_000_000_000, latest: 2000, unread: false)
+        checks["invalid_read_timestamp_rejected"] = !MessagesReadStateFixture.matches(timestamp: .nan, latest: 20, unread: true)
         checks["mark_read_uses_explicit_menu_action"] = MessagesUIActions.readStateAction(unread: false, titles: ["Mark as Read"]) == "Mark as Read"
         checks["mark_unread_uses_explicit_menu_action"] = MessagesUIActions.readStateAction(unread: true, titles: ["Mark as Unread"]) == "Mark as Unread"
         checks["already_read_needs_no_action"] = MessagesUIActions.readStateAction(unread: false, titles: ["Mark as Unread"]) == ""

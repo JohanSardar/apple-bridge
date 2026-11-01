@@ -279,11 +279,9 @@ public actor MessagesCommands {
             let operation = prepared.action["op"].string
             let rawLatest = Double(prepared.nativeState["latest_message_date"].string) ?? 0
             let rawTimestamp = Double(current?["last_read_message_timestamp"] ?? "0") ?? 0
-            let latest = rawLatest > 1e12 ? rawLatest / 1e9 : rawLatest
-            let timestamp = rawTimestamp > 1e12 ? rawTimestamp / 1e9 : rawTimestamp
             let recoverable = try reader.recoverableChat(chat)
             let deleted = current == nil || recoverable
-            let observed = operation == "messages.delete_chat" ? deleted : current != nil && latest > 0 && (operation == "messages.mark_read" ? timestamp >= latest : timestamp < latest) && current?["last_read_message_timestamp"] != prepared.nativeState["last_read_timestamp"].string
+            let observed = operation == "messages.delete_chat" ? deleted : current != nil && MessagesReadStateFixture.matches(timestamp: rawTimestamp, latest: rawLatest, unread: operation == "messages.mark_unread")
             if observed {
                 var evidence = ui.object
                 evidence["source"] = .string("messages")

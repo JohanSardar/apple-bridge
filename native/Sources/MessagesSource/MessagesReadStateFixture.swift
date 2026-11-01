@@ -2,6 +2,12 @@ import Foundation
 import SourceSupport
 
 public enum MessagesReadStateFixture {
+    public static func matches(timestamp rawTimestamp: Double, latest rawLatest: Double, unread: Bool) -> Bool {
+        guard rawTimestamp.isFinite, rawLatest.isFinite, rawTimestamp >= 0, rawLatest > 0 else { return false }
+        let timestamp = rawTimestamp > 1e12 ? rawTimestamp / 1e9 : rawTimestamp
+        let latest = rawLatest > 1e12 ? rawLatest / 1e9 : rawLatest
+        return unread ? timestamp < latest : timestamp >= latest
+    }
     public static func authorizes(_ registration: JSON, chat: String, rowID: Int64, text: String) -> Bool {
         let run = registration["run_id"].string
         guard run.range(of: #"^[A-Za-z0-9_-]+$"#, options: .regularExpression) != nil,

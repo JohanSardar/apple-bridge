@@ -261,14 +261,24 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 		return e
 	}
 	if s.ID == "MSG-READSTATE-REAL" && !readStateFresh {
-		baselineDigest, problem := nativeMessagesChatDigest(ctx, native, rawChat, maximum)
+		baselineDigest, baselineColumns, problem := nativeMessagesChatDigests(ctx, native, rawChat, maximum)
 		if problem != nil {
 			add("existing_read_state_baseline", false)
 			return e
 		}
 		defer func() {
-			digest, problem := nativeMessagesChatDigest(context.Background(), native, rawChat, maximum)
+			digest, columns, problem := nativeMessagesChatDigests(context.Background(), native, rawChat, maximum)
 			preserved := problem == nil && digest == baselineDigest
+			changed := map[string]int{}
+			for column, before := range baselineColumns {
+				if columns[column] != before {
+					changed[column] = 1
+				}
+			}
+			if result.Metrics == nil {
+				result.Metrics = map[string]any{}
+			}
+			result.Metrics["existing_read_state_changed_columns"] = changed
 			result.Assertions = append(result.Assertions, Assertion{Name: "existing_read_state_preserved", Passed: preserved})
 			result.Passed = result.Passed && preserved
 		}()
