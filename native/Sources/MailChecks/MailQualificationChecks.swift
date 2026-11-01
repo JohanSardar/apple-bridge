@@ -53,7 +53,7 @@ func checkMailQualification() async throws {
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: directory) }
     let path = directory.appendingPathComponent("Envelope Index").path
-    try execute(path, "CREATE TABLE subjects(subject TEXT); CREATE TABLE mailboxes(url TEXT); CREATE TABLE message_global_data(message_id INTEGER,message_id_header TEXT); INSERT INTO message_global_data VALUES(1,'one@example.invalid'),(5,'five@example.invalid'); CREATE TABLE messages(subject INTEGER,mailbox INTEGER,deleted INTEGER,message_id INTEGER); INSERT INTO subjects VALUES('[ab-test] fixture'),('[ab-test] other'); INSERT INTO mailboxes VALUES('imap://synthetic/INBOX'),('imap://synthetic/Trash'),('imap://synthetic/Drafts'); INSERT INTO messages VALUES(1,1,0,1),(2,1,0,2),(1,2,0,3),(1,1,1,4),(1,3,0,5);")
+    try execute(path, "CREATE TABLE subjects(subject TEXT); CREATE TABLE mailboxes(url TEXT); CREATE TABLE message_global_data(message_id INTEGER,message_id_header TEXT); INSERT INTO message_global_data VALUES(1,'<one@example.invalid>'),(5,'<five@example.invalid>'); CREATE TABLE messages(subject INTEGER,mailbox INTEGER,deleted INTEGER,message_id INTEGER); INSERT INTO subjects VALUES('[ab-test] fixture'),('[ab-test] other'); INSERT INTO mailboxes VALUES('imap://synthetic/INBOX'),('imap://synthetic/Trash'),('imap://synthetic/Drafts'); INSERT INTO messages VALUES(1,1,0,1),(2,1,0,2),(1,2,0,3),(1,1,1,4),(1,3,0,5);")
     try require(try MailFixtureCleanup.fixtureIDs(tag: "[ab-test] fixture", path: path) == ["one@example.invalid", "five@example.invalid"])
     try require(try MailFixtureCleanup.fixtureIDs(tag: "[ab-test] absent", path: path).isEmpty)
 
