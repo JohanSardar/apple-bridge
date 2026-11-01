@@ -99,8 +99,14 @@ public enum NotesFolderUI {
     }
     public static var available: Bool { AXIsProcessTrusted() }
     public static func rename(id: String, from oldTitle: String, to newTitle: String, trace: CaptureTrace? = nil) async throws {
-        var stage = "permission"
-        defer { trace?.record("notes_folder_rename_ui", fields: ["source": .string("notes"), "stage": .string(stage)]) }
+        var stage = "permission", rowCount = 0, menuCount = 0, fieldCount = 0
+        defer {
+            let fields: [String: JSON] = ["source": .string("notes"), "ui_step": .string(stage), "rows": .number(Double(rowCount)), "menus": .number(Double(menuCount)), "fields": .number(Double(fieldCount)), "deadline_expired": .bool(Date() >= deadline)]
+            trace?.record("notes_folder_rename_ui", fields: fields)
+            let report = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/AppleBridgeDev/notes-folder-rename-ui.json")
+            try? JSONEncoder().encode(JSON.object(fields)).write(to: report, options: .atomic)
+            try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: report.path)
+        }
         guard available else { throw SourceFailure.permissionMissing }
         guard oldTitle.hasPrefix("Bridge Test [ab-test "), newTitle.hasPrefix("Bridge Test [ab-test ") else { throw SourceFailure.unsupported }
         deadline = Date().addingTimeInterval(8)
@@ -113,18 +119,28 @@ public enum NotesFolderUI {
         try await Task.sleep(for: .milliseconds(250))
         stage = "find_row"
         let rows = all(root).filter { node in value(node, kAXRoleAttribute) == kAXRowRole && all(node).contains { child in [kAXTitleAttribute, kAXValueAttribute, kAXDescriptionAttribute].contains { [oldTitle, newTitle].contains(value(child, $0)) } } }
+        rowCount = rows.count
         guard rows.count == 1, await openContext(rows[0], app: app) else { throw SourceFailure.unavailable }
         try await Task.sleep(for: .milliseconds(200))
         stage = "find_rename_menu"
         let menus = all(root).filter { value($0, kAXRoleAttribute) == kAXMenuItemRole && ["Rename Folder", "Rename Folder…", "Rename Folder...", "Rename"].contains(value($0, kAXTitleAttribute)) && enabled($0) }
+        menuCount = menus.count
         guard menus.count == 1, AXUIElementPerformAction(menus[0], kAXPressAction as CFString) == .success else { throw SourceFailure.unavailable }
         try await Task.sleep(for: .milliseconds(200))
         stage = "find_name_field"
-        let fields = all(root).filter { value($0, kAXRoleAttribute) == kAXTextFieldRole && [oldTitle, newTitle].contains(value($0, kAXValueAttribute)) }
+        var fields = all(root).filter { value($0, kAXRoleAttribute) == kAXTextFieldRole && [oldTitle, newTitle].contains(value($0, kAXValueAttribute)) }
+        fieldCount = fields.count
+        var currentFocus: CFTypeRef?
+        if AXUIElementCopyAttributeValue(root, kAXFocusedUIElementAttribute as CFString, &currentFocus) == .success, let currentFocus {
+            let focused = fields.filter { CFEqual(currentFocus, $0) }
+            if focused.count == 1 { fields = focused }
+        }
         guard fields.count == 1, AXUIElementSetAttributeValue(fields[0], kAXValueAttribute as CFString, newTitle as CFString) == .success else { throw SourceFailure.unavailable }
         stage = "commit_name"
-        if AXUIElementPerformAction(fields[0], kAXConfirmAction as CFString) != .success {
-            var focused: CFTypeRef?
+        let confirmation = AXUIElementPerformAction(fields[0], kAXConfirmAction as CFString)
+        var focused: CFTypeRef?
+        let stillEditing = AXUIElementCopyAttributeValue(root, kAXFocusedUIElementAttribute as CFString, &focused) == .success && focused.map { CFEqual($0, fields[0]) } == true
+        if stillEditing || confirmation != .success {
             guard Date() < deadline, NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier,
                   AXUIElementCopyAttributeValue(root, kAXFocusedUIElementAttribute as CFString, &focused) == .success,
                   let focused, CFEqual(focused, fields[0]), value(fields[0], kAXValueAttribute) == newTitle,

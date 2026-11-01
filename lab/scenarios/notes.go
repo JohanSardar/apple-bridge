@@ -119,7 +119,11 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 			if problem == nil {
 				problem = notesCleanupCapturedRun(notesFolderRecovery(w.RecoverTruth, w.HelperApp), raw)
 			}
-			add("captured_run_notes_permanently_cleaned", problem == nil)
+			detail := ""
+			if problem != nil {
+				detail = problem.Error()
+			}
+			e.Assertions = append(e.Assertions, Assertion{Name: "captured_run_notes_permanently_cleaned", Passed: problem == nil, Detail: detail})
 			if problem != nil {
 				return
 			}
