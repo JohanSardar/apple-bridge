@@ -562,10 +562,10 @@ features:
       - {id: NATIVE-MEDIA-EXPORT-SAFETY, levels: [sim, real]}
       - {id: NATIVE-MEDIA-YIELD, levels: [sim]}
       - {id: NATIVE-MEDIA-POSTERS, levels: [sim]}
-    notes: Sim, cap, yield, posters and native export-safety levels pass. Real and replica cold-arrival runs are limited by the own-handle send restriction above. The final Messages tagged cleanup (design/MILESTONE-GATES.md) covers the earlier W1 file bubbles in the own-handle chat; nothing was sent for this feature.
+    notes: Sim, cap, yield, posters and native export-safety levels pass. Media cleanup must verify native preview filenames because attachment balloons omit filename and message-GUID attributes. Registered names and the pre-send baseline also identify late self copies that arrive after ID capture stops. Real sends remain gated on scoped native cleanup qualification.
     limits:
-      - {"scenario": "WEB-MEDIA-VARIANTS", "level": "real", "reason": "limited: needs native attachment cleanup qualification. Scoped recovery could not locate six media rows created by this T63 run; zero foreign rows were deleted. Further real attachment sends are blocked before world creation. This is not a missing-grant limit."}
-      - {"scenario": "WEB-MEDIA-VARIANTS", "level": "replica", "reason": "Same send restriction as the real level. One read-only Air gateway to Ubuntu replica attempt (2026-10-23) did not capture its three expected existing synthetic attachments within 45 seconds; the cause is undetermined (the targets may have been moved by the final tagged cleanup). No current replica variant downloads or cold-arrival latency are certified."}
+      - {"scenario": "WEB-MEDIA-VARIANTS", "level": "real", "reason": "limited: the registered attachment rows exist in chat.db, but their visible media balloons expose neither the target filename nor message GUID in the inspected Accessibility attributes, so filename-only lookup fails with targetUnavailable. Late self copies also arrive after captured-ID collection stops. Native preview identity recovery is under qualification; two late tagged text copies were cleaned, nine media rows remain, zero new media sends and zero foreign deletions."}
+      - {"scenario": "WEB-MEDIA-VARIANTS", "level": "replica", "reason": "Native media cleanup has the same filename-identity and late-copy failures as real. Preview-based recovery must pass before another self-chat send. Current replica variant downloads and cold-arrival behavior remain unqualified."}
   - id: web.remote
     title: Reach from anywhere through embedded Tailscale Funnel
     requirements: [R-WEB-REACH, R-SECURE]
