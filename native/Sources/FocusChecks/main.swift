@@ -43,6 +43,10 @@ struct Checks {
         do { _ = try await cleanup.restoreInactive(cleanupOff); throw SourceFailure.corrupt } catch SourceFailure.unavailable {}
         guard !lost.focused, lost.calls == 2 else { throw SourceFailure.corrupt }
         #if LAB
+        let databaseDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: databaseDirectory, withIntermediateDirectories: false)
+        defer { try? FileManager.default.removeItem(at: databaseDirectory) }
+        _ = try FocusPackRepair.database(testURL: databaseDirectory.appendingPathComponent("focus.sqlite"))
         let attachment = JSON.object(["WFSerializationType": .string("WFTextTokenAttachment"), "Value": .object(["Type": .string("ActionOutput"), "OutputUUID": .string("synthetic-until")])])
         let repaired = try FocusPackRepair.binding(attachment, output: "synthetic-until")
         guard repaired["Type"] == .string("Variable"), repaired["Variable"] == attachment,

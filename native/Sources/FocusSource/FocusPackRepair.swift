@@ -2,6 +2,7 @@
 import Foundation
 import ObjectiveC
 import CryptoKit
+import Darwin
 import SourceSupport
 
 @MainActor
@@ -37,11 +38,29 @@ public enum FocusPackRepair {
         return unsafeBitCast(implementation, to: Call.self)(target, selector, argument)?.takeUnretainedValue()
     }
 
+    public static func database(testURL: URL? = nil) throws -> AnyObject {
+        guard dlopen("/System/Library/PrivateFrameworks/WorkflowKit.framework/WorkflowKit", RTLD_LAZY) != nil,
+              let databaseClass = NSClassFromString("WFDatabase"),
+              let allocated = try object(databaseClass as AnyObject, "alloc") else { throw SourceFailure.unavailable }
+        let database: AnyObject?
+        if let testURL {
+            let (selector, implementation) = try method(allocated, "initWithTestFileURL:error:", arguments: 4)
+            typealias Initialize = @convention(c) (AnyObject, Selector, AnyObject, UnsafeMutableRawPointer?) -> Unmanaged<AnyObject>?
+            database = unsafeBitCast(implementation, to: Initialize.self)(allocated, selector, testURL as NSURL, nil)?.takeRetainedValue()
+        } else {
+            let (selector, implementation) = try method(allocated, "initWithPersistenceMode:error:", arguments: 4)
+            typealias Initialize = @convention(c) (AnyObject, Selector, UInt, UnsafeMutableRawPointer?) -> Unmanaged<AnyObject>?
+            database = unsafeBitCast(implementation, to: Initialize.self)(allocated, selector, 0, nil)?.takeRetainedValue()
+        }
+        guard let database else { throw SourceFailure.unavailable }
+        return database
+    }
+
     public static func run() -> JSON {
         var phase = "framework"
         do {
-            guard Bundle(path: "/System/Library/PrivateFrameworks/WorkflowKit.framework")?.load() == true,
-                  let databaseClass = NSClassFromString("WFDatabase"), let database = try object(databaseClass as AnyObject, "defaultDatabase") else { throw SourceFailure.unavailable }
+            phase = "database_open"
+            let database = try database()
             phase = "reference"
             guard let reference = try object(database, "uniqueVisibleReferenceForWorkflowName:", argument: "AB Focus" as NSString) else { throw SourceFailure.unavailable }
             phase = "record"
