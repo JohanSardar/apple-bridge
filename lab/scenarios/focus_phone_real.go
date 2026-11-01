@@ -46,7 +46,11 @@ func runAirFocusReal(ctx context.Context) Evidence {
 	if err != nil {
 		return e
 	}
-	command := exec.CommandContext(ctx, "ssh", "-o", "BatchMode=yes", "air", "sh", "-s")
+	remote := "sh -s"
+	if helper := os.Getenv("AB_REAL_FOCUS_AIR_HELPER"); helper != "" {
+		remote += " -- '" + strings.ReplaceAll(helper, "'", "'\"'\"'") + "'"
+	}
+	command := exec.CommandContext(ctx, "ssh", "-o", "BatchMode=yes", "air", remote)
 	command.Stdin = strings.NewReader(string(script))
 	command.Stderr = os.Stderr
 	raw, err := command.Output()
