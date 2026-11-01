@@ -487,6 +487,7 @@ enum MessagesAccessibility {
         default: throw SourceFailure.capabilityUnproven
         }
         try session.fence()
+        guard start.duration(to: ContinuousClock.now) < .seconds(10) else { throw SourceFailure.conflict }
         var actionNames: CFArray?
         let copied = AXUIElementCopyActionNames(bubble, &actionNames)
         let normalized = menu.replacingOccurrences(of: "…", with: "")
@@ -521,7 +522,6 @@ enum MessagesAccessibility {
         }
         let after = snapshot(root, prepared: prepared)
         try session.fence()
-        guard start.duration(to: ContinuousClock.now) < .seconds(10) else { throw SourceFailure.conflict }
         return .object(["before_accessibility": before, "after_accessibility": after, "target_verified": .bool(true)])
     }
 }

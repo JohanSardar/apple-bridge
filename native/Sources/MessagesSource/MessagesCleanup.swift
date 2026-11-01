@@ -216,9 +216,12 @@ public enum MessagesCleanup {
                 phase = "delete"
                 _ = try await MessagesAccessibility.perform(prepared)
             } catch {
-                failure = phase + ":" + String(describing: error)
-                if ownedOnly, mediaProof != nil, phase == "validate", error as? MessagesUIFailure == .targetUnavailable { unavailable.insert(guid); continue }
-                break
+                let live = try reader.query("SELECT 1 FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE m.guid=? AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=j.chat_id)", [guid])
+                if !live.isEmpty {
+                    failure = phase + ":" + String(describing: error)
+                    if ownedOnly, mediaProof != nil, phase == "validate", error as? MessagesUIFailure == .targetUnavailable { unavailable.insert(guid); continue }
+                    break
+                }
             }
             let deadline = ContinuousClock.now.advanced(by: .seconds(ownedOnly ? 10 : 2))
             let beforeIDs = Set(remaining.map { $0.0 })
