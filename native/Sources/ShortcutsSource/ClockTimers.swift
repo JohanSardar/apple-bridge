@@ -224,15 +224,36 @@ private struct ClockTimerUI {
             let sliders = find(picker[0], role: kAXSliderRole)
             return sliders.count == 3 ? sliders[index] : nil
         }
+        func inputState(_ index: Int, phase: Int) {
+            guard let element = slider(index) else { return }
+            let windows = find(root, role: kAXWindowRole)
+            var details = ["timer_probe_phase": phase, "timer_probe_component": index + 1, "timer_probe_value": ClockTimers.durationComponent(attribute(element, kAXValueAttribute)) ?? -1, "timer_probe_selected": attribute(element, kAXSelectedAttribute) as? Bool == true ? 1 : 0, "timer_probe_focused": attribute(element, kAXFocusedAttribute) as? Bool == true ? 1 : 0, "timer_probe_windows": windows.count, "timer_probe_minimized_windows": windows.filter { attribute($0, kAXMinimizedAttribute) as? Bool == true }.count, "timer_probe_sheets": find(root, role: kAXSheetRole).count, "timer_probe_display_asleep": CGDisplayIsAsleep(CGMainDisplayID()) != 0 ? 1 : 0, "timer_probe_hidden": app.isHidden ? 1 : 0]
+            if let position = attribute(element, kAXPositionAttribute), let size = attribute(element, kAXSizeAttribute), CFGetTypeID(position) == AXValueGetTypeID(), CFGetTypeID(size) == AXValueGetTypeID() {
+                var point = CGPoint.zero, extent = CGSize.zero
+                if AXValueGetValue(unsafeDowncast(position, to: AXValue.self), .cgPoint, &point), AXValueGetValue(unsafeDowncast(size, to: AXValue.self), .cgSize, &extent) {
+                    details["timer_probe_x"] = Int(point.x)
+                    details["timer_probe_y"] = Int(point.y)
+                    details["timer_probe_width"] = Int(extent.width)
+                    details["timer_probe_height"] = Int(extent.height)
+                }
+            }
+            if let data = try? JSONSerialization.data(withJSONObject: details, options: [.sortedKeys]) { FileHandle.standardError.write(data + Data("\n".utf8)) }
+        }
         for (index, number) in [duration / 3600, duration / 60 % 60, duration % 60].enumerated() {
             guard let element = slider(index) else { throw ClockTimerFailure(step: "find the three timer duration controls") }
+            inputState(index, phase: 0)
             try focus(element)
+            inputState(index, phase: 1)
+            var adjustments = 0
             do {
                 try ClockTimers.adjustDurationComponent(to: number, value: {
                     guard let current = slider(index) else { return nil }
                     return ClockTimers.durationComponent(attribute(current, kAXValueAttribute))
                 }, adjust: { increasing in
-                    key(increasing ? 126 : 125)
+                    let posted = key(increasing ? 126 : 125)
+                    adjustments += 1
+                    if adjustments < 3 { inputState(index, phase: adjustments + 1) }
+                    return posted
                 })
             } catch {
                 let observed = slider(index).flatMap { ClockTimers.durationComponent(attribute($0, kAXValueAttribute)) } ?? -1
