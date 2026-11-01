@@ -21,6 +21,10 @@ public struct MessagesSelfTestReadState: Sendable, Codable {
         !matches(current) || unreadCount > 0 && current.unreadCount == 0
     }
 
+    public func appendingNewer(_ newer: MessagesSelfTestReadState) -> MessagesSelfTestReadState {
+        MessagesSelfTestReadState(unreadIDs: unreadIDs.union(newer.unreadIDs), unreadCount: unreadCount + newer.unreadCount)
+    }
+
     static func savedURL(_ chat: String) -> URL {
         PrivateReport.directory.appendingPathComponent("messages-unread-restore/" + BodyDigest.hash(Data(chat.utf8)) + ".json")
     }
@@ -30,7 +34,9 @@ public struct MessagesSelfTestReadState: Sendable, Codable {
         if FileManager.default.fileExists(atPath: url.path) {
             let saved = try JSONDecoder().decode(Saved.self, from: Data(contentsOf: url))
             guard saved.chat == chat, saved.through <= maximum else { throw SourceFailure.conflict }
-            return (saved.state, saved.through)
+            let state = saved.state.appendingNewer(try capture(chat, after: saved.through, through: maximum))
+            try state.save(chat, through: maximum)
+            return (state, maximum)
         }
         let state = try capture(chat, through: maximum)
         try state.save(chat, through: maximum)
@@ -56,9 +62,9 @@ public struct MessagesSelfTestReadState: Sendable, Codable {
         if FileManager.default.fileExists(atPath: url.path) { try FileManager.default.removeItem(at: url) }
     }
 
-    static func capture(_ chat: String, through baseline: Int64) throws -> MessagesSelfTestReadState {
+    static func capture(_ chat: String, after minimum: Int64 = 0, through baseline: Int64) throws -> MessagesSelfTestReadState {
         let reader = try MessagesSelfTestBaseline.reader()
-        let rows = try reader.query("SELECT m.guid,m.is_read,m.date,c.last_read_message_timestamp FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? AND m.ROWID<=? AND m.is_from_me=0 AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=m.ROWID)", [chat, String(baseline)])
+        let rows = try reader.query("SELECT m.guid,m.is_read,m.date,c.last_read_message_timestamp FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? AND m.ROWID>? AND m.ROWID<=? AND m.is_from_me=0 AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=m.ROWID)", [chat, String(minimum), String(baseline)])
         let unreadIDs = Set(rows.filter { $0.integer("is_read") == 0 }.map { $0["guid"] })
         let count = rows.filter { $0.integer("date") > $0.integer("last_read_message_timestamp") }.count
         return MessagesSelfTestReadState(unreadIDs: unreadIDs, unreadCount: count)

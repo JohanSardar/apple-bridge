@@ -47,6 +47,10 @@ struct MessagesVariantChecks {
         checks["unread_count_restore"] = unreadBaseline.matches(MessagesSelfTestReadState(unreadIDs: ["old-c"], unreadCount: 2))
         checks["unread_count_mismatch_rejected"] = !unreadBaseline.matches(MessagesSelfTestReadState(unreadIDs: [], unreadCount: 0))
         checks["unread_read_flags_mismatch_rejected"] = !MessagesSelfTestReadState(unreadIDs: [], unreadCount: 0).matches(MessagesSelfTestReadState(unreadIDs: ["old-a"], unreadCount: 0))
+        let resumedUnread = unreadBaseline.appendingNewer(MessagesSelfTestReadState(unreadIDs: ["new-a"], unreadCount: 1))
+        checks["unread_resume_preserves_new_messages"] = resumedUnread.unreadIDs == ["old-a", "old-b", "new-a"] && resumedUnread.unreadCount == 3
+        let unchangedUnread = unreadBaseline.appendingNewer(MessagesSelfTestReadState(unreadIDs: [], unreadCount: 0))
+        checks["unread_resume_without_new_messages_is_idempotent"] = unchangedUnread.unreadIDs == unreadBaseline.unreadIDs && unchangedUnread.unreadCount == unreadBaseline.unreadCount
         let pins = try PropertyListSerialization.data(fromPropertyList: ["pD": ["pP": ["synthetic-a", "synthetic-b"]]], format: .binary, options: 0)
         checks["native_pin_order"] = try MessagesPins.identifiers(pins) == ["synthetic-a", "synthetic-b"]
         checks["valid_pin_indices"] = try [-1, 0, 8].allSatisfy { try MessagesPins.requestedIndex(.number(Double($0))) == $0 }
