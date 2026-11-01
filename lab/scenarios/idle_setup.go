@@ -38,7 +38,7 @@ func idleSetup(ctx context.Context, id string, asJSON bool) error {
 		if _, err = os.Lstat(path); !os.IsNotExist(err) {
 			return fmt.Errorf("idle setup session already exists")
 		}
-		w, err = world.NewReal(ctx, "real", 0, world.BlobOptions{Scope: "admin"})
+		w, err = world.NewRealWithSetup(ctx, "real", 0, world.NativeSetup{FilesystemTruth: true}, world.BlobOptions{Scope: "admin"})
 		if err == nil {
 			err = w.SaveSession(path, revision)
 			if err == nil {

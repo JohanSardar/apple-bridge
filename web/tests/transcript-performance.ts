@@ -4,17 +4,17 @@ import {mkdir,writeFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {installProbe,startTrace,stopTrace,traceWork,stats,resultFrames} from './list-performance';
 export async function transcriptObservers(page:Page){
-    await page.addInitScript(nativeTrace=>{
+    await page.addInitScript(()=>{
         function measure(kind:string,callback:()=>void){
             const probe=(window as any).__listProbe;if(probe?.phase!=='scroll'){callback();return;}
-            const start=performance.now();callback();const styledAt=performance.now();if(!nativeTrace)document.body.getBoundingClientRect();const end=performance.now(),last=probe.frames.at(-1);
+            const start=performance.now();callback();const end=performance.now(),last=probe.frames.at(-1);
             if(last)last.work+=end-start;else probe.frames.push({at:start,work:end-start});
-            (probe.observers??=[]).push({kind,script:styledAt-start,style_layout:end-styledAt});
+            (probe.observers??=[]).push({kind,script:end-start});
         }
         const Resize=window.ResizeObserver,Mutation=window.MutationObserver;(window as any).__transcriptNativeMutation=Mutation;
         window.ResizeObserver=class extends Resize {constructor(callback:ResizeObserverCallback){super((entries,observer)=>measure('resize',()=>callback(entries,observer)));}};
         window.MutationObserver=class extends Mutation {constructor(callback:MutationCallback){super((entries,observer)=>measure('mutation',()=>callback(entries,observer)));}};
-    },page.context().browser()?.browserType().name()==='chromium');
+    });
 }
 export async function transcriptInputs(page:Page,info:TestInfo,label:string,actions:()=>Promise<void>){
     await installProbe(page,false,page.context().browser()?.browserType().name()!=='chromium');

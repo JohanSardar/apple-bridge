@@ -76,7 +76,7 @@ func idleSuite(ctx context.Context, scenarios []Scenario, asJSON bool) error {
 		}
 	}
 	if w == nil && err == nil {
-		w, err = world.NewReal(ctx, "real", 0, world.BlobOptions{Scope: "admin"})
+		w, err = world.NewRealWithSetup(ctx, "real", 0, world.NativeSetup{FilesystemTruth: true}, world.BlobOptions{Scope: "admin"})
 	}
 	if err != nil {
 		return err

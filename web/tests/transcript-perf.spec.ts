@@ -76,6 +76,21 @@ test('WEB-MSG-PERF WEB-MSG-PERF-INPUT reactions record complete input coverage',
 test('WEB-MSG-PERF WEB-MSG-PERF-INPUT opening media records complete input coverage',async({page,request},info)=>{
     await prepareSession(page);const ids=await control(request,'/demo-fixtures');await page.goto('/messages/'+encodeURIComponent(ids['message-chat'])+'/'+encodeURIComponent(ids['demo-message-00-000032']));await expect(page.locator('.messages-transcript')).toHaveAttribute('aria-busy','false');const source=page.locator('[data-message="'+ids['demo-message-00-000032']+'"] .media-open');await expect(source).toBeVisible();await expect.poll(()=>source.locator('..').locator('img').evaluate((image:HTMLImageElement)=>image.complete)).toBe(true);
     await transcriptInputs(page,info,'open-media',async()=>{
-        for(let index=0;index<24;index++){await source.click();const viewer=page.getByRole('dialog',{name:'Media viewer',exact:true});await expect(viewer).toBeVisible();await expect(viewer).toHaveAttribute('data-media-loading','false');await expect(viewer.locator('.media-viewer-stage .media-image')).toHaveAttribute('data-media-state','ready');await page.keyboard.press('Escape');await expect(viewer).not.toBeVisible();}
+        for(let index=0;index<24;index++){await source.click();const viewer=page.getByRole('dialog',{name:'Media viewer',exact:true});await expect(viewer).toBeVisible();await expect(viewer).toHaveAttribute('data-media-loading','false');await expect(viewer.locator('.media-viewer-stage .media-image')).toHaveAttribute('data-media-state','ready');await page.keyboard.press('Escape');await expect(viewer).not.toBeVisible();await expect(source).toBeFocused();}
     });
+});
+
+test('WEB-MSG-PERF performance observers leave layout coalesced until the frame',async({page})=>{
+    await page.goto('about:blank');await installProbe(page,false,true);
+    const result=await page.evaluate(async()=>{
+        const probe=(window as any).__listProbe;probe.phase='scroll';
+        let layouts=0,mutations=0;const rect=document.body.getBoundingClientRect.bind(document.body);
+        document.body.getBoundingClientRect=()=>{layouts++;return rect();};
+        const observer=new MutationObserver(()=>{observer.disconnect();mutations++;document.body.style.padding='2px';});
+        observer.observe(document.body,{attributes:true});document.body.style.padding='1px';
+        await Promise.resolve();await Promise.resolve();const beforeFrame=layouts;
+        await new Promise<void>(resolve=>requestAnimationFrame(()=>resolve()));
+        return {beforeFrame,layouts,mutations,frames:probe.frames.length};
+    });
+    expect(result.mutations).toBe(1);expect(result.beforeFrame).toBe(0);expect(result.layouts).toBeGreaterThan(0);expect(result.frames).toBeGreaterThanOrEqual(1);
 });
