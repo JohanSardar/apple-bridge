@@ -11,7 +11,12 @@ import (
 )
 
 func lockAirFocus(ctx context.Context) (func(), error) {
-	command := exec.CommandContext(ctx, "ssh", "-o", "BatchMode=yes", "air", `lockf -k "$HOME/.ab-locks/app-focus" sh -c 'printf "locked\n"; cat >/dev/null'`)
+	remote := `lockf -k "$HOME/.ab-locks/app-focus" `
+	if os.Getenv("AB_REAL_FOCUS_AIR_PACK") != "" {
+		remote += `lockf -k "$HOME/.ab-locks/app-shortcuts" `
+	}
+	remote += `sh -c 'printf "locked\n"; cat >/dev/null'`
+	command := exec.CommandContext(ctx, "ssh", "-o", "BatchMode=yes", "air", remote)
 	input, err := command.StdinPipe()
 	if err != nil {
 		return nil, err
