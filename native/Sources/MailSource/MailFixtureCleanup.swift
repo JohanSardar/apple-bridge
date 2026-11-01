@@ -90,17 +90,20 @@ public enum MailFixtureCleanup {
             do { return try await script(body) }
             catch { throw Failure(step: step, cause: error) }
         }
-        _ = try await perform("close the tagged compose window", """
-        set ownedIDs to id of (outgoing messages whose subject is \(q(tag)))
-        repeat with ownedID in ownedIDs
-            set m to outgoing message id (contents of ownedID)
-            if subject of m is \(q(tag)) then
-                set visible of m to true
-                close m saving no
-            end if
-        end repeat
-        return ""
-        """)
+        func closeCompose() async throws {
+            _ = try await perform("close the tagged compose window", """
+            set ownedIDs to id of (outgoing messages whose subject is \(q(tag)))
+            repeat with ownedID in ownedIDs
+                set m to outgoing message id (contents of ownedID)
+                if subject of m is \(q(tag)) then
+                    set visible of m to true
+                    close m saving no
+                end if
+            end repeat
+            return ""
+            """)
+        }
+        try await closeCompose()
         for _ in 0..<8 {
             let ids = try await fixtureIDs(tag)
             guard ids.count <= 16, ids.allSatisfy({ UInt64($0) != nil }) else { throw MailCommandFailure.unconfirmed }
@@ -142,6 +145,8 @@ public enum MailFixtureCleanup {
             end try
             """)
             if selected == "clear" {
+                try await closeCompose()
+                if !(try await fixtureIDs(tag)).isEmpty { continue }
                 let outgoing = try await script("return count (outgoing messages whose subject is \(q(tag)))")
                 return try MailQualification.cleanupResult("0|" + outgoing)
             }
