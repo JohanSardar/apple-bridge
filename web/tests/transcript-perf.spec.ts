@@ -32,7 +32,7 @@ test('WEB-MSG-PERF WEB-MSG-PERF-FRAME a 100k-message transcript fling records bo
     await expect(transcript).toHaveAttribute('aria-busy','false');await expect.poll(async()=>Number(await transcript.getAttribute('data-window-size'))).toBeGreaterThanOrEqual(200);
     await expect(viewport).toHaveAttribute('aria-busy','false');
     const batches=await page.evaluate(()=>{(window as any).__stopTranscriptBatches();return (window as any).__transcriptBatches as {count:number;busy:boolean}[];});
-    expect(batches.length).toBeGreaterThan(0);expect(batches[0].count).toBeLessThanOrEqual(3);expect(batches.at(-1)?.busy).toBe(false);if(batches.at(-1)!.count>3)expect(batches.some(state=>state.busy)).toBe(true);
+    expect(batches.length).toBeGreaterThan(0);expect(batches[0].count).toBeLessThanOrEqual(1);expect(batches.at(-1)?.busy).toBe(false);if(batches.at(-1)!.count>1)expect(batches.some(state=>state.busy)).toBe(true);
     expect(population).toBe(100000);page.off('websocket',observe);releases.forEach(release=>release());
     await expect(page.locator('.transcript')).toHaveCSS('transform','none');await page.waitForTimeout(300);await installProbe(page,true,page.context().browser()?.browserType().name()!=='chromium');
     const stageProfile=process.env.AB_WEB_STAGE_PROFILE==='1'||process.env.AB_WEB_STAGE_PROFILE==='fling';
@@ -56,6 +56,7 @@ test('WEB-MSG-PERF WEB-MSG-PERF-FRAME a 100k-message transcript fling records bo
 
 test('WEB-MSG-PERF WEB-MSG-PERF-INPUT open chat records input and phone push/pop frame coverage',async({page},info)=>{
     await prepareSession(page);await page.goto('/messages');await expect(page.locator('.conversation-row').first()).toBeVisible();
+    if(info.project.name.endsWith('-phone'))await expect.poll(()=>page.locator('.conversation-list .virtual-viewport').evaluate(element=>element.querySelectorAll('.virtual-row').length<=Math.ceil(element.clientHeight/84)+3)).toBe(true);
     await transcriptInputs(page,info,'open-chat',async()=>{
         for(let index=0;index<24;index++){await page.locator('.conversation-row').nth(index%2).click();await expect(page.locator('.messages-transcript')).toHaveAttribute('aria-busy','false');await expect.poll(()=>page.evaluate(()=>(window as any).__listProbe.actions.at(-1)?.resultAt??0),{intervals:[25]}).toBeGreaterThan(0);if(info.project.name.endsWith('-phone'))await page.getByRole('button',{name:'Back',exact:true}).click();}
     });

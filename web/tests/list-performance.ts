@@ -23,7 +23,7 @@ type TraceEvent={name:string;ts:number;dur?:number;pid:number;tid:number;ph:stri
 export async function startTrace(page:Page):Promise<CDPSession|undefined> {
     if(page.context().browser()?.browserType().name()!=='chromium')return;
     const session=await page.context().newCDPSession(page);
-    await session.send('Tracing.start',{categories:'devtools.timeline,blink.user_timing',transferMode:'ReturnAsStream'});
+    await session.send('Tracing.start',{categories:process.env.AB_WEB_TRACE_CATEGORIES||'devtools.timeline,blink.user_timing',transferMode:'ReturnAsStream'});
     return session;
 }
 export async function stopTrace(session:CDPSession|undefined,phase:'scroll'|'input'|'action'='scroll',nativeFrames=false) {

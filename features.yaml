@@ -1027,6 +1027,8 @@ features:
       - {id: MAC-CAPTURE, levels: [sim]}
       - {id: MAC-IDLE, levels: [sim, real]}
       - {id: Q2-IDLE, levels: [sim, real]}
+      - {id: Q2-IDLE-PREP, levels: [real]}
+      - {id: Q2-IDLE-SETTLE, levels: [real]}
       - {id: MAC-POWER-REAL, levels: [real]}
     notes: Night Shift omitted; SSID requires Location authorization. VPN uses interface heuristics.
     limits:
