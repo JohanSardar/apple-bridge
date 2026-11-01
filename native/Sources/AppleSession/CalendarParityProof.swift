@@ -40,7 +40,8 @@ enum CalendarParityProof {
         event.calendar = calendar; event.title = title + " event"
         event.startDate = Date().addingTimeInterval(86400); event.endDate = event.startDate.addingTimeInterval(3600)
         let eventStart = event.startDate!, eventEnd = event.endDate!
-        let location = EKStructuredLocation(title: "[ab-test] location")
+        let locationTitle = "[ab-test] location"
+        let location = EKStructuredLocation(title: locationTitle)
         location.geoLocation = CLLocation(latitude: 41.88, longitude: -87.63)
         location.radius = 100
         event.structuredLocation = location
@@ -66,12 +67,12 @@ enum CalendarParityProof {
                 try await Task.sleep(for: .milliseconds(100))
             }
             controls["saved_event_found"] = .bool(saved != nil)
-            controls["location_title_matches"] = .bool(saved?.structuredLocation?.title == location.title)
+            controls["location_title_matches"] = .bool(saved?.structuredLocation?.title == locationTitle)
             controls["location_latitude_matches"] = .bool(saved?.structuredLocation?.geoLocation?.coordinate.latitude == 41.88)
             controls["location_longitude_matches"] = .bool(saved?.structuredLocation?.geoLocation?.coordinate.longitude == -87.63)
             controls["location_radius_matches"] = .bool(saved?.structuredLocation?.radius == 100)
             controls["location_radius_default"] = .bool(saved?.structuredLocation?.radius == 0)
-            checks["structured_location_readback"] = .bool(saved?.structuredLocation?.title == location.title && saved?.structuredLocation?.geoLocation?.coordinate.latitude == 41.88 && saved?.structuredLocation?.geoLocation?.coordinate.longitude == -87.63 && saved?.structuredLocation?.radius == 100)
+            checks["structured_location_readback"] = .bool(saved?.structuredLocation?.title == locationTitle && saved?.structuredLocation?.geoLocation?.coordinate.latitude == 41.88 && saved?.structuredLocation?.geoLocation?.coordinate.longitude == -87.63 && saved?.structuredLocation?.radius == 100)
             controls["own_account_identity_count"] = .number(Double(identities.count))
             controls["own_source_identity_count"] = .number(Double(sourceIdentities.count))
             guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.iCal") else { throw SourceFailure.unavailable }
@@ -79,7 +80,7 @@ enum CalendarParityProof {
             configuration.activates = true
             let app = try await NSWorkspace.shared.openApplication(at: url, configuration: configuration)
             try await Task.sleep(for: .seconds(1))
-            let ui = CalendarFixtureUI(app: app, title: eventTitle)
+            let ui = CalendarFixtureUI(app: app, title: eventTitle, calendarTitle: title)
             fixtureUI = ui
             try await ui.openOwnedEvent()
             checks["owned_event_inspector"] = .bool(ui.hasOwnedInspector())
@@ -162,7 +163,7 @@ enum CalendarParityProof {
                 let organizer = identities.sorted().first(where: { $0 != attendee }) ?? attendee
                 try await ui.openOwnedEvent()
                 let invitationTitle = title + " invitation"
-                let invitationUI = CalendarFixtureUI(app: app, title: invitationTitle)
+                let invitationUI = CalendarFixtureUI(app: app, title: invitationTitle, calendarTitle: title)
                 let date = DateFormatter()
                 date.locale = Locale(identifier: "en_US_POSIX"); date.timeZone = TimeZone(secondsFromGMT: 0); date.dateFormat = "yyyyMMdd'T'HHmmss'Z'"
                 let lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//AppleBridge//Calendar parity//EN", "METHOD:REQUEST", "BEGIN:VEVENT", "UID:" + UUID().uuidString, "DTSTAMP:" + date.string(from: Date()), "DTSTART:" + date.string(from: eventStart), "DTEND:" + date.string(from: eventEnd), "SUMMARY:" + invitationTitle, "ORGANIZER:mailto:" + organizer, "ATTENDEE;RSVP=TRUE;PARTSTAT=NEEDS-ACTION:mailto:" + attendee, "END:VEVENT", "END:VCALENDAR", ""]
@@ -207,7 +208,7 @@ enum CalendarParityProof {
                 reasons["invitation"] = .string("EventKit could not identify Johan's own account attendee address. No invitation was created or sent.")
             }
         } catch {
-            reasons[stage] = .string("Calendar could not verify " + stage + " on the test event. Keep Calendar open and retry this check.")
+            reasons[stage] = .string("Calendar could not complete the test event action. Keep Calendar open and retry this check.")
             if let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.iCal").first {
                 let ui = CalendarFixtureUI(app: app, title: title + " event")
                 for name in [title + " event", "travel time", "travel time:", "Travel Time", "Add Alert, Repeat, or Travel Time", "Add Attachment…", "Add notes, URL or attachments", "Accept", "Maybe", "Decline", "None", "Done", "Send", "Open", "Cancel", "Import", "OK"] {
@@ -266,10 +267,12 @@ final class CalendarFixtureUI {
     let app: NSRunningApplication
     let root: AXUIElement
     let title: String
+    let calendarTitle: String?
     var diagnostics: [String: JSON] = [:]
+    private var inspectorCache: AXUIElement?
 
-    init(app: NSRunningApplication, title: String) {
-        self.app = app; self.title = title
+    init(app: NSRunningApplication, title: String, calendarTitle: String? = nil) {
+        self.app = app; self.title = title; self.calendarTitle = calendarTitle
         root = AXUIElementCreateApplication(app.processIdentifier)
         AXUIElementSetMessagingTimeout(root, 0.1)
     }
@@ -277,20 +280,20 @@ final class CalendarFixtureUI {
     func value(_ element: AXUIElement, _ key: String) -> String {
         var result: CFTypeRef?
         guard AXUIElementCopyAttributeValue(element, key as CFString, &result) == .success else { return "" }
-        return (result as? NSAttributedString)?.string ?? result as? String ?? ""
+        return (result as? NSAttributedString)?.string ?? result as? String ?? (result as? NSNumber)?.stringValue ?? ""
     }
 
-    func find(_ name: String, role: String? = nil) -> [AXUIElement] {
+    func find(_ name: String, role: String? = nil, containing: Bool = false, within: AXUIElement? = nil) -> [AXUIElement] {
         var budget = 3000
         let deadline = ContinuousClock.now.advanced(by: .seconds(2))
         func walk(_ element: AXUIElement) -> [AXUIElement] {
             guard budget > 0, ContinuousClock.now < deadline else { return [] }; budget -= 1
-            if (role == nil || value(element, kAXRoleAttribute) == role), [kAXTitleAttribute, kAXValueAttribute, kAXDescriptionAttribute].contains(where: { value(element, $0) == name }) { return [element] }
+            if (role == nil || value(element, kAXRoleAttribute) == role), [kAXTitleAttribute, kAXValueAttribute, kAXDescriptionAttribute].contains(where: { containing ? value(element, $0).contains(name) : value(element, $0) == name }) { return [element] }
             var children: CFTypeRef?
             AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children)
             return (children as? [AXUIElement] ?? []).flatMap(walk)
         }
-        return walk(root)
+        return walk(within ?? root)
     }
 
     func openOwnedEvent() async throws {
@@ -308,6 +311,20 @@ final class CalendarFixtureUI {
         }
         diagnostics["calendar_window_count"] = .number(Double((windows as? [AXUIElement])?.count ?? 0))
         if hasOwnedInspector() { return }
+        if let calendarTitle {
+            var calendars = find(calendarTitle, role: kAXCheckBoxRole)
+            let toggles = find("Calendars", role: kAXButtonRole)
+            if calendars.isEmpty, toggles.count == 1, value(toggles[0], kAXValueAttribute) == "0" {
+                try dialogPress("Calendars")
+                try await Task.sleep(for: .milliseconds(200))
+                calendars = find(calendarTitle, role: kAXCheckBoxRole)
+            }
+            diagnostics["owned_calendar_checkbox_count"] = .number(Double(calendars.count))
+            if calendars.count == 1, value(calendars[0], kAXValueAttribute) == "0" {
+                guard AXUIElementPerformAction(calendars[0], kAXPressAction as CFString) == .success else { throw SourceFailure.unsupported }
+                try await Task.sleep(for: .milliseconds(200))
+            }
+        }
         try post(3, flags: .maskCommand)
         var searches: [AXUIElement] = []
         for _ in 0..<20 {
@@ -318,19 +335,37 @@ final class CalendarFixtureUI {
         diagnostics["calendar_search_field_count"] = .number(Double(searches.count))
         guard searches.count == 1 else { throw SourceFailure.conflict }
         _ = AXUIElementSetAttributeValue(searches[0], kAXFocusedAttribute as CFString, kCFBooleanTrue)
-        try setFocused(title, requireInspector: false)
+        try typeSearch(title.replacingOccurrences(of: "[ab-test] ", with: ""))
         diagnostics["calendar_search_entered"] = .bool(true)
+        try await Task.sleep(for: .milliseconds(200))
         try post(36, flags: [])
         try await Task.sleep(for: .seconds(1))
         var results: [AXUIElement] = []
         for _ in 0..<40 {
-            results = find(title).filter { value($0, kAXRoleAttribute) != kAXTextFieldRole }
+            results = find(title, containing: true).filter { value($0, kAXSubroleAttribute) != kAXSearchFieldSubrole }
             if !results.isEmpty { break }
             try await Task.sleep(for: .milliseconds(250))
         }
         diagnostics["owned_search_result_count"] = .number(Double(results.count))
         guard let result = results.first else { throw SourceFailure.unavailable }
         guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier else { throw SourceFailure.conflict }
+        var candidate = result
+        for _ in 0..<4 {
+            if AXUIElementPerformAction(candidate, kAXPressAction as CFString) == .success {
+                diagnostics["owned_result_press_succeeded"] = .bool(true)
+                try await Task.sleep(for: .milliseconds(200))
+                if !hasOwnedInspector() {
+                    try post(34, flags: .maskCommand)
+                    try await Task.sleep(for: .milliseconds(400))
+                }
+                if hasOwnedInspector() { try fence(); return }
+            }
+            var parent: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(candidate, kAXParentAttribute as CFString, &parent) == .success,
+                  let parent, CFGetTypeID(parent) == AXUIElementGetTypeID() else { break }
+            candidate = unsafeDowncast(parent, to: AXUIElement.self)
+            if [kAXWindowRole, kAXApplicationRole].contains(value(candidate, kAXRoleAttribute)) { break }
+        }
         var position: CFTypeRef?, size: CFTypeRef?
         guard AXUIElementCopyAttributeValue(result, kAXPositionAttribute as CFString, &position) == .success,
               AXUIElementCopyAttributeValue(result, kAXSizeAttribute as CFString, &size) == .success,
@@ -342,7 +377,7 @@ final class CalendarFixtureUI {
         for type in [CGEventType.leftMouseDown, .leftMouseUp] {
             guard let event = CGEvent(mouseEventSource: nil, mouseType: type, mouseCursorPosition: point, mouseButton: .left) else { throw SourceFailure.unavailable }
             event.setIntegerValueField(.mouseEventClickState, value: 2)
-            event.post(tap: .cghidEventTap)
+            event.postToPid(app.processIdentifier)
         }
         try await Task.sleep(for: .milliseconds(400))
         if !hasOwnedInspector() { try post(34, flags: .maskCommand); try await Task.sleep(for: .milliseconds(400)) }
@@ -351,16 +386,16 @@ final class CalendarFixtureUI {
 
     func commit() async throws {
         try fence()
-        if find("Done", role: kAXButtonRole).count == 1 { try press("Done", role: kAXButtonRole) }
+        if inspectorFind("Done", role: kAXButtonRole).count == 1 { try press("Done", role: kAXButtonRole) }
         else { try post(53, flags: []) }
         try await Task.sleep(for: .milliseconds(500))
     }
 
     func revealTravel() async throws {
         try fence()
-        if !find("travel time", role: kAXStaticTextRole).isEmpty || !find("travel time:", role: kAXStaticTextRole).isEmpty { return }
+        if !inspectorFind("travel time", role: kAXStaticTextRole).isEmpty || !inspectorFind("travel time:", role: kAXStaticTextRole).isEmpty { return }
         for name in ["Add Alert, Repeat, or Travel Time", "Add Alert, Repeat or Travel Time"] {
-            let matches = find(name)
+            let matches = inspectorFind(name)
             if matches.count == 1 {
                 guard AXUIElementPerformAction(matches[0], kAXPressAction as CFString) == .success else { throw SourceFailure.unsupported }
                 try await Task.sleep(for: .milliseconds(200))
@@ -408,9 +443,32 @@ final class CalendarFixtureUI {
         guard matches.count == 1, AXUIElementPerformAction(matches[0], kAXPressAction as CFString) == .success else { throw SourceFailure.unsupported }
     }
 
-    func hasOwnedInspector() -> Bool {
-        let fields = find(title, role: kAXTextFieldRole).filter { value($0, kAXSubroleAttribute) != kAXSearchFieldSubrole }
-        return fields.count + find(title, role: kAXTextAreaRole).count == 1
+    func ownedInspector() -> AXUIElement? {
+        if let cached = inspectorCache, !find(title, containing: true, within: cached).isEmpty { return cached }
+        inspectorCache = nil
+        let fields = find(title, containing: true).filter { value($0, kAXSubroleAttribute) != kAXSearchFieldSubrole }
+        for field in fields {
+            var current = field
+            for _ in 0..<6 {
+                let role = value(current, kAXRoleAttribute)
+                if role == kAXApplicationRole { break }
+                if role == kAXWindowRole, !value(current, kAXTitleAttribute).contains(title) { break }
+                let anchors = ["Done", "Accept", "Maybe", "Decline", "Add Invitees", "Add Invitees…", "Add Attachment…", "Add Alert, Repeat, or Travel Time", "Add notes, URL or attachments"]
+                if anchors.contains(where: { !find($0, within: current).isEmpty }) { inspectorCache = current; return current }
+                var parent: CFTypeRef?
+                guard AXUIElementCopyAttributeValue(current, kAXParentAttribute as CFString, &parent) == .success,
+                      let parent, CFGetTypeID(parent) == AXUIElementGetTypeID() else { break }
+                current = unsafeDowncast(parent, to: AXUIElement.self)
+            }
+        }
+        return nil
+    }
+
+    func hasOwnedInspector() -> Bool { ownedInspector() != nil }
+
+    func inspectorFind(_ name: String, role: String? = nil) -> [AXUIElement] {
+        guard let inspector = ownedInspector() else { return [] }
+        return find(name, role: role, within: inspector)
     }
 
     func fence() throws {
@@ -426,14 +484,14 @@ final class CalendarFixtureUI {
         guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier else { throw SourceFailure.conflict }
         guard let down = CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: true), let up = CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: false) else { throw SourceFailure.unavailable }
         down.flags = flags; up.flags = flags
-        down.post(tap: .cghidEventTap); up.post(tap: .cghidEventTap)
+        down.postToPid(app.processIdentifier); up.postToPid(app.processIdentifier)
     }
 
     func key(_ code: CGKeyCode, flags: CGEventFlags = []) throws { try fence(); try post(code, flags: flags) }
 
     func press(_ name: String, role: String) throws {
         try fence()
-        let matches = find(name, role: role)
+        let matches = role == kAXButtonRole ? inspectorFind(name, role: role) : find(name, role: role)
         guard matches.count == 1, AXUIElementPerformAction(matches[0], kAXPressAction as CFString) == .success else { throw SourceFailure.unsupported }
     }
 
@@ -458,9 +516,27 @@ final class CalendarFixtureUI {
         guard value(field, kAXRoleAttribute) == kAXTextFieldRole, AXUIElementSetAttributeValue(field, kAXValueAttribute as CFString, text as CFString) == .success else { throw SourceFailure.unsupported }
     }
 
+    func typeSearch(_ text: String) throws {
+        var focused: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(root, kAXFocusedUIElementAttribute as CFString, &focused) == .success,
+              let focused, CFGetTypeID(focused) == AXUIElementGetTypeID() else { throw SourceFailure.conflict }
+        let field = unsafeDowncast(focused, to: AXUIElement.self)
+        guard value(field, kAXRoleAttribute) == kAXTextFieldRole, value(field, kAXSubroleAttribute) == kAXSearchFieldSubrole else { throw SourceFailure.conflict }
+        try post(0, flags: .maskCommand)
+        let characters = Array(text.utf16)
+        for down in [true, false] {
+            guard let event = CGEvent(keyboardEventSource: nil, virtualKey: 0, keyDown: down) else { throw SourceFailure.unavailable }
+            event.flags = []
+            characters.withUnsafeBufferPointer { buffer in
+                if let base = buffer.baseAddress { event.keyboardSetUnicodeString(stringLength: buffer.count, unicodeString: base) }
+            }
+            event.postToPid(app.processIdentifier)
+        }
+    }
+
     func travelPopup() throws {
         try fence()
-        let labels = ["travel time", "travel time:", "Travel Time", "Travel Time:"].flatMap { find($0, role: kAXStaticTextRole) }
+        let labels = ["travel time", "travel time:", "Travel Time", "Travel Time:"].flatMap { inspectorFind($0, role: kAXStaticTextRole) }
         guard labels.count == 1 else { throw SourceFailure.unsupported }
         var current = labels[0]
         for _ in 0..<3 {
@@ -480,7 +556,7 @@ final class CalendarFixtureUI {
 
     func contextMenu(_ name: String) throws {
         try fence()
-        let matches = find(name)
+        let matches = inspectorFind(name)
         guard matches.count == 1, AXUIElementPerformAction(matches[0], kAXShowMenuAction as CFString) == .success else { throw SourceFailure.unsupported }
     }
 }

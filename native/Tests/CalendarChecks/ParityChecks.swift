@@ -25,7 +25,7 @@ enum CalendarParityChecks {
         location.geoLocation = CLLocation(latitude: 41.88, longitude: -87.63)
         location.radius = 100
         let native = CalendarEventKitFields.structuredLocation(location)
-        guard native["latitude"] == .number(41.88), native["longitude"] == .number(-87.63), native["radius"] == .number(100), CalendarEventKitFields.structuredLocation(nil) == .null, CalendarEventKitFields.participants(nil) == .array([]) else { throw SourceFailure.invalid }
+        guard native["title"] == .string("[ab-test] location"), native["latitude"] == .number(41.88), native["longitude"] == .number(-87.63), native["radius"] == .number(100), CalendarEventKitFields.structuredLocation(nil) == .null, CalendarEventKitFields.participants(nil) == .array([]) else { throw SourceFailure.invalid }
         guard CalendarEventKitFields.ownerParticipationStatus(nil) == .null else { throw SourceFailure.invalid }
         let now = Date(timeIntervalSince1970: 1793448000)
         let identityWindows = CalendarEventKitFields.identitySearchIntervals(around: now)
