@@ -119,9 +119,8 @@ enum CalendarParityProof {
                 let bytes = Data("[ab-test] calendar attachment".utf8)
                 try bytes.write(to: file)
                 let digest = SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined()
-                if ui.find("Add Attachment…", role: kAXButtonRole).isEmpty {
-                    try await ui.menu("Edit", ["Attach File…", "Add Attachment…", "Attach File..."])
-                } else { try ui.press("Add Attachment…", role: kAXButtonRole) }
+                try await ui.revealAttachments()
+                try ui.pressAny(["Add Attachment…", "Add Attachments"], role: kAXButtonRole)
                 controls["attachment_dialog_opened"] = .bool(true)
                 try await Task.sleep(for: .milliseconds(200))
                 try ui.post(5, flags: [.maskCommand, .maskShift])
@@ -167,6 +166,7 @@ enum CalendarParityProof {
                 try await ui.openOwnedEvent()
                 let invitationTitle = title + " invitation"
                 let invitationUI = CalendarFixtureUI(app: app, title: invitationTitle, calendarTitle: title)
+                defer { for (key, value) in invitationUI.diagnostics { controls["invitation_" + key] = value } }
                 let date = DateFormatter()
                 date.locale = Locale(identifier: "en_US_POSIX"); date.timeZone = TimeZone(secondsFromGMT: 0); date.dateFormat = "yyyyMMdd'T'HHmmss'Z'"
                 let lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//AppleBridge//Calendar parity//EN", "METHOD:REQUEST", "BEGIN:VEVENT", "UID:" + UUID().uuidString, "DTSTAMP:" + date.string(from: Date()), "DTSTART:" + date.string(from: eventStart), "DTEND:" + date.string(from: eventEnd), "SUMMARY:" + invitationTitle, "ORGANIZER:mailto:" + organizer, "ATTENDEE;RSVP=TRUE;PARTSTAT=NEEDS-ACTION:mailto:" + attendee, "END:VEVENT", "END:VCALENDAR", ""]
@@ -460,8 +460,8 @@ final class CalendarFixtureUI {
 
     func revealTravel() async throws {
         try fence()
-        if !inspectorFind("travel time", role: kAXStaticTextRole).isEmpty || !inspectorFind("travel time:", role: kAXStaticTextRole).isEmpty { return }
-        for name in ["Add Alert, Repeat, or Travel Time", "Add Alert, Repeat or Travel Time"] {
+        if ["travel time", "travel time:", "Travel time", "Travel time:", "Travel Time", "Travel Time:"].contains(where: { !inspectorFind($0, role: kAXStaticTextRole).isEmpty }) { return }
+        for name in ["Add Alert, Repeat, or Travel Time", "Add Alert, Repeat or Travel Time", "Add Alert or Travel Time"] {
             let matches = inspectorFind(name)
             if matches.count == 1 {
                 guard AXUIElementPerformAction(matches[0], kAXPressAction as CFString) == .success else { throw SourceFailure.unsupported }
@@ -469,6 +469,21 @@ final class CalendarFixtureUI {
                 return
             }
         }
+    }
+
+    func revealAttachments() async throws {
+        try fence()
+        if ["Add Attachment…", "Add Attachments"].contains(where: { !inspectorFind($0, role: kAXButtonRole).isEmpty }) { return }
+        for name in ["Add Notes, URL, or Attachments", "Add Notes or Attachments", "Add URL or Attachments", "Add notes, URL or attachments"] {
+            let matches = inspectorFind(name)
+            if matches.count == 1 {
+                let pressed = AXUIElementPerformAction(matches[0], kAXPressAction as CFString) == .success
+                guard pressed || AXUIElementSetAttributeValue(matches[0], kAXFocusedAttribute as CFString, kCFBooleanTrue) == .success else { throw SourceFailure.unsupported }
+                try await Task.sleep(for: .milliseconds(200))
+                return
+            }
+        }
+        throw SourceFailure.unsupported
     }
 
     func importInvitation(_ file: URL, calendarTitle: String) async throws {
@@ -520,7 +535,7 @@ final class CalendarFixtureUI {
                 let role = value(current, kAXRoleAttribute)
                 if role == kAXApplicationRole { break }
                 if role == kAXWindowRole, !value(current, kAXTitleAttribute).contains(title) { break }
-                let anchors = ["Done", "Accept", "Maybe", "Decline", "Add Invitees", "Add Invitees…", "Add Attachment…", "Add Alert, Repeat, or Travel Time", "Add notes, URL or attachments"]
+                let anchors = ["Done", "Accept", "Maybe", "Decline", "Add Invitees", "Add Invitees…", "Add Attachment…", "Add Attachments", "Add Alert, Repeat, or Travel Time", "Add Alert or Travel Time", "Add Notes, URL, or Attachments", "Add Notes or Attachments", "Add notes, URL or attachments"]
                 if anchors.contains(where: { !find($0, within: current).isEmpty }) { inspectorCache = current; return current }
                 var parent: CFTypeRef?
                 guard AXUIElementCopyAttributeValue(current, kAXParentAttribute as CFString, &parent) == .success,
@@ -563,15 +578,26 @@ final class CalendarFixtureUI {
     }
 
     func pressAny(_ names: [String], role: String) throws {
-        let available = names.filter { find($0, role: role).count == 1 }
-        guard available.count == 1 else { throw SourceFailure.unsupported }
-        try press(available[0], role: role)
+        try fence()
+        var matches: [AXUIElement] = []
+        for name in names {
+            for element in role == kAXButtonRole ? inspectorFind(name, role: role) : find(name, role: role) {
+                if !matches.contains(where: { CFEqual($0, element) }) { matches.append(element) }
+            }
+        }
+        try fence()
+        guard matches.count == 1, AXUIElementPerformAction(matches[0], kAXPressAction as CFString) == .success else { throw SourceFailure.unsupported }
     }
 
     func menu(_ name: String, _ items: [String]) async throws {
         try press(name, role: kAXMenuBarItemRole)
         try await Task.sleep(for: .milliseconds(100))
-        try pressAny(items, role: kAXMenuItemRole)
+        var matches: [AXUIElement] = []
+        for item in items {
+            for element in find(item, role: kAXMenuItemRole) where !matches.contains(where: { CFEqual($0, element) }) { matches.append(element) }
+        }
+        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier,
+              matches.count == 1, AXUIElementPerformAction(matches[0], kAXPressAction as CFString) == .success else { throw SourceFailure.unsupported }
     }
 
     func setFocused(_ text: String, requireInspector: Bool = true) throws {
@@ -603,7 +629,7 @@ final class CalendarFixtureUI {
 
     func travelPopup() throws {
         try fence()
-        let labels = ["travel time", "travel time:", "Travel Time", "Travel Time:"].flatMap { inspectorFind($0, role: kAXStaticTextRole) }
+        let labels = ["travel time", "travel time:", "Travel time", "Travel time:", "Travel Time", "Travel Time:"].flatMap { inspectorFind($0, role: kAXStaticTextRole) }
         guard labels.count == 1 else { throw SourceFailure.unsupported }
         var current = labels[0]
         for _ in 0..<3 {
