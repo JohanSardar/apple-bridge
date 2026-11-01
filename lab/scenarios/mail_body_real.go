@@ -109,13 +109,25 @@ func runMailBodyReal(ctx context.Context, s Scenario, level string) (e Evidence)
 				e.Metrics["matched_fixture_count"] = 1
 				e.Metrics["expected_body_digest"] = sample.Body
 				args, _ := json.Marshal(map[string]string{"message_id": r.ID})
-				var result contracts.QueryResult
-				_, err = world.Request(ctx, w.Gateway, "/v1/op/mail.body", contracts.Query{Args: args, DeadlineMS: 60000}, &result)
+				var result struct {
+                    contracts.QueryResult
+                    Error struct { Code string `json:"code"` } `json:"error"`
+                }
+                status, queryErr := world.Request(ctx, w.Gateway, "/v1/op/mail.body", contracts.Query{Args: args, DeadlineMS: 60000}, &result)
+                e.Metrics["body_query_http_status"] = status
+                for _, code := range []string{"invalid", "unavailable", "unsupported", "not_found", "deadline", "forbidden", "corrupt"} {
+                    if result.Error.Code == code { e.Metrics["body_query_error_"+code+"_count"] = 1 }
+                }
+                err = queryErr
 				var body struct {
 					State string `json:"state"`
 					Text  string `json:"plain_text"`
 				}
-				if err == nil && json.Unmarshal(result.ResultJSON, &body) == nil && body.State == "downloaded" {
+				if err == nil && json.Unmarshal(result.ResultJSON, &body) == nil {
+                    for _, state := range []string{"partial", "offloaded", "downloaded"} {
+                        if body.State == state { e.Metrics["body_state_"+state+"_count"] = 1 }
+                    }
+                    if body.State != "downloaded" { continue }
 					e.Metrics["downloaded_body_count"] = 1
 					e.Metrics["last_body_digest"] = digest(body.Text)
 					if digest(body.Text) != sample.Body {
