@@ -5,9 +5,23 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/shortcut"
 )
+
+func TestSiriProbeAllowsBoundedFirstRegistration(t *testing.T) {
+	for _, tc := range []struct {
+		id, level string
+		want      time.Duration
+	}{{"SIRI-INTENTS", "real", 5 * time.Minute}, {"SIRI-INTENTS", "sim", 20 * time.Second}, {"USE-ACTION-PROBE", "real", 20 * time.Second}} {
+		fixture := &shortcutProbeSimulation{entries: []shortcut.Entry{{Name: "AB Bridge Status"}}, result: shortcut.Result{Data: []byte("Apple Bridge background service is not registered.")}}
+		e := runShortcutProbe(context.Background(), Scenario{ID: tc.id}, tc.level, "AB Bridge Status", fixture, true, validBridgeStatus)
+		if !e.Passed || fixture.runs != 1 || fixture.timeout != tc.want {
+			t.Fatal(tc, e, fixture.runs, fixture.timeout)
+		}
+	}
+}
 
 func TestShortcutProbeRequiresQualifiedUniquePack(t *testing.T) {
 	for _, count := range []int{0, 1, 2} {
