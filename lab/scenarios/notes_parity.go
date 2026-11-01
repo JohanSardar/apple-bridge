@@ -75,15 +75,7 @@ func runNotesParity(ctx context.Context, s Scenario, level string) (e Evidence) 
 	}
 	defer func() {
 		finishCleanupAudit(context.Background(), owned, "notes", &e)
-		proof, ok := e.Metrics["cleanup_counts"].(map[string]any)
-		if ok && proof["passed"] == true {
-			for i := range e.Assertions {
-				if e.Assertions[i].Name == "tagged_notes_cleaned_up" && !e.Assertions[i].Passed {
-					e.Assertions[i].Passed = true
-					e.Assertions[i].Detail = "independent_note_and_folder_baseline_restored_after_probe_exit"
-				}
-			}
-		}
+
 	}()
 	cmd = exec.CommandContext(ctx, "open", "-n", "-W", "-g", "-a", app, "--args", "notes-parity-probe", "--report", report)
 	output, err = cmd.CombinedOutput()
