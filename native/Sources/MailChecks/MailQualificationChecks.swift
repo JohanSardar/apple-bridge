@@ -62,7 +62,7 @@ func checkMailQualification() async throws {
         if scenario == "MAIL-BODY-FIXTURE" { try require(scripts.contains { $0.contains("set default message format to priorFormat") }) }
         if scenario != "MAIL-BODY-FIXTURE" {
             try require(scripts.contains { $0.contains("set visible of m to true") && $0.contains("close m saving no") })
-            try require(scripts.contains { $0.contains("{inbox, sent mailbox, drafts mailbox}") && $0.contains("(id of item 1 of chosen) is (id of m) and subject of item 1 of chosen is") })
+            try require(scripts.contains { $0.contains("{inbox, sent mailbox, drafts mailbox}") && $0.contains("if subject of item 1 of chosen is") && $0.contains("messages of v whose subject is") })
             try require(!scripts.contains { $0.contains("delete m") || $0.contains("move m") || $0.contains("set deleted status") })
         }
         try require(scripts.contains { $0.contains("extract address from sender") && $0.contains("visible:true") && $0.contains("close m saving no") })
@@ -87,7 +87,7 @@ func checkMailQualification() async throws {
     let unsafe = MailQualification(script: { body in body.contains("set chosen") ? "wrong" : "" }, removeSelected: { throw SourceFailure.corrupt })
     let refused = try await unsafe.run(scenario: "MAIL-CLEANUP", tag: "[ab-test] refused")
     try require(!refused["cleanup_passed"].bool && refused["cleanup_error"].string == MailCommandFailure.unconfirmed.localizedDescription)
-    for (stage, step) in [(6, "empty viewer"), (7, "only one test message"), (8, "test message identity")] {
+    for (stage, step) in [(6, "empty viewer"), (7, "only one test message"), (8, "test message identity"), (9, "displayed mailbox")] {
         let selectionFailure = MailQualification(script: { body in body.contains("set chosen to selected messages") ? "failure|\(stage)|-2700" : "" }, removeSelected: { throw SourceFailure.corrupt })
         let proof = try await selectionFailure.run(scenario: "MAIL-CLEANUP", tag: "[ab-test] selection")
         try require(!proof["cleanup_passed"].bool && proof["cleanup_error"].string.contains(step) && proof["cleanup_error_number"] == .number(-2700))

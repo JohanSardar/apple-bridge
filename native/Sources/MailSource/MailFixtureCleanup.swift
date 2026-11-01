@@ -72,14 +72,19 @@ public enum MailFixtureCleanup {
             set index of window of v to 1
             activate
             set selected mailboxes of v to {mailbox of m}
-            delay 0.3
             set cleanupStage to 4
-            set selected messages of v to {m}
+            repeat 20 times
+                set viewerOwned to (messages of v whose subject is \(q(tag)) and deleted status is false)
+                if (count viewerOwned) > 0 then exit repeat
+                delay 0.1
+            end repeat
+            if (count viewerOwned) is 0 then return "failure|9|-2700"
+            set selected messages of v to {item 1 of viewerOwned}
             set cleanupStage to 5
             repeat 20 times
                 set chosen to selected messages of v
                 if (count chosen) is 1 then
-                    if (id of item 1 of chosen) is (id of m) and subject of item 1 of chosen is \(q(tag)) then return (id of item 1 of chosen) as string
+                    if subject of item 1 of chosen is \(q(tag)) then return (id of item 1 of chosen) as string
                 end if
                 delay 0.1
             end repeat
@@ -96,7 +101,7 @@ public enum MailFixtureCleanup {
             }
             if selected.hasPrefix("failure|") {
                 let parts = selected.split(separator: "|")
-                let steps = ["find the tagged test message", "read the tagged test message", "show the tagged mailbox", "select the tagged test message", "confirm the tagged test selection", "select the test message in the empty viewer", "select only one test message", "confirm the selected test message identity"]
+                let steps = ["find the tagged test message", "read the tagged test message", "show the tagged mailbox", "select the tagged test message", "confirm the tagged test selection", "select the test message in the empty viewer", "select only one test message", "confirm the selected test message identity", "find the tagged message in the displayed mailbox"]
                 if parts.count == 3, let stage = Int(parts[1]), steps.indices.contains(stage - 1), let code = Int(parts[2]) { throw Failure(step: steps[stage - 1], cause: MailCommandFailure.script(code)) }
             }
             guard UInt64(selected) != nil else { throw MailCommandFailure.unconfirmed }
