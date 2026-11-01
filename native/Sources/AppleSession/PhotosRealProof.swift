@@ -29,7 +29,7 @@ enum PhotosRealProof {
             guard AXUIElementCopyAttributeValue(element, key as CFString, &value) == .success else { return nil }
             return value
         }
-        func displaysFilename(_ root: AXUIElement, excluding mainWindow: AXUIElement, filename: String) -> Bool {
+        func displaysFilename(_ root: AXUIElement, excluding mainWindow: AXUIElement, filename: String, caseInsensitive: Bool = false) -> Bool {
             let windows = attribute(root, kAXWindowsAttribute) as? [AXUIElement] ?? []
             let panels = windows.filter { !CFEqual($0, mainWindow) }
             guard windows.count == 2, panels.count == 1 else { return false }
@@ -37,7 +37,10 @@ enum PhotosRealProof {
             func matches(_ node: AXUIElement, _ depth: Int) -> Bool {
                 budget -= 1
                 guard budget > 0, depth < 25 else { return false }
-                if [kAXTitleAttribute, kAXValueAttribute, kAXDescriptionAttribute].contains(where: { (attribute(node, $0) as? String ?? "").contains(filename) }) { return true }
+                if [kAXTitleAttribute, kAXValueAttribute, kAXDescriptionAttribute].contains(where: {
+                    let value = attribute(node, $0) as? String ?? ""
+                    return caseInsensitive ? value.localizedCaseInsensitiveContains(filename) : value.contains(filename)
+                }) { return true }
                 return (attribute(node, kAXChildrenAttribute) as? [AXUIElement] ?? []).contains { matches($0, depth + 1) }
             }
             return matches(panels[0], 0)
@@ -107,6 +110,9 @@ enum PhotosRealProof {
                 try await Task.sleep(for: .milliseconds(150))
             }
             cleanupDiagnostics["info_matched"] = .bool(identified)
+            cleanupDiagnostics["info_window_count"] = .number(Double((attribute(root, kAXWindowsAttribute) as? [AXUIElement] ?? []).count))
+            cleanupDiagnostics["info_case_matched"] = .bool(displaysFilename(root, excluding: mainWindow, filename: filename, caseInsensitive: true))
+            cleanupDiagnostics["info_stem_matched"] = .bool(displaysFilename(root, excluding: mainWindow, filename: (filename as NSString).deletingPathExtension, caseInsensitive: true))
             guard identified else { throw SourceFailure.conflict }
             try pressKey(34, flags: .maskCommand)
             infoOpen = false
