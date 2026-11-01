@@ -54,7 +54,7 @@ public struct MessagesMediaCleanupProof: Sendable {
             value["values"] = .array(candidate["values"].array + [candidate["description"]])
             return .object(value)
         }
-        let target = MessagesMediaCleanupProof.targetIndex(candidates, names: names, outgoing: row["is_from_me"].bool, allowSelfEcho: fixture["allow_self_echo"].bool)
+        let target = MessagesMediaCleanupProof.targetIndex(candidates, names: names, outgoing: row["is_from_me"].bool, allowSelfEcho: fixture["allow_self_echo"].bool, ownedCopies: max(1, Int(fixture["owned_copies"].number)))
         return JSON.object(["authorized": .bool(authorized), "target_verified": .bool(authorized && target != nil)])
     }
 
@@ -80,9 +80,9 @@ public struct MessagesMediaCleanupProof: Sendable {
         let targets = candidates.enumerated().filter { _, candidate in
             candidate["outgoing"] == .bool(outgoing) && candidate["values"].array.contains { Self.matches($0.string, names: names) }
         }
-        if !targets.isEmpty, targets.count <= ownedCopies { return targets.first?.offset }
+        if !targets.isEmpty, targets.count <= ownedCopies || equivalentOwned { return targets.first?.offset }
         guard targets.isEmpty, allowSelfEcho else { return nil }
         let echoes = candidates.enumerated().filter { _, candidate in candidate["values"].array.contains { Self.matches($0.string, names: names) } }
-        return !echoes.isEmpty && echoes.count <= ownedCopies ? echoes.first?.offset : nil
+        return !echoes.isEmpty && (echoes.count <= ownedCopies || equivalentOwned) ? echoes.first?.offset : nil
     }
 }

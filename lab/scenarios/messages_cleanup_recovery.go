@@ -82,7 +82,7 @@ func runMessagesCleanupRecovery(ctx context.Context, e Evidence) (result Evidenc
 		add("recovery_owned_identity_truth", false)
 		return
 	}
-	unread, err := db.QueryContext(ctx, "SELECT DISTINCT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE m.is_from_me=0 AND m.is_read=0 AND j.chat_id IN (SELECT cm.chat_id FROM message parent JOIN chat_message_join cm ON cm.message_id=parent.ROWID WHERE parent.ROWID>? AND (instr(parent.text,?)>0 OR instr(parent.attributedBody,CAST(? AS BLOB))>0)) AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=j.chat_id AND r.message_id=m.ROWID)", manifest.Baseline, tag, tag)
+	unread, err := db.QueryContext(ctx, "SELECT DISTINCT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE m.is_from_me=0 AND m.is_read=0 AND COALESCE(m.associated_message_type,0)=0 AND j.chat_id IN (SELECT cm.chat_id FROM message parent JOIN chat_message_join cm ON cm.message_id=parent.ROWID WHERE parent.ROWID>? AND (instr(parent.text,?)>0 OR instr(parent.attributedBody,CAST(? AS BLOB))>0)) AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=j.chat_id AND r.message_id=m.ROWID)", manifest.Baseline, tag, tag)
 	if err != nil {
 		add("recovery_unread_ownership", false)
 		return
