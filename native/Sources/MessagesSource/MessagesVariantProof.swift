@@ -22,8 +22,8 @@ public enum MessagesVariantProof {
         let reader = try MessagesReader(path: path)
         guard let selected = try MessagesSelfTestIsolation.target(database: MessagesDatabase()) else { return limited("No verified self conversation is available. Check the Messages account's own addresses and self conversation.") }
         let handle = selected.handle
-        let existingBaseline: MessagesSelfTestBaseline?
-        do { existingBaseline = selected.chat.isEmpty ? nil : try await MessagesSelfTestBaseline.capture(selected.chat) }
+        let existingBaseline: MessagesContentBaseline?
+        do { existingBaseline = selected.chat.isEmpty ? nil : try MessagesContentBaseline.capture(selected.chat) }
         catch { return limited((error as? MessagesSelfTestBaselineFailure)?.description ?? "The self conversation baseline could not be verified. Keep Messages available and rerun the check.") }
         var chat = ""
         let run = "variant_" + UUID().uuidString.replacingOccurrences(of: "-", with: "")
@@ -156,7 +156,7 @@ public enum MessagesVariantProof {
             try await Task.sleep(for: .milliseconds(500))
         }
         let remaining = try reader.query("SELECT DISTINCT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE m.ROWID>? AND (instr(m.text,?)>0 OR instr(m.attributedBody,CAST(? AS BLOB))>0) AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=j.chat_id)", [String(baseline), tag, tag])
-        let baselineRestored = (try? await existingBaseline?.restoreAndVerify()) ?? (existingBaseline == nil)
+        let baselineRestored = (try? existingBaseline?.restoreAndVerify()) ?? (existingBaseline == nil)
         let cleanupPassed = baselineRestored && ownershipCaptured && cleanup["passed"].bool && remaining.isEmpty
         let passed = cleanupPassed && !lateEffectPossible && echoVerified && outcome["observed"].bool && outcome["disposition"].string == "locally_observed"
         registration["late_effect_possible"] = lateEffectPossible

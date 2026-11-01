@@ -49,8 +49,8 @@ actor MessagesSelfTest {
             return result
         }
         let handle = selected.handle
-        let existingBaseline: MessagesSelfTestBaseline?
-        do { existingBaseline = selected.chat.isEmpty ? nil : try await MessagesSelfTestBaseline.capture(selected.chat) }
+        let existingBaseline: MessagesContentBaseline?
+        do { existingBaseline = selected.chat.isEmpty ? nil : try MessagesContentBaseline.capture(selected.chat) }
         catch {
             let reason = (error as? MessagesSelfTestBaselineFailure)?.description ?? "The self conversation baseline could not be verified. Keep Messages available and rerun the check."
             let result = JSON.object(["os_build": .string(build), "run_id": .string(run), "state": .string("limited"), "writes_submitted": .number(0), "steps": .array([.object(["name": .string("existing_self_chat_baseline"), "proven": .bool(false), "reason": .string(reason)])])])
@@ -195,7 +195,7 @@ actor MessagesSelfTest {
         } catch {
             steps.append(.object(["name": .string("cleanup"), "proven": .bool(false), "reason": .string(uiAllowed ? failureReason(error) : "ui_deferred_until_unlock")]))
         }
-        let baselineRestored = (try? await existingBaseline?.restoreAndVerify()) ?? (existingBaseline == nil)
+        let baselineRestored = (try? existingBaseline?.restoreAndVerify()) ?? (existingBaseline == nil)
         if existingBaseline != nil {
             steps.append(.object(["name": .string("existing_self_chat_preserved"), "proven": .bool(baselineRestored), "reason": .string(baselineRestored ? "" : "The previous self-chat state could not be verified after cleanup. Keep Messages available and review the self-chat before rerunning.")]))
             if !baselineRestored { registration["cleanup_state"] = "pending_native_cleanup" }
