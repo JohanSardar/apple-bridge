@@ -59,8 +59,8 @@ func runNotesExtrasReal(ctx context.Context, s Scenario, level, gitSHA string) (
 			}()})
 			add("owned_note_cleaned", problem == nil)
 		}
-		for id, name := range folders {
-			problem := notesCleanupTruth(w.RecoverTruth, 30*time.Second, map[string]any{"source": "notes", "tag": tag, "action": "cleanup_created_folder", "created_by_run": true, "folder_id": id, "title": name})
+		problem := notesCleanupFolders(w.RecoverTruth, tag, folders)
+		for range folders {
 			add("owned_folder_cleaned", problem == nil)
 		}
 	}()

@@ -14,8 +14,8 @@ extension AppleTruth {
         if verb == "fixture" {
             guard tag.hasPrefix("[ab-test "), tag.hasSuffix("]"), !tag.contains("\n"), tag.count > 11 else { throw NotesTruthFailure.invalid }
         }
-        let cleanup = verb == "fixture" && ["cleanup", "delete", "cleanup_owned", "cleanup_created_folder"].contains(request["action"] as? String ?? "")
-        let storeTargets = cleanup && request["folder_id"] == nil ? try notesDeletionTargets(tag: tag, folderKey: request["action"] as? String == "cleanup_created_folder" ? request["native_key"] as? String : nil) : []
+        let cleanup = verb == "fixture" && ["cleanup", "delete", "cleanup_owned", "cleanup_created_folder", "cleanup_created_folders"].contains(request["action"] as? String ?? "")
+        let storeTargets = cleanup && request["folder_id"] == nil && request["folders"] == nil ? try notesDeletionTargets(tag: tag, folderKey: request["action"] as? String == "cleanup_created_folder" ? request["native_key"] as? String : nil) : []
         var input = request
         input["verb"] = verb
         if verb == "observe", !tag.isEmpty { input["note_ids"] = try notesDeletionTargets(tag: tag, folderKey: nil) }
@@ -65,6 +65,17 @@ extension AppleTruth {
             require((!request.folder_id || folder.id() === request.folder_id) && folder.folders().length === 0 && (request.folder_id ? folder.notes().length === 0 : folder.notes().every(n => n.name().startsWith(tag))));
             const folderID = folder.id();
             return {status:'verified', deleted_ids:[folderID]};
+        }
+        if (action === 'cleanup_created_folders') {
+            require(request.created_by_run === true && Array.isArray(request.folders) && request.folders.length > 0);
+            const ids = request.folders.map(owned => {
+                require(owned.id && typeof owned.title === 'string' && (owned.title === 'Bridge Test ' + tag || owned.title.startsWith('Bridge Test ' + tag + ' ')));
+                const folder = app.folders.byId(owned.id);
+                require(folder.id() === owned.id && folder.name() === owned.title && folder.folders().length === 0 && folder.notes().length === 0);
+                return owned.id;
+            });
+            require(new Set(ids).size === ids.length);
+            return {status:'verified', deleted_ids:ids};
         }
         if (action === 'cleanup' || action === 'delete') {
             const selected = taggedNotes(), deletedIDs = selected.map(note => note.id());

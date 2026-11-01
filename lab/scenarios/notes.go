@@ -361,8 +361,8 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 				e.Metrics = map[string]any{}
 			}
 			e.Metrics["cleanup"] = proof
-			for id, title := range ownedFolders {
-				folderErr := notesCleanupTruth(w.RecoverTruth, 30*time.Second, map[string]any{"source": "notes", "tag": tag, "action": "cleanup_created_folder", "created_by_run": true, "folder_id": id, "title": title})
+			folderErr := notesCleanupFolders(w.RecoverTruth, tag, ownedFolders)
+			for range ownedFolders {
 				add("run_created_folder_cleaned", folderErr == nil)
 			}
 			add("owned_cleanup_counts_match", problem == nil)
@@ -411,8 +411,8 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 				err := notesCleanupTruth(w.RecoverTruth, 30*time.Second, map[string]any{"source": "notes", "tag": tag, "action": "cleanup_owned", "id": fixtureID, "folder_id": fixtureFolderID})
 				add("tagged_notes_cleaned", err == nil)
 			}
-			for id, title := range ownedFolders {
-				problem := notesCleanupTruth(w.RecoverTruth, 30*time.Second, map[string]any{"source": "notes", "tag": tag, "action": "cleanup_created_folder", "created_by_run": true, "folder_id": id, "title": title})
+			problem := notesCleanupFolders(w.RecoverTruth, tag, ownedFolders)
+			for range ownedFolders {
 				add("run_created_folder_cleaned", problem == nil)
 			}
 		}()
