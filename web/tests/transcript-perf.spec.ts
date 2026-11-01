@@ -10,7 +10,7 @@ test.setTimeout(90000);
 test.beforeEach(async({page})=>{await transcriptObservers(page);});
 test.afterEach(async({page},info)=>{
     if(info.status==='passed')return;
-    const partial=await page.evaluate(()=>{const probe=(window as any).__listProbe;return probe&&{actions:probe.actions?.map((action:any)=>({index:action.index,at:action.at,processed:action.processed,frame:action.frame,resultAt:action.resultAt,reactions:action.reactions})),actionFrames:probe.actionFrames,phaseDone:probe.phaseDone,echoes:[...document.querySelectorAll<HTMLElement>('[data-local-echo]')].map(row=>({message:row.dataset.message,command:row.dataset.commandId,state:row.dataset.sendState,text:row.textContent?.slice(0,80)}))};}).catch(()=>undefined);
+    const partial=await page.evaluate(()=>{const probe=(window as any).__listProbe;return probe&&{actions:probe.actions?.map((action:any)=>({index:action.index,at:action.at,processed:action.processed,frame:action.frame,resultAt:action.resultAt,reactions:action.reactions})),actionFrames:probe.actionFrames,phaseDone:probe.phaseDone,rows:[...document.querySelectorAll<HTMLElement>('.message-row')].map(row=>({message:row.dataset.message,command:row.dataset.commandId,state:row.dataset.sendState,text:row.textContent?.slice(0,80),bounds:row.getBoundingClientRect().toJSON()})),echoes:[...document.querySelectorAll<HTMLElement>('[data-local-echo]')].map(row=>({message:row.dataset.message,command:row.dataset.commandId,state:row.dataset.sendState,text:row.textContent?.slice(0,80)}))};}).catch(()=>undefined);
     if(!partial)return;
     await mkdir('../lab/evidence/private/web',{recursive:true});
     const action=info.title.includes('sending text')?'send':info.title.includes('reactions')?'react':'other';
@@ -65,7 +65,7 @@ test('WEB-MSG-PERF WEB-MSG-PERF-INPUT sending text records complete input covera
     await prepareSession(page);const ids=await control(request,'/demo-fixtures');await page.goto('/messages/'+encodeURIComponent(ids['message-chat']));await expect(page.locator('.messages-transcript')).toHaveAttribute('aria-busy','false');
     const prefix='[ab-test] '+randomUUID().slice(0,8);
     await transcriptInputs(page,info,'send',async()=>{
-        for(let index=0;index<24;index++){const content=prefix+' '+index;await page.getByRole('textbox',{name:'Message',exact:true}).fill(content);await page.getByRole('button',{name:'Send message',exact:true}).click();await expect(page.getByRole('textbox',{name:'Message',exact:true})).toHaveValue('');await expect.poll(()=>page.locator('[data-local-echo]').count(),{intervals:[25]}).toBe(0);await expect(page.locator('.messages-transcript').getByText(content,{exact:true})).toBeInViewport({ratio:1});}
+        for(let index=0;index<24;index++){const content=prefix+' '+index;await page.getByRole('textbox',{name:'Message',exact:true}).fill(content);await page.getByRole('button',{name:'Send message',exact:true}).click();await expect(page.getByRole('textbox',{name:'Message',exact:true})).toHaveValue('');await expect.poll(()=>page.locator('[data-local-echo]').count(),{intervals:[25]}).toBe(0);const sent=page.locator('.messages-transcript').getByText(content,{exact:true});await expect(sent).toHaveCount(1);await expect(sent).toBeInViewport({ratio:1});}
     });
 });
 test('WEB-MSG-PERF WEB-MSG-PERF-INPUT reactions record complete input coverage',async({page,request},info)=>{
