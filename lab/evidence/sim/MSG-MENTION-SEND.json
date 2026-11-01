@@ -1,28 +1,60 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[8.41 7.76 7.6] cpu_idle=51% cpus=10 other_heavy=0"
+    "summary": "air: load=[6.69 6.07 6.5] cpu_idle=50% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M6A60Y2M51CD84D75KD9P90V",
+  "run_id": "run_01M6A6TPRTNG2MH9NT5AAKKHJK",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MSG-MENTION-SEND",
   "level": "sim",
   "passed": true,
-  "git_sha": "a48e6294c1c1dd366d81c1ecd399e39a3d5ad32e",
-  "at": "2026-10-31T23:51:52.660913Z",
+  "git_sha": "a17f6a1004cc4df3336159ec3697afff6e7f8ff2",
+  "at": "2026-11-01T00:05:57.146034Z",
   "assertions": [
     {
       "name": "native_readback_checks",
       "passed": true
     },
     {
-      "name": "missing_build_rejected",
+      "name": "empty_chat_rejected",
       "passed": true
     },
     {
-      "name": "plain_send_rejected",
+      "name": "incomplete_deleted_selection_rejected",
+      "passed": true
+    },
+    {
+      "name": "mention_identity_readback",
+      "passed": true
+    },
+    {
+      "name": "current_build_qualified",
+      "passed": true
+    },
+    {
+      "name": "valid_pin_indices",
+      "passed": true
+    },
+    {
+      "name": "group_with_self_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_tag_rejected",
+      "passed": true
+    },
+    {
+      "name": "phone_substring_rejected",
+      "passed": true
+    },
+    {
+      "name": "exact_recipient_email",
+      "passed": true
+    },
+    {
+      "name": "quoted_tag_protected",
       "passed": true
     },
     {
@@ -30,15 +62,7 @@
       "passed": true
     },
     {
-      "name": "existing_deleted_selection_rejected",
-      "passed": true
-    },
-    {
-      "name": "accessibility_input_interference_refused",
-      "passed": true
-    },
-    {
-      "name": "existing_self_chat_accepted",
+      "name": "stale_os_rejected",
       "passed": true
     },
     {
@@ -50,55 +74,7 @@
       "passed": true
     },
     {
-      "name": "group_with_self_rejected",
-      "passed": true
-    },
-    {
-      "name": "quoted_tag_protected",
-      "passed": true
-    },
-    {
-      "name": "accessibility_input_without_automation",
-      "passed": true
-    },
-    {
-      "name": "native_pin_order",
-      "passed": true
-    },
-    {
-      "name": "stale_os_rejected",
-      "passed": true
-    },
-    {
-      "name": "other_run_protected",
-      "passed": true
-    },
-    {
-      "name": "invalid_pin_index_rejected",
-      "passed": true
-    },
-    {
-      "name": "valid_pin_indices",
-      "passed": true
-    },
-    {
-      "name": "extra_mention_text_rejected",
-      "passed": true
-    },
-    {
-      "name": "phone_substring_rejected",
-      "passed": true
-    },
-    {
       "name": "run_message_owned",
-      "passed": true
-    },
-    {
-      "name": "exact_recipient_email",
-      "passed": true
-    },
-    {
-      "name": "untagged_message_protected",
       "passed": true
     },
     {
@@ -106,51 +82,31 @@
       "passed": true
     },
     {
+      "name": "other_run_protected",
+      "passed": true
+    },
+    {
+      "name": "extra_mention_text_rejected",
+      "passed": true
+    },
+    {
+      "name": "existing_deleted_selection_rejected",
+      "passed": true
+    },
+    {
+      "name": "native_pin_order",
+      "passed": true
+    },
+    {
+      "name": "accessibility_input_interference_refused",
+      "passed": true
+    },
+    {
+      "name": "invalid_pin_index_rejected",
+      "passed": true
+    },
+    {
       "name": "additional_recipient_email_rejected",
-      "passed": true
-    },
-    {
-      "name": "other_recipient_email_rejected",
-      "passed": true
-    },
-    {
-      "name": "other_chat_rejected",
-      "passed": true
-    },
-    {
-      "name": "empty_chat_rejected",
-      "passed": true
-    },
-    {
-      "name": "invalid_tag_rejected",
-      "passed": true
-    },
-    {
-      "name": "owned_deleted_selection_allowed",
-      "passed": true
-    },
-    {
-      "name": "stale_build_rejected",
-      "passed": true
-    },
-    {
-      "name": "invalid_pin_state_rejected",
-      "passed": true
-    },
-    {
-      "name": "current_build_qualified",
-      "passed": true
-    },
-    {
-      "name": "mention_identity_readback",
-      "passed": true
-    },
-    {
-      "name": "incomplete_deleted_selection_rejected",
-      "passed": true
-    },
-    {
-      "name": "baseline_message_protected",
       "passed": true
     },
     {
@@ -158,7 +114,51 @@
       "passed": true
     },
     {
+      "name": "missing_build_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_pin_state_rejected",
+      "passed": true
+    },
+    {
+      "name": "stale_build_rejected",
+      "passed": true
+    },
+    {
+      "name": "baseline_message_protected",
+      "passed": true
+    },
+    {
+      "name": "other_chat_rejected",
+      "passed": true
+    },
+    {
+      "name": "untagged_message_protected",
+      "passed": true
+    },
+    {
+      "name": "accessibility_input_without_automation",
+      "passed": true
+    },
+    {
+      "name": "other_recipient_email_rejected",
+      "passed": true
+    },
+    {
       "name": "phone_suffix_is_not_self",
+      "passed": true
+    },
+    {
+      "name": "existing_self_chat_accepted",
+      "passed": true
+    },
+    {
+      "name": "plain_send_rejected",
+      "passed": true
+    },
+    {
+      "name": "owned_deleted_selection_allowed",
       "passed": true
     },
     {

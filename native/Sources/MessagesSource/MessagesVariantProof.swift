@@ -13,7 +13,6 @@ public enum MessagesVariantProof {
         guard AXIsProcessTrusted() else { return limited("needs Messages Accessibility grant") }
         let session = CGSessionCopyCurrentDictionary() as? [String: Any]
         guard session?["CGSSessionScreenIsLocked"] as? Bool != true else { return limited("needs unlocked Mac") }
-        await MessagesUISession.activate()
         if kind == "audio" {
             let bundle = "com.apple.MobileSMS"
             let target = NSAppleEventDescriptor(bundleIdentifier: bundle)
