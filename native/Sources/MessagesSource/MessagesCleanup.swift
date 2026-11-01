@@ -5,6 +5,9 @@ public enum MessagesCleanup {
     public static func allowsLateEcho(rowID: Int64, baseline: Int64, text: String, tag: String) -> Bool {
         rowID > baseline && tag.range(of: #"^\[ab-test [A-Za-z0-9_-]+\]$"#, options: .regularExpression) != nil && text.hasPrefix(tag)
     }
+    public static func canDeleteRetracted(rowID: Int64, baseline: Int64, guid: String, owned: Set<String>, parts: [JSON], text: String) -> Bool {
+        rowID > baseline && !guid.isEmpty && owned.contains(guid) && !parts.isEmpty && text.isEmpty
+    }
     public static func removedOwnedIDs(before: Set<String>, after: Set<String>) -> Set<String> { before.subtracting(after) }
     public static func run(_ arguments: [String]) async throws -> Data {
         var tag = ""
@@ -144,8 +147,17 @@ public enum MessagesCleanup {
                 }
                 guard target["text"].string.range(of: #"\[ab-test [A-Za-z0-9_-]+\]"#, options: .regularExpression) != nil else {
                     if ownedOnly, row.integer("date_retracted") == 0 {
-                        if !target["retracted_parts"].array.isEmpty {
-                            if inaccessibleOwned.insert(row["guid"]).inserted { try await MessagesAccessibility.inspectRetractedTarget(row["guid"]) }
+                        if Self.canDeleteRetracted(rowID: row.integer("row_position"), baseline: ownedBaseline ?? Int64.max, guid: row["guid"], owned: ownedIDs, parts: target["retracted_parts"].array, text: target["text"].string), MessagesSelfTestIsolation.isSelfChat(peers.map { $0["id"] }, own: Array(own)) {
+                            if inaccessibleOwned.insert(row["guid"]).inserted {
+                                try await MessagesAccessibility.inspectRetractedTarget(row["guid"])
+                                try? await MessagesNativeSession.deletePlaceholder(row["guid"], chat: row["capture_chat_guid"])
+                                let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+                                repeat {
+                                    let live = try reader.query("SELECT 1 FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE m.guid=? AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=j.chat_id)", [row["guid"]])
+                                    if live.isEmpty { inaccessibleOwned.remove(row["guid"]); break }
+                                    try await Task.sleep(for: .milliseconds(100))
+                                } while ContinuousClock.now < deadline
+                            }
                             continue
                         }
                         throw SourceFailure.conflict

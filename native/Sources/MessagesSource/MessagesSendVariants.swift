@@ -156,7 +156,7 @@ public enum MessagesSendVariants {
         if operation == "messages.send_audio" {
             let sender = MessagesCommands(path: path, labCommands: true)
             let part = try await sender.stagedAudioPart(prepared)
-            let native = try await MessagesNativeAudio.send(part, chat: route["chat"].string)
+            let native = try await MessagesNativeSession.send(part, chat: route["chat"].string)
             let deadline = ContinuousClock.now.advanced(by: .seconds(10))
             repeat {
                 if let row = try reader.message(native), let captured = try reader.messageObservations(row).first {

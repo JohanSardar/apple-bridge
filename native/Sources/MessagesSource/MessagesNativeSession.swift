@@ -4,7 +4,7 @@ import Darwin
 import SourceSupport
 
 @MainActor
-enum MessagesNativeAudio {
+enum MessagesNativeSession {
     private static func method(_ object: AnyObject, _ name: String) throws -> (Selector, IMP) {
         let selector = NSSelectorFromString(name)
         guard let type = object_getClass(object), let method = class_getInstanceMethod(type, selector) else { throw SendVariantFailure.audioMessageFlagUnverified }
@@ -36,10 +36,10 @@ enum MessagesNativeAudio {
         return message
     }
     static func syntheticFlag() -> Bool { (try? message("synthetic-transfer")) != nil }
-    static func send(_ part: JSON, chat guid: String) throws -> String {
+    private static func chat(_ guid: String) throws -> AnyObject {
         guard !guid.isEmpty, dlopen("/System/Library/PrivateFrameworks/IMCore.framework/IMCore", RTLD_LAZY) != nil,
-              let controllerType = NSClassFromString("IMDaemonController"), let registryType = NSClassFromString("IMChatRegistry"), let transferType = NSClassFromString("IMFileTransferCenter"),
-              let controller = try object(controllerType, "sharedInstance"), let registry = try object(registryType, "sharedInstance"), let transfers = try object(transferType, "sharedInstance"),
+              let controllerType = NSClassFromString("IMDaemonController"), let registryType = NSClassFromString("IMChatRegistry"),
+              let controller = try object(controllerType, "sharedInstance"), let registry = try object(registryType, "sharedInstance"),
               try flag(controller, "connectToDaemon") else { throw SendVariantFailure.audioMessageFlagUnverified }
         let deadline = Date().addingTimeInterval(5)
         var chat: AnyObject?
@@ -48,7 +48,20 @@ enum MessagesNativeAudio {
             if chat != nil { break }
             RunLoop.current.run(until: Date().addingTimeInterval(0.05))
         } while Date() < deadline
-        guard let chat, try object(chat, "guid") as? String == guid,
+        guard let chat, try object(chat, "guid") as? String == guid else { throw SendVariantFailure.audioMessageFlagUnverified }
+        return chat
+    }
+    static func deletePlaceholder(_ guid: String, chat chatGUID: String) throws {
+        let chat = try chat(chatGUID)
+        guard let message = try object(chat, "messageForGUID:", argument: guid as NSString), try object(message, "guid") as? String == guid,
+              let item = try object(message, "_imMessageItem"), try object(item, "guid") as? String == guid else { throw SourceFailure.conflict }
+        let (selector, implementation) = try method(chat, "deleteIMMessageItems:")
+        typealias Call = @convention(c) (AnyObject, Selector, NSArray) -> Void
+        unsafeBitCast(implementation, to: Call.self)(chat, selector, [item] as NSArray)
+    }
+    static func send(_ part: JSON, chat guid: String) throws -> String {
+        let chat = try chat(guid)
+        guard let transferType = NSClassFromString("IMFileTransferCenter"), let transfers = try object(transferType, "sharedInstance"),
               let transfer = try object(transfers, "guidForNewOutgoingTransferWithLocalURL:", argument: NSURL(fileURLWithPath: part["path"].string)) as? String, !transfer.isEmpty else { throw SendVariantFailure.audioMessageFlagUnverified }
         let message = try message(transfer)
         guard let native = try object(message, "guid") as? String, !native.isEmpty else { throw SendVariantFailure.audioMessageFlagUnverified }
@@ -61,5 +74,5 @@ enum MessagesNativeAudio {
 
 public extension MessagesSendVariants {
     @MainActor
-    static func syntheticNativeAudioFlag() -> Bool { MessagesNativeAudio.syntheticFlag() }
+    static func syntheticNativeAudioFlag() -> Bool { MessagesNativeSession.syntheticFlag() }
 }
