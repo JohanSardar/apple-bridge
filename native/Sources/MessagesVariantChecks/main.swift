@@ -26,6 +26,10 @@ struct MessagesVariantChecks {
         let args = JSON.object(["text": .string("test"), "variant": variant])
         let data: [String: JSON] = ["text": .string("test"), "is_from_me": .bool(true), "error_code": .number(0), "effect": .string("com.apple.messages.effect.loud"), "formatting": .array([range])]
         var checks = try await AccessibilityInputChecks.run()
+        let deepLink = try MessagesNavigation.messageURL("test-guid&other=value")
+        let deepLinkComponents = URLComponents(url: deepLink, resolvingAgainstBaseURL: false)
+        checks["message_deep_link_uses_open_path"] = deepLinkComponents?.scheme == "imessage" && deepLinkComponents?.host == nil && deepLinkComponents?.path == "open"
+        checks["message_deep_link_preserves_exact_guid"] = deepLinkComponents?.queryItems == [URLQueryItem(name: "message-guid", value: "test-guid&other=value")]
         checks["multipart_capture_repeats_all_parts_in_one_batch"] = try await CommandCaptureChecks.run()
         checks["self_echo_does_not_cancel_same_media_render"] = !Messages.shouldPreemptMedia(activeDigest: "same", incomingDigest: "same", activeLive: true, incomingImage: true)
         checks["same_media_backfill_is_reused"] = !Messages.shouldPreemptMedia(activeDigest: "same", incomingDigest: "same", activeLive: false, incomingImage: true)

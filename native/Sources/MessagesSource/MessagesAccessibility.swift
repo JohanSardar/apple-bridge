@@ -372,11 +372,7 @@ enum MessagesAccessibility {
         return true
     }
     static func openMessage(_ guid: String, settle: TimeInterval = 3, resetEditor: Bool = true, ownedTag: String = "") throws {
-        var components = URLComponents()
-        components.scheme = "imessage"
-        components.host = "open"
-        components.queryItems = [URLQueryItem(name: "message-guid", value: guid)]
-        guard let url = components.url else { throw MessagesUIFailure.navigationUnavailable }
+        let url = try MessagesNavigation.messageURL(guid)
         MessagesUISession.activate()
         if resetEditor {
             _ = try resetTaggedEditor(ownedTag)

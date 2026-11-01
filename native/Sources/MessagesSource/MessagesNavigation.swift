@@ -6,7 +6,16 @@ public enum MessagesUIFailure: String, Error, Sendable {
     case targetUnavailable, targetAmbiguous, navigationUnavailable, automationDenied, menuUnavailable, editFieldUnavailable, messageValueRejected, composerUnavailable, recipientMismatch, wrongService, draftPresent
 }
 
-enum MessagesNavigation {
+public enum MessagesNavigation {
+    public static func messageURL(_ guid: String) throws -> URL {
+        guard !guid.isEmpty else { throw MessagesUIFailure.navigationUnavailable }
+        var components = URLComponents()
+        components.scheme = "imessage"
+        components.path = "open"
+        components.queryItems = [URLQueryItem(name: "message-guid", value: guid)]
+        guard let url = components.url else { throw MessagesUIFailure.navigationUnavailable }
+        return url
+    }
     static var application: NSRunningApplication? {
         if let front = NSWorkspace.shared.frontmostApplication, front.bundleIdentifier == "com.apple.MobileSMS" { return front }
         return NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.MobileSMS").first
