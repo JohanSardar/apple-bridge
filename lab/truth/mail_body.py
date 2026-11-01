@@ -28,12 +28,13 @@ for key, subject, sender, received in rows:
     if len(raw) != length:
         continue
     message = email.parser.BytesParser(policy=email.policy.default).parsebytes(raw)
-    if message.is_multipart() or message.get_content_type() != 'text/plain':
+    plain = [part for part in message.walk() if part.get_content_type() == 'text/plain' and part.get_content_disposition() != 'attachment']
+    if len(plain) != 1:
         continue
     senders = {address.lower() for _, address in email.utils.getaddresses(message.get_all('From', [])) if address}
     recipients = {address.lower() for _, address in email.utils.getaddresses(message.get_all('To', [])) if address}
     if not senders or not senders.issubset(recipients) or sender.lower() not in senders:
         continue
-    text = message.get_content().replace('\r\n', '\n')
+    text = plain[0].get_content().replace('\r\n', '\n')
     samples.append({'subject_digest': hashlib.sha256(subject.encode()).hexdigest(), 'sender_digest': hashlib.sha256(sender.encode()).hexdigest(), 'received': received, 'body_digest': hashlib.sha256(text.encode()).hexdigest()})
 print(json.dumps({'samples': samples}))

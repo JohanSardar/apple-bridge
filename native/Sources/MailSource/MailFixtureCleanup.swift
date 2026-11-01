@@ -40,7 +40,7 @@ public enum MailFixtureCleanup {
             let currentRow = attribute(element, kAXRoleAttribute) as? String == kAXRowRole ? element : row
             if let currentRow {
                 for name in [kAXValueAttribute, kAXTitleAttribute, kAXDescriptionAttribute] {
-                    if attribute(element, name) as? String == tag { return currentRow }
+                    if (attribute(element, name) as? String)?.contains(tag) == true { return currentRow }
                 }
             }
             for child in attribute(element, kAXChildrenAttribute) as? [AXUIElement] ?? [] {
@@ -53,7 +53,11 @@ public enum MailFixtureCleanup {
             guard let row = find(window, row: nil, depth: 0) else { continue }
             guard AXUIElementPerformAction(window, kAXRaiseAction as CFString) == .success else { throw Failure(step: "bring the Mail viewer forward", cause: MailCommandFailure.rejected) }
             let selected = AXUIElementSetAttributeValue(row, kAXSelectedAttribute as CFString, kCFBooleanTrue)
-            guard selected == .success || AXUIElementPerformAction(row, kAXPressAction as CFString) == .success else { throw Failure(step: "select the tagged row in the Mail viewer", cause: MailCommandFailure.rejected) }
+            var selectedRows = false
+            if selected != .success, let parent = attribute(row, kAXParentAttribute) {
+                selectedRows = AXUIElementSetAttributeValue(unsafeDowncast(parent, to: AXUIElement.self), kAXSelectedRowsAttribute as CFString, [row] as CFArray) == .success
+            }
+            guard selected == .success || selectedRows || AXUIElementPerformAction(row, kAXPressAction as CFString) == .success else { throw Failure(step: "select the tagged row in the Mail viewer", cause: MailCommandFailure.rejected) }
             try await Task.sleep(for: .milliseconds(200))
             return
         }

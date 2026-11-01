@@ -75,7 +75,10 @@ public enum MailBody {
             var text = "", html = ""
             for part in payload.components(separatedBy: "--" + boundary).dropFirst() {
                 if part.hasPrefix("--") { break }
-                let decoded = try mime(part.trimmingCharacters(in: .newlines), depth: depth + 1, partial: &partial)
+                var contents = part
+                if contents.hasPrefix("\n") { contents.removeFirst() }
+                if contents.hasSuffix("\n") { contents.removeLast() }
+                let decoded = try mime(contents, depth: depth + 1, partial: &partial)
                 text += decoded.0; html += decoded.1
             }
             return (text, html)
