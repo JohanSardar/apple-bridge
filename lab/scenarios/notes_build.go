@@ -33,3 +33,10 @@ func notesNativeSetup(ctx context.Context) world.NativeSetup {
 		return nil
 	}}
 }
+
+func notesEnsureRunning(ctx context.Context) error {
+	if err := exec.CommandContext(ctx, "open", "-g", "-b", "com.apple.Notes").Run(); err != nil {
+		return fmt.Errorf("Notes could not be opened: %w", err)
+	}
+	return nil
+}

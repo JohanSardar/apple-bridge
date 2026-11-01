@@ -2,6 +2,26 @@ import Foundation
 import SQLite3
 
 extension AppleTruth {
+    static func notesFolderIdentity(title: String) throws -> String {
+        let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Group Containers/group.com.apple.notes/NoteStore.sqlite").path
+        var db: OpaquePointer?
+        guard sqlite3_open_v2(path, &db, SQLITE_OPEN_READONLY, nil) == SQLITE_OK else {
+            if db != nil { sqlite3_close(db) }; throw NotesDeletionFailure.read
+        }
+        defer { sqlite3_close(db) }
+        var statement: OpaquePointer?
+        let sql = "SELECT m.Z_UUID,f.Z_PK FROM Z_METADATA m CROSS JOIN ZICCLOUDSYNCINGOBJECT f WHERE f.Z_ENT=(SELECT Z_ENT FROM Z_PRIMARYKEY WHERE Z_NAME='ICFolder') AND f.ZTITLE2=? AND COALESCE(f.ZMARKEDFORDELETION,0)=0"
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else { throw NotesDeletionFailure.read }
+        defer { sqlite3_finalize(statement) }
+        let bound = title.withCString { sqlite3_bind_text(statement, 1, $0, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self)) }
+        guard bound == SQLITE_OK else { throw NotesDeletionFailure.read }
+        let result = sqlite3_step(statement)
+        if result == SQLITE_DONE { return "" }
+        guard result == SQLITE_ROW, let uuid = sqlite3_column_text(statement, 0) else { throw NotesDeletionFailure.read }
+        let id = "x-coredata://" + String(cString: uuid) + "/ICFolder/p" + String(sqlite3_column_int64(statement, 1))
+        guard sqlite3_step(statement) == SQLITE_DONE else { throw NotesDeletionFailure.identity }
+        return id
+    }
     static func notesTrashFolder(noteID: String) throws -> String? {
         let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Group Containers/group.com.apple.notes/NoteStore.sqlite").path
         var db: OpaquePointer?
@@ -100,7 +120,7 @@ extension AppleTruth {
         return ids
     }
 
-    static func notesDeletionVerified(_ ids: [String], path: String? = nil) throws -> Bool {
+    static func notesDeletionVerified(_ ids: [String], path: String? = nil, permanent: Bool = false) throws -> Bool {
         let path = path ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Group Containers/group.com.apple.notes/NoteStore.sqlite").path
         var db: OpaquePointer?
         guard sqlite3_open_v2(path, &db, SQLITE_OPEN_READONLY, nil) == SQLITE_OK else {
@@ -132,7 +152,7 @@ extension AppleTruth {
               UNION ALL SELECT f.ZPARENT,a.depth+1 FROM ZICCLOUDSYNCINGOBJECT f JOIN ancestors a ON a.pk=f.Z_PK WHERE a.depth<128
             ) SELECT CASE WHEN NOT EXISTS(SELECT 1 FROM target)
               OR EXISTS(SELECT 1 FROM target WHERE COALESCE(ZMARKEDFORDELETION,0)<>0)
-              OR EXISTS(SELECT 1 FROM ancestors a JOIN ZICCLOUDSYNCINGOBJECT f ON a.pk=f.Z_PK WHERE f.ZFOLDERTYPE=1 OR COALESCE(f.ZMARKEDFORDELETION,0)<>0)
+              OR (\(permanent ? "0" : "1")=1 AND EXISTS(SELECT 1 FROM ancestors a JOIN ZICCLOUDSYNCINGOBJECT f ON a.pk=f.Z_PK WHERE f.ZFOLDERTYPE=1 OR COALESCE(f.ZMARKEDFORDELETION,0)<>0))
               THEN 'deleted' ELSE 'active' END
             """)
             if state != "deleted" { return false }

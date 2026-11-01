@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 import Darwin
 import OSAKit
 import Carbon
@@ -8,12 +9,23 @@ extension AppleTruth {
     static func notes(_ verb: String, _ request: [String: Any]) async throws -> [String: Any] {
         if verb == "observe", request["active_only"] as? Bool == true { return try notesActiveIdentities(path: request["snapshot_path"] as? String) }
         guard verb == "fixture" || verb == "observe", let language = OSALanguage(forName: "JavaScript") else { throw NotesTruthFailure.invalid }
+        if NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.Notes").isEmpty {
+            guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.Notes") else { throw TruthFailure.unavailable }
+            let configuration = NSWorkspace.OpenConfiguration()
+            configuration.activates = false
+            _ = try await NSWorkspace.shared.openApplication(at: url, configuration: configuration)
+        }
         let target = NSAppleEventDescriptor(bundleIdentifier: "com.apple.Notes")
         guard AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false) == noErr else { throw TruthFailure.permissionMissing }
         let tag = request["tag"] as? String ?? ""
         if verb == "fixture" {
             guard tag.hasPrefix("[ab-test "), tag.hasSuffix("]"), !tag.contains("\n"), tag.count > 11 else { throw NotesTruthFailure.invalid }
         }
+        if verb == "fixture", request["action"] as? String == "folder_identity", request["allow_missing"] as? Bool == true, let title = request["title"] as? String {
+            guard title == "Bridge Test " + tag else { throw NotesTruthFailure.invalid }
+            return ["status":"verified", "id":try notesFolderIdentity(title: title)]
+        }
+        if verb == "fixture", request["action"] as? String == "cleanup_owned", let id = request["id"] as? String, try notesDeletionVerified([id], permanent: true) { return ["status":"verified"] }
         let cleanup = verb == "fixture" && ["cleanup", "delete", "cleanup_owned", "cleanup_created_folder", "cleanup_created_folders"].contains(request["action"] as? String ?? "")
         let storeTargets = cleanup && request["folder_id"] == nil && request["folders"] == nil ? try notesDeletionTargets(tag: tag, folderKey: request["action"] as? String == "cleanup_created_folder" ? request["native_key"] as? String : nil) : []
         var input = request
@@ -44,15 +56,25 @@ extension AppleTruth {
             return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').split('\n').map(line => '<div>' + line + '</div>').join('');
         }
         function deleteOwnedNote(id, folderID) {
-            const folder = app.folders.byId(folderID);
-            require(folder.id() === folderID && fixtureFolder(folder));
-            const matches = folder.notes.whose({id:id})();
-            require(matches.length === 1 && matches[0].id() === id && matches[0].name().startsWith(tag) && matches[0].container().id() === folderID);
             const trashID = (request.trash_folders || {})[id];
-            if (trashID) {
+            let current = trashID || folderID;
+            let folder = app.folders.byId(current);
+            let matches = folder.notes.whose({id:id})();
+            if (matches.length === 0 && current !== folderID) {
+                current = folderID;
+                folder = app.folders.byId(current);
+                require(fixtureFolder(folder));
+                matches = folder.notes.whose({id:id})();
+            }
+            require(folder.id() === current && (current === folderID && fixtureFolder(folder) || current === trashID));
+            require(matches.length === 1 && matches[0].id() === id && matches[0].name().startsWith(tag) && matches[0].container().id() === current);
+            if (trashID && current !== trashID) {
                 const trash = app.folders.byId(trashID);
                 require(trash.id() === trashID);
                 app.move(matches[0], {to:trash});
+                const moved = trash.notes.whose({id:id})();
+                require(moved.length === 1 && moved[0].id() === id && moved[0].name().startsWith(tag) && moved[0].container().id() === trashID);
+                app.delete(moved[0]);
             } else { app.delete(matches[0]); }
         }
         function deleteOwnedFolder(id) {
@@ -71,13 +93,12 @@ extension AppleTruth {
         if (action === 'folder_identity') {
             require(request.title.startsWith('Bridge Test ' + tag));
             const folders = app.folders.whose({name:request.title})();
+            if (request.allow_missing === true && folders.length === 0) return {status:'verified',id:''};
             require(folders.length === 1);
             return {status:'verified',id:folders[0].id()};
         }
         if (action === 'cleanup_owned') {
             require(request.id && request.folder_id);
-            const note = app.notes.byId(request.id);
-            require(note.name().startsWith(tag) && note.container().id() === request.folder_id && fixtureFolder(note.container()));
             deleteOwnedNote(request.id, request.folder_id);
             return {status:'verified', deleted_ids:[request.id]};
         }
@@ -152,7 +173,7 @@ extension AppleTruth {
             let ids = Array(Set(storeTargets + deletedIDs))
             var verified = false
             for _ in 0..<600 {
-                if try notesDeletionVerified(ids) { verified = true; break }
+                if try notesDeletionVerified(ids, permanent: true) { verified = true; break }
                 try await Task.sleep(for: .milliseconds(50))
             }
             guard verified else { throw NSError(domain: "NotesCleanup", code: 1, userInfo: [NSLocalizedDescriptionKey: "notestore_deletion_unverified"]) }

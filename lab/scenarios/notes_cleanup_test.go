@@ -23,7 +23,11 @@ func TestNotesCleanupVerifiesExactIdentityWithoutDeletingAgain(t *testing.T) {
 				if action == "cleanup_created_folder" {
 					id = "owned-folder"
 				}
-				if !reflect.DeepEqual(args, map[string]any{"source": "notes", "verify_deleted_ids": []string{id}}) {
+				want := map[string]any{"source": "notes", "verify_deleted_ids": []string{id}}
+				if action == "cleanup_owned" {
+					want["permanent"] = true
+				}
+				if !reflect.DeepEqual(args, want) {
 					t.Fatalf("verification widened identity: %#v", args)
 				}
 				return map[string]any{"status": "verified", "deletion_verified": observes > 1}, nil

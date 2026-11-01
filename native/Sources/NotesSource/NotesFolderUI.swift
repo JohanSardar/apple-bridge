@@ -1,0 +1,267 @@
+import Foundation
+import AppKit
+import ApplicationServices
+import SourceSupport
+
+@MainActor
+public enum NotesFolderUI {
+    private struct Failure: Error { let stage: String }
+    private static var deadline = Date.distantPast
+    private static func value(_ node: AXUIElement, _ key: String) -> String {
+        guard Date() < deadline else { return "" }
+        var result: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(node, key as CFString, &result) == .success else { return "" }
+        return (result as? NSAttributedString)?.string ?? result as? String ?? ""
+    }
+    private static func children(_ node: AXUIElement) -> [AXUIElement] {
+        guard Date() < deadline else { return [] }
+        var result: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(node, kAXChildrenAttribute as CFString, &result) == .success else { return [] }
+        return result as? [AXUIElement] ?? []
+    }
+    private static func nodes(_ root: AXUIElement, budget: inout Int) -> [AXUIElement] {
+        guard Date() < deadline, budget > 0, value(root, kAXRoleAttribute) != kAXMenuBarRole else { return [] }
+        budget -= 1
+        return [root] + children(root).flatMap { nodes($0, budget: &budget) }
+    }
+    private static func all(_ root: AXUIElement) -> [AXUIElement] {
+        var budget = 12000
+        return nodes(root, budget: &budget)
+    }
+    private static func enabled(_ node: AXUIElement) -> Bool {
+        guard Date() < deadline else { return false }
+        var result: CFTypeRef?
+        return AXUIElementCopyAttributeValue(node, kAXEnabledAttribute as CFString, &result) == .success && result as? Bool == true
+    }
+    private static func text(_ node: AXUIElement, contains tag: String) -> Bool {
+        [kAXTitleAttribute, kAXValueAttribute, kAXDescriptionAttribute].contains { value(node, $0).contains(tag) }
+    }
+    private static func named(_ node: AXUIElement, _ names: [String]) -> Bool {
+        [kAXTitleAttribute, kAXDescriptionAttribute, kAXValueAttribute].contains { names.contains(value(node, $0)) }
+    }
+    private static func dialogs(_ root: AXUIElement) -> [AXUIElement] {
+        func find(_ node: AXUIElement, depth: Int) -> [AXUIElement] {
+            guard Date() < deadline, depth > 0 else { return [] }
+            let role = value(node, kAXRoleAttribute)
+            if role == kAXSheetRole || role == "AXDialog" || value(node, kAXSubroleAttribute) == "AXDialog" { return [node] }
+            if role == kAXMenuBarRole { return [] }
+            return children(node).flatMap { find($0, depth: depth - 1) }
+        }
+        return find(root, depth: 5)
+    }
+    private static func confirm(_ root: AXUIElement, tag: String, initiated: Bool = false) throws -> Bool {
+        let visible = dialogs(root)
+        let matches = visible.filter { all($0).contains { text($0, contains: tag) } }
+        let owned = matches.isEmpty && initiated && visible.count == 1 ? visible : matches
+        if owned.isEmpty { return false }
+        guard owned.count == 1 else { throw Failure(stage: "ambiguous_owned_dialog") }
+        let buttons = all(owned[0]).filter { value($0, kAXRoleAttribute) == kAXButtonRole && named($0, ["Delete", "Delete Folder", "Delete Note", "Delete Permanently"]) && enabled($0) }
+        guard buttons.count == 1, AXUIElementPerformAction(buttons[0], kAXPressAction as CFString) == .success else { throw Failure(stage: "owned_delete_confirmation") }
+        return true
+    }
+    private static func cancelBlockingDialog(_ root: AXUIElement) throws {
+        let visible = dialogs(root)
+        if visible.isEmpty { return }
+        guard visible.count == 1 else { throw Failure(stage: "unrelated_notes_dialogs") }
+        let buttons = all(visible[0]).filter { value($0, kAXRoleAttribute) == kAXButtonRole }
+        let cancel = buttons.filter { (named($0, ["Cancel"]) || buttons.count == 1 && named($0, ["OK"])) && enabled($0) }
+        guard cancel.count == 1 else {
+            let buttons = all(visible[0]).filter { value($0, kAXRoleAttribute) == kAXButtonRole }
+            let titles = buttons.filter { value($0, kAXTitleAttribute) == "Cancel" }.count
+            let descriptions = buttons.filter { value($0, kAXDescriptionAttribute) == "Cancel" }.count
+            throw Failure(stage: "cancel_buttons_" + String(buttons.count) + "_title_" + String(titles) + "_description_" + String(descriptions) + "_deadline_" + String(Date() >= deadline))
+        }
+        guard AXUIElementPerformAction(cancel[0], kAXPressAction as CFString) == .success else { throw Failure(stage: "notes_dialog_cancel_failed") }
+    }
+    private static func openContext(_ row: AXUIElement, app: NSRunningApplication) async -> Bool {
+        if AXUIElementPerformAction(row, kAXShowMenuAction as CFString) == .success { return true }
+        for _ in 0..<10 where Date() < deadline {
+            if NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier { break }
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+        var position: CFTypeRef?, size: CFTypeRef?
+        var point = CGPoint.zero, dimensions = CGSize.zero, pid: pid_t = 0
+        guard Date() < deadline, NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier,
+              AXUIElementGetPid(row, &pid) == .success, pid == app.processIdentifier,
+              AXUIElementCopyAttributeValue(row, kAXPositionAttribute as CFString, &position) == .success,
+              AXUIElementCopyAttributeValue(row, kAXSizeAttribute as CFString, &size) == .success,
+              let position, let size, CFGetTypeID(position) == AXValueGetTypeID(), CFGetTypeID(size) == AXValueGetTypeID(),
+              AXValueGetValue(unsafeDowncast(position, to: AXValue.self), .cgPoint, &point),
+              AXValueGetValue(unsafeDowncast(size, to: AXValue.self), .cgSize, &dimensions),
+              dimensions.width > 0, dimensions.height > 0 else { return false }
+        point.x += dimensions.width * 0.55
+        point.y += dimensions.height * 0.5
+        guard let down = CGEvent(mouseEventSource: nil, mouseType: .rightMouseDown, mouseCursorPosition: point, mouseButton: .right),
+              let up = CGEvent(mouseEventSource: nil, mouseType: .rightMouseUp, mouseCursorPosition: point, mouseButton: .right) else { return false }
+        down.post(tap: .cghidEventTap)
+        up.post(tap: .cghidEventTap)
+        return true
+    }
+    public static var available: Bool { AXIsProcessTrusted() }
+    public static func rename(id: String, from oldTitle: String, to newTitle: String, trace: CaptureTrace? = nil) async throws {
+        var stage = "permission", rowCount = 0, menuCount = 0, fieldCount = 0
+        defer {
+            let fields: [String: JSON] = ["source": .string("notes"), "ui_step": .string(stage), "rows": .number(Double(rowCount)), "menus": .number(Double(menuCount)), "fields": .number(Double(fieldCount)), "deadline_expired": .bool(Date() >= deadline)]
+            trace?.record("notes_folder_rename_ui", fields: fields)
+            let report = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/AppleBridgeDev/notes-folder-rename-ui.json")
+            try? JSONEncoder().encode(JSON.object(fields)).write(to: report, options: .atomic)
+            try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: report.path)
+        }
+        guard available else { throw SourceFailure.permissionMissing }
+        guard oldTitle.hasPrefix("Bridge Test [ab-test "), newTitle.hasPrefix("Bridge Test [ab-test ") else { throw SourceFailure.unsupported }
+        deadline = Date().addingTimeInterval(8)
+        guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.Notes").first else { throw SourceFailure.unavailable }
+        let root = AXUIElementCreateApplication(app.processIdentifier)
+        AXUIElementSetMessagingTimeout(root, 0.5)
+        _ = app.activate()
+        stage = "show_folder"
+        _ = try NotesScript.run("show folder id " + NotesScript.quote(id))
+        try await Task.sleep(for: .milliseconds(250))
+        stage = "find_row"
+        let rows = all(root).filter { node in value(node, kAXRoleAttribute) == kAXRowRole && all(node).contains { child in [kAXTitleAttribute, kAXValueAttribute, kAXDescriptionAttribute].contains { [oldTitle, newTitle].contains(value(child, $0)) } } }
+        rowCount = rows.count
+        guard rows.count == 1, await openContext(rows[0], app: app) else { throw SourceFailure.unavailable }
+        try await Task.sleep(for: .milliseconds(200))
+        stage = "find_rename_menu"
+        let menus = all(root).filter { value($0, kAXRoleAttribute) == kAXMenuItemRole && ["Rename Folder", "Rename Folder…", "Rename Folder...", "Rename"].contains(value($0, kAXTitleAttribute)) && enabled($0) }
+        menuCount = menus.count
+        guard menus.count == 1, AXUIElementPerformAction(menus[0], kAXPressAction as CFString) == .success else { throw SourceFailure.unavailable }
+        try await Task.sleep(for: .milliseconds(200))
+        stage = "find_name_field"
+        var fields = all(root).filter { value($0, kAXRoleAttribute) == kAXTextFieldRole && [oldTitle, newTitle].contains(value($0, kAXValueAttribute)) }
+        fieldCount = fields.count
+        var currentFocus: CFTypeRef?
+        if AXUIElementCopyAttributeValue(root, kAXFocusedUIElementAttribute as CFString, &currentFocus) == .success, let currentFocus {
+            let focused = fields.filter { CFEqual(currentFocus, $0) }
+            if focused.count == 1 { fields = focused }
+        }
+        guard fields.count == 1, AXUIElementSetAttributeValue(fields[0], kAXValueAttribute as CFString, newTitle as CFString) == .success else { throw SourceFailure.unavailable }
+        stage = "commit_name"
+        let confirmation = AXUIElementPerformAction(fields[0], kAXConfirmAction as CFString)
+        var focused: CFTypeRef?
+        let stillEditing = AXUIElementCopyAttributeValue(root, kAXFocusedUIElementAttribute as CFString, &focused) == .success && focused.map { CFEqual($0, fields[0]) } == true
+        if stillEditing || confirmation != .success {
+            guard Date() < deadline, NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier,
+                  AXUIElementCopyAttributeValue(root, kAXFocusedUIElementAttribute as CFString, &focused) == .success,
+                  let focused, CFEqual(focused, fields[0]), value(fields[0], kAXValueAttribute) == newTitle,
+                  let down = CGEvent(keyboardEventSource: nil, virtualKey: 36, keyDown: true),
+                  let up = CGEvent(keyboardEventSource: nil, virtualKey: 36, keyDown: false) else { throw SourceFailure.conflict }
+            down.post(tap: .cghidEventTap)
+            up.post(tap: .cghidEventTap)
+        }
+    }
+    #if LAB
+    private static func purgeCapturedNote(_ request: JSON) async -> JSON {
+        deadline = Date().addingTimeInterval(30)
+        var stage = "validate_captured_note"
+        do {
+            guard available, request["notes"].array.count == 1 else { throw Failure(stage: "captured_note_request_unavailable") }
+            let id = request["notes"].array[0]["id"].string, tag = request["tag"].string
+            guard tag.hasPrefix("[ab-test "), tag.hasSuffix("]"), !tag.contains("\n"), let tail = id.split(separator: "/").last, tail.first == "p", let pk = Int(tail.dropFirst()) else { throw Failure(stage: "invalid_captured_note") }
+            let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Group Containers/group.com.apple.notes/NoteStore.sqlite").path
+            let db = try NotesDatabase(path: path)
+            let uuid = try db.query("SELECT Z_UUID FROM Z_METADATA", []).first?["Z_UUID"]?.string ?? ""
+            guard id == "x-coredata://" + uuid + "/ICNote/p" + String(pk) else { throw Failure(stage: "captured_note_store_changed") }
+            guard let note = try db.query("SELECT * FROM ZICCLOUDSYNCINGOBJECT WHERE Z_PK=? AND Z_ENT=(SELECT Z_ENT FROM Z_PRIMARYKEY WHERE Z_NAME='ICNote')", [String(pk)]).first else { return .object(["passed": .bool(true)]) }
+            if note["ZMARKEDFORDELETION"]?.number != 0 { return .object(["passed": .bool(true)]) }
+            let title = note["ZTITLE1"]?.string ?? "", key = note["ZIDENTIFIER"]?.string ?? ""
+            guard title.hasPrefix(tag), !key.isEmpty, note["ZISPASSWORDPROTECTED"]?.number != 1,
+                  let folder = try db.query("SELECT * FROM ZICCLOUDSYNCINGOBJECT WHERE Z_PK=? AND ZFOLDERTYPE=1", [String(Int(note["ZFOLDER"]?.number ?? 0))]).first else { throw Failure(stage: "captured_note_is_not_owned_trash") }
+            let trash = "x-coredata://" + uuid + "/ICFolder/p" + String(Int(folder["Z_PK"]?.number ?? 0))
+            guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.Notes").first else { throw Failure(stage: "notes_not_running") }
+            let root = AXUIElementCreateApplication(app.processIdentifier)
+            AXUIElementSetMessagingTimeout(root, 0.5)
+            _ = app.activate()
+            try cancelBlockingDialog(root)
+            stage = "select_captured_trash_note"
+            let result = try NotesScript.run("set targetNote to first note of folder id " + NotesScript.quote(trash) + " whose id is " + NotesScript.quote(id) + "\nshow targetNote\nset selection to {targetNote}\nif (count of selection) is not 1 then error \"Test note selection changed.\"\nreturn id of item 1 of selection")
+            guard result == id else { throw Failure(stage: "captured_note_selection_changed") }
+            try await Task.sleep(for: .milliseconds(250))
+            let rows = all(root).filter { value($0, kAXRoleAttribute) == kAXRowRole && all($0).contains { named($0, [title]) } }
+            guard rows.count == 1, await openContext(rows[0], app: app) else { throw Failure(stage: "captured_trash_note_row") }
+            try await Task.sleep(for: .milliseconds(200))
+            stage = "delete_captured_trash_note"
+            let menus = all(root).filter { value($0, kAXRoleAttribute) == kAXMenuItemRole && named($0, ["Delete Note", "Delete Note…", "Delete Note...", "Delete Permanently", "Delete"]) && enabled($0) }
+            guard menus.count == 1, AXUIElementPerformAction(menus[0], kAXPressAction as CFString) == .success else { throw Failure(stage: "captured_note_delete_menu") }
+            try await Task.sleep(for: .milliseconds(250))
+            _ = try confirm(root, tag: title, initiated: true)
+            let store = NotesStore(path: path)
+            stage = "verify_permanent_captured_note"
+            for _ in 0..<200 {
+                if try ["gone", "marked"].contains(store.deletionState(key, collection: "notes.note")) { return .object(["passed": .bool(true)]) }
+                try await Task.sleep(for: .milliseconds(50))
+            }
+            throw Failure(stage: "captured_note_permanent_deletion_unverified")
+        } catch { return .object(["passed": .bool(false), "stage": .string((error as? Failure)?.stage ?? stage + "_unavailable")]) }
+    }
+    public static func run(_ request: JSON) async -> JSON {
+        if !request["notes"].array.isEmpty { return await purgeCapturedNote(request) }
+        deadline = Date().addingTimeInterval(30)
+        guard AXIsProcessTrusted() else { return .object(["passed": .bool(false), "stage": .string("accessibility_permission_missing")]) }
+        let tag = request["tag"].string, folders = request["folders"].array
+        guard tag.hasPrefix("[ab-test "), tag.hasSuffix("]"), !tag.contains("\n"), !folders.isEmpty else { return .object(["passed": .bool(false), "stage": .string("invalid_owned_request")]) }
+        let store = NotesStore(path: FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Group Containers/group.com.apple.notes/NoteStore.sqlite").path)
+        var removed = 0
+        var stage = "validate_owned_folders"
+        do {
+            let snapshot = try store.read(metadataOnly: true).observations
+            var targets: [(String, String, String)] = []
+            for owned in folders {
+                let id = owned["id"].string, title = owned["title"].string
+                guard !id.isEmpty, title == "Bridge Test " + tag || title.hasPrefix("Bridge Test " + tag + " ") else { throw Failure(stage: "unowned_folder") }
+                guard let folder = snapshot.first(where: { $0["collection"].string == "notes.folder" && $0["scoped_alias"].string == id }) else { continue }
+                let key = folder["native_key"].string
+                guard folder["data"]["title"].string == title, !folder["data"]["read_only"].bool,
+                      !snapshot.contains(where: { $0["data"]["folder_id"]["$ref"]["native_key"].string == key || $0["data"]["parent_id"]["$ref"]["native_key"].string == key }) else { throw Failure(stage: "owned_folder_not_empty") }
+                targets.append((id, title, key))
+            }
+            for (id, title, key) in targets {
+                if try ["gone", "marked", "trashed"].contains(store.deletionState(key, collection: "notes.folder")) { removed += 1; continue }
+                stage = "revalidate_owned_folder"
+                let fresh = try store.read(metadataOnly: true).observations
+                guard fresh.contains(where: { $0["scoped_alias"].string == id && $0["data"]["title"].string == title }),
+                      !fresh.contains(where: { $0["data"]["folder_id"]["$ref"]["native_key"].string == key || $0["data"]["parent_id"]["$ref"]["native_key"].string == key }) else { throw Failure(stage: "owned_folder_changed") }
+                guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.Notes").first else { throw Failure(stage: "notes_not_running") }
+                let root = AXUIElementCreateApplication(app.processIdentifier)
+                AXUIElementSetMessagingTimeout(root, 0.5)
+                _ = app.activate()
+                stage = "confirm_owned_folder"
+                if try !confirm(root, tag: title) {
+                    try cancelBlockingDialog(root)
+                    try await Task.sleep(for: .milliseconds(150))
+                    guard dialogs(root).isEmpty else { throw Failure(stage: "notes_dialog_still_open") }
+                    stage = "show_owned_folder"
+                    _ = try NotesScript.run("show folder id " + NotesScript.quote(id))
+                    try await Task.sleep(for: .milliseconds(300))
+                    stage = "find_owned_sidebar_row"
+                    let rows = all(root).filter { node in
+                        value(node, kAXRoleAttribute) == kAXRowRole && all(node).contains { child in [kAXTitleAttribute, kAXValueAttribute, kAXDescriptionAttribute].contains { value(child, $0) == title } }
+                    }
+                    guard rows.count == 1 else { throw Failure(stage: "owned_sidebar_row_" + String(rows.count)) }
+                    stage = "open_owned_context_menu"
+                    guard await openContext(rows[0], app: app) else { throw Failure(stage: "owned_folder_context_menu") }
+                    try await Task.sleep(for: .milliseconds(200))
+                    stage = "find_owned_delete_menu"
+                    let items = all(root).filter { node in
+                        value(node, kAXRoleAttribute) == kAXMenuItemRole && ["Delete Folder", "Delete Folder…", "Delete Folder...", "Delete"].contains(value(node, kAXTitleAttribute)) && enabled(node)
+                    }
+                    guard items.count == 1, AXUIElementPerformAction(items[0], kAXPressAction as CFString) == .success else { throw Failure(stage: "owned_delete_menu_" + String(items.count)) }
+                    try await Task.sleep(for: .milliseconds(300))
+                    _ = try confirm(root, tag: title, initiated: true)
+                }
+                stage = "verify_owned_folder_deletion"
+                var verified = false
+                for _ in 0..<200 {
+                    if try ["gone", "marked", "trashed"].contains(store.deletionState(key, collection: "notes.folder")) { verified = true; break }
+                    try await Task.sleep(for: .milliseconds(50))
+                }
+                guard verified else { throw Failure(stage: "owned_folder_notestore_unverified") }
+                removed += 1
+            }
+            return .object(["passed": .bool(true), "removed_count": .number(Double(removed))])
+        } catch {
+            return .object(["passed": .bool(false), "removed_count": .number(Double(removed)), "stage": .string((error as? Failure)?.stage ?? stage + "_" + ((error as? SourceFailure).map { String(describing: $0) } ?? "unavailable"))])
+        }
+    }
+    #endif
+}

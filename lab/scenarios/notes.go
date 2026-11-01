@@ -83,6 +83,13 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		return
 	}
 	ctx = world.WithOptions(ctx, world.Options{GatewayDials: level == "replica", Scope: "notes:read,notes:write,reminders:read,system:read"})
+	if level != "sim" {
+		problem := notesEnsureRunning(ctx)
+		add("notes_application_running", problem == nil)
+		if problem != nil {
+			return
+		}
+	}
 	var w *world.World
 	var err error
 	if level == "sim" {
@@ -101,6 +108,22 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		if s.ID == "NOTE-CRUD" || s.ID == "NOTE-RICH-REJECT" {
 			problem := notesAwaitInitialCapture(w)
 			add("native_notes_capture_ready", problem == nil)
+			if problem != nil {
+				return
+			}
+		}
+	}
+	if level == "real" {
+		if path := os.Getenv("APPLE_BRIDGE_NOTES_RECOVERY_FILE"); path != "" {
+			raw, problem := os.ReadFile(path)
+			if problem == nil {
+				problem = notesCleanupCapturedRun(notesFolderRecovery(w.RecoverTruth, w.HelperApp), raw)
+			}
+			detail := ""
+			if problem != nil {
+				detail = problem.Error()
+			}
+			e.Assertions = append(e.Assertions, Assertion{Name: "captured_run_notes_permanently_cleaned", Passed: problem == nil, Detail: detail})
 			if problem != nil {
 				return
 			}
@@ -371,6 +394,10 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 				e.Metrics = map[string]any{}
 			}
 			e.Metrics["cleanup"] = proof
+			for _, item := range owned.created {
+				purgeErr := notesCleanupTruth(w.RecoverTruth, 30*time.Second, map[string]any{"source": "notes", "tag": tag, "action": "cleanup_owned", "id": item.ID, "folder_id": item.Container})
+				add("owned_recently_deleted_cleaned", purgeErr == nil)
+			}
 			folderErr := notesCleanupFolders(w.RecoverTruth, tag, ownedFolders)
 			for range ownedFolders {
 				add("run_created_folder_cleaned", folderErr == nil)
@@ -409,7 +436,7 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 			if extra["html"] != nil {
 				editable = "none"
 			}
-			data := map[string]any{"title": title, "plain_text": text, "folder_id": map[string]any{"$ref": map[string]string{"collection": "notes.folder", "native_key": "note-folder"}}, "locked": false, "editable": editable, "content_status": "complete", "attachments": []any{}}
+			data := map[string]any{"title": title, "plain_text": text, "folder_id": map[string]any{"$ref": map[string]string{"collection": "notes.folder", "native_key": "note-folder"}}, "locked": false, "editable": editable, "content_status": "complete", "attachments": []any{}, "html": extra["html"], "block_status": "complete", "round_trip_status": "unproven"}
 			err := w.ControlAction("/external-change", map[string]any{"key": "external-note", "collection": "notes.note", "data": data})
 			return map[string]any{"id": "external-note"}, err
 		}
@@ -492,6 +519,44 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		if level == "sim" {
 			effects, _ := w.Effects()
 			add("no_dispatch_effect", len(effects) == 0)
+		}
+		for _, protocol := range []string{"rest", "mcp"} {
+			client.Protocol = protocol
+			var body struct {
+				HTML string `json:"html"`
+			}
+			json.Unmarshal(note.Data, &body)
+			html := strings.ReplaceAll(body.HTML, "synthetic rich body", "synthetic rich body "+protocol)
+			args, _ := json.Marshal(map[string]any{"id": note.ID, "html": html})
+			var edited contracts.CommandRecord
+			err := client.Call(ctx, "notes.update", contracts.Command{ID: contracts.NewCommandID(), Args: args, ExpectedVersion: note.Version, WaitMS: 15000}, &edited)
+			e.Assertions = append(e.Assertions, Assertion{Name: protocol + "_rich_edit_observed", Passed: err == nil && edited.State == "observed", Detail: notesCommandDetail(err, edited)})
+			if err != nil || edited.State != "observed" {
+				return
+			}
+			add(protocol+"_rich_structure_preserved", w.Await(15*time.Second, func() bool {
+				current, ok := find("notes.note", title)
+				var after struct {
+					HTML string `json:"html"`
+				}
+				json.Unmarshal(current.Data, &after)
+				if ok && after.HTML == html {
+					note = current
+					return true
+				}
+				return false
+			}) == nil)
+			if level != "sim" {
+				truth, err := w.Truth("observe", map[string]any{"source": "notes", "tag": tag})
+				rows, _ := truth["records"].([]any)
+				matched := false
+				for _, raw := range rows {
+					row := raw.(map[string]any)
+					text, _ := row["plain_text"].(string)
+					matched = matched || row["id"] == fixtureID && strings.Contains(text, "synthetic rich body "+protocol)
+				}
+				add(protocol+"_rich_independent_readback", err == nil && matched)
+			}
 		}
 		return
 	}

@@ -72,7 +72,7 @@ public enum NotesParityProbe {
             let exact = observed && after["data"]["blocks"] == expected
             let lossless = before["data"]["round_trip_status"].string == "unproven" && after["data"]["round_trip_status"].string == "unproven"
             let reasons = Set(blocks(before["data"]["blocks"]).compactMap { $0["unsupported"] == .null ? nil : $0["unsupported"].string })
-            proofs["simple_rich"] = .object(["state": .string(exact && lossless ? "candidate" : "limited"), "reason": .string(!exact ? "html_changed_structure" : !lossless ? "decoder_roundtrip_unqualified" : "production_command_proof_required"), "effect_observed": .bool(observed), "structure_preserved": .bool(exact), "unknown_attributes": .array(reasons.sorted().map(JSON.string))])
+            proofs["simple_rich"] = .object(["state": .string(exact && lossless ? "candidate" : "limited"), "reason": .string(!exact ? "html_changed_structure" : !lossless ? "decoder_roundtrip_unqualified" : "native_html_structure_preserved"), "effect_observed": .bool(observed), "structure_preserved": .bool(exact), "unknown_attributes": .array(reasons.sorted().map(JSON.string))])
             let checklistHTML = "<ul><li><input type=\"checkbox\">unchecked-token</li><li><input type=\"checkbox\" checked>checked-token</li></ul>"
             let checklist = try create("checklist", html: checklistHTML)
             let checkBefore = try await snapshot(checklist)
@@ -94,38 +94,41 @@ public enum NotesParityProbe {
                 proofs[name] = .object(["state": .string("limited"), "reason": .string(reason)])
             }
         }
-        var cleanup = true
+        var cleanup = true, cleanupStage = "collect_owned_notes"
         do {
             let current = try store.read(keys: [])
             let folder = current.observations.first { $0["scoped_alias"].string == folderID }
             let key = folder?["native_key"].string ?? ""
             let notes = try createdIDs.sorted().flatMap { try store.read(nativeID: $0).observations }.filter { createdIDs.contains($0["scoped_alias"].string) && $0["collection"].string == "notes.note" && $0["data"]["title"].string.hasPrefix(tag) && $0["data"]["folder_id"]["$ref"]["native_key"].string == key }
+            guard notes.count == createdIDs.count else { throw SourceFailure.conflict }
             for note in notes {
+                cleanupStage = "purge_owned_notes"
                 let id = note["scoped_alias"].string
                 let name = try script("return name of note id " + NotesScript.quote(id))
                 guard name.hasPrefix(tag) else { throw SourceFailure.conflict }
                 let trash = try store.trashFolder(forFolder: key)
                 _ = try script(NotesScript.deleteNote(id, folderID: folderID, trashFolderID: trash?["scoped_alias"].string))
+                if let trashID = trash?["scoped_alias"].string {
+                    try NotesScript.purgeOwnedNote(id, trash: trashID, tag: tag)
+                }
             }
-            for attempt in 0..<50 {
-                let remaining = try notes.contains { try !["gone", "marked", "trashed"].contains(store.deletionState($0["native_key"].string, collection: "notes.note")) }
+            cleanupStage = "verify_permanent_notes"
+            for attempt in 0..<300 {
+                let remaining = try notes.contains { try !["gone", "marked"].contains(store.deletionState($0["native_key"].string, collection: "notes.note")) }
                 if !remaining { break }
-                if attempt == 49 { cleanup = false }
+                if attempt == 299 { cleanup = false }
                 try await Task.sleep(for: .milliseconds(100))
             }
             if folderCreated {
                 guard folder?["data"]["title"].string == "Bridge Test " + tag else { throw SourceFailure.conflict }
                 guard try script("return count of notes of folder id " + NotesScript.quote(folderID)) == "0" else { throw SourceFailure.conflict }
-                let quoted = NotesScript.quote(folderID)
-                _ = try script("set targetFolder to folder id " + quoted + "\nset matches to (every folder of (container of targetFolder) whose id is " + quoted + ")\nif (count of matches) is not 1 then error \"Test folder could not be found.\"\nset targetFolder to item 1 of matches\nif (id of targetFolder) is not " + quoted + " or (count of notes of targetFolder) is not 0 or (count of folders of targetFolder) is not 0 then error \"Test folder changed.\"\ndelete targetFolder")
-                for attempt in 0..<50 {
-                    if try ["gone", "marked", "trashed"].contains(store.deletionState(key, collection: "notes.folder")) { break }
-                    if attempt == 49 { cleanup = false }
-                    try await Task.sleep(for: .milliseconds(100))
-                }
+                cleanupStage = "delete_owned_folder"
+                let result = await NotesFolderUI.run(.object(["tag": .string(tag), "folders": .array([.object(["id": .string(folderID), "title": .string("Bridge Test " + tag)])])]))
+                cleanup = cleanup && result["passed"].bool
+                if !result["passed"].bool { cleanupStage = result["stage"].string }
             }
         } catch { cleanup = false }
-        return .object(["state": .string(cleanup ? "verified" : "limited"), "os": .string(ProcessInfo.processInfo.operatingSystemVersionString), "proofs": .object(proofs), "mutation_calls": .number(Double(effects)), "cleanup": .string(cleanup ? "complete" : "unverified"), "test_container_created": .bool(folderCreated), "tag": .string(tag)])
+        return .object(["state": .string(cleanup ? "verified" : "limited"), "os": .string(ProcessInfo.processInfo.operatingSystemVersionString), "proofs": .object(proofs), "mutation_calls": .number(Double(effects)), "cleanup": .string(cleanup ? "complete" : "unverified"), "cleanup_stage": .string(cleanupStage), "test_container_created": .bool(folderCreated), "tag": .string(tag)])
     }
 }
 #endif

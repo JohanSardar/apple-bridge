@@ -61,7 +61,7 @@ public final class NotesSource: Source {
         let operationCoverage = (Self.deletionOperations + Self.extrasOperations).map { operation in
             JSON.object(["operation": .string(operation), "proven": .bool(proven.contains(operation) || extras.contains(operation)), "reason": .string(operation == "notes.delete" ? "public_script_notestore_verified" : proven.contains(operation) ? "os_build_notestore_deletion_verified" : extras.contains(operation) ? "public_script_move_rename" : "capability_unproven")])
         }
-        return SourceReadiness(state: readable ? "ready" : "permission_missing", coverage: .object(["fields": .string("partial"), "operations": .array(operationCoverage), "missing": .array([.string("unknown protobuf fields and unavailable attachment bytes are explicit; rich edits remain unsupported; folder deletion requires per-build proof")])]), capabilities: readable ? Self.operations.filter { (!Self.deletionOperations.contains($0) || proven.contains($0)) && (!Self.extrasOperations.contains($0) || extras.contains($0)) } : [], reason: readable ? "" : "notes_database_access_required")
+        return SourceReadiness(state: readable ? "ready" : "permission_missing", coverage: .object(["fields": .string("partial"), "operations": .array(operationCoverage), "missing": .array([.string("unknown protobuf fields and unavailable attachment bytes are explicit; rich HTML text edits require preserved structure; checklist edits remain unsupported; folder deletion requires per-build proof")])]), capabilities: readable ? Self.operations.filter { (!Self.deletionOperations.contains($0) || proven.contains($0)) && (!Self.extrasOperations.contains($0) || extras.contains($0)) } : [], reason: readable ? "" : "notes_database_access_required")
     }
     public func reconcile(into sink: any ObservationSink, assetPaths: Set<String> = []) async throws {
         while scanning { try await Task.sleep(for: .milliseconds(5)) }
@@ -261,7 +261,11 @@ public final class NotesSource: Source {
         if !action["native_key"].string.isEmpty {
             let note = try find(action["native_key"].string, collection: action["op"].string == "notes.rename_folder" ? "notes.folder" : "notes.note")
             before = note["data"]
-            if action["op"].string == "notes.update", before["editable"].string != "plain" { throw SourceFailure.unsupported }
+            if action["op"].string == "notes.update" {
+                if action["note_args"]["html"] != .null {
+                    try NotesRichEdit.validate(before, html: action["note_args"]["html"].string)
+                } else if before["editable"].string != "plain" { throw SourceFailure.unsupported }
+            }
             guard !before["locked"].bool, !before["read_only"].bool, !before["recently_deleted"].bool else { throw SourceFailure.unsupported }
             if action["op"].string == "notes.rename_folder" {
                 guard before["title"].string.hasPrefix("Bridge Test [ab-test"), argsTitle(action).hasPrefix("Bridge Test [ab-test"), command["expected_state"]["title"] == before["title"] else { throw SourceFailure.conflict }
@@ -301,10 +305,12 @@ public final class NotesSource: Source {
         let action = prepared.action, args = action["note_args"]
         let op = action["op"].string
         var scriptID = ""
+        var renameFailure: (any Error)?
         if op == "notes.rename_folder" {
             let folder = try find(action["native_key"].string, collection: "notes.folder")
             scriptID = folder["scoped_alias"].string
-            _ = try NotesScript.run("set targetFolder to folder id " + NotesScript.quote(scriptID) + "\nset targetContainer to container of targetFolder\nset name of targetFolder to " + NotesScript.quote(args["title"].string) + "\nmove targetFolder to targetContainer")
+            do { try await NotesFolderUI.rename(id: scriptID, from: folder["data"]["title"].string, to: args["title"].string, trace: trace) }
+            catch { renameFailure = error }
         } else if op == "notes.create_folder" {
             scriptID = try NotesScript.run("return id of (make new folder with properties {name:" + NotesScript.quote(args["title"].string) + "})")
         } else if op == "notes.create" {
@@ -325,7 +331,8 @@ public final class NotesSource: Source {
             }
             else {
                 let content = args["mode"].string == "append" ? note["data"]["plain_text"].string + args["plain_text"].string : args["plain_text"].string
-                _ = try NotesScript.run("set body of note id " + NotesScript.quote(scriptID) + " to " + NotesScript.quote(NotesScript.html(content)))
+                let html = args["html"] == .null ? NotesScript.html(content) : args["html"].string
+                _ = try NotesScript.run("set body of note id " + NotesScript.quote(scriptID) + " to " + NotesScript.quote(html))
             }
         }
         for _ in 0..<100 {
@@ -342,12 +349,17 @@ public final class NotesSource: Source {
                 if op == "notes.move", observed["data"]["folder_id"]["$ref"]["native_key"] != action["folder_key"] {
                     try await Task.sleep(for: .milliseconds(50)); continue
                 }
-                if op != "notes.update" || observed["data"]["plain_text"] != prepared.nativeState["plain_text"] {
+                if op == "notes.update", args["html"] != .null {
+                    if observed["data"]["html"] == args["html"] {
+                        return .object(["native_key": observed["native_key"], "observed": .bool(true)])
+                    }
+                } else if op != "notes.update" || observed["data"]["plain_text"] != prepared.nativeState["plain_text"] {
                     return .object(["native_key": observed["native_key"], "observed": .bool(true)])
                 }
             }
             try await Task.sleep(for: .milliseconds(50))
         }
+        if let renameFailure { throw renameFailure }
         if op == "notes.delete" { trace.record("notes_delete_unverified", keys: [action["native_key"].string], fields: ["source": .string(name)]) }
         throw SourceFailure.unavailable
     }

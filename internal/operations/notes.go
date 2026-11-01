@@ -66,8 +66,11 @@ func (g *LocalGateway) executeNote(r contracts.CommandRecord, p trust.Principal,
 		if c.ExpectedVersion < contentVersion || c.ExpectedVersion > current.Version {
 			return reject(&contracts.Error{Code: "conflict", Message: "expected_version differs from current content", Current: &current})
 		}
-		if c.Op == "notes.update" && (data.Editable != "plain" || data.Locked) {
+		if c.Op == "notes.update" && (a.HTML == nil && data.Editable != "plain" || data.Locked) {
 			return reject(&contracts.Error{Code: "unsupported", Message: "rich_content"})
+		}
+		if c.Op == "notes.update" && a.HTML != nil && !contracts.NoteHTMLCompatible(current.Data, *a.HTML) {
+			return reject(contracts.ErrUnsupported)
 		}
 		if data.RecentlyDeleted {
 			return reject(contracts.ErrUnsupported)
@@ -138,7 +141,7 @@ func noteCommandFailure(problem *contracts.Error) *contracts.Error {
 	result := *problem
 	switch problem.Code {
 	case "unsupported":
-		result.Message = "Notes can't apply this change to locked, read-only, or richly formatted content. Edit it in Notes, or use a plain-text note in a writable folder."
+		result.Message = "Notes can't apply this change. Use a writable plain-text note, or preserve the existing formatting in an HTML update. Edit locked or unsupported content in Notes."
 	case "conflict":
 		result.Message = "This note or folder changed. Refresh it and try again."
 	case "unavailable":

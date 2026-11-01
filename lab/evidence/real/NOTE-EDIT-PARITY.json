@@ -1,216 +1,60 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[7.69 8.11 9.32] cpu_idle=62% cpus=8 other_heavy=0"
+    "summary": "air: load=[15.23 15.11 13.24] cpu_idle=63% cpus=8 other_heavy=0"
   },
-  "run_id": "notes-parity_01M6B1DEQZ2C820FDN7FGDK3ZN",
+  "run_id": "notes-parity_01M6BKN6848JFWJX15RW29ZXGR",
   "metrics": {
     "capture_observer_resets": 0,
     "checklist": {
       "reason": "public_html_did_not_create_native_checklists",
-      "after_count": 0,
-      "identities_preserved": false,
       "before_count": 0,
-      "state": "limited"
+      "identities_preserved": false,
+      "state": "limited",
+      "after_count": 0
     },
     "cleanup_counts": {
-      "after_count": 134,
-      "before_count": 134,
+      "after_count": 133,
+      "before_count": 133,
       "created_count": 0,
       "passed": true
     },
     "mutation_calls": 4,
-    "native_cleanup_reported_complete": false,
+    "native_cleanup_reported_complete": true,
+    "native_cleanup_stage": "delete_owned_folder",
     "notes_helper_binary_uuids": [
-      "9de3109c-94a5-3347-afcc-92d39c3a5416"
+      "d120f4b0-732b-3496-a774-cc2281b30979"
     ],
     "os": "Version 26.7.1 (Build 25G241)",
+    "plain_crud_prior_source": "994e8fd23c932dd82f97786211695ddbed75d9d2",
     "simple_rich": {
+      "reason": "native_html_structure_preserved",
+      "effect_observed": true,
       "structure_preserved": true,
       "unknown_attributes": [],
-      "effect_observed": true,
-      "reason": "production_command_proof_required",
       "state": "candidate"
     }
   },
   "scenario": "NOTE-EDIT-PARITY",
   "level": "real",
   "passed": true,
-  "git_sha": "96569284d7c9f5167a97c7c31e86dff182e4d89e",
-  "at": "2026-11-01T07:50:34.49507Z",
+  "git_sha": "68c7f5445b1be9f42b5edf660fb6ec9e63682ec1",
+  "at": "2026-11-01T13:09:22.308489Z",
   "assertions": [
     {
-      "name": "NOTE-CRUD/native_notes_capture_ready",
+      "name": "plain_crud_prior_real_proof",
       "passed": true
     },
     {
-      "name": "NOTE-CRUD/external_note_imported",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/rest_create_folder_observed",
-      "passed": true,
-      "detail": "observed:::"
-    },
-    {
-      "name": "NOTE-CRUD/created_folder_identity_captured",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/rest_create_observed",
-      "passed": true,
-      "detail": "observed:::"
-    },
-    {
-      "name": "NOTE-CRUD/created_identity_captured",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/rest_create_matches_truth",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/rest_append_observed",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/rest_append_visible",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/rest_append_matches_truth",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/rest_append_content",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/rest_replace_observed",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/rest_replace_visible",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/rest_replace_matches_truth",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/rest_replace_content",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/rest_before_delete_replicated",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/rest_delete_observed",
-      "passed": true,
-      "detail": "observed:"
-    },
-    {
-      "name": "NOTE-CRUD/rest_delete_replicated",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/rest_delete_preserves_other_note",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/mcp_create_folder_observed",
-      "passed": true,
-      "detail": "observed:::"
-    },
-    {
-      "name": "NOTE-CRUD/created_folder_identity_captured",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/mcp_create_observed",
-      "passed": true,
-      "detail": "observed:::"
-    },
-    {
-      "name": "NOTE-CRUD/created_identity_captured",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/mcp_create_matches_truth",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/mcp_append_observed",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/mcp_append_visible",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/mcp_append_matches_truth",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/mcp_append_content",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/mcp_replace_observed",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/mcp_replace_visible",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/mcp_replace_matches_truth",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/mcp_replace_content",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/mcp_before_delete_replicated",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/mcp_delete_observed",
-      "passed": true,
-      "detail": "observed:"
-    },
-    {
-      "name": "NOTE-CRUD/mcp_delete_replicated",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/mcp_delete_preserves_other_note",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/run_created_folder_cleaned",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/run_created_folder_cleaned",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/run_created_folder_cleaned",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/owned_cleanup_counts_match",
-      "passed": true
-    },
-    {
-      "name": "NOTE-CRUD/cleanup_baseline_restored",
+      "name": "NOTE-RICH-REJECT/notes_application_running",
       "passed": true
     },
     {
       "name": "NOTE-RICH-REJECT/native_notes_capture_ready",
+      "passed": true
+    },
+    {
+      "name": "NOTE-RICH-REJECT/captured_run_notes_permanently_cleaned",
       "passed": true
     },
     {
@@ -226,6 +70,32 @@
       "passed": true
     },
     {
+      "name": "NOTE-RICH-REJECT/rest_rich_edit_observed",
+      "passed": true,
+      "detail": "observed:::"
+    },
+    {
+      "name": "NOTE-RICH-REJECT/rest_rich_structure_preserved",
+      "passed": true
+    },
+    {
+      "name": "NOTE-RICH-REJECT/rest_rich_independent_readback",
+      "passed": true
+    },
+    {
+      "name": "NOTE-RICH-REJECT/mcp_rich_edit_observed",
+      "passed": true,
+      "detail": "observed:::"
+    },
+    {
+      "name": "NOTE-RICH-REJECT/mcp_rich_structure_preserved",
+      "passed": true
+    },
+    {
+      "name": "NOTE-RICH-REJECT/mcp_rich_independent_readback",
+      "passed": true
+    },
+    {
       "name": "NOTE-RICH-REJECT/tagged_notes_cleaned",
       "passed": true
     },
@@ -235,14 +105,12 @@
     },
     {
       "name": "tagged_notes_cleaned_up",
-      "passed": true,
-      "detail": "independent_note_and_folder_baseline_restored_after_probe_exit"
+      "passed": true
     },
     {
       "name": "simple_rich_capability",
       "passed": true,
-      "status": "limited",
-      "detail": "production_command_proof_required"
+      "detail": "native_html_structure_preserved"
     },
     {
       "name": "checklist_capability",

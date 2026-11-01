@@ -251,6 +251,16 @@ enum HelperLabCommand {
             while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
             try JSONEncoder().encode(result!).write(to: reportURL, options: .atomic)
             return true
+        case "notes-owned-cleanup":
+            let reportURL = try report(arguments)
+            guard let index = arguments.firstIndex(of: "--request"), index + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
+            let request = try JSONDecoder().decode(JSON.self, from: Data(contentsOf: URL(fileURLWithPath: arguments[index + 1])))
+            var result: JSON?
+            Task { @MainActor in result = await NotesFolderUI.run(request) }
+            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
+            try JSONEncoder().encode(result!).write(to: reportURL, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
+            return true
         case "notes-parity-probe":
             let reportURL = try report(arguments)
             var result: JSON?

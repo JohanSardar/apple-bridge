@@ -50,7 +50,11 @@ func notesCleanupTruth(recover func(string, map[string]any) (map[string]any, err
 	}
 	deadline := time.Now().Add(settle)
 	for {
-		response, err := recover("observe", map[string]any{"source": "notes", "verify_deleted_ids": ids})
+		verification := map[string]any{"source": "notes", "verify_deleted_ids": ids}
+		if request["action"] == "cleanup_owned" || request["action"] == "cleanup" || request["action"] == "delete" {
+			verification["permanent"] = true
+		}
+		response, err := recover("observe", verification)
 		if err == nil && response["status"] == "verified" && response["deletion_verified"] == true {
 			return nil
 		}

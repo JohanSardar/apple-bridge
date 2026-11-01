@@ -24,7 +24,19 @@ func runNotesParity(ctx context.Context, s Scenario, level string) (e Evidence) 
 			e.Passed = e.Passed && assertion.Passed
 		}
 	}()
-	for _, id := range []string{"NOTE-CRUD", "NOTE-RICH-REJECT"} {
+	scenarios := []string{"NOTE-CRUD", "NOTE-RICH-REJECT"}
+	if level == "real" {
+		bytes, err := os.ReadFile("lab/evidence/real/NOTE-CRUD.json")
+		var previous Evidence
+		proven := err == nil && json.Unmarshal(bytes, &previous) == nil && previous.Scenario == "NOTE-CRUD" && previous.Level == "real" && previous.Passed
+		add("plain_crud_prior_real_proof", proven)
+		if !proven {
+			return
+		}
+		e.Metrics["plain_crud_prior_source"] = previous.GitSHA
+		scenarios = []string{"NOTE-RICH-REJECT"}
+	}
+	for _, id := range scenarios {
 		result := runNotes(ctx, Scenario{ID: id}, level)
 		if ids, ok := result.Metrics["notes_helper_binary_uuids"].([]string); ok {
 			for _, id := range ids {
@@ -75,15 +87,7 @@ func runNotesParity(ctx context.Context, s Scenario, level string) (e Evidence) 
 	}
 	defer func() {
 		finishCleanupAudit(context.Background(), owned, "notes", &e)
-		proof, ok := e.Metrics["cleanup_counts"].(map[string]any)
-		if ok && proof["passed"] == true {
-			for i := range e.Assertions {
-				if e.Assertions[i].Name == "tagged_notes_cleaned_up" && !e.Assertions[i].Passed {
-					e.Assertions[i].Passed = true
-					e.Assertions[i].Detail = "independent_note_and_folder_baseline_restored_after_probe_exit"
-				}
-			}
-		}
+
 	}()
 	cmd = exec.CommandContext(ctx, "open", "-n", "-W", "-g", "-a", app, "--args", "notes-parity-probe", "--report", report)
 	output, err = cmd.CombinedOutput()
@@ -96,6 +100,7 @@ func runNotesParity(ctx context.Context, s Scenario, level string) (e Evidence) 
 	var result struct {
 		State         string                     `json:"state"`
 		OS            string                     `json:"os"`
+		CleanupStage  string                     `json:"cleanup_stage"`
 		Cleanup       string                     `json:"cleanup"`
 		MutationCalls int                        `json:"mutation_calls"`
 		Proofs        map[string]json.RawMessage `json:"proofs"`
@@ -107,6 +112,7 @@ func runNotesParity(ctx context.Context, s Scenario, level string) (e Evidence) 
 	e.Metrics["os"] = result.OS
 	e.Metrics["mutation_calls"] = result.MutationCalls
 	e.Metrics["native_cleanup_reported_complete"] = result.Cleanup == "complete"
+	e.Metrics["native_cleanup_stage"] = result.CleanupStage
 	add("tagged_notes_cleaned_up", result.Cleanup == "complete")
 	for _, name := range []string{"simple_rich", "checklist"} {
 		var proof struct {
@@ -114,7 +120,13 @@ func runNotesParity(ctx context.Context, s Scenario, level string) (e Evidence) 
 			Reason string `json:"reason"`
 		}
 		err := json.Unmarshal(result.Proofs[name], &proof)
-		e.Assertions = append(e.Assertions, Assertion{Name: name + "_capability", Passed: err == nil && (proof.State == "candidate" || proof.State == "limited"), Status: "limited", Detail: proof.Reason})
+		passed := err == nil && (proof.State == "candidate" || proof.State == "limited")
+		status := "limited"
+		if name == "simple_rich" {
+			passed = err == nil && proof.State == "candidate"
+			status = ""
+		}
+		e.Assertions = append(e.Assertions, Assertion{Name: name + "_capability", Passed: passed, Status: status, Detail: proof.Reason})
 		e.Metrics[name] = json.RawMessage(result.Proofs[name])
 	}
 	return
