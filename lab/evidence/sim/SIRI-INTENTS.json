@@ -1,9 +1,9 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[8.98 14.29 18.17] cpu_idle=55% cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[15.51 15.84 17.12] cpu_idle=35% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M6BAFW1PG8QN9QEQ8SZZ0B8J",
+  "run_id": "run_01M6BB2EH82C7YTE6Y6VN6A234",
   "metrics": {
     "capture_observer_resets": 0,
     "installed_shortcut_count": 1,
@@ -16,7 +16,7 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-11-01T10:29:10.838913Z",
+  "at": "2026-11-01T10:39:19.59208Z",
   "assertions": [
     {
       "name": "inventory_available",
