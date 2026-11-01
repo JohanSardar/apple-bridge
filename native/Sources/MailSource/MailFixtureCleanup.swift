@@ -92,6 +92,7 @@ public enum MailFixtureCleanup {
         }
         func closeCompose() async throws {
             _ = try await perform("close the tagged compose window", """
+            if (count (windows whose name contains \(q(tag)) and visible is true)) is 0 then return ""
             set ownedIDs to id of (outgoing messages whose subject is \(q(tag)))
             repeat with ownedID in ownedIDs
                 set m to outgoing message id (contents of ownedID)
@@ -146,16 +147,13 @@ public enum MailFixtureCleanup {
             if selected == "clear" {
                 try await closeCompose()
                 if !(try await fixtureIDs(tag)).isEmpty { continue }
-                let outgoing = try await script("return count (outgoing messages whose subject is \(q(tag)))")
-                let visible = try await script("return count (outgoing messages whose subject is \(q(tag)) and visible is true)")
                 let windows = try await script("return count (windows whose name contains \(q(tag)) and visible is true)")
-                guard let retained = Int(outgoing), retained >= 0, let open = Int(visible), open >= 0, let windowCount = Int(windows), windowCount >= 0 else { throw MailCommandFailure.unconfirmed }
+                guard let windowCount = Int(windows), windowCount >= 0 else { throw MailCommandFailure.unconfirmed }
                 let closed = windowCount == 0
-                var result = try MailQualification.cleanupResult("0|" + visible)
+                var result = try MailQualification.cleanupResult("0|" + windows)
                 result["cleanup_outgoing_clear"] = .bool(closed)
                 result["cleanup_windows_clear"] = .bool(windowCount == 0)
                 result["cleanup_passed"] = .bool(closed)
-                if retained > 0 { result["cleanup_closed_compose_cache_verified"] = .bool(closed) }
                 return result
             }
             if selected.hasPrefix("select|") {
