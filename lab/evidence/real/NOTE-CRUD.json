@@ -1,37 +1,45 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[56.62 59.42 55.14] cpu_idle=71% cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[9.55 13.2 17.14] cpu_idle=26% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M64WZZQP6GGB4GDWDZ3DB7ZM",
+  "run_id": "run_01M6AW4CNXSKNMCJXMSZWPTSTF",
   "metrics": {
     "capture_observer_resets": 0,
     "cleanup": {
-      "after_count": 112,
-      "before_count": 112,
-      "created_count": 2,
+      "after_count": 119,
+      "before_count": 119,
+      "created_count": 3,
       "passed": true
     },
     "cleanup_counts": {
-      "after_count": 120,
-      "before_count": 120,
+      "after_count": 133,
+      "before_count": 133,
       "created_count": 0,
       "passed": true
-    }
+    },
+    "notes_helper_binary_uuids": [
+      "9444b9cd-fe0e-3e51-ae30-68aebb338788"
+    ]
   },
   "scenario": "NOTE-CRUD",
   "level": "real",
-  "passed": false,
-  "git_sha": "94ca9e7c3a6f08faf26811c72293a53b1c9bb347",
-  "at": "2026-10-29T22:37:52.246712Z",
+  "passed": true,
+  "git_sha": "c64b270099a5b8136a5fa61af0aeef2a720f03d0",
+  "at": "2026-11-01T06:18:14.590117Z",
   "assertions": [
+    {
+      "name": "native_notes_capture_ready",
+      "passed": true
+    },
     {
       "name": "external_note_imported",
       "passed": true
     },
     {
       "name": "rest_create_folder_observed",
-      "passed": true
+      "passed": true,
+      "detail": "observed:::"
     },
     {
       "name": "created_folder_identity_captured",
@@ -39,7 +47,8 @@
     },
     {
       "name": "rest_create_observed",
-      "passed": true
+      "passed": true,
+      "detail": "observed:::"
     },
     {
       "name": "created_identity_captured",
@@ -67,8 +76,111 @@
     },
     {
       "name": "rest_replace_observed",
-      "passed": false,
-      "detail": "command:unsupported"
+      "passed": true
+    },
+    {
+      "name": "rest_replace_visible",
+      "passed": true
+    },
+    {
+      "name": "rest_replace_matches_truth",
+      "passed": true
+    },
+    {
+      "name": "rest_replace_content",
+      "passed": true
+    },
+    {
+      "name": "rest_before_delete_replicated",
+      "passed": true
+    },
+    {
+      "name": "rest_delete_observed",
+      "passed": true,
+      "detail": "observed:"
+    },
+    {
+      "name": "rest_delete_replicated",
+      "passed": true
+    },
+    {
+      "name": "rest_delete_preserves_other_note",
+      "passed": true
+    },
+    {
+      "name": "mcp_create_folder_observed",
+      "passed": true,
+      "detail": "observed:::"
+    },
+    {
+      "name": "created_folder_identity_captured",
+      "passed": true
+    },
+    {
+      "name": "mcp_create_observed",
+      "passed": true,
+      "detail": "observed:::"
+    },
+    {
+      "name": "created_identity_captured",
+      "passed": true
+    },
+    {
+      "name": "mcp_create_matches_truth",
+      "passed": true
+    },
+    {
+      "name": "mcp_append_observed",
+      "passed": true
+    },
+    {
+      "name": "mcp_append_visible",
+      "passed": true
+    },
+    {
+      "name": "mcp_append_matches_truth",
+      "passed": true
+    },
+    {
+      "name": "mcp_append_content",
+      "passed": true
+    },
+    {
+      "name": "mcp_replace_observed",
+      "passed": true
+    },
+    {
+      "name": "mcp_replace_visible",
+      "passed": true
+    },
+    {
+      "name": "mcp_replace_matches_truth",
+      "passed": true
+    },
+    {
+      "name": "mcp_replace_content",
+      "passed": true
+    },
+    {
+      "name": "mcp_before_delete_replicated",
+      "passed": true
+    },
+    {
+      "name": "mcp_delete_observed",
+      "passed": true,
+      "detail": "observed:"
+    },
+    {
+      "name": "mcp_delete_replicated",
+      "passed": true
+    },
+    {
+      "name": "mcp_delete_preserves_other_note",
+      "passed": true
+    },
+    {
+      "name": "run_created_folder_cleaned",
+      "passed": true
     },
     {
       "name": "run_created_folder_cleaned",

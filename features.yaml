@@ -437,12 +437,11 @@ features:
     milestone: M3
     modules: [native/NotesSource, operations]
     depends_on: [notes.read]
-    status: limited
+    status: done
     scenarios:
       - {id: NOTE-CRUD, levels: [sim, real, replica]}
       - {id: NOTE-RICH-REJECT, levels: [sim, real]}
-    limits:
-      - {"scenario": "NOTE-CRUD", "level": "real", "reason": "Zero-indent native paragraph metadata now remains plain-editable; append then replace and captured-ID cleanup need real qualification on the Air."}
+    notes: REST and MCP create, append, replace and delete pass native read-back and replica convergence. Deletion moves the exact note into its account's Recently Deleted folder and verifies NoteStore exclusion; captured-ID cleanup restores the active baseline.
   - id: usage.read
     title: Screen Time estimates from Biome App.InFocus with lock/sleep clipping
     notes: Input fingerprinting reuses immutable metadata key sets without changing its fields or polling cadence.

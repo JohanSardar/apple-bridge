@@ -49,6 +49,7 @@ func runNotesExtrasReal(ctx context.Context, s Scenario, level, gitSHA string) (
 	title := "Bridge Test " + tag
 	folders := map[string]string{}
 	noteID := ""
+	destinationID, pendingRename := "", ""
 	defer func() {
 		if noteID != "" {
 			problem := notesCleanupTruth(w.RecoverTruth, 30*time.Second, map[string]any{"source": "notes", "tag": tag, "action": "cleanup_owned", "id": noteID, "folder_id": func() string {
@@ -64,6 +65,12 @@ func runNotesExtrasReal(ctx context.Context, s Scenario, level, gitSHA string) (
 				return ""
 			}()})
 			add("owned_note_cleaned", problem == nil)
+		}
+		if pendingRename != "" {
+			identity, problem := w.RecoverTruth("fixture", map[string]any{"source": "notes", "tag": tag, "action": "folder_identity", "title": pendingRename})
+			if problem == nil && identity["id"] == destinationID {
+				folders[destinationID] = pendingRename
+			}
 		}
 		problem := notesCleanupFolders(w.RecoverTruth, tag, folders)
 		for range folders {
@@ -109,7 +116,7 @@ func runNotesExtrasReal(ctx context.Context, s Scenario, level, gitSHA string) (
 	destinationTitle := title + " destination"
 	createdDestination := call("notes.create_folder", map[string]any{"title": destinationTitle}, 0)
 	identity, problem := w.Truth("fixture", map[string]any{"source": "notes", "tag": tag, "action": "folder_identity", "title": destinationTitle})
-	destinationID, _ := identity["id"].(string)
+	destinationID, _ = identity["id"].(string)
 	add("destination_identity_captured", problem == nil && destinationID != "")
 	if destinationID == "" {
 		return
@@ -124,10 +131,12 @@ func runNotesExtrasReal(ctx context.Context, s Scenario, level, gitSHA string) (
 		return
 	}
 	renamedTitle := title + " renamed"
+	pendingRename = renamedTitle
 	if !call("notes.rename_folder", map[string]any{"id": destination.ID, "title": renamedTitle}, destination.Version) {
 		return
 	}
 	folders[destinationID] = renamedTitle
+	pendingRename = ""
 	add("rename_readback", find(renamedTitle).ID == destination.ID)
 	if !call("notes.move", map[string]any{"id": note.ID, "folder_id": destination.ID}, note.Version) {
 		return
@@ -158,10 +167,12 @@ func runNotesExtrasReal(ctx context.Context, s Scenario, level, gitSHA string) (
 	client.Protocol = "mcp"
 	destination = find(renamedTitle)
 	mcpTitle := title + " mcp"
+	pendingRename = mcpTitle
 	if !call("notes.rename_folder", map[string]any{"id": destination.ID, "title": mcpTitle}, destination.Version) {
 		return
 	}
 	folders[destinationID] = mcpTitle
+	pendingRename = ""
 	add("mcp_rename_readback", find(mcpTitle).ID == destination.ID)
 	note = find(tag + " note")
 	original := find(title)
