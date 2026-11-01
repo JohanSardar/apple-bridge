@@ -88,6 +88,18 @@ test('WEB-MSG-PERF WEB-MSG-PERF-INPUT opening media records complete input cover
     await page.keyboard.press('Escape');await expect(viewer).not.toBeVisible();await expect(source).toBeFocused();
 });
 
+test('WEB-MSG-PERF toggling bottom mode preserves unchanged virtual positions',async({page})=>{
+    await prepareSession(page);
+    await page.goto('/__fixtures/virtual');
+    const viewport=page.getByRole('listbox',{name:'100000 variable-height rows'});
+    await expect(viewport.locator('.virtual-row').first()).toBeVisible();
+    await page.evaluate(()=>{(window as any).__abWork={phase:'anchor',samples:[]};});
+    await page.getByRole('button',{name:'Bottom mode',exact:true}).click();
+    await expect(viewport.locator('[data-key="99999"]')).toBeInViewport();
+    await page.getByRole('button',{name:'Bottom mode',exact:true}).click();
+    expect(await page.evaluate(()=>(window as any).__abWork.samples.filter((sample:any)=>sample.kind==='virtual-items').length)).toBe(0);
+});
+
 test('WEB-MSG-PERF performance observers leave layout coalesced until the frame',async({page})=>{
     await page.goto('about:blank');await installProbe(page,false,true);
     const result=await page.evaluate(async()=>{

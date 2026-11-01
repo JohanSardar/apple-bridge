@@ -68,6 +68,7 @@ export function VirtualList<T>(props: {
     const cancelFirstMountAnchor=(event:Event)=>{if(firstMountAnchor&&event.isTrusted&&Math.abs(viewport.scrollTop-(assignedScroll??scroll()))>.5)firstMountAnchor=false;};
     createEffect(() => {
         const next = props.items;
+        const bottomAnchored = untrack(() => props.bottomAnchored);
         const userTop=firstMountAnchor===false?viewport.scrollTop:undefined;
         const finish=beginWork('virtual-items');
         const shifted=props.windowKey!==previousWindowKey;previousWindowKey=props.windowKey;
@@ -85,10 +86,10 @@ export function VirtualList<T>(props: {
         positions = new Positions(items.map(item => {const key=props.keyFor(item),estimated=props.estimate?.(item),cached=cache.get(key);if(cached&&cached.estimate!==estimated)remeasure.add(key);const height=(!props.fixedHeights&&cached?.estimate===estimated?cached?.height:estimated)??60;return Number.isFinite(height)&&height>0?height:60;}));
         if(invalidated||remeasure.size)viewport.querySelectorAll<HTMLElement>('.virtual-row').forEach(row=>{if(invalidated||remeasure.has(row.dataset.key!)){observer.unobserve(row);observer.observe(row);}});
         content.style.height=positions.total+'px';
-        if(userTop!==undefined&&!(props.bottomAnchored&&atBottom)){mounting=false;refresh(userTop);finish();return;}
+        if(userTop!==undefined&&!(bottomAnchored&&atBottom)){mounting=false;refresh(userTop);finish();return;}
         if(first&&initialKey!=null){scrollToIndex(initialIndex(),initialAlign,true);if(!mounting)viewport.scrollTop=assignedScroll=scroll();}
         else {
-            if (props.bottomAnchored && (atBottom || first) && (!shifted || first)) {
+            if (bottomAnchored && (atBottom || first) && (!shifted || first)) {
                 setScrollPosition(Math.max(0,positions.total-viewport.clientHeight));
                 queueMicrotask(bottom);
             }
