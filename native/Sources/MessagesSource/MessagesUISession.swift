@@ -205,8 +205,11 @@ public struct MessagesUISession {
         throw MessagesUIFailure.messageValueRejected
     }
     public func clear(_ element: AXUIElement, value: (AXUIElement) -> String) throws -> Bool {
+        let previous = value(element)
         try focus(element, failure: MessagesUIFailure.composerUnavailable)
-        try input(.clearText)
+        var range = CFRange(location: 0, length: previous.utf16.count)
+        guard let selected = AXValueCreate(.cfRange, &range), AXUIElementSetAttributeValue(element, kAXSelectedTextRangeAttribute as CFString, selected) == .success else { throw MessagesUIFailure.messageValueRejected }
+        try input(.keys([51], command: false))
         let deadline = Date().addingTimeInterval(3)
         repeat {
             if value(element).isEmpty { return true }
