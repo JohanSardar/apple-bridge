@@ -51,6 +51,10 @@
       "passed": true
     },
     {
+      "name": "status_intent_previous_bundle_removed",
+      "passed": true
+    },
+    {
       "name": "credential_backend_override_restored",
       "passed": true
     }
