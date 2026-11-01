@@ -111,7 +111,7 @@ public struct MailCommands: Sendable {
         if op == "mail.create_draft" || op == "mail.send" {
             if !args["reply_to"].string.isEmpty || !args["forward_of"].string.isEmpty { throw SourceFailure.unsupported }
             creates = true
-            body = "set m to make new outgoing message with properties {subject:" + q(args["subject"].string) + ", content:" + q(args["body"].string) + ", visible:false}\n"
+            body = "set m to make new outgoing message with properties {subject:" + q(args["subject"].string) + ", content:" + q(args["body"].string) + ", visible:true}\n"
             for (field, kind) in [("to", "to"), ("cc", "cc")] {
                 for address in args[field].array { body += "tell m to make new " + kind + " recipient at end of " + kind + " recipients with properties {address:" + q(address.string) + "}\n" }
             }

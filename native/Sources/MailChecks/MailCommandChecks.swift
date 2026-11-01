@@ -101,6 +101,7 @@ func checkMailCommands() async throws {
             let creates = ["mail.create_draft", "mail.send"].contains(op)
             try require(scripts.count == (creates ? 2 : 1) + (observed ? (creates ? 2 : 1) : 40))
             let effect = scripts[creates ? 1 : 0]
+            if creates { try require(effect.contains("visible:true")) }
             let expected = ["mail.create_draft": "save m", "mail.send": "send m", "mail.move": "move m to mailbox", "mail.delete": "move m to trash mailbox", "mail.mark_read": "set read status of m to true", "mail.set_flag": "set flagged status of m to true"]
             try require(effect.contains(expected[op]!))
             if op == "mail.create_draft" { try require(effect.contains("save m\nset visible of m to true\nclose m saving yes")) }
