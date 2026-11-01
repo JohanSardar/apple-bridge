@@ -53,11 +53,11 @@ func checkMailQualification() async throws {
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: directory) }
     let path = directory.appendingPathComponent("Envelope Index").path
-    try execute(path, "CREATE TABLE subjects(subject TEXT); CREATE TABLE mailboxes(url TEXT); CREATE TABLE message_global_data(message_id INTEGER,message_id_header TEXT); INSERT INTO message_global_data VALUES(1,'<one@example.invalid>'),(5,'<five@example.invalid>'); CREATE TABLE messages(subject INTEGER,mailbox INTEGER,deleted INTEGER,message_id INTEGER); INSERT INTO subjects VALUES('[ab-test] fixture'),('[ab-test] other'); INSERT INTO mailboxes VALUES('imap://synthetic/INBOX'),('imap://synthetic/Trash'),('imap://synthetic/Drafts'); INSERT INTO messages VALUES(1,1,0,1),(2,1,0,2),(1,2,0,3),(1,1,1,4),(1,3,0,5);")
+    try execute(path, "CREATE TABLE subjects(subject TEXT); CREATE TABLE mailboxes(url TEXT); CREATE TABLE message_global_data(message_id INTEGER,message_id_header TEXT); INSERT INTO message_global_data VALUES(1,'<one@example.invalid>'),(5,'<five@example.invalid>'); CREATE TABLE addresses(address TEXT); INSERT INTO addresses VALUES('self@example.invalid'); CREATE TABLE recipients(message INTEGER,address INTEGER); INSERT INTO recipients VALUES(1,1),(2,1),(3,1),(4,1),(5,1); CREATE TABLE messages(subject INTEGER,mailbox INTEGER,deleted INTEGER,message_id INTEGER,sender INTEGER DEFAULT 1); INSERT INTO subjects VALUES('[ab-test] fixture'),('[ab-test] other'); INSERT INTO mailboxes VALUES('imap://synthetic/INBOX'),('imap://synthetic/Trash'),('imap://synthetic/Drafts'); INSERT INTO messages(subject,mailbox,deleted,message_id) VALUES(1,1,0,1),(2,1,0,2),(1,2,0,3),(1,1,1,4),(1,3,0,5);")
     try require(try MailFixtureCleanup.fixtureIDs(tag: "[ab-test] fixture", path: path) == ["one@example.invalid", "five@example.invalid"])
     try require(try MailFixtureCleanup.fixtureIDs(tag: "[ab-test] absent", path: path).isEmpty)
 
-    try execute(path, "INSERT INTO subjects VALUES('[ab-test] orphan'); INSERT INTO messages VALUES(3,999,0,6);")
+    try execute(path, "INSERT INTO subjects VALUES('[ab-test] orphan'); INSERT INTO messages(subject,mailbox,deleted,message_id) VALUES(3,999,0,6);")
     do { _ = try MailFixtureCleanup.fixtureIDs(tag: "[ab-test] orphan", path: path); throw MailCommandFailure.rejected }
     catch SourceFailure.corrupt {}
     let fired = DispatchSemaphore(value: 0)
@@ -95,8 +95,6 @@ func checkMailQualification() async throws {
         if scenario == "MAIL-BODY-FIXTURE" { try require(scripts.contains { $0.contains("set default message format to priorFormat") }) }
         if scenario != "MAIL-BODY-FIXTURE" {
             try require(scripts.contains { $0.contains("windows whose name contains") && $0.contains("close m saving no") && !$0.contains("set visible of m to true") })
-            try require(scripts.contains { $0.contains("{drafts mailbox, inbox, sent mailbox}") && $0.contains("set headerID to message id of m") })
-            try require(scripts.contains { $0.contains("if own is in ownRecipients") })
             try require(!scripts.contains { $0.contains("delete m") || $0.contains("move m") || $0.contains("set deleted status") || $0.contains("set selected messages") })
         }
         try require(scripts.contains { $0.contains("extract address from sender") && $0.contains("visible:true") && $0.contains("close m saving no") })

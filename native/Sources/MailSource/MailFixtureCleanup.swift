@@ -7,12 +7,12 @@ public enum MailFixtureCleanup {
     public typealias FixtureIDs = @Sendable (String) async throws -> [String]
     public static func fixtureIDs(tag: String, path: String = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Mail/V10/MailData/Envelope Index").path) throws -> [String] {
         let reader = try SQLiteSnapshot(path: path, generationSQL: "SELECT 'mail-cleanup'")
-        let found = try reader.query("SELECT trim(g.message_id_header, '<>') AS id, b.url FROM messages m JOIN subjects s ON s.ROWID=m.subject LEFT JOIN message_global_data g ON g.message_id=m.message_id LEFT JOIN mailboxes b ON b.ROWID=m.mailbox WHERE s.subject=? AND m.deleted=0 ORDER BY m.ROWID", values: [tag], maxRows: 16, timeout: 2)
+        let found = try reader.query("SELECT trim(g.message_id_header, '<>') AS id, b.url, EXISTS(SELECT 1 FROM recipients r JOIN addresses recipient ON recipient.ROWID=r.address JOIN addresses sender ON sender.ROWID=m.sender WHERE r.message=m.ROWID AND recipient.address=sender.address COLLATE NOCASE) AS own FROM messages m JOIN subjects s ON s.ROWID=m.subject LEFT JOIN message_global_data g ON g.message_id=m.message_id LEFT JOIN mailboxes b ON b.ROWID=m.mailbox WHERE s.subject=? AND m.deleted=0 ORDER BY m.ROWID", values: [tag], maxRows: 16, timeout: 2)
         guard found.complete else { throw MailCommandFailure.unconfirmed }
         return try found.rows.compactMap { row in
             guard let raw = row["url"]?.text, let url = URL(string: raw) else { throw SourceFailure.corrupt }
             if ["trash", "deleted messages", "deleted items", "bin"].contains(url.lastPathComponent.lowercased()) { return nil }
-            guard let id = row["id"]?.text, !id.isEmpty && id.contains("@") else { throw SourceFailure.corrupt }
+            guard row["own"] == .integer(1), let id = row["id"]?.text, !id.isEmpty && id.contains("@") else { throw SourceFailure.corrupt }
             return id
         }
     }
@@ -24,18 +24,9 @@ public enum MailFixtureCleanup {
     }
     @MainActor public static func selectDisplayed(tag: String) async throws {
         guard !tag.isEmpty, !tag.contains("\n"), !tag.contains("\r"), tag.contains("@") else { throw MailCommandFailure.unconfirmed }
-        let opened = try await MailCommands.run("""
-        repeat with b in {drafts mailbox, inbox, sent mailbox}
-            set found to (messages of b whose message id is \(MailCommands.quote(tag)) and deleted status is false)
-            if (count found) > 0 then
-                open item 1 of found
-                activate
-                return "opened"
-            end if
-        end repeat
-        return ""
-        """)
-        guard opened == "opened" else { throw MailCommandFailure.unconfirmed }
+        let header = tag.hasPrefix("<") ? tag : "<" + tag + ">"
+        guard let encoded = header.addingPercentEncoding(withAllowedCharacters: .alphanumerics),
+              let url = URL(string: "message://" + encoded), NSWorkspace.shared.open(url) else { throw MailCommandFailure.rejected }
         try await Task.sleep(for: .milliseconds(500))
     }
     @MainActor public static func removeSelected() async throws {
@@ -89,36 +80,8 @@ public enum MailFixtureCleanup {
             var selected = try await perform("select the tagged test message", """
             set cleanupStage to 1
             try
-            set m to missing value
-            repeat with ownedID in {\(ids.map(q).joined(separator: ","))}
-                repeat with b in {drafts mailbox, inbox, sent mailbox}
-                    try
-                        set matching to (messages of b whose message id is (contents of ownedID) and deleted status is false)
-                        if (count matching) > 0 then
-                            set candidate to item 1 of matching
-                            if subject of candidate is \(q(tag)) and deleted status of candidate is false then
-                                set own to extract address from sender of candidate
-                                set ownRecipients to address of every to recipient of candidate
-                                if own is in ownRecipients then set m to candidate
-                            end if
-                        end if
-                    on error errorText number errorNumber
-                        if errorNumber is not -1728 then error errorText number errorNumber
-                    end try
-                    if m is not missing value then exit repeat
-                end repeat
-                if m is not missing value then exit repeat
-            end repeat
-            set cleanupStage to 2
-            if m is missing value then
-                if \(ids.count) is 0 then return "clear"
-                return "failure|10|-1728"
-            end if
-            if subject of m is not \(q(tag)) then error "Test message selection changed"
-            set cleanupStage to 3
-            set headerID to message id of m
-            if headerID is "" then return "failure|3|-2700"
-            return "select|" & headerID
+            if \(ids.count) is 0 then return "clear"
+            return "select|" & \(q(ids.first ?? ""))
             on error errorText number errorNumber
                 return "failure|" & cleanupStage & "|" & errorNumber
             end try

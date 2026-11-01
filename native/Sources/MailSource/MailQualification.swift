@@ -41,7 +41,14 @@ public struct MailQualification: Sendable {
               ["MAIL-SEND-SELF-REAL", "MAIL-DRAFT-REAL", "MAIL-ORGANIZE-REAL", "MAIL-BODY-FIXTURE", "MAIL-CLEANUP"].contains(scenario) else { throw SourceFailure.invalid }
         let q = MailCommands.quote
         func cleanup() async throws -> [String: JSON] {
-            try await MailFixtureCleanup.run(tag: tag, script: script, fixtureIDs: fixtureIDs, selectDisplayed: selectDisplayed, removeSelected: removeSelected)
+            do {
+                return try await MailFixtureCleanup.run(tag: tag, script: script, fixtureIDs: fixtureIDs, selectDisplayed: selectDisplayed, removeSelected: removeSelected)
+            } catch {
+                let failure = (error as? MailFixtureCleanup.Failure)?.cause ?? error
+                guard let commandFailure = failure as? MailCommandFailure, commandFailure == .timeout else { throw error }
+                try await restart()
+                return try await MailFixtureCleanup.run(tag: tag, script: script, fixtureIDs: fixtureIDs, selectDisplayed: selectDisplayed, removeSelected: removeSelected)
+            }
         }
         if scenario == "MAIL-CLEANUP" {
             do { return .object(try await cleanup()) }
