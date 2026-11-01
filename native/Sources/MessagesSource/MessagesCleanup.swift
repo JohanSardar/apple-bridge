@@ -100,7 +100,7 @@ public enum MessagesCleanup {
             var result: [(String, JSON)] = []
             for key in rows {
                 if ownedOnly {
-                    guard ownedIDs.contains(key["guid"]), let baseline = ownedBaseline,
+                    guard let baseline = ownedBaseline,
                           let position = try reader.query("SELECT ROWID AS position FROM message WHERE guid=?", [key["guid"]]).first,
                           position.integer("position") > baseline else { continue }
                 }
@@ -114,6 +114,10 @@ public enum MessagesCleanup {
                     guard !allPeers.isEmpty, allPeers.allSatisfy({ own.contains(MessagesProbes.normalize($0["id"])) }) else { continue }
                 }
                 var fields = item.2
+                if ownedOnly, !ownedIDs.contains(row["guid"]) {
+                    guard mediaByMessage[row["guid"]] != nil || (mediaProof != nil && (fields["text"] as? String)?.contains(tag) == true) else { continue }
+                    ownedIDs.insert(row["guid"])
+                }
                 if let names = mediaByMessage[row["guid"]], peers.allSatisfy({ own.contains(MessagesProbes.normalize($0["id"])) }) {
                     fields["cleanup_media_names"] = names
                     fields["cleanup_self_echo"] = ownedOnly
