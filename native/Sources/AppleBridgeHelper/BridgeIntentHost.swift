@@ -14,7 +14,7 @@ enum BridgeIntentHost {
     static func run(_ arguments: [String]) {
         guard arguments.count == 3, let parent = Int32(arguments[1]), parent > 1 else { return }
         let report = URL(fileURLWithPath: arguments[2])
-        LSRegisterURL(Bundle.main.bundleURL as CFURL, true)
+        guard LSRegisterURL(Bundle.main.bundleURL as CFURL, true) == noErr else { return }
         BridgeShortcuts.updateAppShortcutParameters()
         try? Data(String(getpid()).utf8).write(to: report, options: .atomic)
         let watcher = Task { @MainActor in
@@ -37,7 +37,7 @@ enum BridgeIntentHost {
         lifetime.setEventHandler { NSApplication.shared.terminate(nil) }
         lifetime.resume()
         defer { lifetime.cancel() }
-        if kill(parent, 0) == 0 { runApplication() }
+        if kill(parent, 0) == 0 { NSApplication.shared.run() }
     }
 
     private static func publish(_ text: String) {

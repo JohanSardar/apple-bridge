@@ -1259,12 +1259,10 @@ features:
     milestone: M5
     modules: [native/AppleBridgeHelper]
     depends_on: [helper.session]
-    status: limited
-    notes: Status intent metadata and simulation pass. Current warm execution returns no status alongside Johan's live session Helper, even after stale test-copy cleanup and signed-host registration.
+    status: done
+    notes: Signed metadata and action discovery are qualified. Session Helpers dispatch App Intents connection events through AppKit; real hosted AppKit execution and cold SwiftUI launch both return recognized status without foreground interaction.
     scenarios:
       - {id: SIRI-INTENTS, levels: [sim, real]}
-    limits:
-      - {"scenario": "SIRI-INTENTS", "level": "real", "reason": "AB Bridge Status still timed out with zero output after stale tagged test Helpers were stopped and unregistered and the current signed Helper was registered. Johan's live session Helper remained running with the shared bundle identifier com.johansardar.applebridge.services. PR #498 remains open; reliable status dispatch alongside the live session is not qualified."}
   - id: mac.extras
     title: Mac Bluetooth iWork Time Machine and song recognition
     requirements: [R-API, R-SCOPE]
