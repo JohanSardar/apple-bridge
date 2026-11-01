@@ -66,8 +66,12 @@ func runClockTimer(ctx context.Context, initial Evidence, pack clockpack.Pack) (
 	observed, readErr := pack.Exchange(ctx, clockpack.Request{Operation: "timers"})
 	matches := 0
 	for _, timer := range observed.Timers {
-		if _, existed := baseline[timer.ID]; !existed && timer.Label == label && timer.Duration == 120 && timer.Running {
-			matches++
+		if _, existed := baseline[timer.ID]; !existed && timer.Label == label {
+			e.Metrics["created_timer_duration"] = timer.Duration
+			e.Metrics["created_timer_running"] = timer.Running
+			if timer.Duration == 120 && timer.Running {
+				matches++
+			}
 		}
 	}
 	add("created_timer_list_readback", readErr == nil && matches == 1)

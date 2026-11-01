@@ -162,7 +162,11 @@ private struct ClockTimerUI {
         guard picker.count == 1 else { throw ClockTimerFailure(step: "find the timer duration picker") }
         let sliders = find(picker[0], role: kAXSliderRole)
         guard sliders.count == 3 else { throw ClockTimerFailure(step: "find the three timer duration controls") }
-        for (element, number) in zip(sliders, [duration / 3600, duration / 60 % 60, duration % 60]) { try type(String(format: "%02d", number), into: element) }
+        for (element, number) in zip(sliders, [duration / 3600, duration / 60 % 60, duration % 60]) {
+            if AXUIElementSetAttributeValue(element, kAXValueAttribute as CFString, NSNumber(value: number)) != .success {
+                try type(String(format: "%02d", number), into: element)
+            }
+        }
         let sheet = find(root, role: kAXSheetRole)
         let scope = sheet.count == 1 ? sheet[0] : root
         let fields = find(scope, role: kAXTextFieldRole).filter { attribute($0, kAXPlaceholderValueAttribute) as? String == "Timer" }

@@ -132,3 +132,34 @@ func TestConditionalStringCoercion(t *testing.T) {
 		t.Fatal("conditional subject must explicitly coerce to text")
 	}
 }
+
+func TestAlarmTimeUsesNativeHourAndMinuteProperties(t *testing.T) {
+	actions := compiledActions(t, "../../packaging/shortcuts/ab-clock.json")
+	for _, action := range actions {
+		if action.Identifier == "com.apple.mobiletimer-framework.MobileTimerIntents.MTCreateAlarmIntent" {
+			if action.Parameters["name"].(map[string]any)["WFSerializationType"] != "WFTextTokenString" {
+				t.Fatal("alarm name requires a text token")
+			}
+		}
+		if action.Identifier != "is.workflow.actions.gettext" {
+			continue
+		}
+		text, ok := action.Parameters["WFTextActionText"].(map[string]any)
+		if !ok {
+			continue
+		}
+		value, ok := text["Value"].(map[string]any)
+		if !ok || value["string"] != "\ufffc:\ufffc" {
+			continue
+		}
+		attachments := value["attachmentsByRange"].(map[string]any)
+		for key, property := range map[string]string{"{0, 1}": "hours", "{2, 1}": "minutes"} {
+			token := attachments[key].(map[string]any)
+			if token["Type"] != "ActionOutput" || token["Aggrandizements"].([]any)[0].(map[string]any)["PropertyName"] != property {
+				t.Fatal(token)
+			}
+		}
+		return
+	}
+	t.Fatal("alarm time must come from observed native hour and minute properties")
+}

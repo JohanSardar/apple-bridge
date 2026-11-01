@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -133,11 +134,16 @@ func (p Pack) Exchange(ctx context.Context, request Request) (Readback, error) {
 	}
 
 	ids := map[string]bool{}
-	for _, a := range out.Alarms {
-		if !validAlarm(a) || ids[a.ID] {
+	for i := range out.Alarms {
+		a := &out.Alarms[i]
+		if parsed, err := time.Parse("15:4", a.Time); err == nil {
+			a.Time = parsed.Format("15:04")
+		}
+		if !validAlarm(*a) || ids[a.ID] {
 			return Readback{}, ErrUnqualified
 		}
 		ids[a.ID] = true
+		slices.Sort(a.RepeatDays)
 	}
 	switch request.Operation {
 	case "capabilities":

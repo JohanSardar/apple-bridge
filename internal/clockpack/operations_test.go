@@ -57,3 +57,15 @@ func TestTimerDeleteRequiresTagAndObservedAbsence(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestAlarmReadbackNormalizesNativeTimeAndUnorderedRepeatDays(t *testing.T) {
+	fixture := &exchangeFixture{data: `{"version":1,"operation":"alarms","alarms":[{"id":"one","label":"synthetic","time":"7:5","repeat_days":[3,1],"enabled":true}]}`}
+	got, err := (Pack{Runner: fixture}).Exchange(context.Background(), Request{Operation: "alarms"})
+	if err != nil || len(got.Alarms) != 1 || got.Alarms[0].Time != "07:05" || got.Alarms[0].RepeatDays[0] != 1 || got.Alarms[0].RepeatDays[1] != 3 {
+		t.Fatal(got, err)
+	}
+	fixture.data = `{"version":1,"operation":"alarms","alarms":[{"id":"one","label":"synthetic","time":"7:5","repeat_days":[1,1],"enabled":true}]}`
+	if _, err = (Pack{Runner: fixture}).Exchange(context.Background(), Request{Operation: "alarms"}); !errors.Is(err, ErrUnqualified) {
+		t.Fatal(err)
+	}
+}

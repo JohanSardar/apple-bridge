@@ -279,7 +279,8 @@
           "$text": true
         },
         "name": {
-          "$output": "requested_label"
+          "$output": "requested_label",
+          "$text": true
         },
         "repeats": {
           "$output": "created_days"
@@ -603,14 +604,24 @@
     },
     {
       "key": "alarm_time",
-      "identifier": "is.workflow.actions.format.date",
+      "identifier": "is.workflow.actions.gettext",
       "parameters": {
-        "WFDate": {
-          "$output": "alarm_item",
-          "$property": "dateComponents"
-        },
-        "WFDateFormatStyle": "Custom",
-        "WFDateFormat": "HH:mm"
+        "WFTextActionText": {
+          "WFSerializationType": "WFTextTokenString",
+          "Value": {
+            "string": "￼:￼",
+            "attachmentsByRange": {
+              "{0, 1}": {
+                "$output": "alarm_item",
+                "$property": "hours"
+              },
+              "{2, 1}": {
+                "$output": "alarm_item",
+                "$property": "minutes"
+              }
+            }
+          }
+        }
       }
     },
     {

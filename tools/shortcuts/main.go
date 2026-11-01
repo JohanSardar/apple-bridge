@@ -96,6 +96,17 @@ func resolve(value any, name string, outputs map[string]string) (any, error) {
 			}
 			out[k] = converted
 		}
+		if out["WFSerializationType"] == "WFTextTokenString" {
+			if text, ok := out["Value"].(map[string]any); ok {
+				if attachments, ok := text["attachmentsByRange"].(map[string]any); ok {
+					for key, item := range attachments {
+						if token, ok := item.(map[string]any); ok && token["WFSerializationType"] == "WFTextTokenAttachment" {
+							attachments[key] = token["Value"]
+						}
+					}
+				}
+			}
+		}
 		return out, nil
 	case []any:
 		out := make([]any, len(v))
