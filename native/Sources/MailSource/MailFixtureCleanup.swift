@@ -108,7 +108,7 @@ public enum MailFixtureCleanup {
             """)
         }
         try await closeCompose()
-        for _ in 0..<8 {
+        for attempt in 0..<8 {
             let ids = try await fixtureIDs(tag)
             guard ids.count <= 16, ids.allSatisfy({ UInt64($0) != nil }) else { throw MailCommandFailure.unconfirmed }
             var selected = try await perform("select the tagged test message", """
@@ -177,7 +177,13 @@ public enum MailFixtureCleanup {
             if selected.hasPrefix("failure|") {
                 let parts = selected.split(separator: "|")
                 let steps = [1: "find the tagged test message", 2: "read the tagged test message", 3: "show the tagged mailbox", 4: "choose the tagged mailbox", 10: "locate the indexed test message in Mail"]
-                if parts.count == 3, let stage = Int(parts[1]), let step = steps[stage], let code = Int(parts[2]) { throw Failure(step: step, cause: MailCommandFailure.script(code)) }
+                if parts.count == 3, let stage = Int(parts[1]), let step = steps[stage], let code = Int(parts[2]) {
+                    if attempt < 7, [4, 10].contains(stage), [-1728, -1700].contains(code) {
+                        try await Task.sleep(for: .milliseconds(500))
+                        continue
+                    }
+                    throw Failure(step: step, cause: MailCommandFailure.script(code))
+                }
             }
             guard UInt64(selected) != nil, ids.contains(selected) else { throw MailCommandFailure.unconfirmed }
             try await removeSelected()
