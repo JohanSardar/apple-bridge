@@ -165,7 +165,7 @@ enum MessagesAccessibility {
                     if identifier == "Sticker" || !guidMatches.isEmpty || !filenameMatches.isEmpty {
                         var selected: CFTypeRef?
                         AXUIElementCopyAttributeValue(node, kAXSelectedAttribute as CFString, &selected)
-                        nodes.append(["role": value(node, kAXRoleAttribute), "identifier": identifier, "guid_attributes": guidMatches, "filename_attributes": filenameMatches, "attributes": names, "selected": (selected as? NSNumber)?.boolValue ?? false, "outgoing_description": value(node, kAXDescriptionAttribute).hasPrefix("Your iMessage,"), "incoming_description": value(node, kAXDescriptionAttribute).hasPrefix("iMessage,"), "description_length": value(node, kAXDescriptionAttribute).count])
+                        nodes.append(["media_bubble": identifier == "Sticker", "guid_attribute_matches": guidMatches.count, "filename_attribute_matches": filenameMatches.count, "attribute_count": names.count, "selected": (selected as? NSNumber)?.boolValue ?? false, "outgoing_description": value(node, kAXDescriptionAttribute).hasPrefix("Your iMessage,"), "incoming_description": value(node, kAXDescriptionAttribute).hasPrefix("iMessage,"), "description_length": value(node, kAXDescriptionAttribute).count])
                     }
                     return false
                 }
