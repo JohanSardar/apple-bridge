@@ -18,7 +18,7 @@ public struct MessagesSelfTestReadState: Sendable, Codable {
     }
 
     public func needsUnreadRestore(_ current: MessagesSelfTestReadState) -> Bool {
-        unreadCount != current.unreadCount || !matches(current)
+        !matches(current) || unreadCount > 0 && current.unreadCount == 0
     }
 
     static func savedURL(_ chat: String) -> URL {
