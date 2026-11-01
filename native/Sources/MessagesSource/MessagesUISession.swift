@@ -4,6 +4,12 @@ import ApplicationServices
 import SourceSupport
 
 public enum MessagesUIActions {
+    public static func readStateAction(unread: Bool, titles: [String]) -> String? {
+        let desired = unread ? "Mark as Unread" : "Mark as Read"
+        let opposite = unread ? "Mark as Read" : "Mark as Unread"
+        guard titles.filter({ $0 == desired || $0 == opposite }).count == 1 else { return nil }
+        return titles.contains(desired) ? desired : ""
+    }
     public static func resolve<Element>(until deadline: Date, now: () -> Date = { Date() }, wait: () -> Void, attempt: () throws -> Element) throws -> Element {
         repeat {
             do { return try attempt() }

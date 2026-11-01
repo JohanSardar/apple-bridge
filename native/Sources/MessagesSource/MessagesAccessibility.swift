@@ -243,13 +243,22 @@ enum MessagesAccessibility {
         try openMessage(prepared.nativeState["message_guid"].string, settle: 0.5, resetEditor: false)
         try validateConversation(prepared)
         let session = try uiSession()
-        if prepared.action["op"].string == "messages.mark_unread" {
-            let menus = MessagesVariantUI.find(session.root, role: kAXMenuBarItemRole, name: "Conversation")
-            guard menus.count == 1 else { throw MessagesUIFailure.menuUnavailable }
-            try session.fence()
-            try MessagesVariantUI.press(menus[0])
-            let items = MessagesVariantUI.find(menus[0], role: kAXMenuItemRole, name: "Mark as Unread")
-            guard items.count == 1 else { try? session.press(MessagesUISession.escape); throw MessagesUIFailure.menuUnavailable }
+        let menus = MessagesVariantUI.find(session.root, role: kAXMenuBarItemRole, name: "Conversation")
+        guard menus.count == 1 else { throw MessagesUIFailure.menuUnavailable }
+        try session.fence()
+        try MessagesVariantUI.press(menus[0])
+        defer { try? session.press(MessagesUISession.escape) }
+        let action: String = try MessagesUIActions.resolve(until: Date().addingTimeInterval(3), wait: {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }, attempt: {
+            let items = MessagesVariantUI.find(menus[0], role: kAXMenuItemRole)
+            let titles = items.map { value($0, kAXTitleAttribute) }
+            guard let action = MessagesUIActions.readStateAction(unread: prepared.action["op"].string == "messages.mark_unread", titles: titles) else { throw MessagesUIFailure.targetUnavailable }
+            return action
+        })
+        if !action.isEmpty {
+            let items = MessagesVariantUI.find(menus[0], role: kAXMenuItemRole, name: action)
+            guard items.count == 1 else { throw MessagesUIFailure.menuUnavailable }
             try session.fence()
             try MessagesVariantUI.press(items[0])
         }

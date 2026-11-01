@@ -17,6 +17,12 @@ struct MessagesVariantChecks {
         let args = JSON.object(["text": .string("test"), "variant": variant])
         let data: [String: JSON] = ["text": .string("test"), "is_from_me": .bool(true), "error_code": .number(0), "effect": .string("com.apple.messages.effect.loud"), "formatting": .array([range])]
         var checks = try await AccessibilityInputChecks.run()
+        checks["mark_read_uses_explicit_menu_action"] = MessagesUIActions.readStateAction(unread: false, titles: ["Mark as Read"]) == "Mark as Read"
+        checks["mark_unread_uses_explicit_menu_action"] = MessagesUIActions.readStateAction(unread: true, titles: ["Mark as Unread"]) == "Mark as Unread"
+        checks["already_read_needs_no_action"] = MessagesUIActions.readStateAction(unread: false, titles: ["Mark as Unread"]) == ""
+        checks["already_unread_needs_no_action"] = MessagesUIActions.readStateAction(unread: true, titles: ["Mark as Read"]) == ""
+        checks["missing_read_state_menu_rejected"] = MessagesUIActions.readStateAction(unread: false, titles: []) == nil
+        checks["ambiguous_read_state_menu_rejected"] = MessagesUIActions.readStateAction(unread: false, titles: ["Mark as Read", "Mark as Unread"]) == nil
         var readinessTime = Date(timeIntervalSince1970: 0)
         var readinessAttempts = 0
         let readyTarget: String = try MessagesUIActions.resolve(until: readinessTime.addingTimeInterval(1), now: { readinessTime }, wait: { readinessTime.addTimeInterval(0.1) }, attempt: {
