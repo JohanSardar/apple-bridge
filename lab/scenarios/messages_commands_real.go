@@ -333,7 +333,7 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 		saveCleanup()
 	}()
 	if s.ID == "MSG-RESEND" {
-		fixtureReport := filepath.Join(cleanupDirectory, e.RunID+".fixture.json")
+		fixtureReport := filepath.Join(filepath.Dir(cleanupDirectory), "resend-fixture-"+e.RunID+".json")
 		defer os.Remove(fixtureReport)
 		fixtureCtx, cancel := context.WithTimeout(ctx, 50*time.Second)
 		problem := exec.CommandContext(fixtureCtx, "open", "-n", "-W", "-g", "-a", w.HelperApp, "--args", "messages-resend-fixture", e.RunID, "--report", fixtureReport).Run()
