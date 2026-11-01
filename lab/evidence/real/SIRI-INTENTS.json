@@ -32,7 +32,15 @@
       "passed": true
     },
     {
+      "name": "status_intent_cold_baseline_has_no_helper",
+      "passed": true
+    },
+    {
       "name": "status_intent_cold_launch_returns",
+      "passed": true
+    },
+    {
+      "name": "status_intent_cold_host_cleaned_up",
       "passed": true
     },
     {
@@ -42,7 +50,7 @@
   ],
   "metrics": {
     "capture_observer_resets": 0,
-    "installed_shortcut_count": 28,
+    "installed_shortcut_count": 30,
     "output_bytes": 60,
     "output_sha256": "00dccf0aff95323515b12eca0d2b6d5e72290dea6d42db6b0829b409b188f033",
     "probe_pack_matches": 1,

@@ -178,10 +178,7 @@ private struct ClockTimerUI {
 
     private func focus(_ element: AXUIElement) throws {
         app.activate()
-        _ = AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, kCFBooleanTrue)
-        if attribute(element, kAXFocusedAttribute) as? Bool != true {
-            try click(element, button: .left)
-        }
+        try click(element, button: .left)
         RunLoop.current.run(until: Date().addingTimeInterval(0.1))
     }
 
@@ -206,21 +203,28 @@ private struct ClockTimerUI {
             try press(add, step: "open the timer menu")
             try press(find(root, identifier: "addTimer:"), step: "choose a new timer")
         }
-        let picker = find(root, identifier: "TimePicker")
-        guard picker.count == 1 else { throw ClockTimerFailure(step: "find the timer duration picker") }
-        let sliders = find(picker[0], role: kAXSliderRole)
-        guard sliders.count == 3 else { throw ClockTimerFailure(step: "find the three timer duration controls") }
-        for (index, pair) in zip(sliders, [duration / 3600, duration / 60 % 60, duration % 60]).enumerated() {
-            let (element, number) = pair
+        func slider(_ index: Int) -> AXUIElement? {
+            let picker = find(root, identifier: "TimePicker")
+            guard picker.count == 1 else { return nil }
+            let sliders = find(picker[0], role: kAXSliderRole)
+            return sliders.count == 3 ? sliders[index] : nil
+        }
+        for (index, number) in [duration / 3600, duration / 60 % 60, duration % 60].enumerated() {
+            guard let element = slider(index) else { throw ClockTimerFailure(step: "find the three timer duration controls") }
             try focus(element)
             do {
                 try ClockTimers.adjustDurationComponent(to: number, value: {
-                    ClockTimers.durationComponent(attribute(element, kAXValueAttribute))
+                    guard let current = slider(index) else { return nil }
+                    return ClockTimers.durationComponent(attribute(current, kAXValueAttribute))
                 }, adjust: { increasing in
                     key(increasing ? 126 : 125)
                     return true
                 })
-            } catch { throw ClockTimerFailure(step: "set timer duration component \(index + 1)") }
+            } catch {
+                let observed = slider(index).flatMap { ClockTimers.durationComponent(attribute($0, kAXValueAttribute)) } ?? -1
+                if let data = try? JSONSerialization.data(withJSONObject: ["timer_component": index + 1, "timer_component_observed": observed, "timer_component_target": number], options: [.sortedKeys]) { FileHandle.standardError.write(data + Data("\n".utf8)) }
+                throw ClockTimerFailure(step: "set timer duration component \(index + 1)")
+            }
             key(48)
         }
         let sheet = find(root, role: kAXSheetRole)
@@ -259,13 +263,19 @@ private struct ClockTimerUI {
         }
         func deleteItems() -> [AXUIElement] {
             find(root, role: kAXMenuRole).filter { menu in
-                guard let parent = attribute(menu, kAXParentAttribute) else { return false }
+                guard let parent = attribute(menu, kAXParentAttribute) else { return true }
                 return attribute(unsafeDowncast(parent, to: AXUIElement.self), kAXRoleAttribute) as? String != kAXMenuBarItemRole
             }.flatMap { find($0, role: kAXMenuItemRole) }.filter { name($0) == "Delete" }
         }
         _ = AXUIElementPerformAction(rows[0], kAXShowMenuAction as CFString)
         RunLoop.current.run(until: Date().addingTimeInterval(0.25))
         if deleteItems().isEmpty { try click(rows[0], button: .right) }
+        if deleteItems().count != 1 {
+            let menus = find(root, role: kAXMenuRole)
+            let items = menus.flatMap { find($0, role: kAXMenuItemRole) }
+            let details: [String: Any] = ["timer_context_menus": menus.count, "timer_context_menu_items": items.count, "timer_context_delete_items": items.filter { name($0) == "Delete" }.count, "timer_context_delete_timer_items": items.filter { name($0) == "Delete Timer" }.count]
+            if let data = try? JSONSerialization.data(withJSONObject: details, options: [.sortedKeys]) { FileHandle.standardError.write(data + Data("\n".utf8)) }
+        }
         try press(deleteItems(), step: "delete the tagged recent timer")
     }
 }
