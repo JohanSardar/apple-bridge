@@ -22,46 +22,11 @@ public enum MailFixtureCleanup {
         public var errorDescription: String? { "Mail could not " + step + ". " + MailCommands.failureMessage(cause) + " " + recovery }
     }
     @MainActor public static func selectDisplayed(tag: String) async throws {
-        guard AXIsProcessTrusted() else { throw Failure(step: "access its Accessibility controls", cause: MailCommandFailure.rejected, recovery: "Enable Apple Bridge in System Settings > Privacy & Security > Accessibility, then try again.") }
-        guard let mail = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.mail").first else { throw MailCommandFailure.connectionLost }
-        let app = AXUIElementCreateApplication(mail.processIdentifier)
-        AXUIElementSetMessagingTimeout(app, 1)
-        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
-        var visited = 0
-        func attribute(_ element: AXUIElement, _ name: String) -> CFTypeRef? {
-            guard ContinuousClock.now < deadline else { return nil }
-            var value: CFTypeRef?
-            guard AXUIElementCopyAttributeValue(element, name as CFString, &value) == .success else { return nil }
-            return value
-        }
-        func find(_ element: AXUIElement, row: AXUIElement?, depth: Int) -> AXUIElement? {
-            visited += 1
-            guard depth < 20, visited < 2000, ContinuousClock.now < deadline else { return nil }
-            let currentRow = attribute(element, kAXRoleAttribute) as? String == kAXRowRole ? element : row
-            if let currentRow {
-                for name in [kAXValueAttribute, kAXTitleAttribute, kAXDescriptionAttribute] {
-                    if (attribute(element, name) as? String)?.contains(tag) == true { return currentRow }
-                }
-            }
-            for child in attribute(element, kAXChildrenAttribute) as? [AXUIElement] ?? [] {
-                if let found = find(child, row: currentRow, depth: depth + 1) { return found }
-            }
-            return nil
-        }
-        let windows = attribute(app, kAXWindowsAttribute) as? [AXUIElement] ?? []
-        for window in windows {
-            guard let row = find(window, row: nil, depth: 0) else { continue }
-            guard AXUIElementPerformAction(window, kAXRaiseAction as CFString) == .success else { throw Failure(step: "bring the Mail viewer forward", cause: MailCommandFailure.rejected) }
-            let selected = AXUIElementSetAttributeValue(row, kAXSelectedAttribute as CFString, kCFBooleanTrue)
-            var selectedRows = false
-            if selected != .success, let parent = attribute(row, kAXParentAttribute) {
-                selectedRows = AXUIElementSetAttributeValue(unsafeDowncast(parent, to: AXUIElement.self), kAXSelectedRowsAttribute as CFString, [row] as CFArray) == .success
-            }
-            guard selected == .success || selectedRows || AXUIElementPerformAction(row, kAXPressAction as CFString) == .success else { throw Failure(step: "select the tagged row in the Mail viewer", cause: MailCommandFailure.rejected) }
-            try await Task.sleep(for: .milliseconds(200))
-            return
-        }
-        throw Failure(step: "find the tagged row in the Mail viewer", cause: MailCommandFailure.rejected)
+        guard !tag.isEmpty, !tag.contains("\n"), !tag.contains("\r"), tag.contains("@") else { throw MailCommandFailure.unconfirmed }
+        let header = tag.hasPrefix("<") ? tag : "<" + tag + ">"
+        guard let encoded = header.addingPercentEncoding(withAllowedCharacters: .alphanumerics),
+              let url = URL(string: "message://" + encoded), NSWorkspace.shared.open(url) else { throw MailCommandFailure.rejected }
+        try await Task.sleep(for: .milliseconds(500))
     }
     @MainActor public static func removeSelected() async throws {
         guard AXIsProcessTrusted(), let mail = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.mail").first else { throw MailCommandFailure.rejected }
@@ -108,7 +73,7 @@ public enum MailFixtureCleanup {
             """)
         }
         try await closeCompose()
-        for attempt in 0..<8 {
+        for attempt in 0..<40 {
             let ids = try await fixtureIDs(tag)
             guard ids.count <= 16, ids.allSatisfy({ UInt64($0) != nil }) else { throw MailCommandFailure.unconfirmed }
             var selected = try await perform("select the tagged test message", """
@@ -121,7 +86,11 @@ public enum MailFixtureCleanup {
                         set matching to (messages of b whose id is (contents of ownedID))
                         if (count matching) > 0 then
                             set candidate to item 1 of matching
-                            if subject of candidate is \(q(tag)) and deleted status of candidate is false then set m to candidate
+                            if subject of candidate is \(q(tag)) and deleted status of candidate is false then
+                                set own to extract address from sender of candidate
+                                set ownRecipients to address of every to recipient of candidate
+                                if own is in ownRecipients then set m to candidate
+                            end if
                         end if
                     on error errorText number errorNumber
                         if errorNumber is not -1728 then error errorText number errorNumber
@@ -136,14 +105,10 @@ public enum MailFixtureCleanup {
                 return "failure|10|-1728"
             end if
             if subject of m is not \(q(tag)) then error "Test message selection changed"
-            if (count message viewers) is 0 then make new message viewer
             set cleanupStage to 3
-            set v to front message viewer
-            activate
-            set cleanupStage to 4
-            set selected mailboxes of v to {mailbox of m}
-            delay 0.2
-            return "select|" & ((id of m) as string)
+            set headerID to message id of m
+            if headerID is "" then return "failure|3|-2700"
+            return "select|" & headerID
             on error errorText number errorNumber
                 return "failure|" & cleanupStage & "|" & errorNumber
             end try
@@ -161,13 +126,12 @@ public enum MailFixtureCleanup {
                 return result
             }
             if selected.hasPrefix("select|") {
-                guard ids.contains(String(selected.dropFirst(7))) else { throw MailCommandFailure.unconfirmed }
-                try await selectDisplayed(tag)
-                selected = try await perform("confirm the test row selected through Accessibility", """
+                let header = String(selected.dropFirst(7))
+                try await selectDisplayed(header)
+                selected = try await perform("confirm the test message opened by Message-ID", """
                 repeat 20 times
-                    set chosen to selected messages of front message viewer
-                    if (count chosen) is 1 then
-                        if subject of item 1 of chosen is \(q(tag)) then return (id of item 1 of chosen) as string
+                    if (count windows) > 0 then
+                        if name of front window contains \(q(tag)) then return "opened"
                     end if
                     delay 0.1
                 end repeat
@@ -178,15 +142,19 @@ public enum MailFixtureCleanup {
                 let parts = selected.split(separator: "|")
                 let steps = [1: "find the tagged test message", 2: "read the tagged test message", 3: "show the tagged mailbox", 4: "choose the tagged mailbox", 10: "locate the indexed test message in Mail"]
                 if parts.count == 3, let stage = Int(parts[1]), let step = steps[stage], let code = Int(parts[2]) {
-                    if attempt < 7, [4, 10].contains(stage), [-1728, -1700].contains(code) {
+                    if attempt < 39, [4, 10].contains(stage), [-1728, -1700].contains(code) {
                         try await Task.sleep(for: .milliseconds(500))
                         continue
                     }
                     throw Failure(step: step, cause: MailCommandFailure.script(code))
                 }
             }
-            guard UInt64(selected) != nil, ids.contains(selected) else { throw MailCommandFailure.unconfirmed }
+            guard selected == "opened" else { throw MailCommandFailure.unconfirmed }
             try await removeSelected()
+            let settle = ContinuousClock.now.advanced(by: .seconds(8))
+            while try await fixtureIDs(tag) == ids, ContinuousClock.now < settle {
+                try await Task.sleep(for: .milliseconds(500))
+            }
         }
         throw MailCommandFailure.unconfirmed
     }

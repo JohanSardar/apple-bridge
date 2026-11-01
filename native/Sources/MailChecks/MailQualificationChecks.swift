@@ -12,6 +12,7 @@ private actor QualificationMailFake {
     var outgoing = false
     let outgoingAfterDelete: Bool
     let retainsClosedBackend: Bool
+    var staleIndexReads = 0
     var visibleOutgoing = false
     init(fail: Bool = false, stalled: Bool = false, selectionMismatch: Bool = false, outgoingAfterDelete: Bool = false, retainsClosedBackend: Bool = false) { self.fail = fail; self.stalled = stalled; self.selectionMismatch = selectionMismatch; self.outgoingAfterDelete = outgoingAfterDelete; self.retainsClosedBackend = retainsClosedBackend }
     func run(_ body: String) throws -> String {
@@ -21,8 +22,8 @@ private actor QualificationMailFake {
             return "Mail"
         }
         if body.hasPrefix("set matched to"), !body.contains("return count of matched") { return "123" }
-        if body.contains("set cleanupStage") { return created ? "select|123" : "clear" }
-        if body.contains("set chosen to selected messages") { return created && !selectionMismatch ? "123" : "" }
+        if body.contains("set cleanupStage") { return created ? "select|fixture@example.invalid" : "clear" }
+        if body.contains("name of front window contains") { return created && !selectionMismatch ? "opened" : "" }
         if body.contains("set ownedIDs") { if !retainsClosedBackend { outgoing = false }; visibleOutgoing = false; return "" }
         if body.hasPrefix("return count (outgoing") { return (body.contains("visible is true") ? visibleOutgoing : outgoing) ? "1" : "0" }
         if body.hasPrefix("return count (windows") { return visibleOutgoing ? "1" : "0" }
@@ -37,7 +38,11 @@ private actor QualificationMailFake {
         return ""
     }
     func remove() { created = false; outgoing = outgoingAfterDelete; visibleOutgoing = outgoingAfterDelete }
-    func ids() -> [String] { created ? ["123"] : [] }
+    func ids() -> [String] {
+        if !created, staleIndexReads > 0 { staleIndexReads -= 1; return ["123"] }
+        return created ? ["123"] : []
+    }
+    func lagIndex() { staleIndexReads = 2 }
     func select() { selectionMismatch = false }
     func restart() { stalled = false }
     func scripts() -> [String] { calls }
@@ -86,17 +91,24 @@ func checkMailQualification() async throws {
             }
             try require(valid)
         }
-        try require(scripts.contains { $0.contains("set chosen to selected messages") } == (scenario != "MAIL-BODY-FIXTURE"))
+        try require(scripts.contains { $0.contains("name of front window contains") } == (scenario != "MAIL-BODY-FIXTURE"))
         if scenario == "MAIL-BODY-FIXTURE" { try require(scripts.contains { $0.contains("set default message format to priorFormat") }) }
         if scenario != "MAIL-BODY-FIXTURE" {
             try require(scripts.contains { $0.contains("windows whose name contains") && $0.contains("close m saving no") && !$0.contains("set visible of m to true") })
-            try require(scripts.contains { $0.contains("{drafts mailbox, inbox, sent mailbox}") && $0.contains("set selected mailboxes of v") })
-            try require(scripts.contains { $0.contains("if subject of item 1 of chosen is") })
+            try require(scripts.contains { $0.contains("{drafts mailbox, inbox, sent mailbox}") && $0.contains("set headerID to message id of m") })
+            try require(scripts.contains { $0.contains("if own is in ownRecipients") })
             try require(!scripts.contains { $0.contains("delete m") || $0.contains("move m") || $0.contains("set deleted status") || $0.contains("set selected messages") })
         }
         try require(scripts.contains { $0.contains("extract address from sender") && $0.contains("visible:true") && $0.contains("close m saving no") })
         if scenario == "MAIL-ORGANIZE-REAL" { try require(scripts.contains { $0.contains("set flagged status of m to false") }) }
     }
+    let delayedIndex = QualificationMailFake()
+    await delayedIndex.lagIndex()
+    let delayedProof = try await MailQualification(script: { try await delayedIndex.run($0) }, fixtureIDs: { _ in await delayedIndex.ids() }, selectDisplayed: { header in
+        try require(header == "fixture@example.invalid")
+        await delayedIndex.select()
+    }, removeSelected: { await delayedIndex.remove() }).run(scenario: "MAIL-ORGANIZE-REAL", tag: "[ab-test] delayed")
+    try require(delayedProof["cleanup_passed"].bool)
     let stalled = QualificationMailFake(stalled: true)
     let recovered = try await MailQualification(script: { try await stalled.run($0) }, fixtureIDs: { _ in await stalled.ids() }, selectDisplayed: { _ in await stalled.select() }, removeSelected: { await stalled.remove() }, restart: { await stalled.restart() }).run(scenario: "MAIL-DRAFT-REAL", tag: "[ab-test] recovered")
     try require(recovered["unresponsive_mail_recovered"].bool && recovered["draft_created"].bool && recovered["cleanup_passed"].bool)
