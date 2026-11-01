@@ -9,26 +9,6 @@ import (
 	"time"
 )
 
-func simulatedIntentAppReplacement() bool {
-	directory, err := os.MkdirTemp("", "ab-intent-replacement-")
-	if err != nil {
-		return false
-	}
-	defer os.RemoveAll(directory)
-	app := filepath.Join(directory, "current.app")
-	installed := filepath.Join(directory, "installed.app")
-	previous := filepath.Join(directory, "previous.app")
-	if os.Mkdir(app, 0700) != nil || os.Mkdir(installed, 0700) != nil || os.WriteFile(filepath.Join(app, "current"), []byte("synthetic"), 0600) != nil {
-		return false
-	}
-	if replaceBridgeIntentApp(app, installed, previous) != nil {
-		return false
-	}
-	data, err := os.ReadFile(filepath.Join(installed, "current"))
-	_, previousErr := os.Stat(previous)
-	return err == nil && string(data) == "synthetic" && os.IsNotExist(previousErr)
-}
-
 func simulatedIntentHostCleanup(ctx context.Context) bool {
 	directory, err := os.MkdirTemp("", "ab-intent-host-check-")
 	if err != nil {

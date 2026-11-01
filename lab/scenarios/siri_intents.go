@@ -71,9 +71,7 @@ func runSiriIntents(ctx context.Context, s Scenario, level string) (e Evidence) 
 	if level == "sim" {
 		scoped := simulatedIntentHostCleanup(ctx)
 		e.Assertions = append(e.Assertions, Assertion{Name: "status_intent_host_cleanup_is_scoped", Passed: scoped})
-		replaced := simulatedIntentAppReplacement()
-		e.Assertions = append(e.Assertions, Assertion{Name: "status_intent_previous_bundle_removed", Passed: replaced})
-		e.Passed = e.Passed && scoped && replaced
+		e.Passed = e.Passed && scoped
 	}
 	if level == "real" && e.Passed && stopHost != nil {
 		stopHost()
@@ -134,20 +132,14 @@ func startBridgeIntentHost(ctx context.Context) (string, func(), error) {
 	}
 	installed := filepath.Join(parent, "AppleBridgeHelper.app")
 	previous := filepath.Join(directory, "previous.app")
-	registrar := "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
-	if _, statErr := os.Stat(installed); statErr == nil {
-		if err = exec.CommandContext(ctx, registrar, "-u", installed).Run(); err != nil {
-			os.RemoveAll(directory)
-			return "", nil, fmt.Errorf("Apple Bridge could not unregister its previous development Helper: %w", err)
-		}
-	}
-	if err = replaceBridgeIntentApp(app, installed, previous); err != nil {
+	if err = os.Rename(installed, previous); err != nil && !os.IsNotExist(err) {
 		os.RemoveAll(directory)
 		return "", nil, err
 	}
-	if err = exec.CommandContext(ctx, registrar, "-f", installed).Run(); err != nil {
+	if err = os.Rename(app, installed); err != nil {
+		os.Rename(previous, installed)
 		os.RemoveAll(directory)
-		return "", nil, fmt.Errorf("Apple Bridge could not register its current development Helper: %w", err)
+		return "", nil, err
 	}
 	app = installed
 	ready := filepath.Join(directory, "pid")
@@ -201,18 +193,6 @@ func startBridgeIntentHost(ctx context.Context) (string, func(), error) {
 			}
 		}
 	}
-}
-
-func replaceBridgeIntentApp(app, installed, previous string) error {
-	var err error
-	if err = os.Rename(installed, previous); err != nil && !os.IsNotExist(err) {
-		return err
-	}
-	if err = os.Rename(app, installed); err != nil {
-		os.Rename(previous, installed)
-		return err
-	}
-	return os.RemoveAll(previous)
 }
 
 func stopStableIntentHosts(ctx context.Context) error {
