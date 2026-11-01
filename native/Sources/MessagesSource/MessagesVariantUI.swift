@@ -82,10 +82,9 @@ enum MessagesVariantUI {
         }
         try MessagesAccessibility.replace(session,text:args["text"].string)
         if kind=="schedule" {
-            let buttons=find(application,role:kAXButtonRole).filter { MessagesUIActions.appsButton(description: value($0,kAXDescriptionAttribute), identifier: value($0,kAXIdentifierAttribute)) }
-            try press(try unique(buttons,failure:.scheduleDateControlsUnverified))
-            checkpoint("apps_opened", root: application)
-            try press(try unique(find(application,name:"Send Later"),failure:.scheduleDateControlsUnverified))
+            let editMenu = try unique(find(application, role: kAXMenuBarItemRole, name: "Edit"), failure: .scheduleDateControlsUnverified)
+            try press(editMenu)
+            try press(try unique(find(editMenu, role: kAXMenuItemRole, name: "Send Later…"), failure: .scheduleDateControlsUnverified))
             checkpoint("schedule_opened", root: application)
             guard let date = parseTimestamp(variant["scheduled_for"].string) else { throw SendVariantFailure.invalidVariant }
             let fields = find(application, role: "AXDateField")

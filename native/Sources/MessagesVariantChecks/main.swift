@@ -29,8 +29,6 @@ struct MessagesVariantChecks {
         checks["named_incoming_bubble_is_resolved"] = MessagesUIActions.matchesDirection("Self Name, tagged fixture, now", outgoing: false)
         checks["outgoing_bubble_is_not_incoming"] = !MessagesUIActions.matchesDirection("Your iMessage, tagged fixture, now", outgoing: false)
         checks["other_outgoing_service_is_not_incoming"] = !MessagesUIActions.matchesDirection("Your SMS, tagged fixture, now", outgoing: false)
-        checks["lowercase_app_drawer_button_is_resolved"] = MessagesUIActions.appsButton(description: "add", identifier: "")
-        checks["unrelated_button_is_not_an_app_drawer"] = !MessagesUIActions.appsButton(description: "Start FaceTime", identifier: "")
         let address = try MessagesNavigation.addressURL("self+test@example.com")
         checks["self_chat_navigation_uses_exact_address"] = URLComponents(url: address, resolvingAgainstBaseURL: false)?.queryItems == [URLQueryItem(name: "address", value: "self+test@example.com")]
         let deepLink = try MessagesNavigation.messageURL("test-guid&other=value")

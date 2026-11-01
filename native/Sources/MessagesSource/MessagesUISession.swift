@@ -4,9 +4,6 @@ import ApplicationServices
 import SourceSupport
 
 public enum MessagesUIActions {
-    public static func appsButton(description: String, identifier: String) -> Bool {
-        ["apps", "add", "show apps"].contains(description.lowercased()) || ["AppsButton", "AppDrawerButton"].contains(identifier)
-    }
     public static func matchesDirection(_ description: String, outgoing: Bool) -> Bool {
         guard !description.isEmpty else { return false }
         let own = description.hasPrefix("Your iMessage,") || description.hasPrefix("Your text message,")
