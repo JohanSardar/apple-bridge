@@ -38,6 +38,7 @@ func (f *clockSimulation) Run(ctx context.Context, input shortcut.Input) (shortc
 		return shortcut.Result{}, errors.New("invalid synthetic request")
 	}
 	f.operations = append(f.operations, request.Operation)
+	previousAlarms := slices.Clone(f.alarms)
 	switch request.Operation {
 	case "create_alarm":
 		alarm := *request.Alarm
@@ -69,6 +70,9 @@ func (f *clockSimulation) Run(ctx context.Context, input shortcut.Input) (shortc
 		return shortcut.Result{}, fmt.Errorf("unsupported synthetic operation")
 	}
 	response := clockpack.Readback{Version: 1, Operation: request.Operation, Alarms: f.alarms, Timers: f.timers, Capabilities: f.capabilities, TimerRunning: request.Operation == "start_timer", Duration: request.Duration, Label: request.Label}
+	if request.Operation == "toggle_alarm" || request.Operation == "delete_alarm" {
+		response.Alarms = previousAlarms
+	}
 	data, err := json.Marshal(response)
 	return shortcut.Result{Data: data}, err
 }

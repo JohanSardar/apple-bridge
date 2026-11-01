@@ -2,6 +2,7 @@ package clockpack
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -11,6 +12,49 @@ import (
 type exchangeFixture struct {
 	data  string
 	calls int
+}
+
+type refreshingExchangeFixture struct {
+	mutation string
+	fresh    string
+	calls    []string
+}
+
+func (f *refreshingExchangeFixture) Run(_ context.Context, input shortcut.Input) (shortcut.Result, error) {
+	var request Request
+	if err := json.Unmarshal(input.Data, &request); err != nil {
+		return shortcut.Result{}, err
+	}
+	f.calls = append(f.calls, request.Operation)
+	data := f.mutation
+	if request.Operation == "alarms" {
+		data = f.fresh
+	}
+	return shortcut.Result{Data: []byte(data)}, nil
+}
+
+func TestAlarmMutationRechecksStaleEntityResultsInANewInvocation(t *testing.T) {
+	for _, operation := range []string{"toggle_alarm", "delete_alarm"} {
+		t.Run(operation, func(t *testing.T) {
+			fixture := &refreshingExchangeFixture{
+				mutation: `{"version":1,"operation":"` + operation + `","alarms":[{"id":"one","label":"[ab-test] synthetic","time":"07:05","repeat_days":[1,3],"enabled":true}]}`,
+				fresh:    `{"version":1,"operation":"alarms","alarms":[]}`,
+			}
+			if operation == "toggle_alarm" {
+				fixture.fresh = `{"version":1,"operation":"alarms","alarms":[{"id":"one","label":"[ab-test] synthetic","time":"07:05","repeat_days":[1,3],"enabled":false}]}`
+			}
+			request := Request{Operation: operation, Alarm: &Alarm{ID: "one", Label: "[ab-test] synthetic", Time: "07:05", RepeatDays: []int{1, 3}}}
+			out, err := (Pack{Runner: fixture}).Exchange(context.Background(), request)
+			if err != nil || out.Operation != operation || len(fixture.calls) != 2 || fixture.calls[1] != "alarms" {
+				t.Fatal(out, err, fixture.calls)
+			}
+			fixture.calls = nil
+			fixture.fresh = `{"version":1,"operation":"alarms","alarms":[{"id":"one","label":"[ab-test] synthetic","time":"07:05","repeat_days":[1,3],"enabled":true}]}`
+			if _, err := (Pack{Runner: fixture}).Exchange(context.Background(), request); !errors.Is(err, ErrUnqualified) || len(fixture.calls) != 2 {
+				t.Fatal("a fresh readback must still prove the requested change", err, fixture.calls)
+			}
+		})
+	}
 }
 
 func (f *exchangeFixture) Run(context.Context, shortcut.Input) (shortcut.Result, error) {

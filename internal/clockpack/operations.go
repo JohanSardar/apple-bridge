@@ -172,29 +172,15 @@ func (p Pack) Exchange(ctx context.Context, request Request) (Readback, error) {
 		if out.Alarms == nil {
 			return Readback{}, ErrUnqualified
 		}
-		found := false
-		for _, a := range out.Alarms {
-			if request.Operation == "create_alarm" && a.Label != request.Alarm.Label || request.Operation != "create_alarm" && a.ID != request.Alarm.ID {
-				continue
-			}
-			if found {
-				return Readback{}, ErrUnqualified
-			}
-			found = true
-			expectedAlarm := *request.Alarm
-			expectedAlarm.RepeatDays = slices.Clone(expectedAlarm.RepeatDays)
-			slices.Sort(expectedAlarm.RepeatDays)
-			if request.Operation == "create_alarm" {
-				expectedAlarm.ID = a.ID
-			}
-			expected, _ := json.Marshal(expectedAlarm)
-			actual, _ := json.Marshal(a)
-			if string(expected) != string(actual) {
+		if !alarmMutationMatches(request, out.Alarms) {
+			fresh, readErr := p.Exchange(ctx, Request{Operation: "alarms"})
+			if readErr != nil {
 				return out, ErrUnqualified
 			}
-		}
-		if found != (request.Operation != "delete_alarm") {
-			return out, ErrUnqualified
+			out.Alarms = fresh.Alarms
+			if !alarmMutationMatches(request, out.Alarms) {
+				return out, ErrUnqualified
+			}
 		}
 	case "start_timer":
 		if !out.TimerRunning || out.Duration != request.Duration || out.Label != request.Label {
@@ -209,4 +195,29 @@ func (p Pack) Exchange(ctx context.Context, request Request) (Readback, error) {
 		}
 	}
 	return out, nil
+}
+
+func alarmMutationMatches(request Request, alarms []Alarm) bool {
+	found := false
+	for _, alarm := range alarms {
+		if request.Operation == "create_alarm" && alarm.Label != request.Alarm.Label || request.Operation != "create_alarm" && alarm.ID != request.Alarm.ID {
+			continue
+		}
+		if found {
+			return false
+		}
+		found = true
+		expectedAlarm := *request.Alarm
+		expectedAlarm.RepeatDays = slices.Clone(expectedAlarm.RepeatDays)
+		slices.Sort(expectedAlarm.RepeatDays)
+		if request.Operation == "create_alarm" {
+			expectedAlarm.ID = alarm.ID
+		}
+		expected, _ := json.Marshal(expectedAlarm)
+		actual, _ := json.Marshal(alarm)
+		if string(expected) != string(actual) {
+			return false
+		}
+	}
+	return found == (request.Operation != "delete_alarm")
 }
