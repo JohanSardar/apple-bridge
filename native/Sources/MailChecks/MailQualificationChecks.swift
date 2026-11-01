@@ -53,7 +53,8 @@ func checkMailQualification() async throws {
         try require(scripts.contains { $0.contains("set remaining to 0") } == (scenario != "MAIL-BODY-FIXTURE"))
         if scenario == "MAIL-BODY-FIXTURE" { try require(scripts.contains { $0.contains("set default message format to priorFormat") }) }
         if scenario != "MAIL-BODY-FIXTURE" {
-            try require(scripts.contains { $0.contains("repeat 2 times") && $0.contains("by -1") && $0.contains("then delete m") && $0.contains("set deleted status of m to true") })
+            try require(scripts.contains { $0.contains("repeat 2 times") && $0.contains("by -1") && $0.contains("if (id of m) is not in trashed then delete m") && $0.contains("messages of trash mailbox whose subject is \"[ab-test] fixture\"") })
+            try require(!scripts.contains { $0.contains("set deleted status") })
         }
         if scenario == "MAIL-ORGANIZE-REAL" { try require(scripts.contains { $0.contains("set flagged status of m to false") }) }
     }

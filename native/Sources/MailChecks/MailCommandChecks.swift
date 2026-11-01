@@ -86,7 +86,7 @@ func checkMailCommands() async throws {
     catch is CancellationError {}
     try require(MailCommandFailure.appleEvent(-1712) == .timeout)
     try require(MailCommandFailure.appleEvent(-1743) == .permission && MailCommandFailure.appleEvent(-1744) == .permission)
-    try require(MailCommandFailure.appleEvent(-600) == .script(-600))
+    try require(MailCommandFailure.appleEvent(-600) == .connectionLost && MailCommandFailure.appleEvent(-609) == .connectionLost)
     for op in MailCommands.operations {
         for observed in [true, false] {
             let fake = MailFake(observed ? "1" : "")

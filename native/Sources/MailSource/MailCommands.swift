@@ -5,12 +5,13 @@ import AppKit
 import SourceSupport
 
 public enum MailCommandFailure: Error, LocalizedError, Sendable, Equatable {
-    case permission, timeout, rejected, unconfirmed
+    case permission, timeout, connectionLost, rejected, unconfirmed
     case script(Int)
     public static func appleEvent(_ code: Int) -> Self {
         switch code {
         case -1712: .timeout
         case -1743, -1744: .permission
+        case -600, -609: .connectionLost
         default: .script(code)
         }
     }
@@ -18,6 +19,7 @@ public enum MailCommandFailure: Error, LocalizedError, Sendable, Equatable {
         switch self {
         case .permission: "Mail automation is not allowed. Enable Mail for Apple Bridge in System Settings > Privacy & Security > Automation."
         case .timeout: "Mail automation did not respond in time. Restart Mail and try again. If it still does not respond, sign out of macOS and sign in again."
+        case .connectionLost: "Mail closed before completing the command. Reopen Mail, let mailbox sync finish, and check the message before trying again."
         case .rejected, .script: "Mail could not complete the command. Open Mail, check the account and mailbox, and try again."
         case .unconfirmed: "Mail could not confirm the message after the command. Check Sent or Drafts before trying again."
         }

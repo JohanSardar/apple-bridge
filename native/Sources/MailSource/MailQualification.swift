@@ -20,24 +20,29 @@ public struct MailQualification: Sendable {
               ["MAIL-SEND-SELF-REAL", "MAIL-DRAFT-REAL", "MAIL-ORGANIZE-REAL", "MAIL-BODY-FIXTURE", "MAIL-CLEANUP"].contains(scenario) else { throw SourceFailure.invalid }
         let q = MailCommands.quote
         let cleanup = """
-        repeat 2 times
-            repeat with a in accounts
-                repeat with b in mailboxes of a
-                    set owned to (every message of b whose subject is \(q(tag)))
-                    repeat with m in owned
-                        set deleted status of m to true
-                    end repeat
-                end repeat
-            end repeat
-        end repeat
         repeat with i from (count outgoing messages) to 1 by -1
             set m to outgoing message i
             if subject of m is \(q(tag)) then delete m
         end repeat
+        repeat 2 times
+            set trashed to id of (messages of trash mailbox whose subject is \(q(tag)))
+            repeat with a in accounts
+                repeat with b in mailboxes of a
+                    set owned to (every message of b whose subject is \(q(tag)))
+                    repeat with m in owned
+                        if (id of m) is not in trashed then delete m
+                    end repeat
+                end repeat
+            end repeat
+            delay 0.2
+        end repeat
+        set trashed to id of (messages of trash mailbox whose subject is \(q(tag)))
         set remaining to 0
         repeat with a in accounts
             repeat with b in mailboxes of a
-                set remaining to remaining + (count (messages of b whose subject is \(q(tag)) and deleted status is false))
+                repeat with m in (messages of b whose subject is \(q(tag)) and deleted status is false)
+                    if (id of m) is not in trashed then set remaining to remaining + 1
+                end repeat
             end repeat
         end repeat
         set remainingOutgoing to count (outgoing messages whose subject is \(q(tag)))
