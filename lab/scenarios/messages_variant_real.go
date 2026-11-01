@@ -66,14 +66,14 @@ func runMessagesVariantReal(ctx context.Context, s Scenario, e Evidence) (result
 	}
 	result.Metrics = map[string]any{"writes_submitted": proof.Writes}
 	if proof.Cleanup != nil {
-		result.Assertions = append(result.Assertions, Assertion{Name: "owned_messages_cleanup", Passed: *proof.Cleanup})
+		result.Assertions = append(result.Assertions, Assertion{Name: "owned_messages_cleanup", Passed: *proof.Cleanup, Detail: proof.Reason})
 	}
 	result.Passed = proof.Passed
 	if proof.Limited {
 		result.Status = "limited"
 		result.Conditions = map[string]string{"reason": proof.Reason}
 	} else {
-		result.Assertions = append(result.Assertions, Assertion{Name: "sent_variant_attributes_readback", Passed: proof.Passed})
+		result.Assertions = append(result.Assertions, Assertion{Name: "sent_variant_attributes_readback", Passed: proof.Passed, Detail: proof.Reason})
 	}
 	return
 }
