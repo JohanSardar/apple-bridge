@@ -561,7 +561,7 @@ features:
       - {id: NATIVE-MEDIA-POSTERS, levels: [sim]}
     notes: Sim, cap, yield, posters and native export-safety levels pass. Real and replica cold-arrival runs are limited by the own-handle send restriction above. The final Messages tagged cleanup (design/MILESTONE-GATES.md) covers the earlier W1 file bubbles in the own-handle chat; nothing was sent for this feature.
     limits:
-      - {"scenario": "WEB-MEDIA-VARIANTS", "level": "real", "reason": "limited: needs native attachment cleanup qualification. Scoped recovery could not locate six media rows created by this T63 run; zero foreign rows were deleted. Further real attachment sends are blocked before world creation. This is not a missing-grant limit."}
+      - {"scenario": "WEB-MEDIA-VARIANTS", "level": "real", "reason": "The verified self-chat contains unread existing messages. Native preflight submitted zero writes and staged no HEIC, MOV or CAF sends. Read those messages in Messages on the Air, then rerun native attachment rendering and owned cleanup qualification."}
       - {"scenario": "WEB-MEDIA-VARIANTS", "level": "replica", "reason": "Same send restriction as the real level. One read-only Air gateway to Ubuntu replica attempt (2026-10-23) did not capture its three expected existing synthetic attachments within 45 seconds; the cause is undetermined (the targets may have been moved by the final tagged cleanup). No current replica variant downloads or cold-arrival latency are certified."}
   - id: web.remote
     title: Reach from anywhere through embedded Tailscale Funnel
@@ -755,10 +755,10 @@ features:
       - {id: WEB-MSG-OPTIMISTIC, levels: [web]}
       - {id: WEB-MSG-PARTS, levels: [web]}
     limits:
-      - {"scenario": "MSG-SELFTEST", "level": "real", "reason": "limited: initial real Helper world startup failed during the changed-module build; no selftest effects were submitted and the independent baseline stayed at 160287 active message/chat identities."}
-      - {"scenario": "MSG-READSTATE-REAL", "level": "real", "reason": "skipped: requires unlocked Mac with Messages UI available and an unused own self-chat handle; no safe UI cleanup demonstrated at lock screen"}
-      - {"scenario": "MSG-DELETE-REAL", "level": "real", "reason": "skipped: requires unlocked Mac with Messages UI available and an unused own self-chat handle; no safe UI cleanup demonstrated at lock screen"}
-      - {"scenario": "MSG-RESEND", "level": "real", "reason": "skipped: requires a uniquely identified failed self-chat test message via APPLE_BRIDGE_RESEND_RUN; existing self-chat residue must remain untouched"}
+      - {"scenario": "MSG-SELFTEST", "level": "real", "reason": "The native self-test reached its existing self-chat baseline and found unread earlier messages. It stopped before sends, left zero tagged text/file rows, and preserved the 160349-identity baseline. Read those messages in Messages on the Air, then rerun the self-test."}
+      - {"scenario": "MSG-READSTATE-REAL", "level": "real", "reason": "The verified existing self-chat contains unread earlier messages. The native preflight submitted zero writes. Read those messages in Messages on the Air before rerunning; no unused self alias is required."}
+      - {"scenario": "MSG-DELETE-REAL", "level": "real", "reason": "The verified existing self-chat contains unread earlier messages. Cleanup cannot open it without changing their read state, so the native preflight submitted zero writes. Read those messages in Messages on the Air before rerunning; existing residue stays untouched."}
+      - {"scenario": "MSG-RESEND", "level": "real", "reason": "No uniquely verified failed self-message was created by the current run. The real check submitted zero writes and left existing failed messages untouched; native resend remains unqualified."}
       - {"scenario": "WEB-UPLOAD-NATIVE-STAGING", "level": "real", "reason": "limited: native send remained indeterminate. T63 recovered this run's three text/file rows with zero foreign deletions. Further attachment sends are blocked pending native cleanup qualification; this is not a missing-grant limit."}
   - id: web.messages.parity
     title: Messages parity (pins, mute, read receipts, Send Later, effects, formatting, mentions, audio messages, Recently Deleted, groups)

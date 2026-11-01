@@ -1,10 +1,10 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[4.29 5.84 6.83] cpu_idle=82% cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[24.08 14.99 13.19] cpu_idle=29% cpus=8 other_heavy=0"
   },
   "status": "limited",
-  "run_id": "run_01M6A2H2MS5NY1F30MF0GG7257",
+  "run_id": "run_01M6AEY7J1G8XX65E97Z9G2GNE",
   "metrics": {
     "capture_observer_resets": 0,
     "cleanup_counts": {
@@ -13,27 +13,16 @@
       "created_count": 0,
       "passed": true
     },
-    "cleanup_recovery_only": true,
-    "deleted_owned_messages": 3,
-    "remaining_owned_messages": 0,
     "writes_submitted": 0
   },
   "scenario": "MSG-AUDIO-MESSAGE",
   "level": "real",
   "passed": false,
-  "git_sha": "6c0cadfc3b3b9a85ee2333a82967c23409a371f7",
-  "at": "2026-10-31T22:50:47.321742Z",
+  "git_sha": "ced302551f4cb488b3534c217d16918131e97c1a",
+  "at": "2026-11-01T02:27:41.249191Z",
   "assertions": [
     {
-      "name": "owned_messages_cleanup",
-      "passed": true
-    },
-    {
       "name": "cleanup_baseline_restored",
-      "passed": true
-    },
-    {
-      "name": "recovery_ledger_saved",
       "passed": true
     },
     {
@@ -46,6 +35,6 @@
     "air"
   ],
   "conditions": {
-    "reason": "The CAF attachment did not have the native audio-message flag. This recovery sends no new messages and removes only the explicitly selected run's rows."
+    "reason": "The self conversation contains unread existing messages. This check cannot open it without changing their read state. Read those messages in Messages before rerunning the check."
   }
 }

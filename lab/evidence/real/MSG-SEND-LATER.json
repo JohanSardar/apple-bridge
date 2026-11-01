@@ -1,20 +1,30 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[23.61 21.35 13.97] cpu_idle=48% cpus=8 other_heavy=0"
+    "summary": "air: load=[7.12 11.25 11.88] cpu_idle=47% cpus=8 other_heavy=0"
   },
   "status": "limited",
-  "run_id": "run_01M650ZVZ600JM58HWTR9SRM05",
+  "run_id": "run_01M6AEVMD052S3CNVG2Y6F097C",
   "metrics": {
     "capture_observer_resets": 0,
+    "cleanup_counts": {
+      "after_count": 160349,
+      "before_count": 160349,
+      "created_count": 0,
+      "passed": true
+    },
     "writes_submitted": 0
   },
   "scenario": "MSG-SEND-LATER",
   "level": "real",
   "passed": false,
-  "git_sha": "cd736b6bdf6f556b3e7a7dd514fbc4f7d2d45c78",
-  "at": "2026-10-29T23:47:42.694974Z",
+  "git_sha": "ced302551f4cb488b3534c217d16918131e97c1a",
+  "at": "2026-11-01T02:26:16.096365Z",
   "assertions": [
+    {
+      "name": "cleanup_baseline_restored",
+      "passed": true
+    },
     {
       "name": "credential_backend_override_restored",
       "passed": true
@@ -25,6 +35,6 @@
     "air"
   ],
   "conditions": {
-    "reason": "needs verified Send Later date controls and cancellation cleanup"
+    "reason": "The self conversation contains unread existing messages. This check cannot open it without changing their read state. Read those messages in Messages before rerunning the check."
   }
 }
