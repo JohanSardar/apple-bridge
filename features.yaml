@@ -314,7 +314,7 @@ features:
     milestone: M1
     modules: [native/RemindersSource, operations]
     depends_on: [reminders.read]
-    status: limited
+    status: done
     scenarios:
       - {id: REM-CRUD, levels: [sim, real, replica]}
       - {id: REM-LIST-CREATE, levels: [sim, real]}
@@ -326,9 +326,7 @@ features:
       - {id: REM-READONLY-LIST, levels: [sim]}
       - {id: REM-OPERATION-SHAPES, levels: [sim]}
       - {id: REM-NATIVE-LIST-RACE, levels: [sim]}
-    notes: "Tagged list create, rename and delete verified at sim and real; AppleTruth confirms the renamed list is absent after deletion."
-    limits:
-      - {scenario: REM-SECTIONS, level: real, reason: "Native section order and membership readback passed, but File > Edit Sections opens a separate AXWindow rather than an AXSheet. The proof never adopts or closes that editor; the next section creation focuses its AXTable and fails at section_name before an editable field appears."}
+    notes: "Tagged list create, rename and delete verified at sim and real; AppleTruth confirms the renamed list is absent after deletion. R2 verifies native section order, membership, reorder and owned editor and list cleanup at real."
   - id: calendar.read
     title: Calendar window capture, identity, recurrence, time zones, window slide
     requirements: [R-FULL, R-LIVE, R-CAL, R-NO-FALSE-DELETE]
@@ -793,9 +791,6 @@ features:
     depends_on: [web.frontdoor, reminders.write]
     status: limited
     limits:
-      - scenario: WEB-REM-PARITY
-        level: real
-        reason: "Sections: the Edit Sections editor is a separate AXWindow, but the proof only adopts AXSheet. Its reorder gesture never persists section order, and the leftover editor redirects the next run to an AXTable instead of the new section field."
       - scenario: WEB-REM-PARITY
         level: real
         reason: "Custom smart lists: the tag is exposed as AXMenuItem rather than AXCheckBox. After correcting the role, the global confirmation search matches both the leftover section editor and the new-list sheet, so pressAny fails with conflict before smart-list readback. The same unscoped duplicate Cancel controls prevent owned_sheet_cleanup."
