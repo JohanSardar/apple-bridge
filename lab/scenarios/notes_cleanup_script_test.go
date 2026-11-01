@@ -62,7 +62,7 @@ function folder(id) {
         container:() => ({folders:{whose:query => () => titles[query.id] ? [folder(query.id)] : []}})};
 }
 const note = {owned:true, id:() => 'note', name:() => request.note_title || '[ab-test owned] note', container:() => folder(currentFolder)};
-const app = {quit:() => {}, launch:() => {}, folders:{byId:folder}, notes:{byId:() => note}, delete:object => {
+const app = {folders:{byId:folder}, notes:{byId:() => note}, delete:object => {
     if (!object.owned) throw Error('unscoped deletion');
     deleted.push(object.id());
 }, move:(object,options) => {

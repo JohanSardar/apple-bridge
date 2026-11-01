@@ -18,7 +18,7 @@ public enum NotesOwnedCleanup {
         return result as? [AXUIElement] ?? []
     }
     private static func nodes(_ root: AXUIElement, budget: inout Int) -> [AXUIElement] {
-        guard budget > 0 else { return [] }
+        guard budget > 0, value(root, kAXRoleAttribute) != kAXMenuBarRole else { return [] }
         budget -= 1
         return [root] + children(root).flatMap { nodes($0, budget: &budget) }
     }
@@ -69,7 +69,7 @@ public enum NotesOwnedCleanup {
                 guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.Notes").first else { throw Failure(stage: "notes_not_running") }
                 let root = AXUIElementCreateApplication(app.processIdentifier)
                 app.activate()
-                if try !confirm(root, tag: tag) {
+                if try !confirm(root, tag: title) {
                     _ = try NotesScript.run("show folder id " + NotesScript.quote(id))
                     try await Task.sleep(for: .milliseconds(300))
                     let rows = all(root).filter { node in
@@ -83,7 +83,7 @@ public enum NotesOwnedCleanup {
                     }
                     guard items.count == 1, AXUIElementPerformAction(items[0], kAXPressAction as CFString) == .success else { throw Failure(stage: "owned_delete_menu_" + String(items.count)) }
                     try await Task.sleep(for: .milliseconds(300))
-                    _ = try confirm(root, tag: tag)
+                    _ = try confirm(root, tag: title)
                 }
                 var verified = false
                 for _ in 0..<200 {
