@@ -76,8 +76,15 @@ enum MessagesVariantUI {
         checkpoint("composer_resolved", root: application)
         guard value(editor,kAXValueAttribute).isEmpty else { throw SendVariantFailure.draftPresent }
         defer {
-            if !sendStarted,(try? session.fence()) != nil,value(editor,kAXValueAttribute)==args["text"].string,(try? session.focus(editor,failure:SendVariantFailure.composerUnavailable)) != nil {
-                if (try? session.press(0,command:true)) != nil,session.focused(editor),value(editor,kAXValueAttribute)==args["text"].string { try? session.press(51) }
+            if !sendStarted, (try? session.fence()) != nil, value(editor,kAXValueAttribute) == args["text"].string {
+                _ = try? session.clear(editor, value: { value($0,kAXValueAttribute) })
+            }
+            if !sendStarted, kind == "schedule", (try? session.fence()) != nil {
+                let entries = find(application, identifier: "MessageEntryView")
+                if entries.count == 1 {
+                    let close = find(entries[0], role: kAXButtonRole, identifier: "xmark").filter { value($0,kAXDescriptionAttribute) == "Close" }
+                    if close.count == 1 { try? press(close[0]) }
+                }
             }
         }
         try MessagesAccessibility.replace(session,text:args["text"].string)

@@ -38,6 +38,7 @@ public enum MessagesParityFixture {
     @UIActor
     public static func inspectExisting() throws -> JSON {
         guard let selected = try MessagesSelfTestIsolation.target(database: MessagesDatabase()), !selected.chat.isEmpty else { throw SourceFailure.invalid }
+        _ = try MessagesContentBaseline.capture(selected.chat)
         let baseline = try MessagesSelfTestBaseline.target(selected.chat)
         var state = baseline.nativeState.object
         state["conversation_target"] = .bool(false)
