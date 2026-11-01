@@ -44,7 +44,8 @@ enum MessagesVariantUI {
         let labels = ["Apps", "Add", "Show Apps", "Send Later", "Record Audio", "Stop", "Send", "Cancel"]
         var counts = Dictionary(uniqueKeysWithValues: (labels + ["date_fields", "composer_fields"]).map { ($0, 0) })
         for node in find(root) {
-            for label in labels where value(node, kAXTitleAttribute) == label || value(node, kAXDescriptionAttribute) == label { counts[label, default: 0] += 1 }
+            let title = value(node, kAXTitleAttribute), description = value(node, kAXDescriptionAttribute)
+            for label in labels where title == label || description == label { counts[label, default: 0] += 1 }
             if value(node, kAXRoleAttribute) == "AXDateField" { counts["date_fields", default: 0] += 1 }
             if value(node, kAXIdentifierAttribute) == "messageBodyField" { counts["composer_fields", default: 0] += 1 }
         }
