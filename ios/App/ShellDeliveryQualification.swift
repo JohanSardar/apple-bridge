@@ -309,7 +309,7 @@ struct ShellDeliveryQualificationScreen: View {
             if let job = approval.job { ApprovalReviewScreen(job: job) }
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { Task { await PushDelivery.shared.drain() } }
+            if phase == .active, proof.receipt?.done == false, proof.receipt?.checks["ready"] == true { Task { await PushDelivery.shared.drain() } }
         }
         .task { await proof.run() }
     }

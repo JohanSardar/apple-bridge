@@ -13,6 +13,8 @@ def available(device):
             result = subprocess.run(["xcrun", "devicectl", "list", "devices", "--json-output", str(output)], capture_output=True, text=True, timeout=30)
             if result.returncode:
                 return False
+            if any(device in row and "unavailable" in row for row in result.stdout.splitlines()):
+                return False
             if any(device in row and "available (paired)" in row and "unavailable" not in row for row in result.stdout.splitlines()):
                 return True
             if not output.exists():

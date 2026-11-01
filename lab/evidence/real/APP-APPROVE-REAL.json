@@ -1,13 +1,13 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[8.25 5.08 5.09] cpu_idle=57% cpus=10 other_heavy=0"
+    "summary": "air: load=[5.27 4.69 4.87] cpu_idle=61% cpus=10 other_heavy=0"
   },
   "status": "failed",
   "run_id": "",
   "metrics": {
     "apns_accepted_count": 2,
-    "apns_failure_count": 17,
+    "apns_failure_count": 6,
     "apns_wakes": 2,
     "capture_observer_resets": 0,
     "notification_prompt_requested": 0,
@@ -17,7 +17,7 @@
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-11-01T00:25:05.0453Z",
+  "at": "2026-11-01T00:31:35.837381Z",
   "assertions": [
     {
       "name": "fresh_completed_phone_receipt",
@@ -53,7 +53,7 @@
     },
     {
       "name": "connector_prompt_code_and_scopes",
-      "passed": false
+      "passed": true
     },
     {
       "name": "connector_face_id_succeeded",
@@ -68,23 +68,11 @@
       "passed": true
     },
     {
-      "name": "signed_result_uploaded",
+      "name": "face_id_succeeded",
       "passed": false
     },
     {
-      "name": "ready",
-      "passed": true
-    },
-    {
-      "name": "state_restored",
-      "passed": true
-    },
-    {
-      "name": "signed_pair_status",
-      "passed": true
-    },
-    {
-      "name": "face_id_succeeded",
+      "name": "connector_face_id_succeeded",
       "passed": false
     },
     {
@@ -92,7 +80,27 @@
       "passed": true
     },
     {
+      "name": "connector_prompt_code_and_scopes",
+      "passed": true
+    },
+    {
+      "name": "ready",
+      "passed": true
+    },
+    {
       "name": "notification_authorized",
+      "passed": true
+    },
+    {
+      "name": "state_restored",
+      "passed": true
+    },
+    {
+      "name": "signed_result_uploaded",
+      "passed": false
+    },
+    {
+      "name": "signed_pair_status",
       "passed": true
     },
     {

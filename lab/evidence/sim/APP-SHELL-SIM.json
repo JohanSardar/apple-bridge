@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[11.39 10.64 9.67] cpu_idle=56% cpus=10 other_heavy=0"
+    "summary": "air: load=[7.46 5.35 5.1] cpu_idle=61% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M6A3CRSKVYDWCHR7V2FPP8TZ",
+  "run_id": "run_01M6A8AVHE4PF9M7YTW142JWZN",
   "network_path": "loopback",
   "metrics": {
     "capture_observer_resets": 0
@@ -11,8 +11,8 @@
   "scenario": "APP-SHELL-SIM",
   "level": "sim",
   "passed": true,
-  "git_sha": "18e3c4d0b659d55370ac99c4e94b05df28a7496a",
-  "at": "2026-10-31T23:05:54.739802Z",
+  "git_sha": "73fe7c99a2cc08441a6719124fcd7364e7cbdad5",
+  "at": "2026-11-01T00:32:14.894634Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -82,16 +82,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 5.286792,
-      "p95_ms": 5.286792,
-      "max_ms": 5.286792,
+      "p50_ms": 6.108958,
+      "p95_ms": 6.108958,
+      "max_ms": 6.108958,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 11.198542,
-      "p95_ms": 11.198542,
-      "max_ms": 11.198542,
+      "p50_ms": 11.890458,
+      "p95_ms": 11.890458,
+      "max_ms": 11.890458,
       "timeouts": 0
     }
   },

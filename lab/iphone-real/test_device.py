@@ -28,6 +28,13 @@ class DeviceAvailabilityTest(unittest.TestCase):
                 self.assertEqual(device.available("id"), expected)
                 self.assertFalse(device.available("other"))
 
+    def test_unavailable_overrides_a_paired_connected_tunnel(self):
+        def discover(args, **kwargs):
+            pathlib.Path(args[args.index("--json-output") + 1]).write_text(json.dumps({"result": {"devices": [{"identifier": "id", "connectionProperties": {"pairingState": "paired", "tunnelState": "connected"}}]}}))
+            return type("Result", (), {"returncode": 0, "stdout": "phone id unavailable (paired)"})()
+        with patch.object(device.subprocess, "run", side_effect=discover):
+            self.assertFalse(device.available("id"))
+
     def test_discovery_timeout_is_treated_as_disconnect(self):
         with patch.object(device.subprocess, "run", side_effect=device.subprocess.TimeoutExpired("xcrun", 30)):
             self.assertFalse(device.available("id"))

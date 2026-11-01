@@ -1,7 +1,7 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[6.37 8.06 10.68] cpu_idle=56% cpus=10 other_heavy=0"
+    "summary": "air: load=[3.82 4.69 4.87] cpu_idle=42% cpus=10 other_heavy=0"
   },
   "status": "passed",
   "run_id": "",
@@ -12,7 +12,7 @@
   "level": "real",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-31T23:21:36.459984Z",
+  "at": "2026-11-01T00:34:30.611908Z",
   "assertions": [
     {
       "name": "battery_observed",

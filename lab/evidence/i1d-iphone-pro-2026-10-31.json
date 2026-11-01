@@ -1,0 +1,227 @@
+{
+  "at": "2026-11-01T00:36:30.915872+00:00",
+  "checks": {
+    "merge_allowed": false,
+    "real_phone": true,
+    "johan_taps_required_or_used": false,
+    "t3_device_tools_used": false,
+    "capture_face_id_gate_observed": true,
+    "command_face_id_gate_observed": true,
+    "connector_matching_code_and_scope_observed": true,
+    "connector_face_id_gate_observed": true,
+    "biometric_cancellations_automated": true,
+    "tagged_shortcut_deleted_before_confirmation": true,
+    "shortcut_delete_popup_absent": true,
+    "calculator_shield_visually_observed": true,
+    "usage_rows_and_durations_visually_observed": true,
+    "screen_time_settings_unchanged": true,
+    "live_activity_visually_observed": true,
+    "signed_widget_gallery_preview_observed": true,
+    "persistent_widget_installation_qualified": false,
+    "remote_activitykit_push_qualified": false,
+    "shell_sim_ui_qualified": false,
+    "focus_mac_grant_authorized": false,
+    "focus_mac_state_mutated": false
+  },
+  "counts": {
+    "real_passed": 11,
+    "real_failed": 3,
+    "sim_commands_passed": 12,
+    "usage_duration_rows_observed": 13,
+    "tagged_shortcuts_remaining": 0,
+    "python_tests": 14,
+    "intent_dispatch_assertions": 4,
+    "compiled_intents": 29,
+    "compiled_siri_shortcuts": 10
+  },
+  "validation": {
+    "lint": true,
+    "features": true,
+    "go_build": true,
+    "scenario_package_tests": true,
+    "iphone_python_tests": true,
+    "intent_dispatch": true,
+    "compiled_intent_metadata": true,
+    "intent_checker_tests": true,
+    "native_focus_checks": true,
+    "signed_incremental_ios_build": true,
+    "app_signature_verified": true
+  },
+  "real": {
+    "APP-HEALTH-REAL": {
+      "passed": true,
+      "failed_checks": [],
+      "evidence_sha256": "e61ff39126c783c255f34a6f3b0b1eec025e18d59bfa8698860aa9bf120f1643"
+    },
+    "APP-HEALTH-WRITE-REAL": {
+      "passed": true,
+      "failed_checks": [],
+      "evidence_sha256": "0f32bb984485547e41f92947752774cdfad798b6e667dc0ffbaa82b774a46539"
+    },
+    "APP-MOTION-REAL": {
+      "passed": true,
+      "failed_checks": [],
+      "evidence_sha256": "f1a62fabe47449d8a21f429e56b9d8ecf69954e9307505b1524d7eda2d0f6d45"
+    },
+    "APP-ALARM-REAL": {
+      "passed": true,
+      "failed_checks": [],
+      "evidence_sha256": "860dd56dde048887a44be80a0afcece13432c952d29a328ef52fcd6c5f1a204a"
+    },
+    "APP-DEVICE-REAL": {
+      "passed": true,
+      "failed_checks": [],
+      "evidence_sha256": "8144840eb2f243a823b4dad17b05a8563d87f10bd448aef75d171adb01bb96bd"
+    },
+    "APP-SCREENTIME-REAL": {
+      "passed": true,
+      "failed_checks": [],
+      "evidence_sha256": "2f72d478afa07d763a0a00f9c1e7312fdac2644c73ea3d8c2e0b5349b296938f"
+    },
+    "APP-LOC-REAL": {
+      "passed": true,
+      "failed_checks": [],
+      "evidence_sha256": "4cc81097948e5a49d425321b7ce8036d3cd1d71d52a7859fd10ce45816ecef14"
+    },
+    "APP-CAPTURE-REAL": {
+      "passed": false,
+      "failed_checks": [
+        "operation_completed"
+      ],
+      "evidence_sha256": "95cef6e2b8a01c430e31ef10e5217990f98d66728a0b712a7c848f61d1418c50"
+    },
+    "APP-NOTIFY-REAL": {
+      "passed": true,
+      "failed_checks": [],
+      "evidence_sha256": "abae15c665aa52b4192c43182d0ce7ec6f59b9ba1028ab36dd9e4820c536e9dd"
+    },
+    "APP-APPROVE-REAL": {
+      "passed": false,
+      "failed_checks": [
+        "connector_decision_uploaded",
+        "connector_face_id_succeeded",
+        "connector_oauth_token_authenticated",
+        "face_id_succeeded",
+        "gateway_observed_signed_result",
+        "phone_pong_observed",
+        "signed_result_uploaded"
+      ],
+      "evidence_sha256": "297117e89b8e0e561af3aeefb14bb3569ecb68d536e7085f0ab26a039ccc19cd"
+    },
+    "APP-INTENTS-REAL": {
+      "passed": true,
+      "failed_checks": [],
+      "evidence_sha256": "7d6db22c6985414d2015d672fe8dd76fb5569a8f52adf287b9470f6e9c37761d"
+    },
+    "APP-LIVE-REAL": {
+      "passed": true,
+      "failed_checks": [],
+      "evidence_sha256": "048d5b9088f2bb2f2b90697367b7cb0e58ea6d5e93daf68970d209cc3a6e5f2b"
+    },
+    "APP-SHELL-REAL": {
+      "passed": true,
+      "failed_checks": [],
+      "evidence_sha256": "1f71368432f3774691061c52ef6875e009fd9966ec60d1d63c3e271c3a7c19ac"
+    },
+    "FOC-PHONE-SYNC": {
+      "passed": false,
+      "failed_checks": [
+        "focus_status_authorized",
+        "mac_focus_set_and_restore",
+        "phone_focus_enabled",
+        "phone_focus_restored"
+      ],
+      "evidence_sha256": "e490839959b8080242df4b5e700361907ada0dd73e327278e1d8930444ca54d4"
+    }
+  },
+  "sim": {
+    "APP-HEALTH-SIM": {
+      "passed": true,
+      "evidence_sha256": "cdc9a40b0a353326fc1314edfd2e5e64a713436b5acf6ea992100c437dc83835"
+    },
+    "APP-HEALTH-WRITE-SIM": {
+      "passed": true,
+      "evidence_sha256": "98c4b28c77d820d6e7be2e046bc7282b4e4bb1edacbd3cd08ea0573d013e5126"
+    },
+    "APP-MOTION-SIM": {
+      "passed": true,
+      "evidence_sha256": "9e8efb0c0eb9c68286f2430a1827a2ba1f361558da7c9c6f44d1001bbcd10b3c"
+    },
+    "APP-ALARM-SIM": {
+      "passed": true,
+      "evidence_sha256": "ab3f4f8e52ba1d26d0616f59d4c2617e7a87f3c8689a5e0f32c4ff4e4ece00e0"
+    },
+    "APP-DEVICE-SIM": {
+      "passed": true,
+      "evidence_sha256": "acd897f9ef3f367d0b435a359660a24a1412f1f7ae2f785769657af91a7839b8"
+    },
+    "APP-SCREENTIME-SIM": {
+      "passed": true,
+      "evidence_sha256": "cab572892fe82ae0fc51a3f32155f95bd6e20877844c9e8adf3ac4d22e1df645"
+    },
+    "APP-LOC-SIM": {
+      "passed": true,
+      "evidence_sha256": "5828bff59d837534b43ca854677da5a6c51f284c76c447c2f033b454579585af"
+    },
+    "APP-CAPTURE-SIM": {
+      "passed": true,
+      "evidence_sha256": "90bab6c6cb05a515dad17abfc41cafe1786ad43e3f8f3007afc5d42176d2b8bb"
+    },
+    "APP-NOTIFY-SIM": {
+      "passed": true,
+      "evidence_sha256": "6ed59e39eaa2ea1783b135b817deb3764348faac5b29d9423e7ed73cb490c8e1"
+    },
+    "APP-APPROVE-SIM": {
+      "passed": true,
+      "evidence_sha256": "95e0ba7b8b822c9f89913e9dc4f950cc6d72780326607285a883e48709edf29d"
+    },
+    "APP-LIVE-SIM": {
+      "passed": true,
+      "evidence_sha256": "bb9f83917c8b2bcb819305d655c7f5ef7ec6407aa3a7d70736c9869131d7c286"
+    },
+    "APP-SHELL-SIM": {
+      "passed": true,
+      "evidence_sha256": "8068f26e40947bdbedde586741b449fe749f7561003dfe3c10cb16c0d8709d34"
+    }
+  },
+  "source_sha256": {
+    "ios/App/AppleBridgeApp.swift": "00b2b943bdb61ed4c9c054c4eead4a8978d63f37f135ccdb3e0b95453cf379c9",
+    "ios/App/Info.plist": "45c0336d1cad0f639b58b4e6b419d50f66240026c5e85e290034b8b38905658d",
+    "ios/App/RealQualification.swift": "5c13d66a9e29281f1f8362c084bd426fbf4524c9f80e09523f09108a9097de19",
+    "ios/App/ShellDeliveryQualification.swift": "f1fdb82466e9e8684456ecb2f5976f366969434c9df5f15b535af5e45e90f288",
+    "ios/Capabilities/Approvals/ApprovalsCapability.swift": "4b6c49fcb9b44ab379860e5ccbcd8ccfe64a6367646debcd3718ab4871dce998",
+    "ios/Capabilities/HealthRead/HealthCapture.swift": "e60f20384c44aa7028925537606bc1251a223b519b0283bf2ae97b3110fb1eb7",
+    "ios/Capabilities/HealthRead/HealthKitReader.swift": "74a04ed851fbe9d7cea93078cd5388cb10f08f06adbe7ebbd37ebc7ed06da5c6",
+    "ios/Capabilities/HealthWrite/HealthWriteCapability.swift": "e6fd8a35bca336155a57f88fb7ff9cbb51e9fda49bb5d80231e7a307b7ea529d",
+    "ios/Capabilities/Location/LocationStore.swift": "3bf2ef92f96fb86260dea77b38709ff4dd81059129e8090cc9fed64e44031617",
+    "ios/Capabilities/Motion/MotionCapability.swift": "efb90bc32466804042068c75f1652405cf7a97ec8294136585cdbcafbdb3cd33",
+    "ios/Capabilities/Motion/MotionModel.swift": "d54b397774b584a7942e4430098c949ff65532a2e46fd90ac021266b52dd7127",
+    "ios/Capabilities/ScreenTime/ScreenTimeCapability.swift": "0f76e4e77be62f115de94c91e8101dd2de1a1e04de09f33cc0271484cd6d5200",
+    "ios/Delivery/NotificationCompletion.swift": "1b21d391135c37fb683d7a577711b8e3890aafcdcc5c9705e3d895ec151d83cd",
+    "ios/Delivery/PushDelivery.swift": "fcd0c1b5883b23033e831df87b53df3b447c1b02070482eddb129a2efb5c8f29",
+    "ios/Extensions/ScreenTimeMonitor/Monitor.swift": "3ad24e8d8770b69b0e0161c79a8b83c8997826b3a89968cc536e6faa7930e717",
+    "ios/ScreenTimeShared/QualificationMonitor.swift": "379f9dc752109dbca51290ac2960b4aafca5d6c551539468cbfabf8f34f96c40",
+    "ios/ScreenTimeShared/ShieldPolicy.swift": "cab363014f55c9d8ec7c72b60b67f86fc3ff4dd949c811e78f7d8e835503d539",
+    "lab/fixtures/location/LocationProof.swift": "6422c89339be78f918b8764115c25068d14c74d43c956a407196d7bc3d5ff79f",
+    "lab/ios/HealthProof.swift": "2dc585001e97bc17307eeae4c4c7869e0926a2b166d85e573eed2d97377c6f55",
+    "lab/ios/HealthWriteProof.swift": "f368d3a1beca74caff2d243dd93ffcca8686590f318993959fcb74d01c35a8dd",
+    "lab/ios/MotionProof.swift": "5c0839083552343d5d97e9d12d63a1e58b3742aa8e2aca20ad07052661edd8f6",
+    "lab/ios/NotificationProof.swift": "27bfbe777504c2b0d091d012c4e3d31da131ef1ba3c2817496f7dd0de8f46959",
+    "lab/ios/main.swift": "ee91aeb1aa74918719021d7e0cdbe71c76028e3b2adc46873ae85bfd2ba71d8f",
+    "lab/iphone-real/activate.py": "0f51cd74c240c10eaae638bd111200c6c4dfc4fdfc7a3b10b86724fbae22407e",
+    "lab/iphone-real/device.py": "91bf921a7b85e1fd397a6d01ed184c954a90f9af0073020a69aaaa6984c99816",
+    "lab/iphone-real/run.py": "b7e14c5dbc5ded4eb5567c68d4a02f78efe46a24a6d841901c99c61a5b9a7125",
+    "lab/iphone-real/test_activate.py": "1fb83eef374df21395b0913dfefbafa9f440730f999201cd45f1f3460c45892e",
+    "lab/iphone-real/test_device.py": "23dd2709940a0ac15cad8891865a0c551b0f5ffcde951602e1610645440c8894",
+    "lab/iphone-real/test_run.py": "639daecf414e8b6050b70a28f129141e1023fb8c90af407a5fbfb05295fdcfaa",
+    "lab/scenarios/focus_real.go": "7636a8b9d1ea7c1fe183bd3ad6e8d5c02b921fa98697c456d8491400cb7202c2",
+    "lab/scenarios/iphone_command.go": "5f4363e3a00ec9bb2e224623b62a023512a0c482129334e1538f5b30352b63b8",
+    "lab/scenarios/iphone_connector_real.go": "90cd82f57d2b04414cc1a3c5d3931a6d09c431d86ce431623ae003203a7a92e5",
+    "lab/scenarios/iphone_connector_real_test.go": "79a51ba3cfe3c6a33d1c503e8995b765a61bacb0da0dbd104de8f4969bf8aa45",
+    "lab/scenarios/iphone_real.go": "409f27198705cae7abb1fa14846b6838c7492f12e15c9a9296aa1ae026729d6c",
+    "lab/scenarios/iphone_real_test.go": "80a9b3beb46b04c8a199917d466200a9597fa7d2411ee90a9f2912913abb1ad8",
+    "native/Sources/FocusChecks/main.swift": "42caf5b36f71caa7218e89a5a6c2a4e1f78226916802a51751090050a0dddb1a",
+    "native/Sources/FocusSource/FocusQualification.swift": "a04b19c96b9e4856ce35597c01b0639fe9ebc1d5c0943cd44a6ccc720396b9e7"
+  },
+  "app_binary_sha256": "7e020e74228b96b3a7b427cd5a9151144e7c66b4765971eaad2e29c8d2e9c7a8"
+}

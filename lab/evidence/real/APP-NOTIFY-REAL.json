@@ -1,7 +1,7 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[4.27 4.18 4.8] cpu_idle=66% cpus=10 other_heavy=0"
+    "summary": "air: load=[3.99 4.63 4.84] cpu_idle=66% cpus=10 other_heavy=0"
   },
   "run_id": "",
   "metrics": {
@@ -16,7 +16,7 @@
   "level": "real",
   "passed": true,
   "git_sha": "",
-  "at": "2026-11-01T00:24:16.401854Z",
+  "at": "2026-11-01T00:34:59.921633Z",
   "assertions": [
     {
       "name": "fresh_completed_phone_receipt",
@@ -47,11 +47,11 @@
       "passed": true
     },
     {
-      "name": "signed_pair_status",
+      "name": "resources_cleaned",
       "passed": true
     },
     {
-      "name": "identity_restored",
+      "name": "signed_result_uploaded",
       "passed": true
     },
     {
@@ -59,19 +59,19 @@
       "passed": true
     },
     {
+      "name": "signed_pair_status",
+      "passed": true
+    },
+    {
       "name": "ready",
       "passed": true
     },
     {
+      "name": "identity_restored",
+      "passed": true
+    },
+    {
       "name": "notification_authorized",
-      "passed": true
-    },
-    {
-      "name": "resources_cleaned",
-      "passed": true
-    },
-    {
-      "name": "signed_result_uploaded",
       "passed": true
     },
     {
