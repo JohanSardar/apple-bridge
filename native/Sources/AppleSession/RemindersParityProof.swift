@@ -323,6 +323,7 @@ final class RemindersFixtureUI {
     var accessibilityDiagnostics: [String: Double] = [:]
     var ownedSheet: AXUIElement?
     var ownedEditor: AXUIElement?
+    private var sheetScanComplete = false
     var pendingNewListSheet = false
     var selectionDiagnostics: [String: Double] = [:]
 
@@ -522,15 +523,19 @@ final class RemindersFixtureUI {
             if value(element, kAXRoleAttribute) == kAXSheetRole { result.append(element) }
             pending += elements(element, kAXChildrenAttribute) + elements(element, kAXSheetsAttribute)
         }
+        sheetScanComplete = pending.isEmpty
         return result
     }
 
     func sheetIsOpen(_ sheet: AXUIElement) -> Bool {
-        attachedSheets().contains { CFEqual($0, sheet) }
+        let attached = attachedSheets()
+        return !sheetScanComplete || attached.contains { CFEqual($0, sheet) }
     }
 
     func editorIsOpen(_ editor: AXUIElement) -> Bool {
-        (elements(root, kAXWindowsAttribute) + attachedSheets()).contains { CFEqual($0, editor) }
+        let windows = elements(root, kAXWindowsAttribute)
+        let attached = attachedSheets()
+        return !sheetScanComplete || (windows + attached).contains { CFEqual($0, editor) }
     }
 
     func adoptSectionEditor(previousWindows: [AXUIElement], names: [String]) async throws -> AXUIElement {
