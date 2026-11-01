@@ -125,7 +125,9 @@ enum MessagesAccessibility {
             let selfEcho = prepared.nativeState["target"]["cleanup_self_echo"].bool
             var selected = MessagesMediaCleanupProof.targetIndex(candidates, names: Set(mediaNames), outgoing: outgoing, allowSelfEcho: selfEcho, equivalentOwned: prepared.nativeState["target"]["cleanup_equivalent_owned_media"].bool, ownedCopies: ownedCopies)
             if selected == nil, budget > 0 {
+                let deadline = Date().addingTimeInterval(6)
                 for (index, bubble) in bubbles.enumerated() {
+                    guard Date() < deadline else { throw MessagesUIFailure.targetUnavailable }
                     let names = try mediaPreviewNames(bubble, names: Set(mediaNames))
                     if !names.isEmpty {
                         var candidate = candidates[index].object
