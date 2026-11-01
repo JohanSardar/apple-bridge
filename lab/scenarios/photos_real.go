@@ -96,7 +96,7 @@ func runPhotosReal(ctx context.Context, s Scenario, e Evidence) Evidence {
 		e.Assertions = append(e.Assertions, Assertion{Name: "photos_readwrite_authorization", Status: "limited", Detail: "needs Photos grant"})
 		return e
 	}
-	for _, name := range []string{"read_passed", "import_passed", "original_passed", "cleanup_passed"} {
+	for _, name := range []string{"read_passed", "import_passed", "original_passed", "cleanup_passed", "permanent_cleanup_passed"} {
 		add(name, result[name] == true)
 	}
 	add("library_count_restored", photosLibraryCountRestored(result))
@@ -118,7 +118,7 @@ func photosReportPassed(data []byte) bool {
 	if json.Unmarshal(data, &result) != nil || result["failure"] != nil {
 		return false
 	}
-	for _, name := range []string{"grant_passed", "read_passed", "import_passed", "original_passed", "cleanup_passed"} {
+	for _, name := range []string{"grant_passed", "read_passed", "import_passed", "original_passed", "cleanup_passed", "permanent_cleanup_passed"} {
 		if result[name] != true {
 			return false
 		}

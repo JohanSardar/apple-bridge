@@ -292,6 +292,43 @@ final class PhotosProofUI {
         throw SourceFailure.unavailable
     }
 
+    private func permanentlyRemoved(_ assets: [PhotosProofAsset]) throws -> Bool {
+        let database = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Pictures/Photos Library.photoslibrary/database/Photos.sqlite")
+        guard FileManager.default.fileExists(atPath: database.path) else { throw SourceFailure.unavailable }
+        func quoted(_ value: String) -> String { "'" + value.replacingOccurrences(of: "'", with: "''") + "'" }
+        let predicates = try assets.map { asset in
+            if let uuid = asset.id.split(separator: "/").first, UUID(uuidString: String(uuid)) != nil {
+                return "a.ZUUID=" + quoted(String(uuid))
+            }
+            guard asset.id.isEmpty, asset.filename.hasPrefix("[ab-test] "), asset.created.timeIntervalSinceReferenceDate.isFinite else { throw SourceFailure.invalid }
+            return "b.ZORIGINALFILENAME=" + quoted(asset.filename) + " AND ABS(a.ZDATECREATED-\(asset.created.timeIntervalSinceReferenceDate))<1"
+        }
+        guard !predicates.isEmpty else { throw SourceFailure.invalid }
+        let task = Process()
+        let output = Pipe()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/sqlite3")
+        task.arguments = ["-readonly", database.path, "SELECT COUNT(*) FROM ZASSET a LEFT JOIN ZADDITIONALASSETATTRIBUTES b ON a.ZADDITIONALATTRIBUTES=b.Z_PK WHERE " + predicates.map { "(" + $0 + ")" }.joined(separator: " OR ") + ";"]
+        task.standardOutput = output
+        task.standardError = FileHandle.nullDevice
+        try task.run()
+        let data = output.fileHandleForReading.readDataToEndOfFile()
+        task.waitUntilExit()
+        guard task.terminationStatus == 0, let text = String(data: data, encoding: .utf8), let remaining = Int(text.trimmingCharacters(in: .whitespacesAndNewlines)) else { throw SourceFailure.unavailable }
+        diagnostics["remaining_owned_database_asset_count"] = .number(Double(remaining))
+        return remaining == 0
+    }
+
+    private func verifyPermanentCleanup(_ assets: [PhotosProofAsset]) async throws {
+        for _ in 0..<40 {
+            if try permanentlyRemoved(assets) {
+                diagnostics["recently_deleted_cleanup_passed"] = .bool(true)
+                return
+            }
+            try await Task.sleep(for: .milliseconds(250))
+        }
+        throw SourceFailure.conflict
+    }
+
     func purge(_ assets: [PhotosProofAsset]) async throws {
         try await openTrash()
         try await Task.sleep(for: .seconds(1))
@@ -305,12 +342,12 @@ final class PhotosProofUI {
                     break
                 }
             }
-            if !found { diagnostics["recently_deleted_cleanup_passed"] = .bool(true); return }
+            if !found { try await verifyPermanentCleanup(assets); return }
         }
         for node in candidates(assets) {
             if try await inspectSelection(node, assets: assets) { throw SourceFailure.conflict }
         }
-        diagnostics["recently_deleted_cleanup_passed"] = .bool(true)
+        try await verifyPermanentCleanup(assets)
     }
 
     func remove(_ id: String, filename: String, created: Date) async throws {

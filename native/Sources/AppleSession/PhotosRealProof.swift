@@ -195,6 +195,7 @@ enum PhotosRealProof {
             guard remaining == libraryCount else { throw SourceFailure.conflict }
             result["cleanup_library_asset_count"] = .number(Double(remaining))
             result["cleanup_passed"] = .bool(true)
+            result["permanent_cleanup_passed"] = .bool(currentCleanupComplete)
             return .object(result)
         } catch {
             let failedStage = stage
