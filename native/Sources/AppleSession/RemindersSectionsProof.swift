@@ -227,6 +227,13 @@ enum RemindersSectionsProof {
             try await drag(try unique(names[1]), to: unique(names[0]), before: true)
             checks["section_move_readback"] = .bool(try await observed(true, member: true))
         } catch { failure = "The test stopped at " + stage + ": " + String(describing: error) }
+        for path in (try? RemindersStore.paths()) ?? [] {
+            if let captured = try? RemindersStore(path: path).sectionFixture(identifier: identifier, title: title),
+               let data = try? JSONEncoder().encode(captured), let object = try? JSONSerialization.jsonObject(with: data) {
+                fixture["native"] = object
+                break
+            }
+        }
         store.reset()
         if let owned = store.calendar(withIdentifier: identifier), owned.title == title {
             try store.removeCalendar(owned, commit: true)

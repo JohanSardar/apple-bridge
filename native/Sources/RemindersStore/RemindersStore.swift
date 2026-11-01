@@ -26,6 +26,30 @@ public struct RemindersStore: Sendable {
         try profile().snapshot
     }
 
+    #if LAB
+    public func sectionFixture(identifier: String, title: String) throws -> JSON {
+        guard let uuid = UUID(uuidString: identifier), title.hasPrefix("[ab-test "), title.hasSuffix("]") else { throw SourceFailure.invalid }
+        let copy = try StoreCopy(path: path)
+        defer { copy.close() }
+        let hex = uuid.uuidString.replacingOccurrences(of: "-", with: "")
+        let lists = try copy.rows("SELECT Z_PK,ZIDENTIFIER,ZNAME FROM ZREMCDBASELIST WHERE ZIDENTIFIER='" + uuid.uuidString + "' OR HEX(ZIDENTIFIER)='" + hex + "'")
+        guard lists.count == 1, lists[0]["ZNAME"]?.string == title, let number = lists[0]["Z_PK"]?.number, let key = Int64(exactly: number) else { throw SourceFailure.conflict }
+        func columns(_ table: String) throws -> [String] {
+            try copy.rows("PRAGMA table_info(" + table + ")").compactMap { $0["name"]?.string }.sorted()
+        }
+        let listColumns = try columns("ZREMCDBASELIST"), sectionColumns = try columns("ZREMCDBASESECTION")
+        func selected(_ columns: [String], section: Bool) throws -> String {
+            let selected = columns.filter { $0.contains("ORDER") || (section && ($0.contains("DATE") || ["Z_PK", "ZIDENTIFIER", "ZDISPLAYNAME", "ZLIST", "ZSMARTLIST"].contains($0))) }
+            guard !selected.isEmpty, selected.allSatisfy({ $0.allSatisfy { $0.isASCII && ($0.isUppercase || $0.isNumber || $0 == "_") } }) else { throw SourceFailure.unsupported }
+            return selected.joined(separator: ",")
+        }
+        let order = try copy.rows("SELECT " + selected(listColumns, section: false) + " FROM ZREMCDBASELIST WHERE Z_PK=" + String(key))
+        let sections = try copy.rows("SELECT " + selected(sectionColumns, section: true) + " FROM ZREMCDBASESECTION WHERE ZLIST=" + String(key))
+        guard sections.allSatisfy({ $0["ZDISPLAYNAME"]?.string.hasPrefix(title + " ") == true }) else { throw SourceFailure.conflict }
+        return .object(["list_columns": .array(listColumns.map(JSON.string)), "section_columns": .array(sectionColumns.map(JSON.string)), "list_order": .array(order.map(JSON.object)), "sections": .array(sections.map(JSON.object))])
+    }
+    #endif
+
     public func profile() throws -> (snapshot: RemindersStoreSnapshot, timings: StoreTimings) {
         let start = ProcessInfo.processInfo.systemUptime
         let copy = try StoreCopy(path: path)

@@ -206,7 +206,12 @@ enum RemindersParityProof {
                 try await Task.sleep(for: .milliseconds(300))
                 try await ui.drag(second.title, to: first.title)
                 checks["reorder_readback"] = .bool(try await observe { _, row, parent, child in
-                    guard case .supported(let positions) = StoreManualOrder.decode(row.orderingJSON), let parentID = parent.identity.uuid, let childID = child.identity.uuid, let parentIndex = positions[parentID], let childIndex = positions[childID] else { return false }
+                    diagnostics["reorder_child_is_subtask"] = .number(child.parent == parent.identity.key ? 1 : 0)
+                    diagnostics["reorder_parent_binary_uuid"] = .number(parent.identity.uuid == nil ? 0 : 1)
+                    diagnostics["reorder_child_binary_uuid"] = .number(child.identity.uuid == nil ? 0 : 1)
+                    guard case .supported(let positions) = StoreManualOrder.decode(row.orderingJSON), let parentIndex = StoreManualOrder.position(of: parent.identity, in: positions), let childIndex = StoreManualOrder.position(of: child.identity, in: positions) else { return false }
+                    diagnostics["reorder_parent_position"] = .number(Double(parentIndex))
+                    diagnostics["reorder_child_position"] = .number(Double(childIndex))
                     return childIndex < parentIndex
                 })
             }
@@ -268,7 +273,9 @@ enum RemindersParityProof {
             reasons["cleanup"] = .string("The test smart list could not be removed; rerun cleanup for this run before testing again.")
           }
         }
-        if let ui = fixtureUI, let sheet = ui.ownedSheet {
+        if let ui = fixtureUI {
+          if ui.pendingNewListSheet { try? await ui.adoptNewListSheet() }
+          if let sheet = ui.ownedSheet {
             if ui.sheets().contains(where: { CFEqual($0, sheet) }), ui.find("Cancel", role: kAXButtonRole, within: sheet).count == 1 {
                 try? await ui.activate()
                 try? ui.press("Cancel", role: kAXButtonRole)
@@ -278,6 +285,9 @@ enum RemindersParityProof {
                 }
             }
             checks["owned_sheet_cleanup"] = .bool(!ui.sheets().contains(where: { CFEqual($0, sheet) }))
+          } else if ui.pendingNewListSheet {
+            checks["owned_sheet_cleanup"] = .bool(false)
+          }
         }
         store.reset()
         if let owned = store.calendar(withIdentifier: listID), owned.title == title { try store.removeCalendar(owned, commit: true) }
@@ -297,6 +307,7 @@ final class RemindersFixtureUI {
     var searchDiagnostics: [String: Double] = [:]
     var accessibilityDiagnostics: [String: Double] = [:]
     var ownedSheet: AXUIElement?
+    var pendingNewListSheet = false
     var selectionDiagnostics: [String: Double] = [:]
 
     static func editableRole(_ role: String) -> Bool {
@@ -661,9 +672,29 @@ final class RemindersFixtureUI {
         let available = items.filter { find($0, role: kAXMenuItemRole).count == 1 }
         guard available.count == 1 else { throw SourceFailure.unsupported }
         try press(available[0], role: kAXMenuItemRole)
+        if ["New List", "New List…", "New List..."].contains(available[0]) {
+            pendingNewListSheet = true
+            try await adoptNewListSheet()
+            return
+        }
         try await Task.sleep(for: .milliseconds(300))
         let activeSheets = sheets()
         if activeSheets.count == 1 { ownedSheet = activeSheets[0] }
+    }
+
+    func adoptNewListSheet() async throws {
+        guard pendingNewListSheet else { throw SourceFailure.conflict }
+        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+        repeat {
+            let active = sheets()
+            if active.count == 1, find("Standard", role: kAXPopUpButtonRole, within: active[0]).count == 1, find("Cancel", role: kAXButtonRole, within: active[0]).count == 1 {
+                ownedSheet = active[0]
+                pendingNewListSheet = false
+                return
+            }
+            try await Task.sleep(for: .milliseconds(100))
+        } while ContinuousClock.now < deadline
+        throw SourceFailure.conflict
     }
 }
 #endif
