@@ -21,7 +21,7 @@ import (
 )
 
 func runNativeMessagesCommands(ctx context.Context, s Scenario, level string, e Evidence) Evidence {
-	if s.ID == "WEB-MEDIA-VARIANTS" || s.ID == "WEB-UPLOAD-NATIVE-STAGING" {
+	if s.ID == "WEB-UPLOAD-NATIVE-STAGING" {
 		e.Status = "limited"
 		e.Metrics = map[string]any{"writes_submitted": 0}
 		e.Assertions = append(e.Assertions, Assertion{Name: "owned_attachment_cleanup_qualified", Status: "limited", Detail: "needs native attachment cleanup qualification; the captured-ID media target remains unavailable; no send attempted"})
@@ -68,6 +68,14 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 		e.Status = "limited"
 		e.Assertions = append(e.Assertions, Assertion{Name: "cleanup_accessibility", Status: "limited", Detail: "needs Messages Accessibility grant"})
 		return e
+	}
+	if s.ID == "WEB-MEDIA-VARIANTS" {
+		ok, metrics := cleanupNativeMessageRun(w, "run_01M64W1J58T7DV22HT4QNM1XET", false, true)
+		e.Metrics = map[string]any{"previous_run_cleanup": metrics, "writes_submitted": 0}
+		add("owned_attachment_cleanup_qualified", ok)
+		if !ok {
+			return e
+		}
 	}
 	if strings.HasPrefix(s.ID, "MSG-GROUP-") || s.ID == "MSG-SEND-RCS-GROUP" {
 		return runNativeMessagesGroup(ctx, s, e, w, own.Handles)

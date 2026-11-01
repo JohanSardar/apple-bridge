@@ -69,7 +69,26 @@ enum MessagesAccessibility {
                 let direction = MessagesMediaCleanupProof.direction(description, names: Set(mediaNames)).map(JSON.bool) ?? .null
                 candidates.append(.object(["outgoing": direction, "values": nested > 0 ? .array(values) : .array([])]))
             }
-            guard budget > 0, let index = MessagesMediaCleanupProof.targetIndex(candidates, names: Set(mediaNames), outgoing: outgoing, allowSelfEcho: prepared.nativeState["target"]["cleanup_self_echo"].bool) else { throw MessagesUIFailure.targetUnavailable }
+            guard budget > 0, let index = MessagesMediaCleanupProof.targetIndex(candidates, names: Set(mediaNames), outgoing: outgoing, allowSelfEcho: prepared.nativeState["target"]["cleanup_self_echo"].bool) else {
+                var diagnosticBudget = 4000
+                var nodes: [[String: Any]] = []
+                _ = matching(root, budget: &diagnosticBudget) { node in
+                    var attributes: CFArray?
+                    AXUIElementCopyAttributeNames(node, &attributes)
+                    let names = attributes as? [String] ?? []
+                    let matches = names.filter { attribute in
+                        let text = value(node, attribute)
+                        return text.contains(guid) || mediaNames.contains(where: text.contains)
+                    }
+                    let identifier = value(node, kAXIdentifierAttribute)
+                    if identifier == "Sticker" || !matches.isEmpty {
+                        nodes.append(["role": value(node, kAXRoleAttribute), "identifier": identifier, "matching_attributes": matches, "attributes": names, "outgoing_description": value(node, kAXDescriptionAttribute).hasPrefix("Your iMessage,"), "incoming_description": value(node, kAXDescriptionAttribute).hasPrefix("iMessage,"), "description_length": value(node, kAXDescriptionAttribute).count])
+                    }
+                    return false
+                }
+                try? PrivateReport.write(["budget_remaining": budget, "nodes": nodes, "candidate_value_matches": candidates.map { $0["values"].array.filter { MessagesMediaCleanupProof.matches($0.string, names: Set(mediaNames)) }.count }], to: PrivateReport.validate(PrivateReport.directory.appendingPathComponent("messages-media-target-diagnostic.json").path))
+                throw MessagesUIFailure.targetUnavailable
+            }
             return bubbles[index]
         }
         let targets = matching(root, budget: &budget) { element in
