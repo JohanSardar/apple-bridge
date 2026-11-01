@@ -20,9 +20,11 @@ public struct MailQualification: Sendable {
         }
     }
     private let restart: @Sendable () async throws -> Void
+    private let fixtureIDs: MailFixtureCleanup.FixtureIDs
     private let script: MailCommands.Script
     private let removeSelected: @Sendable () async throws -> Void
-    public init(script: @escaping MailCommands.Script = MailCommands.run, removeSelected: @escaping @Sendable () async throws -> Void = MailFixtureCleanup.removeSelected, restart: @escaping @Sendable () async throws -> Void = Self.restartUnresponsiveMail) {
+    public init(script: @escaping MailCommands.Script = MailCommands.run, fixtureIDs: @escaping MailFixtureCleanup.FixtureIDs = { try MailFixtureCleanup.fixtureIDs(tag: $0) }, removeSelected: @escaping @Sendable () async throws -> Void = MailFixtureCleanup.removeSelected, restart: @escaping @Sendable () async throws -> Void = Self.restartUnresponsiveMail) {
+        self.fixtureIDs = fixtureIDs
         self.script = script
         self.removeSelected = removeSelected
         self.restart = restart
@@ -37,7 +39,7 @@ public struct MailQualification: Sendable {
               ["MAIL-SEND-SELF-REAL", "MAIL-DRAFT-REAL", "MAIL-ORGANIZE-REAL", "MAIL-BODY-FIXTURE", "MAIL-CLEANUP"].contains(scenario) else { throw SourceFailure.invalid }
         let q = MailCommands.quote
         func cleanup() async throws -> [String: JSON] {
-            try await MailFixtureCleanup.run(tag: tag, script: script, removeSelected: removeSelected)
+            try await MailFixtureCleanup.run(tag: tag, script: script, fixtureIDs: fixtureIDs, removeSelected: removeSelected)
         }
         if scenario == "MAIL-CLEANUP" {
             do { return .object(try await cleanup()) }
