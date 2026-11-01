@@ -33,6 +33,7 @@ func TestNotesCleanupScriptDeletesOnlyValidatedScopedObjects(t *testing.T) {
 		failed  bool
 	}{
 		{"note", map[string]any{"action": "cleanup_owned", "id": "note", "folder_id": "a"}, []string{"note"}, false},
+		{"note moved into captured trash", map[string]any{"action": "cleanup_owned", "id": "note", "folder_id": "a", "trash_folders": map[string]string{"note": "trash"}}, []string{"note"}, false},
 		{"wrong note folder", map[string]any{"action": "cleanup_owned", "id": "note", "folder_id": "b"}, []string{}, true},
 		{"folder", map[string]any{"action": "cleanup_created_folder", "created_by_run": true, "folder_id": "a", "title": "Bridge Test [ab-test owned] a"}, []string{"a"}, false},
 		{"batch", map[string]any{"action": "cleanup_created_folders", "created_by_run": true, "folders": []map[string]any{{"id": "a", "title": "Bridge Test [ab-test owned] a"}, {"id": "b", "title": "Bridge Test [ab-test owned] b"}}}, []string{"a", "b"}, false},
@@ -48,7 +49,7 @@ func TestNotesCleanupScriptDeletesOnlyValidatedScopedObjects(t *testing.T) {
 			script := `
 const deleted = [];
 const occupied = ` + string(request) + `.occupied;
-const titles = {a:'Bridge Test [ab-test owned] a',b:'Bridge Test [ab-test owned] b'};
+const titles = {a:'Bridge Test [ab-test owned] a',b:'Bridge Test [ab-test owned] b',trash:'Recently Deleted'};
 function folder(id) {
     if (!titles[id]) throw Error('missing folder');
     const notes = () => id === occupied ? [{}] : [];
@@ -59,6 +60,9 @@ function folder(id) {
 const note = {owned:true, id:() => 'note', name:() => '[ab-test owned] note', container:() => folder('a')};
 const app = {folders:{byId:folder}, notes:{byId:() => note}, delete:object => {
     if (!object.owned) throw Error('unscoped deletion');
+    deleted.push(object.id());
+}, move:(object,options) => {
+    if (!object.owned || options.to.id() !== 'trash') throw Error('invalid trash move');
     deleted.push(object.id());
 }};
 let failed = false;

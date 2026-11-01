@@ -104,7 +104,8 @@ public enum NotesParityProbe {
                 let id = note["scoped_alias"].string
                 let name = try script("return name of note id " + NotesScript.quote(id))
                 guard name.hasPrefix(tag) else { throw SourceFailure.conflict }
-                _ = try script(NotesScript.deleteNote(id, folderID: folderID))
+                let trash = try store.trashFolder(forFolder: key)
+                _ = try script(NotesScript.deleteNote(id, folderID: folderID, trashFolderID: trash?["scoped_alias"].string))
             }
             for attempt in 0..<50 {
                 let remaining = try notes.contains { try !["gone", "marked", "trashed"].contains(store.deletionState($0["native_key"].string, collection: "notes.note")) }

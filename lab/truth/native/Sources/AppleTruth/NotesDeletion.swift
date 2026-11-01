@@ -2,6 +2,34 @@ import Foundation
 import SQLite3
 
 extension AppleTruth {
+    static func notesTrashFolder(noteID: String) throws -> String? {
+        let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Group Containers/group.com.apple.notes/NoteStore.sqlite").path
+        var db: OpaquePointer?
+        guard sqlite3_open_v2(path, &db, SQLITE_OPEN_READONLY, nil) == SQLITE_OK else {
+            if db != nil { sqlite3_close(db) }; throw NotesDeletionFailure.read
+        }
+        defer { sqlite3_close(db) }
+        guard let tail = noteID.split(separator: "/").last, tail.first == "p", let pk = Int(tail.dropFirst()), pk > 0 else { throw NotesDeletionFailure.identity }
+        let sql = """
+        WITH RECURSIVE folders(pk,account,parent,depth) AS (
+          SELECT f.Z_PK,f.ZACCOUNT8,f.ZPARENT,0 FROM ZICCLOUDSYNCINGOBJECT n JOIN ZICCLOUDSYNCINGOBJECT f ON f.Z_PK=n.ZFOLDER
+          WHERE n.Z_PK=\(pk) AND n.Z_ENT=(SELECT Z_ENT FROM Z_PRIMARYKEY WHERE Z_NAME='ICNote')
+          UNION ALL SELECT f.Z_PK,f.ZACCOUNT8,f.ZPARENT,a.depth+1 FROM ZICCLOUDSYNCINGOBJECT f JOIN folders a ON f.Z_PK=a.parent WHERE a.depth<128
+        ) SELECT DISTINCT m.Z_UUID,t.Z_PK FROM Z_METADATA m CROSS JOIN ZICCLOUDSYNCINGOBJECT t JOIN folders f ON t.ZACCOUNT8=f.account
+          WHERE t.Z_ENT=(SELECT Z_ENT FROM Z_PRIMARYKEY WHERE Z_NAME='ICFolder') AND t.ZFOLDERTYPE=1 AND t.ZPARENT IS NULL AND COALESCE(t.ZMARKEDFORDELETION,0)=0
+        """
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else { throw NotesDeletionFailure.read }
+        defer { sqlite3_finalize(statement) }
+        let result = sqlite3_step(statement)
+        if result == SQLITE_DONE { return nil }
+        guard result == SQLITE_ROW, let value = sqlite3_column_text(statement, 0) else { throw NotesDeletionFailure.read }
+        let prefix = "x-coredata://" + String(cString: value)
+        guard noteID == prefix + "/ICNote/p" + String(pk) else { throw NotesDeletionFailure.identity }
+        let id = prefix + "/ICFolder/p" + String(sqlite3_column_int64(statement, 1))
+        guard sqlite3_step(statement) == SQLITE_DONE else { throw NotesDeletionFailure.identity }
+        return id
+    }
     static func notesActiveIdentities(path supplied: String? = nil) throws -> [String: Any] {
         let path = supplied ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Group Containers/group.com.apple.notes/NoteStore.sqlite").path
         var db: OpaquePointer?

@@ -3,6 +3,13 @@ import SQLite3
 import SourceSupport
 
 extension NotesStore {
+    func trashFolder(forFolder key: String) throws -> JSON? {
+        let folders = try read(keys: []).observations
+        guard let folder = folders.first(where: { $0["collection"].string == "notes.folder" && $0["native_key"].string == key }) else { throw SourceFailure.conflict }
+        guard !folder["data"]["account"].string.isEmpty else { return nil }
+        let matches = folders.filter { $0["collection"].string == "notes.folder" && $0["data"]["account"] == folder["data"]["account"] && $0["data"]["recently_deleted"].bool && $0["data"]["parent_id"] == .null }
+        return matches.count == 1 ? matches[0] : nil
+    }
     func deletionState(_ key: String, collection: String) throws -> String {
         guard ["notes.note", "notes.folder"].contains(collection) else { throw SourceFailure.invalid }
         var db: OpaquePointer?

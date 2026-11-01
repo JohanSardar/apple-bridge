@@ -320,7 +320,8 @@ public final class NotesSource: Source {
             } else if op == "notes.delete" {
                 let folder = try find(note["data"]["folder_id"]["$ref"]["native_key"].string, collection: "notes.folder")
                 trace.record("notes_delete_started", keys: [action["native_key"].string], fields: ["source": .string(name)])
-                _ = try NotesScript.run(NotesScript.deleteNote(scriptID, folderID: folder["scoped_alias"].string), trace: trace)
+                let trash = try store.trashFolder(forFolder: folder["native_key"].string)
+                _ = try NotesScript.run(NotesScript.deleteNote(scriptID, folderID: folder["scoped_alias"].string, trashFolderID: trash?["scoped_alias"].string), trace: trace)
             }
             else {
                 let content = args["mode"].string == "append" ? note["data"]["plain_text"].string + args["plain_text"].string : args["plain_text"].string

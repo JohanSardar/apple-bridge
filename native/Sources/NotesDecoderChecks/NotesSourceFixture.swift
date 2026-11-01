@@ -76,6 +76,7 @@ enum NotesSourceFixture {
         }
         let traceURL = root.appendingPathComponent("capture-trace.jsonl")
         let source = try NotesSource(home: home, fixtureDatabase: database, trace: CaptureTrace(url: traceURL)), sink = Sink()
+        guard try NotesStore(path: database.path).trashFolder(forFolder: "nested")?["native_key"].string == "trash" else { throw Invalid.boundary }
         guard (await source.open()).capabilities.contains("notes.delete") else { throw Invalid.boundary }
         for operation in ["notes.delete_folder"] {
             let action = JSON.object(["op": .string(operation), "native_key": .string("native-plain")])

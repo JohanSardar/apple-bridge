@@ -18,6 +18,12 @@ extension AppleTruth {
         let storeTargets = cleanup && request["folder_id"] == nil && request["folders"] == nil ? try notesDeletionTargets(tag: tag, folderKey: request["action"] as? String == "cleanup_created_folder" ? request["native_key"] as? String : nil) : []
         var input = request
         input["verb"] = verb
+        if cleanup {
+            let ids = (request["id"] as? String).map { [$0] } ?? storeTargets.filter { $0.contains("/ICNote/") }
+            var trash: [String: String] = [:]
+            for id in ids { trash[id] = try notesTrashFolder(noteID: id) }
+            input["trash_folders"] = trash
+        }
         if verb == "observe", !tag.isEmpty { input["note_ids"] = try notesDeletionTargets(tag: tag, folderKey: nil) }
         let encoded = try JSONSerialization.data(withJSONObject: input, options: [.sortedKeys])
         guard let argument = String(data: encoded, encoding: .utf8) else { throw NotesTruthFailure.invalid }
@@ -42,7 +48,12 @@ extension AppleTruth {
             require(folder.id() === folderID && fixtureFolder(folder));
             const matches = folder.notes.whose({id:id})();
             require(matches.length === 1 && matches[0].id() === id && matches[0].name().startsWith(tag) && matches[0].container().id() === folderID);
-            app.delete(matches[0]);
+            const trashID = (request.trash_folders || {})[id];
+            if (trashID) {
+                const trash = app.folders.byId(trashID);
+                require(trash.id() === trashID);
+                app.move(matches[0], {to:trash});
+            } else { app.delete(matches[0]); }
         }
         function deleteOwnedFolder(id) {
             const folder = app.folders.byId(id);
