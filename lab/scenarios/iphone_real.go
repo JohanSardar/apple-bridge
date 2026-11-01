@@ -65,6 +65,7 @@ func runIPhoneReal(ctx context.Context, s Scenario, level string) (e Evidence) {
 		}
 		defer release()
 		check("air_focus_lock", true)
+		logPhoneInstruction("Air app locks acquired; waiting for the paired physical iPhone")
 	}
 	if err := exec.CommandContext(ctx, "python3", "lab/iphone-real/device.py", device).Run(); err != nil {
 		return fail("physical_device_available", err)

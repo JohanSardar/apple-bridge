@@ -1153,7 +1153,7 @@ features:
     limits:
       - {"scenario": "FOC-SET-REAL", "level": "real", "reason": "needs Focus status grant for AppleBridgeHelper; signed Air probe stopped before dispatch; AB Focus import remains unqualified"}
       - {"scenario": "FOC-IDLE", "level": "real", "reason": "Five-minute Helper CPU qualification remains pending; no idle CPU measurement claimed."}
-      - {scenario: FOC-PHONE-SYNC, level: real, reason: "Phone Focus permission and inactive baseline passed; the Pro AppleBridgeHelper has no Focus-status grant. No Mac Focus mutation was attempted, and phone restoration was acknowledged."}
+      - {scenario: FOC-PHONE-SYNC, level: real, reason: "Mac Focus set/restore now routes to the granted Air helper. Real qualification stopped before mutation because the paired iPhone 13 is unavailable on the Pro; reconnect the unlocked phone by USB and rerun."}
   - id: recordings.read
     title: Voice Memos assets and voicemail metadata
     requirements: [R-API, R-SCOPE]

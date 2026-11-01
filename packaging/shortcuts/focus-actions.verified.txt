@@ -18,4 +18,5 @@ The If subject must use WFInput.Type = Variable with its variable attachment
 under WFInput.Variable. A raw variable attachment at WFInput is invalid.
 FOC-SIM compiles the pack and verifies this binding points to the until output.
 The signed AB Focus.shortcut contains the corrected binding. Import/replace it
-in Shortcuts before rerunning FOC-SET-REAL; no import dialog is opened by tests.
+in Shortcuts before rerunning FOC-SET-REAL. FOC-PHONE-SYNC can replace the
+existing pack through the granted Air helper when AB_REAL_FOCUS_AIR_PACK is set.
