@@ -17,6 +17,13 @@ enum RemindersFixtureChecks {
         precondition(RemindersFixtureUI.editableRole(kAXTextAreaRole))
         precondition(!RemindersFixtureUI.editableRole(kAXMenuItemRole))
         precondition(!RemindersFixtureUI.editableRole(kAXRowRole))
+        precondition(RemindersFixtureUI.editorRole(kAXWindowRole))
+        precondition(RemindersFixtureUI.editorRole(kAXSheetRole))
+        precondition(!RemindersFixtureUI.editorRole(kAXTableRole))
+        precondition(RemindersFixtureUI.scopedActionRole(kAXButtonRole))
+        precondition(RemindersFixtureUI.scopedActionRole(kAXPopUpButtonRole))
+        precondition(!RemindersFixtureUI.scopedActionRole(kAXMenuItemRole))
+        precondition(!RemindersFixtureUI.scopedActionRole(kAXMenuBarItemRole))
         print("reminders fixture checks passed")
     }
 }

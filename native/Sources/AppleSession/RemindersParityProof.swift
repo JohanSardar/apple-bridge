@@ -316,6 +316,7 @@ final class RemindersFixtureUI {
     var searchDiagnostics: [String: Double] = [:]
     var accessibilityDiagnostics: [String: Double] = [:]
     var ownedSheet: AXUIElement?
+    var ownedEditor: AXUIElement?
     var pendingNewListSheet = false
     var selectionDiagnostics: [String: Double] = [:]
 
@@ -495,6 +496,37 @@ final class RemindersFixtureUI {
         return matches
     }
 
+    static func editorRole(_ role: String) -> Bool {
+        [kAXWindowRole, kAXSheetRole].contains(role)
+    }
+
+    static func scopedActionRole(_ role: String) -> Bool {
+        [kAXButtonRole, kAXPopUpButtonRole].contains(role)
+    }
+
+    func editorIsOpen(_ editor: AXUIElement) -> Bool {
+        (elements(root, kAXWindowsAttribute) + sheets()).contains { CFEqual($0, editor) }
+    }
+
+    func adoptSectionEditor(previousWindows: [AXUIElement], names: [String]) async throws -> AXUIElement {
+        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+        repeat {
+            let windows = elements(root, kAXWindowsAttribute).filter { candidate in
+                !previousWindows.contains(where: { CFEqual($0, candidate) })
+            }
+            let candidates = (windows + sheets()).filter { candidate in
+                Self.editorRole(value(candidate, kAXRoleAttribute)) && names.allSatisfy { !find($0, within: candidate).isEmpty } && find("Done", role: kAXButtonRole, within: candidate).count == 1
+            }
+            if candidates.count == 1 {
+                ownedEditor = candidates[0]
+                if value(candidates[0], kAXRoleAttribute) == kAXSheetRole { ownedSheet = candidates[0] }
+                return candidates[0]
+            }
+            try await Task.sleep(for: .milliseconds(100))
+        } while ContinuousClock.now < deadline
+        throw SourceFailure.conflict
+    }
+
     func sheets() -> [AXUIElement] {
         let candidates = elements(root, kAXWindowsAttribute).flatMap { elements($0, kAXChildrenAttribute) }.filter { value($0, kAXRoleAttribute) == kAXSheetRole }
         var focusedSheets: [AXUIElement] = []
@@ -605,7 +637,7 @@ final class RemindersFixtureUI {
         func point(_ name: String, before: Bool) throws -> CGPoint {
             let row = try reminderRow(name)
             let fields = find(name, role: kAXTextFieldRole, within: row) + find(name, role: kAXTextAreaRole, within: row)
-            let target = row
+            let target = fields.count == 1 ? fields[0] : row
             var position: CFTypeRef?, size: CFTypeRef?
             guard AXUIElementCopyAttributeValue(target, kAXPositionAttribute as CFString, &position) == .success,
                   AXUIElementCopyAttributeValue(target, kAXSizeAttribute as CFString, &size) == .success,
@@ -624,7 +656,7 @@ final class RemindersFixtureUI {
                     }
                 }
             }
-            return CGPoint(x: origin.x + (before ? min(60, dimensions.width / 2) : max(1, dimensions.width - 40)), y: y)
+            return CGPoint(x: origin.x + (before ? 1 : min(12, dimensions.width / 2)), y: y)
         }
         let start = try point(from, before: false), end = try point(to, before: true)
         try await activate()
@@ -649,7 +681,7 @@ final class RemindersFixtureUI {
 
     func press(_ name: String, role: String) throws {
         try fence()
-        let matches = find(name, role: role)
+        let matches = actionMatches(name, role: role)
         guard matches.count == 1, AXUIElementPerformAction(matches[0], kAXPressAction as CFString) == .success else { throw SourceFailure.unsupported }
     }
 
@@ -673,8 +705,13 @@ final class RemindersFixtureUI {
         throw SourceFailure.conflict
     }
 
+    func actionMatches(_ name: String, role: String) -> [AXUIElement] {
+        let sheet = ownedSheet.flatMap { owned in sheets().contains(where: { CFEqual($0, owned) }) ? owned : nil }
+        return find(name, role: role, within: Self.scopedActionRole(role) ? sheet : nil)
+    }
+
     func pressAny(_ names: [String], role: String) throws {
-        let available = names.filter { find($0, role: role).count == 1 }
+        let available = names.filter { actionMatches($0, role: role).count == 1 }
         guard available.count == 1 else { throw SourceFailure.conflict }
         try press(available[0], role: role)
     }

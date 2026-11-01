@@ -229,14 +229,9 @@ enum RemindersSectionsProof {
             stage = "reorder_sections"
             _ = app.activate()
             try await Task.sleep(for: .milliseconds(200))
+            let previousWindows = ui.elements(root, kAXWindowsAttribute)
             try await ui.menu("File", ["Edit Sections…", "Edit Sections...", "Edit Sections"])
-            let editorDeadline = ContinuousClock.now.advanced(by: .seconds(5))
-            while ui.ownedSheet == nil, ContinuousClock.now < editorDeadline {
-                let candidates = ui.sheets()
-                if candidates.count == 1 { ui.ownedSheet = candidates[0]; break }
-                try await Task.sleep(for: .milliseconds(100))
-            }
-            guard let editor = ui.ownedSheet else { throw SourceFailure.unsupported }
+            let editor = try await ui.adoptSectionEditor(previousWindows: previousWindows, names: names)
             @MainActor func editorRow(_ name: String) throws -> AXUIElement {
                 let matches = ui.find(name, within: editor)
                 diagnostics["section_editor_title_matches"] = .number(Double(matches.count))
@@ -257,15 +252,15 @@ enum RemindersSectionsProof {
             try await Task.sleep(for: .milliseconds(500))
             checks["section_move_readback"] = .bool(try await observed(true, member: true))
         } catch { failure = "The test stopped at " + stage + ": " + String(describing: error) }
-        if let ui = fixtureUI, let sheet = ui.ownedSheet {
-            if ui.sheets().contains(where: { CFEqual($0, sheet) }), NSWorkspace.shared.frontmostApplication?.processIdentifier == ui.app.processIdentifier {
+        if let ui = fixtureUI, let sheet = ui.ownedEditor {
+            if ui.editorIsOpen(sheet), NSWorkspace.shared.frontmostApplication?.processIdentifier == ui.app.processIdentifier {
                 for name in ["Done", "Cancel"] {
                     let buttons = ui.find(name, role: kAXButtonRole, within: sheet)
                     if buttons.count == 1, AXUIElementPerformAction(buttons[0], kAXPressAction as CFString) == .success { break }
                 }
                 try await Task.sleep(for: .milliseconds(500))
             }
-            checks["owned_sheet_cleanup"] = .bool(!ui.sheets().contains(where: { CFEqual($0, sheet) }))
+            checks["owned_sheet_cleanup"] = .bool(!ui.editorIsOpen(sheet))
         }
         for path in (try? RemindersStore.paths()) ?? [] {
             if let captured = try? RemindersStore(path: path).sectionFixture(identifier: identifier, title: title),
