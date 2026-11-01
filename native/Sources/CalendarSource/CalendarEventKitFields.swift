@@ -3,6 +3,15 @@ import Foundation
 import SourceSupport
 
 public enum CalendarEventKitFields {
+    public static func identitySearchIntervals(around now: Date) -> [DateInterval] {
+        let calendar = Calendar(identifier: .gregorian)
+        return stride(from: -12, through: 0, by: 3).compactMap { years in
+            guard let start = calendar.date(byAdding: .year, value: years, to: now),
+                  let end = calendar.date(byAdding: .year, value: min(years + 3, 1), to: now) else { return nil }
+            return DateInterval(start: start, end: end)
+        }
+    }
+
     public static func structuredLocation(_ location: EKStructuredLocation?) -> JSON {
         guard let location else { return .null }
         let coordinate = location.geoLocation?.coordinate

@@ -48,6 +48,7 @@ enum CalendarParityProof {
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         defer { try? FileManager.default.removeItem(at: root) }
         var stage = "fixture"
+        var fixtureUI: CalendarFixtureUI?
         do {
             try store.save(event, span: .thisEvent, commit: true)
             let identifier = event.calendarItemIdentifier, external = event.calendarItemExternalIdentifier ?? ""
@@ -57,8 +58,19 @@ enum CalendarParityProof {
                 try CalendarStoreSnapshot.read(path: database.path).event(identifier: identifier, external: external, calendar: calendarID, detached: false)
             }
             stage = "show_owned_event"
-            store.reset()
-            let saved = store.calendarItem(withIdentifier: identifier) as? EKEvent
+            var saved: EKEvent?
+            for _ in 0..<30 {
+                store.reset()
+                saved = store.calendarItem(withIdentifier: identifier) as? EKEvent
+                if saved != nil { break }
+                try await Task.sleep(for: .milliseconds(100))
+            }
+            controls["saved_event_found"] = .bool(saved != nil)
+            controls["location_title_matches"] = .bool(saved?.structuredLocation?.title == location.title)
+            controls["location_latitude_matches"] = .bool(saved?.structuredLocation?.geoLocation?.coordinate.latitude == 41.88)
+            controls["location_longitude_matches"] = .bool(saved?.structuredLocation?.geoLocation?.coordinate.longitude == -87.63)
+            controls["location_radius_matches"] = .bool(saved?.structuredLocation?.radius == 100)
+            controls["location_radius_default"] = .bool(saved?.structuredLocation?.radius == 0)
             checks["structured_location_readback"] = .bool(saved?.structuredLocation?.title == location.title && saved?.structuredLocation?.geoLocation?.coordinate.latitude == 41.88 && saved?.structuredLocation?.geoLocation?.coordinate.longitude == -87.63 && saved?.structuredLocation?.radius == 100)
             controls["own_account_identity_count"] = .number(Double(identities.count))
             controls["own_source_identity_count"] = .number(Double(sourceIdentities.count))
@@ -68,6 +80,7 @@ enum CalendarParityProof {
             let app = try await NSWorkspace.shared.openApplication(at: url, configuration: configuration)
             try await Task.sleep(for: .seconds(1))
             let ui = CalendarFixtureUI(app: app, title: eventTitle)
+            fixtureUI = ui
             try await ui.openOwnedEvent()
             checks["owned_event_inspector"] = .bool(ui.hasOwnedInspector())
             try ui.fence()
@@ -207,6 +220,7 @@ enum CalendarParityProof {
             let ui = CalendarFixtureUI(app: app, title: title + " event")
             if ui.find("Cancel", role: kAXButtonRole).count == 1 { try? ui.dialogPress("Cancel") }
         }
+        controls.merge(fixtureUI?.diagnostics ?? [:]) { _, latest in latest }
         do {
             store.reset()
             let query = store.predicateForEvents(withStart: eventStart.addingTimeInterval(-1), end: eventEnd.addingTimeInterval(1), calendars: nil)
@@ -226,14 +240,15 @@ enum CalendarParityProof {
     }
 
     private static func ownIdentities(store: EKEventStore) -> [String: Set<String>] {
-        let now = Date()
-        let predicate = store.predicateForEvents(withStart: now.addingTimeInterval(-180 * 86400), end: now.addingTimeInterval(180 * 86400), calendars: nil)
         var identities: [String: Set<String>] = [:]
-        for event in store.events(matching: predicate) {
-            for participant in (event.attendees ?? []) + [event.organizer].compactMap({ $0 }) where participant.isCurrentUser && participant.url.scheme?.lowercased() == "mailto" {
-                let address = String(participant.url.absoluteString.dropFirst(7)).removingPercentEncoding?.lowercased() ?? ""
-                if !address.isEmpty, !address.contains("\n"), !address.contains("\r") {
-                    identities[event.calendar.source.sourceIdentifier, default: []].insert(address)
+        for interval in CalendarEventKitFields.identitySearchIntervals(around: Date()) {
+            let predicate = store.predicateForEvents(withStart: interval.start, end: interval.end, calendars: nil)
+            for event in store.events(matching: predicate) {
+                for participant in (event.attendees ?? []) + [event.organizer].compactMap({ $0 }) where participant.isCurrentUser && participant.url.scheme?.lowercased() == "mailto" && !event.calendar.source.isDelegate {
+                    let address = String(participant.url.absoluteString.dropFirst(7)).removingPercentEncoding?.lowercased() ?? ""
+                    if !address.isEmpty, !address.contains("\n"), !address.contains("\r") {
+                        identities[event.calendar.source.sourceIdentifier, default: []].insert(address)
+                    }
                 }
             }
         }
@@ -251,6 +266,7 @@ final class CalendarFixtureUI {
     let app: NSRunningApplication
     let root: AXUIElement
     let title: String
+    var diagnostics: [String: JSON] = [:]
 
     init(app: NSRunningApplication, title: String) {
         self.app = app; self.title = title
@@ -279,11 +295,31 @@ final class CalendarFixtureUI {
 
     func openOwnedEvent() async throws {
         app.activate()
-        try await Task.sleep(for: .milliseconds(200))
+        for _ in 0..<20 {
+            if NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier { break }
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        diagnostics["calendar_frontmost"] = .bool(NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier)
+        var windows: CFTypeRef?
+        for _ in 0..<50 {
+            AXUIElementCopyAttributeValue(root, kAXWindowsAttribute as CFString, &windows)
+            if !(windows as? [AXUIElement] ?? []).isEmpty { break }
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        diagnostics["calendar_window_count"] = .number(Double((windows as? [AXUIElement])?.count ?? 0))
         if hasOwnedInspector() { return }
         try post(3, flags: .maskCommand)
-        try await Task.sleep(for: .milliseconds(150))
+        var searches: [AXUIElement] = []
+        for _ in 0..<20 {
+            searches = findRole(kAXTextFieldRole).filter { value($0, kAXSubroleAttribute) == kAXSearchFieldSubrole }
+            if searches.count == 1 { break }
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        diagnostics["calendar_search_field_count"] = .number(Double(searches.count))
+        guard searches.count == 1 else { throw SourceFailure.conflict }
+        _ = AXUIElementSetAttributeValue(searches[0], kAXFocusedAttribute as CFString, kCFBooleanTrue)
         try setFocused(title, requireInspector: false)
+        diagnostics["calendar_search_entered"] = .bool(true)
         try post(36, flags: [])
         try await Task.sleep(for: .seconds(1))
         var results: [AXUIElement] = []
@@ -292,6 +328,7 @@ final class CalendarFixtureUI {
             if !results.isEmpty { break }
             try await Task.sleep(for: .milliseconds(250))
         }
+        diagnostics["owned_search_result_count"] = .number(Double(results.count))
         guard let result = results.first else { throw SourceFailure.unavailable }
         guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier else { throw SourceFailure.conflict }
         var position: CFTypeRef?, size: CFTypeRef?

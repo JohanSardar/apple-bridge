@@ -27,6 +27,12 @@ enum CalendarParityChecks {
         let native = CalendarEventKitFields.structuredLocation(location)
         guard native["latitude"] == .number(41.88), native["longitude"] == .number(-87.63), native["radius"] == .number(100), CalendarEventKitFields.structuredLocation(nil) == .null, CalendarEventKitFields.participants(nil) == .array([]) else { throw SourceFailure.invalid }
         guard CalendarEventKitFields.ownerParticipationStatus(nil) == .null else { throw SourceFailure.invalid }
+        let now = Date(timeIntervalSince1970: 1793448000)
+        let identityWindows = CalendarEventKitFields.identitySearchIntervals(around: now)
+        guard identityWindows.contains(where: { $0.contains(now.addingTimeInterval(-2 * 365 * 86400)) }),
+              identityWindows.contains(where: { $0.contains(now.addingTimeInterval(180 * 86400)) }),
+              identityWindows.allSatisfy({ $0.duration > 0 && $0.duration < 4 * 365 * 86400 }),
+              zip(identityWindows, identityWindows.dropFirst()).allSatisfy({ $0.end == $1.start }) else { throw SourceFailure.invalid }
         let reader = CalendarStoreEnrichment(root: root)
         var nativeObservation = observation["event"]!.object
         var nativeData = nativeObservation["data"]!.object
