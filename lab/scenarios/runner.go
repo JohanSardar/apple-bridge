@@ -1267,6 +1267,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) (resu
 		}
 	}
 	if level == "real" {
+		if len(scenarios) == 1 && (scenarios[0].ID == "Q2-IDLE-PREP" || scenarios[0].ID == "Q2-IDLE-SETTLE") {
+			return idleSetup(ctx, scenarios[0].ID, asJSON)
+		}
 		allIdle := true
 		for _, s := range scenarios {
 			allIdle = allIdle && idleScenario(s.ID)

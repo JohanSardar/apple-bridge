@@ -67,7 +67,17 @@ func idleSuite(ctx context.Context, scenarios []Scenario, asJSON bool) error {
 	conditions := HostConditions{Start: samples, Quiet: samplesQuiet(samples), Summary: fmt.Sprintf("air: load=%v cpu_idle=%s cpus=%d other_heavy=%d", sample.Load, idle, sample.CPUCount, sample.OtherHeavySlots)}
 	reports := diagnosticReportsDir()
 	crashReports, reportsErr := helperCrashReports(reports)
-	w, err := world.NewReal(ctx, "real", 0, world.BlobOptions{Scope: "admin"})
+	var w *world.World
+	var err error
+	if path, pathErr := idleSessionPath(); pathErr == nil {
+		if _, statErr := os.Lstat(path); statErr == nil {
+			sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
+			w, err = world.ResumeSession(ctx, path, strings.TrimSpace(string(sha)))
+		}
+	}
+	if w == nil && err == nil {
+		w, err = world.NewReal(ctx, "real", 0, world.BlobOptions{Scope: "admin"})
+	}
 	if err != nil {
 		return err
 	}

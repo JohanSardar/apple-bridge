@@ -9,6 +9,16 @@ import SQLite3
 @main
 struct Main {
     static func main() async throws {
+        if ["script-reuse", "SAF-IDLE"].contains(CommandLine.arguments.last ?? "") {
+            let script = try SafariReadScript(source: "property counter : 0\nset counter to counter + 1\nreturn counter")
+            guard try script.run().int32Value == 1, try script.run().int32Value == 2 else { throw SourceFailure.corrupt }
+            let invalid = try SafariReadScript(source: "this is not valid AppleScript syntax )")
+            do { _ = try invalid.run(); throw SourceFailure.corrupt } catch SourceFailure.unavailable {}
+            if CommandLine.arguments.last == "script-reuse" {
+                print("Safari compiled read reuse checks passed")
+                return
+            }
+        }
         if CommandLine.arguments.count == 2 && CommandLine.arguments[1] == "commands" {
             let fake = FakeSafari()
             let tabs = SafariTabs(execute: { try fake.run($0) })
