@@ -79,6 +79,15 @@ struct Checks {
 
     @MainActor
     static func clockTimerSnapshotChecks() throws {
+        var activations = 0, waits = 0
+        try ClockTimers.acquireForeground(activate: { activations += 1 }, current: { waits >= 3 }, wait: { waits += 1 })
+        guard activations == 3, waits == 3 else { throw SourceFailure.corrupt }
+        activations = 0
+        var refused = false
+        do {
+            try ClockTimers.acquireForeground(activate: { activations += 1 }, current: { false }, wait: {})
+        } catch { refused = true }
+        guard refused, activations == 20 else { throw SourceFailure.corrupt }
         for (value, expected) in [("3 hours", 3), ("0 minutes", 0), ("12 seconds", 12), ("02", 2), ("9\u{202F}minutes", 9)] {
             guard ClockTimers.durationComponent(value) == expected else { throw SourceFailure.corrupt }
         }
