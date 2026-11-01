@@ -368,9 +368,19 @@ final class CalendarFixtureUI {
         try post(3, flags: .maskCommand)
         var searches: [AXUIElement] = []
         for _ in 0..<20 {
-            searches = findRole(kAXTextFieldRole).filter { value($0, kAXSubroleAttribute) == kAXSearchFieldSubrole }
-            if searches.count == 1 { break }
             try await Task.sleep(for: .milliseconds(100))
+            try focus()
+            var focused: CFTypeRef?
+            if AXUIElementCopyAttributeValue(root, kAXFocusedUIElementAttribute as CFString, &focused) == .success,
+               let focused, CFGetTypeID(focused) == AXUIElementGetTypeID() {
+                let field = unsafeDowncast(focused, to: AXUIElement.self)
+                diagnostics["search_focused_" + value(field, kAXRoleAttribute)] = .bool(true)
+                if value(field, kAXRoleAttribute) == kAXTextFieldRole, value(field, kAXSubroleAttribute) == kAXSearchFieldSubrole {
+                    searches = [field]
+                    break
+                }
+            }
+            try post(3, flags: .maskCommand)
         }
         diagnostics["calendar_search_field_count"] = .number(Double(searches.count))
         guard searches.count == 1 else { throw SourceFailure.conflict }
