@@ -753,12 +753,18 @@ features:
       - {id: WEB-MSG-FAIL-RESEND, levels: [web]}
       - {id: WEB-MSG-OPTIMISTIC, levels: [web]}
       - {id: WEB-MSG-PARTS, levels: [web]}
+      - {id: MSG-SEND-LATER, levels: [sim, real]}
+      - {id: MSG-MENTION-SEND, levels: [sim, real]}
+      - {id: MSG-AUDIO-MESSAGE, levels: [sim, real]}
     limits:
       - {"scenario": "MSG-SELFTEST", "level": "real", "reason": "The native self-test reached its existing self-chat baseline and found unread earlier messages. It stopped before sends, left zero tagged text/file rows, and preserved the 160349-identity baseline. Read those messages in Messages on the Air, then rerun the self-test."}
       - {"scenario": "MSG-READSTATE-REAL", "level": "real", "reason": "The verified existing self-chat contains unread earlier messages. The native preflight submitted zero writes. Read those messages in Messages on the Air before rerunning; no unused self alias is required."}
       - {"scenario": "MSG-DELETE-REAL", "level": "real", "reason": "The verified existing self-chat contains unread earlier messages. Cleanup cannot open it without changing their read state, so the native preflight submitted zero writes. Read those messages in Messages on the Air before rerunning; existing residue stays untouched."}
       - {"scenario": "MSG-RESEND", "level": "real", "reason": "No uniquely verified failed self-message was created by the current run. The real check submitted zero writes and left existing failed messages untouched; native resend remains unqualified."}
       - {"scenario": "WEB-UPLOAD-NATIVE-STAGING", "level": "real", "reason": "The verified self-chat contains unread existing messages. Native preflight submitted zero writes and staged no upload. Read those messages in Messages on the Air, then rerun native upload observation and owned cleanup qualification."}
+      - {"scenario": "MSG-SEND-LATER", "level": "real", "reason": "Native F5 qualification remains pending while the current run's owned self-test fixtures are recovered; existing messages and failed sends remain untouched."}
+      - {"scenario": "MSG-MENTION-SEND", "level": "real", "reason": "Native F5 qualification remains pending while the current run's owned self-test fixtures are recovered; existing messages and failed sends remain untouched."}
+      - {"scenario": "MSG-AUDIO-MESSAGE", "level": "real", "reason": "Native F5 qualification remains pending while the current run's owned self-test fixtures are recovered; existing messages and failed sends remain untouched."}
   - id: web.messages.parity
     title: Messages parity (pins, mute, read receipts, Send Later, effects, formatting, mentions, audio messages, Recently Deleted, groups)
     requirements: [R-WEB-UI, R-MSG-DEPTH]
@@ -776,11 +782,8 @@ features:
       - {id: MSG-READ-RECEIPTS, levels: [sim, real]}
       - {id: MSG-SEND-VARIANTS, levels: [sim]}
       - {id: WEB-MSG-SEND-VARIANTS, levels: [web]}
-      - {id: MSG-SEND-LATER, levels: [sim, real]}
       - {id: MSG-SEND-EFFECT, levels: [sim, real]}
       - {id: MSG-FORMATTING-SEND, levels: [sim, real]}
-      - {id: MSG-MENTION-SEND, levels: [sim, real]}
-      - {id: MSG-AUDIO-MESSAGE, levels: [sim, real]}
       - {id: MSG-RECENTLY-DELETED, levels: [sim, real]}
       - {id: WEB-MSG-PARITY-UI, levels: [web]}
     notes: "Dropped from scope by the owner on 2026-11-01. Group management (W4-GROUPS) completes the existing messages.groups feature and its scenarios instead of duplicating them. T74 adds long-name-safe pinned mute indicators with accessible descriptions, a visible Recently Deleted heading and trailing swipe-width settlement. Five parity checks pass after T73 integration; native send variants retain their per-build qualification gates."
