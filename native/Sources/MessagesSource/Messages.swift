@@ -6,6 +6,9 @@ import SourceSupport
 
 public actor Messages: Source {
     public nonisolated let name = "messages"
+    public static func shouldPreemptMedia(activeDigest: String, incomingDigest: String, activeLive: Bool, incomingImage: Bool) -> Bool {
+        activeDigest != incomingDigest && (!activeLive || incomingImage)
+    }
     private let path: String
     private let pinsURL: URL?
     private let diagnostics: URL?
@@ -186,7 +189,7 @@ public actor Messages: Source {
                                     pendingMedia[key] = job
                                     workTrace.record("media_queued", fields: ["pending_media": .number(Double(pendingMedia.count))])
                                 }
-                                if live, let activeMedia, !activeMedia.0.live || (UTType(filenameExtension: url.pathExtension) ?? UTType(row["uti"]))?.conforms(to: .image) == true {
+                                if live, let activeMedia, Self.shouldPreemptMedia(activeDigest: activeMedia.0.digest, incomingDigest: job.digest, activeLive: activeMedia.0.live, incomingImage: (UTType(filenameExtension: url.pathExtension) ?? UTType(row["uti"]))?.conforms(to: .image) == true) {
                                     workTrace.record("media_preempted_by_live")
                                     activeMedia.1.cancel()
                                 }
