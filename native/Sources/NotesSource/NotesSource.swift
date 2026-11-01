@@ -305,10 +305,12 @@ public final class NotesSource: Source {
         let action = prepared.action, args = action["note_args"]
         let op = action["op"].string
         var scriptID = ""
+        var renameFailure: (any Error)?
         if op == "notes.rename_folder" {
             let folder = try find(action["native_key"].string, collection: "notes.folder")
             scriptID = folder["scoped_alias"].string
-            try await NotesFolderUI.rename(id: scriptID, from: folder["data"]["title"].string, to: args["title"].string, trace: trace)
+            do { try await NotesFolderUI.rename(id: scriptID, from: folder["data"]["title"].string, to: args["title"].string, trace: trace) }
+            catch { renameFailure = error }
         } else if op == "notes.create_folder" {
             scriptID = try NotesScript.run("return id of (make new folder with properties {name:" + NotesScript.quote(args["title"].string) + "})")
         } else if op == "notes.create" {
@@ -357,6 +359,7 @@ public final class NotesSource: Source {
             }
             try await Task.sleep(for: .milliseconds(50))
         }
+        if let renameFailure { throw renameFailure }
         if op == "notes.delete" { trace.record("notes_delete_unverified", keys: [action["native_key"].string], fields: ["source": .string(name)]) }
         throw SourceFailure.unavailable
     }
