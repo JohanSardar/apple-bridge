@@ -164,7 +164,7 @@ public enum MessagesCleanup {
                 _ = try await MessagesAccessibility.perform(prepared)
             } catch {
                 failure = phase + ":" + String(describing: error)
-                if phase == "validate", error as? MessagesUIFailure == .targetUnavailable { unavailable.insert(guid); continue }
+                if ownedOnly, mediaProof != nil, phase == "validate", error as? MessagesUIFailure == .targetUnavailable { unavailable.insert(guid); continue }
                 break
             }
             let deadline = ContinuousClock.now.advanced(by: .seconds(ownedOnly ? 10 : 2))
