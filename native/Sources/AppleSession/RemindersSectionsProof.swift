@@ -234,6 +234,12 @@ enum RemindersSectionsProof {
             let previousWindows = ui.elements(root, kAXWindowsAttribute)
             try await ui.menu("File", ["Edit Sections…", "Edit Sections...", "Edit Sections"])
             let editor = try await ui.adoptSectionEditor(previousWindows: previousWindows, names: names)
+            if FileManager.default.fileExists(atPath: "/tmp/ab-r2-section-inspect") {
+                try FileManager.default.removeItem(atPath: "/tmp/ab-r2-section-inspect")
+                _ = FileManager.default.createFile(atPath: "/tmp/ab-r2-section-ready", contents: Data("1".utf8))
+                defer { try? FileManager.default.removeItem(atPath: "/tmp/ab-r2-section-ready") }
+                try await Task.sleep(for: .seconds(60))
+            }
             @MainActor func editorRow(_ name: String) throws -> AXUIElement {
                 let matches = ui.find(name, within: editor)
                 diagnostics["section_editor_title_matches"] = .number(Double(matches.count))

@@ -667,9 +667,23 @@ final class RemindersFixtureUI {
         return rows[0]
     }
 
+    func dismissOwnedPopover(_ name: String) async throws {
+        for popover in find("", role: kAXPopoverRole) {
+            guard !find(name, within: popover).isEmpty else { throw SourceFailure.conflict }
+            try fence()
+            if AXUIElementPerformAction(popover, kAXCancelAction as CFString) != .success { try key(53) }
+            let deadline = ContinuousClock.now.advanced(by: .seconds(3))
+            while find("", role: kAXPopoverRole).contains(where: { CFEqual($0, popover) }), ContinuousClock.now < deadline {
+                try await Task.sleep(for: .milliseconds(100))
+            }
+            guard !find("", role: kAXPopoverRole).contains(where: { CFEqual($0, popover) }) else { throw SourceFailure.conflict }
+        }
+    }
+
     @discardableResult
     func selectReminder(_ name: String) async throws -> AXUIElement {
         try fence()
+        try await dismissOwnedPopover(name)
         let row = try reminderRow(name)
         let result = AXUIElementSetAttributeValue(row, kAXSelectedAttribute as CFString, kCFBooleanTrue)
         selectionDiagnostics["select_result"] = Double(result.rawValue)
