@@ -42,7 +42,7 @@ extension NotesSource {
         guard let bytes = try? Data(contentsOf: deletionProofURL), let ledger = try? JSONDecoder().decode(JSON.self, from: bytes),
               ledger["version"].number == 1,
               ledger["os_build"].string == ProcessInfo.processInfo.operatingSystemVersionString,
-              let generation = try? store.read().generation, ledger["generation"].string == generation else { return publicOperations }
+              let generation = try? store.read(keys: []).generation, ledger["generation"].string == generation else { return publicOperations }
         return publicOperations + Self.deletionOperations.filter { operation in
             guard !publicOperations.contains(operation) else { return false }
             let proof = ledger["operations"][operation]

@@ -23,7 +23,7 @@ public enum NotesParityProbe {
         var proofs: [String: JSON] = [:]
         @MainActor func snapshot(_ id: String) async throws -> JSON {
             for _ in 0..<50 {
-                if let note = try store.read().observations.first(where: { $0["scoped_alias"].string == id }), note["data"]["content_status"].string == "complete" { return note }
+                if let note = try store.read(nativeID: id).observations.first(where: { $0["scoped_alias"].string == id }), note["data"]["content_status"].string == "complete" { return note }
                 try await Task.sleep(for: .milliseconds(100))
             }
             throw SourceFailure.unavailable
@@ -96,15 +96,15 @@ public enum NotesParityProbe {
         }
         var cleanup = true
         do {
-            let current = try store.read()
+            let current = try store.read(keys: [])
             let folder = current.observations.first { $0["scoped_alias"].string == folderID }
             let key = folder?["native_key"].string ?? ""
-            let notes = current.observations.filter { createdIDs.contains($0["scoped_alias"].string) && $0["collection"].string == "notes.note" && $0["data"]["title"].string.hasPrefix(tag) && $0["data"]["folder_id"]["$ref"]["native_key"].string == key }
+            let notes = try createdIDs.sorted().flatMap { try store.read(nativeID: $0).observations }.filter { createdIDs.contains($0["scoped_alias"].string) && $0["collection"].string == "notes.note" && $0["data"]["title"].string.hasPrefix(tag) && $0["data"]["folder_id"]["$ref"]["native_key"].string == key }
             for note in notes {
                 let id = note["scoped_alias"].string
                 let name = try script("return name of note id " + NotesScript.quote(id))
                 guard name.hasPrefix(tag) else { throw SourceFailure.conflict }
-                _ = try script("delete note id " + NotesScript.quote(id))
+                _ = try script(NotesScript.deleteNote(id, folderID: folderID))
             }
             for attempt in 0..<50 {
                 let remaining = try notes.contains { try !["gone", "marked", "trashed"].contains(store.deletionState($0["native_key"].string, collection: "notes.note")) }
@@ -113,8 +113,15 @@ public enum NotesParityProbe {
                 try await Task.sleep(for: .milliseconds(100))
             }
             if folderCreated {
+                guard folder?["data"]["title"].string == "Bridge Test " + tag else { throw SourceFailure.conflict }
                 guard try script("return count of notes of folder id " + NotesScript.quote(folderID)) == "0" else { throw SourceFailure.conflict }
-                _ = try script("delete folder id " + NotesScript.quote(folderID))
+                let quoted = NotesScript.quote(folderID)
+                _ = try script("set targetFolder to folder id " + quoted + "\nset matches to (every folder of (container of targetFolder) whose id is " + quoted + ")\nif (count of matches) is not 1 then error \"Test folder could not be found.\"\nset targetFolder to item 1 of matches\nif (id of targetFolder) is not " + quoted + " or (count of notes of targetFolder) is not 0 or (count of folders of targetFolder) is not 0 then error \"Test folder changed.\"\ndelete targetFolder")
+                for attempt in 0..<50 {
+                    if try ["gone", "marked", "trashed"].contains(store.deletionState(key, collection: "notes.folder")) { break }
+                    if attempt == 49 { cleanup = false }
+                    try await Task.sleep(for: .milliseconds(100))
+                }
             }
         } catch { cleanup = false }
         return .object(["state": .string(cleanup ? "verified" : "limited"), "os": .string(ProcessInfo.processInfo.operatingSystemVersionString), "proofs": .object(proofs), "mutation_calls": .number(Double(effects)), "cleanup": .string(cleanup ? "complete" : "unverified"), "test_container_created": .bool(folderCreated), "tag": .string(tag)])
