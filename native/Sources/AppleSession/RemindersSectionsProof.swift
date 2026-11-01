@@ -230,6 +230,12 @@ enum RemindersSectionsProof {
             _ = app.activate()
             try await Task.sleep(for: .milliseconds(200))
             try await ui.menu("File", ["Edit Sections…", "Edit Sections...", "Edit Sections"])
+            let editorDeadline = ContinuousClock.now.advanced(by: .seconds(5))
+            while ui.ownedSheet == nil, ContinuousClock.now < editorDeadline {
+                let candidates = ui.sheets()
+                if candidates.count == 1 { ui.ownedSheet = candidates[0]; break }
+                try await Task.sleep(for: .milliseconds(100))
+            }
             guard let editor = ui.ownedSheet else { throw SourceFailure.unsupported }
             @MainActor func editorRow(_ name: String) throws -> AXUIElement {
                 let matches = ui.find(name, within: editor)

@@ -11,6 +11,10 @@ import (
 )
 
 func runRemindersSections(ctx context.Context, level string, e Evidence) Evidence {
+	if e.GitSHA == "" {
+		sha, _ := exec.CommandContext(ctx, "git", "rev-parse", "HEAD").Output()
+		e.GitSHA = strings.TrimSpace(string(sha))
+	}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	dir, err := os.MkdirTemp("", "ab-sections-")
 	if err != nil {
