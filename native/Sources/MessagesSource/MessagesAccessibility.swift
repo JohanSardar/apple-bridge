@@ -102,7 +102,6 @@ enum MessagesAccessibility {
         let outgoing = prepared.nativeState["target"]["is_from_me"].bool
         if prepared.nativeState["conversation_target"].bool {
             let rows = matching(root, budget: &budget) { element in
-                if MessagesUIActions.conversationEntry(role: value(element, kAXRoleAttribute), description: value(element, kAXDescriptionAttribute), expected: expected) { return true }
                 guard value(element, kAXRoleAttribute) == kAXRowRole else { return false }
                 var textBudget = 100
                 return matching(element, budget: &textBudget) { node in [kAXValueAttribute, kAXTitleAttribute, kAXDescriptionAttribute].contains { [expected, "You: " + expected].contains(value(node, $0)) } }.count > 0 && textBudget > 0

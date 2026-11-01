@@ -185,7 +185,7 @@ func TestNativeBaselineSkipsReactionAndUnsentAnchors(t *testing.T) {
 	if err := db.QueryRow(match[1], "self").Scan(&service, &guid); err != nil {
 		t.Fatal(err)
 	}
-	if service != "iMessage" || guid != "visible" {
-		t.Fatal("baseline navigation did not choose visible text")
+	if service != "iMessage" || guid != "incoming" {
+		t.Fatal("baseline navigation did not choose the latest live text")
 	}
 }

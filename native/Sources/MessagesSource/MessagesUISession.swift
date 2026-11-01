@@ -7,10 +7,7 @@ public enum MessagesUIActions {
     public static func matchesDirection(_ description: String, outgoing: Bool) -> Bool {
         guard !description.isEmpty else { return false }
         let own = description.hasPrefix("Your iMessage,") || description.hasPrefix("Your text message,")
-        return outgoing ? own : !own
-    }
-    public static func conversationEntry(role: String, description: String, expected: String) -> Bool {
-        !expected.isEmpty && ["AXRow", "AXStaticText"].contains(role) && description.contains(expected)
+        return outgoing ? own : !description.hasPrefix("Your ")
     }
     public static func readStateAction(unread: Bool, titles: [String]) -> String? {
         let desired = unread ? "Mark as Unread" : "Mark as Read"
