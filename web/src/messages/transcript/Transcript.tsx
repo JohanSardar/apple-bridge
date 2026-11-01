@@ -100,7 +100,7 @@ export default function Transcript(props:TranscriptProps){
     const [width,setWidth]=createSignal(0),[ready,setReady]=createSignal(false),[loadingVisible,setLoadingVisible]=createSignal(false),[expanded,setExpanded]=createSignal<ReadonlySet<string>>(new Set()),[focused,setFocused]=createSignal<string>(),[list,setList]=createSignal<VirtualListHandle>(),[settled,setSettled]=createSignal(false),[pendingJump,setPendingJump]=createSignal<string|undefined>(props.messageID??'unread');
     const [followLatest,setFollowLatest]=createSignal(!props.messageID),[initialPrefetch,setInitialPrefetch]=createSignal(true);
     const [rows,setRows]=createSignal<{scope:string;items:TranscriptRow[]}>({scope:'',items:[]});
-    let container!:HTMLDivElement,transcriptViewport!:HTMLDivElement,initialHeight=0,fontProbe!:HTMLSpanElement,measurementHost!:HTMLDivElement,frame=0,jumpFrame=0,loadingTimer:ReturnType<typeof setTimeout>|undefined;
+    let container!:HTMLDivElement,transcriptViewport!:HTMLDivElement,initialHeight=0,fontProbe!:HTMLSpanElement,measurementHost!:HTMLDivElement,frame=0,jumpFrame=0,sendScrollFrame=0,loadingTimer:ReturnType<typeof setTimeout>|undefined;
     let textMeasurementRevision=0;
     const layout=createTranscriptLayout(),measurer=createTextMeasurer(),[fontRevision,setFontRevision]=createSignal(0),[measurementKey,setMeasurementKey]=createSignal('');
     const fonts=createFontWatcher(()=>{measurer.clear();setFontRevision(value=>value+1);});
@@ -143,7 +143,7 @@ export default function Transcript(props:TranscriptProps){
                 previousLocal=pending;
                 batch(()=>{setInitialPrefetch(value=>value&&prefetching);setMeasurementKey(descriptor+':'+untrack(fontRevision)+':'+size+':'+viewport);setRows({scope:state.anchor,items:next});setReady(true);});
                 if(!next.length)thread.presented();
-                if(added)queueMicrotask(()=>list()?.scrollToIndex(rows().items.length-1,'end'));
+                if(added){cancelAnimationFrame(sendScrollFrame);sendScrollFrame=requestAnimationFrame(()=>list()?.scrollToIndex(rows().items.length-1,'end'));}
                 finishPublish();
             };
             if(staged)frame=requestAnimationFrame(publish);else publish();
@@ -160,6 +160,7 @@ export default function Transcript(props:TranscriptProps){
         if(!api||!ready()||thread.loading()||rows().scope!==thread.view().anchor||settled()&&!pending||!rows().items.length)return;
         const target=initialTarget(),index=initialIndex();
         if(index<0)return;
+        cancelAnimationFrame(sendScrollFrame);
         jumpFrame=requestAnimationFrame(()=>{api.scrollToIndex(index,!target||target==='latest'?'end':'start');setFocused(rows().items[index]?.key);batch(()=>{setPendingJump(undefined);setSettled(true);});thread.presented();});
     });
     onMount(()=>{
@@ -170,7 +171,7 @@ export default function Transcript(props:TranscriptProps){
         container.addEventListener('keydown',key,true);ownerDocument.addEventListener('copy',copy,true);onCleanup(()=>{container.removeEventListener('keydown',key,true);ownerDocument.removeEventListener('copy',copy,true);});
     });
     onMount(()=>{const observer=new ResizeObserver(entries=>batch(()=>{for(const entry of entries)if(entry.target===transcriptViewport){initialHeight=entry.contentRect.height;setWidth(entry.contentRect.width);}else fonts.resized(entry.contentRect);}));observer.observe(transcriptViewport);observer.observe(fontProbe);onCleanup(()=>{observer.disconnect();fonts.dispose();});});
-    onCleanup(()=>{metadata.dispose();cancelAnimationFrame(threadIntroFrame);cancelAnimationFrame(frame);cancelAnimationFrame(jumpFrame);clearTimeout(loadingTimer);});
+    onCleanup(()=>{metadata.dispose();cancelAnimationFrame(threadIntroFrame);cancelAnimationFrame(frame);cancelAnimationFrame(jumpFrame);cancelAnimationFrame(sendScrollFrame);clearTimeout(loadingTimer);});
     function showInChat(id:string){if(props.threadOriginatorID){props.onShowInChat?.(id);return;}closeReplies();setFollowLatest(false);setSettled(false);setPendingJump(id);thread.jump(id);router.navigate("/messages/"+encodeURIComponent(props.chatID)+"/"+encodeURIComponent(id));}
     function latest(){setFollowLatest(true);setSettled(false);setPendingJump('latest');thread.latest();}
     const edit=(id:string)=>setExpanded(previous=>{const next=new Set(previous);if(next.has(id))next.delete(id);else next.add(id);return next;});
