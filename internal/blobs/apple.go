@@ -44,13 +44,6 @@ func (s *Store) Capture(ctx context.Context, c contracts.Capture, w *applepeer.W
 	if len(c.BlobHandles) == 0 {
 		return
 	}
-	s.appleMu.Lock()
-	defer s.appleMu.Unlock()
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.applePending == nil {
-		s.applePending = map[string]*appleJob{}
-	}
 	variants := map[string]bool{}
 	for _, observation := range c.Observations {
 		for _, ref := range contracts.BlobReferences(observation.Data) {
@@ -59,12 +52,13 @@ func (s *Store) Capture(ctx context.Context, c contracts.Capture, w *applepeer.W
 			}
 		}
 	}
+	s.appleMu.Lock()
+	defer s.appleMu.Unlock()
+	if s.applePending == nil {
+		s.applePending = map[string]*appleJob{}
+	}
 	for d, h := range c.BlobHandles {
 		if !contracts.ValidDigest(d) {
-			continue
-		}
-		e := s.manifest.Entries[d]
-		if e.State == "present" || e.State == "failed" {
 			continue
 		}
 		s.appleSequence++
@@ -98,18 +92,37 @@ func (s *Store) persistRetryLocked(d string) bool {
 	return true
 }
 
+func (s *Store) discardAppleJob(digest string, job *appleJob) {
+	s.appleMu.Lock()
+	defer s.appleMu.Unlock()
+	if s.applePending[digest] == job {
+		delete(s.applePending, digest)
+	}
+}
+
 func (s *Store) captureBlobs() {
 	for {
 		s.appleMu.Lock()
+		jobs := make(map[string]*appleJob, len(s.applePending))
+		for d, job := range s.applePending {
+			if job.ctx.Err() != nil {
+				delete(s.applePending, d)
+			} else {
+				jobs[d] = job
+			}
+		}
+		if len(jobs) == 0 {
+			s.appleRunning = false
+			s.appleMu.Unlock()
+			return
+		}
+		s.appleMu.Unlock()
 		s.mu.Lock()
 		var digest string
 		var job *appleJob
 		var ready time.Time
 		now := time.Now()
-		for d, j := range s.applePending {
-			if j.ctx.Err() != nil {
-				continue
-			}
+		for d, j := range jobs {
 			e := s.manifest.Entries[d]
 			available := !e.NextAttemptAt.After(now)
 			readyFirst := available && ready.After(now)
@@ -120,12 +133,6 @@ func (s *Store) captureBlobs() {
 			}
 		}
 		s.mu.Unlock()
-		if job == nil {
-			s.appleRunning = false
-			s.appleMu.Unlock()
-			return
-		}
-		s.appleMu.Unlock()
 		timer := time.NewTimer(max(0, time.Until(ready)))
 		select {
 		case <-job.ctx.Done():
@@ -134,16 +141,16 @@ func (s *Store) captureBlobs() {
 		case <-timer.C:
 		}
 		s.appleMu.Lock()
-		if s.applePending[digest] != job || job.ctx.Err() != nil {
-			s.appleMu.Unlock()
+		current := s.applePending[digest] == job && job.ctx.Err() == nil
+		s.appleMu.Unlock()
+		if !current {
 			continue
 		}
 		s.mu.Lock()
 		e := s.manifest.Entries[digest]
 		if e.State == "present" || e.State == "failed" {
-			delete(s.applePending, digest)
 			s.mu.Unlock()
-			s.appleMu.Unlock()
+			s.discardAppleJob(digest, job)
 			continue
 		}
 		if e.RetryAttempts >= 8 {
@@ -152,32 +159,28 @@ func (s *Store) captureBlobs() {
 			close(s.changed)
 			s.changed = make(chan struct{})
 			s.persistRetryLocked(digest)
-			delete(s.applePending, digest)
 			s.mu.Unlock()
-			s.appleMu.Unlock()
+			s.discardAppleJob(digest, job)
 			continue
 		}
 		e.RetryAttempts++
 		e.NextAttemptAt = time.Now().UTC().Add(retryDelay(e.RetryAttempts))
 		s.manifest.Entries[digest] = e
 		durable := s.persistRetryLocked(digest)
-		if !durable {
-			delete(s.applePending, digest)
-		}
 		s.mu.Unlock()
-		s.appleMu.Unlock()
 		if !durable {
+			s.discardAppleJob(digest, job)
 			continue
 		}
 		err := s.Transfer(job.ctx, digest, job.source)
-		s.appleMu.Lock()
 		s.mu.Lock()
 		e = s.manifest.Entries[digest]
+		remove := false
 		if err == nil || e.State != "pending" {
 			e.NextAttemptAt = time.Time{}
 			s.manifest.Entries[digest] = e
 			s.persistRetryLocked(digest)
-			delete(s.applePending, digest)
+			remove = true
 		} else if e.RetryAttempts >= 8 {
 			e.State, e.Reason = "failed", "ipc_retry_exhausted"
 			e.NextAttemptAt = time.Time{}
@@ -185,15 +188,15 @@ func (s *Store) captureBlobs() {
 			close(s.changed)
 			s.changed = make(chan struct{})
 			s.persistRetryLocked(digest)
-			delete(s.applePending, digest)
+			remove = true
 		} else {
 			e.NextAttemptAt = time.Now().UTC().Add(retryDelay(e.RetryAttempts))
 			s.manifest.Entries[digest] = e
-			if !s.persistRetryLocked(digest) {
-				delete(s.applePending, digest)
-			}
+			remove = !s.persistRetryLocked(digest)
 		}
 		s.mu.Unlock()
-		s.appleMu.Unlock()
+		if remove {
+			s.discardAppleJob(digest, job)
+		}
 	}
 }
