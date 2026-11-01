@@ -44,9 +44,8 @@ enum RemindersSectionsProof {
             configuration.activates = true
             let app = try await NSWorkspace.shared.openApplication(at: url, configuration: configuration)
             try await Task.sleep(for: .seconds(1))
-            let root = AXUIElementCreateApplication(app.processIdentifier)
-            AXUIElementSetMessagingTimeout(root, 0.1)
             let ui = RemindersFixtureUI(app: app, title: title)
+            let root = ui.root
             try await ui.prepare()
             for (key, value) in ui.accessibilityDiagnostics { diagnostics["ui_" + key] = .number(value) }
             diagnostics["ui_windows"] = .number(Double(ui.elements(ui.root, kAXWindowsAttribute).count))
@@ -111,9 +110,10 @@ enum RemindersSectionsProof {
             let target = NSAppleEventDescriptor(bundleIdentifier: "com.apple.reminders")
             if AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false) == noErr {
                 var error: NSDictionary?
-                _ = NSAppleScript(source: "with timeout of 5 seconds\ntell application \"Reminders\"\nset matches to every list whose name is \"" + title + "\"\nif (count matches) is not 1 then error number -2700\nshow item 1 of matches\nactivate\nend tell\nend timeout")?.executeAndReturnError(&error)
+                _ = NSAppleScript(source: "with timeout of 30 seconds\ntell application \"Reminders\"\nset matches to every list whose name is \"" + title + "\"\nif (count matches) is not 1 then error number -2700\nreopen\nshow item 1 of matches\nactivate\nend tell\nend timeout")?.executeAndReturnError(&error)
                 guard error == nil else { throw SourceFailure.unavailable }
             }
+            try await ui.prepare()
             @MainActor func ownedRow() -> AXUIElement? {
                 var rows: [AXUIElement] = []
                 let matches = find(title)

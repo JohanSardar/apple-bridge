@@ -46,7 +46,8 @@ enum RemindersParityProof {
             let sessions = try RemindersStore.paths().map { try RemindersStoreSession(path: $0) }
             var entityNames: [Int64: String] = [:]
             @MainActor func observe(_ predicate: (TypedStoreSnapshot, StoreListRow, StoreReminderRow, StoreReminderRow) -> Bool) async throws -> Bool {
-                for _ in 0..<60 {
+                let deadline = ContinuousClock.now.advanced(by: .seconds(30))
+                repeat {
                     for session in sessions {
                         let read = try await session.read()
                         let snapshot = read.snapshot
@@ -60,7 +61,7 @@ enum RemindersParityProof {
                            let child = snapshot.reminders.values.first(where: { $0.calendarItemIdentifier == secondID }), predicate(snapshot, row, parent, child) { return true }
                     }
                     try await Task.sleep(for: .milliseconds(100))
-                }
+                } while ContinuousClock.now < deadline
                 for path in try RemindersStore.paths() {
                     let snapshot = try await RemindersStoreSession(path: path).read().snapshot
                     if let parent = snapshot.reminders.values.first(where: { $0.calendarItemIdentifier == firstID }) {
@@ -109,7 +110,7 @@ enum RemindersParityProof {
             try script("ignoring application responses\nset emblem of fixtureList to \"star\"\nend ignoring")
             checks["list_icon_readback"] = .bool(try await observe { _, row, _, _ in row.emblem == "star" })
             stage = "navigation"
-            try script("show fixtureList\nactivate")
+            try script("reopen\nshow fixtureList\nactivate")
             try await Task.sleep(for: .seconds(1))
             guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.reminders").first else { throw SourceFailure.unavailable }
             let ui = RemindersFixtureUI(app: app, title: title)
@@ -256,13 +257,7 @@ final class RemindersFixtureUI {
         self.app = app; self.title = title
         root = AXUIElementCreateApplication(app.processIdentifier)
         AXUIElementSetMessagingTimeout(root, 0.25)
-        let enhanced = "AXEnhancedUserInterface" as CFString
-        var settable = DarwinBoolean(false)
-        let supported = AXUIElementIsAttributeSettable(root, enhanced, &settable)
-        accessibilityDiagnostics["enhanced_settable"] = supported == .success && settable.boolValue ? 1 : 0
-        if supported == .success, settable.boolValue {
-            accessibilityDiagnostics["enhanced_result"] = Double(AXUIElementSetAttributeValue(root, enhanced, kCFBooleanTrue).rawValue)
-        }
+
     }
 
     func prepare() async throws {
@@ -277,6 +272,10 @@ final class RemindersFixtureUI {
             _ = AXUIElementPerformAction(window, kAXRaiseAction as CFString)
         }
         accessibilityDiagnostics["minimized_windows"] = Double(minimizedCount)
+        let sidebar = find("Show Sidebar", role: kAXMenuItemRole)
+        if sidebar.count == 1 {
+            accessibilityDiagnostics["show_sidebar_result"] = Double(AXUIElementPerformAction(sidebar[0], kAXPressAction as CFString).rawValue)
+        }
         try await Task.sleep(for: .milliseconds(500))
     }
 
@@ -308,7 +307,13 @@ final class RemindersFixtureUI {
             let actualRole = value(element, kAXRoleAttribute)
             if actualRole == kAXRowRole { rows += 1 }
             roles["role_" + actualRole, default: 0] += 1
+            let subrole = value(element, kAXSubroleAttribute)
+            if !subrole.isEmpty { roles["subrole_" + subrole, default: 0] += 1 }
             let labels = [kAXTitleAttribute, kAXValueAttribute, kAXDescriptionAttribute].map { value(element, $0) }
+            for control in ["Reminders", "Templates", "Search", "New List", "Welcome to Reminders", "Get Started", "Continue", "Upgrade", "Sign In", "iCloud", "Done", "Cancel", "Today", "All", "Scheduled", "Flagged", "No Reminders"] where labels.contains(control) {
+                roles["control_" + control, default: 0] += 1
+            }
+            if subrole == kAXSearchFieldSubrole { roles["nonempty_search_fields", default: 0] += value(element, kAXValueAttribute).isEmpty ? 0 : 1 }
             if labels.contains(where: { $0.contains(name) }) { partialLabels += 1 }
             let matches = labels.contains(name) || (name.hasPrefix(title) && labels.contains { $0.hasPrefix(name + ",") || $0.hasPrefix(name + "\n") })
             if (role == nil || role == actualRole), matches, ![kAXApplicationRole, kAXWindowRole, kAXScrollAreaRole, kAXSplitGroupRole].contains(actualRole) { return [element] }
