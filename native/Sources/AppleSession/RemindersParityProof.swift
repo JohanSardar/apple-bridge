@@ -655,7 +655,7 @@ final class RemindersFixtureUI {
         func point(_ name: String, before: Bool) throws -> CGPoint {
             let row = try reminderRow(name)
             let fields = find(name, role: kAXTextFieldRole, within: row) + find(name, role: kAXTextAreaRole, within: row)
-            let target = fields.count == 1 ? fields[0] : row
+            let target = !before && fields.count == 1 ? fields[0] : row
             var position: CFTypeRef?, size: CFTypeRef?
             guard AXUIElementCopyAttributeValue(target, kAXPositionAttribute as CFString, &position) == .success,
                   AXUIElementCopyAttributeValue(target, kAXSizeAttribute as CFString, &size) == .success,
@@ -674,7 +674,7 @@ final class RemindersFixtureUI {
                     }
                 }
             }
-            return CGPoint(x: origin.x + (before ? 1 : min(12, dimensions.width / 2)), y: y)
+            return CGPoint(x: origin.x + (before ? min(60, dimensions.width / 2) : min(12, dimensions.width / 2)), y: y)
         }
         let start = try point(from, before: false), end = try point(to, before: true)
         try await activate()
