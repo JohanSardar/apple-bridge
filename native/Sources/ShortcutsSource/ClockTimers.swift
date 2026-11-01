@@ -158,8 +158,10 @@ private struct ClockTimerUI {
             for key in [kAXChildrenAttribute, kAXVisibleChildrenAttribute, kAXContentsAttribute, kAXRowsAttribute, kAXWindowsAttribute] {
                 for child in attribute(item, key) as? [AXUIElement] ?? [] { result += visit(child, depth: depth + 1) }
             }
-            if let focused = attribute(item, kAXFocusedUIElementAttribute), CFGetTypeID(focused) == AXUIElementGetTypeID() {
-                result += visit(unsafeDowncast(focused, to: AXUIElement.self), depth: depth + 1)
+            for key in [kAXFocusedUIElementAttribute, kAXShownMenuUIElementAttribute] {
+                if let related = attribute(item, key), CFGetTypeID(related) == AXUIElementGetTypeID() {
+                    result += visit(unsafeDowncast(related, to: AXUIElement.self), depth: depth + 1)
+                }
             }
             return result
         }
@@ -171,9 +173,15 @@ private struct ClockTimerUI {
         RunLoop.current.run(until: Date().addingTimeInterval(0.25))
     }
 
-    private func key(_ code: CGKeyCode) {
-        for down in [true, false] { CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: down)?.postToPid(app.processIdentifier) }
+    private func key(_ code: CGKeyCode) -> Bool {
+        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier else { return false }
+        for down in [true, false] {
+            guard let event = CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: down) else { return false }
+            event.flags = []
+            event.post(tap: .cghidEventTap)
+        }
         RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        return true
     }
 
     private func focus(_ element: AXUIElement) throws {
@@ -183,13 +191,20 @@ private struct ClockTimerUI {
     }
 
     private func click(_ element: AXUIElement, button: CGMouseButton) throws {
+        app.activate()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier else { throw ClockTimerFailure(step: "bring its timer controls to the foreground") }
         guard let position = attribute(element, kAXPositionAttribute), let size = attribute(element, kAXSizeAttribute), CFGetTypeID(position) == AXValueGetTypeID(), CFGetTypeID(size) == AXValueGetTypeID() else { throw ClockTimerFailure(step: "locate the timer control") }
         var point = CGPoint.zero, extent = CGSize.zero
         guard AXValueGetValue(unsafeDowncast(position, to: AXValue.self), .cgPoint, &point), AXValueGetValue(unsafeDowncast(size, to: AXValue.self), .cgSize, &extent), extent.width > 0, extent.height > 0 else { throw ClockTimerFailure(step: "locate the timer control") }
         point.x += extent.width / 2
         point.y += extent.height / 2
         let types: [CGEventType] = button == .right ? [.rightMouseDown, .rightMouseUp] : [.leftMouseDown, .leftMouseUp]
-        for type in types { CGEvent(mouseEventSource: nil, mouseType: type, mouseCursorPosition: point, mouseButton: button)?.postToPid(app.processIdentifier) }
+        for type in types {
+            guard let event = CGEvent(mouseEventSource: nil, mouseType: type, mouseCursorPosition: point, mouseButton: button) else { throw ClockTimerFailure(step: "select its timer control") }
+            event.flags = []
+            event.post(tap: .cghidEventTap)
+        }
         RunLoop.current.run(until: Date().addingTimeInterval(0.25))
     }
 
@@ -218,14 +233,14 @@ private struct ClockTimerUI {
                     return ClockTimers.durationComponent(attribute(current, kAXValueAttribute))
                 }, adjust: { increasing in
                     key(increasing ? 126 : 125)
-                    return true
                 })
             } catch {
                 let observed = slider(index).flatMap { ClockTimers.durationComponent(attribute($0, kAXValueAttribute)) } ?? -1
-                if let data = try? JSONSerialization.data(withJSONObject: ["timer_component": index + 1, "timer_component_observed": observed, "timer_component_target": number], options: [.sortedKeys]) { FileHandle.standardError.write(data + Data("\n".utf8)) }
+                let details = ["timer_component": index + 1, "timer_component_observed": observed, "timer_component_target": number, "timer_input_access": CGPreflightPostEventAccess() ? 1 : 0, "timer_clock_frontmost": NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier ? 1 : 0]
+                if let data = try? JSONSerialization.data(withJSONObject: details, options: [.sortedKeys]) { FileHandle.standardError.write(data + Data("\n".utf8)) }
                 throw ClockTimerFailure(step: "set timer duration component \(index + 1)")
             }
-            key(48)
+            guard key(48) else { throw ClockTimerFailure(step: "commit its timer duration") }
         }
         let sheet = find(root, role: kAXSheetRole)
         let scope = sheet.count == 1 ? sheet[0] : root
