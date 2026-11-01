@@ -3,6 +3,7 @@ package scenarios
 import (
 	"context"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/clockpack"
@@ -30,7 +31,28 @@ func runClockReal(ctx context.Context, s Scenario, initial Evidence, pack clockp
 	pack.Timeout = 5 * time.Minute
 	if s.ID == "CLK-TIMER-REAL" {
 		pack.Runner = clockTimerNativeRunner{app: app}
-		return runClockSession(ctx, s, e, pack)
+		e = runClockSession(ctx, s, e, pack)
+		cleanup, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+		recents, err := pack.Exchange(cleanup, clockpack.Request{Operation: "recent_timers"})
+		add("tagged_timer_history_inventory", err == nil)
+		for _, timer := range recents.Timers {
+			if !strings.HasPrefix(timer.Label, "[ab-test]") {
+				continue
+			}
+			_, err := pack.Exchange(cleanup, clockpack.Request{Operation: "delete_recent_timer", Timer: &timer})
+			add("tagged_timer_history_deleted", err == nil)
+		}
+		recents, err = pack.Exchange(cleanup, clockpack.Request{Operation: "recent_timers"})
+		remaining := 0
+		for _, timer := range recents.Timers {
+			if strings.HasPrefix(timer.Label, "[ab-test]") {
+				remaining++
+			}
+		}
+		e.Metrics["tagged_recent_timers_remaining"] = remaining
+		add("tagged_timer_history_absent", err == nil && remaining == 0)
+		return e
 	}
 	entries, err := (shortcut.CLI{}).Inventory(ctx, false, "")
 	add("clock_inventory_available", err == nil)
