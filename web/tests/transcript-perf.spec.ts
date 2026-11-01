@@ -56,7 +56,7 @@ test('WEB-MSG-PERF WEB-MSG-PERF-FRAME a 100k-message transcript fling records bo
 
 test('WEB-MSG-PERF WEB-MSG-PERF-INPUT open chat records input and phone push/pop frame coverage',async({page},info)=>{
     await prepareSession(page);await page.goto('/messages');await expect(page.locator('.conversation-row').first()).toBeVisible();
-    if(info.project.name.endsWith('-phone'))await expect.poll(()=>page.locator('.conversation-list .virtual-viewport').evaluate(element=>element.querySelectorAll('.virtual-row').length<=Math.ceil(element.clientHeight/84)+3)).toBe(true);
+    await expect.poll(()=>page.locator('.conversation-list .virtual-viewport').evaluate(element=>{const phone=innerWidth<700;return element.querySelectorAll('.virtual-row').length<=Math.ceil(element.clientHeight/(phone?84:68))+(phone?3:7);})).toBe(true);
     await transcriptInputs(page,info,'open-chat',async()=>{
         for(let index=0;index<24;index++){await page.locator('.conversation-row').nth(index%2).click();await expect(page.locator('.messages-transcript')).toHaveAttribute('aria-busy','false');await expect.poll(()=>page.evaluate(()=>(window as any).__listProbe.actions.at(-1)?.resultAt??0),{intervals:[25]}).toBeGreaterThan(0);if(info.project.name.endsWith('-phone'))await page.getByRole('button',{name:'Back',exact:true}).click();}
     });
@@ -74,10 +74,17 @@ test('WEB-MSG-PERF WEB-MSG-PERF-INPUT reactions record complete input coverage',
     });
 });
 test('WEB-MSG-PERF WEB-MSG-PERF-INPUT opening media records complete input coverage',async({page,request},info)=>{
-    await prepareSession(page);const ids=await control(request,'/demo-fixtures');await page.goto('/messages/'+encodeURIComponent(ids['message-chat'])+'/'+encodeURIComponent(ids['demo-message-00-000032']));await expect(page.locator('.messages-transcript')).toHaveAttribute('aria-busy','false');const source=page.locator('[data-message="'+ids['demo-message-00-000032']+'"] .media-open');await expect(source).toBeVisible();await expect.poll(()=>source.locator('..').locator('img').evaluate((image:HTMLImageElement)=>image.complete)).toBe(true);
+    await prepareSession(page);const ids=await control(request,'/demo-fixtures');await page.goto('/messages/'+encodeURIComponent(ids['message-chat'])+'/'+encodeURIComponent(ids['demo-message-00-000032']));await expect(page.locator('.messages-transcript')).toHaveAttribute('aria-busy','false');const source=page.locator('[data-message="'+ids['demo-message-00-000032']+'"] .media-open');await expect(source).toBeVisible();await expect(page.getByRole('listbox',{name:'Messages transcript'})).toHaveAttribute('aria-busy','false');await expect.poll(()=>source.locator('..').locator('img').evaluate((image:HTMLImageElement)=>image.complete)).toBe(true);
+    await page.waitForTimeout(300);
+    await page.evaluate(()=>window.addEventListener('click',event=>{if(event.isTrusted&&(event.target as Element).closest('.media-open'))(window as any).__mediaBackgroundRows=Array.from(document.querySelectorAll('.messages-transcript .virtual-row'));},true));
+    let image:import('@playwright/test').ElementHandle<HTMLElement|SVGElement>|null=null;
     await transcriptInputs(page,info,'open-media',async()=>{
-        for(let index=0;index<24;index++){await source.click();const viewer=page.getByRole('dialog',{name:'Media viewer',exact:true});await expect(viewer).toBeVisible();await expect(viewer).toHaveAttribute('data-media-loading','false');await expect(viewer.locator('.media-viewer-stage .media-image')).toHaveAttribute('data-media-state','ready');await page.keyboard.press('Escape');await expect(viewer).not.toBeVisible();await expect(source).toBeFocused();}
+        for(let index=0;index<24;index++){await source.click();const viewer=page.getByRole('dialog',{name:'Media viewer',exact:true});await expect(viewer).toBeVisible();await expect(viewer).toHaveAttribute('data-media-loading','false');await expect(viewer.locator('.media-viewer-stage .media-image')).toHaveAttribute('data-media-state','ready');expect(await page.locator('.messages-transcript .virtual-row').evaluateAll(rows=>{const previous=(window as any).__mediaBackgroundRows as Element[];return previous.every(row=>rows.includes(row));})).toBe(true);if(image)expect(await image.evaluate(element=>element===document.querySelector('.media-viewer-stage .media-image img'))).toBe(true);else image=await viewer.locator('.media-viewer-stage .media-image img').elementHandle();await page.keyboard.press('Escape');await expect(viewer).not.toBeVisible();await expect(source).toBeFocused();}
     });
+    await source.click();const viewer=page.getByRole('dialog',{name:'Media viewer',exact:true});await expect(viewer).toBeVisible();
+    const stage=viewer.locator('.media-viewer-stage'),bounds=await stage.boundingBox();expect(bounds).not.toBeNull();await page.mouse.move(bounds!.x+bounds!.width/2,bounds!.y+bounds!.height/2);await page.mouse.wheel(0,-200);
+    await expect.poll(()=>viewer.getAttribute('data-media-zoom').then(Number)).toBeGreaterThan(1);expect(await stage.evaluate(element=>element.getAnimations().filter(animation=>animation.playState==='running').length)).toBe(0);
+    await page.keyboard.press('Escape');await expect(viewer).not.toBeVisible();await expect(source).toBeFocused();
 });
 
 test('WEB-MSG-PERF performance observers leave layout coalesced until the frame',async({page})=>{

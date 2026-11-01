@@ -9,11 +9,11 @@ import {fields,text} from '../store/types';
 import {duration,header,name,wording} from '../format';
 import {mediaSource} from './source';
 export function ViewerSession(props:ChatMediaViewerProps){
-    let hidden:HTMLElement|undefined,visibility='';
+    let hidden:HTMLElement|undefined,opacity='';
     const [selected,setSelected]=createSignal(props.attachment);
-    const restore=()=>{if(hidden){hidden.style.visibility=visibility;hidden=undefined;}};
+    const restore=()=>{if(hidden){hidden.style.opacity=opacity;hidden=undefined;}};
     const source=(attachment:BridgeRecord)=>(props.sourceRoot??document).querySelector<HTMLElement>(`[data-media-origin="${CSS.escape(attachment.id)}"]:not([inert],[inert] *)`);
-    const hide=(element?:HTMLElement|null)=>{if(element){hidden=element;visibility=element.style.visibility;element.style.visibility='hidden';}};
+    const hide=(element?:HTMLElement|null)=>{if(element){hidden=element;opacity=element.style.opacity;element.style.opacity='0';}};
     const originFor=(attachment:BridgeRecord)=>{
         const image=source(attachment),rect=image?.getBoundingClientRect();restore();
         if(rect&&rect.width>0&&rect.height>0&&rect.bottom>0&&rect.top<innerHeight&&rect.right>0&&rect.left<innerWidth){hide(image);return rect;}

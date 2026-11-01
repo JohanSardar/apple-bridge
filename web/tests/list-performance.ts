@@ -32,7 +32,7 @@ export async function stopTrace(session:CDPSession|undefined,phase:'scroll'|'inp
 }
 export async function finishTrace(session:CDPSession|undefined,nativeFrames=false) {
     if(!session)return undefined;
-    if(nativeFrames)await session.send('Runtime.evaluate',{expression:'new Promise(requestAnimationFrame)',awaitPromise:true});
+    if(nativeFrames)await session.send('Runtime.evaluate',{expression:'new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))',awaitPromise:true});
     const ready=new Promise<string>(resolve=>session.once('Tracing.tracingComplete',event=>resolve(event.stream)));
     await session.send('Tracing.end');
     const handle=await ready;let raw='';
@@ -40,15 +40,23 @@ export async function finishTrace(session:CDPSession|undefined,nativeFrames=fals
     await session.send('IO.close',{handle});await session.detach();
     return raw;
 }
+function completedFrames(events:TraceEvent[],pid:number,tid:number){
+    const frames=events.filter(event=>event.name==='AnimationFrame'&&event.pid===pid&&event.tid===tid&&(event.ph==='b'||event.ph==='e')).sort((a,b)=>a.ts-b.ts);
+    return frames.flatMap((frame,index)=>{
+        if(frame.ph!=='e')return [];
+        const next=frames.slice(index+1).find(event=>event.ph==='b');
+        return next?[{renderEnd:frame.ts,boundary:{...frame,ts:next.ts}}]:[];
+    });
+}
 export function traceWork(raw:string,phase:'scroll'|'input'|'action'='scroll',nativeFrames=false) {
     const events=(JSON.parse(raw) as {traceEvents:TraceEvent[]}).traceEvents;
     let marks=events.filter(event=>phase==='scroll'?/^list-frame-\d+$/.test(event.name):/^list-input-frame-start-\d+$/.test(event.name)).sort((a,b)=>a.ts-b.ts);
     if(marks.length<(phase==='scroll'?100:20))throw new Error('Chromium frame marks missing');
     if(nativeFrames&&phase==='scroll'){
         const first=marks[0],last=marks.at(-1)!;
-        const completed=events.filter(event=>event.name==='AnimationFrame'&&event.ph==='e'&&event.pid===first.pid&&event.tid===first.tid).sort((a,b)=>a.ts-b.ts),finish=completed.find(event=>event.ts>=last.ts);
+        const completed=completedFrames(events,first.pid,first.tid),finish=completed.find(frame=>frame.renderEnd>=last.ts);
         if(!finish)throw new Error('Chromium closing frame endpoint missing');
-        marks=[first,...completed.filter(event=>event.ts>first.ts&&event.ts<=finish.ts)];
+        marks=[first,...completed.filter(frame=>frame.boundary.ts>first.ts&&frame.boundary.ts<=finish.boundary.ts).map(frame=>frame.boundary)];
         if(marks.length<101)throw new Error('Chromium completed frame endpoints missing');
     }
     const dispatches=phase==='action'?marks.map(mark=>{
@@ -71,19 +79,20 @@ export function traceWork(raw:string,phase:'scroll'|'input'|'action'='scroll',na
 }
 
 export function resultFrames(raw:string){
-    const parsed=JSON.parse(raw),events=parsed.traceEvents as {name:string;ts:number;pid:number;tid:number;ph:string}[];
-    const ends=events.filter(event=>event.name==='AnimationFrame'&&event.ph==='e').sort((a,b)=>a.ts-b.ts);
+    const parsed=JSON.parse(raw),events=parsed.traceEvents as TraceEvent[];
     const results=events.filter(event=>/^list-input-result-\d+$/.test(event.name)).sort((a,b)=>Number(a.name.slice('list-input-result-'.length))-Number(b.name.slice('list-input-result-'.length)));
     const overlaps:number[]=[];
     for(const result of results){
         const index=result.name.slice('list-input-result-'.length);
-        const finish=ends.find(end=>end.ts>=result.ts&&end.pid===result.pid&&end.tid===result.tid);
+        const completed=completedFrames(events,result.pid,result.tid);
+        const finish=completed.find(frame=>frame.renderEnd>=result.ts);
         if(!finish)throw new Error('Rendered input result frame missing');
-        const previous=ends.findLast(end=>end.ts<finish.ts&&end.pid===result.pid&&end.tid===result.tid);
+        const previous=completed.findLast(frame=>frame.renderEnd<finish.renderEnd);
         const begin=events.find(event=>event.name==='list-input-frame-start-'+index),end=events.find(event=>event.name==='list-input-frame-end-'+index);
         if(!begin||!end)throw new Error('Input result endpoints missing');
         const captured=events.find(event=>event.name==='list-input-event-'+index)!;
-        begin.ts=previous?.ts??captured.ts;end.ts=finish.ts;
+        if(!captured)throw new Error('Rendered input capture mark missing');
+        begin.ts=previous?.boundary.ts??captured.ts;end.ts=finish.boundary.ts;
         const dispatch=parsed.traceEvents.filter((event:any)=>event.pid===captured.pid&&event.tid===captured.tid&&event.name==='EventDispatch'&&event.ph==='X'&&event.ts<=captured.ts&&event.ts+event.dur>=captured.ts).sort((a:any,b:any)=>a.dur-b.dur)[0];
         if(!dispatch)throw new Error('Rendered input dispatch missing');
         overlaps.push(Math.max(0,Math.min(end.ts,dispatch.ts+dispatch.dur)-Math.max(begin.ts,dispatch.ts))/1000);

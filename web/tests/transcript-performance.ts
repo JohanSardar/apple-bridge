@@ -19,7 +19,15 @@ export async function transcriptObservers(page:Page){
 export async function transcriptInputs(page:Page,info:TestInfo,label:string,actions:()=>Promise<void>){
     await installProbe(page,false,page.context().browser()?.browserType().name()!=='chromium');
     await page.evaluate(({label,stageProfile})=>{
-        const probe=(window as any).__listProbe;if(stageProfile)(window as any).__abWork={phase:label,samples:[]};probe.actions=[];probe.actionFrames=0;probe.phaseDone=false;
+        const probe=(window as any).__listProbe;
+        if(stageProfile){
+            const work=(window as any).__abWork={phase:label,samples:[]};
+            for(const [prototype,key] of [[HTMLDialogElement.prototype,'showModal'],[HTMLElement.prototype,'focus'],[Element.prototype,'getBoundingClientRect'],[Element.prototype,'animate']] as const){
+                const target=prototype as any,original=target[key];
+                target[key]=function(...args:unknown[]){const at=performance.now();try{return original.apply(this,args);}finally{work.samples.push({kind:key,at,script:performance.now()-at});}};
+            }
+        }
+        probe.actions=[];probe.actionFrames=0;probe.phaseDone=false;
         const native=(window as any).__listNativeRAF as typeof requestAnimationFrame;
         const reactions=()=>Array.from(document.querySelectorAll('.messages-transcript .reaction-badge.own-reaction')).map(element=>element.closest('[data-message]')?.getAttribute('data-message')+':'+element.getAttribute('data-reaction-key')).join('|');
         const capture=(at?:number)=>{
