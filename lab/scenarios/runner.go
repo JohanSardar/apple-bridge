@@ -1369,6 +1369,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		if s.ID == "CAP-SIM" {
 			duration = 20 * time.Minute
 		}
+		if level == "real" && slices.Contains([]string{"MSG-SELFTEST", "MSG-READSTATE-REAL", "MSG-DELETE-REAL", "MSG-RESEND", "MSG-SEND-LATER", "MSG-MENTION-SEND", "MSG-AUDIO-MESSAGE", "WEB-MEDIA-VARIANTS", "WEB-UPLOAD-NATIVE-STAGING", "WEB-MSG-REAL-READ"}, s.ID) {
+			duration = 6 * time.Minute
+		}
 		bounded, cancel := context.WithTimeout(ctx, duration)
 		secretBefore, secretWasSet := os.LookupEnv("APPLE_BRIDGE_SECRET_STORE")
 		e := Run(bounded, s, level)

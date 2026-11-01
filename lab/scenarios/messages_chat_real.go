@@ -71,12 +71,23 @@ func runNativeChatProof(ctx context.Context, s Scenario, e Evidence, w *world.Wo
 		command := contracts.Command{ID: contracts.NewCommandID(), Op: op, Args: raw, ExpectedVersion: version, WaitMS: 15000}
 		started := time.Now()
 		var result contracts.CommandRecord
-		client.Call(ctx, op, command, &result)
+		problem := client.Call(ctx, op, command, &result)
 		w.Await(20*time.Second, func() bool {
 			_, err := world.Request(ctx, w.Gateway, "/v1/op/commands.status", contracts.CommandQuery{ID: command.ID}, &result)
 			return err == nil && result.Disposition != ""
 		})
 		e.Latency[op] = stats([]float64{float64(time.Since(started)) / float64(time.Millisecond)}, 0)
+		diagnostic := map[string]any{"state": result.State, "disposition": result.Disposition, "request_completed": problem == nil, "context_live": ctx.Err() == nil}
+		if result.Error != nil {
+			diagnostic["error_code"] = result.Error.Code
+		}
+		var native struct {
+			Reason string `json:"reason"`
+		}
+		if json.Unmarshal(result.Evidence, &native) == nil && native.Reason != "" {
+			diagnostic["native_reason"] = native.Reason
+		}
+		e.Metrics[op] = diagnostic
 		add(op+"_observed", result.State == contracts.CommandObserved || result.State == contracts.CommandDelivered)
 		return result
 	}
