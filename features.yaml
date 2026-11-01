@@ -699,9 +699,8 @@ features:
       - {id: WEB-PERF-LIST, levels: [web]}
       - {id: WEB-MSG-LIVE, levels: [web]}
       - {id: WEB-MSG-REAL-READ, levels: [sim, real]}
-    notes: The 12-project browser/theme/layout matrices qualify LIVE, THREAD-CORE, SEARCH and the formerly incomplete read matrices. Performance evidence separates observed script/style/layout proxies from complete input and paint budgets. Counts, digests and pass/fail are in WEB-MSG-READ-MATRIX.json.
-    limits:
-      - {"scenario": "WEB-MSG-REAL-READ", "level": "real", "reason": "Real acceptance harness is not implemented; no native effects dispatched"}
+    notes: The 12-project browser/theme/layout matrices qualify LIVE, THREAD-CORE, SEARCH and the formerly incomplete read matrices. Performance evidence separates observed script/style/layout proxies from complete input and paint budgets. Counts, digests and pass/fail are in WEB-MSG-READ-MATRIX.json. The native self-chat read harness passes authenticated chat and thread comparisons against independent read-only truth with zero writes.
+    limits: []
   - id: web.messages.write
     title: Messages web app writing (interactive gate, self-test, composer, actions, uploads)
     requirements: [R-WEB-UI, R-RW, R-MSG-DEPTH, R-SAFE-CMD]
