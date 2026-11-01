@@ -106,9 +106,28 @@ func checkMailCommands() async throws {
             try require(scripts.last!.contains("return"))
             if creates {
                 try require(scripts.last!.contains(op == "mail.send" ? "sent mailbox" : "drafts mailbox"))
-                try require(scripts.last!.contains("((content of candidate) as string) starts with"))
+                try require(scripts.last!.contains("set candidateBody to (content of candidate) as string"))
                 try require(!scripts.last!.contains("and content starts with"))
             }
+        }
+    }
+    for expected in ["synthetic body", "\nsynthetic body"] {
+        let fake = MailFake("1")
+        let commands = MailCommands(script: { await fake.run($0) })
+        let action: JSON = .object(["op": .string("mail.send"), "args": .object(["to": .array([.string("self@example.invalid")]), "subject": .string("synthetic subject"), "body": .string(expected)])])
+        _ = try await commands.dispatch(commands.prepare(.object(["action": action])))
+        let scripts = await fake.scripts()
+        let query = "(messages of sent mailbox whose subject is \"synthetic subject\")"
+        let readback = scripts[2].replacingOccurrences(of: query, with: "{fixtureMessage}")
+        try require(!readback.contains("sent mailbox"))
+        for (content, matches) in [(expected, true), ("\n" + expected + " \n", true), ("\r\n" + expected, true), ("prefix " + expected, false), ("", false), ("\n", false)] {
+            let source = "script fixtureMessage\nproperty content : " + MailCommands.quote(content) + "\nend script\n" + readback
+            let (value, succeeded) = await MainActor.run {
+                var error: NSDictionary?
+                let value = NSAppleScript(source: source)?.executeAndReturnError(&error).stringValue
+                return (value, error == nil)
+            }
+            try require(succeeded && value == (matches ? "1" : "0"))
         }
     }
     let delayed = MailFake("true", lag: 2)
