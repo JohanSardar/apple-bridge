@@ -236,11 +236,17 @@ enum RemindersParityProof {
                 try ui.press(tag, role: tagRole)
                 smartAttempted = true
                 try ui.pressAny(["OK", "Add List", "Done"], role: kAXButtonRole)
+                try await Task.sleep(for: .milliseconds(500))
+                ui.selectionDiagnostics["confirmation_sheet_remains"] = ui.ownedSheet.map { sheet in ui.sheets().contains(where: { CFEqual($0, sheet) }) ? 1 : 0 } ?? 0
                 var found = false
                 for _ in 0..<60 {
                     for session in sessions {
                         let snapshot = try await session.read().snapshot
-                        found = found || snapshot.lists.values.contains { $0.name == smartTitle && $0.filter != nil && $0.smartType != nil }
+                        let matches = snapshot.lists.values.filter { $0.name == smartTitle }
+                        ui.selectionDiagnostics["store_name_matches"] = Double(matches.count)
+                        ui.selectionDiagnostics["store_filter_matches"] = Double(matches.filter { $0.filter != nil }.count)
+                        ui.selectionDiagnostics["store_type_matches"] = Double(matches.filter { $0.smartType != nil }.count)
+                        found = found || matches.contains { $0.filter != nil && $0.smartType != nil }
                     }
                     if found { break }
                     try await Task.sleep(for: .milliseconds(100))
@@ -667,7 +673,11 @@ final class RemindersFixtureUI {
                   let position, let size, CFGetTypeID(position) == AXValueGetTypeID(), CFGetTypeID(size) == AXValueGetTypeID() else { throw SourceFailure.conflict }
             var origin = CGPoint.zero, dimensions = CGSize.zero
             guard AXValueGetValue(unsafeDowncast(position, to: AXValue.self), .cgPoint, &origin), AXValueGetValue(unsafeDowncast(size, to: AXValue.self), .cgSize, &dimensions), dimensions.width > 0, dimensions.height > 0 else { throw SourceFailure.conflict }
-            var y = origin.y + (before ? 2 : dimensions.height / 2)
+            selectionDiagnostics[(before ? "drop" : "drag") + "_x"] = Double(origin.x)
+            selectionDiagnostics[(before ? "drop" : "drag") + "_y"] = Double(origin.y)
+            selectionDiagnostics[(before ? "drop" : "drag") + "_width"] = Double(dimensions.width)
+            selectionDiagnostics[(before ? "drop" : "drag") + "_height"] = Double(dimensions.height)
+            var y = origin.y + (before ? -2 : dimensions.height / 2)
             if !before, fields.count == 1 {
                 var fieldPosition: CFTypeRef?, fieldSize: CFTypeRef?
                 if AXUIElementCopyAttributeValue(fields[0], kAXPositionAttribute as CFString, &fieldPosition) == .success,
@@ -679,7 +689,7 @@ final class RemindersFixtureUI {
                     }
                 }
             }
-            return CGPoint(x: origin.x + (before ? min(60, dimensions.width / 2) : min(12, dimensions.width / 2)), y: y)
+            return CGPoint(x: origin.x + (before ? min(60, dimensions.width / 2) : -8), y: y)
         }
         let start = try point(from, before: false), end = try point(to, before: true)
         try await activate()
