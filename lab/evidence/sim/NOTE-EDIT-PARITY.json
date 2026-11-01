@@ -1,17 +1,17 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[6.22 4.2 3.75] cpu_idle=73% cpus=10 other_heavy=0"
+    "summary": "air: load=[6.39 5.25 4.56] cpu_idle=63% cpus=10 other_heavy=0"
   },
-  "run_id": "notes-parity_01M6AE6G3KRRVFD6VWC75YKF2X",
+  "run_id": "notes-parity_01M6AFZBRZ28RR27RWF598JN4K",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "NOTE-EDIT-PARITY",
   "level": "sim",
   "passed": true,
-  "git_sha": "3a7cacc7cc377ce785539f54d587cbbbbeab0637",
-  "at": "2026-11-01T02:14:43.571052Z",
+  "git_sha": "95c6dabd906adbdd689ea0492ae3143fe44ac151",
+  "at": "2026-11-01T02:45:46.91199Z",
   "assertions": [
     {
       "name": "NOTE-CRUD/external_note_imported",
@@ -19,14 +19,24 @@
     },
     {
       "name": "NOTE-CRUD/rest_create_folder_observed",
-      "passed": true
+      "passed": true,
+      "detail": "observed:::"
     },
     {
       "name": "NOTE-CRUD/rest_create_observed",
-      "passed": true
+      "passed": true,
+      "detail": "observed:::"
     },
     {
       "name": "NOTE-CRUD/rest_create_matches_truth",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_pending_content_rejected",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_pending_content_no_effect",
       "passed": true
     },
     {
@@ -96,14 +106,24 @@
     },
     {
       "name": "NOTE-CRUD/mcp_create_folder_observed",
-      "passed": true
+      "passed": true,
+      "detail": "observed:::"
     },
     {
       "name": "NOTE-CRUD/mcp_create_observed",
-      "passed": true
+      "passed": true,
+      "detail": "observed:::"
     },
     {
       "name": "NOTE-CRUD/mcp_create_matches_truth",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_pending_content_rejected",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_pending_content_no_effect",
       "passed": true
     },
     {

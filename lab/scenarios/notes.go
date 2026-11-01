@@ -433,7 +433,11 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		return
 	}
 	var note contracts.Record
-	err = w.Await(15*time.Second, func() bool { var ok bool; note, ok = find("notes.note", title); return ok })
+	err = w.Await(30*time.Second, func() bool {
+		var ok bool
+		note, ok = find("notes.note", title)
+		return ok && (level == "sim" || s.ID != "NOTE-RICH-REJECT" || notesContentReady(note, false))
+	})
 	add("external_note_imported", err == nil)
 	if err != nil {
 		if s.ID == "NOTE-EXTERNAL" {
@@ -620,7 +624,11 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 				}
 			}
 			var created contracts.Record
-			err = w.Await(10*time.Second, func() bool { var ok bool; created, ok = find("notes.note", newTitle); return ok })
+			err = w.Await(30*time.Second, func() bool {
+				var ok bool
+				created, ok = find("notes.note", newTitle)
+				return ok && (level == "sim" || notesContentReady(created, true))
+			})
 			if err != nil {
 				add("created_visible", false)
 				return
@@ -659,6 +667,13 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 					add(protocol+"_metadata_visible", false)
 					return
 				}
+				pendingID := contracts.NewCommandID()
+				pendingArgs, _ := json.Marshal(map[string]any{"id": created.ID, "mode": "append", "plain_text": "\npending"})
+				var pending contracts.CommandRecord
+				pendingErr := client.Call(ctx, "notes.update", contracts.Command{ID: pendingID, Args: pendingArgs, ExpectedVersion: created.Version, WaitMS: 15000}, &pending)
+				add(protocol+"_pending_content_rejected", errors.Is(pendingErr, contracts.ErrUnsupported) || pending.Error != nil && pending.Error.Code == "unsupported")
+				pendingEffects, pendingEffectErr := w.Effects()
+				add(protocol+"_pending_content_no_effect", pendingEffectErr == nil && pendingEffects[pendingID] == 0)
 				metadata["content_status"], metadata["editable"] = "complete", "plain"
 				delete(metadata, "body_status")
 				err = change()
@@ -681,9 +696,9 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 					e.Assertions[len(e.Assertions)-1].Detail = notesCommandDetail(err, command)
 					return
 				}
-				err = w.Await(5*time.Second, func() bool {
+				err = w.Await(30*time.Second, func() bool {
 					current, ok := find("notes.note", newTitle)
-					if ok && current.Version > created.Version {
+					if ok && current.Version > created.Version && (level == "sim" || notesContentReady(current, true)) {
 						created = current
 						return true
 					}
@@ -754,6 +769,15 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		}
 	}
 	return
+}
+
+func notesContentReady(record contracts.Record, plain bool) bool {
+	var data struct {
+		Editable      string `json:"editable"`
+		BodyStatus    string `json:"body_status"`
+		ContentStatus string `json:"content_status"`
+	}
+	return json.Unmarshal(record.Data, &data) == nil && data.BodyStatus != "pending" && data.ContentStatus == "complete" && (!plain || data.Editable == "plain")
 }
 
 func notesCommandDetail(err error, command contracts.CommandRecord) string {
