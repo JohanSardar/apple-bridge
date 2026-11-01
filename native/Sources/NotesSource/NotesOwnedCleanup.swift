@@ -51,7 +51,7 @@ public enum NotesOwnedCleanup {
         let store = NotesStore(path: FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Group Containers/group.com.apple.notes/NoteStore.sqlite").path)
         var removed = 0
         do {
-            let snapshot = try store.read(keys: []).observations
+            let snapshot = try store.read(metadataOnly: true).observations
             var targets: [(String, String, String)] = []
             for owned in folders {
                 let id = owned["id"].string, title = owned["title"].string
@@ -63,6 +63,9 @@ public enum NotesOwnedCleanup {
                 targets.append((id, title, key))
             }
             for (id, title, key) in targets {
+                let fresh = try store.read(metadataOnly: true).observations
+                guard fresh.contains(where: { $0["scoped_alias"].string == id && $0["data"]["title"].string == title }),
+                      !fresh.contains(where: { $0["data"]["folder_id"]["$ref"]["native_key"].string == key || $0["data"]["parent_id"]["$ref"]["native_key"].string == key }) else { throw Failure(stage: "owned_folder_changed") }
                 guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.Notes").first else { throw Failure(stage: "notes_not_running") }
                 let root = AXUIElementCreateApplication(app.processIdentifier)
                 app.activate()
