@@ -265,6 +265,11 @@
       }
     },
     {
+      "key": "create_input_boundary",
+      "identifier": "is.workflow.actions.nothing",
+      "parameters": {}
+    },
+    {
       "key": "create",
       "identifier": "com.apple.mobiletimer-framework.MobileTimerIntents.MTCreateAlarmIntent",
       "parameters": {
@@ -287,6 +292,11 @@
         },
         "allowsSnooze": true
       }
+    },
+    {
+      "key": "created_state_input_boundary",
+      "identifier": "is.workflow.actions.nothing",
+      "parameters": {}
     },
     {
       "key": "created_state",
@@ -316,6 +326,11 @@
           "$group": "create"
         }
       }
+    },
+    {
+      "key": "targets_input_boundary",
+      "identifier": "is.workflow.actions.nothing",
+      "parameters": {}
     },
     {
       "key": "targets",
@@ -409,6 +424,11 @@
       }
     },
     {
+      "key": "toggle_input_boundary",
+      "identifier": "is.workflow.actions.nothing",
+      "parameters": {}
+    },
+    {
       "key": "toggle",
       "identifier": "com.apple.mobiletimer-framework.MobileTimerIntents.MTToggleAlarmIntent",
       "parameters": {
@@ -438,6 +458,16 @@
       }
     },
     {
+      "key": "same_label_end",
+      "identifier": "is.workflow.actions.conditional",
+      "parameters": {
+        "WFControlFlowMode": 2,
+        "GroupingIdentifier": {
+          "$group": "same_label"
+        }
+      }
+    },
+    {
       "key": "delete_if",
       "identifier": "is.workflow.actions.conditional",
       "parameters": {
@@ -455,6 +485,11 @@
           "$group": "delete"
         }
       }
+    },
+    {
+      "key": "delete_input_boundary",
+      "identifier": "is.workflow.actions.nothing",
+      "parameters": {}
     },
     {
       "key": "delete",
@@ -478,16 +513,6 @@
         "WFControlFlowMode": 2,
         "GroupingIdentifier": {
           "$group": "delete"
-        }
-      }
-    },
-    {
-      "key": "same_label_end",
-      "identifier": "is.workflow.actions.conditional",
-      "parameters": {
-        "WFControlFlowMode": 2,
-        "GroupingIdentifier": {
-          "$group": "same_label"
         }
       }
     },
@@ -552,6 +577,11 @@
       }
     },
     {
+      "key": "timer_input_boundary",
+      "identifier": "is.workflow.actions.nothing",
+      "parameters": {}
+    },
+    {
       "key": "timer",
       "identifier": "is.workflow.actions.timer.start",
       "parameters": {
@@ -575,6 +605,11 @@
           "$group": "timer"
         }
       }
+    },
+    {
+      "key": "alarms_input_boundary",
+      "identifier": "is.workflow.actions.nothing",
+      "parameters": {}
     },
     {
       "key": "alarms",

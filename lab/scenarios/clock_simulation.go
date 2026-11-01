@@ -18,6 +18,7 @@ type clockSimulation struct {
 	operations    []string
 	failStart     bool
 	cleanupFailed bool
+	dropAlarmName bool
 }
 
 func newClockSimulation() *clockSimulation {
@@ -41,6 +42,9 @@ func (f *clockSimulation) Run(ctx context.Context, input shortcut.Input) (shortc
 	case "create_alarm":
 		alarm := *request.Alarm
 		alarm.ID = "created-alarm"
+		if f.dropAlarmName {
+			alarm.Label = "Alarm"
+		}
 		f.alarms = append(f.alarms, alarm)
 	case "toggle_alarm":
 		for i := range f.alarms {

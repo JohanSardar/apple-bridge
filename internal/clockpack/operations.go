@@ -190,11 +190,11 @@ func (p Pack) Exchange(ctx context.Context, request Request) (Readback, error) {
 			expected, _ := json.Marshal(expectedAlarm)
 			actual, _ := json.Marshal(a)
 			if string(expected) != string(actual) {
-				return Readback{}, ErrUnqualified
+				return out, ErrUnqualified
 			}
 		}
 		if found != (request.Operation != "delete_alarm") {
-			return Readback{}, ErrUnqualified
+			return out, ErrUnqualified
 		}
 	case "start_timer":
 		if !out.TimerRunning || out.Duration != request.Duration || out.Label != request.Label {

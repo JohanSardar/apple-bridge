@@ -31,6 +31,16 @@ func TestClockTimerRequiresCleanupBeforeStarting(t *testing.T) {
 	}
 }
 
+func TestClockAlarmCleanupUsesReturnedIDWhenClockDropsTheLabel(t *testing.T) {
+	fixture := newClockSimulation()
+	fixture.dropAlarmName = true
+	before := slices.Clone(fixture.alarms)
+	e := runClockSession(context.Background(), Scenario{ID: "CLK-ALARM-REAL"}, Evidence{RunID: "synthetic-run", Passed: true, Metrics: map[string]any{}}, clockpack.Pack{Runner: fixture})
+	if e.Passed || !reflect.DeepEqual(before, fixture.alarms) || !slices.Contains(fixture.operations, "delete_alarm") {
+		t.Fatal(e, fixture.alarms, fixture.operations)
+	}
+}
+
 func TestClockTimerCleansUpAfterLostCreationReply(t *testing.T) {
 	fixture := newClockSimulation()
 	before := slices.Clone(fixture.timers)
