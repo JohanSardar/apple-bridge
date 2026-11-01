@@ -46,10 +46,16 @@ extension AppleTruth {
         }
         function deleteOwnedNote(id, folderID) {
             const trashID = (request.trash_folders || {})[id];
-            const current = app.notes.byId(id).container().id();
-            const folder = app.folders.byId(current);
+            let current = trashID || folderID;
+            let folder = app.folders.byId(current);
+            let matches = folder.notes.whose({id:id})();
+            if (matches.length === 0 && current !== folderID) {
+                current = folderID;
+                folder = app.folders.byId(current);
+                require(fixtureFolder(folder));
+                matches = folder.notes.whose({id:id})();
+            }
             require(folder.id() === current && (current === folderID && fixtureFolder(folder) || current === trashID));
-            const matches = folder.notes.whose({id:id})();
             require(matches.length === 1 && matches[0].id() === id && matches[0].name().startsWith(tag) && matches[0].container().id() === current);
             if (trashID && current !== trashID) {
                 const trash = app.folders.byId(trashID);
@@ -82,8 +88,6 @@ extension AppleTruth {
         }
         if (action === 'cleanup_owned') {
             require(request.id && request.folder_id);
-            const note = app.notes.byId(request.id);
-            require(note.name().startsWith(tag) && (note.container().id() === request.folder_id && fixtureFolder(note.container()) || note.container().id() === (request.trash_folders || {})[request.id]));
             deleteOwnedNote(request.id, request.folder_id);
             return {status:'verified', deleted_ids:[request.id]};
         }
