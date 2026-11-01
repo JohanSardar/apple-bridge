@@ -11,9 +11,9 @@ struct AppleBridgeHelper {
         umask(0o077)
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory)
-        app.finishLaunching()
         do {
             let arguments = Array(CommandLine.arguments.dropFirst())
+            if arguments.first != "intent-host" { app.finishLaunching() }
             if arguments.first == "clock-timers", arguments.count == 3 {
                 let request = try Data(contentsOf: URL(fileURLWithPath: arguments[1]))
                 let result = try ClockTimers.exchange(request)

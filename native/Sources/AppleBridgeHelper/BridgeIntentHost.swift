@@ -1,5 +1,6 @@
 import AppKit
 import AppIntents
+import SwiftUI
 import CoreServices
 import ApplicationServices
 
@@ -31,7 +32,7 @@ enum BridgeIntentHost {
         lifetime.setEventHandler { NSApplication.shared.terminate(nil) }
         lifetime.resume()
         defer { lifetime.cancel() }
-        if kill(parent, 0) == 0 { NSApplication.shared.run() }
+        if kill(parent, 0) == 0 { BridgeIntentApplication.main() }
     }
 
     private static func publish(_ text: String) {
@@ -82,5 +83,11 @@ enum BridgeIntentHost {
             }
         }
         return nil
+    }
+}
+
+private struct BridgeIntentApplication: App {
+    var body: some Scene {
+        Settings { EmptyView() }
     }
 }
