@@ -7,7 +7,7 @@ struct BridgeStatusIntent: AppIntent {
     static let openAppWhenRun = false
 
     @MainActor
-    func perform() async throws -> some IntentResult & ReturnsValue<String> & ProvidesDialog {
+    func perform() async throws -> some IntentResult & ReturnsValue<String> {
         let status = SMAppService.agent(plistName: "dev.applebridge.gateway.plist").status
         let message: String
         switch status {
@@ -22,7 +22,7 @@ struct BridgeStatusIntent: AppIntent {
         @unknown default:
             message = "Apple Bridge background service status is unknown."
         }
-        return .result(value: message, dialog: IntentDialog(stringLiteral: message))
+        return .result(value: message)
     }
 }
 

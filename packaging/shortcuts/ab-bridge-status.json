@@ -19,7 +19,8 @@
       "identifier": "is.workflow.actions.output",
       "parameters": {
         "WFOutput": {
-          "$output": "status"
+          "$output": "status",
+          "$text": true
         }
       }
     }
