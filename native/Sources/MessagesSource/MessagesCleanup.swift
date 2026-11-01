@@ -134,6 +134,10 @@ public enum MessagesCleanup {
                     guard ownedIDs.contains(key["guid"]) || mediaByMessage[key["guid"]] != nil || Self.allowsLateEcho(rowID: row.integer("row_position"), baseline: ownedBaseline ?? Int64.max, text: item.2["text"] as? String ?? "", tag: tag) else { continue }
                 }
                 var fields = item.2
+                if ownedOnly, !ownedIDs.contains(row["guid"]) {
+                    guard mediaByMessage[row["guid"]] != nil || (mediaProof != nil && (fields["text"] as? String)?.contains(tag) == true) else { continue }
+                    ownedIDs.insert(row["guid"])
+                }
                 if let names = mediaByMessage[row["guid"]], peers.allSatisfy({ own.contains(MessagesProbes.normalize($0["id"])) }) {
                     fields["cleanup_media_names"] = names
                     fields["cleanup_self_echo"] = ownedOnly
