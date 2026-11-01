@@ -48,6 +48,7 @@ enum RemindersSectionsProof {
             let root = ui.root
             try await ui.prepare()
             for (key, value) in ui.accessibilityDiagnostics { diagnostics["ui_" + key] = .number(value) }
+            try ui.requireReady()
             diagnostics["ui_windows"] = .number(Double(ui.elements(ui.root, kAXWindowsAttribute).count))
             var ownedSelection: AXUIElement?
             @MainActor func fence() throws {
@@ -117,6 +118,8 @@ enum RemindersSectionsProof {
                 guard error == nil else { throw SourceFailure.unavailable }
             }
             try await ui.prepare()
+            for (key, value) in ui.accessibilityDiagnostics { diagnostics["ui_" + key] = .number(value) }
+            try ui.requireReady()
             @MainActor func ownedRow() -> AXUIElement? {
                 var rows: [AXUIElement] = []
                 let matches = find(title)

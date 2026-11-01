@@ -117,10 +117,11 @@ enum RemindersParityProof {
             guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.reminders").first else { throw SourceFailure.unavailable }
             let ui = RemindersFixtureUI(app: app, title: title)
             try await ui.prepare()
+            for (key, value) in ui.accessibilityDiagnostics { diagnostics["ui_" + key] = .number(value) }
+            try ui.requireReady()
             try script("show fixtureList\nactivate")
             try await Task.sleep(for: .milliseconds(500))
             let expected = ["File", "Edit", "View", "New Section", "Indent Reminders", "Outdent Reminders", "Add Tags…", "Add Image", "New List…", "Show List Info", "Sort By", "Manual", "Add Image…", "Choose File…"]
-            for (key, value) in ui.accessibilityDiagnostics { diagnostics["ui_" + key] = .number(value) }
             diagnostics["ui_windows"] = .number(Double(ui.elements(ui.root, kAXWindowsAttribute).count))
             checks["owned_list_visible"] = .bool(!ui.find(title).isEmpty)
             for (key, value) in ui.searchDiagnostics { diagnostics["selection_" + key] = .number(value) }
@@ -285,6 +286,16 @@ final class RemindersFixtureUI {
 
     }
 
+    enum ReadinessFailure: Error, CustomStringConvertible {
+        case locationConsent
+
+        var description: String { "Open Reminders and finish its Location consent screen before retrying. No Location permission was requested by this test." }
+    }
+
+    func requireReady() throws {
+        if accessibilityDiagnostics["location_consent_blocked"] == 1 { throw ReadinessFailure.locationConsent }
+    }
+
     func prepare() async throws {
         _ = app.activate()
         let introduction = find("Continue", role: kAXButtonRole)
@@ -292,6 +303,31 @@ final class RemindersFixtureUI {
             guard AXUIElementPerformAction(introduction[0], kAXPressAction as CFString) == .success else { throw SourceFailure.unavailable }
             accessibilityDiagnostics["introduction_dismissed"] = 1
             try await Task.sleep(for: .seconds(1))
+        }
+        for sheet in sheets() {
+            let next = find("Continue", role: kAXButtonRole, within: sheet)
+            guard next.count == 1, (searchDiagnostics["sheet_word_Location"] ?? 0) > 0, (searchDiagnostics["sheet_word_Reminders"] ?? 0) > 0 else { continue }
+            accessibilityDiagnostics["location_consent_sheet"] = 1
+            let cancel = elements(sheet, kAXCancelButtonAttribute)
+            let declineNames = ["Cancel", "Not Now", "Don’t Allow", "Don't Allow", "Skip", "Set Up Later"]
+            let decline = cancel.filter { element in declineNames.contains { name in [kAXTitleAttribute, kAXValueAttribute, kAXDescriptionAttribute].contains { value(element, $0) == name } } }
+            accessibilityDiagnostics["location_decline_buttons"] = Double(decline.count)
+            var actions: CFArray?
+            let read = AXUIElementCopyActionNames(sheet, &actions)
+            let canCancel = read == .success && (actions as? [String] ?? []).contains(kAXCancelAction as String)
+            accessibilityDiagnostics["location_cancel_action"] = canCancel ? 1 : 0
+            if decline.count == 1 {
+                accessibilityDiagnostics["location_cancel_result"] = Double(AXUIElementPerformAction(decline[0], kAXPressAction as CFString).rawValue)
+            } else if canCancel {
+                accessibilityDiagnostics["location_cancel_result"] = Double(AXUIElementPerformAction(sheet, kAXCancelAction as CFString).rawValue)
+            }
+            if decline.count == 1 || canCancel {
+                let deadline = ContinuousClock.now.advanced(by: .seconds(3))
+                while sheets().contains(where: { CFEqual($0, sheet) }), ContinuousClock.now < deadline {
+                    try await Task.sleep(for: .milliseconds(100))
+                }
+            }
+            if sheets().contains(where: { CFEqual($0, sheet) }) { accessibilityDiagnostics["location_consent_blocked"] = 1 }
         }
         var minimizedCount = 0
         for window in elements(root, kAXWindowsAttribute) {
