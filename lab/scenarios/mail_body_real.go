@@ -85,11 +85,12 @@ func runMailBodyReal(ctx context.Context, s Scenario, level string) (e Evidence)
 	sample := truth.Samples[0]
 	digest := func(value string) string { return fmt.Sprintf("%x", sha256.Sum256([]byte(value))) }
 	err = w.Await(60*time.Second, func() bool {
-		records, err := w.Records(w.Gateway)
+		var records contracts.ReadResult
+		_, err := world.Request(ctx, w.Gateway, "/v1/op/records.query", contracts.ReadQuery{Collection: "mail.message", Text: e.RunID, Limit: 10}, &records)
 		if err != nil {
 			return false
 		}
-		for _, r := range records {
+		for _, r := range records.Records {
 			if r.Collection != "mail.message" {
 				continue
 			}
