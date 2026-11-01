@@ -129,3 +129,18 @@ func TestCleanupRecoveryScopeIsLimitedToOwnedMessagesScenarios(t *testing.T) {
 		}
 	}
 }
+
+func TestCleanupRecoveryVerdictRequiresCleanupAndPreservationProof(t *testing.T) {
+	for _, preservation := range []bool{false, true} {
+		e := Evidence{Status: "limited", Assertions: []Assertion{{Name: "owned_messages_cleanup", Passed: true}, {Name: "cleanup_baseline_restored", Passed: preservation}, {Name: "recovery_ledger_saved", Passed: true}}}
+		finishMessagesRecovery(&e, true)
+		if e.Passed != preservation || (e.Status == "") != preservation {
+			t.Fatal("incorrect recovery verdict", e)
+		}
+	}
+	e := Evidence{Status: "limited"}
+	finishMessagesRecovery(&e, true)
+	if e.Passed {
+		t.Fatal("recovery passed without evidence")
+	}
+}

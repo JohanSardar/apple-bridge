@@ -33,6 +33,16 @@ func messagesRecoveryScenario(id string) bool {
 	}
 }
 
+func finishMessagesRecovery(result *Evidence, cleaned bool) {
+	result.Passed = cleaned && len(result.Assertions) > 0
+	for _, assertion := range result.Assertions {
+		result.Passed = result.Passed && assertion.Passed
+	}
+	if result.Passed {
+		result.Status = ""
+	}
+}
+
 func runMessagesCleanupRecovery(ctx context.Context, e Evidence) (result Evidence) {
 	result = e
 	result.Status = "limited"
@@ -140,6 +150,7 @@ func runMessagesCleanupRecovery(ctx context.Context, e Evidence) (result Evidenc
 			}
 			add("recovery_ledger_saved", saved)
 		}
+		finishMessagesRecovery(&result, cleaned)
 	}()
 	dir, err := os.MkdirTemp("", "ab-message-recovery-")
 	if err != nil {
