@@ -42,7 +42,10 @@ enum PhotosRealProof {
         let ui = try PhotosProofUI()
         func deleteVerifiedAsset(_ assetID: String, filename: String, created: Date) async throws {
             stage = "cleaning up the verified test photo"
-            do { try await ui.remove(assetID, filename: filename, created: created) }
+            do {
+                if assetID.isEmpty { try await ui.purge([PhotosProofAsset(id: "", filename: filename, created: created)]) }
+                else { try await ui.remove(assetID, filename: filename, created: created) }
+            }
             catch {
                 stage = ui.stage
                 cleanupDiagnostics = ui.diagnostics
@@ -93,7 +96,7 @@ enum PhotosRealProof {
                     try await deleteVerifiedAsset(asset.localIdentifier, filename: name, created: created)
                     recovered += 1
                 }
-                if matches.isEmpty, !entry["asset"].string.isEmpty {
+                if matches.isEmpty {
                     try await deleteVerifiedAsset(entry["asset"].string, filename: name, created: Date(timeIntervalSinceReferenceDate: entry["created"].number))
                 }
                 let options = PHFetchOptions()
