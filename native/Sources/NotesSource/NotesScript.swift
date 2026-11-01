@@ -20,4 +20,8 @@ public enum NotesScript {
     public static func html(_ text: String) -> String {
         text.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;").replacingOccurrences(of: ">", with: "&gt;").replacingOccurrences(of: "\"", with: "&quot;").components(separatedBy: "\n").map { "<div>" + ($0.isEmpty ? "<br>" : $0) + "</div>" }.joined()
     }
+    public static func deleteNote(_ id: String, folderID: String) -> String {
+        let note = quote(id), folder = quote(folderID)
+        return "set matches to (every note of folder id " + folder + " whose id is " + note + ")\nif (count of matches) is not 1 then error \"Note could not be found in its folder.\"\nset targetNote to item 1 of matches\nif (id of targetNote) is not " + note + " then error \"Note identity changed.\"\ndelete targetNote"
+    }
 }

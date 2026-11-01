@@ -37,6 +37,19 @@ extension AppleTruth {
         function html(text) {
             return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').split('\n').map(line => '<div>' + line + '</div>').join('');
         }
+        function deleteOwnedNote(id, folderID) {
+            const folder = app.folders.byId(folderID);
+            require(folder.id() === folderID && fixtureFolder(folder));
+            const matches = folder.notes.whose({id:id})();
+            require(matches.length === 1 && matches[0].id() === id && matches[0].name().startsWith(tag) && matches[0].container().id() === folderID);
+            app.delete(matches[0]);
+        }
+        function deleteOwnedFolder(id) {
+            const folder = app.folders.byId(id);
+            const matches = folder.container().folders.whose({id:id})();
+            require(matches.length === 1 && matches[0].id() === id && fixtureFolder(matches[0]) && matches[0].folders().length === 0 && matches[0].notes().length === 0);
+            app.delete(matches[0]);
+        }
         if (request.verb === 'observe') {
             const selected = tag ? taggedNotes() : app.notes();
             return {status:'verified', records:selected.map(n => {
@@ -54,7 +67,7 @@ extension AppleTruth {
             require(request.id && request.folder_id);
             const note = app.notes.byId(request.id);
             require(note.name().startsWith(tag) && note.container().id() === request.folder_id && fixtureFolder(note.container()));
-            app.delete(note.container().notes.byId(request.id));
+            deleteOwnedNote(request.id, request.folder_id);
             return {status:'verified', deleted_ids:[request.id]};
         }
         if (action === 'cleanup_created_folder') {
@@ -65,7 +78,7 @@ extension AppleTruth {
             require(folder.name() === 'Bridge Test ' + tag || folder.name().startsWith('Bridge Test ' + tag + ' '));
             require((!request.folder_id || folder.id() === request.folder_id) && folder.folders().length === 0 && (request.folder_id ? folder.notes().length === 0 : folder.notes().every(n => n.name().startsWith(tag))));
             const folderID = folder.id();
-            app.delete(folder.container().folders.byId(folderID));
+            deleteOwnedFolder(folderID);
             return {status:'verified', deleted_ids:[folderID]};
         }
         if (action === 'cleanup_created_folders') {
@@ -78,8 +91,7 @@ extension AppleTruth {
             });
             require(new Set(ids).size === ids.length);
             ids.forEach(id => {
-                const folder = app.folders.byId(id);
-                app.delete(folder.container().folders.byId(id));
+                deleteOwnedFolder(id);
             });
             return {status:'verified', deleted_ids:ids};
         }
@@ -91,7 +103,7 @@ extension AppleTruth {
                 const folder = note.container();
                 require(fixtureFolder(folder));
             });
-            selected.forEach(note => app.delete(note.container().notes.byId(note.id())));
+            selected.forEach(note => deleteOwnedNote(note.id(), note.container().id()));
             return {status:'verified', deleted_ids:deletedIDs};
         }
         if (action === 'modify') {

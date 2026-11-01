@@ -49,14 +49,14 @@ func TestNotesCleanupScriptDeletesOnlyValidatedScopedObjects(t *testing.T) {
 const deleted = [];
 const occupied = ` + string(request) + `.occupied;
 const titles = {a:'Bridge Test [ab-test owned] a',b:'Bridge Test [ab-test owned] b'};
-function scoped(id) { return {owned:true, id:() => id}; }
 function folder(id) {
     if (!titles[id]) throw Error('missing folder');
-    return {id:() => id, name:() => titles[id], folders:() => [], notes:() => id === occupied ? [{}] : [],
-        container:() => ({folders:{byId:scoped}})};
+    const notes = () => id === occupied ? [{}] : [];
+    notes.whose = query => () => query.id === 'note' && id === 'a' ? [note] : [];
+    return {owned:true, id:() => id, name:() => titles[id], folders:() => [], notes,
+        container:() => ({folders:{whose:query => () => titles[query.id] ? [folder(query.id)] : []}})};
 }
-const note = {id:() => 'note', name:() => '[ab-test owned] note',
-    container:() => ({id:() => 'a', name:() => titles.a, notes:{byId:scoped}})};
+const note = {owned:true, id:() => 'note', name:() => '[ab-test owned] note', container:() => folder('a')};
 const app = {folders:{byId:folder}, notes:{byId:() => note}, delete:object => {
     if (!object.owned) throw Error('unscoped deletion');
     deleted.push(object.id());

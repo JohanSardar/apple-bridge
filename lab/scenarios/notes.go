@@ -98,6 +98,13 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 	defer w.Close()
 	if level != "sim" {
 		notesRecordHelperBinary(&e, w.HelperApp)
+		if s.ID == "NOTE-CRUD" || s.ID == "NOTE-RICH-REJECT" {
+			problem := notesAwaitInitialCapture(w)
+			add("native_notes_capture_ready", problem == nil)
+			if problem != nil {
+				return
+			}
+		}
 	}
 	if level == "real" && s.ID == "NOTE-CRUD" {
 		before, problem := cleanupSnapshot(ctx, "notes")
@@ -427,7 +434,7 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		}
 	}
 	if s.ID == "NOTE-RICH-REJECT" {
-		_, err = fixture("create", map[string]any{"title": title, "html": "<div>" + title + "</div><table><tr><td>synthetic</td></tr></table>"})
+		_, err = fixture("create", map[string]any{"title": title, "html": "<div>" + title + "</div><div><b>synthetic rich body</b></div>"})
 	} else {
 		_, err = fixture("create", map[string]any{"title": title})
 	}
