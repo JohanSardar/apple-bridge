@@ -143,7 +143,7 @@ export default function Transcript(props:TranscriptProps){
                 previousLocal=pending;
                 batch(()=>{setInitialPrefetch(value=>value&&prefetching);setMeasurementKey(descriptor+':'+untrack(fontRevision)+':'+size+':'+viewport);setRows({scope:state.anchor,items:next});setReady(true);});
                 if(!next.length)thread.presented();
-                if(added){cancelAnimationFrame(sendScrollFrame);sendScrollFrame=requestAnimationFrame(()=>list()?.scrollToIndex(rows().items.length-1,'end'));}
+                if(immediate&&untrack(followLatest)){cancelAnimationFrame(sendScrollFrame);sendScrollFrame=requestAnimationFrame(()=>list()?.scrollToIndex(rows().items.length-1,'end'));}
                 finishPublish();
             };
             if(staged)frame=requestAnimationFrame(publish);else publish();
