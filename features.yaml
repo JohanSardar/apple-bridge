@@ -1326,12 +1326,10 @@ features:
     milestone: G13
     modules: [ios/App, ios/Capabilities]
     depends_on: [iphone.build]
-    status: limited
+    status: done
     scenarios:
       - {id: APP-SHELL-SIM, levels: [sim]}
       - {id: APP-SHELL-REAL, levels: [real]}
-    limits:
-      - {scenario: APP-SHELL-SIM, level: sim, reason: "The existing simulation exercises generic replica convergence; shell UI is qualified only by the physical scenario."}
   - id: iphone.pairing
     title: iPhone device keys and one-time gateway pairing
     requirements: [R-SECURE, R-API]

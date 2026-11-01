@@ -1,30 +1,13 @@
 import SwiftUI
 import VisionKit
 
-@MainActor
-@Observable
-final class PairingState {
-    var status = "Not paired"
-    var busy = false
-
-    init() {
-        if let identity = try? DeviceIdentity.load(), identity.deviceID != nil { status = "Paired" }
-    }
-
-    func pair(_ code: String) async {
-        busy = true
-        defer { busy = false }
-        do {
+extension PairingState {
+    convenience init() {
+        self.init(paired: (try? DeviceIdentity.load().deviceID) != nil, pair: { code in
             _ = try await PairingClient.pair(code)
-            status = "Paired"
-        } catch { status = "Pairing failed: \(error.localizedDescription)" }
-    }
-
-    func check() async {
-        do {
+        }, check: {
             _ = try await PairingClient.signedRequest(identity: DeviceIdentity.load(), path: "/v1/iphone/status")
-            status = "Paired · Connected"
-        } catch { status = "Disconnected or revoked" }
+        })
     }
 }
 

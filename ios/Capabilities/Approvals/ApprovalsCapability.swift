@@ -10,8 +10,11 @@ enum ApprovalsCapability {
     static var enabled: Bool { UserDefaults.standard.bool(forKey: "capability.approvals.enabled") }
 
     static func stored(_ id: String) -> PhoneJob? {
-        guard let data = UserDefaults.standard.data(forKey: "approval." + id) else { return nil }
-        return try? JSONDecoder().decode(PhoneJob.self, from: data)
+        ApprovalInbox.stored(id)
+    }
+
+    static func pending() -> [PhoneJob] {
+        ApprovalInbox.pending()
     }
 
     static func deliver(_ job: PhoneJob) async throws {
@@ -71,7 +74,7 @@ enum ApprovalsCapability {
         guard enabled, expires > Int64(Date().timeIntervalSince1970) else { return }
         if job.command.op.hasPrefix("iphone.capture.") {
             try NotificationsCapability.recordResult(PhoneResult(command_id: id, request_hash: hash, state: "rejected", data: .null))
-            UserDefaults.standard.removeObject(forKey: "approval." + id)
+            ApprovalInbox.remove(id)
             UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: ["approval." + id])
             await PushDelivery.shared.drain()
             return
@@ -85,6 +88,7 @@ enum ApprovalsCapability {
             try ShellDeliveryQualification.shared.save()
         }
         #endif
+        ApprovalInbox.remove(id)
         UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: ["approval." + id])
     }
 }
