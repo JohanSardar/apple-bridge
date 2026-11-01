@@ -4,6 +4,13 @@ import ApplicationServices
 import SourceSupport
 
 extension MessagesParity {
+    public static func checkboxValue(_ raw: JSON) -> Bool? {
+        switch raw {
+        case .number(0), .string("0"): return false
+        case .number(1), .string("1"): return true
+        default: return nil
+        }
+    }
     public static func detailsControlIndex(_ controls: [JSON]) -> Int? {
         let titles = controls.indices.filter { controls[$0]["identifier"].string == "ConversationTitle" }
         if !titles.isEmpty { return titles.count == 1 ? titles[0] : nil }
@@ -47,9 +54,15 @@ extension MessagesParity {
     @UIActor
     static func checkbox(_ control: AXUIElement) throws -> Bool {
         var value: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(control, kAXValueAttribute as CFString, &value) == .success,
-              let number = value as? NSNumber, [0, 1].contains(number.intValue) else { throw SourceFailure.conflict }
-        return number.boolValue
+        let status = AXUIElementCopyAttributeValue(control, kAXValueAttribute as CFString, &value)
+        let raw: JSON
+        if let number = value as? NSNumber { raw = .number(number.doubleValue) }
+        else if let text = value as? String { raw = .string(text) }
+        else { raw = .null }
+        let checked = checkboxValue(raw)
+        try? PrivateReport.write(["value_read": status == .success, "numeric_value": value is NSNumber, "string_value": value is String, "recognized": checked != nil, "value_is_minus_one": raw == .number(-1) || raw == .string("-1"), "value_is_two": raw == .number(2) || raw == .string("2")], to: PrivateReport.directory.appendingPathComponent("messages-receipt-value-controls.json"))
+        guard status == .success, let checked else { throw SourceFailure.conflict }
+        return checked
     }
     @UIActor
     static func receipts(_ prepared: Prepared, value: Bool) throws {

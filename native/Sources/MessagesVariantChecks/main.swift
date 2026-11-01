@@ -26,6 +26,11 @@ struct MessagesVariantChecks {
         checks["ambiguous_conversation_titles_rejected"] = MessagesParity.detailsControlIndex([titleControl, titleControl]) == nil
         checks["legacy_details_button_supported"] = MessagesParity.detailsControlIndex([legacyDetails]) == 0
         checks["unrelated_details_controls_rejected"] = MessagesParity.detailsControlIndex([.object(["identifier": .string("other"), "role": .string("AXButton"), "description": .string("Self")])]) == nil
+        checks["receipt_string_off_decoded"] = MessagesParity.checkboxValue(.string("0")) == false
+        checks["receipt_string_on_decoded"] = MessagesParity.checkboxValue(.string("1")) == true
+        checks["receipt_numeric_off_decoded"] = MessagesParity.checkboxValue(.number(0)) == false
+        checks["receipt_numeric_on_decoded"] = MessagesParity.checkboxValue(.number(1)) == true
+        checks["receipt_unknown_state_rejected"] = [.number(2), .number(-1), .string("mixed"), .null].allSatisfy { MessagesParity.checkboxValue($0) == nil }
         let proof = JSON.object(["os_build": .string("synthetic-os"), "version": .number(1), "complete": .bool(true), "helper_digest": .string("synthetic-helper")])
         checks["current_build_qualified"] = MessagesSendVariants.validProof(proof, osBuild: "synthetic-os", helperDigest: "synthetic-helper")
         checks["stale_build_rejected"] = !MessagesSendVariants.validProof(proof, osBuild: "synthetic-os", helperDigest: "other-helper")
