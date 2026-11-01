@@ -11,6 +11,10 @@ func checkMailBodies(_ root: URL) async throws {
     let plain = try read("1"), alternative = try read("2"), partial = try read("3"), missing = try read("4"), offloaded = try read("5")
     try require(plain["plain_text"].string == "Hello fixture" && plain["state"].string == "downloaded")
     try require(alternative["plain_text"].string == "Alternative" && alternative["html"].string.contains("&lt;script&gt;") && !alternative["html"].string.contains("<script") && !alternative["html"].string.contains("<img"))
+    let multipart = "Content-Type: multipart/alternative; boundary=fixture\n\n--fixture\nContent-Type: text/plain\n\n\n> [ab-test] fixture\n\n--fixture--\n"
+    try (String(multipart.utf8.count) + "\n" + multipart).write(to: root.appendingPathComponent("9.emlx"), atomically: true, encoding: .utf8)
+    let preserved = try read("9")
+    try require(preserved["state"].string == "downloaded" && preserved["plain_text"].string == "\n> [ab-test] fixture\n")
     try require(partial["state"].string == "partial" && missing["state"].string == "partial" && offloaded["state"].string == "offloaded")
     let htmlOnly = "Content-Type: text/html\n\n<p>Hello</p><script>bad()</script>"
     try (String(htmlOnly.utf8.count) + "\n" + htmlOnly).write(to: root.appendingPathComponent("8.emlx"), atomically: true, encoding: .utf8)

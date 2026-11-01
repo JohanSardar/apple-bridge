@@ -664,6 +664,9 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 			CandidateCount    int    `json:"candidate_count"`
 		}
 		collection := "reminders.reminder"
+		if r.Source == contracts.Mail {
+			collection = "mail.message"
+		}
 		if r.Source == "pdf" {
 			collection = "pdf.artifact"
 		}

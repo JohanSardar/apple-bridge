@@ -3,7 +3,12 @@ import SQLite3
 import MailSource
 import SourceSupport
 
-func require(_ value: Bool) throws { if !value { throw SourceFailure.corrupt } }
+func require(_ value: Bool, file: StaticString = #filePath, line: UInt = #line) throws {
+    if !value {
+        FileHandle.standardError.write(Data("Mail check failed at \(file):\(line)\n".utf8))
+        throw SourceFailure.corrupt
+    }
+}
 func execute(_ path: String, _ sql: String) throws {
     var db: OpaquePointer?
     guard sqlite3_open(path, &db) == SQLITE_OK else { throw SourceFailure.unavailable }
@@ -47,6 +52,7 @@ struct MailChecks {
         let scenario = CommandLine.arguments.last ?? ""
         if scenario == "MAIL-COMMANDS" {
  try await checkMailCommands()
+ try await checkMailCommandCapture(path)
  } else if scenario == "MAIL-BODY" {
             try await checkMailBodies(directory)
         } else if scenario == "MAIL-NO-FALSE-DELETE" {

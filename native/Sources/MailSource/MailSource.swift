@@ -4,18 +4,22 @@ import SourceSupport
 public actor MailSource: Source {
     public nonisolated let name = "mail"
     private let path: String
+    private let commands: MailCommands
     private var generation = ""
     private var keys = Set<String>()
     public static let coverage: JSON = .object(["fields": .string("partial"), "missing": .array([.string("account settings, recipients, attachment files and local body availability require qualification")])])
-    public init(path: String = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Mail/V10/MailData/Envelope Index").path) { self.path = path }
+    public init(path: String = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Mail/V10/MailData/Envelope Index").path, script: @escaping MailCommands.Script = MailCommands.run) {
+        self.path = path
+        commands = MailCommands(script: script)
+    }
     public func open() async -> SourceReadiness {
         do {
             let reader = try SQLiteSnapshot(path: path, generationSQL: "SELECT 'mail-v10'")
             try reader.requireSchema(["messages": ["mailbox", "subject", "sender", "date_received", "read", "message_id"], "mailboxes": ["url"], "subjects": ["subject"], "addresses": ["address"]])
-            return SourceReadiness(state: "ready", coverage: Self.coverage)
+            return SourceReadiness(state: "ready", coverage: Self.coverage, capabilities: MailCommands.operations)
         } catch { return SourceReadiness(state: "permission_missing", coverage: Self.coverage, reason: "Full Disk Access and a supported V10 Envelope Index required") }
     }
-    public func snapshot(maxRows: Int = 100000) throws -> (String, [JSON], Bool) {
+    public func snapshot(maxRows: Int = 100000, updateState: Bool = true) throws -> (String, [JSON], Bool) {
         let reader = try SQLiteSnapshot(path: path, generationSQL: "SELECT 'mail-v10'")
         let scan = try CompleteScan.read(reader: reader, sql: "SELECT CAST(m.ROWID AS TEXT) AS native_key, m.mailbox, b.url, coalesce(s.subject,'') AS subject, coalesce(a.address,'') AS sender, m.date_received, m.read, coalesce(m.message_id,'') AS message_id FROM messages m LEFT JOIN mailboxes b ON b.ROWID=m.mailbox LEFT JOIN subjects s ON s.ROWID=m.subject LEFT JOIN addresses a ON a.ROWID=m.sender ORDER BY m.ROWID", keyColumn: "native_key", scope: "mail.message", previousScope: "mail.message", previousGeneration: generation, previousKeys: keys, maxRows: maxRows, timeout: 5)
         var observations: [JSON] = []
@@ -44,7 +48,7 @@ public actor MailSource: Source {
             if alias.hasPrefix("<"), alias.hasSuffix(">"), alias.contains("@") { observation["scoped_alias"] = .string("mail/" + data["account_id"].string + "/" + alias) }
             observations.append(.object(observation))
         }
-        if scan.complete {
+        if scan.complete && updateState {
             for key in scan.absentKeys { observations.append(.object(["kind": .string("absent"), "revalidated": .bool(true), "collection": .string("mail.message"), "native_key": .string(key), "observed_at": .string(timestamp())])) }
             keys = Set(scan.rows.compactMap { $0["native_key"]?.text })
             generation = reader.generation
@@ -74,7 +78,29 @@ public actor MailSource: Source {
         try await publish()
         for await _ in watcher.changes { try Task.checkCancellation(); try await publish() }
     }
-    public func prepare(_ command: JSON) async throws -> Prepared { return try MailCommands().prepare(command) }
-    public func dispatch(_ prepared: Prepared) async throws -> JSON { try await MailCommands().dispatch(prepared) }
+    public func captureCommand(_ evidence: JSON, into sink: any ObservationSink) async throws {
+        let key = evidence["native_key"].string
+        guard UInt64(key) != nil else { throw SourceFailure.invalid }
+        for _ in 0..<20 {
+            try Task.checkCancellation()
+            let started = timestamp()
+            let (generation, rows, complete) = try snapshot(updateState: false)
+            guard complete else { throw SourceFailure.unavailable }
+            let message = rows.filter { $0["collection"].string == "mail.message" && $0["native_key"].string == key }
+            if message.count == 1 {
+                try await sink.emitCheckpoint(source: name, generation: generation, checkpoint: UUID().uuidString, observations: message, scanID: UUID().uuidString, scanStartedAt: started, scope: [], completionEvidence: "", blobHandles: [:], live: true)
+                return
+            }
+            try await Task.sleep(for: .milliseconds(200))
+        }
+        throw SourceFailure.unavailable
+    }
+    public func prepare(_ command: JSON) async throws -> Prepared { return try commands.prepare(command) }
+    public func dispatch(_ prepared: Prepared) async throws -> JSON {
+        do { return try await commands.dispatch(prepared) }
+        catch let error as MailCommandFailure {
+            return .object(["observed": .bool(false), "disposition": .string("indeterminate"), "reason": .string(error.localizedDescription)])
+        }
+    }
     public func resolve(_ command: String, evidence: JSON) async -> JSON { .null }
 }

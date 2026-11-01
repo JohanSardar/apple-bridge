@@ -1,27 +1,63 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[3.83 2.89 3.06] cpu_idle=82% cpus=8 other_heavy=0"
+    "summary": "air: load=[7.85 16.81 30.58] cpu_idle=63% cpus=8 other_heavy=0"
   },
-  "status": "limited",
-  "run_id": "run_01M65EEE02R5PV68HGCZEEW9KS",
+  "run_id": "run_01M6AZSZJQTKHZWV0EYCKC0CT6",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MAIL-DRAFT-REAL",
   "level": "real",
-  "passed": false,
+  "passed": true,
   "git_sha": "",
-  "at": "2026-10-30T03:42:51.394891Z",
+  "at": "2026-11-01T07:22:27.799503Z",
   "assertions": [
+    {
+      "name": "mail_native_world",
+      "passed": true
+    },
+    {
+      "name": "signed_helper_mail_proof",
+      "passed": true
+    },
+    {
+      "name": "cleanup_mailbox_clear",
+      "passed": true
+    },
+    {
+      "name": "cleanup_outgoing_clear",
+      "passed": true
+    },
+    {
+      "name": "cleanup_passed",
+      "passed": true
+    },
+    {
+      "name": "cleanup_windows_clear",
+      "passed": true
+    },
+    {
+      "name": "draft_created",
+      "passed": true
+    },
+    {
+      "name": "mail_responsive",
+      "passed": true
+    },
+    {
+      "name": "self_address_available",
+      "passed": true
+    },
+    {
+      "name": "final_owned_cleanup",
+      "passed": true
+    },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
   ],
   "latency": null,
-  "hosts": null,
-  "conditions": {
-    "reason": "needs Automation grant AppleBridgeHelper → Mail"
-  }
+  "hosts": null
 }
