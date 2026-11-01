@@ -112,10 +112,17 @@ enum PhotosRealProof {
                     }
                     guard candidates.count <= 1 else { throw SourceFailure.conflict }
                     guard let asset = candidates.first else { continue }
+                    cleanupDiagnostics["legacy_dimensions_passed"] = .bool(asset.pixelWidth == 2 && asset.pixelHeight == 2)
+                    cleanupDiagnostics["legacy_date_passed"] = .bool(asset.creationDate.map { abs($0.timeIntervalSinceReferenceDate - item["created"].number) < 1 } ?? false)
+                    cleanupDiagnostics["legacy_filename_passed"] = .bool(PHAssetResource.assetResources(for: asset).contains { $0.type == .photo && $0.originalFilename == item["filename"].string })
                     guard asset.pixelWidth == 2, asset.pixelHeight == 2,
                           let created = asset.creationDate, abs(created.timeIntervalSinceReferenceDate - item["created"].number) < 1,
                           let resource = PHAssetResource.assetResources(for: asset).first(where: { $0.type == .photo }), resource.originalFilename == item["filename"].string else { throw SourceFailure.conflict }
                     let blob = try await source.blob("photos.original", .object(["asset": .string(asset.localIdentifier)]))
+                    cleanupDiagnostics["legacy_original_digest"] = blob["digest"]
+                    cleanupDiagnostics["legacy_expected_digest"] = .string(legacyDigest)
+                    cleanupDiagnostics["legacy_original_size"] = blob["size"]
+                    cleanupDiagnostics["legacy_expected_size"] = .number(Double(legacyBytes.count))
                     guard blob["digest"].string == legacyDigest, blob["size"].number == Double(legacyBytes.count) else { throw SourceFailure.conflict }
                     verified.append((asset.localIdentifier, resource.originalFilename))
                 }
