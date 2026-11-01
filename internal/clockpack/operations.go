@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -67,8 +68,8 @@ func validAlarm(a Alarm) bool {
 func (p Pack) Exchange(ctx context.Context, request Request) (Readback, error) {
 	var out Readback
 	switch request.Operation {
-	case "alarms", "timers", "capabilities":
-	case "delete_timer":
+	case "alarms", "timers", "recent_timers", "capabilities":
+	case "delete_timer", "delete_recent_timer":
 		if request.Timer == nil || request.Timer.ID == "" || !strings.HasPrefix(request.Timer.Label, "[ab-test]") {
 			return out, fmt.Errorf("valid tagged timer required")
 		}
@@ -94,7 +95,11 @@ func (p Pack) Exchange(ctx context.Context, request Request) (Readback, error) {
 	if err != nil {
 		return out, err
 	}
-	result, err := p.Runner.Run(ctx, shortcut.Input{Shortcut: Name, Timeout: 15 * time.Second, Data: data})
+	timeout := p.Timeout
+	if timeout == 0 {
+		timeout = 15 * time.Second
+	}
+	result, err := p.Runner.Run(ctx, shortcut.Input{Shortcut: Name, Timeout: timeout, Data: data})
 	if err != nil {
 		return out, err
 	}
@@ -129,18 +134,23 @@ func (p Pack) Exchange(ctx context.Context, request Request) (Readback, error) {
 	}
 
 	ids := map[string]bool{}
-	for _, a := range out.Alarms {
-		if !validAlarm(a) || ids[a.ID] {
+	for i := range out.Alarms {
+		a := &out.Alarms[i]
+		if parsed, err := time.Parse("15:4", a.Time); err == nil {
+			a.Time = parsed.Format("15:04")
+		}
+		if !validAlarm(*a) || ids[a.ID] {
 			return Readback{}, ErrUnqualified
 		}
 		ids[a.ID] = true
+		slices.Sort(a.RepeatDays)
 	}
 	switch request.Operation {
 	case "capabilities":
 		if out.Capabilities == nil {
 			return Readback{}, ErrUnqualified
 		}
-	case "timers", "delete_timer":
+	case "timers", "delete_timer", "recent_timers", "delete_recent_timer":
 		if out.Timers == nil {
 			return Readback{}, ErrUnqualified
 		}
@@ -150,7 +160,7 @@ func (p Pack) Exchange(ctx context.Context, request Request) (Readback, error) {
 				return Readback{}, ErrUnqualified
 			}
 			seen[timer.ID] = true
-			if request.Operation == "delete_timer" && timer.ID == request.Timer.ID {
+			if (request.Operation == "delete_timer" || request.Operation == "delete_recent_timer") && timer.ID == request.Timer.ID {
 				return Readback{}, ErrUnqualified
 			}
 		}
@@ -162,27 +172,15 @@ func (p Pack) Exchange(ctx context.Context, request Request) (Readback, error) {
 		if out.Alarms == nil {
 			return Readback{}, ErrUnqualified
 		}
-		found := false
-		for _, a := range out.Alarms {
-			if request.Operation == "create_alarm" && a.Label != request.Alarm.Label || request.Operation != "create_alarm" && a.ID != request.Alarm.ID {
-				continue
+		if !alarmMutationMatches(request, out.Alarms) {
+			fresh, readErr := p.Exchange(ctx, Request{Operation: "alarms"})
+			if readErr != nil {
+				return out, ErrUnqualified
 			}
-			if found {
-				return Readback{}, ErrUnqualified
+			out.Alarms = fresh.Alarms
+			if !alarmMutationMatches(request, out.Alarms) {
+				return out, ErrUnqualified
 			}
-			found = true
-			expectedAlarm := *request.Alarm
-			if request.Operation == "create_alarm" {
-				expectedAlarm.ID = a.ID
-			}
-			expected, _ := json.Marshal(expectedAlarm)
-			actual, _ := json.Marshal(a)
-			if string(expected) != string(actual) {
-				return Readback{}, ErrUnqualified
-			}
-		}
-		if found != (request.Operation != "delete_alarm") {
-			return Readback{}, ErrUnqualified
 		}
 	case "start_timer":
 		if !out.TimerRunning || out.Duration != request.Duration || out.Label != request.Label {
@@ -197,4 +195,29 @@ func (p Pack) Exchange(ctx context.Context, request Request) (Readback, error) {
 		}
 	}
 	return out, nil
+}
+
+func alarmMutationMatches(request Request, alarms []Alarm) bool {
+	found := false
+	for _, alarm := range alarms {
+		if request.Operation == "create_alarm" && alarm.Label != request.Alarm.Label || request.Operation != "create_alarm" && alarm.ID != request.Alarm.ID {
+			continue
+		}
+		if found {
+			return false
+		}
+		found = true
+		expectedAlarm := *request.Alarm
+		expectedAlarm.RepeatDays = slices.Clone(expectedAlarm.RepeatDays)
+		slices.Sort(expectedAlarm.RepeatDays)
+		if request.Operation == "create_alarm" {
+			expectedAlarm.ID = alarm.ID
+		}
+		expected, _ := json.Marshal(expectedAlarm)
+		actual, _ := json.Marshal(alarm)
+		if string(expected) != string(actual) {
+			return false
+		}
+	}
+	return found == (request.Operation != "delete_alarm")
 }

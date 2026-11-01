@@ -1,11 +1,11 @@
-# Screen Time action qualification
+# Screen Time probe
 
-The pack `AB Screen Time` is not supplied or imported yet. No executable action identifier has been qualified on this Mac; do not synthesize one or run an owner's existing shortcut as a substitute.
+`USE-ACTION-PROBE` uses the read-only usage data the macOS bridge already captures. A missing “Get App & Website Data” Shortcuts action does not prevent the probe from returning real output.
 
-F9 follow-up inspected the Air's macOS 26.7.1 builtin action definitions and installed system application App Intent metadata. Neither exposed “Get App & Website Data.” The repository workflow builder can serialize verified actions, but cannot make an unavailable Apple action executable. Creating a text-only placeholder would not probe Screen Time. Keep this real limit until a supported action or a qualified owner export is available.
+The macOS backend is `UsageSource`: it reads the local and synced `App.InFocus` Biome streams, identifies devices from the sync database, and returns `usage.device` and `usage.app_day` records. These are estimated focus durations with provenance, decoder version, device freshness and uncertainty. They are not a claim of parity with the Screen Time settings report.
 
-On a system that exposes Apple's “Get App & Website Data” action, create a dedicated `AB Screen Time` shortcut and approve its access. Export the qualified shortcut to `packaging/shortcuts/AB Screen Time.shortcut` before running the probe. Keep raw results temporary and local. Evidence must contain only counts and coverage, never app names, websites, usage durations or device identifiers.
+The real probe stages an independent read-only copy of the source streams, compares its day totals with the gateway, checks provenance and freshness, and verifies replication and MCP output. Evidence contains counts and pass/fail only. It does not import a shortcut, request authorization, or change usage data. Full Disk Access must already allow the signed Helper to read the streams.
 
-Compare identical date windows against Biome: device count and platform coverage, app and website row counts, missing fields and availability. Retain Biome until output shape, privacy, device reach and unattended execution are verified. Inventory alone never qualifies a shortcut to execute.
+The iPhone DeviceActivity report remains available inside the authorized iOS report extension. This macOS probe does not claim to export data from that privacy boundary or require an iPhone entitlement.
 
-`USE-ACTION-PROBE` now uses a bounded runner after exactly one dedicated pack is installed and its qualified signed export exists at the path above. It requires nonempty output, keeps only its byte count and SHA-256 digest in evidence, and never opens an import or permission dialog. This proves probe execution only; it does not qualify replacing Biome. Its simulation uses synthetic output and does not access Shortcuts or usage data.
+Run `go run ./cmd/bridge-lab run lab/scenarios/usage/USE-ACTION-PROBE.yaml --level sim` locally. Run the real scenario on the Air through `~/bin/ab-real F9 ship/f9c-shortcuts shortcuts USE-ACTION-PROBE`.

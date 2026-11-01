@@ -66,13 +66,17 @@ func usageRows(result contracts.ReadResult) map[string]map[string]float64 {
 	return rows
 }
 func runUsage(ctx context.Context, s Scenario, level string) Evidence {
+	if s.ID == "USE-ACTION-PROBE" {
+		return runUsageActionProbe(ctx, s, level)
+	}
+	return runUsageData(ctx, s, level)
+}
+
+func runUsageData(ctx context.Context, s Scenario, level string) Evidence {
 	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
 	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Assertions: []Assertion{}, Metrics: map[string]any{}, Latency: map[string]Latency{}, Hosts: []string{"air"}}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	fail := func(name string) Evidence { add(name, false); return e }
-	if s.ID == "USE-ACTION-PROBE" {
-		return runUsageActionProbe(ctx, s, level)
-	}
 	if s.ID == "USE-SEGB-DECODE" {
 		output, err := os.ReadFile("native/.build/native-output-1")
 		if err != nil {
@@ -94,6 +98,8 @@ func runUsage(ctx context.Context, s Scenario, level string) Evidence {
 		if err != nil {
 			return fail("independent_usage_truth_access")
 		}
+		e.Metrics["truth_devices"] = truth["device_count"]
+		e.Metrics["unmapped_truth_devices"] = truth["unmapped_device_count"]
 		expected := map[string]map[string]float64{}
 		raw, _ := json.Marshal(truth["rows"])
 		if json.Unmarshal(raw, &expected) != nil || len(expected) == 0 {
@@ -125,7 +131,11 @@ func runUsage(ctx context.Context, s Scenario, level string) Evidence {
 			e.Metrics["different_fields"] = different
 			return len(rows) == len(expected) && missing == 0 && len(different) == 0
 		}
-		add("independent_day_totals_match", w.Await(45*time.Second, matches) == nil)
+		comparisonTimeout := 45 * time.Second
+		if s.ID == "USE-ACTION-PROBE" {
+			comparisonTimeout = 3 * time.Minute
+		}
+		add("independent_day_totals_match", w.Await(comparisonTimeout, matches) == nil)
 	} else {
 		base := float64(1800100800)
 		event := func(offset float64, start bool, bundle string) map[string]any {

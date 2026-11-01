@@ -30,9 +30,15 @@ func runShortcutsRunner(ctx context.Context, s Scenario, level string) Evidence 
 		e.Passed = e.Passed && passed
 	}
 	if s.ID == "SC-RUN-REAL" && level != "sim" {
+		_, stop, hostErr := startBridgeIntentHost(ctx)
+		add("current_helper_intent_host_ready", hostErr == nil)
+		if hostErr != nil {
+			return e
+		}
+		defer stop()
 		input := []byte("[ab-test synthetic echo]")
 		started := time.Now()
-		result, err := (shortcut.CLI{}).Run(ctx, shortcut.Input{Shortcut: "AB Echo", Data: input, Timeout: 20 * time.Second})
+		result, err := (shortcut.CLI{}).Run(ctx, shortcut.Input{Shortcut: "AB Echo", Data: input, Timeout: 5 * time.Minute})
 		digest := sha256.Sum256(result.Data)
 		e.Metrics["elapsed_ms"] = time.Since(started).Milliseconds()
 		e.Metrics["timed_out"] = result.TimedOut

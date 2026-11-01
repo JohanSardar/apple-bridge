@@ -265,6 +265,11 @@
       }
     },
     {
+      "key": "create_input_boundary",
+      "identifier": "is.workflow.actions.nothing",
+      "parameters": {}
+    },
+    {
       "key": "create",
       "identifier": "com.apple.mobiletimer-framework.MobileTimerIntents.MTCreateAlarmIntent",
       "parameters": {
@@ -279,13 +284,20 @@
           "$text": true
         },
         "name": {
-          "$output": "requested_label"
+          "$output": "requested_label",
+          "$text": true
         },
         "repeats": {
           "$output": "created_days"
         },
-        "allowsSnooze": true
+        "allowsSnooze": true,
+        "ShowWhenRun": false
       }
+    },
+    {
+      "key": "created_state_input_boundary",
+      "identifier": "is.workflow.actions.nothing",
+      "parameters": {}
     },
     {
       "key": "created_state",
@@ -303,7 +315,8 @@
         },
         "alarm": {
           "$output": "create"
-        }
+        },
+        "ShowWhenRun": false
       }
     },
     {
@@ -317,6 +330,11 @@
       }
     },
     {
+      "key": "targets_input_boundary",
+      "identifier": "is.workflow.actions.nothing",
+      "parameters": {}
+    },
+    {
       "key": "targets",
       "identifier": "com.apple.mobiletimer-framework.MobileTimerIntents.MTGetAlarmsIntent",
       "parameters": {
@@ -326,7 +344,8 @@
           "Name": "Clock",
           "TeamIdentifier": "0000000000",
           "ActionRequiresAppInstallation": true
-        }
+        },
+        "ShowWhenRun": false
       }
     },
     {
@@ -408,6 +427,11 @@
       }
     },
     {
+      "key": "toggle_input_boundary",
+      "identifier": "is.workflow.actions.nothing",
+      "parameters": {}
+    },
+    {
       "key": "toggle",
       "identifier": "com.apple.mobiletimer-framework.MobileTimerIntents.MTToggleAlarmIntent",
       "parameters": {
@@ -423,7 +447,8 @@
         },
         "alarm": {
           "$output": "target"
-        }
+        },
+        "ShowWhenRun": false
       }
     },
     {
@@ -433,6 +458,16 @@
         "WFControlFlowMode": 2,
         "GroupingIdentifier": {
           "$group": "toggle"
+        }
+      }
+    },
+    {
+      "key": "same_label_end",
+      "identifier": "is.workflow.actions.conditional",
+      "parameters": {
+        "WFControlFlowMode": 2,
+        "GroupingIdentifier": {
+          "$group": "same_label"
         }
       }
     },
@@ -456,6 +491,11 @@
       }
     },
     {
+      "key": "delete_input_boundary",
+      "identifier": "is.workflow.actions.nothing",
+      "parameters": {}
+    },
+    {
       "key": "delete",
       "identifier": "com.apple.clock.DeleteAlarmIntent",
       "parameters": {
@@ -467,7 +507,8 @@
         },
         "entities": {
           "$output": "target"
-        }
+        },
+        "ShowWhenRun": false
       }
     },
     {
@@ -477,16 +518,6 @@
         "WFControlFlowMode": 2,
         "GroupingIdentifier": {
           "$group": "delete"
-        }
-      }
-    },
-    {
-      "key": "same_label_end",
-      "identifier": "is.workflow.actions.conditional",
-      "parameters": {
-        "WFControlFlowMode": 2,
-        "GroupingIdentifier": {
-          "$group": "same_label"
         }
       }
     },
@@ -551,6 +582,11 @@
       }
     },
     {
+      "key": "timer_input_boundary",
+      "identifier": "is.workflow.actions.nothing",
+      "parameters": {}
+    },
+    {
       "key": "timer",
       "identifier": "is.workflow.actions.timer.start",
       "parameters": {
@@ -576,6 +612,11 @@
       }
     },
     {
+      "key": "alarms_input_boundary",
+      "identifier": "is.workflow.actions.nothing",
+      "parameters": {}
+    },
+    {
       "key": "alarms",
       "identifier": "com.apple.mobiletimer-framework.MobileTimerIntents.MTGetAlarmsIntent",
       "parameters": {
@@ -585,7 +626,8 @@
           "Name": "Clock",
           "TeamIdentifier": "0000000000",
           "ActionRequiresAppInstallation": true
-        }
+        },
+        "ShowWhenRun": false
       }
     },
     {
@@ -603,14 +645,24 @@
     },
     {
       "key": "alarm_time",
-      "identifier": "is.workflow.actions.format.date",
+      "identifier": "is.workflow.actions.gettext",
       "parameters": {
-        "WFDate": {
-          "$output": "alarm_item",
-          "$property": "dateComponents"
-        },
-        "WFDateFormatStyle": "Custom",
-        "WFDateFormat": "HH:mm"
+        "WFTextActionText": {
+          "WFSerializationType": "WFTextTokenString",
+          "Value": {
+            "string": "￼:￼",
+            "attachmentsByRange": {
+              "{0, 1}": {
+                "$output": "alarm_item",
+                "$property": "hours"
+              },
+              "{2, 1}": {
+                "$output": "alarm_item",
+                "$property": "minutes"
+              }
+            }
+          }
+        }
       }
     },
     {

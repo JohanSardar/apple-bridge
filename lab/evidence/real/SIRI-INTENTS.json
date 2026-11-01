@@ -9,10 +9,26 @@
     },
     {
       "name": "unique_probe_pack_installed",
+      "passed": true
+    },
+    {
+      "name": "probe_pack_qualified",
+      "passed": true
+    },
+    {
+      "name": "bounded_runner_completed",
+      "passed": false
+    },
+    {
+      "name": "probe_output_valid",
       "passed": false
     },
     {
       "name": "status_intent_metadata_matches_source",
+      "passed": true
+    },
+    {
+      "name": "status_intent_returns_without_dialog",
       "passed": true
     },
     {
@@ -22,8 +38,10 @@
   ],
   "metrics": {
     "capture_observer_resets": 0,
-    "installed_shortcut_count": 17,
-    "probe_pack_matches": 0
-  },
-  "git_sha": ""
+    "installed_shortcut_count": 30,
+    "output_bytes": 0,
+    "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "probe_pack_matches": 1,
+    "timed_out": true
+  }
 }

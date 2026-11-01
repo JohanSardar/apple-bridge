@@ -3,6 +3,7 @@ package scenarios
 import (
 	"context"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/clockpack"
@@ -19,6 +20,38 @@ func runClockReal(ctx context.Context, s Scenario, initial Evidence, pack clockp
 	limited := func(reason string) Evidence {
 		e.Status, e.Passed = "limited", false
 		e.Conditions = map[string]string{"reason": reason}
+		return e
+	}
+	app, stop, hostErr := startBridgeIntentHost(ctx)
+	add("current_helper_intent_host_ready", hostErr == nil)
+	if hostErr != nil {
+		return e
+	}
+	defer stop()
+	pack.Timeout = 5 * time.Minute
+	if s.ID == "CLK-TIMER-REAL" {
+		pack.Runner = clockTimerNativeRunner{app: app}
+		e = runClockSession(ctx, s, e, pack)
+		cleanup, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+		recents, err := pack.Exchange(cleanup, clockpack.Request{Operation: "recent_timers"})
+		add("tagged_timer_history_inventory", err == nil)
+		for _, timer := range recents.Timers {
+			if !strings.HasPrefix(timer.Label, "[ab-test]") {
+				continue
+			}
+			_, err := pack.Exchange(cleanup, clockpack.Request{Operation: "delete_recent_timer", Timer: &timer})
+			add("tagged_timer_history_deleted", err == nil)
+		}
+		recents, err = pack.Exchange(cleanup, clockpack.Request{Operation: "recent_timers"})
+		remaining := 0
+		for _, timer := range recents.Timers {
+			if strings.HasPrefix(timer.Label, "[ab-test]") {
+				remaining++
+			}
+		}
+		e.Metrics["tagged_recent_timers_remaining"] = remaining
+		add("tagged_timer_history_absent", err == nil && remaining == 0)
 		return e
 	}
 	entries, err := (shortcut.CLI{}).Inventory(ctx, false, "")
@@ -73,7 +106,7 @@ func runClockSession(ctx context.Context, s Scenario, initial Evidence, pack clo
 	}
 	request := clockpack.Request{Alarm: &alarm}
 	cleanup := func() {
-		cleanupCtx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+		cleanupCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 		defer cancel()
 		observed, readErr := pack.Exchange(cleanupCtx, clockpack.Request{Operation: "alarms"})
 		if readErr != nil {
@@ -81,8 +114,8 @@ func runClockSession(ctx context.Context, s Scenario, initial Evidence, pack clo
 			return
 		}
 		for _, candidate := range observed.Alarms {
-			if candidate.Label == alarm.Label && !baseline[candidate.ID] {
-				alarm = candidate
+			if !baseline[candidate.ID] && (candidate.ID == alarm.ID || alarm.ID == e.RunID && candidate.Label == alarm.Label) {
+				alarm.ID = candidate.ID
 				break
 			}
 		}
@@ -98,14 +131,18 @@ func runClockSession(ctx context.Context, s Scenario, initial Evidence, pack clo
 	defer cleanup()
 	request.Operation = "create_alarm"
 	created, err := pack.Exchange(ctx, request)
+	var createdIDs []string
+	for _, candidate := range created.Alarms {
+		if !baseline[candidate.ID] {
+			createdIDs = append(createdIDs, candidate.ID)
+		}
+	}
+	if len(createdIDs) == 1 {
+		alarm.ID = createdIDs[0]
+	}
 	add("create_alarm_fields", err == nil)
 	if err != nil {
 		return e
-	}
-	for _, candidate := range created.Alarms {
-		if candidate.Label == alarm.Label {
-			alarm.ID = candidate.ID
-		}
 	}
 	readback, err := pack.Exchange(ctx, clockpack.Request{Operation: "alarms"})
 	add("created_alarm_list_fields", err == nil && clockAlarmMatches(readback.Alarms, alarm))

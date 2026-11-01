@@ -4,15 +4,83 @@
   "passed": false,
   "assertions": [
     {
-      "name": "clock_inventory_available",
-      "passed": true
-    },
-    {
-      "name": "unique_clock_pack_installed",
+      "name": "current_helper_intent_host_ready",
       "passed": true
     },
     {
       "name": "timer_readback_and_cleanup_qualified",
+      "passed": true
+    },
+    {
+      "name": "timer_baseline_readback",
+      "passed": true
+    },
+    {
+      "name": "recent_timer_baseline_readback",
+      "passed": true
+    },
+    {
+      "name": "timer_running_duration_label_readback",
+      "passed": true
+    },
+    {
+      "name": "created_timer_list_readback",
+      "passed": true
+    },
+    {
+      "name": "cleanup_timer_inventory",
+      "passed": true
+    },
+    {
+      "name": "cleanup_timer_deleted",
+      "passed": false
+    },
+    {
+      "name": "cleanup_timer_baseline_restored",
+      "passed": true
+    },
+    {
+      "name": "cleanup_recent_timer_inventory",
+      "passed": true
+    },
+    {
+      "name": "cleanup_recent_timer_deleted",
+      "passed": false
+    },
+    {
+      "name": "cleanup_recent_timer_baseline_restored",
+      "passed": false
+    },
+    {
+      "name": "tagged_timer_history_inventory",
+      "passed": true
+    },
+    {
+      "name": "tagged_timer_history_deleted",
+      "passed": false
+    },
+    {
+      "name": "tagged_timer_history_deleted",
+      "passed": false
+    },
+    {
+      "name": "tagged_timer_history_deleted",
+      "passed": false
+    },
+    {
+      "name": "tagged_timer_history_deleted",
+      "passed": false
+    },
+    {
+      "name": "tagged_timer_history_deleted",
+      "passed": false
+    },
+    {
+      "name": "tagged_timer_history_deleted",
+      "passed": false
+    },
+    {
+      "name": "tagged_timer_history_absent",
       "passed": false
     },
     {
@@ -22,7 +90,8 @@
   ],
   "metrics": {
     "capture_observer_resets": 0,
-    "pack_matches": 1
-  },
-  "git_sha": ""
+    "created_timer_duration": 120,
+    "created_timer_running": true,
+    "tagged_recent_timers_remaining": 6
+  }
 }

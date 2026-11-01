@@ -64,6 +64,6 @@ let package = Package(
         .target(name: "AppleSession", dependencies: sourceTargets.map { .target(name: $0.name) } + ["RemindersStore", "AgendaGate", "SourceSupport"]),
         .executableTarget(name: "CalendarChecks", dependencies: ["CalendarSource"], path: "Tests/CalendarChecks"),
         .executableTarget(name: "CommandOriginChecks", dependencies: ["SourceSupport"], path: "Tests/CommandOriginChecks"),
-        .executableTarget(name: "AppleBridgeHelper", dependencies: ["AppleSession"])
+        .executableTarget(name: "AppleBridgeHelper", dependencies: ["AppleSession", "ShortcutsSource"])
     ]
 )

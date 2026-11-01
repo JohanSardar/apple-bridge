@@ -941,15 +941,13 @@ features:
     milestone: M0
     modules: [internal/shortcut, packaging/shortcuts, native/Sources/ShortcutsSource]
     depends_on: [core.shortcuts]
-    status: limited
-    notes: Native inventory and text runner integrated; installed pack version requires unique AB Pack v1, AB Echo, AB Clock and AB Focus inventory entries. Inline file/blob inputs and digest outputs are bounded; larger uploaded blobs, Clock, Focus, real pack and idle qualification remain limited.
+    status: done
+    notes: Native inventory and the bounded text runner are integrated. AB Echo returns its input on the Air. Installed pack version requires unique AB Pack v1, AB Echo, AB Clock and AB Focus inventory entries. Idle budgets were dropped by the owner.
     scenarios:
       - {id: SC-CAPTURE, levels: [sim]}
       - {id: SC-RUN, levels: [sim]}
       - {id: SC-RUN-REAL, levels: [sim, real]}
       - {id: SC-IDLE, levels: [real], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
-    limits:
-      - {"scenario": "SC-RUN-REAL", "level": "real", "reason": "AB Echo output approval is granted, but the installed old Text attachment returns zero bytes through stdout and output-file modes. The corrected signed Echo replacement awaits owner import; SSH cannot inspect or approve its dialog."}
   - id: clock.pack
     title: Clock helper pack qualification
     requirements: [R-RW]
@@ -957,14 +955,13 @@ features:
     modules: [internal/clockpack, packaging/shortcuts/ab-clock.json]
     depends_on: [shortcuts.runner]
     status: limited
-    notes: Alarm and timer lifecycle, lost-reply cleanup, and complete baseline restoration pass in simulation. The installed Air AB Clock actions match the repo by digest, but live alarm readback remains unqualified, so no alarm was changed. Timer creation requires qualified inspection and deletion first; macOS timer fields and signed inspection remain unavailable. Clock operations remain unadvertised.
+    notes: Real alarm creation, field readback, toggling and deletion pass through the corrected AB Clock pack. Native timer creation returns the requested duration, label and running state; deleting its Recents entry remains under real qualification. Clock operations remain unadvertised.
     scenarios:
       - {id: CLK-SIM, levels: [sim]}
       - {id: CLK-ALARM-REAL, levels: [sim, real]}
       - {id: CLK-TIMER-REAL, levels: [sim, real]}
     limits:
-      - {"scenario": "CLK-ALARM-REAL", "level": "real", "reason": "Installed AB Clock matches the repo actions but did not return structured alarm readback. Owner foreground Shortcuts qualification is required; no alarm was changed."}
-      - {"scenario": "CLK-TIMER-REAL", "level": "real", "reason": "The installed pack cannot qualify timer inspection and deletion. macOS timer label/running-state readback and signed inspection remain unavailable; no timer was started."}
+      - {"scenario": "CLK-TIMER-REAL", "level": "real", "reason": "Native timer creation, duration, label, running-state readback and cancellation pass. Recents cards are on-screen and AXScrollToVisible and AXShowMenu return success, but focus and selection remain false and no enabled context Delete action appears. Six tagged Recents entries remain; the native Accessibility adapter cannot remove them."}
   - id: mac.capture
     title: Mac system state capture
     requirements: [R-API, R-SCOPE]
@@ -1250,16 +1247,15 @@ features:
 
 
   - id: usage.action_probe
-    title: Screen Time Shortcuts action comparison
+    title: Screen Time capture probe with independent comparison
     requirements: [R-USAGE]
     milestone: M4
     modules: [lab/scenarios]
     depends_on: [usage.read]
-    status: limited
+    status: done
+    notes: Real Biome usage capture returns output, matches independent day totals after bounded historical backfill, and replicates through MCP with provenance and device freshness.
     scenarios:
       - {id: USE-ACTION-PROBE, levels: [sim, real]}
-    limits:
-      - {"scenario": "USE-ACTION-PROBE", "level": "real", "reason": "The Air builtin action catalog and installed system app metadata do not expose Get App & Website Data. A verified executable AB Screen Time pack cannot be built until the Apple action or a qualified owner export is available; retain Biome. No shortcut was run."}
   - id: helper.siri_intents
     title: Read-only Apple Bridge status App Intent
     requirements: [R-PKG]
@@ -1267,10 +1263,11 @@ features:
     modules: [native/AppleBridgeHelper]
     depends_on: [helper.session]
     status: limited
+    notes: The implemented status intent passed warm and cold execution in isolation. Current execution cannot be qualified while older Helper instances with the same bundle identifier are running.
     scenarios:
       - {id: SIRI-INTENTS, levels: [sim, real]}
     limits:
-      - {"scenario": "SIRI-INTENTS", "level": "real", "reason": "The dedicated AB Bridge Status wrapper source and signed archive are supplied, but owner import is pending and the Air action registry has not resolved the Helper intent. No shortcut was run."}
+      - {"scenario": "SIRI-INTENTS", "level": "real", "reason": "The status shortcut addresses com.johansardar.applebridge.services by bundle identifier. Older running test and session Helpers share that identifier and do not enter the new App Intents application lifecycle; registering a fresh host does not isolate dispatch. The latest run timed out after 300 seconds without a dialog or returned status."}
   - id: mac.extras
     title: Mac Bluetooth iWork Time Machine and song recognition
     requirements: [R-API, R-SCOPE]

@@ -31,6 +31,16 @@ func TestClockTimerRequiresCleanupBeforeStarting(t *testing.T) {
 	}
 }
 
+func TestClockAlarmCleanupUsesReturnedIDWhenClockDropsTheLabel(t *testing.T) {
+	fixture := newClockSimulation()
+	fixture.dropAlarmName = true
+	before := slices.Clone(fixture.alarms)
+	e := runClockSession(context.Background(), Scenario{ID: "CLK-ALARM-REAL"}, Evidence{RunID: "synthetic-run", Passed: true, Metrics: map[string]any{}}, clockpack.Pack{Runner: fixture})
+	if e.Passed || !reflect.DeepEqual(before, fixture.alarms) || !slices.Contains(fixture.operations, "delete_alarm") {
+		t.Fatal(e, fixture.alarms, fixture.operations)
+	}
+}
+
 func TestClockTimerCleansUpAfterLostCreationReply(t *testing.T) {
 	fixture := newClockSimulation()
 	before := slices.Clone(fixture.timers)
@@ -86,7 +96,17 @@ func TestClockTimerCleanupPreservesPreexistingMatchingLabel(t *testing.T) {
 	fixture.timers[0].Label = "[ab-test] synthetic-run"
 	before := slices.Clone(fixture.timers)
 	e := runClockTimer(context.Background(), Evidence{RunID: "synthetic-run", Passed: true, Metrics: map[string]any{}}, clockpack.Pack{Runner: fixture})
-	if !e.Passed || !reflect.DeepEqual(before, fixture.timers) {
+	if e.Passed || !reflect.DeepEqual(before, fixture.timers) || slices.Contains(fixture.operations, "start_timer") {
 		t.Fatal(e, fixture.timers)
+	}
+}
+
+func TestClockTimerRestoresRecentHistoryAfterLostReply(t *testing.T) {
+	fixture := newClockSimulation()
+	before := slices.Clone(fixture.recentTimers)
+	fixture.failStart = true
+	e := runClockTimer(context.Background(), Evidence{RunID: "synthetic-run", Passed: true, Metrics: map[string]any{}}, clockpack.Pack{Runner: fixture})
+	if e.Passed || !reflect.DeepEqual(before, fixture.recentTimers) || !slices.Contains(fixture.operations, "delete_recent_timer") {
+		t.Fatal(e, fixture.recentTimers)
 	}
 }

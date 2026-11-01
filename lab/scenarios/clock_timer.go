@@ -27,14 +27,28 @@ func runClockTimer(ctx context.Context, initial Evidence, pack clockpack.Pack) (
 	}
 	add("timer_readback_and_cleanup_qualified", qualified)
 	if !qualified {
-		return limited("AB Clock cannot inspect and remove a tagged timer yet. Install a pack supporting timers, start_timer and delete_timer with structured readback; no timer was started.")
+		return limited("Clock timer readback and cleanup are unavailable. Open Clock, allow the signed Apple Bridge Helper Accessibility access in System Settings, and retry. No timer was started.")
 	}
 	before, err := pack.Exchange(ctx, clockpack.Request{Operation: "timers"})
 	add("timer_baseline_readback", err == nil)
 	if err != nil {
 		return e
 	}
+	recent, err := pack.Exchange(ctx, clockpack.Request{Operation: "recent_timers"})
+	add("recent_timer_baseline_readback", err == nil)
+	if err != nil {
+		return e
+	}
 	label := "[ab-test] " + e.RunID
+	for _, timer := range append(slices.Clone(before.Timers), recent.Timers...) {
+		if timer.Label == label {
+			return limited("A matching test timer already exists. Remove only that test timer in Clock, then retry.")
+		}
+	}
+	recentBaseline := map[string]clockpack.Timer{}
+	for _, timer := range recent.Timers {
+		recentBaseline[timer.ID] = timer
+	}
 	baseline := map[string]clockpack.Timer{}
 	for _, timer := range before.Timers {
 		baseline[timer.ID] = timer
@@ -60,14 +74,36 @@ func runClockTimer(ctx context.Context, initial Evidence, pack clockpack.Pack) (
 			remaining[timer.ID] = timer
 		}
 		add("cleanup_timer_baseline_restored", err == nil && reflect.DeepEqual(baseline, remaining))
+		recents, err := pack.Exchange(cleanup, clockpack.Request{Operation: "recent_timers"})
+		add("cleanup_recent_timer_inventory", err == nil)
+		if err != nil {
+			return
+		}
+		for _, timer := range recents.Timers {
+			if _, existed := recentBaseline[timer.ID]; existed || timer.Label != label {
+				continue
+			}
+			_, err := pack.Exchange(cleanup, clockpack.Request{Operation: "delete_recent_timer", Timer: &timer})
+			add("cleanup_recent_timer_deleted", err == nil)
+		}
+		recents, err = pack.Exchange(cleanup, clockpack.Request{Operation: "recent_timers"})
+		restored := map[string]clockpack.Timer{}
+		for _, timer := range recents.Timers {
+			restored[timer.ID] = timer
+		}
+		add("cleanup_recent_timer_baseline_restored", err == nil && reflect.DeepEqual(recentBaseline, restored))
 	}()
 	_, err = pack.Exchange(ctx, clockpack.Request{Operation: "start_timer", Duration: 120, Label: label})
 	add("timer_running_duration_label_readback", err == nil)
 	observed, readErr := pack.Exchange(ctx, clockpack.Request{Operation: "timers"})
 	matches := 0
 	for _, timer := range observed.Timers {
-		if _, existed := baseline[timer.ID]; !existed && timer.Label == label && timer.Duration == 120 && timer.Running {
-			matches++
+		if _, existed := baseline[timer.ID]; !existed && timer.Label == label {
+			e.Metrics["created_timer_duration"] = timer.Duration
+			e.Metrics["created_timer_running"] = timer.Running
+			if timer.Duration == 120 && timer.Running {
+				matches++
+			}
 		}
 	}
 	add("created_timer_list_readback", readErr == nil && matches == 1)

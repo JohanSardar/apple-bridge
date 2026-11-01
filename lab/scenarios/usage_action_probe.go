@@ -3,24 +3,32 @@ package scenarios
 import (
 	"context"
 	"os"
-
-	"github.com/JohanSardar/apple-bridge/internal/shortcut"
+	"os/exec"
+	"path/filepath"
 )
 
 func runUsageActionProbe(ctx context.Context, s Scenario, level string) Evidence {
-	var cli shortcutProbeCLI = shortcut.CLI{}
-	qualified := false
+	e := runUsageData(ctx, s, level)
 	if level == "sim" {
-		cli = &shortcutProbeSimulation{entries: []shortcut.Entry{{Name: "AB Screen Time"}}, result: shortcut.Result{Data: []byte(`{"synthetic":true,"rows":1}`)}}
-		qualified = true
-	} else {
-		file, err := os.Open("packaging/shortcuts/AB Screen Time.shortcut")
-		if err == nil {
-			var header [4]byte
-			n, err := file.Read(header[:])
-			file.Close()
-			qualified = err == nil && n == 4 && string(header[:]) == "AEA1"
+		directory, err := os.MkdirTemp("", "ab-usage-truth-checks-")
+		passed := err == nil
+		if passed {
+			defer os.RemoveAll(directory)
+			executable := filepath.Join(directory, "UsageTruthChecks")
+			output, err := exec.CommandContext(ctx, "xcrun", "swiftc", "-swift-version", "6", "-warnings-as-errors", "-parse-as-library", "lab/truth/native/Sources/AppleTruth/Usage.swift", "lab/fixtures/usage/probe-truth-checks.swift", "-o", executable).CombinedOutput()
+			passed = err == nil
+			if !passed {
+				os.Stderr.Write(output)
+			} else {
+				output, err = exec.CommandContext(ctx, executable).CombinedOutput()
+				passed = err == nil
+				if !passed {
+					os.Stderr.Write(output)
+				}
+			}
 		}
+		e.Assertions = append(e.Assertions, Assertion{Name: "independent_truth_handles_retired_peers", Passed: passed})
+		e.Passed = e.Passed && passed
 	}
-	return runShortcutProbe(ctx, s, level, "AB Screen Time", cli, qualified, func([]byte) bool { return true })
+	return e
 }

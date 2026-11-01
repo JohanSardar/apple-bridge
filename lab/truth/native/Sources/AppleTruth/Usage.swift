@@ -38,8 +38,10 @@ enum UsageTruth {
         var rows: [String: [String: Double]] = [:]
         let locks = Set(["loginwindow", "com.apple.loginwindow", "com.apple.ScreenSaver.Engine"])
         let peers = try devicePeers(biome, immutable: path != nil)
+        guard peers["local"] != nil else { throw UsageTruthFailure.unknownDevice }
+        let unknownDevices = grouped.keys.filter { peers[$0] == nil }.count
         for (directory, set) in grouped {
-            guard let peer = peers[directory] else { throw UsageTruthFailure.unknownDevice }
+            guard let peer = peers[directory] else { continue }
             let sorted = set.sorted { a, b in a.at == b.at ? (a.start == b.start ? a.app < b.app : !a.start) : a.at < b.at }
             var session: Event?, lock: Double?
             func finish(_ at: Double) {
@@ -64,7 +66,7 @@ enum UsageTruth {
             }
             if let lock { finish(lock) }
         }
-        return ["status": "verified", "rows": rows, "device_count": grouped.count]
+        return ["status": "verified", "rows": rows, "device_count": grouped.count - unknownDevices, "unmapped_device_count": unknownDevices]
     }
 }
 

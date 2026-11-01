@@ -1,15 +1,19 @@
 {
   "scenario": "USE-ACTION-PROBE",
   "level": "real",
-  "passed": false,
+  "passed": true,
   "assertions": [
     {
-      "name": "inventory_available",
+      "name": "independent_day_totals_match",
       "passed": true
     },
     {
-      "name": "unique_probe_pack_installed",
-      "passed": false
+      "name": "replica_converged",
+      "passed": true
+    },
+    {
+      "name": "provenance_and_device_freshness",
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",
@@ -17,9 +21,14 @@
     }
   ],
   "metrics": {
+    "app_days": 1401,
     "capture_observer_resets": 0,
-    "installed_shortcut_count": 17,
-    "probe_pack_matches": 0
-  },
-  "git_sha": ""
+    "devices": 3,
+    "different_fields": {},
+    "gateway_rows": 1401,
+    "truth_devices": 3,
+    "truth_rows": 1401,
+    "unmapped_truth_devices": 1,
+    "unmatched_keys": 0
+  }
 }

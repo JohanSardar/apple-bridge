@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os/exec"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -39,6 +40,10 @@ func compiledActions(t *testing.T, source string) []struct {
 }
 
 func TestBundledEchoOutput(t *testing.T) {
+	raw, err := compile("../../packaging/shortcuts/ab-echo.json")
+	if err != nil || !bytes.Contains(raw, []byte("<key>WFWorkflowHasShortcutInputVariables</key>\n<true/>")) {
+		t.Fatal("echo must declare its Shortcut Input variable to the importer", err)
+	}
 	actions := compiledActions(t, "../../packaging/shortcuts/ab-echo.json")
 	if len(actions) != 2 || actions[0].Identifier != "is.workflow.actions.gettext" || actions[1].Identifier != "is.workflow.actions.output" {
 		t.Fatal("echo must convert Shortcut Input to text and explicitly return it")
@@ -52,7 +57,11 @@ func TestBundledEchoOutput(t *testing.T) {
 	if value["string"] != "\ufffc" || attachment["Type"] != "ExtensionInput" {
 		t.Fatal("echo lost its Shortcut Input attachment")
 	}
-	output := actions[1].Parameters["WFOutput"].(map[string]any)["Value"].(map[string]any)
+	token := actions[1].Parameters["WFOutput"].(map[string]any)
+	if token["WFSerializationType"] != "WFTextTokenString" {
+		t.Fatal("Stop and Output requires a text token string")
+	}
+	output := token["Value"].(map[string]any)["attachmentsByRange"].(map[string]any)["{0, 1}"].(map[string]any)
 	if output["Type"] != "ActionOutput" || output["OutputUUID"] != actions[0].Parameters["UUID"] {
 		t.Fatal("echo output must reference the converted text")
 	}
@@ -67,7 +76,11 @@ func TestBundledStatusOutput(t *testing.T) {
 	if descriptor["BundleIdentifier"] != "com.johansardar.applebridge.services" || descriptor["AppIntentIdentifier"] != "BridgeStatusIntent" {
 		t.Fatal("status wrapper must target the services-signed Helper")
 	}
-	output := actions[1].Parameters["WFOutput"].(map[string]any)["Value"].(map[string]any)
+	token := actions[1].Parameters["WFOutput"].(map[string]any)
+	if token["WFSerializationType"] != "WFTextTokenString" {
+		t.Fatal("Stop and Output requires a text token string")
+	}
+	output := token["Value"].(map[string]any)["attachmentsByRange"].(map[string]any)["{0, 1}"].(map[string]any)
 	if output["Type"] != "ActionOutput" || output["OutputUUID"] != actions[0].Parameters["UUID"] {
 		t.Fatal("status output must come from the real intent")
 	}
@@ -118,5 +131,55 @@ func TestConditionalStringCoercion(t *testing.T) {
 	coercion := aggrandizements[1].(map[string]any)
 	if coercion["Type"] != "WFCoercionVariableAggrandizement" || coercion["CoercionItemClass"] != "WFStringContentItem" {
 		t.Fatal("conditional subject must explicitly coerce to text")
+	}
+}
+
+func TestAlarmTimeUsesNativeHourAndMinuteProperties(t *testing.T) {
+	actions := compiledActions(t, "../../packaging/shortcuts/ab-clock.json")
+	for _, action := range actions {
+		if action.Identifier == "com.apple.mobiletimer-framework.MobileTimerIntents.MTCreateAlarmIntent" {
+			if action.Parameters["name"].(map[string]any)["WFSerializationType"] != "WFTextTokenString" {
+				t.Fatal("alarm name requires a text token")
+			}
+		}
+		if action.Identifier != "is.workflow.actions.gettext" {
+			continue
+		}
+		text, ok := action.Parameters["WFTextActionText"].(map[string]any)
+		if !ok {
+			continue
+		}
+		value, ok := text["Value"].(map[string]any)
+		if !ok || value["string"] != "\ufffc:\ufffc" {
+			continue
+		}
+		attachments := value["attachmentsByRange"].(map[string]any)
+		for key, property := range map[string]string{"{0, 1}": "hours", "{2, 1}": "minutes"} {
+			token := attachments[key].(map[string]any)
+			if token["Type"] != "ActionOutput" || token["Aggrandizements"].([]any)[0].(map[string]any)["PropertyName"] != property {
+				t.Fatal(token)
+			}
+		}
+		return
+	}
+	t.Fatal("alarm time must come from observed native hour and minute properties")
+}
+
+func TestClockAppActionsHaveExplicitInputBoundaries(t *testing.T) {
+	actions := compiledActions(t, "../../packaging/shortcuts/ab-clock.json")
+	for i, action := range actions {
+		if strings.HasPrefix(action.Identifier, "com.apple.") || action.Identifier == "is.workflow.actions.timer.start" {
+			if i == 0 || actions[i-1].Identifier != "is.workflow.actions.nothing" {
+				t.Fatal("Clock actions must receive only their explicit parameters")
+			}
+		}
+	}
+}
+
+func TestClockIntentsDoNotPresentBlockingResultDialogs(t *testing.T) {
+	for _, action := range compiledActions(t, "../../packaging/shortcuts/ab-clock.json") {
+		if strings.HasPrefix(action.Identifier, "com.apple.") && action.Parameters["ShowWhenRun"] != false {
+			t.Fatal("Clock intent results must return without a Done sheet")
+		}
 	}
 }

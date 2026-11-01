@@ -16,7 +16,10 @@ type Runner interface {
 	Run(context.Context, shortcut.Input) (shortcut.Result, error)
 }
 
-type Pack struct{ Runner Runner }
+type Pack struct {
+	Runner  Runner
+	Timeout time.Duration
+}
 
 func (p Pack) Inspect(ctx context.Context) ([]byte, error) {
 	runner := p.Runner

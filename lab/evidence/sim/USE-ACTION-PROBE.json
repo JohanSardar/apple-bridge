@@ -4,23 +4,19 @@
   "passed": true,
   "assertions": [
     {
-      "name": "inventory_available",
+      "name": "mac_lock_clipped",
       "passed": true
     },
     {
-      "name": "unique_probe_pack_installed",
+      "name": "replica_converged",
       "passed": true
     },
     {
-      "name": "probe_pack_qualified",
+      "name": "provenance_and_device_freshness",
       "passed": true
     },
     {
-      "name": "bounded_runner_completed",
-      "passed": true
-    },
-    {
-      "name": "probe_output_valid",
+      "name": "independent_truth_handles_retired_peers",
       "passed": true
     },
     {
@@ -29,11 +25,8 @@
     }
   ],
   "metrics": {
+    "app_days": 1,
     "capture_observer_resets": 0,
-    "installed_shortcut_count": 1,
-    "output_bytes": 27,
-    "output_sha256": "8e53673fa3d616ea69876ffdb65b24d60d2e7b6efa0647e0468894df5cf5aea1",
-    "probe_pack_matches": 1,
-    "timed_out": false
+    "devices": 1
   }
 }

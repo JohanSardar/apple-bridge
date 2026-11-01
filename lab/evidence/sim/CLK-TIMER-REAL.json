@@ -4,11 +4,39 @@
   "passed": true,
   "assertions": [
     {
+      "name": "native_timer_snapshot_build",
+      "passed": true
+    },
+    {
+      "name": "native_timer_snapshot_output",
+      "passed": true
+    },
+    {
+      "name": "native_timer_snapshot_states_and_readonly",
+      "passed": true
+    },
+    {
+      "name": "native_timer_duration_adjustment_verified",
+      "passed": true
+    },
+    {
+      "name": "native_timer_localized_component_values",
+      "passed": true
+    },
+    {
+      "name": "native_timer_recent_snapshot_readonly",
+      "passed": true
+    },
+    {
       "name": "timer_readback_and_cleanup_qualified",
       "passed": true
     },
     {
       "name": "timer_baseline_readback",
+      "passed": true
+    },
+    {
+      "name": "recent_timer_baseline_readback",
       "passed": true
     },
     {
@@ -32,11 +60,25 @@
       "passed": true
     },
     {
+      "name": "cleanup_recent_timer_inventory",
+      "passed": true
+    },
+    {
+      "name": "cleanup_recent_timer_deleted",
+      "passed": true
+    },
+    {
+      "name": "cleanup_recent_timer_baseline_restored",
+      "passed": true
+    },
+    {
       "name": "credential_backend_override_restored",
       "passed": true
     }
   ],
   "metrics": {
-    "capture_observer_resets": 0
+    "capture_observer_resets": 0,
+    "created_timer_duration": 120,
+    "created_timer_running": true
   }
 }
