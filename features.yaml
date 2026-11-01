@@ -1037,7 +1037,7 @@ features:
       - {id: FOC-SET-REAL, levels: [real]}
       - {id: FOC-IDLE, levels: [real], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
       - {id: FOC-STATUS-REAL, levels: [real]}
-      - {id: FOC-PHONE-SYNC, levels: [real]}
+      - {id: FOC-PHONE-SYNC, levels: [sim, real]}
     limits:
       - {scenario: FOC-PHONE-SYNC, level: real, reason: "Phone Focus permission and inactive baseline passed; the Pro AppleBridgeHelper has no Focus-status grant. No Mac Focus mutation was attempted, and phone restoration was acknowledged."}
   - id: recordings.read
