@@ -60,8 +60,8 @@ public enum NotesFolderUI {
               AXUIElementCopyAttributeValue(row, kAXPositionAttribute as CFString, &position) == .success,
               AXUIElementCopyAttributeValue(row, kAXSizeAttribute as CFString, &size) == .success,
               let position, let size, CFGetTypeID(position) == AXValueGetTypeID(), CFGetTypeID(size) == AXValueGetTypeID(),
-              AXValueGetValue(unsafeBitCast(position, to: AXValue.self), .cgPoint, &point),
-              AXValueGetValue(unsafeBitCast(size, to: AXValue.self), .cgSize, &dimensions),
+              AXValueGetValue(unsafeDowncast(position, to: AXValue.self), .cgPoint, &point),
+              AXValueGetValue(unsafeDowncast(size, to: AXValue.self), .cgSize, &dimensions),
               dimensions.width > 0, dimensions.height > 0 else { return false }
         point.x += dimensions.width * 0.55
         point.y += dimensions.height * 0.5
