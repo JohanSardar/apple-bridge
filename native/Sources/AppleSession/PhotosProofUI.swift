@@ -65,6 +65,14 @@ final class PhotosProofUI {
         }
         diagnostics["roles"] = .object(roles.mapValues { .number(Double($0)) })
         diagnostics["controls"] = .object(controls)
+        let buttons = elements(kAXButtonRole).map { node in
+            ["title": attribute(node, kAXTitleAttribute) as? String ?? "", "description": attribute(node, kAXDescriptionAttribute) as? String ?? "", "enabled": String(attribute(node, kAXEnabledAttribute) as? Bool ?? false)]
+        }
+        if let data = try? JSONSerialization.data(withJSONObject: buttons) {
+            let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/AppleBridgeDev/photos-private-sheet-buttons.json")
+            try? data.write(to: path, options: .atomic)
+            try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: path.path)
+        }
     }
 
     private func deleteButtons(_ sheet: AXUIElement) -> [AXUIElement] {
