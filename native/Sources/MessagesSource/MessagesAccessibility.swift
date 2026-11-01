@@ -134,6 +134,36 @@ enum MessagesAccessibility {
                   (actions as? [String] ?? []).contains(where: { $0.hasPrefix("Name:" + prepared.action["messages"]["emoji"].string + "\n") }) else { throw SourceFailure.capabilityUnproven }
         }
     }
+    static func validateConversation(_ prepared: Prepared) throws {
+        let chat = prepared.action["native_key"].string
+        let message = prepared.nativeState["message_guid"].string
+        let reader = try MessagesSelfTestBaseline.reader()
+        let memberships = try reader.query("SELECT c.guid FROM chat c JOIN chat_message_join j ON j.chat_id=c.ROWID JOIN message m ON m.ROWID=j.message_id WHERE m.guid=? AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=m.ROWID)", [message]).map { $0["guid"] }
+        let deadline = Date().addingTimeInterval(4)
+        repeat {
+            var budget = 4000
+            let texts = matching(try uiSession().root, budget: &budget) { value($0, kAXIdentifierAttribute) == "CKBalloonTextView" }.map { textValue($0) }
+            if budget > 0, MessagesSelfTestIsolation.matchesConversation(chat: chat, memberships: memberships, expected: prepared.nativeState["target"]["text"].string, visibleTexts: texts) { return }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        } while Date() < deadline
+        throw MessagesUIFailure.targetUnavailable
+    }
+    private static func performReadState(_ prepared: Prepared) throws -> JSON {
+        try openMessage(prepared.nativeState["message_guid"].string, settle: 0.5, resetEditor: false)
+        try validateConversation(prepared)
+        let session = try uiSession()
+        if prepared.action["op"].string == "messages.mark_unread" {
+            let menus = MessagesVariantUI.find(session.root, role: kAXMenuBarItemRole, name: "Conversation")
+            guard menus.count == 1 else { throw MessagesUIFailure.menuUnavailable }
+            try session.fence()
+            try MessagesVariantUI.press(menus[0])
+            let items = MessagesVariantUI.find(menus[0], role: kAXMenuItemRole, name: "Mark as Unread")
+            guard items.count == 1 else { try? session.press(MessagesUISession.escape); throw MessagesUIFailure.menuUnavailable }
+            try session.fence()
+            try MessagesVariantUI.press(items[0])
+        }
+        return .object(["target_verified": .bool(true)])
+    }
     static func press(_ session: MessagesUISession, title: String) throws {
         let deadline = Date().addingTimeInterval(2)
         repeat {
@@ -319,6 +349,7 @@ enum MessagesAccessibility {
     static func perform(_ prepared: Prepared) throws -> JSON {
         let action = try MessagesAction(operation: prepared.action["op"].string)
         let args = prepared.action["messages"]
+        if [.markRead, .markUnread].contains(action) { return try performReadState(prepared) }
         let session = try uiSession(), root = session.root
         let bubble = try target(root, prepared: prepared)
         let initialFocus = focus(root)
@@ -349,7 +380,7 @@ enum MessagesAccessibility {
             let title = String($0.split(separator: "\n").first ?? "").replacingOccurrences(of: "Name:", with: "").replacingOccurrences(of: "…", with: "")
             return title == normalized
         }
-        if action != .reply && copied == .success && direct.count == 1 {
+        if copied == .success && direct.count == 1 {
             guard AXUIElementPerformAction(bubble, direct[0] as CFString) == .success else { throw SourceFailure.conflict }
         } else {
             try contextMenu(bubble, session: session)

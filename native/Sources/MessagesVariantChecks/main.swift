@@ -28,6 +28,9 @@ struct MessagesVariantChecks {
         afterSend = conversationPreferences
         afterSend["new_preference"] = true
         checks["new_conversation_preference_detected"] = try MessagesContentBaseline.preferenceDigest(conversationPreferences) != MessagesContentBaseline.preferenceDigest(afterSend)
+        checks["self_echo_conversation_verified"] = MessagesSelfTestIsolation.matchesConversation(chat: "self", memberships: ["self"], expected: "[ab-test current] fixture", visibleTexts: ["[ab-test current] fixture", "[ab-test current] fixture"])
+        checks["wrong_conversation_rejected"] = !MessagesSelfTestIsolation.matchesConversation(chat: "other", memberships: ["self"], expected: "[ab-test current] fixture", visibleTexts: ["[ab-test current] fixture"])
+        checks["missing_conversation_text_rejected"] = !MessagesSelfTestIsolation.matchesConversation(chat: "self", memberships: ["self"], expected: "[ab-test current] fixture", visibleTexts: ["different"])
         let readState = JSON.object(["run_id": .string("current"), "scenario": .string("MSG-READSTATE-REAL"), "baseline_max_row_id": .number(10), "created_chat_key": .string("self")])
         checks["current_read_state_fixture_allowed"] = MessagesReadStateFixture.authorizes(readState, chat: "self", rowID: 11, text: "[ab-test current] fixture")
         checks["older_read_state_target_refused"] = !MessagesReadStateFixture.authorizes(readState, chat: "self", rowID: 10, text: "[ab-test current] fixture")

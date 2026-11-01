@@ -256,9 +256,11 @@ public actor MessagesCommands {
             }
         }
         guard labCommands || proofs().contains(routeProof(route, kind: action["op"].string)), await MessagesAccessibility.available else { throw SourceFailure.capabilityUnproven }
-        let prepared = Prepared(nativeState: .object(["interactive": .bool(interactive), "conversation_members": .array(rows.map { .string($0["guid"]) }), "conversation_target": .bool(true), "target": target, "destination": route, "route": .string("accessibility"), "last_read_timestamp": .string(conversation["last_read_message_timestamp"]), "latest_message_date": .string(String(latestConversationDate(rows))), "candidate_ids": .array([.string(chat)])]), fingerprint: command["request_hash"].string, action: action)
-        await MessagesUISession.activate()
-        try await MessagesAccessibility.validate(prepared)
+        let prepared = Prepared(nativeState: .object(["interactive": .bool(interactive), "conversation_members": .array(rows.map { .string($0["guid"]) }), "conversation_target": .bool(true), "message_guid": .string(last["guid"]), "target": target, "destination": route, "route": .string("accessibility"), "last_read_timestamp": .string(conversation["last_read_message_timestamp"]), "latest_message_date": .string(String(latestConversationDate(rows))), "candidate_ids": .array([.string(chat)])]), fingerprint: command["request_hash"].string, action: action)
+        if action["op"].string == "messages.delete_chat" {
+            await MessagesUISession.activate()
+            try await MessagesAccessibility.validate(prepared)
+        }
         return prepared
     }
     private func dispatchConversation(_ prepared: Prepared) async throws -> JSON {
@@ -298,7 +300,7 @@ public actor MessagesCommands {
     }
     public func validate(_ prepared: Prepared) async throws {
         if MessagesParity.operations.contains(prepared.action["op"].string) { try await MessagesParity.validate(prepared); return }
-        if !["messages.send", "messages.create_group"].contains(prepared.action["op"].string) {try await MessagesAccessibility.validate(prepared)}
+        if !["messages.send", "messages.create_group", "messages.mark_read", "messages.mark_unread"].contains(prepared.action["op"].string) {try await MessagesAccessibility.validate(prepared)}
     }
     private func dispatchAccessibility(_ prepared: Prepared) async throws -> JSON {
         if prepared.nativeState["conversation_target"].bool { return try await dispatchConversation(prepared) }
