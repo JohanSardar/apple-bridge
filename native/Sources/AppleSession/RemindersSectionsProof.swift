@@ -201,12 +201,15 @@ enum RemindersSectionsProof {
                         diagnostics[stage + "_membership_bytes"] = .number(Double(row.sectionMembership?.count ?? 0))
                         fixture = ["order": row.sectionOrder?.base64EncodedString() ?? "", "membership": row.sectionMembership?.base64EncodedString() ?? "", "reminder_id": item.calendarItemIdentifier, "section_ids": sections.map { $0.identity.uuid?.uuidString ?? $0.identity.textIdentifier ?? "" }]
                         fixture["section_columns"] = (read.columns["ZREMCDBASELIST"] ?? []).filter { $0.contains("SECTION") }.sorted()
-                        let decoded = StoreSections.decode(order: row.sectionOrder, membership: row.sectionMembership)
+                        let decoded = StoreSections.validated(row, snapshot: snapshot)
                         diagnostics[stage + "_decoded"] = .number(decoded == nil ? 0 : 1)
                         guard let decoded else { continue }
                         let ordered = decoded.order.compactMap { id in sections.first(where: { $0.identity.uuid == id || $0.identity.textIdentifier.flatMap(UUID.init(uuidString:)) == id })?.name }
                         let expected = reversed ? Array(names.reversed()) : names
                         guard ordered == expected else { continue }
+                        let firstPoint = try point(unique(expected[0])), secondPoint = try point(unique(expected[1]))
+                        diagnostics[stage + "_ui_order_matches"] = .number(firstPoint.y < secondPoint.y ? 1 : 0)
+                        guard firstPoint.y < secondPoint.y else { continue }
                         if !member { return true }
                         if let itemID = UUID(uuidString: item.calendarItemIdentifier), let sectionID = decoded.membership[itemID], sections.first(where: { $0.identity.uuid == sectionID || $0.identity.textIdentifier.flatMap(UUID.init(uuidString:)) == sectionID })?.name == names[1] { return true }
                     }
