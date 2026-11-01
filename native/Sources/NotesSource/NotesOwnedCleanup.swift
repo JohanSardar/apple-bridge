@@ -7,18 +7,21 @@ import SourceSupport
 @MainActor
 public enum NotesOwnedCleanup {
     private struct Failure: Error { let stage: String }
+    private static var deadline = Date.distantPast
     private static func value(_ node: AXUIElement, _ key: String) -> String {
+        guard Date() < deadline else { return "" }
         var result: CFTypeRef?
         guard AXUIElementCopyAttributeValue(node, key as CFString, &result) == .success else { return "" }
         return result as? String ?? ""
     }
     private static func children(_ node: AXUIElement) -> [AXUIElement] {
+        guard Date() < deadline else { return [] }
         var result: CFTypeRef?
         guard AXUIElementCopyAttributeValue(node, kAXChildrenAttribute as CFString, &result) == .success else { return [] }
         return result as? [AXUIElement] ?? []
     }
     private static func nodes(_ root: AXUIElement, budget: inout Int) -> [AXUIElement] {
-        guard budget > 0, value(root, kAXRoleAttribute) != kAXMenuBarRole else { return [] }
+        guard Date() < deadline, budget > 0, value(root, kAXRoleAttribute) != kAXMenuBarRole else { return [] }
         budget -= 1
         return [root] + children(root).flatMap { nodes($0, budget: &budget) }
     }
@@ -27,6 +30,7 @@ public enum NotesOwnedCleanup {
         return nodes(root, budget: &budget)
     }
     private static func enabled(_ node: AXUIElement) -> Bool {
+        guard Date() < deadline else { return false }
         var result: CFTypeRef?
         return AXUIElementCopyAttributeValue(node, kAXEnabledAttribute as CFString, &result) == .success && result as? Bool == true
     }
@@ -45,6 +49,7 @@ public enum NotesOwnedCleanup {
         return true
     }
     public static func run(_ request: JSON) async -> JSON {
+        deadline = Date().addingTimeInterval(30)
         guard AXIsProcessTrusted() else { return .object(["passed": .bool(false), "stage": .string("accessibility_permission_missing")]) }
         let tag = request["tag"].string, folders = request["folders"].array
         guard tag.hasPrefix("[ab-test "), tag.hasSuffix("]"), !tag.contains("\n"), !folders.isEmpty else { return .object(["passed": .bool(false), "stage": .string("invalid_owned_request")]) }
@@ -67,7 +72,10 @@ public enum NotesOwnedCleanup {
                 stage = "refresh_notes_quit"
                 _ = try NotesScript.run("quit")
                 stage = "refresh_notes_launch"
-                _ = try NotesScript.run("return count of accounts")
+                guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.Notes") else { throw Failure(stage: "notes_application_missing") }
+                let configuration = NSWorkspace.OpenConfiguration()
+                configuration.activates = false
+                _ = try await NSWorkspace.shared.openApplication(at: url, configuration: configuration)
             }
             for (id, title, key) in targets {
                 if try ["gone", "marked", "trashed"].contains(store.deletionState(key, collection: "notes.folder")) { removed += 1; continue }

@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 import Darwin
 import OSAKit
 import Carbon
@@ -8,6 +9,12 @@ extension AppleTruth {
     static func notes(_ verb: String, _ request: [String: Any]) async throws -> [String: Any] {
         if verb == "observe", request["active_only"] as? Bool == true { return try notesActiveIdentities(path: request["snapshot_path"] as? String) }
         guard verb == "fixture" || verb == "observe", let language = OSALanguage(forName: "JavaScript") else { throw NotesTruthFailure.invalid }
+        if NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.Notes").isEmpty {
+            guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.Notes") else { throw TruthFailure.unavailable }
+            let configuration = NSWorkspace.OpenConfiguration()
+            configuration.activates = false
+            _ = try await NSWorkspace.shared.openApplication(at: url, configuration: configuration)
+        }
         let target = NSAppleEventDescriptor(bundleIdentifier: "com.apple.Notes")
         guard AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false) == noErr else { throw TruthFailure.permissionMissing }
         let tag = request["tag"] as? String ?? ""
