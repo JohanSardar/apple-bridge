@@ -1,32 +1,32 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[9.55 13.2 17.14] cpu_idle=26% cpus=8 other_heavy=0"
+    "summary": "air: load=[17.52 40.03 44.44] cpu_idle=19% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M6AW4CNXSKNMCJXMSZWPTSTF",
+  "run_id": "run_01M6AYSHZ3PAYZ4G38MT567W63",
   "metrics": {
     "capture_observer_resets": 0,
     "cleanup": {
-      "after_count": 119,
-      "before_count": 119,
+      "after_count": 120,
+      "before_count": 120,
       "created_count": 3,
       "passed": true
     },
     "cleanup_counts": {
-      "after_count": 133,
-      "before_count": 133,
+      "after_count": 137,
+      "before_count": 137,
       "created_count": 0,
       "passed": true
     },
     "notes_helper_binary_uuids": [
-      "9444b9cd-fe0e-3e51-ae30-68aebb338788"
+      "9de3109c-94a5-3347-afcc-92d39c3a5416"
     ]
   },
   "scenario": "NOTE-CRUD",
   "level": "real",
   "passed": true,
-  "git_sha": "c64b270099a5b8136a5fa61af0aeef2a720f03d0",
-  "at": "2026-11-01T06:18:14.590117Z",
+  "git_sha": "994e8fd23c932dd82f97786211695ddbed75d9d2",
+  "at": "2026-11-01T07:04:45.285157Z",
   "assertions": [
     {
       "name": "native_notes_capture_ready",

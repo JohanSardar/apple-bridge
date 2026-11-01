@@ -1,20 +1,43 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[68.4 36.34 30.26] cpu_idle=26% cpus=8 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[7.69 8.11 9.32] cpu_idle=62% cpus=8 other_heavy=0"
   },
-  "run_id": "notes-parity_01M6AXRK6KW9R6D2SBJZXEFM0N",
+  "run_id": "notes-parity_01M6B1DEQZ2C820FDN7FGDK3ZN",
   "metrics": {
     "capture_observer_resets": 0,
+    "checklist": {
+      "reason": "public_html_did_not_create_native_checklists",
+      "after_count": 0,
+      "identities_preserved": false,
+      "before_count": 0,
+      "state": "limited"
+    },
+    "cleanup_counts": {
+      "after_count": 134,
+      "before_count": 134,
+      "created_count": 0,
+      "passed": true
+    },
+    "mutation_calls": 4,
+    "native_cleanup_reported_complete": false,
     "notes_helper_binary_uuids": [
       "9de3109c-94a5-3347-afcc-92d39c3a5416"
-    ]
+    ],
+    "os": "Version 26.7.1 (Build 25G241)",
+    "simple_rich": {
+      "structure_preserved": true,
+      "unknown_attributes": [],
+      "effect_observed": true,
+      "reason": "production_command_proof_required",
+      "state": "candidate"
+    }
   },
   "scenario": "NOTE-EDIT-PARITY",
   "level": "real",
-  "passed": false,
-  "git_sha": "ac6c3baf3bea168040bdcfa1ab5e8663f6f39620",
-  "at": "2026-11-01T06:46:45.203119Z",
+  "passed": true,
+  "git_sha": "96569284d7c9f5167a97c7c31e86dff182e4d89e",
+  "at": "2026-11-01T07:50:34.49507Z",
   "assertions": [
     {
       "name": "NOTE-CRUD/native_notes_capture_ready",
@@ -35,24 +58,201 @@
     },
     {
       "name": "NOTE-CRUD/rest_create_observed",
-      "passed": false,
-      "detail": "indeterminate:::"
+      "passed": true,
+      "detail": "observed:::"
+    },
+    {
+      "name": "NOTE-CRUD/created_identity_captured",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_create_matches_truth",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_append_observed",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_append_visible",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_append_matches_truth",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_append_content",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_replace_observed",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_replace_visible",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_replace_matches_truth",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_replace_content",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_before_delete_replicated",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_delete_observed",
+      "passed": true,
+      "detail": "observed:"
+    },
+    {
+      "name": "NOTE-CRUD/rest_delete_replicated",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_delete_preserves_other_note",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_create_folder_observed",
+      "passed": true,
+      "detail": "observed:::"
+    },
+    {
+      "name": "NOTE-CRUD/created_folder_identity_captured",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_create_observed",
+      "passed": true,
+      "detail": "observed:::"
+    },
+    {
+      "name": "NOTE-CRUD/created_identity_captured",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_create_matches_truth",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_append_observed",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_append_visible",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_append_matches_truth",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_append_content",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_replace_observed",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_replace_visible",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_replace_matches_truth",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_replace_content",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_before_delete_replicated",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_delete_observed",
+      "passed": true,
+      "detail": "observed:"
+    },
+    {
+      "name": "NOTE-CRUD/mcp_delete_replicated",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_delete_preserves_other_note",
+      "passed": true
     },
     {
       "name": "NOTE-CRUD/run_created_folder_cleaned",
-      "passed": false
+      "passed": true
     },
     {
       "name": "NOTE-CRUD/run_created_folder_cleaned",
-      "passed": false
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/run_created_folder_cleaned",
+      "passed": true
     },
     {
       "name": "NOTE-CRUD/owned_cleanup_counts_match",
-      "passed": false
+      "passed": true
     },
     {
       "name": "NOTE-CRUD/cleanup_baseline_restored",
-      "passed": false
+      "passed": true
+    },
+    {
+      "name": "NOTE-RICH-REJECT/native_notes_capture_ready",
+      "passed": true
+    },
+    {
+      "name": "NOTE-RICH-REJECT/external_note_imported",
+      "passed": true
+    },
+    {
+      "name": "NOTE-RICH-REJECT/rich_rejected_before_dispatch",
+      "passed": true
+    },
+    {
+      "name": "NOTE-RICH-REJECT/rich_rejection_explains_recovery",
+      "passed": true
+    },
+    {
+      "name": "NOTE-RICH-REJECT/tagged_notes_cleaned",
+      "passed": true
+    },
+    {
+      "name": "NOTE-RICH-REJECT/run_created_folder_cleaned",
+      "passed": true
+    },
+    {
+      "name": "tagged_notes_cleaned_up",
+      "passed": true,
+      "detail": "independent_note_and_folder_baseline_restored_after_probe_exit"
+    },
+    {
+      "name": "simple_rich_capability",
+      "passed": true,
+      "status": "limited",
+      "detail": "production_command_proof_required"
+    },
+    {
+      "name": "checklist_capability",
+      "passed": true,
+      "status": "limited",
+      "detail": "public_html_did_not_create_native_checklists"
+    },
+    {
+      "name": "cleanup_baseline_restored",
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",
