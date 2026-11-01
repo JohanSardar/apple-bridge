@@ -308,7 +308,7 @@ public final class NotesSource: Source {
         if op == "notes.rename_folder" {
             let folder = try find(action["native_key"].string, collection: "notes.folder")
             scriptID = folder["scoped_alias"].string
-            _ = try NotesScript.run("set name of folder id " + NotesScript.quote(scriptID) + " to " + NotesScript.quote(args["title"].string))
+            _ = try NotesScript.run("set targetFolder to folder id " + NotesScript.quote(scriptID) + "\nset targetContainer to container of targetFolder\nset name of targetFolder to " + NotesScript.quote(args["title"].string) + "\ntry\nmove targetFolder to targetContainer\nend try", trace: trace)
         } else if op == "notes.create_folder" {
             scriptID = try NotesScript.run("return id of (make new folder with properties {name:" + NotesScript.quote(args["title"].string) + "})")
         } else if op == "notes.create" {
