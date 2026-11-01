@@ -145,10 +145,9 @@ enum RemindersParityProof {
                 for (key, value) in ui.selectionDiagnostics { diagnostics[name + "_" + key] = .number(value) }
             }
             await attempt("images") {
-                try script("show fixtureList\nactivate")
+                try script("show (first reminder of fixtureList whose name is \"" + second.title + "\")\nactivate")
                 try await Task.sleep(for: .milliseconds(300))
                 _ = try await ui.selectReminder(second.title)
-                try ui.focusReminderRow(second.title)
                 let pasteboard = NSPasteboard.general
                 let saved = (pasteboard.pasteboardItems ?? []).map { item in item.types.compactMap { type in item.data(forType: type).map { (type, $0) } } }
                 guard let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 2, pixelsHigh: 2, bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 8, bitsPerPixel: 32) else { throw SourceFailure.unavailable }
@@ -178,11 +177,16 @@ enum RemindersParityProof {
                     ui.selectionDiagnostics["paste_enabled"] = enabled as? Bool == true ? 1 : 0
                     guard enabled as? Bool == true, pasteboard.changeCount == installedChange else { throw SourceFailure.conflict }
                     try ui.press("Paste", role: kAXMenuItemRole)
-                    checks["image_readback"] = .bool(try await observe { snapshot, _, _, child in
-                        snapshot.objects.values.contains { object in
-                            let owners = Set([object.reminder, object.reminder1, object.reminder2, object.reminder3, object.reminder4, object.reminder5].compactMap { $0 }.filter { $0 != 0 })
-                            return entityNames[object.identity.entity] == "REMCDImageAttachment" && owners == [child.identity.key]
+                    checks["image_readback"] = .bool(try await observe { snapshot, list, parent, child in
+                        let owned = Set(snapshot.reminders.values.filter { $0.list == list.identity.key }.map { $0.identity.key })
+                        let images = snapshot.objects.values.filter { entityNames[$0.identity.entity] == "REMCDImageAttachment" }.map { object in
+                            Set([object.reminder, object.reminder1, object.reminder2, object.reminder3, object.reminder4, object.reminder5].compactMap { $0 }.filter { $0 != 0 })
                         }
+                        diagnostics["image_fixture_reminders"] = .number(Double(owned.count))
+                        diagnostics["image_fixture_attachments"] = .number(Double(images.filter { !$0.isDisjoint(with: owned) }.count))
+                        diagnostics["image_parent_attachments"] = .number(Double(images.filter { $0.contains(parent.identity.key) }.count))
+                        diagnostics["image_child_attachments"] = .number(Double(images.filter { $0 == [child.identity.key] }.count))
+                        return images.contains { $0 == [child.identity.key] }
                     })
                 }
             }
@@ -285,20 +289,16 @@ enum RemindersParityProof {
                 let ui = RemindersFixtureUI(app: app, title: smartTitle)
                 try await ui.activate()
                 try ui.focusOwnedList()
-                try await ui.menu("Edit", ["Delete"])
-                guard let sheet = ui.ownedSheet else { throw SourceFailure.conflict }
-                let labels = ui.find("", role: kAXStaticTextRole, within: sheet).flatMap { element in
-                    [kAXTitleAttribute, kAXValueAttribute, kAXDescriptionAttribute].map { ui.value(element, $0) }
-                }
-                guard RemindersFixtureUI.smartListDeleteConfirmation(labels, title: smartTitle) else {
-                    let cancel = ui.find("Cancel", role: kAXButtonRole, within: sheet)
-                    if cancel.count == 1 { _ = AXUIElementPerformAction(cancel[0], kAXPressAction as CFString) }
-                    throw SourceFailure.conflict
-                }
+                do {
+                    try await ui.menu("Edit", ["Delete"])
+                    diagnostics["cleanup_menu_returned"] = .number(1)
+                } catch { diagnostics["cleanup_menu_returned"] = .number(0) }
+                let sheet = try await ui.adoptSmartListDeleteSheet(name: smartTitle)
                 let delete = ui.find("Delete", role: kAXButtonRole, within: sheet)
                 guard delete.count == 1 else { throw SourceFailure.conflict }
                 try await ui.focusApplication()
-                guard AXUIElementPerformAction(delete[0], kAXPressAction as CFString) == .success else { throw SourceFailure.unsupported }
+                let deleteResult = AXUIElementPerformAction(delete[0], kAXPressAction as CFString)
+                diagnostics["cleanup_delete_press_result"] = .number(Double(deleteResult.rawValue))
                 try await Task.sleep(for: .milliseconds(500))
                 absent = false
                 for _ in 0..<60 {
@@ -310,6 +310,11 @@ enum RemindersParityProof {
                     if !present { absent = true; break }
                     try await Task.sleep(for: .milliseconds(100))
                 }
+                let closeDeadline = ContinuousClock.now.advanced(by: .seconds(3))
+                while ui.sheetIsOpen(sheet), ContinuousClock.now < closeDeadline { try await Task.sleep(for: .milliseconds(100)) }
+                let closed = !ui.sheetIsOpen(sheet)
+                diagnostics["cleanup_delete_dialog_closed"] = .number(closed ? 1 : 0)
+                absent = absent && closed && ui.find(smartTitle).isEmpty
             }
             checks["owned_smart_list_cleanup"] = .bool(absent)
           } catch {
@@ -697,10 +702,11 @@ final class RemindersFixtureUI {
     }
 
     func dismissOwnedPopover(_ name: String) async throws {
+        guard name.hasPrefix(title + " ") else { throw SourceFailure.invalid }
         for popover in find("", role: kAXPopoverRole) {
             guard !find(name, within: popover).isEmpty else { throw SourceFailure.conflict }
-            try fence()
-            if AXUIElementPerformAction(popover, kAXCancelAction as CFString) != .success { try key(53) }
+            try await focusApplication()
+            _ = AXUIElementPerformAction(popover, kAXCancelAction as CFString)
             let deadline = ContinuousClock.now.advanced(by: .seconds(3))
             while find("", role: kAXPopoverRole).contains(where: { CFEqual($0, popover) }), ContinuousClock.now < deadline {
                 try await Task.sleep(for: .milliseconds(100))
@@ -711,14 +717,11 @@ final class RemindersFixtureUI {
 
     @discardableResult
     func selectReminder(_ name: String) async throws -> AXUIElement {
-        try fence()
+        try await focusApplication()
         try await dismissOwnedPopover(name)
+        try fence()
         let row = try reminderRow(name)
-        let result = AXUIElementSetAttributeValue(row, kAXSelectedAttribute as CFString, kCFBooleanTrue)
-        selectionDiagnostics["select_result"] = Double(result.rawValue)
-        if result != .success {
-            guard AXUIElementPerformAction(row, kAXPressAction as CFString) == .success else { throw SourceFailure.unsupported }
-        }
+        try focusRow(row)
         try await Task.sleep(for: .milliseconds(200))
         let selectedRow = try reminderRow(name)
         var selected: CFTypeRef?
@@ -737,18 +740,22 @@ final class RemindersFixtureUI {
         var current = row
         for _ in 0..<20 {
             if [kAXOutlineRole, kAXTableRole].contains(value(current, kAXRoleAttribute)) {
-                guard AXUIElementSetAttributeValue(current, kAXFocusedAttribute as CFString, kCFBooleanTrue) == .success,
-                      AXUIElementSetAttributeValue(row, kAXSelectedAttribute as CFString, kCFBooleanTrue) == .success else { throw SourceFailure.unsupported }
+                let before = elements(current, kAXSelectedRowsAttribute)
+                selectionDiagnostics["selected_rows_before"] = Double(before.count)
+                selectionDiagnostics["selection_before_contains_target"] = before.contains(where: { CFEqual($0, row) }) ? 1 : 0
+                guard AXUIElementSetAttributeValue(current, kAXFocusedAttribute as CFString, kCFBooleanTrue) == .success else { throw SourceFailure.unsupported }
+                let result = AXUIElementSetAttributeValue(current, kAXSelectedRowsAttribute as CFString, [row] as CFArray)
+                selectionDiagnostics["selection_set_result"] = Double(result.rawValue)
+                guard result == .success else { throw SourceFailure.unsupported }
+                let selected = elements(current, kAXSelectedRowsAttribute)
+                selectionDiagnostics["selected_rows_after"] = Double(selected.count)
+                guard selected.count == 1, CFEqual(selected[0], row) else { throw SourceFailure.conflict }
                 return
             }
             guard let parent = elements(current, kAXParentAttribute).first else { break }
             current = parent
         }
         throw SourceFailure.conflict
-    }
-
-    func focusReminderRow(_ name: String) throws {
-        try focusRow(reminderRow(name))
     }
 
     func focusOwnedList() throws {
@@ -861,6 +868,25 @@ final class RemindersFixtureUI {
         try await Task.sleep(for: .milliseconds(300))
         let activeSheets = sheets()
         if activeSheets.count == 1 { ownedSheet = activeSheets[0] }
+    }
+
+    func adoptSmartListDeleteSheet(name: String) async throws -> AXUIElement {
+        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+        repeat {
+            let active = sheets()
+            let candidates = (active.isEmpty ? attachedSheets() : active).filter { sheet in
+                let labels = find("", role: kAXStaticTextRole, within: sheet).flatMap { element in
+                    [kAXTitleAttribute, kAXValueAttribute, kAXDescriptionAttribute].map { value(element, $0) }
+                }
+                return Self.smartListDeleteConfirmation(labels, title: name) && find("Delete", role: kAXButtonRole, within: sheet).count == 1 && find("Cancel", role: kAXButtonRole, within: sheet).count == 1
+            }
+            if candidates.count == 1 {
+                ownedSheet = candidates[0]
+                return candidates[0]
+            }
+            try await Task.sleep(for: .milliseconds(100))
+        } while ContinuousClock.now < deadline
+        throw SourceFailure.conflict
     }
 
     func adoptSmartListSheet(name: String) async throws {

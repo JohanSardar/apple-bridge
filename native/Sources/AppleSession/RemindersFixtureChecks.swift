@@ -29,7 +29,7 @@ enum RemindersFixtureChecks {
         precondition(!RemindersFixtureUI.actionMatches("AXMoveToBottom", description: "Move To Bottom", name: "Move To Top"))
         precondition(!RemindersFixtureUI.actionMatches("AXPress", description: "Press", name: "Move To Top"))
         precondition(RemindersFixtureUI.smartListDeleteConfirmation(["Delete Smart List “" + title + " smart”?"], title: title + " smart"))
-        precondition(!RemindersFixtureUI.smartListDeleteConfirmation(["Delete Smart List “Pack”?"], title: title + " smart"))
+        precondition(!RemindersFixtureUI.smartListDeleteConfirmation(["Delete Smart List “Unrelated List”?"], title: title + " smart"))
         precondition(!RemindersFixtureUI.smartListDeleteConfirmation(["Delete Reminder “" + title + " smart”?"], title: title + " smart"))
         precondition(RemindersFixtureUI.matches(["Title", "Value", "Description"], name: "", title: title))
         print("reminders fixture checks passed")
