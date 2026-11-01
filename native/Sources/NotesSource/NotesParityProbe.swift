@@ -72,7 +72,7 @@ public enum NotesParityProbe {
             let exact = observed && after["data"]["blocks"] == expected
             let lossless = before["data"]["round_trip_status"].string == "unproven" && after["data"]["round_trip_status"].string == "unproven"
             let reasons = Set(blocks(before["data"]["blocks"]).compactMap { $0["unsupported"] == .null ? nil : $0["unsupported"].string })
-            proofs["simple_rich"] = .object(["state": .string(exact && lossless ? "candidate" : "limited"), "reason": .string(!exact ? "html_changed_structure" : !lossless ? "decoder_roundtrip_unqualified" : "production_command_proof_required"), "effect_observed": .bool(observed), "structure_preserved": .bool(exact), "unknown_attributes": .array(reasons.sorted().map(JSON.string))])
+            proofs["simple_rich"] = .object(["state": .string(exact && lossless ? "candidate" : "limited"), "reason": .string(!exact ? "html_changed_structure" : !lossless ? "decoder_roundtrip_unqualified" : "native_html_structure_preserved"), "effect_observed": .bool(observed), "structure_preserved": .bool(exact), "unknown_attributes": .array(reasons.sorted().map(JSON.string))])
             let checklistHTML = "<ul><li><input type=\"checkbox\">unchecked-token</li><li><input type=\"checkbox\" checked>checked-token</li></ul>"
             let checklist = try create("checklist", html: checklistHTML)
             let checkBefore = try await snapshot(checklist)
