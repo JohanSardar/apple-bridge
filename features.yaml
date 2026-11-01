@@ -430,7 +430,7 @@ features:
     limits:
       - scenario: NOTE-EXTRAS
         level: real
-        reason: "Air qualification failed because the Helper did not return notes.create_folder dispatch evidence within the 15-second exchange deadline; the destination identity was unavailable. Earlier folder rename also reached NoteStore after command observation expired. Native checklist, hashtag and pin setters are absent from Notes.sdef; folder deletion remains unqualified."
+        reason: "The final Air attempt failed tagged_fixture_visible: the run-created note did not reach complete content hydration within the 10-second read-back window. Earlier attempts timed out waiting 15 seconds for Helper folder-create dispatch evidence, and folder rename committed after observation expired. Native checklist, hashtag and pin setters are absent from Notes.sdef; folder deletion remains unqualified."
   - id: notes.write
     title: Notes plain-text create, update, delete, folders; rich edits reject
     requirements: [R-RW, R-NOTES]

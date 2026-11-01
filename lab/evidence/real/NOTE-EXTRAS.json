@@ -1,14 +1,14 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[23.95 22.23 25.15] cpu_idle=26% cpus=8 other_heavy=0"
+    "summary": "air: load=[144.98 77.16 49.21] cpu_idle=13% cpus=8 other_heavy=0"
   },
-  "run_id": "notes-extras_01M6AXPAAPCPDN3VVNHJSPJ58C",
+  "run_id": "notes-extras_01M6AY9MHA3C10XFV5TZWXNPWE",
   "metrics": {
     "capture_observer_resets": 0,
     "cleanup_counts": {
-      "after_count": 133,
-      "before_count": 133,
+      "after_count": 136,
+      "before_count": 136,
       "created_count": 0,
       "passed": true
     },
@@ -19,8 +19,8 @@
   "scenario": "NOTE-EXTRAS",
   "level": "real",
   "passed": false,
-  "git_sha": "ac6c3baf3bea168040bdcfa1ab5e8663f6f39620",
-  "at": "2026-11-01T06:45:30.583063Z",
+  "git_sha": "6cb36ce90f9e079650bdc04a6d521334f1216584",
+  "at": "2026-11-01T06:56:03.62905Z",
   "assertions": [
     {
       "name": "native_notes_capture_ready",
@@ -32,15 +32,6 @@
     },
     {
       "name": "tagged_fixture_visible",
-      "passed": true
-    },
-    {
-      "name": "rest_create_folder_observed",
-      "passed": false,
-      "detail": "indeterminate:::"
-    },
-    {
-      "name": "destination_identity_captured",
       "passed": false
     },
     {
