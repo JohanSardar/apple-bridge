@@ -62,7 +62,7 @@ func checkMailQualification() async throws {
         if scenario == "MAIL-BODY-FIXTURE" { try require(scripts.contains { $0.contains("set default message format to priorFormat") }) }
         if scenario != "MAIL-BODY-FIXTURE" {
             try require(scripts.contains { $0.contains("set visible of m to true") && $0.contains("close m saving no") })
-            try require(scripts.contains { $0.contains("{inbox, sent mailbox, drafts mailbox}") && $0.contains("if subject of item 1 of chosen is not") })
+            try require(scripts.contains { $0.contains("{inbox, sent mailbox, drafts mailbox}") && $0.contains("(id of item 1 of chosen) is (id of m) and subject of item 1 of chosen is") })
             try require(!scripts.contains { $0.contains("delete m") || $0.contains("move m") || $0.contains("set deleted status") })
         }
         try require(scripts.contains { $0.contains("extract address from sender") && $0.contains("visible:true") && $0.contains("close m saving no") })
