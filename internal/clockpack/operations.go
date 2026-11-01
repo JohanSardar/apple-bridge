@@ -182,6 +182,8 @@ func (p Pack) Exchange(ctx context.Context, request Request) (Readback, error) {
 			}
 			found = true
 			expectedAlarm := *request.Alarm
+			expectedAlarm.RepeatDays = slices.Clone(expectedAlarm.RepeatDays)
+			slices.Sort(expectedAlarm.RepeatDays)
 			if request.Operation == "create_alarm" {
 				expectedAlarm.ID = a.ID
 			}

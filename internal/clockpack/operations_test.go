@@ -69,3 +69,14 @@ func TestAlarmReadbackNormalizesNativeTimeAndUnorderedRepeatDays(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestCreatedAlarmRepeatDaysHaveSetSemantics(t *testing.T) {
+	fixture := &exchangeFixture{data: `{"version":1,"operation":"create_alarm","alarms":[{"id":"assigned","label":"[ab-test] synthetic","time":"7:5","repeat_days":[1,3],"enabled":true}]}`}
+	alarm := Alarm{ID: "requested", Label: "[ab-test] synthetic", Time: "07:05", RepeatDays: []int{3, 1}, Enabled: true}
+	if _, err := (Pack{Runner: fixture}).Exchange(context.Background(), Request{Operation: "create_alarm", Alarm: &alarm}); err != nil {
+		t.Fatal(err)
+	}
+	if alarm.RepeatDays[0] != 3 {
+		t.Fatal("readback validation changed caller-owned weekdays")
+	}
+}
