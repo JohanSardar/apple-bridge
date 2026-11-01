@@ -26,6 +26,7 @@ struct MessagesVariantChecks {
         let args = JSON.object(["text": .string("test"), "variant": variant])
         let data: [String: JSON] = ["text": .string("test"), "is_from_me": .bool(true), "error_code": .number(0), "effect": .string("com.apple.messages.effect.loud"), "formatting": .array([range])]
         var checks = try await AccessibilityInputChecks.run()
+        checks["multipart_capture_repeats_all_parts_in_one_batch"] = try await CommandCaptureChecks.run()
         checks["forwarded_native_receiver_supported"] = await MainActor.run { MessagesSendVariants.syntheticForwardedNativeFlag(ForwardedNativeFlagProxy(), selector: "readyForNativeFlag") }
         checks["already_read_timestamp_is_observed"] = MessagesReadStateFixture.matches(timestamp: 20, latest: 20, unread: false)
         checks["unread_timestamp_is_observed"] = MessagesReadStateFixture.matches(timestamp: 19, latest: 20, unread: true)
