@@ -49,7 +49,8 @@ func runPhotosReal(ctx context.Context, s Scenario, e Evidence) Evidence {
 	}
 	cachedIdentity, _ := os.ReadFile(report + ".sha256")
 	cached, _ := os.ReadFile(report)
-	if info, statErr := os.Stat(report); statErr == nil && recoveryPath == "" && recoveryDigest == "" && s.ID != "PHO-IDLE" && time.Since(info.ModTime()) < 15*time.Minute && string(cachedIdentity) == identity && photosReportPassed(cached) {
+	_, ownedErr := os.Stat(filepath.Join(filepath.Dir(report), "photos-real-owned.json"))
+	if info, statErr := os.Stat(report); statErr == nil && os.IsNotExist(ownedErr) && recoveryPath == "" && recoveryDigest == "" && s.ID != "PHO-IDLE" && time.Since(info.ModTime()) < 15*time.Minute && string(cachedIdentity) == identity && photosReportPassed(cached) {
 		add("signed_helper_probe", true)
 	} else {
 		os.Remove(report)
@@ -98,7 +99,8 @@ func runPhotosReal(ctx context.Context, s Scenario, e Evidence) Evidence {
 	for _, name := range []string{"read_passed", "import_passed", "original_passed", "cleanup_passed"} {
 		add(name, result[name] == true)
 	}
-	for _, name := range []string{"asset_count", "original_digest", "library_asset_count", "recovered_test_asset_count"} {
+	add("library_count_restored", photosLibraryCountRestored(result))
+	for _, name := range []string{"asset_count", "original_digest", "library_asset_count", "cleanup_library_asset_count", "recovered_test_asset_count"} {
 		e.Metrics[name] = result[name]
 	}
 	if e.Passed && recoveryPath == report+".cleanup.json" {
@@ -121,5 +123,11 @@ func photosReportPassed(data []byte) bool {
 			return false
 		}
 	}
-	return true
+	return photosLibraryCountRestored(result)
+}
+
+func photosLibraryCountRestored(result map[string]any) bool {
+	before, beforeOK := result["library_asset_count"].(float64)
+	after, afterOK := result["cleanup_library_asset_count"].(float64)
+	return beforeOK && afterOK && before >= 0 && before == after
 }

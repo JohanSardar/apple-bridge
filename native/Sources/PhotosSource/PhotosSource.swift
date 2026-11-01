@@ -8,7 +8,11 @@ public actor PhotosSource: Source {
     var fixture: [JSON]?
     #if LAB
     var proofImportFilename: String?
-    public func setImportFilenameForProof(_ filename: String) { proofImportFilename = filename }
+    var proofImportCreationDate: Date?
+    public func setImportFilenameForProof(_ filename: String, created: Date = Date()) {
+        proofImportFilename = filename
+        proofImportCreationDate = created
+    }
     var fixtureObservationDelay = 0
     var pendingFixtureObservation: (rows: [JSON], remaining: Int)?
     public func delayNextFixtureObservationForProof(_ reads: Int) { fixtureObservationDelay = max(0, reads) }

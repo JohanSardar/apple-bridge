@@ -139,12 +139,16 @@ extension PhotosSource {
         defer { if let temporary { try? FileManager.default.removeItem(at: temporary) } }
         #if LAB
         let importFilename = proofImportFilename
+        let importCreated = proofImportCreationDate
         #endif
         try PHPhotoLibrary.shared().performChangesAndWait {
             switch op {
             case "photos.create_album": key = PHAssetCollectionChangeRequest.creationRequestForAssetCollection(withTitle: args["name"].string).placeholderForCreatedAssetCollection.localIdentifier
             case "photos.import":
                 let request = PHAssetCreationRequest.forAsset()
+                #if LAB
+                if let importCreated { request.creationDate = importCreated }
+                #endif
                 if let temporary { request.addResource(with: .video, fileURL: temporary, options: nil) }
                 else {
                     let options = PHAssetResourceCreationOptions()
