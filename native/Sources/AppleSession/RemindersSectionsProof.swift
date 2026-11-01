@@ -87,20 +87,31 @@ enum RemindersSectionsProof {
                 guard let down = CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: true), let up = CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: false) else { throw SourceFailure.unavailable }
                 down.post(tap: .cghidEventTap); up.post(tap: .cghidEventTap)
             }
-            @MainActor func point(_ element: AXUIElement, before: Bool = false) throws -> CGPoint {
+            @MainActor func point(_ element: AXUIElement, before: Bool = false, trailing: Bool = false) throws -> CGPoint {
                 var position: CFTypeRef?, size: CFTypeRef?
                 guard AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &position) == .success,
                       AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &size) == .success,
                       let position, let size, CFGetTypeID(position) == AXValueGetTypeID(), CFGetTypeID(size) == AXValueGetTypeID() else { throw SourceFailure.conflict }
                 var origin = CGPoint.zero, dimensions = CGSize.zero
                 guard AXValueGetValue(unsafeDowncast(position, to: AXValue.self), .cgPoint, &origin), AXValueGetValue(unsafeDowncast(size, to: AXValue.self), .cgSize, &dimensions), dimensions.width > 0, dimensions.height > 0 else { throw SourceFailure.conflict }
-                return CGPoint(x: origin.x + dimensions.width / 2, y: origin.y + (before ? 2 : dimensions.height / 2))
+                return CGPoint(x: origin.x + (trailing ? max(1, dimensions.width - 12) : dimensions.width / 2), y: origin.y + (before ? 2 : dimensions.height / 2))
             }
-            @MainActor func drag(_ from: AXUIElement, to: AXUIElement, before: Bool = false) async throws {
-                let start = try point(from), end = try point(to, before: before)
+            @MainActor func drag(_ from: AXUIElement, to: AXUIElement, before: Bool = false, reordering: Bool = false) async throws {
+                try await ui.focusApplication()
+                if reordering {
+                    let result = AXUIElementSetAttributeValue(from, kAXSelectedAttribute as CFString, kCFBooleanTrue)
+                    diagnostics["section_editor_select_result"] = .number(Double(result.rawValue))
+                    guard result == .success else { throw SourceFailure.unsupported }
+                }
+                let start = try point(from, trailing: reordering), end = try point(to, before: before)
                 try fence()
                 defer { CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: end, mouseButton: .left)?.post(tap: .cghidEventTap) }
-                CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: start, mouseButton: .left)?.post(tap: .cghidEventTap)
+                CGEvent(mouseEventSource: nil, mouseType: .mouseMoved, mouseCursorPosition: start, mouseButton: .left)?.post(tap: .cghidEventTap)
+                try await Task.sleep(for: .milliseconds(150))
+                let down = CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: start, mouseButton: .left)
+                down?.setIntegerValueField(.mouseEventClickState, value: 1)
+                down?.post(tap: .cghidEventTap)
+                try await Task.sleep(for: .milliseconds(200))
                 for index in 1...20 {
                     try ui.gestureFence()
                     let fraction = Double(index) / 20
@@ -234,12 +245,6 @@ enum RemindersSectionsProof {
             let previousWindows = ui.elements(root, kAXWindowsAttribute)
             try await ui.menu("File", ["Edit Sections…", "Edit Sections...", "Edit Sections"])
             let editor = try await ui.adoptSectionEditor(previousWindows: previousWindows, names: names)
-            if FileManager.default.fileExists(atPath: "/tmp/ab-r2-section-inspect") {
-                try FileManager.default.removeItem(atPath: "/tmp/ab-r2-section-inspect")
-                _ = FileManager.default.createFile(atPath: "/tmp/ab-r2-section-ready", contents: Data("1".utf8))
-                defer { try? FileManager.default.removeItem(atPath: "/tmp/ab-r2-section-ready") }
-                try await Task.sleep(for: .seconds(60))
-            }
             @MainActor func editorRow(_ name: String) throws -> AXUIElement {
                 let matches = ui.find(name, within: editor)
                 diagnostics["section_editor_title_matches"] = .number(Double(matches.count))
@@ -253,7 +258,7 @@ enum RemindersSectionsProof {
                 }
                 return matches[0]
             }
-            try await drag(try editorRow(names[1]), to: editorRow(names[0]), before: true)
+            try await drag(try editorRow(names[1]), to: editorRow(names[0]), before: true, reordering: true)
             let done = ui.find("Done", role: kAXButtonRole, within: editor)
             guard done.count == 1 else { throw SourceFailure.conflict }
             try press(done[0])
@@ -261,7 +266,9 @@ enum RemindersSectionsProof {
             checks["section_move_readback"] = .bool(try await observed(true, member: true))
         } catch { failure = "The test stopped at " + stage + ": " + String(describing: error) }
         if let ui = fixtureUI, let sheet = ui.ownedEditor {
-            if ui.editorIsOpen(sheet), NSWorkspace.shared.frontmostApplication?.processIdentifier == ui.app.processIdentifier {
+            if ui.editorIsOpen(sheet) {
+                try? await ui.focusApplication()
+                _ = AXUIElementPerformAction(sheet, kAXRaiseAction as CFString)
                 for name in ["Done", "Cancel"] {
                     let buttons = ui.find(name, role: kAXButtonRole, within: sheet)
                     if buttons.count == 1, AXUIElementPerformAction(buttons[0], kAXPressAction as CFString) == .success { break }
@@ -283,7 +290,7 @@ enum RemindersSectionsProof {
         }
         store.reset()
         checks["owned_list_cleanup"] = .bool(store.calendar(withIdentifier: identifier) == nil)
-        try PrivateReport.write(["list_id": identifier, "title": title, "cleanup_state": checks["owned_list_cleanup"]?.bool == true ? "verified_clean" : "pending", "fixture": fixture], to: ledger)
+        try PrivateReport.write(["list_id": identifier, "title": title, "cleanup_state": checks["owned_list_cleanup"]?.bool == true && checks["owned_sheet_cleanup"]?.bool != false ? "verified_clean" : "pending", "fixture": fixture], to: ledger)
         let required = ["section_order_readback", "section_membership_readback", "section_move_readback", "owned_list_cleanup"]
         return .object(["passed": .bool(failure.isEmpty && required.allSatisfy { checks[$0]?.bool == true } && checks.values.allSatisfy(\.bool)), "checks": .object(checks), "diagnostics": .object(diagnostics), "reason": .string(failure)])
     }
