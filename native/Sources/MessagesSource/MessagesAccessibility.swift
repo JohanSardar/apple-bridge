@@ -76,13 +76,13 @@ enum MessagesAccessibility {
                     var attributes: CFArray?
                     AXUIElementCopyAttributeNames(node, &attributes)
                     let names = attributes as? [String] ?? []
-                    let matches = names.filter { attribute in
-                        let text = value(node, attribute)
-                        return text.contains(guid) || mediaNames.contains(where: text.contains)
-                    }
+                    let guidMatches = names.filter { value(node, $0).contains(guid) }
+                    let filenameMatches = names.filter { attribute in mediaNames.contains(where: value(node, attribute).contains) }
                     let identifier = value(node, kAXIdentifierAttribute)
-                    if identifier == "Sticker" || !matches.isEmpty {
-                        nodes.append(["role": value(node, kAXRoleAttribute), "identifier": identifier, "matching_attributes": matches, "attributes": names, "outgoing_description": value(node, kAXDescriptionAttribute).hasPrefix("Your iMessage,"), "incoming_description": value(node, kAXDescriptionAttribute).hasPrefix("iMessage,"), "description_length": value(node, kAXDescriptionAttribute).count])
+                    if identifier == "Sticker" || !guidMatches.isEmpty || !filenameMatches.isEmpty {
+                        var selected: CFTypeRef?
+                        AXUIElementCopyAttributeValue(node, kAXSelectedAttribute as CFString, &selected)
+                        nodes.append(["role": value(node, kAXRoleAttribute), "identifier": identifier, "guid_attributes": guidMatches, "filename_attributes": filenameMatches, "attributes": names, "selected": (selected as? NSNumber)?.boolValue ?? false, "outgoing_description": value(node, kAXDescriptionAttribute).hasPrefix("Your iMessage,"), "incoming_description": value(node, kAXDescriptionAttribute).hasPrefix("iMessage,"), "description_length": value(node, kAXDescriptionAttribute).count])
                     }
                     return false
                 }
