@@ -292,6 +292,19 @@ enum MessagesAccessibility {
         guard AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &result) == .success else { return "" }
         return (result as? NSAttributedString)?.string ?? result as? String ?? ""
     }
+    static func inspectRetractedTarget(_ guid: String) throws {
+        try openMessage(guid, settle: 0.5, resetEditor: false)
+        var budget = 4000
+        let nodes = matching(try uiSession().root, budget: &budget) { _ in true }
+        let labels = Set(["You unsent a message", "You unsent a message.", "This message was unsent", "Delete", "Delete…"])
+        let values = nodes.map { element -> [String: Any] in
+            let identifier = value(element, kAXIdentifierAttribute)
+            var actions: CFArray?
+            AXUIElementCopyActionNames(element, &actions)
+            return ["role": value(element, kAXRoleAttribute), "identifier": identifier.range(of: #"^[A-Za-z_]+$"#, options: .regularExpression) != nil ? identifier : "", "guid_matches": identifier == guid || identifier == "message-" + guid, "retracted_label": [kAXTitleAttribute, kAXDescriptionAttribute, kAXValueAttribute].contains { labels.contains(value(element, $0)) }, "delete_action": (actions as? [String] ?? []).contains { $0.hasPrefix("Name:Delete") }]
+        }
+        try PrivateReport.write(["nodes": values, "budget_remaining": budget], to: PrivateReport.directory.appendingPathComponent("messages-retracted-target-diagnostic.json"))
+    }
     static func clearTaggedDraft(_ tag: String, groupHandles: [String] = []) throws -> Bool {
         MessagesUISession.activate()
         if !groupHandles.isEmpty {

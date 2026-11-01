@@ -13,6 +13,9 @@ import (
 )
 
 func runNativeMessagesSelfTest(ctx context.Context, e Evidence) (result Evidence) {
+	if os.Getenv("APPLE_BRIDGE_MESSAGE_CLEANUP_RUN") != "" {
+		return runMessagesCleanupRecovery(ctx, e)
+	}
 	before, problem := cleanupSnapshot(ctx, "messages")
 	if problem != nil {
 		e.Status = "limited"

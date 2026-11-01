@@ -24,7 +24,7 @@ func runMessagesCleanupRecovery(ctx context.Context, e Evidence) (result Evidenc
 	}
 	run := os.Getenv("APPLE_BRIDGE_MESSAGE_CLEANUP_RUN")
 	key := os.Getenv("APPLE_BRIDGE_MESSAGE_CLEANUP_CACHE")
-	if !regexp.MustCompile(`^variant_[A-F0-9]{32}$`).MatchString(run) || !regexp.MustCompile(`^[a-f0-9]{64}$`).MatchString(key) {
+	if !regexp.MustCompile(`^(variant|selftest)_[A-F0-9]{32}$`).MatchString(run) || !regexp.MustCompile(`^[a-f0-9]{64}$`).MatchString(key) {
 		add("explicit_current_run_recovery", false)
 		return
 	}
@@ -36,7 +36,7 @@ func runMessagesCleanupRecovery(ctx context.Context, e Evidence) (result Evidenc
 		Scenario string `json:"scenario"`
 		Baseline int64  `json:"baseline_max_row_id"`
 	}
-	if err != nil || hex.EncodeToString(digest[:]) != os.Getenv("APPLE_BRIDGE_MESSAGE_CLEANUP_LEDGER_SHA256") || json.Unmarshal(data, &manifest) != nil || manifest.RunID != run || manifest.Scenario != "MSG-AUDIO-MESSAGE" || manifest.Baseline <= 0 {
+	if err != nil || hex.EncodeToString(digest[:]) != os.Getenv("APPLE_BRIDGE_MESSAGE_CLEANUP_LEDGER_SHA256") || json.Unmarshal(data, &manifest) != nil || manifest.RunID != run || manifest.Scenario != e.Scenario || (manifest.Scenario != "MSG-AUDIO-MESSAGE" && manifest.Scenario != "MSG-SELFTEST") || manifest.Baseline <= 0 {
 		add("unchanged_current_run_ledger", false)
 		return
 	}
@@ -98,24 +98,16 @@ func runMessagesCleanupRecovery(ctx context.Context, e Evidence) (result Evidenc
 			add("recovery_ledger_saved", saved)
 		}
 	}()
-	cache, err := os.UserCacheDir()
+	dir, err := os.MkdirTemp("", "ab-message-recovery-")
 	if err != nil {
 		add("recovery_signed_helper", false)
 		return
 	}
-	app := filepath.Join(cache, "AppleBridgeDev", "signed-apps", key, "AppleBridgeHelper.app")
-	if _, err := os.Stat(app); os.IsNotExist(err) {
-		dir, err := os.MkdirTemp("", "ab-message-recovery-")
-		if err != nil {
-			add("recovery_signed_helper", false)
-			return
-		}
-		defer os.RemoveAll(dir)
-		app = filepath.Join(dir, "AppleBridgeHelper.app")
-		if world.BuildHelper(ctx, app) != nil {
-			add("recovery_signed_helper", false)
-			return
-		}
+	defer os.RemoveAll(dir)
+	app := filepath.Join(dir, "AppleBridgeHelper.app")
+	if world.BuildHelper(ctx, app) != nil {
+		add("recovery_signed_helper", false)
+		return
 	}
 	if exec.CommandContext(ctx, "codesign", "--verify", "--strict", app).Run() != nil {
 		add("recovery_signed_helper", false)
@@ -136,6 +128,6 @@ func runMessagesCleanupRecovery(ctx context.Context, e Evidence) (result Evidenc
 	add("owned_messages_cleanup", cleaned)
 	result.Metrics["deleted_owned_messages"] = proof.Deleted
 	result.Metrics["remaining_owned_messages"] = proof.Remaining
-	result.Conditions = map[string]string{"reason": "The CAF attachment did not have the native audio-message flag. This recovery sends no new messages and removes only the explicitly selected run's rows."}
+	result.Conditions = map[string]string{"reason": "This recovery sends no new messages and removes only the explicitly selected run's rows."}
 	return
 }

@@ -311,7 +311,9 @@ public actor MessagesCommands {
         for field in ["text", "is_from_me", "edit_history", "retracted_parts", "retracted_at", "deleted_at"] {
             guard current[field] == prepared.nativeState["target"][field] else { throw SourceFailure.conflict }
         }
-        let ui=try await MessagesAccessibility.perform(prepared)
+        let ui: JSON
+        do { ui = try await MessagesAccessibility.perform(prepared) }
+        catch { ui = .object(["target_verified": .bool(false), "ui_error": .string(String(describing: error))]) }
         let deadline=ContinuousClock.now.advanced(by:.seconds(10))
         let operation=try MessagesAction(operation:prepared.action["op"].string)
         repeat {

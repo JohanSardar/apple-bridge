@@ -74,7 +74,8 @@ public enum MessagesCleanup {
             guard let remy = groupHandles["REMY_IMESSAGE_TEST_HANDLE"], let ben = groupHandles["BEN_GROUP_TEST_HANDLE"], remy != ben else { throw ProbeFailure.invalidArguments }
             if try await MessagesAccessibility.clearTaggedDraft(tag, groupHandles: [remy, ben]) { draftsCleared += 1 }
         }
-        func candidates() throws -> [(String, JSON)] {
+        var inaccessibleOwned: Set<String> = []
+        func candidates() async throws -> [(String, JSON)] {
             if ownedOnly {
                 let run = String(tag.dropFirst(9).dropLast())
                 let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/AppleBridgeDev/messages-command-cleanup/" + run + ".json.creations.json")
@@ -142,7 +143,13 @@ public enum MessagesCleanup {
                     continue
                 }
                 guard target["text"].string.range(of: #"\[ab-test [A-Za-z0-9_-]+\]"#, options: .regularExpression) != nil else {
-                    if ownedOnly, row.integer("date_retracted") == 0 { throw SourceFailure.conflict }
+                    if ownedOnly, row.integer("date_retracted") == 0 {
+                        if !target["retracted_parts"].array.isEmpty {
+                            if inaccessibleOwned.insert(row["guid"]).inserted { try await MessagesAccessibility.inspectRetractedTarget(row["guid"]) }
+                            continue
+                        }
+                        throw SourceFailure.conflict
+                    }
                     continue
                 }
                 guard tag.isEmpty || target["text"].string.contains(tag) else {
@@ -153,7 +160,7 @@ public enum MessagesCleanup {
             }
             return result
         }
-        let initial = try candidates().count
+        let initial = try await candidates().count
         var deleted = 0
         var failure = ""
         func progress(_ remaining: Int, _ phase: String) {
@@ -161,7 +168,7 @@ public enum MessagesCleanup {
         }
         progress(initial,"starting")
         for _ in 0..<200 {
-            let remaining = try candidates()
+            let remaining = try await candidates()
             guard let (guid, target) = remaining.first else { break }
             let prepared = Prepared(nativeState: .object(["target": target, "cleanup_authorized": .bool(true)]), fingerprint: "authorized-tagged-self-cleanup", action: .object(["op": .string("messages.delete_message"), "native_key": .string(guid)]))
             var phase = "open"
@@ -178,7 +185,7 @@ public enum MessagesCleanup {
             var after = remaining
             var removed: Set<String> = []
             repeat {
-                after = try candidates()
+                after = try await candidates()
                 removed = Self.removedOwnedIDs(before: beforeIDs, after: Set(after.map { $0.0 }))
                 if !removed.isEmpty { break }
                 try await Task.sleep(for: .milliseconds(50))
@@ -187,7 +194,8 @@ public enum MessagesCleanup {
             deleted += removed.count
             progress(after.count,"deleting")
         }
-        let remaining = try candidates().count
+        let remaining = try await candidates().count + inaccessibleOwned.count
+        if !inaccessibleOwned.isEmpty, failure.isEmpty { failure = "owned_unsent_placeholder_not_removed" }
         progress(remaining,failure.isEmpty ? "finished" : failure)
         return try JSONSerialization.data(withJSONObject: ["initial_tagged_self_messages": initial, "deleted": deleted, "remaining_tagged_self_messages": remaining, "all_dates": true, "drafts_cleared": draftsCleared, "only_tagged_self_messages": approved.isEmpty, "approved_contacts_included": !approved.isEmpty, "tag_filtered": !tag.isEmpty, "failure": failure, "passed": remaining == 0])
     }
