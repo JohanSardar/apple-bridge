@@ -1,17 +1,17 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[3.96 5.76 5.85] cpu_idle=85% cpus=10 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[4.47 5.12 5.48] cpu_idle=62% cpus=10 other_heavy=3"
   },
-  "run_id": "run_01M6AJCJS584F78C679DKCAQW0",
+  "run_id": "run_01M6ARKX505NTJJPWHF6JPQVHH",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MSG-SEND-LATER",
   "level": "sim",
   "passed": true,
-  "git_sha": "8d9550ea25101dfc1686e17e33be84f33d0feded",
-  "at": "2026-11-01T03:27:57.221032Z",
+  "git_sha": "3a5962172c0187ef1f7f2677f3d261ee7d748c43",
+  "at": "2026-11-01T05:16:48.67227Z",
   "assertions": [
     {
       "name": "native_readback_checks_build",
@@ -22,59 +22,15 @@
       "passed": true
     },
     {
-      "name": "incomplete_deleted_selection_rejected",
-      "passed": true
-    },
-    {
       "name": "owned_deleted_selection_allowed",
       "passed": true
     },
     {
-      "name": "other_run_protected",
+      "name": "wrong_scheduled_date_rejected",
       "passed": true
     },
     {
-      "name": "exact_phone_is_self",
-      "passed": true
-    },
-    {
-      "name": "phone_suffix_is_not_self",
-      "passed": true
-    },
-    {
-      "name": "phone_substring_rejected",
-      "passed": true
-    },
-    {
-      "name": "scheduled_date_exact_readback",
-      "passed": true
-    },
-    {
-      "name": "invalid_pin_state_rejected",
-      "passed": true
-    },
-    {
-      "name": "empty_chat_rejected",
-      "passed": true
-    },
-    {
-      "name": "empty_deleted_selection_rejected",
-      "passed": true
-    },
-    {
-      "name": "native_pin_order",
-      "passed": true
-    },
-    {
-      "name": "group_with_self_rejected",
-      "passed": true
-    },
-    {
-      "name": "other_recipient_email_rejected",
-      "passed": true
-    },
-    {
-      "name": "accessibility_input_interference_refused",
+      "name": "existing_deleted_selection_rejected",
       "passed": true
     },
     {
@@ -82,7 +38,87 @@
       "passed": true
     },
     {
+      "name": "missing_build_rejected",
+      "passed": true
+    },
+    {
+      "name": "other_read_state_chat_refused",
+      "passed": true
+    },
+    {
+      "name": "other_run_read_state_target_refused",
+      "passed": true
+    },
+    {
+      "name": "accessibility_input_without_automation",
+      "passed": true
+    },
+    {
+      "name": "activation_waits_for_foreground_readiness",
+      "passed": true
+    },
+    {
+      "name": "other_recipient_email_rejected",
+      "passed": true
+    },
+    {
+      "name": "exact_phone_is_self",
+      "passed": true
+    },
+    {
+      "name": "incomplete_deleted_selection_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_tag_rejected",
+      "passed": true
+    },
+    {
+      "name": "phone_substring_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_pin_state_rejected",
+      "passed": true
+    },
+    {
+      "name": "group_with_self_rejected",
+      "passed": true
+    },
+    {
+      "name": "valid_pin_indices",
+      "passed": true
+    },
+    {
+      "name": "quoted_tag_protected",
+      "passed": true
+    },
+    {
+      "name": "scheduled_date_exact_readback",
+      "passed": true
+    },
+    {
       "name": "invalid_pin_index_rejected",
+      "passed": true
+    },
+    {
+      "name": "accessibility_input_interference_refused",
+      "passed": true
+    },
+    {
+      "name": "other_run_protected",
+      "passed": true
+    },
+    {
+      "name": "baseline_message_protected",
+      "passed": true
+    },
+    {
+      "name": "empty_deleted_selection_rejected",
+      "passed": true
+    },
+    {
+      "name": "stale_build_rejected",
       "passed": true
     },
     {
@@ -90,23 +126,19 @@
       "passed": true
     },
     {
+      "name": "native_pin_order",
+      "passed": true
+    },
+    {
+      "name": "receipt_preference_change_detected",
+      "passed": true
+    },
+    {
+      "name": "new_conversation_preference_detected",
+      "passed": true
+    },
+    {
       "name": "exact_recipient_phone",
-      "passed": true
-    },
-    {
-      "name": "current_build_qualified",
-      "passed": true
-    },
-    {
-      "name": "missing_build_rejected",
-      "passed": true
-    },
-    {
-      "name": "other_chat_rejected",
-      "passed": true
-    },
-    {
-      "name": "accessibility_input_without_automation",
       "passed": true
     },
     {
@@ -118,15 +150,19 @@
       "passed": true
     },
     {
-      "name": "duplicate_deleted_selection_rejected",
+      "name": "current_read_state_fixture_allowed",
       "passed": true
     },
     {
-      "name": "baseline_message_protected",
+      "name": "older_read_state_target_refused",
       "passed": true
     },
     {
-      "name": "invalid_tag_rejected",
+      "name": "other_chat_rejected",
+      "passed": true
+    },
+    {
+      "name": "empty_chat_rejected",
       "passed": true
     },
     {
@@ -134,23 +170,7 @@
       "passed": true
     },
     {
-      "name": "valid_pin_indices",
-      "passed": true
-    },
-    {
-      "name": "existing_deleted_selection_rejected",
-      "passed": true
-    },
-    {
-      "name": "untagged_message_protected",
-      "passed": true
-    },
-    {
-      "name": "stale_build_rejected",
-      "passed": true
-    },
-    {
-      "name": "quoted_tag_protected",
+      "name": "phone_suffix_is_not_self",
       "passed": true
     },
     {
@@ -158,7 +178,23 @@
       "passed": true
     },
     {
-      "name": "wrong_scheduled_date_rejected",
+      "name": "current_build_qualified",
+      "passed": true
+    },
+    {
+      "name": "owned_send_housekeeping_preserves_preferences",
+      "passed": true
+    },
+    {
+      "name": "untagged_read_state_target_refused",
+      "passed": true
+    },
+    {
+      "name": "duplicate_deleted_selection_rejected",
+      "passed": true
+    },
+    {
+      "name": "untagged_message_protected",
       "passed": true
     },
     {
