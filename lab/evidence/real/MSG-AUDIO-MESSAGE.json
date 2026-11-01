@@ -1,20 +1,30 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[5.83 4.91 6.55] cpu_idle=68% cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[24.08 14.99 13.19] cpu_idle=29% cpus=8 other_heavy=0"
   },
   "status": "limited",
-  "run_id": "run_01M650NFB0868WXWWTBWPDTJQS",
+  "run_id": "run_01M6AEY7J1G8XX65E97Z9G2GNE",
   "metrics": {
     "capture_observer_resets": 0,
+    "cleanup_counts": {
+      "after_count": 160349,
+      "before_count": 160349,
+      "created_count": 0,
+      "passed": true
+    },
     "writes_submitted": 0
   },
   "scenario": "MSG-AUDIO-MESSAGE",
   "level": "real",
   "passed": false,
-  "git_sha": "cd736b6bdf6f556b3e7a7dd514fbc4f7d2d45c78",
-  "at": "2026-10-29T23:42:02.080271Z",
+  "git_sha": "ced302551f4cb488b3534c217d16918131e97c1a",
+  "at": "2026-11-01T02:27:41.249191Z",
   "assertions": [
+    {
+      "name": "cleanup_baseline_restored",
+      "passed": true
+    },
     {
       "name": "credential_backend_override_restored",
       "passed": true
@@ -25,6 +35,6 @@
     "air"
   ],
   "conditions": {
-    "reason": "needs native media cleanup qualification; audio remains fail-closed"
+    "reason": "The self conversation contains unread existing messages. This check cannot open it without changing their read state. Read those messages in Messages before rerunning the check."
   }
 }

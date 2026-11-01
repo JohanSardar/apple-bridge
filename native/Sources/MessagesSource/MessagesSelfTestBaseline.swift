@@ -11,6 +11,40 @@ public enum MessagesSelfTestBaselineFailure: Error, CustomStringConvertible {
     }
 }
 
+public struct MessagesContentBaseline: Sendable {
+    public let chat: String
+    private let lastMessageROWID: Int64
+    private let messagesDigest: String
+    private let preferencesDigest: String
+    private let pins: [String]
+
+    public static func capture(_ chat: String) throws -> MessagesContentBaseline {
+        let reader = try MessagesSelfTestBaseline.reader()
+        let peers = try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID LEFT JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [chat]).map { $0["id"] }
+        guard MessagesSelfTestIsolation.isSelfChat(peers, own: try MessagesSelfTestIsolation.accountHandles(database: MessagesDatabase())) else { throw SourceFailure.invalid }
+        guard try reader.query("SELECT 1 FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? AND m.is_from_me=0 AND m.is_read=0 AND COALESCE(m.associated_message_type,0)=0 AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=m.ROWID) LIMIT 1", [chat]).isEmpty else { throw MessagesSelfTestBaselineFailure.unreadMessages }
+        let maximum = try reader.maximum()
+        return MessagesContentBaseline(chat: chat, lastMessageROWID: maximum, messagesDigest: try MessagesSelfTestBaseline.digest(chat, through: maximum), preferencesDigest: try preferenceDigest(MessagesParity.properties(chat)), pins: try MessagesPins.read())
+    }
+
+    public static func preferenceDigest(_ properties: [String: Any]) throws -> String {
+        func canonical(_ value: Any) -> Any {
+            if let date = value as? Date { return ["date": date.timeIntervalSinceReferenceDate] }
+            if let bytes = value as? Data { return ["data_digest": BodyDigest.hash(bytes)] }
+            if let fields = value as? [String: Any] { return fields.mapValues(canonical) }
+            if let items = value as? [Any] { return items.map(canonical) }
+            return value
+        }
+        let transient = Set(["lastSeenMessageGuid", "LSMD", "numberOfTimesRespondedtoThread"])
+        let preferences = properties.filter { !transient.contains($0.key) }.mapValues(canonical)
+        return BodyDigest.hash(try JSONSerialization.data(withJSONObject: preferences, options: [.sortedKeys]))
+    }
+
+    public func restoreAndVerify() throws -> Bool {
+        try MessagesSelfTestBaseline.digest(chat, through: lastMessageROWID) == messagesDigest && Self.preferenceDigest(MessagesParity.properties(chat)) == preferencesDigest && MessagesPins.read() == pins
+    }
+}
+
 public struct MessagesSelfTestBaseline: Sendable {
     public let chat: String
     public let lastMessageROWID: Int64
@@ -52,17 +86,31 @@ public struct MessagesSelfTestBaseline: Sendable {
 
     @UIActor
     public static func capture(_ chat: String) throws -> MessagesSelfTestBaseline {
+        var checkpoints: [String: Any] = ["capture_started": true]
+        func checkpoint(_ name: String, _ value: Any = true) {
+            checkpoints[name] = value
+            try? PrivateReport.write(checkpoints, to: PrivateReport.directory.appendingPathComponent("messages-baseline-diagnostic.json"))
+        }
+        checkpoint("capture_started")
         let reader = try reader()
-        guard try reader.query("SELECT 1 FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? AND m.is_from_me=0 AND m.is_read=0 AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=m.ROWID) LIMIT 1", [chat]).isEmpty else { throw MessagesSelfTestBaselineFailure.unreadMessages }
+        guard try reader.query("SELECT 1 FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? AND m.is_from_me=0 AND m.is_read=0 AND COALESCE(m.associated_message_type,0)=0 AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=m.ROWID) LIMIT 1", [chat]).isEmpty else { throw MessagesSelfTestBaselineFailure.unreadMessages }
+        checkpoint("unread_preflight_passed")
         let last = try reader.maximum()
         let digest = try digest(chat, through: last)
         let prepared = try target(chat)
+        checkpoint("target_resolved")
         try MessagesAccessibility.openMessage(prepared.nativeState["message_guid"].string, settle: 0.5, resetEditor: false)
+        checkpoint("navigation_completed")
         let (session, titles) = try MessagesParity.menu(prepared)
+        checkpoint("conversation_menu_count", titles.count)
         try MessagesParity.dismiss(session)
+        checkpoint("conversation_menu_dismissed")
         guard titles.contains("Show Alerts") != titles.contains("Hide Alerts") else { throw SourceFailure.capabilityUnproven }
+        checkpoint("alert_state_verified")
         let (receiptSession, _, receiptValue) = try MessagesParity.receiptControl(prepared)
+        checkpoint("receipts_control_verified")
         try MessagesParity.dismiss(receiptSession)
+        checkpoint("capture_completed")
         return MessagesSelfTestBaseline(chat: chat, lastMessageROWID: last, pins: try MessagesPins.read(), muted: titles.contains("Show Alerts"), receipts: receiptValue, receiptsSetting: try receiptSetting(chat), messagesDigest: digest)
     }
 

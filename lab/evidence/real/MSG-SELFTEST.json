@@ -1,27 +1,99 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[18.68 42.31 68.43] cpu_idle=48% cpus=8 other_heavy=0"
+    "summary": "air: load=[18.14 42.44 33.07] cpu_idle=56% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M64VQ5D4JD9YJM7F0B0PYQYZ",
+  "status": "environment-limited",
+  "run_id": "run_01M6AG7ND12JSFA6EZYQG237YE",
   "metrics": {
     "capture_observer_resets": 0,
     "cleanup_counts": {
-      "after_count": 160287,
-      "before_count": 160287,
+      "after_count": 160349,
+      "before_count": 160349,
       "created_count": 0,
       "passed": true
-    }
+    },
+    "os_build": "Version 26.7.1 (Build 25G241)",
+    "remaining_file_messages": 0,
+    "remaining_text_messages": 0,
+    "selftest_run_id": "selftest_7B34E0F250CA4FBC9135D65E662B7254",
+    "selftest_state": "limited",
+    "ui_deferred": false
   },
   "scenario": "MSG-SELFTEST",
   "level": "real",
   "passed": false,
-  "git_sha": "184acc98e1f5b503d718f76dd303429d6e7ddb77",
-  "at": "2026-10-29T22:15:34.564521Z",
+  "git_sha": "b980e2216463fa6d89d076e5d5a283d3ff0e3362",
+  "at": "2026-11-01T02:50:18.913686Z",
   "assertions": [
     {
-      "name": "real_world",
+      "name": "selftest_report",
+      "passed": true
+    },
+    {
+      "name": "existing_self_chat_baseline",
+      "passed": false,
+      "detail": "The self conversation contains unread existing messages. This check cannot open it without changing their read state. Read those messages in Messages before rerunning the check."
+    },
+    {
+      "name": "required_send_text",
       "passed": false
+    },
+    {
+      "name": "required_send_file",
+      "passed": false
+    },
+    {
+      "name": "required_reply",
+      "passed": false
+    },
+    {
+      "name": "required_love_add",
+      "passed": false
+    },
+    {
+      "name": "required_love_remove",
+      "passed": false
+    },
+    {
+      "name": "required_emoji_add",
+      "passed": false
+    },
+    {
+      "name": "required_emoji_remove",
+      "passed": false
+    },
+    {
+      "name": "required_edit",
+      "passed": false
+    },
+    {
+      "name": "required_unsend",
+      "passed": false
+    },
+    {
+      "name": "required_mark_read",
+      "passed": false
+    },
+    {
+      "name": "required_mark_unread",
+      "passed": false
+    },
+    {
+      "name": "required_delete_message",
+      "passed": false
+    },
+    {
+      "name": "required_cleanup",
+      "passed": false
+    },
+    {
+      "name": "independent_file_cleanup",
+      "passed": true
+    },
+    {
+      "name": "independent_tagged_cleanup",
+      "passed": true
     },
     {
       "name": "cleanup_baseline_restored",

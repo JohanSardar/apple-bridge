@@ -52,11 +52,26 @@ enum MessagesAccessibility {
                 var textBudget = 100
                 return matching(element, budget: &textBudget) { node in [kAXValueAttribute, kAXTitleAttribute, kAXDescriptionAttribute].contains { [expected, "You: " + expected].contains(value(node, $0)) } }.count > 0 && textBudget > 0
             }
-            guard budget > 0, rows.count == 1 else { throw MessagesUIFailure.targetUnavailable }
+            guard budget > 0, rows.count == 1 else {
+                var diagnosticBudget = 4000
+                let candidates = matching(root, budget: &diagnosticBudget) { value($0, kAXRoleAttribute) == kAXRowRole }
+                let samples = candidates.map { row -> [String: Any] in
+                    var nested = 100
+                    let exact = matching(row, budget: &nested) { node in
+                        [kAXValueAttribute, kAXTitleAttribute, kAXDescriptionAttribute].contains { value(node, $0).contains(expected) }
+                    }.count
+                    return ["contains_expected_count": exact, "budget_remaining": nested]
+                }
+                try? PrivateReport.write(["stage": "conversation_target", "matching_rows": rows.count, "budget_remaining": budget, "rows": samples], to: PrivateReport.directory.appendingPathComponent("messages-target-diagnostic.json"))
+                throw MessagesUIFailure.targetUnavailable
+            }
             return rows[0]
         }
         if !mediaNames.isEmpty {
-            let bubbles = matching(root, budget: &budget) { value($0, kAXIdentifierAttribute) == "Sticker" }
+            let bubbles = matching(root, budget: &budget) { element in
+                let identifier = value(element, kAXIdentifierAttribute)
+                return identifier == "Sticker" || identifier == guid || identifier == "message-" + guid
+            }
             var candidates: [JSON] = []
             for bubble in bubbles {
                 var nested = 150
@@ -65,11 +80,12 @@ enum MessagesAccessibility {
                     values += [kAXDescriptionAttribute, kAXValueAttribute, "AXURL", kAXTitleAttribute, "AXFilename", kAXHelpAttribute, "AXDocument", "AXValueDescription"].map { .string(value(child, $0)) }
                     return false
                 }
+                if [guid, "message-" + guid].contains(value(bubble, kAXIdentifierAttribute)) { values += mediaNames.map(JSON.string) }
                 let description = value(bubble, kAXDescriptionAttribute)
                 let direction = MessagesMediaCleanupProof.direction(description, names: Set(mediaNames)).map(JSON.bool) ?? .null
                 candidates.append(.object(["outgoing": direction, "values": nested > 0 ? .array(values) : .array([])]))
             }
-            guard budget > 0, let index = MessagesMediaCleanupProof.targetIndex(candidates, names: Set(mediaNames), outgoing: outgoing, allowSelfEcho: prepared.nativeState["target"]["cleanup_self_echo"].bool) else { throw MessagesUIFailure.targetUnavailable }
+            guard budget > 0, let index = MessagesMediaCleanupProof.targetIndex(candidates, names: Set(mediaNames), outgoing: outgoing, allowSelfEcho: prepared.nativeState["target"]["cleanup_self_echo"].bool, equivalentOwned: prepared.nativeState["target"]["cleanup_equivalent_owned_media"].bool) else { throw MessagesUIFailure.targetUnavailable }
             return bubbles[index]
         }
         let targets = matching(root, budget: &budget) { element in
@@ -92,7 +108,8 @@ enum MessagesAccessibility {
             throw MessagesUIFailure.targetUnavailable
         }
         guard targets.count == 1 || prepared.nativeState["cleanup_authorized"].bool else { throw MessagesUIFailure.targetAmbiguous }
-        return targets[0]
+        let directed = targets.filter { value($0, kAXDescriptionAttribute).hasPrefix(outgoing ? "Your iMessage," : "iMessage,") }
+        return directed.first ?? targets[0]
     }
     private static func focus(_ root: AXUIElement) -> String {
         var result: CFTypeRef?
@@ -116,6 +133,36 @@ enum MessagesAccessibility {
             guard AXUIElementCopyActionNames(bubble, &actions) == .success,
                   (actions as? [String] ?? []).contains(where: { $0.hasPrefix("Name:" + prepared.action["messages"]["emoji"].string + "\n") }) else { throw SourceFailure.capabilityUnproven }
         }
+    }
+    static func validateConversation(_ prepared: Prepared) throws {
+        let chat = prepared.action["native_key"].string
+        let message = prepared.nativeState["message_guid"].string
+        let reader = try MessagesSelfTestBaseline.reader()
+        let memberships = try reader.query("SELECT c.guid FROM chat c JOIN chat_message_join j ON j.chat_id=c.ROWID JOIN message m ON m.ROWID=j.message_id WHERE m.guid=? AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=m.ROWID)", [message]).map { $0["guid"] }
+        let deadline = Date().addingTimeInterval(4)
+        repeat {
+            var budget = 4000
+            let texts = matching(try uiSession().root, budget: &budget) { value($0, kAXIdentifierAttribute) == "CKBalloonTextView" }.map { textValue($0) }
+            if budget > 0, MessagesSelfTestIsolation.matchesConversation(chat: chat, memberships: memberships, expected: prepared.nativeState["target"]["text"].string, visibleTexts: texts) { return }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        } while Date() < deadline
+        throw MessagesUIFailure.targetUnavailable
+    }
+    private static func performReadState(_ prepared: Prepared) throws -> JSON {
+        try openMessage(prepared.nativeState["message_guid"].string, settle: 0.5, resetEditor: false)
+        try validateConversation(prepared)
+        let session = try uiSession()
+        if prepared.action["op"].string == "messages.mark_unread" {
+            let menus = MessagesVariantUI.find(session.root, role: kAXMenuBarItemRole, name: "Conversation")
+            guard menus.count == 1 else { throw MessagesUIFailure.menuUnavailable }
+            try session.fence()
+            try MessagesVariantUI.press(menus[0])
+            let items = MessagesVariantUI.find(menus[0], role: kAXMenuItemRole, name: "Mark as Unread")
+            guard items.count == 1 else { try? session.press(MessagesUISession.escape); throw MessagesUIFailure.menuUnavailable }
+            try session.fence()
+            try MessagesVariantUI.press(items[0])
+        }
+        return .object(["target_verified": .bool(true)])
     }
     static func press(_ session: MessagesUISession, title: String) throws {
         let deadline = Date().addingTimeInterval(2)
@@ -181,7 +228,7 @@ enum MessagesAccessibility {
             }
             if let editor {
                 let previous = textValue(editor)
-                guard previous.isEmpty || previous.contains("[ab-test ") else { throw MessagesUIFailure.draftPresent }
+                guard MessagesUISession.canReplaceDraft(previous, with: text) else { throw MessagesUIFailure.draftPresent }
                 try session.type(text, into: editor, value: textValue)
                 return
             }
@@ -206,14 +253,15 @@ enum MessagesAccessibility {
         RunLoop.current.run(until: Date().addingTimeInterval(0.2))
         return true
     }
-    private static func resetTaggedEditor() throws -> Bool {
+    private static func resetTaggedEditor(_ tag: String) throws -> Bool {
         let session = try uiSession(), root = session.root
         var budget = 2000
         let cancel = matching(root, budget: &budget) { value($0, kAXDescriptionAttribute) == "Cancel edit" }
         guard cancel.count == 1 else { return false }
+        guard tag.range(of: #"^\[ab-test [A-Za-z0-9_-]+\]$"#, options: .regularExpression) != nil else { throw MessagesUIFailure.draftPresent }
         budget = 2000
-        let fields = matching(root, budget: &budget) { value($0, kAXRoleAttribute) == kAXTextFieldRole && value($0, kAXIdentifierAttribute) != "messageBodyField" && textValue($0).range(of: #"\[ab-test [A-Za-z0-9_-]+\]"#, options: .regularExpression) != nil }
-        guard !fields.isEmpty else { return false }
+        let fields = matching(root, budget: &budget) { value($0, kAXRoleAttribute) == kAXTextFieldRole && value($0, kAXIdentifierAttribute) != "messageBodyField" && textValue($0).hasPrefix(tag) }
+        guard !fields.isEmpty else { throw MessagesUIFailure.draftPresent }
         guard AXUIElementPerformAction(cancel[0], kAXPressAction as CFString) == .success else {
             try? PrivateReport.write(["stage": "cancel_tagged_editor"], to: PrivateReport.validate(PrivateReport.directory.appendingPathComponent("messages-prepare-diagnostic.json").path))
             throw SourceFailure.conflict
@@ -222,7 +270,7 @@ enum MessagesAccessibility {
         RunLoop.current.run(until: Date().addingTimeInterval(0.35))
         return true
     }
-    static func openMessage(_ guid: String, settle: TimeInterval = 3, resetEditor: Bool = true) throws {
+    static func openMessage(_ guid: String, settle: TimeInterval = 3, resetEditor: Bool = true, ownedTag: String = "") throws {
         var components = URLComponents()
         components.scheme = "imessage"
         components.path = "open"
@@ -230,7 +278,7 @@ enum MessagesAccessibility {
         guard let url = components.url else { throw MessagesUIFailure.navigationUnavailable }
         MessagesUISession.activate()
         if resetEditor {
-            _ = try resetTaggedEditor()
+            _ = try resetTaggedEditor(ownedTag)
         } else {
             let root = try uiSession().root
             var budget = 2000
@@ -243,6 +291,19 @@ enum MessagesAccessibility {
         var result: CFTypeRef?
         guard AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &result) == .success else { return "" }
         return (result as? NSAttributedString)?.string ?? result as? String ?? ""
+    }
+    static func inspectRetractedTarget(_ guid: String) throws {
+        try openMessage(guid, settle: 0.5, resetEditor: false)
+        var budget = 4000
+        let nodes = matching(try uiSession().root, budget: &budget) { _ in true }
+        let labels = Set(["You unsent a message", "You unsent a message.", "This message was unsent", "Delete", "Delete…"])
+        let values = nodes.map { element -> [String: Any] in
+            let identifier = value(element, kAXIdentifierAttribute)
+            var actions: CFArray?
+            AXUIElementCopyActionNames(element, &actions)
+            return ["role": value(element, kAXRoleAttribute), "identifier": identifier.range(of: #"^[A-Za-z_]+$"#, options: .regularExpression) != nil ? identifier : "", "guid_matches": identifier == guid || identifier == "message-" + guid, "retracted_label": [kAXTitleAttribute, kAXDescriptionAttribute, kAXValueAttribute].contains { labels.contains(value(element, $0)) }, "delete_action": (actions as? [String] ?? []).contains { $0.hasPrefix("Name:Delete") }]
+        }
+        try PrivateReport.write(["nodes": values, "budget_remaining": budget], to: PrivateReport.directory.appendingPathComponent("messages-retracted-target-diagnostic.json"))
     }
     static func clearTaggedDraft(_ tag: String, groupHandles: [String] = []) throws -> Bool {
         MessagesUISession.activate()
@@ -273,7 +334,7 @@ enum MessagesAccessibility {
         components.queryItems = [URLQueryItem(name: "addresses", value: handles.joined(separator: ","))]
         guard let url = components.url else { throw MessagesUIFailure.navigationUnavailable }
         MessagesUISession.activate()
-        _ = try resetTaggedEditor()
+        _ = try resetTaggedEditor("")
         try MessagesNavigation.open(url)
         RunLoop.current.run(until: Date().addingTimeInterval(3))
         let session = try uiSession(), root = session.root
@@ -301,6 +362,7 @@ enum MessagesAccessibility {
     static func perform(_ prepared: Prepared) throws -> JSON {
         let action = try MessagesAction(operation: prepared.action["op"].string)
         let args = prepared.action["messages"]
+        if [.markRead, .markUnread].contains(action) { return try performReadState(prepared) }
         let session = try uiSession(), root = session.root
         let bubble = try target(root, prepared: prepared)
         let initialFocus = focus(root)
@@ -331,7 +393,7 @@ enum MessagesAccessibility {
             let title = String($0.split(separator: "\n").first ?? "").replacingOccurrences(of: "Name:", with: "").replacingOccurrences(of: "…", with: "")
             return title == normalized
         }
-        if action != .reply && copied == .success && direct.count == 1 {
+        if copied == .success && direct.count == 1 {
             guard AXUIElementPerformAction(bubble, direct[0] as CFString) == .success else { throw SourceFailure.conflict }
         } else {
             try contextMenu(bubble, session: session)

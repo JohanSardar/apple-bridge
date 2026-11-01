@@ -564,7 +564,7 @@ features:
       - {id: NATIVE-MEDIA-POSTERS, levels: [sim]}
     notes: Sim, cap, yield, posters and native export-safety levels pass. Real and replica cold-arrival runs are limited by the own-handle send restriction above. The final Messages tagged cleanup (design/MILESTONE-GATES.md) covers the earlier W1 file bubbles in the own-handle chat; nothing was sent for this feature.
     limits:
-      - {"scenario": "WEB-MEDIA-VARIANTS", "level": "real", "reason": "limited: needs native attachment cleanup qualification. Scoped recovery could not locate six media rows created by this T63 run; zero foreign rows were deleted. Further real attachment sends are blocked before world creation. This is not a missing-grant limit."}
+      - {"scenario": "WEB-MEDIA-VARIANTS", "level": "real", "reason": "The completed real run stopped at the unread preflight because a Tapback event retained is_read=0. Read-only Air truth now confirms zero genuine unread messages and one unread Tapback. The predicate fix passes local regression checks, but the single combined F5 real rerun is still waiting behind W1 under the Messages lock; post-fix native behavior remains unqualified."}
       - {"scenario": "WEB-MEDIA-VARIANTS", "level": "replica", "reason": "Same send restriction as the real level. One read-only Air gateway to Ubuntu replica attempt (2026-10-23) did not capture its three expected existing synthetic attachments within 45 seconds; the cause is undetermined (the targets may have been moved by the final tagged cleanup). No current replica variant downloads or cold-arrival latency are certified."}
   - id: web.remote
     title: Reach from anywhere through embedded Tailscale Funnel
@@ -645,7 +645,7 @@ features:
     milestone: W2
     modules: [webui, web, operations, native/MessagesSource, lab/demo]
     depends_on: [web.frontdoor, web.demo, web.media]
-    status: limited
+    status: done
     scenarios:
       - {id: MSG-DECODE-BALLOON, levels: [sim, real]}
       - {id: MSG-DECODE-FORMATTING, levels: [sim, real]}
@@ -701,10 +701,9 @@ features:
       - {id: WEB-MSG-PERF-INPUT, levels: [web], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
       - {id: WEB-PERF-LIST, levels: [web]}
       - {id: WEB-MSG-LIVE, levels: [web]}
-      - {id: WEB-MSG-REAL-READ, levels: [real]}
-    notes: The 12-project browser/theme/layout matrices qualify LIVE, THREAD-CORE, SEARCH and the formerly incomplete read matrices. Performance evidence separates observed script/style/layout proxies from complete input and paint budgets. Counts, digests and pass/fail are in WEB-MSG-READ-MATRIX.json.
-    limits:
-      - {"scenario": "WEB-MSG-REAL-READ", "level": "real", "reason": "Real acceptance harness is not implemented; no native effects dispatched"}
+      - {id: WEB-MSG-REAL-READ, levels: [sim, real]}
+    notes: The 12-project browser/theme/layout matrices qualify LIVE, THREAD-CORE, SEARCH and the formerly incomplete read matrices. Performance evidence separates observed script/style/layout proxies from complete input and paint budgets. Counts, digests and pass/fail are in WEB-MSG-READ-MATRIX.json. The native self-chat read harness passes authenticated chat and thread comparisons against independent read-only truth with zero writes.
+    limits: []
   - id: web.messages.write
     title: Messages web app writing (interactive gate, self-test, composer, actions, uploads)
     requirements: [R-WEB-UI, R-RW, R-MSG-DEPTH, R-SAFE-CMD]
@@ -722,10 +721,10 @@ features:
       - {id: WEB-SOURCES-STATUS, levels: [sim, web]}
       - {id: MSG-INTERACTIVE-GATE, levels: [sim, real]}
       - {id: MSG-MEDIA-CLEANUP, levels: [sim]}
-      - {id: MSG-SELFTEST, levels: [real]}
+      - {id: MSG-SELFTEST, levels: [sim, real]}
       - {id: MSG-DELETE-VISIBILITY, levels: [sim, real]}
-      - {id: MSG-READSTATE-REAL, levels: [real]}
-      - {id: MSG-DELETE-REAL, levels: [real]}
+      - {id: MSG-READSTATE-REAL, levels: [sim, real]}
+      - {id: MSG-DELETE-REAL, levels: [sim, real]}
       - {id: MSG-RESEND, levels: [sim, real]}
       - {id: WEB-MSG-COMPOSER, levels: [web]}
       - {id: WEB-MSG-SEND, levels: [web]}
@@ -757,12 +756,18 @@ features:
       - {id: WEB-MSG-FAIL-RESEND, levels: [web]}
       - {id: WEB-MSG-OPTIMISTIC, levels: [web]}
       - {id: WEB-MSG-PARTS, levels: [web]}
+      - {id: MSG-SEND-LATER, levels: [sim, real]}
+      - {id: MSG-MENTION-SEND, levels: [sim, real]}
+      - {id: MSG-AUDIO-MESSAGE, levels: [sim, real]}
     limits:
-      - {"scenario": "MSG-SELFTEST", "level": "real", "reason": "limited: initial real Helper world startup failed during the changed-module build; no selftest effects were submitted and the independent baseline stayed at 160287 active message/chat identities."}
-      - {"scenario": "MSG-READSTATE-REAL", "level": "real", "reason": "skipped: requires unlocked Mac with Messages UI available and an unused own self-chat handle; no safe UI cleanup demonstrated at lock screen"}
-      - {"scenario": "MSG-DELETE-REAL", "level": "real", "reason": "skipped: requires unlocked Mac with Messages UI available and an unused own self-chat handle; no safe UI cleanup demonstrated at lock screen"}
-      - {"scenario": "MSG-RESEND", "level": "real", "reason": "skipped: requires a uniquely identified failed self-chat test message via APPLE_BRIDGE_RESEND_RUN; existing self-chat residue must remain untouched"}
-      - {"scenario": "WEB-UPLOAD-NATIVE-STAGING", "level": "real", "reason": "limited: native send remained indeterminate. T63 recovered this run's three text/file rows with zero foreign deletions. Further attachment sends are blocked pending native cleanup qualification; this is not a missing-grant limit."}
+      - {"scenario": "MSG-SELFTEST", "level": "real", "reason": "Owned recovery deleted five rows but failed owned_messages_cleanup and cleanup_baseline_restored: an empty unsent placeholder remains visible and its Tapback also retains live membership. Native deletion through the exact IMCore identity was not observed. No clean self-test pass is certified."}
+      - {"scenario": "MSG-READSTATE-REAL", "level": "real", "reason": "The completed real run stopped at the unread preflight because a Tapback event retained is_read=0. Read-only Air truth now confirms zero genuine unread messages and one unread Tapback. The predicate fix passes local regression checks, but the single combined F5 real rerun is still waiting behind W1 under the Messages lock; post-fix native behavior remains unqualified."}
+      - {"scenario": "MSG-DELETE-REAL", "level": "real", "reason": "The completed real run stopped at the unread preflight because a Tapback event retained is_read=0. Read-only Air truth now confirms zero genuine unread messages and one unread Tapback. The predicate fix passes local regression checks, but the single combined F5 real rerun is still waiting behind W1 under the Messages lock; post-fix native behavior remains unqualified."}
+      - {"scenario": "MSG-RESEND", "level": "real", "reason": "The completed real run could not find a unique failed self-message owned by that run. A new oversized self-send fixture is implemented but has not completed real qualification; existing failed messages remain untouched."}
+      - {"scenario": "WEB-UPLOAD-NATIVE-STAGING", "level": "real", "reason": "The completed real run stopped at the unread preflight because a Tapback event retained is_read=0. Read-only Air truth now confirms zero genuine unread messages and one unread Tapback. The predicate fix passes local regression checks, but the single combined F5 real rerun is still waiting behind W1 under the Messages lock; post-fix native behavior remains unqualified."}
+      - {"scenario": "MSG-SEND-LATER", "level": "real", "reason": "The completed real run stopped at the unread preflight because a Tapback event retained is_read=0. Read-only Air truth now confirms zero genuine unread messages and one unread Tapback. The predicate fix passes local regression checks, but the single combined F5 real rerun is still waiting behind W1 under the Messages lock; post-fix native behavior remains unqualified."}
+      - {"scenario": "MSG-MENTION-SEND", "level": "real", "reason": "The completed real run stopped at the unread preflight because a Tapback event retained is_read=0. Read-only Air truth now confirms zero genuine unread messages and one unread Tapback. The predicate fix passes local regression checks, but the single combined F5 real rerun is still waiting behind W1 under the Messages lock; post-fix native behavior remains unqualified."}
+      - {"scenario": "MSG-AUDIO-MESSAGE", "level": "real", "reason": "The completed real run stopped at the unread preflight because a Tapback event retained is_read=0. Read-only Air truth now confirms zero genuine unread messages and one unread Tapback. The predicate fix passes local regression checks, but the single combined F5 real rerun is still waiting behind W1 under the Messages lock; post-fix native behavior remains unqualified."}
   - id: web.messages.parity
     title: Messages parity (pins, mute, read receipts, Send Later, effects, formatting, mentions, audio messages, Recently Deleted, groups)
     requirements: [R-WEB-UI, R-MSG-DEPTH]
@@ -780,11 +785,8 @@ features:
       - {id: MSG-READ-RECEIPTS, levels: [sim, real]}
       - {id: MSG-SEND-VARIANTS, levels: [sim]}
       - {id: WEB-MSG-SEND-VARIANTS, levels: [web]}
-      - {id: MSG-SEND-LATER, levels: [sim, real]}
       - {id: MSG-SEND-EFFECT, levels: [sim, real]}
       - {id: MSG-FORMATTING-SEND, levels: [sim, real]}
-      - {id: MSG-MENTION-SEND, levels: [sim, real]}
-      - {id: MSG-AUDIO-MESSAGE, levels: [sim, real]}
       - {id: MSG-RECENTLY-DELETED, levels: [sim, real]}
       - {id: WEB-MSG-PARITY-UI, levels: [web]}
     notes: "Dropped from scope by the owner on 2026-11-01. Group management (W4-GROUPS) completes the existing messages.groups feature and its scenarios instead of duplicating them. T74 adds long-name-safe pinned mute indicators with accessible descriptions, a visible Recently Deleted heading and trailing swipe-width settlement. Five parity checks pass after T73 integration; native send variants retain their per-build qualification gates."

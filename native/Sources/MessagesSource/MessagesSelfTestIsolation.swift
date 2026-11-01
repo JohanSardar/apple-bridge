@@ -38,8 +38,16 @@ public enum MessagesSelfTestIsolation {
         return own.compactMap(identity).contains { $0.email == peer.email && $0.value == peer.value }
     }
 
+    public static func matchesConversation(chat: String, memberships: [String], expected: String, visibleTexts: [String]) -> Bool {
+        !chat.isEmpty && memberships == [chat] && !expected.isEmpty && visibleTexts.contains(expected)
+    }
+
     public static func ownsMessage(rowID: Int64, text: String, tag: String, baseline: Int64) -> Bool {
         tag.range(of: #"^\[ab-test [A-Za-z0-9_-]+\]$"#, options: .regularExpression) != nil && rowID > baseline && text.hasPrefix(tag + " ")
+    }
+
+    public static func qualifiesFixtureChat(_ chat: String, rowID: Int64, baseline: Int64, existing: String) -> Bool {
+        !chat.isEmpty && (existing.isEmpty ? rowID > baseline : chat == existing)
     }
 
     public static func ownsDeletedSelection(_ deleted: [String], created: [String]) -> Bool {

@@ -7,6 +7,9 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
+
+	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
 func messageSendVariant(id string) string {
@@ -15,16 +18,8 @@ func messageSendVariant(id string) string {
 
 func runMessagesVariantReal(ctx context.Context, s Scenario, e Evidence) (result Evidence) {
 	result = e
-	reason := map[string]string{
-		"audio":    "needs native media cleanup qualification; audio remains fail-closed",
-		"schedule": "needs verified Send Later date controls and cancellation cleanup",
-		"mention":  "needs self-chat mention suggestion identity and attribute qualification",
-	}[messageSendVariant(s.ID)]
-	if reason != "" {
-		result.Status = "limited"
-		result.Metrics = map[string]any{"writes_submitted": 0}
-		result.Conditions = map[string]string{"reason": reason}
-		return
+	if s.ID == "MSG-AUDIO-MESSAGE" && os.Getenv("APPLE_BRIDGE_MESSAGE_CLEANUP_RUN") != "" {
+		return runMessagesCleanupRecovery(ctx, e)
 	}
 	before, err := cleanupSnapshot(ctx, "messages")
 	if err != nil {
@@ -43,9 +38,8 @@ func runMessagesVariantReal(ctx context.Context, s Scenario, e Evidence) (result
 	}
 	defer os.RemoveAll(dir)
 	app := filepath.Join(dir, "AppleBridgeHelper.app")
-	output, err := exec.CommandContext(ctx, "packaging/dev/build-helper.sh", app).CombinedOutput()
-	if err != nil {
-		os.Stderr.Write(output)
+	if err = world.BuildHelper(ctx, app); err != nil {
+		os.Stderr.WriteString(err.Error() + "\n")
 		result.Assertions = append(result.Assertions, Assertion{Name: "signed_helper_build", Passed: false})
 		return
 	}
@@ -71,7 +65,11 @@ func runMessagesVariantReal(ctx context.Context, s Scenario, e Evidence) (result
 	result.Passed = proof.Passed
 	if proof.Limited {
 		result.Status = "limited"
-		result.Conditions = map[string]string{"reason": proof.Reason}
+		reason := proof.Reason
+		if reason == "draftPresent" {
+			reason = "Your self-chat already has a draft. Send or discard it in Messages, then try again; the existing draft was left unchanged."
+		}
+		result.Conditions = map[string]string{"reason": reason}
 	} else {
 		result.Assertions = append(result.Assertions, Assertion{Name: "sent_variant_attributes_readback", Passed: proof.Passed})
 	}
@@ -83,6 +81,7 @@ func runMessagesVariantReadback(ctx context.Context, kind string, add func(strin
 	binary := filepath.Join(strings.TrimSpace(string(directory)), "MessagesVariantChecks")
 	if !messagesVariantChecksFresh(binary) {
 		build := exec.CommandContext(ctx, "packaging/dev/build-native.sh")
+		build.WaitDelay = 2 * time.Second
 		build.Env = append(os.Environ(), "APPLE_BRIDGE_NATIVE_TARGET=MessagesVariantChecks")
 		output, err := build.CombinedOutput()
 		add("native_readback_checks_build", err == nil)

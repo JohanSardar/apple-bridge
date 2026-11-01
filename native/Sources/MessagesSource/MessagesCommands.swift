@@ -233,8 +233,12 @@ public actor MessagesCommands {
         let target = try JSONDecoder().decode(JSON.self, from: JSONSerialization.data(withJSONObject: item.2))
         if !interactive {
             guard tagged(target["text"].string) else { throw SourceFailure.invalid }
-            for item in rows {
-                guard let message = try reader.message(item["guid"]), let data = try reader.messageObservations(message).first, let text = data.2["text"] as? String, tagged(text) else { throw SourceFailure.unsupported }
+            if ["messages.mark_read", "messages.mark_unread"].contains(action["op"].string) {
+                try MessagesReadStateFixture.validate(chat: chat, target: row, reader: reader)
+            } else {
+                for item in rows {
+                    guard let message = try reader.message(item["guid"]), let data = try reader.messageObservations(message).first, let text = data.2["text"] as? String, tagged(text) else { throw SourceFailure.unsupported }
+                }
             }
         }
         var destination = action.object
@@ -252,8 +256,11 @@ public actor MessagesCommands {
             }
         }
         guard labCommands || proofs().contains(routeProof(route, kind: action["op"].string)), await MessagesAccessibility.available else { throw SourceFailure.capabilityUnproven }
-        let prepared = Prepared(nativeState: .object(["interactive": .bool(interactive), "conversation_members": .array(rows.map { .string($0["guid"]) }), "conversation_target": .bool(true), "target": target, "destination": route, "route": .string("accessibility"), "last_read_timestamp": .string(conversation["last_read_message_timestamp"]), "latest_message_date": .string(String(latestConversationDate(rows))), "candidate_ids": .array([.string(chat)])]), fingerprint: command["request_hash"].string, action: action)
-        try await MessagesAccessibility.validate(prepared)
+        let prepared = Prepared(nativeState: .object(["interactive": .bool(interactive), "conversation_members": .array(rows.map { .string($0["guid"]) }), "conversation_target": .bool(true), "message_guid": .string(last["guid"]), "target": target, "destination": route, "route": .string("accessibility"), "last_read_timestamp": .string(conversation["last_read_message_timestamp"]), "latest_message_date": .string(String(latestConversationDate(rows))), "candidate_ids": .array([.string(chat)])]), fingerprint: command["request_hash"].string, action: action)
+        if action["op"].string == "messages.delete_chat" {
+            await MessagesUISession.activate()
+            try await MessagesAccessibility.validate(prepared)
+        }
         return prepared
     }
     private func dispatchConversation(_ prepared: Prepared) async throws -> JSON {
@@ -293,7 +300,7 @@ public actor MessagesCommands {
     }
     public func validate(_ prepared: Prepared) async throws {
         if MessagesParity.operations.contains(prepared.action["op"].string) { try await MessagesParity.validate(prepared); return }
-        if !["messages.send", "messages.create_group"].contains(prepared.action["op"].string) {try await MessagesAccessibility.validate(prepared)}
+        if !["messages.send", "messages.create_group", "messages.mark_read", "messages.mark_unread"].contains(prepared.action["op"].string) {try await MessagesAccessibility.validate(prepared)}
     }
     private func dispatchAccessibility(_ prepared: Prepared) async throws -> JSON {
         if prepared.nativeState["conversation_target"].bool { return try await dispatchConversation(prepared) }
@@ -304,7 +311,9 @@ public actor MessagesCommands {
         for field in ["text", "is_from_me", "edit_history", "retracted_parts", "retracted_at", "deleted_at"] {
             guard current[field] == prepared.nativeState["target"][field] else { throw SourceFailure.conflict }
         }
-        let ui=try await MessagesAccessibility.perform(prepared)
+        let ui: JSON
+        do { ui = try await MessagesAccessibility.perform(prepared) }
+        catch { ui = .object(["target_verified": .bool(false), "ui_error": .string(String(describing: error))]) }
         let deadline=ContinuousClock.now.advanced(by:.seconds(10))
         let operation=try MessagesAction(operation:prepared.action["op"].string)
         repeat {
@@ -347,6 +356,11 @@ public actor MessagesCommands {
         var evidence=ui.object
         evidence["source"] = .string("messages"); evidence["observed"] = .bool(false); evidence["disposition"] = .string("indeterminate")
         return .object(evidence)
+    }
+    func stagedAudioPart(_ prepared: Prepared) throws -> JSON {
+        let staged = try parts(prepared)
+        guard staged.count == 1, staged[0]["kind"].string == "attachment" else { throw SourceFailure.invalid }
+        return staged[0]
     }
     private func parts(_ prepared: Prepared) throws -> [JSON] {
         let args = prepared.action["messages"]

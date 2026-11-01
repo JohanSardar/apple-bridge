@@ -1,20 +1,30 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[22.66 21.05 13.69] cpu_idle=60% cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[6.17 10.45 11.56] cpu_idle=7% cpus=8 other_heavy=0"
   },
   "status": "limited",
-  "run_id": "run_01M650Z85EKPSEFFF8FQ791TVC",
+  "run_id": "run_01M6AEX1GGC0T2DV665YZPA4S1",
   "metrics": {
     "capture_observer_resets": 0,
+    "cleanup_counts": {
+      "after_count": 160349,
+      "before_count": 160349,
+      "created_count": 0,
+      "passed": true
+    },
     "writes_submitted": 0
   },
   "scenario": "MSG-MENTION-SEND",
   "level": "real",
   "passed": false,
-  "git_sha": "cd736b6bdf6f556b3e7a7dd514fbc4f7d2d45c78",
-  "at": "2026-10-29T23:47:22.414069Z",
+  "git_sha": "ced302551f4cb488b3534c217d16918131e97c1a",
+  "at": "2026-11-01T02:27:02.288436Z",
   "assertions": [
+    {
+      "name": "cleanup_baseline_restored",
+      "passed": true
+    },
     {
       "name": "credential_backend_override_restored",
       "passed": true
@@ -25,6 +35,6 @@
     "air"
   ],
   "conditions": {
-    "reason": "needs self-chat mention suggestion identity and attribute qualification"
+    "reason": "The self conversation contains unread existing messages. This check cannot open it without changing their read state. Read those messages in Messages before rerunning the check."
   }
 }

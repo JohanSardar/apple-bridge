@@ -39,12 +39,21 @@ actor MessagesSelfTest {
         let tag = "[ab-test " + run + "]"
         let guardLog = try DispatchGuard(home: home)
         let commands = MessagesCommands(path: nil, labCommands: true)
-        let handles = try MessagesProbes.discoverSelfHandles().handles
         let database = try MessagesDatabase()
-        let unused = try MessagesSelfTestIsolation.unused(handles, database: database)
-        guard uiAllowed, let handle = unused.first else {
-            let reason = uiAllowed ? "no unused own-handle alias on this Air; self-chat fallback refused to avoid touching personal conversations" : "ui_deferred_until_unlock"
+        let selected = try MessagesSelfTestIsolation.target(database: database)
+        guard uiAllowed, let selected else {
+            let reason = uiAllowed ? "No verified self conversation is available. Check the Messages account's own addresses and self conversation." : "Unlock the Mac and enable Accessibility for AppleBridgeHelper before rerunning the Messages self-test."
             let result = JSON.object(["os_build": .string(build), "run_id": .string(run), "state": .string("limited"), "writes_submitted": .number(0), "steps": .array([.object(["name": .string("isolated_test_self_chat"), "proven": .bool(false), "reason": .string(reason)])])])
+            try JSONEncoder().encode(result).write(to: reportURL, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
+            return result
+        }
+        let handle = selected.handle
+        let existingBaseline: MessagesContentBaseline?
+        do { existingBaseline = selected.chat.isEmpty ? nil : try MessagesContentBaseline.capture(selected.chat) }
+        catch {
+            let reason = (error as? MessagesSelfTestBaselineFailure)?.description ?? "The self conversation baseline could not be verified. Keep Messages available and rerun the check."
+            let result = JSON.object(["os_build": .string(build), "run_id": .string(run), "state": .string("limited"), "writes_submitted": .number(0), "steps": .array([.object(["name": .string("existing_self_chat_baseline"), "proven": .bool(false), "reason": .string(reason)])])])
             try JSONEncoder().encode(result).write(to: reportURL, options: .atomic)
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
             return result
@@ -71,7 +80,7 @@ actor MessagesSelfTest {
             let started = ContinuousClock.now
             let expiry = Date().addingTimeInterval(30)
             let deadline = ContinuousClock.now.advanced(by: .seconds(30))
-            let action = JSON.object(["op": .string("messages." + operation), "messages": .object(args), "native_key": .string(native)])
+            let action = JSON.object(["op": .string("messages." + operation), "messages": .object(args), "native_key": .string(native), "list_key": .string(operation == "send" ? selected.chat : "")])
             let frame = JSON.object(["command_id": .string(id), "principal": .string("selftest"), "request_hash": .string(UUID().uuidString), "action": action, "expires_at": .string(timestamp(expiry))])
             var result: JSON = .null
             var reason = ""
@@ -119,10 +128,11 @@ actor MessagesSelfTest {
         let target = initial["native_key"].string
         if uiAllowed, initial["observed"].bool {
             if let conversation = try? database.rows("SELECT c.guid,c.ROWID AS row_position FROM chat c JOIN chat_message_join j ON j.chat_id=c.ROWID JOIN message m ON m.ROWID=j.message_id WHERE m.guid=?", bindings: [target]).first,
-               let chat = conversation["guid"], let position = Int64(conversation["row_position"] ?? ""), position > baselineChat {
+               let chat = conversation["guid"], let position = Int64(conversation["row_position"] ?? ""), MessagesSelfTestIsolation.qualifiesFixtureChat(chat, rowID: position, baseline: baselineChat, existing: selected.chat) {
                 registration["baseline_max_chat_row_id"] = baselineChat
                 registration["created_chat_key"] = chat
-                registration["created_by_run"] = true
+                registration["created_by_run"] = selected.chat.isEmpty
+                registration["existing_self_chat"] = !selected.chat.isEmpty
                 try PrivateReport.write(registration, to: ledger)
                 _ = await execute("mark_unread", "mark_unread", args: [:], native: chat)
                 _ = await execute("mark_read", "mark_read", args: [:], native: chat)
@@ -184,6 +194,11 @@ actor MessagesSelfTest {
             registration["cleanup_state"] = result["passed"].bool ? (lateEffectPossible ? "pending_reconciliation" : "verified_clean") : "pending_native_cleanup"
         } catch {
             steps.append(.object(["name": .string("cleanup"), "proven": .bool(false), "reason": .string(uiAllowed ? failureReason(error) : "ui_deferred_until_unlock")]))
+        }
+        let baselineRestored = (try? existingBaseline?.restoreAndVerify()) ?? (existingBaseline == nil)
+        if existingBaseline != nil {
+            steps.append(.object(["name": .string("existing_self_chat_preserved"), "proven": .bool(baselineRestored), "reason": .string(baselineRestored ? "" : "The previous self-chat state could not be verified after cleanup. Keep Messages available and review the self-chat before rerunning.")]))
+            if !baselineRestored { registration["cleanup_state"] = "pending_native_cleanup" }
         }
         registration["late_effect_possible"] = lateEffectPossible
         try PrivateReport.write(registration, to: ledger)

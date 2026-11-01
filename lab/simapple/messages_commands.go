@@ -493,7 +493,7 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 		err := f.changedLocked(contracts.Messages)
 		revision := f.durable.Revision[contracts.Messages]
 		var purgeSnapshot []contracts.Observation
-		if a.Op == "messages.delete_chat_permanently" {
+		if strings.HasPrefix(a.Op, "messages.delete_") {
 			for _, observation := range f.records {
 				purgeSnapshot = append(purgeSnapshot, observation)
 			}
@@ -503,11 +503,9 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 			return err
 		}
 		capture := contracts.Capture{Source: contracts.Messages, Observations: observations, BlobHandles: f.blobHandles()}
-		if a.Op == "messages.delete_chat_permanently" {
+		if strings.HasPrefix(a.Op, "messages.delete_") {
 			capture = fullScanSource(purgeSnapshot, contracts.Messages)
 			capture.BlobHandles = f.blobHandles()
-		} else if strings.HasPrefix(a.Op, "messages.delete_") {
-			capture = fullScanSource(observations, contracts.Messages)
 		}
 		if fault == "outcome-without-capture" {
 			_, err = wire.Send(outcome)

@@ -188,6 +188,14 @@ func mediaTool() string {
 }
 
 func prepareMediaFiles(ctx context.Context, w *world.World, run string) ([]contracts.MessageFile, error) {
+	if _, err := os.Stat(mediaTool()); err != nil {
+		build := exec.CommandContext(ctx, "packaging/dev/build-native.sh")
+		build.Env = append(os.Environ(), "APPLE_BRIDGE_NATIVE_TARGET=MediaChecks")
+		if output, problem := build.CombinedOutput(); problem != nil {
+			os.Stderr.Write(output)
+			return nil, problem
+		}
+	}
 	directory := filepath.Join(w.Dir, "synthetic-media")
 	if _, err := exec.CommandContext(ctx, mediaTool(), "fixtures", directory, run).Output(); err != nil {
 		return nil, err

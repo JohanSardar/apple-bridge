@@ -97,17 +97,31 @@ type World struct {
 }
 
 func commandOutput(ctx context.Context, name string, args ...string) (string, error) {
-	cmd := exec.CommandContext(ctx, name, args...)
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	err := cmd.Run()
+	out, err := os.CreateTemp("", "ab-lab-stdout-")
 	if err != nil {
-		return "", fmt.Errorf("%s failed: %w: %s", name, err, strings.TrimSpace(stderr.String()))
+		return "", err
 	}
-	return strings.TrimSpace(out.String()), nil
+	defer func() { out.Close(); os.Remove(out.Name()) }()
+	stderr, err := os.CreateTemp("", "ab-lab-stderr-")
+	if err != nil {
+		return "", err
+	}
+	defer func() { stderr.Close(); os.Remove(stderr.Name()) }()
+	cmd := exec.CommandContext(ctx, name, args...)
+	cmd.Stdout = out
+	cmd.Stderr = stderr
+	if err = cmd.Run(); err != nil {
+		detail, _ := os.ReadFile(stderr.Name())
+		return "", fmt.Errorf("%s failed: %w: %s", name, err, strings.TrimSpace(string(detail)))
+	}
+	data, err := os.ReadFile(out.Name())
+	return strings.TrimSpace(string(data)), err
 }
+func BuildHelper(ctx context.Context, app string) error {
+	_, err := commandOutput(ctx, "packaging/dev/build-helper.sh", app)
+	return err
+}
+
 func Build(ctx context.Context, level string) error {
 	if err := os.MkdirAll("bin", 0700); err != nil {
 		return err

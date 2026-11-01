@@ -130,7 +130,9 @@ public enum MessagesProbes {
             return report
         case "self-handles":
             let result = try discoverSelfHandles()
-            let report: [String: Any] = ["handles": result.handles, "source": result.source, "index_base": 0, "cleanup_accessibility": AXIsProcessTrusted()]
+            let session = CGSessionCopyCurrentDictionary() as? [String: Any]
+            let unused = try MessagesSelfTestIsolation.unused(result.handles, database: MessagesDatabase())
+            let report: [String: Any] = ["handles": result.handles, "unused_handles": unused, "source": result.source, "index_base": 0, "cleanup_accessibility": AXIsProcessTrusted(), "cleanup_unlocked": session != nil && session?["CGSSessionScreenIsLocked"] as? Bool != true]
             try PrivateReport.write(report, to: PrivateReport.validate(handlesURL.path))
             return report
         case "send-self":

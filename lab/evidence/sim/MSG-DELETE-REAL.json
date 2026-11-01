@@ -1,0 +1,57 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[1.75 2.14 2.72] cpu_idle=76% cpus=10 other_heavy=0"
+  },
+  "run_id": "run_01M6AYC7TSC2FRPTM0BPD4JYYA",
+  "metrics": {
+    "baseline_changed": 0,
+    "baseline_messages": 1,
+    "baseline_missing": 0,
+    "capture_observer_resets": 0,
+    "remaining_messages": 1
+  },
+  "scenario": "MSG-DELETE-REAL",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "2e4c51f363699cfd288eab536078b65beefab244",
+  "at": "2026-11-01T06:57:28.921618Z",
+  "assertions": [
+    {
+      "name": "seed_self_chat",
+      "passed": true
+    },
+    {
+      "name": "fixture_captured",
+      "passed": true
+    },
+    {
+      "name": "target_created",
+      "passed": true
+    },
+    {
+      "name": "delete_message_complete_scan",
+      "passed": true
+    },
+    {
+      "name": "owned_echo_cleanup",
+      "passed": true
+    },
+    {
+      "name": "existing_residue_preserved",
+      "passed": true
+    },
+    {
+      "name": "truth_and_replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

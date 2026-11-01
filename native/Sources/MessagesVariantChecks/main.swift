@@ -6,11 +6,41 @@ import SourceSupport
 struct MessagesVariantChecks {
     static func main() async throws {
         let kind = CommandLine.arguments.dropFirst().first ?? ""
+        if kind == "media-cleanup" {
+            guard let index = CommandLine.arguments.firstIndex(of: "--fixtures"), index + 1 < CommandLine.arguments.count else { throw SourceFailure.invalid }
+            let fixture = try JSONDecoder().decode(JSON.self, from: Data(contentsOf: URL(fileURLWithPath: CommandLine.arguments[index + 1])))
+            print(String(decoding: try JSONEncoder().encode(MessagesMediaCleanupProof.check(fixture)), as: UTF8.self))
+            return
+        }
         let range = JSON.object(["utf16_location": .number(0), "utf16_length": .number(4), "styles": .array([.string("bold")])])
         let variant: JSON = kind == "effect" ? .object(["kind": .string(kind), "effect": .string("loud")]) : .object(["kind": .string(kind), "formatting": .array([range])])
         let args = JSON.object(["text": .string("test"), "variant": variant])
         let data: [String: JSON] = ["text": .string("test"), "is_from_me": .bool(true), "error_code": .number(0), "effect": .string("com.apple.messages.effect.loud"), "formatting": .array([range])]
         var checks = try await AccessibilityInputChecks.run()
+        let conversationPreferences: [String: Any] = ["EnableReadReceiptForChat": true, "shouldForceToSMS": false, "lastSeenMessageGuid": "earlier", "LSMD": Date(timeIntervalSinceReferenceDate: 1), "numberOfTimesRespondedtoThread": 0]
+        var afterSend = conversationPreferences
+        afterSend["lastSeenMessageGuid"] = "owned-send"
+        afterSend["LSMD"] = Date(timeIntervalSinceReferenceDate: 2)
+        afterSend["numberOfTimesRespondedtoThread"] = 1
+        checks["owned_send_housekeeping_preserves_preferences"] = try MessagesContentBaseline.preferenceDigest(conversationPreferences) == MessagesContentBaseline.preferenceDigest(afterSend)
+        afterSend["EnableReadReceiptForChat"] = false
+        checks["receipt_preference_change_detected"] = try MessagesContentBaseline.preferenceDigest(conversationPreferences) != MessagesContentBaseline.preferenceDigest(afterSend)
+        afterSend = conversationPreferences
+        afterSend["new_preference"] = true
+        checks["new_conversation_preference_detected"] = try MessagesContentBaseline.preferenceDigest(conversationPreferences) != MessagesContentBaseline.preferenceDigest(afterSend)
+        checks["self_echo_conversation_verified"] = MessagesSelfTestIsolation.matchesConversation(chat: "self", memberships: ["self"], expected: "[ab-test current] fixture", visibleTexts: ["[ab-test current] fixture", "[ab-test current] fixture"])
+        checks["wrong_conversation_rejected"] = !MessagesSelfTestIsolation.matchesConversation(chat: "other", memberships: ["self"], expected: "[ab-test current] fixture", visibleTexts: ["[ab-test current] fixture"])
+        checks["missing_conversation_text_rejected"] = !MessagesSelfTestIsolation.matchesConversation(chat: "self", memberships: ["self"], expected: "[ab-test current] fixture", visibleTexts: ["different"])
+        checks["owned_unsent_placeholder_allowed"] = MessagesCleanup.canDeleteRetracted(rowID: 11, baseline: 10, guid: "current", owned: ["current"], parts: [.number(0)], text: "")
+        checks["existing_unsent_placeholder_protected"] = !MessagesCleanup.canDeleteRetracted(rowID: 10, baseline: 10, guid: "current", owned: ["current"], parts: [.number(0)], text: "")
+        checks["foreign_unsent_placeholder_protected"] = !MessagesCleanup.canDeleteRetracted(rowID: 11, baseline: 10, guid: "other", owned: ["current"], parts: [.number(0)], text: "")
+        checks["blank_ordinary_message_protected"] = !MessagesCleanup.canDeleteRetracted(rowID: 11, baseline: 10, guid: "current", owned: ["current"], parts: [], text: "")
+        let readState = JSON.object(["run_id": .string("current"), "scenario": .string("MSG-READSTATE-REAL"), "baseline_max_row_id": .number(10), "created_chat_key": .string("self")])
+        checks["current_read_state_fixture_allowed"] = MessagesReadStateFixture.authorizes(readState, chat: "self", rowID: 11, text: "[ab-test current] fixture")
+        checks["older_read_state_target_refused"] = !MessagesReadStateFixture.authorizes(readState, chat: "self", rowID: 10, text: "[ab-test current] fixture")
+        checks["other_run_read_state_target_refused"] = !MessagesReadStateFixture.authorizes(readState, chat: "self", rowID: 11, text: "[ab-test other] fixture")
+        checks["other_read_state_chat_refused"] = !MessagesReadStateFixture.authorizes(readState, chat: "other", rowID: 11, text: "[ab-test current] fixture")
+        checks["untagged_read_state_target_refused"] = !MessagesReadStateFixture.authorizes(readState, chat: "self", rowID: 11, text: "existing message")
         let proof = JSON.object(["os_build": .string("synthetic-os"), "version": .number(1), "complete": .bool(true), "helper_digest": .string("synthetic-helper")])
         checks["current_build_qualified"] = MessagesSendVariants.validProof(proof, osBuild: "synthetic-os", helperDigest: "synthetic-helper")
         checks["stale_build_rejected"] = !MessagesSendVariants.validProof(proof, osBuild: "synthetic-os", helperDigest: "other-helper")
@@ -66,6 +96,63 @@ struct MessagesVariantChecks {
                 changed[field] = value
                 checks[field + "_mismatch_rejected"] = !MessagesSendVariants.matches(args, data: .object(changed))
             }
+        } else if kind == "schedule" {
+            let date = timestamp(Date(timeIntervalSince1970: 2_000_000_000))
+            let args = JSON.object(["text": .string("test"), "variant": .object(["kind": .string(kind), "scheduled_for": .string(date)])])
+            var sent = data
+            sent["schedule"] = .object(["state": .string("native_1"), "scheduled_for": .string(date)])
+            checks["scheduled_date_exact_readback"] = MessagesSendVariants.matches(args, data: .object(sent))
+            sent["schedule"] = .object(["state": .string("native_1"), "scheduled_for": .string(timestamp(Date(timeIntervalSince1970: 2_000_000_060)))])
+            checks["wrong_scheduled_date_rejected"] = !MessagesSendVariants.matches(args, data: .object(sent))
+            checks["plain_send_rejected"] = !MessagesSendVariants.matches(args, data: .object(data))
+        } else if kind == "mention" {
+            let args = JSON.object(["text": .string("test @self@example.com"), "variant": .object(["kind": .string(kind), "handle_id": .string("self@example.com"), "utf16_location": .number(5), "utf16_length": .number(17)])])
+            var sent = data
+            sent["text"] = .string("test Self")
+            sent["parts"] = .array([.object(["mention": .string("self@example.com"), "utf16_location": .number(5), "utf16_length": .number(4)])])
+            checks["mention_identity_readback"] = MessagesSendVariants.matches(args, data: .object(sent))
+            sent["text"] = .string("test Self unexpected")
+            checks["extra_mention_text_rejected"] = !MessagesSendVariants.matches(args, data: .object(sent))
+            sent["text"] = .string("test Self")
+            sent["parts"] = .array([.object(["mention": .string("other@example.com"), "utf16_location": .number(5), "utf16_length": .number(4)])])
+            checks["other_mention_rejected"] = !MessagesSendVariants.matches(args, data: .object(sent))
+            checks["plain_send_rejected"] = !MessagesSendVariants.matches(args, data: .object(data))
+        } else if kind == "audio" {
+            checks["native_audio_factory_sets_flag"] = MessagesSendVariants.syntheticNativeAudioFlag()
+            let args = JSON.object(["text": .string(""), "files": .array([.object(["name": .string("synthetic.caf")])]), "variant": .object(["kind": .string(kind)])])
+            var sent = data
+            sent["text"] = .string("")
+            sent["audio"] = .object(["is_audio_message": .bool(true)])
+            checks["native_audio_flag_required"] = MessagesSendVariants.matches(args, data: .object(sent))
+            checks["late_echo_does_not_hide_deletion"] = MessagesCleanup.removedOwnedIDs(before: ["owned-a", "owned-b"], after: ["owned-b", "owned-echo"]) == ["owned-a"]
+            checks["new_echo_alone_is_not_deletion"] = MessagesCleanup.removedOwnedIDs(before: ["owned-a"], after: ["owned-a", "owned-echo"]).isEmpty
+            checks["earlier_draft_preserved"] = !MessagesUISession.canReplaceDraft("[ab-test old] draft", with: "[ab-test current] reply")
+            checks["personal_draft_preserved"] = !MessagesUISession.canReplaceDraft("personal draft", with: "[ab-test current] reply")
+            checks["current_draft_replace_allowed"] = MessagesUISession.canReplaceDraft("[ab-test current] draft", with: "[ab-test current] reply")
+            checks["verified_existing_fixture_chat_allowed"] = MessagesSelfTestIsolation.qualifiesFixtureChat("self", rowID: 5, baseline: 10, existing: "self")
+            checks["different_existing_fixture_chat_refused"] = !MessagesSelfTestIsolation.qualifiesFixtureChat("other", rowID: 5, baseline: 10, existing: "self")
+            checks["unregistered_existing_fixture_chat_refused"] = !MessagesSelfTestIsolation.qualifiesFixtureChat("self", rowID: 5, baseline: 10, existing: "")
+            checks["new_fixture_chat_allowed"] = MessagesSelfTestIsolation.qualifiesFixtureChat("new", rowID: 11, baseline: 10, existing: "")
+            checks["empty_fixture_chat_refused"] = !MessagesSelfTestIsolation.qualifiesFixtureChat("", rowID: 11, baseline: 10, existing: "")
+            checks["scheduled_send_does_not_require_early_delivery"] = !MessagesVariantProof.requiresSelfEcho("schedule") && MessagesVariantProof.requiresSelfEcho("mention") && MessagesVariantProof.requiresSelfEcho("audio")
+            checks["date_commit_failure_retains_cleanup_obligation"] = MessagesSendVariants.dispatchFailure(SendVariantFailure.draftChanged, sendStarted: true) as? SendVariantFailure == .sendReceiptUnknown
+            checks["pre_send_failure_remains_rejected"] = MessagesSendVariants.dispatchFailure(SendVariantFailure.draftPresent, sendStarted: false) as? SendVariantFailure == .draftPresent
+            do {
+                _ = try await MessagesCleanup.run(["--owned-only"])
+                checks["unscoped_owned_cleanup_refused_before_native_access"] = false
+            } catch ProbeFailure.invalidArguments {
+                checks["unscoped_owned_cleanup_refused_before_native_access"] = true
+            } catch {
+                checks["unscoped_owned_cleanup_refused_before_native_access"] = false
+            }
+            checks["late_tagged_echo_owned"] = MessagesCleanup.allowsLateEcho(rowID: 11, baseline: 10, text: "[ab-test run_current] fixture", tag: "[ab-test run_current]")
+            checks["earlier_residue_refused"] = !MessagesCleanup.allowsLateEcho(rowID: 9, baseline: 10, text: "[ab-test run_current] fixture", tag: "[ab-test run_current]")
+            checks["other_run_echo_refused"] = !MessagesCleanup.allowsLateEcho(rowID: 11, baseline: 10, text: "[ab-test run_earlier] fixture", tag: "[ab-test run_current]")
+            sent["audio"] = .object(["is_audio_message": .bool(false)])
+            checks["ordinary_attachment_rejected"] = !MessagesSendVariants.matches(args, data: .object(sent))
+            sent["audio"] = .object(["is_audio_message": .bool(true)])
+            sent["is_from_me"] = .bool(false)
+            checks["incoming_audio_rejected"] = !MessagesSendVariants.matches(args, data: .object(sent))
         } else {
             checks["unqualified_variant_rejected"] = !MessagesSendVariants.matches(args, data: .object(data))
         }

@@ -1,0 +1,57 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[1.55 2.11 2.71] cpu_idle=56% cpus=10 other_heavy=0"
+  },
+  "run_id": "run_01M6AYC3DYVZHJJDC7Q0VKZ6ZW",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "MSG-READSTATE-REAL",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "2e4c51f363699cfd288eab536078b65beefab244",
+  "at": "2026-11-01T06:57:24.414791Z",
+  "assertions": [
+    {
+      "name": "seed_self_chat",
+      "passed": true
+    },
+    {
+      "name": "fixture_captured",
+      "passed": true
+    },
+    {
+      "name": "target_created",
+      "passed": true
+    },
+    {
+      "name": "mark_unread",
+      "passed": true
+    },
+    {
+      "name": "native_chat_read_state",
+      "passed": true
+    },
+    {
+      "name": "mark_read",
+      "passed": true
+    },
+    {
+      "name": "native_chat_read_state",
+      "passed": true
+    },
+    {
+      "name": "truth_and_replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

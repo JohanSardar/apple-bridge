@@ -1,29 +1,57 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[8.59 7.78 7.89] cpu_idle=25% cpus=8 other_heavy=0"
+    "summary": "air: load=[17.31 16.58 19.79] cpu_idle=21% cpus=8 other_heavy=0"
   },
-  "status": "limited",
-  "run_id": "",
+  "run_id": "run_01M6AKV57R27CHQWQHFRST7Y6X",
   "metrics": {
-    "capture_observer_resets": 0
+    "capture_observer_resets": 0,
+    "web_chats_count": 1,
+    "writes_submitted": 0
   },
   "scenario": "WEB-MSG-REAL-READ",
   "level": "real",
-  "passed": false,
-  "git_sha": "",
-  "at": "2026-10-29T16:18:18.197012Z",
+  "passed": true,
+  "git_sha": "d14c5dac5d97a5ed2264772c5d69a2b4423a0b98",
+  "at": "2026-11-01T03:53:23.448994Z",
   "assertions": [
     {
-      "name": "real_acceptance_implemented",
-      "passed": false,
-      "detail": "Real acceptance harness is not implemented; no native effects dispatched"
+      "name": "self_chat_captured",
+      "passed": true
+    },
+    {
+      "name": "independent_visible_self_message",
+      "passed": true
+    },
+    {
+      "name": "native_self_message_captured",
+      "passed": true
+    },
+    {
+      "name": "self_chat_and_message_identity",
+      "passed": true
+    },
+    {
+      "name": "private_web_session",
+      "passed": true
+    },
+    {
+      "name": "authenticated_web_socket",
+      "passed": true
+    },
+    {
+      "name": "web_chats_matches_independent_self_truth",
+      "passed": true
+    },
+    {
+      "name": "web_thread_matches_independent_self_truth",
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
   ],
-  "latency": null,
+  "latency": {},
   "hosts": null
 }
