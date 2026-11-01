@@ -25,3 +25,6 @@ up and repairs only these bindings in the known eight-action installed pack
 (also accepting and preserving a trailing output action),
 then verifies the saved actions through Apple's workflow database API.
 No import dialog is opened by tests.
+The sharing-facing INFocusStatusCenter can stay false during a live DND
+assertion. Authorized owner-state readback uses Assertions.json version 8,
+falling back to the status API when that store is unavailable or unrecognized.

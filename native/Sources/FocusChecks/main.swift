@@ -21,6 +21,17 @@ struct Checks {
             return .object(["exit_status": .number(0), "timed_out": .bool(false)])
         })
         let prior = fixture.focused
+        func assertionData(_ store: String, version: Int = 8) -> Data {
+            Data("{\"header\":{\"version\":\(version)},\"data\":[\(store)]}".utf8)
+        }
+        guard FocusSource.assertedFocus(assertionData("{}")) == false,
+              FocusSource.assertedFocus(assertionData("{\"storeAssertionRecords\":[]}")) == false,
+              FocusSource.assertedFocus(assertionData("{\"storeAssertionRecords\":[{\"assertionUUID\":\"synthetic\"}]}")) == true,
+              FocusSource.assertedFocus(assertionData("{\"storeInvalidationRecords\":[{}]}")) == false,
+              FocusSource.assertedFocus(assertionData("{\"storeAssertionRecords\":true}")) == nil,
+              FocusSource.assertedFocus(assertionData("{\"foreign\":[]}")) == nil,
+              FocusSource.assertedFocus(assertionData("{}", version: 9)) == nil,
+              FocusSource.assertedFocus(Data("{}".utf8)) == nil else { throw SourceFailure.corrupt }
         let on = try await source.prepare(command(on: true, until: ISO8601DateFormatter().string(from: Date().addingTimeInterval(60))))
         let result = try await source.dispatch(on)
         guard result["observed"].bool, result["readback"]["focused"] == .bool(true), fixture.calls == 1 else { throw SourceFailure.corrupt }

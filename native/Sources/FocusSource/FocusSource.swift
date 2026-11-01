@@ -29,6 +29,18 @@ public final class FocusSource: Source {
         formatter.formatOptions.insert(.withFractionalSeconds)
         return formatter.date(from: value)
     }
+    public static func assertedFocus(_ data: Data) -> Bool? {
+        guard data.count <= 2 * 1024 * 1024,
+              let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let header = root["header"] as? [String: Any], header["version"] as? Int == 8,
+              let stores = root["data"] as? [[String: Any]], stores.count == 1 else { return nil }
+        let store = stores[0]
+        let keys: Set<String> = ["storeAssertionRecords", "storeInvalidationRecords", "storeInvalidationRequestRecords"]
+        guard Set(store.keys).isSubset(of: keys) else { return nil }
+        guard let value = store["storeAssertionRecords"] else { return false }
+        guard let records = value as? [[String: Any]] else { return nil }
+        return !records.isEmpty
+    }
     public static func status() -> JSON {
         let center = INFocusStatusCenter.default
         let authorization: String
@@ -38,7 +50,12 @@ public final class FocusSource: Source {
         case .restricted: authorization = "restricted"
         default: authorization = "not_determined"
         }
-        let focused: JSON = center.authorizationStatus == .authorized ? center.focusStatus.isFocused.map { .bool($0) } ?? .null : .null
+        var active: Bool?
+        if center.authorizationStatus == .authorized {
+            let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/DoNotDisturb/DB/Assertions.json")
+            active = (try? Data(contentsOf: path)).flatMap(assertedFocus) ?? center.focusStatus.isFocused
+        }
+        let focused: JSON = active.map { .bool($0) } ?? .null
         return .object(["focused": focused, "name": .null, "authorization": .string(authorization)])
     }
     private var coverage: JSON { .object(["fields": .string("partial"), "missing": .array([.string("named Focus identity and restoration unavailable")])]) }

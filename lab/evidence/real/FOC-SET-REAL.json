@@ -1,20 +1,18 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[16.52 23.48 23.76] cpu_idle=51% cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[144.98 77.16 49.21] cpu_idle=13% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M6AQE6MV2BQHNX549FP8Z5JJ",
+  "run_id": "run_01M6AY9QD0DT0P7J7D7X6QYRZS",
   "metrics": {
     "capture_observer_resets": 0,
-    "pack_count": 1,
-    "restore_cli_error_bytes": 64,
-    "set_cli_error_bytes": 64
+    "pack_count": 1
   },
   "scenario": "FOC-SET-REAL",
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-11-01T04:56:13.211562Z",
+  "at": "2026-11-01T06:56:06.563246Z",
   "assertions": [
     {
       "name": "helper_directory",
@@ -50,11 +48,15 @@
     },
     {
       "name": "restore_readback",
-      "passed": false
+      "passed": true
+    },
+    {
+      "name": "pack_binding_readback",
+      "passed": true
     },
     {
       "name": "set_shortcut_completed",
-      "passed": false
+      "passed": true
     },
     {
       "name": "set_shortcut_not_timed_out",
@@ -62,7 +64,7 @@
     },
     {
       "name": "restore_shortcut_completed",
-      "passed": false
+      "passed": true
     },
     {
       "name": "restore_shortcut_not_timed_out",
@@ -84,9 +86,6 @@
   "latency": null,
   "hosts": null,
   "conditions": {
-    "restore_cli_error_category": "missing_parameter",
-    "restore_error": "unavailable",
-    "set_cli_error_category": "missing_parameter",
     "set_error": "unavailable"
   }
 }
