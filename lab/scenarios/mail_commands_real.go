@@ -15,6 +15,23 @@ import (
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
+func mailRealWorld(ctx context.Context, level, scope string) (*world.World, error) {
+	const key = "APPLE_BRIDGE_NATIVE_LOCK"
+	if _, configured := os.LookupEnv(key); !configured && os.Getenv("AB_TICKET") == "F1" {
+		build, err := filepath.EvalSymlinks("native/.build")
+		if err != nil {
+			return nil, err
+		}
+		if build == filepath.Join(os.Getenv("HOME"), "ab-mail-native-build") {
+			if err := os.Setenv(key, filepath.Join(build, ".mail-real-build.lock")); err != nil {
+				return nil, err
+			}
+			defer os.Unsetenv(key)
+		}
+	}
+	return world.NewRealWithSetup(ctx, level, 0, world.NativeSetup{FilesystemTruth: true}, world.BlobOptions{Scope: scope})
+}
+
 func mailRecoveryRuns(value string) ([]string, error) {
 	runs := strings.Fields(value)
 	if len(runs) > 10 {
@@ -115,7 +132,7 @@ func runMailCommandsReal(ctx context.Context, s Scenario, level string) (e Evide
 		e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok})
 		e.Passed = e.Passed && ok
 	}
-	w, err := world.NewRealWithSetup(ctx, level, 0, world.NativeSetup{FilesystemTruth: true}, world.BlobOptions{Scope: "mail:read,mail:write,system:read"})
+	w, err := mailRealWorld(ctx, level, "mail:read,mail:write,system:read")
 	add("mail_native_world", err == nil)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)

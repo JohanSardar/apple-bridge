@@ -27,7 +27,7 @@ func runMailBodyReal(ctx context.Context, s Scenario, level string) (e Evidence)
 			Body     string `json:"body_digest"`
 		} `json:"samples"`
 	}
-	w, err := world.NewRealWithSetup(ctx, level, 0, world.NativeSetup{FilesystemTruth: true}, world.BlobOptions{Scope: "mail:read,system:read"})
+	w, err := mailRealWorld(ctx, level, "mail:read,system:read")
 	if !check("mail_native_world", err == nil) {
 		fmt.Fprintln(os.Stderr, err)
 		e.Conditions = map[string]string{"reason": "The Mail helper could not start. Check the qualification log for the build or permission failure"}
