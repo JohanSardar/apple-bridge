@@ -71,6 +71,7 @@ enum MessagesNativeSession {
         let identifier = candidates.count == 2 ? components[2] : ""
         let deadline = Date().addingTimeInterval(5)
         var chat: AnyObject?
+        if !identifier.isEmpty { chat = try object(registry, "loadChatFromDaemonWithChatIdentifier:", argument: identifier as NSString) }
         repeat {
             for candidate in candidates {
                 chat = try object(registry, "existingChatWithGUID:", argument: candidate as NSString)
