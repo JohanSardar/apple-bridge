@@ -1,66 +1,7 @@
 {
-  "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[11.83 11.23 10.83] cpu_idle=32% cpus=8 other_heavy=0"
-  },
-  "run_id": "run_01M6BK1GEBW89045BM5TWXE4BK",
-  "metrics": {
-    "capture_observer_resets": 0,
-    "cleanup": {
-      "all_dates": true,
-      "appletruth_active_remaining": 0,
-      "appletruth_verified": true,
-      "appletruth_visible_remaining": 0,
-      "approved_contacts_included": false,
-      "deleted": 0,
-      "drafts_cleared": 0,
-      "failure": "",
-      "initial_tagged_self_messages": 0,
-      "only_tagged_self_messages": true,
-      "passed": true,
-      "remaining_tagged_self_messages": 0,
-      "tag_filtered": true
-    },
-    "cleanup_counts": {
-      "after_count": 160356,
-      "before_count": 160356,
-      "created_count": 0,
-      "passed": true
-    }
-  },
   "scenario": "MSG-RESEND",
   "level": "real",
   "passed": false,
-  "git_sha": "9517281dad9faa07c576b342579b46ab687deda0",
-  "at": "2026-11-01T12:58:37.387911Z",
-  "assertions": [
-    {
-      "name": "self_chat_captured",
-      "passed": true
-    },
-    {
-      "name": "cleanup_registered_before_submit",
-      "passed": true
-    },
-    {
-      "name": "current_run_native_failed_self_fixture",
-      "passed": false
-    },
-    {
-      "name": "tagged_messages_cleanup",
-      "passed": true
-    },
-    {
-      "name": "cleanup_baseline_restored",
-      "passed": true
-    },
-    {
-      "name": "credential_backend_override_restored",
-      "passed": true
-    }
-  ],
-  "latency": {},
-  "hosts": [
-    "air"
-  ]
+  "git_sha": "a32d293471b2d312694d794d19a4fff414bc2cbb",
+  "log_sha256": "5d2bfbe9cc33ab68ec94e48913fc0f2eceff23365f8be5bee8b96d2ea271c8f8"
 }

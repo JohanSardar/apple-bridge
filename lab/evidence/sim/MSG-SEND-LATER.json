@@ -1,288 +1,20 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[4.58 4.63 4.55] cpu_idle=63% cpus=8 other_heavy=0"
+    "summary": "air: load=[4.37 4.2 3.68] cpu_idle=66% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M6BQGQRH4HFY6EPEW6TN3K5F",
+  "run_id": "run_01M6BXN3TTQMBXS4WG8FRGDQ5X",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MSG-SEND-LATER",
   "level": "sim",
   "passed": true,
-  "git_sha": "7027e1fa9043b005ee9528a7889b86252dc3f0b6",
-  "at": "2026-11-01T14:16:50.705567Z",
+  "git_sha": "0820987a2809ec0e0661facd85bcb06cf1929e0d",
+  "at": "2026-11-01T16:04:05.594484Z",
   "assertions": [
     {
-      "name": "native_readback_checks_build",
-      "passed": true
-    },
-    {
       "name": "native_readback_checks",
-      "passed": true
-    },
-    {
-      "name": "missing_read_state_menu_rejected",
-      "passed": true
-    },
-    {
-      "name": "stale_build_rejected",
-      "passed": true
-    },
-    {
-      "name": "baseline_message_protected",
-      "passed": true
-    },
-    {
-      "name": "phone_substring_rejected",
-      "passed": true
-    },
-    {
-      "name": "quoted_tag_protected",
-      "passed": true
-    },
-    {
-      "name": "exact_recipient_email",
-      "passed": true
-    },
-    {
-      "name": "target_readiness_deadline_is_bounded",
-      "passed": true
-    },
-    {
-      "name": "accessibility_input_without_automation",
-      "passed": true
-    },
-    {
-      "name": "duplicate_deleted_selection_rejected",
-      "passed": true
-    },
-    {
-      "name": "transient_empty_tree_is_retried",
-      "passed": true
-    },
-    {
-      "name": "existing_self_chat_accepted",
-      "passed": true
-    },
-    {
-      "name": "unread_timestamp_is_observed",
-      "passed": true
-    },
-    {
-      "name": "group_with_self_rejected",
-      "passed": true
-    },
-    {
-      "name": "already_read_timestamp_is_observed",
-      "passed": true
-    },
-    {
-      "name": "untagged_foreign_reaction_protected",
-      "passed": true
-    },
-    {
-      "name": "other_recipient_email_rejected",
-      "passed": true
-    },
-    {
-      "name": "other_read_state_chat_refused",
-      "passed": true
-    },
-    {
-      "name": "self_chat_navigation_uses_exact_address",
-      "passed": true
-    },
-    {
-      "name": "invalid_read_timestamp_rejected",
-      "passed": true
-    },
-    {
-      "name": "reaction_to_foreign_parent_protected",
-      "passed": true
-    },
-    {
-      "name": "exact_phone_is_self",
-      "passed": true
-    },
-    {
-      "name": "empty_deleted_selection_rejected",
-      "passed": true
-    },
-    {
-      "name": "multipart_capture_repeats_all_parts_in_one_batch",
-      "passed": true
-    },
-    {
-      "name": "other_run_read_state_target_refused",
-      "passed": true
-    },
-    {
-      "name": "activation_waits_for_foreground_readiness",
-      "passed": true
-    },
-    {
-      "name": "invalid_tag_rejected",
-      "passed": true
-    },
-    {
-      "name": "direct_sheet_confirmation_is_actionable",
-      "passed": true
-    },
-    {
-      "name": "foreign_unsent_placeholder_protected",
-      "passed": true
-    },
-    {
-      "name": "wrong_conversation_rejected",
-      "passed": true
-    },
-    {
-      "name": "ambiguous_target_is_never_retried",
-      "passed": true
-    },
-    {
-      "name": "message_deep_link_uses_open_path",
-      "passed": true
-    },
-    {
-      "name": "missing_conversation_text_rejected",
-      "passed": true
-    },
-    {
-      "name": "read_state_mixed_timestamp_units",
-      "passed": true
-    },
-    {
-      "name": "phone_suffix_is_not_self",
-      "passed": true
-    },
-    {
-      "name": "read_state_mismatch_rejected",
-      "passed": true
-    },
-    {
-      "name": "native_chat_namespace_never_adds_other_address",
-      "passed": true
-    },
-    {
-      "name": "new_live_media_still_preempts_backfill",
-      "passed": true
-    },
-    {
-      "name": "additional_recipient_email_rejected",
-      "passed": true
-    },
-    {
-      "name": "untagged_read_state_target_refused",
-      "passed": true
-    },
-    {
-      "name": "tagged_late_reaction_to_owned_parent_allowed",
-      "passed": true
-    },
-    {
-      "name": "stale_os_rejected",
-      "passed": true
-    },
-    {
-      "name": "current_read_state_fixture_allowed",
-      "passed": true
-    },
-    {
-      "name": "exact_recipient_phone",
-      "passed": true
-    },
-    {
-      "name": "untagged_message_protected",
-      "passed": true
-    },
-    {
-      "name": "new_live_image_still_preempts_other_media",
-      "passed": true
-    },
-    {
-      "name": "current_build_qualified",
-      "passed": true
-    },
-    {
-      "name": "existing_unsent_placeholder_protected",
-      "passed": true
-    },
-    {
-      "name": "owned_deleted_selection_allowed",
-      "passed": true
-    },
-    {
-      "name": "invalid_pin_index_rejected",
-      "passed": true
-    },
-    {
-      "name": "native_pin_order",
-      "passed": true
-    },
-    {
-      "name": "blank_ordinary_message_protected",
-      "passed": true
-    },
-    {
-      "name": "message_deep_link_preserves_exact_guid",
-      "passed": true
-    },
-    {
-      "name": "valid_pin_indices",
-      "passed": true
-    },
-    {
-      "name": "app_root_confirmation_is_actionable",
-      "passed": true
-    },
-    {
-      "name": "already_unread_needs_no_action",
-      "passed": true
-    },
-    {
-      "name": "window_sheet_confirmation_is_actionable",
-      "passed": true
-    },
-    {
-      "name": "owned_unsent_placeholder_allowed",
-      "passed": true
-    },
-    {
-      "name": "native_chat_namespace_never_changes_group_or_service",
-      "passed": true
-    },
-    {
-      "name": "same_media_backfill_is_reused",
-      "passed": true
-    },
-    {
-      "name": "unrelated_menu_delete_is_ignored",
-      "passed": true
-    },
-    {
-      "name": "forwarded_native_receiver_supported",
-      "passed": true
-    },
-    {
-      "name": "run_message_owned",
-      "passed": true
-    },
-    {
-      "name": "older_read_state_target_refused",
-      "passed": true
-    },
-    {
-      "name": "missing_build_rejected",
-      "passed": true
-    },
-    {
-      "name": "native_chat_namespace_alias_is_same_direct_address",
-      "passed": true
-    },
-    {
-      "name": "self_echo_does_not_cancel_same_media_render",
       "passed": true
     },
     {
@@ -290,59 +22,27 @@
       "passed": true
     },
     {
-      "name": "already_read_needs_no_action",
+      "name": "unread_timestamp_is_observed",
       "passed": true
     },
     {
-      "name": "invalid_pin_state_rejected",
+      "name": "other_recipient_email_rejected",
       "passed": true
     },
     {
-      "name": "new_conversation_preference_detected",
+      "name": "invalid_read_timestamp_rejected",
       "passed": true
     },
     {
-      "name": "incomplete_deleted_selection_rejected",
+      "name": "owned_unsent_placeholder_allowed",
       "passed": true
     },
     {
-      "name": "scheduled_date_exact_readback",
+      "name": "multipart_capture_repeats_all_parts_in_one_batch",
       "passed": true
     },
     {
-      "name": "accessibility_input_interference_refused",
-      "passed": true
-    },
-    {
-      "name": "owned_reaction_identity_allowed",
-      "passed": true
-    },
-    {
-      "name": "empty_chat_rejected",
-      "passed": true
-    },
-    {
-      "name": "self_echo_conversation_verified",
-      "passed": true
-    },
-    {
-      "name": "owned_send_housekeeping_preserves_preferences",
-      "passed": true
-    },
-    {
-      "name": "plain_send_rejected",
-      "passed": true
-    },
-    {
-      "name": "other_chat_rejected",
-      "passed": true
-    },
-    {
-      "name": "receipt_preference_change_detected",
-      "passed": true
-    },
-    {
-      "name": "other_run_protected",
+      "name": "message_deep_link_preserves_exact_guid",
       "passed": true
     },
     {
@@ -350,11 +50,39 @@
       "passed": true
     },
     {
-      "name": "ambiguous_read_state_menu_rejected",
+      "name": "phone_substring_rejected",
       "passed": true
     },
     {
-      "name": "old_reaction_protected",
+      "name": "existing_deleted_selection_rejected",
+      "passed": true
+    },
+    {
+      "name": "owned_deleted_selection_allowed",
+      "passed": true
+    },
+    {
+      "name": "stale_os_rejected",
+      "passed": true
+    },
+    {
+      "name": "native_chat_namespace_never_adds_other_address",
+      "passed": true
+    },
+    {
+      "name": "transient_empty_tree_is_retried",
+      "passed": true
+    },
+    {
+      "name": "missing_build_rejected",
+      "passed": true
+    },
+    {
+      "name": "exact_recipient_email",
+      "passed": true
+    },
+    {
+      "name": "untagged_read_state_target_refused",
       "passed": true
     },
     {
@@ -362,7 +90,287 @@
       "passed": true
     },
     {
-      "name": "existing_deleted_selection_rejected",
+      "name": "invalid_pin_index_rejected",
+      "passed": true
+    },
+    {
+      "name": "owned_send_housekeeping_preserves_preferences",
+      "passed": true
+    },
+    {
+      "name": "already_unread_needs_no_action",
+      "passed": true
+    },
+    {
+      "name": "wrong_conversation_rejected",
+      "passed": true
+    },
+    {
+      "name": "exact_phone_is_self",
+      "passed": true
+    },
+    {
+      "name": "invalid_pin_state_rejected",
+      "passed": true
+    },
+    {
+      "name": "target_readiness_deadline_is_bounded",
+      "passed": true
+    },
+    {
+      "name": "old_reaction_protected",
+      "passed": true
+    },
+    {
+      "name": "blank_ordinary_message_protected",
+      "passed": true
+    },
+    {
+      "name": "direct_sheet_confirmation_is_actionable",
+      "passed": true
+    },
+    {
+      "name": "reaction_to_foreign_parent_protected",
+      "passed": true
+    },
+    {
+      "name": "forwarded_native_receiver_supported",
+      "passed": true
+    },
+    {
+      "name": "app_root_confirmation_is_actionable",
+      "passed": true
+    },
+    {
+      "name": "accessibility_input_interference_refused",
+      "passed": true
+    },
+    {
+      "name": "tagged_late_reaction_to_owned_parent_allowed",
+      "passed": true
+    },
+    {
+      "name": "duplicate_deleted_selection_rejected",
+      "passed": true
+    },
+    {
+      "name": "other_outgoing_service_is_not_incoming",
+      "passed": true
+    },
+    {
+      "name": "missing_conversation_text_rejected",
+      "passed": true
+    },
+    {
+      "name": "same_media_backfill_is_reused",
+      "passed": true
+    },
+    {
+      "name": "existing_self_chat_accepted",
+      "passed": true
+    },
+    {
+      "name": "new_conversation_preference_detected",
+      "passed": true
+    },
+    {
+      "name": "invalid_tag_rejected",
+      "passed": true
+    },
+    {
+      "name": "untagged_message_protected",
+      "passed": true
+    },
+    {
+      "name": "empty_chat_rejected",
+      "passed": true
+    },
+    {
+      "name": "owned_reaction_identity_allowed",
+      "passed": true
+    },
+    {
+      "name": "other_run_protected",
+      "passed": true
+    },
+    {
+      "name": "already_read_needs_no_action",
+      "passed": true
+    },
+    {
+      "name": "message_deep_link_uses_open_path",
+      "passed": true
+    },
+    {
+      "name": "receipt_preference_change_detected",
+      "passed": true
+    },
+    {
+      "name": "baseline_message_protected",
+      "passed": true
+    },
+    {
+      "name": "self_echo_does_not_cancel_same_media_render",
+      "passed": true
+    },
+    {
+      "name": "plain_send_rejected",
+      "passed": true
+    },
+    {
+      "name": "untagged_foreign_reaction_protected",
+      "passed": true
+    },
+    {
+      "name": "other_chat_rejected",
+      "passed": true
+    },
+    {
+      "name": "read_state_mismatch_rejected",
+      "passed": true
+    },
+    {
+      "name": "valid_pin_indices",
+      "passed": true
+    },
+    {
+      "name": "phone_suffix_is_not_self",
+      "passed": true
+    },
+    {
+      "name": "read_state_mixed_timestamp_units",
+      "passed": true
+    },
+    {
+      "name": "other_read_state_chat_refused",
+      "passed": true
+    },
+    {
+      "name": "scheduled_date_exact_readback",
+      "passed": true
+    },
+    {
+      "name": "incomplete_deleted_selection_rejected",
+      "passed": true
+    },
+    {
+      "name": "additional_recipient_email_rejected",
+      "passed": true
+    },
+    {
+      "name": "ambiguous_target_is_never_retried",
+      "passed": true
+    },
+    {
+      "name": "outgoing_bubble_is_not_incoming",
+      "passed": true
+    },
+    {
+      "name": "native_chat_namespace_alias_is_same_direct_address",
+      "passed": true
+    },
+    {
+      "name": "missing_read_state_menu_rejected",
+      "passed": true
+    },
+    {
+      "name": "named_incoming_bubble_is_resolved",
+      "passed": true
+    },
+    {
+      "name": "native_chat_namespace_never_changes_group_or_service",
+      "passed": true
+    },
+    {
+      "name": "accessibility_input_without_automation",
+      "passed": true
+    },
+    {
+      "name": "self_chat_navigation_uses_exact_address",
+      "passed": true
+    },
+    {
+      "name": "already_read_timestamp_is_observed",
+      "passed": true
+    },
+    {
+      "name": "self_echo_conversation_verified",
+      "passed": true
+    },
+    {
+      "name": "foreign_unsent_placeholder_protected",
+      "passed": true
+    },
+    {
+      "name": "group_with_self_rejected",
+      "passed": true
+    },
+    {
+      "name": "current_build_qualified",
+      "passed": true
+    },
+    {
+      "name": "stale_build_rejected",
+      "passed": true
+    },
+    {
+      "name": "run_message_owned",
+      "passed": true
+    },
+    {
+      "name": "exact_recipient_phone",
+      "passed": true
+    },
+    {
+      "name": "native_pin_order",
+      "passed": true
+    },
+    {
+      "name": "ambiguous_read_state_menu_rejected",
+      "passed": true
+    },
+    {
+      "name": "new_live_image_still_preempts_other_media",
+      "passed": true
+    },
+    {
+      "name": "other_run_read_state_target_refused",
+      "passed": true
+    },
+    {
+      "name": "older_read_state_target_refused",
+      "passed": true
+    },
+    {
+      "name": "new_live_media_still_preempts_backfill",
+      "passed": true
+    },
+    {
+      "name": "activation_waits_for_foreground_readiness",
+      "passed": true
+    },
+    {
+      "name": "current_read_state_fixture_allowed",
+      "passed": true
+    },
+    {
+      "name": "existing_unsent_placeholder_protected",
+      "passed": true
+    },
+    {
+      "name": "unrelated_menu_delete_is_ignored",
+      "passed": true
+    },
+    {
+      "name": "window_sheet_confirmation_is_actionable",
+      "passed": true
+    },
+    {
+      "name": "empty_deleted_selection_rejected",
+      "passed": true
+    },
+    {
+      "name": "quoted_tag_protected",
       "passed": true
     },
     {

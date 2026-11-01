@@ -1,0 +1,57 @@
+{
+  "initial_owned_rows": 7,
+  "remaining_owned_rows": 5,
+  "remaining_owned_by_ledger": [
+    2,
+    1,
+    2,
+    0
+  ],
+  "owned_text_rows_deleted": 2,
+  "owned_text_cleanup_passed": true,
+  "owned_drafts_cleared": 1,
+  "self_chat_count": 1,
+  "self_chat_handle_count": 1,
+  "daemon_entitlement_denial_count": 27,
+  "daemon_log_sha256": "2a0ae46b9c9d3016a42f30b1a618a73093a94d3a833f3e71841d57070fcbc7dc",
+  "database_read_only": true,
+  "fixture_navigation_passed_before": false,
+  "fixture_navigation_passed_after": true,
+  "owned_compositions_removed": 1,
+  "owned_draft_backup_sha256": "84fea2c5b9148884467dd5d3c06dc020baa6189cd2692e4b23b05464cf396735",
+  "remaining_m4_owned_by_ledger": [
+    2,
+    2
+  ],
+  "remaining_m4_owned_rows": 4,
+  "genuine_unread_self_messages": 0,
+  "real_qualification": {
+    "MSG-SEND-LATER": {
+      "passed": false,
+      "log_sha256": "c9a2824c148a5cef0509535702a8b14ea597501a30dae5373fb0d38e6b8782f5"
+    },
+    "MSG-MENTION-SEND": {
+      "passed": false,
+      "log_sha256": "b307d1e37f54bc7fcb534796564181a74fbf63dbcff27bf5c58ed485852ad672"
+    },
+    "MSG-AUDIO-MESSAGE": {
+      "passed": false,
+      "log_sha256": "be64a02d424905a568af59655dec565046ac663d2d575b77ffabd19496504396"
+    },
+    "MSG-SELFTEST": {
+      "passed": false,
+      "log_sha256": "7ddefbaa130ec72a827dd5f5e623174661738883c9f2ef27dc50f7fd3fed7871"
+    },
+    "MSG-READSTATE-REAL": {
+      "passed": true,
+      "log_sha256": "7e9de48daa7317434e81538190adb69410faa6dc0b96b4a6180edc78cfa2a33f"
+    },
+    "MSG-RESEND": {
+      "passed": false,
+      "log_sha256": "5d2bfbe9cc33ab68ec94e48913fc0f2eceff23365f8be5bee8b96d2ea271c8f8"
+    }
+  },
+  "final_composer_count": 1,
+  "final_composer_empty": true,
+  "final_composer_iMessage": true
+}

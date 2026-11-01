@@ -63,7 +63,9 @@ enum MessagesVariantUI {
         let values = [[String(month), String(day)], [String(hour % 12 == 0 ? 12 : hour % 12), String(format: "%02d", minute), hour < 12 ? "AM" : "PM"]]
         for segments in values {
             for (index, text) in segments.enumerated() {
-                let field = find(try group(segments.count), role: kAXTextFieldRole)[index]
+                let fields = find(try group(segments.count), role: kAXTextFieldRole)
+                guard fields.count == segments.count, fields.indices.contains(index) else { throw SendVariantFailure.scheduleDateControlsMissing }
+                let field = fields[index]
                 try session.focus(field, failure: SendVariantFailure.scheduleDateControlsUnverified)
                 var range = CFRange(location: 0, length: value(field, kAXValueAttribute).utf16.count)
                 guard let selected = AXValueCreate(.cfRange, &range), AXUIElementSetAttributeValue(field, kAXSelectedTextRangeAttribute as CFString, selected) == .success else { throw SendVariantFailure.scheduleDateControlsUnverified }
