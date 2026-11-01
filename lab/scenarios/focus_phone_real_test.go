@@ -44,6 +44,7 @@ esac
 	if err := os.WriteFile(filepath.Join(dir, "ssh"), []byte(script), 0700); err != nil {
 		t.Fatal(err)
 	}
+	t.Setenv("AB_REAL_FOCUS_AIR_PACK", "/Air/[ab-test] AB Focus.shortcut")
 	release, err := lockAirFocus(context.Background())
 	if err != nil {
 		t.Fatal(err)
@@ -70,6 +71,9 @@ esac
 	}
 	if !strings.Contains(string(raw), `sh -s -- '/Air'"'"'s [ab-test] Helper.app'`) {
 		t.Fatalf("Air helper argument was not shell quoted: %s", raw)
+	}
+	if !strings.Contains(string(raw), `lockf -k "$HOME/.ab-locks/app-shortcuts"`) {
+		t.Fatal("pack import did not lock Shortcuts before phone observation")
 	}
 	step, err := os.ReadFile(log + ".step")
 	if err != nil {
