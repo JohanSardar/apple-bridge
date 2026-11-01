@@ -145,14 +145,22 @@ private struct ClockTimerUI {
 
     private func find(_ element: AXUIElement, role: String? = nil, identifier: String? = nil) -> [AXUIElement] {
         var budget = 2000
+        var visited: [AXUIElement] = []
         @MainActor func visit(_ item: AXUIElement, depth: Int) -> [AXUIElement] {
             guard depth < 20, budget > 0 else { return [] }
+            for previous in visited { if CFEqual(previous, item) { return [] } }
             budget -= 1
+            visited.append(item)
             var result: [AXUIElement] = []
             let actualRole = attribute(item, kAXRoleAttribute) as? String
             let actualIdentifier = attribute(item, kAXIdentifierAttribute) as? String
             if (role == nil || actualRole == role) && (identifier == nil || actualIdentifier == identifier) { result.append(item) }
-            for child in attribute(item, kAXChildrenAttribute) as? [AXUIElement] ?? [] { result += visit(child, depth: depth + 1) }
+            for key in [kAXChildrenAttribute, kAXVisibleChildrenAttribute, kAXContentsAttribute, kAXRowsAttribute, kAXWindowsAttribute] {
+                for child in attribute(item, key) as? [AXUIElement] ?? [] { result += visit(child, depth: depth + 1) }
+            }
+            if let focused = attribute(item, kAXFocusedUIElementAttribute), CFGetTypeID(focused) == AXUIElementGetTypeID() {
+                result += visit(unsafeDowncast(focused, to: AXUIElement.self), depth: depth + 1)
+            }
             return result
         }
         return visit(element, depth: 0)

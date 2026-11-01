@@ -124,3 +124,11 @@ func TestCreatedAlarmRepeatDaysHaveSetSemantics(t *testing.T) {
 		t.Fatal("readback validation changed caller-owned weekdays")
 	}
 }
+
+func TestRecentTimerReadbackAcceptsNativeResponseWithoutAlarmFields(t *testing.T) {
+	fixture := &exchangeFixture{data: `{"version":1,"operation":"recent_timers","capabilities":["timers","start_timer","delete_timer"],"timers":[{"id":"recent:1","label":"[ab-test] synthetic","duration":900,"running":false}]}`}
+	out, err := (Pack{Runner: fixture}).Exchange(context.Background(), Request{Operation: "recent_timers"})
+	if err != nil || len(out.Timers) != 1 || out.Timers[0].ID != "recent:1" {
+		t.Fatal(out, err)
+	}
+}
