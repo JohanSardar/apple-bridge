@@ -76,6 +76,7 @@ extension AppleTruth {
         if (action === 'folder_identity') {
             require(request.title.startsWith('Bridge Test ' + tag));
             const folders = app.folders.whose({name:request.title})();
+            if (request.allow_missing === true && folders.length === 0) return {status:'verified',id:''};
             require(folders.length === 1);
             return {status:'verified',id:folders[0].id()};
         }

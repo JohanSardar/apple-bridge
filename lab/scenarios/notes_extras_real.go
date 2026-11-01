@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"os"
 	"strings"
 	"time"
 
@@ -33,6 +34,14 @@ func runNotesExtrasReal(ctx context.Context, s Scenario, level, gitSHA string) (
 	add("native_notes_capture_ready", problem == nil)
 	if problem != nil {
 		return
+	}
+	for _, path := range []string{"lab/evidence/notes-predecessor-cleanup.json", "lab/evidence/real/NOTE-EXTRAS.json"} {
+		recorded, _ := os.ReadFile(path)
+		problem = notesCleanupRecordedExtras(w.RecoverTruth, recorded)
+		add("recorded_run_empty_folder_cleaned", problem == nil)
+		if problem != nil {
+			return
+		}
 	}
 	before, err := cleanupSnapshot(ctx, "notes")
 	if err != nil {
