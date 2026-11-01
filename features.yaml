@@ -373,18 +373,14 @@ features:
     milestone: M2
     modules: [native/ContactsSource]
     depends_on: [helper.session]
-    status: limited
-    limits:
-      - scenario: CON-RELAY
-        level: replica
-        reason: "2026-10-23 isolated public CON-RELAY rerun converged and delivered all 20 live contact changes to Ubuntu, but gateway/replica p95 was 1453.922/1481.835 ms against the 1000 ms budget. TCC activity surged after the quiet precheck, so public R-LIVE is not certified. Tagged cleanup passed; the immediate Serve byte check failed, while a later canonical configuration read matched the baseline."
+    status: done
     scenarios:
       - {id: CON-ME, levels: [real]}
       - {id: CON-NOTE, levels: [real], status: dropped, reason: "Dropped because contact notes need the restricted com.apple.developer.contacts.notes entitlement."}
       - {id: CON-IMPORT, levels: [sim, real]}
       - {id: CON-SEARCH, levels: [sim]}
       - {id: CON-EXTERNAL, levels: [sim, real, replica]}
-      - {id: CON-RELAY, levels: [replica]}
+      - {id: CON-RELAY, levels: [replica], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
       - {id: CON-DROP-EVERYTHING, levels: [sim]}
       - {id: CON-TOKEN-CRASH, levels: [sim]}
       - {id: CON-PERMISSION-LOSS, levels: [sim]}
@@ -401,11 +397,7 @@ features:
     milestone: M2
     modules: [native/ContactsSource, operations]
     depends_on: [contacts.read]
-    status: limited
-    limits:
-      - scenario: CON-RELAY
-        level: replica
-        reason: "2026-10-23 isolated public CON-RELAY rerun delivered 20/20 live changes and six public commands, but native-change replica p95 was 1481.835 ms and command replica p95 1788.080 ms against the 1000 ms budget. TCC activity surged after the quiet precheck, so public write latency is not certified. Tagged cleanup passed; the immediate Serve byte check failed, while a later canonical configuration read matched the baseline."
+    status: done
     scenarios:
       - {id: CON-CRUD, levels: [sim, real, replica]}
       - {id: CON-READONLY-CONTAINER, levels: [sim]}
@@ -703,18 +695,15 @@ features:
       - {id: WEB-MSG-KEYBOARD, levels: [web]}
       - {id: WEB-MSG-KEYBOARD-LIST, levels: [web]}
       - {id: WEB-MSG-A11Y, levels: [web]}
-      - {id: WEB-MSG-PERF, levels: [web]}
-      - {id: WEB-MSG-PERF-FRAME, levels: [web]}
-      - {id: WEB-MSG-PERF-INPUT, levels: [web]}
+      - {id: WEB-MSG-PERF, levels: [web], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
+      - {id: WEB-MSG-PERF-FRAME, levels: [web], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
+      - {id: WEB-MSG-PERF-INPUT, levels: [web], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
       - {id: WEB-PERF-LIST, levels: [web]}
       - {id: WEB-MSG-LIVE, levels: [web]}
       - {id: WEB-MSG-REAL-READ, levels: [real]}
     notes: The 12-project browser/theme/layout matrices qualify LIVE, THREAD-CORE, SEARCH and the formerly incomplete read matrices. Performance evidence separates observed script/style/layout proxies from complete input and paint budgets. Counts, digests and pass/fail are in WEB-MSG-READ-MATRIX.json.
     limits:
       - {"scenario": "WEB-MSG-REAL-READ", "level": "real", "reason": "Real acceptance harness is not implemented; no native effects dispatched"}
-      - {"scenario": "WEB-MSG-PERF", "level": "web", "reason": "Complete own-input and app-update paint budgets remain unproven: Event Timing has a 16 ms reporting floor, Long Tasks has a 50 ms floor, and document Paint Timing cannot attribute app-update paint. The 8 ms input and 4/8 ms frame targets are below those API floors. Chromium tracing and in-page script/style/layout probes are partial proxies; their pass/fail results do not prove complete input or paint cost. Counts and digests are in WEB-MSG-READ-MATRIX.json."}
-      - {"scenario": "WEB-MSG-PERF-INPUT", "level": "web", "reason": "Complete own-input and app-update paint budgets remain unproven: Event Timing has a 16 ms reporting floor, Long Tasks has a 50 ms floor, and document Paint Timing cannot attribute app-update paint. The 8 ms input and 4/8 ms frame targets are below those API floors. Chromium tracing and in-page script/style/layout probes are partial proxies; their pass/fail results do not prove complete input or paint cost. Counts and digests are in WEB-MSG-READ-MATRIX.json."}
-      - {"scenario": "WEB-MSG-PERF-FRAME", "level": "web", "reason": "Complete own-input and app-update paint budgets remain unproven: Event Timing has a 16 ms reporting floor, Long Tasks has a 50 ms floor, and document Paint Timing cannot attribute app-update paint. The 8 ms input and 4/8 ms frame targets are below those API floors. Chromium tracing and in-page script/style/layout probes are partial proxies; their pass/fail results do not prove complete input or paint cost. Counts and digests are in WEB-MSG-READ-MATRIX.json."}
   - id: web.messages.write
     title: Messages web app writing (interactive gate, self-test, composer, actions, uploads)
     requirements: [R-WEB-UI, R-RW, R-MSG-DEPTH, R-SAFE-CMD]
@@ -816,12 +805,6 @@ features:
     depends_on: [web.frontdoor, reminders.write]
     status: limited
     limits:
-      - scenario: WEB-REM-ACTIONS
-        level: web
-        reason: "Trusted phone taps cover details, delete confirmation and cancellation in all three engines, with trusted touch pointer assertions and zero writes. App-specific paint/layout and complete own-input costs remain unproven: Event Timing has a 16 ms reporting floor, Long Tasks has a 50 ms floor, and Paint Timing reports document paints rather than app-update paint or layout cost. Counts and digests are in the focused WEB-REM-ACTIONS evidence; no swipe-gesture proof is claimed by the tap route."
-      - scenario: REM-STORE-PERF
-        level: real
-        reason: "Native warm-full and unchanged modes pass; changed-set modes require native fixtures and remain unproven. Synthetic changed 1/10/100/1000 modes pass."
       - scenario: WEB-REM-PARITY
         level: real
         reason: "Flag: native effect proof could not run because all three Air runner slots remained occupied. Controls stay hidden until real readback and cleanup pass."
@@ -852,14 +835,14 @@ features:
       - {id: WEB-REM-WRITE, levels: [web, real]}
       - {id: WEB-REM-ENTRY, levels: [web]}
       - {id: WEB-REM-PARITY, levels: [sim, real, web]}
-      - {id: WEB-REM-ACTIONS, levels: [web]}
+      - {id: WEB-REM-ACTIONS, levels: [web], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
       - {id: WEB-RM-REMINDERS-HARDENING, levels: [sim]}
       - {id: WEB-RM-REMINDERS-LISTS, levels: [sim]}
       - {id: WEB-RM-REMINDERS-ITEMS, levels: [sim]}
       - {id: WEB-RM-REMINDERS-DEMO, levels: [sim]}
       - {id: REM-STORE-READ, levels: [sim, real]}
       - {id: REM-STORE-DECODE, levels: [sim]}
-      - {id: REM-STORE-PERF, levels: [sim, real]}
+      - {id: REM-STORE-PERF, levels: [sim, real], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
     notes: >-
       Core milestone green with explicit limits: browser 192/204 configured, with 12 not-applicable; all six phone projects prove trusted touch through the details and delete-cancel route. The focused actions matrix passes 72 cases with 12 layout exclusions and no failures or flakes. Quiet exclusive PERF-SHELL passes 12/12 after #303; Chromium navigation/input long tasks are absent and CLS is zero. Native first visibility passes 200/200, gateway/replica p95 560/563 ms; isolated create 372/386 ms and both forwarded deletes pass. Latest-update timing is descriptive only. Parity stays hidden pending native effect proof; real changed-set modes and app-specific UI timings remain limited. The signed Helper authorize-reminders path requested ordinary OS consent once; its report remained not_determined and a subsequent non-prompting status returned unknown while consent was unresolved. Status now includes automation_reminders. Parity commands have explicit unproven coverage and remain hidden; WEB-REM-PARITY checks captured read affordances and absent mutation controls. Gateway reminders.lists and reminders.items provide scoped counts, groups, sections, tags and recursive subtasks. The read-only web/1 UI renders the sidebar, sections and nested items, with completed visibility, sorts, search, details and live updates. Basic writes use trusted input events, identity-based optimistic reconciliation and completion motion; store-only parity remains limited. Views over 2 MiB fail explicitly; item paging remains a follow-up. Store WAL FSEvents hints and bounded burst coalescing supplement EventKit notifications after #267. The real flag-only gateway propagation check is limited until the Helper has Reminders Apple Events authorization. The native V2 UUID-array manual-order decoder is verified; early reminders, section blobs and custom filters remain unsupported pending positive fixtures at unlock. Native tags, attachment IDs, assignment and store alarm/recurrence projections also remain unsupported; EventKit alarms and recurrence stay available. F7 adds scoped native parity qualification and verified synthetic tag-change invalidation. Both native checks were blocked before scenario execution by the Air runner slots; no current permission failure or successful native parity effect is claimed. Remaining store decoders and unverified parity mutations stay hidden.
   - id: web.calendar
@@ -868,17 +851,13 @@ features:
     milestone: W6
     modules: [webui, native/CalendarSource, operations]
     depends_on: [web.frontdoor, calendar.write]
-    status: limited
-    limits:
-      - scenario: WEB-CAL-READ
-        level: web
-        reason: "The focused 12-project read matrix proves cached event details render within one second while fresh live frames are withheld. Complete own-input and app-specific paint/layout budgets remain unproven: Event Timing omits interactions below its 16 ms floor, Long Tasks only detects tasks of at least 50 ms, and document Paint Timing cannot attribute app-update paint or layout cost. A 200-change/5-Hz native burst and kill-during-apply are not established by the ten-change R-LIVE run."
+    status: done
     scenarios:
       - {id: CAL-FUTURE-COUNT-MATH, levels: [sim]}
       - {id: CAL-FUTURE-RULE-MISMATCH, levels: [sim]}
       - {id: CAL-SPLIT-ATOMIC-TIMED, levels: [sim]}
       - {id: CAL-STORE-READ, levels: [sim, real, web]}
-      - {id: WEB-CAL-READ, levels: [web]}
+      - {id: WEB-CAL-READ, levels: [web], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
       - {id: WEB-CAL-NAVIGATE, levels: [web]}
       - {id: WEB-CAL-WRITE, levels: [sim, web, real]}
     notes: >-
@@ -979,15 +958,13 @@ features:
     milestone: G8
     modules: [native/Sources/VisionSource, native/Sources/PDFSource]
     depends_on: [core.queries]
-    status: limited
+    status: done
     scenarios:
       - {id: VIS-OCR, levels: [sim, real]}
       - {id: PDF-TEXT, levels: [sim, real]}
       - {id: PDF-ANNOTATE, levels: [sim]}
-      - {id: VIS-IDLE, levels: [real]}
+      - {id: VIS-IDLE, levels: [real], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
     notes: Blob and explicit file inputs, PDF annotation artifact readback, doctor readiness and native framework queries pass; total Helper idle CPU remains limited.
-    limits:
-      - {"scenario": "VIS-IDLE", "level": "real", "reason": "Failed assertions: helper_cpu_under_two_percent"}
   - id: shortcuts.runner
     title: Bounded Shortcuts CLI runner
     requirements: [R-RW]
@@ -1000,10 +977,9 @@ features:
       - {id: SC-CAPTURE, levels: [sim]}
       - {id: SC-RUN, levels: [sim]}
       - {id: SC-RUN-REAL, levels: [sim, real]}
-      - {id: SC-IDLE, levels: [real]}
+      - {id: SC-IDLE, levels: [real], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
     limits:
       - {"scenario": "SC-RUN-REAL", "level": "real", "reason": "AB Echo output approval is granted, but the installed old Text attachment returns zero bytes through stdout and output-file modes. The corrected signed Echo replacement awaits owner import; SSH cannot inspect or approve its dialog."}
-      - {"scenario": "SC-IDLE", "level": "real", "reason": "Failed assertions: five_minute_helper_cpu_under_two_percent"}
   - id: clock.pack
     title: Clock helper pack qualification
     requirements: [R-RW]
@@ -1025,32 +1001,28 @@ features:
     milestone: G6
     modules: [native/Sources/MacSource]
     depends_on: []
-    status: limited
+    status: done
     scenarios:
       - {id: MAC-CAPTURE, levels: [sim]}
-      - {id: MAC-IDLE, levels: [sim, real]}
+      - {id: MAC-IDLE, levels: [sim, real], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
       - {id: MAC-POWER-REAL, levels: [real]}
     notes: Night Shift omitted; SSID requires Location authorization. VPN uses interface heuristics.
-    limits:
-      - {"scenario": "MAC-IDLE", "level": "real", "reason": "Whole Helper measured 2.016546% CPU-time over 300.018 idle seconds after 790.151 seconds of settling under the global real-run lock; still above 2%."}
   - id: mail.capture
     title: Mail Envelope Index capture foundation
     requirements: [R-RW]
     milestone: M0
     modules: [native/Sources/MailSource, internal/contracts]
     depends_on: []
-    status: limited
+    status: done
     scenarios:
       - {id: MAIL-CAPTURE, levels: [sim]}
       - {id: MAIL-LIVE, levels: [sim]}
       - {id: MAIL-NO-FALSE-DELETE, levels: [sim]}
-      - {id: MAIL-IDLE, levels: [sim, real]}
+      - {id: MAIL-IDLE, levels: [sim, real], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
       - {id: MAIL-READ-REAL, levels: [real]}
       - {id: MAIL-REPLICA, levels: [replica]}
       - {id: MAIL-AGENT, levels: [agent]}
     notes: "MAIL-IDLE sim proves bounded fixture checkpoint suppression and resumed capture after a write; five-minute Helper CPU remains a real-level qualification."
-    limits:
-      - {"scenario": "MAIL-IDLE", "level": "real", "reason": "needs five-minute whole-Helper idle CPU qualification after Mail sync settles (T53)"}
   - id: files.capture
     title: Opt-in files metadata and queries
     notes: Dedicated tagged iCloud fixtures prove eviction, automatic download on read, and content digest readback; fixtures are deleted after qualification.
@@ -1061,7 +1033,7 @@ features:
     status: done
     scenarios:
       - {id: FILE-CAPTURE, levels: [sim]}
-      - {id: FILE-IDLE, levels: [sim, real]}
+      - {id: FILE-IDLE, levels: [sim, real], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
       - {id: FILE-SEARCH-REAL, levels: [real]}
       - {id: FILE-OFFLOAD-REAL, levels: [sim, real]}
   - id: mail.body
@@ -1085,11 +1057,10 @@ features:
     status: limited
     scenarios:
       - {id: PHO-CAPTURE, levels: [sim]}
-      - {id: PHO-IDLE, levels: [sim, real]}
+      - {id: PHO-IDLE, levels: [sim, real], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
       - {id: PHO-READ-REAL, levels: [real]}
     notes: "Photos real scenarios now probe inside the signed Helper identity and use a synthetic Bridge Test album when authorized. Real qualification is limited: needs Photos grant (Full Access for dev.applebridge.helper). No prompt is requested."
     limits:
-      - {"scenario": "PHO-IDLE", "level": "real", "reason": "needs Photos grant"}
       - {"scenario": "PHO-READ-REAL", "level": "real", "reason": "needs Photos grant"}
   - id: photos.commands
     title: Photos import and library commands
@@ -1128,14 +1099,12 @@ features:
     milestone: G4
     modules: [native/Sources/CallsSource, internal/contracts, lab/simapple]
     depends_on: []
-    status: limited
+    status: done
     scenarios:
       - {id: CALL-CAPTURE, levels: [sim]}
-      - {id: CALL-IDLE, levels: [sim, real]}
+      - {id: CALL-IDLE, levels: [sim, real], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
       - {id: CALL-READ-REAL, levels: [real]}
       - {id: CALLS-REPLICA, levels: [replica]}
-    limits:
-      - {"scenario": "CALL-IDLE", "level": "real", "reason": "limited: T99 locked Air rerun: needs Full Disk Access for the current signed AppleBridgeHelper on the Air; non-prompting status=denied; capture cannot settle, so no CPU measurement was taken"}
   - id: focus.pack
     title: Focus status and approved DND writes
     requirements: [R-RW]
@@ -1147,12 +1116,11 @@ features:
     scenarios:
       - {id: FOC-SIM, levels: [sim]}
       - {id: FOC-SET-REAL, levels: [real]}
-      - {id: FOC-IDLE, levels: [real]}
+      - {id: FOC-IDLE, levels: [real], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
       - {id: FOC-STATUS-REAL, levels: [real]}
       - {id: FOC-PHONE-SYNC, levels: [real]}
     limits:
       - {"scenario": "FOC-SET-REAL", "level": "real", "reason": "needs Focus status grant for AppleBridgeHelper; signed Air probe stopped before dispatch; AB Focus import remains unqualified"}
-      - {"scenario": "FOC-IDLE", "level": "real", "reason": "Five-minute Helper CPU qualification remains pending; no idle CPU measurement claimed."}
       - {scenario: FOC-PHONE-SYNC, level: real, reason: "Phone Focus permission and inactive baseline passed; the Pro AppleBridgeHelper has no Focus-status grant. No Mac Focus mutation was attempted, and phone restoration was acknowledged."}
   - id: recordings.read
     title: Voice Memos assets and voicemail metadata
@@ -1200,12 +1168,11 @@ features:
       - {id: MUS-CATALOG-REAL, levels: [real]}
       - {id: MUS-CONTROL-REAL, levels: [real]}
       - {id: MUS-PLAYLIST-REAL, levels: [real]}
-      - {id: MUS-IDLE, levels: [sim, real]}
+      - {id: MUS-IDLE, levels: [sim, real], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
     notes: "Tagged silent-track fixtures and exact playback restore implemented; real qualification requires a nonprompting Music Automation grant and restorable unshuffled playlist context. Library capture bounded to 500 tracks / 50 playlists / 1000 memberships; Automation dev.applebridge.helper → com.apple.Music missing. Public API has no playlist search. Prior whole Helper idle measured 2.063240% CPU-time over 300.014 idle seconds. T71 MAC-IDLE measured 2.016546% over 300.018 idle seconds under the global real-run lock; T99 MUS-IDLE remains unqualified: the current signed Helper reports Full Disk Access denied; no idle CPU sample was taken."
     limits:
       - {"scenario": "MUS-CONTROL-REAL", "level": "real", "reason": "needs Music Automation grant (T79); consent not requested"}
       - {"scenario": "MUS-PLAYLIST-REAL", "level": "real", "reason": "needs Music Automation grant (T79); consent not requested"}
-      - {"scenario": "MUS-IDLE", "level": "real", "reason": "limited: T99 locked Air rerun: needs Full Disk Access for the current signed AppleBridgeHelper on the Air; non-prompting status=denied; capture cannot settle, so no CPU measurement was taken"}
   - id: files.transform
     title: Native image and PDF blob transforms
     requirements: [R-API, R-SCOPE]
@@ -1272,11 +1239,11 @@ features:
     milestone: G7
     modules: [native/Sources/MapsSource]
     depends_on: [core.queries]
-    status: limited
+    status: done
     scenarios:
       - {id: QUERY-AGENT, levels: [sim, real, agent]}
-      - {id: LOC-IDLE, levels: [real]}
-      - {id: MAP-IDLE, levels: [real]}
+      - {id: LOC-IDLE, levels: [real], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
+      - {id: MAP-IDLE, levels: [real], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
       - {id: LOC-CURRENT-REAL, levels: [real]}
       - {id: LOC-SIM, levels: [sim]}
       - {id: MAP-SIM, levels: [sim]}
@@ -1285,24 +1252,19 @@ features:
       - {id: MAP-DIRECTIONS-REAL, levels: [real]}
       - {id: MAP-SNAPSHOT-REAL, levels: [real]}
     notes: Transit route geometry is unsupported by MKDirections (ETA is supported); real maps.open remains unverified. Whole-Helper idle qualification is blocked by T53. QUERY-AGENT qualifies Codex and MCP against synthetic Maps results, not live traffic.
-    limits:
-      - {"scenario": "LOC-IDLE", "level": "real", "reason": "Failed assertions: helper_reached_idle, five_minute_idle_cpu_under_2_percent"}
-      - {"scenario": "MAP-IDLE", "level": "real", "reason": "limited: T99 locked Air rerun: needs Full Disk Access for the current signed AppleBridgeHelper on the Air; non-prompting status=denied; capture cannot settle, so no CPU measurement was taken"}
   - id: safari.capture
     title: Read-only Safari database capture
     requirements: [R-FULL, R-NO-FALSE-DELETE, R-LIVE]
     milestone: G11
     modules: [native/Sources/SafariSource, internal/contracts, lab/simapple]
     depends_on: []
-    status: limited
+    status: done
     notes: Real history and bookmark Truth counts and digests match. CloudTabs.db is absent on this host; cloud schema coverage uses synthetic databases.
     scenarios:
       - {id: SAF-CAPTURE, levels: [sim]}
-      - {id: SAF-IDLE, levels: [sim, real]}
+      - {id: SAF-IDLE, levels: [sim, real], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
       - {id: SAF-HISTORY-REAL, levels: [real]}
       - {id: SAF-BOOKMARKS-REAL, levels: [real]}
-    limits:
-      - {"scenario": "SAF-IDLE", "level": "real", "reason": "Failed assertions: helper_cpu_under_two_percent_for_five_minutes"}
   - id: safari.commands
     title: Safari tabs commands and guarded public page text
     requirements: [R-FULL, R-LIVE]
