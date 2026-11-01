@@ -45,6 +45,9 @@ func checkMailQualification() async throws {
     try require(try MailFixtureCleanup.fixtureIDs(tag: "[ab-test] fixture", path: path) == ["1", "5"])
     try require(try MailFixtureCleanup.fixtureIDs(tag: "[ab-test] absent", path: path).isEmpty)
 
+    try execute(path, "INSERT INTO subjects VALUES('[ab-test] orphan'); INSERT INTO messages VALUES(3,999,0);")
+    do { _ = try MailFixtureCleanup.fixtureIDs(tag: "[ab-test] orphan", path: path); throw MailCommandFailure.rejected }
+    catch SourceFailure.corrupt {}
     let fired = DispatchSemaphore(value: 0)
     await MainActor.run { _ = MailQualification.deadline(after: 0.01) { _ = fired.signal() } }
     let firedResult = await withCheckedContinuation { continuation in
@@ -106,7 +109,7 @@ func checkMailQualification() async throws {
     let unsafe = MailQualification(script: { body in body.contains("set chosen") ? "wrong" : "" }, fixtureIDs: { _ in ["123"] }, removeSelected: { throw SourceFailure.corrupt })
     let refused = try await unsafe.run(scenario: "MAIL-CLEANUP", tag: "[ab-test] refused")
     try require(!refused["cleanup_passed"].bool && refused["cleanup_error"].string == MailCommandFailure.unconfirmed.localizedDescription)
-    for (stage, step) in [(6, "empty viewer"), (7, "only one test message"), (9, "displayed mailbox"), (10, "indexed test message")] {
+    for (stage, step) in [(1, "find the tagged"), (2, "read the tagged"), (3, "show the tagged"), (4, "choose the tagged"), (10, "indexed test message")] {
         let selectionFailure = MailQualification(script: { body in body.contains("set cleanupStage") ? "failure|\(stage)|-2700" : "" }, fixtureIDs: { _ in ["123"] }, removeSelected: { throw SourceFailure.corrupt })
         let proof = try await selectionFailure.run(scenario: "MAIL-CLEANUP", tag: "[ab-test] selection")
         try require(!proof["cleanup_passed"].bool && proof["cleanup_error"].string.contains(step) && proof["cleanup_error_number"] == .number(-2700))
@@ -117,6 +120,13 @@ func checkMailQualification() async throws {
     let unsafeSelection = MailQualification(script: { body in body.contains("set cleanupStage") ? "select|123" : "" }, fixtureIDs: { _ in ["123"] }, selectDisplayed: { _ in }, removeSelected: { throw SourceFailure.corrupt })
     let unconfirmedSelection = try await unsafeSelection.run(scenario: "MAIL-CLEANUP", tag: "[ab-test] selection")
     try require(!unconfirmedSelection["cleanup_passed"].bool && unconfirmedSelection["cleanup_error"].string == MailCommandFailure.unconfirmed.localizedDescription)
+    let staleSelection = MailQualification(script: { body in
+        if body.contains("set cleanupStage") { return "select|123" }
+        if body.contains("set chosen") { return "456" }
+        return ""
+    }, fixtureIDs: { _ in ["123"] }, selectDisplayed: { _ in }, removeSelected: { throw SourceFailure.corrupt })
+    let stale = try await staleSelection.run(scenario: "MAIL-CLEANUP", tag: "[ab-test] selection")
+    try require(!stale["cleanup_passed"].bool && stale["cleanup_error"].string == MailCommandFailure.unconfirmed.localizedDescription)
     let count = await failed.scripts().count
     do { _ = try await runner.run(scenario: "MAIL-CLEANUP", tag: "foreign"); throw SourceFailure.corrupt } catch SourceFailure.invalid {}
     try require(await failed.scripts().count == count)

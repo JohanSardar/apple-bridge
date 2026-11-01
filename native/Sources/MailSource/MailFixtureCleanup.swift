@@ -7,7 +7,7 @@ public enum MailFixtureCleanup {
     public typealias FixtureIDs = @Sendable (String) async throws -> [String]
     public static func fixtureIDs(tag: String, path: String = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Mail/V10/MailData/Envelope Index").path) throws -> [String] {
         let reader = try SQLiteSnapshot(path: path, generationSQL: "SELECT 'mail-cleanup'")
-        let found = try reader.query("SELECT CAST(m.ROWID AS TEXT) AS id, b.url FROM messages m JOIN subjects s ON s.ROWID=m.subject JOIN mailboxes b ON b.ROWID=m.mailbox WHERE s.subject=? AND m.deleted=0 ORDER BY m.ROWID", values: [tag], maxRows: 16, timeout: 2)
+        let found = try reader.query("SELECT CAST(m.ROWID AS TEXT) AS id, b.url FROM messages m JOIN subjects s ON s.ROWID=m.subject LEFT JOIN mailboxes b ON b.ROWID=m.mailbox WHERE s.subject=? AND m.deleted=0 ORDER BY m.ROWID", values: [tag], maxRows: 16, timeout: 2)
         guard found.complete else { throw MailCommandFailure.unconfirmed }
         return try found.rows.compactMap { row in
             guard let id = row["id"]?.text, UInt64(id) != nil, let raw = row["url"]?.text, let url = URL(string: raw) else { throw SourceFailure.corrupt }
@@ -18,10 +18,12 @@ public enum MailFixtureCleanup {
     public struct Failure: Error, LocalizedError, Sendable {
         public let step: String
         public let cause: any Error
-        public var errorDescription: String? { "Mail could not " + step + ". Open Mail, let mailbox sync finish, and try again." }
+        public var recovery = "Open Mail, let mailbox sync finish, and try again."
+        public var errorDescription: String? { "Mail could not " + step + ". " + recovery }
     }
     @MainActor public static func selectDisplayed(tag: String) async throws {
-        guard AXIsProcessTrusted(), let mail = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.mail").first else { throw MailCommandFailure.rejected }
+        guard AXIsProcessTrusted() else { throw Failure(step: "access its Accessibility controls", cause: MailCommandFailure.rejected, recovery: "Enable Apple Bridge in System Settings > Privacy & Security > Accessibility, then try again.") }
+        guard let mail = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.mail").first else { throw MailCommandFailure.connectionLost }
         let app = AXUIElementCreateApplication(mail.processIdentifier)
         AXUIElementSetMessagingTimeout(app, 1)
         let deadline = ContinuousClock.now.advanced(by: .seconds(5))
@@ -46,10 +48,16 @@ public enum MailFixtureCleanup {
             }
             return nil
         }
-        guard let window = attribute(app, kAXFocusedWindowAttribute), let row = find(unsafeDowncast(window, to: AXUIElement.self), row: nil, depth: 0) else { throw Failure(step: "find the tagged row in the Mail viewer", cause: MailCommandFailure.rejected) }
-        let selected = AXUIElementSetAttributeValue(row, kAXSelectedAttribute as CFString, kCFBooleanTrue)
-        guard selected == .success || AXUIElementPerformAction(row, kAXPressAction as CFString) == .success else { throw Failure(step: "select the tagged row in the Mail viewer", cause: MailCommandFailure.rejected) }
-        try await Task.sleep(for: .milliseconds(200))
+        let windows = attribute(app, kAXWindowsAttribute) as? [AXUIElement] ?? []
+        for window in windows {
+            guard let row = find(window, row: nil, depth: 0) else { continue }
+            guard AXUIElementPerformAction(window, kAXRaiseAction as CFString) == .success else { throw Failure(step: "bring the Mail viewer forward", cause: MailCommandFailure.rejected) }
+            let selected = AXUIElementSetAttributeValue(row, kAXSelectedAttribute as CFString, kCFBooleanTrue)
+            guard selected == .success || AXUIElementPerformAction(row, kAXPressAction as CFString) == .success else { throw Failure(step: "select the tagged row in the Mail viewer", cause: MailCommandFailure.rejected) }
+            try await Task.sleep(for: .milliseconds(200))
+            return
+        }
+        throw Failure(step: "find the tagged row in the Mail viewer", cause: MailCommandFailure.rejected)
     }
     @MainActor public static func removeSelected() async throws {
         guard AXIsProcessTrusted(), let mail = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.mail").first else { throw MailCommandFailure.rejected }
@@ -124,8 +132,8 @@ public enum MailFixtureCleanup {
             if (count message viewers) is 0 then make new message viewer
             set cleanupStage to 3
             set v to front message viewer
-            set index of window of v to 1
             activate
+            set cleanupStage to 4
             set selected mailboxes of v to {mailbox of m}
             delay 0.2
             return "select|" & ((id of m) as string)
@@ -153,10 +161,10 @@ public enum MailFixtureCleanup {
             }
             if selected.hasPrefix("failure|") {
                 let parts = selected.split(separator: "|")
-                let steps = ["find the tagged test message", "read the tagged test message", "show the tagged mailbox", "select the tagged test message", "confirm the tagged test selection", "select the test message in the empty viewer", "select only one test message", "confirm the selected test message identity", "find the tagged message in the displayed mailbox", "locate the indexed test message in Mail"]
-                if parts.count == 3, let stage = Int(parts[1]), steps.indices.contains(stage - 1), let code = Int(parts[2]) { throw Failure(step: steps[stage - 1], cause: MailCommandFailure.script(code)) }
+                let steps = [1: "find the tagged test message", 2: "read the tagged test message", 3: "show the tagged mailbox", 4: "choose the tagged mailbox", 10: "locate the indexed test message in Mail"]
+                if parts.count == 3, let stage = Int(parts[1]), let step = steps[stage], let code = Int(parts[2]) { throw Failure(step: step, cause: MailCommandFailure.script(code)) }
             }
-            guard UInt64(selected) != nil else { throw MailCommandFailure.unconfirmed }
+            guard UInt64(selected) != nil, ids.contains(selected) else { throw MailCommandFailure.unconfirmed }
             try await removeSelected()
         }
         throw MailCommandFailure.unconfirmed
