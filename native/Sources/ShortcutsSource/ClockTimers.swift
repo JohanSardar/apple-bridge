@@ -270,6 +270,13 @@ private struct ClockTimerUI {
             }
             throw ClockTimerFailure(step: "find the tagged recent timer")
         }
+        let close = find(rows[0], role: kAXButtonRole).filter {
+            name($0) == "Close" && attribute($0, kAXEnabledAttribute) as? Bool == true
+        }
+        if close.count == 1 {
+            try press(close, step: "remove the tagged recent timer")
+            return
+        }
         func frame(_ element: AXUIElement) -> CGRect? {
             guard let position = attribute(element, kAXPositionAttribute), let size = attribute(element, kAXSizeAttribute), CFGetTypeID(position) == AXValueGetTypeID(), CFGetTypeID(size) == AXValueGetTypeID() else { return nil }
             var point = CGPoint.zero, extent = CGSize.zero
