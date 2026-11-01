@@ -37,17 +37,20 @@ func runSiriIntents(ctx context.Context, s Scenario, level string) Evidence {
 	digest, digestErr := os.ReadFile("packaging/app-intents/source.sha256")
 	var actions struct {
 		Actions map[string]struct {
-			Identifier string `json:"identifier"`
+			Identifier  string `json:"identifier"`
+			OutputFlags *int   `json:"outputFlags"`
 		} `json:"actions"`
 	}
 	parsed := json.Unmarshal(metadata, &actions) == nil && actions.Actions["BridgeStatusIntent"].Identifier == "BridgeStatusIntent"
+	flags := actions.Actions["BridgeStatusIntent"].OutputFlags
+	noninteractive := parsed && flags != nil && *flags == 0
 	emitted := parsed && metadataErr == nil && sourceErr == nil && digestErr == nil && strings.TrimSpace(string(digest)) == fmt.Sprintf("%x", sha256.Sum256(source))
 	if level == "sim" {
 		cli = &shortcutProbeSimulation{entries: []shortcut.Entry{{Name: "AB Bridge Status"}}, result: shortcut.Result{Data: []byte("Apple Bridge background service is not registered.")}}
-		qualified = emitted && rejectsMetadataOnlyHelper(ctx)
+		qualified = emitted && noninteractive && rejectsMetadataOnlyHelper(ctx)
 	} else {
 		artifact, err := os.ReadFile("packaging/shortcuts/AB Bridge Status.shortcut")
-		qualified = emitted && err == nil && len(artifact) >= 4 && string(artifact[:4]) == "AEA1"
+		qualified = emitted && noninteractive && err == nil && len(artifact) >= 4 && string(artifact[:4]) == "AEA1"
 		if qualified {
 			_, stop, hostErr := startBridgeIntentHost(ctx)
 			if hostErr != nil {
@@ -59,7 +62,8 @@ func runSiriIntents(ctx context.Context, s Scenario, level string) Evidence {
 	}
 	e := runShortcutProbe(ctx, s, level, "AB Bridge Status", cli, qualified, validBridgeStatus)
 	e.Assertions = append(e.Assertions, Assertion{Name: "status_intent_metadata_matches_source", Passed: emitted})
-	e.Passed = e.Passed && emitted
+	e.Assertions = append(e.Assertions, Assertion{Name: "status_intent_returns_without_dialog", Passed: noninteractive})
+	e.Passed = e.Passed && emitted && noninteractive
 	if level == "real" && e.Passed && stopHost != nil {
 		stopHost()
 		result, err := cli.Run(ctx, shortcut.Input{Shortcut: "AB Bridge Status", Timeout: 5 * time.Minute})
