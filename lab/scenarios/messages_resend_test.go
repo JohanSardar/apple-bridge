@@ -9,18 +9,10 @@ import (
 	"testing"
 )
 
-func TestResendRefusesPreviousRunBeforeStartingWorld(t *testing.T) {
-	t.Setenv("APPLE_BRIDGE_RESEND_RUN", "previous")
-	e := runMessagesCommands(context.Background(), Scenario{ID: "MSG-RESEND"}, "real")
-	if e.Passed || e.Status != "environment-limited" || e.Metrics["writes_submitted"] != 0 || len(e.Assertions) != 1 || e.Assertions[0].Name != "safe_failed_self_fixture" {
-		t.Fatal(e)
-	}
-}
-
 func TestFailedSelfFixtureIsReadOnlyAndScoped(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	t.Setenv("APPLE_BRIDGE_RESEND_RUN", "owned")
+	t.Setenv("APPLE_BRIDGE_RESEND_RUN", "previous")
 	directory := filepath.Join(home, "Library", "Application Support", "AppleBridgeDev", "messages-command-cleanup")
 	if err := os.MkdirAll(directory, 0700); err != nil {
 		t.Fatal(err)
@@ -50,17 +42,20 @@ func TestFailedSelfFixtureIsReadOnlyAndScoped(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := context.Background()
-	native, chat, err := failedSelfFixture(ctx, db, []string{"self@example.com"})
+	native, chat, err := failedSelfFixture(ctx, db, []string{"self@example.com"}, "owned")
 	if err != nil || native != "owned-failed" || chat != "self" {
 		t.Fatal(native, chat, err)
 	}
-	if _, _, err = failedSelfFixture(ctx, db, []string{"other@example.com"}); err == nil {
+	if _, _, err = failedSelfFixture(ctx, db, []string{"self@example.com"}, "previous"); err == nil {
+		t.Fatal("previous run accepted")
+	}
+	if _, _, err = failedSelfFixture(ctx, db, []string{"other@example.com"}, "owned"); err == nil {
 		t.Fatal("foreign self route accepted")
 	}
 	if _, err = db.Exec("INSERT INTO chat_recoverable_message_join VALUES(1,11)"); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err = failedSelfFixture(ctx, db, []string{"self@example.com"}); err == nil {
+	if _, _, err = failedSelfFixture(ctx, db, []string{"self@example.com"}, "owned"); err == nil {
 		t.Fatal("deleted fixture accepted")
 	}
 	var count int

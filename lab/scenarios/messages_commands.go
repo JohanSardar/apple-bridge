@@ -23,12 +23,6 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 	if s.ID == "MSG-SELFTEST" && level == "real" {
 		return runNativeMessagesSelfTest(ctx, e)
 	}
-	if level == "real" && s.ID == "MSG-RESEND" && os.Getenv("APPLE_BRIDGE_RESEND_RUN") != e.RunID {
-		e.Status = "environment-limited"
-		e.Metrics = map[string]any{"writes_submitted": 0}
-		e.Assertions = append(e.Assertions, Assertion{Name: "safe_failed_self_fixture", Status: "unverified", Detail: "This check needs a failed self-message created and registered by the current run. No native failure was induced; existing failed messages were left untouched."})
-		return e
-	}
 	if level == "real" && (s.ID == "MSG-READSTATE-REAL" || s.ID == "MSG-DELETE-REAL") && os.Getenv("APPLE_BRIDGE_MESSAGES_UI_DEFERRED") == "1" {
 		e.Status = "environment-limited"
 		e.Metrics = map[string]any{"writes_submitted": 0, "ui_deferred": true}

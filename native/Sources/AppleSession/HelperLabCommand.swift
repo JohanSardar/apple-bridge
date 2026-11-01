@@ -28,6 +28,17 @@ enum HelperLabCommand {
             while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
             try JSONEncoder().encode(result!.get()).write(to: reportURL, options: .atomic)
             return true
+        case "messages-resend-fixture":
+            let reportURL = try report(arguments)
+            guard arguments.count > 1 else { throw ProbeFailure.invalidArguments }
+            var result: JSON?
+            Task { @MainActor in
+                do { result = try await MessagesResendFixture.run(arguments[1]) }
+                catch { result = .object(["passed": .bool(false), "failed_fixture_count": .number(0)]) }
+            }
+            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
+            try JSONEncoder().encode(result!).write(to: reportURL, options: .atomic)
+            return true
         case "messages-variant-proof":
             let reportURL = try report(arguments)
             guard arguments.count > 1 else { throw ProbeFailure.invalidArguments }

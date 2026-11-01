@@ -26,7 +26,7 @@ func TestMessagesWritePreflightPreservesExistingUnreadMessages(t *testing.T) {
 		}
 	}
 	ctx := context.Background()
-	for _, id := range []string{"MSG-READSTATE-REAL", "MSG-DELETE-REAL", "WEB-MEDIA-VARIANTS", "WEB-UPLOAD-NATIVE-STAGING"} {
+	for _, id := range []string{"MSG-READSTATE-REAL", "MSG-DELETE-REAL", "MSG-RESEND", "WEB-MEDIA-VARIANTS", "WEB-UPLOAD-NATIVE-STAGING"} {
 		e, allowed := nativeMessagesExistingChatGate(ctx, db, id, "self", Evidence{Passed: true})
 		if allowed || e.Passed || e.Metrics["writes_submitted"] != 0 || e.Conditions["reason"] == "" {
 			t.Fatal(id, e, allowed)

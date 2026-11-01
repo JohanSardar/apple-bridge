@@ -11,8 +11,7 @@ import (
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 )
 
-func failedSelfFixture(ctx context.Context, database *sql.DB, own []string) (string, string, error) {
-	run := os.Getenv("APPLE_BRIDGE_RESEND_RUN")
+func failedSelfFixture(ctx context.Context, database *sql.DB, own []string, run string) (string, string, error) {
 	if !regexp.MustCompile(`^[A-Za-z0-9_-]+$`).MatchString(run) {
 		return "", "", contracts.ErrInvalid
 	}
