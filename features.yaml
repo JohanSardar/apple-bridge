@@ -430,17 +430,21 @@ features:
     limits:
       - scenario: NOTE-EXTRAS
         level: real
-        reason: "Tagged production rename/move with captured-ID cleanup is implemented; real qualification pending on the Air. Folder deletion requires separate proof. Notes.sdef has no native checklist, hashtag or pin setters; existing decoder reads remain available."
+        reason: "Air qualification failed because the Helper did not return notes.create_folder dispatch evidence within the 15-second exchange deadline; the destination identity was unavailable. Earlier folder rename also reached NoteStore after command observation expired. Native checklist, hashtag and pin setters are absent from Notes.sdef; folder deletion remains unqualified."
   - id: notes.write
     title: Notes plain-text create, update, delete, folders; rich edits reject
     requirements: [R-RW, R-NOTES]
     milestone: M3
     modules: [native/NotesSource, operations]
     depends_on: [notes.read]
-    status: done
+    status: limited
     scenarios:
       - {id: NOTE-CRUD, levels: [sim, real, replica]}
       - {id: NOTE-RICH-REJECT, levels: [sim, real]}
+    limits:
+      - scenario: NOTE-CRUD
+        level: real
+        reason: "CRUD passed real with deletion and replica convergence. A later full-baseline audit failed because two previously run-owned folder deletions committed during the next run, changing 135 identities to 133; every command and replica assertion in that run passed. The final isolated rerun remains outstanding at the deadline."
     notes: REST and MCP create, append, replace and delete pass native read-back and replica convergence. Deletion moves the exact note into its account's Recently Deleted folder and verifies NoteStore exclusion; captured-ID cleanup restores the active baseline.
   - id: usage.read
     title: Screen Time estimates from Biome App.InFocus with lock/sleep clipping
@@ -891,9 +895,9 @@ features:
       - {id: WEB-NOTE-WRITE, levels: [web]}
       - {id: WEB-NOTE-PARITY, levels: [web]}
     notes: >-
-      Browser milestone 228/228 passes without skips or flakes; READ includes 4.5:1 highlight/link contrast across all five colors and both appearances. Core milestone green with explicit limits: #283 establishes leader-reported real DECODE-FULL 5/5 and REST/MCP CRUD sim 34/34. The pre-fix real append conflicted; replace/MCP were not reached, and tagged cleanup failed. Further real Notes writes are stopped and limited pending a verified cleanup route; no local On My Mac account exists. Leader-accepted #274 passes 20 real first-record saves, p95 gateway/Ubuntu replica 476.3/870.2 ms; full content 1430/1420 ms is separate. Rich/checklist mutations stay hidden; combined native/browser journeys, worker-enabled external-body integration, burst/crash and app-specific UI timing remain limited.
+      Browser milestone 228/228 passes without skips or flakes; READ includes 4.5:1 highlight/link contrast across all five colors and both appearances. Core milestone green with explicit limits: #283 establishes leader-reported real DECODE-FULL 5/5 and REST/MCP CRUD sim 34/34. REST/MCP plain-text CRUD subsequently passed for real, including delete observation and replication. Later qualification remains limited by intermittent Helper dispatch timeouts and delayed Notes folder cleanup commits. Leader-accepted #274 passes 20 real first-record saves, p95 gateway/Ubuntu replica 476.3/870.2 ms; full content 1430/1420 ms is separate. Rich/checklist mutations stay hidden; combined native/browser journeys, worker-enabled external-body integration, burst/crash and app-specific UI timing remain limited.
     limits:
-      - {"scenario": "NOTE-EDIT-PARITY", "level": "real", "reason": "Production CRUD and rich-write rejection precede the native parity probe; real qualification pending on the Air. Public Notes HTML does not create native checklist identities; rich editing remains unsupported."}
+      - {"scenario": "NOTE-EDIT-PARITY", "level": "real", "reason": "Air parity stopped in its production CRUD prerequisite: notes.create did not return Helper dispatch evidence within the 15-second exchange deadline; the indeterminate creation also prevented captured-folder cleanup and exact baseline restoration. Public Notes HTML does not create native checklist identities; production rich editing remains unsupported."}
   - id: remote.relay
     title: SNI passthrough relay, stable device enrollment and persistent budgets
     requirements: [R-SECURE, R-WEB-REACH]
