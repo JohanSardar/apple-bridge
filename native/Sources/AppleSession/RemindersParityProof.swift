@@ -226,18 +226,17 @@ enum RemindersParityProof {
                 try ui.press("Smart List", role: kAXMenuItemRole)
                 ui.selectionDiagnostics["smart_type_selected"] = 1
                 try await Task.sleep(for: .milliseconds(300))
-                let tagChoices = ui.find(tag, role: kAXCheckBoxRole)
-                ui.selectionDiagnostics["tag_checkbox_matches"] = Double(tagChoices.count)
-                for role in [kAXButtonRole, kAXMenuItemRole, kAXPopUpButtonRole] {
-                    ui.selectionDiagnostics["tag_matches_" + role] = Double(ui.find(tag, role: role).count)
-                }
-                let tagRole = tagChoices.count == 1 ? kAXCheckBoxRole : kAXMenuItemRole
-                guard ui.find(tag, role: tagRole).count == 1 else { throw SourceFailure.unsupported }
-                try ui.press(tag, role: tagRole)
+                guard let sheet = ui.ownedSheet else { throw SourceFailure.conflict }
+                let fields = ui.find("", role: kAXTextFieldRole, within: sheet)
+                ui.selectionDiagnostics["tag_input_matches"] = Double(fields.count)
+                guard fields.count == 1 else { throw SourceFailure.conflict }
+                try ui.set(fields[0], text: tag)
                 smartAttempted = true
-                try ui.pressAny(["OK", "Add List", "Done"], role: kAXButtonRole)
+                try ui.key(36)
+                try await Task.sleep(for: .milliseconds(300))
+                if ui.sheetIsOpen(sheet) { try ui.pressAny(["OK", "Add List", "Done"], role: kAXButtonRole) }
                 try await Task.sleep(for: .milliseconds(500))
-                ui.selectionDiagnostics["confirmation_sheet_remains"] = ui.ownedSheet.map { sheet in ui.sheets().contains(where: { CFEqual($0, sheet) }) ? 1 : 0 } ?? 0
+                ui.selectionDiagnostics["confirmation_sheet_remains"] = ui.sheetIsOpen(sheet) ? 1 : 0
                 var found = false
                 for _ in 0..<60 {
                     for session in sessions {
@@ -291,15 +290,16 @@ enum RemindersParityProof {
         if let ui = fixtureUI {
           if ui.pendingNewListSheet { try? await ui.adoptNewListSheet() }
           if let sheet = ui.ownedSheet {
-            if ui.sheets().contains(where: { CFEqual($0, sheet) }), ui.find("Cancel", role: kAXButtonRole, within: sheet).count == 1 {
-                try? await ui.activate()
-                try? ui.press("Cancel", role: kAXButtonRole)
+            if ui.sheetIsOpen(sheet) {
+                try? await ui.focusApplication()
+                let cancel = ui.find("Cancel", role: kAXButtonRole, within: sheet)
+                if cancel.count == 1 { _ = AXUIElementPerformAction(cancel[0], kAXPressAction as CFString) }
                 let deadline = ContinuousClock.now.advanced(by: .seconds(3))
-                while ui.sheets().contains(where: { CFEqual($0, sheet) }), ContinuousClock.now < deadline {
+                while ui.sheetIsOpen(sheet), ContinuousClock.now < deadline {
                     try await Task.sleep(for: .milliseconds(100))
                 }
             }
-            checks["owned_sheet_cleanup"] = .bool(!ui.sheets().contains(where: { CFEqual($0, sheet) }))
+            checks["owned_sheet_cleanup"] = .bool(!ui.sheetIsOpen(sheet))
           } else if ui.pendingNewListSheet {
             checks["owned_sheet_cleanup"] = .bool(false)
           }
@@ -510,8 +510,27 @@ final class RemindersFixtureUI {
         [kAXButtonRole, kAXPopUpButtonRole].contains(role)
     }
 
+    func attachedSheets() -> [AXUIElement] {
+        var pending = elements(root, kAXWindowsAttribute)
+        var visited: [AXUIElement] = []
+        var result: [AXUIElement] = []
+        let deadline = ContinuousClock.now.advanced(by: .seconds(2))
+        while !pending.isEmpty, visited.count < 3000, ContinuousClock.now < deadline {
+            let element = pending.removeLast()
+            if visited.contains(where: { CFEqual($0, element) }) { continue }
+            visited.append(element)
+            if value(element, kAXRoleAttribute) == kAXSheetRole { result.append(element) }
+            pending += elements(element, kAXChildrenAttribute) + elements(element, kAXSheetsAttribute)
+        }
+        return result
+    }
+
+    func sheetIsOpen(_ sheet: AXUIElement) -> Bool {
+        attachedSheets().contains { CFEqual($0, sheet) }
+    }
+
     func editorIsOpen(_ editor: AXUIElement) -> Bool {
-        (elements(root, kAXWindowsAttribute) + sheets()).contains { CFEqual($0, editor) }
+        (elements(root, kAXWindowsAttribute) + attachedSheets()).contains { CFEqual($0, editor) }
     }
 
     func adoptSectionEditor(previousWindows: [AXUIElement], names: [String]) async throws -> AXUIElement {
