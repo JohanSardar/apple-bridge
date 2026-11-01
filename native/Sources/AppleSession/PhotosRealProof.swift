@@ -1,8 +1,6 @@
 #if LAB
 import Foundation
 import AppKit
-import Darwin
-import Carbon
 import ApplicationServices
 @preconcurrency import Photos
 import CryptoKit
@@ -23,25 +21,6 @@ enum PhotosRealProof {
         let title = "[ab-test] " + UUID().uuidString
         guard AXIsProcessTrusted() else {
             return .object(["grant_passed": .bool(true), "failure": .string("Photos cleanup needs Helper Accessibility access. Enable it in System Settings before retrying.")])
-        }
-        for bundle in ["com.apple.systemevents"] {
-            if NSRunningApplication.runningApplications(withBundleIdentifier: bundle).isEmpty {
-                guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundle) else { throw SourceFailure.unavailable }
-                let configuration = NSWorkspace.OpenConfiguration()
-                configuration.activates = false
-                _ = try await NSWorkspace.shared.openApplication(at: url, configuration: configuration)
-            }
-            let target = NSAppleEventDescriptor(bundleIdentifier: bundle)
-            guard AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false) == noErr else {
-                return .object(["grant_passed": .bool(true), "failure": .string("Photos cleanup needs Helper Automation access to System Events. Enable it in System Settings before retrying.")])
-            }
-        }
-        func script(_ body: String) throws -> NSAppleEventDescriptor {
-            guard let script = NSAppleScript(source: "with timeout of 15 seconds\n" + body + "\nend timeout") else { throw SourceFailure.invalid }
-            var error: NSDictionary?
-            let result = script.executeAndReturnError(&error)
-            guard error == nil else { throw SourceFailure.unavailable }
-            return result
         }
         let filename = title + ".png"
         await source.setImportFilenameForProof(filename)
@@ -77,7 +56,7 @@ enum PhotosRealProof {
             let opened = NSWorkspace.shared.open(url)
             cleanupDiagnostics["url_opened"] = .bool(opened)
             guard opened else { throw SourceFailure.unavailable }
-            var ready: (AXUIElement, AXUIElement)?
+            var ready: (pid_t, AXUIElement, AXUIElement)?
             for _ in 0..<100 {
                 if let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.Photos").first {
                     cleanupDiagnostics["app_running"] = .bool(true)
@@ -87,28 +66,38 @@ enum PhotosRealProof {
                     let windows = attribute(root, kAXWindowsAttribute) as? [AXUIElement] ?? []
                     cleanupDiagnostics["window_count"] = .number(Double(windows.count))
                     if activated && windows.count == 1 {
-                        ready = (root, windows[0])
+                        ready = (app.processIdentifier, root, windows[0])
                         break
                     }
                 }
                 try await Task.sleep(for: .milliseconds(150))
             }
-            guard let (root, mainWindow) = ready else { throw SourceFailure.unavailable }
+            guard let (pid, root, mainWindow) = ready else { throw SourceFailure.unavailable }
             guard NSWorkspace.shared.open(url) else { throw SourceFailure.unavailable }
             try await Task.sleep(for: .milliseconds(300))
             stage = "identifying the imported test photo"
-            _ = try script("""
-            tell application "System Events" to tell process "Photos"
-                if frontmost is false then error "Photos must be in front for cleanup."
-                if (count windows) is not 1 then error "Close other Photos windows before retrying."
-                if (count sheets of window 1) is not 0 then error "Close the Photos dialog before retrying."
-                keystroke "i" using command down
-            end tell
-            """)
+            func pressKey(_ key: CGKeyCode, flags: CGEventFlags) throws {
+                guard NSWorkspace.shared.frontmostApplication?.processIdentifier == pid,
+                      let source = CGEventSource(stateID: .privateState),
+                      let down = CGEvent(keyboardEventSource: source, virtualKey: key, keyDown: true),
+                      let up = CGEvent(keyboardEventSource: source, virtualKey: key, keyDown: false) else { throw SourceFailure.unavailable }
+                down.flags = flags
+                up.flags = flags
+                down.postToPid(pid)
+                up.postToPid(pid)
+            }
+            func verifyNoSheet() throws {
+                guard let children = attribute(mainWindow, kAXChildrenAttribute) as? [AXUIElement] else { throw SourceFailure.unavailable }
+                let count = children.filter { (attribute($0, kAXRoleAttribute) as? String) == kAXSheetRole }.count
+                cleanupDiagnostics["sheet_count"] = .number(Double(count))
+                guard count == 0 else { throw SourceFailure.conflict }
+            }
+            try verifyNoSheet()
+            try pressKey(34, flags: .maskCommand)
             var infoOpen = true
             defer {
                 if infoOpen {
-                    _ = try? script("tell application \"System Events\" to tell process \"Photos\"\nif frontmost then keystroke \"i\" using command down\nend tell")
+                    try? pressKey(34, flags: .maskCommand)
                 }
             }
             var identified = false
@@ -119,22 +108,12 @@ enum PhotosRealProof {
             }
             cleanupDiagnostics["info_matched"] = .bool(identified)
             guard identified else { throw SourceFailure.conflict }
-            _ = try script("""
-            tell application "System Events" to tell process "Photos"
-                if frontmost is false then error "Photos must be in front for cleanup."
-                keystroke "i" using command down
-            end tell
-            """)
+            try pressKey(34, flags: .maskCommand)
             infoOpen = false
             try await Task.sleep(for: .milliseconds(200))
-            _ = try script("""
-            tell application "System Events" to tell process "Photos"
-                if frontmost is false then error "Photos must be in front for cleanup."
-                if (count windows) is not 1 then error "Close other Photos windows before retrying."
-                if (count sheets of window 1) is not 0 then error "Close the Photos dialog before retrying."
-                key code 51 using {command down, option down}
-            end tell
-            """)
+            guard (attribute(root, kAXWindowsAttribute) as? [AXUIElement] ?? []).count == 1 else { throw SourceFailure.conflict }
+            try verifyNoSheet()
+            try pressKey(51, flags: [.maskCommand, .maskAlternate])
             stage = "deleting the imported test photo"
             for _ in 0..<80 {
                 if PHAsset.fetchAssets(withLocalIdentifiers: [assetID], options: nil).count == 0 { break }
