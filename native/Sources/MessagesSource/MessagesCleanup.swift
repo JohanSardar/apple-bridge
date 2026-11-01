@@ -54,7 +54,9 @@ public enum MessagesCleanup {
             let run = String(tag.dropFirst(9).dropLast())
             let ledger = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/AppleBridgeDev/messages-command-cleanup/" + run + ".json")
             if let bytes = try? Data(contentsOf: ledger), let registration = try? JSONDecoder().decode(JSON.self, from: bytes) {
-                mediaProof = try? MessagesMediaCleanupProof(registration: registration, tag: tag)
+                if !registration["media_attachment_names"].array.isEmpty {
+                    mediaProof = try MessagesMediaCleanupProof(registration: registration, tag: tag)
+                }
                 if registration["run_id"].string == run {
                     ownedBaseline = Int64(registration["baseline_max_row_id"].number)
                     ownedIDs = Set(registration["created_message_ids"].array.map { $0.string }.filter { !$0.isEmpty })
@@ -161,7 +163,14 @@ public enum MessagesCleanup {
             deleted += remaining.count - after
             progress(after,"deleting")
         }
-        let remaining = try candidates().count
+        let remainingCandidates = try candidates().count
+        var remainingOwned = 0
+        if ownedOnly {
+            for guid in ownedIDs {
+                remainingOwned += try reader.query("SELECT 1 FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE m.guid=? AND m.ROWID>? AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=j.chat_id) LIMIT 1", [guid, String(ownedBaseline ?? 0)]).count
+            }
+        }
+        let remaining = max(remainingCandidates, remainingOwned)
         progress(remaining,failure.isEmpty ? "finished" : failure)
         return try JSONSerialization.data(withJSONObject: ["initial_tagged_self_messages": initial, "deleted": deleted, "remaining_tagged_self_messages": remaining, "all_dates": true, "drafts_cleared": draftsCleared, "only_tagged_self_messages": approved.isEmpty, "approved_contacts_included": !approved.isEmpty, "tag_filtered": !tag.isEmpty, "failure": failure, "passed": remaining == 0])
     }
