@@ -26,6 +26,8 @@ struct MessagesVariantChecks {
         let args = JSON.object(["text": .string("test"), "variant": variant])
         let data: [String: JSON] = ["text": .string("test"), "is_from_me": .bool(true), "error_code": .number(0), "effect": .string("com.apple.messages.effect.loud"), "formatting": .array([range])]
         var checks = try await AccessibilityInputChecks.run()
+        let address = try MessagesNavigation.addressURL("self+test@example.com")
+        checks["self_chat_navigation_uses_exact_address"] = URLComponents(url: address, resolvingAgainstBaseURL: false)?.queryItems == [URLQueryItem(name: "address", value: "self+test@example.com")]
         let deepLink = try MessagesNavigation.messageURL("test-guid&other=value")
         let deepLinkComponents = URLComponents(url: deepLink, resolvingAgainstBaseURL: false)
         checks["message_deep_link_uses_open_path"] = deepLinkComponents?.scheme == "imessage" && deepLinkComponents?.host == nil && deepLinkComponents?.path == "open"

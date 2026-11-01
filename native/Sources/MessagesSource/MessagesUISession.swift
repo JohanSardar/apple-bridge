@@ -201,15 +201,7 @@ public struct MessagesUISession {
     }
     public func clear(_ element: AXUIElement, value: (AXUIElement) -> String) throws -> Bool {
         try focus(element, failure: MessagesUIFailure.composerUnavailable)
-        let text = value(element)
-        if text.isEmpty { return true }
-        var range = CFRange(location: 0, length: text.utf16.count)
-        if let selection = AXValueCreate(.cfRange, &range), AXUIElementSetAttributeValue(element, kAXSelectedTextRangeAttribute as CFString, selection) == .success {
-            guard focused(element), value(element) == text else { throw MessagesUIFailure.draftPresent }
-            try input(.keys([51], command: false))
-        } else {
-            try input(.clearText)
-        }
+        try input(.clearText)
         let deadline = Date().addingTimeInterval(3)
         repeat {
             if value(element).isEmpty { return true }

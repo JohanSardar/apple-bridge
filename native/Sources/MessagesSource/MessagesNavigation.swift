@@ -7,6 +7,15 @@ public enum MessagesUIFailure: String, Error, Sendable {
 }
 
 public enum MessagesNavigation {
+    public static func addressURL(_ handle: String) throws -> URL {
+        guard !handle.isEmpty else { throw MessagesUIFailure.navigationUnavailable }
+        var components = URLComponents()
+        components.scheme = "imessage"
+        components.path = "open"
+        components.queryItems = [URLQueryItem(name: "address", value: handle)]
+        guard let url = components.url else { throw MessagesUIFailure.navigationUnavailable }
+        return url
+    }
     public static func messageURL(_ guid: String) throws -> URL {
         guard !guid.isEmpty else { throw MessagesUIFailure.navigationUnavailable }
         var components = URLComponents()

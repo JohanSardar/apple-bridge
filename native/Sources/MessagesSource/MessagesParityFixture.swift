@@ -21,25 +21,14 @@ public enum MessagesParityFixture {
         var state = baseline.nativeState.object
         state["conversation_target"] = .bool(false)
         let target = Prepared(nativeState: .object(state), fingerprint: baseline.fingerprint, action: baseline.action)
+        let reader = try MessagesSelfTestBaseline.reader()
+        let peers = try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [chat])
+        guard peers.count == 1 else { throw MessagesUIFailure.recipientMismatch }
+        try MessagesNavigation.open(MessagesNavigation.addressURL(peers[0]["id"]))
+        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
         try MessagesAccessibility.openMessage(target.nativeState["message_guid"].string, settle: 0.5, resetEditor: false)
+        try MessagesAccessibility.validate(target)
         let session = try MessagesAccessibility.uiSession()
-        do { try MessagesAccessibility.validate(target) }
-        catch MessagesUIFailure.targetUnavailable {
-            let transcripts = MessagesVariantUI.find(session.root, identifier: "TranscriptCollectionView")
-            guard transcripts.count == 1 else { throw MessagesUIFailure.targetUnavailable }
-            var position: CFTypeRef?
-            var size: CFTypeRef?
-            guard AXUIElementCopyAttributeValue(transcripts[0], kAXPositionAttribute as CFString, &position) == .success,
-                  AXUIElementCopyAttributeValue(transcripts[0], kAXSizeAttribute as CFString, &size) == .success,
-                  let position, let size else { throw MessagesUIFailure.targetUnavailable }
-            var point = CGPoint.zero
-            var dimensions = CGSize.zero
-            guard AXValueGetValue(position as! AXValue, .cgPoint, &point), AXValueGetValue(size as! AXValue, .cgSize, &dimensions) else { throw MessagesUIFailure.targetUnavailable }
-            try session.click(at: CGPoint(x: point.x + dimensions.width / 2, y: point.y + dimensions.height / 2))
-            try session.press(119)
-            RunLoop.current.run(until: Date().addingTimeInterval(0.5))
-            try MessagesAccessibility.validate(target)
-        }
         let fields = MessagesVariantUI.find(session.root, identifier: "messageBodyField")
         guard fields.count == 1, MessagesVariantUI.value(fields[0], kAXValueAttribute).isEmpty else { throw MessagesUIFailure.draftPresent }
         guard MessagesVariantUI.value(fields[0], kAXPlaceholderValueAttribute).contains("iMessage") else { throw MessagesUIFailure.wrongService }
