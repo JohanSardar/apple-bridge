@@ -73,8 +73,15 @@ func TestMessagesWritePreflightIgnoresUnreadTapbackEvent(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if _, allowed := nativeMessagesExistingChatGate(context.Background(), db, "MSG-DELETE-REAL", "self", Evidence{}); !allowed {
-		t.Fatal("Tapback event treated as an unread message")
+	for _, event := range []int{1000, 2000, 3006} {
+		if _, err := db.Exec(`UPDATE message SET associated_message_type=?`, event); err != nil {
+			t.Fatal(err)
+		}
+		for _, id := range []string{"MSG-READSTATE-REAL", "MSG-DELETE-REAL", "MSG-RESEND", "WEB-MEDIA-VARIANTS", "WEB-UPLOAD-NATIVE-STAGING"} {
+			if _, allowed := nativeMessagesExistingChatGate(context.Background(), db, id, "self", Evidence{}); !allowed {
+				t.Fatal(id, "reaction event treated as an unread message", event)
+			}
+		}
 	}
 	if _, err := db.Exec(`UPDATE message SET associated_message_type=0`); err != nil {
 		t.Fatal(err)
