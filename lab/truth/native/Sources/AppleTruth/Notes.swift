@@ -14,6 +14,10 @@ extension AppleTruth {
         if verb == "fixture" {
             guard tag.hasPrefix("[ab-test "), tag.hasSuffix("]"), !tag.contains("\n"), tag.count > 11 else { throw NotesTruthFailure.invalid }
         }
+        if verb == "fixture", request["action"] as? String == "folder_identity", request["allow_missing"] as? Bool == true, let title = request["title"] as? String {
+            guard title == "Bridge Test " + tag else { throw NotesTruthFailure.invalid }
+            return ["status":"verified", "id":try notesFolderIdentity(title: title)]
+        }
         if verb == "fixture", request["action"] as? String == "cleanup_owned", let id = request["id"] as? String, try notesDeletionVerified([id], permanent: true) { return ["status":"verified"] }
         let cleanup = verb == "fixture" && ["cleanup", "delete", "cleanup_owned", "cleanup_created_folder", "cleanup_created_folders"].contains(request["action"] as? String ?? "")
         let storeTargets = cleanup && request["folder_id"] == nil && request["folders"] == nil ? try notesDeletionTargets(tag: tag, folderKey: request["action"] as? String == "cleanup_created_folder" ? request["native_key"] as? String : nil) : []
