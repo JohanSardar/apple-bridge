@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[1.98 2.67 3.4] cpu_idle=89% cpus=10 other_heavy=0"
+    "summary": "air: load=[2.95 3.46 3.52] cpu_idle=81% cpus=10 other_heavy=0"
   },
-  "run_id": "reminders-parity_01M6AVCYCSK3P5KHS7P03BM35C",
+  "run_id": "reminders-parity_01M6AW0CEQA0JH6EDHH9FZ4HHC",
   "metrics": {
     "capture_observer_resets": 0
   },
@@ -11,7 +11,7 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-11-01T06:05:26.297837Z",
+  "at": "2026-11-01T06:16:03.287693Z",
   "assertions": [
     {
       "name": "native_sections_build",

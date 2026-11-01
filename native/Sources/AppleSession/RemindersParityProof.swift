@@ -218,11 +218,19 @@ enum RemindersParityProof {
             await attempt("smart_list") {
                 guard checks["tags_readback"]?.bool == true else { throw SourceFailure.unavailable }
                 try await ui.menu("File", ["New List", "New List…", "New List..."])
+                ui.selectionDiagnostics["new_list_sheet_ready"] = 1
                 try await ui.setFocused(text: smartTitle)
+                ui.selectionDiagnostics["name_set"] = 1
                 try ui.press("Standard", role: kAXPopUpButtonRole)
+                ui.selectionDiagnostics["type_menu_opened"] = 1
                 try ui.press("Smart List", role: kAXMenuItemRole)
+                ui.selectionDiagnostics["smart_type_selected"] = 1
                 try await Task.sleep(for: .milliseconds(300))
                 let tagChoices = ui.find(tag, role: kAXCheckBoxRole)
+                ui.selectionDiagnostics["tag_checkbox_matches"] = Double(tagChoices.count)
+                for role in [kAXButtonRole, kAXMenuItemRole, kAXPopUpButtonRole] {
+                    ui.selectionDiagnostics["tag_matches_" + role] = Double(ui.find(tag, role: role).count)
+                }
                 guard tagChoices.count == 1 else { throw SourceFailure.unsupported }
                 try ui.press(tag, role: kAXCheckBoxRole)
                 smartAttempted = true
@@ -596,20 +604,37 @@ final class RemindersFixtureUI {
         func point(_ name: String, before: Bool) throws -> CGPoint {
             let row = try reminderRow(name)
             let fields = find(name, role: kAXTextFieldRole, within: row) + find(name, role: kAXTextAreaRole, within: row)
-            let target = !before && fields.count == 1 ? fields[0] : row
+            let target = row
             var position: CFTypeRef?, size: CFTypeRef?
             guard AXUIElementCopyAttributeValue(target, kAXPositionAttribute as CFString, &position) == .success,
                   AXUIElementCopyAttributeValue(target, kAXSizeAttribute as CFString, &size) == .success,
                   let position, let size, CFGetTypeID(position) == AXValueGetTypeID(), CFGetTypeID(size) == AXValueGetTypeID() else { throw SourceFailure.conflict }
             var origin = CGPoint.zero, dimensions = CGSize.zero
             guard AXValueGetValue(unsafeDowncast(position, to: AXValue.self), .cgPoint, &origin), AXValueGetValue(unsafeDowncast(size, to: AXValue.self), .cgSize, &dimensions), dimensions.width > 0, dimensions.height > 0 else { throw SourceFailure.conflict }
-            return CGPoint(x: origin.x + min(60, dimensions.width / 2), y: origin.y + (before ? 2 : dimensions.height / 2))
+            var y = origin.y + (before ? 2 : dimensions.height / 2)
+            if !before, fields.count == 1 {
+                var fieldPosition: CFTypeRef?, fieldSize: CFTypeRef?
+                if AXUIElementCopyAttributeValue(fields[0], kAXPositionAttribute as CFString, &fieldPosition) == .success,
+                   AXUIElementCopyAttributeValue(fields[0], kAXSizeAttribute as CFString, &fieldSize) == .success,
+                   let fieldPosition, let fieldSize, CFGetTypeID(fieldPosition) == AXValueGetTypeID(), CFGetTypeID(fieldSize) == AXValueGetTypeID() {
+                    var fieldOrigin = CGPoint.zero, fieldDimensions = CGSize.zero
+                    if AXValueGetValue(unsafeDowncast(fieldPosition, to: AXValue.self), .cgPoint, &fieldOrigin), AXValueGetValue(unsafeDowncast(fieldSize, to: AXValue.self), .cgSize, &fieldDimensions) {
+                        y = fieldOrigin.y + fieldDimensions.height / 2
+                    }
+                }
+            }
+            return CGPoint(x: origin.x + (before ? min(60, dimensions.width / 2) : max(1, dimensions.width - 40)), y: y)
         }
         let start = try point(from, before: false), end = try point(to, before: true)
         try await activate()
         try fence()
         defer { CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: end, mouseButton: .left)?.post(tap: .cghidEventTap) }
-        CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: start, mouseButton: .left)?.post(tap: .cghidEventTap)
+        CGEvent(mouseEventSource: nil, mouseType: .mouseMoved, mouseCursorPosition: start, mouseButton: .left)?.post(tap: .cghidEventTap)
+        try await Task.sleep(for: .milliseconds(150))
+        let down = CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: start, mouseButton: .left)
+        down?.setIntegerValueField(.mouseEventClickState, value: 1)
+        down?.post(tap: .cghidEventTap)
+        try await Task.sleep(for: .milliseconds(200))
         for index in 1...20 {
             try gestureFence()
             let fraction = Double(index) / 20
