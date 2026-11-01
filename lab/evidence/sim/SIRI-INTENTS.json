@@ -1,7 +1,22 @@
 {
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[8.98 14.29 18.17] cpu_idle=55% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M6BAFW1PG8QN9QEQ8SZZ0B8J",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "installed_shortcut_count": 1,
+    "output_bytes": 50,
+    "output_sha256": "6efac1f1a6f6b1935fce418453feb99a09881e9dedb0f5ce7fe51dc6b1ff9912",
+    "probe_pack_matches": 1,
+    "timed_out": false
+  },
   "scenario": "SIRI-INTENTS",
   "level": "sim",
   "passed": true,
+  "git_sha": "",
+  "at": "2026-11-01T10:29:10.838913Z",
   "assertions": [
     {
       "name": "inventory_available",
@@ -40,12 +55,6 @@
       "passed": true
     }
   ],
-  "metrics": {
-    "capture_observer_resets": 0,
-    "installed_shortcut_count": 1,
-    "output_bytes": 50,
-    "output_sha256": "6efac1f1a6f6b1935fce418453feb99a09881e9dedb0f5ce7fe51dc6b1ff9912",
-    "probe_pack_matches": 1,
-    "timed_out": false
-  }
+  "latency": null,
+  "hosts": null
 }

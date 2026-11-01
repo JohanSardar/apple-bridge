@@ -1,7 +1,20 @@
 {
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[8.82 14.17 18.1] cpu_idle=19% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M6BAG2DKBA0S5PATPG3M61K7",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "created_timer_duration": 120,
+    "created_timer_running": true,
+    "tagged_recent_timers_remaining": 0
+  },
   "scenario": "CLK-TIMER-REAL",
   "level": "real",
-  "passed": false,
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-11-01T10:29:17.363348Z",
   "assertions": [
     {
       "name": "current_helper_intent_host_ready",
@@ -33,7 +46,7 @@
     },
     {
       "name": "cleanup_timer_deleted",
-      "passed": false
+      "passed": true
     },
     {
       "name": "cleanup_timer_baseline_restored",
@@ -44,12 +57,8 @@
       "passed": true
     },
     {
-      "name": "cleanup_recent_timer_deleted",
-      "passed": false
-    },
-    {
       "name": "cleanup_recent_timer_baseline_restored",
-      "passed": false
+      "passed": true
     },
     {
       "name": "tagged_timer_history_inventory",
@@ -57,41 +66,17 @@
     },
     {
       "name": "tagged_timer_history_deleted",
-      "passed": false
-    },
-    {
-      "name": "tagged_timer_history_deleted",
-      "passed": false
-    },
-    {
-      "name": "tagged_timer_history_deleted",
-      "passed": false
-    },
-    {
-      "name": "tagged_timer_history_deleted",
-      "passed": false
-    },
-    {
-      "name": "tagged_timer_history_deleted",
-      "passed": false
-    },
-    {
-      "name": "tagged_timer_history_deleted",
-      "passed": false
+      "passed": true
     },
     {
       "name": "tagged_timer_history_absent",
-      "passed": false
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
   ],
-  "metrics": {
-    "capture_observer_resets": 0,
-    "created_timer_duration": 120,
-    "created_timer_running": true,
-    "tagged_recent_timers_remaining": 6
-  }
+  "latency": null,
+  "hosts": null
 }

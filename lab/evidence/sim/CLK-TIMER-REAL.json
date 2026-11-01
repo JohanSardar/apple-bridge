@@ -1,7 +1,19 @@
 {
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[14.19 16.34 19.17] cpu_idle=43% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M6BADN7WAZDPGCWW128TCF9X",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "created_timer_duration": 120,
+    "created_timer_running": true
+  },
   "scenario": "CLK-TIMER-REAL",
   "level": "sim",
   "passed": true,
+  "git_sha": "",
+  "at": "2026-11-01T10:27:58.332552Z",
   "assertions": [
     {
       "name": "native_timer_snapshot_build",
@@ -76,9 +88,6 @@
       "passed": true
     }
   ],
-  "metrics": {
-    "capture_observer_resets": 0,
-    "created_timer_duration": 120,
-    "created_timer_running": true
-  }
+  "latency": null,
+  "hosts": null
 }
