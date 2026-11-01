@@ -24,6 +24,43 @@ struct BridgeSettings: View {
     @State private var pairing = PairingState()
     @Bindable private var approval = ApprovalReview.shared
     var body: some View {
+        TabView {
+            ForEach(ShellModel.tabs) { tab in
+                Group {
+                    switch tab {
+                    case .settings: settings
+                    case .approvals: ShellApprovalsScreen()
+                    case .diagnostics:
+                        NavigationStack { DiagnosticsScreen(pairing: pairing) }
+                    }
+                }
+                .tabItem { Label(tab.title, systemImage: tab.symbol) }
+            }
+        }
+        .sheet(isPresented: Binding(get: { approval.job != nil }, set: { if !$0 { approval.job = nil } })) {
+            if let job = approval.job { ApprovalReviewScreen(job: job) }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active && !RealQualification.active {
+                LocationCapability.resume()
+                WidgetsCapability.resume()
+                Task { await pairing.check(); await PushDelivery.shared.drain(); await HealthReadController.shared.resume() }
+            }
+        }
+        .task {
+            if await RealQualification.runIfRequested() { return }
+            LocationCapability.resume()
+            WidgetsCapability.resume()
+            if let index = ProcessInfo.processInfo.arguments.firstIndex(of: "--pair-code"), ProcessInfo.processInfo.arguments.count > index + 1 {
+                await pairing.pair(ProcessInfo.processInfo.arguments[index + 1])
+            }
+            await pairing.check()
+            await PushDelivery.shared.drain()
+            await HealthReadController.shared.resume()
+        }
+    }
+
+    private var settings: some View {
         NavigationStack {
             List {
                 Section("Gateway") {
@@ -55,26 +92,6 @@ struct BridgeSettings: View {
                 }
             }
             .navigationTitle("Apple Bridge")
-            .sheet(isPresented: Binding(get: { approval.job != nil }, set: { if !$0 { approval.job = nil } })) {
-                if let job = approval.job { ApprovalReviewScreen(job: job) }
-            }
-            .onChange(of: scenePhase) { _, phase in
-                if phase == .active && !RealQualification.active {
-                    LocationCapability.resume()
-                    WidgetsCapability.resume()
-                    Task { await PushDelivery.shared.drain(); await HealthReadController.shared.resume() }
-                }
-            }
-            .task {
-                if await RealQualification.runIfRequested() { return }
-                LocationCapability.resume()
-                WidgetsCapability.resume()
-                if let index = ProcessInfo.processInfo.arguments.firstIndex(of: "--pair-code"), ProcessInfo.processInfo.arguments.count > index + 1 {
-                    await pairing.pair(ProcessInfo.processInfo.arguments[index + 1])
-                }
-                await PushDelivery.shared.drain()
-                await HealthReadController.shared.resume()
-            }
         }
     }
 }
@@ -97,4 +114,33 @@ struct DiagnosticsScreen: View {
 
 #Preview {
     BridgeSettings()
+}
+
+struct ShellApprovalsScreen: View {
+    @Bindable private var approval = ApprovalReview.shared
+
+    var body: some View {
+        NavigationStack {
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                let rows = ShellModel.approvals(ApprovalsCapability.pending(), now: Int64(context.date.timeIntervalSince1970))
+                List {
+                    if rows.isEmpty { Text(ShellModel.emptyApprovals) }
+                    ForEach(rows) { row in
+                        Button {
+                            guard let job = ApprovalsCapability.stored(row.id), job.expires > Int64(Date().timeIntervalSince1970) else { return }
+                            approval.job = job
+                        } label: {
+                            VStack(alignment: .leading) {
+                                Text(row.title)
+                                Text(row.summary).font(.caption).privacySensitive()
+                            }
+                        }
+                        .disabled(!ApprovalsCapability.enabled)
+                    }
+                }
+            }
+            .navigationTitle("Approvals")
+            .refreshable { await PushDelivery.shared.drain() }
+        }
+    }
 }
