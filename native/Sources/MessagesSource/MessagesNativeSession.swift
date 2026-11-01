@@ -67,13 +67,13 @@ enum MessagesNativeSession {
         checkpoint("self_chat_resolved")
         return chat
     }
-    static func deletePlaceholder(_ guid: String, chat chatGUID: String) throws {
+    static func deleteOwnedItem(_ guid: String, chat chatGUID: String) throws {
         let chat = try chat(chatGUID)
         guard let message = try object(chat, "messageForGUID:", argument: guid as NSString), try object(message, "guid") as? String == guid,
               let item = try object(message, "_imMessageItem"), try object(item, "guid") as? String == guid else { throw SourceFailure.conflict }
         let (selector, implementation) = try method(chat, "deleteIMMessageItems:")
         typealias Call = @convention(c) (AnyObject, Selector, NSArray) -> Void
-        checkpoint("owned_placeholder_delete_requested")
+        checkpoint("owned_item_delete_requested")
         unsafeBitCast(implementation, to: Call.self)(chat, selector, [item] as NSArray)
     }
     static func send(_ part: JSON, chat guid: String) throws -> String {
