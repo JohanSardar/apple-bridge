@@ -99,7 +99,7 @@ func checkMailCommands() async throws {
             if !observed { try require(result["disposition"].string == "indeterminate" && result["reason"].string == MailCommandFailure.unconfirmed.localizedDescription) }
             let scripts = await fake.scripts()
             let creates = ["mail.create_draft", "mail.send"].contains(op)
-            try require(scripts.count == (creates ? 2 : 1) + (observed ? (creates ? 2 : 1) : 40))
+            try require(scripts.count == (creates ? 2 : 1) + (observed ? (creates ? 2 : 1) : (creates ? 150 : 40)))
             let effect = scripts[creates ? 1 : 0]
             if creates { try require(effect.contains("visible:true")) }
             let expected = ["mail.create_draft": "save m", "mail.send": "send m", "mail.move": "move m to mailbox", "mail.delete": "move m to trash mailbox", "mail.mark_read": "set read status of m to true", "mail.set_flag": "set flagged status of m to true"]
@@ -132,6 +132,11 @@ func checkMailCommands() async throws {
             try require(succeeded && value == (matches ? "1" : "0"))
         }
     }
+    let indexedLater = MailFake("1", lag: 45)
+    let delayedSend = MailCommands(script: { await indexedLater.run($0) }, pollInterval: .milliseconds(1))
+    let delayedAction: JSON = .object(["op": .string("mail.send"), "args": .object(["to": .array([.string("self@example.invalid")]), "subject": .string("[ab-test] delayed"), "body": .string("synthetic")])])
+    try require(try await delayedSend.dispatch(delayedSend.prepare(.object(["action": delayedAction])))["observed"].bool)
+    try require(await indexedLater.scripts().filter { $0.contains("send m") }.count == 1)
     let delayed = MailFake("true", lag: 2)
     let commands = MailCommands(script: { await delayed.run($0) }, pollInterval: .milliseconds(1))
     let prepared = try commands.prepare(.object(["action": .object(["op": .string("mail.set_flag"), "native_key": .string("123"), "args": .object(["flagged": .bool(true)])])]))

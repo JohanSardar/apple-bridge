@@ -153,8 +153,8 @@ public struct MailCommands: Sendable {
             guard try await script(readback) == "0" else { throw SourceFailure.conflict }
         }
         _ = try await script(body)
-        let deadline = ContinuousClock.now.advanced(by: .seconds(15))
-        for _ in 0..<40 {
+        let deadline = ContinuousClock.now.advanced(by: .seconds(creates ? 30 : 15))
+        for _ in 0..<(creates ? 150 : 40) {
             try Task.checkCancellation()
             guard ContinuousClock.now < deadline else { throw MailCommandFailure.timeout }
             let evidence = try await script(readback)

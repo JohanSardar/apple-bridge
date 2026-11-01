@@ -54,6 +54,9 @@ func runMailBodyReal(ctx context.Context, s Scenario, level string) (e Evidence)
 			e.Conditions = map[string]string{"reason": problem.Error()}
 			fmt.Fprintln(os.Stderr, problem)
 		}
+		for _, step := range []string{"mail_responsive", "self_address_available", "sent_to_self", "self_mail_received"} {
+			check("fixture_"+step, proof[step])
+		}
 		if !check("self_sent_fixture_created", problem == nil && proof["sent_to_self"] && proof["self_mail_received"]) {
 			return e
 		}
@@ -82,7 +85,6 @@ func runMailBodyReal(ctx context.Context, s Scenario, level string) (e Evidence)
 		}
 		e.Metrics["eligible_sample_count"] = len(truth.Samples)
 	}
-	sample := truth.Samples[0]
 	digest := func(value string) string { return fmt.Sprintf("%x", sha256.Sum256([]byte(value))) }
 	err = w.Await(60*time.Second, func() bool {
 		var records contracts.ReadResult
@@ -90,32 +92,34 @@ func runMailBodyReal(ctx context.Context, s Scenario, level string) (e Evidence)
 		if err != nil {
 			return false
 		}
-		for _, r := range records.Records {
-			if r.Collection != "mail.message" {
-				continue
+		for _, sample := range truth.Samples {
+			for _, r := range records.Records {
+				if r.Collection != "mail.message" {
+					continue
+				}
+				var data struct {
+					Subject  string    `json:"subject"`
+					Sender   string    `json:"from"`
+					Received time.Time `json:"received_at"`
+				}
+				if json.Unmarshal(r.Data, &data) != nil || digest(data.Subject) != sample.Subject || digest(data.Sender) != sample.Sender || data.Received.Unix() != sample.Received {
+					continue
+				}
+				args, _ := json.Marshal(map[string]string{"message_id": r.ID})
+				var result contracts.QueryResult
+				_, err = world.Request(ctx, w.Gateway, "/v1/op/mail.body", contracts.Query{Args: args, DeadlineMS: 60000}, &result)
+				var body struct {
+					State string `json:"state"`
+					Text  string `json:"plain_text"`
+				}
+				if err == nil && json.Unmarshal(result.ResultJSON, &body) == nil && body.State == "downloaded" && digest(body.Text) == sample.Body {
+					e.Metrics["body_digest"] = sample.Body
+					return true
+				}
 			}
-			var data struct {
-				Subject  string    `json:"subject"`
-				Sender   string    `json:"from"`
-				Received time.Time `json:"received_at"`
-			}
-			if json.Unmarshal(r.Data, &data) != nil || digest(data.Subject) != sample.Subject || digest(data.Sender) != sample.Sender || data.Received.Unix() != sample.Received {
-				continue
-			}
-			args, _ := json.Marshal(map[string]string{"message_id": r.ID})
-			var result contracts.QueryResult
-			_, err = world.Request(ctx, w.Gateway, "/v1/op/mail.body", contracts.Query{Args: args}, &result)
-			var body struct {
-				State string `json:"state"`
-				Text  string `json:"plain_text"`
-			}
-			return err == nil && json.Unmarshal(result.ResultJSON, &body) == nil && body.State == "downloaded" && digest(body.Text) == sample.Body
 		}
 		return false
 	})
 	e.Passed = check("mail_body_plain_text_digest_equal", err == nil)
-	if e.Passed {
-		e.Metrics["body_digest"] = sample.Body
-	}
 	return e
 }

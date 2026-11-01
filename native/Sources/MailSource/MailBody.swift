@@ -33,7 +33,7 @@ public enum MailBody {
         defer { try? handle.close() }
         let data = try handle.read(upToCount: (32 << 20) + 1) ?? Data()
         guard data.count <= 32 << 20 else { throw SourceFailure.unavailable }
-        guard let newline = data.firstIndex(of: 10), newline < 20, let length = Int(String(decoding: data[..<newline], as: UTF8.self)), length >= 0, length <= 32 << 20 else { throw SourceFailure.corrupt }
+        guard let newline = data.firstIndex(of: 10), newline < 20, let length = Int(String(decoding: data[..<newline], as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)), length >= 0, length <= 32 << 20 else { throw SourceFailure.corrupt }
         let start = newline + 1
         let available = min(length, data.count - start)
         guard let body = String(data: data.subdata(in: start..<(start + available)), encoding: .isoLatin1) else { throw SourceFailure.corrupt }

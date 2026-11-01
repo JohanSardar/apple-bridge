@@ -1006,12 +1006,10 @@ features:
     milestone: M0
     modules: [native/Sources/MailSource, internal/contracts]
     depends_on: [mail.capture]
-    status: limited
+    status: done
     scenarios:
       - {id: MAIL-BODY, levels: [sim]}
       - {id: MAIL-BODY-REAL, levels: [real]}
-    limits:
-      - {"scenario": "MAIL-BODY-REAL", "level": "real", "reason": "Latest real qualification cannot select an earlier tagged fixture through Mail Accessibility during recovery, so body fixture creation and cleanup are not proved; Automation is granted"}
   - id: photos.capture
     title: Photos metadata capture and filtered search
     requirements: [R-API, R-SCOPE]
@@ -1042,14 +1040,12 @@ features:
     milestone: M0
     modules: [native/Sources/MailSource, internal/contracts, internal/operations]
     depends_on: [mail.capture]
-    status: limited
+    status: done
     scenarios:
       - {id: MAIL-COMMANDS, levels: [sim]}
       - {id: MAIL-SEND-SELF-REAL, levels: [real]}
       - {id: MAIL-DRAFT-REAL, levels: [real]}
       - {id: MAIL-ORGANIZE-REAL, levels: [real]}
-    limits:
-      - {"scenario": "MAIL-ORGANIZE-REAL", "level": "real", "reason": "Sent-message body readback is not confirmed and Mail can retain a stale indexed fixture identity after deletion; signed Helper reports message-unavailable during cleanup"}
   - id: phone.read
     title: Local call history capture
     requirements: [R-API, R-SCOPE]
