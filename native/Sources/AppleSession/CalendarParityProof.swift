@@ -361,8 +361,14 @@ final class CalendarFixtureUI {
             let key = "owned_search_result_" + value(result, kAXRoleAttribute)
             diagnostics[key] = .number((diagnostics[key]?.number ?? 0) + 1)
         }
-        guard let result = results.first else { throw SourceFailure.unavailable }
+        guard let result = results.first(where: { value($0, kAXRoleAttribute) == kAXStaticTextRole }) ?? results.first else { throw SourceFailure.unavailable }
+        diagnostics["owned_result_text_target"] = .bool(value(result, kAXRoleAttribute) == kAXStaticTextRole)
         guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier else { throw SourceFailure.conflict }
+        try await doubleClick(result)
+        diagnostics["owned_result_double_clicked"] = .bool(true)
+        diagnostics["opened_title_count"] = .number(Double(find(title, containing: true).count))
+        diagnostics["opened_fixture_prefix_count"] = .number(Double(find(String(title.prefix(18)), containing: true).count))
+        if hasOwnedInspector() { try fence(); return }
         var candidate = result
         for _ in 0..<4 {
             if AXUIElementSetAttributeValue(candidate, kAXSelectedAttribute as CFString, kCFBooleanTrue) == .success {
@@ -392,22 +398,31 @@ final class CalendarFixtureUI {
             candidate = unsafeDowncast(parent, to: AXUIElement.self)
             if [kAXWindowRole, kAXApplicationRole, kAXTableRole, kAXOutlineRole, kAXScrollAreaRole].contains(value(candidate, kAXRoleAttribute)) { break }
         }
+        try await doubleClick(result)
+        if !hasOwnedInspector() { try post(34, flags: .maskCommand); try await Task.sleep(for: .milliseconds(400)) }
+        try fence()
+    }
+
+    func doubleClick(_ element: AXUIElement) async throws {
+        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier else { throw SourceFailure.conflict }
         var position: CFTypeRef?, size: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(result, kAXPositionAttribute as CFString, &position) == .success,
-              AXUIElementCopyAttributeValue(result, kAXSizeAttribute as CFString, &size) == .success,
+        guard AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &position) == .success,
+              AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &size) == .success,
               let position, let size else { throw SourceFailure.unsupported }
         var point = CGPoint.zero, dimensions = CGSize.zero
         guard AXValueGetValue(unsafeDowncast(position, to: AXValue.self), .cgPoint, &point),
               AXValueGetValue(unsafeDowncast(size, to: AXValue.self), .cgSize, &dimensions) else { throw SourceFailure.unsupported }
         point.x += dimensions.width / 2; point.y += dimensions.height / 2
-        for type in [CGEventType.leftMouseDown, .leftMouseUp] {
-            guard let event = CGEvent(mouseEventSource: nil, mouseType: type, mouseCursorPosition: point, mouseButton: .left) else { throw SourceFailure.unavailable }
-            event.setIntegerValueField(.mouseEventClickState, value: 2)
-            event.post(tap: .cghidEventTap)
+        guard dimensions.width > 0, dimensions.height > 0, CGDisplayBounds(CGMainDisplayID()).contains(point) else { throw SourceFailure.conflict }
+        for count in 1...2 {
+            for type in [CGEventType.leftMouseDown, .leftMouseUp] {
+                guard let event = CGEvent(mouseEventSource: nil, mouseType: type, mouseCursorPosition: point, mouseButton: .left) else { throw SourceFailure.unavailable }
+                event.setIntegerValueField(.mouseEventClickState, value: Int64(count))
+                event.post(tap: .cghidEventTap)
+            }
+            try await Task.sleep(for: .milliseconds(50))
         }
-        try await Task.sleep(for: .milliseconds(400))
-        if !hasOwnedInspector() { try post(34, flags: .maskCommand); try await Task.sleep(for: .milliseconds(400)) }
-        try fence()
+        try await Task.sleep(for: .milliseconds(600))
     }
 
     func commit() async throws {
