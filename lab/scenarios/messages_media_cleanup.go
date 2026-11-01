@@ -84,6 +84,19 @@ func runMediaCleanupProof(ctx context.Context, s Scenario, level string) Evidenc
 		candidate := map[string]any{"description": "Your iMessage, 0-" + filename + ", Text Document · 66 bytes, 3:45 PM"}
 		input["candidates"] = []any{candidate, candidate}
 	}, true, false)
+	run("photo_preview_filename_with_generic_description", func(input map[string]any) {
+		input["candidates"] = []any{map[string]any{"description": "Your iMessage, Photo, 3:45 PM", "values": []string{filename}}}
+	}, true, true)
+	run("duplicate_copies_require_complete_ownership", func(input map[string]any) {
+		candidate := map[string]any{"outgoing": true, "values": []string{filename}}
+		input["candidates"] = []any{candidate, candidate}
+		input["owned_copies"] = 2
+	}, true, true)
+	run("unaccounted_duplicate_is_denied", func(input map[string]any) {
+		candidate := map[string]any{"outgoing": true, "values": []string{filename}}
+		input["candidates"] = []any{candidate, candidate, candidate}
+		input["owned_copies"] = 2
+	}, true, false)
 	run("baseline_data_denied", func(input map[string]any) { input["row"].(map[string]any)["row_id"] = 30 }, false, false)
 	run("other_chat_denied", func(input map[string]any) { input["row"].(map[string]any)["peers"] = []string{"other@example.com"} }, false, false)
 	run("unregistered_attachment_denied", func(input map[string]any) { input["row"].(map[string]any)["attachments"] = []string{"personal.heic"} }, false, false)

@@ -38,6 +38,35 @@ enum MessagesAccessibility {
             throw error
         }
     }
+    static func mediaPreviewNames(_ bubble: AXUIElement, names: Set<String>) throws -> [JSON] {
+        var actions: CFArray?
+        guard AXUIElementCopyActionNames(bubble, &actions) == .success else { return [] }
+        let preview = (actions as? [String] ?? []).filter { $0.hasPrefix("Name:Quick Look\n") }
+        guard preview.count == 1 else { return [] }
+        let session = try uiSession()
+        let previous = children(session.root).filter { value($0, kAXRoleAttribute) == kAXWindowRole }
+        try session.fence()
+        guard AXUIElementPerformAction(bubble, preview[0] as CFString) == .success else { return [] }
+        defer { try? session.press(MessagesUISession.escape) }
+        let deadline = Date().addingTimeInterval(1)
+        var found: Set<String> = []
+        repeat {
+            let windows = children(session.root).filter { window in value(window, kAXRoleAttribute) == kAXWindowRole && !previous.contains(where: { CFEqual($0, window) }) }
+            var budget = 1000
+            for window in windows {
+                _ = matching(window, budget: &budget) { node in
+                    for attribute in [kAXTitleAttribute, kAXValueAttribute, kAXDescriptionAttribute, "AXURL", "AXFilename"] {
+                        let text = value(node, attribute)
+                        if MessagesMediaCleanupProof.matches(text, names: names) { found.insert(text) }
+                    }
+                    return false
+                }
+            }
+            if !found.isEmpty { break }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+        } while Date() < deadline
+        return found.map(JSON.string)
+    }
     static func target(_ root: AXUIElement, prepared: Prepared) throws -> AXUIElement {
         let guid = prepared.action["native_key"].string
         guard !guid.isEmpty else { throw SourceFailure.capabilityUnproven }
@@ -85,7 +114,21 @@ enum MessagesAccessibility {
                 let direction = MessagesMediaCleanupProof.direction(description, names: Set(mediaNames)).map(JSON.bool) ?? .null
                 candidates.append(.object(["outgoing": direction, "values": nested > 0 ? .array(values) : .array([])]))
             }
-            guard budget > 0, let index = MessagesMediaCleanupProof.targetIndex(candidates, names: Set(mediaNames), outgoing: outgoing, allowSelfEcho: prepared.nativeState["target"]["cleanup_self_echo"].bool, equivalentOwned: prepared.nativeState["target"]["cleanup_equivalent_owned_media"].bool) else {
+            let ownedCopies = max(1, Int(prepared.nativeState["target"]["cleanup_media_owned_copies"].number))
+            let selfEcho = prepared.nativeState["target"]["cleanup_self_echo"].bool
+            var selected = MessagesMediaCleanupProof.targetIndex(candidates, names: Set(mediaNames), outgoing: outgoing, allowSelfEcho: selfEcho, equivalentOwned: prepared.nativeState["target"]["cleanup_equivalent_owned_media"].bool, ownedCopies: ownedCopies)
+            if selected == nil, budget > 0 {
+                for (index, bubble) in bubbles.enumerated() {
+                    let names = try mediaPreviewNames(bubble, names: Set(mediaNames))
+                    if !names.isEmpty {
+                        var candidate = candidates[index].object
+                        candidate["values"] = .array(candidates[index]["values"].array + names)
+                        candidates[index] = .object(candidate)
+                    }
+                }
+                selected = MessagesMediaCleanupProof.targetIndex(candidates, names: Set(mediaNames), outgoing: outgoing, allowSelfEcho: selfEcho, equivalentOwned: prepared.nativeState["target"]["cleanup_equivalent_owned_media"].bool, ownedCopies: ownedCopies)
+            }
+            guard budget > 0, let index = selected else {
                 var diagnosticBudget = 4000
                 var nodes: [[String: Any]] = []
                 _ = matching(root, budget: &diagnosticBudget) { node in
