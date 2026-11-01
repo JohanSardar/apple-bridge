@@ -1,18 +1,18 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[144.98 77.16 49.21] cpu_idle=13% cpus=8 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[8.21 8.71 9.44] cpu_idle=66% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M6AY9QD0DT0P7J7D7X6QYRZS",
+  "run_id": "run_01M6B1GWXW1GNZTJ3SN9J9W287",
   "metrics": {
     "capture_observer_resets": 0,
     "pack_count": 1
   },
   "scenario": "FOC-SET-REAL",
   "level": "real",
-  "passed": false,
+  "passed": true,
   "git_sha": "",
-  "at": "2026-11-01T06:56:06.563246Z",
+  "at": "2026-11-01T07:52:27.325025Z",
   "assertions": [
     {
       "name": "helper_directory",
@@ -44,7 +44,7 @@
     },
     {
       "name": "set_readback",
-      "passed": false
+      "passed": true
     },
     {
       "name": "restore_readback",
@@ -72,7 +72,7 @@
     },
     {
       "name": "set_status_after_shortcut",
-      "passed": false
+      "passed": true
     },
     {
       "name": "restore_status_after_shortcut",
@@ -84,8 +84,5 @@
     }
   ],
   "latency": null,
-  "hosts": null,
-  "conditions": {
-    "set_error": "unavailable"
-  }
+  "hosts": null
 }
