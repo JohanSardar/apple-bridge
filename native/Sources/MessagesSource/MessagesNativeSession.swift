@@ -7,7 +7,10 @@ import SourceSupport
 enum MessagesNativeSession {
     private static func method(_ object: AnyObject, _ name: String) throws -> (Selector, IMP) {
         let selector = NSSelectorFromString(name)
-        guard let type = object_getClass(object), let method = class_getInstanceMethod(type, selector) else { throw SendVariantFailure.audioMessageFlagUnverified }
+        guard let type = object_getClass(object), let method = class_getInstanceMethod(type, selector) else {
+            try? PrivateReport.write(["selector_digest": BodyDigest.hash(Data(name.utf8)), "selector_available": false], to: PrivateReport.directory.appendingPathComponent("messages-native-method-diagnostic.json"))
+            throw SendVariantFailure.audioMessageFlagUnverified
+        }
         return (selector, method_getImplementation(method))
     }
     private static func object(_ receiver: AnyObject, _ name: String, argument: AnyObject? = nil) throws -> AnyObject? {
