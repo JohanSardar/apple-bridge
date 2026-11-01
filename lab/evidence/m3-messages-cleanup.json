@@ -1,0 +1,29 @@
+{
+  "initial_owned_rows": 7,
+  "remaining_owned_rows": 7,
+  "remaining_owned_by_ledger": [
+    2,
+    1,
+    2,
+    2
+  ],
+  "genuine_unread_self_messages": 0,
+  "real_qualification": {
+    "MSG-SEND-LATER": {
+      "passed": false,
+      "log_sha256": "c9a2824c148a5cef0509535702a8b14ea597501a30dae5373fb0d38e6b8782f5"
+    },
+    "MSG-MENTION-SEND": {
+      "passed": false,
+      "log_sha256": "b307d1e37f54bc7fcb534796564181a74fbf63dbcff27bf5c58ed485852ad672"
+    },
+    "MSG-AUDIO-MESSAGE": {
+      "passed": false,
+      "log_sha256": "be64a02d424905a568af59655dec565046ac663d2d575b77ffabd19496504396"
+    }
+  },
+  "native_connection_available": false,
+  "saved_owned_draft_removed": true,
+  "self_chat_composer_empty_certified": false,
+  "draft_backup_sha256": "84fea2c5b9148884467dd5d3c06dc020baa6189cd2692e4b23b05464cf396735"
+}
