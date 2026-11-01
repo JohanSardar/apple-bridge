@@ -19,6 +19,13 @@ struct MessagesVariantChecks {
         checks["conversation_shared_message_rejected"] = !MessagesSelfTestIsolation.matchesConversation(chat: "self", memberships: ["self", "other"], expected: "fixture", visibleTexts: ["fixture"])
         checks["conversation_wrong_text_rejected"] = !MessagesSelfTestIsolation.matchesConversation(chat: "self", memberships: ["self"], expected: "fixture", visibleTexts: ["other"])
         checks["conversation_empty_target_rejected"] = !MessagesSelfTestIsolation.matchesConversation(chat: "self", memberships: ["self"], expected: "", visibleTexts: [""])
+        let titleControl = JSON.object(["identifier": .string("ConversationTitle"), "role": .string("AXButton"), "description": .string("Self")])
+        let legacyDetails = JSON.object(["identifier": .string(""), "role": .string("AXButton"), "description": .string("Details")])
+        checks["conversation_title_opens_details"] = MessagesParity.detailsControlIndex([titleControl]) == 0
+        checks["stable_title_preferred_for_details"] = MessagesParity.detailsControlIndex([legacyDetails, titleControl]) == 1
+        checks["ambiguous_conversation_titles_rejected"] = MessagesParity.detailsControlIndex([titleControl, titleControl]) == nil
+        checks["legacy_details_button_supported"] = MessagesParity.detailsControlIndex([legacyDetails]) == 0
+        checks["unrelated_details_controls_rejected"] = MessagesParity.detailsControlIndex([.object(["identifier": .string("other"), "role": .string("AXButton"), "description": .string("Self")])]) == nil
         let proof = JSON.object(["os_build": .string("synthetic-os"), "version": .number(1), "complete": .bool(true), "helper_digest": .string("synthetic-helper")])
         checks["current_build_qualified"] = MessagesSendVariants.validProof(proof, osBuild: "synthetic-os", helperDigest: "synthetic-helper")
         checks["stale_build_rejected"] = !MessagesSendVariants.validProof(proof, osBuild: "synthetic-os", helperDigest: "other-helper")

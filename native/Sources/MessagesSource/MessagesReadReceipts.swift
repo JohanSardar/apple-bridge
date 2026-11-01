@@ -4,21 +4,45 @@ import ApplicationServices
 import SourceSupport
 
 extension MessagesParity {
+    public static func detailsControlIndex(_ controls: [JSON]) -> Int? {
+        let titles = controls.indices.filter { controls[$0]["identifier"].string == "ConversationTitle" }
+        if !titles.isEmpty { return titles.count == 1 ? titles[0] : nil }
+        let matches = controls.indices.filter { controls[$0]["role"].string == kAXButtonRole && ["Details", "Show Details", "Conversation Details"].contains(controls[$0]["description"].string) }
+        return matches.count == 1 ? matches[0] : nil
+    }
     @UIActor
     static func receiptControl(_ prepared: Prepared) throws -> (MessagesUISession, AXUIElement, Bool) {
         try MessagesAccessibility.openMessage(prepared.nativeState["message_guid"].string, settle: 0.5, resetEditor: false)
         let session = try MessagesAccessibility.uiSession()
+        var returned = false
+        var report: [String: Any] = ["passed": false]
+        defer {
+            if !returned { try? dismiss(session) }
+            try? PrivateReport.write(report, to: PrivateReport.directory.appendingPathComponent("messages-receipt-controls.json"))
+        }
         try MessagesAccessibility.validateConversation(prepared)
         let controls = MessagesVariantUI.find(session.root, role: kAXCheckBoxRole, name: "Send Read Receipts")
+        report["initial_receipt_control_count"] = controls.count
         if controls.isEmpty {
-            let buttons = MessagesVariantUI.find(session.root, role: kAXButtonRole).filter { ["Details", "Show Details", "Conversation Details"].contains(MessagesAccessibility.value($0, kAXDescriptionAttribute)) }
-            guard buttons.count == 1 else { throw MessagesUIFailure.menuUnavailable }
+            let nodes = MessagesVariantUI.find(session.root)
+            let descriptors = nodes.map { JSON.object(["identifier": .string(MessagesAccessibility.value($0, kAXIdentifierAttribute)), "role": .string(MessagesAccessibility.value($0, kAXRoleAttribute)), "description": .string(MessagesAccessibility.value($0, kAXDescriptionAttribute))]) }
+            report["conversation_title_count"] = descriptors.filter { $0["identifier"].string == "ConversationTitle" }.count
+            guard let index = detailsControlIndex(descriptors) else { throw MessagesUIFailure.menuUnavailable }
             try session.fence()
-            try MessagesVariantUI.press(buttons[0])
+            try MessagesVariantUI.press(nodes[index])
         }
-        let matches = MessagesVariantUI.find(session.root, role: kAXCheckBoxRole, name: "Send Read Receipts")
+        var matches = MessagesVariantUI.find(session.root, role: kAXCheckBoxRole, name: "Send Read Receipts")
+        let deadline = Date().addingTimeInterval(3)
+        while matches.isEmpty, Date() < deadline {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+            matches = MessagesVariantUI.find(session.root, role: kAXCheckBoxRole, name: "Send Read Receipts")
+        }
+        report["receipt_control_count"] = matches.count
         guard matches.count == 1 else { throw MessagesUIFailure.targetUnavailable }
-        return (session, matches[0], try checkbox(matches[0]))
+        let checked = try checkbox(matches[0])
+        report["passed"] = true
+        returned = true
+        return (session, matches[0], checked)
     }
     @UIActor
     static func checkbox(_ control: AXUIElement) throws -> Bool {
