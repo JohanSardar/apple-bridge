@@ -45,7 +45,16 @@ enum MessagesNativeSession {
               let controllerType = NSClassFromString("IMDaemonController"), let registryType = NSClassFromString("IMChatRegistry"),
               let controller = try object(controllerType, "sharedInstance"), let registry = try object(registryType, "sharedInstance") else { throw SendVariantFailure.audioMessageFlagUnverified }
         checkpoint("connection_requested")
-        guard try flag(controller, "connectToDaemon") else { throw SendVariantFailure.audioMessageFlagUnverified }
+        var connected = try flag(controller, "connectToDaemon")
+        let connectionDeadline = Date().addingTimeInterval(5)
+        while !connected, Date() < connectionDeadline {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+            connected = (try? flag(controller, "isConnected")) == true
+        }
+        guard connected else {
+            checkpoint("connection_unavailable")
+            throw SendVariantFailure.audioMessageFlagUnverified
+        }
         checkpoint("connection_established")
         let deadline = Date().addingTimeInterval(5)
         var chat: AnyObject?
