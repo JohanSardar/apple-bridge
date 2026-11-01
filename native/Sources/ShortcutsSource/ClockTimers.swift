@@ -136,6 +136,25 @@ private struct ClockTimerUI {
         RunLoop.current.run(until: Date().addingTimeInterval(0.25))
     }
 
+    private func key(_ code: CGKeyCode) {
+        for down in [true, false] { CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: down)?.postToPid(app.processIdentifier) }
+        RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+    }
+
+    private func focus(_ element: AXUIElement) throws {
+        app.activate()
+        _ = AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, kCFBooleanTrue)
+        if attribute(element, kAXFocusedAttribute) as? Bool != true {
+            guard let position = attribute(element, kAXPositionAttribute), let size = attribute(element, kAXSizeAttribute), CFGetTypeID(position) == AXValueGetTypeID(), CFGetTypeID(size) == AXValueGetTypeID() else { throw ClockTimerFailure(step: "focus the timer duration control") }
+            var point = CGPoint.zero, extent = CGSize.zero
+            guard AXValueGetValue(unsafeDowncast(position, to: AXValue.self), .cgPoint, &point), AXValueGetValue(unsafeDowncast(size, to: AXValue.self), .cgSize, &extent), extent.width > 0, extent.height > 0 else { throw ClockTimerFailure(step: "find the timer duration control") }
+            point.x += extent.width / 2
+            point.y += extent.height / 2
+            for type in [CGEventType.leftMouseDown, .leftMouseUp] { CGEvent(mouseEventSource: nil, mouseType: type, mouseCursorPosition: point, mouseButton: .left)?.postToPid(app.processIdentifier) }
+        }
+        RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+    }
+
     func create(label: String, duration: Int) throws {
         var started = false
         defer {
@@ -152,17 +171,20 @@ private struct ClockTimerUI {
         guard picker.count == 1 else { throw ClockTimerFailure(step: "find the timer duration picker") }
         let sliders = find(picker[0], role: kAXSliderRole)
         guard sliders.count == 3 else { throw ClockTimerFailure(step: "find the three timer duration controls") }
-        for (element, number) in zip(sliders, [duration / 3600, duration / 60 % 60, duration % 60]) {
-            try ClockTimers.adjustDurationComponent(to: number, value: {
-                if let value = attribute(element, kAXValueAttribute) as? NSNumber { return value.intValue }
-                if let value = attribute(element, kAXValueAttribute) as? String { return Int(value) }
-                return nil
-            }, adjust: { increasing in
-                let action = increasing ? kAXIncrementAction : kAXDecrementAction
-                guard AXUIElementPerformAction(element, action as CFString) == .success else { return false }
-                RunLoop.current.run(until: Date().addingTimeInterval(0.1))
-                return true
-            })
+        for (index, pair) in zip(sliders, [duration / 3600, duration / 60 % 60, duration % 60]).enumerated() {
+            let (element, number) = pair
+            try focus(element)
+            do {
+                try ClockTimers.adjustDurationComponent(to: number, value: {
+                    if let value = attribute(element, kAXValueAttribute) as? NSNumber { return value.intValue }
+                    if let value = attribute(element, kAXValueAttribute) as? String { return Int(value) }
+                    return nil
+                }, adjust: { increasing in
+                    key(increasing ? 126 : 125)
+                    return true
+                })
+            } catch { throw ClockTimerFailure(step: "set timer duration component \(index + 1)") }
+            key(48)
         }
         let sheet = find(root, role: kAXSheetRole)
         let scope = sheet.count == 1 ? sheet[0] : root
