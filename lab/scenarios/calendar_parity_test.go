@@ -43,7 +43,7 @@ func TestCalendarParityNeverRequestsAdditionalPermissions(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		for _, forbidden := range []string{"AEDeterminePermissionToAutomateTarget", "NSAppleScript", "NSAppleEventDescriptor", "requestFullAccess", "requestAccess", "AXIsProcessTrustedWithOptions"} {
+		for _, forbidden := range []string{"AEDeterminePermissionToAutomateTarget", "NSAppleScript", "NSAppleEventDescriptor", "requestFullAccess", "requestAccess", "AXIsProcessTrustedWithOptions", ".cghidEventTap"} {
 			if strings.Contains(string(data), forbidden) {
 				t.Fatalf("%s must use existing EventKit and Accessibility access; found %s", name, forbidden)
 			}
