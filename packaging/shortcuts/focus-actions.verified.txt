@@ -11,3 +11,13 @@ Time: WFDateFieldParameter, required for enabled Time assertions
 FocusModes: WFFocusModesPickerParameter, default nil
 The native action editor defaults the omitted FocusModes to Do Not Disturb.
 Named Focus serialization is not qualified. No named Focus write is advertised.
+
+2026-10-31 F2 qualification:
+The installed pack exits with a missing-parameter error before enabling Focus.
+The If subject must use WFInput.Type = Variable with its variable attachment
+under WFInput.Variable. A raw variable attachment at WFInput is invalid.
+FOC-SIM compiles the pack and verifies this binding points to the until output.
+The signed AB Focus.shortcut contains the corrected binding. FOC-SET-REAL backs
+up and repairs only this binding in the known eight-action installed pack,
+then verifies the saved actions through Apple's workflow database API.
+No import dialog is opened by tests.

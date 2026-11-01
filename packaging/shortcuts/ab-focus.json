@@ -38,7 +38,10 @@
       "identifier": "is.workflow.actions.conditional",
       "parameters": {
         "WFInput": {
-          "$output": "until"
+          "Type": "Variable",
+          "Variable": {
+            "$output": "until"
+          }
         },
         "WFCondition": 100,
         "WFControlFlowMode": 0,

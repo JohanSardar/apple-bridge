@@ -1,18 +1,20 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[61.39 75.97 64.42] cpu_idle=48% cpus=8 other_heavy=0"
+    "summary": "air: load=[16.52 23.48 23.76] cpu_idle=51% cpus=8 other_heavy=0"
   },
-  "status": "limited",
-  "run_id": "run_01M64X8XAANTTK4PZJB7E5DYYZ",
+  "run_id": "run_01M6AQE6MV2BQHNX549FP8Z5JJ",
   "metrics": {
-    "capture_observer_resets": 0
+    "capture_observer_resets": 0,
+    "pack_count": 1,
+    "restore_cli_error_bytes": 64,
+    "set_cli_error_bytes": 64
   },
   "scenario": "FOC-SET-REAL",
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-29T22:42:44.682888Z",
+  "at": "2026-11-01T04:56:13.211562Z",
   "assertions": [
     {
       "name": "helper_directory",
@@ -35,6 +37,46 @@
       "passed": true
     },
     {
+      "name": "signed_set_restore_probe",
+      "passed": true
+    },
+    {
+      "name": "set_restore_report",
+      "passed": true
+    },
+    {
+      "name": "set_readback",
+      "passed": false
+    },
+    {
+      "name": "restore_readback",
+      "passed": false
+    },
+    {
+      "name": "set_shortcut_completed",
+      "passed": false
+    },
+    {
+      "name": "set_shortcut_not_timed_out",
+      "passed": true
+    },
+    {
+      "name": "restore_shortcut_completed",
+      "passed": false
+    },
+    {
+      "name": "restore_shortcut_not_timed_out",
+      "passed": true
+    },
+    {
+      "name": "set_status_after_shortcut",
+      "passed": false
+    },
+    {
+      "name": "restore_status_after_shortcut",
+      "passed": true
+    },
+    {
       "name": "credential_backend_override_restored",
       "passed": true
     }
@@ -42,6 +84,9 @@
   "latency": null,
   "hosts": null,
   "conditions": {
-    "reason": "needs Focus status grant for AppleBridgeHelper"
+    "restore_cli_error_category": "missing_parameter",
+    "restore_error": "unavailable",
+    "set_cli_error_category": "missing_parameter",
+    "set_error": "unavailable"
   }
 }

@@ -11,14 +11,17 @@ public final class FocusSource: Source {
     private let run: @MainActor (JSON) async throws -> JSON
     public init(status: (@MainActor () -> JSON)? = nil, runner: (@MainActor (JSON) async throws -> JSON)? = nil) {
         readStatus = status ?? Self.status
-        run = runner ?? { request in
-            let source = ShortcutsSource()
-            var normalized = request.object
-            normalized["until"] = .string(request["until"].string)
-            let input = try JSONEncoder().encode(JSON.object(normalized))
-            let prepared = try await source.prepare(.object(["request_hash": .string(UUID().uuidString), "action": .object(["op": .string("shortcuts.run"), "args": .object(["shortcut": .string("AB Focus"), "input": .string(String(decoding: input, as: UTF8.self)), "timeout_ms": .number(15000)])])]))
-            return try await source.dispatch(prepared)
-        }
+        run = runner ?? Self.runShortcut
+    }
+    static func runShortcut(_ request: JSON) async throws -> JSON {
+        try await runShortcut(request, source: ShortcutsSource())
+    }
+    static func runShortcut(_ request: JSON, source: ShortcutsSource) async throws -> JSON {
+        var normalized = request.object
+        normalized["until"] = .string(request["until"].string)
+        let input = try JSONEncoder().encode(JSON.object(normalized))
+        let prepared = try await source.prepare(.object(["request_hash": .string(UUID().uuidString), "action": .object(["op": .string("shortcuts.run"), "args": .object(["shortcut": .string("AB Focus"), "input": .string(String(decoding: input, as: UTF8.self)), "timeout_ms": .number(15000)])])]))
+        return try await source.dispatch(prepared)
     }
     private static func expiry(_ value: String) -> Date? {
         let formatter = ISO8601DateFormatter()

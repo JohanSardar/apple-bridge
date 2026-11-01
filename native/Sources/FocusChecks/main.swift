@@ -43,6 +43,12 @@ struct Checks {
         do { _ = try await cleanup.restoreInactive(cleanupOff); throw SourceFailure.corrupt } catch SourceFailure.unavailable {}
         guard !lost.focused, lost.calls == 2 else { throw SourceFailure.corrupt }
         #if LAB
+        let attachment = JSON.object(["WFSerializationType": .string("WFTextTokenAttachment"), "Value": .object(["Type": .string("ActionOutput"), "OutputUUID": .string("synthetic-until")])])
+        let repaired = try FocusPackRepair.binding(attachment, output: "synthetic-until")
+        guard repaired["Type"] == .string("Variable"), repaired["Variable"] == attachment,
+              try FocusPackRepair.binding(repaired, output: "synthetic-until") == repaired else { throw SourceFailure.corrupt }
+        do { _ = try FocusPackRepair.binding(attachment, output: "foreign"); throw SourceFailure.corrupt } catch SourceFailure.invalid {}
+        guard FocusQualification.failureCategory("An action could not be found") == "missing_action", FocusQualification.failureCategory("Cannot convert private input to a dictionary") == "dictionary_input", FocusQualification.failureCategory("opaque private contents") == "shortcut_execution" else { throw SourceFailure.corrupt }
         let proofFixture = Fixture()
         let proofStatus: @MainActor () -> JSON = { .object(["focused": .bool(proofFixture.focused), "authorization": .string("authorized")]) }
         let proofSource = FocusSource(status: proofStatus, runner: { args in
