@@ -152,6 +152,7 @@ enum RemindersSectionsProof {
             }
             try await Task.sleep(for: .milliseconds(500))
             selectedFixture = true
+            try await ui.activate()
             try fence()
             let names = [title + " first", title + " second"]
             stage = "create_sections"

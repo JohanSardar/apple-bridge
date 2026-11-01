@@ -579,6 +579,24 @@ final class RemindersFixtureUI {
         while NSWorkspace.shared.frontmostApplication?.processIdentifier != app.processIdentifier, ContinuousClock.now < deadline {
             try await Task.sleep(for: .milliseconds(100))
         }
+        if ownedSheet.map({ sheet in sheets().contains(where: { CFEqual($0, sheet) }) }) != true,
+           ownedEditor.map({ editorIsOpen($0) }) != true {
+            var windows: [AXUIElement] = []
+            for match in find(title) {
+                var current = match
+                for _ in 0..<20 {
+                    if value(current, kAXRoleAttribute) == kAXWindowRole {
+                        if !windows.contains(where: { CFEqual($0, current) }) { windows.append(current) }
+                        break
+                    }
+                    guard let parent = elements(current, kAXParentAttribute).first else { break }
+                    current = parent
+                }
+            }
+            guard windows.count == 1 else { throw SourceFailure.conflict }
+            guard AXUIElementPerformAction(windows[0], kAXRaiseAction as CFString) == .success else { throw SourceFailure.unavailable }
+            _ = AXUIElementSetAttributeValue(windows[0], kAXMainAttribute as CFString, kCFBooleanTrue)
+        }
         try fence()
     }
 
