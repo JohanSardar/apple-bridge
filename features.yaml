@@ -961,7 +961,7 @@ features:
       - {id: CLK-ALARM-REAL, levels: [sim, real]}
       - {id: CLK-TIMER-REAL, levels: [sim, real]}
     limits:
-      - {"scenario": "CLK-TIMER-REAL", "level": "real", "reason": "Timer creation and active-timer cancellation pass, but Recents cleanup fails because the menu-parent filter excludes Clock's Delete action. The selected-row enabled Delete action fix is awaiting real qualification."}
+      - {"scenario": "CLK-TIMER-REAL", "level": "real", "reason": "Timer creation and active-timer cancellation pass, but the Recents card context menu does not open. The Accessibility tree exposes only a disabled Delete item from the main menu, so tagged history remains. Card visibility qualification is awaiting the next real run."}
   - id: mac.capture
     title: Mac system state capture
     requirements: [R-API, R-SCOPE]
@@ -1252,10 +1252,12 @@ features:
     milestone: M4
     modules: [lab/scenarios]
     depends_on: [usage.read]
-    status: done
-    notes: Real Biome usage capture returns output, matches independent day totals and replicates through MCP. Estimates retain provenance and device freshness.
+    status: limited
+    notes: Real Biome usage capture returns output and replicates through MCP with provenance and device freshness. The independent comparison must wait for complete historical backfill.
     scenarios:
       - {id: USE-ACTION-PROBE, levels: [sim, real]}
+    limits:
+      - {"scenario": "USE-ACTION-PROBE", "level": "real", "reason": "The probe compares immediately after process readiness, before historical native backfill has finished. Its 45-second comparison expired with 37 gateway app-day rows versus 1378 independent rows; all compared fields matched. The bounded complete-backfill wait is awaiting real qualification."}
   - id: helper.siri_intents
     title: Read-only Apple Bridge status App Intent
     requirements: [R-PKG]

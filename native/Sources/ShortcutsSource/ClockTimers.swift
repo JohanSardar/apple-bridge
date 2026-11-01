@@ -270,18 +270,28 @@ private struct ClockTimerUI {
             }
             throw ClockTimerFailure(step: "find the tagged recent timer")
         }
+        func frame(_ element: AXUIElement) -> CGRect? {
+            guard let position = attribute(element, kAXPositionAttribute), let size = attribute(element, kAXSizeAttribute), CFGetTypeID(position) == AXValueGetTypeID(), CFGetTypeID(size) == AXValueGetTypeID() else { return nil }
+            var point = CGPoint.zero, extent = CGSize.zero
+            guard AXValueGetValue(unsafeDowncast(position, to: AXValue.self), .cgPoint, &point), AXValueGetValue(unsafeDowncast(size, to: AXValue.self), .cgSize, &extent) else { return nil }
+            return CGRect(origin: point, size: extent)
+        }
+        let scroll = AXUIElementPerformAction(rows[0], "AXScrollToVisible" as CFString)
+        RunLoop.current.run(until: Date().addingTimeInterval(0.25))
         func deleteItems() -> [AXUIElement] {
             find(root, role: kAXMenuItemRole).filter { name($0) == "Delete" && attribute($0, kAXEnabledAttribute) as? Bool == true }
         }
         _ = AXUIElementSetAttributeValue(rows[0], kAXFocusedAttribute as CFString, kCFBooleanTrue)
         _ = AXUIElementSetAttributeValue(rows[0], kAXSelectedAttribute as CFString, kCFBooleanTrue)
-        _ = AXUIElementPerformAction(rows[0], kAXShowMenuAction as CFString)
+        let showMenu = AXUIElementPerformAction(rows[0], kAXShowMenuAction as CFString)
         RunLoop.current.run(until: Date().addingTimeInterval(0.25))
         if deleteItems().isEmpty { try click(rows[0], button: .right) }
         if deleteItems().count != 1 {
             let menus = find(root, role: kAXMenuRole)
             let items = menus.flatMap { find($0, role: kAXMenuItemRole) }
-            let details: [String: Any] = ["timer_context_menus": menus.count, "timer_context_menu_items": items.count, "timer_context_delete_items": items.filter { name($0) == "Delete" }.count, "timer_context_delete_timer_items": items.filter { name($0) == "Delete Timer" }.count]
+            let windows = (attribute(root, kAXWindowsAttribute) as? [AXUIElement] ?? []).compactMap(frame)
+            let rectangle = frame(rows[0]) ?? .zero
+            let details: [String: Any] = ["timer_context_menus": menus.count, "timer_context_menu_items": items.count, "timer_context_delete_items": items.filter { name($0) == "Delete" }.count, "timer_context_delete_timer_items": items.filter { name($0) == "Delete Timer" }.count, "timer_recent_scroll_supported": scroll == .success, "timer_recent_show_menu_supported": showMenu == .success, "timer_recent_focused": attribute(rows[0], kAXFocusedAttribute) as? Bool == true, "timer_recent_selected": attribute(rows[0], kAXSelectedAttribute) as? Bool == true, "timer_recent_center_inside_window": windows.contains { $0.contains(CGPoint(x: rectangle.midX, y: rectangle.midY)) }, "timer_recent_width": Int(rectangle.width), "timer_recent_height": Int(rectangle.height), "timer_recent_x": Int(rectangle.minX), "timer_recent_y": Int(rectangle.minY)]
             if let data = try? JSONSerialization.data(withJSONObject: details, options: [.sortedKeys]) { FileHandle.standardError.write(data + Data("\n".utf8)) }
         }
         try press(deleteItems(), step: "delete the tagged recent timer")

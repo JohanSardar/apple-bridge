@@ -131,7 +131,11 @@ func runUsageData(ctx context.Context, s Scenario, level string) Evidence {
 			e.Metrics["different_fields"] = different
 			return len(rows) == len(expected) && missing == 0 && len(different) == 0
 		}
-		add("independent_day_totals_match", w.Await(45*time.Second, matches) == nil)
+		comparisonTimeout := 45 * time.Second
+		if s.ID == "USE-ACTION-PROBE" {
+			comparisonTimeout = 3 * time.Minute
+		}
+		add("independent_day_totals_match", w.Await(comparisonTimeout, matches) == nil)
 	} else {
 		base := float64(1800100800)
 		event := func(offset float64, start bool, bundle string) map[string]any {
