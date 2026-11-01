@@ -24,6 +24,10 @@ enum RemindersFixtureChecks {
         precondition(RemindersFixtureUI.scopedActionRole(kAXPopUpButtonRole))
         precondition(!RemindersFixtureUI.scopedActionRole(kAXMenuItemRole))
         precondition(!RemindersFixtureUI.scopedActionRole(kAXMenuBarItemRole))
+        precondition(RemindersFixtureUI.actionMatches("AXMoveToTop", description: "", name: "Move To Top"))
+        precondition(RemindersFixtureUI.actionMatches("custom", description: "Move To Top", name: "Move To Top"))
+        precondition(!RemindersFixtureUI.actionMatches("AXMoveToBottom", description: "Move To Bottom", name: "Move To Top"))
+        precondition(!RemindersFixtureUI.actionMatches("AXPress", description: "Press", name: "Move To Top"))
         print("reminders fixture checks passed")
     }
 }

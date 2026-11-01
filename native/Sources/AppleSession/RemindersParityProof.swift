@@ -204,7 +204,8 @@ enum RemindersParityProof {
             await attempt("reorder") {
                 try script("show fixtureList\nactivate")
                 try await Task.sleep(for: .milliseconds(300))
-                try await ui.drag(second.title, to: first.title)
+                let row = try await ui.selectReminder(second.title)
+                try ui.perform("Move To Top", within: row)
                 checks["reorder_readback"] = .bool(try await observe { _, row, parent, child in
                     diagnostics["reorder_child_is_subtask"] = .number(child.parent == parent.identity.key ? 1 : 0)
                     diagnostics["reorder_parent_binary_uuid"] = .number(parent.identity.uuid == nil ? 0 : 1)
@@ -735,6 +736,36 @@ final class RemindersFixtureUI {
         }
         CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: end, mouseButton: .left)?.post(tap: .cghidEventTap)
         try await Task.sleep(for: .milliseconds(500))
+    }
+
+    static func actionMatches(_ action: String, description: String, name: String) -> Bool {
+        func normalized(_ text: String) -> String { text.filter(\.isLetter).lowercased() }
+        let expected = normalized(name)
+        return [normalized(action), normalized(description)].contains { $0 == expected || $0 == "ax" + expected }
+    }
+
+    func perform(_ name: String, within element: AXUIElement) throws {
+        try fence()
+        var pending = [element]
+        var visited: [AXUIElement] = []
+        var matches: [(AXUIElement, String)] = []
+        while !pending.isEmpty, visited.count < 100 {
+            let current = pending.removeLast()
+            if visited.contains(where: { CFEqual($0, current) }) { continue }
+            visited.append(current)
+            var actions: CFArray?
+            if AXUIElementCopyActionNames(current, &actions) == .success {
+                for action in actions as? [String] ?? [] {
+                    var description: CFString?
+                    _ = AXUIElementCopyActionDescription(current, action as CFString, &description)
+                    if Self.actionMatches(action, description: description as String? ?? "", name: name) { matches.append((current, action)) }
+                }
+            }
+            pending += elements(current, kAXChildrenAttribute)
+        }
+        selectionDiagnostics["native_move_matches"] = Double(matches.count)
+        guard let match = matches.first else { throw SourceFailure.unsupported }
+        guard AXUIElementPerformAction(match.0, match.1 as CFString) == .success else { throw SourceFailure.unsupported }
     }
 
     func press(_ name: String, role: String) throws {
