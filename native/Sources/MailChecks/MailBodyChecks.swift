@@ -15,6 +15,10 @@ func checkMailBodies(_ root: URL) async throws {
     try (String(multipart.utf8.count) + "\n" + multipart).write(to: root.appendingPathComponent("9.emlx"), atomically: true, encoding: .utf8)
     let preserved = try read("9")
     try require(preserved["state"].string == "downloaded" && preserved["plain_text"].string == "\n> [ab-test] fixture\n")
+    let paddedLength = String(multipart.utf8.count).padding(toLength: 10, withPad: " ", startingAt: 0)
+    try (paddedLength + "\n" + multipart).write(to: root.appendingPathComponent("10.emlx"), atomically: true, encoding: .utf8)
+    let padded = try read("10")
+    try require(padded["state"].string == "downloaded" && padded["plain_text"] == preserved["plain_text"])
     try require(partial["state"].string == "partial" && missing["state"].string == "partial" && offloaded["state"].string == "offloaded")
     let htmlOnly = "Content-Type: text/html\n\n<p>Hello</p><script>bad()</script>"
     try (String(htmlOnly.utf8.count) + "\n" + htmlOnly).write(to: root.appendingPathComponent("8.emlx"), atomically: true, encoding: .utf8)
