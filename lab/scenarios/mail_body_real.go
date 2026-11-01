@@ -46,6 +46,7 @@ func runMailBodyReal(ctx context.Context, s Scenario, level string) (e Evidence)
 					e.Conditions = map[string]string{}
 				}
 				e.Conditions["cleanup"] = err.Error()
+				fmt.Fprintln(os.Stderr, err)
 			}
 		}()
 		proof, problem := mailRealProof(ctx, w, "MAIL-BODY-FIXTURE", tag)
@@ -56,12 +57,26 @@ func runMailBodyReal(ctx context.Context, s Scenario, level string) (e Evidence)
 		if !check("self_sent_fixture_created", problem == nil && proof["sent_to_self"] && proof["self_mail_received"]) {
 			return e
 		}
-		err = w.Await(60*time.Second, func() bool {
+		var oracleErr error
+		err = w.Await(45*time.Second, func() bool {
 			oracleCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			defer cancel()
 			output, err := exec.CommandContext(oracleCtx, "python3", "lab/truth/mail_body.py", tag).Output()
-			return err == nil && json.Unmarshal(output, &truth) == nil && len(truth.Samples) > 0
+			if err != nil {
+				oracleErr = fmt.Errorf("Mail body fixture could not be read. Check Full Disk Access and let Mail finish downloading the test message: %w", err)
+				return true
+			}
+			if err = json.Unmarshal(output, &truth); err != nil {
+				oracleErr = fmt.Errorf("Mail body fixture returned an unreadable digest report: %w", err)
+				return true
+			}
+			return len(truth.Samples) > 0
 		})
+		if oracleErr != nil {
+			err = oracleErr
+			e.Conditions = map[string]string{"reason": err.Error()}
+			fmt.Fprintln(os.Stderr, err)
+		}
 		if !check("plain_text_fixture_downloaded", err == nil) {
 			return e
 		}
