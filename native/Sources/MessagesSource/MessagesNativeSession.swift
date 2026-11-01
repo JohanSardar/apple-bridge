@@ -53,9 +53,10 @@ enum MessagesNativeSession {
         checkpoint("framework_requested")
         guard !guid.isEmpty, dlopen("/System/Library/PrivateFrameworks/IMCore.framework/IMCore", RTLD_LAZY) != nil,
               let controllerType = NSClassFromString("IMDaemonController"), let registryType = NSClassFromString("IMChatRegistry"),
-              let controller = try object(controllerType, "sharedInstance"), let registry = try object(registryType, "sharedInstance") else { throw SendVariantFailure.audioMessageFlagUnverified }
+              let controller = try object(controllerType, "sharedController"), let registry = try object(registryType, "sharedInstance") else { throw SendVariantFailure.audioMessageFlagUnverified }
         checkpoint("connection_requested")
-        var connected = try flag(controller, "connectToDaemon")
+        _ = try flag(controller, "connectToDaemon")
+        var connected = (try? flag(controller, "isConnected")) == true
         let connectionDeadline = Date().addingTimeInterval(5)
         while !connected, Date() < connectionDeadline {
             RunLoop.current.run(until: Date().addingTimeInterval(0.05))
@@ -93,11 +94,14 @@ enum MessagesNativeSession {
     static func deleteOwnedItem(_ guid: String, chat chatGUID: String) throws {
         guard UUID(uuidString: guid) != nil, !chatGUID.isEmpty,
               dlopen("/System/Library/PrivateFrameworks/IMCore.framework/IMCore", RTLD_LAZY) != nil,
-              let type = NSClassFromString("IMDaemonController"), let controller = try object(type, "sharedInstance") else { throw SourceFailure.invalid }
+              let type = NSClassFromString("IMDaemonController"), let controller = try object(type, "sharedController") else { throw SourceFailure.invalid }
         _ = try flag(controller, "connectToDaemon")
         let deadline = Date().addingTimeInterval(5)
         while (try? flag(controller, "isConnected")) != true, Date() < deadline { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
-        guard try flag(controller, "isConnected"), let daemon = try object(controller, "synchronousRemoteDaemon") else { throw SourceFailure.unavailable }
+        guard try flag(controller, "isConnected"), let daemon = try object(controller, "synchronousRemoteDaemon") else {
+            checkpoint("owned_cleanup_connection_unavailable")
+            throw SourceFailure.unavailable
+        }
         let (selector, implementation) = try method(daemon, "moveMessagesWithGUIDsToRecentlyDeleted:deleteDate:queryID:")
         typealias Move = @convention(c) (AnyObject, Selector, NSArray, NSDate, NSString) -> Void
         checkpoint("owned_item_soft_delete_requested")
