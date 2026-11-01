@@ -346,7 +346,7 @@ final class RemindersFixtureUI {
     }
 
     func prepare() async throws {
-        _ = app.activate()
+        try await focusApplication()
         let recoveryURL = PrivateReport.directory.appendingPathComponent("reminders-owned-new-list-sheet.json")
         if FileManager.default.fileExists(atPath: recoveryURL.path) {
             let registration = try JSONDecoder().decode(JSON.self, from: Data(contentsOf: recoveryURL))
@@ -573,12 +573,17 @@ final class RemindersFixtureUI {
         throw SourceFailure.conflict
     }
 
-    func activate() async throws {
+    func focusApplication() async throws {
         _ = app.activate()
         let deadline = ContinuousClock.now.advanced(by: .seconds(3))
         while NSWorkspace.shared.frontmostApplication?.processIdentifier != app.processIdentifier, ContinuousClock.now < deadline {
             try await Task.sleep(for: .milliseconds(100))
         }
+        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier else { throw SourceFailure.conflict }
+    }
+
+    func activate() async throws {
+        try await focusApplication()
         if ownedSheet.map({ sheet in sheets().contains(where: { CFEqual($0, sheet) }) }) != true,
            ownedEditor.map({ editorIsOpen($0) }) != true {
             var windows: [AXUIElement] = []

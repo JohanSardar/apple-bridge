@@ -146,6 +146,7 @@ enum RemindersSectionsProof {
                 try await Task.sleep(for: .milliseconds(100))
             }
             guard let listElement = ownedRow() else { throw SourceFailure.conflict }
+            try await ui.focusApplication()
             if AXUIElementPerformAction(listElement, kAXPressAction as CFString) != .success {
                 try fence()
                 guard AXUIElementSetAttributeValue(listElement, kAXSelectedAttribute as CFString, kCFBooleanTrue) == .success else { throw SourceFailure.unsupported }
