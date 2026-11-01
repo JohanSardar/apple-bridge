@@ -1,15 +1,19 @@
 {
   "scenario": "SC-RUN-REAL",
   "level": "real",
-  "passed": false,
+  "passed": true,
   "assertions": [
+    {
+      "name": "current_helper_intent_host_ready",
+      "passed": true
+    },
     {
       "name": "bounded_runner_completed",
       "passed": true
     },
     {
       "name": "echo_output_matches",
-      "passed": false
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",
@@ -18,11 +22,10 @@
   ],
   "metrics": {
     "capture_observer_resets": 0,
-    "elapsed_ms": 1338,
+    "elapsed_ms": 1821,
     "exit_status": 0,
-    "output_bytes": 0,
-    "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "output_bytes": 24,
+    "output_sha256": "41dce0f6a4b0bd1381a4dbd332d6a5ddc69d82c21e4d6b176cd25b670ee32432",
     "timed_out": false
-  },
-  "git_sha": ""
+  }
 }

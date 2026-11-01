@@ -1,7 +1,7 @@
 {
   "scenario": "SIRI-INTENTS",
   "level": "real",
-  "passed": false,
+  "passed": true,
   "assertions": [
     {
       "name": "inventory_available",
@@ -9,10 +9,30 @@
     },
     {
       "name": "unique_probe_pack_installed",
-      "passed": false
+      "passed": true
+    },
+    {
+      "name": "probe_pack_qualified",
+      "passed": true
+    },
+    {
+      "name": "bounded_runner_completed",
+      "passed": true
+    },
+    {
+      "name": "probe_output_valid",
+      "passed": true
     },
     {
       "name": "status_intent_metadata_matches_source",
+      "passed": true
+    },
+    {
+      "name": "status_intent_returns_without_dialog",
+      "passed": true
+    },
+    {
+      "name": "status_intent_cold_launch_returns",
       "passed": true
     },
     {
@@ -22,8 +42,10 @@
   ],
   "metrics": {
     "capture_observer_resets": 0,
-    "installed_shortcut_count": 17,
-    "probe_pack_matches": 0
-  },
-  "git_sha": ""
+    "installed_shortcut_count": 28,
+    "output_bytes": 60,
+    "output_sha256": "00dccf0aff95323515b12eca0d2b6d5e72290dea6d42db6b0829b409b188f033",
+    "probe_pack_matches": 1,
+    "timed_out": false
+  }
 }
