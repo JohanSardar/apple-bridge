@@ -32,6 +32,13 @@ enum RemindersFixtureChecks {
         precondition(!RemindersFixtureUI.smartListDeleteConfirmation(["Delete Smart List “Pack”?"], title: title + " smart"))
         precondition(!RemindersFixtureUI.smartListDeleteConfirmation(["Delete Reminder “" + title + " smart”?"], title: title + " smart"))
         precondition(RemindersFixtureUI.matches(["Title", "Value", "Description"], name: "", title: title))
+        let row = CGRect(x: 0, y: 0, width: 200, height: 32)
+        let field = CGRect(x: 45, y: 6, width: 110, height: 18)
+        let buttons = [CGRect(x: 4, y: 6, width: 24, height: 20), CGRect(x: 176, y: 6, width: 20, height: 20)]
+        let background = RemindersFixtureUI.reminderBackground(row: row, title: field, buttons: buttons)
+        precondition(background.map { point in row.contains(point) && !field.contains(point) && buttons.allSatisfy { !$0.contains(point) } } == true)
+        precondition(RemindersFixtureUI.reminderBackground(row: row, title: row, buttons: []) == nil)
+        precondition(RemindersFixtureUI.reminderBackground(row: row, title: field, buttons: [row]) == nil)
         print("reminders fixture checks passed")
     }
 }

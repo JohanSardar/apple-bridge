@@ -20,7 +20,15 @@ public struct StoreSections: Equatable, Sendable {
     }
 
     public static func decode(order: Data?, membership: Data?) -> Self? {
-        guard let values = object(order) as? [Any] else { return nil }
+        let rawOrder = object(order)
+        let values: [Any]
+        if let wrapper = rawOrder as? [String: Any] {
+            guard wrapper["minimumSupportedVersion"] as? Int == 20230430,
+                  let identifiers = wrapper["orderedIdentifiers"] as? [Any] else { return nil }
+            values = identifiers
+        } else if let identifiers = rawOrder as? [Any] {
+            values = identifiers
+        } else { return nil }
         let identifiers = values.compactMap(uuid)
         guard identifiers.count == values.count, Set(identifiers).count == identifiers.count else { return nil }
         var members: [UUID: UUID] = [:]

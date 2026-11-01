@@ -29,6 +29,17 @@ enum StoreSectionChecks {
         }
         let futureMembership = try JSONSerialization.data(withJSONObject: ["memberships": [], "minimumSupportedVersion": 99999999])
         precondition(StoreSections.decode(order: order, membership: futureMembership) == nil)
+        let nativeOrder = try JSONSerialization.data(withJSONObject: ["orderedIdentifiers": [second.uuidString, first.uuidString], "minimumSupportedVersion": 20230430])
+        check("native section order envelope", StoreSections.decode(order: nativeOrder, membership: nativeMembership)?.order == [second, first])
+        check("native section order membership", StoreSections.decode(order: nativeOrder, membership: nativeMembership)?.membership == [item: second])
+        for invalidOrder: [String: Any] in [
+            ["orderedIdentifiers": [first.uuidString], "minimumSupportedVersion": 99999999],
+            ["orderedIdentifiers": [first.uuidString, first.uuidString], "minimumSupportedVersion": 20230430],
+            ["orderedIdentifiers": "invalid", "minimumSupportedVersion": 20230430]
+        ] {
+            let invalid = try JSONSerialization.data(withJSONObject: invalidOrder)
+            check("invalid section order envelope", StoreSections.decode(order: invalid, membership: nil) == nil)
+        }
         let plistOrder = try PropertyListSerialization.data(fromPropertyList: [first.uuidString, second.uuidString], format: .binary, options: 0)
         let archive = try NSKeyedArchiver.archivedData(withRootObject: [item.uuidString: second.uuidString], requiringSecureCoding: true)
         precondition(StoreSections.decode(order: plistOrder, membership: archive)?.membership == [item: second])
@@ -66,7 +77,7 @@ enum StoreSectionChecks {
         let ambiguous = await enrichment.refresh([], generation: "sections")
         check("ambiguous section order", ambiguous.first { $0["collection"].string == "reminders.list" }?["data"]["sections"] == .null)
         execute("UPDATE ZREMCDBASESECTION SET ZCREATIONDATE=200,Z_OPT=Z_OPT+1 WHERE Z_PK=201")
-        set(try JSONEncoder().encode([second.uuidString,first.uuidString]),try JSONEncoder().encode([item.uuidString:second.uuidString]))
+        set(nativeOrder,try JSONEncoder().encode([item.uuidString:second.uuidString]))
         let moved = await enrichment.refresh([],generation: "sections")
         precondition(moved.first { $0["collection"].string == "reminders.reminder" }?["data"]["section_id"].string == second.uuidString)
         execute("UPDATE ZREMCDBASESECTION SET ZDISPLAYNAME='renamed',Z_OPT=Z_OPT+1 WHERE Z_PK=201")
