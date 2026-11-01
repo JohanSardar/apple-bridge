@@ -758,7 +758,7 @@ features:
       - {"scenario": "MSG-READSTATE-REAL", "level": "real", "reason": "The verified existing self-chat contains unread earlier messages. The native preflight submitted zero writes. Read those messages in Messages on the Air before rerunning; no unused self alias is required."}
       - {"scenario": "MSG-DELETE-REAL", "level": "real", "reason": "The verified existing self-chat contains unread earlier messages. Cleanup cannot open it without changing their read state, so the native preflight submitted zero writes. Read those messages in Messages on the Air before rerunning; existing residue stays untouched."}
       - {"scenario": "MSG-RESEND", "level": "real", "reason": "No uniquely verified failed self-message was created by the current run. The real check submitted zero writes and left existing failed messages untouched; native resend remains unqualified."}
-      - {"scenario": "WEB-UPLOAD-NATIVE-STAGING", "level": "real", "reason": "limited: native send remained indeterminate. T63 recovered this run's three text/file rows with zero foreign deletions. Further attachment sends are blocked pending native cleanup qualification; this is not a missing-grant limit."}
+      - {"scenario": "WEB-UPLOAD-NATIVE-STAGING", "level": "real", "reason": "The verified self-chat contains unread existing messages. Native preflight submitted zero writes and staged no upload. Read those messages in Messages on the Air, then rerun native upload observation and owned cleanup qualification."}
   - id: web.messages.parity
     title: Messages parity (pins, mute, read receipts, Send Later, effects, formatting, mentions, audio messages, Recently Deleted, groups)
     requirements: [R-WEB-UI, R-MSG-DEPTH]
