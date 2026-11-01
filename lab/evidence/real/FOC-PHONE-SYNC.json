@@ -1,107 +1,26 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[5.25 5.7 6.4] cpu_idle=64% cpus=10 other_heavy=0"
+    "summary": "air: load=[3.79 3.5 3.58] cpu_idle=83% cpus=10 other_heavy=0"
   },
-  "status": "failed",
   "run_id": "",
   "metrics": {
     "capture_observer_resets": 0,
-    "phase": 1
+    "error_digest": "a8140f33d5ced6886922bfa300c4a0b7161d791787cea531290a555a7fc58975"
   },
   "scenario": "FOC-PHONE-SYNC",
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-11-01T00:05:04.990289Z",
+  "at": "2026-11-01T02:06:53.346496Z",
   "assertions": [
     {
-      "name": "helper_directory",
+      "name": "air_focus_lock",
       "passed": true
     },
     {
-      "name": "signed_helper_build",
-      "passed": true
-    },
-    {
-      "name": "signed_helper_probe",
-      "passed": true
-    },
-    {
-      "name": "helper_report",
-      "passed": true
-    },
-    {
-      "name": "grant_probe",
-      "passed": true
-    },
-    {
-      "name": "focus_status_authorized",
+      "name": "physical_device_available",
       "passed": false
-    },
-    {
-      "name": "mac_focus_set_and_restore",
-      "passed": false
-    },
-    {
-      "name": "fresh_completed_phone_receipt",
-      "passed": true
-    },
-    {
-      "name": "state_restored",
-      "passed": true
-    },
-    {
-      "name": "resources_cleaned",
-      "passed": true
-    },
-    {
-      "name": "focus_authorized",
-      "passed": true
-    },
-    {
-      "name": "phone_initially_inactive",
-      "passed": true
-    },
-    {
-      "name": "phone_focus_enabled",
-      "passed": false
-    },
-    {
-      "name": "phone_focus_restored",
-      "passed": false
-    },
-    {
-      "name": "focus_authorized",
-      "passed": true
-    },
-    {
-      "name": "phone_focus_restored",
-      "passed": false
-    },
-    {
-      "name": "ready",
-      "passed": true
-    },
-    {
-      "name": "phone_initially_inactive",
-      "passed": true
-    },
-    {
-      "name": "resources_cleaned",
-      "passed": true
-    },
-    {
-      "name": "phone_focus_enabled",
-      "passed": false
-    },
-    {
-      "name": "state_restored",
-      "passed": true
-    },
-    {
-      "name": "restoration_receipt",
-      "passed": true
     },
     {
       "name": "credential_backend_override_restored",
