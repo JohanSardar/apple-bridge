@@ -218,9 +218,18 @@ public enum MessagesCleanup {
             } catch {
                 let live = try reader.query("SELECT 1 FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE m.guid=? AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=j.chat_id)", [guid])
                 if !live.isEmpty {
-                    failure = phase + ":" + String(describing: error)
-                    if ownedOnly, mediaProof != nil, phase == "validate", error as? MessagesUIFailure == .targetUnavailable { unavailable.insert(guid); continue }
-                    break
+                    if ownedOnly, mediaProof != nil, phase == "validate", error as? MessagesUIFailure == .targetUnavailable,
+                       let row = try reader.message(guid) {
+                        try await removeNativeOwned(guid, chat: row["capture_chat_guid"])
+                        if inaccessibleOwned.contains(guid) {
+                            failure = "owned_media_native_item_not_removed"
+                            unavailable.insert(guid)
+                            continue
+                        }
+                    } else {
+                        failure = phase + ":" + String(describing: error)
+                        break
+                    }
                 }
             }
             let deadline = ContinuousClock.now.advanced(by: .seconds(ownedOnly ? 10 : 2))
