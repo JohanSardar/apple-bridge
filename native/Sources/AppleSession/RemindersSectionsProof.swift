@@ -175,6 +175,7 @@ enum RemindersSectionsProof {
                 try press(try unique("New Section", role: kAXMenuItemRole))
                 try await Task.sleep(for: .milliseconds(300))
                 stage = "section_name"
+                try await ui.focusApplication()
                 try fence()
                 var editable: AXUIElement?
                 let editingDeadline = ContinuousClock.now.advanced(by: .seconds(5))

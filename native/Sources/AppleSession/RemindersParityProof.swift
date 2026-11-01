@@ -274,7 +274,18 @@ enum RemindersParityProof {
             }
             if !absent, let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.reminders").first {
                 let ui = RemindersFixtureUI(app: app, title: smartTitle)
-                try await ui.menu("File", ["Delete List", "Delete List…"])
+                try await ui.activate()
+                try ui.focusOwnedList()
+                try await ui.menu("Edit", ["Delete"])
+                guard let sheet = ui.ownedSheet else { throw SourceFailure.conflict }
+                let labels = ui.find("", role: kAXStaticTextRole, within: sheet).flatMap { element in
+                    [kAXTitleAttribute, kAXValueAttribute, kAXDescriptionAttribute].map { ui.value(element, $0) }
+                }
+                guard RemindersFixtureUI.smartListDeleteConfirmation(labels, title: smartTitle) else {
+                    let cancel = ui.find("Cancel", role: kAXButtonRole, within: sheet)
+                    if cancel.count == 1 { _ = AXUIElementPerformAction(cancel[0], kAXPressAction as CFString) }
+                    throw SourceFailure.conflict
+                }
                 try ui.press("Delete", role: kAXButtonRole)
                 try await Task.sleep(for: .milliseconds(500))
                 absent = true
@@ -334,7 +345,7 @@ final class RemindersFixtureUI {
     }
 
     static func matches(_ labels: [String], name: String, title: String) -> Bool {
-        labels.contains(name) || (name.hasPrefix(title) && labels.contains { $0.hasPrefix(name + ",") || $0.hasPrefix(name + "\n") || $0.hasPrefix(name + " #") })
+        name.isEmpty || labels.contains(name) || (name.hasPrefix(title) && labels.contains { $0.hasPrefix(name + ",") || $0.hasPrefix(name + "\n") || $0.hasPrefix(name + " #") })
     }
 
     init(app: NSRunningApplication, title: String) {
@@ -698,6 +709,30 @@ final class RemindersFixtureUI {
         selectionDiagnostics["selected"] = read == .success && selected as? Bool == true ? 1 : 0
         guard read == .success, selected as? Bool == true else { throw SourceFailure.conflict }
         return selectedRow
+    }
+
+    static func smartListDeleteConfirmation(_ labels: [String], title: String) -> Bool {
+        labels.contains { $0.contains("Delete Smart List") && $0.contains(title) }
+    }
+
+    func focusOwnedList() throws {
+        try fence()
+        for match in find(title) {
+            var current = match
+            var row: AXUIElement?
+            for _ in 0..<20 {
+                let role = value(current, kAXRoleAttribute)
+                if role == kAXRowRole { row = current }
+                if role == kAXOutlineRole, let row {
+                    guard AXUIElementSetAttributeValue(current, kAXFocusedAttribute as CFString, kCFBooleanTrue) == .success,
+                          AXUIElementSetAttributeValue(row, kAXSelectedAttribute as CFString, kCFBooleanTrue) == .success else { throw SourceFailure.unsupported }
+                    return
+                }
+                guard let parent = elements(current, kAXParentAttribute).first else { break }
+                current = parent
+            }
+        }
+        throw SourceFailure.conflict
     }
 
     static func actionMatches(_ action: String, description: String, name: String) -> Bool {
