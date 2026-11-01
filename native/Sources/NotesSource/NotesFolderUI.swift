@@ -1,11 +1,10 @@
-#if LAB
 import Foundation
 import AppKit
 import ApplicationServices
 import SourceSupport
 
 @MainActor
-public enum NotesOwnedCleanup {
+public enum NotesFolderUI {
     private struct Failure: Error { let stage: String }
     private static var deadline = Date.distantPast
     private static func value(_ node: AXUIElement, _ key: String) -> String {
@@ -48,6 +47,44 @@ public enum NotesOwnedCleanup {
         guard buttons.count == 1, AXUIElementPerformAction(buttons[0], kAXPressAction as CFString) == .success else { throw Failure(stage: "owned_delete_confirmation") }
         return true
     }
+    public static var available: Bool { AXIsProcessTrusted() }
+    public static func rename(id: String, from oldTitle: String, to newTitle: String, trace: CaptureTrace? = nil) async throws {
+        var stage = "permission"
+        defer { trace?.record("notes_folder_rename_ui", fields: ["source": .string("notes"), "stage": .string(stage)]) }
+        guard available else { throw SourceFailure.permissionMissing }
+        guard oldTitle.hasPrefix("Bridge Test [ab-test "), newTitle.hasPrefix("Bridge Test [ab-test ") else { throw SourceFailure.unsupported }
+        deadline = Date().addingTimeInterval(8)
+        guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.Notes").first else { throw SourceFailure.unavailable }
+        let root = AXUIElementCreateApplication(app.processIdentifier)
+        AXUIElementSetMessagingTimeout(root, 0.5)
+        _ = app.activate()
+        stage = "show_folder"
+        _ = try NotesScript.run("show folder id " + NotesScript.quote(id))
+        try await Task.sleep(for: .milliseconds(250))
+        stage = "find_row"
+        let rows = all(root).filter { node in value(node, kAXRoleAttribute) == kAXRowRole && all(node).contains { child in [kAXTitleAttribute, kAXValueAttribute, kAXDescriptionAttribute].contains { [oldTitle, newTitle].contains(value(child, $0)) } } }
+        guard rows.count == 1, AXUIElementPerformAction(rows[0], kAXShowMenuAction as CFString) == .success else { throw SourceFailure.unavailable }
+        try await Task.sleep(for: .milliseconds(200))
+        stage = "find_rename_menu"
+        let menus = all(root).filter { value($0, kAXRoleAttribute) == kAXMenuItemRole && ["Rename Folder", "Rename Folder…", "Rename Folder...", "Rename"].contains(value($0, kAXTitleAttribute)) && enabled($0) }
+        guard menus.count == 1, AXUIElementPerformAction(menus[0], kAXPressAction as CFString) == .success else { throw SourceFailure.unavailable }
+        try await Task.sleep(for: .milliseconds(200))
+        stage = "find_name_field"
+        let fields = all(root).filter { value($0, kAXRoleAttribute) == kAXTextFieldRole && [oldTitle, newTitle].contains(value($0, kAXValueAttribute)) }
+        guard fields.count == 1, AXUIElementSetAttributeValue(fields[0], kAXValueAttribute as CFString, newTitle as CFString) == .success else { throw SourceFailure.unavailable }
+        stage = "commit_name"
+        if AXUIElementPerformAction(fields[0], kAXConfirmAction as CFString) != .success {
+            var focused: CFTypeRef?
+            guard Date() < deadline, NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier,
+                  AXUIElementCopyAttributeValue(root, kAXFocusedUIElementAttribute as CFString, &focused) == .success,
+                  let focused, CFEqual(focused, fields[0]), value(fields[0], kAXValueAttribute) == newTitle,
+                  let down = CGEvent(keyboardEventSource: nil, virtualKey: 36, keyDown: true),
+                  let up = CGEvent(keyboardEventSource: nil, virtualKey: 36, keyDown: false) else { throw SourceFailure.conflict }
+            down.post(tap: .cghidEventTap)
+            up.post(tap: .cghidEventTap)
+        }
+    }
+    #if LAB
     public static func run(_ request: JSON) async -> JSON {
         deadline = Date().addingTimeInterval(30)
         guard AXIsProcessTrusted() else { return .object(["passed": .bool(false), "stage": .string("accessibility_permission_missing")]) }
@@ -122,5 +159,5 @@ public enum NotesOwnedCleanup {
             return .object(["passed": .bool(false), "removed_count": .number(Double(removed)), "stage": .string((error as? Failure)?.stage ?? stage + "_" + ((error as? SourceFailure).map { String(describing: $0) } ?? "unavailable"))])
         }
     }
+    #endif
 }
-#endif

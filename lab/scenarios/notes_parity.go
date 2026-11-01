@@ -100,6 +100,7 @@ func runNotesParity(ctx context.Context, s Scenario, level string) (e Evidence) 
 	var result struct {
 		State         string                     `json:"state"`
 		OS            string                     `json:"os"`
+		CleanupStage  string                     `json:"cleanup_stage"`
 		Cleanup       string                     `json:"cleanup"`
 		MutationCalls int                        `json:"mutation_calls"`
 		Proofs        map[string]json.RawMessage `json:"proofs"`
@@ -111,6 +112,7 @@ func runNotesParity(ctx context.Context, s Scenario, level string) (e Evidence) 
 	e.Metrics["os"] = result.OS
 	e.Metrics["mutation_calls"] = result.MutationCalls
 	e.Metrics["native_cleanup_reported_complete"] = result.Cleanup == "complete"
+	e.Metrics["native_cleanup_stage"] = result.CleanupStage
 	add("tagged_notes_cleaned_up", result.Cleanup == "complete")
 	for _, name := range []string{"simple_rich", "checklist"} {
 		var proof struct {
