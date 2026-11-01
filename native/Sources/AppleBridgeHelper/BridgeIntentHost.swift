@@ -6,8 +6,8 @@ import ApplicationServices
 
 @MainActor
 enum BridgeIntentHost {
-    static func runApplication(_ launch: @escaping @MainActor () -> Void = {}) {
-        BridgeIntentApplicationDelegate.launch = launch
+    static func runApplication(_ controller: PackagedApp? = nil) {
+        BridgeIntentApplicationDelegate.controller = controller
         BridgeIntentApplication.main()
     }
 
@@ -101,10 +101,13 @@ private struct BridgeIntentApplication: App {
 
 @MainActor
 private final class BridgeIntentApplicationDelegate: NSObject, NSApplicationDelegate {
-    static var launch: (@MainActor () -> Void)?
+    static var controller: PackagedApp?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        Self.launch?()
-        Self.launch = nil
+        Self.controller?.show()
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        Self.controller?.applicationShouldHandleReopen(sender, hasVisibleWindows: flag) ?? false
     }
 }

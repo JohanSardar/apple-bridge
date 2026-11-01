@@ -95,9 +95,7 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
         case "install":
             try controller.install()
         default:
-            withExtendedLifetime(controller) {
-                BridgeIntentHost.runApplication { controller.show() }
-            }
+            BridgeIntentHost.runApplication(controller)
         }
     }
 
@@ -152,7 +150,6 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
         setupItem.submenu = setupMenu
         menu.addItem(setupItem)
         NSApplication.shared.mainMenu = menu
-        NSApplication.shared.delegate = self
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 860, height: 740), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
         window.title = "Apple Bridge Setup"
         window.isReleasedWhenClosed = false
