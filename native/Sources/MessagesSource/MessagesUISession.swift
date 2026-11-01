@@ -73,7 +73,7 @@ public struct LiveMessagesUIDriver: MessagesUIDriver {
     }
     public func systemEvents(_ script: String) -> Int { MessagesAppleScript.execute(script) }
     public func input(_ input: MessagesUIInput) -> Int {
-        guard AXIsProcessTrusted(), let pid = messagesProcess(), frontmostProcess() == pid,
+        guard AXIsProcessTrusted(), CGPreflightPostEventAccess(), let pid = messagesProcess(), frontmostProcess() == pid,
               let source = CGEventSource(stateID: .privateState) else { return -1 }
         func key(_ code: Int, command: Bool = false, text: String? = nil) -> Bool {
             guard frontmostProcess() == pid, let key = CGKeyCode(exactly: code),

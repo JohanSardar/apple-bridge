@@ -11,6 +11,7 @@ public enum MessagesVariantProof {
         guard ["audio", "formatting", "mention", "effect", "schedule"].contains(kind) else { throw SourceFailure.invalid }
         try MessagesSendVariants.invalidateProof(kind)
         guard AXIsProcessTrusted() else { return limited("needs Messages Accessibility grant") }
+        guard CGPreflightPostEventAccess() else { return limited("Allow AppleBridgeHelper in System Settings > Privacy & Security > Accessibility, then rerun this check.") }
         let session = CGSessionCopyCurrentDictionary() as? [String: Any]
         guard session?["CGSSessionScreenIsLocked"] as? Bool != true else { return limited("needs unlocked Mac") }
         if kind == "audio" {
