@@ -9,8 +9,12 @@ public struct MailQualification: Sendable {
         return deadline
     }
     private let script: MailCommands.Script
-    public init(script: @escaping MailCommands.Script = MailCommands.run) { self.script = script }
-    private func cleanupResult(_ raw: String) throws -> [String: JSON] {
+    private let removeSelected: @Sendable () async throws -> Void
+    public init(script: @escaping MailCommands.Script = MailCommands.run, removeSelected: @escaping @Sendable () async throws -> Void = MailFixtureCleanup.removeSelected) {
+        self.script = script
+        self.removeSelected = removeSelected
+    }
+    public static func cleanupResult(_ raw: String) throws -> [String: JSON] {
         let counts = raw.split(separator: "|", omittingEmptySubsequences: false)
         guard counts.count == 2, let mailbox = Int(counts[0]), let outgoing = Int(counts[1]), mailbox >= 0, outgoing >= 0 else { throw MailCommandFailure.unconfirmed }
         return ["cleanup_passed": .bool(mailbox == 0 && outgoing == 0), "cleanup_mailbox_clear": .bool(mailbox == 0), "cleanup_outgoing_clear": .bool(outgoing == 0)]
@@ -19,37 +23,11 @@ public struct MailQualification: Sendable {
         guard tag.range(of: #"^\[ab-test\] [A-Za-z0-9_-]+$"#, options: .regularExpression) != nil,
               ["MAIL-SEND-SELF-REAL", "MAIL-DRAFT-REAL", "MAIL-ORGANIZE-REAL", "MAIL-BODY-FIXTURE", "MAIL-CLEANUP"].contains(scenario) else { throw SourceFailure.invalid }
         let q = MailCommands.quote
-        let cleanup = """
-        repeat with i from (count outgoing messages) to 1 by -1
-            set m to outgoing message i
-            if subject of m is \(q(tag)) then close m saving no
-        end repeat
-        repeat 2 times
-            set trashed to id of (messages of trash mailbox whose subject is \(q(tag)))
-            repeat with a in accounts
-                repeat with b in mailboxes of a
-                    set owned to (every message of b whose subject is \(q(tag)))
-                    repeat with m in owned
-                        if subject of m is \(q(tag)) and (id of m) is not in trashed then delete m
-                    end repeat
-                end repeat
-            end repeat
-            delay 0.2
-        end repeat
-        set trashed to id of (messages of trash mailbox whose subject is \(q(tag)))
-        set remaining to 0
-        repeat with a in accounts
-            repeat with b in mailboxes of a
-                repeat with m in (messages of b whose subject is \(q(tag)) and deleted status is false)
-                    if (id of m) is not in trashed then set remaining to remaining + 1
-                end repeat
-            end repeat
-        end repeat
-        set remainingOutgoing to count (outgoing messages whose subject is \(q(tag)))
-        return (remaining as string) & "|" & (remainingOutgoing as string)
-        """
+        func cleanup() async throws -> [String: JSON] {
+            try await MailFixtureCleanup.run(tag: tag, script: script, removeSelected: removeSelected)
+        }
         if scenario == "MAIL-CLEANUP" {
-            do { return .object(try cleanupResult(try await script(cleanup))) }
+            do { return .object(try await cleanup()) }
             catch {
                 var result: [String: JSON] = ["cleanup_passed": .bool(false), "cleanup_error": .string(MailCommands.failureMessage(error))]
                 if let failure = error as? MailCommandFailure, case .script(let code) = failure { result["cleanup_error_number"] = .number(Double(code)) }
@@ -89,7 +67,8 @@ public struct MailQualification: Sendable {
             checks[draft ? "draft_created" : "sent_to_self"] = .bool(try await apply(draft ? "mail.create_draft" : "mail.send", args))
             if !draft {
                 var key = ""
-                for _ in 0..<120 {
+                let deadline = ContinuousClock.now.advanced(by: .seconds(30))
+                while ContinuousClock.now < deadline {
                     key = try await script("""
                     set found to (messages of inbox whose subject is \(q(tag)))
                     if (count found) is 1 then return (id of item 1 of found) as string
@@ -110,7 +89,7 @@ public struct MailQualification: Sendable {
             if let failure = error as? MailCommandFailure, case .script(let code) = failure { checks["command_error_number"] = .number(Double(code)) }
         }
         if scenario != "MAIL-BODY-FIXTURE" {
-            do { checks.merge(try cleanupResult(try await script(cleanup))) { _, value in value } }
+            do { checks.merge(try await cleanup()) { _, value in value } }
             catch {
                 checks["cleanup_passed"] = .bool(false)
                 checks["cleanup_error"] = .string(MailCommands.failureMessage(error))

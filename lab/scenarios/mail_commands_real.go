@@ -134,11 +134,13 @@ func runMailCommandsReal(ctx context.Context, s Scenario, level string) (e Evide
 				e.Conditions = map[string]string{}
 			}
 			e.Conditions["cleanup"] = err.Error()
+			fmt.Fprintln(os.Stderr, err)
 		}
 	}()
 	proof, err := mailRealProof(ctx, w, s.ID, tag)
 	if err != nil {
 		e.Conditions = map[string]string{"reason": err.Error()}
+		fmt.Fprintln(os.Stderr, err)
 	}
 	add("signed_helper_mail_proof", err == nil && len(proof) > 0)
 	names := make([]string, 0, len(proof))

@@ -62,7 +62,7 @@ public struct MailCommands: Sendable {
             return AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false)
         }
         var error: NSDictionary?
-        guard let script = NSAppleScript(source: "with timeout of 10 seconds\ntell application id \"com.apple.mail\"\n" + body + "\nend tell\nend timeout") else { throw SourceFailure.invalid }
+        guard let script = NSAppleScript(source: "with timeout of 5 seconds\ntell application id \"com.apple.mail\"\n" + body + "\nend tell\nend timeout") else { throw SourceFailure.invalid }
         let result = script.executeAndReturnError(&error)
         if let error { throw MailCommandFailure.appleEvent(error["NSAppleScriptErrorNumber"] as? Int ?? 0) }
         return result.stringValue ?? ""
@@ -131,7 +131,7 @@ public struct MailCommands: Sendable {
         } else {
             let key = action["native_key"].string
             guard UInt64(key) != nil else { throw SourceFailure.invalid }
-            let lookup = "set m to missing value\nrepeat with a in accounts\nrepeat with b in mailboxes of a\nset matches to (messages of b whose id is " + key + ")\nif (count of matches) is greater than 0 then set m to item 1 of matches\nend repeat\nend repeat\nif m is missing value then error \"message unavailable\"\n"
+            let lookup = "set m to missing value\nrepeat with a in accounts\nrepeat with b in mailboxes of a\nset matches to (messages of b whose id is " + key + ")\nif (count of matches) is greater than 0 then set m to item 1 of matches\nif m is not missing value then exit repeat\nend repeat\nif m is not missing value then exit repeat\nend repeat\nif m is missing value then error \"message unavailable\"\n"
             body = lookup
             switch op {
             case "mail.mark_read":
@@ -152,7 +152,10 @@ public struct MailCommands: Sendable {
             guard try await script(readback) == "0" else { throw SourceFailure.conflict }
         }
         _ = try await script(body)
+        let deadline = ContinuousClock.now.advanced(by: .seconds(15))
         for _ in 0..<40 {
+            try Task.checkCancellation()
+            guard ContinuousClock.now < deadline else { throw MailCommandFailure.timeout }
             let evidence = try await script(readback)
             if evidence == "1" || evidence == "true" {
                 let key = creates ? try await script(identity) : action["native_key"].string

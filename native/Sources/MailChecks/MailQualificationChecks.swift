@@ -11,7 +11,8 @@ private actor QualificationMailFake {
     func run(_ body: String) throws -> String {
         calls.append(body)
         if body.hasPrefix("set matched to"), !body.contains("return count of matched") { return "123" }
-        if body.contains("set remaining to 0") { created = false; return "0|0" }
+        if body.contains("set chosen to selected messages") { return created ? "123" : "clear" }
+        if body.hasPrefix("return count (outgoing") { return "0" }
         if body.contains("extract address from sender") { return "self@example.invalid" }
         if body.contains("set found to") { return created ? "123" : "" }
         if body.hasPrefix("return count") || body.contains("return count of matched") { return created ? "1" : "0" }
@@ -22,6 +23,7 @@ private actor QualificationMailFake {
         if body.contains("return (flagged status") { return "true" }
         return ""
     }
+    func remove() { created = false }
     func scripts() -> [String] { calls }
 }
 
@@ -47,20 +49,21 @@ func checkMailQualification() async throws {
     try require(cancelledResult)
     for scenario in ["MAIL-SEND-SELF-REAL", "MAIL-DRAFT-REAL", "MAIL-ORGANIZE-REAL", "MAIL-BODY-FIXTURE"] {
         let fake = QualificationMailFake()
-        let proof = try await MailQualification(script: { try await fake.run($0) }).run(scenario: scenario, tag: "[ab-test] fixture")
+        let proof = try await MailQualification(script: { try await fake.run($0) }, removeSelected: { await fake.remove() }).run(scenario: scenario, tag: "[ab-test] fixture")
         try require(!proof.object.isEmpty && proof.object.values.allSatisfy { $0 == .bool(true) })
         let scripts = await fake.scripts()
-        try require(scripts.contains { $0.contains("set remaining to 0") } == (scenario != "MAIL-BODY-FIXTURE"))
+        try require(scripts.contains { $0.contains("set chosen to selected messages") } == (scenario != "MAIL-BODY-FIXTURE"))
         if scenario == "MAIL-BODY-FIXTURE" { try require(scripts.contains { $0.contains("set default message format to priorFormat") }) }
         if scenario != "MAIL-BODY-FIXTURE" {
-            try require(scripts.contains { $0.contains("repeat 2 times") && $0.contains("by -1") && $0.contains("then close m saving no") && $0.contains("if subject of m is \"[ab-test] fixture\" and (id of m) is not in trashed then delete m") && $0.contains("messages of trash mailbox whose subject is \"[ab-test] fixture\"") })
-            try require(!scripts.contains { $0.contains("set deleted status") })
+            try require(scripts.contains { $0.contains("then close m saving no") })
+            try require(scripts.contains { $0.contains("{inbox, sent mailbox, drafts mailbox}") && $0.contains("if subject of item 1 of chosen is not") })
+            try require(!scripts.contains { $0.contains("delete m") || $0.contains("move m") || $0.contains("set deleted status") })
         }
         try require(scripts.contains { $0.contains("extract address from sender") && $0.contains("close m saving no") })
         if scenario == "MAIL-ORGANIZE-REAL" { try require(scripts.contains { $0.contains("set flagged status of m to false") }) }
     }
     let failed = QualificationMailFake(fail: true)
-    let runner = MailQualification(script: { try await failed.run($0) })
+    let runner = MailQualification(script: { try await failed.run($0) }, removeSelected: { await failed.remove() })
     let proof = try await runner.run(scenario: "MAIL-DRAFT-REAL", tag: "[ab-test] failed")
     try require(proof["fixture_and_commands"] == .bool(false) && proof["cleanup_passed"] == .bool(true))
     try require(proof["command_error"].string == MailCommandFailure.timeout.localizedDescription)
@@ -68,10 +71,12 @@ func checkMailQualification() async throws {
     let cleanup = try await cleanupFailure.run(scenario: "MAIL-CLEANUP", tag: "[ab-test] failed")
     try require(cleanup["cleanup_passed"] == .bool(false) && cleanup["cleanup_error"].string == MailCommandFailure.permission.localizedDescription)
     for (raw, mailbox, outgoing) in [("1|0", false, true), ("0|1", true, false)] {
-        let partial = MailQualification(script: { _ in raw })
-        let proof = try await partial.run(scenario: "MAIL-CLEANUP", tag: "[ab-test] remaining")
-        try require(!proof["cleanup_passed"].bool && proof["cleanup_mailbox_clear"].bool == mailbox && proof["cleanup_outgoing_clear"].bool == outgoing)
+        let proof = try MailQualification.cleanupResult(raw)
+        try require(!proof["cleanup_passed"]!.bool && proof["cleanup_mailbox_clear"]!.bool == mailbox && proof["cleanup_outgoing_clear"]!.bool == outgoing)
     }
+    let unsafe = MailQualification(script: { body in body.contains("set chosen") ? "wrong" : "" }, removeSelected: { throw SourceFailure.corrupt })
+    let refused = try await unsafe.run(scenario: "MAIL-CLEANUP", tag: "[ab-test] refused")
+    try require(!refused["cleanup_passed"].bool && refused["cleanup_error"].string == MailCommandFailure.unconfirmed.localizedDescription)
     let count = await failed.scripts().count
     do { _ = try await runner.run(scenario: "MAIL-CLEANUP", tag: "foreign"); throw SourceFailure.corrupt } catch SourceFailure.invalid {}
     try require(await failed.scripts().count == count)

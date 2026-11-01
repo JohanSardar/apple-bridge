@@ -6,11 +6,14 @@ import json
 import pathlib
 import sqlite3
 import stat
+import sys
 
 root = pathlib.Path.home() / 'Library/Mail/V10'
 connection = sqlite3.connect((root / 'MailData/Envelope Index').as_uri() + '?mode=ro', uri=True)
 connection.execute('PRAGMA query_only=ON')
-rows = connection.execute("SELECT m.ROWID, coalesce(s.subject,''), coalesce(a.address,''), m.date_received FROM messages m JOIN subjects s ON s.ROWID=m.subject LEFT JOIN addresses a ON a.ROWID=m.sender WHERE s.subject LIKE '%[ab-test]%' ORDER BY m.ROWID")
+if len(sys.argv) != 2 or not sys.argv[1].startswith('[ab-test] run_'):
+    raise SystemExit('Mail body qualification requires its own tagged fixture')
+rows = connection.execute("SELECT m.ROWID, coalesce(s.subject,''), coalesce(a.address,''), m.date_received FROM messages m JOIN subjects s ON s.ROWID=m.subject LEFT JOIN addresses a ON a.ROWID=m.sender WHERE s.subject = ? ORDER BY m.ROWID", (sys.argv[1],))
 samples = []
 for key, subject, sender, received in rows:
     files = list(root.rglob(str(key) + '.emlx'))

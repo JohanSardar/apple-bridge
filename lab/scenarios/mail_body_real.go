@@ -19,10 +19,6 @@ func runMailBodyReal(ctx context.Context, s Scenario, level string) (e Evidence)
 		e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok})
 		return ok
 	}
-	output, err := exec.CommandContext(ctx, "python3", "lab/truth/mail_body.py").Output()
-	if !check("real_mail_store_available", err == nil) {
-		return e
-	}
 	var truth struct {
 		Samples []struct {
 			Subject  string `json:"subject_digest"`
@@ -31,10 +27,6 @@ func runMailBodyReal(ctx context.Context, s Scenario, level string) (e Evidence)
 			Body     string `json:"body_digest"`
 		} `json:"samples"`
 	}
-	if !check("mail_body_truth_decoded", json.Unmarshal(output, &truth) == nil) {
-		return e
-	}
-	e.Metrics["eligible_sample_count"] = len(truth.Samples)
 	w, err := world.NewRealWithSetup(ctx, level, 0, world.NativeSetup{FilesystemTruth: true}, world.BlobOptions{Scope: "mail:read,system:read"})
 	if !check("mail_native_world", err == nil) {
 		fmt.Fprintln(os.Stderr, err)
@@ -42,7 +34,7 @@ func runMailBodyReal(ctx context.Context, s Scenario, level string) (e Evidence)
 		return e
 	}
 	defer w.Close()
-	if len(truth.Samples) == 0 {
+	{
 		tag := "[ab-test] " + e.RunID
 		defer func() {
 			cleanup, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -59,12 +51,15 @@ func runMailBodyReal(ctx context.Context, s Scenario, level string) (e Evidence)
 		proof, problem := mailRealProof(ctx, w, "MAIL-BODY-FIXTURE", tag)
 		if problem != nil {
 			e.Conditions = map[string]string{"reason": problem.Error()}
+			fmt.Fprintln(os.Stderr, problem)
 		}
 		if !check("self_sent_fixture_created", problem == nil && proof["sent_to_self"] && proof["self_mail_received"]) {
 			return e
 		}
 		err = w.Await(60*time.Second, func() bool {
-			output, err := exec.CommandContext(ctx, "python3", "lab/truth/mail_body.py").Output()
+			oracleCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			defer cancel()
+			output, err := exec.CommandContext(oracleCtx, "python3", "lab/truth/mail_body.py", tag).Output()
 			return err == nil && json.Unmarshal(output, &truth) == nil && len(truth.Samples) > 0
 		})
 		if !check("plain_text_fixture_downloaded", err == nil) {
