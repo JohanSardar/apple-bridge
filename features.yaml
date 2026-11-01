@@ -1149,7 +1149,7 @@ features:
       - {id: FOC-SET-REAL, levels: [real]}
       - {id: FOC-IDLE, levels: [real]}
       - {id: FOC-STATUS-REAL, levels: [real]}
-      - {id: FOC-PHONE-SYNC, levels: [real]}
+      - {id: FOC-PHONE-SYNC, levels: [sim, real]}
     limits:
       - {"scenario": "FOC-SET-REAL", "level": "real", "reason": "needs Focus status grant for AppleBridgeHelper; signed Air probe stopped before dispatch; AB Focus import remains unqualified"}
       - {"scenario": "FOC-IDLE", "level": "real", "reason": "Five-minute Helper CPU qualification remains pending; no idle CPU measurement claimed."}
