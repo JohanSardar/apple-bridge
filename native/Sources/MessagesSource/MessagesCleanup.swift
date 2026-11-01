@@ -87,7 +87,7 @@ public enum MessagesCleanup {
             if let proof = mediaProof {
                 var attachmentNames: [String: [String]] = [:]
                 var positions: [String: Int64] = [:]
-                for row in try reader.query("SELECT m.guid,m.ROWID AS native_row_id,a.filename FROM message m JOIN message_attachment_join j ON j.message_id=m.ROWID JOIN attachment a ON a.ROWID=j.attachment_id JOIN chat_message_join c ON c.message_id=m.ROWID WHERE instr(a.filename,?)>0 AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=c.chat_id)", ["ab-" + String(tag.dropFirst(9).dropLast()) + "."]) {
+                for row in try reader.query("SELECT m.guid,m.ROWID AS native_row_id,a.filename FROM message m JOIN message_attachment_join j ON j.message_id=m.ROWID JOIN attachment a ON a.ROWID=j.attachment_id JOIN chat_message_join c ON c.message_id=m.ROWID WHERE EXISTS (SELECT 1 FROM message_attachment_join owned JOIN attachment file ON file.ROWID=owned.attachment_id WHERE owned.message_id=m.ROWID AND instr(file.filename,?)>0) AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=c.chat_id)", ["ab-" + String(tag.dropFirst(9).dropLast()) + "."]) {
                     attachmentNames[row["guid"], default: []].append(row["filename"])
                     positions[row["guid"]] = row.integer("native_row_id")
                 }
