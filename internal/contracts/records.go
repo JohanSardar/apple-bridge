@@ -25,6 +25,7 @@ const (
 )
 
 var Collections = map[string]string{
+	"photos.asset": "pha", "photos.album": "phl",
 	"shortcuts.shortcut": "sct", "shortcuts.folder": "scf",
 	"messages.chat": "cht", "messages.handle": "hdl", "messages.message": "msg", "messages.reaction": "rxn", "messages.attachment": "att",
 	"calendar.calendar": "cal", "calendar.event": "evt", "reminders.list": "lst", "reminders.reminder": "rmd", "reminders.attachment": "rat",

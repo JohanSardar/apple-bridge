@@ -1,6 +1,6 @@
 id: NOTE-EDIT-PARITY
 feature: web.notes
-levels: [real]
+levels: [sim, real]
 given: []
 when: [{notes: {}}]
 then: []

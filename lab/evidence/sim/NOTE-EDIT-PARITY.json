@@ -1,0 +1,219 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[3.72 3.67 3.51] cpu_idle=88% cpus=10 other_heavy=0"
+  },
+  "run_id": "notes-parity_01M6AWVQ8JBZC70TK6YS04ZNSC",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "NOTE-EDIT-PARITY",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "c9a6ce7dc7ffe689910b88a3f28c242a34f8711e",
+  "at": "2026-11-01T06:30:59.090437Z",
+  "assertions": [
+    {
+      "name": "NOTE-CRUD/external_note_imported",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_create_folder_observed",
+      "passed": true,
+      "detail": "observed:::"
+    },
+    {
+      "name": "NOTE-CRUD/rest_create_observed",
+      "passed": true,
+      "detail": "observed:::"
+    },
+    {
+      "name": "NOTE-CRUD/rest_create_matches_truth",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_pending_content_rejected",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_pending_content_no_effect",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_hydration_advances_revision",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_append_observed",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_append_visible",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_append_matches_truth",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_append_content",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_content_change_rejects_stale_version",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_stale_version_no_effect",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_replace_observed",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_replace_visible",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_replace_matches_truth",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_replace_content",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_before_delete_replicated",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_delete_observed",
+      "passed": true,
+      "detail": "observed:"
+    },
+    {
+      "name": "NOTE-CRUD/rest_delete_replicated",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_delete_preserves_other_note",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/rest_delete_applied_once",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_create_folder_observed",
+      "passed": true,
+      "detail": "observed:::"
+    },
+    {
+      "name": "NOTE-CRUD/mcp_create_observed",
+      "passed": true,
+      "detail": "observed:::"
+    },
+    {
+      "name": "NOTE-CRUD/mcp_create_matches_truth",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_pending_content_rejected",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_pending_content_no_effect",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_hydration_advances_revision",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_append_observed",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_append_visible",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_append_matches_truth",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_append_content",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_content_change_rejects_stale_version",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_stale_version_no_effect",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_replace_observed",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_replace_visible",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_replace_matches_truth",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_replace_content",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_before_delete_replicated",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_delete_observed",
+      "passed": true,
+      "detail": "observed:"
+    },
+    {
+      "name": "NOTE-CRUD/mcp_delete_replicated",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_delete_preserves_other_note",
+      "passed": true
+    },
+    {
+      "name": "NOTE-CRUD/mcp_delete_applied_once",
+      "passed": true
+    },
+    {
+      "name": "NOTE-RICH-REJECT/external_note_imported",
+      "passed": true
+    },
+    {
+      "name": "NOTE-RICH-REJECT/rich_rejected_before_dispatch",
+      "passed": true
+    },
+    {
+      "name": "NOTE-RICH-REJECT/rich_rejection_explains_recovery",
+      "passed": true
+    },
+    {
+      "name": "NOTE-RICH-REJECT/no_dispatch_effect",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": [
+    "air"
+  ]
+}

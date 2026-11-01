@@ -1,17 +1,17 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[28.27 19.26 13.71] cpu_idle=0% cpus=10 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[3.52 3.63 3.5] cpu_idle=85% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M64V7MXSNWWQH5D9AVG04TXV",
+  "run_id": "run_01M6AWVGA5SVQ2A1PWWR06JT49",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "NOTE-CRUD",
   "level": "sim",
   "passed": true,
-  "git_sha": "829d8e0d8e773aa71b721594e4413fe1c8af849a",
-  "at": "2026-10-29T22:07:06.169787Z",
+  "git_sha": "c9a6ce7dc7ffe689910b88a3f28c242a34f8711e",
+  "at": "2026-11-01T06:30:51.973278Z",
   "assertions": [
     {
       "name": "external_note_imported",
@@ -19,14 +19,24 @@
     },
     {
       "name": "rest_create_folder_observed",
-      "passed": true
+      "passed": true,
+      "detail": "observed:::"
     },
     {
       "name": "rest_create_observed",
-      "passed": true
+      "passed": true,
+      "detail": "observed:::"
     },
     {
       "name": "rest_create_matches_truth",
+      "passed": true
+    },
+    {
+      "name": "rest_pending_content_rejected",
+      "passed": true
+    },
+    {
+      "name": "rest_pending_content_no_effect",
       "passed": true
     },
     {
@@ -74,6 +84,10 @@
       "passed": true
     },
     {
+      "name": "rest_before_delete_replicated",
+      "passed": true
+    },
+    {
       "name": "rest_delete_observed",
       "passed": true,
       "detail": "observed:"
@@ -83,15 +97,33 @@
       "passed": true
     },
     {
-      "name": "mcp_create_folder_observed",
+      "name": "rest_delete_preserves_other_note",
       "passed": true
+    },
+    {
+      "name": "rest_delete_applied_once",
+      "passed": true
+    },
+    {
+      "name": "mcp_create_folder_observed",
+      "passed": true,
+      "detail": "observed:::"
     },
     {
       "name": "mcp_create_observed",
-      "passed": true
+      "passed": true,
+      "detail": "observed:::"
     },
     {
       "name": "mcp_create_matches_truth",
+      "passed": true
+    },
+    {
+      "name": "mcp_pending_content_rejected",
+      "passed": true
+    },
+    {
+      "name": "mcp_pending_content_no_effect",
       "passed": true
     },
     {
@@ -139,12 +171,24 @@
       "passed": true
     },
     {
+      "name": "mcp_before_delete_replicated",
+      "passed": true
+    },
+    {
       "name": "mcp_delete_observed",
       "passed": true,
       "detail": "observed:"
     },
     {
       "name": "mcp_delete_replicated",
+      "passed": true
+    },
+    {
+      "name": "mcp_delete_preserves_other_note",
+      "passed": true
+    },
+    {
+      "name": "mcp_delete_applied_once",
       "passed": true
     },
     {

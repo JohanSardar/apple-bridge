@@ -4,6 +4,18 @@
 
 Existing reads expose checklist block state, optional pins, and decoded hashtag attachments. Notes.sdef on macOS 26 exposes no checklist, tag, or pinned setter. HTML replacement cannot preserve native checklist identities; these writes remain unavailable.
 
-Folder creation uses the existing command. Folder deletion remains subject to the existing per-build deletion proof. Tagged test folders can be renamed with `notes.rename_folder`, guarded by expected version and the Bridge Test tag prefix. Real rename and move qualification remain pending a verified cleanup route: existing real evidence reports iCloud rows surviving AppleScript deletion. NOTE-EXTRAS therefore performs no real mutation and explicitly reports limited coverage.
+Folder creation uses the existing command. Folder deletion remains subject to the existing per-build deletion proof. Tagged test folders can be renamed with `notes.rename_folder`, guarded by expected version and the Bridge Test tag prefix. `NOTE-EXTRAS` exercises folder creation, rename and move through REST and MCP, compares the result with Notes Automation, and removes only the captured fixtures and folders from its run.
 
-Native move and rename capabilities require `notes-extras-proofs.json` in the Helper home: version 1, matching `os_build` and source `generation`, and per-operation `before_active`, `command_completed`, `notestore_verified`, `after_matches`, and `cleanup_complete` evidence. No qualification ledger is produced while real cleanup is unverified; these native capabilities remain unadvertised and reject `capability_unproven`. Prepared folder state retains only a stable digest.
+Native note deletion, move and rename use public Notes Automation commands and verify the resulting NoteStore state before reporting success. Prepared folder state retains only a stable digest. Note fingerprints cover content, lock, pin, folder and attachment dependencies; unrelated cloud bookkeeping does not invalidate a prepared change.
+
+The native delete command can return successfully before NoteStore commits its deletion. Note deletion therefore resolves the account's Recently Deleted folder and moves the exact, validated note there through public Automation. Both the command and capture observer verify the committed trash state. Cleanup uses the same route for captured run-owned notes.
+
+Deleting a note can leave its row in NoteStore with `ZMARKEDFORDELETION=0` while moving it to a folder with `ZFOLDERTYPE=1`. Reads exclude notes marked for deletion and notes under trashed or marked folders. Incremental capture emits an absence for those notes, including when an ancestor folder moves into trash; restoring a note makes it readable again.
+
+Cleanup baselines use a read-only SQLite identity scan without fetching every note body through Automation. Tagged body comparisons select only the current run's notes before reading their content through Notes. Cleanup requires the exact captured ID, run tag and owned folder, deletes through the validated container-scoped Automation object, verifies the deletion state, and checks that the active Notes baseline is restored. Empty run-created folders are validated by captured ID and exact title as one batch before deletion, then verified together. A delayed check is followed by read-only verification of those same IDs. Existing notes and older test fixtures are preserved.
+
+The real Notes harness builds the Helper under its selected shared Swift lane lock. AppleTruth has a separate package and build directory, so its build uses a lock tied to that package instead of waiting for unrelated Helper builds.
+
+Fixtures are created after the gateway receives the initial Notes metadata capture. This keeps them out of the initial library hydration queue, so their bodies receive incremental priority. Rich-write rejection uses a small bold-text fixture.
+
+Parity read-back selects captured note IDs instead of decoding the whole library. Capability generation checks read folder metadata only.

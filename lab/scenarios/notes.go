@@ -20,6 +20,10 @@ import (
 )
 
 func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
+	if level != "sim" {
+		restore := notesNativeBuildLock("native/.build")
+		defer restore()
+	}
 	if s.ID == "NOTE-EDIT-PARITY" {
 		return runNotesParity(ctx, s, level)
 	}
@@ -78,6 +82,30 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		add("gzip_protobuf_scrubbed_fixtures", err == nil)
 		return
 	}
+	ctx = world.WithOptions(ctx, world.Options{GatewayDials: level == "replica", Scope: "notes:read,notes:write,reminders:read,system:read"})
+	var w *world.World
+	var err error
+	if level == "sim" {
+		w, err = world.New(ctx, level, 1, 0)
+	} else {
+		w, err = world.NewRealWithSetup(ctx, level, 1, notesNativeSetup(ctx))
+	}
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "notes world:", err)
+		add("world_start", false)
+		return
+	}
+	defer w.Close()
+	if level != "sim" {
+		notesRecordHelperBinary(&e, w.HelperApp)
+		if s.ID == "NOTE-CRUD" || s.ID == "NOTE-RICH-REJECT" {
+			problem := notesAwaitInitialCapture(w)
+			add("native_notes_capture_ready", problem == nil)
+			if problem != nil {
+				return
+			}
+		}
+	}
 	if level == "real" && s.ID == "NOTE-CRUD" {
 		before, problem := cleanupSnapshot(ctx, "notes")
 		if problem != nil {
@@ -92,20 +120,6 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		}
 		defer func() { finishCleanupAudit(context.Background(), audit, "notes", &e) }()
 	}
-	ctx = world.WithOptions(ctx, world.Options{GatewayDials: level == "replica", Scope: "notes:read,notes:write,reminders:read,system:read"})
-	var w *world.World
-	var err error
-	if level == "sim" {
-		w, err = world.New(ctx, level, 1, 0)
-	} else {
-		w, err = world.NewReal(ctx, level, 1)
-	}
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "notes world:", err)
-		add("world_start", false)
-		return
-	}
-	defer w.Close()
 	if (s.ID == "NOTE-IMPORT" || s.ID == "NOTE-DECODE-FULL") && level == "real" {
 		response, truthErr := w.Truth("observe", map[string]any{"source": "notes", "sqlite": true})
 		if truthErr != nil {
@@ -302,6 +316,7 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 	}
 	var owned *runCleanup
 	ownedFolders := map[string]string{}
+	var fixtureID, fixtureFolderID string
 	observeCleanup := func() ([]cleanupItem, error) {
 		response, err := w.RecoverTruth("observe", map[string]any{"source": "notes", "tag": "", "active_only": true})
 		if err != nil {
@@ -349,15 +364,15 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		}
 		defer func() {
 			proof, problem := owned.finish(observeCleanup, func(item cleanupItem) error {
-				_, err := w.RecoverTruth("fixture", map[string]any{"source": "notes", "tag": tag, "action": "cleanup_owned", "id": item.ID, "folder_id": item.Container})
+				err := notesCleanupTruth(w.RecoverTruth, 30*time.Second, map[string]any{"source": "notes", "tag": tag, "action": "cleanup_owned", "id": item.ID, "folder_id": item.Container})
 				return err
 			})
 			if e.Metrics == nil {
 				e.Metrics = map[string]any{}
 			}
 			e.Metrics["cleanup"] = proof
-			for id, title := range ownedFolders {
-				_, folderErr := w.RecoverTruth("fixture", map[string]any{"source": "notes", "tag": tag, "action": "cleanup_created_folder", "created_by_run": true, "folder_id": id, "title": title})
+			folderErr := notesCleanupFolders(w.RecoverTruth, tag, ownedFolders)
+			for range ownedFolders {
 				add("run_created_folder_cleaned", folderErr == nil)
 			}
 			add("owned_cleanup_counts_match", problem == nil)
@@ -368,10 +383,15 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		extra["tag"] = tag
 		extra["action"] = action
 		if level != "sim" {
-			if owned != nil {
-				extra["folder_title"] = "Bridge Test " + tag
-			}
+			extra["folder_title"] = "Bridge Test " + tag
 			result, problem := w.Truth("fixture", extra)
+			if problem == nil && action == "create" {
+				fixtureID, _ = result["id"].(string)
+				fixtureFolderID, _ = result["folder_id"].(string)
+				if result["folder_created"] == true {
+					ownedFolders[fixtureFolderID] = "Bridge Test " + tag
+				}
+			}
 			if problem == nil && owned != nil && action == "create" {
 				id, _ := result["id"].(string)
 				folder, _ := result["folder_id"].(string)
@@ -397,8 +417,14 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 	}
 	if level != "sim" && owned == nil {
 		defer func() {
-			_, err := w.RecoverTruth("fixture", map[string]any{"source": "notes", "tag": tag, "action": "cleanup"})
-			add("tagged_notes_cleaned", err == nil)
+			if fixtureID != "" {
+				err := notesCleanupTruth(w.RecoverTruth, 30*time.Second, map[string]any{"source": "notes", "tag": tag, "action": "cleanup_owned", "id": fixtureID, "folder_id": fixtureFolderID})
+				add("tagged_notes_cleaned", err == nil)
+			}
+			problem := notesCleanupFolders(w.RecoverTruth, tag, ownedFolders)
+			for range ownedFolders {
+				add("run_created_folder_cleaned", problem == nil)
+			}
 		}()
 	} else if level == "sim" {
 		err = w.ControlAction("/external-change", map[string]any{"key": "note-folder", "collection": "notes.folder", "data": map[string]any{"title": "Bridge Test", "account": "sim"}})
@@ -408,7 +434,7 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		}
 	}
 	if s.ID == "NOTE-RICH-REJECT" {
-		_, err = fixture("create", map[string]any{"title": title, "html": "<div>" + title + "</div><table><tr><td>synthetic</td></tr></table>"})
+		_, err = fixture("create", map[string]any{"title": title, "html": "<div>" + title + "</div><div><b>synthetic rich body</b></div>"})
 	} else {
 		_, err = fixture("create", map[string]any{"title": title})
 	}
@@ -417,7 +443,11 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		return
 	}
 	var note contracts.Record
-	err = w.Await(15*time.Second, func() bool { var ok bool; note, ok = find("notes.note", title); return ok })
+	err = w.Await(30*time.Second, func() bool {
+		var ok bool
+		note, ok = find("notes.note", title)
+		return ok && (level == "sim" || s.ID != "NOTE-RICH-REJECT" || notesContentReady(note, false))
+	})
 	add("external_note_imported", err == nil)
 	if err != nil {
 		if s.ID == "NOTE-EXTERNAL" {
@@ -454,6 +484,11 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		var out contracts.CommandRecord
 		err := client.Call(ctx, "notes.update", contracts.Command{ID: contracts.NewCommandID(), Args: args, ExpectedVersion: note.Version, WaitMS: 15000}, &out)
 		add("rich_rejected_before_dispatch", errors.Is(err, contracts.ErrUnsupported) || (out.Error != nil && out.Error.Code == "unsupported"))
+		problem := out.Error
+		if problem == nil {
+			errors.As(err, &problem)
+		}
+		add("rich_rejection_explains_recovery", problem != nil && strings.Contains(problem.Message, "Notes") && strings.Contains(problem.Message, "plain-text"))
 		if level == "sim" {
 			effects, _ := w.Effects()
 			add("no_dispatch_effect", len(effects) == 0)
@@ -521,6 +556,7 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 			var folderCommand contracts.CommandRecord
 			err = client.Call(ctx, "notes.create_folder", contracts.Command{ID: contracts.NewCommandID(), Args: folderArgs, WaitMS: 15000}, &folderCommand)
 			add(protocol+"_create_folder_observed", err == nil && folderCommand.State == "observed")
+			e.Assertions[len(e.Assertions)-1].Detail = notesCommandDetail(err, folderCommand)
 			if err != nil || folderCommand.State != "observed" {
 				return
 			}
@@ -568,6 +604,7 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 			var command contracts.CommandRecord
 			err = client.Call(ctx, "notes.create", contracts.Command{ID: contracts.NewCommandID(), Args: args, WaitMS: 15000}, &command)
 			add(protocol+"_create_observed", err == nil && command.State == "observed")
+			e.Assertions[len(e.Assertions)-1].Detail = notesCommandDetail(err, command)
 			if err != nil || command.State != "observed" {
 				return
 			}
@@ -597,7 +634,11 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 				}
 			}
 			var created contracts.Record
-			err = w.Await(10*time.Second, func() bool { var ok bool; created, ok = find("notes.note", newTitle); return ok })
+			err = w.Await(30*time.Second, func() bool {
+				var ok bool
+				created, ok = find("notes.note", newTitle)
+				return ok && (level == "sim" || notesContentReady(created, true))
+			})
 			if err != nil {
 				add("created_visible", false)
 				return
@@ -636,6 +677,13 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 					add(protocol+"_metadata_visible", false)
 					return
 				}
+				pendingID := contracts.NewCommandID()
+				pendingArgs, _ := json.Marshal(map[string]any{"id": created.ID, "mode": "append", "plain_text": "\npending"})
+				var pending contracts.CommandRecord
+				pendingErr := client.Call(ctx, "notes.update", contracts.Command{ID: pendingID, Args: pendingArgs, ExpectedVersion: created.Version, WaitMS: 15000}, &pending)
+				add(protocol+"_pending_content_rejected", errors.Is(pendingErr, contracts.ErrUnsupported) || pending.Error != nil && pending.Error.Code == "unsupported")
+				pendingEffects, pendingEffectErr := w.Effects()
+				add(protocol+"_pending_content_no_effect", pendingEffectErr == nil && pendingEffects[pendingID] == 0)
 				metadata["content_status"], metadata["editable"] = "complete", "plain"
 				delete(metadata, "body_status")
 				err = change()
@@ -655,19 +703,12 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 				err = client.Call(ctx, "notes.update", contracts.Command{ID: contracts.NewCommandID(), Args: args, ExpectedVersion: created.Version, WaitMS: 15000}, &command)
 				add(protocol+"_"+mode+"_observed", err == nil && command.State == "observed")
 				if err != nil || command.State != "observed" {
-					reason := "state_not_observed"
-					for _, known := range []*contracts.Error{contracts.ErrUnsupported, contracts.ErrUnauthorized, contracts.ErrUnavailable, contracts.ErrConflict, contracts.ErrExpired, contracts.ErrCorrupt, contracts.ErrCapacity, contracts.ErrIndeterminate, contracts.ErrInvalid, contracts.ErrNotFound} {
-						if errors.Is(err, known) || command.Error != nil && command.Error.Code == known.Code {
-							reason = known.Code
-							break
-						}
-					}
-					e.Assertions[len(e.Assertions)-1].Detail = "command:" + reason
+					e.Assertions[len(e.Assertions)-1].Detail = notesCommandDetail(err, command)
 					return
 				}
-				err = w.Await(5*time.Second, func() bool {
+				err = w.Await(30*time.Second, func() bool {
 					current, ok := find("notes.note", newTitle)
-					if ok && current.Version > created.Version {
+					if ok && current.Version > created.Version && (level == "sim" || notesContentReady(current, true)) {
 						created = current
 						return true
 					}
@@ -689,9 +730,36 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 				}
 
 			}
+			replicated := func(deleted bool) bool {
+				for _, target := range append([]world.Endpoint{w.Gateway}, w.Replicas...) {
+					rows, problem := w.Records(target)
+					if problem != nil {
+						return false
+					}
+					present := false
+					for _, row := range rows {
+						if row.ID == created.ID && !row.Deleted {
+							if !deleted && row.Version < created.Version {
+								return false
+							}
+							present = true
+						}
+					}
+					if present == deleted {
+						return false
+					}
+				}
+				return true
+			}
+			err = w.Await(30*time.Second, func() bool { return replicated(false) })
+			add(protocol+"_before_delete_replicated", err == nil)
+			if err != nil {
+				return
+			}
 			args, _ = json.Marshal(map[string]any{"id": created.ID})
 			command = contracts.CommandRecord{}
-			err = client.Call(ctx, "notes.delete", contracts.Command{ID: contracts.NewCommandID(), Args: args, ExpectedVersion: created.Version, WaitMS: 15000}, &command)
+			deleteID := contracts.NewCommandID()
+			err = client.Call(ctx, "notes.delete", contracts.Command{ID: deleteID, Args: args, ExpectedVersion: created.Version, WaitMS: 15000}, &command)
 			deleteCode := ""
 			if err != nil {
 				var problem *contracts.Error
@@ -705,8 +773,65 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 				deleteCode = command.Error.Code
 			}
 			e.Assertions = append(e.Assertions, Assertion{Name: protocol + "_delete_observed", Passed: err == nil && command.State == "observed", Detail: string(command.State) + ":" + deleteCode})
-			add(protocol+"_delete_replicated", w.Await(5*time.Second, func() bool { _, ok := find("notes.note", newTitle); return !ok }) == nil)
+			add(protocol+"_delete_replicated", w.Await(30*time.Second, func() bool { return replicated(true) }) == nil)
+			_, fixturePresent := find("notes.note", title)
+			add(protocol+"_delete_preserves_other_note", fixturePresent)
+			if level == "sim" {
+				effects, problem := w.Effects()
+				add(protocol+"_delete_applied_once", problem == nil && effects[deleteID] == 1)
+			}
 		}
 	}
 	return
+}
+
+func notesContentReady(record contracts.Record, plain bool) bool {
+	var data struct {
+		Editable      string `json:"editable"`
+		BodyStatus    string `json:"body_status"`
+		ContentStatus string `json:"content_status"`
+	}
+	return json.Unmarshal(record.Data, &data) == nil && data.BodyStatus != "pending" && data.ContentStatus == "complete" && (!plain || data.Editable == "plain")
+}
+
+func notesCommandDetail(err error, command contracts.CommandRecord) string {
+	code := ""
+	var problem *contracts.Error
+	if errors.As(err, &problem) {
+		code = problem.Code
+	} else if err != nil {
+		code = "transport"
+	}
+	if command.Error != nil {
+		code = command.Error.Code
+	}
+	var evidence struct {
+		Reason      string `json:"reason"`
+		NativeError string `json:"native_error_code"`
+	}
+	json.Unmarshal(command.Evidence, &evidence)
+	return string(command.State) + ":" + code + ":" + evidence.Reason + ":" + evidence.NativeError
+}
+
+func notesNativeBuildLock(path string) func() {
+	previous, present := os.LookupEnv("APPLE_BRIDGE_NATIVE_LOCK")
+	if previous != "" {
+		return func() {}
+	}
+	target, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return func() {}
+	}
+	lane := filepath.Base(target)
+	if lane != "ab-swift-build-1" && lane != "ab-swift-build-2" {
+		return func() {}
+	}
+	os.Setenv("APPLE_BRIDGE_NATIVE_LOCK", "/tmp/ab-native-lane-"+strings.TrimPrefix(lane, "ab-swift-build-")+".lock")
+	return func() {
+		if present {
+			os.Setenv("APPLE_BRIDGE_NATIVE_LOCK", previous)
+		} else {
+			os.Unsetenv("APPLE_BRIDGE_NATIVE_LOCK")
+		}
+	}
 }

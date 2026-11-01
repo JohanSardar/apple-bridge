@@ -18,6 +18,10 @@ struct NotesDecoderChecks {
         let nativePlain = try NotesProto.decode(Data(contentsOf: URL(fileURLWithPath: root + "/native-plain.gz")))
         guard !nativePlain.rich, nativePlain.lossless,
               nativePlain.blocks.map(\.type) == ["paragraph", "paragraph"] else { throw CheckFailure.mismatch }
+        for indent in [0, 1] {
+            let body = try NotesProto.decode(Data(contentsOf: URL(fileURLWithPath: root + "/native-indent-\(indent).gz")))
+            guard body.text == nativePlain.text, body.rich == (indent != 0), body.lossless == (indent == 0) else { throw CheckFailure.mismatch }
+        }
         let splitTitle = try NotesProto.decode(Data(contentsOf: URL(fileURLWithPath: root + "/split-title.gz")))
         guard splitTitle.blocks.map(\.type) == ["title", "paragraph"], !splitTitle.rich, splitTitle.lossless else { throw CheckFailure.mismatch }
         let nativeRich = try NotesProto.decode(Data(contentsOf: URL(fileURLWithPath: root + "/native-rich.gz")))

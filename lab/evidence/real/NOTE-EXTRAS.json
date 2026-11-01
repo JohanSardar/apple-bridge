@@ -1,23 +1,50 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[4.51 8.03 14.35] cpu_idle=60% cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[144.98 77.16 49.21] cpu_idle=13% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M61X4P9K6SHTMM6DMAD98CSR",
+  "run_id": "notes-extras_01M6AY9MHA3C10XFV5TZWXNPWE",
   "metrics": {
-    "capture_observer_resets": 0
+    "capture_observer_resets": 0,
+    "cleanup_counts": {
+      "after_count": 136,
+      "before_count": 136,
+      "created_count": 0,
+      "passed": true
+    },
+    "notes_helper_binary_uuids": [
+      "9de3109c-94a5-3347-afcc-92d39c3a5416"
+    ]
   },
   "scenario": "NOTE-EXTRAS",
   "level": "real",
-  "passed": true,
-  "git_sha": "4f77d9f7892fe2d1a98db2d82dd335e7bd151665",
-  "at": "2026-10-28T18:42:43.123941Z",
+  "passed": false,
+  "git_sha": "6cb36ce90f9e079650bdc04a6d521334f1216584",
+  "at": "2026-11-01T06:56:03.62905Z",
   "assertions": [
     {
-      "name": "tagged_mutation_cleanup_required",
-      "passed": true,
-      "status": "limited",
-      "detail": "Existing real Notes cleanup is unproven on 25G241; no real fixtures or mutations attempted"
+      "name": "native_notes_capture_ready",
+      "passed": true
+    },
+    {
+      "name": "tagged_fixture_created",
+      "passed": true
+    },
+    {
+      "name": "tagged_fixture_visible",
+      "passed": false
+    },
+    {
+      "name": "owned_note_cleaned",
+      "passed": true
+    },
+    {
+      "name": "owned_folder_cleaned",
+      "passed": true
+    },
+    {
+      "name": "cleanup_baseline_restored",
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",
@@ -25,5 +52,7 @@
     }
   ],
   "latency": null,
-  "hosts": null
+  "hosts": [
+    "air"
+  ]
 }

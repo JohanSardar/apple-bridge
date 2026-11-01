@@ -11,3 +11,5 @@ Native metadata field roles also follow the [expanded schema](https://github.com
 `title-attachment.gz` has an explicit Title paragraph whose only content is an inline attachment. The projection retains the Title block and attachment reference: changing its block type to `attachment` would incorrectly remove a schema title from the structure count. Non-table styled paragraphs retain their styles when their content is an attachment.
 
 `native-direction.gz` and `native-unknown.gz` retain the native plain metadata but add an unrepresented writing direction or an unknown paragraph attribute. Both stay rich/read-only, covering the boundary of the metadata allowlist.
+
+`native-indent-0.gz` and `native-indent-1.gz` add explicit paragraph indentation to the synthetic native plain fixture. Zero indentation remains plain and lossless after public HTML writes; nonzero indentation stays rich and read-only.

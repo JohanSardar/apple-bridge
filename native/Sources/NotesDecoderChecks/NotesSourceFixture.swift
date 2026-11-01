@@ -52,7 +52,7 @@ enum NotesSourceFixture {
         try sql("CREATE TABLE Z_PRIMARYKEY(Z_ENT INTEGER,Z_NAME TEXT)")
         try sql("INSERT INTO Z_PRIMARYKEY VALUES(1,'ICFolder'),(2,'ICNote'),(3,'ICAccount'),(4,'ICAttachment'),(5,'ICMedia')")
         try sql("CREATE TABLE ZICNOTEDATA(Z_PK INTEGER PRIMARY KEY,ZDATA BLOB,Z_OPT INTEGER DEFAULT 1)")
-        try sql("CREATE TABLE ZICCLOUDSYNCINGOBJECT(Z_PK INTEGER PRIMARY KEY,Z_ENT INTEGER,ZIDENTIFIER TEXT,ZTITLE1 TEXT,ZTITLE2 TEXT,ZNAME TEXT,ZACCOUNT8 INTEGER,ZPARENT INTEGER,ZFOLDER INTEGER,ZNOTEDATA INTEGER,ZMARKEDFORDELETION INTEGER DEFAULT 0,ZFOLDERTYPE INTEGER DEFAULT 0,ZISPASSWORDPROTECTED INTEGER DEFAULT 0,ZISPINNED INTEGER DEFAULT 0,ZNOTE1 INTEGER,ZPARENTATTACHMENT INTEGER,ZMEDIA INTEGER,ZTYPEUTI1 TEXT,ZFILENAME TEXT,ZMERGEABLEDATA1 BLOB,ZALTTEXT TEXT,ZGENERATION TEXT,Z_OPT INTEGER DEFAULT 1)")
+        try sql("CREATE TABLE ZICCLOUDSYNCINGOBJECT(Z_PK INTEGER PRIMARY KEY,Z_ENT INTEGER,ZIDENTIFIER TEXT,ZTITLE1 TEXT,ZTITLE2 TEXT,ZNAME TEXT,ZACCOUNT8 INTEGER,ZPARENT INTEGER,ZFOLDER INTEGER,ZNOTEDATA INTEGER,ZMARKEDFORDELETION INTEGER DEFAULT 0,ZFOLDERTYPE INTEGER DEFAULT 0,ZISPASSWORDPROTECTED INTEGER DEFAULT 0,ZISPINNED INTEGER DEFAULT 0,ZNOTE1 INTEGER,ZPARENTATTACHMENT INTEGER,ZMEDIA INTEGER,ZTYPEUTI1 TEXT,ZFILENAME TEXT,ZMERGEABLEDATA1 BLOB,ZALTTEXT TEXT,ZGENERATION TEXT,ZSERVERRECORDDATA BLOB,Z_OPT INTEGER DEFAULT 1)")
         try sql("INSERT INTO ZICCLOUDSYNCINGOBJECT(Z_PK,Z_ENT,ZIDENTIFIER,ZNAME) VALUES(1,3,'account','Bridge Test Account')")
         try sql("INSERT INTO ZICCLOUDSYNCINGOBJECT(Z_PK,Z_ENT,ZIDENTIFIER,ZTITLE2,ZACCOUNT8,ZPARENT,ZFOLDERTYPE) VALUES(10,1,'root','Bridge Test',1,NULL,0),(11,1,'trash','Recently Deleted',1,NULL,1),(12,1,'nested','Nested',1,10,0)")
         try sql("CREATE TRIGGER object_revision AFTER UPDATE ON ZICCLOUDSYNCINGOBJECT WHEN NEW.Z_OPT=OLD.Z_OPT BEGIN UPDATE ZICCLOUDSYNCINGOBJECT SET Z_OPT=OLD.Z_OPT+1 WHERE Z_PK=NEW.Z_PK; END")
@@ -70,14 +70,15 @@ enum NotesSourceFixture {
         try FileManager.default.createDirectory(at: media.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let original = Data("[ab-test] exact Notes attachment bytes 🧪".utf8)
         try original.write(to: media)
-        for (pk, name) in [(3, "native-plain"), (4, "native-rich"), (5, "split-title"), (6, "title-attachment")] {
+        for (pk, name) in [(3, "native-plain"), (4, "native-rich"), (5, "split-title"), (6, "title-attachment"), (7, "native-indent-0"), (8, "native-indent-1")] {
             try sql("INSERT INTO ZICNOTEDATA(Z_PK,ZDATA) VALUES(\(pk),?)", blob: Data(contentsOf: fixtures.appendingPathComponent(name + ".gz")))
             try sql("INSERT INTO ZICCLOUDSYNCINGOBJECT(Z_PK,Z_ENT,ZIDENTIFIER,ZTITLE1,ZFOLDER,ZNOTEDATA) VALUES(\(40 + pk),2,'\(name)','[ab-test] Synthetic',12,\(pk))")
         }
         let traceURL = root.appendingPathComponent("capture-trace.jsonl")
         let source = try NotesSource(home: home, fixtureDatabase: database, trace: CaptureTrace(url: traceURL)), sink = Sink()
-        guard !(await source.open()).capabilities.contains("notes.delete") else { throw Invalid.boundary }
-        for operation in ["notes.delete", "notes.delete_folder"] {
+        guard try source.deletionTrashFolder(nativeKey: "nested") == "trash" else { throw Invalid.boundary }
+        guard (await source.open()).capabilities.contains("notes.delete") else { throw Invalid.boundary }
+        for operation in ["notes.delete_folder"] {
             let action = JSON.object(["op": .string(operation), "native_key": .string("native-plain")])
             do { _ = try await source.prepare(.object(["action": action])); throw Invalid.boundary }
             catch SourceFailure.capabilityUnproven {}
@@ -91,13 +92,37 @@ enum NotesSourceFixture {
         let plain = await sink.record("native-plain"), rich = await sink.record("native-rich")
         guard plain["data"]["editable"].string == "plain", plain["data"]["content_status"].string == "complete",
               rich["data"]["editable"].string == "none" else { throw Invalid.projection }
-        for candidate in [plain, rich] {
+        let zeroIndent = await sink.record("native-indent-0"), indented = await sink.record("native-indent-1")
+        guard zeroIndent["data"]["editable"].string == "plain", indented["data"]["editable"].string == "none" else { throw Invalid.projection }
+        let plainAction = JSON.object(["op": .string("notes.update"), "native_key": plain["native_key"], "note_args": .object(["mode": .string("append"), "plain_text": .string("[ab-test] append")])])
+        let beforeSync = try await source.prepare(.object(["action": plainAction, "expected_state": plain["data"]]))
+        try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZSERVERRECORDDATA=X'010203',ZGENERATION='cloud-generation',ZISPINNED=NULL,ZISPASSWORDPROTECTED=NULL WHERE ZIDENTIFIER='native-plain'")
+        try source.validate(beforeSync)
+        _ = try await source.prepare(.object(["action": plainAction, "expected_state": plain["data"]]))
+        try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZTITLE1='[ab-test] Changed' WHERE ZIDENTIFIER='native-plain'")
+        do { try source.validate(beforeSync); throw Invalid.boundary }
+        catch SourceFailure.conflict {}
+        try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZTITLE1='[ab-test] Synthetic' WHERE ZIDENTIFIER='native-plain'")
+        for (field, changed, restored) in [("ZFOLDER", "10", "12"), ("ZISPASSWORDPROTECTED", "1", "0")] {
+            try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET \(field)=\(changed) WHERE ZIDENTIFIER='native-plain'")
+            do { try source.validate(beforeSync); throw Invalid.boundary }
+            catch SourceFailure.conflict {}
+            try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET \(field)=\(restored) WHERE ZIDENTIFIER='native-plain'")
+        }
+        try sql("UPDATE ZICNOTEDATA SET ZDATA=? WHERE Z_PK=3", blob: body)
+        do { try source.validate(beforeSync); throw Invalid.boundary }
+        catch SourceFailure.conflict {}
+        try sql("UPDATE ZICNOTEDATA SET ZDATA=? WHERE Z_PK=3", blob: Data(contentsOf: fixtures.appendingPathComponent("native-plain.gz")))
+        try await source.reconcile(into: sink)
+        try await source.waitForHydration()
+        print("Notes conflict checks ignore cloud bookkeeping and reject changed titles, bodies, folders and locks")
+        for candidate in [plain, zeroIndent, rich, indented] {
             let action = JSON.object(["op": .string("notes.update"), "native_key": candidate["native_key"], "mode": .string("append"), "plain_text": .string("[ab-test] append")])
             do {
                 _ = try await source.prepare(.object(["action": action, "expected_state": candidate["data"]]))
-                guard candidate == plain else { throw Invalid.boundary }
+                guard candidate == plain || candidate == zeroIndent else { throw Invalid.boundary }
             } catch SourceFailure.unsupported {
-                guard candidate == rich else { throw Invalid.boundary }
+                guard candidate == rich || candidate == indented else { throw Invalid.boundary }
             }
         }
         let bodyRef = large["data"]["body_blob"]
@@ -119,7 +144,7 @@ enum NotesSourceFixture {
         guard note["data"]["pinned"].bool, note["data"]["blocks"].array.first?["type"].string == "title",
               locked["data"]["content_status"].string == "locked", locked["data"]["plain_text"].string.isEmpty,
               locked["data"]["attachments"].array.isEmpty, locked["data"]["blocks"] == .null,
-              deleted["data"]["read_only"].bool, deleted["data"]["editable"].string == "none",
+              deleted == .null,
               (await sink.record("nested"))["data"]["account_name"].string == "Bridge Test Account" else { throw Invalid.projection }
         if let executable = ProcessInfo.processInfo.environment["APPLE_BRIDGE_NOTES_TRUTH"], !executable.isEmpty {
             let request = root.appendingPathComponent("truth-request.json"), report = root.appendingPathComponent("truth-report.json")
@@ -141,6 +166,18 @@ enum NotesSourceFixture {
                       truth["structure_counts"]["titles"].number == Double(titles),
                       projection["data"]["blocks"].array.filter({ $0["type"].string == "title" }).count == titles else { throw Invalid.projection }
             }
+            guard !response["records"].array.contains(where: { $0["id"].string == "deleted" }) else { throw Invalid.projection }
+            try JSONSerialization.data(withJSONObject: ["source": "notes", "active_only": true, "snapshot_path": database.path]).write(to: request)
+            let identities = Process()
+            identities.executableURL = URL(fileURLWithPath: executable)
+            identities.arguments = ["observe", "--request-file", request.path, "--report", report.path]
+            identities.standardOutput = FileHandle.nullDevice; identities.standardError = FileHandle.nullDevice
+            try identities.run(); identities.waitUntilExit()
+            let active = try JSONDecoder().decode(JSON.self, from: Data(contentsOf: report))
+            guard identities.terminationStatus == 0, active["status"].string == "verified",
+                  active["records"].array.count == response["records"].array.count,
+                  active["records"].array.allSatisfy({ $0["plain_text"] == .null && !$0["id"].string.hasSuffix("/p22") }),
+                  active["records"].array.contains(where: { $0["id"].string == "x-coredata://ab-test-notes-store/ICNote/p20" }) else { throw Invalid.projection }
             print("Independent AppleTruth: 13 block paragraphs, 2 checklist states, 4 table cells")
         }
         let attachment = note["data"]["attachments"].array.first { $0["id"].string == "fixture-image" } ?? .null
@@ -152,8 +189,7 @@ enum NotesSourceFixture {
         let attrs = try FileManager.default.attributesOfItem(atPath: staged.path)
         guard (attrs[.posixPermissions] as? NSNumber)?.intValue == 0o600,
               (attrs[.ownerAccountID] as? NSNumber)?.uint32Value == geteuid() else { throw Invalid.boundary }
-        guard deleted["data"]["attachments"].array.allSatisfy({ $0["blob"] == .null }) else { throw Invalid.boundary }
-        for protected in [locked, deleted] {
+        for protected in [locked] {
             let action = JSON.object(["op": .string("notes.update"), "native_key": protected["native_key"]])
             do { _ = try await source.prepare(.object(["action": action, "expected_state": protected["data"]])); throw Invalid.boundary }
             catch SourceFailure.unsupported {}
@@ -164,17 +200,19 @@ enum NotesSourceFixture {
               try source.deletionState(nativeKey: "absent", collection: "notes.note") == "gone" else { throw Invalid.boundary }
         do { try await source.qualifyDeletion("notes.delete", nativeKey: "delete-proof", perform: {}); throw Invalid.boundary }
         catch SourceFailure.capabilityUnproven {}
-        guard !(await source.open()).capabilities.contains("notes.delete") else { throw Invalid.boundary }
+        guard (await source.open()).capabilities.contains("notes.delete") else { throw Invalid.boundary }
         try await source.qualifyDeletion("notes.delete", nativeKey: "delete-proof") { try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZMARKEDFORDELETION=1 WHERE Z_PK=60") }
         guard try source.deletionState(nativeKey: "delete-proof", collection: "notes.note") == "marked",
               (await source.open()).capabilities.contains("notes.delete") else { throw Invalid.boundary }
-        for protected in [locked, deleted] {
+        for protected in [locked] {
             let action = JSON.object(["op": .string("notes.delete"), "native_key": protected["native_key"]])
             do { _ = try await source.prepare(.object(["action": action, "expected_state": protected["data"]])); throw Invalid.boundary }
             catch SourceFailure.unsupported {}
         }
         try sql("INSERT INTO ZICCLOUDSYNCINGOBJECT(Z_PK,Z_ENT,ZIDENTIFIER,ZTITLE2,ZACCOUNT8) VALUES(13,1,'delete-folder-proof','Bridge Test [ab-test] Deletion proof',1)")
         guard try source.deletionState(nativeKey: "delete-folder-proof", collection: "notes.folder") == "active" else { throw Invalid.boundary }
+        do { try await source.qualifyDeletion("notes.delete_folder", nativeKey: "delete-folder-proof", perform: {}); throw Invalid.boundary }
+        catch SourceFailure.capabilityUnproven {}
         try await source.qualifyDeletion("notes.delete_folder", nativeKey: "delete-folder-proof") { try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZMARKEDFORDELETION=1 WHERE Z_PK=13") }
         guard try source.deletionState(nativeKey: "delete-folder-proof", collection: "notes.folder") == "marked" else { throw Invalid.boundary }
         let proofURL = home.appendingPathComponent("notes-deletion-proofs.json")
@@ -182,10 +220,10 @@ enum NotesSourceFixture {
         let validProof = proof
         proof["os_build"] = .string("different-build")
         try JSONEncoder().encode(JSON.object(proof)).write(to: proofURL)
-        guard !(await source.open()).capabilities.contains("notes.delete") else { throw Invalid.boundary }
+        guard (await source.open()).capabilities.contains("notes.delete") else { throw Invalid.boundary }
         proof = validProof; proof["generation"] = .string("different-store")
         try JSONEncoder().encode(JSON.object(proof)).write(to: proofURL)
-        guard !(await source.open()).capabilities.contains("notes.delete") else { throw Invalid.boundary }
+        guard (await source.open()).capabilities.contains("notes.delete") else { throw Invalid.boundary }
         if let executable = ProcessInfo.processInfo.environment["APPLE_BRIDGE_NOTES_TRUTH"], !executable.isEmpty {
             for (ids, expected) in [(["ICNote/p20"], false), (["ICNote/p22","ICNote/p60","ICNote/p9999","ICFolder/p13"], true), (["ICFolder/p10"], false)] {
                 let request = root.appendingPathComponent("deletion-request.json"), report = root.appendingPathComponent("deletion-report.json")
@@ -198,7 +236,24 @@ enum NotesSourceFixture {
                 guard process.terminationStatus == 0, result["status"].string == "verified", result["deletion_verified"].bool == expected else { throw Invalid.boundary }
             }
         }
-        print("Notes deletion: no-op command cannot qualify; marked/trash/gone states and OS-build invalidation verified")
+        print("Notes deletion: public note delete available; no-op cannot qualify folder deletion; marked/trash/gone states verified")
+        for operation in ["notes.update", "notes.delete"] {
+            let action = JSON.object(["op": .string(operation), "native_key": .string("deleted")])
+            do { _ = try await source.prepare(.object(["action": action])); throw Invalid.boundary }
+            catch SourceFailure.conflict {}
+        }
+        for change in ["ZFOLDER=11", "ZMARKEDFORDELETION=1"] {
+            try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET \(change) WHERE Z_PK=47")
+            try await source.reconcile(into: sink)
+            try await source.waitForHydration()
+            guard (await sink.record("native-indent-0"))["kind"].string == "absent",
+                  (await sink.record("native-plain"))["kind"].string == "upsert" else { throw Invalid.projection }
+            try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZFOLDER=12,ZMARKEDFORDELETION=0 WHERE Z_PK=47")
+            try await source.reconcile(into: sink)
+            try await source.waitForHydration()
+            guard (await sink.record("native-indent-0"))["kind"].string == "upsert" else { throw Invalid.projection }
+        }
+        print("Notes soft deletion: trash and marked rows emit absence, preserve other notes and restore on undelete")
         do { _ = try source.readBlob("notes-blob:" + String(repeating: "0", count: 64), offset: 0, length: 1); throw Invalid.boundary }
         catch SourceFailure.unavailable {}
         let hold = home.appendingPathComponent("lab-notes-hold-hydration")
@@ -256,7 +311,14 @@ enum NotesSourceFixture {
         try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZPARENT=11 WHERE Z_PK=12")
         try await source.reconcile(into: sink)
         try await source.waitForHydration()
-        guard (await sink.record("note"))["data"]["read_only"].bool, (await sink.record("locked"))["data"]["read_only"].bool else { throw Invalid.boundary }
+        guard (await sink.record("note"))["kind"].string == "absent", (await sink.record("locked"))["kind"].string == "absent" else { throw Invalid.boundary }
+        try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZPARENT=10 WHERE Z_PK=12")
+        try await source.reconcile(into: sink)
+        try await source.waitForHydration()
+        try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZMARKEDFORDELETION=1 WHERE Z_PK=10")
+        try await source.reconcile(into: sink)
+        try await source.waitForHydration()
+        guard (await sink.record("note"))["kind"].string == "absent", (await sink.record("locked"))["kind"].string == "absent" else { throw Invalid.boundary }
         let moved = root.appendingPathComponent("unavailable.sqlite")
         try FileManager.default.moveItem(at: database, to: moved)
         defer { try? FileManager.default.moveItem(at: moved, to: database) }

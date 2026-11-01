@@ -3,6 +3,13 @@ import SQLite3
 import SourceSupport
 
 extension NotesStore {
+    func trashFolder(forFolder key: String) throws -> JSON? {
+        let folders = try read(keys: []).observations
+        guard let folder = folders.first(where: { $0["collection"].string == "notes.folder" && $0["native_key"].string == key }) else { throw SourceFailure.conflict }
+        guard !folder["data"]["account"].string.isEmpty else { return nil }
+        let matches = folders.filter { $0["collection"].string == "notes.folder" && $0["data"]["account"] == folder["data"]["account"] && $0["data"]["recently_deleted"].bool && $0["data"]["parent_id"] == .null }
+        return matches.count == 1 ? matches[0] : nil
+    }
     func deletionState(_ key: String, collection: String) throws -> String {
         guard ["notes.note", "notes.folder"].contains(collection) else { throw SourceFailure.invalid }
         var db: OpaquePointer?
@@ -23,7 +30,7 @@ extension NotesStore {
         SELECT CASE WHEN NOT EXISTS(SELECT 1 FROM Z_PRIMARYKEY WHERE Z_NAME='\(entity)') THEN 'unknown'
           WHEN NOT EXISTS(SELECT 1 FROM target) THEN 'gone'
           WHEN EXISTS(SELECT 1 FROM target WHERE COALESCE(ZMARKEDFORDELETION,0)<>0) THEN 'marked'
-          WHEN EXISTS(SELECT 1 FROM ancestors a JOIN ZICCLOUDSYNCINGOBJECT f ON f.Z_PK=a.pk WHERE f.ZFOLDERTYPE=1) THEN 'trashed'
+          WHEN EXISTS(SELECT 1 FROM ancestors a JOIN ZICCLOUDSYNCINGOBJECT f ON f.Z_PK=a.pk WHERE f.ZFOLDERTYPE=1 OR COALESCE(f.ZMARKEDFORDELETION,0)<>0) THEN 'trashed'
           ELSE 'active' END
         """
         var statement: OpaquePointer?
@@ -38,11 +45,13 @@ extension NotesStore {
 extension NotesSource {
     static let deletionOperations = ["notes.delete", "notes.delete_folder"]
     func deletionCapabilities() -> [String] {
+        let publicOperations = ["notes.delete"]
         guard let bytes = try? Data(contentsOf: deletionProofURL), let ledger = try? JSONDecoder().decode(JSON.self, from: bytes),
               ledger["version"].number == 1,
               ledger["os_build"].string == ProcessInfo.processInfo.operatingSystemVersionString,
-              let generation = try? store.read().generation, ledger["generation"].string == generation else { return [] }
-        return Self.deletionOperations.filter { operation in
+              let generation = try? store.read(keys: []).generation, ledger["generation"].string == generation else { return publicOperations }
+        return publicOperations + Self.deletionOperations.filter { operation in
+            guard !publicOperations.contains(operation) else { return false }
             let proof = ledger["operations"][operation]
             return proof["before_active"].bool && proof["command_completed"].bool && proof["notestore_verified"].bool && ["gone", "marked", "trashed"].contains(proof["after_state"].string)
         }
@@ -90,5 +99,6 @@ extension NotesSource {
         throw SourceFailure.capabilityUnproven
     }
     public func deletionState(nativeKey: String, collection: String) throws -> String { try store.deletionState(nativeKey, collection: collection) }
+    public func deletionTrashFolder(nativeKey: String) throws -> String { try store.trashFolder(forFolder: nativeKey)?["native_key"].string ?? "" }
     #endif
 }

@@ -59,9 +59,9 @@ public final class NotesSource: Source {
         let readable = (try? NotesDatabase(path: store.path).query("SELECT Z_ENT FROM Z_PRIMARYKEY WHERE Z_NAME=?", ["ICNote"])) != nil
         let proven = deletionCapabilities(), extras = extrasCapabilities()
         let operationCoverage = (Self.deletionOperations + Self.extrasOperations).map { operation in
-            JSON.object(["operation": .string(operation), "proven": .bool(proven.contains(operation) || extras.contains(operation)), "reason": .string(proven.contains(operation) ? "os_build_notestore_deletion_verified" : extras.contains(operation) ? "os_build_notestore_extra_verified" : "capability_unproven")])
+            JSON.object(["operation": .string(operation), "proven": .bool(proven.contains(operation) || extras.contains(operation)), "reason": .string(operation == "notes.delete" ? "public_script_notestore_verified" : proven.contains(operation) ? "os_build_notestore_deletion_verified" : extras.contains(operation) ? "public_script_move_rename" : "capability_unproven")])
         }
-        return SourceReadiness(state: readable ? "ready" : "permission_missing", coverage: .object(["fields": .string("partial"), "operations": .array(operationCoverage), "missing": .array([.string("unknown protobuf fields and unavailable attachment bytes are explicit; rich edits, deletion and Notes extras require per-build proof")])]), capabilities: readable ? Self.operations.filter { (!Self.deletionOperations.contains($0) || proven.contains($0)) && (!Self.extrasOperations.contains($0) || extras.contains($0)) } : [], reason: readable ? "" : "notes_database_access_required")
+        return SourceReadiness(state: readable ? "ready" : "permission_missing", coverage: .object(["fields": .string("partial"), "operations": .array(operationCoverage), "missing": .array([.string("unknown protobuf fields and unavailable attachment bytes are explicit; rich edits remain unsupported; folder deletion requires per-build proof")])]), capabilities: readable ? Self.operations.filter { (!Self.deletionOperations.contains($0) || proven.contains($0)) && (!Self.extrasOperations.contains($0) || extras.contains($0)) } : [], reason: readable ? "" : "notes_database_access_required")
     }
     public func reconcile(into sink: any ObservationSink, assetPaths: Set<String> = []) async throws {
         while scanning { try await Task.sleep(for: .milliseconds(5)) }
@@ -256,7 +256,6 @@ public final class NotesSource: Source {
     public func prepare(_ command: JSON) async throws -> Prepared {
         let action = command["action"]
         try requireDeletionProof(action["op"].string)
-        try requireExtrasProof(action["op"].string)
         guard Self.operations.contains(action["op"].string) else { throw SourceFailure.unsupported }
         var before = JSON.null
         if !action["native_key"].string.isEmpty {
@@ -288,7 +287,6 @@ public final class NotesSource: Source {
         return SHA256.hash(data: try encoder.encode(data)).map { String(format: "%02x", $0) }.joined()
     }
     public func validate(_ prepared: Prepared) throws {
-        try requireExtrasProof(prepared.action["op"].string)
         if prepared.action["op"].string == "notes.rename_folder" {
             let folder = try find(prepared.action["native_key"].string, collection: "notes.folder")
             guard try folderFingerprint(folder["data"]) == prepared.nativeState["native_fingerprint"].string else { throw SourceFailure.conflict }; return
@@ -306,7 +304,7 @@ public final class NotesSource: Source {
         if op == "notes.rename_folder" {
             let folder = try find(action["native_key"].string, collection: "notes.folder")
             scriptID = folder["scoped_alias"].string
-            _ = try NotesScript.run("set name of folder id " + NotesScript.quote(scriptID) + " to " + NotesScript.quote(args["title"].string))
+            _ = try NotesScript.run("set targetFolder to folder id " + NotesScript.quote(scriptID) + "\nset targetContainer to container of targetFolder\nset name of targetFolder to " + NotesScript.quote(args["title"].string) + "\nmove targetFolder to targetContainer")
         } else if op == "notes.create_folder" {
             scriptID = try NotesScript.run("return id of (make new folder with properties {name:" + NotesScript.quote(args["title"].string) + "})")
         } else if op == "notes.create" {
@@ -320,9 +318,10 @@ public final class NotesSource: Source {
                 let folder = try find(action["folder_key"].string, collection: "notes.folder")
                 _ = try NotesScript.run("move note id " + NotesScript.quote(scriptID) + " to folder id " + NotesScript.quote(folder["scoped_alias"].string))
             } else if op == "notes.delete" {
-                let folderKey = note["data"]["folder_id"]["$ref"]["native_key"].string
-                let folder = try find(folderKey, collection: "notes.folder")
-                _ = try NotesScript.run("delete note id " + NotesScript.quote(scriptID) + " of folder id " + NotesScript.quote(folder["scoped_alias"].string))
+                let folder = try find(note["data"]["folder_id"]["$ref"]["native_key"].string, collection: "notes.folder")
+                trace.record("notes_delete_started", keys: [action["native_key"].string], fields: ["source": .string(name)])
+                let trash = try store.trashFolder(forFolder: folder["native_key"].string)
+                _ = try NotesScript.run(NotesScript.deleteNote(scriptID, folderID: folder["scoped_alias"].string, trashFolderID: trash?["scoped_alias"].string), trace: trace)
             }
             else {
                 let content = args["mode"].string == "append" ? note["data"]["plain_text"].string + args["plain_text"].string : args["plain_text"].string
@@ -333,6 +332,7 @@ public final class NotesSource: Source {
             let snapshot = try store.read(nativeID: scriptID)
             let observed = snapshot.observations.first { $0["scoped_alias"].string == scriptID }
             if op == "notes.delete", try ["gone", "marked", "trashed"].contains(store.deletionState(action["native_key"].string, collection: "notes.note")) {
+                trace.record("notes_delete_verified", keys: [action["native_key"].string], fields: ["source": .string(name)])
                 return .object(["native_key": action["native_key"], "observed": .bool(true), "absent": .bool(observed == nil)])
             }
             if let observed, op != "notes.delete" {
@@ -348,10 +348,7 @@ public final class NotesSource: Source {
             }
             try await Task.sleep(for: .milliseconds(50))
         }
-        if op == "notes.delete" {
-            try? FileManager.default.removeItem(at: deletionProofURL)
-            throw SourceFailure.capabilityUnproven
-        }
+        if op == "notes.delete" { trace.record("notes_delete_unverified", keys: [action["native_key"].string], fields: ["source": .string(name)]) }
         throw SourceFailure.unavailable
     }
     public func resolve(_ command: String, evidence: JSON) async -> JSON { .null }

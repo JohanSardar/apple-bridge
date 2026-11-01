@@ -101,7 +101,11 @@ func Run(ctx context.Context, s Scenario, level string) (e Evidence) {
 	before, reportsErr := helperCrashReports(reports)
 	e = runScenario(ctx, s, level)
 	if reportsErr == nil {
-		e = failOnHelperCrashes(e, reports, before)
+		if strings.HasPrefix(s.ID, "NOTE-") {
+			e = failOnNotesHelperCrashes(e, reports, before)
+		} else {
+			e = failOnHelperCrashes(e, reports, before)
+		}
 	}
 	e.HostConditions = &conditions
 	if e.Metrics == nil {

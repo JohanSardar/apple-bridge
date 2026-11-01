@@ -25,8 +25,7 @@ func runNotesExtras(ctx context.Context, s Scenario, level string) (e Evidence) 
 		}
 	}()
 	if level != "sim" {
-		e.Assertions = append(e.Assertions, Assertion{Name: "tagged_mutation_cleanup_required", Passed: true, Status: "limited", Detail: "Existing real Notes cleanup is unproven on 25G241; no real fixtures or mutations attempted"})
-		return
+		return runNotesExtrasReal(ctx, s, level, e.GitSHA)
 	}
 	ctx = world.WithOptions(ctx, world.Options{Scope: "notes:read,notes:write,reminders:read,system:read"})
 	w, err := world.New(ctx, level, 0, 0)
@@ -115,5 +114,42 @@ func runNotesExtras(ctx context.Context, s Scenario, level string) (e Evidence) 
 	var rejected contracts.CommandRecord
 	rejectedErr := client.Call(ctx, "notes.rename_folder", contracts.Command{ID: contracts.NewCommandID(), Args: untaggedArgs, ExpectedVersion: currentFolder.Version, WaitMS: 15000}, &rejected)
 	add("untagged_rename_rejected", errors.Is(rejectedErr, contracts.ErrInvalid) || rejected.Error != nil && rejected.Error.Code == "invalid")
+	client.Protocol = "mcp"
+	mcpTitle := "Bridge Test [ab-test extras] mcp"
+	renameArgs, _ = json.Marshal(map[string]any{"id": destination, "title": mcpTitle})
+	var mcpRenamed contracts.CommandRecord
+	renameErr = client.Call(ctx, "notes.rename_folder", contracts.Command{ID: contracts.NewCommandID(), Args: renameArgs, ExpectedVersion: currentFolder.Version, WaitMS: 15000}, &mcpRenamed)
+	add("mcp_rename_observed", renameErr == nil && mcpRenamed.State == "observed")
+	add("mcp_rename_readback", w.Await(5*time.Second, func() bool {
+		rows, _ := w.Records(w.Gateway)
+		for _, row := range rows {
+			if row.ID == destination {
+				return recordTitle(row) == mcpTitle
+			}
+		}
+		return false
+	}) == nil)
+	originalFolder, _ := fields["folder_id"].(string)
+	rows, _ = w.Records(w.Gateway)
+	for _, row := range rows {
+		if row.ID == note.ID {
+			note = row
+		}
+	}
+	args, _ = json.Marshal(map[string]any{"id": note.ID, "folder_id": originalFolder})
+	var mcpMoved contracts.CommandRecord
+	err = client.Call(ctx, "notes.move", contracts.Command{ID: contracts.NewCommandID(), Args: args, ExpectedVersion: note.Version, WaitMS: 15000}, &mcpMoved)
+	add("mcp_move_observed", err == nil && mcpMoved.State == "observed")
+	add("mcp_move_readback", w.Await(5*time.Second, func() bool {
+		rows, _ := w.Records(w.Gateway)
+		for _, row := range rows {
+			if row.ID == note.ID {
+				var data map[string]any
+				json.Unmarshal(row.Data, &data)
+				return data["folder_id"] == originalFolder
+			}
+		}
+		return false
+	}) == nil)
 	return
 }
