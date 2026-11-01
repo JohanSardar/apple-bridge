@@ -31,6 +31,16 @@ enum HelperLabCommand {
             while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
             try JSONEncoder().encode(result!.get()).write(to: reportURL, options: .atomic)
             return true
+        case "messages-navigation-probe":
+            let reportURL = try report(arguments)
+            var result: JSON?
+            Task { @MainActor in
+                do { result = try await MessagesParityFixture.inspectExisting() }
+                catch { result = .object(["passed": .bool(false), "reason": .string(String(describing: error))]) }
+            }
+            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
+            try JSONEncoder().encode(result!).write(to: reportURL, options: .atomic)
+            return true
         case "messages-resend-fixture":
             let reportURL = try report(arguments)
             guard arguments.count > 1 else { throw ProbeFailure.invalidArguments }

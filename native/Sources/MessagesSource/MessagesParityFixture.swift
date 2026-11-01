@@ -37,6 +37,23 @@ public enum MessagesParityFixture {
         guard session.focused(fields[0]), MessagesVariantUI.value(fields[0], kAXValueAttribute) == text else { throw MessagesUIFailure.draftPresent }
         try session.press(MessagesUISession.enter)
     }
+    @UIActor
+    public static func inspectExisting() throws -> JSON {
+        guard let selected = try MessagesSelfTestIsolation.target(database: MessagesDatabase()), !selected.chat.isEmpty else { throw SourceFailure.invalid }
+        let baseline = try MessagesSelfTestBaseline.target(selected.chat)
+        var state = baseline.nativeState.object
+        state["conversation_target"] = .bool(false)
+        let target = Prepared(nativeState: .object(state), fingerprint: baseline.fingerprint, action: baseline.action)
+        try MessagesNavigation.open(MessagesNavigation.addressURL(selected.handle))
+        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+        try MessagesAccessibility.openMessage(target.nativeState["message_guid"].string, settle: 0.5, resetEditor: false)
+        var result: [String: JSON] = [:]
+        do { try MessagesAccessibility.validate(target); result["message_target_passed"] = .bool(true) }
+        catch { result["message_target_passed"] = .bool(false); result["message_target_error"] = .string(String(describing: error)) }
+        do { try MessagesAccessibility.validate(baseline); result["conversation_target_passed"] = .bool(true) }
+        catch { result["conversation_target_passed"] = .bool(false); result["conversation_target_error"] = .string(String(describing: error)) }
+        return .object(result)
+    }
     public static func send(text: String, handle: String, existingChat: String = "") async throws -> JSON {
         guard text.range(of: #"^\[ab-test [A-Za-z0-9_-]+\] .+"#, options: .regularExpression) != nil,
               text.utf16.count <= 512, try MessagesProbes.discoverSelfHandles().handles.contains(handle) else { throw SourceFailure.invalid }

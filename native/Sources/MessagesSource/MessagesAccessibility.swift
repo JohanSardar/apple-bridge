@@ -102,6 +102,7 @@ enum MessagesAccessibility {
         let outgoing = prepared.nativeState["target"]["is_from_me"].bool
         if prepared.nativeState["conversation_target"].bool {
             let rows = matching(root, budget: &budget) { element in
+                if MessagesUIActions.conversationEntry(role: value(element, kAXRoleAttribute), description: value(element, kAXDescriptionAttribute), expected: expected) { return true }
                 guard value(element, kAXRoleAttribute) == kAXRowRole else { return false }
                 var textBudget = 100
                 return matching(element, budget: &textBudget) { node in [kAXValueAttribute, kAXTitleAttribute, kAXDescriptionAttribute].contains { [expected, "You: " + expected].contains(value(node, $0)) } }.count > 0 && textBudget > 0
@@ -184,7 +185,7 @@ enum MessagesAccessibility {
             let description = value(element, kAXDescriptionAttribute)
             var textBudget = 100
             let exactText = identifier == "Sticker" && matching(element, budget: &textBudget) { value($0, kAXIdentifierAttribute) == "CKBalloonTextView" && textValue($0) == expected }.count == 1
-            return exactText && (prepared.nativeState["cleanup_authorized"].bool || description.hasPrefix(outgoing ? "Your iMessage," : "iMessage,"))
+            return exactText && (prepared.nativeState["cleanup_authorized"].bool || MessagesUIActions.matchesDirection(description, outgoing: outgoing))
         }
         guard !targets.isEmpty, budget > 0 else {
             var diagnosticBudget = 1000
@@ -199,7 +200,7 @@ enum MessagesAccessibility {
             throw MessagesUIFailure.targetUnavailable
         }
         guard targets.count == 1 || prepared.nativeState["cleanup_authorized"].bool else { throw MessagesUIFailure.targetAmbiguous }
-        let directed = targets.filter { value($0, kAXDescriptionAttribute).hasPrefix(outgoing ? "Your iMessage," : "iMessage,") }
+        let directed = targets.filter { MessagesUIActions.matchesDirection(value($0, kAXDescriptionAttribute), outgoing: outgoing) }
         return directed.first ?? targets[0]
     }
     private static func focus(_ root: AXUIElement) -> String {

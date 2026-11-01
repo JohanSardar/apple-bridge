@@ -26,6 +26,10 @@ struct MessagesVariantChecks {
         let args = JSON.object(["text": .string("test"), "variant": variant])
         let data: [String: JSON] = ["text": .string("test"), "is_from_me": .bool(true), "error_code": .number(0), "effect": .string("com.apple.messages.effect.loud"), "formatting": .array([range])]
         var checks = try await AccessibilityInputChecks.run()
+        checks["named_incoming_bubble_is_resolved"] = MessagesUIActions.matchesDirection("Self Name, tagged fixture, now", outgoing: false)
+        checks["outgoing_bubble_is_not_incoming"] = !MessagesUIActions.matchesDirection("Your iMessage, tagged fixture, now", outgoing: false)
+        checks["modern_conversation_entry_is_resolved"] = MessagesUIActions.conversationEntry(role: "AXStaticText", description: "Self, tagged fixture, now", expected: "tagged fixture")
+        checks["other_conversation_entry_is_refused"] = !MessagesUIActions.conversationEntry(role: "AXStaticText", description: "Other, other text", expected: "tagged fixture")
         let address = try MessagesNavigation.addressURL("self+test@example.com")
         checks["self_chat_navigation_uses_exact_address"] = URLComponents(url: address, resolvingAgainstBaseURL: false)?.queryItems == [URLQueryItem(name: "address", value: "self+test@example.com")]
         let deepLink = try MessagesNavigation.messageURL("test-guid&other=value")
