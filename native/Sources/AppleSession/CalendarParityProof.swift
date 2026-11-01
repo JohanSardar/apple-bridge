@@ -105,7 +105,14 @@ enum CalendarParityProof {
                 try await ui.openOwnedEvent()
                 try await ui.revealTravel()
                 try ui.fence()
-                checks["travel_time_readback"] = .bool(["15 minutes", "15 Minutes"].contains { ui.find($0, role: kAXPopUpButtonRole).count == 1 })
+                let durationVisible = ["15 minutes", "15 Minutes"].contains { ui.inspectorFind($0, role: kAXPopUpButtonRole).count == 1 }
+                var persisted = false
+                for _ in 0..<60 {
+                    if try row()?["travel_time"]?.number == 900 { persisted = true; break }
+                    try await Task.sleep(for: .milliseconds(100))
+                }
+                controls["travel_store_positive_seconds"] = .bool(persisted)
+                checks["travel_time_readback"] = .bool(durationVisible && persisted)
                 try await ui.commit()
             } catch {
                 ui.captureControls("travel_failure")
@@ -506,8 +513,15 @@ final class CalendarFixtureUI {
         defer { inspectorCache = nil }
         try fence()
         if inspectorFind("Done", role: kAXButtonRole).count == 1 { try await press("Done", role: kAXButtonRole) }
+        else if inspectorFind("Close Window", role: kAXButtonRole).count == 1 { try await press("Close Window", role: kAXButtonRole) }
         else { try post(53, flags: []) }
-        try await Task.sleep(for: .milliseconds(500))
+        for _ in 0..<30 {
+            try await Task.sleep(for: .milliseconds(100))
+            try focus()
+            inspectorCache = nil
+            if !hasOwnedInspector() { return }
+        }
+        throw SourceFailure.conflict
     }
 
     func revealTravel() async throws {
