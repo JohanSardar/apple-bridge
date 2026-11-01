@@ -96,6 +96,9 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		return
 	}
 	defer w.Close()
+	if level != "sim" {
+		notesRecordHelperBinary(&e, w.HelperApp)
+	}
 	if level == "real" && s.ID == "NOTE-CRUD" {
 		before, problem := cleanupSnapshot(ctx, "notes")
 		if problem != nil {

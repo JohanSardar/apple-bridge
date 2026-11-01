@@ -28,6 +28,7 @@ func runNotesExtrasReal(ctx context.Context, s Scenario, level, gitSHA string) (
 		return
 	}
 	defer w.Close()
+	notesRecordHelperBinary(&e, w.HelperApp)
 	before, err := cleanupSnapshot(ctx, "notes")
 	if err != nil {
 		add("cleanup_baseline", false)

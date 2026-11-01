@@ -26,6 +26,11 @@ func runNotesParity(ctx context.Context, s Scenario, level string) (e Evidence) 
 	}()
 	for _, id := range []string{"NOTE-CRUD", "NOTE-RICH-REJECT"} {
 		result := runNotes(ctx, Scenario{ID: id}, level)
+		if ids, ok := result.Metrics["notes_helper_binary_uuids"].([]string); ok {
+			for _, id := range ids {
+				notesAddHelperBinary(&e, id)
+			}
+		}
 		for _, assertion := range result.Assertions {
 			assertion.Name = id + "/" + assertion.Name
 			e.Assertions = append(e.Assertions, assertion)
