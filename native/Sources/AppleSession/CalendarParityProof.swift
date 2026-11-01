@@ -83,7 +83,7 @@ enum CalendarParityProof {
             configuration.activates = true
             let app = try await NSWorkspace.shared.openApplication(at: url, configuration: configuration)
             try await Task.sleep(for: .seconds(1))
-            let ui = CalendarFixtureUI(app: app, title: eventTitle, calendarTitle: title)
+            let ui = CalendarFixtureUI(app: app, title: eventTitle, calendarTitle: title, fixtureDate: eventStart)
             fixtureUI = ui
             try await ui.openOwnedEvent()
             checks["owned_event_inspector"] = .bool(ui.hasOwnedInspector())
@@ -98,7 +98,7 @@ enum CalendarParityProof {
                 try await ui.revealTravel()
                 try ui.travelPopup()
                 controls["travel_menu_opened"] = .bool(true)
-                try ui.pressAny(["15 minutes", "15 Minutes"], role: kAXMenuItemRole)
+                try await ui.pressAny(["15 minutes", "15 Minutes"], role: kAXMenuItemRole)
                 controls["travel_duration_selected"] = .bool(true)
                 try await ui.commit()
                 controls["travel_edit_committed"] = .bool(true)
@@ -120,15 +120,9 @@ enum CalendarParityProof {
                 try bytes.write(to: file)
                 let digest = SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined()
                 try await ui.revealAttachments()
-                try ui.pressAny(["Add Attachment…", "Add Attachments"], role: kAXButtonRole)
+                try await ui.pressAny(["Add Attachment…", "Add Attachments"], role: kAXButtonRole)
                 controls["attachment_dialog_opened"] = .bool(true)
-                try await Task.sleep(for: .milliseconds(200))
-                try ui.post(5, flags: [.maskCommand, .maskShift])
-                try await Task.sleep(for: .milliseconds(200))
-                try ui.setFocused(file.path, requireInspector: false)
-                try ui.post(36, flags: [])
-                try await Task.sleep(for: .milliseconds(200))
-                try ui.dialogPress("Open")
+                try await ui.chooseFile(file, action: "Open")
                 controls["attachment_file_selected"] = .bool(true)
                 try await ui.commit()
                 let reader = CalendarStoreEnrichment()
@@ -145,7 +139,7 @@ enum CalendarParityProof {
                 stage = "attachment_remove"
                 try await ui.openOwnedEvent()
                 try ui.contextMenu(filename)
-                try ui.pressAny(["Remove Attachment", "Delete Attachment"], role: kAXMenuItemRole)
+                try await ui.pressAny(["Remove Attachment", "Delete Attachment"], role: kAXMenuItemRole)
                 try await ui.commit()
                 var removed = false
                 for _ in 0..<60 {
@@ -167,7 +161,7 @@ enum CalendarParityProof {
                 controls["invitation_same_mailbox_organizer"] = .bool(!identities.contains(organizer))
                 try await ui.openOwnedEvent()
                 let invitationTitle = title + " invitation"
-                let invitationUI = CalendarFixtureUI(app: app, title: invitationTitle, calendarTitle: title)
+                let invitationUI = CalendarFixtureUI(app: app, title: invitationTitle, calendarTitle: title, fixtureDate: eventStart)
                 defer { for (key, value) in invitationUI.diagnostics { controls["invitation_" + key] = value } }
                 let date = DateFormatter()
                 date.locale = Locale(identifier: "en_US_POSIX"); date.timeZone = TimeZone(secondsFromGMT: 0); date.dateFormat = "yyyyMMdd'T'HHmmss'Z'"
@@ -199,7 +193,7 @@ enum CalendarParityProof {
                 stage = "invitation_response"
                 try await invitationUI.openOwnedEvent()
                 for name in ["Accept", "Maybe", "Decline", "Reply", "OK"] { controls[name] = .bool(!invitationUI.find(name).isEmpty) }
-                try invitationUI.press("Accept", role: kAXButtonRole)
+                try await invitationUI.press("Accept", role: kAXButtonRole)
                 for _ in 0..<60 {
                     store.reset()
                     if let current = store.calendarItem(withIdentifier: invitationID) as? EKEvent,
@@ -285,11 +279,12 @@ final class CalendarFixtureUI {
     let root: AXUIElement
     let title: String
     let calendarTitle: String?
+    let fixtureDate: Date?
     var diagnostics: [String: JSON] = [:]
     private var inspectorCache: AXUIElement?
 
-    init(app: NSRunningApplication, title: String, calendarTitle: String? = nil) {
-        self.app = app; self.title = title; self.calendarTitle = calendarTitle
+    init(app: NSRunningApplication, title: String, calendarTitle: String? = nil, fixtureDate: Date? = nil) {
+        self.app = app; self.title = title; self.calendarTitle = calendarTitle; self.fixtureDate = fixtureDate
         root = AXUIElementCreateApplication(app.processIdentifier)
         AXUIElementSetMessagingTimeout(root, 0.1)
     }
@@ -450,6 +445,10 @@ final class CalendarFixtureUI {
     }
 
     func doubleClick(_ element: AXUIElement) async throws {
+        try await click(element, count: 2)
+    }
+
+    func click(_ element: AXUIElement, count: Int) async throws {
         diagnostics["click_calendar_frontmost"] = .bool(NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier)
         app.activate()
         for _ in 0..<20 {
@@ -476,7 +475,7 @@ final class CalendarFixtureUI {
         diagnostics["click_height_positive"] = .bool(dimensions.height > 0)
         diagnostics["click_on_display"] = .bool(visible)
         guard dimensions.width > 0, dimensions.height > 0, visible else { throw SourceFailure.conflict }
-        for count in 1...2 {
+        for count in 1...count {
             for type in [CGEventType.leftMouseDown, .leftMouseUp] {
                 guard let event = CGEvent(mouseEventSource: nil, mouseType: type, mouseCursorPosition: point, mouseButton: .left) else { throw SourceFailure.unavailable }
                 event.setIntegerValueField(.mouseEventClickState, value: Int64(count))
@@ -507,7 +506,7 @@ final class CalendarFixtureUI {
     func commit() async throws {
         defer { inspectorCache = nil }
         try fence()
-        if inspectorFind("Done", role: kAXButtonRole).count == 1 { try press("Done", role: kAXButtonRole) }
+        if inspectorFind("Done", role: kAXButtonRole).count == 1 { try await press("Done", role: kAXButtonRole) }
         else { try post(53, flags: []) }
         try await Task.sleep(for: .milliseconds(500))
     }
@@ -524,6 +523,15 @@ final class CalendarFixtureUI {
                 captureControls("travel_expanded")
                 return
             }
+        }
+        if let fixtureDate, let inspector = ownedInspector() {
+            let year = String(Calendar.current.component(.year, from: fixtureDate))
+            let dates = findRole(kAXButtonRole, within: inspector).filter { value($0, kAXValueAttribute).contains(year) || value($0, kAXDescriptionAttribute).contains(year) }
+            diagnostics["owned_date_section_count"] = .number(Double(dates.count))
+            guard dates.count == 1 else { throw SourceFailure.unsupported }
+            try await activate(dates[0], name: "date_section")
+            try await Task.sleep(for: .milliseconds(200))
+            captureControls("travel_expanded")
         }
     }
 
@@ -547,14 +555,7 @@ final class CalendarFixtureUI {
         try fence()
         try await menu("File", ["Import…", "Import..."])
         diagnostics["invitation_file_menu_selected"] = .bool(true)
-        try await Task.sleep(for: .milliseconds(200))
-        try post(5, flags: [.maskCommand, .maskShift])
-        try await Task.sleep(for: .milliseconds(200))
-        try setFocused(file.path, requireInspector: false)
-        diagnostics["invitation_file_path_entered"] = .bool(true)
-        try post(36, flags: [])
-        try await Task.sleep(for: .milliseconds(200))
-        try dialogPress("Import")
+        try await chooseFile(file, action: "Import")
         diagnostics["invitation_file_chosen"] = .bool(true)
         try await Task.sleep(for: .milliseconds(500))
         let popups = findRole(kAXPopUpButtonRole)
@@ -568,7 +569,7 @@ final class CalendarFixtureUI {
         try await Task.sleep(for: .seconds(1))
     }
 
-    func findRole(_ role: String) -> [AXUIElement] {
+    func findRole(_ role: String, within: AXUIElement? = nil) -> [AXUIElement] {
         var budget = 3000
         let deadline = ContinuousClock.now.advanced(by: .seconds(2))
         func walk(_ element: AXUIElement) -> [AXUIElement] {
@@ -579,7 +580,7 @@ final class CalendarFixtureUI {
             return (value(element, kAXRoleAttribute) == role ? [element] : []) + descendants
         }
         var found: [AXUIElement] = []
-        for source in discoveryRoots() {
+        for source in within.map({ [$0] }) ?? discoveryRoots() {
             for element in walk(source) where !found.contains(where: { CFEqual($0, element) }) { found.append(element) }
         }
         return found
@@ -589,6 +590,43 @@ final class CalendarFixtureUI {
         try focus()
         let matches = find(name, role: kAXButtonRole)
         guard matches.count == 1, AXUIElementPerformAction(matches[0], kAXPressAction as CFString) == .success else { throw SourceFailure.unsupported }
+    }
+
+    func chooseFile(_ file: URL, action: String) async throws {
+        for _ in 0..<30 {
+            try focus()
+            if find(action, role: kAXButtonRole).count == 1 { break }
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        try post(5, flags: [.maskCommand, .maskShift])
+        var ready = false
+        for _ in 0..<30 {
+            try await Task.sleep(for: .milliseconds(100))
+            try focus()
+            var raw: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(root, kAXFocusedUIElementAttribute as CFString, &raw) == .success,
+                  let raw, CFGetTypeID(raw) == AXUIElementGetTypeID() else { continue }
+            let field = unsafeDowncast(raw, to: AXUIElement.self)
+            let role = value(field, kAXRoleAttribute)
+            diagnostics["file_path_focused_" + role] = .bool(true)
+            guard [kAXTextFieldRole, kAXComboBoxRole].contains(role), value(field, kAXSubroleAttribute) != kAXSearchFieldSubrole else { continue }
+            var current = field
+            for _ in 0..<10 {
+                let role = value(current, kAXRoleAttribute)
+                if role == kAXSheetRole || (role == kAXWindowRole && value(current, kAXSubroleAttribute) == kAXDialogSubrole) { ready = true; break }
+                var parent: CFTypeRef?
+                guard AXUIElementCopyAttributeValue(current, kAXParentAttribute as CFString, &parent) == .success,
+                      let parent, CFGetTypeID(parent) == AXUIElementGetTypeID() else { break }
+                current = unsafeDowncast(parent, to: AXUIElement.self)
+            }
+            if ready { break }
+        }
+        guard ready else { throw SourceFailure.conflict }
+        try sendText(file.path)
+        diagnostics["file_path_entered"] = .bool(true)
+        try post(36, flags: [])
+        try await Task.sleep(for: .milliseconds(300))
+        try dialogPress(action)
     }
 
     func ownedInspector() -> AXUIElement? {
@@ -696,13 +734,14 @@ final class CalendarFixtureUI {
 
     func key(_ code: CGKeyCode, flags: CGEventFlags = []) throws { try fence(); try post(code, flags: flags) }
 
-    func press(_ name: String, role: String) throws {
+    func press(_ name: String, role: String) async throws {
         try fence()
         let matches = role == kAXButtonRole ? inspectorFind(name, role: role) : find(name, role: role)
-        guard matches.count == 1, AXUIElementPerformAction(matches[0], kAXPressAction as CFString) == .success else { throw SourceFailure.unsupported }
+        guard matches.count == 1 else { throw SourceFailure.unsupported }
+        try await activate(matches[0], name: name)
     }
 
-    func pressAny(_ names: [String], role: String) throws {
+    func pressAny(_ names: [String], role: String) async throws {
         try fence()
         var matches: [AXUIElement] = []
         for name in names {
@@ -712,11 +751,28 @@ final class CalendarFixtureUI {
         }
         try fence()
         if let name = names.first { diagnostics["press_" + name + "_match_count"] = .number(Double(matches.count)) }
-        guard matches.count == 1, AXUIElementPerformAction(matches[0], kAXPressAction as CFString) == .success else { throw SourceFailure.unsupported }
+        guard matches.count == 1 else { throw SourceFailure.unsupported }
+        try await activate(matches[0], name: names.first ?? "control")
+    }
+
+    func activate(_ element: AXUIElement, name: String) async throws {
+        try focus()
+        let enabled = value(element, kAXEnabledAttribute) != "0"
+        diagnostics["control_" + name + "_enabled"] = .bool(enabled)
+        var actions: CFArray?
+        if AXUIElementCopyActionNames(element, &actions) == .success {
+            for action in actions as? [String] ?? [] { diagnostics["control_" + name + "_" + action] = .bool(true) }
+        }
+        guard enabled else { throw SourceFailure.unsupported }
+        if AXUIElementPerformAction(element, kAXPressAction as CFString) == .success { return }
+        guard value(element, kAXRoleAttribute) == kAXButtonRole else { throw SourceFailure.unsupported }
+        try fence()
+        try await click(element, count: 1)
+        diagnostics["control_" + name + "_clicked"] = .bool(true)
     }
 
     func menu(_ name: String, _ items: [String]) async throws {
-        try press(name, role: kAXMenuBarItemRole)
+        try await press(name, role: kAXMenuBarItemRole)
         try await Task.sleep(for: .milliseconds(100))
         var matches: [AXUIElement] = []
         for item in items {
@@ -741,6 +797,10 @@ final class CalendarFixtureUI {
               let focused, CFGetTypeID(focused) == AXUIElementGetTypeID() else { throw SourceFailure.conflict }
         let field = unsafeDowncast(focused, to: AXUIElement.self)
         guard value(field, kAXRoleAttribute) == kAXTextFieldRole, value(field, kAXSubroleAttribute) == kAXSearchFieldSubrole else { throw SourceFailure.conflict }
+        try sendText(text)
+    }
+
+    func sendText(_ text: String) throws {
         try post(0, flags: .maskCommand)
         let characters = Array(text.utf16)
         for down in [true, false] {
