@@ -3,6 +3,7 @@ package scenarios
 import (
 	"context"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
 	"os"
 	"path/filepath"
@@ -34,5 +35,44 @@ func TestCleanupRecoveryRejectsUnboundOrForeignLedgersBeforeNativeAccess(t *test
 				t.Fatal(e)
 			}
 		})
+	}
+}
+
+func TestCleanupRecoveryRecognizesCurrentTextAttachmentEchoOnly(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	for _, query := range []string{
+		`CREATE TABLE message(guid TEXT,text TEXT,attributedBody BLOB)`,
+		`CREATE TABLE message_attachment_join(message_id INTEGER,attachment_id INTEGER)`,
+		`CREATE TABLE attachment(filename TEXT,transfer_name TEXT)`,
+		`INSERT INTO message(ROWID,guid) VALUES(1,'baseline'),(2,'txt-echo'),(3,'foreign')`,
+		`INSERT INTO attachment(ROWID,filename,transfer_name) VALUES(1,'/tmp/ab-selftest_CURRENT.txt','ab-selftest_CURRENT.txt'),(2,'/tmp/ab-selftest_OTHER.txt','ab-selftest_OTHER.txt')`,
+		`INSERT INTO message_attachment_join VALUES(1,1),(2,1),(3,2)`,
+	} {
+		if _, err := db.Exec(query); err != nil {
+			t.Fatal(err)
+		}
+	}
+	rows, err := db.Query(nativeMessagesRecoveryOwnershipSQL, 1, "[ab-test selftest_CURRENT]", "[ab-test selftest_CURRENT]", "ab-selftest_CURRENT.", "ab-selftest_CURRENT.")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			t.Fatal(err)
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	if len(ids) != 1 || ids[0] != "txt-echo" {
+		t.Fatal(ids)
 	}
 }
