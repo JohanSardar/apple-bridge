@@ -233,8 +233,12 @@ public actor MessagesCommands {
         let target = try JSONDecoder().decode(JSON.self, from: JSONSerialization.data(withJSONObject: item.2))
         if !interactive {
             guard tagged(target["text"].string) else { throw SourceFailure.invalid }
-            for item in rows {
-                guard let message = try reader.message(item["guid"]), let data = try reader.messageObservations(message).first, let text = data.2["text"] as? String, tagged(text) else { throw SourceFailure.unsupported }
+            if ["messages.mark_read", "messages.mark_unread"].contains(action["op"].string) {
+                try MessagesReadStateFixture.validate(chat: chat, target: row, reader: reader)
+            } else {
+                for item in rows {
+                    guard let message = try reader.message(item["guid"]), let data = try reader.messageObservations(message).first, let text = data.2["text"] as? String, tagged(text) else { throw SourceFailure.unsupported }
+                }
             }
         }
         var destination = action.object

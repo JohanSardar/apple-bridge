@@ -17,6 +17,12 @@ struct MessagesVariantChecks {
         let args = JSON.object(["text": .string("test"), "variant": variant])
         let data: [String: JSON] = ["text": .string("test"), "is_from_me": .bool(true), "error_code": .number(0), "effect": .string("com.apple.messages.effect.loud"), "formatting": .array([range])]
         var checks = try await AccessibilityInputChecks.run()
+        let readState = JSON.object(["run_id": .string("current"), "scenario": .string("MSG-READSTATE-REAL"), "baseline_max_row_id": .number(10), "created_chat_key": .string("self")])
+        checks["current_read_state_fixture_allowed"] = MessagesReadStateFixture.authorizes(readState, chat: "self", rowID: 11, text: "[ab-test current] fixture")
+        checks["older_read_state_target_refused"] = !MessagesReadStateFixture.authorizes(readState, chat: "self", rowID: 10, text: "[ab-test current] fixture")
+        checks["other_run_read_state_target_refused"] = !MessagesReadStateFixture.authorizes(readState, chat: "self", rowID: 11, text: "[ab-test other] fixture")
+        checks["other_read_state_chat_refused"] = !MessagesReadStateFixture.authorizes(readState, chat: "other", rowID: 11, text: "[ab-test current] fixture")
+        checks["untagged_read_state_target_refused"] = !MessagesReadStateFixture.authorizes(readState, chat: "self", rowID: 11, text: "existing message")
         let proof = JSON.object(["os_build": .string("synthetic-os"), "version": .number(1), "complete": .bool(true), "helper_digest": .string("synthetic-helper")])
         checks["current_build_qualified"] = MessagesSendVariants.validProof(proof, osBuild: "synthetic-os", helperDigest: "synthetic-helper")
         checks["stale_build_rejected"] = !MessagesSendVariants.validProof(proof, osBuild: "synthetic-os", helperDigest: "other-helper")

@@ -121,7 +121,10 @@ public struct MessagesUISession {
         driver.activateMessages()
         RunLoop.current.run(until: Date().addingTimeInterval(settle))
         let deadline = Date().addingTimeInterval(3)
-        while driver.messagesProcess() == nil, Date() < deadline { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
+        repeat {
+            if let messages = driver.messagesProcess(), driver.frontmostProcess() == messages { return }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+        } while Date() < deadline
     }
     public func fence() throws { guard driver.frontmostProcess() == pid else { throw SourceFailure.conflict } }
     public func run(_ script: String) throws {

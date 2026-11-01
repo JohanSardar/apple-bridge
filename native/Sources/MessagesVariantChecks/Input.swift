@@ -32,7 +32,11 @@ enum AccessibilityInputChecks {
         try guarded.press(MessagesUISession.escape)
         var refused = false
         do { try guarded.press(MessagesUISession.enter) } catch SourceFailure.conflict { refused = true }
+        let delayed = AccessibilityInputDriver(front: [999, 999, 4242])
+        MessagesUISession.activate(delayed, settle: 0)
+        let ready = (try? MessagesUISession.frontmost(delayed, trusted: true)) != nil
         return ["accessibility_input_without_automation": driver.inputs == expected && driver.automationCalls == 0,
+                "activation_waits_for_foreground_readiness": ready && delayed.inputs.isEmpty,
                 "accessibility_input_interference_refused": refused && interrupted.inputs == [.keys([53], command: false)] && interrupted.automationCalls == 0]
     }
 }
