@@ -227,7 +227,7 @@ enum RemindersParityProof {
                 ui.selectionDiagnostics["smart_type_selected"] = 1
                 try await Task.sleep(for: .milliseconds(300))
                 guard let sheet = ui.ownedSheet else { throw SourceFailure.conflict }
-                let fields = ui.find("", role: kAXTextFieldRole, within: sheet)
+                let fields = ui.find("", role: kAXTextFieldRole, within: sheet).filter { ui.value($0, kAXValueAttribute).isEmpty }
                 ui.selectionDiagnostics["tag_input_matches"] = Double(fields.count)
                 guard fields.count == 1 else { throw SourceFailure.conflict }
                 try ui.set(fields[0], text: tag)
@@ -690,7 +690,8 @@ final class RemindersFixtureUI {
         func point(_ name: String, before: Bool) throws -> CGPoint {
             let row = try reminderRow(name)
             let fields = find(name, role: kAXTextFieldRole, within: row) + find(name, role: kAXTextAreaRole, within: row)
-            let target = !before && fields.count == 1 ? fields[0] : row
+            guard fields.count == 1 else { throw SourceFailure.conflict }
+            let target = before ? row : fields[0]
             var position: CFTypeRef?, size: CFTypeRef?
             guard AXUIElementCopyAttributeValue(target, kAXPositionAttribute as CFString, &position) == .success,
                   AXUIElementCopyAttributeValue(target, kAXSizeAttribute as CFString, &size) == .success,
