@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -21,7 +22,13 @@ func notesFolderRecovery(truth func(string, map[string]any) (map[string]any, err
 			return nil, problem
 		}
 		defer os.RemoveAll(root)
-		input, output := filepath.Join(root, "request.json"), filepath.Join(root, "report.json")
+		home, problem := os.UserHomeDir()
+		if problem != nil {
+			return nil, problem
+		}
+		input := filepath.Join(root, "request.json")
+		output := filepath.Join(home, "Library", "Application Support", "AppleBridgeDev", contracts.NewID("notes-owned-cleanup")+".json")
+		defer os.Remove(output)
 		raw, problem := json.Marshal(request)
 		if problem != nil {
 			return nil, problem
