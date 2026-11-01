@@ -39,6 +39,17 @@ enum HelperLabCommand {
             while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
             try JSONEncoder().encode(result!).write(to: reportURL, options: .atomic)
             return true
+        case "focus-phone-pack":
+            let reportURL = try report(arguments)
+            guard arguments.count > 1 else { throw ProbeFailure.invalidArguments }
+            var result: Result<JSON, any Error>?
+            Task { @MainActor in
+                do { result = .success(try await FocusPhonePack.install(URL(fileURLWithPath: arguments[1]))) }
+                catch { result = .failure(error) }
+            }
+            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
+            try JSONEncoder().encode(result!.get()).write(to: reportURL, options: .atomic)
+            return true
         case "focus-real-checks":
             let reportURL = try report(arguments)
             guard arguments.count > 1 else { throw ProbeFailure.invalidArguments }

@@ -47,8 +47,9 @@ func runAirFocusReal(ctx context.Context) Evidence {
 		return e
 	}
 	remote := "sh -s"
-	if helper := os.Getenv("AB_REAL_FOCUS_AIR_HELPER"); helper != "" {
-		remote += " -- '" + strings.ReplaceAll(helper, "'", "'\"'\"'") + "'"
+	helper, pack := os.Getenv("AB_REAL_FOCUS_AIR_HELPER"), os.Getenv("AB_REAL_FOCUS_AIR_PACK")
+	if helper != "" || pack != "" {
+		remote += " -- '" + strings.ReplaceAll(helper, "'", "'\"'\"'") + "' '" + strings.ReplaceAll(pack, "'", "'\"'\"'") + "'"
 	}
 	command := exec.CommandContext(ctx, "ssh", "-o", "BatchMode=yes", "air", remote)
 	command.Stdin = strings.NewReader(string(script))
