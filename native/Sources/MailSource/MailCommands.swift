@@ -119,17 +119,10 @@ public struct MailCommands: Sendable {
             let selection = "messages of " + (op == "mail.send" ? "sent mailbox" : "drafts mailbox") + " whose subject is " + q(args["subject"].string)
             let matches = """
             set matched to {}
+            set expectedBody to \(q(args["body"].string))
             repeat with candidate in (\(selection))
                 set candidateBody to (content of candidate) as string
-                repeat while candidateBody starts with linefeed or candidateBody starts with return
-                    if candidateBody starts with \(q(args["body"].string)) then exit repeat
-                    if (length of candidateBody) is 1 then
-                        set candidateBody to ""
-                    else
-                        set candidateBody to text 2 thru -1 of candidateBody
-                    end if
-                end repeat
-                if candidateBody starts with \(q(args["body"].string)) then set end of matched to contents of candidate
+                if candidateBody starts with expectedBody or candidateBody starts with (linefeed & expectedBody) or candidateBody starts with (return & expectedBody) or candidateBody starts with (return & linefeed & expectedBody) then set end of matched to contents of candidate
             end repeat
 
             """
