@@ -65,7 +65,7 @@ test('WEB-MSG-PERF WEB-MSG-PERF-INPUT sending text records complete input covera
     await prepareSession(page);const ids=await control(request,'/demo-fixtures');await page.goto('/messages/'+encodeURIComponent(ids['message-chat']));await expect(page.locator('.messages-transcript')).toHaveAttribute('aria-busy','false');
     const prefix='[ab-test] '+randomUUID().slice(0,8);
     await transcriptInputs(page,info,'send',async()=>{
-        for(let index=0;index<24;index++){const content=prefix+' '+index;await page.getByRole('textbox',{name:'Message',exact:true}).fill(content);await page.getByRole('button',{name:'Send message',exact:true}).click();await expect(page.getByRole('textbox',{name:'Message',exact:true})).toHaveValue('');await expect.poll(()=>page.locator('[data-local-echo]').count(),{intervals:[25]}).toBe(0);const sent=page.locator('.messages-transcript').getByText(content,{exact:true});await expect(sent).toHaveCount(1);await expect(sent).toBeInViewport({ratio:1});}
+        for(let index=0;index<24;index++){const content=prefix+' '+index;await page.getByRole('textbox',{name:'Message',exact:true}).fill(content);await page.getByRole('button',{name:'Send message',exact:true}).click();await expect(page.getByRole('textbox',{name:'Message',exact:true})).toHaveValue('');await expect.poll(()=>page.locator('[data-local-echo]').count(),{intervals:[25]}).toBe(0);const sent=page.locator('.messages-transcript .message-row.outgoing').getByText(content,{exact:true});await expect(sent).toHaveCount(1);await expect(sent).toBeInViewport({ratio:1});}
     });
 });
 test('WEB-MSG-PERF WEB-MSG-PERF-INPUT reactions record complete input coverage',async({page,request},info)=>{
