@@ -110,6 +110,22 @@ enum MessagesNativeSession {
         checkpoint("owned_item_delete_requested")
         unsafeBitCast(implementation, to: Call.self)(chat, selector, [item] as NSArray)
     }
+    static func failedSelfFixture(_ text: String, chat guid: String, register: (String) throws -> Void) throws -> String {
+        guard text.range(of: #"^\[ab-test run_[A-Z0-9]{26}\] failed fixture$"#, options: .regularExpression) != nil else { throw SourceFailure.invalid }
+        let chat = try chat(guid)
+        guard let type = NSClassFromString("IMMessage") else { throw SourceFailure.unavailable }
+        let (factorySelector, factoryImplementation) = try method(type, "instantMessageWithText:flags:threadIdentifier:")
+        typealias Factory = @convention(c) (AnyObject, Selector, NSAttributedString, UInt64, NSString?) -> Unmanaged<AnyObject>?
+        guard let message = unsafeBitCast(factoryImplementation, to: Factory.self)(type, factorySelector, NSAttributedString(string: text), 0x100005, nil)?.takeUnretainedValue(),
+              try flag(message, "isFromMe"), let native = try object(message, "guid") as? String, !native.isEmpty else { throw SourceFailure.conflict }
+        let (sendSelector, sendImplementation) = try method(chat, "sendMessage:")
+        let (cancelSelector, cancelImplementation) = try method(chat, "cancelMessage:")
+        try register(native)
+        typealias Call = @convention(c) (AnyObject, Selector, AnyObject) -> Void
+        unsafeBitCast(sendImplementation, to: Call.self)(chat, sendSelector, message)
+        unsafeBitCast(cancelImplementation, to: Call.self)(chat, cancelSelector, message)
+        return native
+    }
     static func send(_ part: JSON, chat guid: String) throws -> String {
         let chat = try chat(guid)
         guard let transferType = NSClassFromString("IMFileTransferCenter"), let transfers = try object(transferType, "sharedInstance"),
