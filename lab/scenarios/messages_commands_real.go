@@ -41,7 +41,7 @@ func nativeMessagesExistingChatGate(ctx context.Context, db *sql.DB, id, chat st
 		return e, true
 	}
 	var unread int
-	err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? AND m.is_from_me=0 AND m.is_read=0 AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=m.ROWID)`, chat).Scan(&unread)
+	err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? AND m.is_from_me=0 AND m.is_read=0 AND COALESCE(m.associated_message_type,0)=0 AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=m.ROWID)`, chat).Scan(&unread)
 	if err == nil && unread == 0 {
 		return e, true
 	}

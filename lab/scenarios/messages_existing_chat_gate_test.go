@@ -13,7 +13,7 @@ func TestMessagesWritePreflightPreservesExistingUnreadMessages(t *testing.T) {
 	}
 	defer db.Close()
 	for _, query := range []string{
-		`CREATE TABLE message(is_from_me INTEGER,is_read INTEGER)`,
+		`CREATE TABLE message(is_from_me INTEGER,is_read INTEGER,associated_message_type INTEGER DEFAULT 0)`,
 		`CREATE TABLE chat(guid TEXT)`,
 		`CREATE TABLE chat_message_join(chat_id INTEGER,message_id INTEGER)`,
 		`CREATE TABLE chat_recoverable_message_join(chat_id INTEGER,message_id INTEGER)`,
@@ -48,5 +48,35 @@ func TestMessagesWritePreflightPreservesExistingUnreadMessages(t *testing.T) {
 	}
 	if _, allowed := nativeMessagesExistingChatGate(ctx, db, "WEB-MEDIA-VARIANTS", "self", Evidence{}); !allowed {
 		t.Fatal("deleted unread history treated as active")
+	}
+}
+
+func TestMessagesWritePreflightIgnoresUnreadTapbackEvent(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	for _, query := range []string{
+		`CREATE TABLE message(is_from_me INTEGER,is_read INTEGER,associated_message_type INTEGER)`,
+		`CREATE TABLE chat(guid TEXT)`,
+		`CREATE TABLE chat_message_join(chat_id INTEGER,message_id INTEGER)`,
+		`CREATE TABLE chat_recoverable_message_join(chat_id INTEGER,message_id INTEGER)`,
+		`INSERT INTO chat(guid) VALUES('self')`,
+		`INSERT INTO message VALUES(0,0,3006)`,
+		`INSERT INTO chat_message_join VALUES(1,1)`,
+	} {
+		if _, err := db.Exec(query); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, allowed := nativeMessagesExistingChatGate(context.Background(), db, "MSG-DELETE-REAL", "self", Evidence{}); !allowed {
+		t.Fatal("Tapback event treated as an unread message")
+	}
+	if _, err := db.Exec(`UPDATE message SET associated_message_type=0`); err != nil {
+		t.Fatal(err)
+	}
+	if _, allowed := nativeMessagesExistingChatGate(context.Background(), db, "MSG-DELETE-REAL", "self", Evidence{}); allowed {
+		t.Fatal("genuine unread message allowed")
 	}
 }
