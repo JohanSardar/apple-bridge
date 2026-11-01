@@ -347,10 +347,26 @@ final class CalendarFixtureUI {
             try await Task.sleep(for: .milliseconds(250))
         }
         diagnostics["owned_search_result_count"] = .number(Double(results.count))
+        for result in results {
+            let key = "owned_search_result_" + value(result, kAXRoleAttribute)
+            diagnostics[key] = .number((diagnostics[key]?.number ?? 0) + 1)
+        }
         guard let result = results.first else { throw SourceFailure.unavailable }
         guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier else { throw SourceFailure.conflict }
         var candidate = result
         for _ in 0..<4 {
+            if AXUIElementSetAttributeValue(candidate, kAXSelectedAttribute as CFString, kCFBooleanTrue) == .success {
+                diagnostics["owned_result_selected"] = .bool(true)
+            }
+            if AXUIElementPerformAction(candidate, kAXShowMenuAction as CFString) == .success {
+                try await Task.sleep(for: .milliseconds(200))
+                let info = find("Get Info", role: kAXMenuItemRole)
+                if info.count == 1, AXUIElementPerformAction(info[0], kAXPressAction as CFString) == .success {
+                    diagnostics["owned_result_info_succeeded"] = .bool(true)
+                    try await Task.sleep(for: .milliseconds(400))
+                    if hasOwnedInspector() { try fence(); return }
+                } else { try post(53, flags: []) }
+            }
             if AXUIElementPerformAction(candidate, kAXPressAction as CFString) == .success {
                 diagnostics["owned_result_press_succeeded"] = .bool(true)
                 try await Task.sleep(for: .milliseconds(200))
@@ -364,7 +380,7 @@ final class CalendarFixtureUI {
             guard AXUIElementCopyAttributeValue(candidate, kAXParentAttribute as CFString, &parent) == .success,
                   let parent, CFGetTypeID(parent) == AXUIElementGetTypeID() else { break }
             candidate = unsafeDowncast(parent, to: AXUIElement.self)
-            if [kAXWindowRole, kAXApplicationRole].contains(value(candidate, kAXRoleAttribute)) { break }
+            if [kAXWindowRole, kAXApplicationRole, kAXTableRole, kAXOutlineRole, kAXScrollAreaRole].contains(value(candidate, kAXRoleAttribute)) { break }
         }
         var position: CFTypeRef?, size: CFTypeRef?
         guard AXUIElementCopyAttributeValue(result, kAXPositionAttribute as CFString, &position) == .success,
@@ -377,7 +393,7 @@ final class CalendarFixtureUI {
         for type in [CGEventType.leftMouseDown, .leftMouseUp] {
             guard let event = CGEvent(mouseEventSource: nil, mouseType: type, mouseCursorPosition: point, mouseButton: .left) else { throw SourceFailure.unavailable }
             event.setIntegerValueField(.mouseEventClickState, value: 2)
-            event.postToPid(app.processIdentifier)
+            event.post(tap: .cghidEventTap)
         }
         try await Task.sleep(for: .milliseconds(400))
         if !hasOwnedInspector() { try post(34, flags: .maskCommand); try await Task.sleep(for: .milliseconds(400)) }
