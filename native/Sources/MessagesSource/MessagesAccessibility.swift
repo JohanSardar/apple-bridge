@@ -252,11 +252,12 @@ enum MessagesAccessibility {
         components.path = "open"
         components.queryItems = [URLQueryItem(name: "message-guid", value: guid)]
         guard let url = components.url else { throw MessagesUIFailure.navigationUnavailable }
-        MessagesUISession.activate()
         if resetEditor {
+            MessagesUISession.activate()
             _ = try resetTaggedEditor()
-        } else {
-            let root = try uiSession().root
+        } else if let application = MessagesNavigation.application {
+            let root = AXUIElementCreateApplication(application.processIdentifier)
+            AXUIElementSetMessagingTimeout(root, 0.25)
             var budget = 2000
             guard matching(root, budget: &budget, predicate: { value($0, kAXDescriptionAttribute) == "Cancel edit" }).isEmpty, budget > 0 else { throw SourceFailure.conflict }
         }

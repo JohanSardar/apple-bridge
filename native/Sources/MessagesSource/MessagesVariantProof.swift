@@ -14,7 +14,6 @@ public enum MessagesVariantProof {
         guard AXIsProcessTrusted() else { return limited("needs Messages Accessibility grant") }
         let session = CGSessionCopyCurrentDictionary() as? [String: Any]
         guard session?["CGSSessionScreenIsLocked"] as? Bool != true else { return limited("needs unlocked Mac") }
-        await MessagesUISession.activate()
         let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/chat.db").path
         let reader = try MessagesReader(path: path)
         guard let selected = try MessagesSelfTestIsolation.target(database: MessagesDatabase()) else { return limited("No verified self conversation is available. Check the Messages account's own addresses and self conversation.") }
@@ -22,6 +21,7 @@ public enum MessagesVariantProof {
         let existingBaseline: MessagesSelfTestBaseline?
         do { existingBaseline = selected.chat.isEmpty ? nil : try await MessagesSelfTestBaseline.capture(selected.chat) }
         catch { return limited((error as? MessagesSelfTestBaselineFailure)?.description ?? "The self conversation baseline could not be verified. Keep Messages available and rerun the check.") }
+        await MessagesUISession.activate()
         var chat = ""
         let run = "variant_" + UUID().uuidString.replacingOccurrences(of: "-", with: "")
         let tag = "[ab-test " + run + "]"

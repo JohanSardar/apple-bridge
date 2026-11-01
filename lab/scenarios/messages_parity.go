@@ -131,7 +131,7 @@ func runMessagesParity(ctx context.Context, s Scenario, level string) Evidence {
 	return e
 }
 
-func runMessagesParityProof(ctx context.Context, s Scenario, e Evidence) Evidence {
+func runMessagesParityProof(ctx context.Context, s Scenario, e Evidence) (result Evidence) {
 	app := os.Getenv("APPLE_BRIDGE_PARITY_HELPER_APP")
 	if app == "" {
 		home, err := os.MkdirTemp("", "ab-messages-parity-")
@@ -146,6 +146,12 @@ func runMessagesParityProof(ctx context.Context, s Scenario, e Evidence) Evidenc
 			return e
 		}
 	}
+	unread, err := captureMessagesUnread(ctx, messagesUnreadPath())
+	if err != nil {
+		e.Assertions = append(e.Assertions, Assertion{Name: "prelaunch_unread_baseline_captured", Passed: false})
+		return e
+	}
+	defer func() { finishMessagesUnreadAudit(unread, &result) }()
 	data, _ := bridgeruntime.MessagesParitySelfTest(ctx, app, os.Getenv("APPLE_BRIDGE_PARITY_FORCE") == "1", true)
 	var report struct {
 		OSBuild          string `json:"os_build"`

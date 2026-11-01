@@ -51,6 +51,12 @@ func runMessagesVariantReal(ctx context.Context, s Scenario, e Evidence) (result
 	}
 	report := filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "AppleBridgeDev", "variant-"+e.RunID+".json")
 	defer os.Remove(report)
+	unread, unreadErr := captureMessagesUnread(ctx, messagesUnreadPath())
+	if unreadErr != nil {
+		result.Assertions = append(result.Assertions, Assertion{Name: "prelaunch_unread_baseline_captured", Passed: false})
+		return
+	}
+	defer func() { finishMessagesUnreadAudit(unread, &result) }()
 	err = exec.CommandContext(ctx, "open", "-n", "-W", "-g", "-a", app, "--args", "messages-variant-proof", messageSendVariant(s.ID), "--report", report).Run()
 	raw, readErr := os.ReadFile(report)
 	var proof struct {

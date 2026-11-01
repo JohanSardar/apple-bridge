@@ -55,7 +55,6 @@ actor MessagesParitySelfTest {
         guard includeUI else { blocked("ui_disabled_by_caller"); return try save() }
         guard session?["CGSSessionScreenIsLocked"] as? Bool != true else { blocked("screen_locked"); return try save() }
         guard AXIsProcessTrusted() else { blocked("accessibility_permission_missing"); return try save() }
-        await MessagesUISession.activate()
         if !force, cached["cleanup_state"].string == "verified_clean", cached["baseline_captured"].bool, cached["baseline_preserved"].bool,
            let at = parseTimestamp(cached["at"].string), Date().timeIntervalSince(at) >= 0, Date().timeIntervalSince(at) < 300 {
             try JSONEncoder().encode(cached).write(to: MessagesParity.reportURL, options: .atomic)
@@ -71,6 +70,7 @@ actor MessagesParitySelfTest {
         let existingBaseline: MessagesSelfTestBaseline?
         do { existingBaseline = selected.chat.isEmpty ? nil : try await MessagesSelfTestBaseline.capture(selected.chat) }
         catch { blocked("self_chat_baseline_" + MessagesParity.failureReason(error)); return try save() }
+        await MessagesUISession.activate()
         beforeIDs = try activeIDs(database)
         beforePins = try? MessagesPins.read()
         baselineCaptured = true
