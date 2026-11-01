@@ -1,9 +1,9 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[15.59 20.34 18.87] cpu_idle=29% cpus=8 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[17.76 24.18 21.32] cpu_idle=59% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M6BC1KP2YX0WFP7KJ0YXZQF1",
+  "run_id": "run_01M6BCKY0JQ32ZY3V996QS45XM",
   "metrics": {
     "capture_observer_resets": 0
   },
@@ -11,7 +11,7 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-11-01T10:56:20.674364Z",
+  "at": "2026-11-01T11:06:21.077178Z",
   "assertions": [
     {
       "name": "native_mail_build",

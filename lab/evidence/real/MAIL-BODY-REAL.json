@@ -1,26 +1,54 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[2.33 2.75 2.94] cpu_idle=81% cpus=8 other_heavy=0"
+    "summary": "air: load=[7.07 14.89 17.88] cpu_idle=56% cpus=8 other_heavy=0"
   },
-  "status": "limited",
-  "run_id": "run_01M65EWQJ2EF1VBMNAGW9J8TE7",
+  "run_id": "run_01M6BCV16ERTT4HQCY1VV26NDX",
   "metrics": {
+    "body_digest": "430177dea80c7cecaf1f2dd014d6bb97ef66cacb8fb8d3858320e0ed34d09959",
     "capture_observer_resets": 0,
-    "eligible_sample_count": 0
+    "eligible_sample_count": 2
   },
   "scenario": "MAIL-BODY-REAL",
   "level": "real",
-  "passed": false,
+  "passed": true,
   "git_sha": "",
-  "at": "2026-10-30T03:50:39.938099Z",
+  "at": "2026-11-01T11:10:13.710772Z",
   "assertions": [
     {
-      "name": "real_mail_store_available",
+      "name": "mail_native_world",
       "passed": true
     },
     {
-      "name": "mail_body_truth_decoded",
+      "name": "fixture_mail_responsive",
+      "passed": true
+    },
+    {
+      "name": "fixture_self_address_available",
+      "passed": true
+    },
+    {
+      "name": "fixture_sent_to_self",
+      "passed": true
+    },
+    {
+      "name": "fixture_self_mail_received",
+      "passed": true
+    },
+    {
+      "name": "self_sent_fixture_created",
+      "passed": true
+    },
+    {
+      "name": "plain_text_fixture_downloaded",
+      "passed": true
+    },
+    {
+      "name": "mail_body_plain_text_digest_equal",
+      "passed": true
+    },
+    {
+      "name": "owned_fixture_cleanup",
       "passed": true
     },
     {
@@ -29,8 +57,5 @@
     }
   ],
   "latency": null,
-  "hosts": null,
-  "conditions": {
-    "reason": "needs locally downloaded plain-text [ab-test] self-sent mail; creating it needs Automation grant AppleBridgeHelper → Mail"
-  }
+  "hosts": null
 }
