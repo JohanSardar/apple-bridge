@@ -43,7 +43,8 @@ public enum MessagesParityFixture {
         state["conversation_target"] = .bool(false)
         let target = Prepared(nativeState: .object(state), fingerprint: baseline.fingerprint, action: baseline.action)
         try MessagesAccessibility.openMessage(target.nativeState["message_guid"].string, settle: 0.5, resetEditor: false)
-        var result: [String: JSON] = [:]
+        let fields = MessagesVariantUI.find(try MessagesAccessibility.uiSession().root, identifier: "messageBodyField")
+        var result: [String: JSON] = ["composer_count": .number(Double(fields.count)), "nonempty_composer_count": .number(Double(fields.filter { !MessagesVariantUI.value($0, kAXValueAttribute).isEmpty }.count))]
         do { try MessagesAccessibility.validateConversation(target); result["message_target_passed"] = .bool(true) }
         catch { result["message_target_passed"] = .bool(false); result["message_target_error"] = .string(String(describing: error)) }
         do { try MessagesAccessibility.validate(baseline); result["conversation_target_passed"] = .bool(true) }
