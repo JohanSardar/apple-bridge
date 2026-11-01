@@ -148,7 +148,7 @@ enum RemindersParityProof {
                 try script("show fixtureList\nactivate")
                 try await Task.sleep(for: .milliseconds(300))
                 _ = try await ui.selectReminder(second.title)
-                try await ui.focusReminderBackground(second.title)
+                try ui.focusReminderRow(second.title)
                 let pasteboard = NSPasteboard.general
                 let saved = (pasteboard.pasteboardItems ?? []).map { item in item.types.compactMap { type in item.data(forType: type).map { (type, $0) } } }
                 guard let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 2, pixelsHigh: 2, bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 8, bitsPerPixel: 32) else { throw SourceFailure.unavailable }
@@ -284,7 +284,7 @@ enum RemindersParityProof {
             if !absent, let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.reminders").first {
                 let ui = RemindersFixtureUI(app: app, title: smartTitle)
                 try await ui.activate()
-                try await ui.focusOwnedList()
+                try ui.focusOwnedList()
                 try await ui.menu("Edit", ["Delete"])
                 guard let sheet = ui.ownedSheet else { throw SourceFailure.conflict }
                 let labels = ui.find("", role: kAXStaticTextRole, within: sheet).flatMap { element in
@@ -295,7 +295,10 @@ enum RemindersParityProof {
                     if cancel.count == 1 { _ = AXUIElementPerformAction(cancel[0], kAXPressAction as CFString) }
                     throw SourceFailure.conflict
                 }
-                try ui.press("Delete", role: kAXButtonRole)
+                let delete = ui.find("Delete", role: kAXButtonRole, within: sheet)
+                guard delete.count == 1 else { throw SourceFailure.conflict }
+                try await ui.focusApplication()
+                guard AXUIElementPerformAction(delete[0], kAXPressAction as CFString) == .success else { throw SourceFailure.unsupported }
                 try await Task.sleep(for: .milliseconds(500))
                 absent = false
                 for _ in 0..<60 {
@@ -729,59 +732,32 @@ final class RemindersFixtureUI {
         labels.contains { $0.contains("Delete Smart List") && $0.contains(title) }
     }
 
-    func frame(_ element: AXUIElement) throws -> CGRect {
-        var position: CFTypeRef?, size: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &position) == .success,
-              AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &size) == .success,
-              let position, let size, CFGetTypeID(position) == AXValueGetTypeID(), CFGetTypeID(size) == AXValueGetTypeID() else { throw SourceFailure.conflict }
-        var origin = CGPoint.zero, dimensions = CGSize.zero
-        guard AXValueGetValue(unsafeDowncast(position, to: AXValue.self), .cgPoint, &origin), AXValueGetValue(unsafeDowncast(size, to: AXValue.self), .cgSize, &dimensions), dimensions.width > 0, dimensions.height > 0 else { throw SourceFailure.conflict }
-        return CGRect(origin: origin, size: dimensions)
-    }
-
-    func click(_ point: CGPoint) async throws {
+    private func focusRow(_ row: AXUIElement) throws {
         try fence()
-        guard let down = CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: point, mouseButton: .left),
-              let up = CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: point, mouseButton: .left) else { throw SourceFailure.unavailable }
-        down.setIntegerValueField(.mouseEventClickState, value: 1)
-        up.setIntegerValueField(.mouseEventClickState, value: 1)
-        var released = false
-        defer { if !released { up.post(tap: .cghidEventTap) } }
-        down.post(tap: .cghidEventTap)
-        try await Task.sleep(for: .milliseconds(80))
-        up.post(tap: .cghidEventTap)
-        released = true
-        try await Task.sleep(for: .milliseconds(150))
-        try fence()
-    }
-
-    static func reminderBackground(row: CGRect, title: CGRect, buttons: [CGRect]) -> CGPoint? {
-        [title.maxX + 4, row.maxX - 36, title.minX - 6].map { CGPoint(x: $0, y: title.midY) }.first { point in
-            row.contains(point) && !title.contains(point) && buttons.allSatisfy { !$0.insetBy(dx: -2, dy: -2).contains(point) }
+        var current = row
+        for _ in 0..<20 {
+            if [kAXOutlineRole, kAXTableRole].contains(value(current, kAXRoleAttribute)) {
+                guard AXUIElementSetAttributeValue(current, kAXFocusedAttribute as CFString, kCFBooleanTrue) == .success,
+                      AXUIElementSetAttributeValue(row, kAXSelectedAttribute as CFString, kCFBooleanTrue) == .success else { throw SourceFailure.unsupported }
+                return
+            }
+            guard let parent = elements(current, kAXParentAttribute).first else { break }
+            current = parent
         }
+        throw SourceFailure.conflict
     }
 
-    func focusReminderBackground(_ name: String) async throws {
-        let row = try reminderRow(name)
-        let fields = find(name, role: kAXTextFieldRole, within: row) + find(name, role: kAXTextAreaRole, within: row)
-        guard fields.count == 1 else { throw SourceFailure.conflict }
-        let buttons = find("", role: kAXButtonRole, within: row) + find("", role: kAXCheckBoxRole, within: row)
-        guard let point = Self.reminderBackground(row: try frame(row), title: try frame(fields[0]), buttons: try buttons.map { try frame($0) }) else { throw SourceFailure.conflict }
-        try await click(point)
+    func focusReminderRow(_ name: String) throws {
+        try focusRow(reminderRow(name))
     }
 
-    func focusOwnedList() async throws {
+    func focusOwnedList() throws {
         try fence()
         for match in find(title) {
             var current = match
             for _ in 0..<20 {
                 if value(current, kAXRoleAttribute) == kAXRowRole {
-                    let counts = find("", role: kAXStaticTextRole, within: current).filter { element in
-                        [kAXTitleAttribute, kAXValueAttribute, kAXDescriptionAttribute].contains { Int(value(element, $0)) != nil }
-                    }
-                    guard counts.count == 1 else { throw SourceFailure.conflict }
-                    let rectangle = try frame(counts[0])
-                    try await click(CGPoint(x: rectangle.midX, y: rectangle.midY))
+                    try focusRow(current)
                     return
                 }
                 guard let parent = elements(current, kAXParentAttribute).first else { break }
