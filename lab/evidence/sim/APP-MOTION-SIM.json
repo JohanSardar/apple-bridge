@@ -1,7 +1,7 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[52.44 61.15 45.44] cpu_idle=0% cpus=10 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[8.13 5.31 5.08] cpu_idle=61% cpus=10 other_heavy=0"
   },
   "run_id": "",
   "metrics": {
@@ -11,7 +11,7 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-29T22:46:04.759118Z",
+  "at": "2026-11-01T00:31:52.301609Z",
   "assertions": [
     {
       "name": "swift_adapter_build",
@@ -22,7 +22,7 @@
       "passed": true
     },
     {
-      "name": "bounded_history_upload_then_next_command",
+      "name": "signed_result_upload_then_next_command",
       "passed": true
     },
     {

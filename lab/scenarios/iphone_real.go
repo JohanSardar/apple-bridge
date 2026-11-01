@@ -57,6 +57,9 @@ func runIPhoneReal(ctx context.Context, s Scenario, level string) (e Evidence) {
 	if os.Getenv("APPLE_BRIDGE_SECRET_STORE") != "file" {
 		return fail("isolated_file_secret_store", nil)
 	}
+	if err := exec.CommandContext(ctx, "python3", "lab/iphone-real/device.py", device).Run(); err != nil {
+		return fail("physical_device_available", err)
+	}
 	lock := exec.CommandContext(ctx, "lockf", "-k", "-t", "0", "/tmp/ab-iphone.lock", "sh", "-c", "printf 'locked\\n'; cat >/dev/null")
 	input, err := lock.StdinPipe()
 	if err != nil {
@@ -89,6 +92,8 @@ func runIPhoneReal(ctx context.Context, s Scenario, level string) (e Evidence) {
 	var gateway *operations.LocalGateway
 	var authority *trust.Authority
 	var store *state.Store
+	var delivery *iphone.Delivery
+	var connector atomic.Pointer[realPhoneConnector]
 	var pushes atomic.Int64
 	var pushFailures atomic.Int64
 	paired := s.ID == "APP-PAIR-REAL" || s.ID == "APP-CMD-REAL" || s.ID == "APP-NOTIFY-REAL" || s.ID == "APP-APPROVE-REAL"
@@ -105,10 +110,22 @@ func runIPhoneReal(ctx context.Context, s Scenario, level string) (e Evidence) {
 		if err = store.InitCommands(ctx); err != nil {
 			return fail("ledger", err)
 		}
-		delivery := iphone.NewDelivery(store, authority)
+		delivery = iphone.NewDelivery(store, authority)
 		gateway = &operations.LocalGateway{State: store, Authority: authority, Context: ctx, IPhone: delivery}
 		delivery.Authorize = gateway.ReauthorizeIPhone
 		delivery.Decide = gateway.DecidePhoneApproval
+		delivery.ConnectorPending = func() []iphone.ConnectorApproval {
+			if fixture := connector.Load(); fixture != nil {
+				return fixture.pendingPhone()
+			}
+			return nil
+		}
+		delivery.ConnectorDecide = func(id, code string, approve bool) error {
+			if fixture := connector.Load(); fixture != nil {
+				return fixture.approvals.Decide(id, code, approve)
+			}
+			return contracts.ErrUnauthorized
+		}
 		mux := realPhoneHandler(authority, delivery)
 		server := httptest.NewUnstartedServer(mux)
 		listener, listenErr := net.Listen("tcp4", "0.0.0.0:0")
@@ -158,10 +175,26 @@ func runIPhoneReal(ctx context.Context, s Scenario, level string) (e Evidence) {
 			go delivery.Run(runctx)
 		}
 	}
+	var offline time.Duration
 	devctl := func(args ...string) error {
 		args = append([]string{"devicectl", "--timeout", "15"}, args...)
-		cmd := exec.CommandContext(ctx, "xcrun", args...)
-		return cmd.Run()
+		var err error
+		for {
+			err = exec.CommandContext(ctx, "xcrun", args...).Run()
+			if err == nil || ctx.Err() != nil || exec.CommandContext(ctx, "python3", "lab/iphone-real/device.py", device, "--check").Run() == nil {
+				break
+			}
+			start := time.Now()
+			reconnectErr := exec.CommandContext(ctx, "python3", "lab/iphone-real/device.py", device).Run()
+			offline += time.Since(start)
+			if reconnectErr != nil {
+				return reconnectErr
+			}
+		}
+		if err == nil && slices.Contains(args, "launch") && os.Getenv("AB_WDA_URL") != "" {
+			err = exec.CommandContext(ctx, "python3", "lab/iphone-real/activate.py", "com.johansardar.applebridge.ios").Run()
+		}
+		return err
 	}
 	source := filepath.Join(dir, "request.json")
 	raw, _ := json.Marshal(request)
@@ -192,12 +225,17 @@ func runIPhoneReal(ctx context.Context, s Scenario, level string) (e Evidence) {
 	}
 	logPhoneInstruction(phoneInstruction(s.ID))
 
-	deadline := time.Now().Add(400 * time.Second)
+	deadline := time.Now().Add(800 * time.Second)
 	submitted := false
 	var receipt phoneReceipt
 	phase := 0
+	focusSubmitted := false
 	phaseStart := time.Now()
-	for time.Now().Before(deadline) {
+	phaseOffline := offline
+	for time.Now().Before(deadline.Add(offline)) {
+		if time.Since(phaseStart)-(offline-phaseOffline) > 210*time.Second {
+			break
+		}
 		if ctx.Err() != nil {
 			return fail("run_context", ctx.Err())
 		}
@@ -209,10 +247,26 @@ func runIPhoneReal(ctx context.Context, s Scenario, level string) (e Evidence) {
 				if current.Counts["phase"] != phase {
 					phase = current.Counts["phase"]
 					phaseStart = time.Now()
-					logPhoneInstruction(phoneInstruction(s.ID))
+					phaseOffline = offline
+					logPhoneInstruction(phonePhaseInstruction(s.ID, phase))
 				}
-				if phase != 0 && time.Since(phaseStart) > 185*time.Second {
+				if time.Since(phaseStart)-(offline-phaseOffline) > 210*time.Second {
 					break
+				}
+				if s.ID == "APP-APPROVE-REAL" && phase == 3 && connector.Load() == nil {
+					fixture, fixtureErr := newRealPhoneConnector(authority)
+					if fixtureErr != nil {
+						return fail("connector_request_created", fixtureErr)
+					}
+					connector.Store(fixture)
+					logPhoneInstruction("open [ab-test] iPhone connection, match Code " + fixture.pending.Code + ", tap Allow, and complete Face ID")
+					delivery.Wake()
+				}
+				if s.ID == "FOC-PHONE-SYNC" && receipt.Checks["ready"] && !focusSubmitted {
+					focusSubmitted = true
+					focus := runFocusReal(ctx, s, Evidence{RunID: commandID, Scenario: s.ID, Level: level, Passed: true, Metrics: map[string]any{}})
+					e.Assertions = append(e.Assertions, focus.Assertions...)
+					check("mac_focus_set_and_restore", focus.Passed)
 				}
 				if receipt.Checks["ready"] && !submitted && gateway != nil {
 					phones, listErr := authority.IPhones()
@@ -296,6 +350,8 @@ func runIPhoneReal(ctx context.Context, s Scenario, level string) (e Evidence) {
 			check("phone_pong_observed", valid && payload["pong"] == true)
 		}
 		if s.ID == "APP-APPROVE-REAL" {
+			fixture := connector.Load()
+			check("connector_oauth_token_authenticated", fixture != nil && fixture.qualified())
 			check("face_id_succeeded", receipt.Checks["face_id_succeeded"])
 		}
 		check("apns_accepted", pushes.Load() > 0)
@@ -309,49 +365,57 @@ func runIPhoneReal(ctx context.Context, s Scenario, level string) (e Evidence) {
 }
 
 func logPhoneInstruction(instruction string) {
-	fmt.Fprintln(os.Stderr, ">>> JOHAN: "+instruction+" now; waiting up to 3 minutes")
-	path := os.Getenv("AB_JOHAN_PROMPT_FILE")
+	instruction = strings.ReplaceAll(strings.ReplaceAll(instruction, "\n", " "), "\r", " ")
+	fmt.Fprintln(os.Stderr, "Automation step: "+instruction)
+	path := os.Getenv("AB_IPHONE_AUTOMATION_STEPS")
 	if path == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return
-		}
-		path = filepath.Join(home, "I1-NEEDS-JOHAN.txt")
+		return
 	}
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Could not append the iPhone tap instructions")
+		fmt.Fprintln(os.Stderr, "Could not append the iPhone automation instructions")
 		return
 	}
 	defer file.Close()
-	fmt.Fprintln(file, time.Now().Format("15:04")+" "+strings.ReplaceAll(strings.ReplaceAll(instruction, "\n", " "), "\r", " "))
+	fmt.Fprintln(file, time.Now().Format("15:04")+" "+instruction)
+}
+
+func phonePhaseInstruction(s string, phase int) string {
+	if s == "APP-INTENTS-REAL" && phase == 2 {
+		return "in Shortcuts touch and hold [ab-test] Ping iPhone, tap Delete and Delete Shortcut, return to Apple Bridge, then tap Confirm observations"
+	}
+	return phoneInstruction(s)
 }
 
 func phoneInstruction(s string) string {
 	switch s {
+	case "FOC-PHONE-SYNC":
+		return "tap Allow on Share Focus Status if prompted; keep Apple Bridge open while the Pro enables and restores Do Not Disturb"
 	case "APP-SHELL-REAL":
-		return "open Capability and Diagnostics in [ab-test], inspect them, then tap Confirm observations"
+		return "tap Capability, inspect its fields and tap Back; tap Diagnostics, inspect its fields and tap Back, then tap Confirm observations"
 	case "APP-PAIR-REAL":
 		return "tap Allow on Apple Bridge Local Network if prompted"
 	case "APP-CMD-REAL":
 		return "tap Allow on Apple Bridge Local Network if prompted; keep the phone unlocked"
 	case "APP-NOTIFY-REAL":
-		return "tap Allow on Notifications if prompted, then [ab-test] Confirm on the notification"
+		return "tap Allow on Notifications if prompted, touch and hold the [ab-test] Notification qualification banner, then tap [ab-test] Confirm"
 	case "APP-APPROVE-REAL":
 		return "tap Allow on Notifications if prompted, open the [ab-test] approval, tap Approve and complete Face ID"
 	case "APP-LIVE-REAL":
-		return "inspect [ab-test] Updated Live Activity and Bridge status widget, then return and tap Confirm observations"
+		return "view [ab-test] Updated on the Lock Screen and the existing Bridge status widget, then return to Apple Bridge and tap Confirm observations"
 	default:
-		return "save and run [ab-test] Ping iPhone in Shortcuts, return to Apple Bridge, then delete the test shortcut"
+		return "in Shortcuts tap +, search Check Bridge Status, tap Apple Bridge Check Bridge Status, name it [ab-test] Ping iPhone, tap Done, then tap the shortcut to run it and return to Apple Bridge"
 	}
 }
 
 func isIPhoneRealScenario(id, level string) bool {
-	return level == "real" && slices.Contains([]string{"APP-SHELL-REAL", "APP-PAIR-REAL", "APP-CMD-REAL", "APP-NOTIFY-REAL", "APP-APPROVE-REAL", "APP-LIVE-REAL", "APP-INTENTS-REAL"}, id)
+	return level == "real" && slices.Contains([]string{"APP-SHELL-REAL", "APP-PAIR-REAL", "APP-CMD-REAL", "APP-NOTIFY-REAL", "APP-APPROVE-REAL", "APP-LIVE-REAL", "APP-INTENTS-REAL", "FOC-PHONE-SYNC"}, id)
 }
 
 func phoneRequirements(s string) []string {
 	switch s {
+	case "FOC-PHONE-SYNC":
+		return []string{"focus_authorized", "phone_initially_inactive", "phone_focus_enabled", "phone_focus_restored"}
 	case "APP-SHELL-REAL":
 		return []string{"capability_fields_observed", "diagnostics_observed"}
 	case "APP-PAIR-REAL":
@@ -361,7 +425,7 @@ func phoneRequirements(s string) []string {
 	case "APP-NOTIFY-REAL":
 		return []string{"notification_authorized", "ready", "signed_result_uploaded", "identity_restored"}
 	case "APP-APPROVE-REAL":
-		return []string{"notification_authorized", "ready", "face_id_succeeded", "signed_result_uploaded", "identity_restored"}
+		return []string{"notification_authorized", "ready", "face_id_succeeded", "signed_result_uploaded", "identity_restored", "connector_prompt_code_and_scopes", "connector_face_id_succeeded", "connector_decision_uploaded"}
 	case "APP-LIVE-REAL":
 		return []string{"activities_authorized", "activity_started", "activity_updated", "widget_shared_status", "live_and_widget_observed", "activity_ended"}
 	case "APP-INTENTS-REAL":

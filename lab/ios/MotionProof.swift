@@ -15,7 +15,11 @@ final class FakeMotion: MotionAdapter {
     }
     func pedometer(from: Date, to: Date) async throws -> MotionDay {
         ranges.append((from, to))
-        return MotionDay(start: from, end: to, steps: 100, floorsUp: 2, floorsDown: 1)
+        return await withCheckedContinuation { continuation in
+            DispatchQueue.global().async { @Sendable in
+                continuation.resume(returning: MotionDay(start: from, end: to, steps: 100, floorsUp: 2, floorsDown: 1))
+            }
+        }
     }
 }
 

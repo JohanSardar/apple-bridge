@@ -1153,7 +1153,7 @@ features:
     limits:
       - {"scenario": "FOC-SET-REAL", "level": "real", "reason": "needs Focus status grant for AppleBridgeHelper; signed Air probe stopped before dispatch; AB Focus import remains unqualified"}
       - {"scenario": "FOC-IDLE", "level": "real", "reason": "Five-minute Helper CPU qualification remains pending; no idle CPU measurement claimed."}
-      - {"scenario": "FOC-PHONE-SYNC", "level": "real", "reason": "Johan must have the paired iPhone available and qualify Focus sync after a safe AB Focus set/readback/restore implementation"}
+      - {scenario: FOC-PHONE-SYNC, level: real, reason: "Phone Focus permission and inactive baseline passed; the Pro AppleBridgeHelper has no Focus-status grant. No Mac Focus mutation was attempted, and phone restoration was acknowledged."}
   - id: recordings.read
     title: Voice Memos assets and voicemail metadata
     requirements: [R-API, R-SCOPE]
@@ -1387,24 +1387,20 @@ features:
     milestone: G13
     modules: [ios/Capabilities/HealthRead, internal/contracts, internal/state, internal/iphone]
     depends_on: [iphone.delivery]
-    status: limited
+    status: done
     scenarios:
       - {id: APP-HEALTH-SIM, levels: [sim]}
       - {id: APP-HEALTH-REAL, levels: [real]}
-    limits:
-      - {scenario: APP-HEALTH-REAL, level: real, reason: 'limited: real-device request and observation harness missing; needs Allow tap'}
   - id: iphone.health.write
     title: Log water, weight, mindful minutes and workouts
     requirements: [R-API, R-SECURE]
     milestone: G13
     modules: [ios/Capabilities/HealthWrite, internal/contracts]
     depends_on: [iphone.health]
-    status: limited
+    status: done
     scenarios:
       - {id: APP-HEALTH-WRITE-SIM, levels: [sim]}
       - {id: APP-HEALTH-WRITE-REAL, levels: [real]}
-    limits:
-      - {scenario: APP-HEALTH-WRITE-REAL, level: real, reason: 'limited: real-device request and observation harness missing; needs Allow tap'}
   - id: iphone.build
     title: Signed iPhone build and USB install
     requirements: [R-PKG]
@@ -1425,7 +1421,7 @@ features:
       - {id: APP-SHELL-SIM, levels: [sim]}
       - {id: APP-SHELL-REAL, levels: [real]}
     limits:
-      - {scenario: APP-SHELL-REAL, level: real, reason: 'Phone probe completed with 21 registered capabilities but capability-field and Diagnostics observation confirmations did not arrive within three minutes'}
+      - {scenario: APP-SHELL-SIM, level: sim, reason: "The existing simulation exercises generic replica convergence; shell UI is qualified only by the physical scenario."}
   - id: iphone.pairing
     title: iPhone device keys and one-time gateway pairing
     requirements: [R-SECURE, R-API]
@@ -1452,36 +1448,30 @@ features:
     milestone: G13
     modules: [ios/Capabilities/Notifications, ios/Delivery, internal/contracts, lab/scenarios]
     depends_on: [iphone.delivery]
-    status: limited
+    status: done
     scenarios:
       - {id: APP-NOTIFY-SIM, levels: [sim], status: dropped, reason: "Dropped because native notification proof is blocked by simulator contention."}
       - {id: APP-NOTIFY-REAL, levels: [real]}
-    limits:
-      - {scenario: APP-NOTIFY-REAL, level: real, reason: 'Notification authorization was requested on the phone but no Allow response arrived within three minutes; delivery and button interaction remain unproved'}
   - id: iphone.motion
     title: iPhone activity, pedometer, floors and seven-day history
     requirements: [R-API]
     milestone: G13
     modules: [ios/Capabilities/Motion, internal/contracts]
     depends_on: [iphone.delivery]
-    status: limited
+    status: done
     scenarios:
       - {id: APP-MOTION-SIM, levels: [sim]}
       - {id: APP-MOTION-REAL, levels: [real]}
-    limits:
-      - {scenario: APP-MOTION-REAL, level: real, reason: 'limited: real-device request and observation harness missing; needs Allow tap'}
   - id: iphone.alarms
     title: iPhone AlarmKit alarms and timers
     requirements: [R-SAFE-CMD, R-API]
     milestone: G13
     modules: [ios/Capabilities/Alarms, internal/contracts]
     depends_on: [iphone.delivery]
-    status: limited
+    status: done
     scenarios:
       - {id: APP-ALARM-SIM, levels: [sim]}
       - {id: APP-ALARM-REAL, levels: [real]}
-    limits:
-      - {scenario: APP-ALARM-REAL, level: real, reason: 'limited: real-device request and observation harness missing; needs Allow tap'}
   - id: iphone.extras
     title: iPhone WeatherKit, Journal suggestions and EnergyKit hints
     requirements: [R-API, R-SCOPE]
@@ -1498,36 +1488,32 @@ features:
     milestone: G13
     modules: [ios/Capabilities/DeviceContext, internal/contracts]
     depends_on: [iphone.delivery]
-    status: limited
+    status: done
     scenarios:
       - {id: APP-DEVICE-SIM, levels: [sim]}
       - {id: APP-DEVICE-REAL, levels: [real]}
-    limits:
-      - {scenario: APP-DEVICE-REAL, level: real, reason: 'limited: real-device request and observation harness missing; needs Allow tap; Wi-Fi location authorization required; NFC is dropped because it needs a physical tag'}
+    notes: Battery, charging, Wi-Fi, device-name presence and Focus-filter state qualified on the physical iPhone. NFC is explicitly skipped and remains unqualified without a physical tag.
   - id: iphone.screentime
     title: Bridge-owned Screen Time shields, downtime and usage report
     requirements: [R-SAFE-CMD, R-API]
     milestone: G13
     modules: [ios/Capabilities/ScreenTime, ios/ScreenTimeShared, ios/Extensions, internal/contracts]
     depends_on: [iphone.delivery]
-    status: limited
+    status: done
     scenarios:
       - {id: APP-SCREENTIME-SIM, levels: [sim]}
       - {id: APP-SCREENTIME-REAL, levels: [real]}
-    limits:
-      - {scenario: APP-SCREENTIME-REAL, level: real, reason: 'limited: real-device request and observation harness missing; needs Allow tap'}
   - id: iphone.location
     title: iPhone precise location and named geofence event records
     requirements: [R-API, R-SAFE-CMD]
     milestone: G13
     modules: [ios/Capabilities/Location, internal/contracts, internal/iphone]
     depends_on: [iphone.delivery]
-    status: limited
+    status: done
     scenarios:
       - {id: APP-LOC-SIM, levels: [sim]}
       - {id: APP-LOC-REAL, levels: [real]}
-    limits:
-      - {scenario: APP-LOC-REAL, level: real, reason: 'limited: real-device request and observation harness missing; needs Allow tap for Always and Precise Location'}
+    notes: Physical iPhone qualification covers a foreground precise fix and tagged geofence registration/removal; background movement delivery remains outside this scenario.
   - id: iphone.appleapproval
     title: Apple approval gated FinanceKit, critical alerts, location push and fall detection
     requirements: [R-API, R-SCOPE, R-SAFE-CMD]
@@ -1544,12 +1530,9 @@ features:
     milestone: G13
     modules: [ios/Capabilities, lab/iphoneintents]
     depends_on: [iphone.delivery]
-    status: limited
+    status: done
     scenarios:
       - {id: APP-INTENTS-REAL, levels: [real]}
-    limits:
-      - {scenario: APP-INTENTS-REAL, level: real, reason: 'No saved Ping iPhone invocation, pong or workflow-deletion confirmation arrived during the two three-minute phone phases'}
-
   - id: iphone.approvals
     title: Face ID command approvals
     requirements: [R-SECURE, R-SAFE-CMD, R-API]
@@ -1561,20 +1544,18 @@ features:
       - {id: APP-APPROVE-SIM, levels: [sim]}
       - {id: APP-APPROVE-REAL, levels: [real]}
     limits:
-      - {scenario: APP-APPROVE-REAL, level: real, reason: 'Notification authorization request reached the phone but no Allow response arrived within three minutes; Face ID approval was not reached'}
+      - {scenario: APP-APPROVE-REAL, level: real, reason: "Command and connector approvals require a live Face ID match; there is no non-biometric qualification path. Signed decisions and OAuth token authentication remain unqualified."}
   - id: iphone.widgets
     title: Agent task Live Activities and bridge status widgets
     requirements: [R-API]
     milestone: G13
     modules: [ios/Capabilities/Widgets, ios/BridgeWidgets, ios/WidgetShared, internal/iphone, internal/relay]
     depends_on: [iphone.delivery]
-    status: limited
+    status: done
     scenarios:
       - {id: APP-LIVE-SIM, levels: [sim]}
       - {id: APP-LIVE-REAL, levels: [real]}
-    limits:
-      - {scenario: APP-LIVE-REAL, level: real, reason: 'Native ActivityKit start/update/end and shared widget status passed; no Lock Screen or widget observation confirmation arrived within three minutes'}
-    notes: Gateway pushes ActivityKit start, update and end using signed device token registration. APNs acceptance is dispatch only; no phone observation is claimed. Widgets show the last reported delivery status with its age.
+    notes: Physical qualification observed the local tagged Live Activity and signed widget preview, then verified activity termination and widget baseline restoration. Remote ActivityKit push delivery is outside this local lifecycle check.
 
 
   - id: iphone.capture
@@ -1588,7 +1569,7 @@ features:
       - {id: APP-CAPTURE-SIM, levels: [sim]}
       - {id: APP-CAPTURE-REAL, levels: [real]}
     limits:
-      - {scenario: APP-CAPTURE-REAL, level: real, reason: 'limited: real-device request and observation harness missing; needs Allow tap for camera and microphone'}
+      - {scenario: APP-CAPTURE-REAL, level: real, reason: "Automation reached the real Face ID gate and canceled it; capture requires a live biometric match and has no non-biometric qualification path. No media bytes were captured; the capability baseline was restored."}
 
   - id: home.pack
     title: Home automation

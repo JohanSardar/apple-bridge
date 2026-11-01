@@ -1,17 +1,41 @@
 {
-  "status": "limited",
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[4.44 8.15 10.89] cpu_idle=72% cpus=10 other_heavy=0"
+  },
+  "status": "passed",
+  "run_id": "",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
   "scenario": "APP-MOTION-REAL",
   "level": "real",
-  "passed": false,
+  "passed": true,
   "git_sha": "",
+  "at": "2026-10-31T23:20:42.20806Z",
   "assertions": [
     {
-      "name": "permission",
-      "passed": false
+      "name": "current_activity_observed",
+      "passed": true
+    },
+    {
+      "name": "foreground_active",
+      "passed": true
+    },
+    {
+      "name": "pedometer_observed",
+      "passed": true
+    },
+    {
+      "name": "redacted_observation",
+      "passed": true,
+      "detail": "{\"counts\":{\"activities\":1148,\"steps\":4051},\"digests\":{}}"
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
-  ]
+  ],
+  "latency": null,
+  "hosts": null
 }

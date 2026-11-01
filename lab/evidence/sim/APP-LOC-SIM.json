@@ -1,7 +1,7 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[54.05 52.04 52.89] cpu_idle=0% cpus=10 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[7.18 5.2 5.05] cpu_idle=68% cpus=10 other_heavy=0"
   },
   "run_id": "",
   "metrics": {
@@ -11,7 +11,7 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-29T23:24:40.941173Z",
+  "at": "2026-11-01T00:32:01.633978Z",
   "assertions": [
     {
       "name": "isolated_home",

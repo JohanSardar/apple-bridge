@@ -43,6 +43,16 @@ struct HealthPage: Sendable {
 }
 
 @MainActor
+enum HealthReadAuthorization {
+    static func request<T: Sendable>(_ types: [T], indirect: (T) -> Bool = { _ in false }, perObject: (T) -> Bool, bulk: ([T]) async throws -> Void, individual: (T) async throws -> Void) async throws {
+        let requested = types.filter { !indirect($0) }
+        let shared = requested.filter { !perObject($0) }
+        if !shared.isEmpty { try await bulk(shared) }
+        for type in requested where perObject(type) { try await individual(type) }
+    }
+}
+
+@MainActor
 protocol HealthReading {
     var streams: [String] { get }
     func page(stream: String, anchor: Data?) async throws -> HealthPage

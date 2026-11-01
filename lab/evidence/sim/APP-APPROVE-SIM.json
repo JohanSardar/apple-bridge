@@ -1,7 +1,17 @@
 {
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[7.33 5.29 5.08] cpu_idle=45% cpus=10 other_heavy=0"
+  },
+  "run_id": "",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
   "scenario": "APP-APPROVE-SIM",
   "level": "sim",
   "passed": true,
+  "git_sha": "",
+  "at": "2026-11-01T00:32:10.716811Z",
   "assertions": [
     {
       "name": "isolated_home",
@@ -183,5 +193,7 @@
       "name": "credential_backend_override_restored",
       "passed": true
     }
-  ]
+  ],
+  "latency": null,
+  "hosts": null
 }

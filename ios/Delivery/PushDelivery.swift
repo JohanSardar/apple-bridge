@@ -230,20 +230,32 @@ final class BridgeAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificati
         completionHandler([.banner, .sound, .list])
     }
 
-    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping @Sendable () -> Void) {
         let info = response.notification.request.content.userInfo
-        if info["approval"] as? Bool == true, let id = info["command_id"] as? String, let hash = info["request_hash"] as? String, let expires = info["expires"] as? Int64 {
+        let id = info["command_id"] as? String
+        let hash = info["request_hash"] as? String
+        let buttons = info["buttons"] as? [String]
+        let approval = info["approval"] as? Bool == true
+        let expires = info["expires"] as? Int64
+        let action = response.actionIdentifier
+        NotificationCompletion.deliver({ @MainActor in
+            await self.handleNotificationResponse(id: id, hash: hash, buttons: buttons, approval: approval, expires: expires, action: action)
+        }, completion: completionHandler)
+    }
+
+    @MainActor
+    private func handleNotificationResponse(id: String?, hash: String?, buttons: [String]?, approval: Bool, expires: Int64?, action: String) async {
+        if approval, let id, let hash, let expires {
             do {
-                try await ApprovalsCapability.present(id: id, hash: hash, action: response.actionIdentifier, expires: expires)
+                try ApprovalsCapability.present(id: id, hash: hash, action: action, expires: expires)
             } catch {
                 await MainActor.run { PushDelivery.shared.status = "Approval pending" }
             }
             return
         }
-        guard let id = info["command_id"] as? String, let hash = info["request_hash"] as? String, let buttons = info["buttons"] as? [String] else { return }
-        let action = response.actionIdentifier
+        guard let id, let hash, let buttons else { return }
         do {
-            try await NotificationsCapability.record(id: id, hash: hash, buttons: buttons, action: action)
+            try NotificationsCapability.record(id: id, hash: hash, buttons: buttons, action: action)
             await PushDelivery.shared.drain()
         } catch {
             await MainActor.run { PushDelivery.shared.status = "Action delivery pending" }

@@ -24,7 +24,7 @@ func TestIPhoneRealRequiresSelectedPhysicalDevice(t *testing.T) {
 }
 
 func TestIPhoneRealRoutesOnlyHardwareScenarios(t *testing.T) {
-	for _, id := range []string{"APP-SHELL-REAL", "APP-PAIR-REAL", "APP-CMD-REAL", "APP-NOTIFY-REAL", "APP-APPROVE-REAL", "APP-LIVE-REAL", "APP-INTENTS-REAL"} {
+	for _, id := range []string{"APP-SHELL-REAL", "APP-PAIR-REAL", "APP-CMD-REAL", "APP-NOTIFY-REAL", "APP-APPROVE-REAL", "APP-LIVE-REAL", "APP-INTENTS-REAL", "FOC-PHONE-SYNC"} {
 		if !isIPhoneRealScenario(id, "real") || isIPhoneRealScenario(id, "sim") || len(phoneRequirements(id)) == 0 {
 			t.Fatalf("incorrect hardware route for %s", id)
 		}
@@ -97,7 +97,7 @@ func TestRealPhoneReceiptRefreshesAfterNonFinalCopy(t *testing.T) {
 
 func TestRealPhoneInstructionsAppendSinglePlainLine(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "instructions.txt")
-	t.Setenv("AB_JOHAN_PROMPT_FILE", path)
+	t.Setenv("AB_IPHONE_AUTOMATION_STEPS", path)
 	logPhoneInstruction("tap Allow\non the iPhone")
 	logPhoneInstruction("complete Face ID")
 	raw, err := os.ReadFile(path)
@@ -107,5 +107,13 @@ func TestRealPhoneInstructionsAppendSinglePlainLine(t *testing.T) {
 	lines := strings.Split(strings.TrimSpace(string(raw)), "\n")
 	if len(lines) != 2 || !strings.HasSuffix(lines[0], "tap Allow on the iPhone") || !strings.HasSuffix(lines[1], "complete Face ID") {
 		t.Fatalf("unexpected prompt lines: %q", raw)
+	}
+}
+
+func TestRealPhoneIntentCleanupInstructionsMatchPhase(t *testing.T) {
+	first := phonePhaseInstruction("APP-INTENTS-REAL", 1)
+	cleanup := phonePhaseInstruction("APP-INTENTS-REAL", 2)
+	if !strings.Contains(first, "tap +") || !strings.Contains(cleanup, "Delete Shortcut") || strings.Contains(cleanup, "name it") {
+		t.Fatal("shortcut cleanup repeated the creation instructions")
 	}
 }

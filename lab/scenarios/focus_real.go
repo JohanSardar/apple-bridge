@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 func runFocusReal(ctx context.Context, s Scenario, e Evidence) Evidence {
@@ -21,7 +22,19 @@ func runFocusReal(ctx context.Context, s Scenario, e Evidence) Evidence {
 	}
 	defer os.RemoveAll(dir)
 	app := filepath.Join(dir, "AppleBridgeHelper.app")
-	output, err := exec.CommandContext(ctx, "packaging/dev/build-helper.sh", app).CombinedOutput()
+	var output []byte
+	if selected := os.Getenv("AB_REAL_FOCUS_HELPER"); s.ID == "FOC-PHONE-SYNC" && selected != "" {
+		app = selected
+		output, err = exec.CommandContext(ctx, "codesign", "--verify", "--strict", app).CombinedOutput()
+	} else {
+		build := exec.CommandContext(ctx, "packaging/dev/build-helper.sh", app)
+		if s.ID == "FOC-PHONE-SYNC" {
+			if sdk, sdkErr := exec.CommandContext(ctx, "packaging/dev/sdkroot.sh").Output(); sdkErr == nil && len(sdk) > 0 {
+				build.Env = append(os.Environ(), "SDKROOT="+strings.TrimSpace(string(sdk)))
+			}
+		}
+		output, err = build.CombinedOutput()
+	}
 	add("signed_helper_build", err == nil)
 	if err != nil {
 		os.Stderr.Write(output)
@@ -50,6 +63,7 @@ func runFocusReal(ctx context.Context, s Scenario, e Evidence) Evidence {
 		return e
 	}
 	if !granted {
+		add("focus_status_authorized", false)
 		e.Status = "limited"
 		e.Passed = false
 		e.Conditions = map[string]string{"reason": "needs Focus status grant for AppleBridgeHelper"}

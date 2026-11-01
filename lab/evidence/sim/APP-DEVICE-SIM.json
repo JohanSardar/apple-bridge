@@ -1,7 +1,7 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[72.78 79.97 69.86] cpu_idle=0% cpus=10 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[7.63 5.25 5.06] cpu_idle=57% cpus=10 other_heavy=0"
   },
   "run_id": "",
   "metrics": {
@@ -11,7 +11,7 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-29T23:09:02.470444Z",
+  "at": "2026-11-01T00:31:57.63207Z",
   "assertions": [
     {
       "name": "swift_adapter_build",

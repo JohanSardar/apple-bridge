@@ -42,7 +42,7 @@ enum ScreenTimeCapability {
     }
 
     static func authorized() throws {
-        guard AuthorizationCenter.shared.authorizationStatus == .approved else { throw ScreenTimeError.authorization }
+        guard BridgeShieldPolicy.authorized(status: AuthorizationCenter.shared.authorizationStatus.rawValue) else { throw ScreenTimeError.authorization }
     }
 
     static func schedule(start: Int, end: Int) throws {

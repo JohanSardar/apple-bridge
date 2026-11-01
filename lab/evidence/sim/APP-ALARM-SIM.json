@@ -1,4 +1,8 @@
 {
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[7.63 5.25 5.06] cpu_idle=37% cpus=10 other_heavy=0"
+  },
   "run_id": "",
   "metrics": {
     "capture_observer_resets": 0
@@ -7,7 +11,7 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-29T22:52:53.121325Z",
+  "at": "2026-11-01T00:31:54.770073Z",
   "assertions": [
     {
       "name": "swift_handler_build",

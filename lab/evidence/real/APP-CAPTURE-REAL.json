@@ -1,17 +1,41 @@
 {
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[4.47 5.89 6.58] cpu_idle=76% cpus=10 other_heavy=0"
+  },
   "status": "limited",
+  "run_id": "",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
   "scenario": "APP-CAPTURE-REAL",
   "level": "real",
   "passed": false,
   "git_sha": "",
+  "at": "2026-11-01T00:02:44.553476Z",
   "assertions": [
     {
-      "name": "camera_microphone_permission",
+      "name": "foreground_active",
+      "passed": true
+    },
+    {
+      "name": "operation_completed",
       "passed": false
+    },
+    {
+      "name": "state_restored",
+      "passed": true
+    },
+    {
+      "name": "redacted_observation",
+      "passed": true,
+      "detail": "{\"counts\":{},\"digests\":{\"failure\":\"6246b27bffbb09766f6190f8dd0d0af26d83720ec43d19acdaaaff1ac804a4fc\"}}"
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
-  ]
+  ],
+  "latency": null,
+  "hosts": null
 }

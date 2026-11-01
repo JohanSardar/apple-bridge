@@ -1,7 +1,17 @@
 {
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[7.01 5.19 5.04] cpu_idle=35% cpus=10 other_heavy=0"
+  },
+  "run_id": "",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
   "scenario": "APP-NOTIFY-SIM",
   "level": "sim",
   "passed": true,
+  "git_sha": "",
+  "at": "2026-11-01T00:32:07.800117Z",
   "assertions": [
     {
       "name": "isolated_home",
@@ -37,6 +47,14 @@
     },
     {
       "name": "principal",
+      "passed": true
+    },
+    {
+      "name": "notification_completion_build",
+      "passed": true
+    },
+    {
+      "name": "background_notification_completes_on_main_after_delivery",
       "passed": true
     },
     {
@@ -171,5 +189,7 @@
       "name": "credential_backend_override_restored",
       "passed": true
     }
-  ]
+  ],
+  "latency": null,
+  "hosts": null
 }

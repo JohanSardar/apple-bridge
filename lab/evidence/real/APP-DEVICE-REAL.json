@@ -1,17 +1,45 @@
 {
-  "status": "limited",
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[3.82 4.69 4.87] cpu_idle=42% cpus=10 other_heavy=0"
+  },
+  "status": "passed",
+  "run_id": "",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
   "scenario": "APP-DEVICE-REAL",
   "level": "real",
-  "passed": false,
+  "passed": true,
   "git_sha": "",
+  "at": "2026-11-01T00:34:30.611908Z",
   "assertions": [
     {
-      "name": "permission",
-      "passed": false
+      "name": "battery_observed",
+      "passed": true
+    },
+    {
+      "name": "focus_observed",
+      "passed": true
+    },
+    {
+      "name": "foreground_active",
+      "passed": true
+    },
+    {
+      "name": "wifi_observed",
+      "passed": true
+    },
+    {
+      "name": "redacted_observation",
+      "passed": true,
+      "detail": "{\"counts\":{\"device_name_present\":1,\"nfc_physical_tag_skipped\":1},\"digests\":{}}"
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
-  ]
+  ],
+  "latency": null,
+  "hosts": null
 }

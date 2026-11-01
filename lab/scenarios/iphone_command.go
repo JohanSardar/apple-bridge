@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -72,6 +73,15 @@ func runIPhoneCommand(ctx context.Context, s Scenario, level string) Evidence {
 	args, _ := json.Marshal(contracts.IPhoneTarget{DeviceID: phone.ID})
 	command := contracts.Command{ID: "cmd_iphone_roundtrip", Op: "iphone.ping", Args: args, WaitMS: 1000}
 	if s.ID == "APP-NOTIFY-SIM" {
+		proof := filepath.Join(dir, "notification-completion")
+		build := exec.CommandContext(ctx, "xcrun", "swiftc", "-swift-version", "6", "-parse-as-library", "ios/Delivery/NotificationCompletion.swift", "lab/ios/NotificationProof.swift", "-o", proof)
+		build.Env = append(os.Environ(), "SDKROOT=")
+		buildErr := build.Run()
+		add("notification_completion_build", buildErr == nil)
+		if buildErr == nil {
+			output, proofErr := exec.CommandContext(ctx, proof).Output()
+			add("background_notification_completes_on_main_after_delivery", proofErr == nil && string(output) == "PASS\n")
+		}
 		command.Op = "iphone.notify"
 		command.Args, _ = json.Marshal(contracts.IPhoneNotifyArgs{DeviceID: phone.ID, Title: "[ab-test] Notification", Body: "Bridge Test", Buttons: []contracts.IPhoneNotificationButton{{ID: "approve", Title: "Approve"}, {ID: "deny", Title: "Deny"}}, Thread: "ab-test", TimeSensitive: true})
 		invalid := command

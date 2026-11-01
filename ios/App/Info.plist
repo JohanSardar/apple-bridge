@@ -33,6 +33,7 @@
 	<string>Capture your selected Health samples and summaries for your paired Apple Bridge gateway.</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSFocusStatusUsageDescription</key><string>Verify that Focus status syncs with your paired Mac when you enable this check.</string>
 	<key>NSMotionUsageDescription</key>
 	<string>Read activity, steps and floors for your motion automations.</string>
 	<key>NSSupportsLiveActivities</key>

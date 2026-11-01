@@ -1,17 +1,45 @@
 {
-  "status": "limited",
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[7.9 8.32 10.72] cpu_idle=75% cpus=10 other_heavy=0"
+  },
+  "status": "passed",
+  "run_id": "",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
   "scenario": "APP-HEALTH-WRITE-REAL",
   "level": "real",
-  "passed": false,
+  "passed": true,
   "git_sha": "",
+  "at": "2026-10-31T23:21:59.929132Z",
   "assertions": [
     {
-      "name": "health_write_permission",
-      "passed": false
+      "name": "foreground_active",
+      "passed": true
+    },
+    {
+      "name": "health_authorization_completed",
+      "passed": true
+    },
+    {
+      "name": "resources_cleaned",
+      "passed": true
+    },
+    {
+      "name": "write_read_delete_absent",
+      "passed": true
+    },
+    {
+      "name": "redacted_observation",
+      "passed": true,
+      "detail": "{\"counts\":{\"deleted\":4,\"recovered_samples_deleted\":0,\"remaining_samples_deleted\":0,\"written\":4},\"digests\":{}}"
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
-  ]
+  ],
+  "latency": null,
+  "hosts": null
 }
