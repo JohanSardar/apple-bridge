@@ -178,16 +178,19 @@ final class PhotosProofUI {
         throw SourceFailure.unavailable
     }
 
-    private func confirmDelete(permanent: Bool) async throws {
+    private func confirmDelete(permanent: Bool, deleted: (@MainActor () -> Bool)? = nil) async throws {
         guard elements(kAXSheetRole).isEmpty else { throw SourceFailure.conflict }
-        try await key(51, flags: permanent ? [] : .maskCommand)
+        try await key(51)
         for _ in 0..<40 {
             let sheets = elements(kAXSheetRole)
+            diagnostics["delete_sheet_count"] = .number(Double(sheets.count))
             guard sheets.count <= 1 else { throw SourceFailure.conflict }
             if let sheet = sheets.first {
                 let buttons = elements(kAXButtonRole, below: sheet).filter { values($0).contains("Delete") }
+                diagnostics["delete_button_count"] = .number(Double(buttons.count))
                 guard buttons.count == 1, attribute(buttons[0], kAXEnabledAttribute) as? Bool == true,
                       AXUIElementPerformAction(buttons[0], kAXPressAction as CFString) == .success else { throw SourceFailure.unavailable }
+                diagnostics["delete_button_pressed_passed"] = .bool(true)
                 for _ in 0..<30 {
                     if elements(kAXSheetRole).isEmpty {
                         diagnostics[permanent ? "permanent_delete_confirmed_passed" : "photos_delete_confirmed_passed"] = .bool(true)
@@ -196,6 +199,10 @@ final class PhotosProofUI {
                     try await Task.sleep(for: .milliseconds(150))
                 }
                 throw SourceFailure.unavailable
+            }
+            if sheets.isEmpty, let deleted, deleted() {
+                diagnostics["photos_delete_observed_passed"] = .bool(true)
+                return
             }
             try await Task.sleep(for: .milliseconds(150))
         }
@@ -226,7 +233,7 @@ final class PhotosProofUI {
                 guard matches.count == before.count, let selected = matches.first,
                       try await inspectSelection(selected, assets: group) else { throw SourceFailure.conflict }
                 stage = "deleting the verified test photo in Photos"
-                try await confirmDelete(permanent: false)
+                try await confirmDelete(permanent: false, deleted: { self.live(group).count == before.count - 1 })
                 var after = before
                 for _ in 0..<60 {
                     after = live(group)
