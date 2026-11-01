@@ -62,7 +62,7 @@ public struct MailCommands: Sendable {
             return AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false)
         }
         var error: NSDictionary?
-        guard let script = NSAppleScript(source: "with timeout of 5 seconds\ntell application id \"com.apple.mail\"\n" + body + "\nend tell\nend timeout") else { throw SourceFailure.invalid }
+        guard let script = NSAppleScript(source: "with timeout of 15 seconds\ntell application id \"com.apple.mail\"\n" + body + "\nend tell\nend timeout") else { throw SourceFailure.invalid }
         let result = script.executeAndReturnError(&error)
         if let error { throw MailCommandFailure.appleEvent(error["NSAppleScriptErrorNumber"] as? Int ?? 0) }
         return result.stringValue ?? ""
@@ -115,7 +115,7 @@ public struct MailCommands: Sendable {
             for (field, kind) in [("to", "to"), ("cc", "cc")] {
                 for address in args[field].array { body += "tell m to make new " + kind + " recipient at end of " + kind + " recipients with properties {address:" + q(address.string) + "}\n" }
             }
-            body += op == "mail.send" ? "send m\n" : "save m\nclose m saving yes\n"
+            body += op == "mail.send" ? "send m\n" : "save m\nset visible of m to true\nclose m saving yes\n"
             let selection = "messages of " + (op == "mail.send" ? "sent mailbox" : "drafts mailbox") + " whose subject is " + q(args["subject"].string)
             let matches = """
             set matched to {}

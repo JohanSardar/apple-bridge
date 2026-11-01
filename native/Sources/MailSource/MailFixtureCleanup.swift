@@ -34,7 +34,10 @@ public enum MailFixtureCleanup {
         _ = try await script("""
         repeat with i from (count outgoing messages) to 1 by -1
             set m to outgoing message i
-            if subject of m is \(q(tag)) then close m saving no
+            if subject of m is \(q(tag)) then
+                set visible of m to true
+                close m saving no
+            end if
         end repeat
         return ""
         """)

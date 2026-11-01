@@ -55,13 +55,16 @@ public struct MailQualification: Sendable {
                 _ = try await script("return name")
                 checks["unresponsive_mail_recovered"] = .bool(true)
             }
+            checks["mail_responsive"] = .bool(true)
             let own = try await script("""
-            set m to make new outgoing message with properties {subject:\(q(tag)), visible:false}
-            set own to extract address from sender of m
-            close m saving no
-            return own
+            set own to extract address from primary email
+            repeat with a in accounts
+                if own is in (email addresses of a) then return own
+            end repeat
+            error "Mail needs a primary address from a configured account"
             """)
             guard own.contains("@"), !own.contains("\n") else { throw SourceFailure.unavailable }
+            checks["self_address_available"] = .bool(true)
             let commands = MailCommands(script: { body in
                 guard scenario == "MAIL-BODY-FIXTURE", body.contains("make new outgoing message") else { return try await script(body) }
                 return try await script("""
