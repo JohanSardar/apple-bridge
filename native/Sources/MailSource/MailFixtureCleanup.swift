@@ -10,8 +10,9 @@ public enum MailFixtureCleanup {
         let found = try reader.query("SELECT trim(g.message_id_header, '<>') AS id, b.url FROM messages m JOIN subjects s ON s.ROWID=m.subject LEFT JOIN message_global_data g ON g.message_id=m.message_id LEFT JOIN mailboxes b ON b.ROWID=m.mailbox WHERE s.subject=? AND m.deleted=0 ORDER BY m.ROWID", values: [tag], maxRows: 16, timeout: 2)
         guard found.complete else { throw MailCommandFailure.unconfirmed }
         return try found.rows.compactMap { row in
-            guard let id = row["id"]?.text, !id.isEmpty && id.contains("@"), let raw = row["url"]?.text, let url = URL(string: raw) else { throw SourceFailure.corrupt }
+            guard let raw = row["url"]?.text, let url = URL(string: raw) else { throw SourceFailure.corrupt }
             if ["trash", "deleted messages", "deleted items", "bin"].contains(url.lastPathComponent.lowercased()) { return nil }
+            guard let id = row["id"]?.text, !id.isEmpty && id.contains("@") else { throw SourceFailure.corrupt }
             return id
         }
     }
