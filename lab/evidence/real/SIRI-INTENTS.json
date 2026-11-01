@@ -1,23 +1,22 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[22.97 18.19 29.21] cpu_idle=22% cpus=8 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[17.81 18.86 18.44] cpu_idle=41% cpus=8 other_heavy=0"
   },
-  "status": "limited",
-  "run_id": "run_01M6B96706RV3XQGE8GEPPHMCP",
+  "run_id": "run_01M6BC5V5P5ZBGXX5BJEEFRR8N",
   "metrics": {
     "capture_observer_resets": 0,
     "installed_shortcut_count": 30,
-    "output_bytes": 0,
-    "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "output_bytes": 60,
+    "output_sha256": "00dccf0aff95323515b12eca0d2b6d5e72290dea6d42db6b0829b409b188f033",
     "probe_pack_matches": 1,
     "timed_out": false
   },
   "scenario": "SIRI-INTENTS",
   "level": "real",
-  "passed": false,
+  "passed": true,
   "git_sha": "",
-  "at": "2026-11-01T10:06:25.79958Z",
+  "at": "2026-11-01T10:58:39.414109Z",
   "assertions": [
     {
       "name": "inventory_available",
@@ -33,18 +32,34 @@
     },
     {
       "name": "bounded_runner_completed",
-      "passed": false
+      "passed": true
     },
     {
       "name": "probe_output_valid",
-      "passed": false
+      "passed": true
     },
     {
       "name": "status_intent_metadata_matches_source",
       "passed": true
     },
     {
+      "name": "status_intent_appkit_session_dispatch",
+      "passed": true
+    },
+    {
       "name": "status_intent_returns_without_dialog",
+      "passed": true
+    },
+    {
+      "name": "status_intent_cold_baseline_has_no_helper",
+      "passed": true
+    },
+    {
+      "name": "status_intent_cold_launch_returns",
+      "passed": true
+    },
+    {
+      "name": "status_intent_cold_host_cleaned_up",
       "passed": true
     },
     {
@@ -53,8 +68,5 @@
     }
   ],
   "latency": null,
-  "hosts": null,
-  "conditions": {
-    "reason": "The dedicated AB Bridge Status shortcut did not return valid output. Open it in Shortcuts, check its actions and existing permissions, and retry after it runs successfully."
-  }
+  "hosts": null
 }

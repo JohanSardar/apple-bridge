@@ -1259,12 +1259,10 @@ features:
     milestone: M5
     modules: [native/AppleBridgeHelper]
     depends_on: [helper.session]
-    status: limited
-    notes: Metadata and discovery are qualified. Session Helpers now dispatch AppKit events; real requalification is pending.
+    status: done
+    notes: Signed metadata and action discovery are qualified. Session Helpers dispatch App Intents connection events through AppKit; real hosted AppKit execution and cold SwiftUI launch both return recognized status without foreground interaction.
     scenarios:
       - {id: SIRI-INTENTS, levels: [sim, real]}
-    limits:
-      - {scenario: SIRI-INTENTS, level: real, reason: "linkd selected a concurrent session Helper whose Foundation run loop did not dispatch the App Intents connection Apple Event, producing errAETimeout (-1712). Session AppKit lifecycle fix awaits real qualification."}
   - id: mac.extras
     title: Mac Bluetooth iWork Time Machine and song recognition
     requirements: [R-API, R-SCOPE]
