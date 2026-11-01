@@ -69,16 +69,23 @@ public enum MailFixtureCleanup {
             if (count message viewers) is 0 then make new message viewer
             set cleanupStage to 3
             set v to front message viewer
-            set selected mailboxes of v to {mailbox of m}
-            set cleanupStage to 4
-            set selected messages of v to {m}
             set index of window of v to 1
             activate
+            set selected mailboxes of v to {mailbox of m}
+            delay 0.3
+            set cleanupStage to 4
+            set selected messages of v to {m}
             set cleanupStage to 5
-            set chosen to selected messages of v
-            if (count chosen) is not 1 then error "Test message selection is not unique"
-            if subject of item 1 of chosen is not \(q(tag)) then error "Test message selection changed"
-            return (id of item 1 of chosen) as string
+            repeat 20 times
+                set chosen to selected messages of v
+                if (count chosen) is 1 then
+                    if (id of item 1 of chosen) is (id of m) and subject of item 1 of chosen is \(q(tag)) then return (id of item 1 of chosen) as string
+                end if
+                delay 0.1
+            end repeat
+            if (count chosen) is 0 then return "failure|6|-2700"
+            if (count chosen) is greater than 1 then return "failure|7|-2700"
+            return "failure|8|-2700"
             on error errorText number errorNumber
                 return "failure|" & cleanupStage & "|" & errorNumber
             end try
@@ -89,7 +96,7 @@ public enum MailFixtureCleanup {
             }
             if selected.hasPrefix("failure|") {
                 let parts = selected.split(separator: "|")
-                let steps = ["find the tagged test message", "read the tagged test message", "show the tagged mailbox", "select the tagged test message", "confirm the tagged test selection"]
+                let steps = ["find the tagged test message", "read the tagged test message", "show the tagged mailbox", "select the tagged test message", "confirm the tagged test selection", "select the test message in the empty viewer", "select only one test message", "confirm the selected test message identity"]
                 if parts.count == 3, let stage = Int(parts[1]), steps.indices.contains(stage - 1), let code = Int(parts[2]) { throw Failure(step: steps[stage - 1], cause: MailCommandFailure.script(code)) }
             }
             guard UInt64(selected) != nil else { throw MailCommandFailure.unconfirmed }

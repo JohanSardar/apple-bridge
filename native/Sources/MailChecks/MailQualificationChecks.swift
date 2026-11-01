@@ -87,6 +87,11 @@ func checkMailQualification() async throws {
     let unsafe = MailQualification(script: { body in body.contains("set chosen") ? "wrong" : "" }, removeSelected: { throw SourceFailure.corrupt })
     let refused = try await unsafe.run(scenario: "MAIL-CLEANUP", tag: "[ab-test] refused")
     try require(!refused["cleanup_passed"].bool && refused["cleanup_error"].string == MailCommandFailure.unconfirmed.localizedDescription)
+    for (stage, step) in [(6, "empty viewer"), (7, "only one test message"), (8, "test message identity")] {
+        let selectionFailure = MailQualification(script: { body in body.contains("set chosen to selected messages") ? "failure|\(stage)|-2700" : "" }, removeSelected: { throw SourceFailure.corrupt })
+        let proof = try await selectionFailure.run(scenario: "MAIL-CLEANUP", tag: "[ab-test] selection")
+        try require(!proof["cleanup_passed"].bool && proof["cleanup_error"].string.contains(step) && proof["cleanup_error_number"] == .number(-2700))
+    }
     let count = await failed.scripts().count
     do { _ = try await runner.run(scenario: "MAIL-CLEANUP", tag: "foreign"); throw SourceFailure.corrupt } catch SourceFailure.invalid {}
     try require(await failed.scripts().count == count)
