@@ -606,6 +606,8 @@ features:
     scenarios:
       - {id: RELAY-PASSTHROUGH, levels: [sim]}
       - {id: RELAY-ENROLL, levels: [sim]}
+      - {id: RELAY-ROTATE-GATED, levels: [sim]}
+      - {id: RELAY-TLS-SPLICE, levels: [sim]}
       - {id: RELAY-LIMITS, levels: [sim]}
       - {id: RELAY-STREAMS, levels: [sim]}
       - {id: RELAY-ACME, levels: [sim]}

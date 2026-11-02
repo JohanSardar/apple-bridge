@@ -45,12 +45,13 @@ type Credential struct {
 	Credential string `json:"credential"`
 }
 type Store struct {
-	mu         sync.Mutex
-	path       string
-	zone       string
-	defaults   Limits
-	devices    map[string]Device
-	challenges map[string]time.Time
+	mu            sync.Mutex
+	path          string
+	zone          string
+	defaults      Limits
+	devices       map[string]Device
+	challenges    map[string]time.Time
+	admissionFile string
 }
 
 func Open(path, zone string, defaults Limits) (*Store, error) {
@@ -144,6 +145,9 @@ func (s *Store) Enroll(in Enrollment) (Credential, error) {
 	key, e1 := base64.RawURLEncoding.DecodeString(in.PublicKey)
 	sig, e2 := base64.RawURLEncoding.DecodeString(in.Signature)
 	if !ok || time.Now().After(expires) || e1 != nil || e2 != nil || len(key) != ed25519.PublicKeySize || base64.RawURLEncoding.EncodeToString(key) != in.PublicKey || !ed25519.Verify(key, EnrollmentMessage(s.zone, in.Nonce), sig) {
+		return Credential{}, ErrDenied
+	}
+	if !s.admitted(in.PublicKey) {
 		return Credential{}, ErrDenied
 	}
 	host := ""

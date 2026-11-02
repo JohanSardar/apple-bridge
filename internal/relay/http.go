@@ -87,7 +87,7 @@ func (s *Server) Handler(admin string) http.Handler {
 		}
 		w.WriteHeader(204)
 	})
-	return mux
+	return admissionThrottle(mux)
 }
 func decode(w http.ResponseWriter, r *http.Request, out any) bool {
 	r.Body = http.MaxBytesReader(w, r.Body, 4096)
