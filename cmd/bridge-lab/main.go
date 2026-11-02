@@ -62,12 +62,36 @@ func run(ctx context.Context, args []string) error {
 			return fmt.Errorf("simapple paths required")
 		}
 		return simapple.Run(ctx, simapple.Config{Socket: *socket, SecretFile: *secret, Control: *control, LegacySources: *legacySources})
-	case "run":
+	case "run", "replica-matrix":
 		level := "sim"
+		if args[0] == "replica-matrix" {
+			level = "replica"
+		}
 		asJSON := false
+		selection := world.ImplementationSelection(ctx)
+		if args[0] == "replica-matrix" {
+			selection.Replica = "rust"
+		}
 		paths := []string{}
 		for i := 1; i < len(args); i++ {
 			switch args[i] {
+			case "--impl", "--rust-binary":
+				flagName := args[i]
+				i++
+				if i >= len(args) {
+					return fmt.Errorf("%s requires a value", flagName)
+				}
+				if flagName == "--rust-binary" {
+					selection.RustBinary = args[i]
+				} else {
+					parsed, err := world.ParseImplementations(args[i])
+					if err != nil {
+						return err
+					}
+					selection.Gateway, selection.Replica = parsed.Gateway, parsed.Replica
+				}
+			case "--local-replicas":
+				selection.LocalReplicas = true
 			case "--level":
 				i++
 				if i >= len(args) {
@@ -84,6 +108,7 @@ func run(ctx context.Context, args []string) error {
 				paths = append(paths, args[i])
 			}
 		}
+		ctx = world.WithImplementations(ctx, selection)
 		if len(paths) == 0 {
 			return fmt.Errorf("scenario paths required")
 		}
@@ -95,6 +120,9 @@ func run(ctx context.Context, args []string) error {
 				return agent.Mail(ctx, asJSON)
 			}
 			return agent.Suite(ctx, paths, asJSON)
+		}
+		if args[0] == "replica-matrix" {
+			return scenarios.ReplicaMatrix(ctx, paths, asJSON)
 		}
 		return scenarios.Suite(ctx, paths, level, asJSON)
 	}

@@ -64,3 +64,12 @@ rust-test:
 
 rust-ci: lint rust-test rust-lint
 	go test ./contracts/golden ./internal/frontdoor ./internal/iphone ./internal/web ./lab/scenarios -run Golden -count=1
+
+.PHONY: replica-matrix replica-matrix-go
+REPLICA_MATRIX_FLAGS ?= --local-replicas
+RUST_BRIDGE ?=
+replica-matrix:
+	RUST_BRIDGE="$(RUST_BRIDGE)" SCENARIOS="$(SCENARIOS)" packaging/dev/replica-matrix.sh
+
+replica-matrix-go:
+	go run ./cmd/bridge-lab replica-matrix $(SCENARIOS) --impl gateway=go,replica=go $(REPLICA_MATRIX_FLAGS)

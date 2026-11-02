@@ -49,23 +49,24 @@ type Latency struct {
 	Timeouts int     `json:"timeouts"`
 }
 type Evidence struct {
-	Impl           string             `json:"impl"`
-	HostTelemetry  map[string]string  `json:"host_telemetry,omitempty"`
-	HostConditions *HostConditions    `json:"host_conditions"`
-	Status         string             `json:"status,omitempty"`
-	RunID          string             `json:"run_id"`
-	NetworkPath    string             `json:"network_path,omitempty"`
-	Metrics        map[string]any     `json:"metrics,omitempty"`
-	Scenario       string             `json:"scenario"`
-	Level          string             `json:"level"`
-	Passed         bool               `json:"passed"`
-	GitSHA         string             `json:"git_sha"`
-	At             time.Time          `json:"at"`
-	Assertions     []Assertion        `json:"assertions"`
-	Latency        map[string]Latency `json:"latency"`
-	Hosts          []string           `json:"hosts"`
-	NativeTimings  []NativeTiming     `json:"native_timings,omitempty"`
-	Conditions     map[string]string  `json:"conditions,omitempty"`
+	Implementations world.Implementations `json:"implementations"`
+	Impl            string                `json:"impl"`
+	HostTelemetry   map[string]string     `json:"host_telemetry,omitempty"`
+	HostConditions  *HostConditions       `json:"host_conditions"`
+	Status          string                `json:"status,omitempty"`
+	RunID           string                `json:"run_id"`
+	NetworkPath     string                `json:"network_path,omitempty"`
+	Metrics         map[string]any        `json:"metrics,omitempty"`
+	Scenario        string                `json:"scenario"`
+	Level           string                `json:"level"`
+	Passed          bool                  `json:"passed"`
+	GitSHA          string                `json:"git_sha"`
+	At              time.Time             `json:"at"`
+	Assertions      []Assertion           `json:"assertions"`
+	Latency         map[string]Latency    `json:"latency"`
+	Hosts           []string              `json:"hosts"`
+	NativeTimings   []NativeTiming        `json:"native_timings,omitempty"`
+	Conditions      map[string]string     `json:"conditions,omitempty"`
 }
 
 type Seen struct {
@@ -216,6 +217,10 @@ func (w *watcher) observed(title string) (Seen, bool) {
 func (w *watcher) valid() bool { w.mu.Lock(); defer w.mu.Unlock(); return !w.invalid }
 
 func Load(paths []string) ([]Scenario, error) {
+	return loadLevel(paths, "")
+}
+
+func loadLevel(paths []string, level string) ([]Scenario, error) {
 	files := map[string]bool{}
 	for _, path := range paths {
 		info, err := os.Stat(path)
@@ -268,6 +273,9 @@ func Load(paths []string) ([]Scenario, error) {
 		}
 		if s.Level != "" && len(s.Levels) == 0 {
 			s.Levels = []string{s.Level}
+		}
+		if level != "" && !slices.Contains(s.Levels, level) {
+			continue
 		}
 		if err = validateScenario(s); err != nil {
 			return nil, fmt.Errorf("%s: %w", f, err)
@@ -1220,7 +1228,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 	if level != "sim" && level != "replica" && level != "real" && level != "web" {
 		return fmt.Errorf("level unsupported by tracer")
 	}
-	scenarios, err := Load(paths)
+	scenarios, err := loadLevel(paths, level)
 	if err != nil {
 		return err
 	}

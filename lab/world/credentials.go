@@ -66,7 +66,7 @@ func credentialLifecycle(ctx context.Context, store trust.SecretStore) (Credenti
 	return result, nil
 }
 func (w *World) Credentials() (CredentialResult, error) {
-	if w.Level != "replica" {
+	if w.Level != "replica" || ImplementationSelection(w.ctx).LocalReplicas {
 		return CredentialLifecycle(w.ctx, filepath.Join(w.Dir, "credentials"))
 	}
 	root, err := filepath.Abs("bin/bridge-lab-linux-amd64")
