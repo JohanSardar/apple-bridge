@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"os/exec"
 	"slices"
 	"strings"
 	"time"
@@ -60,7 +61,8 @@ func ReplicaMatrix(ctx context.Context, paths []string, asJSON bool) error {
 	if mixed.Gateway == "go" && mixed.Replica == "go" {
 		impl = "go"
 	}
-	e := Evidence{Scenario: "REPLICA-MIXED-CONVERGENCE", Level: "replica", RunID: contracts.NewID("matrix"), At: time.Now().UTC(), Implementations: mixed, Impl: impl, Metrics: map[string]any{}}
+	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
+	e := Evidence{GitSHA: strings.TrimSpace(string(sha)), Scenario: "REPLICA-MIXED-CONVERGENCE", Level: "replica", RunID: contracts.NewID("matrix"), At: time.Now().UTC(), Implementations: mixed, Impl: impl, Metrics: map[string]any{}}
 	w, err := world.New(bounded, "replica", 2, 100)
 	e.Assertions = append(e.Assertions, Assertion{Name: "selected_binaries_started", Passed: err == nil, Detail: fmt.Sprint(err)})
 	if err == nil {
