@@ -32,7 +32,12 @@ impl Frame {
             serde_json::from_slice(bytes).map_err(|_| ErrorCode::Invalid)?;
         let frame = Self { protocol, fields };
         let kind = frame.kind()?;
-        if bytes.len() > MAX_FRAME && (protocol != Protocol::Ipc || kind != "QueryResult") {
+        if bytes.len() > MAX_FRAME
+            && !matches!(
+                (protocol, kind.as_str()),
+                (Protocol::Ipc, "QueryResult") | (Protocol::Feed, "CommandResponse")
+            )
+        {
             return Err(ErrorCode::Capacity);
         }
         frame.order()?;
@@ -93,7 +98,10 @@ impl Frame {
         out.push(b'}');
         if out.len() > MAX_QUERY_FRAME
             || (out.len() > MAX_FRAME
-                && (self.protocol != Protocol::Ipc || self.kind()? != "QueryResult"))
+                && !matches!(
+                    (self.protocol, self.kind()?.as_str()),
+                    (Protocol::Ipc, "QueryResult") | (Protocol::Feed, "CommandResponse")
+                ))
         {
             return Err(ErrorCode::Capacity);
         }

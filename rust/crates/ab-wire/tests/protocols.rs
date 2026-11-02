@@ -125,6 +125,12 @@ fn reject_oversized_frames_and_malformed_blob_headers() -> Result {
         );
         assert!(Frame::from_json(Protocol::Feed, json.as_bytes()).is_err());
     }
+    let response = format!(
+        "{{\"t\":\"CommandResponse\",\"response\":{{\"result\":\"{}\"}}}}",
+        "a".repeat(framing::MAX_FRAME)
+    );
+    let response = Frame::from_json(Protocol::Feed, response.as_bytes())?;
+    assert!(response.encode_json()?.len() > framing::MAX_FRAME);
     let chunk = BlobChunk {
         digest: [42; 32],
         offset: 0x0102_0304_0506_0708,

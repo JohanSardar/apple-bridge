@@ -247,6 +247,13 @@ fn is_zero_u64(v: &u64) -> bool {
 }
 impl IpcFrame {
     pub fn encode(&self) -> Result<Vec<u8>, ErrorCode> {
+        if self
+            .result_json
+            .as_ref()
+            .is_some_and(|v| v.get().len() > 1 << 20)
+        {
+            return Err(ErrorCode::Capacity);
+        }
         let mode = if self.t == "QueryResult" {
             EscapeMode::NoHtml
         } else {
@@ -270,6 +277,21 @@ impl IpcFrame {
                 _ => &["t", "id"],
             };
             fields.retain(|k, _| allowed.contains(&k.as_str()));
+            let required: &[(&str, &str)] = match self.t.as_str() {
+                "Query" => &[("args", "null")],
+                "QueryResult" => &[("id", "\"\""), ("result_json", "null")],
+                "QueryError" => &[("id", "\"\""), ("code", "\"\"")],
+                _ => &[("id", "\"\"")],
+            };
+            for (key, value) in required {
+                if !fields.contains_key(*key) {
+                    fields.insert(
+                        (*key).into(),
+                        RawValue::from_string((*value).into()).map_err(|_| ErrorCode::Invalid)?,
+                    );
+                }
+            }
+
             if self.t == "QueryResult" && !fields.contains_key("blobs") {
                 fields.insert(
                     "blobs".into(),
