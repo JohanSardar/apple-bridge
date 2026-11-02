@@ -74,3 +74,11 @@ replica-matrix:
 
 replica-matrix-go:
 	go run ./cmd/bridge-lab replica-matrix $(SCENARIOS) --impl gateway=go,replica=go $(REPLICA_MATRIX_FLAGS)
+
+.PHONY: sim-parallel
+SIM_JOBS ?= $(if $(filter Darwin,$(shell uname -s)),1,4)
+SIM_TIMEOUT ?= 900
+SIM_OUTPUT ?= /tmp/ab-sim-parallel-$(shell date +%s)
+SIM_SELECT ?=
+sim-parallel:
+	python3 lab/testing/sim_parallel.py --parallel $(SIM_JOBS) --timeout $(SIM_TIMEOUT) --output $(SIM_OUTPUT) $(if $(SIM_SELECT),--select $(SIM_SELECT),)

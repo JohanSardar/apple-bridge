@@ -126,17 +126,9 @@ func BuildHelper(ctx context.Context, app string) error {
 }
 
 func Build(ctx context.Context, level string) error {
-	if ImplementationSelection(ctx).Prebuilt {
-		info, err := os.Stat("bin/bridge")
-		if err != nil {
-			return err
-		}
-		if !info.Mode().IsRegular() || info.Mode().Perm()&0111 == 0 {
-			return fmt.Errorf("prebuilt bin/bridge is not executable")
-		}
-		return nil
+	if ImplementationSelection(ctx).Prebuilt || prebuilt(ctx) {
+		return requireExecutable("bin/bridge")
 	}
-
 	if err := os.MkdirAll("bin", 0700); err != nil {
 		return err
 	}

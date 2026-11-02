@@ -23,6 +23,8 @@ func run(ctx context.Context, args []string) error {
 		return fmt.Errorf("expected run or simapple")
 	}
 	switch args[0] {
+	case "inventory":
+		return inventory(args[1:])
 	case "wire-checks":
 		if len(args) != 2 {
 			return contracts.ErrInvalid
@@ -104,6 +106,7 @@ func run(ctx context.Context, args []string) error {
 				}
 			case "--prebuilt":
 				selection.Prebuilt = true
+				ctx = world.WithPrebuilt(ctx)
 			case "--local-replicas":
 				selection.LocalReplicas = true
 			case "--level":
