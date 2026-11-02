@@ -18,7 +18,6 @@ export function createChatSurface() {
 export type ChatSurface = ReturnType<typeof createChatSurface>;
 export function ChatActionSurface(props: {
     surface: ChatSurface; actions: ChatActions; handles: Handles; onDeleted: (id: string) => void;
-    extraActions?: (chat: ChatSummary, anchor: HTMLElement, close: () => void) => JSX.Element
 }) {
     function Panel(panel: { value: NonNullable<ReturnType<ChatSurface['target']>> }) {
         const value = panel.value;
@@ -29,7 +28,6 @@ export function ChatActionSurface(props: {
                 (value.anchor.matches('a,button') ? value.anchor : value.anchor.querySelector<HTMLElement>('a,button'))?.focus({ preventScroll: true });
             else document.querySelector<HTMLElement>('.conversation-list [role=listbox]')?.focus({ preventScroll: true });
         };
-        const extras = value.confirm ? undefined : props.extraActions?.(value.chat, value.anchor, close);
         onMount(() => {
             dialog.showModal();
             if (!value.confirm) {
@@ -70,7 +68,7 @@ export function ChatActionSurface(props: {
                     }}>{read() ? s.markAsRead : s.markAsUnread}</button>
                 <button class="destructive" disabled={!props.actions.can('delete_chat', value.chat.chat.id)}
                     onClick={event => { if (event.isTrusted) props.surface.open(value.chat, value.anchor, true); }}>{s.deleteConversation}</button>
-                {extras}
+
                 <button onClick={close}>{s.closeAction}</button>
             </>}>
                 <h2>{s.deleteConversationTitle(conversationTitle(value.chat, props.handles))}</h2>
@@ -101,7 +99,6 @@ export function ChatActionSurface(props: {
 }
 export function SwipeChatRow(props: {
     chat: ChatSummary; actions: ChatActions; surface: ChatSurface; children: JSX.Element;
-    extraTrailing?: (chat: ChatSummary, anchor: HTMLElement, close: () => void) => JSX.Element
 }) {
     let root!: HTMLDivElement, origin: { id: number; x: number; y: number; width: number } | undefined, suppress = false;
     const [offset, setOffset] = createSignal(0);
@@ -161,7 +158,6 @@ export function SwipeChatRow(props: {
                     }}>{props.chat.unread_count > 0 ? s.readAction : s.unread}</button>
             }>
                 <div class="chat-swipe-trailing" ref={element => { trailing = element; resize.disconnect(); resize.observe(element); }}>
-                    {props.extraTrailing?.(props.chat, root, () => setOffset(0))}
                     <button class="destructive" disabled={!props.actions.can('delete_chat', props.chat.chat.id)}
                         onClick={() => { props.surface.open(props.chat, root, true); setOffset(0); }}>{s.deleteAction}</button>
                 </div>

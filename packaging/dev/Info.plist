@@ -18,6 +18,6 @@
 <key>NSMicrophoneUsageDescription</key><string>Apple Bridge requests access when you explicitly request this permission.</string>
 <key>NSSpeechRecognitionUsageDescription</key><string>Apple Bridge requests access when you explicitly request this permission.</string>
 <key>NSFocusStatusUsageDescription</key><string>Apple Bridge requests access when you explicitly request this permission.</string>
-<key>NSPhotoLibraryUsageDescription</key><string>Apple Bridge requests access when you explicitly request this permission.</string>
+
 <key>NSBluetoothAlwaysUsageDescription</key><string>Apple Bridge requests access when you explicitly request this permission.</string>
 </dict></plist>

@@ -48,16 +48,5 @@
   "messages.mark_read",
   "messages.mark_unread",
   "messages.delete_message",
-  "messages.delete_chat",
-  "messages.create_group",
-  "messages.rename_group",
-  "messages.add_member",
-  "messages.remove_member",
-  "messages.leave_group",
-  "messages.pin",
-  "messages.mute",
-  "messages.set_read_receipts",
-  "messages.recover_chat",
-  "messages.delete_chat_permanently",
-  "messages.keep_audio"
+  "messages.delete_chat"
 ]

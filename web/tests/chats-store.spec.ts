@@ -11,7 +11,7 @@ test('WEB-MSG-CHATS-STORE paged live chats, stable filter transport, unread tota
     await expect.poll(async()=>Number(await unread.textContent())).toBeGreaterThanOrEqual(270);
     const total=Number(await count.textContent()),beforeUnread=Number(await unread.textContent());
     expect(await page.locator('.fixture>p').evaluateAll(elements=>{const names=elements.map(element=>element.textContent);return names.indexOf('Conversation 009')<names.indexOf('Conversation 008');})).toBe(true);
-    await expect.poll(()=>new Set(frames.filter(frame=>frame.t==='sub'&&frame.view==='chats'&&!frame.args?.after&&['deleted','spam'].includes(frame.args?.filter)).map(frame=>frame.args.filter)).size).toBe(2);
+    await expect.poll(()=>new Set(frames.filter(frame=>frame.t==='sub'&&frame.view==='chats'&&!frame.args?.after&&['spam'].includes(frame.args?.filter)).map(frame=>frame.args.filter)).size).toBe(1);
     const transport=frames.filter(frame=>frame.t==='sub'&&frame.view==='chats').map(frame=>frame.id).sort();
     await page.getByLabel('Chat filter',{exact:true}).selectOption('unread');await expect.poll(async()=>Number(await count.textContent())).toBeLessThan(total);await expect.poll(async()=>Number(await count.textContent())).toBeGreaterThan(0);expect(frames.filter(frame=>frame.t==='sub'&&frame.view==='chats').map(frame=>frame.id).sort()).toEqual(transport);
     await page.getByLabel('Chat filter',{exact:true}).selectOption('known');await expect.poll(async()=>Number(await count.textContent())).toBeGreaterThan(0);expect(frames.filter(frame=>frame.t==='sub'&&frame.view==='chats').map(frame=>frame.id).sort()).toEqual(transport);

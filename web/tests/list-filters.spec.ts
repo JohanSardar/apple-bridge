@@ -2,12 +2,12 @@ import { expect, type Page } from '@playwright/test';
 import { test } from './list-session';
 import { control } from './session';
 import { mkdir } from 'node:fs/promises';
-const choices=[['All Messages','all','Maya Chen'],['Known Senders','known','Maya Chen'],['Unknown Senders','unknown','Unknown sender fixture'],['Unread','unread','Maya Chen'],['Recently Deleted','deleted','Deleted fixture'],['Spam','spam','Spam fixture']] as const;
+const choices=[['All Messages','all','Maya Chen'],['Known Senders','known','Maya Chen'],['Unknown Senders','unknown','Unknown sender fixture'],['Unread','unread','Maya Chen'],['Spam','spam','Spam fixture']] as const;
 async function choose(page:Page,label:string){await page.getByRole('button',{name:'Filters and Edit',exact:true}).click();await page.getByRole('menuitemradio',{name:label,exact:true}).click();await expect(page.locator('.conversation-list')).toHaveAttribute('data-filter',label);}
-test('WEB-MSG-FILTERS six filters keep stable server views',async({page,request})=>{
+test('WEB-MSG-FILTERS five filters keep stable server views',async({page,request})=>{
     await control(request,'/list-filters');const frames:any[]=[];page.on('websocket',socket=>socket.on('framesent',frame=>{try{frames.push(JSON.parse(String(frame.payload)));}catch{}}));
     await page.goto('/messages');const list=page.getByRole('listbox',{name:'Conversations'});await expect(list).toBeVisible();await expect.poll(async()=>Number(await list.locator('[aria-setsize]').first().getAttribute('aria-setsize'))).toBeGreaterThanOrEqual(540);
-    await expect.poll(()=>frames.filter(frame=>frame.t==='sub'&&frame.view==='chats'&&!frame.args?.after).map(frame=>frame.args.filter).sort()).toEqual(['all','deleted','spam']);
+    await expect.poll(()=>frames.filter(frame=>frame.t==='sub'&&frame.view==='chats'&&!frame.args?.after).map(frame=>frame.args.filter).sort()).toEqual(['all','spam']);
     const baseline=frames.filter(frame=>frame.t==='sub'&&frame.view==='chats').map(frame=>frame.id).sort();
     for(const [label,value,title] of choices){
         await choose(page,label);await expect(page.locator('.conversation-row').filter({hasText:title}).first()).toBeVisible();
@@ -19,7 +19,7 @@ test('WEB-MSG-FILTERS six filters keep stable server views',async({page,request}
 });
 test('WEB-MSG-FILTERS every filter has its own empty state',async({page,request},info)=>{
     await control(request,'/list-filters');await page.goto('/messages');await expect(page.getByRole('listbox',{name:'Conversations'})).toBeVisible();await control(request,'/list-empty');
-    for(const [label,empty] of [['All Messages','No Messages'],['Known Senders','No Messages from Known Senders'],['Unknown Senders','No Messages from Unknown Senders'],['Unread','No Unread Messages'],['Recently Deleted','No Recently Deleted Messages'],['Spam','No Spam']]){
+    for(const [label,empty] of [['All Messages','No Messages'],['Known Senders','No Messages from Known Senders'],['Unknown Senders','No Messages from Unknown Senders'],['Unread','No Unread Messages'],['Spam','No Spam']]){
         await choose(page,label);await expect(page.locator('.list-empty')).toHaveText(empty);await expect(page.locator('.conversation-row')).toHaveCount(0);if(label==='All Messages'){await mkdir('../lab/evidence/private/web',{recursive:true});await page.screenshot({path:`../lab/evidence/private/web/list-empty-${info.project.name}.png`});}
     }
 });

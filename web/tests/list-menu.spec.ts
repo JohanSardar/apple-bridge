@@ -26,6 +26,6 @@ test('WEB-MSG-FILTERS WEB-MSG-FILTERS-MENU menu pixels stay legible and focus fo
     const sample=(value:typeof normal)=>({contrast_min:value.contrast_min,samples:value.samples,regions:value.regions,fill_alpha:value.fill_alpha});
     const metrics={normal:sample(normal),no_backdrop:sample(noBlur),solid_fallback:sample(solid),backdrop_channel_transmission:transmission,bare_backdrop_difference:bareTransmission};
     await mkdir('../lab/evidence/web/metrics',{recursive:true});await writeFile(`../lab/evidence/web/metrics/WEB-MSG-FILTERS-contrast-${info.project.name}.json`,JSON.stringify(metrics,null,2)+'\n');
-    for(const sample of [normal,noBlur,solid]){expect(sample.regions).toBe(6);expect(sample.samples).toBeGreaterThan(1000);expect(sample.contrast_min).toBeGreaterThanOrEqual(4.5);}
+    for(const sample of [normal,noBlur,solid]){expect(sample.regions).toBe(5);expect(sample.samples).toBeGreaterThan(1000);expect(sample.contrast_min).toBeGreaterThanOrEqual(4.5);}
     expect(bareTransmission).toBeGreaterThanOrEqual(250);expect(normal.fill_alpha).toBeGreaterThanOrEqual(.92);expect(transmission).toBeLessThanOrEqual(24);
 });

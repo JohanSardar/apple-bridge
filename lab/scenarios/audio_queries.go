@@ -38,7 +38,7 @@ func runAudioQueries(ctx context.Context, s Scenario, level string) (e Evidence)
 	}
 	defer w.Close()
 	endpoint := w.Gateway
-	endpoint.Token, err = w.ScopedToken(endpoint, "speech:read,speech:write,capture:write,ai:read,audio:read,system:read")
+	endpoint.Token, err = w.ScopedToken(endpoint, "speech:read,speech:write,capture:write,audio:read,system:read")
 	add("scopes_granted", err == nil)
 	if err != nil {
 		return
@@ -77,41 +77,7 @@ func runAudioQueries(ctx context.Context, s Scenario, level string) (e Evidence)
 		}
 	}
 
-	if s.ID == "AUD-SIM" {
-		for _, op := range []string{"ai.local", "ai.rewrite"} {
-			args := json.RawMessage(`{"prompt":"Bridge fixture"}`)
-			if op == "ai.rewrite" {
-				args = json.RawMessage(`{"text":"Bridge fixture","style":"formal"}`)
-			}
-			var output contracts.QueryResult
-			callErr := client.Call(ctx, op, contracts.Query{Args: args, DeadlineMS: 1000}, &output)
-			var value struct {
-				Status string `json:"status"`
-				Reason string `json:"reason"`
-			}
-			decodeErr := json.Unmarshal(output.ResultJSON, &value)
-			add("sim_model_availability_explicit", callErr == nil && decodeErr == nil && value.Status == "unavailable" && value.Reason != "")
-		}
-	}
 	var out contracts.QueryResult
-	if s.ID == "AI-LOCAL" {
-		err = client.Call(ctx, "ai.local", contracts.Query{Args: json.RawMessage(`{"prompt":"Return a JSON object with a single key named count and integer value 3.","schema":{"type":"object","properties":{"count":{"type":"integer"}},"required":["count"],"additionalProperties":false}}`), DeadlineMS: 60000}, &out)
-		var result struct {
-			Status string `json:"status"`
-			Reason string `json:"reason"`
-			Text   string `json:"text"`
-		}
-		decode := json.Unmarshal(out.ResultJSON, &result)
-		valid := result.Status == "unavailable" && result.Reason != ""
-		if result.Status == "available" {
-			var fixed struct {
-				Count int `json:"count"`
-			}
-			valid = contracts.DecodeInput([]byte(result.Text), &fixed) == nil && fixed.Count == 3
-		}
-		add("fixed_schema_or_explicit_unavailability", err == nil && decode == nil && valid)
-		return
-	}
 	err = client.Call(ctx, "speech.synthesize", contracts.Query{Args: json.RawMessage(`{"text":"Bridge fixture"}`), DeadlineMS: 60000}, &out)
 	var audio struct {
 		Data  string `json:"data_base64"`

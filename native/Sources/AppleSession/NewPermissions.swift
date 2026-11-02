@@ -5,7 +5,6 @@ import AVFoundation
 import CoreGraphics
 import Speech
 import Intents
-import Photos
 import CoreBluetooth
 import UserNotifications
 import AppKit
@@ -13,8 +12,8 @@ import Carbon
 
 @MainActor
 public enum NewPermissions {
-    public static let automation = ["automation_mail": "com.apple.mail", "automation_music": "com.apple.Music", "automation_safari": "com.apple.Safari", "automation_shortcuts_events": "com.apple.shortcuts.events"]
-    public static let names = ["location", "camera", "microphone", "screen_recording", "speech_recognition", "focus", "photos", "bluetooth", "notifications"] + automation.keys.sorted()
+    public static let automation = ["automation_mail": "com.apple.mail", "automation_safari": "com.apple.Safari", "automation_shortcuts_events": "com.apple.shortcuts.events"]
+    public static let names = ["location", "camera", "microphone", "screen_recording", "speech_recognition", "focus", "bluetooth", "notifications"] + automation.keys.sorted()
 
     public static func status() async -> [String: String] {
         var result = Dictionary(uniqueKeysWithValues: names.map { ($0, "unknown") })
@@ -25,7 +24,6 @@ public enum NewPermissions {
         result["camera"] = state(AVCaptureDevice.authorizationStatus(for: .video).rawValue, authorized: [3])
         result["microphone"] = state(AVCaptureDevice.authorizationStatus(for: .audio).rawValue, authorized: [3])
         result["speech_recognition"] = state(SFSpeechRecognizer.authorizationStatus().rawValue, authorized: [3])
-        result["photos"] = state(PHPhotoLibrary.authorizationStatus(for: .readWrite).rawValue, authorized: [3, 4])
         result["bluetooth"] = state(CBManager.authorization.rawValue, authorized: [3])
         result["focus"] = state(INFocusStatusCenter.default.authorizationStatus.rawValue, authorized: [3])
         result["screen_recording"] = CGPreflightScreenCaptureAccess() ? "authorized" : "unknown"
@@ -125,8 +123,6 @@ public enum NewPermissions {
             }
         case "focus":
             try await call("focus", adapters: adapters) { _ = await INFocusStatusCenter.default.requestAuthorization() }
-        case "photos":
-            try await call("photos", adapters: adapters) { _ = await PHPhotoLibrary.requestAuthorization(for: .readWrite) }
         case "bluetooth":
             try await call("bluetooth", adapters: adapters) {
                 bluetooth = CBCentralManager(delegate: nil, queue: nil, options: [CBCentralManagerOptionShowPowerAlertKey: false])

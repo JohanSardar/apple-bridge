@@ -1,5 +1,0 @@
-id: MUS-SIM
-feature: music.catalog
-levels: [sim]
-when:
-  - queries: {}

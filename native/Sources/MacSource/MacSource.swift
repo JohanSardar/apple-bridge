@@ -22,7 +22,7 @@ public final class MacSource: Source {
     public func open() async -> SourceReadiness {
         var missing: [JSON] = [.string("Night Shift has no supported public API"), .string("SSID requires Location authorization")]
         if NSPasteboard.general.accessBehavior != .alwaysAllow { missing.append(.string("Clipboard requires Always Allow in Paste from Other Apps")) }
-        return SourceReadiness(state: "ready", coverage: .object(["fields": .string("partial"), "missing": .array(missing)]), capabilities: ["mac.set_volume", "mac.set_mute", "mac.set_output_device", "mac.set_appearance", "mac.launch_app", "mac.activate_app", "mac.quit_app", "mac.keep_awake", "mac.clipboard_write", "mac.clipboard_read", "mac.notify", "mac.open_settings", "mac.set_wallpaper", "mac.network_check", "mac.bluetooth_devices", "mac.time_machine_status", "mac.recognize_song", "mac.iwork_export"])
+        return SourceReadiness(state: "ready", coverage: .object(["fields": .string("partial"), "missing": .array(missing)]), capabilities: ["mac.set_volume", "mac.set_mute", "mac.set_appearance", "mac.launch_app", "mac.activate_app", "mac.quit_app", "mac.keep_awake", "mac.clipboard_write", "mac.clipboard_read", "mac.notify", "mac.open_settings", "mac.set_wallpaper", "mac.network_check", "mac.bluetooth_devices", "mac.time_machine_status", "mac.recognize_song", "mac.iwork_export"])
     }
     private func power() -> JSON {
         var value: [String: JSON] = ["source": .string("unknown"), "charging": .bool(false), "low_power_mode": .bool(ProcessInfo.processInfo.isLowPowerModeEnabled), "keep_awake_held": .bool(false)]
@@ -250,13 +250,6 @@ public final class MacSource: Source {
             let result = try script("output muted of (get volume settings)")
             guard (result == "true") == muted else { throw SourceFailure.conflict }
             readback = .bool(muted)
-        case "mac.set_output_device":
-            guard var device = UInt32(args["device"].string), try audio().contains(where: { $0.0 == String(device) && $0.1["output"].bool }) else { throw SourceFailure.invalid }
-            var address = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyDefaultOutputDevice, mScope: kAudioObjectPropertyScopeGlobal, mElement: 0)
-            guard AudioObjectSetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, 4, &device) == noErr else { throw SourceFailure.unavailable }
-            var actual: UInt32 = 0; var count: UInt32 = 4
-            guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &count, &actual) == noErr, actual == device else { throw SourceFailure.conflict }
-            readback = .string(String(actual))
         case "mac.set_appearance":
             if NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.systemevents").isEmpty {
                 guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.systemevents") else { throw SourceFailure.unavailable }

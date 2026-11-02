@@ -376,18 +376,11 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "APP-DEVICE-SIM" || s.ID == "APP-DEVICE-REAL" {
 		return runIPhoneCapability(ctx, s, level, "ios/Capabilities/DeviceContext/DeviceModel.swift", "lab/ios/DeviceProof.swift")
 	}
-	if s.ID == "APP-WALLET-SIM" {
-		return runIPhoneApproval(ctx, s, level)
-	}
-
 	if s.ID == "APP-MOTION-SIM" || s.ID == "APP-MOTION-REAL" {
 		return runIPhoneCapability(ctx, s, level, "ios/Capabilities/Motion/MotionModel.swift", "lab/ios/MotionProof.swift")
 	}
 	if s.Feature == "iphone.alarms" {
 		return runIPhoneAlarm(ctx, s, level)
-	}
-	if s.ID == "APP-EXTRAS-SIM" {
-		return runIPhoneExtras(ctx, s, level)
 	}
 	if s.Feature == "iphone.screentime" {
 		return runIPhoneScreenTime(ctx, s, level)
@@ -432,9 +425,6 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "audio.queries" {
 		return runAudioQueries(ctx, s, level)
 	}
-	if s.Feature == "music.catalog" {
-		return runMusicCatalog(ctx, s, level)
-	}
 	if s.Feature == "capture.commands" {
 		return runCapture(ctx, s, level)
 	}
@@ -447,9 +437,6 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "core.permissions" {
 		return runPermissionStatus(ctx, s, level)
 	}
-	if s.Feature == "weather.pack" {
-		return runWeatherPack(ctx, s, level)
-	}
 	if s.Feature == "helper.siri_intents" {
 		return runSiriIntents(ctx, s, level)
 	}
@@ -461,9 +448,6 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	}
 	if s.Feature == "files.capture" || s.Feature == "files.commands" || s.Feature == "files.transform" {
 		return runFiles(ctx, s, level)
-	}
-	if s.Feature == "photos.capture" || s.Feature == "photos.commands" {
-		return runPhotos(ctx, s, level)
 	}
 	if s.Feature == "shortcuts.actions" {
 		return runActions(ctx, s, level)
@@ -491,9 +475,6 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	}
 	if s.ID == "HELPER-RELEASE-COMMANDS" {
 		return runHelperReleaseCommands(ctx, s, level)
-	}
-	if s.ID == "SAF-COMMANDS" || s.ID == "SAF-TABS-REAL" || s.ID == "SAF-READINGLIST-REAL" {
-		return runSafariCommands(ctx, s, level)
 	}
 	if s.ID == "SAF-CAPTURE" || s.ID == "SAF-IDLE" || s.ID == "SAF-HISTORY-REAL" || s.ID == "SAF-BOOKMARKS-REAL" {
 		return runSafariCapture(ctx, s, level)
@@ -559,9 +540,6 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	}
 	if s.ID == "WEB-RM-REMINDERS-DEMO" {
 		return runRemindersDemo(ctx, s, level)
-	}
-	if s.ID == "WEB-CAL-PARITY" && level != "web" {
-		return runCalendarParity(ctx, s, level)
 	}
 	if s.ID == "WEB-REM-PARITY" && level != "web" {
 		return runRemindersSections(ctx, level, Evidence{RunID: contracts.NewID("reminders-parity"), Scenario: s.ID, Level: level, At: time.Now().UTC()})
@@ -641,10 +619,7 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "WEB-SOURCES-STATUS" || s.ID == "WEB-COMMAND-RESOLVE" {
 		return runWebServer(ctx, s, level)
 	}
-	if s.ID == "MSG-PINS" || s.ID == "MSG-MUTE" || s.ID == "MSG-READ-RECEIPTS" || s.ID == "MSG-RECENTLY-DELETED" {
-		return runMessagesParity(ctx, s, level)
-	}
-	if s.ID == "MSG-OWNER-TOKEN-SELFCHAT" || s.ID == "MSG-SEND-LATER" || s.ID == "MSG-SEND-EFFECT" || s.ID == "MSG-FORMATTING-SEND" || s.ID == "MSG-MENTION-SEND" || s.ID == "MSG-AUDIO-MESSAGE" || s.ID == "MSG-SEND-VARIANTS" || s.ID == "MSG-SELFTEST" || s.ID == "MSG-RESEND" || s.ID == "MSG-READSTATE-REAL" || s.ID == "MSG-DELETE-REAL" || s.ID == "MSG-COMMAND-OBSERVED-IDS" || s.ID == "MSG-FAILED-OBSERVED-IDS" || s.ID == "MSG-COMMAND-PARTS" {
+	if s.ID == "MSG-OWNER-TOKEN-SELFCHAT" || s.ID == "MSG-SELFTEST" || s.ID == "MSG-RESEND" || s.ID == "MSG-READSTATE-REAL" || s.ID == "MSG-DELETE-REAL" || s.ID == "MSG-COMMAND-OBSERVED-IDS" || s.ID == "MSG-FAILED-OBSERVED-IDS" || s.ID == "MSG-COMMAND-PARTS" {
 		return runMessagesCommands(ctx, s, level)
 	}
 	if s.ID == "MSG-MEDIA-CLEANUP" {
@@ -680,7 +655,7 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "recordings.read" {
 		return runRecordings(ctx, s, level)
 	}
-	if s.Feature == "phone.read" || s.Feature == "phone.dial" {
+	if s.Feature == "phone.read" {
 		return runPhone(ctx, s, level)
 	}
 	if s.Feature == "web.frontdoor" || s.Feature == "web.agents" {
@@ -1294,10 +1269,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		if s.Feature == "vision.queries" && level == "real" {
 			duration = 20 * time.Minute
 		}
-		if s.Feature == "photos.capture" || s.Feature == "photos.commands" {
-			duration = 30 * time.Minute
-		}
-		if s.Feature == "phone.read" || s.Feature == "phone.dial" || s.Feature == "recordings.read" {
+		if s.Feature == "phone.read" || s.Feature == "recordings.read" {
 			duration = 45 * time.Minute
 		}
 		if s.Feature == "maps.queries" && level == "real" {
@@ -1333,10 +1305,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		if s.Feature == "web.readmodels" || s.Feature == "web.messages.read" {
 			duration = 15 * time.Minute
 		}
-		if level == "real" && slices.Contains([]string{"MSG-PINS", "MSG-MUTE", "MSG-READ-RECEIPTS", "MSG-RECENTLY-DELETED"}, s.ID) {
-			duration = 8 * time.Minute
-		}
-		if level == "real" && (s.Feature == "messages.actions" || s.Feature == "messages.groups" || s.Feature == "web.media") {
+		if level == "real" && (s.Feature == "messages.actions" || s.Feature == "web.media") {
 			duration = 8 * time.Minute
 		}
 		if (strings.HasPrefix(s.ID, "CAL-") || s.ID == "WEB-CAL-WRITE") && level != "sim" {
@@ -1360,7 +1329,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		if level == "web" && s.Web != nil {
 			duration = time.Duration(max(1, len(s.Web.Browsers)*len(s.Web.Themes)*len(s.Web.Layouts))) * webRunBudget(s)
 		}
-		if (strings.HasPrefix(s.ID, "MAC-") || s.ID == "MUS-IDLE") && level == "real" {
+		if (strings.HasPrefix(s.ID, "MAC-")) && level == "real" {
 			duration = 45 * time.Minute
 		}
 		if level == "sim" && slices.Contains([]string{"MSG-DECODE", "MSG-DECODE-BALLOON", "MSG-DECODE-FORMATTING", "MSG-READ-RICH-FIELDS", "MSG-DELETE-VISIBILITY", "MSG-WATCHER-REARM", "MSG-MEDIA-CLEANUP"}, s.ID) {

@@ -2,13 +2,9 @@
 import PackageDescription
 
 let sourceTargets: [Target] = [
-    .target(name: "WeatherSource", dependencies: ["SourceSupport"]),
     .target(name: "FocusSource", dependencies: ["SourceSupport", "ShortcutsSource"]),
-    .target(name: "MusicSource", dependencies: ["SourceSupport"]),
-    .target(name: "PhotosSource", dependencies: ["SourceSupport"]),
     .target(name: "CaptureSource", dependencies: ["SourceSupport", "SpeechSource"]),
     .target(name: "SpeechSource", dependencies: ["SourceSupport"]),
-    .target(name: "AISource", dependencies: ["SourceSupport"]),
     .target(name: "AudioSource", dependencies: ["SourceSupport"]),
     .target(name: "MapsSource", dependencies: ["SourceSupport"]),
     .target(name: "MacSource", dependencies: ["SourceSupport"]),
@@ -35,10 +31,9 @@ let package = Package(
     products: [.executable(name: "AppleBridgeHelper", targets: ["AppleBridgeHelper"])],
     targets: sourceTargets + [
         .target(name: "SourceSupport"),
-        .executableTarget(name: "MusicChecks", dependencies: ["MusicSource", "SourceSupport"]),
+        .executableTarget(name: "MessagesSafetyChecks", dependencies: ["MessagesSource", "SourceSupport"]),
         .executableTarget(name: "FocusChecks", dependencies: ["FocusSource", "SourceSupport"]),
         .executableTarget(name: "CaptureChecks", dependencies: ["CaptureSource", "MacSource", "SourceSupport"]),
-        .executableTarget(name: "PhotosChecks", dependencies: ["PhotosSource", "SourceSupport"]),
         .executableTarget(name: "MailChecks", dependencies: ["MailSource", "SourceSupport"]),
         .executableTarget(name: "FilesChecks", dependencies: ["FilesSource", "SourceSupport"]),
         .executableTarget(name: "RecordingsChecks", dependencies: ["VoiceMemosSource", "VoicemailSource", "SourceSupport"]),
@@ -58,7 +53,6 @@ let package = Package(
         .executableTarget(name: "UsageChecks", dependencies: ["Decoders", "UsageSource", "SourceSupport"]),
         .executableTarget(name: "NotesDecoderChecks", dependencies: ["Decoders", "NotesSource", "SourceSupport"]),
         .executableTarget(name: "DecoderChecks", dependencies: ["Decoders"]),
-        .executableTarget(name: "MessagesVariantChecks", dependencies: ["MessagesSource", "SourceSupport"]),
         .executableTarget(name: "MessagesCaptureChecks", dependencies: ["MessagesSource", "SourceSupport", "MediaDerivatives"]),
         .executableTarget(name: "MessagesBench", dependencies: ["MessagesSource", "SourceSupport"]),
         .target(name: "AppleSession", dependencies: sourceTargets.map { .target(name: $0.name) } + ["RemindersStore", "AgendaGate", "SourceSupport"]),

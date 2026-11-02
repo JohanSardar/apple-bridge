@@ -5,7 +5,7 @@ import ApplicationServices
 import SourceSupport
 
 public enum MessagesAction: String, Sendable {
-    case send, reply, react, edit, unsend, markRead = "mark_read", markUnread = "mark_unread", deleteMessage = "delete_message", deleteChat = "delete_chat", createGroup = "create_group", renameGroup = "rename_group", addMember = "add_member", removeMember = "remove_member", leaveGroup = "leave_group"
+    case send, reply, react, edit, unsend, markRead = "mark_read", markUnread = "mark_unread", deleteMessage = "delete_message", deleteChat = "delete_chat"
     public init(operation: String) throws {
         guard let value = Self(rawValue: String(operation.dropFirst("messages.".count))) else { throw SourceFailure.invalid }
         self = value
@@ -243,16 +243,16 @@ enum MessagesAccessibility {
         try openMessage(prepared.nativeState["message_guid"].string, settle: 0.5, resetEditor: false)
         try validateConversation(prepared)
         let session = try uiSession()
-        let menus = MessagesVariantUI.find(session.root, role: kAXMenuBarItemRole, name: "Conversation")
+        let menus = MessagesAX.find(session.root, role: kAXMenuBarItemRole, name: "Conversation")
         guard menus.count == 1 else { throw MessagesUIFailure.menuUnavailable }
         try session.fence()
-        try MessagesVariantUI.press(menus[0])
+        try MessagesAX.press(menus[0])
         var menuOpen = true
         defer { if menuOpen { try? session.press(MessagesUISession.escape) } }
         let action: String = try MessagesUIActions.resolve(until: Date().addingTimeInterval(3), wait: {
             RunLoop.current.run(until: Date().addingTimeInterval(0.1))
         }, attempt: {
-            let items = MessagesVariantUI.find(menus[0], role: kAXMenuItemRole)
+            let items = MessagesAX.find(menus[0], role: kAXMenuItemRole)
             let titles = items.map { item in
                 let title = value(item, kAXTitleAttribute)
                 return title.isEmpty ? value(item, kAXDescriptionAttribute) : title
@@ -261,10 +261,10 @@ enum MessagesAccessibility {
             return action
         })
         if !action.isEmpty {
-            let items = MessagesVariantUI.find(menus[0], role: kAXMenuItemRole, name: action)
+            let items = MessagesAX.find(menus[0], role: kAXMenuItemRole, name: action)
             guard items.count == 1 else { throw MessagesUIFailure.menuUnavailable }
             try session.fence()
-            try MessagesVariantUI.press(items[0])
+            try MessagesAX.press(items[0])
             menuOpen = false
         }
         return .object(["target_verified": .bool(true)])
@@ -427,39 +427,6 @@ enum MessagesAccessibility {
               tag.isEmpty || text.contains(tag) else { return false }
         return try session.clear(field, value: textValue)
     }
-    static func createGroup(_ args: JSON) throws {
-        let handles = args["handles"].array.map(\.string)
-        var components = URLComponents()
-        components.scheme = "imessage"
-        components.path = "open"
-        components.queryItems = [URLQueryItem(name: "addresses", value: handles.joined(separator: ","))]
-        guard let url = components.url else { throw MessagesUIFailure.navigationUnavailable }
-        MessagesUISession.activate()
-        _ = try resetTaggedEditor("")
-        try MessagesNavigation.open(url)
-        RunLoop.current.run(until: Date().addingTimeInterval(3))
-        let session = try uiSession(), root = session.root
-        var budget = 4000
-        let recipients = matching(root, budget: &budget) { value($0, kAXRoleAttribute) == kAXPopUpButtonRole }
-        let descriptions = recipients.map { value($0, kAXDescriptionAttribute) }
-        guard budget > 0, recipients.count == handles.count, Set(handles).count == handles.count, handles.allSatisfy({ handle in
-            descriptions.filter { MessagesParityFixture.recipientMatches($0, handle: handle) }.count == 1
-        }) else { throw MessagesUIFailure.recipientMismatch }
-        budget = 4000
-        let fields = matching(root, budget: &budget) { value($0, kAXIdentifierAttribute) == "messageBodyField" }
-        guard fields.count == 1 else { throw MessagesUIFailure.composerUnavailable }
-        guard textValue(fields[0]).isEmpty else { throw MessagesUIFailure.draftPresent }
-        let placeholder = value(fields[0], kAXPlaceholderValueAttribute)
-        guard placeholder.contains(args["service"].string) else { throw MessagesUIFailure.wrongService }
-        try session.type(args["text"].string, into: fields[0], value: textValue)
-        budget = 4000
-        let finalRecipients = matching(root, budget: &budget) { value($0, kAXRoleAttribute) == kAXPopUpButtonRole }
-        let finalDescriptions = finalRecipients.map { value($0, kAXDescriptionAttribute) }
-        guard budget > 0, finalRecipients.count == handles.count, handles.allSatisfy({ handle in
-            finalDescriptions.filter { MessagesParityFixture.recipientMatches($0, handle: handle) }.count == 1
-        }), session.focused(fields[0]), textValue(fields[0]) == args["text"].string else { throw MessagesUIFailure.recipientMismatch }
-        try session.press(MessagesUISession.enter)
-    }
     static func perform(_ prepared: Prepared) throws -> JSON {
         let action = try MessagesAction(operation: prepared.action["op"].string)
         let args = prepared.action["messages"]
@@ -480,10 +447,6 @@ enum MessagesAccessibility {
         case .markRead: menu = "Mark as Read"
         case .markUnread: menu = "Mark as Unread"
         case .deleteMessage, .deleteChat: menu = "Delete…"
-        case .renameGroup: menu = "Change Group Name"
-        case .addMember: menu = "Add Member"
-        case .removeMember: menu = "Remove from Conversation"
-        case .leaveGroup: menu = "Leave this Conversation"
         default: throw SourceFailure.capabilityUnproven
         }
         try session.fence()
@@ -516,8 +479,6 @@ enum MessagesAccessibility {
             }
             RunLoop.current.run(until: Date().addingTimeInterval(0.25))
             _ = try acknowledgeDeletedInfo()
-        case .renameGroup: try replace(session, text: args["name"].string); try session.press(MessagesUISession.enter)
-        case .addMember: try replace(session, text: args["handle"].string); try session.press(MessagesUISession.enter)
         default: break
         }
         let after = snapshot(root, prepared: prepared)

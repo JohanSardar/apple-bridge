@@ -131,7 +131,7 @@ func macRealCommands(ctx context.Context, s Scenario, client scripted.Client, ad
 }
 
 func macCommandSchemas(add func(string, bool)) {
-	expected := map[string]string{"mac.set_volume": "volume", "mac.set_mute": "muted", "mac.set_output_device": "device", "mac.set_appearance": "appearance", "mac.launch_app": "bundle_id", "mac.activate_app": "bundle_id", "mac.quit_app": "bundle_id", "mac.keep_awake": "on", "mac.clipboard_write": "text"}
+	expected := map[string]string{"mac.set_volume": "volume", "mac.set_mute": "muted", "mac.set_appearance": "appearance", "mac.launch_app": "bundle_id", "mac.activate_app": "bundle_id", "mac.quit_app": "bundle_id", "mac.keep_awake": "on", "mac.clipboard_write": "text"}
 	for _, descriptor := range contracts.MacDescriptors() {
 		schema := contracts.OperationSchema(descriptor)
 		args := schema["properties"].(map[string]any)["args"].(map[string]any)

@@ -24,7 +24,7 @@ public struct MessagesContentBaseline: Sendable {
         guard MessagesSelfTestIsolation.isSelfChat(peers, own: try MessagesSelfTestIsolation.accountHandles(database: MessagesDatabase())) else { throw SourceFailure.invalid }
         guard try reader.query("SELECT 1 FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? AND m.is_from_me=0 AND m.is_read=0 AND COALESCE(m.associated_message_type,0)=0 AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=m.ROWID) LIMIT 1", [chat]).isEmpty else { throw MessagesSelfTestBaselineFailure.unreadMessages }
         let maximum = try reader.maximum()
-        return MessagesContentBaseline(chat: chat, lastMessageROWID: maximum, messagesDigest: try MessagesSelfTestBaseline.digest(chat, through: maximum), preferencesDigest: try preferenceDigest(MessagesParity.properties(chat)), pins: try MessagesPins.read())
+        return MessagesContentBaseline(chat: chat, lastMessageROWID: maximum, messagesDigest: try MessagesSelfTestBaseline.digest(chat, through: maximum), preferencesDigest: try preferenceDigest(MessagesBaselineProperties.properties(chat)), pins: try MessagesPins.read())
     }
 
     public static func preferenceDigest(_ properties: [String: Any]) throws -> String {
@@ -41,20 +41,11 @@ public struct MessagesContentBaseline: Sendable {
     }
 
     public func restoreAndVerify() throws -> Bool {
-        try MessagesSelfTestBaseline.digest(chat, through: lastMessageROWID) == messagesDigest && Self.preferenceDigest(MessagesParity.properties(chat)) == preferencesDigest && MessagesPins.read() == pins
+        try MessagesSelfTestBaseline.digest(chat, through: lastMessageROWID) == messagesDigest && Self.preferenceDigest(MessagesBaselineProperties.properties(chat)) == preferencesDigest && MessagesPins.read() == pins
     }
 }
 
-public struct MessagesSelfTestBaseline: Sendable {
-    public let chat: String
-    public let lastMessageROWID: Int64
-    private let pins: [String]
-    private let muted: Bool
-    private let receipts: Bool
-    private let receiptsSetting: String
-    private let messagesDigest: String
-
-    static func reader() throws -> MessagesReader {
+enum MessagesSelfTestBaseline {    static func reader() throws -> MessagesReader {
         try MessagesReader(path: FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/chat.db").path)
     }
 
@@ -80,58 +71,4 @@ public struct MessagesSelfTestBaseline: Sendable {
         return BodyDigest.hash(try JSONSerialization.data(withJSONObject: values, options: [.sortedKeys]))
     }
 
-    static func receiptSetting(_ chat: String) throws -> String {
-        guard let value = try MessagesParity.properties(chat)["EnableReadReceiptForChat"] as? NSNumber else { return "default" }
-        return value.boolValue ? "on" : "off"
-    }
-
-    @UIActor
-    public static func capture(_ chat: String) throws -> MessagesSelfTestBaseline {
-        var checkpoints: [String: Any] = ["capture_started": true]
-        func checkpoint(_ name: String, _ value: Any = true) {
-            checkpoints[name] = value
-            try? PrivateReport.write(checkpoints, to: PrivateReport.directory.appendingPathComponent("messages-baseline-diagnostic.json"))
-        }
-        checkpoint("capture_started")
-        let reader = try reader()
-        guard try reader.query("SELECT 1 FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? AND m.is_from_me=0 AND m.is_read=0 AND COALESCE(m.associated_message_type,0)=0 AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=m.ROWID) LIMIT 1", [chat]).isEmpty else { throw MessagesSelfTestBaselineFailure.unreadMessages }
-        checkpoint("unread_preflight_passed")
-        let last = try reader.maximum()
-        let digest = try digest(chat, through: last)
-        let prepared = try target(chat)
-        checkpoint("target_resolved")
-        try MessagesAccessibility.openMessage(prepared.nativeState["message_guid"].string, settle: 0.5, resetEditor: false)
-        checkpoint("navigation_completed")
-        let (session, titles) = try MessagesParity.menu(prepared)
-        checkpoint("conversation_menu_count", titles.count)
-        try MessagesParity.dismiss(session)
-        checkpoint("conversation_menu_dismissed")
-        guard titles.contains("Show Alerts") != titles.contains("Hide Alerts") else { throw SourceFailure.capabilityUnproven }
-        checkpoint("alert_state_verified")
-        let (receiptSession, _, receiptValue) = try MessagesParity.receiptControl(prepared)
-        checkpoint("receipts_control_verified")
-        try MessagesParity.dismiss(receiptSession)
-        checkpoint("capture_completed")
-        return MessagesSelfTestBaseline(chat: chat, lastMessageROWID: last, pins: try MessagesPins.read(), muted: titles.contains("Show Alerts"), receipts: receiptValue, receiptsSetting: try receiptSetting(chat), messagesDigest: digest)
-    }
-
-    @UIActor
-    public func restoreAndVerify() throws -> Bool {
-        let prepared = try Self.target(chat)
-        let (session, titles) = try MessagesParity.menu(prepared)
-        try MessagesParity.dismiss(session)
-        guard titles.contains("Show Alerts") != titles.contains("Hide Alerts") else { throw SourceFailure.conflict }
-        if titles.contains("Show Alerts") != muted { try MessagesParity.mute(prepared, value: muted) }
-        let (receiptSession, _, current) = try MessagesParity.receiptControl(prepared)
-        try MessagesParity.dismiss(receiptSession)
-        if current != receipts { try MessagesParity.receipts(prepared, value: receipts) }
-        let identifier = try Self.reader().query("SELECT chat_identifier FROM chat WHERE guid=?", [chat]).first?["chat_identifier"] ?? ""
-        guard !identifier.isEmpty else { throw SourceFailure.conflict }
-        if try MessagesPins.read().contains(identifier) != pins.contains(identifier) { try MessagesParity.pin(prepared, value: pins.contains(identifier)) }
-        let (verifiedSession, verifiedTitles) = try MessagesParity.menu(prepared)
-        try MessagesParity.dismiss(verifiedSession)
-        let (verifiedReceiptSession, _, verifiedReceipts) = try MessagesParity.receiptControl(prepared)
-        try MessagesParity.dismiss(verifiedReceiptSession)
-        return try MessagesPins.read() == pins && verifiedTitles.contains("Show Alerts") == muted && verifiedTitles.contains("Hide Alerts") != muted && verifiedReceipts == receipts && Self.receiptSetting(chat) == receiptsSetting && Self.digest(chat, through: lastMessageROWID) == messagesDigest
-    }
 }

@@ -25,10 +25,6 @@ public final class SafariTabs {
         guard error == nil else { throw SourceFailure.unavailable }
         return result
     }
-    private func quote(_ text: String) throws -> String {
-        guard !text.contains(where: { $0.isNewline || $0.asciiValue.map({ $0 < 32 }) == true }) else { throw SourceFailure.invalid }
-        return "\"" + text.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") + "\""
-    }
     public func tabs() throws -> [JSON] {
         let result = try script("set rows to {}\nrepeat with w in windows\nset n to 0\nrepeat with t in tabs of w\nset n to n + 1\nset end of rows to {id of w, n, name of t, URL of t, (index of w is 1 and current tab of w is t)}\nend repeat\nend repeat\nreturn rows")
         var rows: [JSON] = []
@@ -40,42 +36,5 @@ public final class SafariTabs {
             rows.append(.object(["kind": .string("upsert"), "collection": .string("safari.tab"), "native_key": .string(key), "scoped_alias": .string("safari/safari.tab/" + key), "observed_at": .string(timestamp()), "data": .object(["window": .number(Double(window)), "index": .number(Double(index)), "title": .string(row.atIndex(3)?.stringValue ?? ""), "url": .string(row.atIndex(4)?.stringValue ?? ""), "active": .bool(row.atIndex(5)?.booleanValue ?? false)])]))
         }
         return rows
-    }
-    public func prepare(_ command: JSON) throws -> Prepared {
-        let action = command["action"]
-        let op = action["op"].string
-        let args = action["args"]
-        guard ["safari.open_url", "safari.add_reading_list"].contains(op) else { throw SourceFailure.unsupported }
-        guard permitted(fresh: true) else { throw SourceFailure.permissionMissing }
-        guard args.object.count == 1,
-              args["url"].string.utf8.count <= 2048, let url = URL(string: args["url"].string), ["http", "https"].contains(url.scheme), url.host != nil, url.user == nil else { throw SourceFailure.invalid }
-        _ = try quote(args["url"].string)
-        return Prepared(nativeState: .null, fingerprint: command["request_hash"].string, action: action)
-    }
-    public func dispatch(_ prepared: Prepared) async throws -> JSON {
-        guard permitted(fresh: true) else { throw SourceFailure.permissionMissing }
-        let args = prepared.action["args"]
-        let readback: JSON
-        switch prepared.action["op"].string {
-        case "safari.open_url":
-            let url = args["url"].string
-            let result = try script("set w to make new document with properties {URL:" + (try quote(url)) + "}\nreturn id of front window")
-            let window = result.int32Value
-            let key = "\(window):1"
-            var matched: JSON?
-            for _ in 0..<50 {
-                matched = try tabs().first(where: { $0["native_key"].string == key && $0["data"]["url"].string == url })
-                if matched != nil { break }
-                try await Task.sleep(for: .milliseconds(100))
-            }
-            guard let row = matched else { throw SourceFailure.conflict }
-            readback = .object(["tab": .string(key), "url": row["data"]["url"]])
-        case "safari.add_reading_list":
-            let url = args["url"].string
-            _ = try script("add reading list item " + (try quote(url)))
-            readback = .object(["url": .string(url)])
-        default: throw SourceFailure.unsupported
-        }
-        return .object(["disposition": .string("locally_observed"), "observed": .bool(true), "fingerprint": .string(prepared.fingerprint), "readback": readback])
     }
 }

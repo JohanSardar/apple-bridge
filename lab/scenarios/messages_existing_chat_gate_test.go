@@ -144,7 +144,7 @@ func TestNativeUnreadPreflightQueriesPreserveGenuineUnreadMessages(t *testing.T)
 			}
 		}
 	}
-	if count != 4 {
+	if count != 3 {
 		t.Fatal("native unread query coverage changed", count)
 	}
 }

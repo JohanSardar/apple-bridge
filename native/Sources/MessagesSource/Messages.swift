@@ -97,7 +97,7 @@ public actor Messages: Source {
             "chat_recoverable_message_join": ["chat_id", "message_id", "delete_date"]
         ]
         var missing = ["messages.chat.muted_until", "messages.message.audio.transcription", "messages.message.audio.kept", "messages.message.recoverable_until", "messages.chat.recoverable_until"]
-        if MessagesParity.muteProfile() == .null { missing.append("messages.chat.muted") }
+        missing.append("messages.chat.muted")
         if (try? MessagesPins.read(at: pinsURL)) == nil { missing.append("messages.chat.pinned_index") }
         missing += expected.keys.sorted().flatMap { table in expected[table]!.filter { reader?.columns[table]?.contains($0) != true }.map { table + "." + $0 } }
         return .object(["fields": .string(missing.isEmpty ? "complete" : "partial"), "missing": .array(missing.map(JSON.string))])
