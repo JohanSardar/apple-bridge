@@ -1,6 +1,6 @@
 #![forbid(unsafe_code)]
-pub mod gojson;
+pub mod crypto;
 mod fields;
 pub mod framing;
-pub mod crypto;
+pub mod gojson;
 pub mod messages;
