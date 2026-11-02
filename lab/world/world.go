@@ -123,6 +123,9 @@ func BuildHelper(ctx context.Context, app string) error {
 }
 
 func Build(ctx context.Context, level string) error {
+	if prebuilt(ctx) {
+		return requireExecutable("bin/bridge")
+	}
 	if err := os.MkdirAll("bin", 0700); err != nil {
 		return err
 	}
