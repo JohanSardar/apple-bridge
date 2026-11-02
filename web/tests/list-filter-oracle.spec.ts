@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test';
 import { test } from './list-session';
 import { control } from './session';
-const filters=['all','known','unknown','unread','deleted','spam'] as const;
+const filters=['all','known','unknown','unread','spam'] as const;
 const ids=(rows:any[])=>rows.map(row=>row.chat.id).sort();
 test('WEB-MSG-FILTERS ORACLE stable transport equals server filters with fourth linked participant and hidden Contacts',async({page,context,request})=>{
     await control(request,'/list-filters');
@@ -17,7 +17,7 @@ test('WEB-MSG-FILTERS ORACLE stable transport equals server filters with fourth 
         await page.goto('/__fixtures/live');const rows=page.locator('.fixture>p[data-chat]'),select=page.getByLabel('Chat filter',{exact:true});
         const rendered=()=>rows.evaluateAll(elements=>elements.map(element=>(element as HTMLElement).dataset.chat!).sort());
         await expect.poll(rendered).toEqual(ids(oracle.all));
-        await expect.poll(()=>sent.filter(frame=>frame.t==='sub'&&frame.view==='chats'&&!frame.args?.after).map(frame=>frame.args.filter).sort()).toEqual(['all','deleted','spam']);
+        await expect.poll(()=>sent.filter(frame=>frame.t==='sub'&&frame.view==='chats'&&!frame.args?.after).map(frame=>frame.args.filter).sort()).toEqual(['all','spam']);
         const baseline=sent.filter(frame=>frame.t==='sub'&&frame.view==='chats').map(frame=>frame.id).sort();
         for(const filter of filters){await select.selectOption(filter);await expect.poll(rendered).toEqual(ids(oracle[filter]));}
         expect(sent.filter(frame=>frame.t==='sub'&&frame.view==='chats').map(frame=>frame.id).sort()).toEqual(baseline);

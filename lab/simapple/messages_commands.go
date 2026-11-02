@@ -17,9 +17,6 @@ func messageCoverage() contracts.Coverage {
 	for _, op := range contracts.MessagesOperations {
 		c.Operations = append(c.Operations, contracts.OperationCapability{Operation: op, Proven: true, Reason: "simulated_native_route"})
 	}
-	for _, op := range contracts.MessageVariantCapabilities {
-		c.Operations = append(c.Operations, contracts.OperationCapability{Operation: op, Proven: false, Reason: "per_os_variant_proof_required"})
-	}
 	return c
 }
 func messageCapabilities() []string { return contracts.MessagesOperations }
@@ -39,9 +36,6 @@ func (f *fakeApple) isMessageCommand(frame contracts.IPCFrame) bool {
 	return e.Source == "messages"
 }
 func messageProblem(code string) *contracts.Error { return &contracts.Error{Code: code, Message: code} }
-func simGroupHandle(handle string) bool {
-	return handle == "self@example.com" || handle == "second-self@example.com" || handle == "member1@example.com" || handle == "member2@example.com" || handle == "member3@example.com"
-}
 func simHandleKey(handle string) string {
 	if handle == "self@example.com" {
 		return "message-self"
@@ -74,9 +68,6 @@ func (f *fakeApple) messageOwnRecipients(a contracts.NativeAction) bool {
 }
 func (f *fakeApple) messageValidate(a contracts.NativeAction) *contracts.Error {
 	m := a.Messages
-	if m != nil && (m.Variant != nil || a.Op == "messages.keep_audio") {
-		return messageProblem("capability_unproven")
-	}
 	if m == nil {
 		return contracts.ErrInvalid
 	}
@@ -102,15 +93,12 @@ func (f *fakeApple) messageValidate(a contracts.NativeAction) *contracts.Error {
 			return &contracts.Error{Code: "invalid", Message: "untagged text requires a local owner token and verified own recipients; other sends require [ab-test <id>]"}
 		}
 	}
-	if a.Origin != "interactive" && (a.Op == "messages.send" || a.Op == "messages.create_group") {
+	if a.Origin != "interactive" && (a.Op == "messages.send") {
 		for _, h := range m.Handles {
-			if h != "self@example.com" && h != "second-self@example.com" && (a.Op != "messages.create_group" || !simGroupHandle(h)) {
+			if h != "self@example.com" && h != "second-self@example.com" {
 				return contracts.ErrUnauthorized
 			}
 		}
-	}
-	if a.Origin != "interactive" && m.Handle != "" && !simGroupHandle(m.Handle) {
-		return contracts.ErrUnauthorized
 	}
 	var data map[string]any
 	if a.NativeKey != "" {
@@ -135,10 +123,6 @@ func (f *fakeApple) messageValidate(a contracts.NativeAction) *contracts.Error {
 			chat = ref.Ref.NativeKey
 		}
 	}
-	if problem := f.messageParityValidate(a, data); problem != nil {
-		return problem
-	}
-	service := m.Service
 	if chat != "" {
 		o, ok := f.records[chat]
 		if !ok || o.Kind == "absent" {
@@ -146,12 +130,6 @@ func (f *fakeApple) messageValidate(a contracts.NativeAction) *contracts.Error {
 		}
 		var c map[string]any
 		json.Unmarshal(o.Data, &c)
-		service, _ = c["service"].(string)
-		if a.Op == "messages.add_member" || a.Op == "messages.remove_member" || a.Op == "messages.rename_group" || a.Op == "messages.leave_group" {
-			if c["style"] != "group" {
-				return contracts.ErrUnsupported
-			}
-		}
 		raw, _ := json.Marshal(c["participants"])
 		var peers []struct {
 			Ref struct {
@@ -164,22 +142,10 @@ func (f *fakeApple) messageValidate(a contracts.NativeAction) *contracts.Error {
 				return contracts.ErrUnauthorized
 			}
 		}
-		if a.Op == "messages.remove_member" {
-			if len(peers) < 4 {
-				return contracts.ErrUnsupported
-			}
-		}
-		if a.Op == "messages.leave_group" && len(peers) < 3 {
-			return contracts.ErrUnsupported
-		}
 	}
 	switch a.Op {
 	case "messages.edit", "messages.unsend":
 		if !actionWindowOpen(data, a.Op == "messages.edit", time.Now()) {
-			return contracts.ErrUnsupported
-		}
-	case "messages.add_member", "messages.remove_member", "messages.leave_group", "messages.rename_group":
-		if service != "iMessage" {
 			return contracts.ErrUnsupported
 		}
 	}
@@ -211,7 +177,7 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 			f.mu.Unlock()
 			return reject(contracts.ErrConflict)
 		}
-		before := f.messageBefore(a)
+		before := f.records[a.NativeKey].Data
 		if a.NativeKey != "" && len(frame.ExpectedState) > 0 {
 			var expected, native map[string]any
 			json.Unmarshal(frame.ExpectedState, &expected)
@@ -253,7 +219,7 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 			f.mu.Unlock()
 			return reject(e)
 		}
-		if !reflect.DeepEqual(t.Before, f.messageBefore(t.Action)) {
+		if !reflect.DeepEqual(t.Before, f.records[t.Action.NativeKey].Data) {
 			f.mu.Unlock()
 			return reject(contracts.ErrConflict)
 		}
@@ -298,9 +264,7 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 			put("message", key, map[string]any{"chat_id": messageReference("chat", chat), "text": text, "parts": []any{map[string]any{"index": 0, "kind": "text", "text": text}}, "is_from_me": fromMe, "sent_at": now, "decode_status": "decoded", "edit_history": []any{}, "retracted_parts": []any{}, "kind": "message", "error_code": 0}, false)
 		}
 		switch a.Op {
-		case "messages.pin", "messages.mute", "messages.set_read_receipts", "messages.recover_chat", "messages.delete_chat_permanently":
-			f.messageParityApply(a, now, put)
-		case "messages.send", "messages.reply", "messages.create_group":
+		case "messages.send", "messages.reply":
 			chat := a.ListKey
 			if a.Op == "messages.reply" {
 				raw, _ := json.Marshal(data["chat_id"])
@@ -315,16 +279,13 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 			if chat == "" {
 				chat = contracts.NewID("chat")
 				style := "direct"
-				if a.Op == "messages.create_group" {
-					style = "group"
-				}
 				peers := []any{}
 				for _, h := range m.Handles {
 					handle := simHandleKey(h)
 					put("handle", handle, map[string]any{"address": h, "service": m.Service}, false)
 					peers = append(peers, messageReference("handle", handle))
 				}
-				put("chat", chat, map[string]any{"service": m.Service, "style": style, "display_name": m.Name, "participants": peers}, false)
+				put("chat", chat, map[string]any{"service": m.Service, "style": style, "display_name": "", "participants": peers}, false)
 			}
 			native = contracts.NewID("message")
 			hasText := m.Text != "" || a.Op != "messages.send" || len(m.Files) == 0
@@ -418,10 +379,6 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 				newMessage(native+"-manual", m.Text, chat, true)
 				disposition = contracts.DispositionIndeterminate
 			}
-			if a.Op == "messages.create_group" {
-				native = chat
-				collection = "chat"
-			}
 		case "messages.edit":
 			history, _ := data["edit_history"].([]any)
 			history = append(history, map[string]any{"text": data["text"], "timestamp": now})
@@ -465,33 +422,6 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 			put(collection, native, data, false)
 		case "messages.delete_message", "messages.delete_chat":
 			put(collection, native, data, true)
-		case "messages.rename_group":
-			data["display_name"] = m.Name
-			put(collection, native, data, false)
-		case "messages.add_member", "messages.remove_member":
-			peers, _ := data["participants"].([]any)
-			handle := simHandleKey(m.Handle)
-			if a.Op == "messages.add_member" {
-				put("handle", handle, map[string]any{"address": m.Handle, "service": "iMessage"}, false)
-			}
-			if a.Op == "messages.add_member" {
-				peers = append(peers, messageReference("handle", handle))
-			} else {
-				filtered := []any{}
-				for _, p := range peers {
-					raw, _ := json.Marshal(p)
-					want, _ := json.Marshal(messageReference("handle", handle))
-					if string(raw) != string(want) {
-						filtered = append(filtered, p)
-					}
-				}
-				peers = filtered
-			}
-			data["participants"] = peers
-			put(collection, native, data, false)
-		case "messages.leave_group":
-			data["left"] = true
-			put(collection, native, data, false)
 		}
 		f.effects[t.CommandID]++
 		evidence := map[string]any{"source": "messages", "collection": "messages." + collection, "native_key": native, "fingerprint": t.Hash, "observed": disposition != contracts.DispositionIndeterminate, "parts": parts, "candidate_count": 1}

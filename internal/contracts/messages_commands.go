@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 type MessageFile struct {
@@ -25,48 +24,33 @@ type NativeMessagesArgs struct {
 }
 
 type MessagesArgs struct {
-	MessagesParityArgs
-	Variant   *MessageSendVariant `json:"variant,omitempty"`
-	ResendOf  string              `json:"resend_of,omitempty"`
-	ID        string              `json:"id,omitempty"`
-	ChatID    string              `json:"chat_id,omitempty"`
-	Handles   []string            `json:"handles,omitempty"`
-	Service   string              `json:"service,omitempty"`
-	Text      string              `json:"text,omitempty"`
-	Files     []MessageFile       `json:"files,omitempty"`
-	PartIndex int                 `json:"part_index,omitempty"`
-	Reaction  string              `json:"reaction,omitempty"`
-	Emoji     string              `json:"emoji,omitempty"`
-	Remove    bool                `json:"remove,omitempty"`
-	Name      string              `json:"name,omitempty"`
-	Handle    string              `json:"handle,omitempty"`
+	ResendOf  string        `json:"resend_of,omitempty"`
+	ID        string        `json:"id,omitempty"`
+	ChatID    string        `json:"chat_id,omitempty"`
+	Handles   []string      `json:"handles,omitempty"`
+	Service   string        `json:"service,omitempty"`
+	Text      string        `json:"text,omitempty"`
+	Files     []MessageFile `json:"files,omitempty"`
+	PartIndex int           `json:"part_index,omitempty"`
+	Reaction  string        `json:"reaction,omitempty"`
+	Emoji     string        `json:"emoji,omitempty"`
+	Remove    bool          `json:"remove,omitempty"`
 }
 
-var MessagesOperations = []string{"messages.send", "messages.reply", "messages.react", "messages.edit", "messages.unsend", "messages.mark_read", "messages.mark_unread", "messages.delete_message", "messages.delete_chat", "messages.create_group", "messages.rename_group", "messages.add_member", "messages.remove_member", "messages.leave_group", "messages.pin", "messages.mute", "messages.set_read_receipts", "messages.recover_chat", "messages.delete_chat_permanently"}
+var MessagesOperations = []string{"messages.send", "messages.reply", "messages.react", "messages.edit", "messages.unsend", "messages.mark_read", "messages.mark_unread", "messages.delete_message", "messages.delete_chat"}
 
 func MessagesArgumentFields(op string) []string {
-	if fields := MessagesParityFields(op); fields != nil {
-		return fields
-	}
 	switch op {
 	case "messages.send":
-		return []string{"chat_id", "handles", "service", "text", "files", "resend_of", "variant"}
+		return []string{"chat_id", "handles", "service", "text", "files", "resend_of"}
 	case "messages.reply":
 		return []string{"id", "part_index", "text", "files"}
 	case "messages.react":
 		return []string{"id", "part_index", "reaction", "emoji", "remove"}
 	case "messages.edit":
 		return []string{"id", "part_index", "text"}
-	case "messages.keep_audio":
-		return []string{"id"}
 	case "messages.unsend":
 		return []string{"id", "part_index"}
-	case "messages.create_group":
-		return []string{"handles", "service", "text", "name"}
-	case "messages.rename_group":
-		return []string{"id", "name"}
-	case "messages.add_member", "messages.remove_member":
-		return []string{"id", "handle"}
 	default:
 		return []string{"id"}
 	}
@@ -99,9 +83,6 @@ func ValidateMessagesCommand(c Command) (MessagesArgs, error) {
 			return a, ErrInvalid
 		}
 	}
-	if IsMessagesParity(c.Op) {
-		return a, ValidateMessagesParity(c, a)
-	}
 	switch c.Op {
 	case "messages.send":
 		if a.ResendOf != "" && a.ChatID == "" {
@@ -111,10 +92,6 @@ func ValidateMessagesCommand(c Command) (MessagesArgs, error) {
 			return a, ErrInvalid
 		}
 		if len(a.Handles) > 0 && (len(a.Handles) != 1 || a.Service != "iMessage" && a.Service != "SMS" && a.Service != "RCS") {
-			return a, ErrInvalid
-		}
-	case "messages.create_group":
-		if len(a.Handles) < 2 || a.Service == "" || a.Text == "" || c.ExpectedVersion != 0 {
 			return a, ErrInvalid
 		}
 	default:
@@ -132,12 +109,6 @@ func ValidateMessagesCommand(c Command) (MessagesArgs, error) {
 			return a, ErrInvalid
 		}
 	}
-	if c.Op == "messages.rename_group" && a.Name == "" {
-		return a, ErrInvalid
-	}
-	if (c.Op == "messages.add_member" || c.Op == "messages.remove_member") && a.Handle == "" {
-		return a, ErrInvalid
-	}
 	if c.Op == "messages.react" {
 		switch a.Reaction {
 		case "love", "like", "dislike", "laugh", "emphasize", "question":
@@ -149,25 +120,11 @@ func ValidateMessagesCommand(c Command) (MessagesArgs, error) {
 			return a, ErrInvalid
 		}
 	}
-	if c.Op != "messages.send" && a.Variant != nil {
-		return a, ErrInvalid
-	}
-	if c.Op == "messages.send" {
-		if err := ValidateMessageSendVariant(a, time.Now()); err != nil {
-			return a, err
-		}
-	}
-	if c.Op == "messages.keep_audio" && c.ExpectedVersion == 0 {
-		return a, ErrInvalid
-	}
 	return a, nil
 }
 func MessagesTargetCollection(op string) string {
-	if IsMessagesParity(op) {
-		return "messages.chat"
-	}
 	switch op {
-	case "messages.mark_read", "messages.mark_unread", "messages.delete_chat", "messages.rename_group", "messages.add_member", "messages.remove_member", "messages.leave_group", "messages.create_group":
+	case "messages.mark_read", "messages.mark_unread", "messages.delete_chat":
 		return "messages.chat"
 	}
 	return "messages.message"

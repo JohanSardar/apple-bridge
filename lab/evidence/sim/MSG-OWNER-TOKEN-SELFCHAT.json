@@ -1,0 +1,65 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[5.3 5.12 4.9] cpu_idle=66% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M6DDCCAFF9WPK165S001F0R0",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "MSG-OWNER-TOKEN-SELFCHAT",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "05078201ef6cc55670f096634e71d221fad9089f",
+  "at": "2026-11-02T05:58:11.023843Z",
+  "assertions": [
+    {
+      "name": "seed_self_chat",
+      "passed": true
+    },
+    {
+      "name": "fixture_captured",
+      "passed": true
+    },
+    {
+      "name": "local_token_untagged_self_chat_observed",
+      "passed": true
+    },
+    {
+      "name": "self_chat_single_effect",
+      "passed": true
+    },
+    {
+      "name": "nonself_fixture",
+      "passed": true
+    },
+    {
+      "name": "nonself_captured",
+      "passed": true
+    },
+    {
+      "name": "nonself_chat_available",
+      "passed": true
+    },
+    {
+      "name": "token_cannot_spoof_interactive_for_nonself",
+      "passed": true
+    },
+    {
+      "name": "nonself_zero_effects",
+      "passed": true
+    },
+    {
+      "name": "truth_and_replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

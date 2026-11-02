@@ -18,7 +18,6 @@ type MacArgs struct {
 	Text         *string  `json:"text,omitempty"`
 	Volume       *float64 `json:"volume,omitempty"`
 	Muted        *bool    `json:"muted,omitempty"`
-	Device       string   `json:"device,omitempty"`
 	Appearance   string   `json:"appearance,omitempty"`
 	BundleID     string   `json:"bundle_id,omitempty"`
 	On           *bool    `json:"on,omitempty"`
@@ -91,10 +90,6 @@ func ValidateMacCommand(c Command) error {
 		if a.Muted == nil {
 			return ErrInvalid
 		}
-	case "mac.set_output_device":
-		if a.Device == "" {
-			return ErrInvalid
-		}
 	case "mac.set_appearance":
 		if a.Appearance != "light" && a.Appearance != "dark" {
 			return ErrInvalid
@@ -124,7 +119,7 @@ func MacCompletionEvidence(raw json.RawMessage, hash string) bool {
 func MacDescriptors() []OperationDescriptor {
 	var out []OperationDescriptor
 
-	for _, name := range []string{"mac.set_volume", "mac.set_mute", "mac.set_output_device", "mac.set_appearance", "mac.launch_app", "mac.activate_app", "mac.quit_app", "mac.keep_awake", "mac.clipboard_write", "mac.notify", "mac.open_settings", "mac.set_wallpaper", "mac.lock_screen", "mac.sleep_display", "mac.restart", "mac.shutdown"} {
+	for _, name := range []string{"mac.set_volume", "mac.set_mute", "mac.set_appearance", "mac.launch_app", "mac.activate_app", "mac.quit_app", "mac.keep_awake", "mac.clipboard_write", "mac.notify", "mac.open_settings", "mac.set_wallpaper", "mac.lock_screen", "mac.sleep_display", "mac.restart", "mac.shutdown"} {
 		out = append(out, OperationDescriptor{Name: name, Version: 1, Kind: CommandOp, Source: "mac", Scope: "mac:write", Capability: name, Input: Command{}, Output: CommandRecord{}, Description: "Change Mac state with native readback"})
 	}
 	out = append(out, OperationDescriptor{Name: "mac.clipboard_read", Version: 1, Kind: QueryOp, Source: "mac", Scope: "mac:read", Capability: "mac.clipboard_read", Input: Query{}, Output: QueryResult{}, Description: "Read transient clipboard text without capturing contents"})
@@ -210,7 +205,7 @@ func macSchema(d OperationDescriptor, schema map[string]any) map[string]any {
 	}
 	args := JSONSchema(MacArgs{})
 	fields := args["properties"].(map[string]any)
-	key := map[string]string{"mac.set_volume": "volume", "mac.set_mute": "muted", "mac.set_output_device": "device", "mac.set_appearance": "appearance", "mac.launch_app": "bundle_id", "mac.activate_app": "bundle_id", "mac.quit_app": "bundle_id", "mac.keep_awake": "on", "mac.clipboard_write": "text"}[d.Name]
+	key := map[string]string{"mac.set_volume": "volume", "mac.set_mute": "muted", "mac.set_appearance": "appearance", "mac.launch_app": "bundle_id", "mac.activate_app": "bundle_id", "mac.quit_app": "bundle_id", "mac.keep_awake": "on", "mac.clipboard_write": "text"}[d.Name]
 	for name := range fields {
 		if name != key && !(d.Name == "mac.keep_awake" && name == "duration") {
 			delete(fields, name)

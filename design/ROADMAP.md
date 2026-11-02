@@ -11,7 +11,6 @@ Everything still to do, in order. The aim is your Mac as a server you sign in to
 **Rules carried over from the SPEC:**
 - **Done means evidence:** a feature is done only with passing evidence at every level it lists (`features.yaml` status rules). Unprovable work is `limited` with the reason.
 - **Writes are commands with evidence:** prepare, dispatch, then observe the effect in Apple's own data.
-- **Captured vs on-demand:** captured sources sync durable records. On-demand tools (weather, maps, location, capture) answer a query and are never replicated as state.
 - **Policy:** SIP stays on. No private-API injection, no TCC edits. Real tests use only the owner's Apple ID, with tagged test data that gets cleaned up.
 
 ## Track 0 — this week: prove what exists
@@ -57,12 +56,9 @@ The new captured Sources follow the Source contract: `open` reports readiness an
 | B3 | **Call history and voicemail**: calls, voicemail metadata, transcripts, audio (voicemail on macOS 26+) | C07, C10–C12 | iMCP CallHistory and Voicemail store code | Captured (`phone.call`, `voicemail.message`) | M |
 | B4 | **Existing-source upgrades**: Reminders list rename and delete; Contacts Me card; borrow iMCP's date, alarm, recurrence and DST validation fixtures for Calendar and Reminders | X04, X06, X01–X03 | iMCP parsers and fixtures | Existing Sources | S |
 | B5 | **Query contract** (new IPC for on-demand tools, with deadlines, cancellation and digest-backed image or audio outputs), then **Location and Maps**: current Mac location, geocoding, nearby places, routes, ETA, map images | L01–L05, L06 | iMCP Location and Maps adapters | On-demand | M, then S–M |
-| B6 | **Weather**: current, hourly, daily, minute | L08–L09 | iMCP WeatherKit adapter | On-demand | S (needs the WeatherKit entitlement, see E1) |
-| B7 | **Music**: now playing, playback control, catalog search | M08–M10 | iMCP Apple Events playback plus MusicKit | On-demand plus commands | S–M |
 | B8 | **Capture and utilities**: screenshot, camera still, microphone recording, play sound | D12, D14–D16 | iMCP Capture and Utilities | On-demand, with artifacts as blobs | S |
 | B9 | **Shortcuts**: list and run with typed input and output. The run result is the evidence; arbitrary effects aren't claimed as verified | S01–S02 | iMCP Shortcuts (the `shortcuts` CLI) | On-demand plus commands | S |
 | B10 | **Mail compose (draft) and placing a phone call**, each with honest evidence (draft saved, outgoing call record appears) | C05, C08 | iMCP launch wrappers | Commands | M |
-| B11 | **Home**: inventory, state, lights, locks, scenes, rooms. Short-term route is Home scenes via Shortcuts (H16) | H01–H10, H16 | iMCP HomeKit helper (Catalyst) | Companion process | L, plus signing (E1) |
 
 ## Track 3 — beyond iMCP, on the Mac
 
@@ -73,7 +69,6 @@ The best value × feasibility rows that iMCP lacks, grouped into features:
 | C1 | **Mac alarms and timers** | K01–K03, K11 | Shortcuts Clock actions on macOS. Mac alarms don't sync to the iPhone | S (after B9) |
 | C2 | **Focus / Do Not Disturb**: read status and current Focus; set Focus, which syncs to the iPhone when "Share across devices" is on | F01–F03, F05 | `INFocusStatusCenter` plus Shortcuts "Set Focus" | S–M; P0-1 verifies phone propagation |
 | C3 | **Files and iCloud Drive**: search, read, create, edit, move, trash, download offloaded files, tags | P07–P10, X12 | FileManager, NSFileCoordinator, Spotlight (`NSMetadataQuery`) | M |
-| C4 | **Photos**: search, originals, import, albums, favorites, people and keywords | M01–M06 | PhotoKit; Photos TCC | M |
 | C5 | **OCR and PDF**: text from images, screenshots and scans; search and annotate PDFs | A07, X11 | Vision, PDFKit | S |
 | C6 | **Mac controls**: volume and audio devices, Wi-Fi state, network diagnostics, launch and quit apps, clipboard, battery and power, keep awake, lock and sleep, dark mode, Night Shift | D01–D02, D04–D08, D11, D19–D21 | CoreAudio, CoreWLAN, NSWorkspace, NSPasteboard, IOKit, `caffeinate` | S each |
 | C7 | **Bridge notifications** on the Mac (agent approvals, alerts) | D17 | UserNotifications | S |
@@ -117,15 +112,13 @@ The best value × feasibility rows that iMCP lacks, grouped into features:
 | D11 | Phone location, arrival and departure events | L11, L16 |
 | D12 | Approve agent actions with Face ID from a notification; device notifications | X21, D17 |
 | D13 | App limits and downtime set by our app (FamilyControls; it can't edit Apple's own limits) | F08–F09 |
-| D14 | Wallet transactions and balances where FinanceKit allows | W04 |
 
 ## Track E — prerequisites and decisions
 
 | ID | Item | Notes |
 |---|---|---|
-| E1 | **Apple Developer Program membership and a provisioned App ID** | Needed for WeatherKit (B6), MapKit routing (B5), possibly MusicKit catalog (B7), the HomeKit companion (B11) and the iPhone app (Track 4B). Today's dev builds use a stable self-signed identity, which must not change for the Helper. A Developer ID identity for the shipped app is a separate decision |
-| E2 | **New permissions in onboarding** | Location, Photos, Camera, Microphone, Screen Recording, Focus status, Bluetooth. Each is requested only when its feature is turned on, and appears in `sources.status` and `doctor` |
-| E3 | **Per-feature on/off switches and agent scopes** | New sources get their own `<source>:read` and `<source>:write` grants, so connectors can be given Mail without Photos, for example |
+| E2 | **New permissions in onboarding** | Location, Camera, Microphone, Screen Recording, Focus status, Bluetooth. Each is requested only when its feature is turned on, and appears in `sources.status` and `doctor` |
+| E3 | **Per-feature on/off switches and agent scopes** | New sources get their own `<source>:read` and `<source>:write` grants, so connectors can be given Mail without Contacts, for example |
 | E4 | **Real-test safety for new sources** | Tagged fixtures only (for example a tagged test album, a tagged test file folder, tagged mail drafts). Phone tests only on the owner's devices |
 
 ## Blocked by Apple (won't build)
@@ -144,8 +137,7 @@ The best value × feasibility rows that iMCP lacks, grouped into features:
 2. **R1-1:** a polished one-command built-in Tailscale default.
 3. **Shortcuts first:** B9 Shortcuts, then C1 Mac alarms and timers and C2 Focus, all cheap once B9 exists.
 4. **Big data sources:** B1 Mail, B3 Calls and voicemail, B2 Voice Memos.
-5. **On-demand tools:** B5 the query contract with Location and Maps, then B6 Weather, B7 Music, B8 Capture, C5 OCR and PDF, C6 Mac controls.
-6. **Larger new sources:** C3 Files, C4 Photos, C8 Safari, C9 Mail actions.
+6. **Larger new sources:** C3 Files, C8 Safari, C9 Mail actions.
 7. **iPhone without an app:** Track 4A, if P0-1 passed.
 8. **Our relay and own domains:** R1-4, R1-5, then the R1-6 and R1-7 bring-your-own-account options.
 9. **iPhone app and Home:** E1, then Track 4B and B11 Home.

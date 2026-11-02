@@ -238,9 +238,9 @@ func (s *Store) persistCommand(ctx context.Context, t CommandTransition, partsUp
 	cursor.Sequence++
 	r.Cursor = cursor
 	transientCompletion := r.State == contracts.CommandObserved && r.CommitSeq == 0 && ((r.Command.Op == "shortcuts.run" && r.Source == contracts.Shortcuts && contracts.ShortcutCompletionEvidence(r.Evidence, r.RequestHash)) || (r.Command.Op == "maps.open" && r.Source == "maps" && contracts.MapsOpenEvidence(r.Evidence, r.RequestHash)))
-	runnerCompletion := (r.Command.Op == "shortcuts.run" && r.Source == contracts.Shortcuts && contracts.ShortcutCompletionEvidence(r.Evidence, r.RequestHash) || r.Source == "music" && contracts.MusicPlayerOperation(r.Command.Op) && contracts.MusicCompletionEvidence(r.Evidence, r.RequestHash)) && r.State == contracts.CommandObserved && r.CommitSeq == 0
+	runnerCompletion := (r.Command.Op == "shortcuts.run" && r.Source == contracts.Shortcuts && contracts.ShortcutCompletionEvidence(r.Evidence, r.RequestHash)) && r.State == contracts.CommandObserved && r.CommitSeq == 0
 	playbackCompletion := contracts.PlaybackOperation(r.Command.Op) && r.Source == contracts.CollectionSource(r.Command.Op) && r.State == contracts.CommandObserved && r.CommitSeq == 0 && contracts.PlaybackEvidence(r.Evidence, r.RequestHash)
-	macCompletion := (r.Source == "mac" || r.Source == contracts.Safari) && r.State == contracts.CommandObserved && contracts.MacCompletionEvidence(r.Evidence, r.RequestHash)
+	macCompletion := r.Source == "mac" && r.State == contracts.CommandObserved && contracts.MacCompletionEvidence(r.Evidence, r.RequestHash)
 	iphoneCompletion := r.Source == contracts.IPhone && r.State == contracts.CommandObserved && contracts.IPhoneCompletionEvidence(r.Evidence, r.Command, r.RequestHash)
 	if !iphoneCompletion && !(contracts.CaptureOperation(r.Command.Op) && contracts.CaptureEvidence(r.Evidence, r.RequestHash)) && !transientCompletion && !macCompletion && !runnerCompletion && !playbackCompletion && (r.State == contracts.CommandObserved || r.State == contracts.CommandDelivered) && (r.CommitSeq == 0 || r.CommitSeq >= cursor.Sequence) {
 		return r, contracts.ErrCorrupt

@@ -7,7 +7,6 @@ import RemindersStore
 import SourceSupport
 import NotesSource
 import SafariSource
-import MusicSource
 import MailSource
 import FocusSource
 
@@ -42,17 +41,6 @@ enum HelperLabCommand {
             while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
             try JSONEncoder().encode(result!).write(to: reportURL, options: .atomic)
             return true
-        case "messages-variant-proof":
-            let reportURL = try report(arguments)
-            guard arguments.count > 1 else { throw ProbeFailure.invalidArguments }
-            var result: JSON?
-            Task { @MainActor in
-                do { result = try await MessagesVariantProof.run(arguments[1]) }
-                catch { result = .object(["passed": .bool(false), "limited": .bool(true), "reason": .string("native_variant_probe_unavailable")]) }
-            }
-            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
-            try JSONEncoder().encode(result!).write(to: reportURL, options: .atomic)
-            return true
         case "focus-phone-pack":
             let reportURL = try report(arguments)
             guard arguments.count > 1 else { throw ProbeFailure.invalidArguments }
@@ -72,21 +60,6 @@ enum HelperLabCommand {
             Task { @MainActor in
                 do {
                     let result = try await FocusQualification.run(arguments[1])
-                    try JSONEncoder().encode(result).write(to: reportURL, options: .atomic)
-                } catch { failure = error }
-                finished = true
-            }
-            while !finished { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
-            if let failure { throw failure }
-            return true
-        case "photos-real-checks":
-            let reportURL = try report(arguments)
-            guard arguments.count > 1 else { throw ProbeFailure.invalidArguments }
-            var finished = false
-            var failure: (any Error)?
-            Task { @MainActor in
-                do {
-                    let result = try await PhotosRealProof.run(arguments[1])
                     try JSONEncoder().encode(result).write(to: reportURL, options: .atomic)
                 } catch { failure = error }
                 finished = true
@@ -118,17 +91,6 @@ enum HelperLabCommand {
             }
             while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
             try JSONEncoder().encode(result!).write(to: reportURL, options: .atomic)
-            return true
-        case "music-qualification":
-            let reportURL = try report(arguments)
-            var result: Result<JSON, any Error>?
-            Task { @MainActor in
-                do { result = .success(try await MusicPlayer().qualifyPlayback(playlistOnly: arguments.contains("--playlist"))) }
-                catch { result = .failure(error) }
-            }
-            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.005)) }
-            try JSONEncoder().encode(try result!.get()).write(to: reportURL, options: .atomic)
-            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
             return true
         case "media-cleanup-checks":
             guard let index = arguments.firstIndex(of: "--fixtures"), index + 1 < arguments.count else { throw ProbeFailure.invalidArguments }

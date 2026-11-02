@@ -274,28 +274,6 @@ features:
       - {id: MSG-MARK-READ, levels: [sim]}
       - {id: MSG-DELETE, levels: [sim]}
       - {id: MSG-UI-INTERFERENCE, levels: [sim]}
-  - id: messages.groups
-    title: Create groups and manage name and membership
-    requirements: [R-MSG-DEPTH]
-    milestone: M1
-    modules: [native/MessagesSource]
-    depends_on: [messages.actions]
-    status: dropped
-    scenarios:
-      - {id: MSG-GROUP-CREATE, levels: [sim, real]}
-      - {id: MSG-GROUP-MANAGE, levels: [sim, real]}
-      - {id: MSG-SEND-RCS-GROUP, levels: [sim, real]}
-    notes: Dropped because group actions would text other people.
-  - id: messages.typing
-    title: Messages typing indicators (hidden without a public proof)
-    requirements: [R-MSG-DEPTH, R-WEB-UI]
-    milestone: W4
-    modules: [native/MessagesSource, webui]
-    depends_on: [messages.groups]
-    status: dropped
-    scenarios:
-      - {id: WEB-MSG-TYPING, levels: [web]}
-    notes: Dropped because there is no public API for typing indicators.
   - id: reminders.read
     title: Reminders lists and items, live capture, recurrence coverage
     requirements: [R-FULL, R-LIVE, R-REM, R-NO-FALSE-DELETE]
@@ -742,31 +720,6 @@ features:
       - {id: WEB-MSG-FAIL-RESEND, levels: [web]}
       - {id: WEB-MSG-OPTIMISTIC, levels: [web]}
       - {id: WEB-MSG-PARTS, levels: [web]}
-      - {id: MSG-SEND-LATER, levels: [sim, real], status: dropped, reason: "Dropped by the owner on 2026-11-01: imagent refuses the Helper connection that these native Messages actions need."}
-      - {id: MSG-MENTION-SEND, levels: [sim, real], status: dropped, reason: "Dropped by the owner on 2026-11-01: imagent refuses the Helper connection that these native Messages actions need."}
-      - {id: MSG-AUDIO-MESSAGE, levels: [sim, real], status: dropped, reason: "Dropped by the owner on 2026-11-01: imagent refuses the Helper connection that these native Messages actions need."}
-  - id: web.messages.parity
-    title: Messages parity (pins, mute, read receipts, Send Later, effects, formatting, mentions, audio messages, Recently Deleted, groups)
-    requirements: [R-WEB-UI, R-MSG-DEPTH]
-    milestone: W4
-    modules: [native/MessagesSource, operations, webui]
-    depends_on: [web.messages.write]
-    status: dropped
-    # Native variants without per-build proof stay hidden. Browser PARITY-UI
-    # passed its 12-project cohort; native status is independent of that pass.
-    # Per-variant sim checks prove fail-closed rejection without plain fallback.
-    # Native variants remain hidden until per-build real qualification.
-    scenarios:
-      - {id: MSG-PINS, levels: [sim, real]}
-      - {id: MSG-MUTE, levels: [sim, real]}
-      - {id: MSG-READ-RECEIPTS, levels: [sim, real]}
-      - {id: MSG-SEND-VARIANTS, levels: [sim]}
-      - {id: WEB-MSG-SEND-VARIANTS, levels: [web]}
-      - {id: MSG-SEND-EFFECT, levels: [sim, real]}
-      - {id: MSG-FORMATTING-SEND, levels: [sim, real]}
-      - {id: MSG-RECENTLY-DELETED, levels: [sim, real]}
-      - {id: WEB-MSG-PARITY-UI, levels: [web]}
-    notes: "Dropped from scope by the owner on 2026-11-01. Group management (W4-GROUPS) completes the existing messages.groups feature and its scenarios instead of duplicating them. T74 adds long-name-safe pinned mute indicators with accessible descriptions, a visible Recently Deleted heading and trailing swipe-width settlement. Five parity checks pass after T73 integration; native send variants retain their per-build qualification gates."
   - id: web.reminders
     title: Reminders web app (read, write, parity)
     requirements: [R-WEB-UI, R-WEB-FAST, R-RW]
@@ -807,17 +760,6 @@ features:
       - {id: WEB-CAL-WRITE, levels: [sim, web, real]}
     notes: >-
       Core milestone green: browser 144/144 passes without skips or flakes; #262 fixes recurring future-split reconciliation under a controlled response barrier. Native store/identity/counts and basic writes/cleanup pass. Ten-change R-LIVE gateway/replica p95 468.9/471.3 ms passes; REST/MCP month handlers p95 0.921/0.910 ms pass. Replica exactly-once attribution remains unverified despite convergence. Screenshots and raw reports remain private. WEB-CAL-PARITY covers the hidden parity actions and verified store reads. Positive travel-time units, structured coordinates, detached store identities and attachment derivatives require native proof and remain hidden when unsupported.
-  - id: web.calendar.parity
-    title: Calendar invitation responses, travel time and attachment parity
-    requirements: [R-WEB-UI, R-RW]
-    milestone: W6
-    modules: [webui, native/CalendarSource, operations]
-    depends_on: [web.calendar]
-    status: dropped
-    scenarios:
-      - {id: WEB-CAL-PARITY, levels: [sim, real, web]}
-    notes: "Dropped from scope by the owner on 2026-11-01. WEB-CAL-PARITY now has synthetic store mutation/readback and native Helper qualification in addition to the existing browser coverage. Missing travel time stays unsupported; only numeric zero is verified without positive native unit proof. The scoped native check creates its own tagged calendar/event, attempts travel-time and attachment add/remove with digest readback, and verifies cleanup. Incoming invitation response effects remain unproven; existing invitations are never used. Native parity operations remain unregistered and controls stay hidden until real effects pass."
-
   - id: web.contacts
     title: Contacts web app (read, write, parity)
     requirements: [R-WEB-UI, R-WEB-FAST, R-RW]
@@ -857,7 +799,7 @@ features:
     modules: [relay]
     depends_on: []
     status: done
-    notes: Device-signed outbound smux TLS tunnel, reconnect and health pings; Mac ACME DNS-01, custom-domain checks, CT warnings and VM service deployment. Public apex control TLS and the live Mac health endpoint are reachable through ab-relay. ACME control renewal, public TXT propagation, explicit device addressing and startup retries are implemented. Ubuntu REST/MCP checks and the isolated Claude Code HTTP connector pass. CONN-RELAY-CLAUDE real transport evidence (2026-10-29) is complemented by CONN-CLAUDE-AI real (2026-10-31, PR https://github.com/JohanSardar/apple-bridge/pull/476), which proves interactive Claude.ai OAuth through the public relay, owner-local Mac approval and an authorized tool call. CT aggregator completeness is out of scope (remote.ct_indexing is dropped).
+    notes: Device-signed outbound smux TLS tunnel, reconnect and health pings; Mac ACME DNS-01, custom-domain checks, CT warnings and VM service deployment. Public apex control TLS and the live Mac health endpoint are reachable through ab-relay. ACME control renewal, public TXT propagation, explicit device addressing and startup retries are implemented. Ubuntu REST/MCP checks and the isolated Claude Code HTTP connector pass. CONN-RELAY-CLAUDE real transport evidence (2026-10-29) is complemented by CONN-CLAUDE-AI real (2026-10-31, PR https://github.com/JohanSardar/apple-bridge/pull/476), which proves interactive Claude.ai OAuth through the public relay, owner-local Mac approval and an authorized tool call.
     scenarios:
       - {id: RELAY-PASSTHROUGH, levels: [sim]}
       - {id: RELAY-ENROLL, levels: [sim]}
@@ -977,30 +919,6 @@ features:
     scenarios:
       - {id: MAIL-BODY, levels: [sim]}
       - {id: MAIL-BODY-REAL, levels: [real]}
-  - id: photos.capture
-    title: Photos metadata capture and filtered search
-    requirements: [R-API, R-SCOPE]
-    milestone: G10
-    modules: [native/Sources/PhotosSource, internal/contracts]
-    depends_on: [core.queries]
-    status: dropped
-    scenarios:
-      - {id: PHO-CAPTURE, levels: [sim]}
-      - {id: PHO-IDLE, levels: [sim, real], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
-      - {id: PHO-READ-REAL, levels: [real]}
-    notes: "Dropped from scope by the owner on 2026-11-01. Photos real scenarios now probe inside the signed Helper identity and use a synthetic Bridge Test album when authorized. Real qualification is limited: needs Photos grant (Full Access for dev.applebridge.helper). No prompt is requested."
-  - id: photos.commands
-    title: Photos import and library commands
-    requirements: [R-API, R-SCOPE]
-    milestone: G10
-    modules: [native/Sources/PhotosSource, internal/contracts, internal/operations]
-    depends_on: [photos.capture]
-    status: dropped
-    scenarios:
-      - {id: PHO-COMMANDS, levels: [sim]}
-      - {id: PHO-IMPORT-REAL, levels: [real]}
-      - {id: PHO-ORIGINAL-REAL, levels: [real]}
-    notes: "Dropped from scope by the owner on 2026-11-01. Signed Helper qualification imports a synthetic PNG into a unique Bridge Test album, checks readback and original digests, and cleans up. Real runs limited: needs Photos grant (Full Access). Deleted synthetic imports remain in Recently Deleted for 30 days."
   - id: mail.commands
     title: Mail commands with readback
     requirements: [R-RW]
@@ -1073,20 +991,6 @@ features:
       - {id: FILE-COMMANDS, levels: [sim]}
       - {id: FILE-CRUD-REAL, levels: [sim, real]}
       - {id: FILE-REPLICA, levels: [replica]}
-  - id: music.catalog
-    title: Music catalog, player controls and library
-    requirements: [R-API, R-SCOPE]
-    milestone: G7
-    modules: [native/Sources/MusicSource, internal/contracts]
-    depends_on: [core.queries]
-    status: dropped
-    scenarios:
-      - {id: MUS-SIM, levels: [sim]}
-      - {id: MUS-CATALOG-REAL, levels: [real]}
-      - {id: MUS-CONTROL-REAL, levels: [real]}
-      - {id: MUS-PLAYLIST-REAL, levels: [real]}
-      - {id: MUS-IDLE, levels: [sim, real], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
-    notes: "Dropped from scope by the owner on 2026-11-01. Tagged silent-track fixtures and exact playback restore implemented; real qualification requires a nonprompting Music Automation grant and restorable unshuffled playlist context. Library capture bounded to 500 tracks / 50 playlists / 1000 memberships; Automation dev.applebridge.helper → com.apple.Music missing. Public API has no playlist search. Prior whole Helper idle measured 2.063240% CPU-time over 300.014 idle seconds. T71 MAC-IDLE measured 2.016546% over 300.018 idle seconds under the global real-run lock; T99 MUS-IDLE remains unqualified: the current signed Helper reports Full Disk Access denied; no idle CPU sample was taken."
   - id: files.transform
     title: Native image and PDF blob transforms
     requirements: [R-API, R-SCOPE]
@@ -1106,19 +1010,7 @@ features:
     scenarios:
       - {id: AUD-SIM, levels: [sim]}
       - {id: SPEECH-SAY, levels: [real]}
-      - {id: AI-LOCAL, levels: [real]}
       - {id: AUD-TRANSCRIBE, levels: [real]}
-  - id: weather.pack
-    title: Weather via native WeatherKit fallback
-    requirements: [R-RW]
-    milestone: G7
-    modules: [internal/weatherpack, native/Sources/WeatherSource]
-    depends_on: [helper.session]
-    status: dropped
-    scenarios:
-      - {id: WX-SIM, levels: [sim]}
-      - {id: WX-REAL, levels: [real]}
-    notes: Dropped from scope by product decision.
   - id: mac.commands
     title: Mac system commands
     requirements: [R-API, R-SCOPE]
@@ -1179,18 +1071,6 @@ features:
       - {id: SAF-IDLE, levels: [sim, real], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
       - {id: SAF-HISTORY-REAL, levels: [real]}
       - {id: SAF-BOOKMARKS-REAL, levels: [real]}
-  - id: safari.commands
-    title: Safari tabs commands and guarded public page text
-    requirements: [R-FULL, R-LIVE]
-    milestone: G11
-    modules: [native/Sources/SafariSource, internal/contracts, internal/operations, internal/publichttp, lab/simapple]
-    depends_on: [safari.capture]
-    status: dropped
-    notes: "Dropped from scope by the owner on 2026-11-01. Public page text has no Safari cookies; logged-in pages are limited. safari.close_tab is limited. Safari exposes no stable tab identity; closing could hit a user tab"
-    scenarios:
-      - {id: SAF-COMMANDS, levels: [sim]}
-      - {id: SAF-TABS-REAL, levels: [real]}
-      - {id: SAF-READINGLIST-REAL, levels: [real]}
   - id: capture.commands
     title: Capture and PDF print provider lifecycle
     requirements: [R-API, R-SCOPE]
@@ -1237,17 +1117,6 @@ features:
       - {id: IWORK-REAL, levels: [sim, real], status: dropped, reason: "Dropped by the owner: iWork (Pages) export is out of scope."}
       - {id: SHAZAM-REAL, levels: [real], status: dropped, reason: "Dropped because song recognition needs the ShazamKit entitlement."}
       - {id: BT-REAL, levels: [real]}
-  - id: phone.dial
-    title: Continuity dialing with Mac confirmation
-    requirements: [R-API, R-SCOPE]
-    milestone: G4
-    modules: [native/Sources/CallsSource, internal/contracts, internal/operations]
-    depends_on: [phone.read]
-    status: dropped
-    scenarios:
-      - {id: CALL-DIAL, levels: [sim]}
-      - {id: CALL-DIAL-REAL, levels: [real]}
-    notes: Dropped because calls are prohibited.
   - id: iphone.health
     title: Incremental HealthKit samples and day or week summaries
     requirements: [R-API, R-SECURE]
@@ -1337,16 +1206,6 @@ features:
     scenarios:
       - {id: APP-ALARM-SIM, levels: [sim]}
       - {id: APP-ALARM-REAL, levels: [real]}
-  - id: iphone.extras
-    title: iPhone WeatherKit, Journal suggestions and EnergyKit hints
-    requirements: [R-API, R-SCOPE]
-    milestone: G13
-    modules: [ios/Capabilities/Extras, internal/contracts, lab/scenarios]
-    depends_on: [iphone.delivery]
-    status: dropped
-    scenarios:
-      - {id: APP-EXTRAS-SIM, levels: [sim]}
-    notes: Dropped because these capabilities need Apple approval.
   - id: iphone.device.context
     title: iPhone battery, charging, Wi-Fi, name and Focus filter
     requirements: [R-API]
@@ -1379,16 +1238,6 @@ features:
       - {id: APP-LOC-SIM, levels: [sim]}
       - {id: APP-LOC-REAL, levels: [real]}
     notes: Physical iPhone qualification covers a foreground precise fix and tagged geofence registration/removal; background movement delivery remains outside this scenario.
-  - id: iphone.appleapproval
-    title: Apple approval gated FinanceKit, critical alerts, location push and fall detection
-    requirements: [R-API, R-SCOPE, R-SAFE-CMD]
-    milestone: G13
-    modules: [ios/Capabilities/AppleApproval, ios/Extensions/LocationPush, internal/contracts]
-    depends_on: [iphone.delivery]
-    status: dropped
-    scenarios:
-      - {id: APP-WALLET-SIM, levels: [sim]}
-    notes: Dropped because these capabilities need Apple approval.
   - id: iphone.intents
     title: Siri, Shortcuts and Action button for iPhone commands
     requirements: [R-API]
@@ -1431,47 +1280,3 @@ features:
     scenarios:
       - {id: APP-CAPTURE-SIM, levels: [sim]}
       - {id: APP-CAPTURE-REAL, levels: [real], status: dropped, reason: "Dropped by the owner on 2026-11-01: needs a live Face ID match."}
-  - id: home.pack
-    title: Home automation
-    requirements: [R-API]
-    milestone: G14
-    modules: []
-    depends_on: []
-    status: dropped
-    notes: Home was dropped from scope.
-
-  - id: mac.airplay
-    title: AirPlay output routing
-    requirements: [R-API]
-    milestone: G16
-    modules: []
-    depends_on: []
-    status: dropped
-    notes: AirPlay is removed; operation registration, native handlers and simulator support are removed.
-
-  - id: iphone.nfc
-    title: NFC physical tag qualification
-    requirements: [R-API]
-    milestone: G13
-    modules: []
-    depends_on: []
-    status: dropped
-    notes: NFC is dropped because it needs a physical tag.
-
-  - id: remote.ct_indexing
-    title: RELAY-REAL crt.sh indexing
-    requirements: [R-API]
-    milestone: M0
-    modules: []
-    depends_on: []
-    status: dropped
-    notes: crt.sh indexing is dropped because it is an outside dependency; public relay DNS/TLS and REST/MCP qualification remain in scope.
-
-  - id: files.inline_limit
-    title: FILE-COMMANDS payloads over 128 KiB
-    requirements: [R-API]
-    milestone: G9
-    modules: []
-    depends_on: []
-    status: dropped
-    notes: Larger inline payloads are dropped because the 128 KiB cap is by design.

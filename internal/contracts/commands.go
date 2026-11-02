@@ -146,12 +146,6 @@ func ValidateCommand(c Command) (ReminderArgs, error) {
 	if strings.HasPrefix(c.Op, "mail.") {
 		return ValidateMailCommand(c)
 	}
-	if strings.HasPrefix(c.Op, "music.") {
-		return ReminderArgs{}, ValidateMusicCommand(c)
-	}
-	if strings.HasPrefix(c.Op, "photos.") {
-		return ReminderArgs{}, ValidatePhotoCommand(c)
-	}
 	if PlaybackOperation(c.Op) {
 		return ReminderArgs{}, ValidatePlayback(c)
 	}
@@ -161,9 +155,6 @@ func ValidateCommand(c Command) (ReminderArgs, error) {
 	if CaptureOperation(c.Op) {
 		return ReminderArgs{}, ValidateCapture(c)
 	}
-	if strings.HasPrefix(c.Op, "safari.") {
-		return ReminderArgs{}, ValidateSafariCommand(c)
-	}
 	if strings.HasPrefix(c.Op, "mac.") {
 		return ReminderArgs{}, ValidateMacCommand(c)
 	}
@@ -172,9 +163,6 @@ func ValidateCommand(c Command) (ReminderArgs, error) {
 	}
 	if c.Op == "maps.open" {
 		return ReminderArgs{}, ValidateMapsOpen(c)
-	}
-	if c.Op == "phone.dial" {
-		return ReminderArgs{}, ValidatePhoneDial(c)
 	}
 	if c.Op == "focus.set" {
 		return ReminderArgs{}, ValidateFocusSet(c)

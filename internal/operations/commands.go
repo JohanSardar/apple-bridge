@@ -193,7 +193,7 @@ func (g *LocalGateway) Submit(ctx context.Context, p trust.Principal, c contract
 			releaseUploads()
 		}
 	}()
-	if p.IsAgent() && (p.Level == trust.AgentApprove || c.Op == "phone.dial" || c.Op == "focus.set") {
+	if p.IsAgent() && (p.Level == trust.AgentApprove || c.Op == "focus.set") {
 		r := contracts.CommandRecord{UploadReferences: refs, Command: contracts.RedactMacCommand(c), Principal: p.ID, Source: contracts.CollectionSource(c.Op), RequestHash: hash, State: contracts.CommandAwaitingApproval, Disposition: contracts.DispositionAwaitingApproval, AdmissionEra: era, CreatedAt: now, ExpiresAt: now.Add(24 * time.Hour)}
 		record, err := g.State.TransitionCommand(ctx, state.CommandTransition{Record: r})
 		if err == nil && g.IPhone != nil {
@@ -271,19 +271,7 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 	}
 	defer release()
 	action := contracts.NativeAction{Op: c.Op, Args: a, Origin: c.Origin}
-	if c.Op == "phone.dial" {
-		var args contracts.PhoneDialArgs
-		json.Unmarshal(c.Args, &args)
-		action.Args = args
-	}
-	if strings.HasPrefix(c.Op, "music.") {
-		args, problem := g.musicArgs(runctx, p, c)
-		if problem != nil {
-			return g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, problem)
-		}
-		action.Args = args
-	}
-	if strings.HasPrefix(c.Op, "photos.") || strings.HasPrefix(c.Op, "mail.") {
+	if strings.HasPrefix(c.Op, "mail.") {
 		action.Args = c.Args
 	}
 	if contracts.PlaybackOperation(c.Op) {
@@ -297,13 +285,6 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 		var args contracts.FileArgs
 		if json.Unmarshal(c.Args, &args) != nil {
 			return g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, contracts.ErrInvalid)
-		}
-		action.Args = args
-	}
-	if strings.HasPrefix(c.Op, "safari.") {
-		var args contracts.SafariArgs
-		if json.Unmarshal(c.Args, &args) != nil {
-			return r, contracts.ErrInvalid
 		}
 		action.Args = args
 	}
@@ -374,12 +355,6 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 	}
 	if strings.HasPrefix(c.Op, "mail.") {
 		collection = "mail.message"
-	}
-	if strings.HasPrefix(c.Op, "photos.") {
-		collection = "photos.asset"
-		if c.Op == "photos.create_album" {
-			collection = "photos.album"
-		}
 	}
 	if c.Op == "reminders.rename_list" || c.Op == "reminders.delete_list" {
 		collection = "reminders.list"
@@ -545,9 +520,6 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 		return r, contracts.ErrCorrupt
 	}
 	evidence, _ := json.Marshal(prepared)
-	if r.Source == "music" {
-		evidence, _ = json.Marshal(map[string]string{"fingerprint": hash})
-	}
 	r, err = g.transition(g.Context, r, "prepared", "", evidence, nil)
 	if err != nil {
 		return r, err
@@ -641,7 +613,7 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 		to = "indeterminate"
 		f.Disposition = "indeterminate"
 	}
-	if (r.Source == "mac" || r.Source == contracts.Safari) && !contracts.CaptureOperation(r.Command.Op) && to == "observed" && !contracts.MacCompletionEvidence(f.Evidence, r.RequestHash) {
+	if r.Source == "mac" && !contracts.CaptureOperation(r.Command.Op) && to == "observed" && !contracts.MacCompletionEvidence(f.Evidence, r.RequestHash) {
 		to = "indeterminate"
 		f.Disposition = "indeterminate"
 	}
@@ -653,11 +625,7 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 		to = "indeterminate"
 		f.Disposition = "indeterminate"
 	}
-	if contracts.MusicPlayerOperation(r.Command.Op) && to == "observed" && !contracts.MusicCompletionEvidence(f.Evidence, r.RequestHash) {
-		to = "indeterminate"
-		f.Disposition = "indeterminate"
-	}
-	if !contracts.CaptureOperation(r.Command.Op) && r.Command.Op != "maps.open" && r.Source != "mac" && r.Source != contracts.Safari && r.Command.Op != "shortcuts.run" && r.Command.Op != "focus.set" && !contracts.MusicPlayerOperation(r.Command.Op) && !contracts.PlaybackOperation(r.Command.Op) && (to == "observed" || to == "delivered" || to == "delivery_failed") {
+	if !contracts.CaptureOperation(r.Command.Op) && r.Command.Op != "maps.open" && r.Source != "mac" && r.Command.Op != "shortcuts.run" && r.Command.Op != "focus.set" && !contracts.PlaybackOperation(r.Command.Op) && (to == "observed" || to == "delivered" || to == "delivery_failed") {
 		var evidence struct {
 			NativeKey         string `json:"native_key"`
 			Fingerprint       string `json:"fingerprint"`
@@ -672,22 +640,6 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 		}
 		if r.Source == "pdf" {
 			collection = "pdf.artifact"
-		}
-		if r.Source == contracts.Phone {
-			collection = "phone.call"
-		}
-		if r.Source == "music" {
-			collection = "music.library_item"
-			if r.Command.Op == "music.add_to_playlist" {
-				collection = "music.playlist"
-			}
-		}
-
-		if r.Source == "photos" {
-			collection = "photos.asset"
-			if r.Command.Op == "photos.create_album" {
-				collection = "photos.album"
-			}
 		}
 		if r.Source == "files" {
 			collection = "files.item"
@@ -748,9 +700,6 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 				}
 			}
 		}
-	}
-	if r.Source == "music" {
-		f.Evidence = musicPublicEvidence(f.Evidence)
 	}
 	if g.messageParts(ctx, &r, &f) {
 		if r.CommitSeq < prior.CommitSeq {

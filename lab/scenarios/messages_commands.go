@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/lab/scripted"
 	"github.com/JohanSardar/apple-bridge/lab/world"
@@ -17,9 +16,6 @@ import (
 func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence {
 	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
 	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Assertions: []Assertion{}, Latency: map[string]Latency{}, Hosts: []string{"air"}}
-	if level == "real" && messageSendVariant(s.ID) != "" {
-		return runMessagesVariantReal(ctx, s, e)
-	}
 	if s.ID == "MSG-SELFTEST" && level == "real" {
 		return runNativeMessagesSelfTest(ctx, e)
 	}
@@ -33,9 +29,6 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 		return runNativeMessagesCommands(ctx, s, level, e)
 	}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
-	if kind := messageSendVariant(s.ID); kind != "" {
-		runMessagesVariantReadback(ctx, kind, add)
-	}
 	w, err := world.New(ctx, level, 1, 0, world.BlobOptions{Scope: "messages:read,messages:write,system:read"})
 	if err != nil {
 		add("world_start", false)
@@ -270,79 +263,6 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 		_, problem = submit(wrong)
 		add("resend_successful_target_rejected", successful.ID != "" && problem != nil && count(wrong, 0))
 
-	case "MSG-SEND-VARIANTS", "MSG-SEND-LATER", "MSG-SEND-EFFECT", "MSG-FORMATTING-SEND", "MSG-MENTION-SEND", "MSG-AUDIO-MESSAGE":
-		var sources contracts.ReadResult
-		add("source_status", client.Call(ctx, "sources.status", struct{}{}, &sources) == nil)
-		coverage := map[string]contracts.OperationCapability{}
-		for _, source := range sources.Records {
-			var data struct {
-				Coverage     contracts.Coverage `json:"coverage"`
-				Capabilities []string           `json:"capabilities"`
-			}
-			json.Unmarshal(source.Data, &data)
-			for _, item := range data.Coverage.Operations {
-				coverage[item.Operation] = item
-			}
-			for _, name := range contracts.MessageVariantCapabilities {
-				advertised := false
-				for _, capability := range data.Capabilities {
-					advertised = advertised || capability == name
-				}
-				add("not_advertised_"+name, !advertised)
-			}
-		}
-		for _, name := range contracts.MessageVariantCapabilities {
-			proof, ok := coverage[name]
-			add("limited_reason_"+name, ok && !proof.Proven && proof.Reason == "per_os_variant_proof_required")
-		}
-		variants := []map[string]any{
-			{"kind": "schedule", "scheduled_for": time.Now().Add(time.Hour).UTC().Format(time.RFC3339Nano)},
-			{"kind": "effect", "effect": "loud"},
-			{"kind": "formatting", "formatting": []any{map[string]any{"utf16_location": 0, "utf16_length": 1, "styles": []string{"bold"}}}},
-			{"kind": "mention", "handle_id": "handle-self", "utf16_location": 0, "utf16_length": 1},
-			{"kind": "audio"},
-		}
-		selected := map[string]string{"MSG-SEND-LATER": "schedule", "MSG-SEND-EFFECT": "effect", "MSG-FORMATTING-SEND": "formatting", "MSG-MENTION-SEND": "mention", "MSG-AUDIO-MESSAGE": "audio"}[s.ID]
-		for _, variant := range variants {
-			if selected != "" && variant["kind"] != selected {
-				continue
-			}
-			args := map[string]any{"chat_id": chat.ID, "text": text, "variant": variant}
-			if variant["kind"] == "audio" {
-				args["text"] = ""
-				args["files"] = []any{map[string]any{"name": "ab-test-audio.wav", "data": base64.StdEncoding.EncodeToString([]byte("synthetic audio"))}}
-			}
-			c := command("send", args, 0)
-			_, problem := submit(c)
-			failure, ok := problem.(*contracts.Error)
-			add("unproven_"+variant["kind"].(string)+"_no_plain_fallback", ok && failure.Code == "capability_unproven" && count(c, 0))
-		}
-		invalid := []map[string]any{
-			{"kind": "unknown"},
-			{"kind": "schedule", "scheduled_for": time.Now().Add(-time.Hour).UTC().Format(time.RFC3339Nano)},
-			{"kind": "effect", "effect": "invented"},
-			{"kind": "effect", "effect": "loud", "scheduled_for": time.Now().Add(time.Hour).UTC().Format(time.RFC3339Nano)},
-			{"kind": "formatting", "formatting": []any{map[string]any{"utf16_location": 2, "utf16_length": 1, "styles": []string{"bold"}}}},
-			{"kind": "formatting", "formatting": []any{map[string]any{"utf16_location": 0, "utf16_length": 0, "styles": []string{"bold"}}}},
-			{"kind": "formatting", "formatting": []any{map[string]any{"utf16_location": 0, "utf16_length": 1, "styles": []string{"bold", "bold"}}}},
-		}
-		for index, variant := range invalid {
-			c := command("send", map[string]any{"chat_id": chat.ID, "text": "A😀B", "variant": variant}, 0)
-			_, problem := submit(c)
-			failure, ok := problem.(*contracts.Error)
-			add(fmt.Sprintf("invalid_variant_%d_no_effect", index), ok && failure.Code == "invalid" && count(c, 0))
-		}
-		ordinary, problem := send()
-		add("plain_send_unchanged", observed(ordinary, problem))
-		if len(ordinary.ObservedRecordIDs) > 0 {
-			target := record("messages.message", ordinary.ObservedRecordIDs[0])
-			c := command("keep_audio", map[string]any{"id": target.ID}, target.Version)
-			_, problem = submit(c)
-			failure, ok := problem.(*contracts.Error)
-			add("keep_unproven_no_effect", ok && failure.Code == "capability_unproven" && count(c, 0))
-		} else {
-			add("keep_unproven_no_effect", false)
-		}
 	case "MSG-CAPABILITY-MATRIX":
 		var status contracts.ReadResult
 		err := client.Call(ctx, "sources.status", struct{}{}, &status)
@@ -464,64 +384,6 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 		bad := command("send", map[string]any{"handles": []string{"other@example.com"}, "service": "iMessage", "text": text}, 0)
 		_, err := submit(bad)
 		add("non_self_refused_before_effect", err != nil && count(bad, 0))
-	case "MSG-GROUP-CREATE", "MSG-GROUP-MANAGE", "MSG-SEND-RCS-GROUP":
-		c := command("create_group", map[string]any{"handles": []string{"self@example.com", "member1@example.com", "member2@example.com"}, "service": "iMessage", "text": text, "name": "Bridge Test"}, 0)
-		r, err := submit(c)
-		add("group_created", observed(r, err))
-		var group contracts.Record
-		for _, g := range read("messages.chat") {
-			if g.ID != chat.ID {
-				group = g
-			}
-		}
-		if s.ID == "MSG-GROUP-MANAGE" && group.ID != "" {
-			for _, op := range []string{"rename_group", "add_member"} {
-				extra := map[string]any{"name": "Bridge Test renamed"}
-				if op == "add_member" {
-					extra = map[string]any{"handle": "member3@example.com"}
-				}
-				r, err := submit(target(op, group, extra))
-				add(op, observed(r, err))
-				group = record("messages.chat", group.ID)
-			}
-			r, err := submit(target("remove_member", group, map[string]any{"handle": "member3@example.com"}))
-			add("remove_member", observed(r, err))
-			group = record("messages.chat", group.ID)
-			rejected := target("remove_member", group, map[string]any{"handle": "member2@example.com"})
-			r, err = submit(rejected)
-			add("remove_rejects_below_four_participants", err != nil && count(rejected, 0))
-			r, err = submit(target("leave_group", group, nil))
-			add("leave_group", observed(r, err))
-		}
-		for _, service := range []string{"SMS", "RCS"} {
-			created := command("create_group", map[string]any{"handles": []string{"self@example.com", "second-self@example.com"}, "service": service, "text": text}, 0)
-			r, err := submit(created)
-			add(service+"_group_creation_route_explicit", observed(r, err))
-			for _, g := range read("messages.chat") {
-				var d map[string]any
-				json.Unmarshal(g.Data, &d)
-				if d["service"] != service {
-					continue
-				}
-				if service == "RCS" {
-					c := command("send", map[string]any{"chat_id": g.ID, "text": text + " RCS group"}, 0)
-					r, err := submit(c)
-					add("rcs_existing_group_send", observed(r, err))
-				}
-				for _, op := range []string{"rename_group", "add_member", "remove_member", "leave_group"} {
-					extra := map[string]any{}
-					if op == "rename_group" {
-						extra["name"] = "Bridge Test renamed"
-					}
-					if op == "add_member" || op == "remove_member" {
-						extra["handle"] = "self@example.com"
-					}
-					c := target(op, g, extra)
-					_, err := submit(c)
-					add(service+"_"+op+"_rejected_before_effect", err != nil && count(c, 0))
-				}
-			}
-		}
 
 	default:
 		r, err := send()

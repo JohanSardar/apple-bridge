@@ -3,7 +3,6 @@ import AppleSession
 import Contacts
 import EventKit
 import Carbon
-import Photos
 import ApplicationServices
 import SQLite3
 
@@ -20,7 +19,6 @@ final class SetupPermissions {
             let state = EKEventStore.authorizationStatus(for: type)
             result[name] = state == .fullAccess ? "granted" : state == .notDetermined ? "not_determined" : "denied"
         }
-        if PHPhotoLibrary.authorizationStatus(for: .readWrite) == .limited { result["photos"] = "limited" }
         do {
             let file = try FileHandle(forReadingFrom: FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/com.apple.TCC/TCC.db"))
             try file.close()
@@ -40,7 +38,7 @@ final class SetupPermissions {
         return result
     }
     func compareTCC(_ statuses: [String: String]) -> (matches: Bool, count: Int) {
-        let services = ["kTCCServiceAddressBook": "contacts", "kTCCServiceCalendar": "calendar", "kTCCServiceCalendarFullAccess": "calendar", "kTCCServiceReminders": "reminders", "kTCCServicePhotos": "photos", "kTCCServiceCamera": "camera", "kTCCServiceMicrophone": "microphone", "kTCCServiceSpeechRecognition": "speech_recognition", "kTCCServiceBluetoothAlways": "bluetooth", "kTCCServiceAccessibility": "accessibility", "kTCCServiceScreenCapture": "screen_recording", "kTCCServiceSystemPolicyAllFiles": "full_disk_access"]
+        let services = ["kTCCServiceAddressBook": "contacts", "kTCCServiceCalendar": "calendar", "kTCCServiceCalendarFullAccess": "calendar", "kTCCServiceReminders": "reminders", "kTCCServiceCamera": "camera", "kTCCServiceMicrophone": "microphone", "kTCCServiceSpeechRecognition": "speech_recognition", "kTCCServiceBluetoothAlways": "bluetooth", "kTCCServiceAccessibility": "accessibility", "kTCCServiceScreenCapture": "screen_recording", "kTCCServiceSystemPolicyAllFiles": "full_disk_access"]
         var count = 0
         var matches = true
         let files = [FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/com.apple.TCC/TCC.db").path, "/Library/Application Support/com.apple.TCC/TCC.db"]

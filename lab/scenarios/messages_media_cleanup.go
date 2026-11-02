@@ -23,11 +23,11 @@ func runMediaCleanupProof(ctx context.Context, s Scenario, level string) Evidenc
 	}
 	defer os.RemoveAll(directory)
 	nativeOutput, _ := os.ReadFile("native/.build/native-output-1")
-	binary := filepath.Join(strings.TrimSpace(string(nativeOutput)), "MessagesVariantChecks")
-	if !messagesVariantChecksFresh(binary) {
+	binary := filepath.Join(strings.TrimSpace(string(nativeOutput)), "MessagesSafetyChecks")
+	if !messagesSafetyChecksFresh(binary) {
 		build := exec.CommandContext(ctx, "packaging/dev/build-native.sh")
 		build.WaitDelay = 2 * time.Second
-		build.Env = append(os.Environ(), "APPLE_BRIDGE_NATIVE_TARGET=MessagesVariantChecks")
+		build.Env = append(os.Environ(), "APPLE_BRIDGE_NATIVE_TARGET=MessagesSafetyChecks")
 		if output, err := build.CombinedOutput(); err != nil {
 			os.Stderr.Write(output)
 			add("native_cleanup_checks_build", false)
@@ -38,7 +38,7 @@ func runMediaCleanupProof(ctx context.Context, s Scenario, level string) Evidenc
 			add("native_cleanup_checks_binary", false)
 			return e
 		}
-		binary = filepath.Join(strings.TrimSpace(string(nativeOutput)), "MessagesVariantChecks")
+		binary = filepath.Join(strings.TrimSpace(string(nativeOutput)), "MessagesSafetyChecks")
 	}
 	filename := "ab-run_media.heic"
 	fixture := map[string]any{"tag": "[ab-test run_media]", "registration": map[string]any{"scenario": "WEB-MEDIA-VARIANTS", "run_id": "run_media", "baseline_max_row_id": 30, "media_attachment_names": []string{filename}}, "own": []string{"self@example.com"}, "row": map[string]any{"row_id": 31, "attachments": []string{filename}, "peers": []string{"self@example.com"}, "is_from_me": true}, "candidates": []any{map[string]any{"outgoing": true, "values": []string{"file:///private/test/" + filename}}, map[string]any{"outgoing": false, "values": []string{filename}}}}
@@ -122,4 +122,25 @@ func runMediaCleanupProof(ctx context.Context, s Scenario, level string) Evidenc
 		e.Passed = e.Passed && a.Passed
 	}
 	return e
+}
+
+func messagesSafetyChecksFresh(binary string) bool {
+	info, err := os.Stat(binary)
+	if err != nil {
+		return false
+	}
+	for _, root := range []string{"native/Package.swift", "native/Sources/MessagesSafetyChecks", "native/Sources/MessagesSource", "native/Sources/SourceSupport", "native/Sources/Decoders", "packaging/dev/build-native.sh", "packaging/dev/build-native.py"} {
+		if filepath.Walk(root, func(_ string, entry os.FileInfo, problem error) error {
+			if problem != nil {
+				return problem
+			}
+			if entry.ModTime().After(info.ModTime()) {
+				return os.ErrInvalid
+			}
+			return nil
+		}) != nil {
+			return false
+		}
+	}
+	return true
 }

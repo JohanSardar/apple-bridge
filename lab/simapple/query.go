@@ -72,13 +72,6 @@ func (s *querySession) receive(f contracts.IPCFrame) bool {
 			} else {
 				out.ResultJSON = json.RawMessage(`{"items":[{"app":"com.example.synthetic","identifier":"Export","title":"Export"}],"complete":true,"schema_guaranteed":false}`)
 			}
-		case "weather.current":
-			result, weatherErr := syntheticWeather(ctx, f.Args)
-			out.ResultJSON = result
-			if weatherErr != nil {
-				out.T = "QueryError"
-				out.Code = "invalid"
-			}
 		case "test.echo":
 		case "test.sleep":
 			select {
@@ -136,29 +129,6 @@ func (s *querySession) receive(f contracts.IPCFrame) bool {
 		case "helper.version":
 			out.ResultJSON = json.RawMessage(`{"version":"sim","protocol":"ipc/1"}`)
 		default:
-			if f.Op == "music.now_playing" {
-				var fields map[string]json.RawMessage
-				if contracts.DecodeInput(f.Args, &fields) != nil || len(fields) != 0 {
-					out.T = "QueryError"
-					out.Code = "invalid"
-				} else {
-					s.fake.mu.Lock()
-					player := s.fake.music.player()
-					delete(player, "id")
-					out.ResultJSON, _ = json.Marshal(player)
-					s.fake.mu.Unlock()
-				}
-				break
-			}
-			if code, result, handled := simulateMusicQuery(f.Op, f.Args); handled {
-				if code != "" {
-					out.T = "QueryError"
-					out.Code = code
-				} else {
-					out.ResultJSON = result
-				}
-				break
-			}
 			if code, result, blobs, handled := s.fake.mapsQuery(f.Op, f.Args); handled {
 				out.Blobs = blobs
 				out.ResultJSON = result
@@ -168,24 +138,18 @@ func (s *querySession) receive(f contracts.IPCFrame) bool {
 				}
 				break
 			}
-			if photos, handled := s.fake.photosQuery(f); handled {
-				out = photos
-				break
-			}
 			if files, handled := s.fake.filesQuery(f); handled {
 				out = files
 				break
 			}
-			for _, handler := range []func(string, json.RawMessage) (string, json.RawMessage, bool){simulateTranscription, simulateAIQuery} {
-				if code, result, handled := handler(f.Op, f.Args); handled {
-					out.ResultJSON = result
-					if code != "" {
-						out.T = "QueryError"
-						out.Code = code
-					}
-					_, _ = s.wire.Send(out)
-					return
+			if code, result, handled := simulateTranscription(f.Op, f.Args); handled {
+				out.ResultJSON = result
+				if code != "" {
+					out.T = "QueryError"
+					out.Code = code
 				}
+				_, _ = s.wire.Send(out)
+				return
 			}
 			if code, result, handled := simulateAudioQuery(f.Op, f.Args); handled {
 				out.ResultJSON = result

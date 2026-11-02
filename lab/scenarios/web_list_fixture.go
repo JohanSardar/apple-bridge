@@ -1,7 +1,6 @@
 package scenarios
 
 import (
-	"context"
 	"fmt"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/lab/world"
@@ -20,9 +19,6 @@ func webListFixture(w *world.World, update bool) (webAvatar, error) {
 	previousTimeout := w.Control.Timeout
 	w.Control.Timeout = webFixtureSetupTimeout
 	defer func() { w.Control.Timeout = previousTimeout }()
-	if err := webListClearDemoPin(w); err != nil {
-		return avatar, err
-	}
 	avatar, err := webAvatarFixture(w)
 	if err != nil {
 		return avatar, err
@@ -91,7 +87,7 @@ func webListFixture(w *world.World, update bool) (webAvatar, error) {
 			at = now.Add(-20 * time.Minute).Truncate(time.Second).Add(time.Duration(i-8) * 100 * time.Millisecond)
 		}
 		if i >= 5 && i <= 7 {
-			at = now.Add(-time.Duration([]int{24, 72, 240}[i-5]) * time.Hour)
+			at = now.In(time.Local).AddDate(0, 0, -[]int{1, 3, 10}[i-5]).UTC()
 		}
 		messageKey := fmt.Sprintf("list-message-%03d", i)
 		data := map[string]any{"chat_id": rmRef("messages.chat", key), "sent_at": at, "kind": "message", "text": body, "is_from_me": i%2 != 0, "parts": []any{}}
@@ -136,42 +132,4 @@ func webListLateIncoming(w *world.World) error {
 		return fmt.Errorf("synthetic world required")
 	}
 	return rmPut(w, rmObservation("messages.message", "list-late-incoming", map[string]any{"chat_id": rmRef("messages.chat", "list-chat-539"), "sent_at": time.Now().UTC().Add(time.Minute), "kind": "message", "text": "Now at the top", "is_from_me": false, "parts": []any{}}))
-}
-
-func webListPinFixture(w *world.World) error {
-	if w.Level != "sim" || w.Native {
-		return fmt.Errorf("synthetic world required")
-	}
-	records := []contracts.Observation{}
-	for index, name := range []string{"Maya Chen", "Weekend Crew", "Riley Parker"} {
-		participants := []any{rmRef("messages.handle", fmt.Sprintf("list-handle-%d", index))}
-		style := "direct"
-		if index == 1 {
-			style = "group"
-			participants = []any{rmRef("messages.handle", "list-handle-0"), rmRef("messages.handle", "list-handle-2"), rmRef("messages.handle", "list-handle-3"), rmRef("messages.handle", "list-handle-4")}
-		}
-		records = append(records, rmObservation("messages.chat", fmt.Sprintf("list-chat-%03d", index), map[string]any{"display_name": name, "participants": participants, "style": style, "service": "iMessage", "filter": "known", "pinned_index": index}))
-	}
-	return rmPut(w, records...)
-}
-
-func webListClearDemoPin(w *world.World) error {
-	var page contracts.ReadResult
-	_, err := world.Request(context.Background(), w.Gateway, "/v1/op/records.query", contracts.ReadQuery{Collection: "messages.chat", IncludeAliases: true, Limit: 1000}, &page)
-	if err != nil {
-		return err
-	}
-	for _, alias := range page.Aliases {
-		if alias.NativeKey != "message-chat" {
-			continue
-		}
-		for _, record := range page.Records {
-			if record.ID == alias.RecordID {
-				data := rmData(record)
-				data["pinned_index"] = nil
-				return rmPut(w, rmObservation("messages.chat", "message-chat", data))
-			}
-		}
-	}
-	return fmt.Errorf("demo conversation missing")
 }

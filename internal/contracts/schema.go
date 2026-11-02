@@ -103,14 +103,6 @@ func (builder *schemaBuilder) build(t reflect.Type) map[string]any {
 }
 func OperationSchema(d OperationDescriptor) map[string]any {
 	s := JSONSchema(d.Input)
-	if d.Source == Safari && (d.Kind == QueryOp || d.Kind == CommandOp) {
-		key := "url"
-		if d.Name == "safari.page_text" {
-			key = "tab"
-		}
-		s["properties"].(map[string]any)["args"] = map[string]any{"type": "object", "additionalProperties": false, "required": []string{key}, "properties": map[string]any{key: map[string]any{"type": "string", "minLength": 1, "maxLength": 2048}}}
-		return s
-	}
 	if d.Kind == QueryOp {
 		props := s["properties"].(map[string]any)
 		props["args"] = map[string]any{}
@@ -211,34 +203,6 @@ func OperationSchema(d OperationDescriptor) map[string]any {
 		s["properties"].(map[string]any)["args"] = args
 		return s
 	}
-	if d.Kind == CommandOp && d.Source == "photos" {
-		args := JSONSchema(PhotoCommandArgs{})
-		fields := args["properties"].(map[string]any)
-		required := []string{"asset"}
-		allowed := " asset "
-		switch d.Name {
-		case "photos.import":
-			required = []string{"data", "digest", "kind"}
-			allowed = " data digest kind album "
-		case "photos.create_album":
-			required = []string{"name"}
-			allowed = " name "
-		case "photos.set_favorite":
-			required = []string{"asset", "favorite"}
-			allowed = " asset favorite "
-		case "photos.add_to_album", "photos.remove_from_album":
-			required = []string{"asset", "album"}
-			allowed = " asset album "
-		}
-		for key := range fields {
-			if !strings.Contains(allowed, " "+key+" ") {
-				delete(fields, key)
-			}
-		}
-		args["required"] = required
-		s["properties"].(map[string]any)["args"] = args
-		return s
-	}
 	if d.Kind == CommandOp && strings.HasPrefix(d.Name, "notes.") {
 		return noteSchema(d, s)
 	}
@@ -286,7 +250,7 @@ func OperationSchema(d OperationDescriptor) map[string]any {
 		}
 		if d.Source == Messages {
 			required = []string{}
-			if d.Name != "messages.send" && d.Name != "messages.create_group" {
+			if d.Name != "messages.send" {
 				required = []string{"id"}
 			}
 		}
@@ -296,8 +260,6 @@ func OperationSchema(d OperationDescriptor) map[string]any {
 				required = []string{"id", "text"}
 			case "messages.react":
 				required = []string{"id", "reaction"}
-			case "messages.create_group":
-				required = []string{"handles", "service", "text"}
 			}
 			if service, ok := fields["service"].(map[string]any); ok {
 				service["enum"] = []string{"iMessage", "SMS", "RCS"}
@@ -312,15 +274,12 @@ func OperationSchema(d OperationDescriptor) map[string]any {
 				args["oneOf"] = []any{map[string]any{"required": []string{"chat_id"}}, map[string]any{"required": []string{"handles", "service"}}}
 				args["anyOf"] = []any{map[string]any{"required": []string{"text"}}, map[string]any{"required": []string{"files"}}}
 			}
-			if d.Name == "messages.edit" || d.Name == "messages.unsend" || d.Name == "messages.keep_audio" || strings.HasPrefix(d.Name, "messages.delete_") {
+			if d.Name == "messages.edit" || d.Name == "messages.unsend" || strings.HasPrefix(d.Name, "messages.delete_") {
 				s["required"] = []string{"args", "expected_version"}
 			}
 		}
 		args["required"] = required
 		properties["args"] = args
-		if d.Source == Messages {
-			applyMessagesParitySchema(d.Name, s, args)
-		}
 		if d.Source != Messages && d.Name != "reminders.create" && d.Name != "reminders.create_list" && d.Name != "calendar.create_event" && d.Name != "calendar.create_calendar" {
 			s["required"] = []string{"args", "expected_version"}
 		}

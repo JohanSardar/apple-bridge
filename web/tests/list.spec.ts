@@ -29,7 +29,7 @@ test('WEB-MSG-LIST relative dates, selection and window focus',async({page},info
     const rows=page.locator('.conversation-row');
     const listViewport=page.getByRole('listbox',{name:'Conversations'});
     await expect.poll(()=>['Conversation 005','Conversation 006','Conversation 007'].every(title=>[...receivedChats.get(page)!.values()].some(chat=>chat.title===title))).toBe(true);
-    const ordered=[...receivedChats.get(page)!.values()].filter(chat=>chat.chat.data.is_archived!==true&&chat.pinned_index==null).sort((a,b)=>Date.parse(b.last_activity_at)-Date.parse(a.last_activity_at)||a.chat.id.localeCompare(b.chat.id));
+    const ordered=[...receivedChats.get(page)!.values()].filter(chat=>chat.chat.data.is_archived!==true).sort((a,b)=>Date.parse(b.last_activity_at)-Date.parse(a.last_activity_at)||a.chat.id.localeCompare(b.chat.id));
     for(const [title,label] of [['Conversation 005',/^Yesterday$/],['Conversation 006',/^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$/],['Conversation 007',/^\d{1,2}\/\d{1,2}\/\d{2}$/]] as const){
         const row=rows.filter({hasText:title}),index=ordered.findIndex(chat=>chat.title===title);expect(index).toBeGreaterThanOrEqual(0);
         await listViewport.evaluate((element,top)=>element.scrollTop=top,index*(info.project.use.viewport?.width===390?84:68));
@@ -86,18 +86,6 @@ test('WEB-MSG-LOADING coherent cached rows paint before an offline connection wi
     await page.addInitScript(()=>{(window as any).__listSkeletonPainted=false;new MutationObserver(()=>requestAnimationFrame(()=>{const skeleton=document.querySelector<HTMLElement>('.list-skeleton');if(skeleton&&skeleton.getBoundingClientRect().height>0)(window as any).__listSkeletonPainted=true;})).observe(document,{childList:true,subtree:true});});
     await page.reload();await expect(viewport).toBeVisible();await expect.poll(async()=>Number(await viewport.locator('[aria-setsize]').first().getAttribute('aria-setsize'))).toBeGreaterThanOrEqual(540);
     await page.waitForTimeout(220);expect(await page.evaluate(()=>(window as any).__listSkeletonPainted)).toBe(false);await expect(page.locator('.list-skeleton')).toHaveCount(0);
-});
-test('WEB-MSG-KEYBOARD-LIST optional pins, preview bubbles and numbered shortcuts',async({page,request},info)=>{
-    await expect(page.getByRole('group',{name:'Pinned conversations'})).toHaveCount(0);
-    const pinFrames=sentFrames.get(page)!;await control(request,'/list-pins');
-    const pins=page.getByRole('group',{name:'Pinned conversations'});
-    await expect(pins.getByRole('button')).toHaveCount(3);
-    await expect(pins.getByRole('button',{name:'Maya Chen',exact:true}).locator('.pin-preview')).toContainText('Are we still on for tomorrow?');await expect(pins.getByRole('button',{name:'Weekend Crew',exact:true}).locator('.pin-preview')).toHaveCount(0);const sidebar=(await page.locator('.sidebar').boundingBox())!;for(const bubble of await pins.locator('.pin-preview').all()){const box=(await bubble.boundingBox())!;expect(box.x).toBeGreaterThanOrEqual(sidebar.x);expect(box.x+box.width).toBeLessThanOrEqual(sidebar.x+sidebar.width);}
-    await control(request,'/list-fixture?update=1');await expect(pins.getByRole('button',{name:'Weekend Crew',exact:true}).locator('.pin-preview')).toHaveText('The plan is ready');expect(pinFrames.some(frame=>frame.t==='sub'&&frame.view==='chats')).toBe(true);expect(pinFrames.some(frame=>frame.t==='sub'&&frame.view==='thread')).toBe(false);await mkdir('../lab/evidence/private/web',{recursive:true});await page.screenshot({path:`../lab/evidence/private/web/list-pins-${info.project.name}.png`});
-    if(info.project.use.viewport?.width===390){await pins.getByRole('button',{name:'Maya Chen',exact:true}).click();await expect(page).toHaveURL(/messages\/cht_/);return;}
-    const modifier=await page.evaluate(()=>/Mac|iPhone|iPad/.test(navigator.platform)?'Meta':'Control');
-    await page.keyboard.press(modifier+'+2');await expect(pins.getByRole('button',{name:'Weekend Crew'})).toHaveAttribute('aria-pressed','true');
-    await page.keyboard.press(modifier+'+1');await expect(pins.getByRole('button',{name:'Maya Chen'})).toHaveAttribute('aria-pressed','true');
 });
 test('WEB-MSG-KEYBOARD-LIST arrows, chat cycling and New Message',async({page},info)=>{
     test.skip(info.project.use.viewport?.width===390,'Desktop keyboard shortcuts');

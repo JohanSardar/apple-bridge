@@ -1,9 +1,9 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[13.13 10.69 11.15] cpu_idle=44% cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[5.36 4.65 4.66] cpu_idle=55% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M630YGR1N9H7A8TT36G3TG7S",
+  "run_id": "run_01M6DCZE616BY7HZTMRZC94BEF",
   "metrics": {
     "capture_observer_resets": 0,
     "word_overlap_ratio": 1
@@ -12,7 +12,7 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-29T05:08:29.56903Z",
+  "at": "2026-11-02T05:51:06.945549Z",
   "assertions": [
     {
       "name": "world_started",
@@ -36,14 +36,6 @@
     },
     {
       "name": "missing_callback_is_indeterminate",
-      "passed": true
-    },
-    {
-      "name": "sim_model_availability_explicit",
-      "passed": true
-    },
-    {
-      "name": "sim_model_availability_explicit",
       "passed": true
     },
     {

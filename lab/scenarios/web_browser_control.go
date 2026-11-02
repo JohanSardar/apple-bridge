@@ -245,9 +245,6 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string, prepa
 		case "/list-empty":
 			err = webListEmptyFixture(ctx, w)
 			value = map[string]any{"ok": err == nil}
-		case "/list-pins":
-			err = webListPinFixture(w)
-			value = map[string]any{"ok": err == nil}
 		case "/list-late-incoming":
 			err = webListLateIncoming(w)
 			value = map[string]any{"ok": err == nil}

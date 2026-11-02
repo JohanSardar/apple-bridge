@@ -77,7 +77,6 @@ func runMac(ctx context.Context, s Scenario, level string) (e Evidence) {
 		}{
 			{"mac.set_volume", map[string]any{"volume": 23}},
 			{"mac.set_mute", map[string]any{"muted": true}},
-			{"mac.set_output_device", map[string]any{"device": "fixture"}},
 			{"mac.set_appearance", map[string]any{"appearance": "dark"}},
 			{"mac.launch_app", map[string]any{"bundle_id": "com.apple.calculator"}},
 			{"mac.activate_app", map[string]any{"bundle_id": "com.apple.calculator"}},

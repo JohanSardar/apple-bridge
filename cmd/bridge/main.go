@@ -30,7 +30,7 @@ func run(ctx context.Context, args []string) error {
 		return contracts.ErrInvalid
 	}
 	if args[0] == "permissions" {
-		if len(args) < 3 || args[1] != "request" || !strings.Contains(",location,camera,microphone,screen_recording,speech_recognition,focus,photos,bluetooth,notifications,automation_mail,automation_music,automation_safari,automation_shortcuts_events,", ","+args[2]+",") || args[2] == "" {
+		if len(args) < 3 || args[1] != "request" || !strings.Contains(",location,camera,microphone,screen_recording,speech_recognition,focus,bluetooth,notifications,automation_mail,automation_safari,automation_shortcuts_events,", ","+args[2]+",") || args[2] == "" {
 			return contracts.ErrInvalid
 		}
 		app := ""

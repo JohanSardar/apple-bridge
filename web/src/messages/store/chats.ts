@@ -3,13 +3,12 @@ import type { LiveClient } from '../../data/live';
 import type { ChatSummary, Cursor } from '../../data/types';
 import { viewCache } from '../../data/cache';
 import { strings as s } from '../../app/strings';
-export type ChatFilter = 'all' | 'known' | 'unknown' | 'unread' | 'deleted' | 'spam';
+export type ChatFilter = 'all' | 'known' | 'unknown' | 'unread' | 'spam';
 export const chatFilters: { value: ChatFilter; label: string; empty: string }[] = [
     {value:'all',label:s.allMessages,empty:s.noMessages},
     {value:'known',label:s.knownSenders,empty:s.noKnownSenders},
     {value:'unknown',label:s.unknownSenders,empty:s.noUnknownSenders},
     {value:'unread',label:s.unread,empty:s.noUnreadMessages},
-    {value:'deleted',label:s.recentlyDeleted,empty:s.noDeletedMessages},
     {value:'spam',label:s.spam,empty:s.noSpam}
 ];
 function boundedSnapshot(rows:ChatSummary[]){
@@ -80,7 +79,7 @@ function createChatView(live: LiveClient, filter: Accessor<ChatFilter | undefine
     const rows=createMemo<ChatSummary[]>((previous)=>{
         if(!ready())return [];
         const unique=new Map<string,ChatSummary>();
-        for(const page of pages())for(const chat of page.view.data().chats??[])if(chat.chat?.id&&(filter()==='deleted'||!chat.chat.data.is_archived)&&!unique.has(chat.chat.id)){const pinned=chat.chat.data.pinned_index;unique.set(chat.chat.id,chat.pinned_index==null&&typeof pinned==='number'?{...chat,pinned_index:pinned}:chat);}
+        for(const page of pages())for(const chat of page.view.data().chats??[])if(chat.chat?.id&&!chat.chat.data.is_archived&&!unique.has(chat.chat.id)){const pinned=chat.chat.data.pinned_index;unique.set(chat.chat.id,chat.pinned_index==null&&typeof pinned==='number'?{...chat,pinned_index:pinned}:chat);}
         const current=pages(),last=current.at(-1)?.view.data();
         const cursor=current[0]?.view.cursor();
         const pending=current.some(page=>{const next=page.view.cursor();return !cursor||!next||next.epoch!==cursor.epoch||next.sequence!==cursor.sequence;})||current.some((page,index)=>!page.view.data().chats||page.view.data().next!==current[index+1]?.after)||Boolean(last?.next);
@@ -103,7 +102,7 @@ function buildChatsStore(live: LiveClient) {
     let timer=0;
     const frame=requestAnimationFrame(()=>{timer=window.setTimeout(()=>setSpecials(true),0);});
     onCleanup(()=>{cancelAnimationFrame(frame);clearTimeout(timer);});
-    const deleted=createChatView(live,()=>specials()?'deleted':undefined),spam=createChatView(live,()=>specials()?'spam':undefined);
+    const spam=createChatView(live,()=>specials()?'spam':undefined);
     const buckets=createMemo(()=>{
         const result:{all:ChatSummary[];known:ChatSummary[];unknown:ChatSummary[];unread:ChatSummary[]}={all:[],known:[],unknown:[],unread:[]};
         for(const chat of all.rows()){
@@ -115,9 +114,9 @@ function buildChatsStore(live: LiveClient) {
         return result;
     });
     const visibleAll=()=>buckets().all;
-    const rows=()=>{const value=filter();return value==='deleted'?deleted.rows():value==='spam'?spam.rows():buckets()[value];};
+    const rows=()=>{const value=filter();return value==='spam'?spam.rows():buckets()[value];};
     const unread=createMemo(()=>buckets().unread.length);
-    const active=()=>filter()==='deleted'?deleted:filter()==='spam'?spam:all;
+    const active=()=>filter()==='spam'?spam:all;
     return {all:visibleAll,cursor:all.cursor,rows,filter,setFilter,unread,loading:()=>active().loading(),delayed:()=>active().delayed()};
 }
 const stores=new WeakMap<LiveClient,{store:ReturnType<typeof buildChatsStore>;dispose:()=>void;users:number}>();

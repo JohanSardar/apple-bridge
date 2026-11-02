@@ -1,4 +1,0 @@
-id: WEB-MSG-TYPING
-feature: messages.typing
-levels: [web]
-web: {browsers: [chromium], themes: [light], layouts: [desktop], server: gateway, fixture: list}

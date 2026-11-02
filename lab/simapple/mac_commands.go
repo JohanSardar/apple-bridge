@@ -69,8 +69,6 @@ func (f *fakeApple) macCommand(wire *applepeer.Wire, frame contracts.IPCFrame, f
 		readback = args.Volume
 	case "mac.set_mute":
 		readback = args.Muted
-	case "mac.set_output_device":
-		readback = args.Device
 	case "mac.set_appearance":
 		readback = args.Appearance
 	case "mac.keep_awake":

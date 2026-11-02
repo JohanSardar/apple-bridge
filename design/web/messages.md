@@ -18,7 +18,7 @@ Status: W0 draft, waiting for Johan's skim. Decisions: `design/DECISIONS.md` (20
 
 | Width | Layout | Mirrors |
 |---|---|---|
-| ≥ 1024 px | Three panes. Sidebar (conversation list, 280–420 px, resizable): search field, pinned grid, list. Transcript in the middle. Details open as an inspector on the right (320 px), not a popover. | macOS Messages |
+| ≥ 1024 px | Three panes. Sidebar (conversation list, 280–420 px, resizable): search field and list. Transcript in the middle. Details open as an inspector on the right (320 px), not a popover. | macOS Messages |
 | 700–1023 px | Two panes. Sidebar plus transcript; details open as a sheet. | iPad Messages |
 | < 700 px | Navigation stack: list, then transcript (push, swipe-back), then details (push). Large "Messages" title collapses into the bar on scroll. | iPhone Messages |
 
@@ -31,16 +31,9 @@ Status: W0 draft, waiting for Johan's skim. Decisions: `design/DECISIONS.md` (20
 | Feature | Apple behavior | Web | Bridge | When |
 |---|---|---|---|---|
 | Row | Avatar 40 pt (iOS 52), name (Headline), one or two preview lines (Subheadline, secondary), time or date on the right (Footnote, secondary), chevron on iOS | Same. Time uses the viewer's locale and hour cycle (`Intl.DateTimeFormat`, so "9:41 AM" in en-US and "09:41" in en-GB), then "Yesterday", the weekday within 7 days, then the short date. Unnamed groups are titled from given names ("Alex, Sam & 3 more"; exact wording to verify in §17) | R | W2 |
-| Avatar | Contact photo, else monogram on a gray gradient. Groups: up to 3 overlapping member avatars, or the group photo | Same. Monogram: first letter of the given name plus first letter of the family name, letters only; one letter when only one side is a letter; the person glyph when there is none (phone numbers, emails). Until the handles that determine the name resolve, show the neutral person glyph rather than provisional initials. Keep the glyph and initials in the same fixed avatar box; crossfade with opacity only for at most 150 ms, with no transition under reduced motion. A photo that fails or decodes empty falls back to the monogram. Group composite: 2 members on a diagonal, 3 in a triangle, each mini avatar ringed in the row background so overlaps read apart, monogram text about 0.42× its circle | R (contact images); group photo `—` | W2 / W4 |
 | Unread | Blue dot left of the avatar; the preview is not bolded | Same, plus an unread count in the tab and app badge | R (`last_read_at`, `read_at`) | W2 |
 | Preview text | Last message; attachments become "Attachment: 1 Image", "Video", "Audio Message", "Location", "Link"; reactions become "Loved 'text'"; system events are worded | Same wording table (§15) | R | W2 |
-| Typing in row | Pins show a typing bubble (row behavior to verify) | Only if typing can be read (§13) | `—` | W4 / hide |
-| Muted | Bell-slash icon after the name; no notifications | Same, shown only when the state is known to be muted; unknown shows nothing | `—` (Hide Alerts state) | W4 |
-| Pinned grid | Up to 9 pins in a 3-column grid of large avatars. Unread pins show the latest incoming message in a bubble above the avatar (never a reaction removal); the bubble stays inside the safe area with its tail on the avatar. Drag to reorder; pin/unpin from the context menu or swipe | Same, including drag reorder with a spring | `—` (pins live in Messages prefs, iCloud-synced) | W4 read and write |
 | Swipe actions (touch) | Leading: Mark read/unread. Trailing: Hide Alerts, Delete (full swipe deletes) | Same; full-swipe with a rubber band and haptic-style snap | Mark read W sim-only; Delete chat W sim-only | W3 |
-| Context menu | Pin, Mark as Read/Unread, Hide Alerts, Delete; mac adds Open in New Window | Same, minus New Window; ⌘-click opens a new browser tab | as above | W3 / W4 |
-| Filters | All Messages, Known Senders, Unknown Senders, Unread, Recently Deleted, Spam | Same menu, top-left on phone and in the sidebar header on desktop. Keep one stable all subscription, precompute All/Known/Unknown/Unread arrays from its rows, and start fixed deleted/spam views after paint. Switching filters creates no subscriptions. `known_sender` includes every participant, not only avatar handles, and requires no Contacts details; live deltas update sender and unread membership. All six client views equal the server-filter oracle | Unknown/Spam `—` (`chat.is_filtered`, `message.is_spam` not read); Recently Deleted `—` | W2 read, W4 actions |
-| Recently Deleted | Deleted conversations and messages for 30 days; Recover, Delete permanently | Same view | `—` (recoverable tables not read) | W2 read, W4 write |
 | Edit / select | Multi-select for Delete and Mark Read | Same; Shift/⌘-click ranges on desktop | as above | W3 |
 | Compose button | Square-pencil, top right | Same; ⌘N. Hidden until W3 rather than shown disabled | — | W3 |
 | Search field | Top of sidebar (mac); iOS placement to verify (bottom glass bar on 26+?) | Desktop: sidebar top. Phone: bottom glass bar (§8) | R (`search`) | W2 |
@@ -60,7 +53,6 @@ Status: W0 draft, waiting for Johan's skim. Decisions: `design/DECISIONS.md` (20
 | Emoji-only | 1–3 emoji render large with no bubble | Same | R | W2 |
 | Sender names in groups | Small name above the first bubble of a run; avatar beside the last | Same | R | W2 |
 | Timestamps | Centered date and time headers between gaps over 1 hour; swipe left to reveal exact times on iOS | Same, including the swipe-to-reveal gutter with spring return; desktop hover tooltip | R | W2 |
-| Delivered / Read | Under the last sent message: "Delivered", "Read 9:41", "Delivered Quietly" | Same | R (delivered/read); quietly `—` | W2 / W4 |
 | Not Delivered | Red "!" with "Not Delivered"; tap to Try Again | Same; Try Again resends | R (`error_code`); resend W | W3 |
 | Not sure if delivered | — (Apple has no equivalent; it never loses its own status) | Shown when a send's outcome is indeterminate. Never offers Try Again; offers Check (read-only reconcile by the original command ID) and Copy. If no unmatched outgoing row from this chat appeared while it was pending, the bubble stays with this label. If one did, the bubble is not restored (it may be that row); a transcript pill above the composer reads "1 message may not have been delivered · Check" until reconciliation resolves it. Resolving to observed attaches the command to its row; resolving to a no-effect failure restores the bubble as Not Delivered; a concrete delivery failure uses its captured row. Observed or delivered is always Sent, even without record IDs | indeterminate disposition; `system.command` read | W3 |
 | Edited | "Edited" label; tap shows previous versions inline | Same expand animation | R (`edit_history`) | W2 |
@@ -88,17 +80,13 @@ A per-part `delivery_failed` with a captured record uses that failed row, withou
 | Genmoji | occasional | Inline image glyph sized to the text line | `—` (`emoji_image_*`) | W2 read |
 | PDF and other files | occasional | File chip with icon, name and size; opens or downloads | R | W2 |
 | Contact card (vCard) | occasional | Card with name and photo; "View" shows the fields | R (attachment) | W2 |
-| Audio message | rare | Waveform bubble with play/pause, scrub, duration and speed; transcript text when present; "Keep" on expiring audio | partial (attachment); flags `—` | W2 read, W4 Keep |
 | Location / Find My | rare | Captured map link only; opens Maps without a map-tiles service. Live location becomes an honest placeholder | `—` | W2 / placeholder |
-| Scheduled (Send Later) | rare | Dashed-outline bubble with "Send Later at 9:00"; edit time, send now, delete | `—` (`schedule_*`) | W4 |
 | Live Photo | rare | Still with a LIVE badge; press or hover plays the clip | `—` (pairing) | W2 |
 | Text formatting and animated text | rare | Bold, italic, underline and strikethrough render natively. Big, Small, Shake, Nod, Explode, Ripple, Bloom and Jitter are our own animations | `—` (attributedBody attributes not decoded) | W2 read |
-| Polls (iOS 26) | rare | Native poll card when the payload decodes; otherwise a placeholder | `—` | W4 / placeholder |
 | iMessage app content (games, YouTube, Apple Cash, Photos app) | rare | Placeholder card: app name, caption and image if the payload carries them, "Open on an Apple device" | `—` | placeholder |
 | Digital Touch, handwriting | rare | Placeholder card ("Digital Touch: open on an Apple device"); handwriting renders if stored as an image | `—` | placeholder |
 | Business chat / RCS cards | rare | Placeholder card with the text content | `—` | placeholder |
 | Satellite / SOS / Check In | rare | Label "via satellite"; Check In as a placeholder card | `—` | placeholder |
-| Chat background (iOS 26) | — | Show the background image behind the transcript when readable | `—` | W4 / hide |
 
 Videos and Live Photos reserve at least 120 px on the short side, within the available width and height caps, with centered cover cropping. Images and stickers keep the no-upscale rule. Video and Live Photo poster variants target a 360 px short side with a 1.5 MP total budget, reducing the short side only for extreme aspect ratios. Video posters use the original video frame; Live Photo posters use the oriented key still. ThumbHash placeholders are unchanged.
 
@@ -120,13 +108,9 @@ The paged window retains a message object only while its epoch, record version, 
 |---|---|---|---|---|
 | Text field | Capsule glass field, grows to 6 lines then scrolls; placeholder "iMessage" or "Text Message" by service | Same; Enter sends, Shift+Enter adds a newline (mac default) | — | W3 |
 | Send button | Up-arrow circle in service color, appears when there's content | Same, springs in | send W (proven) | W3 |
-| Attachments | "+" menu: Camera, Photos, Stickers, Cash, Audio, Check In, Location, Send Later, Polls, apps | "+" menu: Photos & files (picker, paste, drag), Camera (phone capture), Audio (record → send as file now, as an audio message in W4), Location (browser geolocation → maps link card), Send Later (W4). The rest are hidden | send files W (proven) | W3 / W4 |
 | Emoji | System picker | Phone: the OS keyboard. Desktop: our own lightweight picker (⌃⌘Space), searchable, with recents | — | W3 |
-| Mentions | Typing a name in a group suggests a member and inserts a mention token | Same suggestion UI | `—` (sending mention attributes) | W4 |
 | Reply mode | Swipe right on a bubble or choose Reply; the composer shows the quoted bubble | Same | reply W (proven) | W3 |
 | Edit mode | Edit within 15 minutes, up to 5 times; the field turns into an inline edit with ✓ and ✕ | Same limits enforced in the UI | edit W (proven) | W3 |
-| Send with effect | Long-press send opens the effect picker | Same picker, our animations preview live | `—` | W4 |
-| Formatting | Select text and use B / I / U / S and text effects | Same toolbar | `—` | W4 |
 | Optimistic send | Bubble appears instantly, faded until delivered | Same: pending → sent → delivered/read; failure → red "!" | command lifecycle | W3 |
 | Drafts | Per-chat draft kept | Same, stored locally per device | — | W3 |
 
@@ -152,13 +136,8 @@ Opened by long-press (touch), right-click (desktop) or the tapback hotkey (⌘T)
 | Feature | Web | Bridge | When |
 |---|---|---|---|
 | Header | Avatar (large), name; buttons: Call, FaceTime, Mail open `tel:` / `facetime:` / `mailto:` on the viewer's device; Info opens the contact | R | W2 |
-| Group name and photo | Shown; edit in W4 | W4 limited on 25G241; captured photo remains readable | W2 / W4 |
-| Members | List with add (+) and remove (swipe) | W4 limited on 25G241; controls hidden without proof | W2 / W4 |
-| Hide Alerts | Toggle | `—` | W4 |
-| Send Read Receipts | Per-chat toggle | `—` | W4 |
 | Share Focus Status | Hidden | — | hide |
 | Share My Location | Hidden | — | hide |
-| Leave this Conversation | Group only, with confirm | W4 limited on 25G241; control hidden without proof | W4 |
 | Delete Conversation | With confirm | W sim-only | W3 |
 | Collections | Tabs: Photos (grid), Links, Documents, Locations; from attachments and link balloons | R / `—` (links) | W2 |
 | Block / Report Junk | Hidden | — | hide |
@@ -168,7 +147,6 @@ Opened by long-press (touch), right-click (desktop) or the tapback hotkey (⌘T)
 - **To field:** contact autocomplete over names, phones and emails (`contacts.lookup`); tokens; several recipients create a group.
 - **Service hint:** shown from history. Blue if this handle has iMessage history, green for SMS/RCS, gray "unknown" otherwise. The bridge can't query Apple's iMessage registry.
 - **Existing chat:** if it already exists, the transcript loads under the To field like Apple's.
-- **Bridge:** send with handles W (proven to own handles). **When:** W3; group creation in W4.
 
 ## 8. Search
 
@@ -200,7 +178,6 @@ Opened by long-press (touch), right-click (desktop) or the tapback hotkey (⌘T)
 - **Sending:** send on Enter.
 - **Notifications:** sounds; previews in notifications.
 - **Filters:** show Unknown Senders filter.
-- Read receipts default: `—`, W4.
 
 ## 12. Keyboard shortcuts (desktop, mac-matching)
 
@@ -223,7 +200,6 @@ Keys marked * get checked against the Air's Messages menus in the capture pass. 
 
 On Windows and Linux, Ctrl stands in for ⌘.
 
-## 13. What needs bridge work (feeds W1/W2/W4 tasks)
 
 **Read model and decoding (W1–W2):**
 - `messages.chats`: last message, unread count, muted, pinned order.
@@ -240,20 +216,6 @@ On Windows and Linux, Ctrl stands in for ⌘.
 
 **Writes to prove at the real level (W3):** mark read/unread, delete message, delete chat, resend failed.
 
-**New writes, Accessibility or AppleScript (W4):**
-- pin/unpin and reorder
-- Hide Alerts
-- read receipts per chat
-- Send Later (create, edit, cancel)
-- send with effect
-- formatting and text effects
-- mentions
-- audio message
-- Keep audio
-- Recently Deleted recover/delete
-- group create, rename, photo, add/remove, leave (iMessage groups need a second iMessage identity; RCS groups via the Ben contact)
-
-**Typing indicators (W4 investigation):** chat.db doesn't store them. Reading may be possible from Messages' Accessibility tree for the open chat only; sending isn't feasible without driving the Mac's UI. Default: **hidden** unless that proves reliable.
 
 ## 14. Motion
 
@@ -350,9 +312,7 @@ Captures stay in `lab/evidence/private/web/` (gitignored); only the numbers land
 - Image Playground
 - Chat backgrounds editing
 
-## 19. W4 groups, remaining surfaces and typing (2026-10-22)
 
-W4-GROUPS management is **limited** on macOS 26.7.1 (25G241). The installed
 `Messages.sdef` has only `send`, `login` and `logout` commands; its chat properties
 are `id`, `name` and `account`. It has no group-mutation or typing route.
 A group made only of Johan's own handles cannot serve as a proof of an eligible
@@ -375,7 +335,6 @@ An uncertain outcome stays locked with a read-only Check action; it is never
 redispatched automatically. Invalid addresses and duplicate members cannot be
 submitted, and revoked proofs prevent further submission.
 
-W4-TYPING is **limited and hidden**. A read-only schema inspection on this build
 found no typing field. The scripting dictionary has no typing command or event.
 The public Messages framework documents extension conversations and content
 insertion, not a macOS typing subscription. Reliable open-chat Accessibility
@@ -384,7 +343,6 @@ aliases cannot establish an incoming remote typing signal. Sending by driving
 the native composer per keystroke is not a proven public route and is hidden.
 No local composer activity is presented as another person's typing.
 
-W4-UI's remaining surfaces stay truthful: polls retain the existing placeholder,
 chat backgrounds stay hidden, and sender-side link-preview generation is
 unproven for AppleScript sends and has no composer toggle. Captured incoming
 link cards continue to render. Pins/mute/read receipts/Recently Deleted belong
@@ -394,12 +352,9 @@ belong to HELPER-B.
 References: [Apple's group management guide](https://support.apple.com/guide/messages/icht3268ad23/mac)
 and [public Messages framework](https://developer.apple.com/documentation/messages).
 
-List chat actions use fresh Messages capability proof and a coherent captured chats cursor. Read/unread and delete are input guarded; opening an unread row forwards the native input. Menus and swipe actions expose read/unread and deletion, with confirmation even after a full delete swipe. Optimistic rows reconcile only against command observed_record_ids and a compatible captured cursor; failures and uncertain outcomes restore captured presentation without automatic replay. Pin, mute and Recently Deleted actions remain W4-owned.
 
 Conversation parity controls use fresh per-build capability proofs and captured chat versions. Pin order changes only after capture; Hide Alerts and per-chat receipts require known state. Recently Deleted recovery targets one conversation, and permanent deletion requires confirmation. An indeterminate change offers Check Change for the same command, never an automatic resend. Native variants without proof remain hidden; the simulator does not establish native support.
 
 ## 20. Milestone qualification (2026-10-23)
 
 The browser matrix has complete 12-project passes for 61 of 64 registered Messages manifests. Reply, Manage and Effects retain failing cells; their exact outcomes are in [the milestone gate](../MILESTONE-GATES.md). No failing cell is counted as a pass. The earlier quiet read-model runs met the chats, thread and demo budgets on their measured source. Final quiet open-chat/media input p95 and cold chat-open frame measurements missed the unchanged limits. Send, react and fling could not be certified because the exclusive runs overlapped external TCC load. A timeout under that load has no confirmed quiet-host cause.
-
-Real-data R-LIVE and W3 native action proofs remain limited because this Air has no truly unused own-handle alias. The personal self-chat fallback is refused; no native batch was rerun. W4 native variants without proof remain hidden, and group management and typing retain the hard-rule and public-route limits above. Two prior tagged attachments from the ROWID 40 own-handle chat are in Recently Deleted pending Messages' automatic expiry; purging the chat would also destroy pre-existing recoverable messages, so it was refused. Private evidence and the read-only cleanup audit are recorded in the milestone gate.

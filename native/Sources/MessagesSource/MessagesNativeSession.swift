@@ -17,9 +17,8 @@ enum MessagesNativeSession {
         if (object as? NSObjectProtocol)?.responds(to: selector) == true, let implementation = forwardedImplementation { return (selector, implementation) }
         let receiver = type.map { BodyDigest.hash(Data(NSStringFromClass($0).utf8)) } ?? ""
         try? PrivateReport.write(["selector_digest": BodyDigest.hash(Data(name.utf8)), "receiver_digest": receiver, "selector_available": false], to: PrivateReport.directory.appendingPathComponent("messages-native-method-diagnostic.json"))
-        throw SendVariantFailure.audioMessageFlagUnverified
+        throw SourceFailure.unsupported
     }
-    static func syntheticForwardedFlag(_ receiver: NSObject, selector: String) -> Bool { (try? flag(receiver, selector)) == true }
     private static func object(_ receiver: AnyObject, _ name: String, argument: AnyObject? = nil) throws -> AnyObject? {
         let (selector, implementation) = try method(receiver, name)
         if name.contains(":") {
@@ -34,18 +33,6 @@ enum MessagesNativeSession {
         typealias Call = @convention(c) (AnyObject, Selector) -> Bool
         return unsafeBitCast(implementation, to: Call.self)(receiver, selector)
     }
-    private static func message(_ transfer: String) throws -> AnyObject {
-        guard dlopen("/System/Library/PrivateFrameworks/IMCore.framework/IMCore", RTLD_LAZY) != nil,
-              let type = NSClassFromString("IMMessage") else { throw SendVariantFailure.audioMessageFlagUnverified }
-        let body = NSMutableAttributedString(string: "\u{FFFC}")
-        body.addAttributes([NSAttributedString.Key("__kIMFileTransferGUIDAttributeName"): transfer, NSAttributedString.Key("__kIMMessagePartAttributeName"): 0], range: NSRange(location: 0, length: 1))
-        let receiver: AnyObject = type
-        let (selector, implementation) = try method(receiver, "instantMessageWithText:messageSubject:fileTransferGUIDs:flags:threadIdentifier:")
-        typealias Call = @convention(c) (AnyObject, Selector, NSAttributedString, NSString?, NSArray, UInt64, NSString?) -> Unmanaged<AnyObject>?
-        guard let message = unsafeBitCast(implementation, to: Call.self)(receiver, selector, body, nil, [transfer] as NSArray, 0x100005 | (1 << 21), nil)?.takeUnretainedValue(), try flag(message, "isAudioMessage"), try flag(message, "isFromMe") else { throw SendVariantFailure.audioMessageFlagUnverified }
-        return message
-    }
-    static func syntheticFlag() -> Bool { (try? message("synthetic-transfer")) != nil }
     private static func checkpoint(_ stage: String) {
         try? PrivateReport.write(["stage": stage], to: PrivateReport.directory.appendingPathComponent("messages-native-session-diagnostic.json"))
     }
@@ -53,7 +40,7 @@ enum MessagesNativeSession {
         checkpoint("framework_requested")
         guard !guid.isEmpty, dlopen("/System/Library/PrivateFrameworks/IMCore.framework/IMCore", RTLD_LAZY) != nil,
               let controllerType = NSClassFromString("IMDaemonController"), let registryType = NSClassFromString("IMChatRegistry"),
-              let controller = try object(controllerType, "sharedController"), let registry = try object(registryType, "sharedInstance") else { throw SendVariantFailure.audioMessageFlagUnverified }
+              let controller = try object(controllerType, "sharedController"), let registry = try object(registryType, "sharedInstance") else { throw SourceFailure.unsupported }
         checkpoint("connection_requested")
         _ = try flag(controller, "connectToDaemon")
         var connected = (try? flag(controller, "isConnected")) == true
@@ -64,7 +51,7 @@ enum MessagesNativeSession {
         }
         guard connected else {
             checkpoint("connection_unavailable")
-            throw SendVariantFailure.audioMessageFlagUnverified
+            throw SourceFailure.unsupported
         }
         checkpoint("connection_established")
         let candidates = MessagesSelfTestIsolation.nativeChatCandidates(guid)
@@ -123,23 +110,4 @@ enum MessagesNativeSession {
         unsafeBitCast(cancelImplementation, to: Call.self)(chat, cancelSelector, message)
         return native
     }
-    static func send(_ part: JSON, chat guid: String) throws -> String {
-        let chat = try chat(guid)
-        guard let transferType = NSClassFromString("IMFileTransferCenter"), let transfers = try object(transferType, "sharedInstance"),
-              let transfer = try object(transfers, "guidForNewOutgoingTransferWithLocalURL:", argument: NSURL(fileURLWithPath: part["path"].string)) as? String, !transfer.isEmpty else { throw SendVariantFailure.audioMessageFlagUnverified }
-        let message = try message(transfer)
-        guard let native = try object(message, "guid") as? String, !native.isEmpty else { throw SendVariantFailure.audioMessageFlagUnverified }
-        let (selector, implementation) = try method(chat, "sendMessage:")
-        typealias Call = @convention(c) (AnyObject, Selector, AnyObject) -> Void
-        checkpoint("audio_send_requested")
-        unsafeBitCast(implementation, to: Call.self)(chat, selector, message)
-        return native
-    }
-}
-
-public extension MessagesSendVariants {
-    @MainActor
-    static func syntheticNativeAudioFlag() -> Bool { MessagesNativeSession.syntheticFlag() }
-    @MainActor
-    static func syntheticForwardedNativeFlag(_ receiver: NSObject, selector: String) -> Bool { MessagesNativeSession.syntheticForwardedFlag(receiver, selector: selector) }
 }

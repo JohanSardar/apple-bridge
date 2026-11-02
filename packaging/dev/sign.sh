@@ -22,10 +22,8 @@ profile, app, base, output = map(Path, sys.argv[1:])
 data = plistlib.loads(subprocess.check_output(["security", "cms", "-D", "-i", str(profile)]))
 grants = data["Entitlements"]
 entitlements = plistlib.loads(base.read_bytes())
-for key in ["com.apple.application-identifier", "com.apple.developer.team-identifier", "com.apple.developer.weatherkit"]:
+for key in ["com.apple.application-identifier", "com.apple.developer.team-identifier"]:
     entitlements[key] = grants[key]
-if grants["com.apple.developer.weatherkit"] is not True:
-    raise SystemExit("services profile does not enable WeatherKit")
 output.write_bytes(plistlib.dumps(entitlements))
 info = app / "Contents/Info.plist"
 metadata = plistlib.loads(info.read_bytes())

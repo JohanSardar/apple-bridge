@@ -23,7 +23,6 @@ JSON version 1 has `name` and an ordered `actions` array. Each action has a uniq
 
 `{"$output":"earlier-key"}` emits an action-output token attachment using that action's stable UUID. Unknown/forward output references reject. `{"$input":true}` emits a Shortcut Input attachment. `{"$group":"condition-name"}` emits a stable grouping UUID for native If/Otherwise/end actions. Reserved `$` keys reject malformed references. Output from the final action follows native Shortcuts behavior; native input/output settings belong in action parameters.
 
-This intentionally small schema carries native parameters rather than maintaining a second action catalog. Later tickets can supply verified native identifiers/parameters for Run Shortcut, current weather/forecast, Clock alarms/timers, Focus, battery, Text, Dictionary, Get Dictionary Value, If/Otherwise, Send Message and Get Contents of URL (HTTP). Dictionary item serialization, token strings and condition modes are passed as nested native objects. This ticket proves compilation/signing of Nothing only; it does not claim those later actions' platform availability, grants or business effects. Consult capability catalog S01–S10 and the iMCP port map before exposing execution.
 
 ## Verification boundary
 

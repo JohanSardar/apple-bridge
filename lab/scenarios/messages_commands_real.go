@@ -121,9 +121,6 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	if !cleanupReady {
 		return e
 	}
-	if strings.HasPrefix(s.ID, "MSG-GROUP-") || s.ID == "MSG-SEND-RCS-GROUP" {
-		return runNativeMessagesGroup(ctx, s, e, w, own.Handles)
-	}
 	native, err := sql.Open("sqlite", "file:"+filepath.Join(os.Getenv("HOME"), "Library", "Messages", "chat.db")+"?mode=ro")
 	if err != nil {
 		add("readonly_truth", false)

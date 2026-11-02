@@ -8,7 +8,7 @@ func MessagesDescriptors() []OperationDescriptor {
 		{Name: "messages.search", Version: 1, Kind: ReadOp, ReadModel: true, Source: Messages, Scope: "messages:read", Input: MessageSearchQuery{}, Output: MessageSearchResult{}, Description: "Search visible local messages and attachment filenames with prefix text, sender, media-kind and unread filters; filters apply before pagination"},
 		{Name: "messages.collection", Version: 1, Kind: ReadOp, ReadModel: true, Source: Messages, Scope: "messages:read", Input: CollectionQuery{}, Output: CollectionResult{}, Description: "Page visible chat attachments or balloon messages by media kind", Examples: []Example{{Input: CollectionQuery{ChatID: "cht_example", Kind: "photos", Limit: 50}, Output: CollectionResult{Items: []Record{}, CoverageNotes: []string{}}}}},
 	}
-	for _, op := range append(append([]string{}, MessagesOperations...), "messages.keep_audio") {
+	for _, op := range MessagesOperations {
 		descriptors = append(descriptors, OperationDescriptor{Name: op, Version: 1, Kind: CommandOp, Source: Messages, Scope: "messages:write", Capability: op, Input: Command{}, Output: CommandRecord{}, Description: "Messages command with evidence; unproven native routes reject before dispatch"})
 	}
 	return descriptors

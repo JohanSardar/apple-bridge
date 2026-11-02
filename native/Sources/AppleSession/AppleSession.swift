@@ -1,7 +1,6 @@
 import PDFSource
 import CallsSource
 import FilesSource
-import PhotosSource
 import MailSource
 import Foundation
 import CryptoKit
@@ -297,8 +296,8 @@ public actor AppleSession: ObservationSink {
                     return
                 }
                 guard output.blobs.count <= 16, output.blobs.allSatisfy({ $0.size <= 64 << 20 && !$0.handle.isEmpty }) else { throw SourceFailure.invalid }
-                let photoBlob = frame["op"].string == "photos.original" || frame["op"].string == "photos.thumbnail"
-                blobs = photoBlob ? [.object(["digest": result["digest"], "size": result["size"], "handle": result["handle"]])] : frame["op"].string == "files.read" ? [.object(["digest": result["digest"], "size": result["size"], "handle": .string("files-blob:" + result["digest"].string)])] : blobs
+
+                blobs = frame["op"].string == "files.read" ? [.object(["digest": result["digest"], "size": result["size"], "handle": .string("files-blob:" + result["digest"].string)])] : blobs
                 try? wire?.send(.object(["t": .string("QueryResult"), "id": id, "result_json": result, "blobs": .array(blobs)]))
             } catch {
                 let code = error is CancellationError ? "deadline" : (error as? SourceFailure == .invalid ? "invalid" : (error as? SourceFailure == .unsupported ? "unsupported" : "unavailable"))
@@ -323,7 +322,7 @@ public actor AppleSession: ObservationSink {
         let started = CaptureTrace.now()
         var prepared: UInt64 = 0
         let registered = registeredBlobReaders.first(where: { frame["handle"].string.hasPrefix($0.key) })?.value
-        let source = registered?.source ?? (frame["handle"].string.hasPrefix("pdf:") ? "pdf" : frame["handle"].string.hasPrefix("photos-blob:") ? "photos" : frame["handle"].string.hasPrefix("files-blob:") ? "files" : frame["handle"].string.hasPrefix("notes-blob:") ? "notes" : (frame["handle"].string.hasPrefix("contacts-image:") ? "contacts" : (frame["handle"].string.hasPrefix("calendar-attachment:") ? "calendar" : "messages")))
+        let source = registered?.source ?? (frame["handle"].string.hasPrefix("pdf:") ? "pdf" : frame["handle"].string.hasPrefix("files-blob:") ? "files" : frame["handle"].string.hasPrefix("notes-blob:") ? "notes" : (frame["handle"].string.hasPrefix("contacts-image:") ? "contacts" : (frame["handle"].string.hasPrefix("calendar-attachment:") ? "calendar" : "messages")))
         defer { trace.record("helper_blob_read", fields: ["source": .string(source), "started_ns": .integer(started), "prepared_ns": .integer(prepared), "finished_ns": .integer(CaptureTrace.now())]) }
         do {
             guard !frame["handle"].string.isEmpty, frame["offset"].number >= 0, frame["offset"].number < Double(Int64.max), frame["length"].number > 0, frame["length"].number <= 131072, frame["length"].number.rounded(.down) == frame["length"].number, frame["offset"].number.rounded(.down) == frame["offset"].number else { throw SourceFailure.invalid }
@@ -351,10 +350,6 @@ public actor AppleSession: ObservationSink {
             }
             else if frame["handle"].string.hasPrefix("contacts-image:") { response = try await contacts.readBlob(frame["handle"].string, offset: Int(frame["offset"].number), length: Int(frame["length"].number)) }
             else if frame["handle"].string.hasPrefix("calendar-attachment:") { response = try await calendar.readBlob(frame["handle"].string, offset: Int(frame["offset"].number), length: Int(frame["length"].number)) }
-            else if frame["handle"].string.hasPrefix("photos-blob:") {
-                guard let photos = additionalSources["photos"] as? PhotosSource else { throw SourceFailure.unavailable }
-                response = try await photos.readBlob(frame["handle"].string, offset: Int64(frame["offset"].number), length: Int(frame["length"].number))
-            }
             else if frame["handle"].string.hasPrefix("pdf:") {
                 guard let pdf = additionalSources["pdf"] as? PDFSource else { throw SourceFailure.unavailable }
                 response = try await pdf.readBlob(frame["handle"].string, offset: Int64(frame["offset"].number), length: Int(frame["length"].number))
@@ -553,31 +548,6 @@ public actor AppleSession: ObservationSink {
         if ["speech.say", "capture.play_sound"].contains(operation) {
             guard evidence["finished_callback"].bool, evidence["prepared"]["request_hash"] == fingerprint else { throw SourceFailure.unavailable }
             return evidence
-        }
-        if operation == "music.favorite" || operation == "music.add_to_playlist" {
-            let collection = operation == "music.favorite" ? "music.library_item" : "music.playlist"
-            guard let checkpoint = observedCheckpoints[collection + "/" + evidence["native_key"].string] else { throw SourceFailure.unavailable }
-            var result = evidence.object
-            result["fingerprint"] = fingerprint
-            result["capture_checkpoint"] = .string(checkpoint)
-            return .object(result)
-        }
-        if operation == "phone.dial", let calls = additionalSources["phone"] as? CallsSource {
-            try await calls.scan(into: self, live: true)
-            guard let checkpoint = observedCheckpoints["phone.call/" + evidence["native_key"].string] else { throw SourceFailure.unavailable }
-            var result = evidence.object
-            result["fingerprint"] = fingerprint
-            result["capture_checkpoint"] = .string(checkpoint)
-            return .object(result)
-        }
-        if operation.hasPrefix("photos."), let photos = additionalSources["photos"] as? PhotosSource {
-            try await photos.captureCommand(evidence, into: self)
-            let collection = operation == "photos.create_album" ? "photos.album" : "photos.asset"
-            guard let checkpoint = observedCheckpoints[collection + "/" + evidence["native_key"].string] else { throw SourceFailure.unavailable }
-            var result = evidence.object
-            result["fingerprint"] = fingerprint
-            result["capture_checkpoint"] = .string(checkpoint)
-            return .object(result)
         }
         if operation.hasPrefix("files."), let files = additionalSources["files"] as? FilesSource {
             try await files.reconcile(into: self)

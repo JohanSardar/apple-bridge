@@ -17,7 +17,7 @@ public actor SafariSource: Source {
         let permitted = await tabs.permitted()
         let missing: [JSON] = [.string("CloudTabs schema availability varies")] + (permitted ? [] : [.string("Automation dev.applebridge.helper → com.apple.Safari")])
         let readable = ["History.db", "Bookmarks.plist", "CloudTabs.db"].contains { FileManager.default.isReadableFile(atPath: directory.appendingPathComponent($0).path) }
-        return SourceReadiness(state: readable ? "ready" : "permission_missing", coverage: .object(["fields": .string("partial"), "missing": .array(missing)]), capabilities: permitted ? ["safari.open_url", "safari.add_reading_list"] : [], reason: readable ? (permitted ? "" : "Automation dev.applebridge.helper → com.apple.Safari") : "Full Disk Access required")
+        return SourceReadiness(state: readable ? "ready" : "permission_missing", coverage: .object(["fields": .string("partial"), "missing": .array(missing)]), capabilities: [], reason: readable ? (permitted ? "" : "Automation dev.applebridge.helper → com.apple.Safari") : "Full Disk Access required")
     }
     private func observation(_ collection: String, _ key: String, _ data: [String: JSON]) -> JSON {
         .object(["kind": .string("upsert"), "collection": .string(collection), "native_key": .string(key), "scoped_alias": .string(name + "/" + collection + "/" + key), "observed_at": .string(timestamp()), "data": .object(data)])
@@ -156,18 +156,7 @@ public actor SafariSource: Source {
             }
         }
     }
-    public func prepare(_ command: JSON) async throws -> Prepared { try await tabs.prepare(command) }
-    public func dispatch(_ prepared: Prepared) async throws -> JSON {
-        let evidence = try await tabs.dispatch(prepared)
-        if prepared.action["op"].string == "safari.add_reading_list" {
-            let url = prepared.action["args"]["url"].string
-            for _ in 0..<100 {
-                if let rows = try? bookmarks(), rows.contains(where: { $0["collection"].string == "safari.reading_list" && $0["data"]["url"].string == url }) { return evidence }
-                try await Task.sleep(for: .milliseconds(100))
-            }
-            throw SourceFailure.conflict
-        }
-        return evidence
-    }
+    public func prepare(_ command: JSON) async throws -> Prepared { throw SourceFailure.unsupported }
+    public func dispatch(_ prepared: Prepared) async throws -> JSON { throw SourceFailure.unsupported }
     public func resolve(_ command: String, evidence: JSON) async -> JSON { .null }
 }
