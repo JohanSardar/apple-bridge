@@ -1,0 +1,24 @@
+[package]
+name = "ab-replication"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+[lints]
+workspace = true
+[dependencies]
+ab-state = { path = "../ab-state" }
+ab-trust = { path = "../ab-trust" }
+ab-blobs = { path = "../ab-blobs" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+jiff.workspace = true
+tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "tls12"] }
+tokio-tungstenite = { version = "0.28", default-features = false, features = ["connect", "handshake", "rustls-tls-webpki-roots"] }
+futures-util = { version = "0.3", features = ["sink"] }
+hex = "0.4"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+[dev-dependencies]
+sha2.workspace = true
+tempfile = "3"

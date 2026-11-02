@@ -1,0 +1,45 @@
+{
+  "impl": "rust",
+  "state": "sqlite",
+  "build_host": "ubuntu",
+  "base": "80f8f5dd",
+  "rust_ci": "passed",
+  "includes": [
+    "Rust workspace tests",
+    "crate graph",
+    "strict Clippy",
+    "rustfmt",
+    "dependency audit",
+    "Go vet and lint",
+    "Rust and Go golden corpora",
+    "command cancellation and disconnect races"
+  ],
+  "interop": [
+    "pairing",
+    "snapshot digest convergence",
+    "capture_atomic partial batches",
+    "cursor resume",
+    "scope Reset/resnapshot",
+    "blob digest and partial-transfer resume",
+    "Go credential reopen",
+    "Go token verification",
+    "Go Ed25519 delegation verification",
+    "feed command result and error envelopes",
+    "direct HTTPS mTLS command result and error envelopes"
+  ],
+  "modes": [
+    "replica dials gateway",
+    "gateway dials replica"
+  ],
+  "remaining": [
+    "C frontdoor/runtime integration and D full replica scenario matrix",
+    "Remote relay establishment and smoke test"
+  ],
+  "reproduce": [
+    "cargo build --manifest-path rust/Cargo.toml -p ab-replication --examples",
+    "go build -tags lab -p 2 -o bin/bridge ./cmd/bridge",
+    "go build -p 2 -o bin/feed-interop ./rust/crates/ab-replication/interop",
+    "AB_FEED_PROBE=\"$PWD/rust/target/debug/examples/feed_probe\" bin/feed-interop",
+    "AB_GATEWAY_DIALS=1 AB_FEED_PROBE=\"$PWD/rust/target/debug/examples/feed_probe\" bin/feed-interop"
+  ]
+}
