@@ -1,0 +1,27 @@
+[package]
+name = "ab-runtime"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+[lints]
+workspace = true
+[dependencies]
+ab-operations = { path = "../ab-operations" }
+ab-frontdoor = { path = "../ab-frontdoor" }
+ab-wire = { path = "../ab-wire" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+axum.workspace = true
+sha2.workspace = true
+ab-state = { path = "../ab-state" }
+ab-trust = { path = "../ab-trust" }
+ab-replication = { path = "../ab-replication", optional = true }
+ab-blobs = { path = "../ab-blobs" }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+
+jiff.workspace = true
+
+[features]
+replica-feed = ["dep:ab-replication"]

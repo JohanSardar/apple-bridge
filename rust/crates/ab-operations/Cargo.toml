@@ -1,0 +1,16 @@
+[package]
+name = "ab-operations"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+[lints]
+workspace = true
+[dependencies]
+ab-catalog = { path = "../ab-catalog" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+ab-state = { path = "../ab-state" }
+ab-trust = { path = "../ab-trust" }
+ulid = "1"
