@@ -57,3 +57,10 @@ rust-lint:
 	rust/check.sh fmt --all -- --check
 	rust/check.sh clippy --workspace --all-targets -- -D warnings
 	rust/check.sh deny check
+
+.PHONY: rust-test rust-ci
+rust-test:
+	rust/check.sh test --workspace --locked
+
+rust-ci: lint rust-test rust-lint
+	go test ./contracts/golden ./internal/frontdoor ./internal/iphone ./internal/web -run Golden -count=1

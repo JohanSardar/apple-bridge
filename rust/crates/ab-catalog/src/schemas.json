@@ -1,0 +1,7259 @@
+[
+  {
+    "additionalProperties": false,
+    "properties": {
+      "calendar_id": {
+        "type": "string"
+      },
+      "end": {
+        "type": "string"
+      },
+      "start": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "start",
+      "end"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "aliases": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "collection": {
+              "type": "string"
+            },
+            "generation": {
+              "type": "string"
+            },
+            "native_key": {
+              "type": "string"
+            },
+            "record_id": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "source",
+            "generation",
+            "collection",
+            "native_key",
+            "record_id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "cursor": {
+        "additionalProperties": false,
+        "properties": {
+          "epoch": {
+            "type": "string"
+          },
+          "sequence": {
+            "type": "integer"
+          },
+          "subscription_revision": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "epoch",
+          "subscription_revision",
+          "sequence"
+        ],
+        "type": "object"
+      },
+      "next": {
+        "type": "string"
+      },
+      "permissions": {
+        "type": "object"
+      },
+      "records": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "collection": {
+              "type": "string"
+            },
+            "coverage": {
+              "additionalProperties": false,
+              "properties": {
+                "fields": {
+                  "type": "string"
+                },
+                "missing": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "operations": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "operation": {
+                        "type": "string"
+                      },
+                      "proven": {
+                        "type": "boolean"
+                      },
+                      "reason": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "operation",
+                      "proven",
+                      "reason"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "pack_version": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "fields",
+                "missing"
+              ],
+              "type": "object"
+            },
+            "data": {
+              "type": "object"
+            },
+            "deleted": {
+              "type": "boolean"
+            },
+            "id": {
+              "type": "string"
+            },
+            "observed_at": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "tombstone_reason": {
+              "type": "string"
+            },
+            "version": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "collection",
+            "id",
+            "version",
+            "source",
+            "observed_at",
+            "deleted",
+            "coverage",
+            "data"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "replica": {
+        "additionalProperties": false,
+        "nullable": true,
+        "properties": {
+          "blob_backlog": {
+            "type": "integer"
+          },
+          "blobs": {
+            "additionalProperties": false,
+            "properties": {
+              "backlog": {
+                "type": "integer"
+              },
+              "bytes": {
+                "type": "integer"
+              },
+              "corruptions": {
+                "type": "integer"
+              },
+              "entries": {
+                "type": "object"
+              },
+              "resumed_bytes": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "entries",
+              "bytes",
+              "backlog",
+              "resumed_bytes",
+              "corruptions"
+            ],
+            "type": "object"
+          },
+          "cursor": {
+            "additionalProperties": false,
+            "properties": {
+              "epoch": {
+                "type": "string"
+              },
+              "sequence": {
+                "type": "integer"
+              },
+              "subscription_revision": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "epoch",
+              "subscription_revision",
+              "sequence"
+            ],
+            "type": "object"
+          },
+          "dial_replicas": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "attempts": {
+                  "type": "integer"
+                },
+                "cursor": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "epoch": {
+                      "type": "string"
+                    },
+                    "sequence": {
+                      "type": "integer"
+                    },
+                    "subscription_revision": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "epoch",
+                    "subscription_revision",
+                    "sequence"
+                  ],
+                  "type": "object"
+                },
+                "last_heartbeat": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "replica_id": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "replica_id",
+                "state",
+                "cursor",
+                "last_heartbeat",
+                "attempts"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "gateway_head": {
+            "type": "integer"
+          },
+          "lag": {
+            "type": "integer"
+          },
+          "last_heartbeat": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "resumes": {
+            "type": "integer"
+          },
+          "role": {
+            "type": "string"
+          },
+          "schema": {
+            "type": "integer"
+          },
+          "snapshot_pages": {
+            "type": "integer"
+          },
+          "snapshot_sequence": {
+            "type": "integer"
+          },
+          "snapshots": {
+            "type": "integer"
+          },
+          "staleness_ms": {
+            "type": "integer"
+          },
+          "state": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "blobs",
+          "role",
+          "gateway_head",
+          "lag",
+          "blob_backlog",
+          "staleness_ms",
+          "snapshot_pages",
+          "schema",
+          "snapshot_sequence",
+          "state",
+          "cursor",
+          "last_heartbeat",
+          "mode",
+          "snapshots",
+          "resumes"
+        ],
+        "type": "object"
+      }
+    },
+    "required": [
+      "records",
+      "cursor"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "calendars": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "end": {
+        "type": "string"
+      },
+      "start": {
+        "type": "string"
+      },
+      "text": {
+        "type": "string"
+      },
+      "time_zone": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "start",
+      "end"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "calendars": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "collection": {
+              "type": "string"
+            },
+            "coverage": {
+              "additionalProperties": false,
+              "properties": {
+                "fields": {
+                  "type": "string"
+                },
+                "missing": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "operations": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "operation": {
+                        "type": "string"
+                      },
+                      "proven": {
+                        "type": "boolean"
+                      },
+                      "reason": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "operation",
+                      "proven",
+                      "reason"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "pack_version": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "fields",
+                "missing"
+              ],
+              "type": "object"
+            },
+            "data": {
+              "type": "object"
+            },
+            "deleted": {
+              "type": "boolean"
+            },
+            "id": {
+              "type": "string"
+            },
+            "observed_at": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "tombstone_reason": {
+              "type": "string"
+            },
+            "version": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "collection",
+            "id",
+            "version",
+            "source",
+            "observed_at",
+            "deleted",
+            "coverage",
+            "data"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "coverage_notes": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "cursor": {
+        "additionalProperties": false,
+        "properties": {
+          "epoch": {
+            "type": "string"
+          },
+          "sequence": {
+            "type": "integer"
+          },
+          "subscription_revision": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "epoch",
+          "subscription_revision",
+          "sequence"
+        ],
+        "type": "object"
+      },
+      "events": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "column": {
+              "type": "integer"
+            },
+            "columns": {
+              "type": "integer"
+            },
+            "event": {
+              "additionalProperties": false,
+              "properties": {
+                "collection": {
+                  "type": "string"
+                },
+                "coverage": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "fields": {
+                      "type": "string"
+                    },
+                    "missing": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "operations": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "operation": {
+                            "type": "string"
+                          },
+                          "proven": {
+                            "type": "boolean"
+                          },
+                          "reason": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "operation",
+                          "proven",
+                          "reason"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "pack_version": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "fields",
+                    "missing"
+                  ],
+                  "type": "object"
+                },
+                "data": {
+                  "type": "object"
+                },
+                "deleted": {
+                  "type": "boolean"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "observed_at": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "tombstone_reason": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "collection",
+                "id",
+                "version",
+                "source",
+                "observed_at",
+                "deleted",
+                "coverage",
+                "data"
+              ],
+              "type": "object"
+            },
+            "overlap_group": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "event",
+            "overlap_group",
+            "column",
+            "columns"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      }
+    },
+    "required": [
+      "events",
+      "calendars",
+      "cursor",
+      "coverage_notes"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "alarms": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "absolute_date": {
+                  "type": "string"
+                },
+                "relative_offset": {
+                  "nullable": true,
+                  "type": "number"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "all_day": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "availability": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "calendar_id": {
+            "type": "string"
+          },
+          "end": {
+            "nullable": true,
+            "type": "string"
+          },
+          "location": {
+            "nullable": true,
+            "type": "string"
+          },
+          "notes": {
+            "nullable": true,
+            "type": "string"
+          },
+          "recurrence": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "end": {
+                  "type": "string"
+                },
+                "frequency": {
+                  "type": "string"
+                },
+                "interval": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "frequency",
+                "interval"
+              ],
+              "type": "object"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "start": {
+            "nullable": true,
+            "type": "string"
+          },
+          "time_zone": {
+            "nullable": true,
+            "type": "string"
+          },
+          "title": {
+            "nullable": true,
+            "type": "string"
+          },
+          "url": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "calendar_id",
+          "title",
+          "start",
+          "end"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "command": {
+        "additionalProperties": false,
+        "properties": {
+          "admission_era": {
+            "type": "string"
+          },
+          "args": {
+            "type": "object"
+          },
+          "command_id": {
+            "type": "string"
+          },
+          "expected_version": {
+            "type": "integer"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "op": {
+            "type": "string"
+          },
+          "origin": {
+            "type": "string"
+          },
+          "wait_ms": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "args"
+        ],
+        "type": "object"
+      },
+      "commit_seq": {
+        "type": "integer"
+      },
+      "created_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "cursor": {
+        "additionalProperties": false,
+        "properties": {
+          "epoch": {
+            "type": "string"
+          },
+          "sequence": {
+            "type": "integer"
+          },
+          "subscription_revision": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "epoch",
+          "subscription_revision",
+          "sequence"
+        ],
+        "type": "object"
+      },
+      "disposition": {
+        "type": "string"
+      },
+      "error": {
+        "additionalProperties": false,
+        "nullable": true,
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "current": {
+            "additionalProperties": false,
+            "nullable": true,
+            "properties": {
+              "collection": {
+                "type": "string"
+              },
+              "coverage": {
+                "additionalProperties": false,
+                "properties": {
+                  "fields": {
+                    "type": "string"
+                  },
+                  "missing": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "operations": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "operation": {
+                          "type": "string"
+                        },
+                        "proven": {
+                          "type": "boolean"
+                        },
+                        "reason": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "operation",
+                        "proven",
+                        "reason"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "pack_version": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "fields",
+                  "missing"
+                ],
+                "type": "object"
+              },
+              "data": {
+                "type": "object"
+              },
+              "deleted": {
+                "type": "boolean"
+              },
+              "id": {
+                "type": "string"
+              },
+              "observed_at": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "tombstone_reason": {
+                "type": "string"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "collection",
+              "id",
+              "version",
+              "source",
+              "observed_at",
+              "deleted",
+              "coverage",
+              "data"
+            ],
+            "type": "object"
+          },
+          "message": {
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "retryable"
+        ],
+        "type": "object"
+      },
+      "evidence": {
+        "type": "object"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "history": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "at": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "evidence": {
+              "type": "object"
+            },
+            "state": {
+              "type": "string"
+            },
+            "transition": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "state",
+            "at"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "observed_record_ids": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "parts": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "disposition": {
+              "type": "string"
+            },
+            "index": {
+              "type": "integer"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "record_id": {
+              "type": "string"
+            },
+            "upload_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "index",
+            "kind",
+            "disposition"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "principal": {
+        "type": "string"
+      },
+      "request_hash": {
+        "type": "string"
+      },
+      "source": {
+        "type": "string"
+      },
+      "state": {
+        "type": "string"
+      },
+      "upload_references": {
+        "type": "object"
+      }
+    },
+    "required": [
+      "command",
+      "principal",
+      "source",
+      "request_hash",
+      "state",
+      "admission_era",
+      "created_at",
+      "expires_at",
+      "commit_seq",
+      "cursor",
+      "history"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "alarms": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "absolute_date": {
+                  "type": "string"
+                },
+                "relative_offset": {
+                  "nullable": true,
+                  "type": "number"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "all_day": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "availability": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "calendar_id": {
+            "type": "string"
+          },
+          "end": {
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "location": {
+            "nullable": true,
+            "type": "string"
+          },
+          "notes": {
+            "nullable": true,
+            "type": "string"
+          },
+          "recurrence": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "end": {
+                  "type": "string"
+                },
+                "frequency": {
+                  "type": "string"
+                },
+                "interval": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "frequency",
+                "interval"
+              ],
+              "type": "object"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "span": {
+            "enum": [
+              "this",
+              "future"
+            ],
+            "type": "string"
+          },
+          "start": {
+            "nullable": true,
+            "type": "string"
+          },
+          "time_zone": {
+            "nullable": true,
+            "type": "string"
+          },
+          "title": {
+            "nullable": true,
+            "type": "string"
+          },
+          "url": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "span"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args",
+      "expected_version"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "span": {
+            "enum": [
+              "this",
+              "future"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "span"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args",
+      "expected_version"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "folder": {
+        "type": "string"
+      },
+      "sort": {
+        "enum": [
+          "modified",
+          "created",
+          "title"
+        ],
+        "type": "string"
+      },
+      "time_zone": {
+        "type": "string"
+      }
+    },
+    "required": [],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "accounts": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "count": {
+              "type": "integer"
+            },
+            "folder_ids": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "id": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "title",
+            "count",
+            "folder_ids"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "count": {
+        "type": "integer"
+      },
+      "cursor": {
+        "additionalProperties": false,
+        "properties": {
+          "epoch": {
+            "type": "string"
+          },
+          "sequence": {
+            "type": "integer"
+          },
+          "subscription_revision": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "epoch",
+          "subscription_revision",
+          "sequence"
+        ],
+        "type": "object"
+      },
+      "folders": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "account_id": {
+              "type": "string"
+            },
+            "count": {
+              "type": "integer"
+            },
+            "folder": {
+              "additionalProperties": false,
+              "properties": {
+                "collection": {
+                  "type": "string"
+                },
+                "coverage": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "fields": {
+                      "type": "string"
+                    },
+                    "missing": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "operations": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "operation": {
+                            "type": "string"
+                          },
+                          "proven": {
+                            "type": "boolean"
+                          },
+                          "reason": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "operation",
+                          "proven",
+                          "reason"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "pack_version": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "fields",
+                    "missing"
+                  ],
+                  "type": "object"
+                },
+                "data": {
+                  "type": "object"
+                },
+                "deleted": {
+                  "type": "boolean"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "observed_at": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "tombstone_reason": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "collection",
+                "id",
+                "version",
+                "source",
+                "observed_at",
+                "deleted",
+                "coverage",
+                "data"
+              ],
+              "type": "object"
+            },
+            "parent_id": {
+              "nullable": true,
+              "type": "string"
+            },
+            "read_only": {
+              "type": "boolean"
+            },
+            "recently_deleted": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "folder",
+            "count",
+            "account_id",
+            "parent_id",
+            "read_only",
+            "recently_deleted"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "sections": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "key": {
+              "type": "string"
+            },
+            "notes": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "note": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "collection": {
+                        "type": "string"
+                      },
+                      "coverage": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "fields": {
+                            "type": "string"
+                          },
+                          "missing": {
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
+                          "operations": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "operation": {
+                                  "type": "string"
+                                },
+                                "proven": {
+                                  "type": "boolean"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "operation",
+                                "proven",
+                                "reason"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "pack_version": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "fields",
+                          "missing"
+                        ],
+                        "type": "object"
+                      },
+                      "data": {
+                        "type": "object"
+                      },
+                      "deleted": {
+                        "type": "boolean"
+                      },
+                      "id": {
+                        "type": "string"
+                      },
+                      "observed_at": {
+                        "format": "date-time",
+                        "type": "string"
+                      },
+                      "source": {
+                        "type": "string"
+                      },
+                      "tombstone_reason": {
+                        "type": "string"
+                      },
+                      "version": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "collection",
+                      "id",
+                      "version",
+                      "source",
+                      "observed_at",
+                      "deleted",
+                      "coverage",
+                      "data"
+                    ],
+                    "type": "object"
+                  },
+                  "pinned": {
+                    "nullable": true,
+                    "type": "boolean"
+                  },
+                  "preview": {
+                    "type": "string"
+                  },
+                  "read_only": {
+                    "type": "boolean"
+                  },
+                  "thumbnail": {
+                    "additionalProperties": false,
+                    "nullable": true,
+                    "properties": {
+                      "digest": {
+                        "type": "string"
+                      },
+                      "variant": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "digest",
+                      "variant"
+                    ],
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "note",
+                  "preview",
+                  "thumbnail",
+                  "pinned",
+                  "read_only"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "title": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "key",
+            "title",
+            "notes"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "sort": {
+        "type": "string"
+      },
+      "time_zone": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "accounts",
+      "folders",
+      "sections",
+      "count",
+      "sort",
+      "time_zone",
+      "cursor"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "display_order": {
+        "enum": [
+          "given",
+          "family"
+        ],
+        "type": "string"
+      },
+      "group": {
+        "type": "string"
+      },
+      "sort": {
+        "enum": [
+          "given",
+          "family"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "containers": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "collection": {
+              "type": "string"
+            },
+            "coverage": {
+              "additionalProperties": false,
+              "properties": {
+                "fields": {
+                  "type": "string"
+                },
+                "missing": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "operations": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "operation": {
+                        "type": "string"
+                      },
+                      "proven": {
+                        "type": "boolean"
+                      },
+                      "reason": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "operation",
+                      "proven",
+                      "reason"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "pack_version": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "fields",
+                "missing"
+              ],
+              "type": "object"
+            },
+            "data": {
+              "type": "object"
+            },
+            "deleted": {
+              "type": "boolean"
+            },
+            "id": {
+              "type": "string"
+            },
+            "observed_at": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "tombstone_reason": {
+              "type": "string"
+            },
+            "version": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "collection",
+            "id",
+            "version",
+            "source",
+            "observed_at",
+            "deleted",
+            "coverage",
+            "data"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "count": {
+        "type": "integer"
+      },
+      "cursor": {
+        "additionalProperties": false,
+        "properties": {
+          "epoch": {
+            "type": "string"
+          },
+          "sequence": {
+            "type": "integer"
+          },
+          "subscription_revision": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "epoch",
+          "subscription_revision",
+          "sequence"
+        ],
+        "type": "object"
+      },
+      "display_order": {
+        "type": "string"
+      },
+      "groups": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "count": {
+              "type": "integer"
+            },
+            "group": {
+              "additionalProperties": false,
+              "properties": {
+                "collection": {
+                  "type": "string"
+                },
+                "coverage": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "fields": {
+                      "type": "string"
+                    },
+                    "missing": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "operations": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "operation": {
+                            "type": "string"
+                          },
+                          "proven": {
+                            "type": "boolean"
+                          },
+                          "reason": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "operation",
+                          "proven",
+                          "reason"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "pack_version": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "fields",
+                    "missing"
+                  ],
+                  "type": "object"
+                },
+                "data": {
+                  "type": "object"
+                },
+                "deleted": {
+                  "type": "boolean"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "observed_at": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "tombstone_reason": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "collection",
+                "id",
+                "version",
+                "source",
+                "observed_at",
+                "deleted",
+                "coverage",
+                "data"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "group",
+            "count"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "sections": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "contacts": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "avatar": {
+                    "additionalProperties": false,
+                    "nullable": true,
+                    "properties": {
+                      "digest": {
+                        "type": "string"
+                      },
+                      "variant": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "digest",
+                      "variant"
+                    ],
+                    "type": "object"
+                  },
+                  "contact": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "collection": {
+                        "type": "string"
+                      },
+                      "coverage": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "fields": {
+                            "type": "string"
+                          },
+                          "missing": {
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
+                          "operations": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "operation": {
+                                  "type": "string"
+                                },
+                                "proven": {
+                                  "type": "boolean"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "operation",
+                                "proven",
+                                "reason"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "pack_version": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "fields",
+                          "missing"
+                        ],
+                        "type": "object"
+                      },
+                      "data": {
+                        "type": "object"
+                      },
+                      "deleted": {
+                        "type": "boolean"
+                      },
+                      "id": {
+                        "type": "string"
+                      },
+                      "observed_at": {
+                        "format": "date-time",
+                        "type": "string"
+                      },
+                      "source": {
+                        "type": "string"
+                      },
+                      "tombstone_reason": {
+                        "type": "string"
+                      },
+                      "version": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "collection",
+                      "id",
+                      "version",
+                      "source",
+                      "observed_at",
+                      "deleted",
+                      "coverage",
+                      "data"
+                    ],
+                    "type": "object"
+                  },
+                  "conversation_ids": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "display_name": {
+                    "type": "string"
+                  },
+                  "initials": {
+                    "type": "string"
+                  },
+                  "is_me": {
+                    "nullable": true,
+                    "type": "boolean"
+                  },
+                  "sort_key": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "contact",
+                  "display_name",
+                  "sort_key",
+                  "initials",
+                  "avatar",
+                  "is_me",
+                  "conversation_ids"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "key": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "key",
+            "contacts"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "sort": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "sections",
+      "groups",
+      "containers",
+      "count",
+      "sort",
+      "display_order",
+      "cursor"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "list": {
+        "type": "string"
+      },
+      "show_completed": {
+        "type": "boolean"
+      },
+      "smart": {
+        "enum": [
+          "today",
+          "scheduled",
+          "all",
+          "flagged",
+          "completed",
+          "assigned"
+        ],
+        "type": "string"
+      },
+      "sort": {
+        "enum": [
+          "manual",
+          "due",
+          "created",
+          "priority",
+          "title"
+        ],
+        "type": "string"
+      },
+      "tag": {
+        "type": "string"
+      },
+      "time_zone": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "time_zone"
+    ],
+    "type": "object"
+  },
+  {
+    "$defs": {
+      "contracts.ReminderItem": {
+        "additionalProperties": false,
+        "properties": {
+          "attachments": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "collection": {
+                  "type": "string"
+                },
+                "coverage": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "fields": {
+                      "type": "string"
+                    },
+                    "missing": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "operations": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "operation": {
+                            "type": "string"
+                          },
+                          "proven": {
+                            "type": "boolean"
+                          },
+                          "reason": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "operation",
+                          "proven",
+                          "reason"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "pack_version": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "fields",
+                    "missing"
+                  ],
+                  "type": "object"
+                },
+                "data": {
+                  "type": "object"
+                },
+                "deleted": {
+                  "type": "boolean"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "observed_at": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "tombstone_reason": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "collection",
+                "id",
+                "version",
+                "source",
+                "observed_at",
+                "deleted",
+                "coverage",
+                "data"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "reminder": {
+            "additionalProperties": false,
+            "properties": {
+              "collection": {
+                "type": "string"
+              },
+              "coverage": {
+                "additionalProperties": false,
+                "properties": {
+                  "fields": {
+                    "type": "string"
+                  },
+                  "missing": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "operations": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "operation": {
+                          "type": "string"
+                        },
+                        "proven": {
+                          "type": "boolean"
+                        },
+                        "reason": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "operation",
+                        "proven",
+                        "reason"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "pack_version": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "fields",
+                  "missing"
+                ],
+                "type": "object"
+              },
+              "data": {
+                "type": "object"
+              },
+              "deleted": {
+                "type": "boolean"
+              },
+              "id": {
+                "type": "string"
+              },
+              "observed_at": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "tombstone_reason": {
+                "type": "string"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "collection",
+              "id",
+              "version",
+              "source",
+              "observed_at",
+              "deleted",
+              "coverage",
+              "data"
+            ],
+            "type": "object"
+          },
+          "subtasks": {
+            "items": {
+              "$ref": "#/$defs/contracts.ReminderItem"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "reminder",
+          "subtasks",
+          "attachments"
+        ],
+        "type": "object"
+      }
+    },
+    "$id": "urn:apple-bridge:schema:contracts.ReminderItemsResult",
+    "additionalProperties": false,
+    "properties": {
+      "count": {
+        "type": "integer"
+      },
+      "cursor": {
+        "additionalProperties": false,
+        "properties": {
+          "epoch": {
+            "type": "string"
+          },
+          "sequence": {
+            "type": "integer"
+          },
+          "subscription_revision": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "epoch",
+          "subscription_revision",
+          "sequence"
+        ],
+        "type": "object"
+      },
+      "sections": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "items": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "attachments": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "collection": {
+                          "type": "string"
+                        },
+                        "coverage": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "fields": {
+                              "type": "string"
+                            },
+                            "missing": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "operations": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "operation": {
+                                    "type": "string"
+                                  },
+                                  "proven": {
+                                    "type": "boolean"
+                                  },
+                                  "reason": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "operation",
+                                  "proven",
+                                  "reason"
+                                ],
+                                "type": "object"
+                              },
+                              "type": "array"
+                            },
+                            "pack_version": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "fields",
+                            "missing"
+                          ],
+                          "type": "object"
+                        },
+                        "data": {
+                          "type": "object"
+                        },
+                        "deleted": {
+                          "type": "boolean"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "observed_at": {
+                          "format": "date-time",
+                          "type": "string"
+                        },
+                        "source": {
+                          "type": "string"
+                        },
+                        "tombstone_reason": {
+                          "type": "string"
+                        },
+                        "version": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "collection",
+                        "id",
+                        "version",
+                        "source",
+                        "observed_at",
+                        "deleted",
+                        "coverage",
+                        "data"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "reminder": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "collection": {
+                        "type": "string"
+                      },
+                      "coverage": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "fields": {
+                            "type": "string"
+                          },
+                          "missing": {
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
+                          "operations": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "operation": {
+                                  "type": "string"
+                                },
+                                "proven": {
+                                  "type": "boolean"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "operation",
+                                "proven",
+                                "reason"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "pack_version": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "fields",
+                          "missing"
+                        ],
+                        "type": "object"
+                      },
+                      "data": {
+                        "type": "object"
+                      },
+                      "deleted": {
+                        "type": "boolean"
+                      },
+                      "id": {
+                        "type": "string"
+                      },
+                      "observed_at": {
+                        "format": "date-time",
+                        "type": "string"
+                      },
+                      "source": {
+                        "type": "string"
+                      },
+                      "tombstone_reason": {
+                        "type": "string"
+                      },
+                      "version": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "collection",
+                      "id",
+                      "version",
+                      "source",
+                      "observed_at",
+                      "deleted",
+                      "coverage",
+                      "data"
+                    ],
+                    "type": "object"
+                  },
+                  "subtasks": {
+                    "items": {
+                      "$ref": "#/$defs/contracts.ReminderItem"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "reminder",
+                  "subtasks",
+                  "attachments"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "section": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "kind": {
+                  "enum": [
+                    "store",
+                    "list",
+                    "date",
+                    "daypart",
+                    "none"
+                  ],
+                  "type": "string"
+                },
+                "list_id": {
+                  "type": "string"
+                },
+                "order": {
+                  "type": "number"
+                },
+                "title": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "id",
+                "title",
+                "order"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "section",
+            "items"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      }
+    },
+    "required": [
+      "sections",
+      "count",
+      "cursor"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "time_zone": {
+        "description": "Viewer IANA time zone",
+        "type": "string"
+      }
+    },
+    "required": [
+      "time_zone"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "cursor": {
+        "additionalProperties": false,
+        "properties": {
+          "epoch": {
+            "type": "string"
+          },
+          "sequence": {
+            "type": "integer"
+          },
+          "subscription_revision": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "epoch",
+          "subscription_revision",
+          "sequence"
+        ],
+        "type": "object"
+      },
+      "lists": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "count": {
+              "nullable": true,
+              "type": "integer"
+            },
+            "group_id": {
+              "nullable": true,
+              "type": "string"
+            },
+            "list": {
+              "additionalProperties": false,
+              "properties": {
+                "collection": {
+                  "type": "string"
+                },
+                "coverage": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "fields": {
+                      "type": "string"
+                    },
+                    "missing": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "operations": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "operation": {
+                            "type": "string"
+                          },
+                          "proven": {
+                            "type": "boolean"
+                          },
+                          "reason": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "operation",
+                          "proven",
+                          "reason"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "pack_version": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "fields",
+                    "missing"
+                  ],
+                  "type": "object"
+                },
+                "data": {
+                  "type": "object"
+                },
+                "deleted": {
+                  "type": "boolean"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "observed_at": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "tombstone_reason": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "collection",
+                "id",
+                "version",
+                "source",
+                "observed_at",
+                "deleted",
+                "coverage",
+                "data"
+              ],
+              "type": "object"
+            },
+            "order": {
+              "nullable": true,
+              "type": "number"
+            },
+            "pinned": {
+              "nullable": true,
+              "type": "boolean"
+            },
+            "sections": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "enum": [
+                      "store",
+                      "list",
+                      "date",
+                      "daypart",
+                      "none"
+                    ],
+                    "type": "string"
+                  },
+                  "list_id": {
+                    "type": "string"
+                  },
+                  "order": {
+                    "type": "number"
+                  },
+                  "title": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "id",
+                  "title",
+                  "order"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "status": {
+              "enum": [
+                "unsupported"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "list",
+            "sections",
+            "group_id",
+            "order",
+            "pinned"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "smart": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "count": {
+              "nullable": true,
+              "type": "integer"
+            },
+            "id": {
+              "enum": [
+                "today",
+                "scheduled",
+                "all",
+                "flagged",
+                "completed",
+                "assigned"
+              ],
+              "type": "string"
+            },
+            "status": {
+              "enum": [
+                "unsupported"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "tags": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "count": {
+              "type": "integer"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "count"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      }
+    },
+    "required": [
+      "smart",
+      "lists",
+      "tags",
+      "cursor"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "after": {
+        "description": "Opaque cursor from the previous page",
+        "type": "string"
+      },
+      "filter": {
+        "description": "all (default), known, unknown, unread, deleted, spam, or archived",
+        "type": "string"
+      },
+      "limit": {
+        "description": "Page size, default 50, maximum 200",
+        "maximum": 200,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "participants": {
+        "description": "Exact normalized phone/email handle set, 1–32 inputs; duplicates folded",
+        "items": {
+          "type": "string"
+        },
+        "maxItems": 32,
+        "minItems": 1,
+        "type": "array"
+      }
+    },
+    "required": [],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "chats": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "avatar_handles": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "contact_id": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "contact_id"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "chat": {
+              "additionalProperties": false,
+              "properties": {
+                "collection": {
+                  "type": "string"
+                },
+                "coverage": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "fields": {
+                      "type": "string"
+                    },
+                    "missing": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "operations": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "operation": {
+                            "type": "string"
+                          },
+                          "proven": {
+                            "type": "boolean"
+                          },
+                          "reason": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "operation",
+                          "proven",
+                          "reason"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "pack_version": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "fields",
+                    "missing"
+                  ],
+                  "type": "object"
+                },
+                "data": {
+                  "type": "object"
+                },
+                "deleted": {
+                  "type": "boolean"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "observed_at": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "tombstone_reason": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "collection",
+                "id",
+                "version",
+                "source",
+                "observed_at",
+                "deleted",
+                "coverage",
+                "data"
+              ],
+              "type": "object"
+            },
+            "has_unseen_mention": {
+              "type": "boolean"
+            },
+            "known_sender": {
+              "type": "boolean"
+            },
+            "last_activity_at": {
+              "type": "string"
+            },
+            "last_message": {
+              "additionalProperties": false,
+              "nullable": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "is_from_me": {
+                  "type": "boolean"
+                },
+                "preview": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "attachment_kinds": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "count": {
+                      "type": "integer"
+                    },
+                    "group_event": {
+                      "type": "object"
+                    },
+                    "kind": {
+                      "enum": [
+                        "text",
+                        "attachments",
+                        "reaction",
+                        "group_event",
+                        "unsent",
+                        "edited"
+                      ],
+                      "type": "string"
+                    },
+                    "reaction": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "kind": {
+                          "type": "string"
+                        },
+                        "removed": {
+                          "type": "boolean"
+                        },
+                        "target_excerpt": {
+                          "type": "string"
+                        },
+                        "verb": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "verb",
+                        "target_excerpt"
+                      ],
+                      "type": "object"
+                    },
+                    "text": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ],
+                  "type": "object"
+                },
+                "sender_handle_id": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "sent_at": {
+                  "type": "string"
+                },
+                "service": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "sent_at",
+                "is_from_me",
+                "preview"
+              ],
+              "type": "object"
+            },
+            "muted": {
+              "nullable": true,
+              "type": "boolean"
+            },
+            "pin_preview": {
+              "additionalProperties": false,
+              "nullable": true,
+              "properties": {
+                "at": {
+                  "type": "string"
+                },
+                "message_id": {
+                  "type": "string"
+                },
+                "text_preview": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "message_id",
+                "text_preview",
+                "at"
+              ],
+              "type": "object"
+            },
+            "pinned_index": {
+              "nullable": true,
+              "type": "integer"
+            },
+            "title": {
+              "type": "string"
+            },
+            "unread_count": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "known_sender",
+            "pin_preview",
+            "chat",
+            "title",
+            "avatar_handles",
+            "last_message",
+            "last_activity_at",
+            "unread_count",
+            "has_unseen_mention",
+            "muted",
+            "pinned_index"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "coverage_notes": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "cursor": {
+        "additionalProperties": false,
+        "properties": {
+          "epoch": {
+            "type": "string"
+          },
+          "sequence": {
+            "type": "integer"
+          },
+          "subscription_revision": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "epoch",
+          "subscription_revision",
+          "sequence"
+        ],
+        "type": "object"
+      },
+      "next": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "chats",
+      "cursor",
+      "coverage_notes"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "after": {
+        "type": "string"
+      },
+      "anchor": {
+        "description": "latest (default), oldest, unread, or a message ID",
+        "type": "string"
+      },
+      "before": {
+        "type": "string"
+      },
+      "chat_id": {
+        "type": "string"
+      },
+      "limit": {
+        "description": "Page size, default 50, maximum 200",
+        "maximum": 200,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "thread_originator_id": {
+        "description": "Restrict to this root message and its replies in the chat",
+        "type": "string"
+      }
+    },
+    "required": [
+      "chat_id"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "after": {
+        "type": "string"
+      },
+      "before": {
+        "type": "string"
+      },
+      "cursor": {
+        "additionalProperties": false,
+        "properties": {
+          "epoch": {
+            "type": "string"
+          },
+          "sequence": {
+            "type": "integer"
+          },
+          "subscription_revision": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "epoch",
+          "subscription_revision",
+          "sequence"
+        ],
+        "type": "object"
+      },
+      "items": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "attachments": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "collection": {
+                    "type": "string"
+                  },
+                  "coverage": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "fields": {
+                        "type": "string"
+                      },
+                      "missing": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "operations": {
+                        "items": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "operation": {
+                              "type": "string"
+                            },
+                            "proven": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "operation",
+                            "proven",
+                            "reason"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "pack_version": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "fields",
+                      "missing"
+                    ],
+                    "type": "object"
+                  },
+                  "data": {
+                    "type": "object"
+                  },
+                  "deleted": {
+                    "type": "boolean"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "observed_at": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "source": {
+                    "type": "string"
+                  },
+                  "tombstone_reason": {
+                    "type": "string"
+                  },
+                  "version": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "collection",
+                  "id",
+                  "version",
+                  "source",
+                  "observed_at",
+                  "deleted",
+                  "coverage",
+                  "data"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "collection": {
+              "type": "string"
+            },
+            "coverage": {
+              "additionalProperties": false,
+              "properties": {
+                "fields": {
+                  "type": "string"
+                },
+                "missing": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "operations": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "operation": {
+                        "type": "string"
+                      },
+                      "proven": {
+                        "type": "boolean"
+                      },
+                      "reason": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "operation",
+                      "proven",
+                      "reason"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "pack_version": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "fields",
+                "missing"
+              ],
+              "type": "object"
+            },
+            "data": {
+              "type": "object"
+            },
+            "deleted": {
+              "type": "boolean"
+            },
+            "id": {
+              "type": "string"
+            },
+            "observed_at": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "reactions": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "collection": {
+                    "type": "string"
+                  },
+                  "coverage": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "fields": {
+                        "type": "string"
+                      },
+                      "missing": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "operations": {
+                        "items": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "operation": {
+                              "type": "string"
+                            },
+                            "proven": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "operation",
+                            "proven",
+                            "reason"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "pack_version": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "fields",
+                      "missing"
+                    ],
+                    "type": "object"
+                  },
+                  "data": {
+                    "type": "object"
+                  },
+                  "deleted": {
+                    "type": "boolean"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "observed_at": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "source": {
+                    "type": "string"
+                  },
+                  "tombstone_reason": {
+                    "type": "string"
+                  },
+                  "version": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "collection",
+                  "id",
+                  "version",
+                  "source",
+                  "observed_at",
+                  "deleted",
+                  "coverage",
+                  "data"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "reply_count": {
+              "type": "integer"
+            },
+            "source": {
+              "type": "string"
+            },
+            "tombstone_reason": {
+              "type": "string"
+            },
+            "version": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "collection",
+            "id",
+            "version",
+            "source",
+            "observed_at",
+            "deleted",
+            "coverage",
+            "data",
+            "reactions",
+            "attachments",
+            "reply_count"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "unread_anchor": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "items",
+      "cursor"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "ids": {
+        "description": "At most 500 handle IDs",
+        "items": {
+          "type": "string"
+        },
+        "maxItems": 500,
+        "type": "array"
+      }
+    },
+    "required": [
+      "ids"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "cursor": {
+        "additionalProperties": false,
+        "properties": {
+          "epoch": {
+            "type": "string"
+          },
+          "sequence": {
+            "type": "integer"
+          },
+          "subscription_revision": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "epoch",
+          "subscription_revision",
+          "sequence"
+        ],
+        "type": "object"
+      },
+      "handles": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "address": {
+              "type": "string"
+            },
+            "avatar": {
+              "additionalProperties": false,
+              "nullable": true,
+              "properties": {
+                "digest": {
+                  "type": "string"
+                },
+                "variant": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "digest",
+                "variant"
+              ],
+              "type": "object"
+            },
+            "contact_id": {
+              "nullable": true,
+              "type": "string"
+            },
+            "display_name": {
+              "type": "string"
+            },
+            "family_name": {
+              "type": "string"
+            },
+            "given_name": {
+              "type": "string"
+            },
+            "handle_id": {
+              "type": "string"
+            },
+            "initials": {
+              "type": "string"
+            },
+            "service": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "handle_id",
+            "address",
+            "service",
+            "display_name",
+            "initials"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      }
+    },
+    "required": [
+      "handles",
+      "cursor"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "after": {
+        "type": "string"
+      },
+      "from_contact_id": {
+        "type": "string"
+      },
+      "from_handle_id": {
+        "type": "string"
+      },
+      "kind": {
+        "enum": [
+          "",
+          "photos",
+          "links",
+          "documents",
+          "locations"
+        ],
+        "type": "string"
+      },
+      "limit": {
+        "maximum": 200,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "text": {
+        "maxLength": 512,
+        "type": "string"
+      },
+      "unread": {
+        "type": "boolean"
+      }
+    },
+    "required": [],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "coverage_notes": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "cursor": {
+        "additionalProperties": false,
+        "properties": {
+          "epoch": {
+            "type": "string"
+          },
+          "sequence": {
+            "type": "integer"
+          },
+          "subscription_revision": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "epoch",
+          "subscription_revision",
+          "sequence"
+        ],
+        "type": "object"
+      },
+      "items": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "attachments": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "collection": {
+                    "type": "string"
+                  },
+                  "coverage": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "fields": {
+                        "type": "string"
+                      },
+                      "missing": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "operations": {
+                        "items": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "operation": {
+                              "type": "string"
+                            },
+                            "proven": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "operation",
+                            "proven",
+                            "reason"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "pack_version": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "fields",
+                      "missing"
+                    ],
+                    "type": "object"
+                  },
+                  "data": {
+                    "type": "object"
+                  },
+                  "deleted": {
+                    "type": "boolean"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "observed_at": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "source": {
+                    "type": "string"
+                  },
+                  "tombstone_reason": {
+                    "type": "string"
+                  },
+                  "version": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "collection",
+                  "id",
+                  "version",
+                  "source",
+                  "observed_at",
+                  "deleted",
+                  "coverage",
+                  "data"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "collection": {
+              "type": "string"
+            },
+            "coverage": {
+              "additionalProperties": false,
+              "properties": {
+                "fields": {
+                  "type": "string"
+                },
+                "missing": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "operations": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "operation": {
+                        "type": "string"
+                      },
+                      "proven": {
+                        "type": "boolean"
+                      },
+                      "reason": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "operation",
+                      "proven",
+                      "reason"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "pack_version": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "fields",
+                "missing"
+              ],
+              "type": "object"
+            },
+            "data": {
+              "type": "object"
+            },
+            "deleted": {
+              "type": "boolean"
+            },
+            "id": {
+              "type": "string"
+            },
+            "observed_at": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "reactions": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "collection": {
+                    "type": "string"
+                  },
+                  "coverage": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "fields": {
+                        "type": "string"
+                      },
+                      "missing": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "operations": {
+                        "items": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "operation": {
+                              "type": "string"
+                            },
+                            "proven": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "operation",
+                            "proven",
+                            "reason"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "pack_version": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "fields",
+                      "missing"
+                    ],
+                    "type": "object"
+                  },
+                  "data": {
+                    "type": "object"
+                  },
+                  "deleted": {
+                    "type": "boolean"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "observed_at": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "source": {
+                    "type": "string"
+                  },
+                  "tombstone_reason": {
+                    "type": "string"
+                  },
+                  "version": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "collection",
+                  "id",
+                  "version",
+                  "source",
+                  "observed_at",
+                  "deleted",
+                  "coverage",
+                  "data"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "reply_count": {
+              "type": "integer"
+            },
+            "source": {
+              "type": "string"
+            },
+            "tombstone_reason": {
+              "type": "string"
+            },
+            "version": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "collection",
+            "id",
+            "version",
+            "source",
+            "observed_at",
+            "deleted",
+            "coverage",
+            "data",
+            "reactions",
+            "attachments",
+            "reply_count"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "next": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "items",
+      "cursor",
+      "coverage_notes"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "after": {
+        "type": "string"
+      },
+      "chat_id": {
+        "type": "string"
+      },
+      "kind": {
+        "enum": [
+          "photos",
+          "videos",
+          "media",
+          "links",
+          "documents",
+          "locations",
+          "audio"
+        ],
+        "type": "string"
+      },
+      "limit": {
+        "maximum": 200,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "chat_id",
+      "kind"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "coverage_notes": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "cursor": {
+        "additionalProperties": false,
+        "properties": {
+          "epoch": {
+            "type": "string"
+          },
+          "sequence": {
+            "type": "integer"
+          },
+          "subscription_revision": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "epoch",
+          "subscription_revision",
+          "sequence"
+        ],
+        "type": "object"
+      },
+      "items": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "collection": {
+              "type": "string"
+            },
+            "coverage": {
+              "additionalProperties": false,
+              "properties": {
+                "fields": {
+                  "type": "string"
+                },
+                "missing": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "operations": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "operation": {
+                        "type": "string"
+                      },
+                      "proven": {
+                        "type": "boolean"
+                      },
+                      "reason": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "operation",
+                      "proven",
+                      "reason"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "pack_version": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "fields",
+                "missing"
+              ],
+              "type": "object"
+            },
+            "data": {
+              "type": "object"
+            },
+            "deleted": {
+              "type": "boolean"
+            },
+            "id": {
+              "type": "string"
+            },
+            "observed_at": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "tombstone_reason": {
+              "type": "string"
+            },
+            "version": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "collection",
+            "id",
+            "version",
+            "source",
+            "observed_at",
+            "deleted",
+            "coverage",
+            "data"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "next": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "items",
+      "cursor",
+      "coverage_notes"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {},
+    "required": [],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "after": {
+        "type": "string"
+      },
+      "collection": {
+        "description": "Collection name; use an empty string to query all visible collections. Follow next with after to read further pages.",
+        "enum": [
+          "",
+          "calendar.calendar",
+          "calendar.event",
+          "contacts.contact",
+          "contacts.container",
+          "contacts.group",
+          "files.item",
+          "focus.status",
+          "health.sample",
+          "iphone.location",
+          "mac.app",
+          "mac.audio_device",
+          "mac.bluetooth_device",
+          "mac.display",
+          "mac.network",
+          "mac.power",
+          "mail.account",
+          "mail.attachment",
+          "mail.mailbox",
+          "mail.message",
+          "messages.attachment",
+          "messages.chat",
+          "messages.handle",
+          "messages.message",
+          "messages.reaction",
+          "notes.folder",
+          "notes.note",
+          "pdf.artifact",
+          "phone.call",
+          "reminders.attachment",
+          "reminders.list",
+          "reminders.reminder",
+          "safari.bookmark",
+          "safari.cloud_tab",
+          "safari.history",
+          "safari.reading_list",
+          "safari.tab",
+          "shortcuts.folder",
+          "shortcuts.shortcut",
+          "system.command",
+          "system.replica",
+          "system.source",
+          "usage.app_day",
+          "usage.device",
+          "voice_memos.folder",
+          "voice_memos.recording",
+          "voicemail.message"
+        ],
+        "type": "string"
+      },
+      "id": {
+        "type": "string"
+      },
+      "include_aliases": {
+        "type": "boolean"
+      },
+      "include_deleted": {
+        "type": "boolean"
+      },
+      "limit": {
+        "type": "integer"
+      },
+      "text": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "collection"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "command_id": {
+        "type": "string"
+      },
+      "limit": {
+        "type": "integer"
+      },
+      "resolve": {
+        "type": "boolean"
+      }
+    },
+    "required": [],
+    "type": "object"
+  },
+  {
+    "items": {
+      "additionalProperties": false,
+      "properties": {
+        "admission_era": {
+          "type": "string"
+        },
+        "command": {
+          "additionalProperties": false,
+          "properties": {
+            "admission_era": {
+              "type": "string"
+            },
+            "args": {
+              "type": "object"
+            },
+            "command_id": {
+              "type": "string"
+            },
+            "expected_version": {
+              "type": "integer"
+            },
+            "expires_at": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "op": {
+              "type": "string"
+            },
+            "origin": {
+              "type": "string"
+            },
+            "wait_ms": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "args"
+          ],
+          "type": "object"
+        },
+        "commit_seq": {
+          "type": "integer"
+        },
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "cursor": {
+          "additionalProperties": false,
+          "properties": {
+            "epoch": {
+              "type": "string"
+            },
+            "sequence": {
+              "type": "integer"
+            },
+            "subscription_revision": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "epoch",
+            "subscription_revision",
+            "sequence"
+          ],
+          "type": "object"
+        },
+        "disposition": {
+          "type": "string"
+        },
+        "error": {
+          "additionalProperties": false,
+          "nullable": true,
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "current": {
+              "additionalProperties": false,
+              "nullable": true,
+              "properties": {
+                "collection": {
+                  "type": "string"
+                },
+                "coverage": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "fields": {
+                      "type": "string"
+                    },
+                    "missing": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "operations": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "operation": {
+                            "type": "string"
+                          },
+                          "proven": {
+                            "type": "boolean"
+                          },
+                          "reason": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "operation",
+                          "proven",
+                          "reason"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "pack_version": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "fields",
+                    "missing"
+                  ],
+                  "type": "object"
+                },
+                "data": {
+                  "type": "object"
+                },
+                "deleted": {
+                  "type": "boolean"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "observed_at": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "tombstone_reason": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "collection",
+                "id",
+                "version",
+                "source",
+                "observed_at",
+                "deleted",
+                "coverage",
+                "data"
+              ],
+              "type": "object"
+            },
+            "message": {
+              "type": "string"
+            },
+            "retryable": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "code",
+            "message",
+            "retryable"
+          ],
+          "type": "object"
+        },
+        "evidence": {
+          "type": "object"
+        },
+        "expires_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "history": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "at": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "evidence": {
+                "type": "object"
+              },
+              "state": {
+                "type": "string"
+              },
+              "transition": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "state",
+              "at"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "observed_record_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "parts": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "disposition": {
+                "type": "string"
+              },
+              "index": {
+                "type": "integer"
+              },
+              "kind": {
+                "type": "string"
+              },
+              "record_id": {
+                "type": "string"
+              },
+              "upload_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "index",
+              "kind",
+              "disposition"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "principal": {
+          "type": "string"
+        },
+        "request_hash": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "upload_references": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "command",
+        "principal",
+        "source",
+        "request_hash",
+        "state",
+        "admission_era",
+        "created_at",
+        "expires_at",
+        "commit_seq",
+        "cursor",
+        "history"
+      ],
+      "type": "object"
+    },
+    "type": "array"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "due": {
+            "nullable": true,
+            "type": "string"
+          },
+          "due_all_day": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "list_id": {
+            "type": "string"
+          },
+          "notes": {
+            "nullable": true,
+            "type": "string"
+          },
+          "priority": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "start": {
+            "nullable": true,
+            "type": "string"
+          },
+          "title": {
+            "nullable": true,
+            "type": "string"
+          },
+          "url": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "list_id",
+          "title"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "minProperties": 2,
+        "properties": {
+          "due": {
+            "nullable": true,
+            "type": "string"
+          },
+          "due_all_day": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          },
+          "list_id": {
+            "type": "string"
+          },
+          "notes": {
+            "nullable": true,
+            "type": "string"
+          },
+          "priority": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "start": {
+            "nullable": true,
+            "type": "string"
+          },
+          "title": {
+            "nullable": true,
+            "type": "string"
+          },
+          "url": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args",
+      "expected_version"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args",
+      "expected_version"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "handle": {
+        "type": "string"
+      },
+      "limit": {
+        "description": "New q searches default to 25; positive limits are capped at 25",
+        "type": "integer"
+      },
+      "name": {
+        "type": "string"
+      },
+      "q": {
+        "description": "Partial name, normalized phone or email; 1–64 characters after trimming",
+        "type": "string"
+      }
+    },
+    "required": [],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args",
+      "expected_version"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "folder_id": {
+            "type": "string"
+          },
+          "plain_text": {
+            "nullable": true,
+            "type": "string"
+          },
+          "title": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "folder_id",
+          "title"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "replace",
+              "append"
+            ],
+            "type": "string"
+          },
+          "plain_text": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "plain_text"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args",
+      "expected_version"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args",
+      "expected_version"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "anyOf": [
+          {
+            "required": [
+              "text"
+            ]
+          },
+          {
+            "required": [
+              "files"
+            ]
+          }
+        ],
+        "oneOf": [
+          {
+            "required": [
+              "chat_id"
+            ]
+          },
+          {
+            "required": [
+              "handles",
+              "service"
+            ]
+          }
+        ],
+        "properties": {
+          "chat_id": {
+            "type": "string"
+          },
+          "files": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "data": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "upload_id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "handles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "resend_of": {
+            "type": "string"
+          },
+          "service": {
+            "enum": [
+              "iMessage",
+              "SMS",
+              "RCS"
+            ],
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "files": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "data": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "upload_id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "id": {
+            "type": "string"
+          },
+          "part_index": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "emoji": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "part_index": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "reaction": {
+            "enum": [
+              "love",
+              "like",
+              "dislike",
+              "laugh",
+              "emphasize",
+              "question",
+              "emoji"
+            ],
+            "type": "string"
+          },
+          "remove": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "reaction"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "part_index": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args",
+      "expected_version"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "part_index": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args",
+      "expected_version"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "args": {
+        "additionalProperties": false,
+        "type": "object"
+      },
+      "deadline_ms": {
+        "maximum": 60000,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "id": {
+        "maxLength": 128,
+        "pattern": "^qry_[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "op": {
+        "enum": [
+          "helper.version"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "blobs": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "digest": {
+              "type": "string"
+            },
+            "handle": {
+              "type": "string"
+            },
+            "size": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "digest",
+            "size"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "id": {
+        "type": "string"
+      },
+      "result_json": {}
+    },
+    "required": [
+      "id",
+      "result_json",
+      "blobs"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "args": {},
+      "deadline_ms": {
+        "maximum": 60000,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "id": {
+        "maxLength": 128,
+        "pattern": "^qry_[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "op": {
+        "enum": [
+          "pdf.text"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "input": {
+            "maxLength": 16384,
+            "type": "string"
+          },
+          "input_base64": {
+            "type": "string"
+          },
+          "shortcut": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "type": "string"
+          },
+          "timeout_ms": {
+            "maximum": 300000,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "shortcut"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "args": {},
+      "deadline_ms": {
+        "maximum": 60000,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "id": {
+        "maxLength": 128,
+        "pattern": "^qry_[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "op": {
+        "enum": [
+          "pdf.search"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "args": {},
+      "deadline_ms": {
+        "maximum": 60000,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "id": {
+        "maxLength": 128,
+        "pattern": "^qry_[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "op": {
+        "enum": [
+          "files.search"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "args": {},
+      "deadline_ms": {
+        "maximum": 60000,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "id": {
+        "maxLength": 128,
+        "pattern": "^qry_[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "op": {
+        "enum": [
+          "vision.ocr"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "args": {},
+      "deadline_ms": {
+        "maximum": 60000,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "id": {
+        "maxLength": 128,
+        "pattern": "^qry_[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "op": {
+        "enum": [
+          "files.read"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args",
+      "expected_version"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "content_base64": {
+            "maxLength": 174764,
+            "type": "string"
+          },
+          "digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "parent": {
+            "type": "string"
+          },
+          "root": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "root",
+          "name",
+          "content_base64",
+          "digest"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "type": "string"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "parent": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "root": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "root",
+          "path",
+          "name"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "type": "string"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "args": {},
+      "deadline_ms": {
+        "maximum": 60000,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "id": {
+        "maxLength": 128,
+        "pattern": "^qry_[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "op": {
+        "enum": [
+          "speech.synthesize"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "args": {},
+      "deadline_ms": {
+        "maximum": 60000,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "id": {
+        "maxLength": 128,
+        "pattern": "^qry_[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "op": {
+        "enum": [
+          "audio.transcribe"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "root": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "root",
+          "path"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "type": "string"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "root": {
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 64,
+            "type": "array"
+          }
+        },
+        "required": [
+          "root",
+          "path",
+          "tags"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "type": "string"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "args": {},
+      "deadline_ms": {
+        "maximum": 60000,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "id": {
+        "maxLength": 128,
+        "pattern": "^qry_[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "op": {
+        "enum": [
+          "mail.body"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "args": {},
+      "deadline_ms": {
+        "maximum": 60000,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "id": {
+        "maxLength": 128,
+        "pattern": "^qry_[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "op": {
+        "enum": [
+          "maps.snapshot"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "args": {},
+      "deadline_ms": {
+        "maximum": 60000,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "id": {
+        "maxLength": 128,
+        "pattern": "^qry_[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "op": {
+        "enum": [
+          "location.current"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "args": {},
+      "deadline_ms": {
+        "maximum": 60000,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "id": {
+        "maxLength": 128,
+        "pattern": "^qry_[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "op": {
+        "enum": [
+          "location.geocode"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "args": {},
+      "deadline_ms": {
+        "maximum": 60000,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "id": {
+        "maxLength": 128,
+        "pattern": "^qry_[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "op": {
+        "enum": [
+          "location.reverse_geocode"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "args": {},
+      "deadline_ms": {
+        "maximum": 60000,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "id": {
+        "maxLength": 128,
+        "pattern": "^qry_[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "op": {
+        "enum": [
+          "maps.search"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "args": {},
+      "deadline_ms": {
+        "maximum": 60000,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "id": {
+        "maxLength": 128,
+        "pattern": "^qry_[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "op": {
+        "enum": [
+          "maps.nearby"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "args": {},
+      "deadline_ms": {
+        "maximum": 60000,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "id": {
+        "maxLength": 128,
+        "pattern": "^qry_[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "op": {
+        "enum": [
+          "maps.directions"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "from": {
+            "additionalProperties": false,
+            "properties": {
+              "lat": {
+                "maximum": 90,
+                "minimum": -90,
+                "type": "number"
+              },
+              "lon": {
+                "maximum": 180,
+                "minimum": -180,
+                "type": "number"
+              }
+            },
+            "required": [
+              "lat",
+              "lon"
+            ],
+            "type": "object"
+          },
+          "mode": {
+            "enum": [
+              "driving",
+              "walking",
+              "transit",
+              "cycling"
+            ],
+            "type": "string"
+          },
+          "to": {
+            "additionalProperties": false,
+            "properties": {
+              "lat": {
+                "maximum": 90,
+                "minimum": -90,
+                "type": "number"
+              },
+              "lon": {
+                "maximum": 180,
+                "minimum": -180,
+                "type": "number"
+              }
+            },
+            "required": [
+              "lat",
+              "lon"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "mode"
+        ],
+        "type": "object"
+      },
+      "deadline_ms": {
+        "maximum": 60000,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "id": {
+        "maxLength": 128,
+        "pattern": "^qry_[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "op": {
+        "enum": [
+          "maps.eta"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "args": {},
+      "deadline_ms": {
+        "maximum": 60000,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "id": {
+        "maxLength": 128,
+        "pattern": "^qry_[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "op": {
+        "enum": [
+          "shortcuts.actions"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "volume": {
+            "maximum": 100,
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "volume"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "muted": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "muted"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "appearance": {
+            "enum": [
+              "light",
+              "dark"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "appearance"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "bundle_id": {
+            "maxLength": 255,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "bundle_id"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "duration": {
+            "maximum": 86400,
+            "minimum": 0,
+            "type": "number"
+          },
+          "on": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "on"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "description": "Transient clipboard text; at most 65536 UTF-8 bytes. Contents are redacted from durable command history.",
+            "maxLength": 65536,
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "action_url": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "body"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "pane": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "pane"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "command_id": {
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "seconds": {
+            "maximum": 60,
+            "minimum": 1,
+            "type": "number"
+          }
+        },
+        "required": [
+          "seconds"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "display": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "window": {
+            "nullable": true,
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "command_id": {
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "date": {
+        "type": "string"
+      },
+      "device_id": {
+        "type": "string"
+      },
+      "period": {
+        "type": "string"
+      },
+      "time_zone": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "period",
+      "date"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "cursor": {
+        "additionalProperties": false,
+        "properties": {
+          "epoch": {
+            "type": "string"
+          },
+          "sequence": {
+            "type": "integer"
+          },
+          "subscription_revision": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "epoch",
+          "subscription_revision",
+          "sequence"
+        ],
+        "type": "object"
+      },
+      "end": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "metrics": {
+        "type": "object"
+      },
+      "start": {
+        "format": "date-time",
+        "type": "string"
+      }
+    },
+    "required": [
+      "start",
+      "end",
+      "metrics",
+      "cursor"
+    ],
+    "type": "object"
+  },
+  {
+    "items": {
+      "additionalProperties": false,
+      "properties": {
+        "gateway_key": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "type": "object"
+    },
+    "type": "array"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "args": {
+        "additionalProperties": false,
+        "type": "object"
+      },
+      "deadline_ms": {
+        "maximum": 60000,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "id": {
+        "maxLength": 128,
+        "pattern": "^qry_[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "op": {
+        "enum": [
+          "mac.bluetooth_devices"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "args": {
+        "additionalProperties": false,
+        "type": "object"
+      },
+      "deadline_ms": {
+        "maximum": 60000,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "id": {
+        "maxLength": 128,
+        "pattern": "^qry_[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "op": {
+        "enum": [
+          "mac.clipboard_read"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "app": {
+            "type": "string"
+          },
+          "document_blob": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "document_blob",
+          "format",
+          "app"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "args": {
+        "additionalProperties": false,
+        "type": "object"
+      },
+      "deadline_ms": {
+        "maximum": 60000,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "id": {
+        "maxLength": 128,
+        "pattern": "^qry_[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "op": {
+        "enum": [
+          "mac.network_check"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "audio_blob": {
+            "maxLength": 11184812,
+            "minLength": 4,
+            "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "audio_blob"
+        ],
+        "type": "object"
+      },
+      "deadline_ms": {
+        "maximum": 60000,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "id": {
+        "maxLength": 128,
+        "pattern": "^qry_[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "op": {
+        "enum": [
+          "mac.recognize_song"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "seconds": {
+            "maximum": 30,
+            "minimum": 1,
+            "type": "number"
+          }
+        },
+        "required": [
+          "seconds"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "image_blob": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "image_blob"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "args": {
+        "additionalProperties": false,
+        "type": "object"
+      },
+      "deadline_ms": {
+        "maximum": 60000,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "id": {
+        "maxLength": 128,
+        "pattern": "^qry_[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "op": {
+        "enum": [
+          "mac.time_machine_status"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "blob": {
+            "type": "string"
+          },
+          "blob_id": {
+            "type": "string"
+          },
+          "file": {
+            "type": "string"
+          },
+          "printer": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "printer"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  }
+]

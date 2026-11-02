@@ -33,3 +33,20 @@ fn command_lifecycle_rejects_effects_after_rejection() {
     assert_eq!(error.message, "peer unavailable");
     assert!(error.retryable);
 }
+
+#[test]
+fn collection_prefixes_equal_go_registry() -> Result<(), Box<dyn std::error::Error>> {
+    let expected: std::collections::BTreeMap<String, String> = serde_json::from_str(include_str!(
+        "../../../../contracts/golden/collections.json"
+    ))?;
+    let mut actual = std::collections::BTreeMap::new();
+    for collection in Collection::ALL {
+        let name = serde_json::to_value(collection)?
+            .as_str()
+            .ok_or("collection")?
+            .to_owned();
+        actual.insert(name, collection.prefix().to_owned());
+    }
+    assert_eq!(actual, expected);
+    Ok(())
+}
