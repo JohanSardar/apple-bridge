@@ -4,6 +4,8 @@ use std::{fmt, str::FromStr};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Source {
+    #[serde(rename = "location")]
+    Location,
     #[serde(rename = "audio")]
     Audio,
     #[serde(rename = "calendar")]
@@ -444,16 +446,23 @@ impl CommandState {
             Admitted, AwaitingApproval, Delivered, DeliveryFailed, Dispatched, Expired, Failed,
             Indeterminate, Observed, Prepared, Rejected, RejectedByOwner,
         };
-        let valid = self == next
-            || matches!(
-                (self, next),
-                (AwaitingApproval, Admitted | RejectedByOwner | Expired)
-                    | (Admitted, Prepared | Rejected | Failed | Expired)
-                    | (Prepared, Dispatched | Failed | Rejected | Expired)
-                    | (Dispatched, Observed | Failed | Indeterminate | Expired)
-                    | (Observed, Delivered | DeliveryFailed)
-                    | (Indeterminate, Observed | Failed)
-            );
+        let valid = matches!(
+            (self, next),
+            (
+                AwaitingApproval,
+                Admitted | RejectedByOwner | Expired | Rejected
+            ) | (Admitted, Prepared | Rejected | Expired)
+                | (Prepared, Dispatched | Rejected | Expired)
+                | (
+                    Dispatched,
+                    Observed | Indeterminate | Failed | Rejected | Delivered | DeliveryFailed
+                )
+                | (Observed, Delivered | DeliveryFailed)
+                | (
+                    Indeterminate,
+                    Observed | Delivered | Failed | DeliveryFailed
+                )
+        );
         if valid {
             Ok(next)
         } else {
@@ -481,7 +490,7 @@ pub struct Record {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub tombstone_reason: String,
     pub collection: Collection,
-    pub id: String,
+    pub id: RecordId,
     pub version: u64,
     pub source: Source,
     pub observed_at: String,
@@ -564,7 +573,7 @@ impl fmt::Display for ErrorCode {
 }
 impl std::error::Error for ErrorCode {}
 #[derive(Clone, Debug, thiserror::Error, Serialize, Deserialize)]
-#[error("{code}: {message}")]
+#[error("{code}")]
 pub struct ContractError {
     pub code: ErrorCode,
     pub message: String,
@@ -580,5 +589,83 @@ impl From<ErrorCode> for ContractError {
             current: None,
             retryable: code.retryable(),
         }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(try_from = "String", into = "String")]
+pub struct RecordId(String);
+impl RecordId {
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+    pub fn collection(&self) -> Result<Collection, ErrorCode> {
+        Collection::ALL
+            .iter()
+            .copied()
+            .find(|c| valid_id(&self.0, c.prefix()))
+            .ok_or(ErrorCode::Invalid)
+    }
+}
+impl TryFrom<String> for RecordId {
+    type Error = ErrorCode;
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        let id = Self(value);
+        id.collection()?;
+        Ok(id)
+    }
+}
+impl From<RecordId> for String {
+    fn from(value: RecordId) -> Self {
+        value.0
+    }
+}
+impl FromStr for RecordId {
+    type Err = ErrorCode;
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        Self::try_from(value.to_owned())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(try_from = "String", into = "String")]
+pub struct CommandId(String);
+impl TryFrom<String> for CommandId {
+    type Error = ErrorCode;
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.is_empty()
+            || value.len() > 128
+            || !value
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b"._:-".contains(&b))
+        {
+            return Err(ErrorCode::Invalid);
+        }
+        Ok(Self(value))
+    }
+}
+impl From<CommandId> for String {
+    fn from(value: CommandId) -> Self {
+        value.0
+    }
+}
+impl FromStr for CommandId {
+    type Err = ErrorCode;
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        Self::try_from(value.to_owned())
+    }
+}
+impl CommandId {
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl Record {
+    pub fn validate(&self) -> Result<(), ErrorCode> {
+        if self.id.collection()? != self.collection || self.source != self.collection.source() {
+            return Err(ErrorCode::Invalid);
+        }
+        Ok(())
     }
 }

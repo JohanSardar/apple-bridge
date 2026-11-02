@@ -152,3 +152,38 @@ func TestWireGolden(t *testing.T) {
 	sig := ed25519.Sign(key, b)
 	golden.Check(t, "delegation.json", encode(t, map[string]any{"impl": "go", "raw": string(b), "header": base64.RawURLEncoding.EncodeToString(b) + "." + base64.RawURLEncoding.EncodeToString(sig), "public_key": base64.RawURLEncoding.EncodeToString(key.Public().(ed25519.PublicKey))}))
 }
+
+func TestBlobChunkGolden(t *testing.T) {
+	rows := []any{}
+	for _, offset := range []int64{0, 1, 0x0102030405060708} {
+		digest := "2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a"
+		b, err := contracts.EncodeBlobChunk(digest, offset, []byte("fixture"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		rows = append(rows, map[string]any{"digest": digest, "offset": offset, "payload": "fixture", "hex": hex.EncodeToString(b)})
+	}
+	golden.Check(t, "blob.json", encode(t, map[string]any{"impl": "go", "chunks": rows}))
+}
+
+func TestAllMessagesGolden(t *testing.T) {
+	ipc := []any{}
+	for _, kind := range []string{"Challenge", "Authenticate", "Authenticated", "Open", "Ready", "Committed", "SourceState", "Ping", "Pong", "Close", "Reset", "Prepare", "Prepared", "Dispatch", "Rejected", "Outcome", "Resolve", "BlobUnavailable", "BlobRead", "BlobChunk", "Query", "QueryResult", "QueryError", "QueryCancel"} {
+		frame := contracts.IPCFrame{T: kind, ID: "qry_fixture", Op: "fixture.op", Args: json.RawMessage(`{"text":"<>&"}`), ResultJSON: json.RawMessage(`{"ok":true}`), Code: "invalid", CommandID: "cmd_fixture", OwnerFence: 7, Handle: "fixture", Bytes: []byte("fixture")}
+		b, err := contracts.EncodeFrame(frame)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ipc = append(ipc, map[string]any{"json": string(b[4:]), "framed_hex": hex.EncodeToString(b)})
+	}
+	feed := []any{}
+	for _, kind := range []string{"Hello", "Welcome", "SnapshotBegin", "SnapshotPage", "SnapshotEnd", "Ack", "Reset", "Heartbeat", "BlobWant", "BlobDone", "CommandRequest", "CommandResponse", "Clock"} {
+		frame := contracts.FeedFrame{T: kind, Protocol: contracts.FeedProtocol, ID: "fixture", Request: json.RawMessage(`{"op":"fixture.op","args":{"text":"<>&"}}`)}
+		b, err := contracts.MarshalQueryJSON(frame)
+		if err != nil {
+			t.Fatal(err)
+		}
+		feed = append(feed, string(b))
+	}
+	golden.Check(t, "messages.json", encode(t, map[string]any{"impl": "go", "ipc": ipc, "feed": feed}))
+}

@@ -1,0 +1,23 @@
+{
+  "chunks": [
+    {
+      "digest": "2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a",
+      "hex": "2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a000000000000000000000007000000000000000000000000000000000000000066697874757265",
+      "offset": 0,
+      "payload": "fixture"
+    },
+    {
+      "digest": "2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a",
+      "hex": "2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a000000000000000100000007000000000000000000000000000000000000000066697874757265",
+      "offset": 1,
+      "payload": "fixture"
+    },
+    {
+      "digest": "2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a",
+      "hex": "2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a010203040506070800000007000000000000000000000000000000000000000066697874757265",
+      "offset": 72623859790382856,
+      "payload": "fixture"
+    }
+  ],
+  "impl": "go"
+}
