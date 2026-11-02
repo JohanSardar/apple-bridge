@@ -1,0 +1,13 @@
+[package]
+name = "ab-catalog"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+ab-domain = { path = "../ab-domain" }
+serde.workspace = true
+serde_json.workspace = true
