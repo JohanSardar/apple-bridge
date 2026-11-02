@@ -48,3 +48,12 @@ dist:
 .PHONY: decoder-checks
 decoder-checks:
 	packaging/dev/heavy.sh packaging/dev/check-decoders.sh
+
+.PHONY: rust-check rust-lint
+rust-check:
+	rust/check.sh check --workspace
+
+rust-lint:
+	rust/check.sh fmt --all -- --check
+	rust/check.sh clippy --workspace --all-targets -- -D warnings
+	rust/check.sh deny check

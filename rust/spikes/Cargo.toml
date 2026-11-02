@@ -1,0 +1,23 @@
+[package]
+name = "ab-spikes"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+[lints]
+workspace = true
+[dependencies]
+ab-wire = { path = "../crates/ab-wire" }
+serde.workspace = true
+serde_json.workspace = true
+jiff.workspace = true
+sha2.workspace = true
+tokio.workspace = true
+axum.workspace = true
+hyper.workspace = true
+rustls.workspace = true
+rusqlite.workspace = true
+libsqlite3-sys.workspace = true
+rmcp.workspace = true
+ed25519-dalek.workspace = true
+x25519-dalek.workspace = true
+x509-parser = "0.18"
