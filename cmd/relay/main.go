@@ -39,6 +39,7 @@ func run() error {
 	idle := flag.Duration("idle-timeout", 2*time.Minute, "maximum inactivity across both stream directions")
 	apnsKey := flag.String("apns-key", "", "private APNs signing key path")
 	apnsSandbox := flag.Bool("apns-sandbox", true, "use sandbox APNs for development profiles")
+	admission := flag.String("owner-keys-file", "", "required canonical Ed25519 owner keys, one per line")
 	flag.Parse()
 	if *idle <= 0 {
 		return fmt.Errorf("idle-timeout must be positive")
@@ -49,6 +50,12 @@ func run() error {
 	}
 	if !*controlACME && (*cert == "" || *key == "") {
 		return fmt.Errorf("control-cert and control-key required")
+	}
+	if *admission != "" {
+		store.RequireOwnerKeys(*admission)
+		if err := store.ValidateOwnerKeys(); err != nil {
+			return err
+		}
 	}
 	server := relay.New(store)
 	if *apnsKey != "" {
