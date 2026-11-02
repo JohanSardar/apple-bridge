@@ -22,6 +22,8 @@ func run(ctx context.Context, args []string) error {
 		return fmt.Errorf("expected run or simapple")
 	}
 	switch args[0] {
+	case "inventory":
+		return inventory(args[1:])
 	case "wire-checks":
 		if len(args) != 2 {
 			return contracts.ErrInvalid
@@ -74,6 +76,8 @@ func run(ctx context.Context, args []string) error {
 					return fmt.Errorf("level required")
 				}
 				level = args[i]
+			case "--prebuilt":
+				ctx = world.WithPrebuilt(ctx)
 			case "--direct-tailscale":
 				ctx = world.WithOptions(ctx, world.Options{DirectTailscale: true})
 			case "--require-quiet":
