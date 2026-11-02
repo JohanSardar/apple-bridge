@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
-	"github.com/JohanSardar/apple-bridge/internal/trust"
 )
 
 type Config struct {
@@ -39,6 +38,8 @@ type Process struct {
 	stopped bool
 }
 type Endpoint struct {
+	Impl   string
+	Binary string
 	Listen string
 	URL    string
 	Host   string
@@ -66,6 +67,7 @@ type World struct {
 	fixtureCopyMethod string
 	dialCode          string
 	remoteExtraHomes  []string
+	localExtraHomes   []string
 
 	blobOptions            BlobOptions
 	secretOverride         bool
@@ -84,6 +86,7 @@ type World struct {
 	Control          *http.Client
 	processes        []*Process
 	replicaProcesses []*Process
+	goBridge         string
 	bridge           string
 	lab              string
 	remoteBinary     string
@@ -123,13 +126,16 @@ func BuildHelper(ctx context.Context, app string) error {
 }
 
 func Build(ctx context.Context, level string) error {
+	if ImplementationSelection(ctx).Prebuilt || prebuilt(ctx) {
+		return requireExecutable("bin/bridge")
+	}
 	if err := os.MkdirAll("bin", 0700); err != nil {
 		return err
 	}
 	if _, err := commandOutput(ctx, "go", "build", "-tags", "lab", "-p", "2", "-o", "bin/bridge", "./cmd/bridge"); err != nil {
 		return err
 	}
-	if level == "replica" {
+	if level == "replica" && !ImplementationSelection(ctx).LocalReplicas {
 		cmd := exec.CommandContext(ctx, "go", "build", "-tags", "lab", "-p", "2", "-o", "bin/bridge-linux-amd64", "./cmd/bridge")
 		cmd.Env = append(os.Environ(), "GOOS=linux", "GOARCH=amd64")
 		var log bytes.Buffer
@@ -272,7 +278,7 @@ func newEnvironment(ctx context.Context, level string, replicas, seed int, nativ
 	}
 	id := strings.ToLower(contracts.NewID(""))
 	id = id[len(id)-10:]
-	w := &World{Dir: filepath.Join("/tmp/ablab", id), Level: level, Native: native, bridge: filepath.Join(root, "bin", "bridge"), ctx: ctx}
+	w := &World{Dir: filepath.Join("/tmp/ablab", id), Level: level, Native: native, bridge: filepath.Join(root, "bin", "bridge"), ctx: ctx, goBridge: filepath.Join(root, "bin", "bridge")}
 	if len(blobOptions) > 0 {
 		w.blobOptions = blobOptions[0]
 	}
@@ -319,7 +325,7 @@ func newEnvironment(ctx context.Context, level string, replicas, seed int, nativ
 		peerHost = address
 		w.NetworkPath = "tailscale_direct"
 	}
-	if level == "replica" {
+	if level == "replica" && !ImplementationSelection(ctx).LocalReplicas {
 		if _, err = commandOutput(ctx, "ssh", "ubuntu", "mkdir -p "+quote(w.Dir)+" && chmod 700 "+quote(w.Dir)); err != nil {
 			return nil, err
 		}
@@ -350,7 +356,11 @@ func newEnvironment(ctx context.Context, level string, replicas, seed int, nativ
 		}
 	}
 	if gatewayBinary == "" {
-		gatewayBinary = w.bridge
+		gatewayBinary, err = ImplementationSelection(ctx).Binary(ImplementationSelection(ctx).Gateway, w.bridge)
+		if err != nil {
+			return nil, err
+		}
+		w.bridge = gatewayBinary
 	}
 	if native {
 		w.HelperApp = filepath.Join(w.Dir, "apps", "AppleBridgeHelper.app")
@@ -410,7 +420,7 @@ func newEnvironment(ctx context.Context, level string, replicas, seed int, nativ
 		return nil, err
 	}
 	w.pairAddress = w.proxy.Address()
-	if level == "replica" && !options.GatewayDials {
+	if level == "replica" && !ImplementationSelection(ctx).LocalReplicas && !options.GatewayDials {
 		direct := false
 		if options.DirectTailscale {
 			_, probeErr := commandOutput(ctx, "ssh", "ubuntu", "python3 -c "+quote("import socket; s=socket.create_connection("+fmt.Sprintf("(%q,%q)", peerHost, strings.Split(w.pairAddress, ":")[1])+",5); s.close()"))
@@ -442,7 +452,7 @@ func newEnvironment(ctx context.Context, level string, replicas, seed int, nativ
 	if err != nil {
 		return nil, err
 	}
-	w.Gateway = Endpoint{URL: "http://" + cfg.APIAddress, Host: cfg.APIAddress, Token: token, Home: gatewayHome}
+	w.Gateway = Endpoint{Impl: ImplementationSelection(ctx).Gateway, Binary: gatewayBinary, URL: "http://" + cfg.APIAddress, Host: cfg.APIAddress, Token: token, Home: gatewayHome}
 	if !native {
 		control := filepath.Join(w.Dir, "sim.sock")
 		simArgs := []string{"simapple", "--socket", cfg.Socket, "--secret-file", filepath.Join(gatewayHome, "apple-secret"), "--control", control}
@@ -546,7 +556,7 @@ func (w *World) Close() {
 	if w.Control != nil {
 		w.Control.CloseIdleConnections()
 	}
-	if w.Level == "replica" {
+	if w.Level == "replica" && !ImplementationSelection(w.ctx).LocalReplicas {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		for _, endpoint := range w.Replicas {
 			commandOutput(ctx, "ssh", "ubuntu", "env APPLE_BRIDGE_SECRET_STORE=file "+quote(w.remoteLab)+" credential-cleanup --home "+quote(endpoint.Home))
@@ -563,15 +573,18 @@ func (w *World) Close() {
 		cancel()
 	}
 	for _, home := range w.secretHomes {
-		trust.NewSecretStore(home).Delete(context.Background(), "identity-key")
+		w.CleanupCredential(home)
 	}
 	for _, endpoint := range append([]Endpoint{w.Gateway}, w.Replicas...) {
 		if endpoint.Home != "" && !endpoint.Remote {
-			trust.NewSecretStore(endpoint.Home).Delete(context.Background(), "identity-key")
+			w.CleanupCredential(endpoint.Home)
 		}
 	}
 	if w.diskMount != "" {
 		commandOutput(context.Background(), "hdiutil", "detach", w.diskMount)
+	}
+	for _, home := range w.localExtraHomes {
+		os.RemoveAll(home)
 	}
 	os.RemoveAll(w.Dir)
 	if w.secretOverride {
@@ -596,10 +609,7 @@ func (w *World) StopReplica(index int) {
 }
 func (w *World) RestartReplica(index int) error {
 	e := w.Replicas[index]
-	binary := w.bridge
-	if e.Remote {
-		binary = w.remoteBinary
-	}
+	binary := w.endpointBinary(e)
 	_, err := w.execute(e.Remote, "rm", "-f", filepath.Join(e.Home, "runtime.json"))
 	if err != nil {
 		return err
@@ -618,7 +628,11 @@ func (w *World) RestartReplica(index int) error {
 	return err
 }
 func (w *World) ControlAction(path string, action any) error {
-	return w.controlAction(w.Control, path, action)
+	err := w.controlAction(w.Control, path, action)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "lab control %s: %v\n", path, err)
+	}
+	return err
 }
 func (w *World) FlushCaptures(timeout time.Duration) error {
 	client := *w.Control
@@ -736,10 +750,7 @@ func (w *World) Status(e Endpoint) (ReplicaStatus, error) {
 }
 
 func (w *World) ScopedToken(e Endpoint, scope string) (string, error) {
-	binary := w.bridge
-	if e.Remote {
-		binary = w.remoteBinary
-	}
+	binary := w.endpointBinary(e)
 	return w.execute(e.Remote, binary, "token", "create", "--home", e.Home, "--scope", scope)
 }
 
@@ -780,10 +791,10 @@ func (w *World) AddReplica() error { return w.AddReplicaScope("reminders:read,sy
 func (w *World) AddReplicaScope(scope string) error {
 	i := len(w.Replicas)
 	var err error
-	remote := w.Level == "replica"
+	remote := w.Level == "replica" && !ImplementationSelection(w.ctx).LocalReplicas
 	home := filepath.Join(w.Dir, "replica"+strconv.Itoa(i))
 	options, _ := w.ctx.Value(optionsKey{}).(Options)
-	if w.Level == "replica" && options.PersistentReplicaStorage {
+	if remote && options.PersistentReplicaStorage {
 		var err error
 		home, err = commandOutput(w.ctx, "ssh", "ubuntu", `mktemp -d "$HOME/.cache/apple-bridge-doctor.XXXXXX"`)
 		if err != nil {
@@ -791,12 +802,39 @@ func (w *World) AddReplicaScope(scope string) error {
 		}
 		w.remoteExtraHomes = append(w.remoteExtraHomes, home)
 	}
-	binary := w.bridge
+	if !remote && options.PersistentReplicaStorage {
+		cache, err := os.UserCacheDir()
+		if err != nil {
+			return err
+		}
+		if err := os.MkdirAll(cache, 0700); err != nil {
+			return err
+		}
+		home, err = os.MkdirTemp(cache, "apple-bridge-doctor-")
+		if err != nil {
+			return err
+		}
+		w.localExtraHomes = append(w.localExtraHomes, home)
+	}
+	binary := w.goBridge
 	if remote {
 		binary = w.remoteBinary
 		if _, err = commandOutput(w.ctx, "ssh", "ubuntu", "mkdir -p "+quote(home)); err != nil {
 			return err
 		}
+	}
+	selection := ImplementationSelection(w.ctx)
+	impl := selection.ReplicaAt(i)
+	binary, err = selection.Binary(impl, binary)
+	if err != nil {
+		return err
+	}
+	if remote && impl == "rust" {
+		target := filepath.Join(w.Dir, "bridge-rust")
+		if _, err = commandOutput(w.ctx, "scp", binary, "ubuntu:"+target); err != nil {
+			return err
+		}
+		binary = target
 	}
 	listen := ""
 	if options.GatewayDials {
@@ -869,7 +907,7 @@ func (w *World) AddReplicaScope(scope string) error {
 	if err != nil {
 		return err
 	}
-	endpoint := Endpoint{Listen: listen, URL: "http://" + cfg.APIAddress, Host: cfg.APIAddress, Home: home, Token: token, Remote: remote}
+	endpoint := Endpoint{Impl: impl, Binary: binary, Listen: listen, URL: "http://" + cfg.APIAddress, Host: cfg.APIAddress, Home: home, Token: token, Remote: remote}
 
 	if remote {
 		addr, err := freeAddress()

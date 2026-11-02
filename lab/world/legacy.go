@@ -13,6 +13,9 @@ type legacyHelperKey struct{}
 const LegacyRevision = "f0cea78"
 
 func BuildLegacy(ctx context.Context) error {
+	if prebuilt(ctx) {
+		return requireExecutable("bin/bridge-feed1")
+	}
 	if err := os.MkdirAll("/tmp/ablab", 0700); err != nil {
 		return err
 	}

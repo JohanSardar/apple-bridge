@@ -25,9 +25,14 @@ import (
 	bridgeweb "github.com/JohanSardar/apple-bridge/internal/web"
 )
 
+var credentialProbe func(context.Context, []string) error
+
 func run(ctx context.Context, args []string) error {
 	if len(args) == 0 {
 		return contracts.ErrInvalid
+	}
+	if args[0] == "lab-credential-lifecycle" && credentialProbe != nil {
+		return credentialProbe(ctx, args[1:])
 	}
 	if args[0] == "permissions" {
 		if len(args) < 3 || args[1] != "request" || !strings.Contains(",location,camera,microphone,screen_recording,speech_recognition,focus,bluetooth,notifications,automation_mail,automation_safari,automation_shortcuts_events,", ","+args[2]+",") || args[2] == "" {

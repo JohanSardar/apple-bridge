@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -33,13 +34,17 @@ func hostSamples(ctx context.Context, level string) map[string]world.HostSample 
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() { defer wg.Done(); local = world.SampleHost(ctx, false) }()
-	if level == "replica" {
+	if level == "replica" && !world.ImplementationSelection(ctx).LocalReplicas {
 		wg.Add(1)
 		go func() { defer wg.Done(); remote = world.SampleHost(ctx, true) }()
 	}
 	wg.Wait()
-	result["air"] = local
-	if level == "replica" {
+	localName := "air"
+	if runtime.GOOS == "linux" {
+		localName = "ubuntu"
+	}
+	result[localName] = local
+	if level == "replica" && !world.ImplementationSelection(ctx).LocalReplicas {
 		result["ubuntu"] = remote
 	}
 	return result
@@ -54,6 +59,12 @@ func samplesQuiet(samples map[string]world.HostSample) bool {
 }
 
 func Run(ctx context.Context, s Scenario, level string) (e Evidence) {
+	selection := world.ImplementationSelection(ctx)
+	if selection.Gateway == "rust" || selection.Replica == "rust" {
+		if reason := replicaQualificationBlocker(s); reason != "" {
+			return Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), Status: "blocked", Impl: "mixed", Implementations: selection, HostConditions: &HostConditions{}, Assertions: []Assertion{{Name: "binary_harness_required", Detail: reason}}}
+		}
+	}
 	ctx, captureMetrics := world.WithCaptureMetrics(ctx)
 	conditions := HostConditions{}
 	required, _ := ctx.Value(quietKey{}).(bool)
@@ -100,6 +111,11 @@ func Run(ctx context.Context, s Scenario, level string) (e Evidence) {
 	reports := diagnosticReportsDir()
 	before, reportsErr := helperCrashReports(reports)
 	e = runScenario(ctx, s, level)
+	e.Implementations = world.ImplementationSelection(ctx)
+	e.Impl = e.Implementations.Replica
+	if e.Implementations.Gateway != e.Implementations.Replica {
+		e.Impl = "mixed"
+	}
 	if reportsErr == nil {
 		if strings.HasPrefix(s.ID, "NOTE-") {
 			e = failOnNotesHelperCrashes(e, reports, before)
@@ -108,6 +124,7 @@ func Run(ctx context.Context, s Scenario, level string) (e Evidence) {
 		}
 	}
 	e.HostConditions = &conditions
+	e.Hosts = hosts
 	if e.Metrics == nil {
 		e.Metrics = map[string]any{}
 	}

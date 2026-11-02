@@ -1,7 +1,6 @@
 package world
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 
@@ -52,6 +51,3 @@ func (w *World) FillDisk() error {
 	return file.Sync()
 }
 func (w *World) FreeDisk() error { return os.Remove(filepath.Join(w.diskMount, "filler")) }
-func (w *World) CleanupCredential(home string) {
-	trust.NewSecretStore(home).Delete(context.Background(), "identity-key")
-}

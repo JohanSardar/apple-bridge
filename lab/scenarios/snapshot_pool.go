@@ -7,8 +7,6 @@ import (
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
-	"github.com/JohanSardar/apple-bridge/internal/state"
-	"github.com/JohanSardar/apple-bridge/internal/trust"
 	"github.com/JohanSardar/apple-bridge/lab/scripted"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 	"github.com/coder/websocket"
@@ -20,17 +18,12 @@ func runSnapshotPool(ctx context.Context, w *world.World, evidence *Evidence, ad
 	if len(w.Replicas) == 0 {
 		return
 	}
-	authority, err := trust.Open(w.Replicas[0].Home)
+	config, address, replicaID, err := w.FeedClient(w.Replicas[0])
 	if err != nil {
 		add("replica_identity", false)
 		return
 	}
-	enrollment, err := authority.Enrollment()
-	if err != nil || enrollment == nil {
-		add("replica_enrollment", false)
-		return
-	}
-	transport := &http.Transport{TLSClientConfig: authority.ClientTLS(enrollment.Fingerprint)}
+	transport := &http.Transport{TLSClientConfig: config}
 	defer transport.CloseIdleConnections()
 	bounded, cancel := context.WithTimeout(ctx, 12*time.Second)
 	defer cancel()
@@ -48,14 +41,14 @@ func runSnapshotPool(ctx context.Context, w *world.World, evidence *Evidence, ad
 	}()
 	started := time.Now()
 	for len(feeds) < 12 {
-		socket, _, err := websocket.Dial(bounded, "wss://"+enrollment.Address+"/v1/feed", &websocket.DialOptions{HTTPClient: &http.Client{Transport: transport}})
+		socket, _, err := websocket.Dial(bounded, "wss://"+address+"/v1/feed", &websocket.DialOptions{HTTPClient: &http.Client{Transport: transport}})
 		if err != nil {
 			add("twelve_paused_snapshots_with_pool_8", false)
 			return
 		}
 		entry := paused{socket: socket}
 		feeds = append(feeds, entry)
-		err = wsjson.Write(bounded, socket, contracts.FeedFrame{T: "Hello", Protocol: contracts.FeedProtocol, ReplicaID: enrollment.ReplicaID, SchemaOffer: []int{1}, Credits: contracts.ByteCredit})
+		err = wsjson.Write(bounded, socket, contracts.FeedFrame{T: "Hello", Protocol: contracts.FeedProtocol, ReplicaID: replicaID, SchemaOffer: []int{1}, Credits: contracts.ByteCredit})
 		if err != nil {
 			add("snapshot_hello", false)
 			return
@@ -140,7 +133,7 @@ func runSnapshotPool(ctx context.Context, w *world.World, evidence *Evidence, ad
 				return
 			}
 			if frame.T == "SnapshotEnd" {
-				add("materialized_snapshot_stays_frozen", len(records) == feed.begin.Count && state.Digest(records) == feed.begin.Digest)
+				add("materialized_snapshot_stays_frozen", len(records) == feed.begin.Count && snapshotDigest(records) == feed.begin.Digest)
 				break
 			}
 		}

@@ -80,10 +80,7 @@ func (w *World) Restore(path string) error {
 	return err
 }
 func (w *World) Doctor(endpoint Endpoint) (map[string]any, error) {
-	binary := w.bridge
-	if endpoint.Remote {
-		binary = w.remoteBinary
-	}
+	binary := w.endpointBinary(endpoint)
 	output, err := w.execute(endpoint.Remote, binary, "doctor", "--home", endpoint.Home)
 	var result map[string]any
 	if err == nil {

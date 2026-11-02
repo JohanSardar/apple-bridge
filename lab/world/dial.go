@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
-	"github.com/JohanSardar/apple-bridge/internal/trust"
 	"github.com/coder/websocket"
 )
 
@@ -28,11 +27,11 @@ func (w *World) UnpairedDialRejected(index int) error {
 	if err != nil {
 		return err
 	}
-	gateway, err := trust.Open(w.Gateway.Home)
+	gateway, err := w.Certificate(w.Gateway)
 	if err != nil {
 		return err
 	}
-	pinned := &http.Transport{TLSClientConfig: gateway.ClientTLS(trust.Fingerprint(cert.Raw))}
+	pinned := &http.Transport{TLSClientConfig: pinnedTLS(gateway, identityFingerprint(cert.Raw))}
 	defer pinned.CloseIdleConnections()
 	live := &http.Client{Transport: pinned, Timeout: 2 * time.Second}
 	response, err := live.Get("https://" + w.proxy.Address() + "/v1/listener-probe")
@@ -46,11 +45,15 @@ func (w *World) UnpairedDialRejected(index int) error {
 
 	home := w.Dir + "/unpaired-dial"
 	defer w.CleanupCredential(home)
-	a, err := trust.Open(home)
+	_, err = w.execute(false, w.bridge, "token", "create", "--home", home, "--scope", "system:read")
 	if err != nil {
 		return err
 	}
-	transport := &http.Transport{TLSClientConfig: a.ClientTLS(trust.Fingerprint(cert.Raw))}
+	a, err := w.Certificate(Endpoint{Home: home})
+	if err != nil {
+		return err
+	}
+	transport := &http.Transport{TLSClientConfig: pinnedTLS(a, identityFingerprint(cert.Raw))}
 	defer transport.CloseIdleConnections()
 	ctx, cancel := context.WithTimeout(w.ctx, 2*time.Second)
 	defer cancel()
@@ -76,10 +79,7 @@ func (w *World) GatewayDialStatus() ([]contracts.DialStatus, error) {
 
 func (w *World) DialPairingReplayRejected(index int) bool {
 	endpoint := w.Replicas[index]
-	binary := w.bridge
-	if endpoint.Remote {
-		binary = w.remoteBinary
-	}
+	binary := w.endpointBinary(endpoint)
 	_, err := w.execute(endpoint.Remote, binary, "join", w.dialCode, "--home", endpoint.Home, "--listen", endpoint.Listen)
 	return err != nil && strings.Contains(err.Error(), "unauthorized")
 }
