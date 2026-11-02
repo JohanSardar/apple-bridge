@@ -1,6 +1,6 @@
 id: CON-RELAY
 feature: contacts.read
-levels: [replica]
+levels: [replica, real]
 given: [{world: {replicas: 1}}]
 when: [{contacts: {}}]
 then: [{converge: {}}]
