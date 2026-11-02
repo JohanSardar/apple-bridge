@@ -309,7 +309,7 @@ type OperationDescriptor struct {
 
 | Source | Operations |
 |---|---|
-| messages | `messages.send` (existing chat or handle list; text and/or files), `messages.reply` (threaded reply to a message part), `messages.react` (add/remove tapback or emoji), `messages.edit`, `messages.unsend`, `messages.mark_read`, `messages.mark_unread`, `messages.delete_message`, `messages.delete_chat`, `messages.create_group`, `messages.rename_group`, `messages.add_member`, `messages.remove_member`, `messages.leave_group` |
+| messages | `messages.send` (existing chat or handle list; text and/or files), `messages.reply` (threaded reply to a message part), `messages.react` (add/remove tapback or emoji), `messages.edit`, `messages.unsend`, `messages.mark_read`, `messages.mark_unread`, `messages.delete_message`, `messages.delete_chat` |
 | calendar | `calendar.create_event`, `calendar.update_event` (span `this|future`), `calendar.delete_event` (span `this|future`), `calendar.create_calendar` |
 | reminders | `reminders.create`, `reminders.update`, `reminders.complete`, `reminders.uncomplete`, `reminders.delete`, `reminders.create_list` |
 | contacts | `contacts.create`, `contacts.update`, `contacts.delete` |
@@ -405,12 +405,6 @@ protocol Source: Sendable {
 
 Focus status and pack qualification: [spec/focus.md](spec/focus.md).
 
-Music catalog query: [Music](spec/music.md).
-
-Music catalog, player controls and library capture: [Music](spec/music.md).
-
-Photos capture, query and command coverage: [Photos](spec/photos.md).
-
 Contacts Me-card and notes entitlement contract: [spec/contacts.md](spec/contacts.md).
 
 Mail capture foundation and local body queries: [Mail](spec/mail.md).
@@ -474,8 +468,6 @@ Every source publishes `system.source` with state, coverage, freshness and capab
 | `unsend` | Accessibility: bubble → Undo Send | `date_retracted` set / part retracted | 2 min, iMessage only |
 | `mark_read` / `mark_unread` | Accessibility (context menu on conversation) | `is_read` / chat `last_read_message_timestamp` | |
 | `delete_message` / `delete_chat` | Accessibility (context menu → Delete, confirm) | no active membership, with `deleted_at` from the recoverable join; physical absence only after a complete scan | retained recoverable records stay in the copy; test-created data only in tests |
-| `create_group` | Accessibility (new message, multiple recipients, send first message) | new chat with style group and participants | capability proven separately (F10) |
-| `rename_group`, `add_member`, `remove_member`, `leave_group` | Accessibility (conversation details) | `group_action_type` / `group_title` rows, `chat_handle_join` changes | iMessage groups only; RCS rename if proven |
 
 Conversation commands locate a unique sidebar row from the verified native target and snapshot all active members. Preparation requires Messages already in the foreground and does not open or activate a conversation. Dispatch rechecks the native read timestamp and member snapshot before the UI action. Lab conversation changes require entirely tagged fixtures; chat deletion additionally requires a private manifest proving this run created the chat after its recorded baseline. Real chat proofs and the UI self-test choose an unused discovered own handle and remain unverified for conversation-wide changes when no safe isolated chat can be created.
 
@@ -829,7 +821,6 @@ Levels: **S** = sim, **R** = real (Air), **P** = replica on Ubuntu, **A** = MCP 
 | MSG-SEND-GHOST | Ghost send (empty unjoined SMS row) → delivery_failed, not success | S (R if reproducible) |
 | MSG-SEND-IDENTICAL-MANUAL | Identical text sent manually concurrently → indeterminate unless uniquely correlated | S |
 | MSG-SEND-NEW-HANDLE | Send to a handle without an existing chat (own email when no chat) | S R |
-| MSG-SEND-RCS-GROUP | Send into the existing Ben RCS/SMS group (if present) or create via `create_group` with Ben + self | R |
 | MSG-REPLY | Threaded reply to own message part | S R |
 | MSG-REACT | Add then remove tapback on own message; emoji reaction | S R |
 | MSG-EDIT | Edit own iMessage; edit history visible; 6th edit rejected; >15 min rejected | S R |
@@ -1459,39 +1450,6 @@ Recently Deleted becomes `deleted_at` + `recoverable_until` on messages and chat
 | W3-UPLOAD | replica upload forwarding, upload limits |
 | W3-COMPOSE | composer, actions, chat actions, new message, optimistic UI, emoji picker |
 
-### 23.14 W4: Messages parity
-
-**Approach.** Each item gets:
-- a Helper implementation through Accessibility or AppleScript (ADR 0009)
-- capability proof per OS build (an added self-test step where it can be done on self)
-- a sim scenario and a real scenario on self, or on the Ben RCS contact where a group is required
-
-Items needing a second iMessage identity are `limited` at the real level (DECISIONS 2026-10-16).
-
-| Item | Read | Write |
-|---|---|---|
-| Pins (order, pin/unpin, reorder) | §23.12 if readable; else via Accessibility snapshot of the sidebar on change | Accessibility |
-| Hide Alerts | as above | Accessibility (details pane toggle) |
-| Read receipts per chat | §23.12 | Accessibility |
-| Send Later (create, edit time, send now, delete) | §23.12 | Accessibility (+ menu → Send Later) |
-| Send with effect | — | Accessibility (effect picker) |
-| Formatting and text effects | §23.12 | Accessibility (format menu over a selection) |
-| Mentions | §23.12 | type `@name` and confirm the suggestion via Accessibility |
-| Audio message | §23.12 | send the recorded file as an audio message (Accessibility or the file-flag route; investigate) |
-| Keep expiring audio | §23.12 | Accessibility |
-| Recently Deleted (recover, delete now) | §23.12 | Accessibility |
-| Groups (create, rename, photo, add, remove, leave) | existing | Accessibility; real proofs RCS via Ben; iMessage-group parts `limited` |
-| Typing indicators | Accessibility tree of the open chat (investigate) | not feasible without driving the Mac's UI per keystroke; hidden unless reading proves reliable |
-| Link preview on send | sender-side preview generation | investigate whether Messages generates it for AppleScript sends; otherwise hidden |
-
-**Helper A command contract.** `messages.pin({id,pinned_index})` uses -1 to unpin and 0–8 to insert/reorder; the pin set stays contiguous and has at most nine items. `messages.mute({id,muted})` records a known boolean without inventing a mute expiry. `messages.set_read_receipts({id,read_receipts})` accepts on/off/default. `messages.recover_chat({id})` and `messages.delete_chat_permanently({id})` require a recoverable conversation. All require `expected_version`; recovery and purge affect only that conversation's recoverable members. Simulation proves these transitions; it does not establish native support.
-
-The signed Helper's `selftest messages-parity --report <private-report>` uses an unused own handle and registers cleanup before sending. It never falls back to an existing conversation. Its per-OS-build ledger publishes exact failure reasons and leaves unproven operations out of capabilities. The 25G241 attempt returned an indeterminate isolated-fixture send; no native parity variant was enabled. Tagged cleanup found zero active messages; the late-effect reconciliation registration is retained. Mute capture may use only a property independently identified by an AX/native-properties round trip, and only for the service used in that proof; it never guesses a key. Pin order, receipt mutation and exact Recently Deleted AX targets remain unproven and hidden.
-
-**UI:** the W4 rows of `design/web/messages.md` (pinned grid drag reorder, mute bell, Send Later bubble and sheet, long-press send effect picker with live preview, formatting toolbar, mention suggestions, audio message recorder with waveform, Recently Deleted actions, group management in details).
-
-**Units:** W4-HELPER-A (pins, mute, read receipts, Recently Deleted), W4-HELPER-B (Send Later, effects, formatting, mentions, audio message, Keep), W4-GROUPS, W4-UI, W4-TYPING (investigation, may close as hidden).
-
 ### 23.15 W5–W8: Reminders, Calendar, Contacts, Notes
 
 Each app follows its spec (`design/web/reminders.md`, `calendar.md`, `contacts.md`, `notes.md`) in three steps. Each step starts with failing scenarios at sim/web and ends at real on the Air, using tagged "Bridge Test" containers and cleanup:
@@ -1534,7 +1492,6 @@ Measure the first Reminders checkpoint after Helper start before and after enric
 | W6-STORE | Store-backed fields per the `calendar.md` §4 mapping, AppleTruth counts, the read model `calendar.range` with precomputed overlap groups (≤ 10 ms p95 for a month), sim and demo dataset. CAL-STORE-READ. |
 | W6-UI | Day, Week, Month, Year and List views, calendars sidebar, mini month, event inspector (read), search, now-line, period paging with momentum, keyboard. WEB-CAL-READ. |
 | W6-WRITE | Create (drag, double-click, quick event with client-side natural language), move and resize with snapping, edit and delete with the This/Future prompt, alerts, time zone, new calendar. WEB-CAL-WRITE (web, real on the "Bridge Test" calendar). |
-| W6-PARITY | Invitation responses, travel time and attachments through Calendar.app Accessibility where provable, otherwise hidden. WEB-CAL-PARITY. |
 
 **W7 units (Contacts):**
 
