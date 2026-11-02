@@ -21,12 +21,25 @@ struct UsageChecks {
         guard totals(a + a).0 == 60, totals([e(0,true), e(600,true,"loginwindow"), e(3600,false)]).0 == 600, totals([e(0,true),e(600,true,"loginwindow"),e(3600,false)]).1 == 3000 else { throw SourceFailure.corrupt }
         guard totals([e(0,true),e(20000,false)]).0 == 14400, totals([e(0,true)]).0 == 0, totals([e(0,true),e(120,true,"test.synthetic.beta"),e(180,false,"test.synthetic.beta")]).0 == 180 else { throw SourceFailure.corrupt }
         guard totals([e(0,true),e(60,true,"com.apple.ScreenSaver.Engine"),e(600,false)]).0 == 60, totals([e(0,true),e(90,true,"bridge.power.sleep"),e(600,false)]).0 == 90 else { throw SourceFailure.corrupt }
+        let overlap = InFocus.decode(try Data(contentsOf: root.appendingPathComponent("system-ui.segb")))
+        guard totals(overlap).0 == 120, totals(overlap).1 == 60 else { throw SourceFailure.corrupt }
+        let blocked = [DateInterval(start: Date(timeIntervalSince1970: start + 10), duration: 40), DateInterval(start: Date(timeIntervalSince1970: start + 30), duration: 40)]
+        let clipped = UsageRollup.records([e(0,true),e(100,false)], device: "synthetic", mac: true, zone: zone, blocked: blocked)
+        guard clipped.values.reduce(0, { $0 + $1["seconds_estimated"].number }) == 40, clipped.values.reduce(0, { $0 + $1["clipped_seconds"].number }) == 60 else { throw SourceFailure.corrupt }
         let format = ISO8601DateFormatter()
         for pair in [("2026-03-08T04:30:00Z", "2026-03-08T08:30:00Z", 14400.0), ("2026-11-01T03:30:00Z", "2026-11-01T07:30:00Z", 14400.0)] {
             let events = [InFocusEvent(time: format.date(from: pair.0)!.timeIntervalSince1970, starting: true, bundle: "test.synthetic.alpha"), InFocusEvent(time: format.date(from: pair.1)!.timeIntervalSince1970, starting: false, bundle: "test.synthetic.alpha")]
             let rows = UsageRollup.records(events, device: "synthetic", mac: true, zone: zone)
             guard rows.count == 2, rows.values.reduce(0, { $0 + $1["seconds_estimated"].number }) == pair.2 else { throw SourceFailure.corrupt }
         }
+        let fallStart = format.date(from: "2026-11-01T04:00:00Z")!.timeIntervalSince1970
+        var fall: [InFocusEvent] = []
+        for hour in 0..<25 {
+            fall.append(InFocusEvent(time: fallStart + Double(hour * 3600), starting: true, bundle: "test.synthetic.alpha"))
+            fall.append(InFocusEvent(time: fallStart + Double((hour + 1) * 3600), starting: false, bundle: "test.synthetic.alpha"))
+        }
+        let fallRows = UsageRollup.records(fall, device: "synthetic", mac: true, zone: zone)
+        guard fallRows.values.reduce(0, { $0 + $1["seconds_estimated"].number }) == 86400, fallRows.values.reduce(0, { $0 + $1["clipped_seconds"].number }) == 3600 else { throw SourceFailure.corrupt }
         let biome = FileManager.default.temporaryDirectory.appendingPathComponent("usage-inputs-" + UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: biome) }
         let local = biome.appendingPathComponent("streams/restricted/App.InFocus/local"), remote = biome.appendingPathComponent("streams/restricted/App.InFocus/remote/peer")

@@ -1,10 +1,20 @@
 {
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[4.82 4.95 4.5] cpu_idle=73% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M6DB51759Z9DS9DQ18ZJBNQ5",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
   "scenario": "USE-ACTION-PROBE",
   "level": "real",
   "passed": true,
+  "git_sha": "28ef901667265c377d23a43a22cc0a4551b3d47a",
+  "at": "2026-11-02T05:19:13.125434Z",
   "assertions": [
     {
-      "name": "independent_day_totals_match",
+      "name": "raw_focus_upper_bound_and_clipping_conserved",
       "passed": true
     },
     {
@@ -12,7 +22,15 @@
       "passed": true
     },
     {
+      "name": "daily_device_totals_physically_bounded",
+      "passed": true
+    },
+    {
       "name": "provenance_and_device_freshness",
+      "passed": true
+    },
+    {
+      "name": "counts_proof_export",
       "passed": true
     },
     {
@@ -20,15 +38,8 @@
       "passed": true
     }
   ],
-  "metrics": {
-    "app_days": 1401,
-    "capture_observer_resets": 0,
-    "devices": 3,
-    "different_fields": {},
-    "gateway_rows": 1401,
-    "truth_devices": 3,
-    "truth_rows": 1401,
-    "unmapped_truth_devices": 1,
-    "unmatched_keys": 0
-  }
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
 }

@@ -1,22 +1,30 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[3.98 5.07 9.19] cpu_idle=57% cpus=8 other_heavy=0"
+    "summary": "air: load=[4.48 4.56 3.89] cpu_idle=58% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M645QK88X863QPPKA49CFKX8",
+  "run_id": "run_01M6DAB0Z1MYCNAQ3A2GP2QEEQ",
   "metrics": {
-    "app_days": 1,
+    "app_days": 4,
     "capture_observer_resets": 0,
-    "devices": 1
+    "devices": 2
   },
   "scenario": "USE-LOCK-CLIP",
   "level": "sim",
   "passed": true,
-  "git_sha": "1072adab174a7e89586b0dbb52b1a34150794f09",
-  "at": "2026-10-29T15:51:20.072275Z",
+  "git_sha": "28ef901667265c377d23a43a22cc0a4551b3d47a",
+  "at": "2026-11-02T05:05:00.89702Z",
   "assertions": [
     {
       "name": "mac_lock_clipped",
+      "passed": true
+    },
+    {
+      "name": "system_ui_batch",
+      "passed": true
+    },
+    {
+      "name": "system_ui_excluded_without_overlap",
       "passed": true
     },
     {

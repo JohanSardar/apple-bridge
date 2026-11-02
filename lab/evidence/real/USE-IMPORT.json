@@ -1,26 +1,20 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[7.51 10.43 13.69] cpu_idle=61% cpus=8 other_heavy=0"
+    "summary": "air: load=[4.43 4.73 4.65] cpu_idle=66% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5YZMCJWZ0AAGSMDJ065AQHE",
+  "run_id": "run_01M6DBN49NRYFTDFEQ73FJ83A8",
   "metrics": {
-    "app_days": 1406,
-    "capture_observer_resets": 0,
-    "devices": 3,
-    "different_fields": {},
-    "gateway_rows": 1406,
-    "truth_rows": 1406,
-    "unmatched_keys": 0
+    "capture_observer_resets": 0
   },
   "scenario": "USE-IMPORT",
   "level": "real",
   "passed": true,
-  "git_sha": "582a8a1943513c7583890c02902d18cc8ee73e50",
-  "at": "2026-10-27T15:28:31.324735Z",
+  "git_sha": "e915d4b1447a6d715ff45dbac80bcff58c0c7438",
+  "at": "2026-11-02T05:28:00.565276Z",
   "assertions": [
     {
-      "name": "independent_day_totals_match",
+      "name": "raw_focus_upper_bound_and_clipping_conserved",
       "passed": true
     },
     {
@@ -28,7 +22,15 @@
       "passed": true
     },
     {
+      "name": "daily_device_totals_physically_bounded",
+      "passed": true
+    },
+    {
       "name": "provenance_and_device_freshness",
+      "passed": true
+    },
+    {
+      "name": "counts_proof_export",
       "passed": true
     },
     {

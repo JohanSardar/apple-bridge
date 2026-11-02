@@ -88,6 +88,7 @@ func runUsageData(ctx context.Context, s Scenario, level string) Evidence {
 		e.Passed = err == nil
 		return e
 	}
+	rawReference := map[string]map[string]float64{}
 	w, err := world.NewUsage(ctx, level)
 	if err != nil {
 		return fail("world_start")
@@ -105,6 +106,7 @@ func runUsageData(ctx context.Context, s Scenario, level string) Evidence {
 		if json.Unmarshal(raw, &expected) != nil || len(expected) == 0 {
 			return fail("truth_has_usage")
 		}
+		rawReference = expected
 		matches := func() bool {
 			actual, err := usageRecords(ctx, w.Gateway, "rest")
 			if err != nil {
@@ -120,7 +122,14 @@ func runUsageData(ctx context.Context, s Scenario, level string) Evidence {
 					continue
 				}
 				for field, value := range want {
-					if math.Abs(got[field]-value) > 0.001 {
+					differentValue := math.Abs(got[field]-value) > 0.001
+					if field == "seconds_estimated" {
+						differentValue = got[field] > value+0.001
+					}
+					if field == "clipped_seconds" {
+						differentValue = math.Abs(got[field]+got["seconds_estimated"]-value-want["seconds_estimated"]) > 0.001
+					}
+					if differentValue {
 						different[field]++
 					}
 				}
@@ -135,7 +144,7 @@ func runUsageData(ctx context.Context, s Scenario, level string) Evidence {
 		if s.ID == "USE-ACTION-PROBE" {
 			comparisonTimeout = 3 * time.Minute
 		}
-		add("independent_day_totals_match", w.Await(comparisonTimeout, matches) == nil)
+		add("raw_focus_upper_bound_and_clipping_conserved", w.Await(comparisonTimeout, matches) == nil)
 	} else {
 		base := float64(1800100800)
 		event := func(offset float64, start bool, bundle string) map[string]any {
@@ -187,6 +196,8 @@ func runUsageData(ctx context.Context, s Scenario, level string) Evidence {
 			add("remote_import", send("remote", "iphone", event(0, true, app), event(120, false, app)) == nil)
 			add("per_device_totals", w.Await(10*time.Second, func() bool { s, _, _ := totals(w.Gateway, "remote"); return s == 120 }) == nil)
 		case "USE-LOCK-CLIP":
+			add("system_ui_batch", send("remote-ui", "mac", event(0, true, app), event(60, true, "com.apple.universalcontrol"), event(120, true, "test.synthetic.beta"), event(180, false, "test.synthetic.beta")) == nil)
+			add("system_ui_excluded_without_overlap", w.Await(10*time.Second, func() bool { s, c, _ := totals(w.Gateway, "remote-ui"); return s == 120 && c == 60 }) == nil)
 			add("screensaver_batch", send("local", "mac", event(4000, true, app), event(4100, true, "com.apple.ScreenSaver.Engine"), event(4600, false, app)) == nil)
 			add("screensaver_clipped", w.Await(10*time.Second, func() bool { s, c, _ := totals(w.Gateway, "local"); return s == 700 && c == 3500 }) == nil)
 		case "USE-REMOTE-LAG":
@@ -221,18 +232,33 @@ func runUsageData(ctx context.Context, s Scenario, level string) Evidence {
 	result, err := usageRecords(ctx, w.Gateway, "mcp")
 	metadata := err == nil
 	devices, days := 0, 0
+	names := map[string]bool{}
+	dayTotals := map[string]float64{}
+	bounded := true
 	for _, record := range result.Records {
 		var data map[string]any
 		json.Unmarshal(record.Data, &data)
 		if record.Collection == "usage.device" {
 			devices++
+			name, _ := data["name"].(string)
+			metadata = metadata && name != "Unnamed device" && !names[name]
+			names[name] = true
 			metadata = metadata && data["name"] != "" && data["platform"] != "" && data["latest_event_at"] != nil
 		} else {
 			days++
+			device, _ := data["device_id"].(string)
+			day, _ := data["day"].(string)
+			seconds, _ := data["seconds_estimated"].(float64)
+			dayTotals[device+"/"+day] += seconds
+			bounded = bounded && seconds >= 0 && dayTotals[device+"/"+day] <= 86400.001
 			metadata = metadata && data["provenance"] == "biome.app_infocus" && data["decoder_version"] == "infocus-segb-1" && data["uncertainty"] != ""
 		}
 	}
+	add("daily_device_totals_physically_bounded", bounded)
 	add("provenance_and_device_freshness", metadata && devices > 0 && days > 0)
+	if level == "real" {
+		add("counts_proof_export", writeUsageProof(result, rawReference) == nil)
+	}
 	e.Metrics["devices"] = devices
 	e.Metrics["app_days"] = days
 	e.Passed = true
