@@ -3,6 +3,10 @@ import Darwin
 import Decoders
 import SourceSupport
 
+public enum MessagesSendSafetyFailure: String, Error {
+    case textTagRequired = "untagged text requires a local owner token and verified own recipients; other sends require [ab-test <id>]"
+}
+
 public actor MessagesCommands {
     public static let operations = ["send", "reply", "react", "edit", "unsend", "mark_read", "mark_unread", "delete_message", "delete_chat", "create_group", "rename_group", "add_member", "remove_member", "leave_group"].map { "messages." + $0 }
     private let path: String
@@ -62,6 +66,22 @@ public actor MessagesCommands {
     }
     private func tagged(_ text: String) -> Bool {
         text.range(of: #"\[ab-test [A-Za-z0-9_-]+\]"#, options: .regularExpression) != nil
+    }
+    private func ownsRecipients(_ action: JSON, reader: MessagesReader) throws -> Bool {
+        guard let discovered = try? MessagesProbes.discoverSelfHandles() else { return false }
+        let own = Set(discovered.handles)
+        let recipients: [String]
+        if !action["list_key"].string.isEmpty {
+            recipients = try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID LEFT JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [action["list_key"].string]).map { $0["id"] }
+        } else {
+            recipients = action["messages"]["handles"].array.map(\.string)
+        }
+        return !recipients.isEmpty && recipients.allSatisfy { own.contains(MessagesProbes.normalize($0)) }
+    }
+    private func validateOwnSend(_ prepared: Prepared) throws {
+        if prepared.nativeState["owner_self"].bool {
+            guard try ownsRecipients(prepared.action, reader: MessagesReader(path: path)) else { throw MessagesSendSafetyFailure.textTagRequired }
+        }
     }
     private func approvedHandles() throws -> Set<String> {
         var handles = Set(try MessagesProbes.discoverSelfHandles().handles)
@@ -155,7 +175,11 @@ public actor MessagesCommands {
         if action["op"].string == "messages.create_group" { return try prepareGroup(command) }
         if action["op"].string != "messages.send" {return try await prepareAccessibility(command)}
         let args = action["messages"]
-        guard interactive || args["text"].string.isEmpty || tagged(args["text"].string), !args["text"].string.isEmpty || !args["files"].array.isEmpty else { throw SourceFailure.invalid }
+        let ownerSelf = try CommandOrigin(command) == .ownerSelf && !args["text"].string.isEmpty && !tagged(args["text"].string)
+        if !interactive && !args["text"].string.isEmpty && !tagged(args["text"].string) {
+            guard ownerSelf, try ownsRecipients(action, reader: MessagesReader(path: path)) else { throw MessagesSendSafetyFailure.textTagRequired }
+        }
+        guard !args["text"].string.isEmpty || !args["files"].array.isEmpty else { throw SourceFailure.invalid }
         for file in args["files"].array {
             let name=file["name"].string
             guard !name.isEmpty,name==URL(fileURLWithPath:name).lastPathComponent,name != ".",name != "..",file["data"].string.isEmpty else {throw SourceFailure.invalid}
@@ -174,7 +198,7 @@ public actor MessagesCommands {
         }
         let maximum = try reader.maximum()
         let payload = try JSONEncoder().encode(args)
-        let state = JSON.object(["interactive": .bool(interactive), "route": route["kind"], "destination": route, "max_row_id": .number(Double(maximum)), "payload_fingerprint": .string(BodyDigest.hash(payload)), "command_id": command["command_id"], "expires_at": command["expires_at"], "candidate_ids": .array([.string(String(maximum)), .string(route["chat"].string)])])
+        let state = JSON.object(["owner_self": .bool(ownerSelf), "interactive": .bool(interactive), "route": route["kind"], "destination": route, "max_row_id": .number(Double(maximum)), "payload_fingerprint": .string(BodyDigest.hash(payload)), "command_id": command["command_id"], "expires_at": command["expires_at"], "candidate_ids": .array([.string(String(maximum)), .string(route["chat"].string)])])
         return Prepared(nativeState: state, fingerprint: command["request_hash"].string, action: action)
     }
     private func prepareAccessibility(_ command: JSON) async throws -> Prepared {
@@ -297,6 +321,7 @@ public actor MessagesCommands {
         return .object(["source": .string("messages"), "observed": .bool(false), "disposition": .string("indeterminate"), "reason": .string("conversation_effect_unproven"), "ui": ui])
     }
     public func validate(_ prepared: Prepared) async throws {
+        try validateOwnSend(prepared)
         if MessagesParity.operations.contains(prepared.action["op"].string) { try await MessagesParity.validate(prepared); return }
         if !["messages.send", "messages.create_group", "messages.mark_read", "messages.mark_unread"].contains(prepared.action["op"].string) {try await MessagesAccessibility.validate(prepared)}
     }
@@ -385,6 +410,7 @@ public actor MessagesCommands {
         return parts
     }
     public func dispatch(_ prepared: Prepared) async throws -> JSON {
+        try validateOwnSend(prepared)
         if prepared.action["messages"]["variant"] != .null {
             let reader=try MessagesReader(path:path),route=try verifyRoute(prepared.action,reader:reader,interactive:prepared.nativeState["interactive"].bool)
             guard route==prepared.nativeState["destination"],labCommands || MessagesSendVariants.proven(MessagesSendVariants.operation(prepared.action["messages"]) ?? "",route:route,args:prepared.action["messages"]) else { throw SourceFailure.capabilityUnproven }

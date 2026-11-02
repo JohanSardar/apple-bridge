@@ -74,6 +74,10 @@ func (f *fakeApple) messageRoutes(mux *http.ServeMux) {
 			capture.Scope = []string{"messages.chat", "messages.handle", "messages.message", "messages.reaction", "messages.attachment"}
 			capture.ScanStartedAt = now
 			capture.CompletionEvidence = "complete"
+		case "nonself-chat":
+			put("handle", "message-other", map[string]any{"address": "other@example.com", "service": "iMessage"})
+			put("chat", "message-other-chat", map[string]any{"service": "iMessage", "style": "direct", "display_name": "Synthetic other", "participants": []any{messageReference("handle", "message-other")}, "capabilities": []string{}})
+			capture.Observations = []contracts.Observation{f.records["message-other"], f.records["message-other-chat"]}
 		case "incoming":
 			if action.Key == "" {
 				f.mu.Unlock()

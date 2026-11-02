@@ -705,6 +705,7 @@ features:
       - {id: MSG-COMMAND-PARTS, levels: [sim]}
       - {id: WEB-SOURCES-STATUS, levels: [sim, web]}
       - {id: MSG-INTERACTIVE-GATE, levels: [sim, real]}
+      - {id: MSG-OWNER-TOKEN-SELFCHAT, levels: [sim]}
       - {id: MSG-MEDIA-CLEANUP, levels: [sim]}
       - {id: MSG-SELFTEST, levels: [sim, real], status: dropped, reason: "Dropped by the owner on 2026-11-01: imagent refuses the Helper connection that these native Messages actions need."}
       - {id: MSG-DELETE-VISIBILITY, levels: [sim, real]}

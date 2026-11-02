@@ -644,7 +644,7 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "MSG-PINS" || s.ID == "MSG-MUTE" || s.ID == "MSG-READ-RECEIPTS" || s.ID == "MSG-RECENTLY-DELETED" {
 		return runMessagesParity(ctx, s, level)
 	}
-	if s.ID == "MSG-SEND-LATER" || s.ID == "MSG-SEND-EFFECT" || s.ID == "MSG-FORMATTING-SEND" || s.ID == "MSG-MENTION-SEND" || s.ID == "MSG-AUDIO-MESSAGE" || s.ID == "MSG-SEND-VARIANTS" || s.ID == "MSG-SELFTEST" || s.ID == "MSG-RESEND" || s.ID == "MSG-READSTATE-REAL" || s.ID == "MSG-DELETE-REAL" || s.ID == "MSG-COMMAND-OBSERVED-IDS" || s.ID == "MSG-FAILED-OBSERVED-IDS" || s.ID == "MSG-COMMAND-PARTS" {
+	if s.ID == "MSG-OWNER-TOKEN-SELFCHAT" || s.ID == "MSG-SEND-LATER" || s.ID == "MSG-SEND-EFFECT" || s.ID == "MSG-FORMATTING-SEND" || s.ID == "MSG-MENTION-SEND" || s.ID == "MSG-AUDIO-MESSAGE" || s.ID == "MSG-SEND-VARIANTS" || s.ID == "MSG-SELFTEST" || s.ID == "MSG-RESEND" || s.ID == "MSG-READSTATE-REAL" || s.ID == "MSG-DELETE-REAL" || s.ID == "MSG-COMMAND-OBSERVED-IDS" || s.ID == "MSG-FAILED-OBSERVED-IDS" || s.ID == "MSG-COMMAND-PARTS" {
 		return runMessagesCommands(ctx, s, level)
 	}
 	if s.ID == "MSG-MEDIA-CLEANUP" {
