@@ -14,7 +14,7 @@ import (
 )
 
 func securityOwnerRequests(ctx context.Context, c *webClient, add func(string, bool)) {
-	for _, path := range []string{"/oauth/authorize", "/web/v1/approvals/test", "/web/v1/passkeys/options", "/web/v1/agents"} {
+	for _, path := range []string{"/oauth/authorize", "/approvals/test", "/auth/passkeys/options"} {
 		for _, origin := range []string{"", "null", "https://attacker.example"} {
 			req, _ := http.NewRequestWithContext(ctx, "POST", c.origin+path, strings.NewReader(`{"decision":"approve"}`))
 			req.AddCookie(c.cookie)

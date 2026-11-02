@@ -1,17 +1,17 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[8.55 8.28 13.78] cpu_idle=65% cpus=8 other_heavy=0"
+    "summary": "air: load=[5.23 5.04 4.54] cpu_idle=66% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M6391S5KQQ0FY2Y1BPZRC3FF",
+  "run_id": "run_01M6EYSSP7VM7QRF0HQT57Q5B2",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MSG-COMMAND-PARTS",
   "level": "sim",
   "passed": true,
-  "git_sha": "25767535ee953ff549360bd1106ae68a6d004077",
-  "at": "2026-10-29T07:30:05.10735Z",
+  "git_sha": "381fd8bdb2777c9f9e35894a034f501948214911",
+  "at": "2026-11-02T20:21:50.919457Z",
   "assertions": [
     {
       "name": "seed_self_chat",
@@ -926,134 +926,6 @@
       "passed": true
     },
     {
-      "name": "web_gateway_session",
-      "passed": true
-    },
-    {
-      "name": "web_gateway_ready_upload_0",
-      "passed": true
-    },
-    {
-      "name": "web_gateway_ready_upload_1",
-      "passed": true
-    },
-    {
-      "name": "web_gateway_socket",
-      "passed": true
-    },
-    {
-      "name": "web_gateway_observed",
-      "passed": true
-    },
-    {
-      "name": "web_gateway_exact_unique_part",
-      "passed": true
-    },
-    {
-      "name": "web_gateway_exact_unique_part",
-      "passed": true
-    },
-    {
-      "name": "web_gateway_exact_unique_part",
-      "passed": true
-    },
-    {
-      "name": "web_gateway_cmd_status_parts",
-      "passed": true
-    },
-    {
-      "name": "web_gateway_owned_command_record_parts",
-      "passed": true
-    },
-    {
-      "name": "web_gateway_read_only_reconciliation_effect_one",
-      "passed": true
-    },
-    {
-      "name": "web_gateway_delayed_capture_fault_armed",
-      "passed": true
-    },
-    {
-      "name": "web_gateway_delayed_capture_socket",
-      "passed": true
-    },
-    {
-      "name": "web_gateway_delayed_capture_first_terminal_is_sent_without_client_resolve",
-      "passed": true
-    },
-    {
-      "name": "web_gateway_delayed_capture_exact_primary_and_part_identity",
-      "passed": true
-    },
-    {
-      "name": "web_gateway_delayed_capture_effect_remains_one",
-      "passed": true
-    },
-    {
-      "name": "web_replica_session",
-      "passed": true
-    },
-    {
-      "name": "web_replica_ready_upload_0",
-      "passed": true
-    },
-    {
-      "name": "web_replica_ready_upload_1",
-      "passed": true
-    },
-    {
-      "name": "web_replica_socket",
-      "passed": true
-    },
-    {
-      "name": "web_replica_observed",
-      "passed": true
-    },
-    {
-      "name": "web_replica_exact_unique_part",
-      "passed": true
-    },
-    {
-      "name": "web_replica_exact_unique_part",
-      "passed": true
-    },
-    {
-      "name": "web_replica_exact_unique_part",
-      "passed": true
-    },
-    {
-      "name": "web_replica_cmd_status_parts",
-      "passed": true
-    },
-    {
-      "name": "web_replica_owned_command_record_parts",
-      "passed": true
-    },
-    {
-      "name": "web_replica_read_only_reconciliation_effect_one",
-      "passed": true
-    },
-    {
-      "name": "web_replica_delayed_capture_fault_armed",
-      "passed": true
-    },
-    {
-      "name": "web_replica_delayed_capture_socket",
-      "passed": true
-    },
-    {
-      "name": "web_replica_delayed_capture_first_terminal_is_sent_without_client_resolve",
-      "passed": true
-    },
-    {
-      "name": "web_replica_delayed_capture_exact_primary_and_part_identity",
-      "passed": true
-    },
-    {
-      "name": "web_replica_delayed_capture_effect_remains_one",
-      "passed": true
-    },
-    {
       "name": "capture_bound_fault_armed",
       "passed": true
     },
@@ -1093,16 +965,16 @@
   "latency": {
     "single_text_delayed_capture_no_action_ms": {
       "samples": 1,
-      "p50_ms": 418.852666,
-      "p95_ms": 418.852666,
-      "max_ms": 418.852666,
+      "p50_ms": 360.034208,
+      "p95_ms": 360.034208,
+      "max_ms": 360.034208,
       "timeouts": 0
     },
     "single_text_delayed_capture_resolve_ms": {
       "samples": 1,
-      "p50_ms": 586.361042,
-      "p95_ms": 586.361042,
-      "max_ms": 586.361042,
+      "p50_ms": 361.859042,
+      "p95_ms": 361.859042,
+      "max_ms": 361.859042,
       "timeouts": 0
     }
   },

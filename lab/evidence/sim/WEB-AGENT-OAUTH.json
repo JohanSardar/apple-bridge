@@ -1,19 +1,18 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[14.82 12.31 10.61] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[4.83 4.48 3.8] cpu_idle=67% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5EMPXBN0N0D9R8E62BXVRZA",
+  "run_id": "run_01M6EY5T1BXF8FH9YTF4ESKRAS",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
   "scenario": "WEB-AGENT-OAUTH",
   "level": "sim",
   "passed": true,
-  "git_sha": "799c6645ab38b88f478b18b3e83bbef11eb32c39",
-  "at": "2026-10-21T07:09:48.789193Z",
+  "git_sha": "590faa40f8445f912b0d01f38738001e9a725af9",
+  "at": "2026-11-02T20:10:55.91592Z",
   "assertions": [
-    {
-      "name": "agents_available",
-      "passed": true
-    },
     {
       "name": "oauth_discovery_challenge_/mcp",
       "passed": true
@@ -35,7 +34,7 @@
       "passed": true
     },
     {
-      "name": "authorize_requires_device_session",
+      "name": "authorize_offers_local_approval",
       "passed": true
     },
     {

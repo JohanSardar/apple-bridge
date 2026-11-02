@@ -2,11 +2,11 @@
 
 Your Mac's Apple data (Messages, Calendar, Reminders, Contacts, Notes, Screen Time) as a live, fully synced, read/write copy on any computer, with one REST API and one MCP server.
 
-This repository owns the Go gateway, native Mac Helper, web app, relay and gateway-side iPhone integration. The native iPhone app, widgets, extensions, client-side fixtures, signed builds and TestFlight tooling live in [apple-bridge-iphone](https://github.com/JohanSardar/apple-bridge-iphone).
+This repository owns the Go gateway, native Mac Helper, consent pages, relay and gateway-side iPhone integration. The native iPhone app, widgets, extensions, client-side fixtures, signed builds and TestFlight tooling live in [apple-bridge-iphone](https://github.com/JohanSardar/apple-bridge-iphone).
 
 ## Mac development
 
-Use `make build` to build the web app, gateway and native Helper. `make lint` and `make features` check this repository. Mac builds need no iPhone checkout or Xcode iOS SDK. On the Air, run build and test steps serially through `~/bin/ab-local`.
+Use `make build` to build the gateway and native Helper. `make lint` and `make features` check this repository. Mac builds need no iPhone checkout or Xcode iOS SDK. On the Air, run build and test steps serially through `~/bin/ab-local`.
 
 ## iPhone integration
 
@@ -22,3 +22,5 @@ APPLE_BRIDGE_IPHONE_ROOT=/path/to/apple-bridge-iphone ~/bin/ab-local go run ./cm
 Pure Go gateway pairing and delivery checks still run here without the app checkout. The integrated [feature graph](features.yaml) links app-owned modules to the iPhone repository. App build instructions and physical qualification history moved with the app.
 
 Status: in development. Design: [design/](design/). Research: [research/](research/).
+
+The full SolidJS web app lives on the `web-app` branch. Main serves only consent, passkey enrollment and agent approvals; agent management uses `bridge agent`.

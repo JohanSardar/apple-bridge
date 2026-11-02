@@ -22,7 +22,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync/atomic"
-	"testing/fstest"
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
@@ -73,60 +72,6 @@ func runWebServer(ctx context.Context, s Scenario, level string) Evidence {
 		runAgentActivity(ctx, w, add)
 	case "WEB-AGENT-CREDENTIALS":
 		runAgentCredentials(ctx, w, &e, add)
-	case "WEB-SERVE-EMBED":
-		for _, built := range []bool{false, true} {
-			assets := fstest.MapFS{}
-			if built {
-				assets["dist/index.html"] = &fstest.MapFile{Data: []byte("<html>Bridge Test</html>")}
-				assets["dist/assets/test-hash.js"] = &fstest.MapFile{Data: []byte("export const ready=true")}
-				assets["dist/sw.js"] = &fstest.MapFile{Data: []byte("self.addEventListener('fetch',()=>{})")}
-				assets["dist/manifest.webmanifest"] = &fstest.MapFile{Data: []byte("{}")}
-			}
-			fixture := httptest.NewServer(bridgeweb.Handler(bridgeweb.Deps{Assets: assets}))
-			paths := []string{"/", "/messages/test"}
-			if built {
-				paths = append(paths, "/assets/test-hash.js", "/sw.js", "/manifest.webmanifest")
-			}
-			for _, path := range paths {
-				resp, err := http.Get(fixture.URL + path)
-				if err != nil {
-					add("static_fixture", false)
-					continue
-				}
-				body, _ := io.ReadAll(resp.Body)
-				resp.Body.Close()
-				cache := "no-store"
-				if strings.HasPrefix(path, "/assets/") {
-					cache = "public, max-age=31536000, immutable"
-				} else if path == "/sw.js" || path == "/manifest.webmanifest" {
-					cache = "no-cache"
-				}
-				add("static_cache_"+path, resp.StatusCode == 200 && resp.Header.Get("Cache-Control") == cache)
-				if !built {
-					add("empty_dist_not_built", strings.Contains(string(body), "make web"))
-				}
-			}
-			fixture.Close()
-		}
-		secure := httptest.NewTLSServer(bridgeweb.Handler(bridgeweb.Deps{Assets: fstest.MapFS{}}))
-		tlsResponse, tlsErr := secure.Client().Get(secure.URL + "/")
-		add("hsts_on_https", tlsErr == nil && tlsResponse.Header.Get("Strict-Transport-Security") != "")
-		if tlsErr == nil {
-			tlsResponse.Body.Close()
-		}
-		rogue, _ := http.NewRequestWithContext(ctx, "GET", secure.URL+"/", nil)
-		rogue.Host = "attacker.invalid"
-		rogueResponse, rogueErr := secure.Client().Do(rogue)
-		add("tls_arbitrary_host_rejected", rogueErr == nil && rogueResponse.StatusCode == 403)
-		if rogueErr == nil {
-			rogueResponse.Body.Close()
-		}
-		secure.Close()
-		resp, body := request("GET", "/", "")
-		add("app_or_not_built", resp != nil && resp.StatusCode == 200 && (strings.Contains(body, "make web") || strings.Contains(body, "<html")))
-		add("index_no_store", resp != nil && resp.Header.Get("Cache-Control") == "no-store")
-		resp, _ = request("GET", "/messages/test", "")
-		add("app_route_fallback", resp != nil && resp.StatusCode == 200)
 	case "WEB-AUTH-ORIGIN":
 		runWebPinnedHosts(ctx, w, add)
 		for _, origin := range []string{"", "https://foreign.example"} {
@@ -168,6 +113,7 @@ func runWebServer(ctx context.Context, s Scenario, level string) Evidence {
 }
 
 type webClient struct {
+	home    string
 	ctx     context.Context
 	origin  string
 	cookie  *http.Cookie
@@ -179,12 +125,27 @@ func (c *webClient) request(method, path string, input any) (*http.Response, []b
 	if input != nil {
 		raw, _ = json.Marshal(input)
 	}
-	req, err := http.NewRequestWithContext(c.ctx, method, c.origin+"/web/v1/"+path, bytes.NewReader(raw))
+	prefix := "/auth/"
+	contentType := "application/json"
+	if strings.HasPrefix(path, "approvals") {
+		prefix = "/"
+		if method == "POST" {
+			values := url.Values{}
+			if fields, ok := input.(map[string]string); ok {
+				for k, v := range fields {
+					values.Set(k, v)
+				}
+			}
+			raw = []byte(values.Encode())
+			contentType = "application/x-www-form-urlencoded"
+		}
+	}
+	req, err := http.NewRequestWithContext(c.ctx, method, c.origin+prefix+path, bytes.NewReader(raw))
 	if err != nil {
 		return nil, nil, err
 	}
 	req.Header.Set("Origin", c.origin)
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", contentType)
 	for name, values := range c.headers {
 		for _, value := range values {
 			req.Header.Add(name, value)
@@ -597,7 +558,7 @@ func runWebBlobs(ctx context.Context, w *world.World, c *webClient, e *Evidence,
 	}
 	add("blob_immutable_private_etag", resp.Header.Get("Cache-Control") == "private, max-age=31536000, immutable" && resp.Header.Get("ETag") == `"`+digest+`"`)
 	add("original_blob_immutable_matches_url_digest", fmt.Sprintf("%x", sha256.Sum256(body)) == digest)
-	req, _ := http.NewRequestWithContext(ctx, "GET", c.origin+"/web/v1/"+path, nil)
+	req, _ := http.NewRequestWithContext(ctx, "GET", c.origin+"/auth/"+path, nil)
 	req.AddCookie(c.cookie)
 	req.Header.Set("Range", "bytes=10-19")
 	resp, err = http.DefaultClient.Do(req)

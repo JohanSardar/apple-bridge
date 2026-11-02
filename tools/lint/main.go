@@ -82,7 +82,7 @@ func lintGo(rel, path string) []finding {
 		}
 		line := fset.Position(pos).Line
 		switch {
-		case tok == token.COMMENT && (strings.HasPrefix(lit, "//go:build ") || rel == "web/embed.go" && lit == "//go:embed all:dist"):
+		case tok == token.COMMENT && (strings.HasPrefix(lit, "//go:build ") || rel == "internal/web/pages.go" && lit == "//go:embed assets/webauthn.js"):
 		case tok == token.COMMENT:
 			out = append(out, finding{rel, line, "comment"})
 		case tok == token.IMPORT:
@@ -111,9 +111,6 @@ func checkImport(rel, imp string) string {
 	target := strings.TrimPrefix(imp, module)
 	if dir == "cmd/bridge" && strings.HasPrefix(target, "lab/") {
 		return "product command must not import " + target
-	}
-	if target == "web" && dir != "internal/web" {
-		return "only internal/web may import webui"
 	}
 	if strings.HasPrefix(dir, "internal/contracts") && !strings.HasPrefix(target, "internal/contracts") {
 		return "contracts must not import " + target

@@ -55,7 +55,7 @@ func (s *server) oauthAuthorizationRoutes(mux *http.ServeMux) {
 			respond(w, 200, map[string]any{"client_name": c.Name, "redirect_host": u.Host, "scopes": requestedScopes(r.URL.Query()), "groups": contracts.GrantGroups(true)})
 			return
 		}
-		s.static(w, r)
+		s.consent(w, r, c.Name)
 	})
 	mux.HandleFunc("POST /oauth/authorize", func(w http.ResponseWriter, r *http.Request) {
 		c, code, err := s.authorizationRequest(r)
@@ -68,7 +68,18 @@ func (s *server) oauthAuthorizationRoutes(mux *http.ServeMux) {
 			Scopes   []contracts.Grant `json:"scopes"`
 			Decision string            `json:"decision"`
 		}
-		if json.NewDecoder(r.Body).Decode(&in) != nil || in.Decision != "approve" && in.Decision != "reject" {
+		var decodeErr error
+		if strings.HasPrefix(r.Header.Get("Content-Type"), "application/x-www-form-urlencoded") {
+			decodeErr = r.ParseForm()
+			in.Level = trust.AgentLevel(r.PostForm.Get("level"))
+			in.Decision = r.PostForm.Get("decision")
+			for _, scope := range r.PostForm["scopes"] {
+				in.Scopes = append(in.Scopes, contracts.Grant(scope))
+			}
+		} else {
+			decodeErr = json.NewDecoder(r.Body).Decode(&in)
+		}
+		if decodeErr != nil || in.Decision != "approve" && in.Decision != "reject" {
 			respond(w, 400, map[string]string{"error": "invalid_request"})
 			return
 		}
@@ -85,7 +96,11 @@ func (s *server) oauthAuthorizationRoutes(mux *http.ServeMux) {
 			reject(w, 503, "unavailable")
 			return
 		}
-		respond(w, 200, map[string]string{"redirect": redirect})
+		if strings.HasPrefix(r.Header.Get("Content-Type"), "application/x-www-form-urlencoded") {
+			renderPage(w, map[string]any{"Title": "Connection authorized", "Redirect": redirect})
+		} else {
+			respond(w, 200, map[string]string{"redirect": redirect})
+		}
 	})
 }
 

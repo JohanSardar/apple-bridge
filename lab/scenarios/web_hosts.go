@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
-	"testing/fstest"
 )
 
 func runWebPinnedHosts(ctx context.Context, w *world.World, add func(string, bool)) {
@@ -19,7 +18,7 @@ func runWebPinnedHosts(ctx context.Context, w *world.World, add func(string, boo
 		return
 	}
 	fixture := httptest.NewUnstartedServer(nil)
-	handler := bridgeweb.Handler(bridgeweb.Deps{Authority: authority, Address: fixture.Listener.Addr().String(), Assets: fstest.MapFS{}})
+	handler := bridgeweb.Handler(bridgeweb.Deps{Authority: authority, Address: fixture.Listener.Addr().String()})
 	fixture.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		handler.ServeHTTP(w, r)
 	})
@@ -38,7 +37,7 @@ func runWebPinnedHosts(ctx context.Context, w *world.World, add func(string, boo
 	add("tls_arbitrary_host_rejected", tlsRequest("attacker.invalid", "/") == 403)
 	add("tls_localhost_allowed", tlsRequest(fixture.Listener.Addr().String(), "/") == 200)
 	fixture2 := httptest.NewUnstartedServer(nil)
-	fixture2.Config.Handler = bridgeweb.Handler(bridgeweb.Deps{Authority: authority, Address: fixture2.Listener.Addr().String(), Assets: fstest.MapFS{}})
+	fixture2.Config.Handler = bridgeweb.Handler(bridgeweb.Deps{Authority: authority, Address: fixture2.Listener.Addr().String()})
 	fixture2.Start()
 	defer fixture2.Close()
 	req, _ := http.NewRequestWithContext(ctx, "GET", fixture2.URL+"/", nil)
@@ -51,7 +50,7 @@ func runWebPinnedHosts(ctx context.Context, w *world.World, add func(string, boo
 
 	publicHost := "bridge.example.invalid:10000"
 	securePublic := httptest.NewUnstartedServer(nil)
-	securePublic.Config.Handler = bridgeweb.Handler(bridgeweb.Deps{Authority: authority, Address: securePublic.Listener.Addr().String(), PublicHost: func() string { return publicHost }, Assets: fstest.MapFS{}})
+	securePublic.Config.Handler = bridgeweb.Handler(bridgeweb.Deps{Authority: authority, Address: securePublic.Listener.Addr().String(), PublicHost: func() string { return publicHost }})
 	securePublic.StartTLS()
 	defer securePublic.Close()
 	publicRequest, _ := http.NewRequestWithContext(ctx, "POST", securePublic.URL+"/web/v1/login/options", strings.NewReader("{}"))

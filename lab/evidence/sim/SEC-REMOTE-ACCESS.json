@@ -1,20 +1,20 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[3.11 4.27 4.39] cpu_idle=89% cpus=10 other_heavy=0"
+    "summary": "air: load=[4.58 4.5 3.91] cpu_idle=59% cpus=8 other_heavy=0"
   },
-  "run_id": "security_01M6AT8Y0R0H457X5Q4RFB5ZQY",
+  "run_id": "security_01M6EYAFWGGMD0B1KSPM52CKDS",
   "network_path": "isolated Mac gateway adversarial HTTP and trust checks",
   "metrics": {
     "capture_observer_resets": 0,
-    "protected_endpoint_count": 222,
-    "revocation_ms": 10
+    "protected_endpoint_count": 175,
+    "revocation_ms": 6
   },
   "scenario": "SEC-REMOTE-ACCESS",
   "level": "sim",
   "passed": true,
-  "git_sha": "4203c92cd69a2e79a3336cd03e9d479e6d247051",
-  "at": "2026-11-01T05:45:46.264621Z",
+  "git_sha": "590faa40f8445f912b0d01f38738001e9a725af9",
+  "at": "2026-11-02T20:13:29.360166Z",
   "assertions": [
     {
       "name": "isolated_gateway",
@@ -326,18 +326,6 @@
     },
     {
       "name": "owner_session",
-      "passed": true
-    },
-    {
-      "name": "approve_csrf_and_cross_origin_refused",
-      "passed": true
-    },
-    {
-      "name": "approve_csrf_and_cross_origin_refused",
-      "passed": true
-    },
-    {
-      "name": "approve_csrf_and_cross_origin_refused",
       "passed": true
     },
     {

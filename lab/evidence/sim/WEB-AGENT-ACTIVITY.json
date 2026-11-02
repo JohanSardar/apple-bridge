@@ -1,14 +1,17 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[7.85 10.31 11.89] cpus=8 other_heavy=0"
+    "summary": "air: load=[5.52 4.56 3.8] cpu_idle=70% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5FZS1RVJ0VTF2W6YVERQ8JH",
+  "run_id": "run_01M6EY51XS76X1PH55AV2GS1A2",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
   "scenario": "WEB-AGENT-ACTIVITY",
   "level": "sim",
   "passed": true,
-  "git_sha": "e6157630fffe4263b13fbaa0113baa4cd0e97e7c",
-  "at": "2026-10-21T19:42:27.611218Z",
+  "git_sha": "590faa40f8445f912b0d01f38738001e9a725af9",
+  "at": "2026-11-02T20:10:31.225731Z",
   "assertions": [
     {
       "name": "activity_read",

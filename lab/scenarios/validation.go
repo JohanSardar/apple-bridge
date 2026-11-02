@@ -60,7 +60,7 @@ func validateScenario(s Scenario) error {
 	if s.Web != nil {
 		return validateWeb(s)
 	}
-	if s.Feature == "messages.read" && strings.HasPrefix(s.ID, "MSG-") {
+	if s.Feature == "messages.read" && strings.HasPrefix(s.ID, "MSG-") && s.ID != "MSG-DECODE-BALLOON" && s.ID != "MSG-DECODE-FORMATTING" && s.ID != "MSG-READ-RICH-FIELDS" {
 		_, _, valid := messageScenarioOptions(s)
 		if !valid || s.Feature != "messages.read" {
 			return fmt.Errorf("invalid Messages read scenario")

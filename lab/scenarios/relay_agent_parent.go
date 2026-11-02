@@ -2,7 +2,6 @@ package scenarios
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
@@ -35,14 +34,14 @@ func relayAgentParentBoundaries(ctx context.Context, w *world.World, owner *webC
 		return err == nil && status.Replica != nil && status.Replica.State == "connected" && status.Replica.Cursor.SubscriptionRevision == parent.Revision
 	})
 	add("narrowed_subscription_connected", err == nil)
-	response, raw, err := owner.request("POST", "approvals/"+scoped.ID, map[string]string{"decision": "approve"})
-	json.Unmarshal(raw, &row)
+	response, _, err := owner.request("POST", "approvals/"+scoped.ID, map[string]string{"decision": "approve"})
+	row = storedApproval(ctx, w, scoped.ID)
 	effects, _ := w.Effects()
 	add("fresh_parent_scope_rejects_pending_write", err == nil && response.StatusCode == 200 && row.State == contracts.CommandRejected && effects[scoped.ID] == 0)
 	err = gateway.Revoke(enrollment.ReplicaID)
 	add("parent_replica_revoked", err == nil)
-	response, raw, err = owner.request("POST", "approvals/"+revoked.ID, map[string]string{"decision": "approve"})
-	json.Unmarshal(raw, &row)
+	response, _, err = owner.request("POST", "approvals/"+revoked.ID, map[string]string{"decision": "approve"})
+	row = storedApproval(ctx, w, revoked.ID)
 	effects, _ = w.Effects()
 	add("revoked_parent_rejects_pending_agent_approval", err == nil && response.StatusCode == 200 && row.State == contracts.CommandRejected && effects[revoked.ID] == 0)
 }

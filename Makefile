@@ -9,7 +9,7 @@ export PATH := /opt/homebrew/bin:$(HOME)/go/bin:$(PATH)
 
 .PHONY: build lint features sim real replica agent dist native
 
-build: web
+build:
 	packaging/dev/heavy.sh go build -p 2 ./...
 	packaging/dev/heavy.sh packaging/dev/build-native.sh
 
@@ -18,13 +18,11 @@ native:
 
 lint:
 	python3 packaging/dev/test_source_registrations.py
-	cd web && pnpm lint
 	gofmt -l $$(find . -name '*.go' -not -path './.worktrees/*' -not -path '*/node_modules/*' -not -path './.build/*') | grep -v '^$$' && exit 1 || true
 	go vet ./...
 	go run ./tools/lint .
 
 features:
-	cd web && pnpm exec node --test dev/scenarios.test.mjs && pnpm exec node dev/scenarios.mjs
 	go run ./tools/featuregraph -html design/features.html
 
 SCENARIOS ?= lab/scenarios
@@ -50,11 +48,3 @@ dist:
 .PHONY: decoder-checks
 decoder-checks:
 	packaging/dev/heavy.sh packaging/dev/check-decoders.sh
-
-.PHONY: web
-web:
-	packaging/dev/heavy.sh --light sh -c 'cd web && pnpm install --frozen-lockfile && pnpm build:release'
-
-.PHONY: demo
-demo: web
-	packaging/dev/heavy.sh go run ./cmd/bridge-lab demo

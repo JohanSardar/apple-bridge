@@ -1,8 +1,0 @@
-id: WEB-AUTH-ENROLL
-feature: web.frontdoor
-levels: [web]
-web: {browsers: [chromium], themes: [light, dark], layouts: [phone, desktop], server: gateway}
-given: []
-when: [{web: {}}]
-then: []
-cleanup: []

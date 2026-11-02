@@ -233,11 +233,8 @@ func run(ctx context.Context, args []string) error {
 			}
 			enrollmentURL := strings.TrimSuffix(*webHost, "/") + "/enroll#" + token
 			fmt.Println(enrollmentURL)
-			if *publicEnroll {
-				_, err = qrcodes.Fprintln(os.Stdout, qrcodes.FormatSmall, enrollmentURL)
-				return err
-			}
-			return nil
+			_, err = qrcodes.Fprintln(os.Stdout, qrcodes.FormatSmall, enrollmentURL)
+			return err
 		case "lock":
 			return authority.LockWeb()
 		case "devices":

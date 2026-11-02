@@ -1,8 +1,0 @@
-id: WEB-AUTH-REVOKE
-feature: web.frontdoor
-levels: [web]
-web: {browsers: [webkit, chromium, firefox], themes: [light, dark], layouts: [phone, desktop], server: gateway}
-given: []
-when: [{web: {}}]
-then: []
-cleanup: []

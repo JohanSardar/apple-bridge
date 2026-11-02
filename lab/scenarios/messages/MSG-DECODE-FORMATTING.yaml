@@ -1,5 +1,5 @@
 id: MSG-DECODE-FORMATTING
-feature: web.messages.read
+feature: messages.read
 levels: [sim, real]
 given: [{world: {}}]
 when: [{readmodels: {}}]

@@ -1,14 +1,17 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[8.21 9.04 10.13] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[10.84 6.32 4.72] cpu_idle=83% cpus=8 other_heavy=0"
   },
-  "run_id": "relay-agents_01M5ER5HZ4ZEKM8AWS3DPSARD6",
+  "run_id": "relay-agents_01M6EYGKBWYFQ3XCK9MT62MGZ6",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
   "scenario": "WEB-RELAY-AGENTS",
   "level": "sim",
   "passed": true,
-  "git_sha": "f0002e5bb9fad47fa4caf4b7b3d383fd8623f6ff",
-  "at": "2026-10-21T08:10:14.372195Z",
+  "git_sha": "590faa40f8445f912b0d01f38738001e9a725af9",
+  "at": "2026-11-02T20:16:49.532732Z",
   "assertions": [
     {
       "name": "paired_replica_world",
@@ -59,15 +62,11 @@
       "passed": true
     },
     {
-      "name": "gateway_owner_live_connection",
-      "passed": true
-    },
-    {
       "name": "replica_approve_agent_queued_on_gateway",
       "passed": true
     },
     {
-      "name": "delegated_agent_pending_approval_live_event",
+      "name": "delegated_agent_pending_approval_page",
       "passed": true
     },
     {
@@ -152,6 +151,10 @@
     },
     {
       "name": "revoked_parent_rejects_pending_agent_approval",
+      "passed": true
+    },
+    {
+      "name": "no_oversized_capture_observer_resets",
       "passed": true
     },
     {

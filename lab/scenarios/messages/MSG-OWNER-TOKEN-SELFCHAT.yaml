@@ -1,5 +1,5 @@
 id: MSG-OWNER-TOKEN-SELFCHAT
-feature: web.messages.write
+feature: messages.actions
 levels: [sim]
 given: [{world: {replicas: 1}}]
 when: [{messages_commands: {}}]

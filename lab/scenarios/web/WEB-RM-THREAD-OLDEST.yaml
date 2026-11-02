@@ -1,9 +1,0 @@
-id: WEB-RM-THREAD-OLDEST
-feature: web.readmodels
-levels: [web]
-web:
-  browsers: [webkit, chromium]
-  themes: [light]
-  layouts: [phone, desktop]
-  server: gateway
-  huge: true

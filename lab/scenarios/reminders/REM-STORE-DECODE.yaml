@@ -1,5 +1,5 @@
 id: REM-STORE-DECODE
-feature: web.reminders
+feature: reminders.read
 levels: [sim]
 given: [{world: {replicas: 1}}]
 when: [{readmodels: {}}]

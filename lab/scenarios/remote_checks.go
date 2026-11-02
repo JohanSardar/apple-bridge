@@ -35,14 +35,14 @@ func remoteProxyChecks(ctx context.Context, home string, status remote.Status, u
 		defer response.Body.Close()
 		return response.StatusCode
 	}
-	add("direct_loopback_forwarding_spoof_rejected", proxyRequest("/web/v1/login/options", u.Host, "192.0.2.40") == 403)
-	add("proxy_unconfigured_forwarded_host_rejected", proxyRequest(proxyTarget.Path+"/web/v1/login/options", "attacker.invalid", "192.0.2.40") == 403)
+	add("direct_loopback_forwarding_spoof_rejected", proxyRequest("/auth/login/options", u.Host, "192.0.2.40") == 403)
+	add("proxy_unconfigured_forwarded_host_rejected", proxyRequest(proxyTarget.Path+"/auth/login/options", "attacker.invalid", "192.0.2.40") == 403)
 	ownIPs := true
 	for i := 0; i < 10; i++ {
-		ownIPs = ownIPs && proxyRequest(proxyTarget.Path+"/web/v1/login/options", u.Host, "192.0.2.40") == 200
+		ownIPs = ownIPs && proxyRequest(proxyTarget.Path+"/auth/login/options", u.Host, "192.0.2.40") == 200
 	}
-	add("system_original_client_ip_rate_bucket", ownIPs && proxyRequest(proxyTarget.Path+"/web/v1/login/options", u.Host, "192.0.2.40") == 429)
-	add("system_distinct_client_ip_not_loopback_bucket", proxyRequest(proxyTarget.Path+"/web/v1/login/options", u.Host, "192.0.2.41") == 200)
+	add("system_original_client_ip_rate_bucket", ownIPs && proxyRequest(proxyTarget.Path+"/auth/login/options", u.Host, "192.0.2.40") == 429)
+	add("system_distinct_client_ip_not_loopback_bucket", proxyRequest(proxyTarget.Path+"/auth/login/options", u.Host, "192.0.2.41") == 200)
 
 }
 func remoteMappingChecks(ctx context.Context, before []byte, u *url.URL, add func(string, bool)) {

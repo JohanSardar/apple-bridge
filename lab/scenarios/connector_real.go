@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -26,21 +25,6 @@ func runConnectorReal(ctx context.Context, s Scenario, level string) Evidence {
 			e.Passed = e.Passed && a.Passed
 		}
 		return e
-	}
-	webBuilt := true
-	for _, args := range [][]string{{"install", "--frozen-lockfile"}, {"build:release"}} {
-		command := exec.CommandContext(ctx, "pnpm", args...)
-		command.Dir = "web"
-		command.Stdout = os.Stderr
-		command.Stderr = os.Stderr
-		if command.Run() != nil {
-			webBuilt = false
-			break
-		}
-	}
-	add("approval_web_built", webBuilt)
-	if !webBuilt {
-		return finish()
 	}
 	err := world.Build(ctx, "sim")
 	add("gateway_embeds_approval_web", err == nil)

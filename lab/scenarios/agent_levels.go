@@ -7,7 +7,6 @@ import (
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/internal/trust"
 	"github.com/JohanSardar/apple-bridge/lab/world"
-	"github.com/coder/websocket/wsjson"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,19 +14,19 @@ import (
 )
 
 func runAgentLevels(ctx context.Context, w *world.World, c *webClient, e *Evidence, add func(string, bool)) {
+	authority, err := trust.Open(w.Gateway.Home)
+	if err != nil {
+		add("authority", false)
+		return
+	}
 	create := func(level string) (trust.Agent, string) {
-		resp, raw, err := c.request("POST", "agents", map[string]any{"name": "Bridge Test " + level, "level": level, "scopes": []string{"messages:write"}})
-		var v struct {
-			Agent trust.Agent `json:"agent"`
-			Token string      `json:"token"`
-		}
-		json.Unmarshal(raw, &v)
-		add("create_"+level, err == nil && resp.StatusCode == 201 && v.Token != "")
-		return v.Agent, v.Token
+		agent, token, err := authority.CreateAgent("Bridge Test "+level, trust.AgentLevel(level), []contracts.Grant{"messages:write"})
+		add("create_"+level, err == nil && token != "")
+		return agent, token
 	}
 	add("message_fixture", w.ControlAction("/messages", map[string]any{"action": "seed", "count": 0}) == nil)
 	var chats contracts.ReadResult
-	err := w.Await(5*time.Second, func() bool {
+	err = w.Await(5*time.Second, func() bool {
 		_, err := world.Request(ctx, w.Gateway, "/v1/op/records.query", contracts.ReadQuery{Collection: "messages.chat"}, &chats)
 		return err == nil && len(chats.Records) == 1
 	})
@@ -35,12 +34,6 @@ func runAgentLevels(ctx context.Context, w *world.World, c *webClient, e *Eviden
 		add("chat_visible", false)
 		return
 	}
-	conn, err := c.socket()
-	if err != nil {
-		add("owner_live", false)
-		return
-	}
-	defer conn.CloseNow()
 	command := func() contracts.Command {
 		raw, _ := json.Marshal(map[string]any{"chat_id": chats.Records[0].ID, "text": "[ab-test " + e.RunID + "] owner-approved agent message"})
 		return contracts.Command{ID: contracts.NewCommandID(), Op: "messages.send", Args: raw, WaitMS: 15000}
@@ -76,15 +69,10 @@ func runAgentLevels(ctx context.Context, w *world.World, c *webClient, e *Eviden
 	other.Args = json.RawMessage(strings.Replace(string(pending.Args), "owner-approved", "changed", 1))
 	code, _ = call(approveToken, other)
 	add("pending_changed_id_conflicts", code == 409)
-	timed, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel()
-	var frame map[string]any
-	err = wsjson.Read(timed, conn, &frame)
-	add("approval_live_event", err == nil && frame["t"] == "approval")
 	resp, raw, err := c.request("GET", "approvals", nil)
 	add("owner_receives_full_text", err == nil && resp.StatusCode == 200 && bytes.Contains(raw, []byte("owner-approved agent message")) && bytes.Contains(raw, []byte("argument_hash")))
 	code, _, _ = agentRequest(ctx, c.origin, approveToken, "GET", "/web/v1/approvals", nil)
-	add("agent_cannot_approve", code == 401)
+	add("agent_cannot_approve", code == 404)
 	start := time.Now()
 	resp, _, err = c.request("POST", "approvals/"+pending.ID, map[string]string{"decision": "approve"})
 	add("owner_approves", err == nil && resp.StatusCode == 200)

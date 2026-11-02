@@ -1,5 +1,5 @@
 id: CAL-FUTURE-RULE-MISMATCH
-feature: web.calendar
+feature: calendar.read
 levels: [sim]
 given: [{world: {replicas: 1}}]
 when: [{calendar_journey: {}}]

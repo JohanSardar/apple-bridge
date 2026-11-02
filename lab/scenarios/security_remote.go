@@ -112,7 +112,7 @@ func securityEndpointSweep(ctx context.Context, origin string, public bool, add 
 		{"GET", "/web/v1/session"}, {"GET", "/web/v1/agents"}, {"GET", "/web/v1/devices"},
 		{"GET", "/web/v1/passkeys"}, {"GET", "/web/v1/activity"}, {"GET", "/web/v1/approvals"},
 		{"GET", "/web/v1/sources"}, {"GET", "/web/v1/live"}, {"POST", "/web/v1/handles"}, {"POST", "/web/v1/lookup"}, {"POST", "/web/v1/upload"}, {"GET", "/web/v1/blob/unknown"}, {"GET", "/web/v1/upload/unknown"},
-		{"POST", "/oauth/authorize"}, {"POST", "/web/v1/approvals/test"},
+		{"POST", "/oauth/authorize"}, {"POST", "/approvals/test"}, {"GET", "/auth/session"}, {"POST", "/auth/passkeys/options"},
 	}
 	if public {
 		paths = append(paths, struct{ method, path string }{"GET", "/v1/health"})
@@ -123,7 +123,7 @@ func securityEndpointSweep(ctx context.Context, origin string, public bool, add 
 	all := true
 	for _, p := range paths {
 		status, _, _ := agentRequest(ctx, origin, "", p.method, p.path, map[string]any{})
-		denied := status == 401 || status == 403
+		denied := status == 401 || status == 403 || strings.HasPrefix(p.path, "/web/v1/") && status == 404
 		all = all && denied
 		if !denied {
 			add("unauthenticated_denied_"+p.method+"_"+p.path, false)

@@ -1,19 +1,18 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[8.66 9.14 10.18] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[5.25 4.55 3.81] cpu_idle=71% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5ER5C4VBV9JXZWJRNZY44BA",
+  "run_id": "run_01M6EY5ETT980YNETPV914W563",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
   "scenario": "WEB-AGENT-LEVELS",
   "level": "sim",
   "passed": true,
-  "git_sha": "f0002e5bb9fad47fa4caf4b7b3d383fd8623f6ff",
-  "at": "2026-10-21T08:10:08.412079Z",
+  "git_sha": "590faa40f8445f912b0d01f38738001e9a725af9",
+  "at": "2026-11-02T20:10:44.442178Z",
   "assertions": [
-    {
-      "name": "agents_available",
-      "passed": true
-    },
     {
       "name": "message_fixture",
       "passed": true
@@ -56,10 +55,6 @@
     },
     {
       "name": "pending_changed_id_conflicts",
-      "passed": true
-    },
-    {
-      "name": "approval_live_event",
       "passed": true
     },
     {
@@ -152,9 +147,9 @@
   "latency": {
     "approval_to_observed": {
       "samples": 1,
-      "p50_ms": 77.27625,
-      "p95_ms": 77.27625,
-      "max_ms": 77.27625,
+      "p50_ms": 77.179125,
+      "p95_ms": 77.179125,
+      "max_ms": 77.179125,
       "timeouts": 0
     }
   },

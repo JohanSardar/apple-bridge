@@ -61,7 +61,7 @@
   - Writes are optimistic.
   - Warm load: under 1 s, showing cached data first.
   - Every number is reported with p50, p95 and max.
-- **Frontend:** SolidJS + TypeScript + Vite with no component library. Our own spring engine on the Web Animations API, View Transitions and our own virtual list.
+- **Frontend:** Main retains server-rendered consent and approval pages with vanilla WebAuthn JavaScript. The full SolidJS app is preserved on the web-app branch.
 - **Data path:**
   - Indexed read models in `state.db`, exposed as ops: `messages.chats` and `messages.thread`, with reactions and edits folded into their messages.
   - One WebSocket per tab for subscriptions, live deltas and command acks.

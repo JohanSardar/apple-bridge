@@ -108,7 +108,7 @@ func TestConnectorPublicRoutesCannotApproveOrLeakLocalRequests(t *testing.T) {
 	}{
 		{"POST", "/oauth/authorize?" + q.Encode(), "http://127.0.0.1:7780", `{"decision":"approve","scopes":["messages:read"]}`, 401},
 		{"POST", "/oauth/pending?" + q.Encode(), "https://attacker.example", "{}", 403},
-		{"GET", "/pending", "", "", 200},
+		{"GET", "/pending", "", "", 404},
 		{"GET", "/oauth/pending/unknown", "", "", 410},
 	} {
 		req := httptest.NewRequest(test.method, "http://127.0.0.1:7780"+test.path, strings.NewReader(test.body))
