@@ -28,3 +28,5 @@ bits = struct.unpack("<Q", struct.pack("<d", base - 978307200))[0]
 crlf_time = struct.unpack("<d", struct.pack("<Q", (bits & ~0xFFFF00) | 0x0A0D00))[0] + 978307200
 assert b"\r\n" in event(crlf_time, 1, "test.synthetic.crlf")[5:13]
 (root / "crlf.segb").write_bytes(container([event(crlf_time, 1, "test.synthetic.crlf"), event(crlf_time + 60, 0, "test.synthetic.crlf")]))
+
+(root / "system-ui.segb").write_bytes(container([event(base, 1, "test.synthetic.alpha"), event(base + 60, 1, "com.apple.universalcontrol"), event(base + 120, 1, "test.synthetic.beta"), event(base + 180, 0, "test.synthetic.beta")]))

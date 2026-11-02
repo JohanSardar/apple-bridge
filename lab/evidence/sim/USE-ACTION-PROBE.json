@@ -1,7 +1,19 @@
 {
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[4.66 4.99 4.48] cpu_idle=85% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M6DB2JN7G20WWZ824PANJE0R",
+  "metrics": {
+    "app_days": 1,
+    "capture_observer_resets": 0,
+    "devices": 1
+  },
   "scenario": "USE-ACTION-PROBE",
   "level": "sim",
   "passed": true,
+  "git_sha": "28ef901667265c377d23a43a22cc0a4551b3d47a",
+  "at": "2026-11-02T05:17:52.679214Z",
   "assertions": [
     {
       "name": "mac_lock_clipped",
@@ -9,6 +21,10 @@
     },
     {
       "name": "replica_converged",
+      "passed": true
+    },
+    {
+      "name": "daily_device_totals_physically_bounded",
       "passed": true
     },
     {
@@ -24,9 +40,8 @@
       "passed": true
     }
   ],
-  "metrics": {
-    "app_days": 1,
-    "capture_observer_resets": 0,
-    "devices": 1
-  }
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
 }

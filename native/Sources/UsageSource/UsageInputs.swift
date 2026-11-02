@@ -43,6 +43,13 @@ public struct UsageInputs: Equatable, Sendable {
             stamps[file.path] = stamp(file.path)
             if FileManager.default.fileExists(atPath: file.path) { guard let value = entry(file) else { return nil }; files.append(value) }
         }
+        if root.standardizedFileURL == FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Biome").standardizedFileURL {
+            for name in ["knowledgeC.db", "knowledgeC.db-wal"] {
+                let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/Knowledge/" + name).path
+                stamps[path] = stamp(path)
+                if let value = entry(URL(fileURLWithPath: path)) { files.append(value) }
+            }
+        }
         guard !failure else { return nil }
         self.files = files.sorted()
         self.stamps = stamps

@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[3.98 5.06 9.16] cpu_idle=47% cpus=8 other_heavy=0"
+    "summary": "air: load=[5.42 4.92 4.33] cpu_idle=54% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M645QQD7GKZ82WR9WK256HQT",
+  "run_id": "run_01M6DAXAAGGEV5NEYWTY7235SY",
   "metrics": {
     "app_days": 2,
     "capture_observer_resets": 0,
@@ -12,8 +12,8 @@
   "scenario": "USE-REMOTE-LAG",
   "level": "sim",
   "passed": true,
-  "git_sha": "1072adab174a7e89586b0dbb52b1a34150794f09",
-  "at": "2026-10-29T15:51:24.327511Z",
+  "git_sha": "28ef901667265c377d23a43a22cc0a4551b3d47a",
+  "at": "2026-11-02T05:15:00.304407Z",
   "assertions": [
     {
       "name": "mac_lock_clipped",
@@ -36,6 +36,10 @@
       "passed": true
     },
     {
+      "name": "daily_device_totals_physically_bounded",
+      "passed": true
+    },
+    {
       "name": "provenance_and_device_freshness",
       "passed": true
     },
@@ -47,9 +51,9 @@
   "latency": {
     "batch_to_gateway_ms": {
       "samples": 1,
-      "p50_ms": 16.341,
-      "p95_ms": 16.341,
-      "max_ms": 16.341,
+      "p50_ms": 14.891,
+      "p95_ms": 14.891,
+      "max_ms": 14.891,
       "timeouts": 0
     }
   },

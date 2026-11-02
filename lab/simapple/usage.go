@@ -71,6 +71,10 @@ func (f *fakeApple) usageControl(mux *http.ServeMux) {
 					rows[key] = row
 				}
 				seconds := math.Max(0, math.Min(until, credited)-cursor)
+				switch current.Bundle {
+				case "com.apple.universalcontrol", "com.apple.UserNotificationCenter", "com.apple.systempreferences", "com.apple.controlcenter", "com.apple.notificationcenterui":
+					seconds = 0
+				}
 				row["seconds_estimated"] = row["seconds_estimated"].(float64) + seconds
 				row["clipped_seconds"] = row["clipped_seconds"].(float64) + until - cursor - seconds
 				row["sessions"] = row["sessions"].(float64) + 1
@@ -108,7 +112,7 @@ func (f *fakeApple) usageControl(mux *http.ServeMux) {
 		if locked > 0 {
 			closeSession(locked)
 		}
-		add("usage.device", batch.Device, map[string]any{"name": "Synthetic Device", "platform": batch.Platform, "build": "sim", "is_local": batch.Device == "local", "latest_event_at": time.Unix(0, int64(latest*1e9)).UTC().Format(time.RFC3339Nano), "provenance": "biome.app_infocus", "decoder_version": "infocus-segb-1"})
+		add("usage.device", batch.Device, map[string]any{"name": "Synthetic " + batch.Platform + " " + batch.Device, "platform": batch.Platform, "build": "sim", "is_local": batch.Device == "local", "latest_event_at": time.Unix(0, int64(latest*1e9)).UTC().Format(time.RFC3339Nano), "provenance": "biome.app_infocus", "decoder_version": "infocus-segb-1"})
 		for key, row := range rows {
 			add("usage.app_day", key, row)
 		}

@@ -8,7 +8,7 @@ import SourceSupport
 @MainActor
 public final class UsageSource: Source {
     public nonisolated let name = "usage"
-    public static let coverage: JSON = .object(["fields": .string("estimated"), "missing": .array([.string("settings_parity: unproven"), .string("historical sleep without focus lock evidence"), .string("device names/build unavailable where absent from DevicePeer"), .string("remote batches may lag")])])
+    public static let coverage: JSON = .object(["fields": .string("estimated"), "missing": .array([.string("settings_parity: unproven"), .string("historical lock/sleep gaps outside local knowledgeC evidence"), .string("remote names unavailable where absent from DevicePeer; distinct platform/id fallback"), .string("remote batches may lag")])])
     private let root: URL
     private var committed: [String: JSON] = [:]
     private var generation = UUID().uuidString
@@ -32,7 +32,10 @@ public final class UsageSource: Source {
         while step == SQLITE_ROW {
             let model = text(4).lowercased(), platform = sqlite3_column_int(statement, 2)
             let kind = platform == 3 ? "mac" : (model.contains("ipad") ? "ipad" : (platform == 2 ? "iphone" : "unknown"))
-            peers.append((text(0), text(1), kind, sqlite3_column_int(statement, 3) != 0))
+            let local = sqlite3_column_int(statement, 3) != 0
+            let name = text(1).trimmingCharacters(in: .whitespacesAndNewlines)
+            let resolved = name.isEmpty ? (local ? Host.current().localizedName ?? "Mac " + String(text(0).prefix(8)) : kind + " " + String(text(0).prefix(8))) : name
+            peers.append((text(0), resolved, kind, local))
             step = sqlite3_step(statement)
         }
         guard step == SQLITE_DONE else { throw SourceFailure.unavailable }
@@ -56,6 +59,7 @@ public final class UsageSource: Source {
         let base = root.appendingPathComponent("streams/restricted/App.InFocus")
         var current: [String: JSON] = [:]
         let peers = try peers()
+        let blocked = UsageHistory.blocked()
         guard peers.contains(where: { $0.3 }) else { throw SourceFailure.unavailable }
         for (identifier, deviceName, platform, local) in peers {
             let directory = local ? base.appendingPathComponent("local") : base.appendingPathComponent("remote/" + identifier)
@@ -64,8 +68,8 @@ public final class UsageSource: Source {
             if local { input += power }
             let latest = input.map(\.time).max()
             let key = "usage.device/" + identifier
-            current[key] = .object(["name": .string(deviceName.isEmpty ? "Unnamed device" : deviceName), "name_status": .string(deviceName.isEmpty ? "unavailable" : "present"), "platform": .string(platform), "build": .string("unavailable"), "is_local": .bool(local), "latest_event_at": latest.map { .string(timestamp(Date(timeIntervalSince1970: $0))) } ?? .null, "provenance": .string("biome.app_infocus"), "decoder_version": .string(InFocus.version)])
-            for (key, value) in UsageRollup.records(input, device: identifier, mac: platform == "mac") { current["usage.app_day/" + key] = value }
+            current[key] = .object(["name": .string(deviceName), "name_status": .string(local ? "local_host_or_peer" : (deviceName == platform + " " + String(identifier.prefix(8)) ? "platform_id_fallback" : "peer_metadata")), "platform": .string(platform), "build": .string("unavailable"), "is_local": .bool(local), "latest_event_at": latest.map { .string(timestamp(Date(timeIntervalSince1970: $0))) } ?? .null, "provenance": .string("biome.app_infocus"), "decoder_version": .string(InFocus.version)])
+            for (key, value) in UsageRollup.records(input, device: identifier, mac: platform == "mac", blocked: local ? blocked : []) { current["usage.app_day/" + key] = value }
         }
         var observations: [JSON] = []
         let ordered = current.keys.sorted { a, b in
