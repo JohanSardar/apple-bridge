@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M549KKN68F1RNCPG9007KF9X",
   "scenario": "CORE-LIVE-LATENCY",
   "level": "real",

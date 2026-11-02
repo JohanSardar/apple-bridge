@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "at": "2026-10-18T21:15:31.153893+00:00",
   "appletruth_status": "verified",
   "visible_tagged_remaining": 0,

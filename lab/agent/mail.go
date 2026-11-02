@@ -51,7 +51,7 @@ func Mail(ctx context.Context, asJSON bool) error {
 	outcome, err := runner.execute(ctx, w, Task{ID: "MAIL-AGENT", Scope: "mail:read"}, 1, "Use only apple_bridge MCP tools to find the email whose subject contains "+tag+". Return its complete subject and nothing else.", nil)
 	passed := err == nil && outcome.Exit == 0 && outcome.Calls > 0 && outcome.Forbidden == 0 && strings.TrimSpace(outcome.Answer) == "[ab-test "+tag+"] synthetic email"
 	sha, _ := exec.CommandContext(ctx, "git", "rev-parse", "HEAD").Output()
-	evidence := map[string]any{"at": time.Now().UTC(), "git_sha": strings.TrimSpace(string(sha)), "scenario": "MAIL-AGENT", "level": "agent", "passed": passed, "exit_code": outcome.Exit, "mcp_calls": outcome.Calls, "forbidden_calls": outcome.Forbidden, "mcp_only": outcome.Calls > 0 && outcome.Forbidden == 0}
+	evidence := map[string]any{"impl": "go", "at": time.Now().UTC(), "git_sha": strings.TrimSpace(string(sha)), "scenario": "MAIL-AGENT", "level": "agent", "passed": passed, "exit_code": outcome.Exit, "mcp_calls": outcome.Calls, "forbidden_calls": outcome.Forbidden, "mcp_only": outcome.Calls > 0 && outcome.Forbidden == 0}
 	if !passed {
 		evidence["failure"] = "agent_execution_or_answer"
 		if log, readErr := os.ReadFile(filepath.Join(private, "MAIL-AGENT-1", "stderr.log")); readErr == nil && strings.Contains(string(log), "token_revoked") {

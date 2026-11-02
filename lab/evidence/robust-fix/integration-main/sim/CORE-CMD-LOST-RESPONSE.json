@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M55FP3DF0ZEP9QXRM5A9N46G",
   "network_path": "loopback",
   "scenario": "CORE-CMD-LOST-RESPONSE",

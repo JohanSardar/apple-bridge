@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "base": "0b1b83e",
   "scenario": "WEB-CONTACT-AVATAR-THUMB",
   "matrix": [

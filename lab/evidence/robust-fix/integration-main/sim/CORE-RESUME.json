@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M55FRXFY3ECK71EXM5935PTH",
   "network_path": "loopback",
   "scenario": "CORE-RESUME",

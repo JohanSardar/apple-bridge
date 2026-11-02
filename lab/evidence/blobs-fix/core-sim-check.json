@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "command": "APPLE_BRIDGE_LAB_CONTENDED_BENCH=1 packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/core --level sim",
   "exit_code": 0,
   "scenarios": [

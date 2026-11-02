@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "command": "go run ./cmd/bridge-lab run lab/scenarios/core --level sim --require-quiet",
   "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
   "exit_code": 1,

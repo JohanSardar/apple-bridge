@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "stage": "before_gateway_commit",
   "first_failing_source": "contacts",
   "capture_failures": 76,

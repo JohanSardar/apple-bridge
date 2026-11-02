@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "purpose": "Baseline before the authenticated four-timestamp exchange replaces receive-minus-send transit estimates",
   "scenarios": [
     {

@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "date": "2026-10-17",
   "level": "real",
   "scope": "unlocked Messages and login-Keychain follow-up",

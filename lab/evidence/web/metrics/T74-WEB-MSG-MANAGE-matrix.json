@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "scenario": "WEB-MSG-MANAGE",
   "passed": true,
   "projects": {

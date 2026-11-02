@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "scenario": "RMT-PRIVATE-CONNECT",
   "level": "sim",
   "at": "2026-10-28T15:16:28.095088Z",

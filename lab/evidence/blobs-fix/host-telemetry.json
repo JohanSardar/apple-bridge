@@ -4,54 +4,63 @@
     "at": "2026-10-17T05:41:41.881615+00:00",
     "load_average": "{ 4.50 7.25 8.16 }",
     "process_cpu_percent_sum": 423.69999999999993,
-    "active_and_queued_heavy_wrappers": 0
+    "active_and_queued_heavy_wrappers": 0,
+    "impl": "go"
   },
   {
     "phase": "core-sim-in-progress",
     "at": "2026-10-17T05:43:49.679294+00:00",
     "load_average": "{ 7.28 7.07 7.94 }",
-    "process_cpu_percent_sum": 362.40000000000015
+    "process_cpu_percent_sum": 362.40000000000015,
+    "impl": "go"
   },
   {
     "phase": "before-final-process-restart-verification",
     "at": "2026-10-17T05:52:35.335161+00:00",
     "load_average": "{ 6.16 8.07 8.41 }",
-    "process_cpu_percent_sum": 371.7
+    "process_cpu_percent_sum": 371.7,
+    "impl": "go"
   },
   {
     "phase": "after-final-checks",
     "at": "2026-10-17T05:56:39.647667+00:00",
     "load_average": "{ 4.91 6.41 7.59 }",
-    "process_cpu_percent_sum": 354.8
+    "process_cpu_percent_sum": 354.8,
+    "impl": "go"
   },
   {
     "phase": "after-final-checks",
     "at": "2026-10-17T06:12:47.235971+00:00",
     "load_average": "{ 9.46 7.82 7.37 }",
-    "process_cpu_percent_sum": 516.0
+    "process_cpu_percent_sum": 516.0,
+    "impl": "go"
   },
   {
     "phase": "final-session-fence-verification-requested",
     "at": "2026-10-17T06:13:35.855510+00:00",
     "load_average": "{ 8.49 7.81 7.39 }",
-    "process_cpu_percent_sum": 372.5
+    "process_cpu_percent_sum": 372.5,
+    "impl": "go"
   },
   {
     "phase": "after-final-checks",
     "at": "2026-10-17T06:26:02.349797+00:00",
     "load_average": "{ 8.60 13.40 11.50 }",
-    "process_cpu_percent_sum": 569.0
+    "process_cpu_percent_sum": 569.0,
+    "impl": "go"
   },
   {
     "phase": "after-final-checks",
     "at": "2026-10-17T06:54:28.471803+00:00",
     "load_average": "{ 10.33 9.31 9.83 }",
-    "process_cpu_percent_sum": 644.9
+    "process_cpu_percent_sum": 644.9,
+    "impl": "go"
   },
   {
     "phase": "after-final-checks",
     "at": "2026-10-17T18:02:01.673167+00:00",
     "load_average": "{ 7.74 9.16 12.95 }",
-    "process_cpu_percent_sum": 397.2
+    "process_cpu_percent_sum": 397.2,
+    "impl": "go"
   }
 ]

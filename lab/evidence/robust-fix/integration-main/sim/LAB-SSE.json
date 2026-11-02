@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M55FWH9FF4K55P3QBW34ND66",
   "network_path": "loopback",
   "scenario": "LAB-SSE",

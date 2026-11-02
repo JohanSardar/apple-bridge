@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "scenario": "MSG-SEND-FILES",
   "file_bytes": 5242880,
   "transport": "private staged blob path and digest; no file bytes in native IPC",

@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "scenario": "REM-STORE-PERF",
   "purpose": "Determine whether sim A/B measures the Swift enrichment change",
   "original_gateway_sha256": {

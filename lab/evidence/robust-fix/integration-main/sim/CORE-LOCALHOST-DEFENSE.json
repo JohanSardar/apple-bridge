@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M55FRND25942REVTSSA84GP8",
   "network_path": "loopback",
   "scenario": "CORE-LOCALHOST-DEFENSE",

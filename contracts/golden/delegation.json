@@ -1,0 +1,6 @@
+{
+  "header": "eyJyZXBsaWNhX2lkIjoicmVwbGljYS1maXh0dXJlIiwibG9jYWxfcHJpbmNpcGFsIjoidG9rZW46Zml4dHVyZSIsImxvY2FsX2dyYW50cyI6WyJjb250YWN0czpyZWFkIl0sImNvbW1hbmRfaWQiOiJjbWQtZml4dHVyZSIsInJlcXVlc3RfaGFzaCI6Imhhc2gtZml4dHVyZSIsImlhdCI6MTc2NzMyMzA0NX0.brIQahOnPWSTme4bUzthNFMnF_ttN_OeNX6btfHX7Zp_3kCHL0rpPuCpLuYIec-ZzKHMG731AmmAxxuo823ECQ",
+  "impl": "go",
+  "public_key": "GX9rI-FshTLGq8g4-s1ep4m-DHaykgM0A5v6iz02jWE",
+  "raw": "{\"replica_id\":\"replica-fixture\",\"local_principal\":\"token:fixture\",\"local_grants\":[\"contacts:read\"],\"command_id\":\"cmd-fixture\",\"request_hash\":\"hash-fixture\",\"iat\":1767323045}"
+}

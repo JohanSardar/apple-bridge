@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "verdict": "incomplete_performance_acceptance",
   "source_commit": "6afff21",
   "checks": {

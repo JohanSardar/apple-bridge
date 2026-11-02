@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M55FWH8QFPTRW90VXR1SQBBD",
   "scenario": "LAB-MALFORMED-SCENARIO",
   "level": "sim",

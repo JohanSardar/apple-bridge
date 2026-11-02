@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "scenario": "SC-RUN-REAL",
   "level": "sim",
   "passed": true,

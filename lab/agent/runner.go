@@ -44,6 +44,7 @@ type TaskResult struct {
 	Attempts []Attempt `json:"attempts"`
 }
 type Evidence struct {
+	Impl     string       `json:"impl"`
 	RunID    string       `json:"run_id"`
 	Scenario string       `json:"scenario"`
 	Level    string       `json:"level"`
@@ -61,6 +62,14 @@ type outcome struct {
 	Calls     int    `json:"mcp_calls"`
 	Forbidden int    `json:"forbidden_calls"`
 	Answer    string `json:"answer"`
+}
+
+func (e Evidence) MarshalJSON() ([]byte, error) {
+	type value Evidence
+	if e.Impl == "" {
+		e.Impl = "go"
+	}
+	return json.Marshal(value(e))
 }
 
 func Suite(ctx context.Context, paths []string, asJSON bool) error {

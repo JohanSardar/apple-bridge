@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "scenario": "CLK-ALARM-REAL",
   "level": "real",
   "passed": true,

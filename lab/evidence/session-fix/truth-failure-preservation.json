@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "directory_mode": "0700",
   "errors_is_unverified": true,
   "kind": "real_appletruth_failure_probe",

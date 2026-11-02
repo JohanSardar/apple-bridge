@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "scenario": "REM-STORE-PERF",
   "kind": "excluded_sim_diagnostic",
   "method": "Original sim A/B/A/B, shared normal gate, 200 samples each; zero-based chronological indexes retained only for A2/B2",

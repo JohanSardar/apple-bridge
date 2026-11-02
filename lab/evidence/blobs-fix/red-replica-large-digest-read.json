@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M55FYTBATK4TM0SXM9PPZF6D",
   "network_path": "ssh_tunnel",
   "metrics": {

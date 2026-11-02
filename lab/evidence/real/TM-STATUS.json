@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M67CEGQDH1A5E7DK2SSS49J4",
   "metrics": {
     "capture_observer_resets": 0

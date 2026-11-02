@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M55FP6YYB0Y0TY0NP3DRNRNW",
   "network_path": "loopback",
   "scenario": "CORE-DISCONNECT-DETECT",

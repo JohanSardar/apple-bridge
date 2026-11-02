@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "scenario": "REM-STORE-PERF",
   "level": "real",
   "phase": "backup_per_read_baseline",

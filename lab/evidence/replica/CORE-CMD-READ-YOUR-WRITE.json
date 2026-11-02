@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M549YV0V0Z2Q73JVHKZ9MZM6",
   "network_path": "ssh_fallback_direct_tcp_timeout",
   "scenario": "CORE-CMD-READ-YOUR-WRITE",

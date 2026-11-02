@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M55FXG6J2J0T5E8JQ8BKW9K0",
   "network_path": "loopback",
   "scenario": "REM-CRUD",

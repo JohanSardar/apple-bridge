@@ -1,0 +1,14 @@
+{
+  "ephemeral_private_hex": "1717171717171717171717171717171717171717171717171717171717171717",
+  "impl": "go",
+  "info": "device-fixture",
+  "packet": {
+    "ephemeral_key": "8T/vPvqVmKKiP8dWv2iP6LvX9s+VKLuu87REJojwqzE=",
+    "box": "Hx8fHx8fHx8fHx8fetuF8gd6EiQrOerSmko+Q2aQW0yhNpqVJK9jQs+huQ9bHMu57Ay1JTiiHyUYh3uZaULdMbkDr0hm5uc9h176sOk3+vdGyq/ZyQ==",
+    "signature": "aDL16l/TAUzQk3eN+DEioq06xXfcLwZKrwZtj/NhaE2XtquJlj4aGO207j5KE4IJPJ5AzWomK1rDhDwXmOUQAA=="
+  },
+  "plaintext": "{\"command_id\":\"cmd-fixture\",\"op\":\"iphone.ping\",\"args\":{}}",
+  "recipient_private_hex": "1111111111111111111111111111111111111111111111111111111111111111",
+  "salt": "apple-bridge-iphone/1",
+  "signing_seed_hex": "2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a"
+}

@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "unit": "Helper session and Reminders native acceptance",
   "passed": true,
   "tested_code_revision": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b",

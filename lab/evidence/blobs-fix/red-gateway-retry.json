@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "scenario": "CORE-BLOB-GATEWAY-RETRY",
   "level": "sim",
   "passed": false,

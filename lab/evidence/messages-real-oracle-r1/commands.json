@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "source_sha": "665b5e81251e86c80e45d8202a0e7ab5a692443e",
   "wrapper": "packaging/dev/heavy.sh python3 lab/evidence/private/verify-messages-real.py",
   "transport": "ssh -o ControlPath=none air",

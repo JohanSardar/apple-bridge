@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "scenario": "NATIVE-MEDIA-EXPORT-SAFETY",
   "level": "sim",
   "run_id": "run_01M5G8NNP18Z5G3N9DADQKD6TH",

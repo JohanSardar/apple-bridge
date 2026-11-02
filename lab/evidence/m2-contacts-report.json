@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "unit": "M2 Contacts",
   "merge_policy": "Leader small-fix instruction: targeted CON-CRUD sim and Ubuntu replica verification, no review",
   "verified_source_before_scope_metadata_rebase": "4bc9adb775b46b559c84183d914a7d70d7d14e4e",

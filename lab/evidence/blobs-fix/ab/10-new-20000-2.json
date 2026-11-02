@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "order": 10,
   "variant": "new",
   "rows": 20000,

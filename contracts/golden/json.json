@@ -1,0 +1,40 @@
+{
+  "impl": "go",
+  "rfc3339nano": [
+    "2026-01-02T03:04:05+05:30",
+    "2026-01-02T03:04:05.000000001+05:30",
+    "2026-01-02T03:04:05.000001+05:30",
+    "2026-01-02T03:04:05.123+05:30",
+    "2026-01-02T03:04:05.123456789+05:30"
+  ],
+  "vectors": [
+    {
+      "command_hash": "66b65ec83d93e1d48f5a3167f819091e9eb96e3281be5e6a74ab005793538c04",
+      "command_preimage": "{\"Op\":\"fixture.op\",\"Args\":{\"a\":1.0,\"b\":1e0,\"c\":-0,\"d\":-0.0,\"z\":9007199254740993},\"Version\":7,\"Expires\":\"2026-01-02T03:04:05.123456789Z\",\"Era\":\"era-fixture\"}",
+      "input": "{\"z\":9007199254740993,\"a\":1.0,\"b\":1e0,\"c\":-0,\"d\":-0.0}",
+      "query": "{\"a\":1.0,\"b\":1e0,\"c\":-0,\"d\":-0.0,\"z\":9007199254740993}",
+      "record_data": "{\"a\":1.0,\"b\":1e0,\"c\":-0,\"d\":-0.0,\"z\":9007199254740993}"
+    },
+    {
+      "command_hash": "1eea1ede58663fba5b6039718c5b5e3af669fbbd883be886ff67145beb7eaab5",
+      "command_preimage": "{\"Op\":\"fixture.op\",\"Args\":{\"array\":[],\"null\":null,\"text\":\"雪 😀 \\u003c\\u003e\\u0026 \\u2028\\u2029\"},\"Version\":7,\"Expires\":\"2026-01-02T03:04:05.123456789Z\",\"Era\":\"era-fixture\"}",
+      "input": "{\"text\":\"雪 😀 \u003c\u003e\u0026 \\u2028\\u2029\",\"null\":null,\"array\":[]}",
+      "query": "{\"array\":[],\"null\":null,\"text\":\"雪 😀 \u003c\u003e\u0026 \\u2028\\u2029\"}",
+      "record_data": "{\"array\":[],\"null\":null,\"text\":\"雪 😀 \\u003c\\u003e\\u0026 \\u2028\\u2029\"}"
+    },
+    {
+      "command_hash": "8ad191b0a942021fdd98fb3d5cad550a5d1581987a2d6c3fac1944cdc45031a7",
+      "command_preimage": "{\"Op\":\"fixture.op\",\"Args\":{\"e\":1E+09,\"n\":123456789012345678901234567890,\"small\":1e-09},\"Version\":7,\"Expires\":\"2026-01-02T03:04:05.123456789Z\",\"Era\":\"era-fixture\"}",
+      "input": "{\"n\":123456789012345678901234567890,\"e\":1E+09,\"small\":1e-09}",
+      "query": "{\"e\":1E+09,\"n\":123456789012345678901234567890,\"small\":1e-09}",
+      "record_data": "{\"e\":1E+09,\"n\":123456789012345678901234567890,\"small\":1e-09}"
+    },
+    {
+      "command_hash": "cc10c7fe618b89938dbc9c6465b9fe82e1ed6ee8131fc9b8ffdfec020a6e04f2",
+      "command_preimage": "{\"Op\":\"fixture.op\",\"Args\":{\"duplicate\":2},\"Version\":7,\"Expires\":\"2026-01-02T03:04:05.123456789Z\",\"Era\":\"era-fixture\"}",
+      "input": "{\"duplicate\":1,\"duplicate\":2}",
+      "query": "{\"duplicate\":2}",
+      "record_data": "{\"duplicate\":2}"
+    }
+  ]
+}

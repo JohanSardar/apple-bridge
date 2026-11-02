@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "scenario": "NOTE-EXTRAS",
   "level": "real",
   "run_id": "notes-extras_01M6B1AGPTZVNDWPEDN4M6Z4JH",

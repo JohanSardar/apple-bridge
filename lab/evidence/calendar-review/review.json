@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "reviewed_range": "ea2c5c4..85ac1fc",
   "real_runs_before_fixes": 0,
   "findings": [

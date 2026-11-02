@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "kind": "core_reminders_sim_acceptance",
   "total_scenario_files": 56,
   "unique_scenario_ids": 56,

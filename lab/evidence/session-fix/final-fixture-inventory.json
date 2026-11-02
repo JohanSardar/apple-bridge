@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "kind": "real_final_reminders_inventory",
   "passed": true,
   "all_lists_positive_control": true,

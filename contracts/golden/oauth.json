@@ -1,0 +1,41 @@
+{
+  "exchanges": [
+    {
+      "body": "",
+      "method": "GET",
+      "path": "/.well-known/oauth-protected-resource",
+      "response": "{\"authorization_servers\":[\"http://localhost:7780\"],\"bearer_methods_supported\":[\"header\"],\"resource\":\"http://localhost:7780/mcp\",\"scopes_supported\":[\"audio:read\",\"audio:write\",\"calendar:read\",\"calendar:write\",\"contacts:read\",\"contacts:write\",\"files:read\",\"files:write\",\"focus:read\",\"focus:write\",\"health:read\",\"health:write\",\"iphone:read\",\"iphone:write\",\"mac:read\",\"mac:write\",\"mail:read\",\"mail:write\",\"location:read\",\"location:write\",\"maps:read\",\"maps:write\",\"messages:read\",\"messages:write\",\"notes:read\",\"notes:write\",\"pdf:read\",\"pdf:write\",\"phone:read\",\"phone:write\",\"capture:read\",\"capture:write\",\"print:read\",\"print:write\",\"voice_memos:read\",\"voice_memos:write\",\"voicemail:read\",\"voicemail:write\",\"reminders:read\",\"reminders:write\",\"safari:read\",\"safari:write\",\"shortcuts:read\",\"shortcuts:write\",\"speech:read\",\"speech:write\",\"usage:read\",\"usage:write\",\"vision:read\",\"vision:write\"]}\n",
+      "status": 200
+    },
+    {
+      "body": "",
+      "method": "GET",
+      "path": "/.well-known/oauth-authorization-server",
+      "response": "{\"authorization_endpoint\":\"http://localhost:7780/oauth/authorize\",\"authorization_response_iss_parameter_supported\":true,\"client_id_metadata_document_supported\":true,\"code_challenge_methods_supported\":[\"S256\"],\"grant_types_supported\":[\"authorization_code\",\"refresh_token\"],\"issuer\":\"http://localhost:7780\",\"registration_endpoint\":\"http://localhost:7780/oauth/register\",\"response_types_supported\":[\"code\"],\"scopes_supported\":[\"audio:read\",\"audio:write\",\"calendar:read\",\"calendar:write\",\"contacts:read\",\"contacts:write\",\"files:read\",\"files:write\",\"focus:read\",\"focus:write\",\"health:read\",\"health:write\",\"iphone:read\",\"iphone:write\",\"mac:read\",\"mac:write\",\"mail:read\",\"mail:write\",\"location:read\",\"location:write\",\"maps:read\",\"maps:write\",\"messages:read\",\"messages:write\",\"notes:read\",\"notes:write\",\"pdf:read\",\"pdf:write\",\"phone:read\",\"phone:write\",\"capture:read\",\"capture:write\",\"print:read\",\"print:write\",\"voice_memos:read\",\"voice_memos:write\",\"voicemail:read\",\"voicemail:write\",\"reminders:read\",\"reminders:write\",\"safari:read\",\"safari:write\",\"shortcuts:read\",\"shortcuts:write\",\"speech:read\",\"speech:write\",\"usage:read\",\"usage:write\",\"vision:read\",\"vision:write\"],\"token_endpoint\":\"http://localhost:7780/oauth/token\",\"token_endpoint_auth_methods_supported\":[\"none\"]}\n",
+      "status": 200
+    },
+    {
+      "body": "{\"decision\":\"approve\",\"level\":\"read\",\"scopes\":[\"messages:read\"]}",
+      "method": "POST",
+      "path": "/oauth/authorize?client_id=client-fixture\u0026code_challenge=ZtNPunH49FD35FWYhT5Tv8I7vRKQJ8uxMaL0_9eHjNA\u0026code_challenge_method=S256\u0026redirect_uri=https%3A%2F%2Fconnector.example%2Fcallback\u0026resource=http%3A%2F%2Flocalhost%3A7780%2Fmcp\u0026response_type=code\u0026scope=messages%3Aread\u0026state=fixture",
+      "response": "{\"redirect\":\"https://connector.example/callback?code=code-fixture\\u0026iss=http%3A%2F%2Flocalhost%3A7780\\u0026state=fixture\"}\n",
+      "status": 200
+    },
+    {
+      "body": "client_id=client-fixture\u0026code=code-fixture\u0026code_verifier=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\u0026grant_type=authorization_code\u0026redirect_uri=https%3A%2F%2Fconnector.example%2Fcallback\u0026resource=http%3A%2F%2Flocalhost%3A7780%2Fmcp",
+      "method": "POST",
+      "path": "/oauth/token",
+      "response": "{\"access_token\":\"access_token-fixture\",\"token_type\":\"Bearer\",\"expires_in\":3600,\"refresh_token\":\"refresh_token-fixture\",\"scope\":\"messages:read\"}\n",
+      "status": 200
+    },
+    {
+      "body": "client_id=client-fixture\u0026grant_type=refresh_token\u0026refresh_token=refresh_token-fixture\u0026resource=http%3A%2F%2Flocalhost%3A7780%2Fmcp",
+      "method": "POST",
+      "path": "/oauth/token",
+      "response": "{\"access_token\":\"access_token-fixture\",\"token_type\":\"Bearer\",\"expires_in\":3600,\"refresh_token\":\"refresh_token-fixture\",\"scope\":\"messages:read\"}\n",
+      "status": 200
+    }
+  ],
+  "impl": "go",
+  "normalization": "random client IDs, codes and tokens are replaced with named synthetic values; bodies retain wire formatting"
+}

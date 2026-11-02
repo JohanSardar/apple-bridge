@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M55GEZHRTN2EGEYJSQD50A99",
   "scenario": "REM-CREATE-EXTERNAL",
   "level": "real",

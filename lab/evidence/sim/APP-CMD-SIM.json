@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "passed": true,
   "assertions": [
     {

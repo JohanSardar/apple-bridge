@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M549XVN29YJ89D86XNW7NFD4",
   "network_path": "ssh_fallback_direct_tcp_timeout",
   "scenario": "CORE-CMD-LOST-RESPONSE",

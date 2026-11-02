@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "scenario": "APP-BUILD-REAL",
   "level": "real",
   "passed": true,

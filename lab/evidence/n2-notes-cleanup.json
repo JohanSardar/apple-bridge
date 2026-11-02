@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "captured_owned_notes": 4,
   "permanently_deleted_owned_notes": 4,
   "captured_empty_owned_folders": 2,

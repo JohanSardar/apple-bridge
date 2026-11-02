@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "checks": {
     "signed_device_build": true,
     "device_install": false,

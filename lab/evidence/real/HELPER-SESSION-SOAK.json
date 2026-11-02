@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M55EYM8X5KMSE4B3D24ZQXR5",
   "scenario": "HELPER-SESSION-SOAK",
   "level": "real",

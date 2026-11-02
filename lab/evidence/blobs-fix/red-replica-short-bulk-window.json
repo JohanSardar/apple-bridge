@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M55FAKW2NDWM2G391EGP6MFS",
   "network_path": "ssh_tunnel",
   "scenario": "CORE-BLOB-INTERRUPT",

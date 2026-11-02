@@ -1,0 +1,10 @@
+{
+  "X-Bridge-Proof": "eyJob3N0bmFtZSI6ImZpeHR1cmUuZXhhbXBsZS5jb20iLCJjcmVkZW50aWFsIjoic3ludGhldGljLWNyZWRlbnRpYWwiLCJub25jZSI6InN5bnRoZXRpYy1ub25jZSIsInNpZ25hdHVyZSI6IjJxNTdGRlNBM3hVckh2TnFwRUx5bWZ2dENYSFNoNEV0RVVDRjhHYVVtTEhlRjhCNHlDQi1MaHhwUkk3SnloVFBibE9hSi1GTnd0U1JDWnpoWjJ4aEJnIn0",
+  "challenge_response": "{\"nonce\":\"synthetic-nonce\"}",
+  "impl": "go",
+  "proof_json": "{\"hostname\":\"fixture.example.com\",\"credential\":\"synthetic-credential\",\"nonce\":\"synthetic-nonce\",\"signature\":\"2q57FFSA3xUrHvNqpELymfvtCXHSh4EtEUCF8GaUmLHeF8B4yCB-LhxpRI7JyhTPblOaJ-FNwtSRCZzhZ2xhBg\"}",
+  "proof_message": "apple-bridge-relay/1\ntunnel\nfixture.example.com\nsynthetic-credential\nsynthetic-nonce",
+  "public_key": "GX9rI-FshTLGq8g4-s1ep4m-DHaykgM0A5v6iz02jWE",
+  "request": "GET /tunnel",
+  "smux_version": 2
+}

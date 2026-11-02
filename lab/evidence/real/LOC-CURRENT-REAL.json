@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "scenario": "LOC-CURRENT-REAL",
   "level": "real",
   "passed": true,

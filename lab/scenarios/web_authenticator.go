@@ -1,6 +1,7 @@
 package scenarios
 
 import (
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -9,6 +10,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"slices"
 )
 
 type webAuthenticator struct {
@@ -49,14 +51,26 @@ func webCBOR(value any) []byte {
 		return cborHead(1, -1-v)
 	case map[string]any:
 		b := cborHead(5, len(v))
-		for key, item := range v {
+		keys := make([]string, 0, len(v))
+		for key := range v {
+			keys = append(keys, key)
+		}
+		slices.Sort(keys)
+		for _, key := range keys {
+			item := v[key]
 			b = append(b, webCBOR(key)...)
 			b = append(b, webCBOR(item)...)
 		}
 		return b
 	case map[int]any:
 		b := cborHead(5, len(v))
-		for key, item := range v {
+		keys := make([]int, 0, len(v))
+		for key := range v {
+			keys = append(keys, key)
+		}
+		slices.Sort(keys)
+		for _, key := range keys {
+			item := v[key]
 			b = append(b, webCBOR(key)...)
 			b = append(b, webCBOR(item)...)
 		}
@@ -95,7 +109,7 @@ func (a *webAuthenticator) credential(create bool, challenge, origin, rp string)
 	} else {
 		clientHash := sha256.Sum256(client)
 		signed := sha256.Sum256(append(append([]byte{}, auth...), clientHash[:]...))
-		signature, err := ecdsa.SignASN1(rand.Reader, a.Key, signed[:])
+		signature, err := a.Key.Sign(nil, signed[:], crypto.SHA256)
 		if err != nil {
 			return nil, err
 		}

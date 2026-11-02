@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "kind": "review_baseline_crash_reports",
   "matching_reports": 27,
   "samples": [

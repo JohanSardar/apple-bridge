@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "at": "2026-10-30T21:43:46.011625Z",
   "exit_code": 0,
   "forbidden_calls": 0,

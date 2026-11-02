@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M55FNT8KZQWXSHTBT0SPMY2J",
   "network_path": "loopback",
   "scenario": "CORE-CMD-CLOCK-JUMP",

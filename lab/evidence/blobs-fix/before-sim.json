@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "scenario": "CORE-BLOB-INTERRUPT",
   "level": "sim",
   "passed": true,

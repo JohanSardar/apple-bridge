@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "kind": "native_dispatch_timer_audit",
   "code_revision": "67ca0b40daa49e104ce217db189c5f5aeed1f5c0",
   "entries": [

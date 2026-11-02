@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "at": "2026-10-18T21:16:20.252334+00:00",
   "code_commit": "76088c09c1b65094b98848fb77f7155b3d60a21c",
   "branch": "messages-finish",

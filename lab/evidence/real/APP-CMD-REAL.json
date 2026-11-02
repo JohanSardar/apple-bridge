@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "assertions": [
     {
       "name": "fresh_completed_phone_receipt",

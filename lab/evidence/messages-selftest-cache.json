@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "scenario": "MSG-SELFTEST",
   "level": "real",
   "check": "same-build-cache",

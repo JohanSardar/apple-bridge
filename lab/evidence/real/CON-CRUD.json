@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "host_telemetry": {
     "heavy_jobs": "2",
     "load_average": "{ 2.86 3.67 4.52 }",

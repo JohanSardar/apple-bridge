@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "scenario": "WEB-RM-REMINDERS-ITEMS",
   "level": "sim",
   "run_id": "run_01M5G45EC3G6V356K8FQV6MQWD",

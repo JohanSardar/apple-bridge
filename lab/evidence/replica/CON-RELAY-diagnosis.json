@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "scenario": "CON-RELAY",
   "level": "replica",
   "run_id": "relay_01M5N2CQRVM925YDQP0ZB49YH7",

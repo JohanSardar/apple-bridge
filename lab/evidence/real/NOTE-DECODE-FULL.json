@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "scenario": "NOTE-DECODE-FULL",
   "level": "real",
   "passed": true,

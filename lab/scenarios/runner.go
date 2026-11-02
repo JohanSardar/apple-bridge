@@ -49,6 +49,7 @@ type Latency struct {
 	Timeouts int     `json:"timeouts"`
 }
 type Evidence struct {
+	Impl           string             `json:"impl"`
 	HostTelemetry  map[string]string  `json:"host_telemetry,omitempty"`
 	HostConditions *HostConditions    `json:"host_conditions"`
 	Status         string             `json:"status,omitempty"`
@@ -1204,6 +1205,14 @@ func Save(e Evidence) error {
 	}
 	return os.WriteFile(filepath.Join(dir, e.Scenario+".json"), append(b, '\n'), 0644)
 }
+func (e Evidence) MarshalJSON() ([]byte, error) {
+	type value Evidence
+	if e.Impl == "" {
+		e.Impl = "go"
+	}
+	return json.Marshal(value(e))
+}
+
 func Suite(ctx context.Context, paths []string, level string, asJSON bool) error {
 	if level != "sim" && level != "replica" && level != "real" && level != "web" {
 		return fmt.Errorf("level unsupported by tracer")

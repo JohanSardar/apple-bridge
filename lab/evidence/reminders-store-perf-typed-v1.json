@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "scenario": "REM-STORE-PERF",
   "level": "real",
   "phase": "typed_persistent_before_dropping_version_scan",

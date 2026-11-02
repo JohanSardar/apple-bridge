@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "at": "2026-11-01T00:36:30.915872+00:00",
   "checks": {
     "merge_allowed": false,

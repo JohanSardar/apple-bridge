@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "answer_check": true,
   "at": "2026-10-31T23:09:22.806993Z",
   "forbidden_calls": 0,

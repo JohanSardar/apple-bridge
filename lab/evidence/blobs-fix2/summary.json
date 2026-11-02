@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "scope": "Incremental blob protection and durable gateway retry budget; benchmark and CORE-BENCH investigation changes removed",
   "source_commit_before_evidence": "0b38068897f04690a46e9c76ce174cd446547fac",
   "implementation": [
