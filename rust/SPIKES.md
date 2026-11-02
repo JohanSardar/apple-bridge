@@ -24,6 +24,26 @@ Peak memory is sampled aggregate RSS of Cargo and its descendant processes at 10
 
 Reproduce from the workspace: `python3 rust/spikes/budget.py`. The controller must run outside `ab-local`; it acquires the lock separately for every clean/check/build/leaf check. Results resume from `/tmp/ab-rust-budget.json`; remove that results file to start a new matrix. The final cleanup removes only `spike-budget` artifacts.
 
+## S2: Helper TCC child attribution
+
+**PASS for the requested launch matrix on this MacBook Air, macOS 26.7.1 (2026-11-02).** The network-free Rust probe is embedded in a newly built lab Helper with bundle ID `com.johansardar.applebridge.services`, signed by certificate SHA-1 `7746ED75674E4CEAF4A091FBCE4C24673EE0ECC4`. The live Helper, gateway and bridge home were not modified. Each real invocation took `~/bin/ab-local`; Cargo used jobs=2 and the shared `~/ab-cargo-target`.
+
+| Launch | Result | Attribution and access evidence |
+| --- | --- | --- |
+| `open -n -W -g -a <new-app> --args lab-tcc-probe <report>` | PASS | All six reads succeed; the Rust child's responsible PID equals its Helper parent's PID. |
+| Same app re-signed with the same certificate, requirements and entitlements, then the same `open` chain | PASS | All six reads succeed again; responsibility still points to the Helper. |
+| Byte-identical signed probe copied outside the app and launched as its own GUI launchd agent | DENIED, expected | Parent PID 1; responsible PID equals the probe PID. Database opens fail; WAL and Biome return EPERM. No FDA grant for the standalone probe; the services bundle has FDA `auth_value=2`. The agent is booted out in `finally`. |
+
+The reads are a read-only `SELECT count(*) FROM message` on Messages (168,665 rows), a one-byte open/read of its WAL, existence/readability of one attachment restricted to the Messages Attachments tree, Notes `ZICCLOUDSYNCINGOBJECT` (411 rows), a Biome restricted App.InFocus/local directory listing (2 entries), and Safari `history_items` (2,614 rows). Counts are point-in-time observations; no filenames or content are emitted. WAL readability is tested separately while the normal SQLite count observes its WAL-backed view; this is not a parser test of raw WAL records.
+
+The probe calls the dynamically resolved `responsibility_get_pid_responsible_for_pid` only when present, through lab `ab-sys`. This is diagnostic evidence from a private symbol, not a supported platform guarantee. Exact PIDs, signed artifact hash, designated requirements and FDA rows are retained in `lab/evidence/real/HELPER-TCC-READY.json`. The probe has no network dependencies or network calls and uses a single newline-terminated JSON response over an inherited Unix socketpair. The Helper uses `posix_spawn` without responsibility disclaiming; the entry exists only in LAB builds and returns before normal application initialization.
+
+**Recommendation: use the child for this qualified launch/signing/OS combination.** The conditional staticlib fallback was not needed because child access succeeded. Re-run the scenario after macOS or signing/launch changes; success here does not establish an OS contract. SMAppService registration was not changed or tested. Documents/Desktop/Downloads, Shortcuts, Automation, Accessibility and new permission requests were explicitly excluded by the task's no-prompt rule, overriding the broader plan matrix. No permission dialog was requested.
+
+Re-run: `~/bin/ab-local go run ./cmd/bridge-lab run lab/scenarios/helper/HELPER-TCC-READY.yaml --level real --json`. This scenario builds a new signed destination, checks both Helper launches and all negative controls, and records `impl=rust`; it does not start a gateway or create personal-app fixtures. The isolated lab workspace under `rust/lab/identity-spikes` avoids adding privileged lab dependencies to product crates. Its only unsafe code lives in its `ab-sys` crate.
+
+Verification: the real scenario passed 20 assertions; `make lint`, `go test ./lab/scenarios ./internal/trust`, standalone Cargo Clippy with warnings denied, Cargo formatting and `git diff --check` passed. The dependency tree contains no network crates. These are focused spike gates, not a full-product migration certification.
+
 ## S3: gojson
 
 **PASS for the requested synthetic and live-database comparisons. The full plan exit gate remains INCOMPLETE until recorded capture frames are supplied.**
@@ -56,6 +76,16 @@ Reproduce with `<oracle> sqlite <temporary-path-prefix> <ab-spikes>`. Use a fres
 **10 cases, 0 mismatches**: Go server/Rust client and Rust server/Go client both exchanged application bytes; four wrong-pin cases and four expired-certificate cases were rejected. Go uses the actual `internal/trust` `PinnedListener` and `ClientTLS` implementations. Synthetic identities are generated in a temporary directory and deleted; no live credentials were accessed. The plan's separate smux/relay component is outside this requested mTLS spike and remains unverified.
 
 Reproduce with `python3 rust/spikes/tls_matrix.py <oracle> <ab-spikes>`.
+
+## S8: legacy Python Keychain item from Rust
+
+**Direct read FAILS non-interactively: OSStatus -25293 (`errSecAuthFailed`).** The test successfully creates and programmatically unlocks a throwaway keychain with a generated 32-byte random password. A Go executable invokes the actual `internal/trust.KeychainStore.Put` path, which runs the frozen python3 ctypes Security.framework script and stores the normal hex encoding. The signed Rust executable uses `security-framework` 3.7.0 with an explicit one-keychain search array and user interaction disabled. Reading the same item returns -25293. The actual Go/Python `Get` path still reads and verifies the original bytes afterwards, proving rollback access and distinguishing the result from missing or corrupt test data.
+
+No login keychain, live bridge credential or existing item was opened by the S8 test. Both Python and Rust disable Keychain interaction before accessing the throwaway store. Any operation requiring UI fails instead of showing a dialog. `SecKeychainDelete` returns 0 in `finally`, and the generated password file is deleted. The test never invokes default-keychain or search-list APIs. These results concern legacy per-item access identity; they do not justify changing live ACLs.
+
+**Migration path:** retain the existing noninteractive Python adapter for old items until an explicit migration is implemented. Use it to read each existing item, write a replacement into the intended store with an explicit ACL for a stable signed Rust executable, then verify Rust and rollback Python reads before retiring the old item. Stop on authentication/interaction errors; do not prompt or silently replace credentials. This spike defines the path but does not implement or authorize a live migration. The live Air's file-store deployment is unaffected.
+
+Re-run both S2 and S8: `~/bin/ab-local python3 rust/lab/identity-spikes/run.py /tmp/ab-rust-identity-results.json`. The Go test writer/reader never prints secret bytes. S8 evidence is retained at `rust/lab/identity-spikes/results.json`; only counts, statuses and process/signing identities are retained. API references: [explicit Keychain search](https://docs.rs/security-framework/3.7.0/security_framework/os/macos/passwords/fn.find_generic_password.html), [disabled interaction](https://docs.rs/security-framework/3.7.0/security_framework/os/macos/keychain/struct.SecKeychain.html#method.disable_user_interaction), [Apple responsibility caveat](https://developer.apple.com/forums/thread/760291).
 
 ## Gates and cleanup
 

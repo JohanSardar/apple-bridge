@@ -32,6 +32,9 @@ func nativeScenario(id, level string) bool {
 }
 
 func runNativeScenario(ctx context.Context, s Scenario, level string) Evidence {
+	if s.ID == "HELPER-TCC-READY" {
+		return runRustTCCReady(ctx, s, level)
+	}
 	rest := runNativeProtocol(ctx, s, level, "rest")
 	if s.ID != "REM-CRUD" || !rest.Passed {
 		return rest

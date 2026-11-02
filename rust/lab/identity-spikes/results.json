@@ -1,0 +1,122 @@
+{
+  "os": "26.7.1",
+  "stage": "/tmp/ab-identity-spikes-h496g1ya",
+  "probe_sha256": "f36500dbf44a0aca9ed2faab1d1581722a34288664df349675ac1beb38dd1923",
+  "signing_certificate_sha1": "7746ED75674E4CEAF4A091FBCE4C24673EE0ECC4",
+  "bundle_id": "com.johansardar.applebridge.services",
+  "designated_requirement": "designated => identifier \"com.johansardar.applebridge.services\" and anchor apple generic and certificate leaf[subject.CN] = \"Apple Development: Created via API (NY9286F4SP)\" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */\nExecutable=/private/tmp/ab-identity-spikes-h496g1ya/AppleBridgeHelper.app/Contents/MacOS/AppleBridgeHelper",
+  "open": {
+    "attachment": {
+      "exists": true,
+      "pass": true
+    },
+    "biome": {
+      "count": 2,
+      "pass": true
+    },
+    "chat": {
+      "count": 168665,
+      "pass": true
+    },
+    "notes": {
+      "count": 411,
+      "pass": true
+    },
+    "pid": 87837,
+    "ppid": 87834,
+    "responsible_pid": 87834,
+    "safari": {
+      "count": 2614,
+      "pass": true
+    },
+    "wal": {
+      "exists": true,
+      "pass": true
+    }
+  },
+  "resigned": {
+    "attachment": {
+      "exists": true,
+      "pass": true
+    },
+    "biome": {
+      "count": 2,
+      "pass": true
+    },
+    "chat": {
+      "count": 168665,
+      "pass": true
+    },
+    "notes": {
+      "count": 411,
+      "pass": true
+    },
+    "pid": 87843,
+    "ppid": 87842,
+    "responsible_pid": 87842,
+    "safari": {
+      "count": 2614,
+      "pass": true
+    },
+    "wal": {
+      "exists": true,
+      "pass": true
+    }
+  },
+  "control": {
+    "attachment": {
+      "pass": false,
+      "sqlite_code": 14
+    },
+    "biome": {
+      "errno": 1,
+      "pass": false
+    },
+    "chat": {
+      "pass": false,
+      "sqlite_code": 14
+    },
+    "notes": {
+      "pass": false,
+      "sqlite_code": 14
+    },
+    "pid": 87845,
+    "ppid": 1,
+    "responsible_pid": 87845,
+    "safari": {
+      "pass": false,
+      "sqlite_code": 14
+    },
+    "wal": {
+      "errno": 1,
+      "pass": false
+    }
+  },
+  "control_identity": {
+    "label": "dev.applebridge.lab.tcc.92a97f7508e88d9e",
+    "program": "/tmp/ab-identity-spikes-h496g1ya/identity-spikes",
+    "uid": 501,
+    "signature": "designated => identifier \"identity-spikes\" and anchor apple generic and certificate leaf[subject.CN] = \"Apple Development: Created via API (NY9286F4SP)\" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */\nExecutable=/private/tmp/ab-identity-spikes-h496g1ya/identity-spikes",
+    "grants": [
+      [
+        "kTCCServiceSystemPolicyAllFiles",
+        "/private/tmp/ab-identity-spikes-h496g1ya/identity-spikes",
+        1,
+        0
+      ],
+      [
+        "kTCCServiceSystemPolicyAllFiles",
+        "com.johansardar.applebridge.services",
+        0,
+        2
+      ]
+    ]
+  },
+  "control_cleaned": true,
+  "keychain": {
+    "pass": false,
+    "status": -25293
+  },
+  "legacy_rollback_read": true,
+  "keychain_delete_status": 0
+}
