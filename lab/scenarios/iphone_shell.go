@@ -22,7 +22,7 @@ func runIPhoneShell(ctx context.Context, s Scenario, level string) Evidence {
 	}
 	defer os.RemoveAll(dir)
 	binary := filepath.Join(dir, "shell-proof")
-	cmd := exec.CommandContext(ctx, "xcrun", "swiftc", "-swift-version", "6", "-warnings-as-errors", "-parse-as-library", "ios/Delivery/PhoneJob.swift", "ios/Capabilities/Approvals/ApprovalInbox.swift", "ios/Pairing/PairingState.swift", "ios/App/ShellModel.swift", "lab/ios/ShellProof.swift", "-o", binary)
+	cmd := iphoneProjectCommand(ctx, "xcrun", "swiftc", "-swift-version", "6", "-warnings-as-errors", "-parse-as-library", "ios/Delivery/PhoneJob.swift", "ios/Capabilities/Approvals/ApprovalInbox.swift", "ios/Pairing/PairingState.swift", "ios/App/ShellModel.swift", "lab/ios/ShellProof.swift", "-o", binary)
 	output, err := cmd.CombinedOutput()
 	add("shell_view_models_build", err == nil)
 	if err != nil {

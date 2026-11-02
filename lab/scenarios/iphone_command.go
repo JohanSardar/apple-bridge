@@ -74,8 +74,7 @@ func runIPhoneCommand(ctx context.Context, s Scenario, level string) Evidence {
 	command := contracts.Command{ID: "cmd_iphone_roundtrip", Op: "iphone.ping", Args: args, WaitMS: 1000}
 	if s.ID == "APP-NOTIFY-SIM" {
 		proof := filepath.Join(dir, "notification-completion")
-		build := exec.CommandContext(ctx, "xcrun", "swiftc", "-swift-version", "6", "-parse-as-library", "ios/Delivery/NotificationCompletion.swift", "lab/ios/NotificationProof.swift", "-o", proof)
-		build.Env = append(os.Environ(), "SDKROOT=")
+		build := iphoneProjectCommand(ctx, "xcrun", "swiftc", "-swift-version", "6", "-parse-as-library", "ios/Delivery/NotificationCompletion.swift", "lab/ios/NotificationProof.swift", "-o", proof)
 		buildErr := build.Run()
 		add("notification_completion_build", buildErr == nil)
 		if buildErr == nil {

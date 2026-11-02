@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"os"
-	"os/exec"
 	"slices"
 	"sort"
 	"time"
@@ -12,7 +11,7 @@ import (
 
 func runIPhoneSensorReal(ctx context.Context, s Scenario) Evidence {
 	e := Evidence{Scenario: s.ID, Level: "real", At: time.Now().UTC(), Status: "limited"}
-	cmd := exec.CommandContext(ctx, "python3", "lab/iphone-real/run.py", s.ID)
+	cmd := iphoneProjectCommand(ctx, "python3", "lab/iphone-real/run.py", s.ID)
 	cmd.Stderr = os.Stderr
 	raw, err := cmd.Output()
 	var result struct {

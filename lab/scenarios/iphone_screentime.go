@@ -30,7 +30,7 @@ func runIPhoneScreenTime(ctx context.Context, s Scenario, level string) Evidence
 	}
 	defer os.RemoveAll(dir)
 	binary := filepath.Join(dir, "shield-policy")
-	err = exec.CommandContext(ctx, "swiftc", "ios/ScreenTimeShared/ShieldPolicy.swift", "lab/ios/main.swift", "-o", binary).Run()
+	err = iphoneProjectCommand(ctx, "swiftc", "ios/ScreenTimeShared/ShieldPolicy.swift", "lab/ios/main.swift", "-o", binary).Run()
 	add("swift_policy_compiled", err == nil)
 	if err == nil {
 		output, err := exec.CommandContext(ctx, binary).Output()

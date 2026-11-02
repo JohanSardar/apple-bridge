@@ -24,8 +24,7 @@ func runIPhoneHealthWrite(ctx context.Context, s Scenario, level string) Evidenc
 	}
 	defer os.RemoveAll(dir)
 	binary := filepath.Join(dir, "proof")
-	cmd := exec.CommandContext(ctx, "xcrun", "swiftc", "-parse-as-library", "ios/Capabilities/HealthWrite/HealthLog.swift", "lab/ios/HealthWriteProof.swift", "-o", binary)
-	cmd.Env = append(os.Environ(), "SDKROOT=")
+	cmd := iphoneProjectCommand(ctx, "xcrun", "swiftc", "-parse-as-library", "ios/Capabilities/HealthWrite/HealthLog.swift", "lab/ios/HealthWriteProof.swift", "-o", binary)
 	output, err := cmd.CombinedOutput()
 	e.Assertions = append(e.Assertions, Assertion{Name: "swift_write_build", Passed: err == nil})
 	if err != nil {

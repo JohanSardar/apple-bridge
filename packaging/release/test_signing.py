@@ -9,7 +9,6 @@ from unittest.mock import patch, Mock
 
 import signing
 import release
-import testflight
 
 
 class SigningTests(unittest.TestCase):
@@ -110,13 +109,6 @@ class SigningTests(unittest.TestCase):
             self.assertGreaterEqual(len(signs), 2)
             for call in signs:
                 self.assertEqual(call[call.index('--keychain') + 1], '/private/release.keychain-db')
-
-    def test_xcode_export_uses_apple_tools_before_homebrew(self):
-        with patch.dict(os.environ, {'PATH': '/opt/homebrew/bin:/usr/bin', 'SDKROOT': '/wrong-sdk'}):
-            environment = testflight.xcode_environment()
-        self.assertEqual(environment['PATH'].split(':')[0], '/usr/bin')
-        self.assertNotIn('SDKROOT', environment)
-
 
 if __name__ == '__main__':
     unittest.main()

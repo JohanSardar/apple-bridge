@@ -1,5 +1,24 @@
-# Apple Bridge
+# Apple Bridge for Mac
 
 Your Mac's Apple data (Messages, Calendar, Reminders, Contacts, Notes, Screen Time) as a live, fully synced, read/write copy on any computer, with one REST API and one MCP server.
+
+This repository owns the Go gateway, native Mac Helper, web app, relay and gateway-side iPhone integration. The native iPhone app, widgets, extensions, client-side fixtures, signed builds and TestFlight tooling live in [apple-bridge-iphone](https://github.com/JohanSardar/apple-bridge-iphone).
+
+## Mac development
+
+Use `make build` to build the web app, gateway and native Helper. `make lint` and `make features` check this repository. Mac builds need no iPhone checkout or Xcode iOS SDK. On the Air, run build and test steps serially through `~/bin/ab-local`.
+
+## iPhone integration
+
+The gateway still owns pairing, `/v1/iphone/*`, command admission, the ledger, signed record ingestion and relay/APNs delivery. The iPhone repository owns device execution, permissions, keys and receipts. Their wire protocol and installed bundle IDs are unchanged.
+
+Only scenarios that compile phone models or drive the phone harness need a checkout of the app. Clone it separately and set its location explicitly:
+
+```sh
+git clone https://github.com/JohanSardar/apple-bridge-iphone.git ../apple-bridge-iphone
+APPLE_BRIDGE_IPHONE_ROOT=/path/to/apple-bridge-iphone ~/bin/ab-local go run ./cmd/bridge-lab run lab/scenarios/iphone/APP-SHELL-SIM.yaml --level sim
+```
+
+Pure Go gateway pairing and delivery checks still run here without the app checkout. The integrated [feature graph](features.yaml) links app-owned modules to the iPhone repository. App build instructions and physical qualification history moved with the app.
 
 Status: in development. Design: [design/](design/). Research: [research/](research/).

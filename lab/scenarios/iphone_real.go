@@ -67,7 +67,7 @@ func runIPhoneReal(ctx context.Context, s Scenario, level string) (e Evidence) {
 		check("air_focus_lock", true)
 		logPhoneInstruction("Air app locks acquired; waiting for the paired physical iPhone")
 	}
-	if err := exec.CommandContext(ctx, "python3", "lab/iphone-real/device.py", device).Run(); err != nil {
+	if err := iphoneProjectCommand(ctx, "python3", "lab/iphone-real/device.py", device).Run(); err != nil {
 		return fail("physical_device_available", err)
 	}
 	lock := exec.CommandContext(ctx, "lockf", "-k", "-t", "0", "/tmp/ab-iphone.lock", "sh", "-c", "printf 'locked\\n'; cat >/dev/null")
@@ -191,18 +191,18 @@ func runIPhoneReal(ctx context.Context, s Scenario, level string) (e Evidence) {
 		var err error
 		for {
 			err = exec.CommandContext(ctx, "xcrun", args...).Run()
-			if err == nil || ctx.Err() != nil || exec.CommandContext(ctx, "python3", "lab/iphone-real/device.py", device, "--check").Run() == nil {
+			if err == nil || ctx.Err() != nil || iphoneProjectCommand(ctx, "python3", "lab/iphone-real/device.py", device, "--check").Run() == nil {
 				break
 			}
 			start := time.Now()
-			reconnectErr := exec.CommandContext(ctx, "python3", "lab/iphone-real/device.py", device).Run()
+			reconnectErr := iphoneProjectCommand(ctx, "python3", "lab/iphone-real/device.py", device).Run()
 			offline += time.Since(start)
 			if reconnectErr != nil {
 				return reconnectErr
 			}
 		}
 		if err == nil && slices.Contains(args, "launch") && os.Getenv("AB_WDA_URL") != "" {
-			err = exec.CommandContext(ctx, "python3", "lab/iphone-real/activate.py", "com.johansardar.applebridge.ios").Run()
+			err = iphoneProjectCommand(ctx, "python3", "lab/iphone-real/activate.py", "com.johansardar.applebridge.ios").Run()
 		}
 		return err
 	}
