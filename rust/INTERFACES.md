@@ -45,3 +45,66 @@ C integration request for B: expose a cancellation-aware authenticated `Client::
 `restrict` and `blob_references` are implemented as requested. The immutable read-model dispatcher now additionally handles `contacts.lookup`, `contacts.list`, `notes.list`, `health.summary`, `calendar.range`, `sources.status`, and `replica.status` with Go query/result shapes. Route `contacts.lookup`, `sources.status`, and `replica.status` through `read_model` explicitly: the existing C Service routes these names through ordinary `ReadQuery`, which cannot carry contact lookup fields or dynamic status.
 
 Runtime may call `state.set_replica_status(status: serde_json::Value) -> Result<()>` with its current Go-shaped replica status. State filters the status's blob entries and recomputes bytes/backlog/resume/corruption totals through caller Visibility. Until runtime supplies status, `replica.status` returns the Go empty local-status projection. `sources.status` adds Go's source-grants projection; runtime permission status remains runtime-owned.
+
+## Worker B: trust, blobs and feed
+
+`ab-trust::Authority::open(home)` uses the Go file-secret layout. `join(code).await`, `enrollment()`, `create_token(grants, remote)`, `authenticate_token(token)`, `client_tls(pin)`, `server_tls(pin)` and `sign_delegation(principal, command_id, request_hash, challenge)` provide replica identity operations. `Grant::parse` validates grants. `Principal::visibility()` returns Trust Visibility; adapters translate sources, principal IDs and commands:all into the State visibility map.
+
+`ab-replication::Client<S: ReplicaState>` accepts `Arc<tokio::sync::Mutex<S>>`, `Arc<Authority>` and optional `Arc<Mutex<ab_blobs::Store>>`. The typed `ReplicaState` seam mirrors Worker A's synchronous contract, with associated snapshot token, typed Cursor, restrict and blob_references methods. `follow(stop_receiver).await` reconnects, `connect().await` runs one outbound session, `listen(address, stop_receiver).await` accepts gateway-dials feeds. `status()` returns a watch receiver. State errors map to replication Error::State at this adapter boundary. The adapter must enforce snapshot count/digest and ID/ordinal validation before install, and atomic batch/cursor changes. Feed never acks an uncommitted cursor.
+
+`ab-blobs::Store::open(home, cap)`, `begin(digest,size)`, `chunk(digest,offset,bytes)`, `finish(digest)` implement durable resumable reception. `Digest::try_from(String)` validates content hashes. `RecordGrant::from_record(visibility, record)` requires a visible, nondeleted record and authorizes only referenced content. `open_authorized`, `protect` and `gc` apply access and retention rules. All synchronous store calls need a blocking execution context when wired to a production Tokio runtime.
+
+### B → C authenticated GatewayTransport integration
+
+`Client::gateway_transport()` returns a cloneable `ab_replication::GatewayTransport` sharing the active authenticated session. `connected()` becomes true only after validated Welcome. `Client::exchange(delegation: String, request: Vec<u8>).await` is the equivalent feed-only entry point. The handle's `exchange(&GatewayRoute, delegation, request).await` supports `GatewayRoute::Feed` and `GatewayRoute::Direct { address, fingerprint }`.
+
+The result is `CommandResponse { result: Option<Box<RawValue>>, error: Option<ab_trust::domain::ContractError>, lookup_only: bool }`. C's local `ab_operations::GatewayTransport` wrapper maps its route enum to B's, returns the typed response.error through the operations boundary, or constructs `ForwardReply { result, lookup_only }`. B cannot implement the operations trait directly because the frozen dependency graph forbids replication → operations. Keep that thin implementation in C's runtime transport module; no C WIP merge is needed for B's PR.
+
+Feed exchange registers its unique correlation ID before writing CommandRequest in the live lane. CommandResponse resolves that ID without consuming feed credits. At most sixteen requests are pending. Dropping/timing out an exchange removes its pending sender and queues CommandCancel. Dropping the session clears the active handle and every pending sender, so waiting callers fail immediately; reconnect never replays commands. An authenticated relay session entering Client::consume uses the same mechanism. Relay establishment itself remains outside this client transport implementation.
+
+Direct exchange POSTs the same ordered signed body to `https://<gateway>/v1/commands`, supplies `X-Apple-Bridge-Delegation`, uses the enrolled certificate/key plus pinned gateway DER with TLS 1.3, disables redirects, bounds the response, decodes Go error envelopes, and preserves `X-Apple-Bridge-Command-Lookup-Only`. Both direct and feed exchange require a connected authenticated feed, matching Go's disconnected fail-fast behavior. Query timeouts follow native_query.deadline_ms (1–60000 ms, default 1000 ms); ordinary command forwarding defaults to 20 seconds.
+
+Authority exposes `principal(id)`, `authorize(principal, grant)`, `parse_grants(scope)` and `Visibility::to_map()` for C's identity/state adapters. `domain` and `wire` reexports let downstream crates name the public contract types while retaining the frozen direct dependency boundaries. Delegation protocol `delegation/1` negotiates fresh local-principal challenge signing over the active session.
+
+C's adapter can use the following implementation without adding an operations dependency to B:
+
+```rust
+#[derive(Debug)]
+struct ReplicaGatewayTransport(ab_replication::GatewayTransport);
+impl ab_operations::GatewayTransport for ReplicaGatewayTransport {
+    fn connected(&self) -> bool { self.0.connected() }
+    fn exchange<'a>(
+        &'a self, route: &'a ab_operations::GatewayRoute,
+        delegation: String, body: Vec<u8>,
+    ) -> ab_operations::Task<'a, ab_operations::ForwardReply> {
+        Box::pin(async move {
+            let route = match route {
+                ab_operations::GatewayRoute::Feed => ab_replication::GatewayRoute::Feed,
+                ab_operations::GatewayRoute::Direct { address, fingerprint } =>
+                    ab_replication::GatewayRoute::Direct {
+                        address: address.clone(), fingerprint: fingerprint.clone(),
+                    },
+            };
+            let response = self.0.exchange(&route, delegation, body).await
+                .map_err(|_| ab_operations::Error::from(ab_operations::Code::Unavailable))?;
+            if let Some(error) = response.error {
+                return Err(serde_json::to_value(error).ok()
+                    .and_then(|v| serde_json::from_value(v).ok())
+                    .unwrap_or_else(|| ab_operations::Code::Corrupt.into()));
+            }
+            Ok(ab_operations::ForwardReply {
+                result: response.result.ok_or(ab_operations::Code::Corrupt)?,
+                lookup_only: response.lookup_only,
+            })
+        })
+    }
+}
+```
+
+Dropping C's boxed exchange future cancels the pending B exchange. `GatewayTransport` is independent of `S`, so it can be stored as `Arc<dyn ab_operations::GatewayTransport>` while the feed loop owns `Client<S>`.
+
+### Landed State integration and capture atomicity
+
+B now implements `ReplicaState` directly for `ab_state::State<ab_state::Replica>`. Runtime can pass that concrete state into Client without maintaining a duplicate adapter. The Go/SyntheticApple harness probe now uses this SQLite implementation; evidence marks `state=sqlite`.
+
+Hello advertises `capture_atomic`. Negotiated partial batches enter State staging and replenish only byte credit. Only the final batch advances the acknowledged cursor. Session cleanup discards uncommitted capture parts. FollowStatus.partial_batches counts received partial batches; the interop runner requires at least one actual partial capture and matching final Go/Rust snapshot digests. The runner also requires the feed/direct command exchange success marker, digest-verified blob completion with persisted resumed bytes, and a higher subscription revision with messages removed after scope narrowing.
