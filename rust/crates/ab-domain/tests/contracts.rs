@@ -50,3 +50,18 @@ fn collection_prefixes_equal_go_registry() -> Result<(), Box<dyn std::error::Err
     assert_eq!(actual, expected);
     Ok(())
 }
+
+#[test]
+fn record_data_retains_legacy_number_tokens() -> Result<(), Box<dyn std::error::Error>> {
+    let record: ab_domain::Record = serde_json::from_str(
+        r#"{"collection":"messages.message","id":"msg_01ARZ3NDEKTSV4RRFFQ69G5FAV","version":1,"source":"messages","observed_at":"2026-01-02T03:04:05Z","deleted":false,"coverage":{"fields":"","missing":null},"data":{"n":123456789012345678901234567890,"one":1.0,"exp":1e0}}"#,
+    )?;
+    record.validate()?;
+    assert_eq!(
+        record.data.get(),
+        r#"{"n":123456789012345678901234567890,"one":1.0,"exp":1e0}"#
+    );
+    let encoded = serde_json::to_string(&record)?;
+    assert!(encoded.contains(record.data.get()));
+    Ok(())
+}

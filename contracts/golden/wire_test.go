@@ -176,6 +176,13 @@ func TestAllMessagesGolden(t *testing.T) {
 		}
 		ipc = append(ipc, map[string]any{"json": string(b[4:]), "framed_hex": hex.EncodeToString(b)})
 	}
+	for _, kind := range []string{"Query", "QueryResult", "QueryError", "QueryCancel"} {
+		b, err := contracts.EncodeFrame(contracts.IPCFrame{T: kind})
+		if err != nil {
+			t.Fatal(err)
+		}
+		ipc = append(ipc, map[string]any{"json": string(b[4:]), "framed_hex": hex.EncodeToString(b)})
+	}
 	feed := []any{}
 	for _, kind := range []string{"Hello", "Welcome", "SnapshotBegin", "SnapshotPage", "SnapshotEnd", "Ack", "Reset", "Heartbeat", "BlobWant", "BlobDone", "CommandRequest", "CommandResponse", "Clock"} {
 		frame := contracts.FeedFrame{T: kind, Protocol: contracts.FeedProtocol, ID: "fixture", Request: json.RawMessage(`{"op":"fixture.op","args":{"text":"<>&"}}`)}

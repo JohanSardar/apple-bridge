@@ -63,4 +63,4 @@ rust-test:
 	rust/check.sh test --workspace --locked
 
 rust-ci: lint rust-test rust-lint
-	go test ./contracts/golden ./internal/frontdoor ./internal/iphone ./internal/web -run Golden -count=1
+	go test ./contracts/golden ./internal/frontdoor ./internal/iphone ./internal/web ./lab/scenarios -run Golden -count=1

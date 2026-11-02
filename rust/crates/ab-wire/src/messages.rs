@@ -42,7 +42,7 @@ pub struct Capture {
     pub observations: Option<Vec<Observation>>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub scan_id: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "empty_slice")]
     pub scope: Option<Vec<Box<RawValue>>>,
     #[serde(default)]
     pub scan_started_at: GoTime,
@@ -70,7 +70,7 @@ pub struct IpcFrame {
     pub deadline_ms: i64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub result_json: Option<Box<RawValue>>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "empty_slice")]
     pub blobs: Option<Vec<Box<RawValue>>>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub code: String,
@@ -108,7 +108,7 @@ pub struct IpcFrame {
     pub route: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub fingerprint: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "empty_slice")]
     pub candidate_ids: Option<Vec<Box<RawValue>>>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub disposition: String,
@@ -170,7 +170,7 @@ pub struct Batch {
 }
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct FeedFrame {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "empty_slice")]
     pub features: Option<Vec<Box<RawValue>>>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub delegation_protocol: String,
@@ -196,7 +196,7 @@ pub struct FeedFrame {
     pub gateway_id: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cursor: Option<Box<RawValue>>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "empty_slice")]
     pub schema_offer: Option<Vec<Box<RawValue>>>,
     #[serde(default, skip_serializing_if = "is_zero_i64")]
     pub schema: i64,
@@ -206,7 +206,7 @@ pub struct FeedFrame {
     pub epoch: String,
     #[serde(default, skip_serializing_if = "is_zero_u64")]
     pub subscription_revision: u64,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "empty_slice")]
     pub scope: Option<Vec<Box<RawValue>>>,
     #[serde(default, skip_serializing_if = "is_zero_u64")]
     pub head: u64,
@@ -224,7 +224,7 @@ pub struct FeedFrame {
     pub expires_at: GoTime,
     #[serde(default, skip_serializing_if = "is_zero_i64")]
     pub ordinal: i64,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "empty_slice")]
     pub records: Option<Vec<Box<RawValue>>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub batch: Option<Batch>,
@@ -247,6 +247,13 @@ fn is_zero_u64(v: &u64) -> bool {
 }
 impl IpcFrame {
     pub fn encode(&self) -> Result<Vec<u8>, ErrorCode> {
+        if self
+            .result_json
+            .as_ref()
+            .is_some_and(|v| v.get().len() > 1 << 20)
+        {
+            return Err(ErrorCode::Capacity);
+        }
         let mode = if self.t == "QueryResult" {
             EscapeMode::NoHtml
         } else {
@@ -270,6 +277,21 @@ impl IpcFrame {
                 _ => &["t", "id"],
             };
             fields.retain(|k, _| allowed.contains(&k.as_str()));
+            let required: &[(&str, &str)] = match self.t.as_str() {
+                "Query" => &[("args", "null")],
+                "QueryResult" => &[("id", "\"\""), ("result_json", "null")],
+                "QueryError" => &[("id", "\"\""), ("code", "\"\"")],
+                _ => &[("id", "\"\"")],
+            };
+            for (key, value) in required {
+                if !fields.contains_key(*key) {
+                    fields.insert(
+                        (*key).into(),
+                        RawValue::from_string((*value).into()).map_err(|_| ErrorCode::Invalid)?,
+                    );
+                }
+            }
+
             if self.t == "QueryResult" && !fields.contains_key("blobs") {
                 fields.insert(
                     "blobs".into(),
@@ -303,4 +325,9 @@ impl FeedFrame {
         }
         Frame::from_json(Protocol::Feed, &bytes)?.encode_json()
     }
+}
+
+#[allow(clippy::ref_option)]
+fn empty_slice<T>(value: &Option<Vec<T>>) -> bool {
+    value.as_ref().is_none_or(Vec::is_empty)
 }
