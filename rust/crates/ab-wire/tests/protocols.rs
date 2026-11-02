@@ -255,3 +255,27 @@ fn typed_message_encoders_equal_go_for_every_message_kind() -> Result {
     }
     Ok(())
 }
+
+#[test]
+fn empty_optional_slices_follow_go_omitempty() -> Result {
+    use ab_wire::messages::{FeedFrame, IpcFrame};
+    let base = IpcFrame {
+        t: "Ping".into(),
+        ..IpcFrame::default()
+    };
+    let empty = IpcFrame {
+        candidate_ids: Some(vec![]),
+        ..base.clone()
+    };
+    assert_eq!(empty.encode()?, base.encode()?);
+    let base = FeedFrame {
+        t: "Heartbeat".into(),
+        ..FeedFrame::default()
+    };
+    let empty = FeedFrame {
+        records: Some(vec![]),
+        ..base.clone()
+    };
+    assert_eq!(empty.encode()?, base.encode()?);
+    Ok(())
+}
