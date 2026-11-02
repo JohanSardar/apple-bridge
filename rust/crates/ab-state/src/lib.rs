@@ -1,8 +1,10 @@
 #![forbid(unsafe_code)]
 mod models;
+mod notes;
 mod projection;
 mod reminders;
 mod scope;
+mod specialized;
 use ab_domain::{Collection, ErrorCode, Record};
 use ab_wire::{
     gojson::{self, EscapeMode},
@@ -43,7 +45,7 @@ pub struct Change {
     pub record: Record,
 }
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 pub struct ReadQuery {
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub include_aliases: bool,
@@ -90,6 +92,7 @@ pub struct State<Role> {
     pending: Option<(u64, u64)>,
     generation: u64,
     role: PhantomData<Role>,
+    replica_status: Option<serde_json::Value>,
 }
 #[derive(Debug)]
 pub struct SnapshotInstall {
@@ -103,6 +106,7 @@ pub struct SnapshotInstall {
 }
 #[derive(Debug)]
 pub struct Changes {
+    parts: bool,
     visibility: Visibility,
     cursor: Cursor,
 }
@@ -281,12 +285,13 @@ impl State<Replica> {
         tx.execute_batch(
             "DELETE FROM blob_refs WHERE owner LIKE 'capture-stage:%' OR owner LIKE 'staging:%';",
         )?;
-        tx.commit()?;
+        commit(tx)?;
         Ok(Self {
             db,
             pending: None,
             generation: 0,
             role: PhantomData,
+            replica_status: None,
         })
     }
     pub fn head(&self) -> Result<Cursor> {
@@ -303,7 +308,7 @@ impl State<Replica> {
     pub fn discard_capture(&mut self) -> Result<()> {
         let tx = self.db.transaction()?;
         tx.execute_batch("DELETE FROM pending_changes; DELETE FROM blob_refs WHERE owner LIKE 'capture-stage:%';")?;
-        tx.commit()?;
+        commit(tx)?;
         self.pending = None;
         Ok(())
     }
@@ -371,7 +376,7 @@ impl State<Replica> {
                 &record,
             )?;
         }
-        tx.commit()?;
+        commit(tx)?;
         i.ordinal += 1;
         i.expires = jiff::Timestamp::now()
             .checked_add(std::time::Duration::from_secs(600))
@@ -401,7 +406,7 @@ impl State<Replica> {
         tx.execute_batch(
             "DELETE FROM staging_records; DELETE FROM blob_refs WHERE owner LIKE 'staging:%';",
         )?;
-        tx.commit()?;
+        commit(tx)?;
         Ok(i.cursor)
     }
     pub fn apply_batch(&mut self, b: &Batch) -> Result<Cursor> {
@@ -444,7 +449,7 @@ impl State<Replica> {
             }
         }
         if b.partial {
-            tx.commit()?;
+            commit(tx)?;
             self.pending = Some((self.pending.map_or(b.after, |(after, _)| after), b.through));
             return Ok(c);
         }
@@ -466,7 +471,7 @@ impl State<Replica> {
         )?;
         c.sequence = b.through;
         set_cursor(&tx, &c)?;
-        tx.commit()?;
+        commit(tx)?;
         self.pending = None;
         Ok(c)
     }
@@ -562,7 +567,16 @@ impl State<Replica> {
     }
     pub fn changes(&self, visibility: Visibility, cursor: Cursor) -> Result<Changes> {
         self.check_cursor(&cursor)?;
-        Ok(Changes { visibility, cursor })
+        Ok(Changes {
+            parts: false,
+            visibility,
+            cursor,
+        })
+    }
+    pub fn feed_changes(&self, visibility: Visibility, cursor: Cursor) -> Result<Changes> {
+        let mut changes = self.changes(visibility, cursor)?;
+        changes.parts = true;
+        Ok(changes)
     }
     fn check_cursor(&self, c: &Cursor) -> Result<()> {
         let h = self.head()?;
@@ -629,6 +643,9 @@ impl State<Replica> {
                     String::from_utf8_lossy(&encoded(&ch)?).into_owned(),
                 )?);
             }
+        }
+        if b.partial && !i.parts {
+            return Err(ErrorCode::Reset.into());
         }
         i.cursor.sequence = b.through;
         Ok(Some(b))
@@ -701,4 +718,10 @@ pub(crate) fn collection(c: Collection) -> &'static str {
 
 pub(crate) fn number(count: u64) -> Result<i64> {
     i64::try_from(count).map_err(|_| ErrorCode::Corrupt.into())
+}
+
+pub(crate) fn commit(tx: Transaction<'_>) -> Result<()> {
+    tx.execute("DELETE FROM blob_ref_changes", [])?;
+    tx.commit()?;
+    Ok(())
 }

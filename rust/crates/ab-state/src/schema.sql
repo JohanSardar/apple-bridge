@@ -68,3 +68,22 @@ CREATE TRIGGER IF NOT EXISTS records_search_insert AFTER INSERT ON records WHEN 
  INSERT INTO records_fts_map(collection,id) SELECT NEW.collection,NEW.id WHERE NEW.deleted=0 AND NOT EXISTS(SELECT 1 FROM records_fts_map WHERE collection=NEW.collection AND id=NEW.id);
  DELETE FROM records_fts WHERE rowid=(SELECT fts_rowid FROM records_fts_map WHERE collection=OLD.collection AND id=OLD.id);
  INSERT INTO records_fts(rowid,collection,id,source,text) SELECT fts_rowid,NEW.collection,NEW.id,NEW.source,coalesce(json_extract(NEW.payload,'$.data.subject'),'')||' '||coalesce(json_extract(NEW.payload,'$.data.from'),'')||' '||coalesce(json_extract(NEW.payload,'$.data.to'),'')||' '||coalesce(json_extract(NEW.payload,'$.data.snippet'),'')||' '||coalesce(json_extract(NEW.payload,'$.data.text'),'')||' '||coalesce(json_extract(NEW.payload,'$.data.title'),'')||' '||coalesce(json_extract(NEW.payload,'$.data.notes'),'')||' '||coalesce(json_extract(NEW.payload,'$.data.plain_text'),'')||' '||coalesce(json_extract(NEW.payload,'$.data.given_name'),'')||' '||coalesce(json_extract(NEW.payload,'$.data.middle_name'),'')||' '||coalesce(json_extract(NEW.payload,'$.data.family_name'),'')||' '||coalesce(json_extract(NEW.payload,'$.data.nickname'),'')||' '||coalesce(json_extract(NEW.payload,'$.data.organization'),'')||' '||coalesce(json_extract(NEW.payload,'$.data.job_title'),'')||' '||coalesce(json_extract(NEW.payload,'$.data.filename'),'')||' '||coalesce(json_extract(NEW.payload,'$.data.balloon.link.title'),'')||' '||coalesce(json_extract(NEW.payload,'$.data.balloon.app.caption'),'') FROM records_fts_map WHERE collection=NEW.collection AND id=NEW.id AND NEW.deleted=0; END;
+
+CREATE TABLE IF NOT EXISTS blob_refs(owner TEXT NOT NULL,digest TEXT NOT NULL,payload BLOB NOT NULL,PRIMARY KEY(owner,digest));
+ DROP INDEX IF EXISTS records_blob_candidates;
+ DROP INDEX IF EXISTS staging_blob_candidates;
+ CREATE TABLE IF NOT EXISTS blob_ref_changes(owner TEXT PRIMARY KEY);
+ DROP TRIGGER IF EXISTS blob_refs_changed_insert;
+ DROP TRIGGER IF EXISTS blob_refs_changed_update;
+ DROP TRIGGER IF EXISTS blob_refs_changed_delete;
+ DROP TRIGGER IF EXISTS blob_sets_changed_insert;
+ DROP TRIGGER IF EXISTS blob_sets_changed_update;
+ DROP TRIGGER IF EXISTS blob_sets_changed_delete;
+ CREATE TRIGGER IF NOT EXISTS blob_refs_changed_insert AFTER INSERT ON blob_refs BEGIN INSERT INTO blob_ref_changes(owner) VALUES(NEW.owner) ON CONFLICT(owner) DO NOTHING; END;
+ CREATE TRIGGER IF NOT EXISTS blob_refs_changed_update AFTER UPDATE ON blob_refs BEGIN INSERT INTO blob_ref_changes(owner) VALUES(NEW.owner) ON CONFLICT(owner) DO NOTHING; END;
+ CREATE TRIGGER IF NOT EXISTS blob_refs_changed_delete AFTER DELETE ON blob_refs BEGIN INSERT INTO blob_ref_changes(owner) VALUES(OLD.owner) ON CONFLICT(owner) DO NOTHING; END;
+ CREATE TRIGGER IF NOT EXISTS blob_sets_changed_insert AFTER INSERT ON blob_reference_sets BEGIN INSERT INTO blob_ref_changes(owner) VALUES(NEW.owner) ON CONFLICT(owner) DO NOTHING; END;
+ CREATE TRIGGER IF NOT EXISTS blob_sets_changed_update AFTER UPDATE ON blob_reference_sets BEGIN INSERT INTO blob_ref_changes(owner) VALUES(NEW.owner) ON CONFLICT(owner) DO NOTHING; END;
+ CREATE TRIGGER IF NOT EXISTS blob_sets_changed_delete AFTER DELETE ON blob_reference_sets BEGIN INSERT INTO blob_ref_changes(owner) VALUES(OLD.owner) ON CONFLICT(owner) DO NOTHING; END;
+ CREATE TRIGGER IF NOT EXISTS blob_refs_record_delete AFTER DELETE ON records BEGIN DELETE FROM blob_refs WHERE owner='record:'||OLD.id; END;
+ CREATE TRIGGER IF NOT EXISTS blob_refs_staging_delete AFTER DELETE ON staging_records BEGIN DELETE FROM blob_refs WHERE owner='staging:'||OLD.snapshot||':'||OLD.id; END;

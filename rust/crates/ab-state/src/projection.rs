@@ -88,6 +88,7 @@ pub(crate) fn initialize(db: &Connection) -> Result<()> {
         db.execute("UPDATE records SET payload=payload WHERE deleted=0", [])?;
         set_meta(db, "fts_version", "5")?;
     }
+    set_meta(db, "blob_refs_version", "1")?;
     Ok(())
 }
 pub(crate) fn write(db: &Connection, record: &Record, seq: u64) -> Result<()> {
@@ -104,7 +105,7 @@ pub(crate) fn blob_refs(db: &Connection, owner: &str, record: &Record) -> Result
     }
     Ok(())
 }
-fn valid_digest(fields: &str) -> bool {
+pub(crate) fn valid_digest(fields: &str) -> bool {
     fields.len() == 64
         && fields
             .bytes()

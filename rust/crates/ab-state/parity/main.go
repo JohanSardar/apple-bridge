@@ -6,10 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	"github.com/JohanSardar/apple-bridge/internal/operations"
 	"github.com/JohanSardar/apple-bridge/internal/state"
- "github.com/JohanSardar/apple-bridge/internal/operations"
 	"github.com/JohanSardar/apple-bridge/internal/trust"
 	"os"
+	"sort"
 )
 
 func main() {
@@ -40,6 +41,24 @@ func main() {
 		ctx := context.Background()
 		err = nil
 		switch q.Op {
+		case "references":
+			refs, e := s.BlobReferenceSet(ctx)
+			err = e
+			owners := []string{}
+			for owner := range refs {
+				owners = append(owners, owner)
+			}
+			sort.Strings(owners)
+			outrefs := []contracts.BlobReference{}
+			for _, owner := range owners {
+				list := refs[owner]
+				sort.Slice(list, func(i, j int) bool { return list[i].Digest < list[j].Digest })
+				outrefs = append(outrefs, list...)
+			}
+			out = outrefs
+		case "restrict":
+			err = s.Restrict(ctx, q.Visibility)
+			out = map[string]any{}
 		case "head":
 			out = s.Head()
 		case "changes":
@@ -77,7 +96,18 @@ func main() {
 			out = state.Digest(r.Records)
 		case "model":
 			switch q.Operation {
-case "calendar.agenda": service:=operations.Service{State:s};out,err=service.Invoke(ctx,trust.Principal{ID:"synthetic",Kind:"owner",Grants:[]contracts.Grant{"calendar:read"}},q.Operation,q.Query)
+			case "contacts.lookup", "notes.list", "health.summary", "calendar.range", "replica.status":
+				service := operations.Service{State: s}
+				out, err = service.Invoke(ctx, trust.Principal{ID: "synthetic", Kind: "owner", Grants: []contracts.Grant{"admin"}}, q.Operation, q.Query)
+			case "contacts.list":
+				var query contracts.ContactsListQuery
+				json.Unmarshal(q.Query, &query)
+				out, err = s.ContactsList(ctx, q.Visibility, query)
+			case "sources.status":
+				out, err = s.SourceStatuses(ctx, q.Visibility)
+			case "calendar.agenda":
+				service := operations.Service{State: s}
+				out, err = service.Invoke(ctx, trust.Principal{ID: "synthetic", Kind: "owner", Grants: []contracts.Grant{"calendar:read"}}, q.Operation, q.Query)
 			case "messages.chats":
 				var x contracts.ChatsQuery
 				json.Unmarshal(q.Query, &x)

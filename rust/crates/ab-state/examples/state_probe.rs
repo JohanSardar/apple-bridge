@@ -4,6 +4,11 @@ use std::io::{self, BufRead, Write};
 fn invoke(state: &mut State<Replica>, q: &Value) -> Result<Value, Box<dyn std::error::Error>> {
     let v: Visibility = serde_json::from_value(q["visibility"].clone()).unwrap_or_default();
     match q["op"].as_str().unwrap_or("") {
+        "restrict" => {
+            state.restrict(&v)?;
+            Ok(json!({}))
+        }
+        "references" => Ok(serde_json::to_value(state.blob_references()?)?),
         "head" => Ok(serde_json::to_value(state.head()?)?),
         "read" => Ok(serde_json::to_value(state.read(
             &v,
