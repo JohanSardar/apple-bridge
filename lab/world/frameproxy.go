@@ -4,11 +4,9 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
-	"github.com/JohanSardar/apple-bridge/internal/trust"
 	"io"
 	"net"
 	"net/http"
-	"path/filepath"
 	"slices"
 	"sync"
 	"time"
@@ -41,35 +39,17 @@ type frameFaults struct {
 }
 
 func (w *World) configureFrameFaults() error {
-	gateway, err := trust.Open(w.Gateway.Home)
+	gateway, err := w.Certificate(w.Gateway)
 	if err != nil {
 		return err
 	}
-	endpoint := w.Replicas[0]
-	var certificate tls.Certificate
-	if endpoint.Remote {
-		public, err := w.execute(true, "cat", filepath.Join(endpoint.Home, "identity.pem"))
-		if err != nil {
-			return err
-		}
-		key, err := w.execute(true, "cat", filepath.Join(endpoint.Home, "secrets", trust.Fingerprint([]byte("identity-key"))))
-		if err != nil {
-			return err
-		}
-		certificate, err = tls.X509KeyPair([]byte(public), []byte(key))
-		if err != nil {
-			return err
-		}
-	} else {
-		replica, err := trust.Open(endpoint.Home)
-		if err != nil {
-			return err
-		}
-		certificate = replica.Certificate
+	certificate, err := w.Certificate(w.Replicas[0])
+	if err != nil {
+		return err
 	}
 	w.proxy.mu.Lock()
 	defer w.proxy.mu.Unlock()
-	w.proxy.frames = &frameFaults{server: gateway.Certificate, client: certificate}
+	w.proxy.frames = &frameFaults{server: gateway, client: certificate}
 	return nil
 }
 func (w *World) DropBatch() error {

@@ -8,14 +8,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/JohanSardar/apple-bridge/internal/trust"
+	"github.com/JohanSardar/apple-bridge/internal/contracts"
 )
 
 func (w *World) PairingChecks() error {
-	remote := w.Level == "replica"
-	binary := w.bridge
+	remote := w.Level == "replica" && !ImplementationSelection(w.ctx).LocalReplicas
+	binary := w.goBridge
 	if remote {
 		binary = w.remoteBinary
+	}
+	if len(w.Replicas) > 0 {
+		binary = w.endpointBinary(w.Replicas[0])
 	}
 	home := filepath.Join(w.Dir, "pairing")
 	if remote {
@@ -32,7 +35,11 @@ func (w *World) PairingChecks() error {
 	if err != nil {
 		return err
 	}
-	decoded, err := trust.DecodePairCode(code)
+	rawCode, err := base32.StdEncoding.WithPadding(base32.NoPadding).DecodeString(strings.TrimPrefix(code, "ab1-"))
+	var decoded pairCode
+	if err == nil {
+		err = json.Unmarshal(rawCode, &decoded)
+	}
 	if err != nil {
 		return err
 	}
@@ -60,7 +67,7 @@ func (w *World) PairingChecks() error {
 	if err != nil {
 		return err
 	}
-	var expiredCode trust.PairCode
+	var expiredCode pairCode
 	if err = json.Unmarshal(raw, &expiredCode); err != nil {
 		return err
 	}
@@ -83,7 +90,7 @@ func (w *World) ReplicaIdentity(index int) (string, error) {
 		return "", err
 	}
 	var document struct {
-		Enrollment trust.Enrollment `json:"enrollment"`
+		Enrollment enrollment `json:"enrollment"`
 	}
 	err = json.Unmarshal([]byte(data), &document)
 	return document.Enrollment.ReplicaID, err
@@ -105,26 +112,39 @@ func (w *World) ScopeReplica(index int, scope string) error {
 	return err
 }
 
-func (w *World) Principal(endpoint Endpoint) (trust.Principal, error) {
+func (w *World) Principal(endpoint Endpoint) (Principal, error) {
 	data, err := w.execute(endpoint.Remote, "cat", filepath.Join(endpoint.Home, "credentials.json"))
 	if err != nil {
-		return trust.Principal{}, err
+		return Principal{}, err
 	}
 	var document struct {
-		Principals []trust.Principal `json:"principals"`
-		Enrollment *trust.Enrollment `json:"enrollment"`
+		Principals []Principal `json:"principals"`
+		Enrollment *enrollment `json:"enrollment"`
 	}
 	if err = json.Unmarshal([]byte(data), &document); err != nil {
-		return trust.Principal{}, err
+		return Principal{}, err
 	}
-	hash := trust.Fingerprint([]byte(endpoint.Token))
+	hash := identityFingerprint([]byte(endpoint.Token))
 	for _, principal := range document.Principals {
 		if principal.TokenHash == hash {
 			if document.Enrollment != nil {
-				principal.Grants = trust.EffectiveGrants(principal.Grants, document.Enrollment.Grants)
+				principal.Grants = effectiveGrants(principal.Grants, document.Enrollment.Grants)
 			}
 			return principal, nil
 		}
 	}
-	return trust.Principal{}, fmt.Errorf("world principal unavailable")
+	return Principal{}, fmt.Errorf("world principal unavailable")
+}
+
+type pairCode struct {
+	ID          string    `json:"id"`
+	Address     string    `json:"address"`
+	Fingerprint string    `json:"fingerprint"`
+	Secret      []byte    `json:"secret"`
+	ExpiresAt   time.Time `json:"expires_at"`
+}
+
+type enrollment struct {
+	ReplicaID string            `json:"replica_id"`
+	Grants    []contracts.Grant `json:"grants"`
 }
