@@ -1,56 +1,217 @@
 {
-  "impl": "go",
-  "run_id": "run_01M54AAA3NNGK9MXQTNADVGGXM",
+  "impl": "rust",
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[9.95 5.84 5.14] cpu_idle=73% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M6F6J7VP2ZSH3HETJPFXV32G",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "rust_identity": {
+      "os": "26.7.1",
+      "stage": "/tmp/ab-identity-spikes-1iwhkw7s",
+      "probe_sha256": "0a34c4f255d2b457189726bf3ca95acf8df50a64e20e49e14e003cace879a24f",
+      "signing_certificate_sha1": "7746ED75674E4CEAF4A091FBCE4C24673EE0ECC4",
+      "bundle_id": "com.johansardar.applebridge.services",
+      "designated_requirement": "designated =\u003e identifier \"com.johansardar.applebridge.services\" and anchor apple generic and certificate leaf[subject.CN] = \"Apple Development: Created via API (NY9286F4SP)\" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */\nExecutable=/private/tmp/ab-identity-spikes-1iwhkw7s/AppleBridgeHelper.app/Contents/MacOS/AppleBridgeHelper",
+      "open": {
+        "attachment": {
+          "exists": true,
+          "pass": true
+        },
+        "biome": {
+          "count": 2,
+          "pass": true
+        },
+        "chat": {
+          "count": 168665,
+          "pass": true
+        },
+        "notes": {
+          "count": 411,
+          "pass": true
+        },
+        "pid": 88051,
+        "ppid": 88049,
+        "responsible_pid": 88049,
+        "safari": {
+          "count": 2614,
+          "pass": true
+        },
+        "wal": {
+          "exists": true,
+          "pass": true
+        }
+      },
+      "resigned": {
+        "attachment": {
+          "exists": true,
+          "pass": true
+        },
+        "biome": {
+          "count": 2,
+          "pass": true
+        },
+        "chat": {
+          "count": 168665,
+          "pass": true
+        },
+        "notes": {
+          "count": 411,
+          "pass": true
+        },
+        "pid": 88059,
+        "ppid": 88058,
+        "responsible_pid": 88058,
+        "safari": {
+          "count": 2614,
+          "pass": true
+        },
+        "wal": {
+          "exists": true,
+          "pass": true
+        }
+      },
+      "control": {
+        "attachment": {
+          "pass": false,
+          "sqlite_code": 14
+        },
+        "biome": {
+          "errno": 1,
+          "pass": false
+        },
+        "chat": {
+          "pass": false,
+          "sqlite_code": 14
+        },
+        "notes": {
+          "pass": false,
+          "sqlite_code": 14
+        },
+        "pid": 88061,
+        "ppid": 1,
+        "responsible_pid": 88061,
+        "safari": {
+          "pass": false,
+          "sqlite_code": 14
+        },
+        "wal": {
+          "errno": 1,
+          "pass": false
+        }
+      },
+      "control_identity": {
+        "label": "dev.applebridge.lab.tcc.cf47174afee6de1a",
+        "program": "/tmp/ab-identity-spikes-1iwhkw7s/identity-spikes",
+        "uid": 501,
+        "signature": "designated =\u003e identifier \"identity-spikes\" and anchor apple generic and certificate leaf[subject.CN] = \"Apple Development: Created via API (NY9286F4SP)\" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */\nExecutable=/private/tmp/ab-identity-spikes-1iwhkw7s/identity-spikes",
+        "grants": [
+          [
+            "kTCCServiceSystemPolicyAllFiles",
+            "/private/tmp/ab-identity-spikes-1iwhkw7s/identity-spikes",
+            1,
+            0
+          ],
+          [
+            "kTCCServiceSystemPolicyAllFiles",
+            "com.johansardar.applebridge.services",
+            0,
+            2
+          ]
+        ]
+      },
+      "control_cleaned": true
+    }
+  },
   "scenario": "HELPER-TCC-READY",
   "level": "real",
   "passed": true,
-  "git_sha": "26827bb9cf7bf21a9b427aedb8eaa85c9cdc916e",
-  "at": "2026-10-17T06:55:45.781544Z",
+  "git_sha": "2d1f0450ecaec80588969d6400bf4cab2c36e546",
+  "at": "2026-11-02T22:37:31.894624Z",
   "assertions": [
     {
-      "name": "reminders_ready",
+      "name": "open_chat",
       "passed": true
     },
     {
-      "name": "designated_requirement_preserved",
+      "name": "open_wal",
       "passed": true
     },
     {
-      "name": "permission_states_preserved",
+      "name": "open_attachment",
       "passed": true
     },
     {
-      "name": "granted_access_preserved",
+      "name": "open_notes",
       "passed": true
     },
     {
-      "name": "automation_status_preserved",
-      "passed": true,
-      "status": "unverified",
-      "detail": "Automation permission checks are unknown while locked; UI automation access is unverified"
-    },
-    {
-      "name": "calendar_contacts_states_preserved",
+      "name": "open_biome",
       "passed": true
     },
     {
-      "name": "real_capture_from_immutable_world",
+      "name": "open_safari",
       "passed": true
     },
     {
-      "name": "replica_convergence",
+      "name": "resigned_chat",
       "passed": true
     },
     {
-      "name": "no_scope_leak",
+      "name": "resigned_wal",
       "passed": true
     },
     {
-      "name": "no_scope_leak",
+      "name": "resigned_attachment",
+      "passed": true
+    },
+    {
+      "name": "resigned_notes",
+      "passed": true
+    },
+    {
+      "name": "resigned_biome",
+      "passed": true
+    },
+    {
+      "name": "resigned_safari",
+      "passed": true
+    },
+    {
+      "name": "control_chat",
+      "passed": true
+    },
+    {
+      "name": "control_wal",
+      "passed": true
+    },
+    {
+      "name": "control_attachment",
+      "passed": true
+    },
+    {
+      "name": "control_notes",
+      "passed": true
+    },
+    {
+      "name": "control_biome",
+      "passed": true
+    },
+    {
+      "name": "control_safari",
+      "passed": true
+    },
+    {
+      "name": "launchd_control_removed",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
       "passed": true
     }
   ],
-  "latency": {},
+  "latency": null,
   "hosts": [
     "air"
   ]

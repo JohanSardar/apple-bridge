@@ -1232,7 +1232,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		directShortcut := scenario.ID == "SC-RUN-REAL" || scenario.Feature == "clock.pack"
 		packagingOnly = packagingOnly && (scenario.ID == "APP-SHELL-SIM" && level == "sim" || directShortcut || level == "real" && (scenario.ID == "CONN-CLAUDE-AI" || scenario.ID == "CONN-CHATGPT") || isIPhoneRealScenario(scenario.ID, level) || level == "real" && isIPhoneSensorReal(scenario.ID) || scenario.Feature == "iphone.location" || scenario.Feature == "iphone.health" || scenario.Feature == "packaging.app" || scenario.Feature == "packaging.release" || scenario.Feature == "packaging.setup" || scenario.Feature == "core.shortcuts" || scenario.Feature == "core.permissions" || scenario.Feature == "usage.action_probe" || scenario.Feature == "helper.siri_intents")
 	}
-	if !packagingOnly {
+	if !packagingOnly && !(len(scenarios) == 1 && scenarios[0].ID == "HELPER-TCC-READY") {
 		if err = world.Build(ctx, level); err != nil {
 			return err
 		}
@@ -1254,6 +1254,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		ran++
 		fmt.Fprintln(os.Stderr, "running", s.ID, level)
 		duration := 3 * time.Minute
+		if s.ID == "HELPER-TCC-READY" {
+			duration = 10 * time.Minute
+		}
 		if s.ID == "QUERY-AGENT" {
 			duration = 5 * time.Minute
 		}
