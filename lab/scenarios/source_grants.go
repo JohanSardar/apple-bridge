@@ -31,8 +31,6 @@ func runSourceGrants(ctx context.Context, w *world.World, add func(string, bool)
 	}
 	cookie, _, err := authority.CreateDeviceSession("trusted")
 	owner := &webClient{ctx: ctx, origin: strings.Replace(w.Gateway.URL, "127.0.0.1", "localhost", 1), cookie: &http.Cookie{Name: bridgeweb.LocalSessionCookie, Value: cookie}}
-	resp, raw, err := owner.request("GET", "grants", nil)
-	add("agent_ui_dummy_group", err == nil && resp.StatusCode == 200 && bytes.Contains(raw, []byte("Lab dummy")) && bytes.Contains(raw, []byte("labdummy:write")))
 	client, err := authority.RegisterOAuth(trust.OAuthClient{Name: "Bridge Test grants", RedirectURIs: []string{"https://connector.example/callback"}})
 	challenge := sha256.Sum256([]byte(strings.Repeat("a", 43)))
 	query := url.Values{"client_id": {client.ID}, "redirect_uri": {"https://connector.example/callback"}, "response_type": {"code"}, "resource": {owner.origin + "/mcp"}, "code_challenge_method": {"S256"}, "code_challenge": {base64.RawURLEncoding.EncodeToString(challenge[:])}, "scope": {"labdummy:read labdummy:write"}}
@@ -52,14 +50,6 @@ func runSourceGrants(ctx context.Context, w *world.World, add func(string, bool)
 		add("consent_dummy_group", response.StatusCode == 200 && found)
 	} else {
 		add("consent_dummy_group", false)
-	}
-	command := exec.CommandContext(ctx, "pnpm", "exec", "node", "dev/source-grants.mjs", owner.origin, query.Encode())
-	command.Dir = "web"
-	command.Env = append(command.Environ(), "AB_GRANTS_SESSION="+cookie)
-	output, err := command.CombinedOutput()
-	add("consent_and_agent_render_dummy_group", err == nil && bytes.Contains(output, []byte("source grants rendered")))
-	if err != nil {
-		println(string(output))
 	}
 	store, err := state.Open(w.Gateway.Home)
 	add("dummy_store", err == nil)

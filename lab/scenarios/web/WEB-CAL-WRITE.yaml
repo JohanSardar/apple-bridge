@@ -1,6 +1,6 @@
 id: WEB-CAL-WRITE
-feature: web.calendar
-levels: [sim, web, real]
+feature: calendar.write
+levels: [sim, real]
 web:
   browsers: [webkit, chromium, firefox]
   themes: [light, dark]

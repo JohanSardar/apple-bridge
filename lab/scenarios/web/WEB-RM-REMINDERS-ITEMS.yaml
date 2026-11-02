@@ -1,5 +1,5 @@
 id: WEB-RM-REMINDERS-ITEMS
-feature: web.reminders
+feature: reminders.read
 levels: [sim]
 given: [{world: {replicas: 1}}]
 when: [{readmodels: {}}]

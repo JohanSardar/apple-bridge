@@ -1,14 +1,17 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[7.19 10.09 10.54] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[4.54 4.49 3.91] cpu_idle=76% cpus=8 other_heavy=0"
   },
-  "run_id": "relay_01M5ECPTDG9C739WPTB7E944GJ",
+  "run_id": "relay_01M6EYAPHRP8FB6AWSXT8FYAZ8",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
   "scenario": "WEB-RELAY-AUTH",
   "level": "sim",
   "passed": true,
-  "git_sha": "75f28b7e1babfc1609a67d39c4dfc904d2b38236",
-  "at": "2026-10-21T04:49:57.168879Z",
+  "git_sha": "590faa40f8445f912b0d01f38738001e9a725af9",
+  "at": "2026-11-02T20:13:36.184037Z",
   "assertions": [
     {
       "name": "paired_world",
@@ -111,6 +114,10 @@
       "passed": true
     },
     {
+      "name": "no_oversized_capture_observer_resets",
+      "passed": true
+    },
+    {
       "name": "credential_backend_override_restored",
       "passed": true
     }
@@ -118,9 +125,9 @@
   "latency": {
     "relay_revocation": {
       "samples": 1,
-      "p50_ms": 101.232959,
-      "p95_ms": 101.232959,
-      "max_ms": 101.232959,
+      "p50_ms": 102.16725,
+      "p95_ms": 102.16725,
+      "max_ms": 102.16725,
       "timeouts": 0
     }
   },

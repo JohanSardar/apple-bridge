@@ -1,6 +1,6 @@
 id: CAL-STORE-READ
-feature: web.calendar
-levels: [sim, real, web]
+feature: calendar.read
+levels: [sim, real]
 given: [{world: {replicas: 1}}]
 when: [{calendar_journey: {}}]
 then: [{converge: {}}]

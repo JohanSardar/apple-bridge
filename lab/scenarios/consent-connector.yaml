@@ -1,0 +1,7 @@
+id: CONSENT-CONNECTOR
+feature: web.frontdoor
+levels: [sim]
+given: [{world: {replicas: 1}}]
+when: []
+then: []
+cleanup: [{world: {}}]

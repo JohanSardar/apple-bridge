@@ -4,7 +4,6 @@ levels:
   real: Real Swift Helper and Apple apps on the Air
   replica: Real gateway on the Air, replica on the Ubuntu laptop
   agent: GPT-6-Luna via Codex on Ubuntu using only the replica MCP
-  web: Playwright (WebKit, Chromium, Firefox) on the Air against a bridge-lab demo world, or the real gateway for real-level web runs
 statuses: [todo, in_progress, done, limited, blocked, dropped]
 status_rules:
   dropped: Intentionally excluded from scope, with a reason; no passing qualification is claimed
@@ -30,8 +29,6 @@ requirements:
   R-USAGE: Screen Time per app, per device, per day estimates, read-only
   R-PKG: Developer ID signed and notarized app, signed updates, onboarding, background service and clean uninstall
   R-AGENT: A remote agent can do real tasks through MCP only
-  R-WEB-UI: A web app mirrors Apple's apps per design/web specs, light and dark, phone and desktop, latest two Safari, Chrome/Edge and Firefox
-  R-WEB-FAST: Interaction under 8 ms, 120 fps scrolling of 100k-message threads, Mac-to-browser p95 under 500 ms, warm load under 1 s
   R-WEB-REACH: Any browser or agent anywhere reaches the bridge through the embedded Funnel with nothing installed and nothing paid
   R-WEB-SECURE: Passkey device sessions, public-computer mode, revocation, origin and CSP protection, rate limits, agent levels with owner approval
 
@@ -244,6 +241,9 @@ features:
       - {id: MSG-WATCHER-REARM, levels: [sim]}
       - {id: MSG-PERMISSION-LOSS, levels: [sim]}
       - {id: CORE-MESSAGES-SHAPE, levels: [sim]}
+      - {id: MSG-DECODE-BALLOON, levels: [sim, real]}
+      - {id: MSG-DECODE-FORMATTING, levels: [sim, real]}
+      - {id: MSG-READ-RICH-FIELDS, levels: [sim, real]}
   - id: messages.send
     title: Send text and files to self, new handles and existing groups with truthful dispositions
     requirements: [R-RW, R-MSG-DEPTH, R-SAFE-CMD]
@@ -274,6 +274,16 @@ features:
       - {id: MSG-MARK-READ, levels: [sim]}
       - {id: MSG-DELETE, levels: [sim]}
       - {id: MSG-UI-INTERFERENCE, levels: [sim]}
+      - {id: MSG-COMMAND-OBSERVED-IDS, levels: [sim]}
+      - {id: MSG-FAILED-OBSERVED-IDS, levels: [sim]}
+      - {id: MSG-COMMAND-PARTS, levels: [sim]}
+      - {id: MSG-OWNER-TOKEN-SELFCHAT, levels: [sim]}
+      - {id: MSG-MEDIA-CLEANUP, levels: [sim]}
+      - {id: MSG-SELFTEST, levels: [sim, real], status: dropped, reason: "Dropped by the owner on 2026-11-01: imagent refuses the Helper connection that these native Messages actions need."}
+      - {id: MSG-DELETE-VISIBILITY, levels: [sim, real]}
+      - {id: MSG-READSTATE-REAL, levels: [sim, real], status: dropped, reason: "Dropped by the owner on 2026-11-01: imagent refuses the Helper connection that these native Messages actions need."}
+      - {id: MSG-DELETE-REAL, levels: [sim, real]}
+      - {id: MSG-RESEND, levels: [sim, real], status: dropped, reason: "Dropped by the owner on 2026-11-01: imagent refuses the Helper connection that these native Messages actions need."}
   - id: reminders.read
     title: Reminders lists and items, live capture, recurrence coverage
     requirements: [R-FULL, R-LIVE, R-REM, R-NO-FALSE-DELETE]
@@ -286,6 +296,14 @@ features:
       - {id: REM-DST, levels: [sim]}
       - {id: REM-RECURRING, levels: [sim]}
       - {id: REM-PERMISSION-LOSS, levels: [sim]}
+      - {id: WEB-REM-PARITY, levels: [sim, real]}
+      - {id: WEB-RM-REMINDERS-HARDENING, levels: [sim]}
+      - {id: WEB-RM-REMINDERS-LISTS, levels: [sim]}
+      - {id: WEB-RM-REMINDERS-ITEMS, levels: [sim]}
+      - {id: WEB-RM-REMINDERS-DEMO, levels: [sim]}
+      - {id: REM-STORE-READ, levels: [sim, real]}
+      - {id: REM-STORE-DECODE, levels: [sim]}
+      - {id: REM-STORE-PERF, levels: [sim, real], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
   - id: reminders.write
     title: Reminders create, update, complete, delete, lists, conflicts
     requirements: [R-RW, R-REM, R-SAFE-CMD]
@@ -304,6 +322,7 @@ features:
       - {id: REM-READONLY-LIST, levels: [sim]}
       - {id: REM-OPERATION-SHAPES, levels: [sim]}
       - {id: REM-NATIVE-LIST-RACE, levels: [sim]}
+      - {id: WEB-REM-WRITE, levels: [real]}
     notes: "Tagged list create, rename and delete verified at sim and real; AppleTruth confirms the renamed list is absent after deletion. R2 verifies native section order, membership, reorder and owned editor and list cleanup at real."
   - id: calendar.read
     title: Calendar window capture, identity, recurrence, time zones, window slide
@@ -326,6 +345,10 @@ features:
       - {id: CAL-INVALIDATED-EVENT, levels: [sim]}
       - {id: CAL-ID-CHURN, levels: [sim]}
       - {id: CAL-PERMISSION-LOSS, levels: [sim]}
+      - {id: CAL-FUTURE-COUNT-MATH, levels: [sim]}
+      - {id: CAL-FUTURE-RULE-MISMATCH, levels: [sim]}
+      - {id: CAL-SPLIT-ATOMIC-TIMED, levels: [sim]}
+      - {id: CAL-STORE-READ, levels: [sim, real]}
   - id: calendar.write
     title: Calendar create, update and delete with spans
     requirements: [R-RW, R-CAL, R-SAFE-CMD]
@@ -342,6 +365,7 @@ features:
       - {id: CAL-SPLIT-FRAME-CAP, levels: [sim]}
       - {id: CAL-RECUR-ALL-REJECT, levels: [sim]}
       - {id: CAL-READONLY, levels: [sim]}
+      - {id: WEB-CAL-WRITE, levels: [sim, real]}
 
   - id: contacts.read
     title: Contacts import, history tokens, resets, images, handle links
@@ -363,6 +387,8 @@ features:
       - {id: CON-IMAGE, levels: [sim]}
       - {id: CON-HANDLE-LINK, levels: [sim]}
       - {id: CON-RECIPIENT-LOOKUP, levels: [sim]}
+      - {id: WEB-CON-LIST, levels: [sim]}
+      - {id: CON-GROUPS, levels: [sim]}
     notes: >-
       Thirty-second recovery polls skip history enumeration when the committed token and Me identity are unchanged; notifications retain 50 ms coalescing and commands reconcile immediately.
       Direct external Contacts R-LIVE passes on candidate 165ea123 based on main b99d876b: 20 native changes, gateway p95 454.953 ms and Ubuntu replica p95 507.510 ms over the LAN SSH tunnel, below the unchanged 1000 ms budget. Media backfill is enabled, bulk capture peak is one, and the fresh signed Helper is crash-free. The isolated 2026-10-23 public CON-RELAY rerun proves scope, subscription and live-feed delivery with 20/20 replica samples; the earlier 0/20 observation is superseded. Gateway/replica p95 was 1453.922/1481.835 ms against the unchanged 1000 ms budget, with a TCC activity surge during the run after a quiet precheck. Tagged contact cleanup passed. The immediate Serve byte comparison failed, but a later canonical configuration read matched the saved baseline.
@@ -394,6 +420,9 @@ features:
       - {id: NOTE-IMPORT, levels: [sim, real]}
       - {id: NOTE-EXTERNAL, levels: [sim, real, replica]}
       - {id: NOTE-DECODE, levels: [sim]}
+      - {id: NOTE-LIST, levels: [sim]}
+      - {id: NOTE-DECODE-FULL, levels: [sim, real]}
+      - {id: NOTE-EDIT-PARITY, levels: [sim, real], status: dropped, reason: "Dropped by the owner on 2026-11-01: Notes scripting does not support HTML structure or checklist changes."}
   - id: notes.extras
     title: Notes checklist, folder, tag, pin and move extras
     requirements: [R-RW, R-NOTES]
@@ -471,7 +500,7 @@ features:
 
   - id: web.readmodels
     title: Read models for chats, threads and collections (messages.chats, messages.thread, messages.collection)
-    requirements: [R-WEB-FAST, R-API]
+    requirements: [R-API]
     milestone: W1
     modules: [state, operations, contracts]
     depends_on: [messages.read]
@@ -481,47 +510,23 @@ features:
       - {id: WEB-RM-SEARCH, levels: [sim]}
       - {id: WEB-RM-THREAD, levels: [sim]}
       - {id: WEB-RM-MEDIA-COLLECTION, levels: [sim]}
-      - {id: WEB-RM-THREAD-OLDEST, levels: [web]}
-      - {id: WEB-RM-OLDEST-BROWSER, levels: [web]}
       - {id: WEB-RM-THREAD-ORIGINATOR, levels: [sim]}
-      - {id: WEB-RM-THREAD-ORIGINATOR-BROWSER, levels: [web]}
       - {id: WEB-RM-THREAD-ORIGINATOR-PERF, levels: [sim]}
     notes: Functional read-model contracts, including exact participant sets and search, pass at all listed levels. One exclusive quiet WEB-RM-CHATS sim run passed all 178 checks with REST/MCP chats p95 9.85/10.55 ms against the unchanged 15 ms budgets; the prior deferral is closed.
   - id: web.frontdoor
-    title: Web front door, passkey device sessions, live views (web/1), embedded app shell
-    requirements: [R-WEB-SECURE, R-WEB-FAST, R-WEB-UI]
+    title: Server rendered passkey consent and command approvals
+    requirements: [R-WEB-SECURE, R-AGENT]
     milestone: W1
-    modules: [web, webui, trust, replication]
+    modules: [internal/web, trust, operations]
     depends_on: [web.readmodels]
     status: done
     scenarios:
-      - {id: WEB-SERVE-EMBED, levels: [sim, web]}
-      - {id: WEB-AUTH-ENROLL, levels: [web]}
-      - {id: WEB-AUTH-LOGIN, levels: [web]}
-      - {id: WEB-AUTH-REVOKE, levels: [web]}
-      - {id: WEB-AUTH-ORIGIN, levels: [sim]}
-      - {id: WEB-AUTH-RATELIMIT, levels: [sim]}
-      - {id: WEB-AUTH-ISOLATION, levels: [sim]}
-      - {id: WEB-LIVE-DELTA, levels: [web]}
-      - {id: WEB-LIVE-RESUME, levels: [web]}
-      - {id: WEB-PERF-SHELL, levels: [web]}
-      - {id: WEB-AUTH-SOFTWARE, levels: [sim]}
-      - {id: WEB-BLOB-ACCESS, levels: [sim]}
-      - {id: WEB-COMMAND-INTERACTIVE, levels: [sim]}
-      - {id: WEB-COMMAND-RESOLVE, levels: [sim]}
-      - {id: WEB-LIVE-RECORD, levels: [sim]}
-      - {id: WEB-LIVE-READMODELS, levels: [sim]}
-      - {id: WEB-SHELL-JOURNEY, levels: [web]}
-      - {id: WEB-INPUT-GUARD, levels: [web]}
-      - {id: WEB-VIRTUAL-ANCHOR, levels: [web]}
-      - {id: WEB-CACHE-POLICY, levels: [web]}
-      - {id: WEB-LIVE-MOCK, levels: [web]}
-      - {id: WEB-MOTION, levels: [web]}
+      - {id: CONSENT-CONNECTOR, levels: [sim]}
   - id: web.media
-    title: Browser-safe media variants made by the Helper
-    requirements: [R-WEB-UI, R-ATTACH]
+    title: Helper media variants for REST blobs and replication
+    requirements: [R-API, R-ATTACH]
     milestone: W1
-    modules: [native/MediaDerivatives, blobs, web]
+    modules: [native/MediaDerivatives, blobs, replication]
     depends_on: [messages.read]
     status: done
     scenarios:
@@ -546,8 +551,7 @@ features:
       - {id: CONN-CLAUDE-CODE, levels: [real]}
       - {id: CONN-CLAUDE-AI, levels: [sim, real]}
       - {id: CONN-CHATGPT, levels: [sim, real], status: dropped, reason: "Dropped by the owner on 2026-11-01: the owner ChatGPT plan has no Developer mode for custom connectors."}
-      - {id: WEB-LOCAL-SAFARI, levels: [web]}
-    notes: A1 connector sim checks now prove five-minute code matching, owner-local approval, denial, expiry, replay refusal, request isolation, OAuth token exchange and records_query. RMT-ONECOMMAND-FLOW sim covers ephemeral approval-link delivery, token-free status and logs, redacted client failures, and cancellation before Funnel approval. System Funnel passes the public Ubuntu path with a valid certificate, REST and MCP SSE, spoofed-forwarding rejection and Serve-config preservation (real evidence 2026-10-21). WEB-LOCAL-SAFARI passes. T76 live private embedded runners validate on/private status and invitation shape through the Air system tailnet path; remote off and private restoration pass. With the tailnet grant tcp:7780 to the bridge node in place, invitation redemption and the session-gated bridge challenge pass for real (2026-10-30).
+    notes: A1 connector sim checks now prove five-minute code matching, owner-local approval, denial, expiry, replay refusal, request isolation, OAuth token exchange and records_query. RMT-ONECOMMAND-FLOW sim covers ephemeral approval-link delivery, token-free status and logs, redacted client failures, and cancellation before Funnel approval. System Funnel passes the public Ubuntu path with a valid certificate, REST and MCP SSE, spoofed-forwarding rejection and Serve-config preservation (real evidence 2026-10-21). T76 live private embedded runners validate on/private status and invitation shape through the Air system tailnet path; remote off and private restoration pass. With the tailnet grant tcp:7780 to the bridge node in place, invitation redemption and the session-gated bridge challenge pass for real (2026-10-30).
   - id: web.agents
     title: Agent tokens with read, approve-first and full levels; MCP OAuth for connectors
     requirements: [R-WEB-SECURE, R-AGENT]
@@ -560,20 +564,9 @@ features:
       - {id: WEB-AGENT-CREDENTIALS, levels: [sim]}
       - {id: WEB-AGENT-ACTIVITY, levels: [sim]}
       - {id: WEB-AGENT-LEVELS, levels: [sim]}
-      - {id: WEB-AGENT-OAUTH, levels: [sim, web]}
-      - {id: WEB-AGENT-OAUTH-CIMD, levels: [sim, web]}
-    notes: Agent credentials and levels, durable gateway approvals, redacted 90-day activity, public-client OAuth and grouped settings/consent screens pass sim and browser coverage. CIMD rejects malformed redirects and client URLs, oversized metadata, private redirects and DNS rebinding before connections. Replica agent delegation is covered by web.relay. SEC-REMOTE-ACCESS passes sim and Air real (2026-11-01), proving public relay endpoint denial, OAuth binding and replay defenses, connector revocation within three seconds, token redaction and test tunnel credential cleanup.
-  - id: web.demo
-    title: Synthetic demo world serving the web app (bridge-lab demo)
-    requirements: [R-WEB-UI]
-    milestone: W1
-    modules: [lab/demo, lab/world]
-    depends_on: [web.readmodels, web.frontdoor]
-    status: done
-    scenarios:
-      - {id: WEB-DEMO-DATASET, levels: [sim]}
-      - {id: WEB-DEMO-SESSION, levels: [web]}
-    notes: Seeded 60-contact 40-chat 5000-message SimApple demo with generated media, one-use lab sign-in, live updates and optional 100000-message chat. Reader-only payload gaps are documented in lab/demo/FIXTURES.md. The Messages milestone gate measured default demo startup at 5.431 s against the unchanged 10-second threshold (design/MILESTONE-GATES.md).
+      - {id: WEB-AGENT-OAUTH, levels: [sim]}
+      - {id: WEB-AGENT-OAUTH-CIMD, levels: [sim]}
+    notes: Agent credentials and levels, durable gateway approvals, redacted 90-day activity and public-client OAuth are retained. Go-rendered consent and approval forms replace the SolidJS settings screens. CIMD rejects malformed redirects and client URLs, oversized metadata, private redirects and DNS rebinding before connections. Replica agent delegation is covered by web.relay. SEC-REMOTE-ACCESS passes sim and Air real (2026-11-01), proving public relay endpoint denial, OAuth binding and replay defenses, connector revocation within three seconds, token redaction and test tunnel credential cleanup.
   - id: web.relay
     title: Replicas connect through the Remote relay with device-key auth
     requirements: [R-WEB-REACH, R-FULL, R-LIVE, R-SECURE]
@@ -602,196 +595,6 @@ features:
       Reminders and Notes pass; Messages R-LIVE is limited on messages entries because
       no unused own-handle alias exists. App-specific public-path limits stay recorded on
       each app's own entry. No thresholds were changed.
-  - id: web.messages.read
-    title: Messages web app reading at full fidelity (list, transcript, media, viewer, links, effects, details, search)
-    requirements: [R-WEB-UI, R-WEB-FAST, R-MSG-DEPTH]
-    milestone: W2
-    modules: [webui, web, operations, native/MessagesSource, lab/demo]
-    depends_on: [web.frontdoor, web.demo, web.media]
-    status: done
-    scenarios:
-      - {id: MSG-DECODE-BALLOON, levels: [sim, real]}
-      - {id: MSG-DECODE-FORMATTING, levels: [sim, real]}
-      - {id: MSG-READ-RICH-FIELDS, levels: [sim, real]}
-      - {id: WEB-CONTACT-AVATAR-THUMB, levels: [web]}
-      - {id: WEB-HANDLES-ROUTE, levels: [web]}
-      - {id: WEB-MSG-CHATS-STORE, levels: [web]}
-      - {id: WEB-MSG-CHATS-CACHE, levels: [web]}
-      - {id: WEB-FIXTURE-SNAPSHOT, levels: [sim]}
-      - {id: WEB-MSG-LIST, levels: [web]}
-      - {id: WEB-MSG-AVATAR-READY, levels: [web]}
-      - {id: WEB-MSG-LOADING, levels: [web]}
-      - {id: WEB-MSG-REORDER, levels: [web]}
-      - {id: WEB-MSG-FILTERS, levels: [web]}
-      - {id: WEB-MSG-FILTERS-MENU, levels: [web]}
-      - {id: WEB-MSG-SEARCH, levels: [web]}
-      - {id: WEB-PERF-SEARCH, levels: [web]}
-      - {id: WEB-MSG-SEARCH-LIST, levels: [web]}
-      - {id: WEB-MSG-SIDEBAR, levels: [web]}
-      - {id: WEB-MSG-THREAD-CORE, levels: [web]}
-      - {id: WEB-MSG-READ-THROTTLE, levels: [web]}
-      - {id: WEB-MSG-TRANSCRIPT-VIEWER, levels: [web]}
-      - {id: WEB-MSG-COMPOSITION, levels: [web]}
-      - {id: WEB-MSG-TRANSCRIPT-HOOKS, levels: [web]}
-      - {id: WEB-MSG-TEXT-SIZING, levels: [web]}
-      - {id: WEB-MSG-REACTIONS, levels: [web]}
-      - {id: WEB-MSG-REPLIES, levels: [web]}
-      - {id: WEB-MSG-REPLY-HANDOFF, levels: [web]}
-      - {id: WEB-MSG-POINTER, levels: [web]}
-      - {id: WEB-MSG-EDIT-UNSEND-VIEW, levels: [web]}
-      - {id: WEB-MSG-GROUP-EVENTS, levels: [web]}
-      - {id: WEB-MSG-MOTION, levels: [web]}
-      - {id: WEB-MSG-INTERACTION-MOTION, levels: [web]}
-      - {id: WEB-MSG-FONTS, levels: [web]}
-      - {id: WEB-MSG-MEDIA, levels: [web]}
-      - {id: WEB-MSG-RICH-PARTS, levels: [web]}
-      - {id: WEB-MSG-EFFECTS-TRANSCRIPT, levels: [web]}
-      - {id: WEB-MSG-CARD-SURFACES, levels: [web]}
-      - {id: WEB-MSG-VIEWER, levels: [web]}
-      - {id: WEB-MSG-LINKS, levels: [web]}
-      - {id: WEB-MSG-STICKERS-GENMOJI, levels: [web]}
-      - {id: WEB-MSG-EFFECTS, levels: [web]}
-      - {id: WEB-MSG-AUDIO, levels: [web]}
-      - {id: WEB-MSG-FILES, levels: [web]}
-      - {id: WEB-MSG-PLACEHOLDERS, levels: [web]}
-      - {id: WEB-MSG-PENDING, levels: [web]}
-      - {id: WEB-MSG-DETAILS, levels: [web]}
-      - {id: WEB-MSG-KEYBOARD, levels: [web]}
-      - {id: WEB-MSG-KEYBOARD-LIST, levels: [web]}
-      - {id: WEB-MSG-A11Y, levels: [web]}
-      - {id: WEB-MSG-PERF, levels: [web], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
-      - {id: WEB-MSG-PERF-FRAME, levels: [web], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
-      - {id: WEB-MSG-PERF-INPUT, levels: [web], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
-      - {id: WEB-PERF-LIST, levels: [web]}
-      - {id: WEB-MSG-LIVE, levels: [web]}
-      - {id: WEB-MSG-REAL-READ, levels: [sim, real]}
-    notes: The 12-project browser/theme/layout matrices qualify LIVE, THREAD-CORE, SEARCH and the formerly incomplete read matrices. Performance evidence separates observed script/style/layout proxies from complete input and paint budgets. Counts, digests and pass/fail are in WEB-MSG-READ-MATRIX.json. The native self-chat read harness passes authenticated chat and thread comparisons against independent read-only truth with zero writes.
-    limits: []
-  - id: web.messages.write
-    title: Messages web app writing (interactive gate, self-test, composer, actions, uploads)
-    requirements: [R-WEB-UI, R-RW, R-MSG-DEPTH, R-SAFE-CMD]
-    milestone: W3
-    modules: [native/MessagesSource, operations, web, webui, replication]
-    depends_on: [web.messages.read]
-    status: done
-    # WEB-MSG-REPLY retains one red cell (WebKit light-phone: a hidden-stack
-    # action anchor detaches after the dialog opens); MANAGE passes its declared matrix.
-    # T74 final serial timing runs record the remaining unchanged-budget limits.
-    scenarios:
-      - {id: MSG-COMMAND-OBSERVED-IDS, levels: [sim]}
-      - {id: MSG-FAILED-OBSERVED-IDS, levels: [sim]}
-      - {id: MSG-COMMAND-PARTS, levels: [sim]}
-      - {id: WEB-SOURCES-STATUS, levels: [sim, web]}
-      - {id: MSG-INTERACTIVE-GATE, levels: [sim, real]}
-      - {id: MSG-OWNER-TOKEN-SELFCHAT, levels: [sim]}
-      - {id: MSG-MEDIA-CLEANUP, levels: [sim]}
-      - {id: MSG-SELFTEST, levels: [sim, real], status: dropped, reason: "Dropped by the owner on 2026-11-01: imagent refuses the Helper connection that these native Messages actions need."}
-      - {id: MSG-DELETE-VISIBILITY, levels: [sim, real]}
-      - {id: MSG-READSTATE-REAL, levels: [sim, real], status: dropped, reason: "Dropped by the owner on 2026-11-01: imagent refuses the Helper connection that these native Messages actions need."}
-      - {id: MSG-DELETE-REAL, levels: [sim, real]}
-      - {id: MSG-RESEND, levels: [sim, real], status: dropped, reason: "Dropped by the owner on 2026-11-01: imagent refuses the Helper connection that these native Messages actions need."}
-      - {id: WEB-MSG-COMPOSER, levels: [web]}
-      - {id: WEB-MSG-SEND, levels: [web]}
-      - {id: WEB-MSG-ATTACH-SEND, levels: [web]}
-      - {id: WEB-UPLOAD-REPLICA, levels: [sim]}
-      - {id: WEB-UPLOAD-REPLICA-CHECKPOINT, levels: [sim]}
-      - {id: WEB-UPLOAD-CONTROL-PRODUCTION, levels: [sim]}
-      - {id: WEB-UPLOAD-REPLICA-RESUME, levels: [sim]}
-      - {id: WEB-UPLOAD-REPLICA-STATUS, levels: [sim]}
-      - {id: WEB-UPLOAD-REPLICA-STATUS-LOAD, levels: [sim]}
-      - {id: WEB-UPLOAD-REPLICA-STATUS-CAPTURE, levels: [sim]}
-      - {id: WEB-UPLOAD-REPLICA-LOST-RESPONSE, levels: [sim]}
-      - {id: WEB-UPLOAD-REPLICA-FORWARD-RESUME, levels: [sim]}
-      - {id: WEB-UPLOAD-RESUME, levels: [sim]}
-      - {id: WEB-UPLOAD-OVERSIZE, levels: [sim]}
-      - {id: WEB-UPLOAD-DIGEST, levels: [sim]}
-      - {id: WEB-UPLOAD-MISSING-PART, levels: [sim]}
-      - {id: WEB-UPLOAD-FEED, levels: [sim]}
-      - {id: WEB-UPLOAD-LIMITS, levels: [sim]}
-      - {id: WEB-UPLOAD-LEASE, levels: [sim]}
-      - {id: WEB-UPLOAD-NATIVE-STAGING, levels: [sim, real]}
-      - {id: WEB-MSG-REACT, levels: [web]}
-      - {id: WEB-MSG-REPLY, levels: [web]}
-      - {id: WEB-MSG-EDIT, levels: [web]}
-      - {id: WEB-MSG-UNSEND, levels: [web]}
-      - {id: WEB-MSG-MANAGE, levels: [web]}
-      - {id: WEB-MSG-CHAT-ACTIONS, levels: [web]}
-      - {id: WEB-MSG-NEW, levels: [web]}
-      - {id: WEB-MSG-FAIL-RESEND, levels: [web]}
-      - {id: WEB-MSG-OPTIMISTIC, levels: [web]}
-      - {id: WEB-MSG-PARTS, levels: [web]}
-  - id: web.reminders
-    title: Reminders web app (read, write, parity)
-    requirements: [R-WEB-UI, R-WEB-FAST, R-RW]
-    milestone: W5
-    modules: [webui, native/RemindersSource, native/RemindersStore, state, operations]
-    depends_on: [web.frontdoor, reminders.write]
-    status: done
-    scenarios:
-      - {id: WEB-REM-READ, levels: [web]}
-      - {id: WEB-REM-DETAILS, levels: [web]}
-      - {id: WEB-REM-WRITE, levels: [web, real]}
-      - {id: WEB-REM-ENTRY, levels: [web]}
-      - {id: WEB-REM-PARITY, levels: [sim, real, web]}
-      - {id: WEB-REM-ACTIONS, levels: [web], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
-      - {id: WEB-RM-REMINDERS-HARDENING, levels: [sim]}
-      - {id: WEB-RM-REMINDERS-LISTS, levels: [sim]}
-      - {id: WEB-RM-REMINDERS-ITEMS, levels: [sim]}
-      - {id: WEB-RM-REMINDERS-DEMO, levels: [sim]}
-      - {id: REM-STORE-READ, levels: [sim, real]}
-      - {id: REM-STORE-DECODE, levels: [sim]}
-      - {id: REM-STORE-PERF, levels: [sim, real], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
-    notes: >-
-      Core milestone green with explicit limits: browser 192/204 configured, with 12 not-applicable; all six phone projects prove trusted touch through the details and delete-cancel route. The focused actions matrix passes 72 cases with 12 layout exclusions and no failures or flakes. Quiet exclusive PERF-SHELL passes 12/12 after #303; Chromium navigation/input long tasks are absent and CLS is zero. Native first visibility passes 200/200, gateway/replica p95 560/563 ms; isolated create 372/386 ms and both forwarded deletes pass. Latest-update timing is descriptive only. Parity controls remain subject to native command qualification; real changed-set modes and app-specific UI timings remain limited. The signed Helper authorize-reminders path requested ordinary OS consent once; its report remained not_determined and a subsequent non-prompting status returned unknown while consent was unresolved. Status now includes automation_reminders. Parity controls remain gated by command qualification; WEB-REM-PARITY covers native effects and existing browser read affordances. Gateway reminders.lists and reminders.items provide scoped counts, groups, sections, tags and recursive subtasks. The read-only web/1 UI renders the sidebar, sections and nested items, with completed visibility, sorts, search, details and live updates. Basic writes use trusted input events, identity-based optimistic reconciliation and completion motion; unsupported store-only fields remain gated. Views over 2 MiB fail explicitly; item paging remains a follow-up. Store WAL FSEvents hints and bounded burst coalescing supplement EventKit notifications after #267. The real flag-only gateway propagation check is limited until the Helper has Reminders Apple Events authorization. The native V2 UUID-array manual-order decoder and versioned section order and membership envelopes are verified; early reminders and custom-filter decoding remain unsupported pending positive fixtures at unlock. Native tags, attachment IDs, assignment and store alarm/recurrence projections also remain unsupported; EventKit alarms and recurrence stay available. R2 qualifies native sections, flags, list icons, indent/outdent, tags, manual reminder order, image attachments and custom smart lists, with verified owned editor, dialog and list cleanup. No Location or notification permission was requested. Remaining unsupported store decoders stay hidden.
-  - id: web.calendar
-    title: Calendar web app (read, write, parity)
-    requirements: [R-WEB-UI, R-WEB-FAST, R-RW]
-    milestone: W6
-    modules: [webui, native/CalendarSource, operations]
-    depends_on: [web.frontdoor, calendar.write]
-    status: done
-    scenarios:
-      - {id: CAL-FUTURE-COUNT-MATH, levels: [sim]}
-      - {id: CAL-FUTURE-RULE-MISMATCH, levels: [sim]}
-      - {id: CAL-SPLIT-ATOMIC-TIMED, levels: [sim]}
-      - {id: CAL-STORE-READ, levels: [sim, real, web]}
-      - {id: WEB-CAL-READ, levels: [web], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
-      - {id: WEB-CAL-NAVIGATE, levels: [web]}
-      - {id: WEB-CAL-WRITE, levels: [sim, web, real]}
-    notes: >-
-      Core milestone green: browser 144/144 passes without skips or flakes; #262 fixes recurring future-split reconciliation under a controlled response barrier. Native store/identity/counts and basic writes/cleanup pass. Ten-change R-LIVE gateway/replica p95 468.9/471.3 ms passes; REST/MCP month handlers p95 0.921/0.910 ms pass. Replica exactly-once attribution remains unverified despite convergence. Screenshots and raw reports remain private. WEB-CAL-PARITY covers the hidden parity actions and verified store reads. Positive travel-time units, structured coordinates, detached store identities and attachment derivatives require native proof and remain hidden when unsupported.
-  - id: web.contacts
-    title: Contacts web app (read, write, parity)
-    requirements: [R-WEB-UI, R-WEB-FAST, R-RW]
-    milestone: W7
-    modules: [webui, native/ContactsSource, operations]
-    depends_on: [web.frontdoor, contacts.write]
-    status: done
-    scenarios:
-      - {id: WEB-CON-LIST, levels: [sim]}
-      - {id: CON-GROUPS, levels: [sim]}
-      - {id: WEB-CON-READ, levels: [web]}
-      - {id: WEB-CON-WRITE, levels: [web]}
-      - {id: WEB-CON-PARITY, levels: [web]}
-    notes: >-
-      Core milestone green: browser 60/60 passes without skips or flakes; #249 repairs source-response geometry, #251 contains avatars, shares card/list photos and tightens phone spacing. #257 removes fixture surfaces from the shell; post-#281 exclusive audit passes shell 58291, Contacts route 14939 and all cacheable assets 611382 bytes. Native external changes pass 20/20 per endpoint: gateway/replica p95 795.7/807.8 ms. Native CRUD after #248 is leader-reported separately. Groups/posters stay hidden; photo-command fidelity and combined native/browser write acceptance remain limited. Replica exactly-once attribution remains unverified despite convergence. Raw reports and screenshots stay private.
-  - id: web.notes
-    title: Notes web app (read, write, parity)
-    requirements: [R-WEB-UI, R-WEB-FAST, R-RW]
-    milestone: W8
-    modules: [webui, native/NotesSource, native/Decoders, operations]
-    depends_on: [web.frontdoor, notes.write]
-    status: done
-    scenarios:
-      - {id: NOTE-LIST, levels: [sim]}
-      - {id: NOTE-LIST-LIVE, levels: [web]}
-      - {id: NOTE-DECODE-FULL, levels: [sim, real]}
-      - {id: NOTE-EDIT-PARITY, levels: [sim, real], status: dropped, reason: "Dropped by the owner on 2026-11-01: Notes scripting does not support HTML structure or checklist changes."}
-      - {id: WEB-NOTE-READ, levels: [web]}
-      - {id: WEB-NOTE-WRITE, levels: [web]}
-      - {id: WEB-NOTE-PARITY, levels: [web]}
-    notes: >-
-      Browser milestone 228/228 passes without skips or flakes; READ includes 4.5:1 highlight/link contrast across all five colors and both appearances. Core milestone green with explicit limits: #283 establishes leader-reported real DECODE-FULL 5/5 and REST/MCP CRUD sim 34/34. REST/MCP plain-text CRUD subsequently passed for real, including delete observation and replication. N2 qualifies REST/MCP folder rename and move, structure-preserving rich HTML text edits, permanent run-owned note cleanup, and exact baseline restoration for real. Leader-accepted #274 passes 20 real first-record saves, p95 gateway/Ubuntu replica 476.3/870.2 ms; full content 1430/1420 ms is separate. Rich/checklist mutations stay hidden; combined native/browser journeys, worker-enabled external-body integration, burst/crash and app-specific UI timing remain limited.
   - id: remote.relay
     title: SNI passthrough relay, stable device enrollment and persistent budgets
     requirements: [R-SECURE, R-WEB-REACH]
@@ -809,16 +612,6 @@ features:
       - {id: RELAY-OWN-DOMAIN, levels: [sim]}
       - {id: RELAY-REAL, levels: [real]}
       - {id: CONN-RELAY-CLAUDE, levels: [real]}
-  - id: remote.public-enroll
-    title: Enroll a public-host passkey with a terminal QR
-    requirements: [R-SECURE, R-WEB-REACH]
-    milestone: W1
-    modules: [remote, web, trust]
-    depends_on: [web.remote]
-    status: done
-    scenarios:
-      - {id: AUTH-PUBLIC-ENROLL, levels: [web]}
-    notes: Public URL requires Remote on; QR uses the existing Tailscale QR utility. Chromium virtual authenticators verify public RP enrollment and localhost exclusion.
   - id: remote.private
     title: Private userspace Tailscale access through localhost
     requirements: [R-SECURE, R-WEB-REACH]

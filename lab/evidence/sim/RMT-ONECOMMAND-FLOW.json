@@ -1,7 +1,7 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[3.68 5.44 6.59] cpu_idle=84% cpus=8 other_heavy=0"
+    "summary": "air: load=[4.63 4.5 3.91] cpu_idle=63% cpus=8 other_heavy=0"
   },
   "run_id": "remote-flow",
   "network_path": "isolated fake LocalClient and TCP listener; no tailscaled or login",
@@ -11,8 +11,8 @@
   "scenario": "RMT-ONECOMMAND-FLOW",
   "level": "sim",
   "passed": true,
-  "git_sha": "c511b846dbe231eef74f37d52a3756caa93428dc",
-  "at": "2026-10-28T09:03:29.53275Z",
+  "git_sha": "590faa40f8445f912b0d01f38738001e9a725af9",
+  "at": "2026-11-02T20:13:26.309328Z",
   "assertions": [
     {
       "name": "probe_rejects_discovery",
@@ -31,11 +31,43 @@
       "passed": true
     },
     {
+      "name": "approval_tokens_absent_from_status_and_logs",
+      "passed": true
+    },
+    {
+      "name": "cancel_returns",
+      "passed": true
+    },
+    {
+      "name": "cancel_mid_wait_never_serves_after_funnel_enabled",
+      "passed": true
+    },
+    {
+      "name": "approval_tokens_absent_from_status_and_logs",
+      "passed": true
+    },
+    {
+      "name": "client_error_redacted",
+      "passed": true
+    },
+    {
+      "name": "approval_tokens_absent_from_status_and_logs",
+      "passed": true
+    },
+    {
       "name": "private_home",
       "passed": true
     },
     {
       "name": "isolated_listener",
+      "passed": true
+    },
+    {
+      "name": "approval_tokens_absent_from_status_and_logs",
+      "passed": true
+    },
+    {
+      "name": "approval_tokens_absent_from_status_and_logs",
       "passed": true
     },
     {
@@ -102,9 +134,9 @@
   "latency": {
     "remote_off": {
       "samples": 1,
-      "p50_ms": 101.717458,
-      "p95_ms": 101.717458,
-      "max_ms": 101.717458,
+      "p50_ms": 101.179708,
+      "p95_ms": 101.179708,
+      "max_ms": 101.179708,
       "timeouts": 0
     }
   },

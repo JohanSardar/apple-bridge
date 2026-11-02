@@ -1,4 +1,0 @@
-id: WEB-MSG-PARTS
-feature: web.messages.write
-levels: [web]
-web: {browsers: [webkit, chromium, firefox], themes: [light, dark], layouts: [phone, desktop], server: gateway}

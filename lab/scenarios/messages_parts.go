@@ -182,6 +182,5 @@ func checkMessageParts(ctx context.Context, w *world.World, evidence *Evidence, 
 	checkMessagePartAmbiguity(ctx, w, evidence, chatID, add)
 	checkMessagePartReceiptFailure(ctx, w, evidence, chatID, add)
 	checkMessagePartProgress(ctx, w, evidence, chatID, add)
-	checkWebMessageParts(ctx, w, evidence, chatID, add)
 	checkMessageCaptureBound(ctx, w, evidence, chatID, add)
 }

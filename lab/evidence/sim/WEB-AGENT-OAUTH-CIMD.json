@@ -1,24 +1,64 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[8.09 8.74 8.9] cpu_idle=41% cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[5.07 4.52 3.81] cpu_idle=71% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M60MG9CV20A6910FA77AX4YH",
+  "run_id": "run_01M6EY5MMJEEHZSMNXYYT7XD7P",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "WEB-AGENT-OAUTH-CIMD",
   "level": "sim",
   "passed": true,
-  "git_sha": "6d3393beeee0b7626b97f7e9ed78548c2391599b",
-  "at": "2026-10-28T06:52:31.516008Z",
+  "git_sha": "590faa40f8445f912b0d01f38738001e9a725af9",
+  "at": "2026-11-02T20:10:50.386563Z",
   "assertions": [
     {
-      "name": "agents_available",
+      "name": "metadata_documents_advertised",
       "passed": true
     },
     {
-      "name": "metadata_documents_advertised",
+      "name": "invalid_client_id_https://client.example/client#",
+      "passed": true
+    },
+    {
+      "name": "invalid_client_id_https://client.example/client#fragment",
+      "passed": true
+    },
+    {
+      "name": "invalid_client_id_https://client.example",
+      "passed": true
+    },
+    {
+      "name": "invalid_client_id_https://client.example/",
+      "passed": true
+    },
+    {
+      "name": "invalid_client_id_https://client.example/a/./client",
+      "passed": true
+    },
+    {
+      "name": "invalid_client_id_https://client.example/a/../client",
+      "passed": true
+    },
+    {
+      "name": "invalid_client_id_https://client.example/a/%2e/client",
+      "passed": true
+    },
+    {
+      "name": "invalid_client_id_https://client.example/a/%2E%2e/client",
+      "passed": true
+    },
+    {
+      "name": "invalid_document_malformed-redirect",
+      "passed": true
+    },
+    {
+      "name": "invalid_document_unsupported-redirect",
+      "passed": true
+    },
+    {
+      "name": "invalid_document_mixed-redirects",
       "passed": true
     },
     {
@@ -66,6 +106,10 @@
       "passed": true
     },
     {
+      "name": "dns_rebinding_refused_before_connection",
+      "passed": true
+    },
+    {
       "name": "cache_control_reuses_document",
       "passed": true
     },
@@ -86,6 +130,10 @@
       "passed": true
     },
     {
+      "name": "private_redirect_no_connection",
+      "passed": true
+    },
+    {
       "name": "reject_private-redirect",
       "passed": true
     },
@@ -95,6 +143,18 @@
     },
     {
       "name": "reject_bad-redirect",
+      "passed": true
+    },
+    {
+      "name": "reject_malformed-redirect",
+      "passed": true
+    },
+    {
+      "name": "reject_unsupported-redirect",
+      "passed": true
+    },
+    {
+      "name": "reject_mixed-redirects",
       "passed": true
     },
     {
@@ -126,7 +186,7 @@
       "passed": true
     },
     {
-      "name": "authorize_requires_device_session",
+      "name": "authorize_offers_local_approval",
       "passed": true
     },
     {

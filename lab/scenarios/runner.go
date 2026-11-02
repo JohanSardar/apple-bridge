@@ -556,9 +556,6 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "WEB-MEDIA-VARIANTS" || s.ID == "WEB-MEDIA-CAP" {
 		return runMediaVariants(ctx, s, level)
 	}
-	if s.Feature == "web.demo" {
-		return runDemoDataset(ctx, s, level)
-	}
 	if s.Feature == "web.relay" {
 		if s.ID == "WEB-RELAY-REPLICA" || s.ID == "WEB-RELAY-NATIVE-AGENTS" || s.ID == "WEB-RELAY-REPLICA-BLOBS" {
 			return runRelayReplica(ctx, s, level)
@@ -592,7 +589,7 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "web.remote" {
 		return runRemote(ctx, s, level)
 	}
-	if s.Feature == "web.messages.read" && strings.HasPrefix(s.ID, "MSG-") {
+	if s.ID == "MSG-DECODE-BALLOON" || s.ID == "MSG-DECODE-FORMATTING" || s.ID == "MSG-READ-RICH-FIELDS" {
 		return runRichMessages(ctx, s, level)
 	}
 	if s.ID == "WEB-RM-MEDIA-COLLECTION" {
@@ -657,6 +654,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	}
 	if s.Feature == "phone.read" {
 		return runPhone(ctx, s, level)
+	}
+	if s.ID == "CONSENT-CONNECTOR" {
+		return runAgentAccess(ctx, s, level, runConsent)
 	}
 	if s.Feature == "web.frontdoor" || s.Feature == "web.agents" {
 		return runWebServer(ctx, s, level)

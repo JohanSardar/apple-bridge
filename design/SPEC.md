@@ -582,7 +582,7 @@ Submit(principal, {id, op, args, expected_version?, expires_at?})
 - Stronger later evidence (from `Resolve` or capture) may move `indeterminate → locally_observed/delivered/failed_no_effect`, appending to `history`.
 - Status returns `commit_seq`; command submission and `commands.status` on a replica wait until its local cursor reaches the command cursor, so an observed result is immediately readable locally. A command from an older admission era remains lookup-only and skips the current-feed wait.
 - Observed outcomes also persist `observed_record_ids`: concrete bridge record IDs resolved from the correlated native key in the active source generation and command epoch. Subsequent record updates do not invalidate that stable identity. For multipart sends, this compatibility field retains the primary message record; each attachment derives from its own part's message record. REST, MCP and forwarded replica status return the same IDs. Missing aliases leave IDs absent; other lookup failures also record `record_id_resolution_error` in outcome evidence/history. The command disposition alone sets the client label (observed or delivered is always Sent); missing IDs only prevent swapping a local echo for its captured row, and clients never match text, time or sequence to find it (`design/web/messages.md` §3.1, "Not sure if delivered"). Rejected, failed-no-effect and indeterminate outcomes never invent observed IDs.
-- A single-part `delivery_failed` outcome receives `commit_seq` and `observed_record_ids` only when the same conservative correlation proves a concrete captured failed record. A ghost failure without a matching record remains `delivery_failed` without an ID or commit. The UI shows "Not Delivered" with Try Again disabled and explains that it cannot verify the message. A concrete failed ID enables explicit `messages.send` with `resend_of`; neither case automatically redispatches.
+- A single-part `delivery_failed` outcome receives `commit_seq` and `observed_record_ids` only when the same conservative correlation proves a concrete captured failed record. A ghost failure without a matching record remains `delivery_failed` without an ID or commit. A concrete failed ID enables explicit `messages.send` with `resend_of`; neither case automatically redispatches.
 - A positive `messages.send` Helper outcome whose capture is not yet bound stays in flight for at most 10 s after that Outcome. On committed Messages captures, the gateway reruns read-only Resolve for the original command ID and applies the same fingerprint, capture and alias correlation; it never dispatches again. Receipt registration precedes notification. A delayed capture can therefore produce observed/delivered on the existing command watch without client action. The follow-up stops at its bound and leaves an unresolved outcome indeterminate.
 - `messages.send` also exposes `parts: [{index, kind: text|attachment, upload_id?, record_id?, disposition}]` on command status, `cmd_status.command` and enriched `system.command` subscriptions. A nonempty text body precedes attachments in original request order. `upload_id` refers to that requested attachment by index. Each `record_id` resolves the Helper's correlated per-part `native_key` through the alias table under the same active-generation, epoch and capture rules as the primary record. Missing proof leaves that part unresolved; filenames and times never identify a part. The compatibility primary ID does not identify which part failed in a mixed outcome.
 - Public per-part dispositions are `observed | delivered | delivery_failed | failed_no_effect | indeterminate`. Evidence only strengthens: an indeterminate part may become observed, delivered or definitively failed, and an observed part may become delivered or delivery_failed with fresh failure proof bound to the same captured record; a verified record ID is never cleared or replaced. The aggregate is observed only when every part is observed (delivered also proves observation); any definitive part failure makes it delivery_failed with per-part detail; otherwise it is indeterminate. New per-part evidence with the same aggregate appends an explicit `history` event with `transition: "parts_updated"` and advances `commit_seq` and the command cursor. Identical evidence is a no-op. Read-only reconciliation never redispatches.
@@ -638,7 +638,7 @@ Rules (F2, F3, D4):
 - Credits: 4 MiB outstanding metadata; replica acks after each committed batch. A consumer that doesn't ack for 30 s or exceeds the server's 16 MiB send buffer is disconnected; on reconnect it resumes or resnapshots.
 - Replicas never poll for data. They detect disconnection locally (no heartbeat for 15 s → `system.replica.state=disconnected`, reads continue with staleness reported).
 - Scope change for a replica → new subscription revision → purge + snapshot of the new scope.
-- Local SSE (`GET /v1/changes?after=`) reuses the same framing semantics for local subscribers, filtered by the caller's Visibility. An oversized capture resets local observers before any part is exposed (`event: reset` with `error: reset` for SSE, `error{code: reset}` for web/1); clients and internal RYW, status and approval watchers re-read the committed snapshot instead of consuming feed parts.
+- Local SSE (`GET /v1/changes?after=`) reuses the same framing semantics for local subscribers, filtered by the caller's Visibility. An oversized capture resets local observers before any part is exposed (`event: reset` with `error: reset` for SSE); clients and internal RYW, status and approval watchers re-read the committed snapshot instead of consuming feed parts.
 
 Budgets (provisional, benchmarked in M0/M5 on the Air): 256 KiB frames, 1 MiB blob chunks, 4 MiB credit.
 
@@ -967,119 +967,27 @@ Each milestone proves its riskiest unknown first, starts every feature as a fail
 
 ---
 
-## 23. Web app
+## 23. Consent and approvals
 
-Decisions: `DECISIONS.md` (2026-10-20). Product spec per app: `design/web/<app>.md` (Messages: `design/web/messages.md`). This section is the binding architecture for the web milestones W1+.
+The full SolidJS web app is preserved on the `web-app` branch. Main has no framework, Node, pnpm, service worker, manifest, browser read APIs or live `web/1` protocol.
 
 ### 23.1 Modules
 
-| Module | Path | Owns | Depends on |
-|---|---|---|---|
-| Web | `internal/web/` | Browser front door: static app, `/web/v1` API, device sessions, passkeys, live views (`web/1`), agent management and OAuth pages, blob variants | Operations, Replication (journal iterator), Blobs, Trust, Contracts, `webui` |
-| Remote | `internal/remote/` | Embedded Tailscale node (tsnet), Funnel listener, public routing to Web / Frontdoor / Replication | handlers injected by Runtime; Trust (state secrets) |
-| WebUI | `web/` (TypeScript) + `web/embed.go` (package `webui`) | SolidJS app; built assets embedded into `bridge` | — (only `internal/web` imports `webui`) |
-| Read models | `internal/state/` (tables) + `internal/operations/` (ops) | Derived per-view indexes and the `messages.chats` / `messages.thread` / `messages.collection` reads | State, Trust, Contracts |
-| MediaDerivatives | `native/Sources/MediaDerivatives/` | Browser-safe variants of attachment blobs (Swift, system frameworks only) | AppleSession blob path |
-| Demo | `lab/demo/` + `bridge-lab demo` | Deterministic synthetic dataset on a sim world, serving the web UI | lab World, SimApplePeer |
+`internal/web` serves Go HTML templates for OAuth consent, enrollment and pending command approvals, plus a handwritten vanilla WebAuthn script and CSS. Operations owns commands and read models; Trust owns passkeys, cookies, agent levels and OAuth credentials. Remote routes REST/MCP unchanged. Agent creation, revocation and snippets use `bridge agent`.
 
-Frontdoor (§15) keeps REST/MCP semantics; Remote reuses its handler with a public-host policy (§23.5). Runtime reuses one Web handler across local and Remote listeners so sign-in notifications reach both sets of live sockets; Remote owns the public HTTPS Host policy. `bridge web --demo` from DECISIONS is realized as `bridge-lab demo`, because the product binary never imports `lab/` (§5).
+### 23.2 Consent security
 
-New dependencies (approved): `tailscale.com` (tsnet, BSD-3), `github.com/go-webauthn/webauthn` (BSD-3). Frontend runtime: `solid-js` only. Frontend dev: `vite`, `vite-plugin-solid`, `typescript`, `@playwright/test`. Node and pnpm are build-time only (Homebrew on the Air); release binaries embed the built assets.
+The explicit Host allowlist, origin-bound ceremonies, single-use five-minute ceremony IDs, required user verification, CSP script-src 'self', same-origin POST protection, no-store pages, rate limits and session rules remain. Every form POST requires exactly one matching Origin. Cookies are Secure/HttpOnly/SameSite=Strict/Path=/ (`__Host-ab_session`); pinned HTTP loopback alone uses `ab_session_local`. Trusted sessions slide 30 days with a 90-day absolute bound; public sessions expire after 30 idle minutes or 12 hours. Authentication is limited to 10 requests/minute and 100/day/IP with failure backoff and a global 600/minute ceiling. IPv6 groups by /64.
 
-### 23.2 Web front door
+`bridge web enroll --host <origin>` issues a 160-bit, ten-minute, single-use enrollment token and URL/QR. `/enroll#<token>` runs first-passkey registration using `/auth/enroll/options` and `/auth/enroll/finish`. `/auth/login/options` and `/auth/login/finish` run discoverable sign-in. No browser storage holds bearer credentials. `bridge web lock` revokes device sessions.
 
-Same origin for everything. Served by the gateway and by replicas (any instance), locally on the Frontdoor listener's host under `/` and publicly through Remote. Every request, including TLS, must match an explicit host allow-list: `localhost:<local-port>`, `127.0.0.1:<local-port>`, or the configured public HTTPS host including its selected port. Origin and relying-party ID derive only from that accepted value.
+### 23.3 Pages
 
-**Static.** `GET /` and app routes return `index.html` (`Cache-Control: no-store`). `/assets/*` are content-hashed (`public, max-age=31536000, immutable`). `/sw.js` and `/manifest.webmanifest` are `no-cache`. If `web/dist/index.html` is absent (assets not built), `/` returns a plain page saying `make web` is needed.
-
-**API `/web/v1`** (JSON; cookie auth; every state-changing request and the WebSocket upgrade require `Origin` equal to the serving origin):
-
-| Route | Purpose |
-|---|---|
-| `GET session` | `{device_id, kind: trusted|public, expires_at, cache: persistent|memory}` or 401 |
-| `POST enroll/options`, `POST enroll/finish` | First passkey, authorized by a one-time enroll token |
-| `POST login/options`, `POST login/finish` | Discoverable-credential sign-in (user verification required); body picks `kind` |
-| `POST logout` | Ends this session |
-| `GET devices`, `DELETE devices/{id}` | Sessions list and revoke (revoked sockets close within 1 s; the client wipes its cache on `session_revoked`) |
-| `GET passkeys`, `POST passkeys/options`, `POST passkeys/finish`, `DELETE passkeys/{id}` | Manage passkeys from a signed-in session |
-| `GET agents`, `POST agents`, `DELETE agents/{id}`, `GET activity` | Agent tokens and activity log (§23.6) |
-| `GET approvals`, `POST approvals/{command_id}` | Approve or reject agent commands |
-| `GET blob/{digest}?record=<id>&variant=<v>` | Bytes with Range, `ETag` = digest, `private, max-age=31536000, immutable`; `variant` ∈ `original|thumb|display|video|poster|audio|live` |
-| `POST upload` | Stage a blob for sending (streamed, ≤ 100 MiB) |
-| `POST handles` | Read-only `messages.handles{ids[]≤500}` for frame-batched names and contact avatars |
-| `POST lookup` | Device-session recipient lookup through Operations `contacts.lookup`; projected `{results:[{contact_id,display_name,handles:[{value,kind:phone|email,label}]}],capability}` only |
-| `GET sources` | Read-only `sources.status` through Operations with Scope and Visibility; source states, per-operation proven/unproven capabilities and reasons, and each `system.source` record ID for live proof subscriptions |
-| `GET live` | WebSocket, protocol `web/1` (§23.3) |
-
-**Recipient lookup.** `POST lookup` accepts `{q,limit?}`: trim `q`, then require 1–64 Unicode characters; `limit` defaults to 8 and accepts 1–20. `contacts:read` and the device principal’s Visibility apply. Without that scope, return `{results:[],capability:"unavailable"}` so raw handle entry remains available. Responses use `Cache-Control: no-store`. Limit each session to 20 lookups per second; excess requests return 429 with `Retry-After`. The client debounces 80 ms, aborts stale requests and displays only the latest query’s results. Agents keep using the existing MCP/REST `contacts.lookup` path; `/web/v1` remains device-cookie authenticated.
-
-**Source discovery freshness.** Responses use `Cache-Control: no-store` and an increasing `X-Bridge-Source-Sequence` per serving process. Discovery supplies source IDs; actions require fresh live proven coverage. JSON API routes bypass the service worker; the approved trusted blob thumbnail cache remains separate.
-
-**Upload locality.** Upload IDs are staged on the serving instance and owned by the device principal. A replica forwards verified bytes through the feed bulk lane, and reports readiness only after gateway verification (§23.13). Gateway uploads retain their local staging path.
-
-**Ceremony JSON.** Options requests accept `{token?, kind?: trusted|public}` (`token` is required for enrollment, `kind` defaults to trusted). Options responses contain the standard WebAuthn `publicKey` object and `ceremony_id`. Finish requests contain `{ceremony_id, credential}`, where `credential` is the WebAuthn credential JSON (base64url binary fields). The server binds the single-use ceremony to its flow, serving origin, chosen session kind and, for additional passkeys, the signed-in device. Ceremonies expire after five minutes. Passkey/device list responses are `{passkeys: [...]}` / `{devices: [...]}`. Passkey list rows expose only `id`, `rp_id`, `created_at`. Device IDs include the `device:` prefix. `bridge web enroll --host <origin>` defaults to `http://localhost:7780`; this implementation prints the enrollment URL only, avoiding another QR dependency.
-
-**Sessions.**
-- **Principal:** `device:<id>` in Trust, with the owner's full grants.
-- **Cookie:** `__Host-ab_session` (Secure; HttpOnly; SameSite=Strict; Path=/), an opaque 256-bit value stored hashed. Only plain HTTP on a pinned `localhost:<port>` or `127.0.0.1:<port>` uses `ab_session_local` without Secure, retaining HttpOnly, SameSite=Strict and Path=/. Public and TLS requests never accept the local cookie; plain HTTP never accepts the `__Host-` cookie. Refresh and logout use the serving origin’s cookie.
-- **Trusted:** 30 days sliding, 90 days absolute.
-- **Public:** session cookie with no Max-Age, 30 minutes idle and 12 hours absolute, with `cache: memory`, meaning nothing goes to IndexedDB, Cache Storage or the service worker.
-
-**Passkeys.**
-- **Last credential:** deleting the final passkey for a relying-party ID returns 409; deleting a nonfinal key remains allowed.
-- **Relying-party ID:** the serving hostname: the Funnel name publicly, `localhost` locally. Each relying-party ID has its own credentials.
-- **First passkey:** registered only through an enroll token from `bridge web enroll`, which `bridge setup` calls. The token is 160-bit, valid 10 minutes, single use, and printed as a URL plus QR (`https://<host>/enroll#<token>`).
-- **Later passkeys:** added from signed-in sessions.
-- **Hostname change:** if the public hostname changes, passkeys must be enrolled again (documented).
-
-**Protection.**
-- **Rate limits:** sign-in and enroll at 10 per minute and 100 per day per client IP (IPv6 grouped by /64), with failure backoff per IP escalating to 60 s. Recent failures from another IP never apply to a clean IP; only a high global ceiling of 600 auth requests per minute protects resources. API at 50 requests per second per session.
-- **Headers:**
-  - CSP `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'`
-  - `Referrer-Policy: no-referrer`
-  - `X-Content-Type-Options: nosniff`
-  - `Permissions-Policy: camera=(self), microphone=(self), geolocation=(self)`
-  - HSTS on HTTPS
-- **Revoke everything:** `bridge web lock` revokes every device session.
-- **Sign-in events:** each successful sign-in emits a `signin` event to every other live session.
-
-**Interactive principal.** Commands submitted by a `device:` principal through `web/1` are **interactive**. They carry `origin: interactive` into Operations and across the Apple seam. The Helper's lab gates (`[ab-test]` tag, own-handle routes) apply to lab and agent principals only. Interactive commands still need the operation's capability proof on this OS build (W3 self-test). Client code submits commands only from input-event handlers (enforced by a Playwright check that no command is sent without a preceding trusted input event).
-
-### 23.3 Live protocol `web/1`
-
-WebSocket `GET /web/v1/live`, JSON text frames `{"t": …}`. The logical protocol is `web/1`. The `Sec-WebSocket-Protocol` wire token is `web.1`, because `/` is not a legal HTTP token (WHATWG WebSockets, constructor step 9). Client, server and lab checks offer and select `web.1`.
-
-```text
-C→S hello{v:1}                                   S→C welcome{session, head}
-C→S sub{id, view, args}                          S→C snap{sub, data, cursor} then delta{sub, changes[], cursor}…
-C→S unsub{id}
-C→S cmd{id, op, args, expected_version?}         S→C ack{id, status} then cmd_status{id, status}… until final
-C→S resolve{id}                                  S→C cmd_status{id, status, command, throttled?}
-C→S ping                                         S→C pong; S→C beat{head} every 15 s
-S→C signin{device, at} · approval{command} · session_revoked · error{code, message}
-```
-
-**Views:**
-- `chats{filter: all|known|unknown|unread|deleted|spam, participants?}`: ChatSummary rows (§23.4) and order keys. Deltas upsert or remove rows. The conversation list keeps one stable paginated `all` view and starts fixed `deleted` and `spam` views after paint. All/Known/Unknown/Unread arrays are precomputed from the all-view rows and updated by live deltas; selecting a filter only switches arrays, without a new subscription or snapshot reply. Server filters remain the membership oracle for all six views, including Contacts-hidden principals.
-- `thread{chat_id, thread_originator_id?, anchor: latest|oldest|unread|<message_id>, before?, after?}`: a window of ThreadItems. Deltas update items inside the window and report `newer`/`older` counts outside it.
-- `record{collection, id}`.
-- `collection{chat_id, kind}`.
-- `search{text?, kind?, from_handle_id?, from_contact_id?, unread?, after?, limit?}`: scoped message full-text search with filters applied before pagination (§23.4).
-
-**View payloads.** The WebSocket upgrade offers subprotocol `web.1` for logical protocol `web/1`. `record` snapshots contain the `records.get` result (`records`, `cursor`); record deltas contain the same Change rows as SSE. For an owned `system.command` record, Web enriches the record data from `commands.status` so reconnecting clients can reconcile their command without resubmitting it. Read-model snapshots contain the corresponding operation result. Read-model delta changes are `{op: upsert, id, row, order}` or `{op: remove, id}`; `order` is the zero-based position. A read-model delta also carries the ordered ID array `order` and pagination fields in `page`. Thread subscriptions re-evaluate their requested read window: `anchor: latest` follows the tail, `anchor: oldest` follows the head, and explicit message anchors remain centered on that item. Thread snapshots include `data.newer` and `data.older`; thread deltas carry total `newer` and `older` counts outside the subscribed window, also emitted as a `{op: window, newer, older}` metadata change so row reducers update those counts even when no window item changed. A subscription may provide its resume `cursor` next to `args`; record subscriptions replay journal rows. Derived subscriptions take a fresh snapshot on reconnect because their previous window membership is client state. Unsupported views produce `error{code: unsupported}` until their Operations descriptors are available. `ack.status` and `cmd_status.status` are command-state strings; `cmd_status.command` contains the command ledger record, and rejected acknowledgments carry `error`. Socket overload and revocation close with code 1008 and reason `overloaded` / `session_revoked`.
-
-**Rules:**
-- **Check:** `resolve{id}` runs read-only `commands.status` with `resolve: true` for that principal-owned command only. It never submits or redispatches a command. Unknown and foreign IDs are hidden. At most one Resolve per command every 5 s and ten per device session in a rolling minute are admitted; excess requests return the stored `cmd_status` with `throttled: true`. Limits survive socket reconnects. Check also refreshes the owned command-record subscription, while reconnect alone only reads stored status and never requests Resolve automatically. Resolve errors include the requested command `id`; the client shows a human-readable Check failure on that command’s notice without changing its delivery disposition.
-- **Deltas:** come from the State journal through the same iterator as local SSE (§12), filtered by Visibility and mapped to affected subscriptions.
-- **Optimistic reconciliation:** `cmd_status.command` and enriched `system.command` record subscriptions carry `observed_record_ids` with `commit_seq` (§11.2). A local echo is swapped for its captured row only after its concrete captured IDs appear in a compatible view cursor at or beyond the command commit. Without IDs or a comparable cursor, new outgoing captured rows in that chat are held for at most 500 ms while the echo exists, then released, and the echo is suppressed. A definitive failure restores the echo as Not Delivered. An indeterminate outcome keeps the echo as "Not sure if delivered" unless a candidate row was released, in which case a transcript notice with a read-only Check replaces it. Labels follow the disposition, never the presence of IDs.
-- **Budget:** journal commit to frame written ≤ 20 ms p95 on the gateway.
-- **Reconnect:** the client resubscribes with its last cursor per view. The server replays from the journal when it can, otherwise sends a fresh `snap`.
-- **Backpressure:** at most 4 MiB unsent per socket; beyond that the socket closes with `overloaded` and the client reconnects.
-- **Command IDs:** generated by the client (ULID), so a resend after reconnect is idempotent (§11.2).
+`/` is a small server-rendered landing page. `/oauth/authorize` renders the connector name, scopes and read/approve/full level selector with a passkey sign-in button. `/approvals` lists pending commands with redacted arguments, owner-only full arguments and Approve/Reject forms. Approval decisions use the existing durable ledger and resume the normal command lifecycle. iPhone Face ID approvals and delivery remain supported. Removed `/web/v1/*` routes return 404.
 
 ### 23.4 Read models
 
-Operations (descriptors in `internal/contracts/operations.go`; available through REST, MCP and `web/1`; scope `messages:read`):
+Operations (descriptors in `internal/contracts/operations.go`; available through REST and MCP; scope `messages:read`):
 
 - `messages.chats{filter?: all|known|unknown|unread|deleted|spam|archived, participants?: handle[], limit≤200, after?}` → `{chats: ChatSummary[], next?}`. Ordered by `last_activity_at` desc, then id. Optional `participants` contains 1–32 phone/email handles and matches the exact normalized set (case-folded email and normalized phone; duplicates folded), never a subset or superset. It uses the handle-address and chat-membership indexes in one bounded lookup, applies Visibility, and binds pagination cursors to the normalized set. ChatSummary fields:
   - `chat`: the record
@@ -1089,8 +997,7 @@ Operations (descriptors in `internal/contracts/operations.go`; available through
   - `last_message`: `{id, sent_at, is_from_me, sender_handle_id?, service?, preview{group_event?, kind: text|attachments|reaction|group_event|unsent|edited, text?, attachment_kinds?, count?, reaction?}}`
   - `last_activity_at`, `unread_count`, `has_unseen_mention` (from captured message flags)
   - `muted` and `pinned_index`, nullable where native state is unavailable
-  - `pin_preview`: `{message_id, text_preview, at} | null`, the latest unread incoming message with text bounded to 200 Unicode code points plus an ellipsis, maintained by the read model’s existing deltas. The UI reads this field directly and never pages through a thread to construct a pin bubble.
-  - The client persists one atomic owner-scoped materialized snapshot per transport view, bounded to the first 2,000 rows and 2 MiB. Deltas mark persistence dirty; snapshot construction, UTF-8 encoding and size checks run together after paint in a coalesced background task at most once per 500 ms, with pagehide/hidden-page flushes. Per-page transport entries are neither persisted nor hydrated. Public sessions persist nothing and sign-out/revocation wipe the snapshots.
+  - `pin_preview`: `{message_id, text_preview, at} | null`, the latest unread incoming message with text bounded to 200 Unicode code points plus an ellipsis, maintained by the read model’s existing deltas. REST and MCP consumers receive the same bounded projection.
 - `messages.thread{chat_id, thread_originator_id?, anchor?, before?, after?, limit≤200}` → `{items: ThreadItem[], before?, after?, unread_anchor?}`. ThreadItem is the message record plus:
   - `reactions[]`: current state per sender and part, with removals folded out
   - `attachments[]`: records including `derivatives` and `media`
@@ -1119,7 +1026,7 @@ Operations (descriptors in `internal/contracts/operations.go`; available through
 
 - `reminders.lists{time_zone}` → `{smart: SmartTile[], lists: ReminderList[], tags: TagCount[], cursor}`.
   - `SmartTile`: `{id: today|scheduled|all|flagged|completed|assigned, count?, status?: unsupported}`; incomplete counts except Completed. Today includes overdue incomplete reminders and reminders due during the viewer's day. Scheduled has a due date and is incomplete. Flagged requires the native store flag. Assigned means assigned to the current user, never merely assigned to someone. Its predicate uses the source-verified `assignment.assignee.is_me` boolean; unknown current-user identity makes the Assigned tile `status=unsupported` with no count, just like an unsupported custom smart filter. Never infer identity from a display name. Each predicate has a synthetic-store scenario assertion.
-  - `ReminderList`: `{list: Record, count?, status?: unsupported, sections: ReminderSection[], group_id: id|null, order, pinned}`. This is a flat sidebar projection; groups are list records with `is_group=true`, and each child names its group in `group_id`. Return pinned entries first in native pin order, then native display order, with record id only as a tie breaker. The UI preserves the returned order and uses `group_id` for disclosure folders without sorting. Custom smart lists get a count from a supported decoded filter, or `status=unsupported` with the count omitted.
+  - `ReminderList`: `{list: Record, count?, status?: unsupported, sections: ReminderSection[], group_id: id|null, order, pinned}`. This is a flat sidebar projection; groups are list records with `is_group=true`, and each child names its group in `group_id`. Return pinned entries first in native pin order, then native display order, with record id only as a tie breaker. Consumers receive the native order and group IDs. Custom smart lists get a count from a supported decoded filter, or `status=unsupported` with the count omitted.
   - `TagCount`: `{name, count}` counts incomplete visible reminders once per tag. If tag coverage is unavailable for a visible incomplete reminder, omit the tag facet rather than publish partial counts.
 - `reminders.items{time_zone, list?: id, smart?: today|scheduled|all|flagged|completed|assigned, tag?: name, show_completed?: false, sort?: manual|due|created|priority|title}` → `{sections: ReminderSectionItems[], count, cursor}`. Exactly one selector is required. Unknown selectors/sorts reject as invalid.
   - `ReminderSectionItems`: `{section: ReminderSection, items: ReminderItem[]}`. Empty native sections remain visible for a list selector. Scheduled groups by due day (`kind=date`); All and Completed group by list (`kind=list`, with `list_id`). Today uses one `kind=none` section until the current OS daypart grouping is verified; verified grouping may use Overdue / Morning / Afternoon / Tonight (`kind=daypart`).
@@ -1153,7 +1060,7 @@ Budgets: the shared REST/MCP read-model handler for 1,000-item `reminders.items`
 
 | Path | Handler | Auth |
 |---|---|---|
-| `/`, app routes, `/assets/*`, `/web/*`, `/oauth/*`, `/.well-known/oauth-*` | Web | device session / OAuth |
+| `/`, `/enroll`, `/auth/*`, `/approvals`, `/oauth/*`, `/.well-known/oauth-*` | Web | device session / OAuth |
 | `/v1/*`, `/mcp` | Frontdoor (public-host mode) | `Authorization: Bearer` with remote-allowed principals: **agent** tokens (§23.6), or explicitly opted-in `bridge token create --remote` tokens during W1; any `Origin` header rejects; local machine tokens are refused remotely |
 | `/v1/feed` | Replication on gateways; 404 on replicas | `relay/1` paired device-key authentication (§12); any `Origin` header rejects |
 
@@ -1161,34 +1068,9 @@ TLS ends on the Mac: inside `bridge` with tsnet in embedded mode, or in system t
 
 ### 23.6 Agent access
 
-**Agent tokens:**
-- **Principal:** `agent:<id>`, created in the web UI (or `bridge agent create --name --level --scope`) and shown once.
-- **Scopes:** the source grants of §14.
-- **Levels:**
-  - `read`: read operations only.
-  - `approve`: every command is admitted as `awaiting_approval`, a new disposition before `admitted`.
-    - Device sessions receive an `approval` event, and the web UI lists the command with redacted arguments plus the full text for the owner.
-    - Approving resumes the normal lifecycle. The expiry clock starts at approval, with a 24-hour approval window.
-    - Rejecting finalizes as `rejected_by_owner`.
-    - `wait_ms` returns the current status.
-  - `full`: commands proceed directly, with the same Helper gates as interactive commands.
-- **Defaults:** new tokens start at `approve`. Lab and test principals keep today's gates.
-- **Activity log:** commands appear individually (redacted per §15), reads aggregated per minute per operation. Retention is 90 days.
-- **W1 routing:** agent commands and owner approvals execute on the gateway only. Replicas serve local scoped reads and forward commands with signed identity, grants and level. Gateway approvals for replica agents use a fresh signed principal recheck (§12); the 24-hour approval window and TTL starting at approval remain the same. Owner approval live events recognize both local and replica-delegated `agent:` IDs.
-- **Owner routes:** `GET /web/v1/approvals` returns pending commands with hashed argument summaries and owner-only full arguments; `POST /web/v1/approvals/{command_id}` accepts `approve` or `reject`. Device sessions alone may call these routes. The `web.1` `approval` event carries command IDs for refetch.
+Agent tokens retain read, approve and full levels, grants, revocation and the 90-day activity log. Approve-level commands wait for owner approval; rejecting finalizes rejected_by_owner. Approval lasts 24 hours and the effect TTL starts at approval. CLI agent management includes connection snippets.
 
-**MCP OAuth 2.1 (connector UIs such as claude.ai and ChatGPT):**
-- Endpoints: `/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`, `/oauth/register` (dynamic client registration), `/oauth/authorize` (a consent page in the web app that requires a device session, where the owner picks the level and scopes), and `/oauth/token`.
-- PKCE S256 is mandatory.
-- Access tokens last 1 hour; refresh tokens rotate, last 90 days, and are revocable from the Agents list.
-- The resulting access token is an `agent:` principal.
-
-**Connection snippets** generated per token:
-- **Grok:** xAI SDK `mcp(server_url, authorization)`.
-- **Claude Code:** `claude mcp add --transport http … --header`.
-- **Codex:** `config.toml`.
-- **ChatGPT and claude.ai:** connector URL with OAuth.
-- **curl.**
+MCP OAuth 2.1 retains protected-resource and authorization-server discovery, dynamic client registration, authorization and token endpoints. PKCE S256 and resource binding are mandatory; access tokens last one hour, refresh tokens rotate and last 90 days. Revoking the agent revokes connector access. Consent uses a passkey-authenticated device session and selected level/scopes. Client metadata document validation remains.
 
 ### 23.7 Media derivatives
 
@@ -1212,308 +1094,3 @@ The Helper creates variants for present attachment blobs, as new blobs reference
 - **Sync:** variants count toward blob caps and sync like other blobs. Replicas fetch variants before originals.
 - **Fallback:** a request by the original digest serves a browser-safe original when a variant is missing, or `variant_pending` otherwise.
 - **Exact variants:** clients request the selected derivative's digest. A pending derivative returns 503 `variant_pending` with `Retry-After`; an unavailable one returns 404 `variant_unavailable`; both are `no-store`. `immutable` caching applies only when the body's digest equals the URL digest.
-
-### 23.8 Frontend
-
-- **Stack:** `web/` with pnpm, Vite, SolidJS and TypeScript (strict). No UI libraries.
-- **Source layout:**
-  - `src/app`: shell, router, layouts, theme
-  - `src/design`: tokens.css from `design/web/messages.md` §16, materials, type, SVG icon sprite
-  - `src/motion`: springs, gestures, shared-element transitions
-  - `src/virtual`: virtual list with variable heights and anchor preservation
-  - `src/data`: `web/1` client, store, IndexedDB cache, optimistic commands
-  - `src/auth`, `src/settings` (devices, passkeys, agents, approvals, activity)
-  - `src/<app>` per app
-- **Budgets** (Playwright gates):
-  - shell JS ≤ 60 KiB gzip, measured over the `index.html` static-import closure; route chunks loaded lazily
-  - each app-route lazy JS closure, including its lazy descendants and excluding shared shell chunks, ≤ 60 KiB gzip
-  - record actual service-worker precache gzip bytes; the full cacheable distribution, including lazy assets and fonts, ≤ 600 KiB gzip
-  - CLS 0
-  - no long task > 50 ms during scroll or navigation
-  - interaction-to-next-paint ≤ 8 ms p95 on the Air
-  - warm load to cached content < 1 s
-- **Lint:** `make lint` gains a zero-comments check for `.ts`/`.tsx` (the TypeScript tokenizer, so strings, templates and regexes are respected) and `tsc --noEmit`.
-- **Build:**
-  - `make web` runs `pnpm install --frozen-lockfile && pnpm build:release` into `web/dist/`, and `make build` depends on it. The lab uses `pnpm build` with browser fixtures.
-  - `web/dist/*` is gitignored except `.gitkeep`, so `go:embed all:dist` always compiles.
-- **PWA:**
-  - Manifest with our own icons.
-  - The service worker precaches the shell and caches blob thumbs in Cache Storage (200 MB LRU).
-  - Public sessions get no caching.
-
-### 23.9 Demo
-
-`bridge-lab demo [--listen 127.0.0.1:0]` starts a sim World gateway seeded by `lab/demo`:
-- **Dataset:** deterministic, synthetic and personal-data-free. About 40 chats (direct and group; iMessage, SMS and RCS) and about 5k messages, covering every item type the sim represents, with generated images, PDFs and vCards.
-- **Output:** it prints a URL with an auto-login **demo session**. That session exists only in lab builds and is impossible in the product binary.
-- **Uses:** contributors, README media and the `web` test level.
-
-### 23.10 Test level `web` and scenarios
-
-- **Level:** `web` is Playwright through `bridge-lab`. A scenario YAML with `level: web` runs `pnpm exec playwright test -g <ID>` against a fresh demo world.
-- **Matrix:** WebKit, Chromium and Firefox × light and dark × phone (390×844) and desktop (1440×900), as each scenario declares. Passkey flows use Chromium's virtual authenticator.
-- **Real-level web scenarios** drive the same UI against the real gateway on the Air.
-
-W1 scenarios:
-
-| ID | Level | Proves |
-|---|---|---|
-| WEB-SERVE-EMBED | sim, web | binary serves the app; immutable asset caching; route fallback; "not built" page |
-| WEB-AUTH-ENROLL | web | enroll token → passkey → trusted session; token single-use and expiring |
-| WEB-AUTH-LOGIN | web | discoverable sign-in; trusted vs public (public leaves no IndexedDB/Cache Storage) |
-| WEB-AUTH-REVOKE | web | revoke closes the other socket ≤ 1 s and wipes its cache; `bridge web lock` |
-| WEB-AUTH-ORIGIN | sim | foreign or missing Origin on state change or WS upgrade rejects; CSP and headers present |
-| WEB-AUTH-RATELIMIT | sim | sign-in and enroll limits |
-| WEB-RM-CHATS | sim | `messages.chats` equals Truth-derived summaries via REST and MCP; budget |
-| WEB-RM-THREAD | sim | thread pages stable, no gaps or duplicates under concurrent inserts; reactions folded; budget |
-| WEB-LIVE-DELTA | web | sim inbound message reaches the browser view ≤ 500 ms p95 (browser-observed) |
-| WEB-LIVE-RESUME | web | socket drop and reconnect converge without gaps |
-| WEB-MEDIA-VARIANTS | real | HEIC, MOV and CAF attachments on the Air get variants with correct dimensions and duration, and play in WebKit, Chromium and Firefox |
-| WEB-REMOTE-FUNNEL | real | `bridge remote on` → public URL reachable from Ubuntu with a valid certificate; agent REST/MCP works; local tokens refused; `off` closes ≤ 1 s |
-| WEB-AGENT-LEVELS | sim | read rejects commands; approve → `awaiting_approval` → approve executes / reject finalizes; full executes |
-| WEB-AGENT-OAUTH | sim, web | dynamic registration + PKCE + consent with a device session → MCP call succeeds; refresh rotates; revoke works |
-| WEB-PERF-SHELL | web | bundle, CLS and warm-load budgets |
-
-### 23.11 W1 units
-
-| Unit | Contents | Depends on |
-|---|---|---|
-| W1-RM | §23.4 read models + descriptors + WEB-RM-* | — |
-| W1-WEB | §23.2 + §23.3 server side (Web module, sessions, passkeys, live views, blob variants route, interactive principal marker) + WEB-AUTH-* (server parts) | W1-RM for live views of chats and threads (stub until merged) |
-| W1-UI | §23.8 scaffold: tokens, motion engine, virtual list, layouts, router, `web/1` client, auth and settings screens, PWA, lint, `make web`, embed, Playwright harness and `web` level | protocol in §23.3 (parallel with W1-WEB) |
-| W1-MEDIA | §23.7 + WEB-MEDIA-VARIANTS | — |
-| W1-REMOTE | §23.5 + WEB-REMOTE-FUNNEL | W1-WEB |
-| W1-AGENT | §23.6 + WEB-AGENT-* | W1-WEB, W1-REMOTE |
-| W1-DEMO | §23.9 | W1-RM, W1-UI |
-| W1-RELAY | replicas over Remote (`/v1/feed`, replica device-key auth instead of TLS client certs) | W1-REMOTE; lowest priority |
-
-### 23.12 W2: Messages, reading at full fidelity
-
-**Scope:** every **W2** row of `design/web/messages.md`. W2 follows the draft spec. Rows Johan changes after his skim are applied when he gives them; this doesn't block W2.
-
-**Reader decoding (Swift Helper → records), added to §6.2.** Decoders are pure and fixture-tested (§19), with fixtures scrubbed to synthetic values.
-
-`messages.message` gains:
-- `balloon{bundle_id, kind, app_name?, link?, app?}`:
-  - `kind` is one of `link|app|digital_touch|handwriting|poll|check_in|apple_cash|find_my|chatbot|unknown`.
-  - `link`: `{url, title?, summary?, site_name?, image_attachment_id?, icon_attachment_id?, video_url?}`, from `payload_data` (keyed archive) plus the plugin payload attachments.
-  - `app`: `{caption?, subcaption?, trailing_caption?, image_attachment_id?, url?}`, from the MSMessage template layout when present.
-- `audio{is_audio_message, played_at?, expirable, kept, transcription?}`.
-- `schedule{state, scheduled_for}` (Send Later).
-- `subject`.
-- `delivery{quietly, notified_anyway}`.
-- `is_spam`, `has_unseen_mention`, `via_satellite`, `is_sos`.
-- `formatting[]`: `{utf16_location, utf16_length, styles[bold|italic|underline|strikethrough], effect?[big|small|shake|nod|explode|ripple|bloom|jitter]}`, from attributedBody attributes.
-- A `genmoji` kind in `parts[]`: `{attachment_id, description}`.
-
-`messages.attachment` gains:
-- `is_sticker`.
-- `sticker{target_message_id, part_index, x, y, scale, rotation}`, from `sticker_user_info`.
-- `hidden` (`hide_attachment`).
-- `genmoji`.
-
-`messages.chat` gains:
-- `filter: known|unknown`, from `is_filtered` and contact linkage.
-- `group_photo_attachment_id?`.
-- `read_receipts: on|off|default`.
-- `muted?` is the known Hide Alerts boolean, independent of an expiry. `muted_until?` and `pinned_index?` are emitted only when reliably captured. Unknown values stay null/absent with `coverage.missing`; a permanent mute never invents an expiry. A known `muted` boolean takes precedence over the legacy expiry projection.
-
-Recently Deleted becomes `deleted_at` + `recoverable_until` on messages and chats, from the recoverable tables.
-
-**Read models:**
-- `messages.chats` filters `known|unknown|unread|deleted|spam` become real.
-- `messages.collection` `links|locations` become real.
-- `has_unseen_mention` is real.
-- New read `messages.handles{ids[]≤500}` → `{handles: [{handle_id, address, service, contact_id?, display_name, given_name?, family_name?, initials, avatar{digest, variant}?}], cursor}`, for sender names and avatars in threads.
-
-**Client architecture (`web/src/messages/`):**
-
-| Path | Owns |
-|---|---|
-| `routes.ts` | `/messages`, `/messages/<chat>`, `/messages/<chat>/<message>`, `/messages/new`, `/messages/search?q` |
-| `store/` | chats view store, thread window store (anchored window over `web.1` thread view, prefetching ±2 pages), handles cache (`messages.handles`, batched per frame), unread and badge |
-| `format/` | dates and times (§2/§3 rules, locale-aware), names ("A, B & 2 others"), preview wording (§15), byte sizes, durations |
-| `list/` | ConversationList (virtualized), ConversationRow, PinnedGrid, FiltersMenu, SearchField, Avatar (photo / monogram / group composite) |
-| `transcript/` | Transcript (bottom-anchored virtual list), layout engine (runs, tails, headers, receipts as pure functions over ThreadItems), Bubble, TextContent (data detectors, mentions, formatting), Reactions, ReplyConnector, ThreadOverlay, GroupEventLine, Receipt, NewMessagesPill |
-| `media/` | MediaBubble (single, stack, grid), VideoBubble, AudioBubble (waveform player), FileChip, ContactCard, LinkCard, StickerLayer, Genmoji, PlaceholderCard, MediaViewer (shared-element zoom, swipe, video controls, PiP, share and download) |
-| `effects/` | one canvas layer with GPU-only animation for bubble effects (slam, loud, gentle, invisible ink), screen effects (echo, spotlight, balloons, confetti, love, lasers, fireworks, celebration) and text effects (big, small, shake, nod, explode, ripple, bloom, jitter). Each ≤ 2.5 s, skippable, replaced by a static label under Reduce Motion |
-| `details/` | DetailsInspector (pane ≥1024, sheet below), member list, Collections tabs |
-| `search/` | SearchResults (sections, filter tokens, highlighted matches, jump-to-message with pulse) |
-
-**Rules:**
-- **Chats cache:** trusted sessions atomically persist a versioned materialized view with its cursor, capped at 2,000 chats and 2 MiB serialized in display order. Hydration renders this snapshot before reconciling a fresh live view; transport pages do not independently hydrate or persist. IndexedDB upgrade removes legacy chat-page keys. Public sessions persist nothing, and session removal wipes the snapshot. WEB-MSG-CHATS-CACHE covers interrupted cross-page reorder, offline reload, upgrade and privacy.
-- **Focused replies:** ThreadOverlay owns a bounded, paged `thread` subscription with `thread_originator_id`, so replies outside the main transcript window remain available without loading the whole chat. Its five 40-item pages cap the focused window at 200 items; the main transcript retains five 100-item pages. The focused reader never feeds pending-command projection or main-window observation. Concurrent transcript instances keep actual message IDs for actions and use separate DOM IDs.
-- **Layout engine:** the transcript layout is a pure function `(items, handles, prefs, width) → rows`, with code-level tests allowed as layout math. Rows have deterministic height estimates from measured text plus known media dimensions (`media.width/height`). The DOM is authoritative for rendered text height; ResizeObserver corrects virtual positions with scroll-anchor compensation; residual estimate differences may require one frame of correction without clipping text. Media reservations remain fixed.
-- **Text measurement:** done in one batched pass per frame using the exact computed text-node font family, size, weight, letter spacing, feature settings and variation settings. Canvas estimates reserve `ceil(width) + max(1 px, 0.5% of width)` before applying the bubble width cap. Nondefault font features or variations use batched DOM text measurements. Font-set readiness and matching FontFace loaded promises invalidate measurements, with an intrinsic font probe detecting later changes without depending on loadingdone events; intrinsic text height and tail silhouettes follow the observed DOM bounds.
-- **Viewer source:** the media viewer pages the whole chat through `messages.collection{chat_id, kind: media}`, independently of the transcript window. Owning `message_id` supports Show in Chat; `sent_at` preserves interleaved photo/video order.
-- **Media sizes:** media bubbles size from `media` before any byte loads. A ThumbHash placeholder fades to the image on decode, which happens off the main thread with `decode()`. Phone images use at most 70% of transcript width and 60% of viewport height; opaque portraits exceeding the height cap crop at the center. Alpha images and stickers preserve their aspect within those bounds and float without fill, radius or clipping. Desktop media width is at most 480 px.
-
-**Performance acceptance (replaces rAF-interval proxies on 60 Hz/headless hosts):**
-- **Main-thread work per frame** (script + style + layout, measured in Chromium tracing and with in-page instrumentation in WebKit and Firefox) ≤ 4 ms p95 and ≤ 8 ms max during:
-  - a 100k-message transcript fling
-  - list scroll
-  - push/pop transitions
-- **Long tasks:** none during those journeys. Chromium is the gate, because the Long Task API isn't available elsewhere.
-- **Frame intervals** are still recorded but are only gates when the host display supports 120 Hz.
-- **Input responsiveness** ≤ 8 ms p95 for send, react, open chat and open media. This is our own main-thread cost for the input: Event Timing input delay plus processing (`processingEnd − startTime`), plus the script, style and layout work of the frame that renders the result.
-  - Click→next-frame (rAF) is recorded as descriptive data and becomes a gate only on a 120 Hz host. On 60 Hz or headless hosts the frame cadence alone is about 16.7 ms, so it measures display alignment, not our work.
-  - Decided 2026-10-21 during W2-LIST acceptance; the measured list was 0.3–0.6 ms processing and frame work p95 1.93 ms.
-- **WebKit:** WebKit jank must be explained and fixed. Show where the time goes (script, layout or paint) before claiming it's a headless artifact.
-
-**W2 units:**
-
-| Unit | Contents | Depends on |
-|---|---|---|
-| W2-READER | Decoding and records above, AppleTruth checks, SimApplePeer + demo dataset support for every new field, read-model filters and collections, `messages.handles` | W1-DEMO merged (for demo support) |
-| W2-LIST | `list/`, `format/`, `store/` (chats, handles), search field, keyboard navigation, live reordering with springs | W1-DEMO |
-| W2-TRANSCRIPT | `transcript/` core (text, runs, tails, headers, receipts, edits, unsends, reactions, replies and ThreadOverlay, group events, paging, anchors, new pill), the performance acceptance above, and the WebKit jank fix | W1-DEMO |
-| W2-MEDIA | `media/` bubbles and MediaViewer, link and app cards, stickers, Genmoji, placeholders, and `effects/` | W2-TRANSCRIPT layout engine, W2-READER fields |
-| W2-DETAILS | `details/`, `search/` results | W2-LIST |
-
-**W2 scenarios:**
-- Level `web` on the demo world, all 12 projects unless noted:
-  - WEB-MSG-LIST, WEB-MSG-AVATAR-READY (delayed handle names, neutral avatars and stable monogram geometry), WEB-MSG-LOADING (cached first paint and delayed skeletons), WEB-MSG-REORDER (live ordering and unread springs), WEB-MSG-FILTERS, WEB-MSG-SEARCH, WEB-MSG-THREAD-CORE, WEB-MSG-REACTIONS, WEB-MSG-REPLIES, WEB-MSG-EDIT-UNSEND-VIEW, WEB-MSG-GROUP-EVENTS, WEB-MSG-MEDIA, WEB-MSG-VIEWER, WEB-MSG-LINKS, WEB-MSG-STICKERS-GENMOJI, WEB-MSG-EFFECTS, WEB-MSG-PLACEHOLDERS, WEB-MSG-DETAILS, WEB-MSG-KEYBOARD, WEB-MSG-A11Y (axe-free structural checks plus labels), WEB-MSG-PERF.
-  - WEB-PERF-LIST uses one Chromium/light/desktop project with `web.huge: true` for list scroll, filter switching, search typing and live reorder. It runs in the exclusive lane with frame work p95 ≤ 4 ms / max ≤ 8 ms and own-input cost p95 ≤ 8 ms. WEB-MSG-PERF is transcript-only and its canonical manifest is owned by W2-TRANSCRIPT.
-  - WEB-MSG-SIDEBAR separately verifies desktop sidebar resize bounds, RTL keyboard handling and trusted-only width persistence. Its separate World avoids unrelated fixture authentication bursts.
-  - WEB-MSG-SEARCH-LIST covers inline conversation matches, search-field shortcuts and the full-results route hook; WEB-MSG-SEARCH covers the full results page. WEB-PERF-SEARCH checks the unchanged 50 ms response-to-DOM budget for bounded results at the Messages milestone.
-  - WEB-MSG-KEYBOARD-LIST covers list selection, chat cycling and pinned shortcuts; WEB-MSG-KEYBOARD covers transcript shortcuts.
-  - WEB-MSG-LIVE: a sim inbound message appears with the receive animation in under 500 ms p95.
-- Level `real` (the real gateway on the Air, read-only):
-  - WEB-MSG-REAL-READ: the real chat list and threads render without errors.
-  - Every decoded field kind present in real data renders. Evidence is counts only.
-- Reader level `sim` + `real`:
-  - MSG-DECODE-BALLOON, MSG-DECODE-FORMATTING, MSG-READ-RICH-FIELDS (AppleTruth agrees on counts per field kind).
-
-### 23.13 W3: Messages, writing
-
-**Interactive gate (Helper).**
-- **Where interactive comes from:** a command arriving over ApplePeer with `origin: interactive`. Only the gateway sets this for `device:` principals (§23.2) and policy-authorized `agent:` principals at level `full` (§23.6); the IPC socket is owner-only. The Helper rejects unknown origins, inconsistent action origins, and interactive origins from other principal kinds at the IPC boundary. Dispatch must retain the prepared origin.
-- **What it relaxes:** interactive commands skip the lab text tag (`[ab-test <id>]`) and the own-handle route restriction.
-- **What still applies:** the operation's capability proof for this OS build, expiry, the dispatch guard, conservative correlation, and the no-redispatch rules (§11.2).
-- **Other principals:** lab, test and `agent:` principals keep today's gates. `agent:` with level `full` gets interactive-equivalent routing only after owner approval or at level `full`, per §23.6.
-
-**Self-test (`bridge selftest messages`, run by `bridge setup`).** It proves each Messages operation on this Mac's OS build and records capability evidence (ADR 0008).
-- **Own handles:** discovered from the Messages account (`account_login` / `destination_caller_id`) and the Contacts "me" card.
-- **Run:** in a tagged self chat it does send text, send a file, reply, react (classic and emoji, add and remove), edit, unsend, mark read/unread, and delete message. Afterwards it cleans up everything it created.
-- **Result:** each passing operation becomes `proven` for the build; a failure leaves that operation hidden in the UI with the reason.
-- **Rerun:** automatic after a macOS update changes the build. The Helper caches one report per running build and does not repeat an interrupted run; `bridge selftest messages --force` starts a new, guarded run. `bridge setup` invokes the same self-test. `--no-ui` proves the AppleScript steps and records the remaining operations and cleanup as deferred. Private run manifests and the dispatch guard retain unfinished cleanup obligations; failures remain unproven with per-operation reasons.
-
-**Proofs to finish at the real level** (sim-only today): `messages.mark_read`, `messages.mark_unread`, `messages.delete_message` and `messages.delete_chat` (tagged self chat only), plus resend of a failed message (`messages.send` with `resend_of`). Resend names a visible failed outgoing message in the same `chat_id` and always uses a fresh command ID. Operations validates that reference, and the Helper rechecks native failure before preparation and dispatch. Reusing the resend command ID returns its existing outcome. Indeterminate effects are never automatically resent. The real proof requires an explicitly supplied registered failed self-message fixture; it never induces an unsafe native failure.
-
-**Upload path:**
-- `POST /web/v1/upload` streams to a staged blob on the serving instance.
-- **On a replica,** the serving instance verifies its staged bytes and supplies their mandatory digest to signed feed upload controls. Bytes use the binary bulk lane in 1 MiB chunks (§12), with the digest verified by the gateway before readiness and by the replica against the ready response, before the referencing command is admitted.
-- **Limits:** 100 MiB per file, 10 files per message.
-- Gateway-local raw uploads retain their local staging path. A completed response carries `upload_id`, `offset`, `size`, `state: ready` and `expires_at`.
-- Optional resumable staging starts with an empty POST and `Upload-Length`; `Upload-Digest` optionally checks the browser bytes against a supplied lowercase SHA-256 digest; replica forwarding always supplies and verifies a mandatory digest on both transfer endpoints. Append raw bytes with `Upload-ID` and `Upload-Offset`. `GET /web/v1/upload/{id}` returns progress; `DELETE` abandons it. IDs are principal-owned. Accepted writes extend the lease to ten minutes; status reads and commit do not extend it. Interrupted writes retain acknowledged offsets. Completion verifies the declared size and digest before readiness. On a replica the final append returns only after gateway verification and may take as long as forwarding; a client that loses that response re-reads status and sends a zero-byte append to resume.
-- Expired or abandoned leases release temporary files, upload aliases and pins. Before admission (including awaiting owner approval), the gateway verifies ready upload IDs and persists their blob references with the command. Durable command protection survives upload lease expiry and owner approval; an upload ID alone never grants another principal access.
-
-**Client (`web/src/messages/compose/`, `actions/`):**
-- **Composer:** text, Enter/Shift+Enter, autogrow to 6 lines, paste, drag and drop, file picker, phone camera capture, audio recording sent as a file (an audio message in W4), location sent as a maps link, our own desktop emoji picker (⌃⌘Space), and per-chat drafts in local storage. Public sessions keep drafts in memory only.
-- **Sending state:** pending → sent → delivered/read per part. `command.parts` carries `{index, kind: text|attachment, upload_id?, record_id?, disposition}` (§11.2). In a partial failure, only failed parts show Not Delivered; Try Again sends only the selected failed part with a fresh command and its own `resend_of`, leaving successful parts intact. Unverified failures cannot enable Try Again, and indeterminate parts use §3.1's Check/notice policy.
-- **Message actions** (long-press, right-click, ⌘T/⌘R/⌘E/⌘Z):
-  - Tapback picker (6 classic, emoji search, remove).
-  - Reply mode.
-  - Inline edit (15 min, 5 edits).
-  - Undo Send (2 min; particle dissolve).
-  - Delete (confirm).
-  - Copy, Forward (pre-filled new message), Save attachment.
-- **Chat actions:** mark read/unread (swipe and menu), delete chat (confirm, full-swipe).
-- **New message:** recipient tokens with `contacts.lookup` autocomplete, service hint from an exact-participant `messages.chats` lookup, an existing chat loads under the To field, and send. History lookup never blocks a single-recipient Send; a failure only shows "Couldn't load earlier messages". Sending to a handle lets native Messages select or create the chat only after send succeeds. Two or more tokens show "New group messages aren't available yet" beside disabled Send, while an exact existing group can still load read-only history.
-- **Optimistic UI:** each pending part has a distinct presentation key and swaps only by its own exact `record_id` at a compatible captured cursor reaching `commit_seq`. Actual captured IDs and versions remain unchanged. No text, filename or time matching is permitted. Multi-file app sending stays disabled until per-part mapping and cardinality proof land. It never duplicates and never flickers.
-- **Gesture guard:** every command is submitted from input-event handlers only (§23.2).
-
-**Scenarios** (level `web` on the demo world, plus `real` on the Air with Johan's own handles only; never text anyone else):
-
-| ID | Levels | Proves |
-|---|---|---|
-| MSG-INTERACTIVE-GATE | sim, real | interactive skips the tag and own-handle rules; lab and agent principals don't; expiry and no-redispatch unchanged. At real level, an untagged interactive send to own handle, then cleanup |
-| MSG-DELETE-VISIBILITY | sim, real | sim checks retained recoverable message/chat records and restoration; read-only real proof compares a previously cleaned test message with independent native Truth |
-| MSG-MEDIA-CLEANUP | sim | native manifest authorization and unambiguous attachment-only target selection; no effects on unproven data |
-| MSG-SELFTEST | real | the self-test proves each operation and cleans up completely |
-| MSG-READSTATE-REAL, MSG-DELETE-REAL | real | the conversation proofs listed above, using an isolated tagged self chat |
-| MSG-RESEND | sim, real | explicit fresh-command resend of a failed message; real proof requires a registered failed self fixture |
-| MSG-COMMAND-PARTS | sim | text plus two files captures distinct part identities, including concrete-row and no-effect failures plus same-aggregate partial evidence progress; REST/MCP, live command status and owned command-record parity. Real proof waits for unlock with tagged self-handle cleanup |
-| WEB-MSG-SEND | web, real | text send: tap to local bubble ≤ 1 frame; ack; delivered; no duplicate |
-| WEB-MSG-ATTACH-SEND | web, real | photo, video, PDF and audio-file upload and send, including via a replica-served UI |
-| WEB-MSG-REACT, WEB-MSG-REPLY, WEB-MSG-EDIT, WEB-MSG-UNSEND | web, real | each action end to end, with the UI's time limits |
-| WEB-MSG-CHAT-ACTIONS | web | read/unread and delete chat via swipe and menu |
-| WEB-MSG-NEW | web | new message with autocomplete and service hint |
-| WEB-MSG-FAIL-RESEND | web | failure shows "Not Delivered" and Try Again resends |
-| WEB-MSG-OPTIMISTIC | web | reconnect mid-send converges with no duplicates |
-
-**Units:**
-
-| Unit | Contents |
-|---|---|
-| W3-HELPER | interactive gate in Swift, self-test, real proofs, resend |
-| W3-UPLOAD | replica upload forwarding, upload limits |
-| W3-COMPOSE | composer, actions, chat actions, new message, optimistic UI, emoji picker |
-
-### 23.15 W5–W8: Reminders, Calendar, Contacts, Notes
-
-Each app follows its spec (`design/web/reminders.md`, `calendar.md`, `contacts.md`, `notes.md`) in three steps. Each step starts with failing scenarios at sim/web and ends at real on the Air, using tagged "Bridge Test" containers and cleanup:
-- **R:** read at full fidelity, including store-backed fields beyond the public frameworks, with AppleTruth checks, read models and the UI.
-- **W:** basic writes through the existing commands, with the UI and optimistic state.
-- **P:** parity through AppleScript or Accessibility, proven per OS build or hidden.
-
-| Milestone | App | Store reader (R) | Read models |
-|---|---|---|---|
-| W5 | Reminders | Reminders Core Data store (read-only WAL snapshot, FDA) linked to EventKit identifiers | `reminders.lists`, `reminders.items` |
-| W6 | Calendar | Calendar store for travel time, attachments, geo and invitation status | `calendar.range` with overlap groups |
-| W7 | Contacts | — (Contacts framework is complete except notes) | `contacts.list` |
-| W8 | Notes | Extended NoteStore protobuf decoder (full blocks) | `notes.list` |
-
-**W5 units (Reminders), runnable as worker capacity frees:**
-
-| Unit | Contents |
-|---|---|
-| W5-STORE | Swift store reader per the `reminders.md` §7 mapping. Pure blob decoders (early-reminder deltas, section order and membership, smart-list filter) with scrubbed fixtures. AppleTruth counts. SimApplePeer + demo dataset fields. Read models `reminders.lists` and `reminders.items` (smart, tag and section aware). Scenarios REM-STORE-READ (sim, real). |
-| W5-UI | Sidebar and home (smart tiles, lists with groups, tags), list content (rows, sections, subtasks, completed toggle, sort), details inspector (read), search, keyboard, motion. WEB-REM-READ and WEB-REM-DETAILS. |
-| W5-WRITE | Inline create with client-side natural-language dates, edit, complete (signature motion), delete, move, create list; optimistic via `observed_record_ids`. WEB-REM-WRITE (web, real on "Bridge Test"). |
-| W5-PARITY | Flag, subtasks, sections, tags, list icon/emoji/group, manual reorder, images, custom smart lists, through AppleScript or Accessibility, proven per OS build or hidden. WEB-REM-PARITY. |
-
-The read inspector renders EventKit recurrence frequency, interval, selectors and end conditions, absolute/relative alerts, and location proximity, radius and coordinates in the viewer’s time zone. Recurrence is labeled as the next incomplete occurrence. Unknown schedule shapes hide the affected field and glyph rather than guessing. WEB-REM-DETAILS verifies synthetic values on desktop and phone. Schedule configuration is read-only; basic edits preserve these fields.
-
-Verified manual ordering: `ZREMINDERIDSMERGEABLEORDERING_V2_JSON` is an unversioned JSON array of canonical UUID strings on macOS 26.7.1. The pure decoder accepts only that shape with unique identifiers and exposes zero-based `manual_order` positions. Invalid bytes, duplicate identifiers, object/version envelopes, and unverified formats yield null with unsupported coverage. A supported array that omits a reminder yields null with partial coverage. List-only order changes compare decoded positions and reproject only reminders whose positions or coverage changed; appending an identifier does not reproject unchanged positions. Unchanged ordering bytes reuse the decoded list ordering. The scrubbed fixture comes from a tagged three-reminder list created and deleted by the Helper. A second guarded five-reminder probe verified the same ordering format; neither absolute nor relative EventKit alarms populated due-date delta blobs; positive early-reminder, section and smart-filter fixtures remain deferred while the Air is locked, so those fields stay unsupported.
-
-W5-STORE budgets on the Air: incremental enrichment after each EventKit capture <50 ms p95; 1- and 10-reminder changes <5 ms p95. Report 200-sample p50/p95 for 1, 10, 100 and 1,000 changed reminders. Full reads run at Helper startup or fallback (invalid history token, history truncation, schema change) and stay <100 ms p95 warm. Report cold reads separately without a gate, since they include page-cache warmup. A fresh forced full read must keep main-queue blocking below 16 ms.
-
-Real live runs time the full `RemindersStoreEnrichment.refresh` await inside the Helper, report the first call separately and retain warm p50/p95/max plus per-capture timings. Compare real main/candidate runs as interleaved A/B/A/B with per-effect timestamps and load/swap; repeat a pair if either run starts above 7 GB of swap. Both candidates must pass the existing ≤1 s live budget; candidate p95 stays within the baseline-run spread plus 10 ms, and direct warm enrichment p95 stays below 50 ms.
-
-Store refresh piggybacks on capture completion; it adds no EventKit fetch or watcher. Known gap: a store-only flag, section or tag change reaches Bridge only if EventKit also posts a change notification. Once the Helper has Reminders Apple Events authorization, the tagged real flag proof must measure flag-only gateway propagation without another edit. If no notification arrives, follow up with a WAL FSEvents hint through the existing bounded coalescer (§7), never one refetch per hint.
-
-Measure the first Reminders checkpoint after Helper start before and after enrichment; if enrichment adds more than about one second, emit the EventKit checkpoint first and store fields in the next checkpoint.
-
-**W6 units (Calendar):**
-
-| Unit | Contents |
-|---|---|
-| W6-STORE | Store-backed fields per the `calendar.md` §4 mapping, AppleTruth counts, the read model `calendar.range` with precomputed overlap groups (≤ 10 ms p95 for a month), sim and demo dataset. CAL-STORE-READ. |
-| W6-UI | Day, Week, Month, Year and List views, calendars sidebar, mini month, event inspector (read), search, now-line, period paging with momentum, keyboard. WEB-CAL-READ. |
-| W6-WRITE | Create (drag, double-click, quick event with client-side natural language), move and resize with snapping, edit and delete with the This/Future prompt, alerts, time zone, new calendar. WEB-CAL-WRITE (web, real on the "Bridge Test" calendar). |
-
-**W7 units (Contacts):**
-
-| Unit | Contents |
-|---|---|
-| W7-READ | Read model `contacts.list{group?, sort}` with section keys and display/sort-order preferences, photo variants, "me" identification, linked conversations through `messages.handle.contact_id`. UI: lists sidebar, A–Z sections with an index scrubber, card with labeled fields and quick actions that open `tel:`/`facetime:`/`mailto:` or Messages new-message, vCard download. WEB-CON-READ. |
-| W7-WRITE | Inline edit mode (add/remove fields, label pickers, photo set/remove), create, delete with confirm, optimistic via `observed_record_ids`. WEB-CON-WRITE (web, real on the "Bridge Test" organization). |
-| W7-PARITY | Group membership writes through `CNSaveRequest`, and the contact poster if stored accessibly. Otherwise hidden. WEB-CON-PARITY. |
-
-**W8 units (Notes):**
-
-| Unit | Contents |
-|---|---|
-| W8-DECODE | Extend `Decoders.NotesProto` to full block structure: titles, headings, monostyled, lists, checklists with state, tables, links, quotes, highlights, collapsible sections, and attachment references with blobs and variants. Pinned and tags. Scrubbed fixtures and AppleTruth counts. Read model `notes.list{folder, sort}`. NOTE-DECODE-FULL (sim, real). |
-| W8-UI | Folders sidebar (accounts, nested folders, Recently Deleted read-only), note list (pinned section, date groups, previews, thumbnails, gallery), read-only rich editor rendering, locked notes title-only, search, keyboard. WEB-NOTE-READ. |
-| W8-WRITE | Plain-text editor for `editable: plain` notes with debounced autosave on `expected_version`, new note and folder, delete. WEB-NOTE-WRITE (web, real in the "Bridge Test" folder). |
-| W8-PARITY | Investigate checklist toggling and simple rich edits through AppleScript HTML bodies on losslessly round-tripped notes; keep only what's provable. WEB-NOTE-PARITY. |
-
-Notes rich records retain `plain_text`, escaped fallback `html`, structured `blocks`, attachment references and optional `pinned` / `tags`. The block/run contract and unknown-format behavior are specified in `design/web/notes.md` §5. Locked bodies are never decoded or staged. A serializable block tree is not itself a write qualification: rich editing stays hidden until its per-OS proof passes. Recently Deleted is captured read-only; a delete may be observed as a move there rather than a tombstone.
-
-W8-PARITY is limited on macOS 26.7.1 (25G241): the tagged simple-rich HTML replacement did not preserve expected text/block structure, and public HTML checkbox import did not create native checklist identities. Neither rich edits nor checklist toggles are exposed. `NOTE-EDIT-PARITY` records the per-OS result with tagged-note cleanup; app acceptance remains a separate milestone gate.
-
-The shell's app switcher enables each app when its R step passes. Scenario families: `WEB-REM-*`, `WEB-CAL-*`, `WEB-CON-*`, `WEB-NOTE-*` (web level, 12 projects), plus `REM-STORE-*`, `CAL-STORE-*` and `NOTE-DECODE-FULL` (sim and real).
-
-Voice Memos and voicemail metadata capture: [recordings](spec/recordings.md).

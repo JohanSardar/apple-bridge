@@ -1,6 +1,6 @@
 id: WEB-REM-WRITE
-feature: web.reminders
-levels: [web, real]
+feature: reminders.write
+levels: [real]
 web:
   browsers: [webkit, chromium, firefox]
   themes: [light, dark]

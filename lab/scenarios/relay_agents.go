@@ -12,7 +12,6 @@ import (
 	"github.com/JohanSardar/apple-bridge/internal/trust"
 	bridgeweb "github.com/JohanSardar/apple-bridge/internal/web"
 	"github.com/JohanSardar/apple-bridge/lab/world"
-	"github.com/coder/websocket/wsjson"
 )
 
 func runRelayAgents(ctx context.Context, s Scenario, level string) (e Evidence) {
@@ -80,31 +79,17 @@ func runRelayAgents(ctx context.Context, s Scenario, level string) (e Evidence) 
 	status, record := call(full, immediate)
 	add("replica_full_agent_forwarded", status == 200 && record.State == contracts.CommandObserved)
 	_, approve := create(trust.AgentApprove)
-	connection, err := owner.socket()
-	add("gateway_owner_live_connection", err == nil)
-	if err != nil {
-		return
-	}
-	defer connection.CloseNow()
 	pending := command()
 	status, record = call(approve, pending)
 	add("replica_approve_agent_queued_on_gateway", status == 200 && record.State == contracts.CommandAwaitingApproval)
 	if status != 200 || record.State != contracts.CommandAwaitingApproval {
 		return
 	}
-	liveContext, stop := context.WithTimeout(ctx, 3*time.Second)
-	var event struct {
-		T       string `json:"t"`
-		Command struct {
-			ID string `json:"command_id"`
-		} `json:"command"`
-	}
-	err = wsjson.Read(liveContext, connection, &event)
-	stop()
-	add("delegated_agent_pending_approval_live_event", err == nil && event.T == "approval" && event.Command.ID == pending.ID)
+	response, body, pageErr := owner.request("GET", "approvals", nil)
+	add("delegated_agent_pending_approval_page", pageErr == nil && response.StatusCode == 200 && strings.Contains(string(body), pending.ID))
 	effects, _ = w.Effects()
 	add("no_effect_before_gateway_owner_consent", effects[pending.ID] == 0)
-	response, _, err := owner.request("POST", "approvals/"+pending.ID, map[string]string{"decision": "approve"})
+	response, _, err = owner.request("POST", "approvals/"+pending.ID, map[string]string{"decision": "approve"})
 	add("gateway_owner_approves_replica_agent", err == nil && response.StatusCode == 200)
 	endpoint := w.Replicas[0]
 	endpoint.Token = approve

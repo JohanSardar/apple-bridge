@@ -22,7 +22,7 @@ func TestOwnerGateOriginsAndCookies(t *testing.T) {
 	code.Resource = origin + "/mcp"
 	handler := Handler(Deps{Authority: approvals.Authority, ConnectorApprovals: approvals, PublicHost: func() string { return "bridge.example" }})
 	q := url.Values{"client_id": {client.ID}, "response_type": {"code"}, "redirect_uri": {code.RedirectURI}, "code_challenge": {code.Challenge}, "code_challenge_method": {"S256"}, "resource": {code.Resource}, "scope": {"messages:read"}}
-	for _, path := range []string{"/oauth/authorize?" + q.Encode(), "/web/v1/agents", "/web/v1/approvals/test", "/web/v1/passkeys/options"} {
+	for _, path := range []string{"/oauth/authorize?" + q.Encode(), "/approvals", "/approvals/test", "/auth/passkeys/options"} {
 		for _, source := range []string{"", "null", "https://attacker.example", origin} {
 			for _, authenticated := range []bool{false, true} {
 				req := httptest.NewRequest("POST", origin+path, strings.NewReader(`{"decision":"approve","scopes":["messages:read"]}`))
@@ -47,7 +47,7 @@ func TestOwnerGateOriginsAndCookies(t *testing.T) {
 			}
 		}
 	}
-	req := httptest.NewRequest("GET", origin+"/web/v1/session", nil)
+	req := httptest.NewRequest("GET", origin+"/auth/session", nil)
 	req.TLS = &tls.ConnectionState{}
 	req.AddCookie(&http.Cookie{Name: SessionCookie, Value: token})
 	response := httptest.NewRecorder()
@@ -111,7 +111,7 @@ func TestOwnerGateDoesNotAcceptAgentOrForwardingHeaders(t *testing.T) {
 	}
 	handler := Handler(Deps{Authority: approvals.Authority, PublicHost: func() string { return "bridge.example" }})
 	for _, host := range []string{"bridge.example", "attacker.example"} {
-		req := httptest.NewRequest("GET", "https://"+host+"/web/v1/agents", nil)
+		req := httptest.NewRequest("GET", "https://"+host+"/approvals", nil)
 		req.Header.Set("Authorization", "Bearer "+agentToken)
 		req.Header.Set("X-Forwarded-Host", "bridge.example")
 		req.Header.Set("X-Forwarded-Proto", "https")

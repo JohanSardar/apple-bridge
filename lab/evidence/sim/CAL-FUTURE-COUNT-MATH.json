@@ -1,18 +1,17 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[5.95 10.65 12.04] cpu_idle=56% cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[4.7 4.94 4.48] cpu_idle=78% cpus=8 other_heavy=0"
   },
-  "run_id": "cal_01M5K2WGPXW1GZBC43R86PZTE3",
+  "run_id": "cal_01M6EYREV4Z1NFZZ4JEX4HA60B",
   "metrics": {
-    "capture_observer_resets": 0,
-    "summary_only": true
+    "capture_observer_resets": 0
   },
   "scenario": "CAL-FUTURE-COUNT-MATH",
   "level": "sim",
   "passed": true,
-  "git_sha": "0d2cd4771a2a1b173e2f126a13ffeb6e6e9d5836",
-  "at": "2026-10-23T00:34:30.237639Z",
+  "git_sha": "381fd8bdb2777c9f9e35894a034f501948214911",
+  "at": "2026-11-02T20:21:07.045545Z",
   "assertions": [
     {
       "name": "native_calendar_checks_build",
@@ -34,5 +33,12 @@
   "latency": {},
   "hosts": [
     "air"
-  ]
+  ],
+  "conditions": {
+    "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
+    "heavy_slots_in_use": "0",
+    "load_average": "4.70 4.94 4.48",
+    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica",
+    "swap_usage": "total = 3072.00M  used = 2717.88M  free = 354.12M  (encrypted)"
+  }
 }

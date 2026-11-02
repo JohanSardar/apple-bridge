@@ -1,5 +1,5 @@
 id: NOTE-LIST
-feature: web.notes
+feature: notes.read
 levels: [sim]
 given: []
 when: [{web: {}}]

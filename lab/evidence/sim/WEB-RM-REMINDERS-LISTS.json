@@ -1,14 +1,17 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[7.77 6.6 5.87] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[4.28 4.82 4.48] cpu_idle=79% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5G6Z9D09JTXZFQM2XYAVQGJ",
+  "run_id": "run_01M6EYV0JEGQMFR0ETPSKKMBXF",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
   "scenario": "WEB-RM-REMINDERS-LISTS",
   "level": "sim",
   "passed": true,
-  "git_sha": "3907c1d45ea6f74919509314881afda7f639afe4",
-  "at": "2026-10-21T21:48:12.064564Z",
+  "git_sha": "381fd8bdb2777c9f9e35894a034f501948214911",
+  "at": "2026-11-02T20:22:30.734414Z",
   "assertions": [
     {
       "name": "world_start",

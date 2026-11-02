@@ -1,4 +1,0 @@
-id: WEB-RM-OLDEST-BROWSER
-feature: web.readmodels
-levels: [web]
-web: {browsers: [webkit, chromium], themes: [light], layouts: [phone, desktop], server: gateway}

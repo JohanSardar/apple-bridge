@@ -1,5 +1,5 @@
 id: NOTE-DECODE-FULL
-feature: web.notes
+feature: notes.read
 levels: [sim, real]
 given: [{world: {replicas: 1}}]
 when: [{notes: {}}]

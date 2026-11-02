@@ -174,9 +174,12 @@ func runAgentOAuth(ctx context.Context, w *world.World, c *webClient, e *Evidenc
 		add("owner_revoke_token", false)
 		return
 	}
-	resp, _, err := c.request("DELETE", "agents/"+p.ID, nil)
+	authority, err := trust.Open(w.Gateway.Home)
+	if err == nil {
+		err = authority.Revoke(p.ID)
+	}
 	code, _, _ = agentRequest(ctx, c.origin, tokens.AccessToken, "POST", "/v1/op/messages.chats", map[string]any{})
-	add("owner_revoke_oauth", err == nil && resp.StatusCode == 200 && code == 401)
+	add("owner_revoke_oauth", err == nil && code == 401)
 }
 
 func cloneValues(v url.Values) url.Values {

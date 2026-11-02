@@ -1,9 +1,0 @@
-id: WEB-SERVE-EMBED
-feature: web.frontdoor
-levels: [sim, web]
-given: [{world: {replicas: 1}}]
-when: [{web: {}}]
-then: []
-cleanup: [{world: {}}]
-
-web: {browsers: [webkit, chromium, firefox], themes: [light, dark], layouts: [phone, desktop], server: gateway}

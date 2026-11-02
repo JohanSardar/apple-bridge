@@ -1,5 +1,5 @@
 id: NOTE-EDIT-PARITY
-feature: web.notes
+feature: notes.read
 levels: [sim, real]
 given: []
 when: [{notes: {}}]

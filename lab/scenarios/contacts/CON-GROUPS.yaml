@@ -1,5 +1,5 @@
 id: CON-GROUPS
-feature: web.contacts
+feature: contacts.read
 levels: [sim]
 given: [{world: {}}]
 when: [{readmodels: {}}]

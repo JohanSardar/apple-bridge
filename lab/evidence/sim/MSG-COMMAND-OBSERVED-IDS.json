@@ -1,17 +1,17 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[8.51 8.27 13.81] cpu_idle=33% cpus=8 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[5.08 5.01 4.53] cpu_idle=72% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M6391K9X6FKYJ71VG18TGAPK",
+  "run_id": "run_01M6EYSNDTPVR56CA2WS7ZT0Q8",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MSG-COMMAND-OBSERVED-IDS",
   "level": "sim",
   "passed": true,
-  "git_sha": "25767535ee953ff549360bd1106ae68a6d004077",
-  "at": "2026-10-29T07:29:59.101221Z",
+  "git_sha": "381fd8bdb2777c9f9e35894a034f501948214911",
+  "at": "2026-11-02T20:21:46.555344Z",
   "assertions": [
     {
       "name": "seed_self_chat",
@@ -242,18 +242,6 @@
       "passed": true
     },
     {
-      "name": "web_command_submitted",
-      "passed": true
-    },
-    {
-      "name": "web_cmd_status_exact_observed_id",
-      "passed": true
-    },
-    {
-      "name": "web_reconnect_record_retains_exact_ids",
-      "passed": true
-    },
-    {
       "name": "truth_and_replica_convergence",
       "passed": true
     },
@@ -265,44 +253,44 @@
   "latency": {
     "gateway_edit_command_to_readable_record": {
       "samples": 1,
-      "p50_ms": 125.539916,
-      "p95_ms": 125.539916,
-      "max_ms": 125.539916,
+      "p50_ms": 51.458541,
+      "p95_ms": 51.458541,
+      "max_ms": 51.458541,
       "timeouts": 0
     },
     "gateway_reply_command_to_readable_record": {
       "samples": 1,
-      "p50_ms": 95.369292,
-      "p95_ms": 95.369292,
-      "max_ms": 95.369292,
+      "p50_ms": 48.947334,
+      "p95_ms": 48.947334,
+      "max_ms": 48.947334,
       "timeouts": 0
     },
     "gateway_send_command_to_readable_record": {
       "samples": 1,
-      "p50_ms": 119.697,
-      "p95_ms": 119.697,
-      "max_ms": 119.697,
+      "p50_ms": 64.172958,
+      "p95_ms": 64.172958,
+      "max_ms": 64.172958,
       "timeouts": 0
     },
     "replica_edit_command_to_readable_record": {
       "samples": 1,
-      "p50_ms": 273.4835,
-      "p95_ms": 273.4835,
-      "max_ms": 273.4835,
+      "p50_ms": 55.986375,
+      "p95_ms": 55.986375,
+      "max_ms": 55.986375,
       "timeouts": 0
     },
     "replica_reply_command_to_readable_record": {
       "samples": 1,
-      "p50_ms": 238.05175,
-      "p95_ms": 238.05175,
-      "max_ms": 238.05175,
+      "p50_ms": 55.416666,
+      "p95_ms": 55.416666,
+      "max_ms": 55.416666,
       "timeouts": 0
     },
     "replica_send_command_to_readable_record": {
       "samples": 1,
-      "p50_ms": 96.112416,
-      "p95_ms": 96.112416,
-      "max_ms": 96.112416,
+      "p50_ms": 73.531917,
+      "p95_ms": 73.531917,
+      "max_ms": 73.531917,
       "timeouts": 0
     }
   },

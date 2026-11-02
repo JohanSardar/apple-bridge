@@ -193,6 +193,5 @@ func (s *server) authFinish(w http.ResponseWriter, r *http.Request, flow string)
 		return
 	}
 	setCookie(w, r, token, session, 0)
-	s.broadcast(map[string]any{"t": "signin", "device": session.DeviceID, "at": time.Now().UTC()}, session.DeviceID)
 	respond(w, 200, session)
 }

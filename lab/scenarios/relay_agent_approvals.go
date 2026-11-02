@@ -2,7 +2,7 @@ package scenarios
 
 import (
 	"context"
-	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
@@ -17,8 +17,8 @@ func relayAgentApprovalBoundaries(ctx context.Context, w *world.World, owner *we
 	add("revocation_fixture_pending", code == 200 && row.State == contracts.CommandAwaitingApproval)
 	err := authority.Revoke(revoked.ID)
 	add("replica_agent_revoked_locally", err == nil)
-	response, raw, err := owner.request("POST", "approvals/"+c.ID, map[string]string{"decision": "approve"})
-	json.Unmarshal(raw, &row)
+	response, _, err := owner.request("POST", "approvals/"+c.ID, map[string]string{"decision": "approve"})
+	row = storedApproval(ctx, w, c.ID)
 	effects, _ := w.Effects()
 	add("fresh_replica_revocation_rejects_pending_approval", err == nil && response.StatusCode == 200 && row.State == contracts.CommandRejected && effects[c.ID] == 0)
 	_, token = create(trust.AgentApprove)
@@ -56,18 +56,5 @@ func relayAgentApprovalBoundaries(ctx context.Context, w *world.World, owner *we
 
 func pendingReplicaApproval(owner *webClient, id string) bool {
 	response, raw, err := owner.request("GET", "approvals", nil)
-	var out struct {
-		Approvals []struct {
-			ID string `json:"command_id"`
-		} `json:"approvals"`
-	}
-	if err != nil || response.StatusCode != 200 || json.Unmarshal(raw, &out) != nil {
-		return false
-	}
-	for _, row := range out.Approvals {
-		if row.ID == id {
-			return true
-		}
-	}
-	return false
+	return err == nil && response.StatusCode == 200 && strings.Contains(string(raw), "/approvals/"+id)
 }

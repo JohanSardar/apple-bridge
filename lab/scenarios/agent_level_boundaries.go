@@ -37,13 +37,13 @@ func runAgentReplicaBoundary(ctx context.Context, w *world.World, chatID string,
 			return
 		}
 		ownerToken, _, ownerErr := gateway.CreateDeviceSession("trusted")
-		owner := &webClient{ctx: ctx, origin: strings.Replace(w.Gateway.URL, "127.0.0.1", "localhost", 1), cookie: &http.Cookie{Name: bridgeweb.LocalSessionCookie, Value: ownerToken}}
+		owner := &webClient{home: w.Gateway.Home, ctx: ctx, origin: strings.Replace(w.Gateway.URL, "127.0.0.1", "localhost", 1), cookie: &http.Cookie{Name: bridgeweb.LocalSessionCookie, Value: ownerToken}}
 		enrollment, _ := replicaAuthority.Enrollment()
 		if enrollment == nil {
 			add("gateway_activity_enrollment", false)
 			return
 		}
-		response, activity, activityErr := owner.request("GET", "activity?principal="+url.QueryEscape(enrollment.ReplicaID+"/"+replicaAgent.ID), nil)
+		response, activity, activityErr := owner.activity("activity?principal=" + url.QueryEscape(enrollment.ReplicaID+"/"+replicaAgent.ID))
 		add("replica_delegation_logged_on_gateway", ownerErr == nil && activityErr == nil && response.StatusCode == 200 && bytes.Contains(activity, []byte(replicaCommand.ID)))
 	} else {
 		add("replica_agent_authority", false)
@@ -51,7 +51,7 @@ func runAgentReplicaBoundary(ctx context.Context, w *world.World, chatID string,
 }
 
 func checkAgentLevelActivity(c *webClient, expected map[string]contracts.CommandState, add func(string, bool)) {
-	response, raw, err := c.request("GET", "activity", nil)
+	response, raw, err := c.activity("activity")
 	if err != nil || response.StatusCode != 200 {
 		add("level_activity_available", false)
 		return
