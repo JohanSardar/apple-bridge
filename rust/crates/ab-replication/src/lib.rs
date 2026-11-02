@@ -309,9 +309,6 @@ impl<S: ReplicaState> Client<S> {
                     }
                     continue;
                 };
-                if text.len() > 1 << 20 {
-                    return Err(Error::Invalid);
-                }
                 ab_trust::wire::framing::Frame::from_json(
                     ab_trust::wire::framing::Protocol::Feed,
                     text.as_bytes(),

@@ -17,12 +17,21 @@ use std::{
 use tokio::sync::oneshot;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CommandResponse {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "result_value"
+    )]
     pub result: Option<Box<RawValue>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error: Option<ContractError>,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub lookup_only: bool,
+}
+fn result_value<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Option<Box<RawValue>>, D::Error> {
+    Box::<RawValue>::deserialize(deserializer).map(Some)
 }
 #[derive(Debug)]
 pub(crate) struct Session {
@@ -359,6 +368,16 @@ mod tests {
         let registration = Registration::new(hub.clone(), Writer { live, bulk })?;
         registration.session.ready();
         Ok((home, GatewayTransport { authority, hub }, registration, rx))
+    }
+    #[test]
+    fn nullable_command_result_preserves_wire_value() -> Result<(), Box<dyn std::error::Error>> {
+        let response: CommandResponse =
+            serde_json::from_str(r#"{"result":null,"lookup_only":true}"#)?;
+        assert_eq!(response.result.ok_or("result")?.get(), "null");
+        assert!(response.lookup_only);
+        let missing: CommandResponse = serde_json::from_str("{}")?;
+        assert!(missing.result.is_none());
+        Ok(())
     }
     #[tokio::test]
     async fn cancellation_drops_pending_and_sends_cancel() -> Result<(), Box<dyn std::error::Error>>

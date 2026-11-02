@@ -88,8 +88,8 @@ impl ab_operations::GatewayTransport for ReplicaGatewayTransport {
             let response = self.0.exchange(&route, delegation, body).await
                 .map_err(|_| ab_operations::Error::from(ab_operations::Code::Unavailable))?;
             if let Some(error) = response.error {
-                return Err(serde_json::to_value(error).ok()
-                    .and_then(|v| serde_json::from_value(v).ok())
+                return Err(serde_json::to_vec(&error).ok()
+                    .and_then(|bytes| serde_json::from_slice(&bytes).ok())
                     .unwrap_or_else(|| ab_operations::Code::Corrupt.into()));
             }
             Ok(ab_operations::ForwardReply {
