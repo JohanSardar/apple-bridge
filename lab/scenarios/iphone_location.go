@@ -38,8 +38,7 @@ func runIPhoneLocation(ctx context.Context, s Scenario, level string) Evidence {
 	}
 	defer os.RemoveAll(dir)
 	binary := filepath.Join(dir, "location-proof")
-	cmd := exec.CommandContext(ctx, "xcrun", "swiftc", "-swift-version", "6", "-parse-as-library", "ios/Capabilities/Location/LocationStore.swift", "ios/App/QualificationWait.swift", "lab/fixtures/location/LocationProof.swift", "-o", binary)
-	cmd.Env = append(os.Environ(), "SDKROOT=")
+	cmd := iphoneProjectCommand(ctx, "xcrun", "swiftc", "-swift-version", "6", "-parse-as-library", "ios/Capabilities/Location/LocationStore.swift", "ios/App/QualificationWait.swift", "lab/fixtures/location/LocationProof.swift", "-o", binary)
 	output, err := cmd.CombinedOutput()
 	add("swift_adapter_build", err == nil)
 	if err != nil {

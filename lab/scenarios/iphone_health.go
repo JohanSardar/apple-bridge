@@ -41,8 +41,7 @@ func runIPhoneHealth(ctx context.Context, s Scenario, level string) Evidence {
 	}
 	defer os.RemoveAll(dir)
 	binary := filepath.Join(dir, "proof")
-	cmd := exec.CommandContext(ctx, "xcrun", "swiftc", "-parse-as-library", "ios/Capabilities/HealthRead/HealthCapture.swift", "lab/ios/HealthProof.swift", "-o", binary)
-	cmd.Env = append(os.Environ(), "SDKROOT=")
+	cmd := iphoneProjectCommand(ctx, "xcrun", "swiftc", "-parse-as-library", "ios/Capabilities/HealthRead/HealthCapture.swift", "lab/ios/HealthProof.swift", "-o", binary)
 	buildOutput, buildErr := cmd.CombinedOutput()
 	err = buildErr
 	if err != nil {

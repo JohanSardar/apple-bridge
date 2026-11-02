@@ -1121,7 +1121,7 @@ features:
     title: Incremental HealthKit samples and day or week summaries
     requirements: [R-API, R-SECURE]
     milestone: G13
-    modules: [ios/Capabilities/HealthRead, internal/contracts, internal/state, internal/iphone]
+    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/HealthRead, internal/contracts, internal/state, internal/iphone]
     depends_on: [iphone.delivery]
     status: done
     scenarios:
@@ -1131,7 +1131,7 @@ features:
     title: Log water, weight, mindful minutes and workouts
     requirements: [R-API, R-SECURE]
     milestone: G13
-    modules: [ios/Capabilities/HealthWrite, internal/contracts]
+    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/HealthWrite, internal/contracts]
     depends_on: [iphone.health]
     status: done
     scenarios:
@@ -1141,7 +1141,7 @@ features:
     title: Signed iPhone build and USB install
     requirements: [R-PKG]
     milestone: G13
-    modules: [ios, packaging/dev/build-ios.sh, packaging/dev/install-ios.sh]
+    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios, https://github.com/JohanSardar/apple-bridge-iphone/tree/main/packaging/dev/build-ios.sh, https://github.com/JohanSardar/apple-bridge-iphone/tree/main/packaging/dev/install-ios.sh]
     depends_on: []
     status: done
     scenarios:
@@ -1150,7 +1150,7 @@ features:
     title: iPhone capability settings and diagnostics
     requirements: [R-PKG]
     milestone: G13
-    modules: [ios/App, ios/Capabilities]
+    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/App, https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities]
     depends_on: [iphone.build]
     status: done
     scenarios:
@@ -1160,7 +1160,7 @@ features:
     title: iPhone device keys and one-time gateway pairing
     requirements: [R-SECURE, R-API]
     milestone: G13
-    modules: [ios/Pairing, internal/trust, internal/contracts, internal/operations, lab/simapple]
+    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Pairing, internal/trust, internal/contracts, internal/operations, lab/simapple]
     depends_on: [iphone.shell]
     status: done
     scenarios:
@@ -1170,7 +1170,7 @@ features:
     title: Encrypted iPhone push commands and signed results
     requirements: [R-SECURE, R-SAFE-CMD, R-API]
     milestone: G13
-    modules: [internal/iphone, internal/relay, ios/Delivery, lab/simapple]
+    modules: [internal/iphone, internal/relay, https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Delivery, lab/simapple]
     depends_on: [iphone.pairing]
     status: done
     scenarios:
@@ -1180,7 +1180,7 @@ features:
     title: iPhone notifications and interactive button results
     requirements: [R-SECURE, R-SAFE-CMD, R-API]
     milestone: G13
-    modules: [ios/Capabilities/Notifications, ios/Delivery, internal/contracts, lab/scenarios]
+    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/Notifications, https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Delivery, internal/contracts, lab/scenarios]
     depends_on: [iphone.delivery]
     status: done
     scenarios:
@@ -1190,7 +1190,7 @@ features:
     title: iPhone activity, pedometer, floors and seven-day history
     requirements: [R-API]
     milestone: G13
-    modules: [ios/Capabilities/Motion, internal/contracts]
+    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/Motion, internal/contracts]
     depends_on: [iphone.delivery]
     status: done
     scenarios:
@@ -1200,7 +1200,7 @@ features:
     title: iPhone AlarmKit alarms and timers
     requirements: [R-SAFE-CMD, R-API]
     milestone: G13
-    modules: [ios/Capabilities/Alarms, internal/contracts]
+    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/Alarms, internal/contracts]
     depends_on: [iphone.delivery]
     status: done
     scenarios:
@@ -1210,18 +1210,18 @@ features:
     title: iPhone battery, charging, Wi-Fi, name and Focus filter
     requirements: [R-API]
     milestone: G13
-    modules: [ios/Capabilities/DeviceContext, internal/contracts]
+    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/DeviceContext, internal/contracts]
     depends_on: [iphone.delivery]
     status: done
     scenarios:
       - {id: APP-DEVICE-SIM, levels: [sim]}
       - {id: APP-DEVICE-REAL, levels: [real]}
-    notes: Battery, charging, Wi-Fi, device-name presence and Focus-filter state qualified on the physical iPhone. NFC is explicitly skipped and remains unqualified without a physical tag.
+    notes: Battery, charging, Wi-Fi, device-name presence and Focus-filter state qualified on the physical iPhone. App implementation lives in apple-bridge-iphone; this graph tracks the integrated gateway journey.
   - id: iphone.screentime
     title: Bridge-owned Screen Time shields, downtime and usage report
     requirements: [R-SAFE-CMD, R-API]
     milestone: G13
-    modules: [ios/Capabilities/ScreenTime, ios/ScreenTimeShared, ios/Extensions, internal/contracts]
+    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/ScreenTime, https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/ScreenTimeShared, https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Extensions, internal/contracts]
     depends_on: [iphone.delivery]
     status: done
     scenarios:
@@ -1231,7 +1231,7 @@ features:
     title: iPhone precise location and named geofence event records
     requirements: [R-API, R-SAFE-CMD]
     milestone: G13
-    modules: [ios/Capabilities/Location, internal/contracts, internal/iphone]
+    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/Location, internal/contracts, internal/iphone]
     depends_on: [iphone.delivery]
     status: done
     scenarios:
@@ -1242,7 +1242,7 @@ features:
     title: Siri, Shortcuts and Action button for iPhone commands
     requirements: [R-API]
     milestone: G13
-    modules: [ios/Capabilities, lab/iphoneintents]
+    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities, https://github.com/JohanSardar/apple-bridge-iphone/tree/main/lab/iphoneintents]
     depends_on: [iphone.delivery]
     status: done
     scenarios:
@@ -1251,7 +1251,7 @@ features:
     title: Face ID command approvals
     requirements: [R-SECURE, R-SAFE-CMD, R-API]
     milestone: G13
-    modules: [ios/Capabilities/Approvals, internal/iphone, internal/operations]
+    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/Approvals, internal/iphone, internal/operations]
     depends_on: [iphone.notifications]
     status: done
     scenarios:
@@ -1261,7 +1261,7 @@ features:
     title: Agent task Live Activities and bridge status widgets
     requirements: [R-API]
     milestone: G13
-    modules: [ios/Capabilities/Widgets, ios/BridgeWidgets, ios/WidgetShared, internal/iphone, internal/relay]
+    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/Widgets, https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/BridgeWidgets, https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/WidgetShared, internal/iphone, internal/relay]
     depends_on: [iphone.delivery]
     status: done
     scenarios:
@@ -1274,7 +1274,7 @@ features:
     title: Face ID gated photo and microphone capture
     requirements: [R-SECURE, R-SAFE-CMD, R-API]
     milestone: G13
-    modules: [ios/Capabilities/Capture, internal/iphone]
+    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/Capture, internal/iphone]
     depends_on: [iphone.approvals]
     status: done
     scenarios:

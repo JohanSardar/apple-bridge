@@ -32,7 +32,7 @@ func runIPhoneCapability(ctx context.Context, s Scenario, level string, sources 
 	defer os.RemoveAll(dir)
 	binary := filepath.Join(dir, "proof")
 	args := append([]string{"swiftc", "-parse-as-library", "-o", binary}, sources...)
-	cmd := exec.CommandContext(ctx, "xcrun", args...)
+	cmd := iphoneProjectCommand(ctx, "xcrun", args...)
 	_, err = cmd.CombinedOutput()
 	e.Assertions = append(e.Assertions, Assertion{Name: "swift_adapter_build", Passed: err == nil})
 	if err != nil {

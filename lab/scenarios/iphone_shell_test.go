@@ -2,6 +2,7 @@ package scenarios
 
 import (
 	"context"
+	"os"
 	"os/exec"
 	"runtime"
 	"testing"
@@ -9,6 +10,9 @@ import (
 )
 
 func TestIPhoneShellSimUsesAppViewModels(t *testing.T) {
+	if os.Getenv("APPLE_BRIDGE_IPHONE_ROOT") == "" {
+		t.Skip("requires APPLE_BRIDGE_IPHONE_ROOT for the companion integration check")
+	}
 	if runtime.GOOS != "darwin" {
 		t.Skip("requires the local Swift toolchain")
 	}

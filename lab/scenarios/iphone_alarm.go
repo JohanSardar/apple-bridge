@@ -21,7 +21,7 @@ func runIPhoneAlarm(ctx context.Context, s Scenario, level string) Evidence {
 	}
 	defer os.RemoveAll(dir)
 	binary := filepath.Join(dir, "checks")
-	err = exec.CommandContext(ctx, "swiftc", "-parse-as-library", "ios/Capabilities/Alarms/AlarmCommands.swift", "lab/iphonealarms/main.swift", "-o", binary).Run()
+	err = iphoneProjectCommand(ctx, "swiftc", "-parse-as-library", "ios/Capabilities/Alarms/AlarmCommands.swift", "lab/iphonealarms/main.swift", "-o", binary).Run()
 	e.Assertions = append(e.Assertions, Assertion{Name: "swift_handler_build", Passed: err == nil})
 	if err == nil {
 		err = exec.CommandContext(ctx, binary).Run()

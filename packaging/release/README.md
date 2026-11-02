@@ -78,30 +78,9 @@ It copies the app and bundled helper into a temporary HOME under the user's cach
 
 The product uninstall explicitly confirms removal, unregisters the gateway and main-app login services, stops the setup helper, deletes the app credential keychain, resets `dev.applebridge.helper` TCC permissions, clears updater preferences and standard app data paths, and removes the app bundle including its helper. Redirected ancestors are refused; unregister, credential and TCC failures stop cleanup. `R1-DMG-REAL` runs locally on the Pro. It checks the stapled DMG, requires Gatekeeper to report `accepted` and `source=Notarized Developer ID`, mounts it read-only, verifies the bundled app with `codesign --verify --deep --strict`, checks the Applications link, and detaches the volume. It does not launch the product or change permissions.
 
-## TestFlight
+## iPhone releases
 
-All five bundle IDs already exist. App Store profiles have now been created for the main app, alarms, widgets, Screen Time monitor and Screen Time report, using the new dedicated Apple Distribution certificate. The profiles include production APNs and the required Family Controls distribution entitlements. Their paths are saved privately in `~/.config/apple-bridge-release/profiles-release.json`.
-
-```sh
-export APPLE_DEVELOPER_TEAM_ID=AX3C2B78YD
-python3 packaging/release/testflight.py \
-  --profiles "$HOME/.config/apple-bridge-release/profiles-release.json" \
-  --version 0.1.2 --build 4 --output dist/testflight-4 \
-  --upload-internal
-```
-
-The script checks profile types and bundle/team matches, archives with an explicit signing keychain, exports an internal-only TestFlight IPA, and uploads with `altool` using the ASC API key. Xcode runs with Apple tools first in PATH because Homebrew rsync rejects Apple's extended-attribute arguments during IPA export. No external tester groups or review submission are configured.
-
-The App Store Connect iOS app record is `Apple Bridge`, bundle `com.johansardar.applebridge.ios`, SKU `APPLEBRIDGE-IOS`, app ID `6829322065`. The upload stays internal-only through `testFlightInternalTestingOnly=true`; no public release, external tester group, or App Store review is created.
-
-The app icon uses the existing web icon in an opaque 1024-pixel iOS asset catalog. iPad orientation metadata supports multitasking, the obsolete NFC `NDEF` entitlement is excluded, and the Device Activity report uses ExtensionKit and the app's `Extensions` directory. Siri intent descriptions use plain action text without reserved device names. These checks run in `R1-RELEASE-SIM` alongside the release tests.
-
-Confirm Apple's independent processing result after upload:
-
-```sh
-ASC_BYPASS_KEYCHAIN=1 asc builds list --app 6829322065 \
-  --version 0.1.2 --build-number 4 --processing-state all --output json
-```
+The iPhone archive, export and internal TestFlight tooling now lives in [apple-bridge-iphone](https://github.com/JohanSardar/apple-bridge-iphone). Run those commands from that repository. The dedicated release keychain can hold both existing identities; no certificate or credential migration is needed.
 
 ## Local qualification
 

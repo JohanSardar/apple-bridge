@@ -38,8 +38,7 @@ func runIPhoneCapture(ctx context.Context, s Scenario, level string) Evidence {
 		return e
 	}
 	defer os.RemoveAll(dir)
-	cmd := exec.CommandContext(ctx, "xcrun", "swiftc", "-parse-as-library", "ios/Capabilities/Capture/CaptureModel.swift", "ios/App/QualificationWait.swift", "lab/ios/CaptureProof.swift", "-o", filepath.Join(dir, "proof"))
-	cmd.Env = append(os.Environ(), "SDKROOT=")
+	cmd := iphoneProjectCommand(ctx, "xcrun", "swiftc", "-parse-as-library", "ios/Capabilities/Capture/CaptureModel.swift", "ios/App/QualificationWait.swift", "lab/ios/CaptureProof.swift", "-o", filepath.Join(dir, "proof"))
 	_, err = cmd.CombinedOutput()
 	add("swift_capture_build", err == nil)
 	if err != nil {
