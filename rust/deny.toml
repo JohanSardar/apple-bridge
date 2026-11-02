@@ -1,0 +1,10 @@
+[advisories]
+[licenses]
+allow = ["MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC", "Zlib", "Unicode-3.0", "MPL-2.0", "CDLA-Permissive-2.0"]
+[bans]
+multiple-versions = "warn"
+deny = [{ name = "openssl" }, { name = "native-tls" }]
+features = [{ name = "serde_json", deny = ["arbitrary_precision", "preserve_order"] }]
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

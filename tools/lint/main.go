@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-var skipDirs = map[string]bool{".git": true, ".worktrees": true, ".build": true, "bin": true, "node_modules": true, "evidence": true, "fixtures": true, "testdata": true}
+var skipDirs = map[string]bool{".git": true, "target": true, ".worktrees": true, ".build": true, "bin": true, "node_modules": true, "evidence": true, "fixtures": true, "testdata": true}
 
 var importRules = map[string][]string{
 	"internal/contracts":   {"internal/"},
@@ -49,6 +49,10 @@ func main() {
 		switch {
 		case strings.HasSuffix(path, ".go"):
 			findings = append(findings, lintGo(rel, path)...)
+		case filepath.Base(path) == "Cargo.toml":
+			findings = append(findings, lintCargo(rel, path)...)
+		case strings.HasSuffix(path, ".rs"):
+			findings = append(findings, lintRust(rel, path)...)
 		case strings.HasSuffix(path, ".swift"):
 			findings = append(findings, lintSwift(rel, path)...)
 		}
