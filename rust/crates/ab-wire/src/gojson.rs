@@ -16,8 +16,25 @@ pub enum Error {
     Time,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(try_from = "String", into = "String")]
 pub struct GoTime(String);
+impl Default for GoTime {
+    fn default() -> Self {
+        Self("0001-01-01T00:00:00Z".into())
+    }
+}
+impl TryFrom<String> for GoTime {
+    type Error = Error;
+    fn try_from(value: String) -> Result<Self, Error> {
+        Self::parse(&value)
+    }
+}
+impl From<GoTime> for String {
+    fn from(value: GoTime) -> Self {
+        value.0
+    }
+}
 
 impl GoTime {
     pub fn parse(input: &str) -> Result<Self, Error> {
@@ -169,4 +186,48 @@ fn go_utf8(mut input: &[u8]) -> String {
         }
     }
     out
+}
+
+pub fn legacy_json<T: serde::Serialize>(value: &T, mode: EscapeMode) -> Result<Vec<u8>, Error> {
+    legacy_raw(&serde_json::to_vec(value)?, mode)
+}
+
+pub fn legacy_raw(bytes: &[u8], mode: EscapeMode) -> Result<Vec<u8>, Error> {
+    let _: Box<RawValue> = serde_json::from_slice(bytes)?;
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'"' {
+            let start = i;
+            i += 1;
+            while i < bytes.len() {
+                if bytes[i] == b'\\' {
+                    i += 2;
+                } else if bytes[i] == b'"' {
+                    i += 1;
+                    break;
+                } else {
+                    i += 1;
+                }
+            }
+            let raw = std::str::from_utf8(&bytes[start..i]).map_err(|_| Error::Time)?;
+            let raw = raw
+                .replace('\u{2028}', "\\u2028")
+                .replace('\u{2029}', "\\u2029");
+            let raw = if matches!(mode, EscapeMode::Html) {
+                raw.replace('<', "\\u003c")
+                    .replace('>', "\\u003e")
+                    .replace('&', "\\u0026")
+            } else {
+                raw
+            };
+            out.extend_from_slice(raw.as_bytes());
+        } else {
+            if !bytes[i].is_ascii_whitespace() {
+                out.push(bytes[i]);
+            }
+            i += 1;
+        }
+    }
+    Ok(out)
 }
