@@ -1,0 +1,12 @@
+{
+  "frames": [
+    "{\"t\":\"Hello\",\"protocol\":\"feed/1\",\"replica_id\":\"replica-fixture\",\"schema_offer\":[2],\"credits\":4194304,\"expires_at\":\"0001-01-01T00:00:00Z\",\"at\":\"0001-01-01T00:00:00Z\"}",
+    "{\"t\":\"Welcome\",\"protocol\":\"feed/1\",\"gateway_id\":\"gateway-fixture\",\"schema\":2,\"epoch\":\"epoch-fixture\",\"subscription_revision\":1,\"expires_at\":\"0001-01-01T00:00:00Z\",\"at\":\"0001-01-01T00:00:00Z\"}",
+    "{\"t\":\"SnapshotBegin\",\"id\":\"snapshot-fixture\",\"s\":1,\"count\":1,\"digest\":\"c38ff838733d79f620dcf45a8c577e0e510ac0f85a6d7e5ea61cb2e4e42124c3\",\"expires_at\":\"2026-01-02T03:04:05.123456789Z\",\"at\":\"0001-01-01T00:00:00Z\"}",
+    "{\"t\":\"SnapshotPage\",\"id\":\"snapshot-fixture\",\"expires_at\":\"0001-01-01T00:00:00Z\",\"records\":[{\"collection\":\"contacts.contact\",\"id\":\"con_fixture\",\"version\":1,\"source\":\"contacts\",\"observed_at\":\"2026-01-02T03:04:05.123456789Z\",\"deleted\":false,\"coverage\":{\"fields\":\"\",\"missing\":null},\"data\":{\"name\":\"fixture\"}}],\"at\":\"0001-01-01T00:00:00Z\"}",
+    "{\"t\":\"SnapshotEnd\",\"id\":\"snapshot-fixture\",\"digest\":\"c38ff838733d79f620dcf45a8c577e0e510ac0f85a6d7e5ea61cb2e4e42124c3\",\"expires_at\":\"0001-01-01T00:00:00Z\",\"at\":\"0001-01-01T00:00:00Z\"}",
+    "{\"t\":\"Batch\",\"epoch\":\"epoch-fixture\",\"subscription_revision\":1,\"after\":1,\"through\":2,\"changes\":[{\"sequence\":2,\"op\":\"upsert\",\"record\":{\"collection\":\"contacts.contact\",\"id\":\"con_fixture\",\"version\":1,\"source\":\"contacts\",\"observed_at\":\"2026-01-02T03:04:05.123456789Z\",\"deleted\":false,\"coverage\":{\"fields\":\"\",\"missing\":null},\"data\":{\"name\":\"fixture\"}}}]}",
+    "{\"t\":\"Batch\",\"partial\":true,\"epoch\":\"epoch-fixture\",\"subscription_revision\":1,\"after\":2,\"through\":2,\"changes\":[]}"
+  ],
+  "impl": "go"
+}

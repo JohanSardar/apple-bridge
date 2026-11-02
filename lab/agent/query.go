@@ -54,7 +54,7 @@ func Query(ctx context.Context, level string, asJSON bool) error {
 	tools, answerOK := queryChecks(transcript, out.Answer)
 	passed := runErr == nil && readErr == nil && out.Exit == 0 && out.Calls >= 1 && out.Forbidden == 0 && tools && answerOK
 	sha, _ := exec.CommandContext(ctx, "git", "rev-parse", "HEAD").Output()
-	evidence := map[string]any{"at": time.Now().UTC(), "git_sha": strings.TrimSpace(string(sha)), "scenario": "QUERY-AGENT", "level": level, "passed": passed, "mcp_calls": out.Calls, "forbidden_calls": out.Forbidden, "tools_check": tools, "answer_check": answerOK}
+	evidence := map[string]any{"impl": "go", "at": time.Now().UTC(), "git_sha": strings.TrimSpace(string(sha)), "scenario": "QUERY-AGENT", "level": level, "passed": passed, "mcp_calls": out.Calls, "forbidden_calls": out.Forbidden, "tools_check": tools, "answer_check": answerOK}
 	if !passed {
 		evidence["failure"] = "agent_execution_or_answer"
 	}

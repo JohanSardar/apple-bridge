@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M55FP2G6VJRVN5YKFN1669W7",
   "network_path": "loopback",
   "scenario": "CORE-CMD-IDEMPOTENT",

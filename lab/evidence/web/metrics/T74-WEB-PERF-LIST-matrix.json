@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "scenario": "WEB-PERF-LIST",
   "passed": true,
   "projects": {

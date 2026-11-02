@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "source_head": "5f1808d50778b2e3ccc0c1ba6cbf53eb36f195b3",
   "source_note": "uncommitted lab read-window diagnostics, committed with this evidence",
   "lab_sha256": "878e218fe576f135b5f625779aedf61687a9df6846ef6e1cf94e968d00a894f0",

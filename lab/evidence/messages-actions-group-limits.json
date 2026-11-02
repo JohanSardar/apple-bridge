@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "screen_capture": {
     "at": "2026-10-17T20:48:17.259518+00:00",
     "locked": true,

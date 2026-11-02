@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "baseline": "main bcb5708b includes LIVE-FIX #75",
   "candidate": "#120 on #115 rebased onto bcb5708b",
   "lab_sha256": "cee6d63317a016d7798cd8ea54f589e66a5e167e27c062bd8ca8ecd5c37e5d28",

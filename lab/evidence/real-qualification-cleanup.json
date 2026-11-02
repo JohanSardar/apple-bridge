@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "scenario": "REM-LIST-MANAGE-cleanup",
   "passed": true,
   "remaining_lists": 0,

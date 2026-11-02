@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "date": "2026-10-17",
   "scope": "Notes Apple Event timeout diagnosis on macOS 26.7.1",
   "observed": [

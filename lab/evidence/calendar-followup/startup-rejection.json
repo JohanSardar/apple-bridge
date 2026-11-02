@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "rejected_capture": {
     "error_code": "internal",
     "error_number": 1555,

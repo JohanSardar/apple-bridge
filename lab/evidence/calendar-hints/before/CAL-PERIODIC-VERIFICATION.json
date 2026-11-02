@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "cal_01M5G1W90FED8VD6Q89NR0790E",
   "scenario": "CAL-PERIODIC-VERIFICATION",
   "level": "sim",

@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "full_sim": {
     "kind": "simulation_suite",
     "command": "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios --level sim --json",

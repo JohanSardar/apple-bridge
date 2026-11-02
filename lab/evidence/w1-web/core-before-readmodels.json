@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "command": "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/core --level sim --json",
   "artifact_commit": "a70e2b9837fb935aeabf78a6e528b118bf40f6cf",
   "phase": "before W1-RM rebase",

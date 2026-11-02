@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "agent_01M55Y7443HV2YJQNYS5YVJ341",
   "scenario": "AGENT-SUITE",
   "level": "agent",

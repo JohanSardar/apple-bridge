@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M55FWGEAESQZQ8GJ4CCX829W",
   "network_path": "loopback",
   "scenario": "CORE-UPGRADE",

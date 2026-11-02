@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "scenario": "REM-STORE-PERF",
   "kind": "direct_helper_cost_before_live_fix",
   "git_sha": "e16affbc0b6aa9249995f408e00814008cf9228e",

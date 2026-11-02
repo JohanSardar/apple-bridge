@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "settled": 1,
   "warmup_seconds": 811.3,
   "idle_seconds": 300.02,

@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "host_conditions": {
     "quiet": true,
     "summary": "air: load=[3.99 4.63 4.84] cpu_idle=66% cpus=10 other_heavy=0"

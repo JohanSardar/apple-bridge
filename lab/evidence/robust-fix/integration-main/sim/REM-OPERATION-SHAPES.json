@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M55FXJBKMWDA0EVZ8BVVXZJA",
   "network_path": "loopback",
   "scenario": "REM-OPERATION-SHAPES",

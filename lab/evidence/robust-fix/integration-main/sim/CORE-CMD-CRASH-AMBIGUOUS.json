@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M55FNW9WRJN8KK6VDAX7C0TZ",
   "network_path": "loopback",
   "scenario": "CORE-CMD-CRASH-AMBIGUOUS",

@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "passed": true,
   "source_sha256": "1c213a90f77725fc9813178b8ec945624dca472c84657a30e1093dc98acd35d0",
   "tests_sha256": "9f3d583a5de5e14a67704af3c4401f77797867006c148269d518ca317812cca1",

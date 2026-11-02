@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "baseline": "Unmodified main product internal/ and cmd/bridge at the recorded baseline SHA; same new SimApplePeer and scenario harness for both binaries.",
   "conditions": "One connected replica on Air; fresh World per run; 64 records per IPC capture; synthetic reminder metadata without blob payloads; elapsed interval covers enqueue through final durable ACK; fixture generation and truth persistence excluded; no builds between samples.",
   "schedule": "old10k/new10k repeated three times back to back, then new2k/new20k repeated three times",

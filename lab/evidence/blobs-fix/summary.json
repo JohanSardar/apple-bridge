@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "commits_before_final_evidence_commit": [
     "31f1f9f Bound large blob verification reads separately from metadata probes",
     "83d0df3 Reserve an active bulk window for metadata priority verification",

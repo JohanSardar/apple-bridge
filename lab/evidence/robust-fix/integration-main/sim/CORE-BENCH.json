@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M55FGCVXT1C4GPH8WQCC478Z",
   "network_path": "loopback",
   "metrics": {

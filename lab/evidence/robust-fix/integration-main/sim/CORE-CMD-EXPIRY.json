@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M55FP05DMSKPTMNEHGZPRC58",
   "network_path": "loopback",
   "scenario": "CORE-CMD-EXPIRY",

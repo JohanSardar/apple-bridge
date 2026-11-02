@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "task": "gateway-dials and authenticated feed clock offset",
   "transport": "ssh -o ControlPath=none air",
   "working_directory": "~/apple-bridge/.worktrees/gateway-dials",

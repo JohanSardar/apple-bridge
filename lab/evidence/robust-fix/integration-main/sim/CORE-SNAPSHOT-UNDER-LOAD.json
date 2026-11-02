@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M55FVP9K94Y8MJ2VENJCKN06",
   "network_path": "loopback",
   "scenario": "CORE-SNAPSHOT-UNDER-LOAD",

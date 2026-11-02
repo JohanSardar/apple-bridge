@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "scenario": "T74",
   "level": "web",
   "git_sha": "5989a67d0e021c8d737039ab231325a841d66020",

@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M55FP53TNTRX4XXJCQSWZ2TJ",
   "network_path": "loopback",
   "scenario": "CORE-CMD-OFFLINE",

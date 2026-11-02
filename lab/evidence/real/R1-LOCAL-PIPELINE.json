@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "unsigned_assembly": true,
   "developer_id_signature": true,
   "sparkle_appcast_signature": true,

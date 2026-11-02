@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M547WXKVDNYDTSQ77SJJ08EX",
   "scenario": "CAL-CRUD",
   "level": "sim",

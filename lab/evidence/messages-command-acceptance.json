@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "transport": "ssh -o ControlPath=none air",
   "worktree": "~/apple-bridge/.worktrees/m1-messages-commands",
   "heavy_wrapper": "packaging/dev/heavy.sh env GOFLAGS=-p=2",

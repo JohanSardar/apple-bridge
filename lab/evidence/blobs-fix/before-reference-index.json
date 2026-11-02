@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M5499BSX82H9G20MKDEAPH88",
   "scenario": "CORE-BLOB-REFERENCE-INDEX",
   "level": "sim",

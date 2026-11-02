@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M54783G47CW8HSXG52TVE4QP",
   "scenario": "CORE-BLOB-GATEWAY-RETRY",
   "level": "sim",

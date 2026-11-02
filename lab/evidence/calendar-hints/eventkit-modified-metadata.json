@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "calmeta_20261021T193546_9cc2ed0f",
   "conditions": {
     "load_average": "{ 3.98 4.53 6.27 }",

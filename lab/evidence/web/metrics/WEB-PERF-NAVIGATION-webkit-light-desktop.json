@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "idle_frames": {
     "samples": 179,
     "p50_ms": 17,

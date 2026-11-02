@@ -1,0 +1,125 @@
+{
+  "enroll_credential": {
+    "clientExtensionResults": {},
+    "id": "ERERERERERERERERERERERERERERERERERERERERERE",
+    "rawId": "ERERERERERERERERERERERERERERERERERERERERERE",
+    "response": {
+      "attestationObject": "o2dhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAQAAAAAAAAAAAAAAAAAAAAAAIBERERERERERERERERERERERERERERERERERERERERERpSJYIDy6jDS8NdIOgfcwrBx71tZhqUL5DGqcpVxRL55KABJmIVggZ4DF_HAnXixwYaDnh3uxdN6t65iHAn8_qDZUFYun9QwgAQECAyZjZm10ZG5vbmU",
+      "clientDataJSON": "eyJjaGFsbGVuZ2UiOiJGeGNYRnhjWEZ4Y1hGeGNYRnhjWEZ4Y1hGeGNYRnhjWEZ4Y1hGeGNYRnhjIiwiY3Jvc3NPcmlnaW4iOmZhbHNlLCJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0Ojc3ODAiLCJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIn0",
+      "transports": [
+        "internal"
+      ]
+    },
+    "type": "public-key"
+  },
+  "enroll_options": {
+    "publicKey": {
+      "rp": {
+        "name": "Bridge",
+        "id": "localhost"
+      },
+      "user": {
+        "name": "Bridge owner",
+        "displayName": "Bridge owner",
+        "id": "YXBwbGUtYnJpZGdlLW93bmVy"
+      },
+      "challenge": "FxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxc",
+      "pubKeyCredParams": [
+        {
+          "type": "public-key",
+          "alg": -7
+        },
+        {
+          "type": "public-key",
+          "alg": -35
+        },
+        {
+          "type": "public-key",
+          "alg": -36
+        },
+        {
+          "type": "public-key",
+          "alg": -257
+        },
+        {
+          "type": "public-key",
+          "alg": -258
+        },
+        {
+          "type": "public-key",
+          "alg": -259
+        },
+        {
+          "type": "public-key",
+          "alg": -37
+        },
+        {
+          "type": "public-key",
+          "alg": -38
+        },
+        {
+          "type": "public-key",
+          "alg": -39
+        },
+        {
+          "type": "public-key",
+          "alg": -8
+        }
+      ],
+      "timeout": 300000,
+      "authenticatorSelection": {
+        "requireResidentKey": true,
+        "residentKey": "required",
+        "userVerification": "required"
+      }
+    }
+  },
+  "impl": "go",
+  "login_credential": {
+    "clientExtensionResults": {},
+    "id": "ERERERERERERERERERERERERERERERERERERERERERE",
+    "rawId": "ERERERERERERERERERERERERERERERERERERERERERE",
+    "response": {
+      "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MFAAAAAg",
+      "clientDataJSON": "eyJjaGFsbGVuZ2UiOiJGeGNYRnhjWEZ4Y1hGeGNYRnhjWEZ4Y1hGeGNYRnhjWEZ4Y1hGeGNYRnhjIiwiY3Jvc3NPcmlnaW4iOmZhbHNlLCJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0Ojc3ODAiLCJ0eXBlIjoid2ViYXV0aG4uZ2V0In0",
+      "signature": "MEUCIQDCwC4nkeoDIUJIlEsp26U-t0aNRtDJzs86ZHZTeqFnhQIgbfoEhLIF6AY7sKU5kKIAO3gJu4aoi7-aVD8Zr2UNLKI",
+      "userHandle": "YXBwbGUtYnJpZGdlLW93bmVy"
+    },
+    "type": "public-key"
+  },
+  "login_options": {
+    "publicKey": {
+      "challenge": "FxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxc",
+      "timeout": 300000,
+      "rpId": "localhost",
+      "userVerification": "required"
+    }
+  },
+  "origin": "http://localhost:7780",
+  "stored_credential": {
+    "id": "ERERERERERERERERERERERERERERERERERERERERERE=",
+    "publicKey": "pQECAyYgASFYIGeAxfxwJ14scGGg54d7sXTereuYhwJ/P6g2VBWLp/UMIlggPLqMNLw10g6B9zCsHHvW1mGpQvkMapylXFEvnkoAEmY=",
+    "attestationType": "none",
+    "attestationFormat": "none",
+    "transport": [
+      "internal"
+    ],
+    "flags": {
+      "userPresent": true,
+      "userVerified": true,
+      "backupEligible": false,
+      "backupState": false
+    },
+    "authenticator": {
+      "AAGUID": "AAAAAAAAAAAAAAAAAAAAAA==",
+      "signCount": 1
+    },
+    "attestation": {
+      "clientDataJSON": "eyJjaGFsbGVuZ2UiOiJGeGNYRnhjWEZ4Y1hGeGNYRnhjWEZ4Y1hGeGNYRnhjWEZ4Y1hGeGNYRnhjIiwiY3Jvc3NPcmlnaW4iOmZhbHNlLCJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0Ojc3ODAiLCJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIn0=",
+      "clientDataHash": "ZZ1P+9+NHuXrxJlpfNiRPy/oHOf7OTy1nXy6zatqEjI=",
+      "object": "o2dhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4/krrmihjLHmVzzuoMdl2NFAAAAAQAAAAAAAAAAAAAAAAAAAAAAIBERERERERERERERERERERERERERERERERERERERERERpSJYIDy6jDS8NdIOgfcwrBx71tZhqUL5DGqcpVxRL55KABJmIVggZ4DF/HAnXixwYaDnh3uxdN6t65iHAn8/qDZUFYun9QwgAQECAyZjZm10ZG5vbmU="
+    }
+  },
+  "synthetic_scalar": "000000000000000000000000000000000000000000000000000000000000002a",
+  "user_handle": "apple-bridge-owner"
+}

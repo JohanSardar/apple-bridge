@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M54A8K8R6MWDMQDZ323818P7",
   "scenario": "HELPER-RESTART-REAL",
   "level": "real",

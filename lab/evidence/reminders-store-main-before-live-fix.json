@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "scenario": "REM-STORE-PERF",
   "kind": "real_baseline_failure",
   "reason": "Leader identified known R-LIVE regression on main before LIVE-FIX #75. Excluded from enrichment approval; paired driver stopped.",

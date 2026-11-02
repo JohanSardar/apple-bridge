@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "failure": {
     "source_sha": "7a30967",
     "scenario": "CORE-BLOB-REFERENCE-INDEX",

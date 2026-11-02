@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "APP-ALARM-REAL": {
     "checks": {
       "operation_completed": false,

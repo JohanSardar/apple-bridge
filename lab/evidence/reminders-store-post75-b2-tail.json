@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "threshold_ms": 470.917333,
   "tail_count": 72,
   "samples": [

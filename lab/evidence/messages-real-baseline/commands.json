@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "source_sha": "27e49adbc0fd7ef03a120f17747312eb78b7d8aa",
   "transport": "ssh -o ControlPath=none air",
   "command": "packaging/dev/heavy.sh go run -p 2 ./cmd/bridge-lab run lab/scenarios/messages/MSG-HISTORY-IMPORT.yaml lab/scenarios/messages/MSG-RECEIPTS.yaml lab/scenarios/messages/MSG-WATCHER-REARM.yaml lab/scenarios/messages/MSG-INCOMING.yaml --level real --json",

@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M55FQ5Z8S9DKVMABV61A9MB7",
   "network_path": "loopback",
   "scenario": "CORE-KILL-GATEWAY-CAPTURE",

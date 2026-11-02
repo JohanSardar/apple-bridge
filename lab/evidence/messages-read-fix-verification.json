@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "task": "messages-read-fix",
   "transport": "ssh -o ControlPath=none air",
   "working_directory": "~/apple-bridge/.worktrees/messages-read-fix",

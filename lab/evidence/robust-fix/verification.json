@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "implementation": {
     "implementation_head_sha": "41c46d82102923f7c5e0848aa0e4a17009c228d7",
     "main_base_sha": "e0b815a3dcb012988ec6ed79bca57e9b765fadf0",

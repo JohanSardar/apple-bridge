@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "synthetic_only": true,
   "wal_rotation_row_count": 2,
   "main_replacement_row_count": 3,

@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "command": "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/core/LAB-TRUTH-MULTIPLICITY.yaml lab/scenarios/core/LAB-MALFORMED-SCENARIO.yaml --level sim --json",
   "condition": "Original title normalization and permissive option validation, with new lab self-check actions installed",
   "exit_code": 1,

@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "conditions": {
     "clock": "native CLOCK_UPTIME_RAW for real fixtures; lab monotonic fixture return for sim",
     "heavy_slots_in_use": 2,

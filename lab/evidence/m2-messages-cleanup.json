@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "at": "2026-11-01T13:29:26.629672+00:00",
   "earlier_pair_ownership": {
     "run_id": "selftest_969E5414562046FDB242C7C680E5AA46",

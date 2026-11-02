@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "provenance": "Independent review measurements supplied in the implementation brief; not rerun by this worker",
   "level": "real",
   "samples": 200,

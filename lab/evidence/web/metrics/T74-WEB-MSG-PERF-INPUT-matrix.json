@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "scenario": "WEB-MSG-PERF-INPUT",
   "passed": false,
   "projects": {

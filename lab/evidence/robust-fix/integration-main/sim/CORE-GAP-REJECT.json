@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M55FPVF7FQMGHTR2CG0N0MV0",
   "network_path": "loopback",
   "scenario": "CORE-GAP-REJECT",

@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "scenario": "WEB-UPLOAD-REPLICA-RESUME",
   "level": "sim",
   "repetitions": 10,

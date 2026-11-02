@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "reply_before_fix": {
     "host_conditions": {
       "quiet": true,

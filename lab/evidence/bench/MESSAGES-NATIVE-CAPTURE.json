@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "elapsed_seconds": 98.633231291,
   "message_order_of_magnitude": 5,
   "observations_fit_ipc": true,

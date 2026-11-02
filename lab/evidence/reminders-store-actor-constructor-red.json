@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "expected_failure": "cold_full_read_main_queue_blocking_under_16_ms",
   "phase": "actor_read_with_caller_setup_and_teardown",
   "evidence": {

@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M55FQDR9YY1DJBFB3FCE0GN6",
   "network_path": "loopback",
   "scenario": "CORE-LIVE-LATENCY",

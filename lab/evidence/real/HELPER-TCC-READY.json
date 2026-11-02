@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M54AAA3NNGK9MXQTNADVGGXM",
   "scenario": "HELPER-TCC-READY",
   "level": "real",

@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "at": "2026-10-18T05:15:39Z",
   "implementation_branch": "messages-real-session",
   "implementation_merged": false,

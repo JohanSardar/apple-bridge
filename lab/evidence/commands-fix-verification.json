@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "code_commit": "c9aa42147ac4f6337b58fd04e7b9db83f17128e6",
   "transport": "ssh -o ControlPath=none air",
   "heavy_wrapper": "packaging/dev/heavy.sh",

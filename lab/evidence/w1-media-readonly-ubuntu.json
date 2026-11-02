@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "latency_budget": "unverified; existing attachments only",
   "network_path": "ssh_tunnel",
   "new_messages_sent": 0,

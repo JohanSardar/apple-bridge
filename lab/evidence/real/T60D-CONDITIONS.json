@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "passed": true,
   "subjects": 8,
   "operators": 8,

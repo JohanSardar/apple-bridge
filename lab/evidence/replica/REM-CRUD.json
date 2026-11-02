@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M54B1AHHQYPP3B5Y4WHHZB0Z",
   "scenario": "REM-CRUD",
   "level": "replica",

@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "native_timings": [
     {
       "save_ns": 1033741287618375,

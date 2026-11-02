@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "oracle": "independent_read_only_calendar_database",
   "all_dates": true,
   "tagged_items": 0,

@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M55FXF61CNHN06Z4J4KBNMHM",
   "network_path": "loopback",
   "scenario": "LAB-TRUTH-MULTIPLICITY",

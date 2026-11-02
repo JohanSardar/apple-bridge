@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "ticket": "T00",
   "baseline_git_sha": "d20fd34f8946c67b43e81a0d5f5a19c8f1567197",
   "rebased_on": "02f24309d16b1bf39fe1f9a97255fd98ba86d702",

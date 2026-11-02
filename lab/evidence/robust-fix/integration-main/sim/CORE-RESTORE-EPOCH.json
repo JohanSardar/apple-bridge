@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "run_id": "run_01M55FRSD5K38C08YBDFEGNGZ7",
   "network_path": "loopback",
   "scenario": "CORE-RESTORE-EPOCH",

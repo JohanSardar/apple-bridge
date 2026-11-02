@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "date": "2026-10-17",
   "calendar": {
     "before_calendars": 1,

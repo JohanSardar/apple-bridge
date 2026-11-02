@@ -1,4 +1,5 @@
 {
+  "impl": "go",
   "disposition": "locally_observed",
   "apple_event_error": 0,
   "route": "chat_id_raw",
