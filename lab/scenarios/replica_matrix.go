@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -15,7 +16,7 @@ import (
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
-func ReplicaMatrix(ctx context.Context, paths []string, asJSON bool) error {
+func ReplicaMatrix(ctx context.Context, paths []string, asJSON bool, jobs int) error {
 	scenarios, err := loadLevel(paths, "replica")
 	if err != nil {
 		return err
@@ -26,7 +27,7 @@ func ReplicaMatrix(ctx context.Context, paths []string, asJSON bool) error {
 		if _, err = selection.Binary(impl, "bin/bridge"); err != nil {
 			for _, scenario := range scenarios {
 				if slices.Contains(scenario.Levels, "replica") {
-					fmt.Fprintf(os.Stderr, "BLOCKED %s: %s; requires %s via join, token, start and REST/feed\n", scenario.ID, err, scenario.Feature)
+					fmt.Fprintf(os.Stderr, "BLOCKED %s: %s; missing executable blocks required interfaces: %s\n", scenario.ID, err, replicaRequirements(scenario))
 					if reason := replicaQualificationBlocker(scenario); reason != "" {
 						fmt.Fprintf(os.Stderr, "BLOCKED %s: %s\n", scenario.ID, reason)
 					}
@@ -46,10 +47,7 @@ func ReplicaMatrix(ctx context.Context, paths []string, asJSON bool) error {
 			blocked = true
 		}
 	}
-	if blocked {
-		return fmt.Errorf("replica matrix blocked on harness conversion; assertions were not executed")
-	}
-	suiteErr := Suite(ctx, paths, "replica", asJSON)
+	suiteErr := replicaMatrixSuite(ctx, scenarios, asJSON, jobs)
 	mixed := selection
 	mixed.Replicas = []string{"go", "rust"}
 	if selection.Replica == "go" && selection.Gateway == "go" {
@@ -85,12 +83,20 @@ func ReplicaMatrix(ctx context.Context, paths []string, asJSON bool) error {
 	if err = Save(e); err != nil {
 		return err
 	}
+	if asJSON {
+		if err := json.NewEncoder(os.Stdout).Encode(e); err != nil {
+			return err
+		}
+	}
 	fmt.Fprintf(os.Stderr, "%s passed=%t\n", e.Scenario, e.Passed)
 	if suiteErr != nil {
 		return suiteErr
 	}
 	if !e.Passed {
 		return fmt.Errorf("mixed replica convergence failed")
+	}
+	if blocked {
+		return fmt.Errorf("replica matrix incomplete: harness blockers remain; runnable scenarios and convergence executed")
 	}
 	return nil
 }

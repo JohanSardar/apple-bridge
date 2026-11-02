@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"syscall"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
@@ -68,6 +69,7 @@ func run(ctx context.Context, args []string) error {
 			level = "replica"
 		}
 		asJSON := false
+		jobs := 1
 		selection := world.ImplementationSelection(ctx)
 		if args[0] == "replica-matrix" {
 			selection.Replica = "rust"
@@ -90,6 +92,18 @@ func run(ctx context.Context, args []string) error {
 					}
 					selection.Gateway, selection.Replica = parsed.Gateway, parsed.Replica
 				}
+			case "--jobs":
+				i++
+				if i >= len(args) {
+					return fmt.Errorf("--jobs requires a value")
+				}
+				var err error
+				jobs, err = strconv.Atoi(args[i])
+				if err != nil || jobs < 1 || jobs > 32 {
+					return fmt.Errorf("--jobs must be between 1 and 32")
+				}
+			case "--prebuilt":
+				selection.Prebuilt = true
 			case "--local-replicas":
 				selection.LocalReplicas = true
 			case "--level":
@@ -122,7 +136,7 @@ func run(ctx context.Context, args []string) error {
 			return agent.Suite(ctx, paths, asJSON)
 		}
 		if args[0] == "replica-matrix" {
-			return scenarios.ReplicaMatrix(ctx, paths, asJSON)
+			return scenarios.ReplicaMatrix(ctx, paths, asJSON, jobs)
 		}
 		return scenarios.Suite(ctx, paths, level, asJSON)
 	}

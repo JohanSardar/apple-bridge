@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"time"
 )
@@ -68,4 +69,8 @@ func pinnedTLS(certificate tls.Certificate, fingerprint string) *tls.Config {
 		}
 		return nil
 	}}
+}
+
+func (w *World) CleanupCredential(home string) {
+	os.Remove(filepath.Join(home, "secrets", identityFingerprint([]byte("identity-key"))))
 }

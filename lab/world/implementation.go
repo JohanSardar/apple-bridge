@@ -9,6 +9,7 @@ import (
 )
 
 type Implementations struct {
+	Prebuilt      bool     `json:"-"`
 	Gateway       string   `json:"gateway"`
 	Replica       string   `json:"replica"`
 	Replicas      []string `json:"replicas,omitempty"`

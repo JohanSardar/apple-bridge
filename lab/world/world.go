@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
-	"github.com/JohanSardar/apple-bridge/internal/trust"
 )
 
 type Config struct {
@@ -68,6 +67,7 @@ type World struct {
 	fixtureCopyMethod string
 	dialCode          string
 	remoteExtraHomes  []string
+	localExtraHomes   []string
 
 	blobOptions            BlobOptions
 	secretOverride         bool
@@ -126,6 +126,17 @@ func BuildHelper(ctx context.Context, app string) error {
 }
 
 func Build(ctx context.Context, level string) error {
+	if ImplementationSelection(ctx).Prebuilt {
+		info, err := os.Stat("bin/bridge")
+		if err != nil {
+			return err
+		}
+		if !info.Mode().IsRegular() || info.Mode().Perm()&0111 == 0 {
+			return fmt.Errorf("prebuilt bin/bridge is not executable")
+		}
+		return nil
+	}
+
 	if err := os.MkdirAll("bin", 0700); err != nil {
 		return err
 	}
@@ -570,15 +581,18 @@ func (w *World) Close() {
 		cancel()
 	}
 	for _, home := range w.secretHomes {
-		trust.NewSecretStore(home).Delete(context.Background(), "identity-key")
+		w.CleanupCredential(home)
 	}
 	for _, endpoint := range append([]Endpoint{w.Gateway}, w.Replicas...) {
 		if endpoint.Home != "" && !endpoint.Remote {
-			trust.NewSecretStore(endpoint.Home).Delete(context.Background(), "identity-key")
+			w.CleanupCredential(endpoint.Home)
 		}
 	}
 	if w.diskMount != "" {
 		commandOutput(context.Background(), "hdiutil", "detach", w.diskMount)
+	}
+	for _, home := range w.localExtraHomes {
+		os.RemoveAll(home)
 	}
 	os.RemoveAll(w.Dir)
 	if w.secretOverride {
@@ -622,7 +636,11 @@ func (w *World) RestartReplica(index int) error {
 	return err
 }
 func (w *World) ControlAction(path string, action any) error {
-	return w.controlAction(w.Control, path, action)
+	err := w.controlAction(w.Control, path, action)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "lab control %s: %v\n", path, err)
+	}
+	return err
 }
 func (w *World) FlushCaptures(timeout time.Duration) error {
 	client := *w.Control
@@ -791,6 +809,20 @@ func (w *World) AddReplicaScope(scope string) error {
 			return err
 		}
 		w.remoteExtraHomes = append(w.remoteExtraHomes, home)
+	}
+	if !remote && options.PersistentReplicaStorage {
+		cache, err := os.UserCacheDir()
+		if err != nil {
+			return err
+		}
+		if err := os.MkdirAll(cache, 0700); err != nil {
+			return err
+		}
+		home, err = os.MkdirTemp(cache, "apple-bridge-doctor-")
+		if err != nil {
+			return err
+		}
+		w.localExtraHomes = append(w.localExtraHomes, home)
 	}
 	binary := w.goBridge
 	if remote {
