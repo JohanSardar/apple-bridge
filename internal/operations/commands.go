@@ -110,6 +110,9 @@ func (g *LocalGateway) Submit(ctx context.Context, p trust.Principal, c contract
 		return empty, contracts.ErrUnauthorized
 	}
 	c.Origin = ""
+	if c.Op == "messages.send" && p.Kind == "token" && !p.Remote && strings.HasPrefix(p.ID, "token:") {
+		c.Origin = "owner_self"
+	}
 	if p.Kind == "device" || p.IsAgent() && (p.Level == trust.AgentFull || p.Level == trust.AgentApprove) || p.Kind == "delegated" && strings.Contains(p.ID, "/device:") {
 		c.Origin = "interactive"
 	}

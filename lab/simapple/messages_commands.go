@@ -51,6 +51,27 @@ func simHandleKey(handle string) string {
 	}
 	return "synthetic-" + strings.Split(handle, "@")[0]
 }
+func (f *fakeApple) messageOwnRecipients(a contracts.NativeAction) bool {
+	if a.ListKey == "" {
+		return len(a.Messages.Handles) == 1 && (a.Messages.Handles[0] == "self@example.com" || a.Messages.Handles[0] == "second-self@example.com")
+	}
+	var chat struct {
+		Participants []struct {
+			Ref struct {
+				NativeKey string `json:"native_key"`
+			} `json:"$ref"`
+		} `json:"participants"`
+	}
+	if json.Unmarshal(f.records[a.ListKey].Data, &chat) != nil || len(chat.Participants) == 0 {
+		return false
+	}
+	for _, p := range chat.Participants {
+		if p.Ref.NativeKey != "message-self" && p.Ref.NativeKey != "message-self-email" {
+			return false
+		}
+	}
+	return true
+}
 func (f *fakeApple) messageValidate(a contracts.NativeAction) *contracts.Error {
 	m := a.Messages
 	if m != nil && (m.Variant != nil || a.Op == "messages.keep_audio") {
@@ -77,7 +98,9 @@ func (f *fakeApple) messageValidate(a contracts.NativeAction) *contracts.Error {
 		}
 	}
 	if a.Origin != "interactive" && m.Text != "" && (!strings.Contains(m.Text, "[ab-test ") || !strings.Contains(m.Text, "]")) {
-		return contracts.ErrInvalid
+		if a.Origin != "owner_self" || a.Op != "messages.send" || !f.messageOwnRecipients(a) {
+			return &contracts.Error{Code: "invalid", Message: "untagged text requires a local owner token and verified own recipients; other sends require [ab-test <id>]"}
+		}
 	}
 	if a.Origin != "interactive" && (a.Op == "messages.send" || a.Op == "messages.create_group") {
 		for _, h := range m.Handles {
@@ -175,7 +198,7 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 			return reject(contracts.ErrInvalid)
 		}
 		a := *frame.Action
-		if frame.Origin != "" && frame.Origin != "interactive" || a.Origin != frame.Origin || frame.Origin == "interactive" && !(strings.HasPrefix(frame.Principal, "device:") || strings.HasPrefix(frame.Principal, "agent:") || strings.Contains(frame.Principal, "/device:")) {
+		if frame.Origin != "" && frame.Origin != "interactive" && frame.Origin != "owner_self" || frame.Origin == "owner_self" && !strings.HasPrefix(frame.Principal, "token:") || a.Origin != frame.Origin || frame.Origin == "interactive" && !(strings.HasPrefix(frame.Principal, "device:") || strings.HasPrefix(frame.Principal, "agent:") || strings.Contains(frame.Principal, "/device:")) {
 			f.mu.Unlock()
 			return reject(contracts.ErrInvalid)
 		}

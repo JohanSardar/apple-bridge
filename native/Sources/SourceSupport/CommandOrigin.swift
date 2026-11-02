@@ -1,11 +1,14 @@
 import Foundation
 
 public enum CommandOrigin: Sendable, Equatable {
-    case gated, interactive
+    case gated, interactive, ownerSelf
 
     public init(_ frame: JSON) throws {
         switch frame["origin"] {
         case .null, .string(""): self = .gated
+        case .string("owner_self"):
+            guard frame["principal"].string.hasPrefix("token:"), frame["principal"].string.count > 6, frame["action"]["op"].string == "messages.send" else { throw SourceFailure.invalid }
+            self = .ownerSelf
         case .string("interactive"):
             let principal = frame["principal"].string
             let parts = principal.split(separator: "/", omittingEmptySubsequences: false)

@@ -156,6 +156,26 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 	}
 
 	switch s.ID {
+	case "MSG-OWNER-TOKEN-SELFCHAT":
+		untagged := command("send", map[string]any{"chat_id": chat.ID, "text": "synthetic owner self-chat"}, 0)
+		result, problem := submit(untagged)
+		add("local_token_untagged_self_chat_observed", observed(result, problem))
+		add("self_chat_single_effect", count(untagged, 1))
+		add("nonself_fixture", w.ControlAction("/messages", map[string]any{"action": "nonself-chat"}) == nil)
+		add("nonself_captured", w.Await(5*time.Second, func() bool { return convergence(w) }) == nil)
+		other := ""
+		for _, r := range read("messages.chat") {
+			if r.ID != chat.ID {
+				other = r.ID
+			}
+		}
+		add("nonself_chat_available", other != "")
+		denied := command("send", map[string]any{"chat_id": other, "text": "synthetic untagged text"}, 0)
+		denied.Origin = "interactive"
+		_, problem = submit(denied)
+		add("token_cannot_spoof_interactive_for_nonself", problem != nil && strings.Contains(problem.Error(), "verified own recipients"))
+		add("nonself_zero_effects", count(denied, 0))
+
 	case "MSG-SELFTEST":
 		ownedIDs := map[string]bool{}
 		own := func(result contracts.CommandRecord) {
