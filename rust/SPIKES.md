@@ -64,3 +64,60 @@ Ubuntu: `make lint`, `go test ./...`, Rust build, `cargo clippy --all-targets --
 All six Air measurements completed, and the `spike-budget` profile was cleaned (2,045 files / 467.3 MiB removed). Existing shared profiles were preserved. Final golden checks and Rust/Go gates include Phase 0 main `a02485dd` and relay containment main `c76a25d6`. Database clones and temporary synthetic identities are deleted; the isolated Ubuntu workspace, build artifacts and Go toolchain are removed after final verification. The final fresh-clone comparison used the final UTF-8 decoder and observed seven more records than the initial comparison, still with zero mismatches. The plan's 25 GB free-space prerequisite was not met; the task explicitly requested measurements on the available Air. No unrelated worktrees or caches were pruned. These results do not certify the whole migration or authorize a gateway cutover.
 
 Crate/API references: [rusqlite](https://docs.rs/rusqlite/0.41.1/rusqlite/), [rustls certificate verifier](https://docs.rs/rustls/0.23.46/rustls/client/danger/trait.ServerCertVerifier.html), [rmcp features](https://docs.rs/rmcp/3.8.0/rmcp/).
+
+## S4: rmcp parity
+
+**PASS for the frozen transcripts and tested legacy clients: 8/8 exchanges match semantically, 0 breaking differences after adaptation.** Ubuntu x86_64, Rust 1.99.1, Go 1.27.2, rmcp **3.8.0**, Go SDK **1.8.0**. Synthetic loopback servers only; public-host tests select SSE and send synthetic public Host/Origin without contacting a public gateway.
+
+The standalone research crate lives at spikes/s4-s6, outside the product workspace because S6 introduces the dependency advisory below. It uses StreamableHttpService with legacy_session_mode=false, no rmcp attribute macros, and a **147-entry descriptor table** decoded from the frozen tools/list fixture. This proves transport and descriptor serialization, not Rust operation implementations or future ab-catalog generation.
+
+- JSON and SSE: initialize, initialized notification, tools/list and unauthorized tools/call; **4 exchanges per mode, 147/147 descriptors, 0 semantic payload or status mismatches**. Object key order is ignored; array order, schema values, numbers and error code/message are compared. Golden fixtures are unchanged.
+- Go and rmcp clients each initialize, list **147 tools** and receive the frozen authorization error code **0** and message: **4 combinations pass**.
+- Legacy versions **2024-11-05, 2025-03-26, 2025-06-18, 2025-11-25** are accepted and echoed in both modes: **8 handshakes**. This tests Streamable HTTP negotiation, not the obsolete two-endpoint HTTP+SSE transport.
+- Live Go/Rust matrix: **56 comparisons** covering initialize, unknown tool, missing arguments, wrong argument type, unknown method, unknown cancellation ID and malformed JSON, across four versions and two modes. Unknown tools explicitly map to Go error **-32602** and exact message. Unauthenticated invalid arguments follow Go authorization precedence.
+- Cancellation: **2/2 Go-client calls** are observed active before cancellation and return to **0 active handlers** within a 2-second deadline. Unknown cancellation notifications return **202** in both implementations. Stateless POSTs have no shared request registry; in-flight cancellation uses HTTP disconnect, matching Go frontdoor request-context cancellation. Cross-POST notification cancellation is not guaranteed.
+- Host/Origin: **12/12 checks pass**. Both modes reject evil Host, evil Origin, wrong Origin port and null Origin with **403**; explicitly allowed local and synthetic public origins succeed. Missing Origin remains accepted for SDK clients. Origin allow-list entries include explicit ports.
+
+Every observed difference:
+
+| Difference | Classification/disposition |
+| --- | --- |
+| JSON property order for initialize and list | Acceptable: objects are unordered; payloads are semantically equal. |
+| SSE whitespace/event framing | Acceptable: decoded data events are equal and both SDK clients consume them. Stateless responses have no resumption guarantee. |
+| Macro-free handler initially returned authorization for unknown tools | Breaking mapping; fixed by descriptor lookup with Go -32602 and exact message. |
+| rmcp malformed application/json returned HTTP 415 versus Go 400 | Breaking HTTP classification; fixed by the application/json status adapter. Other media types retain 415. Remaining diagnostic prose differs, acceptable for malformed requests. |
+| Unknown method: Go HTTP 400/plain text versus rmcp HTTP 200/JSON-RPC -32601 | Acceptable unsupported-method error representation; known methods and tools are unaffected. |
+
+Recommendation: **use rmcp**, with descriptor lookup, Go error mapping, malformed-JSON status adaptation, public/local mode selection and explicit allow-lists. A hand-rolled transport is unnecessary for the tested contract. Golden tools/call covers authorization failure only; successful domain calls, application-specific structured errors and production auth middleware remain ab-frontdoor work.
+
+Reproduce on Ubuntu: python3 rust/spikes/s4-s6/run.py. The committed mcp-results.json contains golden, security, legacy-version and rmcp-client observations; the Go matrix logs remaining diagnostic differences. Final focused package wall times are approximately **0.1–0.9 seconds**, n=1 each, smoke timings rather than throughput measurements.
+
+References: [Streamable HTTP](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports), [cancellation](https://modelcontextprotocol.io/specification/2025-03-26/basic/utilities/cancellation), [tool errors](https://modelcontextprotocol.io/specification/2025-03-26/server/tools).
+
+## S6: WebAuthn
+
+**Functional PASS: both directions authenticate, 0 re-enrolments. Dependency acceptance FAIL for webauthn-rs-core 0.6.2.**
+
+Uses the core API directly, never the UUID API. RP localhost, exact origin http://localhost:7780, user handle **18 bytes**, exactly apple-bridge-owner; resident key and UV both **required**. Inputs are the synthetic ceremony corpus and existing Go virtual authenticator. No live passkey, browser, permission prompt or gateway was accessed.
+
+- **Go registration → Rust authentication: 1/1 pass.** Import Go stored ID, COSE public key, counter and flags; recover Rust metadata from archived attestation and compare to independently verified registration. Rust verifies the corpus signature, reports UV=true, counter **1→2**, needs_update=true.
+- **Rust registration → Go authentication: 1/1 pass.** Rust creates a fresh challenge/state with the 18-byte handle; the existing Go authenticator signs registration and Rust verifies it. Convert the Rust ES256/P-256 public key to Go COSE-CBOR plus ID/counter/flags. Go FinishDiscoverableLogin authenticates that same credential, checking exact ID and handle.
+- Rust also authenticates this Rust-registered key against a fresh Go-authenticator assertion: **1/1 pass**. Required UV is enforced in both implementations: **2/2 freshly signed UV-negative assertions rejected**.
+- These ceremonies use the same go-webauthn configuration, handle and discoverable-login API as internal/web/auth.go. Required-resident options are asserted. The virtual authenticator does not prove physical resident-key storage.
+
+| Stored field | Conversion |
+| --- | --- |
+| ID/key coordinates | Go padded standard base64 versus Rust unpadded base64url; decode to bytes first |
+| Public key | Go integer-keyed COSE CBOR versus Rust COSEKey; ES256 EC_EC2 SECP256R1 maps to 1=2, 3=-7, -1=1, -2=x, -3=y |
+| Counter | Go authenticator.signCount ↔ Rust counter; persist verified updates |
+| UV/backup flags | Preserve user_verified, backup_eligible and backup_state individually |
+| Transports | Go golden stores internal; core returned null transports, so preserve Go hint separately |
+| Attestation/extensions | Go raw client data/object versus Rust parsed metadata/policy; preserve original Go envelope for rollback |
+
+Recommendation: **core API works without re-enrolment**, with explicit conversion and preservation of the original Go credential envelope byte-for-byte. Do not replace stored Go JSON with Rust Credential JSON. The spike covers **ES256/P-256, none attestation, non-backed-up synthetic credentials**; other algorithms and backup transitions need fixtures before general migration.
+
+The isolated dependency audit found **RUSTSEC-2023-0071** in rsa **0.10.0-rc.19**, through crypto-glue **0.2.2**, with no safe upgrade reported. The spike verifies public-key signatures and performs no RSA private-key operations, but product dependency policy still rejects this dependency. Resolve it before adding WebAuthn to the product workspace. No advisory ignore or policy weakening was added. The initial licence error was missing MIT metadata on this spike, since corrected; upstream MPL-2.0 is already permitted.
+
+### S4/S6 verification
+
+All builds/checks ran on ssh ubuntu; Air use was git/source transfer only. This isolated crate pins both libraries and commits its lockfile. Rust formatting, strict Clippy (pedantic, nursery, unwrap/expect denied), make lint and go test ./... pass. The isolated dependency audit reports the RSA advisory; the product workspace retains its original dependency graph and policy. Focused tests require AB_SPIKE_BINARY, set automatically by run.py; ordinary Go gates skip them without a binary. No product runtime code changed.

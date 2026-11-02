@@ -1,0 +1,264 @@
+{
+  "json": {
+    "exchanges": [
+      {
+        "method": "initialize",
+        "status": 200,
+        "content_type": "application/json",
+        "differences": [],
+        "status_matches": true,
+        "wire_matches": false
+      },
+      {
+        "method": "notifications/initialized",
+        "status": 202,
+        "content_type": "",
+        "differences": [],
+        "status_matches": true,
+        "wire_matches": true
+      },
+      {
+        "method": "tools/list",
+        "status": 200,
+        "content_type": "application/json",
+        "differences": [],
+        "status_matches": true,
+        "wire_matches": false
+      },
+      {
+        "method": "tools/call",
+        "status": 200,
+        "content_type": "application/json",
+        "differences": [],
+        "status_matches": true,
+        "wire_matches": true
+      }
+    ],
+    "security": {
+      "bad_host": 403,
+      "bad_origin": 403,
+      "allowed_origin": 200,
+      "public_origin": 200,
+      "wrong_port": 403,
+      "null_origin": 403
+    },
+    "versions": {
+      "2024-11-05": {
+        "status": 200,
+        "body": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "result": {
+            "protocolVersion": "2024-11-05",
+            "capabilities": {
+              "logging": {},
+              "tools": {
+                "listChanged": true
+              }
+            },
+            "serverInfo": {
+              "name": "apple-bridge",
+              "version": "1"
+            }
+          }
+        }
+      },
+      "2025-03-26": {
+        "status": 200,
+        "body": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "result": {
+            "protocolVersion": "2025-03-26",
+            "capabilities": {
+              "logging": {},
+              "tools": {
+                "listChanged": true
+              }
+            },
+            "serverInfo": {
+              "name": "apple-bridge",
+              "version": "1"
+            }
+          }
+        }
+      },
+      "2025-06-18": {
+        "status": 200,
+        "body": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "result": {
+            "protocolVersion": "2025-06-18",
+            "capabilities": {
+              "logging": {},
+              "tools": {
+                "listChanged": true
+              }
+            },
+            "serverInfo": {
+              "name": "apple-bridge",
+              "version": "1"
+            }
+          }
+        }
+      },
+      "2025-11-25": {
+        "status": 200,
+        "body": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "result": {
+            "protocolVersion": "2025-11-25",
+            "capabilities": {
+              "logging": {},
+              "tools": {
+                "listChanged": true
+              }
+            },
+            "serverInfo": {
+              "name": "apple-bridge",
+              "version": "1"
+            }
+          }
+        }
+      }
+    },
+    "rmcp_client": {
+      "status": 0,
+      "stdout": "{\"call_error\":\"Err(McpError(ErrorData { code: ErrorCode(0), message: \\\"unauthorized: credential or scope rejected\\\", data: None }))\",\"tools\":147}\n",
+      "stderr": ""
+    }
+  },
+  "sse": {
+    "exchanges": [
+      {
+        "method": "initialize",
+        "status": 200,
+        "content_type": "text/event-stream",
+        "differences": [],
+        "status_matches": true,
+        "wire_matches": false
+      },
+      {
+        "method": "notifications/initialized",
+        "status": 202,
+        "content_type": "",
+        "differences": [],
+        "status_matches": true,
+        "wire_matches": true
+      },
+      {
+        "method": "tools/list",
+        "status": 200,
+        "content_type": "text/event-stream",
+        "differences": [],
+        "status_matches": true,
+        "wire_matches": false
+      },
+      {
+        "method": "tools/call",
+        "status": 200,
+        "content_type": "text/event-stream",
+        "differences": [],
+        "status_matches": true,
+        "wire_matches": false
+      }
+    ],
+    "security": {
+      "bad_host": 403,
+      "bad_origin": 403,
+      "allowed_origin": 200,
+      "public_origin": 200,
+      "wrong_port": 403,
+      "null_origin": 403
+    },
+    "versions": {
+      "2024-11-05": {
+        "status": 200,
+        "body": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "result": {
+            "protocolVersion": "2024-11-05",
+            "capabilities": {
+              "logging": {},
+              "tools": {
+                "listChanged": true
+              }
+            },
+            "serverInfo": {
+              "name": "apple-bridge",
+              "version": "1"
+            }
+          }
+        }
+      },
+      "2025-03-26": {
+        "status": 200,
+        "body": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "result": {
+            "protocolVersion": "2025-03-26",
+            "capabilities": {
+              "logging": {},
+              "tools": {
+                "listChanged": true
+              }
+            },
+            "serverInfo": {
+              "name": "apple-bridge",
+              "version": "1"
+            }
+          }
+        }
+      },
+      "2025-06-18": {
+        "status": 200,
+        "body": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "result": {
+            "protocolVersion": "2025-06-18",
+            "capabilities": {
+              "logging": {},
+              "tools": {
+                "listChanged": true
+              }
+            },
+            "serverInfo": {
+              "name": "apple-bridge",
+              "version": "1"
+            }
+          }
+        }
+      },
+      "2025-11-25": {
+        "status": 200,
+        "body": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "result": {
+            "protocolVersion": "2025-11-25",
+            "capabilities": {
+              "logging": {},
+              "tools": {
+                "listChanged": true
+              }
+            },
+            "serverInfo": {
+              "name": "apple-bridge",
+              "version": "1"
+            }
+          }
+        }
+      }
+    },
+    "rmcp_client": {
+      "status": 0,
+      "stdout": "{\"call_error\":\"Err(McpError(ErrorData { code: ErrorCode(0), message: \\\"unauthorized: credential or scope rejected\\\", data: None }))\",\"tools\":147}\n",
+      "stderr": ""
+    }
+  }
+}
