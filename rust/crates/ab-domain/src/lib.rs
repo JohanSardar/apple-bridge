@@ -485,7 +485,7 @@ pub struct Coverage {
     pub fields: String,
     pub missing: Option<Vec<String>>,
 }
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Record {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub tombstone_reason: String,
@@ -496,7 +496,7 @@ pub struct Record {
     pub observed_at: String,
     pub deleted: bool,
     pub coverage: Coverage,
-    pub data: serde_json::Value,
+    pub data: Box<serde_json::value::RawValue>,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ErrorCode {
