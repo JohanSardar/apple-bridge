@@ -1,0 +1,52 @@
+{
+  "scenario": "CORE-BLOB-NO-DIGEST-AUTH",
+  "go_baseline": "pass",
+  "rust_before": "fail: unknown_record_denied",
+  "rust_after": "pass",
+  "implementations": {
+    "gateway": "rust",
+    "replica": "go"
+  },
+  "assertions": [
+    {
+      "name": "digest_alone_denied",
+      "passed": true
+    },
+    {
+      "name": "unknown_record_denied",
+      "passed": true
+    },
+    {
+      "name": "unrelated_record_denied",
+      "passed": true
+    },
+    {
+      "name": "out_of_scope_blob_status_denied",
+      "passed": true
+    },
+    {
+      "name": "out_of_scope_record_denied",
+      "passed": true
+    },
+    {
+      "name": "digest_alone_denied",
+      "passed": true
+    },
+    {
+      "name": "unknown_record_denied",
+      "passed": true
+    },
+    {
+      "name": "unrelated_record_denied",
+      "passed": true
+    },
+    {
+      "name": "out_of_scope_blob_status_denied",
+      "passed": true
+    },
+    {
+      "name": "out_of_scope_record_denied",
+      "passed": true
+    }
+  ]
+}
