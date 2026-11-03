@@ -10,6 +10,9 @@ use std::{
     time::Duration,
 };
 
+#[cfg(target_os = "macos")]
+use std::os::unix::fs::MetadataExt;
+
 fn paths(root: &Path, directories_only: bool, out: &mut Vec<PathBuf>) {
     let Ok(metadata) = std::fs::symlink_metadata(root) else {
         return;
@@ -40,7 +43,7 @@ fn cstring(path: &Path) -> io::Result<CString> {
 #[derive(Debug)]
 pub struct Watcher {
     queue: OwnedFd,
-    files: BTreeMap<PathBuf, OwnedFd>,
+    files: BTreeMap<PathBuf, (u64, u64, OwnedFd)>,
 }
 
 #[cfg(target_os = "macos")]
@@ -70,6 +73,7 @@ impl Watcher {
         }
         // SAFETY: open returned this descriptor and nothing else owns it.
         let owned = unsafe { OwnedFd::from_raw_fd(fd) };
+        let identity = std::fs::File::from(owned.try_clone()?).metadata()?;
         let change = libc::kevent {
             ident: usize::try_from(fd).map_err(|_| io::ErrorKind::InvalidInput)?,
             filter: libc::EVFILT_VNODE,
@@ -98,14 +102,19 @@ impl Watcher {
         if result < 0 {
             return Err(io::Error::last_os_error());
         }
-        self.files.insert(path.to_path_buf(), owned);
+        self.files
+            .insert(path.to_path_buf(), (identity.dev(), identity.ino(), owned));
         Ok(())
     }
 
     pub fn watch_tree(&mut self, root: &Path) -> io::Result<()> {
         let mut found = Vec::new();
         paths(root, false, &mut found);
-        self.files.retain(|path, _| found.contains(path));
+        self.files.retain(|path, (dev, ino, _)| {
+            found.contains(path)
+                && std::fs::symlink_metadata(path)
+                    .is_ok_and(|current| current.dev() == *dev && current.ino() == *ino)
+        });
         for path in found {
             if !self.files.contains_key(&path) {
                 self.register(&path)?;
@@ -248,5 +257,103 @@ impl Watcher {
             }
         }
         Ok(true)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Watcher;
+    use std::{fs, io, io::Write, path::Path, time::Duration};
+
+    fn settle(watcher: &mut Watcher) -> io::Result<()> {
+        while watcher.wait(Duration::from_millis(50))? {}
+        Ok(())
+    }
+
+    fn woke(watcher: &mut Watcher) -> io::Result<bool> {
+        watcher.wait(Duration::from_secs(3))
+    }
+
+    fn scratch(name: &str) -> io::Result<std::path::PathBuf> {
+        let dir = std::env::temp_dir().join(format!("ab-sys-watch-{name}-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir)?;
+        Ok(dir)
+    }
+
+    fn replace(dir: &Path, name: &str, body: &str) -> io::Result<()> {
+        let staging = dir.join(format!("{name}.tmp"));
+        fs::write(&staging, body)?;
+        fs::rename(&staging, dir.join(name))?;
+        Ok(())
+    }
+
+    #[test]
+    fn wakes_on_new_file_and_in_place_write() -> io::Result<()> {
+        let dir = scratch("create")?;
+        fs::write(dir.join("a.db"), "one")?;
+        let mut watcher = Watcher::new()?;
+        watcher.watch_tree(&dir)?;
+        settle(&mut watcher)?;
+        fs::write(dir.join("b.db"), "two")?;
+        assert!(woke(&mut watcher)?);
+        watcher.watch_tree(&dir)?;
+        settle(&mut watcher)?;
+        let mut file = fs::OpenOptions::new().append(true).open(dir.join("a.db"))?;
+        file.write_all(b"more")?;
+        file.sync_all()?;
+        assert!(woke(&mut watcher)?);
+        fs::remove_dir_all(&dir)?;
+        Ok(())
+    }
+
+    #[test]
+    fn follows_atomic_rename_replacement() -> io::Result<()> {
+        let dir = scratch("rename")?;
+        replace(&dir, "sync.db", "one")?;
+        let mut watcher = Watcher::new()?;
+        watcher.watch_tree(&dir)?;
+        settle(&mut watcher)?;
+        replace(&dir, "sync.db", "two")?;
+        assert!(woke(&mut watcher)?);
+        watcher.watch_tree(&dir)?;
+        settle(&mut watcher)?;
+        let mut file = fs::OpenOptions::new()
+            .append(true)
+            .open(dir.join("sync.db"))?;
+        file.write_all(b"three")?;
+        file.sync_all()?;
+        assert!(woke(&mut watcher)?);
+        fs::remove_dir_all(&dir)?;
+        Ok(())
+    }
+
+    #[test]
+    fn wakes_on_nested_directory_change() -> io::Result<()> {
+        let dir = scratch("nested")?;
+        fs::create_dir_all(dir.join("sub/deep"))?;
+        let mut watcher = Watcher::new()?;
+        watcher.watch_tree(&dir)?;
+        settle(&mut watcher)?;
+        fs::write(dir.join("sub/deep/segment"), "x")?;
+        assert!(woke(&mut watcher)?);
+        fs::remove_dir_all(&dir)?;
+        Ok(())
+    }
+
+    #[test]
+    fn watches_a_single_file_root() -> io::Result<()> {
+        let dir = scratch("single")?;
+        let path = dir.join("one.db");
+        fs::write(&path, "one")?;
+        let mut watcher = Watcher::new()?;
+        watcher.watch_tree(&path)?;
+        settle(&mut watcher)?;
+        let mut file = fs::OpenOptions::new().append(true).open(&path)?;
+        file.write_all(b"two")?;
+        file.sync_all()?;
+        assert!(woke(&mut watcher)?);
+        fs::remove_dir_all(&dir)?;
+        Ok(())
     }
 }

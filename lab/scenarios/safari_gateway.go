@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func safariGateway(ctx context.Context, e Evidence, observations []contracts.Observation) Evidence {
+func safariGateway(ctx context.Context, e Evidence, observations []contracts.Observation, stage func() error) Evidence {
 	add := func(name string, passed bool) {
 		e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: passed})
 		e.Passed = e.Passed && passed
@@ -36,6 +36,7 @@ func safariGateway(ctx context.Context, e Evidence, observations []contracts.Obs
 		return e
 	}
 	add("simulated_native_capture", w.ControlAction("/safari", observations) == nil)
+	add("session_fixture_staged", stage() == nil)
 	matches := func(endpoint world.Endpoint) bool {
 		rows, err := w.Records(endpoint)
 		if err != nil {
