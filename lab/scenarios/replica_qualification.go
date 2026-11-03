@@ -11,6 +11,15 @@ func calendarGatewaySimScenario(s Scenario) bool {
 	}
 }
 
+func nativeGatewaySimScenario(s Scenario) bool {
+	switch s.ID {
+	case "FILE-COMMANDS", "FILE-CRUD-REAL", "FILE-OFFLOAD-REAL", "USE-IMPORT", "USE-LOCK-CLIP", "USE-REMOTE-LAG", "AUD-SIM", "LOC-SIM", "MAP-SIM":
+		return true
+	default:
+		return false
+	}
+}
+
 func nativeReplicaSimScenario(s Scenario) bool {
 	switch s.ID {
 	case "CAL-CRUD", "CAL-WINDOW-SLIDE", "CAL-MOVED-OUTSIDE-WINDOW", "CAL-SPLIT-ATOMIC-ALLDAY", "CAL-SPLIT-ATOMIC-TIMED", "CAL-RECUR-THIS", "CAL-RECUR-FUTURE", "REM-CRUD", "NOTE-CRUD":

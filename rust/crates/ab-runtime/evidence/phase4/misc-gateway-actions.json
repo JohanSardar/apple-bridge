@@ -1,0 +1,349 @@
+{
+  "host": "ubuntu",
+  "level": "sim",
+  "parallel": 2,
+  "results": [
+    {
+      "scenario": "APP-APPROVE-SIM",
+      "go": "pass",
+      "rust_before": "blocked before gateway startup",
+      "rust_after": "blocked",
+      "blockers": [
+        "harness: semantic product helper IPhoneCompletionEvidence",
+        "harness: semantic product helper ValidateIPhoneCommand",
+        "harness: lab/scenarios/iphone_command.go still imports product implementations: iphone, operations, relay, state, trust"
+      ],
+      "root_cause": "harness imports Go product implementations"
+    },
+    {
+      "scenario": "APP-CMD-SIM",
+      "go": "pass",
+      "rust_before": "blocked before gateway startup",
+      "rust_after": "blocked",
+      "blockers": [
+        "harness: semantic product helper IPhoneCompletionEvidence",
+        "harness: semantic product helper ValidateIPhoneCommand",
+        "harness: lab/scenarios/iphone_command.go still imports product implementations: iphone, operations, relay, state, trust"
+      ],
+      "root_cause": "harness imports Go product implementations"
+    },
+    {
+      "scenario": "APP-LIVE-SIM",
+      "go": "pass",
+      "rust_before": "blocked before gateway startup",
+      "rust_after": "blocked",
+      "blockers": [
+        "harness: lab/scenarios/iphone_live.go still imports product implementations: iphone, operations, relay, state, trust"
+      ],
+      "root_cause": "harness imports Go product implementations"
+    },
+    {
+      "scenario": "APP-PAIR-SIM",
+      "go": "pass",
+      "rust_before": "blocked before gateway startup",
+      "rust_after": "blocked",
+      "blockers": [
+        "harness: lab/scenarios/iphone_pair.go still imports product implementations: trust"
+      ],
+      "root_cause": "harness imports Go product implementations"
+    },
+    {
+      "scenario": "AUD-SIM",
+      "go": "pass",
+      "rust_before": "blocked before gateway startup",
+      "rust_after": "pass",
+      "blockers": [],
+      "root_cause": "native actions and completion evidence"
+    },
+    {
+      "scenario": "FILE-COMMANDS",
+      "go": "pass",
+      "rust_before": "blocked before gateway startup",
+      "rust_after": "pass",
+      "blockers": [],
+      "root_cause": "native actions and completion evidence"
+    },
+    {
+      "scenario": "FILE-CRUD-REAL",
+      "go": "pass",
+      "rust_before": "blocked before gateway startup",
+      "rust_after": "pass",
+      "blockers": [],
+      "root_cause": "native actions and completion evidence"
+    },
+    {
+      "scenario": "FILE-OFFLOAD-REAL",
+      "go": "pass",
+      "rust_before": "blocked before gateway startup",
+      "rust_after": "pass",
+      "blockers": [],
+      "root_cause": "native actions and completion evidence"
+    },
+    {
+      "scenario": "IWORK-REAL",
+      "go": "pass",
+      "rust_before": "blocked before gateway startup",
+      "rust_after": "blocked",
+      "blockers": [
+        "harness: semantic product helper MacCompletionEvidence"
+      ],
+      "root_cause": "harness imports Go product implementations"
+    },
+    {
+      "scenario": "LOC-SIM",
+      "go": "pass",
+      "rust_before": "blocked before gateway startup",
+      "rust_after": "pass",
+      "blockers": [],
+      "root_cause": "qualification guard"
+    },
+    {
+      "scenario": "MAC-ACTIONS",
+      "go": "pass",
+      "rust_before": "blocked before gateway startup",
+      "rust_after": "blocked",
+      "blockers": [
+        "harness: semantic product helper MacCompletionEvidence",
+        "harness: semantic product helper MacDescriptors",
+        "harness: semantic product helper OperationSchema",
+        "harness: lab/scenarios/mac_actions.go still imports product implementations: trust"
+      ],
+      "root_cause": "harness imports Go product implementations"
+    },
+    {
+      "scenario": "MAC-CAPTURE",
+      "go": "pass",
+      "rust_before": "blocked before gateway startup",
+      "rust_after": "blocked",
+      "blockers": [
+        "harness: semantic product helper MacCompletionEvidence",
+        "harness: semantic product helper MacDescriptors",
+        "harness: semantic product helper OperationSchema",
+        "harness: lab/scenarios/mac_actions.go still imports product implementations: trust"
+      ],
+      "root_cause": "harness imports Go product implementations"
+    },
+    {
+      "scenario": "MAC-COMMANDS",
+      "go": "pass",
+      "rust_before": "blocked before gateway startup",
+      "rust_after": "blocked",
+      "blockers": [
+        "harness: semantic product helper MacCompletionEvidence",
+        "harness: semantic product helper MacDescriptors",
+        "harness: semantic product helper OperationSchema",
+        "harness: lab/scenarios/mac_actions.go still imports product implementations: trust"
+      ],
+      "root_cause": "harness imports Go product implementations"
+    },
+    {
+      "scenario": "MAC-EXTRAS-SIM",
+      "go": "pass",
+      "rust_before": "blocked before gateway startup",
+      "rust_after": "blocked",
+      "blockers": [
+        "harness: semantic product helper MacCompletionEvidence",
+        "harness: semantic product helper MacDescriptors",
+        "harness: semantic product helper OperationSchema",
+        "harness: lab/scenarios/mac_actions.go still imports product implementations: trust"
+      ],
+      "root_cause": "harness imports Go product implementations"
+    },
+    {
+      "scenario": "MAC-IDLE",
+      "go": "pass",
+      "rust_before": "blocked before gateway startup",
+      "rust_after": "blocked",
+      "blockers": [
+        "harness: semantic product helper MacCompletionEvidence",
+        "harness: semantic product helper MacDescriptors",
+        "harness: semantic product helper OperationSchema",
+        "harness: lab/scenarios/mac_actions.go still imports product implementations: trust"
+      ],
+      "root_cause": "harness imports Go product implementations"
+    },
+    {
+      "scenario": "MAP-SIM",
+      "go": "pass",
+      "rust_before": "blocked before gateway startup",
+      "rust_after": "pass",
+      "blockers": [],
+      "root_cause": "native actions and completion evidence"
+    },
+    {
+      "scenario": "PDF-ANNOTATE",
+      "go": "pass",
+      "rust_before": "blocked before gateway startup",
+      "rust_after": "blocked",
+      "blockers": [
+        "harness: lab/scenarios/vision_queries.go still imports product implementations: runtime"
+      ],
+      "root_cause": "harness imports Go product implementations"
+    },
+    {
+      "scenario": "PDF-TEXT",
+      "go": "pass",
+      "rust_before": "blocked before gateway startup",
+      "rust_after": "blocked",
+      "blockers": [
+        "harness: lab/scenarios/vision_queries.go still imports product implementations: runtime"
+      ],
+      "root_cause": "harness imports Go product implementations"
+    },
+    {
+      "scenario": "RELAY-ENROLL",
+      "go": "pass",
+      "rust_before": "blocked before gateway startup",
+      "rust_after": "blocked",
+      "blockers": [
+        "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: relay, remote",
+        "harness: lab/scenarios/relay_dns.go still imports product implementations: relay",
+        "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
+        "harness: lab/scenarios/relay_service.go still imports product implementations: relay",
+        "harness: lab/scenarios/relay_streams.go still imports product implementations: relay",
+        "harness: lab/scenarios/remote_checks.go still imports product implementations: remote"
+      ],
+      "root_cause": "harness imports Go product implementations"
+    },
+    {
+      "scenario": "RELAY-LIMITS",
+      "go": "fail",
+      "rust_before": "blocked before gateway startup",
+      "rust_after": "blocked",
+      "blockers": [
+        "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: relay, remote",
+        "harness: lab/scenarios/relay_dns.go still imports product implementations: relay",
+        "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
+        "harness: lab/scenarios/relay_service.go still imports product implementations: relay",
+        "harness: lab/scenarios/relay_streams.go still imports product implementations: relay",
+        "harness: lab/scenarios/remote_checks.go still imports product implementations: remote"
+      ],
+      "root_cause": "harness imports Go product implementations"
+    },
+    {
+      "scenario": "RELAY-PASSTHROUGH",
+      "go": "pass",
+      "rust_before": "blocked before gateway startup",
+      "rust_after": "blocked",
+      "blockers": [
+        "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: relay, remote",
+        "harness: lab/scenarios/relay_dns.go still imports product implementations: relay",
+        "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
+        "harness: lab/scenarios/relay_service.go still imports product implementations: relay",
+        "harness: lab/scenarios/relay_streams.go still imports product implementations: relay",
+        "harness: lab/scenarios/remote_checks.go still imports product implementations: remote"
+      ],
+      "root_cause": "harness imports Go product implementations"
+    },
+    {
+      "scenario": "RELAY-ROTATE-GATED",
+      "go": "pass",
+      "rust_before": "blocked before gateway startup",
+      "rust_after": "blocked",
+      "blockers": [
+        "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: relay, remote",
+        "harness: lab/scenarios/relay_containment.go still imports product implementations: relay",
+        "harness: lab/scenarios/relay_dns.go still imports product implementations: relay",
+        "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
+        "harness: lab/scenarios/relay_service.go still imports product implementations: relay",
+        "harness: lab/scenarios/relay_streams.go still imports product implementations: relay",
+        "harness: lab/scenarios/relay_tls_splice.go still imports product implementations: replication, state, trust",
+        "harness: lab/scenarios/remote_checks.go still imports product implementations: remote"
+      ],
+      "root_cause": "harness imports Go product implementations"
+    },
+    {
+      "scenario": "RELAY-STREAMS",
+      "go": "fail",
+      "rust_before": "blocked before gateway startup",
+      "rust_after": "blocked",
+      "blockers": [
+        "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: relay, remote",
+        "harness: lab/scenarios/relay_dns.go still imports product implementations: relay",
+        "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
+        "harness: lab/scenarios/relay_service.go still imports product implementations: relay",
+        "harness: lab/scenarios/relay_streams.go still imports product implementations: relay",
+        "harness: lab/scenarios/remote_checks.go still imports product implementations: remote"
+      ],
+      "root_cause": "harness imports Go product implementations"
+    },
+    {
+      "scenario": "RELAY-TLS-SPLICE",
+      "go": "fail",
+      "rust_before": "blocked before gateway startup",
+      "rust_after": "blocked",
+      "blockers": [
+        "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: relay, remote",
+        "harness: lab/scenarios/relay_containment.go still imports product implementations: relay",
+        "harness: lab/scenarios/relay_dns.go still imports product implementations: relay",
+        "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
+        "harness: lab/scenarios/relay_service.go still imports product implementations: relay",
+        "harness: lab/scenarios/relay_streams.go still imports product implementations: relay",
+        "harness: lab/scenarios/relay_tls_splice.go still imports product implementations: replication, state, trust",
+        "harness: lab/scenarios/remote_checks.go still imports product implementations: remote"
+      ],
+      "root_cause": "harness imports Go product implementations"
+    },
+    {
+      "scenario": "SC-RUN-REAL",
+      "go": "pass",
+      "rust_before": "blocked before gateway startup",
+      "rust_after": "blocked",
+      "blockers": [
+        "harness: semantic product helper Descriptor",
+        "harness: semantic product helper ValidateCommand",
+        "harness: lab/scenarios/shortcuts_runner.go still imports product implementations: shortcut",
+        "harness: lab/scenarios/siri_intents.go still imports product implementations: shortcut"
+      ],
+      "root_cause": "harness imports Go product implementations"
+    },
+    {
+      "scenario": "USE-IMPORT",
+      "go": "pass",
+      "rust_before": "blocked before gateway startup",
+      "rust_after": "pass",
+      "blockers": [],
+      "root_cause": "qualification guard"
+    },
+    {
+      "scenario": "USE-LOCK-CLIP",
+      "go": "pass",
+      "rust_before": "blocked before gateway startup",
+      "rust_after": "pass",
+      "blockers": [],
+      "root_cause": "qualification guard"
+    },
+    {
+      "scenario": "USE-READONLY",
+      "go": "pass",
+      "rust_before": "blocked before gateway startup",
+      "rust_after": "fail",
+      "blockers": [],
+      "root_cause": "qualification guard"
+    },
+    {
+      "scenario": "USE-REMOTE-LAG",
+      "go": "pass",
+      "rust_before": "blocked before gateway startup",
+      "rust_after": "pass",
+      "blockers": [],
+      "root_cause": "qualification guard"
+    },
+    {
+      "scenario": "VIS-OCR",
+      "go": "pass",
+      "rust_before": "blocked before gateway startup",
+      "rust_after": "blocked",
+      "blockers": [
+        "harness: lab/scenarios/vision_queries.go still imports product implementations: runtime"
+      ],
+      "root_cause": "harness imports Go product implementations"
+    }
+  ],
+  "verification": "make rust-ci passed; fixed binary built with lab-harness",
+  "notes": [
+    "FILE-COMMANDS before product fix: files.create unsupported; MAP-SIM: both open assertions failed; AUD-SIM: playback completion and missing-callback assertions failed.",
+    "USE-READONLY MCP response is a separate follow-up fix.",
+    "Relay server port outside ownership. No real-level scenarios or live home access."
+  ]
+}

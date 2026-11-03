@@ -17,6 +17,116 @@ impl ActionResolver for Actions {
         if command.op.starts_with("messages.") {
             return self.messages(principal, command);
         }
+        if native_command(&command.op) {
+            return native_action(command);
+        }
+        self.reminder(principal, command)
+    }
+    fn conflict(
+        &self,
+        principal: &Principal,
+        command: &Command,
+        frame: &ab_wire::messages::IpcFrame,
+    ) -> Result<Option<Error>, Error> {
+        let problem: Option<Error> = frame
+            .error
+            .as_ref()
+            .map(|raw| serde_json::from_str(raw.get()).map_err(|_| Code::Corrupt))
+            .transpose()?;
+        if problem
+            .as_ref()
+            .is_none_or(|problem| problem.code != Code::Conflict)
+        {
+            return Ok(problem);
+        }
+        if command.op.starts_with("messages.") {
+            return Ok(problem);
+        }
+        let args: Value = serde_json::from_str(command.args.get()).map_err(|_| Code::Invalid)?;
+        let id = args["id"].as_str().ok_or(Code::Corrupt)?;
+        let source = if command.op.starts_with("calendar.") {
+            "calendar"
+        } else {
+            "reminders"
+        };
+        let collection = if source == "calendar" {
+            "calendar.event"
+        } else if command.op.ends_with("_list") {
+            "reminders.list"
+        } else {
+            "reminders.reminder"
+        };
+        let native_key = self.state.with(|state| state.native_key(collection, id))?;
+        let evidence: Value =
+            serde_json::from_str(frame.evidence.as_ref().ok_or(Code::Corrupt)?.get())
+                .map_err(|_| Code::Corrupt)?;
+        if native_key.is_empty() || evidence["native_key"] != native_key {
+            return Err(Code::Corrupt.into());
+        }
+        let cursor = self
+            .peer
+            .captured(
+                source,
+                evidence["capture_checkpoint"]
+                    .as_str()
+                    .ok_or(Code::Corrupt)?,
+                collection,
+                &native_key,
+            )
+            .map_err(|_| Code::Corrupt)?;
+        let visibility = principal.visibility().into_iter().collect();
+        let result = self.state.with(|state| {
+            state.read(
+                &visibility,
+                &ab_state::ReadQuery {
+                    collection: collection.into(),
+                    id: id.into(),
+                    include_deleted: true,
+                    ..ab_state::ReadQuery::default()
+                },
+            )
+        })?;
+        if result.cursor.epoch != cursor.epoch
+            || result.cursor.sequence < cursor.sequence
+            || result.records.len() != 1
+        {
+            return Err(Code::Corrupt.into());
+        }
+        let mut error = Error::from(Code::Conflict);
+        error.current =
+            Some(serde_json::value::to_raw_value(&result.records[0]).map_err(|_| Code::Corrupt)?);
+        Ok(Some(error))
+    }
+}
+
+fn native_action(command: &Command) -> Result<PreparedAction, Error> {
+    Ok(PreparedAction {
+        action: serde_json::value::to_raw_value(&json!({
+            "op": command.op, "args": command.args, "origin": command.origin
+        }))
+        .map_err(|_| Code::Corrupt)?,
+        expected_state: None,
+        collection: if command.op.starts_with("files.") {
+            "files.item"
+        } else {
+            ""
+        }
+        .into(),
+        serialization_key: if command.op.starts_with("files.") {
+            "files"
+        } else {
+            &command.op
+        }
+        .into(),
+    })
+}
+
+fn native_command(op: &str) -> bool {
+    op.starts_with("files.") || matches!(op, "maps.open" | "speech.say" | "capture.play_sound")
+}
+
+impl Actions {
+    fn reminder(&self, principal: &Principal, command: &Command) -> Result<PreparedAction, Error> {
         if !command.op.starts_with("reminders.") {
             return Err(Code::Unsupported.into());
         }
@@ -108,80 +218,5 @@ impl ActionResolver for Actions {
                 "lists".into()
             },
         })
-    }
-    fn conflict(
-        &self,
-        principal: &Principal,
-        command: &Command,
-        frame: &ab_wire::messages::IpcFrame,
-    ) -> Result<Option<Error>, Error> {
-        let problem: Option<Error> = frame
-            .error
-            .as_ref()
-            .map(|raw| serde_json::from_str(raw.get()).map_err(|_| Code::Corrupt))
-            .transpose()?;
-        if problem
-            .as_ref()
-            .is_none_or(|problem| problem.code != Code::Conflict)
-        {
-            return Ok(problem);
-        }
-        if command.op.starts_with("messages.") {
-            return Ok(problem);
-        }
-        let args: Value = serde_json::from_str(command.args.get()).map_err(|_| Code::Invalid)?;
-        let id = args["id"].as_str().ok_or(Code::Corrupt)?;
-        let source = if command.op.starts_with("calendar.") {
-            "calendar"
-        } else {
-            "reminders"
-        };
-        let collection = if source == "calendar" {
-            "calendar.event"
-        } else if command.op.ends_with("_list") {
-            "reminders.list"
-        } else {
-            "reminders.reminder"
-        };
-        let native_key = self.state.with(|state| state.native_key(collection, id))?;
-        let evidence: Value =
-            serde_json::from_str(frame.evidence.as_ref().ok_or(Code::Corrupt)?.get())
-                .map_err(|_| Code::Corrupt)?;
-        if native_key.is_empty() || evidence["native_key"] != native_key {
-            return Err(Code::Corrupt.into());
-        }
-        let cursor = self
-            .peer
-            .captured(
-                source,
-                evidence["capture_checkpoint"]
-                    .as_str()
-                    .ok_or(Code::Corrupt)?,
-                collection,
-                &native_key,
-            )
-            .map_err(|_| Code::Corrupt)?;
-        let visibility = principal.visibility().into_iter().collect();
-        let result = self.state.with(|state| {
-            state.read(
-                &visibility,
-                &ab_state::ReadQuery {
-                    collection: collection.into(),
-                    id: id.into(),
-                    include_deleted: true,
-                    ..ab_state::ReadQuery::default()
-                },
-            )
-        })?;
-        if result.cursor.epoch != cursor.epoch
-            || result.cursor.sequence < cursor.sequence
-            || result.records.len() != 1
-        {
-            return Err(Code::Corrupt.into());
-        }
-        let mut error = Error::from(Code::Conflict);
-        error.current =
-            Some(serde_json::value::to_raw_value(&result.records[0]).map_err(|_| Code::Corrupt)?);
-        Ok(Some(error))
     }
 }

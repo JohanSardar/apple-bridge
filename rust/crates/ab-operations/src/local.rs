@@ -221,11 +221,19 @@ impl LocalGateway {
                 })
             })?;
         }
-        validate_shape(&descriptor.input["properties"]["args"], &args)?;
+        let transient = matches!(
+            command.op.as_str(),
+            "maps.open" | "speech.say" | "capture.play_sound"
+        );
+        if !transient {
+            validate_shape(&descriptor.input["properties"]["args"], &args)?;
+        }
+        crate::native_commands::validate(&command, &args)?;
         if !args.is_object()
-            || descriptor.input["required"]
-                .as_array()
-                .is_some_and(|v| v.iter().any(|k| k == "expected_version"))
+            || !transient
+                && descriptor.input["required"]
+                    .as_array()
+                    .is_some_and(|v| v.iter().any(|k| k == "expected_version"))
                 && command.expected_version == 0
         {
             return Err(Code::Invalid.into());
@@ -586,7 +594,25 @@ impl LocalGateway {
             state,
             State::Observed | State::Delivered | State::DeliveryFailed
         ) {
-            if let Some((cursor, key)) = self.bound(&r, &frame, collection) {
+            let proof: Value = frame
+                .evidence
+                .as_ref()
+                .and_then(|raw| serde_json::from_str(raw.get()).ok())
+                .unwrap_or(Value::Null);
+            if let Some(valid) =
+                crate::native_commands::transient_completion(&r.command, &proof, &r.request_hash)
+            {
+                if state != State::Observed || !valid {
+                    state = State::Indeterminate;
+                    disposition = Disposition::Indeterminate;
+                }
+            } else if r.command.op.starts_with("files.")
+                && state == State::Observed
+                && !crate::native_commands::file_completion(&r.command, &proof, &r.request_hash)
+            {
+                state = State::Indeterminate;
+                disposition = Disposition::Indeterminate;
+            } else if let Some((cursor, key)) = self.bound(&r, &frame, collection) {
                 r.commit_seq = cursor.sequence;
                 match self.state.observed_record_id(collection, &key, &cursor) {
                     Ok(id) => r.observed_record_ids = vec![id],
