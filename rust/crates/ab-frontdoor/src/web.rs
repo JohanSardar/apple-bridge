@@ -467,6 +467,8 @@ fn route(
 }
 fn all_scopes() -> Vec<String> {
     [
+        #[cfg(feature = "lab-harness")]
+        "labdummy",
         "audio",
         "calendar",
         "contacts",
@@ -859,6 +861,8 @@ fn pending_request(
 
 fn groups() -> Vec<Value> {
     let titles = [
+        #[cfg(feature = "lab-harness")]
+        "Lab dummy",
         "Audio",
         "Calendar",
         "Contacts",
