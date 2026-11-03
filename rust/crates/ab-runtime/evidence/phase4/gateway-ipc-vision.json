@@ -1,0 +1,393 @@
+{
+  "artifact_sha256": "68be567ad88a8a323aca2ba50e285eef5b5fc23931ebb7e5b74c0e61a038a6ee",
+  "proofs": [
+    {
+      "implementation": "go",
+      "scenario": "VIS-OCR",
+      "passed": true,
+      "assertions": [
+        {
+          "name": "world_started",
+          "passed": true
+        },
+        {
+          "name": "query_scopes_granted",
+          "passed": true
+        },
+        {
+          "name": "helper_ready",
+          "passed": true
+        },
+        {
+          "name": "malformed_document_rejected",
+          "passed": true
+        },
+        {
+          "name": "generated_fixture_read",
+          "passed": true
+        },
+        {
+          "name": "fixture_query_completed",
+          "passed": true
+        },
+        {
+          "name": "fixture_content_matched",
+          "passed": true
+        },
+        {
+          "name": "file_requires_opt_in",
+          "passed": true
+        },
+        {
+          "name": "unowned_blob_rejected",
+          "passed": true
+        },
+        {
+          "name": "file_input_matches_inline",
+          "passed": true
+        },
+        {
+          "name": "ocr_shape",
+          "passed": true
+        },
+        {
+          "name": "generated_fixture_read",
+          "passed": true
+        },
+        {
+          "name": "fixture_query_completed",
+          "passed": true
+        },
+        {
+          "name": "fixture_content_matched",
+          "passed": true
+        },
+        {
+          "name": "file_requires_opt_in",
+          "passed": true
+        },
+        {
+          "name": "unowned_blob_rejected",
+          "passed": true
+        },
+        {
+          "name": "file_input_matches_inline",
+          "passed": true
+        },
+        {
+          "name": "ocr_shape",
+          "passed": true
+        },
+        {
+          "name": "generated_fixture_read",
+          "passed": true
+        },
+        {
+          "name": "fixture_query_completed",
+          "passed": true
+        },
+        {
+          "name": "fixture_content_matched",
+          "passed": true
+        },
+        {
+          "name": "file_requires_opt_in",
+          "passed": true
+        },
+        {
+          "name": "unowned_blob_rejected",
+          "passed": true
+        },
+        {
+          "name": "file_input_matches_inline",
+          "passed": true
+        },
+        {
+          "name": "ocr_shape",
+          "passed": true
+        },
+        {
+          "name": "credential_backend_override_restored",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "implementation": "rust",
+      "scenario": "VIS-OCR",
+      "passed": true,
+      "assertions": [
+        {
+          "name": "world_started",
+          "passed": true
+        },
+        {
+          "name": "query_scopes_granted",
+          "passed": true
+        },
+        {
+          "name": "helper_ready",
+          "passed": true
+        },
+        {
+          "name": "malformed_document_rejected",
+          "passed": true
+        },
+        {
+          "name": "generated_fixture_read",
+          "passed": true
+        },
+        {
+          "name": "fixture_query_completed",
+          "passed": true
+        },
+        {
+          "name": "fixture_content_matched",
+          "passed": true
+        },
+        {
+          "name": "file_requires_opt_in",
+          "passed": true
+        },
+        {
+          "name": "unowned_blob_rejected",
+          "passed": true
+        },
+        {
+          "name": "file_input_matches_inline",
+          "passed": true
+        },
+        {
+          "name": "ocr_shape",
+          "passed": true
+        },
+        {
+          "name": "generated_fixture_read",
+          "passed": true
+        },
+        {
+          "name": "fixture_query_completed",
+          "passed": true
+        },
+        {
+          "name": "fixture_content_matched",
+          "passed": true
+        },
+        {
+          "name": "file_requires_opt_in",
+          "passed": true
+        },
+        {
+          "name": "unowned_blob_rejected",
+          "passed": true
+        },
+        {
+          "name": "file_input_matches_inline",
+          "passed": true
+        },
+        {
+          "name": "ocr_shape",
+          "passed": true
+        },
+        {
+          "name": "generated_fixture_read",
+          "passed": true
+        },
+        {
+          "name": "fixture_query_completed",
+          "passed": true
+        },
+        {
+          "name": "fixture_content_matched",
+          "passed": true
+        },
+        {
+          "name": "file_requires_opt_in",
+          "passed": true
+        },
+        {
+          "name": "unowned_blob_rejected",
+          "passed": true
+        },
+        {
+          "name": "file_input_matches_inline",
+          "passed": true
+        },
+        {
+          "name": "ocr_shape",
+          "passed": true
+        },
+        {
+          "name": "credential_backend_override_restored",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "implementation": "go",
+      "scenario": "HELPER-IPC-RESPONSIVE",
+      "passed": true,
+      "assertions": [
+        {
+          "name": "isolated_gateway_started",
+          "passed": true
+        },
+        {
+          "name": "command_fixture_seed_ready",
+          "passed": true
+        },
+        {
+          "name": "helper_authenticated_with_bounded_credit",
+          "passed": true
+        },
+        {
+          "name": "helper_ready_before_capture_hold",
+          "passed": true
+        },
+        {
+          "name": "causal_command_list_available",
+          "passed": true
+        },
+        {
+          "name": "causal_create_dispatched",
+          "passed": true
+        },
+        {
+          "name": "observed_capture_held_before_receipt",
+          "passed": true
+        },
+        {
+          "name": "causal_control_progresses_before_receipt",
+          "passed": true
+        },
+        {
+          "name": "observed_reply_waits_for_capture_receipt",
+          "passed": true
+        },
+        {
+          "name": "cited_capture_produces_observed_commit_and_record_id",
+          "passed": true
+        },
+        {
+          "name": "causal_update_prepared",
+          "passed": true
+        },
+        {
+          "name": "conflict_capture_held_before_receipt",
+          "passed": true
+        },
+        {
+          "name": "conflict_reply_waits_for_capture_receipt",
+          "passed": true
+        },
+        {
+          "name": "cited_capture_returns_conflict_with_current",
+          "passed": true
+        },
+        {
+          "name": "capture_commit_held_before_acknowledgment",
+          "passed": true
+        },
+        {
+          "name": "blob_reply_progresses_while_capture_commit_is_held",
+          "passed": true
+        },
+        {
+          "name": "control_progresses_without_early_capture_ack",
+          "passed": true
+        },
+        {
+          "name": "capture_credit_exhaustion_closes_session",
+          "passed": true
+        },
+        {
+          "name": "credential_backend_override_restored",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "implementation": "rust",
+      "scenario": "HELPER-IPC-RESPONSIVE",
+      "passed": true,
+      "assertions": [
+        {
+          "name": "isolated_gateway_started",
+          "passed": true
+        },
+        {
+          "name": "command_fixture_seed_ready",
+          "passed": true
+        },
+        {
+          "name": "helper_authenticated_with_bounded_credit",
+          "passed": true
+        },
+        {
+          "name": "helper_ready_before_capture_hold",
+          "passed": true
+        },
+        {
+          "name": "causal_command_list_available",
+          "passed": true
+        },
+        {
+          "name": "causal_create_dispatched",
+          "passed": true
+        },
+        {
+          "name": "observed_capture_held_before_receipt",
+          "passed": true
+        },
+        {
+          "name": "causal_control_progresses_before_receipt",
+          "passed": true
+        },
+        {
+          "name": "observed_reply_waits_for_capture_receipt",
+          "passed": true
+        },
+        {
+          "name": "cited_capture_produces_observed_commit_and_record_id",
+          "passed": true
+        },
+        {
+          "name": "causal_update_prepared",
+          "passed": true
+        },
+        {
+          "name": "conflict_capture_held_before_receipt",
+          "passed": true
+        },
+        {
+          "name": "conflict_reply_waits_for_capture_receipt",
+          "passed": true
+        },
+        {
+          "name": "cited_capture_returns_conflict_with_current",
+          "passed": true
+        },
+        {
+          "name": "capture_commit_held_before_acknowledgment",
+          "passed": true
+        },
+        {
+          "name": "blob_reply_progresses_while_capture_commit_is_held",
+          "passed": true
+        },
+        {
+          "name": "control_progresses_without_early_capture_ack",
+          "passed": true
+        },
+        {
+          "name": "capture_credit_exhaustion_closes_session",
+          "passed": true
+        },
+        {
+          "name": "credential_backend_override_restored",
+          "passed": true
+        }
+      ]
+    }
+  ]
+}
