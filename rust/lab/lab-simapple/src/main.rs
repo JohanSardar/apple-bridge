@@ -660,12 +660,11 @@ impl Session {
             Some("Ping") => {
                 send(&mut self.stream, &json!({"t":"Pong"}))?;
             }
-            Some("Pong") => {}
+            Some("Pong" | "QueryCancel") => {}
             Some("Query") => {
                 let reply = query::query(&mut self.blobs, &frame);
                 send(&mut self.stream, &reply)?;
             }
-            Some("QueryCancel") => {}
             Some("BlobRead") => {
                 let reply = query::blob(&self.blobs, &frame).ok_or_else(|| invalid("blob read"))?;
                 send(&mut self.stream, &reply)?;
