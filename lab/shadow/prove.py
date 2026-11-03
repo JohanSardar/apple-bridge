@@ -152,7 +152,7 @@ def main():
         if command.get('state') != 'observed':
             raise RuntimeError('synthetic command was not observed')
         generated = operation('reminders.create', {'op': 'reminders.create', 'args': {'list_id': records[0]['id'], 'title': '[ab-test shadow] generated id'}, 'wait_ms': 15000})
-        if generated.get('state') != 'observed' or not generated.get('command', {}).get('id', generated.get('id', '')).startswith('cmd_'):
+        if generated.get('state') != 'observed' or not generated.get('command', {}).get('command_id', '').startswith('cmd_'):
             raise RuntimeError('gateway-generated command id was not observed')
         def http_call(method, path, body=None, extra=None):
             headers = {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'Accept': 'application/json, text/event-stream'}
