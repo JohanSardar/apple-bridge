@@ -58,3 +58,31 @@ No request bodies, URLs, credentials, account identifiers or IP addresses are lo
 Supplementary race and transport cases check two simultaneous completions competing for one slot and unauthenticated policy RPC refusal. Browser rendering and real forwarder socket-disconnect latency are integration gates for the forwarder worker, not claims made by these fixtures. No legacy parity scenario is replaced or weakened.
 
 API and cryptographic references: [GitHub OAuth](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps), [minimal scopes](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps), [WebAuthn](https://www.w3.org/TR/webauthn-3/), [RFC 8628](https://www.rfc-editor.org/rfc/rfc8628).
+
+## R2 certificate protections contract
+
+Owner: R2 certificate implementation. R1 and ab-relay workers consume this contract; no forwarder DNS dependency is introduced.
+
+## Gates
+
+Compile `ab-remote`, `ab-runtime`, and `ab-relay-control` with `r2-certificates`. All features default off. Mac opt-in additionally requires `remote/r2-certificates.json` containing `true`; control requires `caa::Control::new(adapter, true)`. Existing relay/1 enrollment and proofs are unchanged.
+
+## Enrollment and CAA
+
+The separate control service calls `caa::Control::apply` at enrollment with a `Change::Enroll`, revision zero, and `enrolled_mac` obtained from its authenticated host enrollment record (never from the request body). The caller must authorize ownership of `binding.host` before passing the key. A Mac signs `Change::transcript()` using its Ed25519 identity. This covers operation, host, account URI, both keys, revision, and expiry; the proof domain is `apple-bridge-caa/2`. Maximum validity is five minutes. Recovery uses the recovery public key pinned in the preceding binding, never a relay assertion. Rotation uses the preceding Mac key. Either operation can replace both keys and the ACME account. Store the recovery private key off the relay.
+
+`DnsAdapter::commit(previous, next, records)` is a durable compare-and-swap transaction: reject conflicting revisions and CNAME hosts; replace the full per-host CAA RRset and persist the next binding together, or report failure without advancing the binding. An external DNS provider needs a durable intent/outbox and retries with read-back before enrollment is acknowledged; no concrete provider is installed by this change. Replaying a completed revision is refused. Serialize host updates in the service, including recovery. Never expose this adapter, its credentials, or an RPC that can call it to the forwarders. The separate control-service bootstrap must install this interface; the existing Go relay DNS routes remain legacy until that worker removes them.
+
+The only emitted records are flags zero, `issue` with `letsencrypt.org; accounturi=<Mac URI>; validationmethods=dns-01`, and `issuewild` with `;`. No alternate CA or wildcard authorization is emitted. User DNS strong mode requires A/AAAA records; a CNAME moves effective CAA to its target. Authoritative DNS operators can replace CAA; the fixture explicitly demonstrates this residual risk.
+
+## Mac CT
+
+`ct::run` is independent of relay control responses and runs alongside the tunnel reconnect loop. It queries public crt.sh over HTTPS for the assigned name, the configured custom domain, and all names in `remote/ct-names.json` (a JSON string array). Include every custom name there when enrollment changes. Each owned name also queries its parent wildcard. DER parsing retains poisoned precertificates, and SHA-256 is computed locally. Locally installed certificates add fingerprints to `remote/ct-known.json`, independent of relay acknowledgment. Known precertificate fingerprints can be recorded by the Mac issuance integration with `ct::remember`; final and precertificate DER hashes differ and are deliberately never inferred equivalent.
+
+`CtClient` is injectable for offline fixtures. Product `PublicCt` has a fixed public HTTPS origin, bounded responses, per-request and per-query timeouts, no redirects, and no relay all-clear input. Aggregation always has an explicit lag warning: a successful scan means observed results, never proof of no issuance. Query failures retain prior unexpected findings. A missing report or age over 15 minutes appears as unknown in `ct::doctor`, wired into runtime doctor. Findings are sticky until a Mac-local fingerprint acknowledgment.
+
+`IphonePush::alert` is the asynchronous iPhone delivery hook. The default `Notifications` implementation persists `remote/ct-alert.json` and emits the warning to the process notification/log path. The iPhone worker must implement this trait using its authenticated encrypted push delivery and inject it into `ct::run`; the default relay adapter does not claim APNs delivery. Doctor reads `remote/ct-monitor.json` even if push fails. No CT result is allowed to clear relay warnings.
+
+## Offline verification
+
+On build host: `CARGO_TARGET_DIR=~/targets/relay-r2 cargo test -p ab-remote -p ab-relay-control --features r2-certificates --locked` from `rust/`. The `relay_ct_independent` and `relay_caa_account` integration scenarios exercise Rust product entry points with fixture adapters. They are sim-level focused component scenarios, not a claim of full bridge-lab or live gateway qualification. No production DNS, CA, or relay is contacted. Pebble/Docker were absent on the build host, so the CAA scenario uses an RFC 8657 enforcing ACME authorization fixture with CNAME traversal and wildcard precedence. Sources: [RFC 8657](https://www.rfc-editor.org/rfc/rfc8657.html), [RFC 8659](https://www.rfc-editor.org/rfc/rfc8659.html), [crt.sh](https://crt.sh/).

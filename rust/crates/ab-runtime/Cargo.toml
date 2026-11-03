@@ -28,6 +28,7 @@ jiff.workspace = true
 rusqlite.workspace = true
 
 [features]
+r2-certificates = ["ab-remote/r2-certificates"]
 lab-queries = ["lab-harness", "ab-frontdoor/lab-queries"]
 lab-harness = ["ab-state/lab", "ab-frontdoor/lab-harness", "ab-operations/lab-harness"]
 default = ["replica-feed"]

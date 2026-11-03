@@ -121,6 +121,12 @@ pub fn doctor(home: &Path) -> Result<Value, Error> {
             .ok_or(Error::Invalid)?
             .push(json!("Verify disk encryption for the data directory."));
     }
+    for warning in ab_remote::ct::doctor(home, ab_remote::ct::now()) {
+        result["warnings"]
+            .as_array_mut()
+            .ok_or(Error::Invalid)?
+            .push(json!(warning));
+    }
     clock(home, &mut result)?;
     Ok(result)
 }

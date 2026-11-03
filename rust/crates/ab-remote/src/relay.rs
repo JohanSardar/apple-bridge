@@ -153,10 +153,29 @@ impl Ingress for Relay {
     fn run(&self, gateway: Gateway, mut stop: watch::Receiver<bool>) -> IngressFuture<'_> {
         Box::pin(async move {
             let id = enroll(&self.home, &self.endpoint, &self.zone, &self.client).await?;
+            let notifications = crate::ct::Notifications {
+                home: self.home.clone(),
+            };
+            let monitor = async {
+                if crate::ct::enabled(&self.home) {
+                    let ct_client = crate::ct::PublicCt::new()?;
+                    crate::ct::run(
+                        &self.home,
+                        &id.credential.hostname,
+                        &ct_client,
+                        &notifications,
+                    )
+                    .await
+                } else {
+                    std::future::pending::<Result<()>>().await
+                }
+            };
+            tokio::pin!(monitor);
             let mut delay = Duration::from_millis(100);
             loop {
                 tokio::select! {
                     () = stopped(&mut stop) => return Ok(()),
+                    result = &mut monitor => return result,
                     result = self.connect(&id, gateway.clone()) => { if let Err(e) = result { eprintln!("relay connection ended: {e}"); } }
                 }
                 tokio::select! { () = stopped(&mut stop) => return Ok(()), () = tokio::time::sleep(delay) => {} }

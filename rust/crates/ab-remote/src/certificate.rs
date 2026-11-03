@@ -61,6 +61,10 @@ impl Certificates {
         .with_safe_default_protocol_versions()?
         .with_no_client_auth()
         .with_single_cert(chain, key)?;
+        if crate::ct::enabled(&self.home) {
+            let value = crate::ct::hex(&fingerprint);
+            crate::ct::remember(&self.home, &value)?;
+        }
         *self
             .current
             .write()

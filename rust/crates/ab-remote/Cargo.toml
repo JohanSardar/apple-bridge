@@ -31,3 +31,11 @@ pkcs8 = { version = "0.10", features = ["pem", "std"] }
 
 [dev-dependencies]
 tempfile = "3"
+
+[features]
+default = []
+r2-certificates = []
+
+[[test]]
+name = "relay_ct_independent"
+required-features = ["r2-certificates"]
