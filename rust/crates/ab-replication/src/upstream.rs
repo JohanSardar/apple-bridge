@@ -21,6 +21,7 @@ pub trait UploadHandler: std::fmt::Debug + Send + Sync {
 }
 #[derive(Debug)]
 pub(crate) struct Session<'a> {
+    pub clock: bool,
     pub principal: &'a ab_trust::Principal,
     pub certificate: &'a [u8],
     pub id: String,

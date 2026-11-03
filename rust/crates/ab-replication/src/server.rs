@@ -140,6 +140,21 @@ impl<S: GatewayState> Server<S> {
         let response = match message {
             Message::Text(text) => {
                 let frame: FeedFrame = serde_json::from_str(&text)?;
+                if frame.t == "ClockPing" || frame.t == "ClockAck" {
+                    if !context.clock {
+                        return Err(Error::Invalid);
+                    }
+                    if let Some(response) = crate::clock::respond(&frame, jiff::Timestamp::now())? {
+                        socket
+                            .send(Message::Text(
+                                String::from_utf8(response.encode()?)
+                                    .map_err(|_| Error::Invalid)?
+                                    .into(),
+                            ))
+                            .await?;
+                    }
+                    return Ok(None);
+                }
                 if frame.t != "UploadControl" {
                     return Ok(Some(frame));
                 }
@@ -195,7 +210,8 @@ impl<S: GatewayState> Server<S> {
     ) -> Result<(), Error> {
         static NEXT_SESSION: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
         let principal = self.authority.authenticate_certificate(certificate)?;
-        let context = Session {
+        let mut context = Session {
+            clock: false,
             principal: &principal,
             certificate,
             id: format!(
@@ -205,7 +221,7 @@ impl<S: GatewayState> Server<S> {
             ),
             uploads: self.uploads.as_deref(),
         };
-        let session = self.session(&mut socket, &context);
+        let session = self.session(&mut socket, &mut context);
         let invalidated = async {
             let mut timer = tokio::time::interval(Duration::from_millis(100));
             loop {
@@ -222,7 +238,7 @@ impl<S: GatewayState> Server<S> {
     async fn session<T: AsyncRead + AsyncWrite + Unpin>(
         &self,
         socket: &mut WebSocketStream<T>,
-        context: &Session<'_>,
+        context: &mut Session<'_>,
     ) -> Result<(), Error> {
         let p = context.principal;
         let hello = tokio::time::timeout(Duration::from_secs(15), receive(socket))
@@ -239,6 +255,7 @@ impl<S: GatewayState> Server<S> {
         {
             return Err(Error::Invalid);
         }
+        context.clock = hello.clock_protocol == "ntp/1";
         let limit = usize::try_from(hello.credits.min(4 << 20)).map_err(|_| Error::Invalid)?;
         let visibility = p.visibility();
         let atomic = hello
@@ -260,6 +277,9 @@ impl<S: GatewayState> Server<S> {
         });
         let mut welcome = frame("Welcome");
         welcome.protocol = "feed/1".into();
+        if context.clock {
+            welcome.clock_protocol = "ntp/1".into();
+        }
         welcome.gateway_id.clone_from(&self.authority.fingerprint);
         welcome.epoch.clone_from(&head.epoch);
         welcome.subscription_revision = p.revision;
