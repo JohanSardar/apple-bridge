@@ -580,7 +580,7 @@ impl LocalGateway {
         }
         r = self.transition(r, State::Dispatched, None, None, None)?;
         let result = tokio::time::timeout(
-            Duration::from_secs(15),
+            outcome_timeout(&r.command)?,
             self.peer.exchange(IpcFrame {
                 t: "Dispatch".into(),
                 origin: r.command.origin.clone(),
@@ -1237,6 +1237,26 @@ pub struct CommandPart {
     pub record_id: String,
     pub disposition: String,
 }
+fn outcome_timeout(command: &Command) -> Result<Duration, Error> {
+    if command.op == "focus.set" {
+        return Ok(Duration::from_secs(25));
+    }
+    if crate::outcome::capture(&command.op) {
+        return Ok(Duration::from_secs(75));
+    }
+    if command.op == "shortcuts.run" {
+        let args: Value = serde_json::from_str(command.args.get()).map_err(|_| Code::Invalid)?;
+        let millis = args["timeout_ms"].as_u64().unwrap_or(0);
+        if millis > 300_000 {
+            return Err(Code::Invalid.into());
+        }
+        return Ok(Duration::from_millis(
+            if millis == 0 { 30_000 } else { millis } + 5_000,
+        ));
+    }
+    Ok(Duration::from_secs(15))
+}
+
 fn target_collection(op: &str) -> String {
     match op {
         "reminders.create_list" | "reminders.rename_list" | "reminders.delete_list" => {
