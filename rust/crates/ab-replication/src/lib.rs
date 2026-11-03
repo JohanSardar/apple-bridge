@@ -2,6 +2,7 @@
 mod clock;
 mod command;
 mod listener;
+pub mod server;
 mod state;
 use ab_blobs::{Digest, Reference, Store as BlobStore};
 use ab_trust::wire::{

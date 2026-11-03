@@ -1,6 +1,8 @@
 #![forbid(unsafe_code)]
+mod gateway;
 mod identity;
 pub mod iphone;
+pub use gateway::{AgentLevel, VerifiedDelegation};
 mod pairing;
 mod store;
 pub mod tls;

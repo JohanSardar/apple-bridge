@@ -15,7 +15,7 @@ use std::{
 pub struct Authority {
     home: PathBuf,
     pub certificate: Vec<u8>,
-    key: Vec<u8>,
+    pub(crate) key: Vec<u8>,
     pub fingerprint: String,
 }
 #[derive(serde::Serialize)]
@@ -187,11 +187,26 @@ impl Authority {
                     return false;
                 };
                 check.update(hash.as_bytes());
-                check.verify_slice(&tag).is_ok() && p.active() && p.kind == "token"
+                check.verify_slice(&tag).is_ok()
+                    && p.active()
+                    && ["token", "agent"].contains(&p.kind.as_str())
             })
             .ok_or(Error::Unauthorized)?;
         if let Some(e) = d.enrollment {
             p.grants = effective_grants(&p.grants, &e.grants);
+        }
+        if p.kind == "agent" {
+            self.update(|d| {
+                let current = d
+                    .principals
+                    .iter_mut()
+                    .find(|c| c.id == p.id && c.token_hash == hash && c.active())
+                    .ok_or(Error::Unauthorized)?;
+                let now = serde_json::json!(jiff::Timestamp::now().to_string());
+                current.extra.insert("last_used".into(), now.clone());
+                p.extra.insert("last_used".into(), now);
+                Ok(())
+            })?;
         }
         Ok(p)
     }
@@ -202,7 +217,10 @@ impl Authority {
         .with_protocol_versions(&[&rustls::version::TLS13])
         .map_err(|e| Error::Identity(e.to_string()))?
         .dangerous()
-        .with_custom_certificate_verifier(Arc::new(crate::tls::Pin { digest: pin.into() }))
+        .with_custom_certificate_verifier(Arc::new(crate::tls::Pin {
+            digest: pin.into(),
+            accept_unpaired: false,
+        }))
         .with_client_auth_cert(
             vec![self.certificate.clone().into()],
             rustls::pki_types::PrivatePkcs8KeyDer::from(self.key.clone()).into(),
@@ -210,12 +228,25 @@ impl Authority {
         .map_err(|e| Error::Identity(e.to_string()))
     }
     pub fn server_tls(&self, pin: &str) -> Result<rustls::ServerConfig, Error> {
+        self.listener_tls(pin, false)
+    }
+    pub fn gateway_tls(&self) -> Result<rustls::ServerConfig, Error> {
+        self.listener_tls("", true)
+    }
+    fn listener_tls(
+        &self,
+        pin: &str,
+        accept_unpaired: bool,
+    ) -> Result<rustls::ServerConfig, Error> {
         rustls::ServerConfig::builder_with_provider(Arc::new(
             rustls::crypto::ring::default_provider(),
         ))
         .with_protocol_versions(&[&rustls::version::TLS13])
         .map_err(|e| Error::Identity(e.to_string()))?
-        .with_client_cert_verifier(Arc::new(crate::tls::Pin { digest: pin.into() }))
+        .with_client_cert_verifier(Arc::new(crate::tls::Pin {
+            digest: pin.into(),
+            accept_unpaired,
+        }))
         .with_single_cert(
             vec![self.certificate.clone().into()],
             rustls::pki_types::PrivatePkcs8KeyDer::from(self.key.clone()).into(),
@@ -280,6 +311,29 @@ impl Authority {
         Ok(p)
     }
     pub fn authorize(&self, p: &Principal, grant: &Grant) -> Result<(), Error> {
+        if p.kind == "delegated" {
+            if p.level == "read" && grant.as_str().ends_with(":write")
+                || !subset(std::slice::from_ref(grant), &p.grants)
+            {
+                return Err(Error::Unauthorized);
+            }
+            let parent = self
+                .load()?
+                .principals
+                .into_iter()
+                .find(|current| {
+                    current.kind == "replica"
+                        && current.active()
+                        && current.fingerprint == p.fingerprint
+                        && subset(&p.grants, &current.grants)
+                })
+                .ok_or(Error::Unauthorized)?;
+            return if subset(std::slice::from_ref(grant), &parent.grants) {
+                Ok(())
+            } else {
+                Err(Error::Unauthorized)
+            };
+        }
         let current = self.principal(&p.id)?;
         if current.kind == "agent" && current.level == "read" && grant.as_str().ends_with(":write")
             || !subset(std::slice::from_ref(grant), &current.grants)

@@ -9,10 +9,11 @@ use sha2::{Digest, Sha256};
 #[derive(Debug)]
 pub(crate) struct Pin {
     pub(crate) digest: String,
+    pub(crate) accept_unpaired: bool,
 }
 impl Pin {
     fn check(&self, cert: &CertificateDer<'_>, now: UnixTime) -> Result<(), rustls::Error> {
-        if format!("{:x}", Sha256::digest(cert.as_ref())) != self.digest {
+        if !self.accept_unpaired && format!("{:x}", Sha256::digest(cert.as_ref())) != self.digest {
             return Err(rustls::Error::General("pin".into()));
         }
         let (_, parsed) = x509_parser::parse_x509_certificate(cert.as_ref())

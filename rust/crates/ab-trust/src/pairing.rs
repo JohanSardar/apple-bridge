@@ -18,7 +18,7 @@ pub struct Enrollment {
     pub fingerprint: String,
     pub grants: Vec<Grant>,
 }
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PairCode {
     #[serde(default)]
     pub purpose: String,
