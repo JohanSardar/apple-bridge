@@ -78,9 +78,6 @@ func runRemoteFlow(ctx context.Context, s Scenario, level string) Evidence {
 	add := func(name string, passed bool) {
 		e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: passed})
 	}
-	if level == "real" {
-		return runRemotePrivateReal(ctx, s, level)
-	}
 	remoteProbeRejections(ctx, add)
 	remoteCancelFlow(ctx, add)
 	remoteFailureFlow(ctx, add)
