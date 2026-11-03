@@ -1,0 +1,21 @@
+{"fixture":"attachment.gz","text":"[ab-test decoder] Title\nbody 🧪\n","utf8_sha256":"242cdc29421680f5efe381698d306543e5f77c629fa3c69ff756af6161b24a69"}
+{"fixture":"checklist.gz","text":"[ab-test decoder] Title\nbody 🧪\n","utf8_sha256":"242cdc29421680f5efe381698d306543e5f77c629fa3c69ff756af6161b24a69"}
+{"error":true,"fixture":"duplicate-text.gz"}
+{"fixture":"formatting.gz","text":"[ab-test decoder] Title\nbody 🧪\n","utf8_sha256":"242cdc29421680f5efe381698d306543e5f77c629fa3c69ff756af6161b24a69"}
+{"error":true,"fixture":"full-table.gz"}
+{"fixture":"full.gz","text":"[ab-test decoder] Full 🧪\nHeading\nSubheading\nCode <&>\nBullet\nDash\nNumber\nUnchecked\nChecked\nQuote\nStyled link\n￼\n￼\n","utf8_sha256":"8225e059151fb75fd7082cf5d1d9db3ec88e86f993dc0761020ee6a7522cea69"}
+{"fixture":"large-body.gz","utf8_sha256":"3d72beec291146baf3bfe96deb6f9f225c675789f22e55c111b36c4a28e02cb4"}
+{"error":true,"fixture":"malformed.gz"}
+{"fixture":"native-direction.gz","text":"[ab-test] Plain\nbody 🧪\n","utf8_sha256":"55b8f904f3d118b9ca5df396b08da19817a9a607a6205d601482dcc87a44116b"}
+{"fixture":"native-indent-0.gz","text":"[ab-test] Plain\nbody 🧪\n","utf8_sha256":"55b8f904f3d118b9ca5df396b08da19817a9a607a6205d601482dcc87a44116b"}
+{"fixture":"native-indent-1.gz","text":"[ab-test] Plain\nbody 🧪\n","utf8_sha256":"55b8f904f3d118b9ca5df396b08da19817a9a607a6205d601482dcc87a44116b"}
+{"fixture":"native-plain.gz","text":"[ab-test] Plain\nbody 🧪\n","utf8_sha256":"55b8f904f3d118b9ca5df396b08da19817a9a607a6205d601482dcc87a44116b"}
+{"fixture":"native-rich.gz","text":"[ab-test] Plain\nbody 🧪\n","utf8_sha256":"55b8f904f3d118b9ca5df396b08da19817a9a607a6205d601482dcc87a44116b"}
+{"fixture":"native-unknown.gz","text":"[ab-test] Plain\nbody 🧪\n","utf8_sha256":"55b8f904f3d118b9ca5df396b08da19817a9a607a6205d601482dcc87a44116b"}
+{"fixture":"plain.gz","text":"[ab-test decoder] Title\nbody 🧪\n","utf8_sha256":"242cdc29421680f5efe381698d306543e5f77c629fa3c69ff756af6161b24a69"}
+{"fixture":"split-title.gz","text":"Title\nbody\n","utf8_sha256":"7fbcade393afba9d3ed614a5cd972cabc0faab085ea94c47ec907765c71c506f"}
+{"fixture":"surrogate-split.gz","text":"🧪","utf8_sha256":"0db66ddb1ed9d843f2aff1fc93ea43218fe5b7f96c4ae1cead77be0ba315c0c1"}
+{"fixture":"table.gz","text":"[ab-test decoder] Title\nbody 🧪\n","utf8_sha256":"242cdc29421680f5efe381698d306543e5f77c629fa3c69ff756af6161b24a69"}
+{"fixture":"title-attachment.gz","text":"￼\n","utf8_sha256":"ae88816dfe9c643151d8e5048692091dbe5a998adf770b8bfb68ef3c85aacd60"}
+{"fixture":"unknown-style.gz","text":"[ab-test] Future style","utf8_sha256":"b3bc3860c01c50fd03851ed5b685adb15f31a4751220bcf1c918600b1b3c056e"}
+{"fixture":"wrong-weight-wire.gz","text":"[ab-test] text","utf8_sha256":"3652fc6796a3a9e41881615e74fbf1f16cbac8a4ee60de18aedda10a2178d63e"}

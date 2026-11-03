@@ -51,11 +51,11 @@ IDs, spends credits, receives Committed and persists checkpoints. No decoder
 port changes that ownership. A later ab-session integration must explicitly
 transfer each responsibility after its separate shadow-comparison gate.
 
-## Pending source work
+## Source scope
 
-The Notes reader is pending. Screen Time, Safari, Calls, Voicemail, Voice
-Memos and Mail have synthetic stream evidence below. No 24-hour shadow evidence
-is claimed.
+Screen Time, Safari, Calls, Voicemail, Voice Memos, Mail and Notes have
+synthetic stream evidence below. Messages remains the separate worker’s
+implementation. No 24-hour shadow evidence is claimed.
 
 ## Messages worker coordination (t3/rust-messages-reader)
 
@@ -72,8 +72,9 @@ projections implement Serialize. `body_digest` returns lowercase hex SHA-256.
 `plist::Value` has Null, Bool, Integer(i64), Real(f64), Date(reference seconds),
 Data(Vec<u8>), String, Uid(usize), Array and Dictionary(BTreeMap) variants.
 `rich::balloon`, `sticker` and `chat_properties` return serde_json Values.
-Messages capture ownership is unchanged by this merge. Readers should encode
-record data through `ab_wire::gojson::record_data(..., EscapeMode::Html)`.
+Messages capture ownership is unchanged by this merge. For Swift Double-bearing projections, `native_json::record_data` preserves
+Swift numeric tokens before calling gojson HTML mode. Raw JSON callers can use
+`ab_wire::gojson::record_data(..., EscapeMode::Html)` directly.
 
 ## Messages capture API
 
@@ -387,3 +388,78 @@ fixture as a test; a separate race/clock test proves acknowledgement ordering,
 state preservation on failed reads and deadline recovery. 32 Swift URL vectors
 cover account/host case, percent encoding, Unicode, IPv6, invalid ports and path
 components. No HTTP/URL networking dependency was added.
+
+
+## Notes metadata, revision checkpoints and hydration
+
+`notes_reader::Reader::open(database, staging)` requires explicit paths. The
+reader never opens Notes, runs commands, requests TCC or registers itself.
+`reconcile(context)` returns a pending complete metadata batch. `commit` accepts
+it only after Committed, then schedules hydration. `hydrate_next` returns one
+pending hydration; check `hydration_current` immediately before emission and
+call `commit_hydration` after acknowledgement. Both fingerprint and generation
+must still match. Stale work cannot overwrite newer metadata. A changed source
+snapshot sets reconciliation_pending. Source scheduling, credits and IPC remain
+caller responsibilities; there is no gateway dependency in this implementation.
+
+Revision checkpoints contain selected object ownership/revision fields and
+body revisions, not historical body copies. Unchanged notes are not decoded or
+hashed. Folder/account, attachment/media ownership and body revisions propagate
+to affected notes. Metadata precedes hydration; changed work takes priority.
+Bodies respect locks, trash ancestry, smart/read-only folders, missing ownership
+and malformed wire data. Metadata preview, fingerprint/dependency hashes,
+large-body externalization and raw undecoded-body blobs preserve Swift output.
+Generation is notes-UUID and native fingerprints match Swift exactly. The
+NotesDatabase compatibility path preserves its omitted NULLs, Double numbers,
+C-string text projection and one-second busy timeout; other readers retain
+strict SQLite UTF-8 and their existing timeout.
+
+`resume_identities` accepts a generation and collection/key pairs from session
+checkpoint storage. It revalidates missing candidates on the bootstrap scan.
+The lab CLI keeps its own tuple identity cache. Swift's unordered absence,
+retry and asset-invalidation loops now sort keys, making the resulting stream
+reproducible. This does not change which records qualify for emission.
+
+Context carries session coverage and Helper facts. `Facts.mime` maps every
+encountered UTI to a MIME string or explicit None. `Facts.supports` maps
+UTI|extension to the Helper's MediaDerivatives.supports result. Supported media
+also needs a digest-keyed DerivativeFacts result (complete, partial or
+unavailable), with generated variant bytes/MIME/dimensions. Missing facts return
+FactsRequired and keep that hydration first in the queue; resolve the missing
+fact before taking another reader step. Missing facts are not reported as
+corrupt content. These are explicit framework inputs, not Rust implementations of
+UTType, ImageIO or AVFoundation. The later native/1 integration supplies them
+from the signed Helper. No network crates or framework calls were added to Rust.
+
+Staged Notes handles use notes-blob:DIGEST, bounded range reads and database
+access revalidation. After draining and acknowledging hydration, call
+finish_hydration(now). It preserves active/recent blobs and prunes inactive
+regular files older than one hour; symlinks are untouched. Unit clock tests
+cover that boundary. Asset paths in context explicitly invalidate affected
+notes without requiring a database revision change.
+
+The lab CLI source notes supports scan, hold, release and blob commands.
+`parity/notes/build-swift.sh OUTPUT SOURCE_SUPPORT DECODERS` compiles the actual
+Swift source and media code under per-command ab-local. Only the media cache
+root is rewritten in a temporary compilation copy to use the supplied fixture
+root. The oracle never invokes commands or source readiness/TCC checks. It
+obtains MIME/support facts from the framework; the comparison forwards actual
+synthetic PNG derivative bytes/results to Rust as its framework inputs. All
+fixture trees, escape files and cache directories stay inside private temporary
+parents. No live databases or user media caches are accessed.
+
+Verified replay: 43 stages, 182 matching responses and identical Go JSON Data
+hashes, including retained WAL, idle/no-revision changes, cloud bookkeeping,
+title/body/lock changes, attachment ownership and late/changed/missing assets,
+symlink escapes, a real synthetic-PNG derivative result, folder cycles/trash/
+smart state, GUID changes/deletion, missing revisions, schema/UUID changes,
+held-hydration races, identity-cache restart and complete empty reconciliation.
+Blob reads verify exact large-body JSON, raw malformed gzip, immutable old
+attachment bytes and range failures. Separate tests reject stale metadata and
+hydration acknowledgements. All 21 gzip fixtures also exercise the metadata
+plain-text decoder against Swift, including malformed/table inputs. Existing
+full decoder fixtures remain unchanged.
+
+Real-data shadow comparisons, source cutover and session/gateway wiring remain
+orchestrator work. These readers and the fixture CLI provide the independent
+Phase 6 pieces for that later gate.

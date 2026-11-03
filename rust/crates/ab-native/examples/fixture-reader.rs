@@ -61,6 +61,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "voicemail",
         "voice-memos",
         "mail",
+        "notes",
     ]
     .contains(&source.as_str())
         || options
@@ -81,6 +82,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     if source == "mail" {
         return mail(root, options);
+    }
+    if source == "notes" {
+        return notes(root, options);
     }
     let mut reader = Reader::default();
     let frames = options.iter().any(|o| o == "--frames");
@@ -337,6 +341,100 @@ fn mail(root: &Path, options: &[String]) -> Result<(), Box<dyn std::error::Error
             write_json(&mut output, &serde_json::json!({"kind":"failed_scan"}))?;
             output.flush()?;
         }
+        Ok(())
+    };
+    if options.iter().any(|o| o == "--interactive") {
+        for line in std::io::stdin().lock().lines() {
+            run(&line?)?;
+        }
+    } else {
+        run("scan")?;
+    }
+    Ok(())
+}
+
+fn notes(root: &Path, options: &[String]) -> Result<(), Box<dyn std::error::Error>> {
+    use ab_native::notes_reader::{Context, Reader};
+    let cache = root.join("rust-notes-identities.json");
+    let mut reader = Reader::open(
+        &root.join("NoteStore.sqlite"),
+        &root.join("rust-notes-blobs"),
+    )?;
+    if let Ok(bytes) = std::fs::read(&cache) {
+        let saved: serde_json::Value = serde_json::from_slice(&bytes)?;
+        let identities: Vec<(String, String)> =
+            serde_json::from_value(saved["identities"].clone())?;
+        reader.resume_identities(
+            saved["generation"].as_str().ok_or("invalid identities")?,
+            &identities,
+        )?;
+    }
+    let mut ordinal = 0;
+    let frames = options.iter().any(|o| o == "--frames");
+    let context = |ordinal| -> Result<Context, Box<dyn std::error::Error>> {
+        let mut context: Context =
+            serde_json::from_slice(&std::fs::read(root.join("context.json"))?)?;
+        write!(context.capture.checkpoint, "-{ordinal}")?;
+        Ok(context)
+    };
+    let mut run = |line: &str| -> Result<(), Box<dyn std::error::Error>> {
+        let parts = line.split_whitespace().collect::<Vec<_>>();
+        if let ["blob", handle, offset, length] = parts.as_slice() {
+            let value = offset
+                .parse()
+                .ok()
+                .zip(length.parse().ok())
+                .and_then(|(offset, length)| reader.read_blob(handle, offset, length).ok())
+                .unwrap_or_else(|| serde_json::json!({"kind":"failed_blob"}));
+            let mut output = std::io::stdout().lock();
+            write_json(&mut output, &value)?;
+            output.flush()?;
+            return Ok(());
+        }
+        if line == "hold" {
+            std::fs::write(root.join("hold-hydration"), b"hold")?;
+        } else if line == "release" {
+            let _ = std::fs::remove_file(root.join("hold-hydration"));
+        } else if line == "scan" {
+            let context = context(ordinal)?;
+            if let Ok(pending) = reader.reconcile(&context) {
+                emit_capture(&pending.batch, frames)?;
+                reader.commit(pending)?;
+                ordinal += 1;
+                std::fs::write(
+                    &cache,
+                    serde_json::to_vec(
+                        &serde_json::json!({"generation":reader.generation(),"identities":reader.identities()}),
+                    )?,
+                )?;
+            } else {
+                let mut output = std::io::stdout().lock();
+                write_json(&mut output, &serde_json::json!({"kind":"failed_scan"}))?;
+                output.flush()?;
+                return Ok(());
+            }
+        } else {
+            return Err("expected scan, hold, release or blob".into());
+        }
+        if !root.join("hold-hydration").exists() {
+            while reader.has_hydration() {
+                let context = context(ordinal)?;
+                if let Some(pending) = reader.hydrate_next(&context)?
+                    && reader.hydration_current(&pending)?
+                {
+                    emit_capture(&pending.batch, frames)?;
+                    reader.commit_hydration(pending)?;
+                    ordinal += 1;
+                }
+            }
+        }
+        reader.finish_hydration(std::time::SystemTime::now())?;
+        let mut output = std::io::stdout().lock();
+        write_json(
+            &mut output,
+            &serde_json::json!({"kind":"done","changed_notes":reader.changed_notes,"bootstrap_scans":reader.bootstrap_scans}),
+        )?;
+        output.flush()?;
         Ok(())
     };
     if options.iter().any(|o| o == "--interactive") {
