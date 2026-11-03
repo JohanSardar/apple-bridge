@@ -19,6 +19,9 @@ pub fn messages(_: &mut World, input: &Value, _: &mut Evidence) -> Result<()> {
     SEED.store(input["count"].as_u64().unwrap_or(0), Ordering::SeqCst);
     Ok(())
 }
+pub fn seed_count() -> u64 {
+    SEED.load(Ordering::SeqCst)
+}
 pub fn messages_truth(_: &mut World, _: &Value, _: &mut Evidence) -> Result<()> {
     Ok(())
 }

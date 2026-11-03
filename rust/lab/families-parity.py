@@ -4,7 +4,9 @@ from pathlib import Path
 import subprocess
 
 HARNESS_ONLY = {'credential_backend_override_restored'}
-BLOB_SCENARIOS = ['CORE-BLOB-CAP', 'CORE-BLOB-CORRUPT', 'CORE-BLOB-DUPLICATE-REFERENCE',
+BLOB_MESSAGES_A_SCENARIOS = ['messages/MSG-DB-REPLACED', 'messages/MSG-PERMISSION-LOSS', 'messages/MSG-INCOMING',
+                        'messages/MSG-DECODE']
+SCENARIOS = ['CORE-BLOB-CAP', 'CORE-BLOB-CORRUPT', 'CORE-BLOB-DUPLICATE-REFERENCE',
                   'CORE-BLOB-GATEWAY-RETRY', 'CORE-BLOB-GC', 'CORE-BLOB-INTERRUPT',
                   'CORE-BLOB-NO-DIGEST-AUTH', 'CORE-BLOB-OFFLOADED', 'CORE-BLOB-REFERENCE-INDEX',
                   'CORE-BLOB-SLOW-READ', 'CORE-BLOB-STAGE-DURING-TRANSFER',
@@ -44,12 +46,15 @@ def main():
         parser.add_argument('--' + name, required=True)
     parser.add_argument('--scenario', action='append')
     parser.add_argument('--import', dest='imports', action='store_true')
+    parser.add_argument('--messages-a', dest='messages_a', action='store_true')
     parser.add_argument('--media', dest='media', action='store_true')
     parser.add_argument('--web-rm', dest='web_rm', action='store_true')
     parser.add_argument('--native', dest='native', action='store_true')
     args = parser.parse_args()
     if args.imports:
         args.scenario = (args.scenario or []) + IMPORT_SCENARIOS
+    if args.messages_a:
+        args.scenario = (args.scenario or []) + MESSAGES_A_SCENARIOS
     if args.media:
         args.scenario = (args.scenario or []) + MEDIA_SCENARIOS
     if args.web_rm:
