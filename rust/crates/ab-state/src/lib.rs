@@ -3,6 +3,7 @@ mod completion;
 mod protection;
 pub use protection::{BlobProtection, ReferenceSet};
 mod gateway;
+mod health;
 mod ledger;
 pub use gateway::{CommitResult, FrozenSnapshot, restore};
 pub use ledger::{BlobReference, Command, CommandError, CommandEvent, CommandPart, CommandRecord};
