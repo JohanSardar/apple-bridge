@@ -21,3 +21,5 @@ path = "src/main.rs"
 name = "ab-shortcuts-checks"
 path = "src/checks.rs"
 required-features = ["lab-harness"]
+[dev-dependencies]
+tempfile = "3"

@@ -45,6 +45,13 @@ impl Image {
         [0, 1, 2].map(|i| f64::from(self.pixels[at + i]) * 257.0)
     }
     #[must_use]
+    pub fn alpha16(&self, x: usize, y: usize) -> f64 {
+        if self.channels < 4 {
+            return 65535.0;
+        }
+        f64::from(self.pixels[(y * self.width + x) * self.channels + 3]) * 257.0
+    }
+    #[must_use]
     pub fn center_marker(&self) -> bool {
         let [r, g, b] = self.rgb16(self.width / 2, self.height / 2);
         r > 50000.0 && g < 12000.0 && b < 12000.0

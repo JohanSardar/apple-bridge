@@ -15,7 +15,10 @@ pub use pairing::{Enrollment, PairCode, pair_proof};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
-pub use store::{CredentialStore, FileStore, KeychainStore, atomic_write};
+pub use store::{
+    CredentialStore, FileStore, KeychainStore, LibsecretStore, StoreEnvironment, atomic_write,
+    select,
+};
 
 pub fn decision_now() -> jiff::Timestamp {
     #[cfg(feature = "lab-harness")]
@@ -50,11 +53,30 @@ pub enum Error {
     Invalid,
     #[error("credential store unavailable")]
     Unavailable,
+    #[error(transparent)]
+    CredentialStore(#[from] CredentialStoreError),
     #[error("invalid identity: {0}")]
     Identity(String),
     #[error(transparent)]
     Http(#[from] reqwest::Error),
 }
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CredentialStoreError {
+    pub code: String,
+    pub store: String,
+    pub remedy: String,
+    pub retryable: bool,
+}
+impl std::fmt::Display for CredentialStoreError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}: {} credential store unavailable; {}",
+            self.code, self.store, self.remedy
+        )
+    }
+}
+impl std::error::Error for CredentialStoreError {}
 pub fn fingerprint(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
 }

@@ -340,6 +340,10 @@ impl Runner for Cli {
 }
 
 pub fn open_pack(directory: &Path) -> Result<(), Error> {
+    open_pack_with(Path::new("/usr/bin/open"), directory)
+}
+
+pub fn open_pack_with(program: &Path, directory: &Path) -> Result<(), Error> {
     let mut paths = Vec::new();
     for name in PACK_NAMES {
         let path = std::path::absolute(directory.join(format!("{name}.shortcut")))?;
@@ -352,10 +356,69 @@ pub fn open_pack(directory: &Path) -> Result<(), Error> {
         }
         paths.push(path);
     }
-    let status = Command::new("/usr/bin/open").args(&paths).status()?;
+    let status = Command::new(program).args(&paths).status()?;
     if status.success() {
         Ok(())
     } else {
         Err(Error::message("open failed"))
+    }
+}
+
+#[cfg(test)]
+mod install_pack_tests {
+    use super::*;
+    use std::os::unix::fs::PermissionsExt;
+
+    type Check = Result<(), Box<dyn std::error::Error>>;
+
+    fn fixture(
+        signed: bool,
+    ) -> Result<(tempfile::TempDir, PathBuf, PathBuf), Box<dyn std::error::Error>> {
+        let dir = tempfile::tempdir()?;
+        let pack = dir.path().join("pack");
+        fs::create_dir(&pack)?;
+        for name in PACK_NAMES {
+            fs::write(
+                pack.join(format!("{name}.shortcut")),
+                if signed {
+                    &b"AEA1payload"[..]
+                } else {
+                    &b"unsigned"[..]
+                },
+            )?;
+        }
+        let log = dir.path().join("argv");
+        let program = dir.path().join("open");
+        fs::write(
+            &program,
+            format!("#!/bin/sh\nprintf '%s\\n' \"$@\" > '{}'\n", log.display()),
+        )?;
+        fs::set_permissions(&program, fs::Permissions::from_mode(0o755))?;
+        Ok((dir, pack, program))
+    }
+
+    #[test]
+    fn install_pack_opens_every_signed_file() -> Check {
+        let (dir, pack, program) = fixture(true)?;
+        open_pack_with(&program, &pack)?;
+        let opened = fs::read_to_string(dir.path().join("argv"))?;
+        let lines: Vec<&str> = opened.lines().collect();
+        assert_eq!(lines.len(), PACK_NAMES.len());
+        for (line, name) in lines.iter().zip(PACK_NAMES) {
+            assert!(line.starts_with('/'));
+            assert!(line.ends_with(&format!("{name}.shortcut")));
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn install_pack_rejects_unsigned_and_missing_files() -> Check {
+        let (dir, pack, program) = fixture(false)?;
+        assert!(open_pack_with(&program, &pack).is_err());
+        assert!(!dir.path().join("argv").exists());
+        let (_dir, pack, program) = fixture(true)?;
+        fs::remove_file(pack.join(format!("{}.shortcut", PACK_NAMES[3])))?;
+        assert!(open_pack_with(&program, &pack).is_err());
+        Ok(())
     }
 }

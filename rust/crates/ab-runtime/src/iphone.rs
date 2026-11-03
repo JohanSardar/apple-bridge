@@ -99,6 +99,17 @@ impl Gateway for PhoneGateway {
         )
     }
     fn authorize(&mut self, row: &QueuedCommand) -> Result<(), Error> {
+        #[cfg(feature = "lab-harness")]
+        if row.principal.starts_with("replica:") {
+            let mode =
+                std::fs::read_to_string(self.home.join("phone-delegated-mode")).unwrap_or_default();
+            if mode.strip_prefix("allow ") == Some(row.request_hash.as_str()) {
+                std::fs::write(self.home.join("phone-delegated-authorized"), "")
+                    .map_err(|_| Error::Unavailable)?;
+                return Ok(());
+            }
+            return Err(Error::Unauthorized);
+        }
         if row.principal.contains('/') {
             return Err(Error::Unauthorized);
         }

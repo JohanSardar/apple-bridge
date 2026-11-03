@@ -171,7 +171,7 @@ fn lease_target(home: &Path) -> Option<(String, String)> {
     Some((address.to_owned(), path))
 }
 
-fn proxy(mut downstream: StreamOwned<ServerConnection, TcpStream>, home: &Path) {
+pub(crate) fn proxy(mut downstream: StreamOwned<ServerConnection, TcpStream>, home: &Path) {
     let Some((method, path, headers, body)) = read_request(&mut downstream) else {
         return;
     };
@@ -522,7 +522,13 @@ impl Gateway {
     }
 
     pub fn lab(&self, action: &str, owner: &str, pin: &str) -> Result<Value> {
-        let body = serde_json::to_vec(&json!({"action": action, "owner": owner, "pin": pin}))?;
+        self.lab_with(action, owner, pin, "")
+    }
+
+    pub fn lab_with(&self, action: &str, owner: &str, pin: &str, digest: &str) -> Result<Value> {
+        let body = serde_json::to_vec(
+            &json!({"action": action, "owner": owner, "pin": pin, "digest": digest}),
+        )?;
         let mut stream = UnixStream::connect(self.home.join("run/blobs-lab.sock"))?;
         stream.set_read_timeout(Some(Duration::from_secs(5)))?;
         write!(

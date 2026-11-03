@@ -1,0 +1,22 @@
+[package]
+name = "lab-demo"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+[lints]
+workspace = true
+[lib]
+path = "src/lib.rs"
+[[bin]]
+name = "lab-demo"
+path = "src/main.rs"
+[dependencies]
+serde_json.workspace = true
+jiff.workspace = true
+sha2.workspace = true
+hex = "0.4"
+base64 = "0.22"
+miniz_oxide = "0.9"
+crc32fast = "1"
+[dev-dependencies]
+gif = "0.14"

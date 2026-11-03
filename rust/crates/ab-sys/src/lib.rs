@@ -1,5 +1,6 @@
 #![deny(unsafe_code)]
 
+pub mod keychain;
 pub mod watch;
 
 use std::{

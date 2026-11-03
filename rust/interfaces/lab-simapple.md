@@ -175,6 +175,95 @@ The listener is configured only by `<home>/lab-relay.json`, read at gateway star
 
 Only `GET /v1/feed` is served; any other path returns 401. The handler is the production relay handler (`feed.RelayHandler()` in Go, `Server::relay_http` in Rust): no client certificate is requested, requests carrying an `Origin` header are rejected with 401, relay/1 hellos (no `version`) are accepted as legacy, relay/2 hellos are bound to the TLS 1.3 exporter `EXPORTER-Channel-Binding` with an empty context. The feed started after authentication is the same one the gateway peer and ingress paths use.
 
+## Maps, location and Files handlers (Phase 8)
+
+The Rust peer answers the Maps and Location queries of the Go simulator (`maps.rs`): `location.current`, `location.geocode`, `location.reverse_geocode`, `maps.search`, `maps.nearby`, `maps.directions`, `maps.eta` and `maps.snapshot`, with the Go argument rules (strict keys, coordinate and radius ranges, `transit` directions `unsupported`, snapshot size 128..1024, at most 50 markers). Snapshots are blank RGBA PNGs stored in the session blob map. `maps.open` prepares and dispatches with the `com.apple.Maps` frontmost evidence bound to the request hash. The peer advertises `maps.open` and the eight `files.*` commands in `Ready`.
+
+`files.rs` serves `files.search` and `files.read` from `files.item` records and `files.create|write|move|rename|trash|set_tags|download|evict` for root `/Bridge Test`, emitting a complete `files.item` capture before the `Outcome`; content is stored base64 in `data.blobs[digest]`, the same store `/dataset` fills, so `BlobRead` serves it.
+
+Real-level runner additions: `Registry::register_standalone(id, handler)` registers a real-level scenario that needs no world (native checks, packaging); `World::helper_app` carries the signed Helper path of a real world; `World::sibling(suffix)` starts a second sim world next to the first (FILE-COMMANDS runs its REST and MCP passes in separate worlds, as the Go harness does).
+
+Gate: `python3 rust/lab/families-parity.py ... --maps` runs MAP-SIM, LOC-SIM, FILE-COMMANDS, FILE-CRUD-REAL and FILE-OFFLOAD-REAL (sim level) in one run against both harnesses; verdicts are identical with the Rust gateway (`lab-queries`).
+
+## Safari, FILE-REPLICA and packaging adapters (Phase 8)
+
+`safari.rs` ports SAF-CAPTURE and SAF-IDLE (sim): the adapter writes the synthetic Safari databases with the same Python fixture as the Go harness, builds and runs the native `SafariChecks`, checks the six observations against the registered collection shapes, posts them to the peer `/safari` route, and compares gateway and replica records. Both are in the `--native` parity set and need macOS.
+
+Compile-only real adapters: SAF-IDLE (`idle_real`), SAF-BOOKMARKS-REAL and SAF-HISTORY-REAL (standalone; native checks against an independent Python truth), FILE-REPLICA (`filerep.rs`, local replica instead of the Ubuntu replica) and PKG-INSTALL/PKG-BACKGROUND (`pkginstall.rs`, standalone). None of these has been run.
+
+QUERY-AGENT and AGENT-SUITE are not ported: they drive a Codex agent over MCP (`lab/agent/codex.py`) and need an LLM, its credentials and the agent task suite.
+
+## Native scenario runner (Phase 8)
+
+`lab-adapters/src/native_runner.rs` ports Go's `runNativeScenario` (`lab/scenarios/native.go`), which `lab/scenarios/runner.go` dispatches by scenario ID, not by YAML step. Ported at sim level: REM-CRUD (both `core/REM-CRUD.yaml`, which uses `command_journey`, and `reminders/REM-CRUD.yaml`, which uses `reminders_crud`; they share one ID and run the same native flow, REST then MCP with `mcp_`-prefixed assertion names), REM-CREATE-EXTERNAL, REM-LIST-MANAGE, REM-LIST-CREATE, REM-RECURRING and REM-PERMISSION-LOSS. The step names `reminders_external`, `reminders_crud`, `reminders_list`, `reminders_recurring` and `reminders_permission_loss` all call `native_runner::run`, and `journey::command_journey` and `journey::seed` hand native IDs over or ignore them. A native world is seeded with `/seed {count: 0}` and one replica regardless of the YAML `replicas` or `seed` values, exactly like Go's `world.New(ctx, level, 1, 0)`. The no-op `fixture` cleanup action is registered because the sim level has nothing to clean.
+
+Reusable pieces for other families: `native_runner::uptime_ns()` and `native_runner::instant_ns(Instant)` are one monotonic nanosecond clock shared by effect stamps and the SSE `Watcher` (which records an `Instant` per change, so `first_seen_title` converts through `instant_ns`); `native_runner::records_at(client)` is Go's `RecordsAt` (records plus the first-page cursor, erroring with `snapshot changed during pagination` if the cursor moves); `native_runner::replicas_equal_gateway(gateway, replicas)` is the `RecordsAt` replica comparison (equal cursor and equal `system.command`-free record lists); `native_runner::without_commands`. The peer controls `/complete-recurring` and `/source-state` already exist in `lab-simapple`. The clock is process-local, which is exact at sim level; peer-supplied `effect_uptime_ns` values from AppleTruth belong to the real level, which is never run.
+
+REM-LIST-LOST-ACK is real-only: `native_runner.rs` compiles its flow (arming `helper/lab-pause-outcome`, the ambiguous response, the paused-outcome marker and list visibility), and reports `native_list_effect_before_lost_outcome` as `unverified` because the native list inventory needs AppleTruth. It is never run at real level.
+
+Other Go scenarios that reach `runNativeScenario`, so their families should build on `native_runner.rs` rather than re-port it: HELPER-LIVE-BACKFILL, HELPER-SESSION-SOAK, HELPER-RESTART-REAL and HELPER-TCC-READY (all real-only; they need `Truth`, `RestartHelper`, helper-home pause files and the signed helper app, so compile-only), and CORE-LIVE-LATENCY at the real level (its sim and replica levels use the `changes` action instead). Their shared prologue (`reminders_ready`, `ready`) and epilogue (`replica_convergence`, per-endpoint `no_scope_leak`) are `Native::protocol` and `Native::epilogue`.
+
+Gate: `python3 rust/lab/families-parity.py ... --reminders` now also runs the seven native files above (`core/REM-CRUD` and `reminders/REM-CRUD` both included). `verdicts()` keys a repeated scenario ID with a trailing `#`, so duplicate IDs are compared pairwise in order. Verdicts are identical for the Go harness and the Rust harness against the Rust gateway on Linux.
+
+## Owner passkey session (`lab-adapters/src/webauthn.rs`)
+
+Scenarios that end in an owner approval need an owner session, and the gateway has no CLI to mint one. The Rust lab ports the Go virtual WebAuthn authenticator into a lab-owned module with no `ab-*` dependency (`p256`, `sha2`, `serde_json`, `curl`):
+
+- `Authenticator` holds a P-256 key, a random 32-byte credential ID, a counter and a user-verified flag. `credential(create, challenge, origin, rp)` builds the same `none`-attestation registration and ES256 assertion the Go authenticator builds (hand-written CBOR, internal transport, user handle `apple-bridge-owner`).
+- `Owner::enroll(&Gateway)` runs `bridge web enroll --host http://localhost:PORT`, drives `/auth/enroll/options` and `/auth/enroll/finish` over HTTP with an `Origin` header, and keeps the `ab_session_local` cookie. `Owner::login()` runs the discoverable-login ceremony with the enrolled key. `Owner::decide(id, "approve"|"reject")` posts the `/approvals/{id}` form and parses the command record out of the status page.
+- The ceremony is the real one: the gateway verifies the attestation, stores the passkey, and verifies the assertion signature and counter. APP-CMD-SIM and APP-NOTIFY-SIM use it for `owner_device`, `owner_authenticated` and `iphone_owner_approval_without_helper`.
+
+## iPhone command and capture lab hooks
+
+`lab-harness` builds of the gateway add these actions on the lab socket for the iPhone capture scenario, which Go drives in-process:
+
+- `phone-delegated` clones a command into an admitted-prepared-dispatched row for a delegated principal.
+- `phone-delegated-mode` (`allow <request_hash>` or `deny`) controls the delegated re-authorization check in the phone gateway adapter. `phone-delegated-authorized` reports whether that check ran for the allowed row.
+- `phone-blob-grant` reports whether a principal holds a query-blob grant for a digest.
+
+Production builds contain none of this.
+
+## Vision, PDF, audio and capture (Phase 8)
+
+The Rust peer answers `vision.ocr`, `pdf.text`, `pdf.search`, `audio.transcribe` and `speech.synthesize` with the Go fixtures (three OCR PNG digests, the fixture PDF digest and any `pdf.artifact` blob reference, the 364-byte WAV), and runs `pdf.annotate`, `speech.say`, `capture.play_sound`, `capture.screenshot`, `capture.camera_photo`, `capture.record_audio`, `mac.screen_record` and `print.document` (the capture operations intercept before the mac family, as in Go). `pdf`, `speech`, `print` and `capture` are advertised in Ready but are not scanned sources. `lab-adapters/src/vision.rs` ports AUD-SIM, PDF-ANNOTATE, PDF-TEXT, VIS-OCR and CAP-SIM, and compiles AUD-TRANSCRIBE, SPEECH-SAY and VIS-IDLE (real-only; the runner rejects them at sim level). Gate: `families-parity.py --vision` on Linux (four scenarios) and `--vision --vision-native` on macOS, where CAP-SIM builds `CaptureChecks`.
+
+## Real-level iPhone qualification (`lab-adapters/src/iphone_phone_real.rs`)
+
+APP-SHELL-REAL, APP-PAIR-REAL, APP-CMD-REAL, APP-NOTIFY-REAL, APP-APPROVE-REAL, APP-LIVE-REAL and APP-INTENTS-REAL are ported from Go's `runIPhoneReal`. They are compile-only and unit-tested on pure parts (pairing-code base32, receipt parsing, requirement tables); no phase 8 work runs them.
+
+- `lab-families --level real` routes these IDs (and the sensor IDs in `iphone_real.rs`) to `iphone_real::run_real` before any world exists. The signed-Helper requirement applies only when the run includes a scenario that is not handled by the iPhone real path, so a phone-only run needs no Helper.
+- The run needs `AB_REAL_DEVICE`, `APPLE_BRIDGE_SECRET_STORE=file` and `APPLE_BRIDGE_IPHONE_ROOT`. It takes the `/tmp/ab-iphone.lock` phone lock, drives the iPhone project's `lab/iphone-real/device.py` and `devicectl` (request copy, launch, receipt polling with the offline-time allowance, 210 s per phase, 800 s total), and always runs the restore handshake.
+- Paired scenarios start an isolated `Gateway` fixture. A `Lan` forwarder listens on `0.0.0.0` with its own TLS certificate, hands connections to the fixture's ingress proxy, and rewrites the pairing code's `address` and `fingerprint` for the phone (`AB_REAL_HOST` or `en0`).
+- Push scenarios point the gateway at a loopback relay stand-in that forwards `POST /iphone/push` to the APNs sandbox with an ES256 token (`AB_REAL_APNS_KEY`, `AB_REAL_APNS_KEY_ID`, `AB_REAL_APNS_TEAM_ID`) and counts accepted and failed pushes for `apns_accepted`.
+- APP-APPROVE-REAL's connector phase registers an OAuth client, creates a pending connector approval, and after the phone decision exchanges the code and checks the token against the API. The pending-approval response field names (`id`, `code`) and the token check operation are unverified against a live run.
+- The paired device ID is read from the gateway's `credentials.json` because the gateway has no CLI to list iPhones.
+
+## Seeded demo generator (Phase 8)
+
+`rust/lab/lab-demo` is the Rust port of `lab/demo` (`demo.Generate`), with no `ab-*` dependency, for every scenario that needs the canonical demo. `lab_demo::generate(Options { seed, huge }) -> Dataset` returns `records` (observation JSON objects with `kind`, `collection`, `native_key`, `scoped_alias`, `data`, `observed_at`), `blobs` (digest to bytes), `live_photos`, `seed` and `counts`; `Dataset::control_json()` is the body for the SimApple `/dataset` route (`records`, base64 `blobs`, `live_photos`). `lab_demo::{EPOCH, ts, reference, chat_key, handle_key, message_key, contact_key}` mirror the Go helpers. The `lab-demo` binary (`--seed N`, `--huge`, `--digest`) prints the dataset for diffing.
+
+The generator reproduces Go's `math/rand/v2` PCG-DXSM (`Uint64`, `IntN`, `Float64`) and the Go call order, so seeds give the same records. Verified on `ssh build` against the Go generator for seeds 1 and 17 and the huge dataset: all 5,415 (and 105,315 for the huge dataset) records, counts, seed, live photo map and blob count are equal when the PNG and GIF byte-derived fields (`size` of image/png and image/gif attachments, and every blob `digest`) are blanked. Those bytes differ because Go's `compress/flate` and `compress/lzw` output are not reproduced: PNGs use unfiltered scanlines through `miniz_oxide`, the GIF has a hand-written LZW encoder (decodes to the same two frames). Pixels, dimensions, MIME types, filenames and the fixture video, audio, Live Photo, PDF and vCard bytes are identical to Go. No scenario assertion compares those digests.
+
+### Thread originator and reminders demo read models (Phase 8)
+
+`lab-adapters` registers WEB-RM-THREAD-ORIGINATOR, WEB-RM-THREAD-ORIGINATOR-PERF (`threads.rs`) and WEB-RM-REMINDERS-DEMO (`reminders_demo.rs`) under `readmodels`. Both use `lab-demo` for the canonical dataset and `demo.rs` to load it: `World::control` passes bodies as argv, so `demo::load` and `demo::send` pipe the JSON to the SimApple `/dataset` route through `curl --data-binary @-` with a long deadline. The thread adapters append the transcript root, the bounded gap messages (non-huge), the 205 distant replies, resolve gateway aliases for `demo-chat-39`, `message-chat` and the replies with `records.query` and `include_aliases`, then run the REST/MCP pagination, cursor-rejection, window and visibility checks and the live SSE inserts, moves and removals with the Go assertion names. The PERF variant also runs the 100-sample filtered and interleaved unfiltered p95 10 ms budgets. The reminders adapter starts one replica with scope `reminders:read,system:read`, loads the 16 generated reminders records, waits for `converged`, counts lists, groups, subtasks, sections, tags, smart lists and the assignee over the gateway records, and checks `reminders.lists` and `reminders.items` over REST and MCP on the gateway and the replica. REST/MCP parity compares responses with the `cursor` removed and null-valued keys dropped, which matches Go's typed decoding.
+
+Gate: `python3 rust/lab/families-parity.py ... --web-rm` runs all five web read-model scenarios. On `ssh build`, WEB-RM-THREAD-ORIGINATOR (32 Rust assertions) and WEB-RM-REMINDERS-DEMO (111) give identical verdicts with the Go harness. WEB-RM-THREAD-ORIGINATOR-PERF loads 105,315 records in one `/dataset` call: on the shared build host (load average 25 to 70) both the Go harness (3 minute client timeout) and the Rust peer (110 second commit wait) timed out at that load step, so no parity verdict exists yet; run it on a quiet host.
+
+## Helper session ports (`helper_ipc`, `session_proxy`, `siri`, `helper_real`)
+
+`helper_ipc::Wire` is the IPC wire client of the Rust runner: length-prefixed frames over the gateway's helper socket, the Challenge/Authenticate/Authenticated handshake with `lab_wire` proofs, `Open` with the 4 MiB byte credit, and Ping/Pong answering while waiting for a frame. `Capture` frames are flattened on the wire (the capture fields sit next to `t`), exactly as the Go `IPCFrame.MarshalJSON` writes them. The 4096-byte send buffer of the blob-progress probe is set through `socket2` because the workspace forbids unsafe code.
+
+HELPER-IPC-RESPONSIVE (19 assertions): handshake, causal create/update with the capture held at the gateway (`lab-command-capture-armed`/`-reached`/`-release` FIFO), observed and conflict replies waiting for the capture receipt, the held live capture (`lab-capture-armed`/`-reached`), a 128 KiB blob chunk written within a second, control round trip, and byte-credit exhaustion closing the session. The runner starts the world's SimApple, so the scenario seeds the reminders list with `/seed {count: 0}`, stops the peer and plays the helper itself.
+
+SESSION-PROXY-BYTES needs `AB_SESSION_BINARY` (the `ab-session` binary). The runner stops the world's peer, starts `ab-session --gateway-fd 3 --helper-fd 4` over two socketpairs (descriptors are remapped by `sh` from stdin/stdout because the workspace forbids `pre_exec`), starts the Rust SimApple binary (path from `--simapple`) against a runner-owned listener, copies all four directions in threads and compares the transcripts byte for byte, then half-closes and checks both directions drain.
+
+SIRI-INTENTS (sim level only) runs the shortcut-probe simulation (one `AB Bridge Status` shortcut returning the not-registered status), the App Intent metadata/source digest checks, the metadata-only helper rejection (`packaging/dev/app-intents.py` with a fake `nm`), the scoped intent-host cleanup (`pgrep -f` with an anchored quoted pattern, SIGTERM, an unrelated process left alone) and the bundle replacement. The Go real-level path (installing the development Helper and launching the intent host) is not ported.
+
+`helper_real` registers HELPER-LIVE-BACKFILL, HELPER-RELEASE-COMMANDS, HELPER-RESTART-REAL, HELPER-SESSION-SOAK, HELPER-SIGNED-APP-CACHE and HELPER-TCC-READY with `Registry::register_real`. Compile-only: nothing runs them. Independent truth fixtures go through `open -a $AB_LAB_TRUTH_APP`. Gaps against Go: live backfill needs a world started with the backfill hold, and the cold/warm world rebuilds of the signed app cache and the post-restart reminder flow of HELPER-RESTART-REAL are not ported.
+
+Gate: `python3 rust/lab/families-parity.py ... --helper` (with `AB_SESSION_BINARY` set) and `--darwin-usage --calls`, identical per-assertion verdicts with the Go harness against the Rust gateway built with `--features lab-queries`.
+
 ### lab-relay client (Phase 8)
 
 `rust/lab/lab-relay` is a standalone relay client with no `ab-*` dependency (rustls, tungstenite, rcgen, x509-parser, ed25519-dalek only). It provides `Ca` (a lab-owned Ed25519 test CA that issues the leaf chain written for `lab-relay.json`), `configure_gateway` and `gateway_address` (write the listener config, read back the bound address), `Link::dial` (TLS 1.3 trusting only the lab CA, SNI `localhost`, optional `Origin`, exporter `EXPORTER-Channel-Binding` with an empty context captured as `Link::binding`), `Identity::load` (a replica home's `identity.pem` and file-store key) and `Identity::generate` (an unpaired device), `authenticate`/`relay1_client`/`relay2_client`/`join` (the relay/1 and relay/2 handshakes including pairing proofs), transcript helpers `input1`/`input2` for oracle checks on captured frames, and `replay_gateway` (a one-shot TLS websocket server that replays a captured challenge and reports whether a proof arrived). The same code drives the Go and Rust gateways.

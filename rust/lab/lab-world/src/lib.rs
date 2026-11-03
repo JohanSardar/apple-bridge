@@ -3,9 +3,10 @@ pub use proxy::FaultProxy;
 use serde_json::Value;
 use std::{
     fs,
+    io::Write,
     os::unix::fs::PermissionsExt,
     path::{Path, PathBuf},
-    process::{Child, Command},
+    process::{Child, Command, Stdio},
     thread,
     time::{Duration, Instant},
 };
@@ -107,6 +108,7 @@ pub fn require_signed_helper(app: Option<&Path>) -> Result<&Path> {
 pub struct World {
     pub directory: PathBuf,
     pub gateway_home: PathBuf,
+    pub helper_app: Option<PathBuf>,
     pub runtime: Value,
     config: WorldConfig,
     gateway: Option<Child>,
@@ -130,6 +132,7 @@ impl World {
         let mut world = Self {
             directory: config.directory.clone(),
             gateway_home: config.directory.join("gateway"),
+            helper_app: None,
             runtime: Value::Null,
             config,
             gateway: None,
@@ -157,6 +160,7 @@ impl World {
         let mut world = Self {
             directory: config.directory.clone(),
             gateway_home: config.directory.join("gateway"),
+            helper_app: Some(app.clone()),
             runtime: Value::Null,
             config: WorldConfig {
                 gateway: config.gateway,
@@ -221,6 +225,18 @@ impl World {
             thread::sleep(Duration::from_millis(25));
         }
     }
+    pub fn sibling(&self, suffix: &str) -> Result<Self> {
+        let name = self
+            .directory
+            .file_name()
+            .ok_or_else(|| Error::Invalid("world directory has no name".into()))?
+            .to_string_lossy()
+            .into_owned();
+        Self::start(WorldConfig {
+            directory: self.directory.with_file_name(format!("{name}-{suffix}")),
+            ..self.config.clone()
+        })
+    }
     pub fn restart_peer(&mut self) -> Result<()> {
         stop(&mut self.peer);
         let _ = fs::remove_file(self.directory.join("sim.sock"));
@@ -284,29 +300,37 @@ impl World {
         output(command)
     }
     pub fn control(&self, route: &str, input: &Value) -> Result<Value> {
+        self.control_for(route, input, 25)
+    }
+    pub fn control_for(&self, route: &str, input: &Value, seconds: u64) -> Result<Value> {
         let mut command = Command::new("curl");
         command
-            .args([
-                "--silent",
-                "--show-error",
-                "--fail",
-                "--max-time",
-                "25",
-                "--unix-socket",
-            ])
+            .args(["--silent", "--show-error", "--fail", "--max-time"])
+            .arg(seconds.to_string())
+            .arg("--unix-socket")
             .arg(self.directory.join("sim.sock"));
         if !input.is_null() {
             command.args([
                 "-H",
                 "Content-Type: application/json",
                 "--data-binary",
-                &serde_json::to_string(input)?,
+                "@-",
             ]);
         }
         command.arg(format!("http://sim{route}"));
-        Ok(serde_json::from_str(&output(command).map_err(|e| {
-            Error::Invalid(format!("control {route}: {e}"))
-        })?)?)
+        let fail = |e: String| Error::Invalid(format!("control {route}: {e}"));
+        command.stdin(Stdio::piped()).stdout(Stdio::piped());
+        let mut child = command.spawn()?;
+        if let Some(mut stdin) = child.stdin.take()
+            && !input.is_null()
+        {
+            stdin.write_all(&serde_json::to_vec(input)?)?;
+        }
+        let result = child.wait_with_output()?;
+        if !result.status.success() {
+            return Err(fail(format!("command exited {}", result.status)));
+        }
+        Ok(serde_json::from_slice(&result.stdout)?)
     }
     pub fn query(&self, operation: &str, input: &Value) -> Result<Value> {
         self.query_with_token(operation, input, &self.token)
@@ -423,6 +447,10 @@ impl World {
     pub fn restart_gateway(&mut self) -> Result<()> {
         self.stop_gateway();
         self.start_gateway()
+    }
+    #[must_use]
+    pub fn config(&self) -> &WorldConfig {
+        &self.config
     }
     pub fn close(&mut self) {
         if let Some(proxy) = self.proxy.take() {

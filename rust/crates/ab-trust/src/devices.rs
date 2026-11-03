@@ -100,6 +100,25 @@ impl Authority {
             Ok((p, out))
         })
     }
+    pub fn device_sessions(&self) -> Result<Vec<Session>, Error> {
+        let d = self.load()?;
+        let sessions: Vec<Session> = read(&d, "devices")?;
+        Ok(sessions
+            .into_iter()
+            .filter(|s| valid(s) && d.principals.iter().any(|p| p.id == s.device_id))
+            .map(|mut s| {
+                s.token_hash.clear();
+                s
+            })
+            .collect())
+    }
+    pub fn lock_web(&self) -> Result<(), Error> {
+        self.update(|d| {
+            d.principals.retain(|p| p.kind != "device");
+            d.extra.remove("devices");
+            Ok(())
+        })
+    }
     pub fn create_web_enroll(&self) -> Result<String, Error> {
         let raw = token(20);
         self.update(|d| {
@@ -129,5 +148,31 @@ impl Authority {
         } else {
             Err(Error::Unauthorized)
         }
+    }
+}
+#[cfg(test)]
+mod tests {
+    use crate::Authority;
+    #[test]
+    fn lock_web_drops_device_sessions_and_principals() -> Result<(), Box<dyn std::error::Error>> {
+        let home = tempfile::tempdir()?;
+        let authority = Authority::open(home.path())?;
+        let (_, trusted) = authority.create_device_session("trusted")?;
+        let (_, public) = authority.create_device_session("public")?;
+        let sessions = authority.device_sessions()?;
+        assert_eq!(sessions.len(), 2);
+        assert!(sessions.iter().all(|s| s.token_hash.is_empty()));
+        assert!(sessions.iter().any(|s| s.device_id == trusted.device_id));
+        assert!(sessions.iter().any(|s| s.device_id == public.device_id));
+        authority.lock_web()?;
+        assert!(authority.device_sessions()?.is_empty());
+        assert!(
+            authority
+                .load()?
+                .principals
+                .iter()
+                .all(|p| p.kind != "device")
+        );
+        Ok(())
     }
 }

@@ -36,22 +36,40 @@ fn run() -> Result<bool, Box<dyn std::error::Error>> {
         simapple.ok_or("--simapple required")?.canonicalize()?
     };
     let output = output.ok_or("--output required")?;
-    if real {
+    let phone_only = !paths.is_empty()
+        && paths.iter().all(|path| {
+            path.file_stem()
+                .and_then(|stem| stem.to_str())
+                .is_some_and(lab_adapters::iphone_real::handles)
+        });
+    if real && !phone_only {
         lab_world::require_signed_helper(helper.as_deref())?;
     }
     fs::create_dir_all(&output)?;
     lab_adapters::replicas::configure(&gateway);
+    lab_adapters::session_proxy::configure(&simapple);
     let registry = lab_adapters::registry();
     let mut passed = !paths.is_empty();
     for (index, path) in paths.iter().enumerate() {
         let mut scenario: Scenario = serde_saphyr::from_slice(&fs::read(path)?)?;
         lab_adapters::shortcuts::inject(&mut scenario);
+        lab_adapters::connectors::inject(&mut scenario);
         if scenario.when.is_empty()
             && lab_adapters::readmodels::SCENARIOS.contains(&scenario.id.as_str())
         {
             scenario.when.push(serde_json::json!({"readmodels": {}}));
         }
+        if scenario.when.is_empty()
+            && let Some(step) = lab_adapters::implied_step(&scenario.id)
+        {
+            scenario.when.push(serde_json::json!({ step: {} }));
+        }
         if real {
+            if let Some(evidence) = lab_adapters::iphone_real::run_real(&scenario) {
+                passed &= evidence.passed;
+                println!("{}", serde_json::to_string(&evidence)?);
+                continue;
+            }
             let evidence = registry.run_real(
                 &scenario,
                 RealConfig {

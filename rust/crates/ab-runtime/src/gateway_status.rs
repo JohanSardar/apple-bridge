@@ -3,6 +3,14 @@ use ab_operations::GatewayStore;
 use std::sync::Arc;
 use tokio::sync::{Mutex, watch};
 
+pub fn grace_seconds(grace_ms: u64) -> Result<i64, Error> {
+    if grace_ms == 0 {
+        Ok(24 * 60 * 60)
+    } else {
+        i64::try_from(grace_ms.div_ceil(1000)).map_err(|_| Error::Invalid)
+    }
+}
+
 pub async fn run(
     state: GatewayStore,
     blobs: Arc<Mutex<ab_blobs::Store>>,
@@ -11,11 +19,7 @@ pub async fn run(
 ) -> Result<(), Error> {
     let mut tick = tokio::time::interval(std::time::Duration::from_millis(100));
     let mut gc = tokio::time::interval(std::time::Duration::from_secs(1));
-    let grace = if grace_ms == 0 {
-        24 * 60 * 60
-    } else {
-        i64::try_from(grace_ms.div_ceil(1000)).map_err(|_| Error::Invalid)?
-    };
+    let grace = grace_seconds(grace_ms)?;
     loop {
         tokio::select! {
             _ = stop.changed() => return Ok(()),
