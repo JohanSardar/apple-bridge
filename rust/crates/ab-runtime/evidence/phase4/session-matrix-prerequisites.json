@@ -1,0 +1,240 @@
+{
+  "session_binary": "ab-session",
+  "trials": [
+    {
+      "implementation": "go",
+      "trial": 0,
+      "passed": true,
+      "metrics": {
+        "capture_observer_resets": 0,
+        "gateway_to_helper_bytes": 1171,
+        "gateway_to_helper_received_bytes": 1171,
+        "helper_to_gateway_bytes": 5827,
+        "helper_to_gateway_received_bytes": 5827
+      },
+      "failures": []
+    },
+    {
+      "implementation": "go",
+      "trial": 1,
+      "passed": true,
+      "metrics": {
+        "capture_observer_resets": 0,
+        "gateway_to_helper_bytes": 873,
+        "gateway_to_helper_received_bytes": 873,
+        "helper_to_gateway_bytes": 4598,
+        "helper_to_gateway_received_bytes": 4598
+      },
+      "failures": []
+    },
+    {
+      "implementation": "go",
+      "trial": 2,
+      "passed": true,
+      "metrics": {
+        "capture_observer_resets": 0,
+        "gateway_to_helper_bytes": 738,
+        "gateway_to_helper_received_bytes": 738,
+        "helper_to_gateway_bytes": 4598,
+        "helper_to_gateway_received_bytes": 4598
+      },
+      "failures": []
+    },
+    {
+      "implementation": "go",
+      "trial": 3,
+      "passed": true,
+      "metrics": {
+        "capture_observer_resets": 0,
+        "gateway_to_helper_bytes": 738,
+        "gateway_to_helper_received_bytes": 738,
+        "helper_to_gateway_bytes": 4598,
+        "helper_to_gateway_received_bytes": 4598
+      },
+      "failures": []
+    },
+    {
+      "implementation": "go",
+      "trial": 4,
+      "passed": true,
+      "metrics": {
+        "capture_observer_resets": 0,
+        "gateway_to_helper_bytes": 634,
+        "gateway_to_helper_received_bytes": 634,
+        "helper_to_gateway_bytes": 4305,
+        "helper_to_gateway_received_bytes": 4305
+      },
+      "failures": []
+    },
+    {
+      "implementation": "go",
+      "trial": 5,
+      "passed": false,
+      "metrics": {
+        "capture_observer_resets": 0,
+        "gateway_to_helper_bytes": 738,
+        "gateway_to_helper_received_bytes": 738,
+        "helper_to_gateway_bytes": 4598,
+        "helper_to_gateway_received_bytes": 4305
+      },
+      "failures": [
+        "helper_to_gateway_exact_transcript"
+      ]
+    },
+    {
+      "implementation": "go",
+      "trial": 6,
+      "passed": true,
+      "metrics": {
+        "capture_observer_resets": 0,
+        "gateway_to_helper_bytes": 738,
+        "gateway_to_helper_received_bytes": 738,
+        "helper_to_gateway_bytes": 4598,
+        "helper_to_gateway_received_bytes": 4598
+      },
+      "failures": []
+    },
+    {
+      "implementation": "go",
+      "trial": 7,
+      "passed": true,
+      "metrics": {
+        "capture_observer_resets": 0,
+        "gateway_to_helper_bytes": 1527,
+        "gateway_to_helper_received_bytes": 1527,
+        "helper_to_gateway_bytes": 6113,
+        "helper_to_gateway_received_bytes": 6113
+      },
+      "failures": []
+    },
+    {
+      "implementation": "rust",
+      "trial": 0,
+      "passed": false,
+      "metrics": {
+        "capture_observer_resets": 0,
+        "gateway_to_helper_bytes": 1316,
+        "gateway_to_helper_received_bytes": 1184,
+        "helper_to_gateway_bytes": 5589,
+        "helper_to_gateway_received_bytes": 5589
+      },
+      "failures": [
+        "gateway_to_helper_exact_transcript"
+      ]
+    },
+    {
+      "implementation": "rust",
+      "trial": 1,
+      "passed": true,
+      "metrics": {
+        "capture_observer_resets": 0,
+        "gateway_to_helper_bytes": 1258,
+        "gateway_to_helper_received_bytes": 1258,
+        "helper_to_gateway_bytes": 5317,
+        "helper_to_gateway_received_bytes": 5317
+      },
+      "failures": []
+    },
+    {
+      "implementation": "rust",
+      "trial": 2,
+      "passed": true,
+      "metrics": {
+        "capture_observer_resets": 0,
+        "gateway_to_helper_bytes": 1494,
+        "gateway_to_helper_received_bytes": 1494,
+        "helper_to_gateway_bytes": 5606,
+        "helper_to_gateway_received_bytes": 5606
+      },
+      "failures": []
+    },
+    {
+      "implementation": "rust",
+      "trial": 3,
+      "passed": true,
+      "metrics": {
+        "capture_observer_resets": 0,
+        "gateway_to_helper_bytes": 1316,
+        "gateway_to_helper_received_bytes": 1316,
+        "helper_to_gateway_bytes": 5588,
+        "helper_to_gateway_received_bytes": 5588
+      },
+      "failures": []
+    },
+    {
+      "implementation": "rust",
+      "trial": 4,
+      "passed": true,
+      "metrics": {
+        "capture_observer_resets": 0,
+        "gateway_to_helper_bytes": 1316,
+        "gateway_to_helper_received_bytes": 1316,
+        "helper_to_gateway_bytes": 5589,
+        "helper_to_gateway_received_bytes": 5589
+      },
+      "failures": []
+    },
+    {
+      "implementation": "rust",
+      "trial": 5,
+      "passed": false,
+      "metrics": {
+        "capture_observer_resets": 0,
+        "gateway_to_helper_bytes": 1390,
+        "gateway_to_helper_received_bytes": 1390,
+        "helper_to_gateway_bytes": 5896,
+        "helper_to_gateway_received_bytes": 5606
+      },
+      "failures": [
+        "helper_to_gateway_exact_transcript"
+      ]
+    },
+    {
+      "implementation": "rust",
+      "trial": 6,
+      "passed": false,
+      "metrics": {
+        "capture_observer_resets": 0,
+        "gateway_to_helper_bytes": 1316,
+        "gateway_to_helper_received_bytes": 1184,
+        "helper_to_gateway_bytes": 5588,
+        "helper_to_gateway_received_bytes": 5588
+      },
+      "failures": [
+        "gateway_to_helper_exact_transcript"
+      ]
+    },
+    {
+      "implementation": "rust",
+      "trial": 7,
+      "passed": true,
+      "metrics": {
+        "capture_observer_resets": 0,
+        "gateway_to_helper_bytes": 1316,
+        "gateway_to_helper_received_bytes": 1316,
+        "helper_to_gateway_bytes": 5586,
+        "helper_to_gateway_received_bytes": 5586
+      },
+      "failures": []
+    }
+  ],
+  "qualification": "not stable: exact transcript mismatch reproduces against both Go and Rust gateways; existing assertions retained",
+  "sse_probe": {
+    "request": "GET /v1/changes with an empty Last-Event-ID header",
+    "rust_gateway_status": 409,
+    "go_replica_status": 200,
+    "go_replica_heartbeat_seconds": [
+      5.016,
+      10.017,
+      15.018
+    ],
+    "qualification": "Rust Frontdoor parses the empty header as a cursor before heartbeat streaming begins"
+  },
+  "source_commit": "f6a592557ef1a5134352f7759f589fc8e8005fae",
+  "gateway_sha256": "68be567ad88a8a323aca2ba50e285eef5b5fc23931ebb7e5b74c0e61a038a6ee",
+  "session_sha256": "7579cafd0aab994e84a36c594ccbbcb0a423621f9e82e8bb2fcee43d5ee0fc0a",
+  "checks": {
+    "make rust-ci": "passed",
+    "make gateway-matrix": "165 pass / 18 fail / 18 blocked; all 201 completed"
+  }
+}
