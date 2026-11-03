@@ -216,7 +216,7 @@ impl<G: Gateway> Delivery<G> {
             || row.target()? != phone.id
             || row.request_hash != upload.request_hash
             || row.state != CommandState::Dispatched
-            || jiff::Timestamp::now()
+            || ab_trust::decision_now()
                 >= row
                     .expires_at
                     .parse::<jiff::Timestamp>()
@@ -490,8 +490,8 @@ impl<G: Gateway> Delivery<G> {
             }
             tokio::select! {
                 changed = stop.changed() => { if changed.is_err() || *stop.borrow() { return; } }
-                _ = interval.tick() => { let _ = self.push_once(&client, jiff::Timestamp::now().as_second()).await; }
-                () = self.wake.notified() => { let _ = self.push_once(&client, jiff::Timestamp::now().as_second()).await; }
+                _ = interval.tick() => { let _ = self.push_once(&client, ab_trust::decision_now().as_second()).await; }
+                () = self.wake.notified() => { let _ = self.push_once(&client, ab_trust::decision_now().as_second()).await; }
             }
         }
     }

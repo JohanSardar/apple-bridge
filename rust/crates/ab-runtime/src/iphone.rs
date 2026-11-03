@@ -287,10 +287,15 @@ async fn secure(
     request: axum::extract::Request,
     next: axum::middleware::Next,
 ) -> axum::response::Response {
-    if request
-        .extensions()
-        .get::<ab_frontdoor::web::SecureTransport>()
-        .is_none()
+    #[cfg(feature = "lab-harness")]
+    let plaintext = std::env::var("APPLE_BRIDGE_LAB_IPHONE_PLAINTEXT").is_ok_and(|v| v == "1");
+    #[cfg(not(feature = "lab-harness"))]
+    let plaintext = false;
+    if (!plaintext
+        && request
+            .extensions()
+            .get::<ab_frontdoor::web::SecureTransport>()
+            .is_none())
         || request.headers().contains_key(axum::http::header::ORIGIN)
     {
         return ab_frontdoor::problem(Code::Unauthorized.into());
@@ -340,7 +345,7 @@ pub async fn run(
             _ = stop.changed() => return Ok(()),
             _ = sweep.tick() => {
                 let phone = phone.clone();
-                tokio::task::spawn_blocking(move || phone.sweep(jiff::Timestamp::now().as_second())).await.map_err(|_| crate::Error::Invalid)?.map_err(|_| crate::Error::Invalid)?;
+                tokio::task::spawn_blocking(move || phone.sweep(ab_trust::decision_now().as_second())).await.map_err(|_| crate::Error::Invalid)?.map_err(|_| crate::Error::Invalid)?;
             },
             _ = push.tick() => push_once(&phone, &home).await,
             () = wake.notified() => push_once(&phone, &home).await,
@@ -383,6 +388,6 @@ async fn push_once(
         return;
     };
     let _ = phone
-        .push_once(&client, jiff::Timestamp::now().as_second())
+        .push_once(&client, ab_trust::decision_now().as_second())
         .await;
 }

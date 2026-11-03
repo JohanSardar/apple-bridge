@@ -12,7 +12,7 @@ import subprocess
 import sys
 import time
 
-from shadow import private_directory, normalized_json
+from shadow import private_directory, normalized_json, iphone_request
 
 
 def wait(path, process):
@@ -107,9 +107,12 @@ def main():
         if primer:
             stop(primer)
         stop(gateway)
+    (root / 'iphone-agent.json').write_text(subprocess.check_output(['bin/bridge', 'agent', 'create', '--home', str(home), '--name', 'shadow-approver', '--level', 'approve', '--scope', 'iphone:write'], text=True))
+    subprocess.run(['bin/bridge-lab', 'iphone-device', '--home', str(home), '--output', str(root / 'iphone-device.json')], check=True, stdout=log)
     shutil.copytree(home, root / 'starting')
     (home / 'runtime.json').unlink(missing_ok=True)
-    gateway = subprocess.Popen(gateway_args, stdout=log, stderr=log, env=dict(os.environ, APPLE_BRIDGE_LAB_FEED_LOG=str(feed_log)))
+    observer = root / 'iphone-observer.sock'
+    gateway = subprocess.Popen(gateway_args, stdout=log, stderr=log, env=dict(os.environ, APPLE_BRIDGE_LAB_FEED_LOG=str(feed_log), APPLE_BRIDGE_LAB_IPHONE_PLAINTEXT='1', APPLE_BRIDGE_LAB_IPHONE_OBSERVER=str(observer)))
     tap = helper = None
     try:
         wait(socket, gateway)
@@ -117,7 +120,7 @@ def main():
         with sockets.socket() as reservation:
             reservation.bind(('127.0.0.1', 0))
             admission_port = reservation.getsockname()[1]
-        tap = subprocess.Popen([sys.executable, 'lab/shadow/shadow.py', 'record', '--listen', str(proxy), '--upstream', str(socket), '--output', str(root / 'recording'), '--admission-listen', '127.0.0.1:' + str(admission_port), '--admission-upstream', json.loads((home / 'runtime.json').read_text())['api_address'], '--delegated-log', str(feed_log)], stdout=log, stderr=log)
+        tap = subprocess.Popen([sys.executable, 'lab/shadow/shadow.py', 'record', '--listen', str(proxy), '--upstream', str(socket), '--output', str(root / 'recording'), '--iphone-observer', str(observer), '--admission-listen', '127.0.0.1:' + str(admission_port), '--admission-upstream', json.loads((home / 'runtime.json').read_text())['api_address'], '--delegated-log', str(feed_log)], stdout=log, stderr=log)
         wait(proxy, tap)
         helper = subprocess.Popen(['bin/bridge-lab', 'simapple', '--socket', str(proxy), '--secret-file', str(home / 'apple-secret'), '--control', str(root / 'sim.sock')], stdout=log, stderr=log)
         wait(root / 'sim.sock', helper)
@@ -199,6 +202,29 @@ def main():
             raise RuntimeError('synthetic feed list failed')
         http_call('GET', '/v1/records/reminders.list/' + records[0]['id'])
         http_call('POST', '/v1/op/records.query', {'collection': 'reminders.list'}, {'X-Ingress': 'cli'})
+        device = json.loads((root / 'iphone-device.json').read_text())
+        agent = json.loads((root / 'iphone-agent.json').read_text())
+        def phone_call(path, payload):
+            connection = http.client.HTTPConnection(config['api_address'], timeout=20)
+            try:
+                connection.request('POST', path, iphone_request(device, path, int(time.time()), json.dumps(payload).encode()), {'Content-Type': 'application/json'})
+                response = connection.getresponse()
+                response.read()
+                return response.status
+            finally:
+                connection.close()
+        pending = urllib.request.Request(origin + '/v1/op/iphone.ping', data=json.dumps({'command_id': 'cmd_shadow_phone', 'op': 'iphone.ping', 'args': {'device_id': device['device_id']}}).encode(), headers={'Authorization': 'Bearer ' + agent['token'], 'Content-Type': 'application/json'})
+        with urllib.request.urlopen(pending, timeout=20) as response:
+            held = json.load(response)
+        if held.get('state') != 'awaiting_approval':
+            raise RuntimeError('synthetic iPhone command was not held for approval')
+        request_hash = held['request_hash']
+        if phone_call('/v1/iphone/approval', {'command_id': 'cmd_shadow_phone', 'request_hash': request_hash, 'approve': True}) != 200:
+            raise RuntimeError('synthetic iPhone approval rejected')
+        if phone_call('/v1/iphone/pending', {}) != 200:
+            raise RuntimeError('synthetic iPhone pending rejected')
+        if phone_call('/v1/iphone/result', {'command_id': 'cmd_shadow_phone', 'request_hash': request_hash, 'state': 'observed', 'data': None}) != 200:
+            raise RuntimeError('synthetic iPhone result rejected')
         control = http.client.HTTPConnection('sim', timeout=5)
         control.sock = sockets.socket(sockets.AF_UNIX)
         control.sock.connect(str(root / 'sim.sock'))
@@ -282,20 +308,24 @@ def main():
     manifest = root / 'decisions.json'
     subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'decisions', '--recording', str(recording), '--home', str(home), '--starting-home', str(root / 'starting'), '--output', str(manifest)], check=True, stdout=subprocess.DEVNULL)
     for run in range(args.go_go_runs):
-        result = subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'replay', '--recording', str(recording), '--starting-home', str(root / 'starting'), '--output', str(root / ('replay-go-go-' + str(run))), '--go', args.go, '--rust', args.go, '--decisions', str(manifest), '--exact', '--feed-peer-home', str(feed_peer), '--lab-binary', args.lab], capture_output=True, text=True)
+        result = subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'replay', '--recording', str(recording), '--starting-home', str(root / 'starting'), '--output', str(root / ('replay-go-go-' + str(run))), '--go', args.go, '--rust', args.go, '--decisions', str(manifest), '--iphone-device', str(root / 'iphone-device.json'), '--exact', '--feed-peer-home', str(feed_peer), '--lab-binary', args.lab], capture_output=True, text=True)
         report = json.loads(result.stdout) if result.stdout else {'digests': []}
         if result.returncode or not report['digests'] or any(not row['equal'] for row in report['digests']):
             raise RuntimeError('synthetic Go-Go exact replay failed in run ' + str(run) + ': ' + result.stderr.strip())
         shutil.rmtree(root / ('replay-go-go-' + str(run)))
-    result = subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'replay', '--recording', str(recording), '--starting-home', str(root / 'starting'), '--output', str(root / 'replay-exact'), '--go', args.go, '--rust', args.rust, '--decisions', str(manifest), '--exact', '--feed-peer-home', str(feed_peer), '--lab-binary', args.lab], capture_output=True, text=True)
+    result = subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'replay', '--recording', str(recording), '--starting-home', str(root / 'starting'), '--output', str(root / 'replay-exact'), '--go', args.go, '--rust', args.rust, '--decisions', str(manifest), '--iphone-device', str(root / 'iphone-device.json'), '--exact', '--feed-peer-home', str(feed_peer), '--lab-binary', args.lab], capture_output=True, text=True)
     report = json.loads(result.stdout) if result.stdout else {'digests': []}
     if result.returncode or any(not row['equal'] for row in report['digests']):
         raise RuntimeError('synthetic exact decision replay failed: ' + result.stderr.strip())
+    with sqlite3.connect(home / 'ledger.db') as db:
+        phone_state = db.execute("SELECT state FROM commands WHERE id='cmd_shadow_phone'").fetchone()
+    if not phone_state or phone_state[0] != 'observed':
+        raise RuntimeError('synthetic iPhone command did not complete')
     ingress = sorted({json.loads(line)['ingress'] for line in recording.read_text().splitlines() if json.loads(line).get('ingress')})
     feed_rows = sum(1 for line in recording.read_text().splitlines() if json.loads(line).get('ingress') == 'feed')
     if feed_rows != 3:
         raise RuntimeError('delegated feed observer recorded ' + str(feed_rows) + ' of 3 commands')
-    print(json.dumps({'delegated_feed_commands_recorded': feed_rows, 'exact_decision_replay_equal': True, 'ingress_kinds': ingress, 'alias_clock_equivalence': True, 'go_go_exact_replay_runs_equal': args.go_go_runs, 'rust_diff_tables': len(report['digests']), 'synthetic_capture_recorded': True, 'identical_home_equal': True, 'changed_gojson_bytes_detected': True, 'record_data_key_order_detected': True, 'record_data_clock_detected': True, 'seeded_mismatches_detected': detected, 'frame_types': sorted(kinds)}))
+    print(json.dumps({'delegated_feed_commands_recorded': feed_rows, 'exact_decision_replay_equal': True, 'iphone_ingress_rows': sum(1 for line in recording.read_text().splitlines() if json.loads(line).get('ingress') == 'iphone' and json.loads(line)['direction'] == 'admission'), 'ingress_kinds': ingress, 'alias_clock_equivalence': True, 'go_go_exact_replay_runs_equal': args.go_go_runs, 'rust_diff_tables': len(report['digests']), 'synthetic_capture_recorded': True, 'identical_home_equal': True, 'changed_gojson_bytes_detected': True, 'record_data_key_order_detected': True, 'record_data_clock_detected': True, 'seeded_mismatches_detected': detected, 'frame_types': sorted(kinds)}))
 
 
 if __name__ == '__main__':

@@ -62,6 +62,7 @@ python3 lab/shadow/shadow.py replay --recording "$SHADOW/recording/ipc.shadow" -
 `prove.py --go "$GO_LAB_BINARY" --rust "$RUST_LAB_BINARY"` records REST, MCP, record-read and `X-Ingress: cli` admissions, then requires the exact decision replay.
 
 Delegated feed commands are covered by the section below. iPhone traffic reaches the gateway over the peer listener, not the HTTP front door, so the recorder does not observe it and replay cannot re-issue it.
+Not covered: delegated feed traffic reaches the gateway over the peer listener, not the HTTP front door, so the recorder does not observe it and replay cannot re-issue it (its handshakes use fresh nonces and delegation certificates). A gateway-side feed observer plus a peer-protocol replayer is still required. iPhone ingress is covered below.
 
 ## Explicit lab replay decisions
 
@@ -92,3 +93,12 @@ Lab-tagged Go and Rust `lab-harness` gateways append one JSON line per delegated
 `shadow record --delegated-log <file>` (the file must not exist beforehand) merges those lines into the transcript at stop, by wall time, as `admission`/`response` rows with `ingress: feed`.
 
 `shadow replay --feed-peer-home <home> --lab-binary bin/bridge-lab` re-drives each feed row with `bridge-lab shadow-feed`, which loads the synthetic replica from the peer home, signs a fresh delegation with the recorded principal and request hash, and posts to the clone's peer listener. The starting home must already enroll that replica (`bridge pair` then `bridge join --home <peer-home>`), the peer home is copied per gateway and the response outcome must equal the recorded one. Replay without `--feed-peer-home` fails closed when the recording has feed rows. `prove.py` pairs a synthetic replica before snapshotting the starting home, records a feed submit, status and list, and requires 8 of 8 exact Go-vs-Go replays plus zero Go-vs-Rust table differences (`--lab` sets the `bridge-lab` path).
+## iPhone ingress
+
+Lab Go (`Delivery.Handler`) and Rust (`ab-iphone` router) gateways accept `APPLE_BRIDGE_LAB_IPHONE_OBSERVER`, a Unix socket served by `shadow record --iphone-observer <socket>`. Before handling each `/v1/iphone/*` POST (including `/approval`, `/result` and `/pending`), the gateway sends the request's path, device ID, `at` and payload to the recorder and waits for its acknowledgment, then reports the response status and body afterwards. The recorder appends them as an `admission`/`response` pair with `ingress: iphone` and no signature, so they keep their order against the IPC frames the approval or result causes. An unreachable observer fails the request closed with 503.
+
+`APPLE_BRIDGE_LAB_IPHONE_PLAINTEXT=1` lets both lab gateways serve `/v1/iphone/*` on the loopback API listener, which production requires TLS or the public host for. Replay sets it for the cloned gateways and never sets the observer.
+
+`shadow replay --iphone-device <file>` re-drives those rows. The file holds a synthetic paired device ID and Ed25519 seed (`bridge-lab iphone-device --home <home> --output <file>` pairs one through the real pairing path before the starting snapshot). Each replayed request gets a fresh signature over the recorded payload. With a recorded clock, its `at` is the row's wall second and both gateways verify it, expire commands and sweep against the decision clock, so repeated replays are byte-identical. Without one it uses the current time. A recording from a real phone replays only against a starting home whose paired phone is replaced by the synthetic device.
+
+`prove.py` pairs a synthetic device and an approval-level agent before the snapshot, then has the agent submit `iphone.ping`, and the device approve it, poll `/pending` and send a signed `observed` result. It requires the command to end `observed`, 8 of 8 exact Go-vs-Go replays and zero Go-vs-Rust table differences. The result is signed but not authenticated by Apple: it does not prove a real phone executed anything.

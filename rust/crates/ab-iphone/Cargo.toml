@@ -19,3 +19,6 @@ jiff.workspace = true
 sha2.workspace = true
 axum.workspace = true
 tokio.workspace = true
+
+[features]
+lab-harness = ["ab-trust/lab-harness"]

@@ -220,7 +220,7 @@ func Handler(deps Deps, descriptors []contracts.OperationDescriptor) http.Handle
 			return
 		}
 		if strings.HasPrefix(r.URL.Path, "/v1/iphone/") && deps.Authority != nil {
-			if !public && r.TLS == nil {
+			if !public && !iphoneSecure(r) {
 				respond(w, nil, contracts.ErrUnauthorized)
 				return
 			}

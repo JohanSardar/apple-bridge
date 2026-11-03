@@ -3,6 +3,7 @@ import concurrent.futures
 import http.client
 import http.server
 import base64
+import calendar
 from isolation import require_isolation, require_home
 from contextlib import ExitStack
 from datetime import datetime, timezone
@@ -153,6 +154,48 @@ def record(args):
                         for conn in (source, target):
                             peers.discard(conn)
                             conn.close()
+        observer_server = None
+        if args.iphone_observer:
+            observer_path = Path(args.iphone_observer).resolve()
+            if observer_path.exists():
+                raise ValueError('iPhone observer socket already exists')
+            observer_server = socket.socket(socket.AF_UNIX)
+            observer_server.bind(str(observer_path))
+            os.chmod(observer_path, 0o600)
+            observer_server.listen(16)
+            observer_server.settimeout(.2)
+            def observe(conn):
+                with conn:
+                    conn.settimeout(30)
+                    line = b''
+                    while not line.endswith(b'\n'):
+                        chunk = conn.recv(1 << 20)
+                        if not chunk:
+                            return
+                        line += chunk
+                    event = json.loads(line)
+                    if event['event'] == 'request':
+                        body = json.dumps({'device_id': event['device_id'], 'at': event['at'], 'payload': event.get('payload') or ''}).encode()
+                        number = append('admission', body, session, method='POST', path=event['path'], ingress='iphone', headers={'Content-Type': 'application/json', 'X-Ingress': 'iphone'})
+                    else:
+                        number = append('response', base64.b64decode(event.get('body') or ''), session, request=event['request'], status=event['status'])
+                    conn.sendall(json.dumps({'sequence': number}).encode() + b'\n')
+            def observe_loop():
+                while not stop.is_set():
+                    try:
+                        conn, _ = observer_server.accept()
+                    except socket.timeout:
+                        continue
+                    except OSError:
+                        return
+                    def guarded(connection=conn):
+                        try:
+                            observe(connection)
+                        except (OSError, ValueError, KeyError):
+                            errors.append('iPhone observer failed')
+                            stop.set()
+                    threading.Thread(target=guarded, daemon=True).start()
+            threading.Thread(target=observe_loop, daemon=True).start()
         admission_server = None
         if args.admission_listen:
             host, port = args.admission_listen.rsplit(':', 1)
@@ -221,6 +264,9 @@ def record(args):
                 workers = [worker for worker in workers if worker.is_alive()]
         finally:
             stop.set()
+            if observer_server:
+                observer_server.close()
+                observer_path.unlink(missing_ok=True)
             if admission_server:
                 admission_server.shutdown()
                 admission_server.server_close()
@@ -314,11 +360,32 @@ def connect(path, secret):
     return conn
 
 
-def admit(row, address):
+IPHONE_DEVICE = None
+
+
+def iphone_request(device, path, at, payload):
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    key = Ed25519PrivateKey.from_private_bytes(base64.b64decode(device['signing_seed']))
+    signature = key.sign(b'apple-bridge-iphone/1\0' + path.encode() + b'\0' + str(at).encode() + b'\0' + payload)
+    return json.dumps({'device_id': device['device_id'], 'at': at, 'payload': base64.b64encode(payload).decode(), 'signature': base64.b64encode(signature).decode()}).encode()
+
+
+def wall_seconds(wall):
+    return calendar.timegm(time.strptime(wall[:19], '%Y-%m-%dT%H:%M:%S'))
+
+
+def admit(row, address, at=None):
     conn = http.client.HTTPConnection(address, timeout=60)
     try:
         body = base64.b64decode(row['raw'], validate=True)
-        conn.request(row.get('method', 'POST'), row['path'], body or None, row['headers'])
+        headers = row['headers']
+        if row.get('ingress') == 'iphone':
+            if IPHONE_DEVICE is None:
+                raise ValueError('recording contains iPhone ingress; pass --iphone-device')
+            recorded = json.loads(body)
+            body = iphone_request(IPHONE_DEVICE, row['path'], int(time.time()) if at is None else at, base64.b64decode(recorded['payload']))
+            headers = {'Content-Type': 'application/json'}
+        conn.request(row.get('method', 'POST'), row['path'], body or None, headers)
         result = conn.getresponse()
         raw = result.read()
         try:
@@ -390,7 +457,7 @@ def replay_session(rows, path, secret, api_address, home, clock=None, feed=None)
                         raise ValueError('recording has delegated feed ingress; replay needs --feed-peer-home')
                     admissions[row['sequence']] = pool.submit(feed, row)
                 else:
-                    admissions[row['sequence']] = pool.submit(admit, row, api_address)
+                    admissions[row['sequence']] = pool.submit(admit, row, api_address, wall_seconds(row['wall']) if clock and row.get('wall') else None)
                 sent[row['sequence']] = row
                 persisting(before, admissions[row['sequence']])
                 continue
@@ -519,6 +586,8 @@ def recording_rows(path):
 
 def replay(args):
     require_isolation()
+    global IPHONE_DEVICE
+    IPHONE_DEVICE = json.loads(Path(args.iphone_device).read_text()) if args.iphone_device else None
     require_home(args.starting_home)
     destination = private_directory(args.output)
     original = Path(args.starting_home).resolve()
@@ -576,7 +645,8 @@ def replay(args):
             with sqlite3.connect(database.as_uri() + '?mode=ro', uri=True) as source, sqlite3.connect(home / database.name) as target:
                 source.backup(target)
         path = destination / (name + '.sock')
-        env = dict(os.environ, APPLE_BRIDGE_SECRET_STORE='file')
+        env = dict(os.environ, APPLE_BRIDGE_SECRET_STORE='file', APPLE_BRIDGE_LAB_IPHONE_PLAINTEXT='1')
+        env.pop('APPLE_BRIDGE_LAB_IPHONE_OBSERVER', None)
         if args.decisions:
             decisions = Path(args.decisions).resolve()
             manifest = json.loads(decisions.read_bytes())
@@ -817,6 +887,7 @@ def main():
     p.add_argument('--duration', type=duration)
     p.add_argument('--admission-listen')
     p.add_argument('--admission-upstream')
+    p.add_argument('--iphone-observer')
     p.add_argument('--upstream', required=True)
     p.add_argument('--output', required=True)
     p.add_argument('--delegated-log')
@@ -824,6 +895,7 @@ def main():
     for option in ('recording', 'starting-home', 'output'):
         p.add_argument('--' + option, required=True)
     p.add_argument('--decisions')
+    p.add_argument('--iphone-device')
     p.add_argument('--exact', action='store_true')
     p.add_argument('--go-binary', '--go', dest='go_binary', required=True)
     p.add_argument('--rust-binary', '--rust', dest='rust_binary', required=True)
