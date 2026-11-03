@@ -1,0 +1,18 @@
+[package]
+name = "ab-session"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+default = []
+rust-effects = []
+
+[dependencies]
+ab-sys = { path = "../ab-sys" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true

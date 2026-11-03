@@ -11,3 +11,7 @@ missing_debug_implementations = "deny"
 pedantic = { level = "deny", priority = -1 }
 unwrap_used = "deny"
 expect_used = "deny"
+missing_errors_doc = "allow"
+
+[dependencies]
+libc = "0.2"

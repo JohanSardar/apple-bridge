@@ -523,6 +523,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "WEB-RM-REMINDERS-LISTS" {
 		return runRemindersSidebar(ctx, s, level)
 	}
+	if s.ID == "SESSION-PROXY-BYTES" {
+		return runSessionProxy(ctx, s, level)
+	}
 	if s.ID == "HELPER-IPC-RESPONSIVE" {
 		return runHelperIPC(ctx, s, level)
 	}
