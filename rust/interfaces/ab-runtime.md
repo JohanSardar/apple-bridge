@@ -64,3 +64,7 @@ The CLI supports web enroll --host / --public using Authority::create_web_enroll
 ## G-F query audit assembly
 
 Runtime's QueryAuditSink appends the Go-shaped operation/argument_bytes/result_bytes/blob_bytes row to owner-only commands-audit.jsonl and forwards completed agent queries to the provided QueryActivity sink. It never logs query arguments or results. The lab-harness feature includes the existing frontdoor test-query descriptors so the default matrix reaches the same test.echo/test.sleep/test.blob paths over REST and MCP; ordinary builds retain the frozen catalog. CORE-QUERY-ROUNDTRIP, CORE-QUERY-DEADLINE, CORE-QUERY-BLOB and CORE-QUERY-SCOPE pass unchanged against the selected Rust gateway. Full Linux matrix: 116 pass / 35 fail / 50 blocked (201), with CAL-WINDOW-SLIDE passing in this run after previous intermittence.
+
+## G-F APP-LOC-SIM binary qualification
+
+The location scenario retains the Swift fake adapter proof and sends its five location records twice through the selected gateway's signed HTTP ingress. Readback uses records.query; each of the five location/geofence commands is admitted through REST, decrypted with the independent phone wire decoder, completed through signed HTTP and read back through commands.status. Invalid geofence validation uses HTTP, and coordinate-bearing receipts remain rejected. All behavioral assertions pass against Go first and then Rust on the Air, serially through ab-local; no real location adapter or device permission request runs.
