@@ -10,7 +10,10 @@ use std::{
     io::Write,
     net::Shutdown,
     os::unix::net::UnixStream,
-    sync::{Arc, Condvar, Mutex, MutexGuard},
+    sync::{
+        Arc, Condvar, Mutex, MutexGuard,
+        atomic::{AtomicBool, Ordering},
+    },
     thread,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
@@ -71,12 +74,13 @@ struct Shared {
     flights: BTreeMap<String, Flight>,
     saved: BTreeMap<String, String>,
     sequence: u64,
-    observed: BTreeMap<String, (String, u64)>,
+    observed: BTreeMap<String, (String, u64, bool)>,
     dispatched: BTreeMap<String, u64>,
 }
 
 #[derive(Debug)]
 struct Gate {
+    wake: AtomicBool,
     shared: Mutex<Shared>,
     changed: Condvar,
 }
@@ -84,6 +88,12 @@ struct Gate {
 impl Gate {
     fn lock(&self) -> Result<MutexGuard<'_, Shared>, Error> {
         self.shared.lock().map_err(|_| Error::WorkerPanicked)
+    }
+
+    fn poke(&self) {
+        self.wake.store(true, Ordering::SeqCst);
+        drop(self.shared.lock());
+        self.changed.notify_all();
     }
 
     fn close(&self) {
@@ -186,7 +196,7 @@ fn watch(gate: &Gate, roots: &[std::path::PathBuf]) {
             Ok(true) => {
                 thread::sleep(Duration::from_millis(15));
                 while matches!(watcher.wait(Duration::ZERO), Ok(true)) {}
-                gate.changed.notify_all();
+                gate.poke();
             }
             Ok(false) => {}
             Err(_) => return,
@@ -212,6 +222,7 @@ fn release(
 }
 
 fn ingest(
+    gate: &Gate,
     readers: &Readers,
     held: &Held,
     to_helper: &Mutex<UnixStream>,
@@ -234,6 +245,8 @@ fn ingest(
             release(to_helper, source, &[cover])?;
         }
     }
+    drop(readers);
+    gate.poke();
     Ok(())
 }
 
@@ -279,17 +292,22 @@ fn note_dispatch(shared: &mut Shared, value: &Value) {
     }
 }
 
-fn note_observed(shared: &mut Shared, flight: &Flight) {
+fn holds_facts(source: &str) -> bool {
+    matches!(source, "calendar" | "contacts")
+}
+
+fn note_observed(shared: &mut Shared, source: &str, flight: &Flight) {
     shared.sequence += 1;
     let sequence = shared.sequence;
     for key in &flight.keys {
-        shared
-            .observed
-            .insert(key.clone(), (flight.checkpoint.clone(), sequence));
+        shared.observed.insert(
+            key.clone(),
+            (flight.checkpoint.clone(), sequence, holds_facts(source)),
+        );
     }
 }
 
-fn bind_outcome(gate: &Gate, value: &mut Value) -> Result<bool, Error> {
+fn bind_outcome(gate: &Gate, value: &mut Value, rejected: bool) -> Result<bool, Error> {
     let key = match value["evidence"]["native_key"].as_str() {
         Some(key) if value["evidence"]["capture_checkpoint"].is_string() => key.to_owned(),
         _ => return Ok(false),
@@ -301,8 +319,8 @@ fn bind_outcome(gate: &Gate, value: &mut Value) -> Result<bool, Error> {
         .unwrap_or(shared.sequence);
     let deadline = std::time::Instant::now() + Duration::from_secs(15);
     loop {
-        if let Some((checkpoint, sequence)) = shared.observed.get(&key)
-            && *sequence > after
+        if let Some((checkpoint, sequence, facts)) = shared.observed.get(&key)
+            && (rejected || *facts || *sequence > after)
         {
             value["evidence"]["capture_checkpoint"] = Value::String(checkpoint.clone());
             return Ok(true);
@@ -323,7 +341,8 @@ fn forward_outcome(
     to_gateway: &Mutex<UnixStream>,
     value: &mut Value,
 ) -> Result<bool, Error> {
-    if !bind_outcome(gate, value)? {
+    let rejected = value["t"] == "Rejected";
+    if !bind_outcome(gate, value, rejected)? {
         return Ok(false);
     }
     send(
@@ -532,6 +551,9 @@ fn produce(
         if shared.closed {
             return Ok(());
         }
+        if gate.wake.swap(false, Ordering::SeqCst) {
+            continue;
+        }
         let (shared, _) = gate
             .changed
             .wait_timeout(shared, poll)
@@ -643,7 +665,7 @@ fn gateway_frame(
             );
             drop(shared);
             if flight.rust {
-                note_observed(&mut *gate.lock()?, &flight);
+                note_observed(&mut *gate.lock()?, source, &flight);
             }
             gate.changed.notify_all();
             if flight.rust {
@@ -703,6 +725,7 @@ pub fn relay_layered(
     let store = options.state.as_deref().map(Store::open).transpose()?;
     let store = store.as_ref();
     let gate = Gate {
+        wake: AtomicBool::new(false),
         shared: Mutex::new(Shared::default()),
         changed: Condvar::new(),
     };
@@ -776,6 +799,7 @@ pub fn relay_layered(
                         let size = u64::try_from(bytes.len()).map_err(|_| Error::Invalid)?;
                         if rust.contains(source) {
                             ingest(
+                                &gate,
                                 &readers,
                                 &held,
                                 &to_helper,
@@ -787,7 +811,7 @@ pub fn relay_layered(
                         }
                         register(&gate, source, generation, checkpoint, size)?;
                     }
-                    Some("Outcome") if !rust.is_empty() => {
+                    Some("Outcome" | "Rejected") if !rust.is_empty() => {
                         if forward_outcome(&gate, &to_gateway, &mut value)? {
                             if let Some(layer) = layer {
                                 layer.helper(&value, bytes.len())?;

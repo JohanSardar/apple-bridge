@@ -753,7 +753,41 @@ pub struct AgendaReader {
     root: PathBuf,
     state: AgendaState,
     facts: Option<Facts>,
+    partial: bool,
     pending: Option<agenda::Pending>,
+}
+
+fn identity(row: &Value) -> String {
+    format!(
+        "{}/{}",
+        row["collection"].as_str().unwrap_or_default(),
+        row["native_key"].as_str().unwrap_or_default()
+    )
+}
+
+impl Facts {
+    fn merge(mut self, later: Self) -> Self {
+        let mut rows: BTreeMap<String, Value> = self
+            .rows
+            .drain(..)
+            .map(|row| (identity(&row), row))
+            .collect();
+        for row in later.rows {
+            let key = identity(&row);
+            self.absences.remove(&key);
+            rows.insert(key, row);
+        }
+        for (key, disposition) in later.absences {
+            rows.remove(&key);
+            self.absences.insert(key, disposition);
+        }
+        self.rows = rows.into_values().collect();
+        self.live |= later.live;
+        if later.blob_handles.is_some() {
+            self.blob_handles = later.blob_handles;
+        }
+        self
+    }
 }
 
 impl AgendaReader {
@@ -764,6 +798,7 @@ impl AgendaReader {
             root,
             state: AgendaState::Calendar(agenda::Reader::default()),
             facts: None,
+            partial: false,
             pending: None,
         }
     }
@@ -775,6 +810,7 @@ impl AgendaReader {
             root,
             state: AgendaState::Contacts(contacts::Reader::default()),
             facts: None,
+            partial: false,
             pending: None,
         }
     }
@@ -845,28 +881,29 @@ impl CaptureReader for AgendaReader {
     }
 
     fn ingest(&mut self, capture: &Value) -> Result<bool, Error> {
-        self.facts = Some(self.parse(capture)?);
-        Ok(true)
+        let parsed = self.parse(capture)?;
+        self.partial = capture["scan_id"]
+            .as_str()
+            .is_some_and(|scan| !scan.is_empty())
+            && capture["completion_evidence"].as_str() != Some("complete");
+        self.facts = Some(match self.facts.take() {
+            Some(earlier) if earlier.generation == parsed.generation => earlier.merge(parsed),
+            _ => parsed,
+        });
+        Ok(!self.partial)
     }
 
     fn next(&mut self, context: &ScanContext) -> Result<Option<Value>, Error> {
         if self.pending.is_some() {
             return Err(Error::Conflict);
         }
+        if self.partial {
+            return Ok(None);
+        }
         let Some(facts) = self.facts.take() else {
             return Ok(None);
         };
-        let present: BTreeSet<String> = facts
-            .rows
-            .iter()
-            .map(|row| {
-                format!(
-                    "{}/{}",
-                    row["collection"].as_str().unwrap_or_default(),
-                    row["native_key"].as_str().unwrap_or_default()
-                )
-            })
-            .collect();
+        let present: BTreeSet<String> = facts.rows.iter().map(identity).collect();
         let revalidated = facts
             .absences
             .into_iter()
