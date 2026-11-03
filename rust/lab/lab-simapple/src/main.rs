@@ -17,8 +17,10 @@ mod stale;
 mod vision;
 use lab_wire::{receive, send};
 use serde_json::{Value, json};
+use sha2::{Digest, Sha256};
 use std::{
-    collections::{BTreeMap, VecDeque},
+    cell::RefCell,
+    collections::{BTreeMap, BTreeSet, VecDeque},
     fs::{self, OpenOptions},
     io::{Read, Write},
     os::unix::{
@@ -76,6 +78,12 @@ fn source(collection: &str) -> &str {
 fn observation(collection: &str, key: &str, data: Value) -> Value {
     json!({"kind":"upsert", "collection":collection,"native_key":key,"data":data,"observed_at":now()})
 }
+thread_local! {
+    static BUMPED: RefCell<BTreeMap<String, u64>> = const { RefCell::new(BTreeMap::new()) };
+}
+fn bumped(src: &str) -> Option<u64> {
+    BUMPED.with(|b| b.borrow_mut().remove(src))
+}
 #[derive(Debug, Default)]
 struct Bulk {
     target: String,
@@ -99,9 +107,76 @@ struct State {
     calendar: calendar::Live,
     blob: blobs::Fixture,
     clipboard: String,
+    progress: Value,
+    completed: BTreeMap<String, BTreeSet<u64>>,
 }
 impl State {
-    fn save(&self) -> Result<()> {
+    fn source_digests(&self) -> BTreeMap<String, String> {
+        let mut hashers: BTreeMap<String, Sha256> = BTreeMap::new();
+        if let Some(records) = self.data["records"].as_object() {
+            let mut keys: Vec<_> = records.keys().collect();
+            keys.sort();
+            for key in keys {
+                let record = &records[key];
+                let hasher = hashers
+                    .entry(source(record["collection"].as_str().unwrap_or_default()).to_owned())
+                    .or_default();
+                hasher.update(key.as_bytes());
+                hasher.update(serde_json::to_vec(record).unwrap_or_default());
+            }
+        }
+        hashers
+            .into_iter()
+            .map(|(src, hasher)| (src, hex::encode(hasher.finalize())))
+            .collect()
+    }
+    fn bump_revisions(&mut self) {
+        for (src, digest) in self.source_digests() {
+            if self.data["revision_digest"][&src] == json!(digest) {
+                continue;
+            }
+            let revision = self.data["revision"][&src].as_u64().unwrap_or_default() + 1;
+            self.data["revision"][&src] = json!(revision);
+            self.data["revision_digest"][&src] = json!(digest);
+            BUMPED.with(|b| b.borrow_mut().insert(src, revision));
+        }
+    }
+    fn revision(&self, src: &str) -> u64 {
+        self.data["revision"][src].as_u64().unwrap_or_default()
+    }
+    fn committed(&self, src: &str) -> u64 {
+        self.progress["committed"][src].as_u64().unwrap_or_default()
+    }
+    fn record_commit(&mut self, src: &str, revision: u64, full: bool) {
+        let done = self.completed.entry(src.to_owned()).or_default();
+        let mut committed = self.committed(src);
+        if full {
+            committed = committed.max(revision);
+        } else if revision > committed {
+            done.insert(revision);
+        }
+        while done.contains(&(committed + 1)) {
+            committed += 1;
+        }
+        done.retain(|sequence| *sequence > committed);
+        self.progress["committed"][src] = json!(committed);
+    }
+    fn save_progress(&self) -> Result<()> {
+        let path = self.path.with_file_name("rust-sim-progress.json");
+        let temporary = path.with_extension("tmp");
+        let mut file = OpenOptions::new()
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .open(&temporary)?;
+        file.set_permissions(fs::Permissions::from_mode(0o600))?;
+        file.write_all(&serde_json::to_vec(&self.progress)?)?;
+        file.sync_all()?;
+        fs::rename(temporary, &path)?;
+        Ok(())
+    }
+    fn save(&mut self) -> Result<()> {
+        self.bump_revisions();
         let temporary = self.path.with_extension("tmp");
         let mut file = OpenOptions::new()
             .create(true)
@@ -173,6 +248,7 @@ struct Request {
     done: Option<mpsc::Sender<()>>,
     whole: bool,
     exact: bool,
+    revision: Option<u64>,
 }
 fn enqueue(tx: &mpsc::Sender<Request>, frame: Value, wait: bool) -> Result<()> {
     enqueue_mode(tx, frame, wait, false)
@@ -190,11 +266,13 @@ fn enqueue_request(
     let (done, rx) = mpsc::channel();
     let observations = frame["observations"].as_array().map_or(0, Vec::len);
     let seconds = 110 + u64::try_from(observations / 200).unwrap_or_default();
+    let revision = frame["source"].as_str().and_then(bumped);
     tx.send(Request {
         frame,
         done: if wait { Some(done) } else { None },
         whole,
         exact,
+        revision,
     })
     .map_err(|_| invalid("session stopped"))?;
     if wait {
@@ -251,7 +329,7 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
         "/effects" => Ok(s.data["effects"].clone()),
         "/command-origins" => Ok(s.data["origins"].clone()),
         "/stats" => Ok(
-            json!({"blob_digests":blobs::digests(&s.blob),"scans":s.data["scans"],"source_scans":s.data["source_scans"],"revision":{},"committed":{}}),
+            json!({"blob_digests":blobs::digests(&s.blob),"scans":s.progress["scans"],"source_scans":s.progress["source_scans"],"revision":s.data["revision"],"committed":s.progress["committed"]}),
         ),
         "/fault" => {
             let name = string(&input, "name");
@@ -544,9 +622,22 @@ struct Session<'a> {
     sleeping: BTreeMap<String, query::Cancel>,
     finished: mpsc::Sender<(String, Value)>,
     finished_rx: mpsc::Receiver<(String, Value)>,
+    hint: Option<u64>,
+    full: bool,
 }
 impl Session<'_> {
-    fn emit(&mut self, state: &Shared, mut frame: Value) -> Result<()> {
+    fn emit(&mut self, state: &Shared, frame: Value) -> Result<()> {
+        let owned = self.hint.is_none();
+        if owned {
+            self.hint = frame["source"].as_str().and_then(bumped);
+        }
+        let result = self.emit_chunks(state, frame);
+        if owned {
+            self.hint = None;
+        }
+        result
+    }
+    fn emit_chunks(&mut self, state: &Shared, mut frame: Value) -> Result<()> {
         if let Some(observations) = frame["observations"].as_array_mut() {
             observations.sort_by_key(|record| record["kind"] == "absent");
         }
@@ -616,13 +707,16 @@ impl Session<'_> {
                 thread::park();
             }
         }
-        if request.exact {
-            self.emit_exact(state, &request.frame)?;
+        self.hint = request.revision;
+        let result = if request.exact {
+            self.emit_exact(state, &request.frame)
         } else if request.whole {
-            self.emit_part(state, request.frame)?;
+            self.emit_part(state, request.frame)
         } else {
-            self.emit(state, request.frame)?;
-        }
+            self.emit(state, request.frame)
+        };
+        self.hint = None;
+        result?;
         if let Some(done) = request.done {
             let _ = done.send(());
         }
@@ -707,6 +801,14 @@ impl Session<'_> {
         if size > self.credit {
             return Err(invalid("capture credit"));
         }
+        let partial = frame["scan_id"].is_string() && frame["completion_evidence"].is_null();
+        let full = self.full
+            || (src == "messages"
+                && frame["scan_id"].is_string()
+                && frame["completion_evidence"] == "complete");
+        let revision = self
+            .hint
+            .unwrap_or_else(|| lock(state).map_or(0, |s| s.revision(&src)));
         let started = Instant::now();
         let n = send(&mut self.stream, &frame)?;
         self.credit -= n;
@@ -739,6 +841,18 @@ impl Session<'_> {
                         s.bulk.count += 1;
                         s.bulk.ack_ms += started.elapsed().as_secs_f64() * 1000.0;
                         s.bulk.bytes += n as u64;
+                    }
+                    {
+                        let mut s = lock(state)?;
+                        s.progress["checkpoints"][&src] = json!(checkpoint);
+                        let was = s.progress["in_progress"][&src] == true;
+                        if !partial {
+                            s.record_commit(&src, revision, full);
+                        }
+                        s.progress["in_progress"][&src] = json!(partial);
+                        if !partial || !was {
+                            s.save_progress()?;
+                        }
                     }
                     self.checkpoints.insert(src, checkpoint);
                     self.credit += n;
@@ -1081,6 +1195,8 @@ fn session(
         sleeping: BTreeMap::new(),
         finished: finished_tx,
         finished_rx,
+        hint: None,
+        full: false,
     };
     for src in sources {
         let generation = generation_of(&lock(state)?.data, src, &session.generation);
@@ -1143,15 +1259,34 @@ fn session(
             )?;
             continue;
         }
-        let capture = {
+        let refresh = src == "messages"
+            && open["checkpoints"][src]["refresh_blobs"] == true;
+        let (capture, revision) = {
             let mut s = lock(state)?;
-            let scans = s.data["scans"].as_u64().unwrap_or_default() + 1;
-            s.data["scans"] = json!(scans);
-            let n = s.data["source_scans"][src].as_u64().unwrap_or_default() + 1;
-            s.data["source_scans"][src] = json!(n);
-            s.scan(src)?
+            let revision = s.revision(src);
+            let offered = session.checkpoints.get(src).cloned().unwrap_or_default();
+            let scan = src == "calendar"
+                || refresh
+                || s.progress["in_progress"][src] == true
+                || offered.is_empty()
+                || offered != string(&s.progress["checkpoints"], src)
+                || revision != s.committed(src);
+            if !scan {
+                continue;
+            }
+            let scans = s.progress["scans"].as_u64().unwrap_or_default() + 1;
+            s.progress["scans"] = json!(scans);
+            let n = s.progress["source_scans"][src].as_u64().unwrap_or_default() + 1;
+            s.progress["source_scans"][src] = json!(n);
+            s.save_progress()?;
+            (s.scan(src)?, revision)
         };
-        session.emit(state, capture)?;
+        session.hint = Some(revision);
+        session.full = true;
+        let result = session.emit(state, capture);
+        session.hint = None;
+        session.full = false;
+        result?;
     }
     loop {
         if let Ok((id, reply)) = session.finished_rx.try_recv() {
@@ -1203,8 +1338,13 @@ fn run() -> Result<()> {
     let data = if path.exists() {
         serde_json::from_slice(&fs::read(&path)?)?
     } else {
-        json!({"generation":id("sim")?,"records":{},"effects":{},"evidence":{},"origins":{},"scans":0,"source_scans":{}})
+        json!({"generation":id("sim")?,"records":{},"effects":{},"evidence":{},"origins":{}})
     };
+    let progress = fs::read(home.join("rust-sim-progress.json"))
+        .ok()
+        .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
+        .filter(|progress| progress["generation"] == data["generation"])
+        .unwrap_or_else(|| json!({"generation":data["generation"],"checkpoints":{},"committed":{},"in_progress":{},"scans":0,"source_scans":{}}));
     let blob = blobs::restore(&data);
     let state = Arc::new(Mutex::new(State {
         bulk: Bulk::default(),
@@ -1218,6 +1358,8 @@ fn run() -> Result<()> {
         calendar: calendar::Live::default(),
         blob,
         clipboard: String::new(),
+        progress,
+        completed: BTreeMap::new(),
     }));
     {
         let mut s = lock(&state)?;
