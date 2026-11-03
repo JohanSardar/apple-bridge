@@ -62,6 +62,15 @@ pub fn start(world: &World, count: usize) -> Result<()> {
     start_with(world, count, SCOPE, 0)
 }
 pub fn start_with(world: &World, count: usize, scope: &str, cap: u64) -> Result<()> {
+    start_with_args(world, count, scope, cap, &[])
+}
+pub fn start_with_args(
+    world: &World,
+    count: usize,
+    scope: &str,
+    cap: u64,
+    extra: &[String],
+) -> Result<()> {
     let peer = world.runtime["peer_address"]
         .as_str()
         .ok_or_else(|| Error::Invalid("runtime peer address".into()))?
@@ -86,6 +95,7 @@ pub fn start_with(world: &World, count: usize, scope: &str, cap: u64) -> Result<
             .arg(&home)
             .args(["--api-addr", "127.0.0.1:0"])
             .args(["--blob-cap", &cap.to_string()])
+            .args(extra)
             .env("APPLE_BRIDGE_SECRET_STORE", "file")
             .stdout(log.try_clone()?)
             .stderr(log)
@@ -96,7 +106,7 @@ pub fn start_with(world: &World, count: usize, scope: &str, cap: u64) -> Result<
             home,
             address,
             token,
-            scope: SCOPE.to_owned(),
+            scope: scope.to_owned(),
         });
     }
     let deadline = Instant::now() + Duration::from_secs(15);
