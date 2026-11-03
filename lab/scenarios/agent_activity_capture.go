@@ -4,14 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
-	"github.com/JohanSardar/apple-bridge/internal/trust"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 	"time"
 )
 
-func runAgentActivityCapture(ctx context.Context, w *world.World, authority *trust.Authority, add func(string, bool)) {
+func runAgentActivityCapture(ctx context.Context, w *world.World, add func(string, bool)) {
 	add("activity_capture_fixture", w.ControlAction("/messages", map[string]any{"action": "seed", "count": 0}) == nil)
-	_, token, err := authority.CreateAgent("Bridge Test concurrent activity", trust.AgentFull, []contracts.Grant{"messages:write"})
+	token, err := binaryAgentToken(w, "Bridge Test concurrent activity", "full", "messages:write")
 	add("activity_capture_agent", err == nil)
 	principal := w.Gateway
 	principal.Token = token
@@ -28,7 +27,7 @@ func runAgentActivityCapture(ctx context.Context, w *world.World, authority *tru
 	done := make(chan bool, 3)
 	ready := make(chan struct{}, 3)
 	for reader := 0; reader < 3; reader++ {
-		_, readToken, readErr := authority.CreateAgent("Bridge Test concurrent reader", trust.AgentRead, []contracts.Grant{"messages:read"})
+		readToken, readErr := binaryAgentToken(w, "Bridge Test concurrent reader", "read", "messages:read")
 		if readErr != nil {
 			stop()
 			add("activity_capture_read_agent", false)

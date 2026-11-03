@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/lab/scripted"
+	"github.com/JohanSardar/apple-bridge/lab/world"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -23,7 +24,7 @@ func macRealCommands(ctx context.Context, s Scenario, client scripted.Client, ad
 		raw, _ := json.Marshal(args)
 		var out contracts.CommandRecord
 		err := client.Call(ctx, op, contracts.Command{ID: contracts.NewCommandID(), Args: raw, WaitMS: 15000}, &out)
-		return err == nil && out.State == contracts.CommandObserved && contracts.MacCompletionEvidence(out.Evidence, out.RequestHash)
+		return err == nil && out.State == contracts.CommandObserved && macCompletionReadback(out.Evidence, out.RequestHash)
 	}
 	script := func(source string) (string, error) {
 		b, err := exec.CommandContext(ctx, "/usr/bin/osascript", "-e", source).Output()
@@ -130,10 +131,19 @@ func macRealCommands(ctx context.Context, s Scenario, client scripted.Client, ad
 	}
 }
 
-func macCommandSchemas(add func(string, bool)) {
+func macCommandSchemas(ctx context.Context, w *world.World, add func(string, bool)) {
+	schemas, err := macBinarySchemas(ctx, w)
+	add("binary_mac_schemas", err == nil)
+	if err != nil {
+		return
+	}
 	expected := map[string]string{"mac.set_volume": "volume", "mac.set_mute": "muted", "mac.set_appearance": "appearance", "mac.launch_app": "bundle_id", "mac.activate_app": "bundle_id", "mac.quit_app": "bundle_id", "mac.keep_awake": "on", "mac.clipboard_write": "text"}
-	for _, descriptor := range contracts.MacDescriptors() {
-		schema := contracts.OperationSchema(descriptor)
+	for _, descriptor := range macSchemaOperations() {
+		schema, ok := schemas[descriptor.Name]
+		if !ok {
+			add(descriptor.Name+"_argument_schema", false)
+			continue
+		}
 		args := schema["properties"].(map[string]any)["args"].(map[string]any)
 		fields, _ := args["properties"].(map[string]any)
 		if descriptor.Name == "mac.recognize_song" {

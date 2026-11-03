@@ -147,6 +147,10 @@ func (p *FaultProxy) relayFrames(conn net.Conn, config frameFaults) {
 				var frame contracts.FeedFrame
 				json.Unmarshal(data, &frame)
 				p.mu.Lock()
+				if p.blackhole {
+					p.mu.Unlock()
+					continue
+				}
 				if frame.T == "Hello" {
 					if slices.Contains(frame.Features, "capture_atomic") {
 						p.frames.atomicOffers++
@@ -193,6 +197,10 @@ func (p *FaultProxy) relayFrames(conn net.Conn, config frameFaults) {
 			var frame contracts.FeedFrame
 			json.Unmarshal(data, &frame)
 			p.mu.Lock()
+			if p.blackhole {
+				p.mu.Unlock()
+				continue
+			}
 			switch frame.T {
 			case "Welcome", "Reset", "SnapshotBegin", "SnapshotPage", "SnapshotEnd", "Batch":
 				outstanding += len(data)

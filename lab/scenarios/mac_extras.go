@@ -86,7 +86,7 @@ func runMacExtras(ctx context.Context, s Scenario, level string) (e Evidence) {
 			Readback map[string]any `json:"readback"`
 		}
 		decode := json.Unmarshal(out.Evidence, &evidence)
-		add(test.op+"_readback", err == nil && out.State == contracts.CommandObserved && contracts.MacCompletionEvidence(out.Evidence, out.RequestHash) && decode == nil && evidence.Readback[test.field] == test.expected)
+		add(test.op+"_readback", err == nil && out.State == contracts.CommandObserved && macCompletionReadback(out.Evidence, out.RequestHash) && decode == nil && evidence.Readback[test.field] == test.expected)
 	}
 	for _, app := range []string{"pages", "numbers", "keynote"} {
 		for _, format := range []string{"pdf", "text"} {

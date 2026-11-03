@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/JohanSardar/apple-bridge/internal/blobs"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 	"io"
@@ -22,10 +21,10 @@ import (
 	"time"
 )
 
-func blobProgress(ctx context.Context, e world.Endpoint) (blobs.BlobProgress, error) {
+func blobProgress(ctx context.Context, e world.Endpoint) (contracts.BlobProgress, error) {
 	var response struct {
 		Replica struct {
-			Blobs blobs.BlobProgress `json:"blobs"`
+			Blobs contracts.BlobProgress `json:"blobs"`
 		} `json:"replica"`
 	}
 	_, err := world.Request(ctx, e, "/v1/op/sources.status", struct{}{}, &response)
@@ -345,7 +344,7 @@ func blobJourney(ctx context.Context, w *world.World, id string, rows int, evide
 		if !check("reference_index_migration_converges", w.Await(10*time.Second, func() bool { return convergence(w) }) == nil) {
 			return false
 		}
-		db, err = sql.Open("sqlite", filepath.Join(w.Gateway.Home, "state.db"))
+		db, err = sql.Open("sqlite", "file:"+filepath.Join(w.Gateway.Home, "state.db")+"?mode=ro")
 		if !check("migrated_reference_index_open", err == nil) {
 			return false
 		}
