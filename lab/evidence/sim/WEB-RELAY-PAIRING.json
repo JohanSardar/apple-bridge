@@ -6,17 +6,17 @@
   "impl": "mixed",
   "host_conditions": {
     "quiet": false,
-    "summary": "ubuntu: load=[107.54 67.52 31.07] cpu_idle=1% cpus=22 other_heavy=0"
+    "summary": "ubuntu: load=[49.28 57.78 41.36] cpu_idle=1% cpus=22 other_heavy=0"
   },
-  "run_id": "relay-pair_01M6H41QYHM95ZNXQH8JJNXJHB",
+  "run_id": "relay-pair_01M6H4FQ1KHCXDF8CAG5A6019F",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "WEB-RELAY-PAIRING",
   "level": "sim",
   "passed": true,
-  "git_sha": "0bf8ac55de22b5e19d8547a055f7aa23accc24be",
-  "at": "2026-11-03T16:32:03.025851126Z",
+  "git_sha": "a05cf6222b7847a6a2cc4779f51424d2cb407620",
+  "at": "2026-11-03T16:39:40.851615098Z",
   "assertions": [
     {
       "name": "pairing_world",

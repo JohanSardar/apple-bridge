@@ -6,17 +6,17 @@
   "impl": "mixed",
   "host_conditions": {
     "quiet": false,
-    "summary": "ubuntu: load=[104.46 66.24 30.47] cpu_idle=0% cpus=22 other_heavy=0"
+    "summary": "ubuntu: load=[49.04 57.87 41.3] cpu_idle=1% cpus=22 other_heavy=0"
   },
-  "run_id": "relay_01M6H41J82K4F73YZC91XZATGF",
+  "run_id": "relay_01M6H4FK1CKSESB1A92YHBEGX7",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "WEB-RELAY-AUTH",
   "level": "sim",
   "passed": true,
-  "git_sha": "0bf8ac55de22b5e19d8547a055f7aa23accc24be",
-  "at": "2026-11-03T16:31:57.186386437Z",
+  "git_sha": "a05cf6222b7847a6a2cc4779f51424d2cb407620",
+  "at": "2026-11-03T16:39:36.748884814Z",
   "assertions": [
     {
       "name": "paired_world",
@@ -130,9 +130,9 @@
   "latency": {
     "relay_revocation": {
       "samples": 1,
-      "p50_ms": 100.717367,
-      "p95_ms": 100.717367,
-      "max_ms": 100.717367,
+      "p50_ms": 100.333127,
+      "p95_ms": 100.333127,
+      "max_ms": 100.333127,
       "timeouts": 0
     }
   },
