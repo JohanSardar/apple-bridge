@@ -296,8 +296,10 @@ dependencies = [
 name = "ab-session"
 version = "0.0.0"
 dependencies = [
+ "ab-native",
  "ab-sys",
  "jiff",
+ "rusqlite",
  "serde",
  "serde_json",
  "sha2 0.10.9",

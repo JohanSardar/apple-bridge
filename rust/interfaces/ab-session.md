@@ -116,3 +116,65 @@ qualification. Existing capabilities must be narrowed before enabling it for a
 production Helper. Authoritative Rust source selection is still rejected;
 reader scheduling, capture credit and checkpoint persistence integration remain
 separate work.
+
+## Rust capture producer (per source, lab-only today)
+
+Build ab-session with `--features rust-capture`. Without it the binary is unchanged and
+`Selection::validate_proxy` still rejects `Producer::Rust`. The mode is separate from the
+fd-launched proxy and from `rust-effects`; the two relays are not combined yet.
+
+Entry point: `ab-session --lab-listen PATH --lab-gateway PATH`. It listens where the Helper (or
+simapple) would dial the gateway, dials the gateway socket for every accepted connection, and runs
+`routed::relay`. Configuration is two environment variables:
+`AB_SESSION_PRODUCERS={"safari":"Rust"}` selects sources (others stay Swift/simapple), and
+`AB_SESSION_RUST_SOURCES={"safari":{"root":"DIR"},"usage":{"root":"DIR","zone":"UTC","local_name":"..."}}`
+gives each Rust source its fixture directory (optional `generation`, default `rust-native/1`).
+`AB_SESSION_RUST_POLL_MS` (default 100) is the reader poll interval. Every Rust source must have
+a config entry and be in the supported list (`safari`, `usage`); otherwise startup fails.
+
+Behaviour of `routed::relay(gateway, helper, readers, poll)` (framing and byte-credit accounting
+copy `effects.rs`: whole frame length including the 4-byte header is the credit):
+
+- Authentication and every frame for non-Rust sources pass through as raw bytes.
+- `Open` is parsed: fence, `byte_credit` and `checkpoints` seed a shared pool. Checkpoints seed the
+  per-source committed `(generation, checkpoint)` used for `predecessor`.
+- A Helper `Capture` for a Rust source is dropped and answered with a synthetic `Committed`
+  (same source, checkpoint and whole-frame credit) so the Swift/simapple loop does not stall.
+  Other sources' captures register a flight and spend pool credit.
+- After `Ready`, a producer thread polls each Rust source's `CaptureReader`. A reader returns a
+  pending `Capture` (generation, scan id, scope, `complete` evidence, observations, `live`;
+  coverage is removed). Session adds `predecessor` (committed checkpoint of the same generation,
+  else empty), assigns a unique checkpoint and scan id, waits for pool credit, writes the frame
+  and registers a flight. One flight per source.
+- Gateway `Committed` for a Rust flight must match checkpoint and credit; it is consumed, returns
+  credit, advances the committed checkpoint and calls `CaptureReader::commit`. It is never sent
+  to the Helper. `Committed` for other sources passes through and also updates bookkeeping.
+- A reader error or unchanged input yields no frame; absence is never invented. A new connection
+  builds fresh readers, so the first scan is full (`live` false) and replays under the gateway's
+  committed predecessor; a generation change is one rescan.
+
+Rolling out another source (what to copy, in order):
+
+1. Implement `readers::CaptureReader` for the `ab_native` reader: `next` builds a pending scan
+   from `ScanContext` (checkpoint, scan id, now) and returns the serialised batch with
+   `coverage` removed; `commit` calls the reader's commit. Skip unchanged input cheaply
+   (Safari uses the reader's input signature, Usage a file-tree signature).
+2. Register the source name in `readers::from_config` and the `validate_routed` list in `main.rs`.
+3. Lab world: `AB_LAB_SESSION=<ab-session>` and `AB_LAB_SESSION_SOURCES=safari,usage` make
+   `lab/world/session.go` start ab-session on `session.sock`, point simapple at it, and keep the
+   gateway socket unchanged. Fixture roots default to `<world>/session-<source>`; a scenario that
+   already owns a fixture calls `world.WithSessionRoot(ctx, source, dir)` (Safari does). If the
+   scenario feeds the source through a simapple control route, add a hook in
+   `World.ControlAction` that materialises the same data as files (`stageSessionUsage` writes
+   SEGB segments and `sync/sync.db` atomically for `/usage`). simapple's own capture for that
+   source is dropped, so assertions only see the Rust reader's rows.
+4. Prove: the source's sim scenarios must give the same assertions with the world option off and
+   on (`--impl gateway=rust`), and a negative control must fail (proves the data comes from the
+   Rust reader): Screen Time with `AB_SESSION_RUST_POLL_MS=3600000`, Safari with
+   `AB_LAB_SESSION_CONTROL=empty` (the session reads an empty fixture directory). Safari's
+   scenario runs a corruption check over its fixture, so the session reads a pristine copy. Add a socketpair test in
+   `tests/capture_producer.rs` for the frame rules.
+
+Gaps: no restart persistence of Rust-sourced checkpoints beyond what `Open.checkpoints` carries,
+no blob handles, no live (watcher-driven) scheduling, no combination with `rust-effects`, and the
+fd-launched production proxy still rejects Rust producers.
