@@ -7,7 +7,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/JohanSardar/apple-bridge/internal/trust"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 	"io"
 	"net/http"
@@ -29,7 +28,7 @@ func runAgentOAuth(ctx context.Context, w *world.World, c *webClient, e *Evidenc
 	add("authorization_metadata_pkce", code == 200 && bytes.Contains(raw, []byte("S256")))
 	redirect := "https://connector.example/callback"
 	code, raw, _ = agentRequest(ctx, c.origin, "", "POST", "/oauth/register", map[string]any{"client_name": "Bridge Test connector", "redirect_uris": []string{redirect}, "grant_types": []string{"authorization_code", "refresh_token"}, "token_endpoint_auth_method": "none"})
-	var client trust.OAuthClient
+	var client oauthClientFixture
 	json.Unmarshal(raw, &client)
 	add("dynamic_registration", code == 201 && client.ID != "")
 	if client.ID == "" {
@@ -94,7 +93,7 @@ func runAgentOAuth(ctx context.Context, w *world.World, c *webClient, e *Evidenc
 	code, _, _ = agentRequest(ctx, c.origin, "", "POST", "/oauth/token", bad)
 	add("resource_binding", code == 400)
 	code, raw, _ = agentRequest(ctx, c.origin, "", "POST", "/oauth/token", form)
-	var tokens trust.OAuthTokens
+	var tokens oauthTokensFixture
 	json.Unmarshal(raw, &tokens)
 	add("code_exchange_one_hour_access", code == 200 && tokens.AccessToken != "" && tokens.ExpiresIn == 3600 && tokens.RefreshToken != "")
 	mcp := func(token, method string, params any) bool {
@@ -106,8 +105,8 @@ func runAgentOAuth(ctx context.Context, w *world.World, c *webClient, e *Evidenc
 	stored, err := os.ReadFile(filepath.Join(w.Gateway.Home, "credentials.json"))
 	add("oauth_secrets_stored_hashed", err == nil && !bytes.Contains(stored, []byte(tokens.AccessToken)) && !bytes.Contains(stored, []byte(tokens.RefreshToken)) && !bytes.Contains(stored, []byte(response.Get("code"))))
 	var credentials struct {
-		Access  []trust.OAuthAccess  `json:"oauth_access"`
-		Refresh []trust.OAuthRefresh `json:"oauth_refresh"`
+		Access  []oauthAccessFixture  `json:"oauth_access"`
+		Refresh []oauthRefreshFixture `json:"oauth_refresh"`
 	}
 	json.Unmarshal(stored, &credentials)
 	lifetimes := len(credentials.Access) > 0 && len(credentials.Refresh) > 0
@@ -124,7 +123,7 @@ func runAgentOAuth(ctx context.Context, w *world.World, c *webClient, e *Evidenc
 	add("expired_access_rejected", expired == nil && code == 401)
 	refresh := url.Values{"grant_type": {"refresh_token"}, "client_id": {client.ID}, "refresh_token": {tokens.RefreshToken}, "resource": {c.origin + "/mcp"}}
 	code, raw, _ = agentRequest(ctx, c.origin, "", "POST", "/oauth/token", refresh)
-	var rotated trust.OAuthTokens
+	var rotated oauthTokensFixture
 	json.Unmarshal(raw, &rotated)
 	add("refresh_rotates", code == 200 && rotated.RefreshToken != "" && rotated.RefreshToken != tokens.RefreshToken && rotated.AccessToken != tokens.AccessToken)
 	code, _, _ = agentRequest(ctx, c.origin, "", "POST", "/oauth/token", refresh)
@@ -143,12 +142,12 @@ func runAgentOAuth(ctx context.Context, w *world.World, c *webClient, e *Evidenc
 	extraForm := cloneValues(form)
 	extraForm.Set("code", extraResponse.Get("code"))
 	extraStatus, extraRaw, _ := agentRequest(ctx, c.origin, "", "POST", "/oauth/token", extraForm)
-	var extraTokens trust.OAuthTokens
+	var extraTokens oauthTokensFixture
 	json.Unmarshal(extraRaw, &extraTokens)
 	err = editAgentCredentials(w.Gateway.Home, func(data map[string]any) {
 		for _, v := range data["oauth_refresh"].([]any) {
 			f := v.(map[string]any)
-			if f["hash"] == trust.Fingerprint([]byte(extraTokens.RefreshToken)) {
+			if f["hash"] == fixtureTokenHash([]byte(extraTokens.RefreshToken)) {
 				f["expires_at"] = time.Now().Add(-time.Second).Format(time.RFC3339Nano)
 			}
 		}
@@ -164,20 +163,18 @@ func runAgentOAuth(ctx context.Context, w *world.World, c *webClient, e *Evidenc
 	form.Set("code", response.Get("code"))
 	code, raw, _ = agentRequest(ctx, c.origin, "", "POST", "/oauth/token", form)
 	json.Unmarshal(raw, &tokens)
-	a, err := trust.Open(w.Gateway.Home)
+	_, err = w.GatewayCommand("agent", "list")
 	if err != nil {
 		add("owner_revoke_authority", false)
 		return
 	}
-	p, err := a.AuthenticateToken(tokens.AccessToken)
+	principal, err := binaryOAuthPrincipal(ctx, w, c.origin, tokens.AccessToken)
 	if err != nil {
 		add("owner_revoke_token", false)
 		return
 	}
-	authority, err := trust.Open(w.Gateway.Home)
-	if err == nil {
-		err = authority.Revoke(p.ID)
-	}
+	_, err = w.GatewayCommand("agent", "revoke", principal)
+
 	code, _, _ = agentRequest(ctx, c.origin, tokens.AccessToken, "POST", "/v1/op/messages.chats", map[string]any{})
 	add("owner_revoke_oauth", err == nil && code == 401)
 }
