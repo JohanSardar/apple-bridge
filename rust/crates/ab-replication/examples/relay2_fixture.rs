@@ -62,6 +62,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut state = ab_state::State::<ab_state::Gateway>::open(format!("{home}/relay2-feed"))?;
     state.commit_capture(&serde_json::from_value(serde_json::json!({"source":"reminders","generation":"r3","checkpoint":"1","observations":[{"kind":"upsert","collection":"reminders.reminder","native_key":"synthetic","observed_at":"2026-01-02T00:00:00Z","data":{"title":"synthetic-splice-feed-marker"}}]}))?)?;
     let server = Arc::new(ab_replication::server::Server {
+        delegations: Arc::new(ab_replication::delegation::Delegations::new(
+            authority.clone(),
+        )),
         state: Arc::new(tokio::sync::Mutex::new(
             ab_replication::gateway::StateAdapter(Arc::new(Mutex::new(state))),
         )),
