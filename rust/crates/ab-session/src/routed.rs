@@ -193,7 +193,11 @@ fn watch(gate: &Gate, roots: &[std::path::PathBuf]) {
     }
 }
 
-fn release(to_helper: &Mutex<UnixStream>, source: &str, covers: &[(String, u64)]) -> Result<(), Error> {
+fn release(
+    to_helper: &Mutex<UnixStream>,
+    source: &str,
+    covers: &[(String, u64)],
+) -> Result<(), Error> {
     for (checkpoint, credit) in covers {
         send(
             &mut *to_helper.lock().map_err(|_| Error::WorkerPanicked)?,
@@ -686,7 +690,14 @@ pub fn relay_layered(
                             value["generation"].as_str().unwrap_or_default().to_owned();
                         let size = u64::try_from(bytes.len()).map_err(|_| Error::Invalid)?;
                         if rust.contains(source) {
-                            ingest(&readers, &held, &to_helper, source, &value, (checkpoint, size))?;
+                            ingest(
+                                &readers,
+                                &held,
+                                &to_helper,
+                                source,
+                                &value,
+                                (checkpoint, size),
+                            )?;
                             continue;
                         }
                         register(&gate, source, generation, checkpoint, size)?;
