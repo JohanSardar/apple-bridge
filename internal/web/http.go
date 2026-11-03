@@ -124,7 +124,7 @@ func Handler(deps Deps) http.Handler {
 		deps.ConnectorApprovals = NewConnectorApprovals(deps.Authority)
 	}
 	if deps.ClientMetadata == nil {
-		deps.ClientMetadata = &ClientMetadataFetcher{}
+		deps.ClientMetadata = labClientMetadata()
 	}
 	s := &server{deps: deps, rates: map[string]rate{}, ceremonies: map[string]ceremony{}}
 	mux := http.NewServeMux()
