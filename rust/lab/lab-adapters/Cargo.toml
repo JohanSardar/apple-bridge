@@ -16,3 +16,5 @@ serde_json.workspace = true
 sha2.workspace = true
 hex = "0.4"
 serde-saphyr = "2.1"
+miniz_oxide = "0.9"
+crc32fast = "1"
