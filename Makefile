@@ -56,11 +56,13 @@ rust-check:
 rust-lint:
 	rust/check.sh fmt --all -- --check
 	rust/check.sh clippy --workspace --all-targets -- -D warnings
+	rust/check.sh clippy -p ab-session --all-targets --features rust-effects -- -D warnings
 	rust/check.sh deny check
 
 .PHONY: rust-test rust-ci
 rust-test:
 	rust/check.sh test --workspace --locked
+	rust/check.sh test -p ab-session --features rust-effects --locked
 
 rust-ci: lint rust-test rust-lint rust-lab-independence
 	python3 rust/check-native-graph.py

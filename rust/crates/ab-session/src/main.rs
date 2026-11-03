@@ -1,10 +1,12 @@
 #![forbid(unsafe_code)]
 
 use ab_session::Error;
+#[cfg(feature = "rust-effects")]
+use std::os::fd::AsRawFd;
 
 fn run() -> Result<(), Error> {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    if args.len() != 4 || args[0] != "--gateway-fd" || args[2] != "--helper-fd" {
+    if ![4, 6].contains(&args.len()) || args[0] != "--gateway-fd" || args[2] != "--helper-fd" {
         return Err(Error::Invalid);
     }
     let gateway = args[1].parse::<i32>().map_err(|_| Error::Invalid)?;
@@ -29,6 +31,33 @@ fn run() -> Result<(), Error> {
     selection.validate_proxy()?;
     let gateway = ab_sys::inherited_unix_stream(gateway)?;
     let helper = ab_sys::inherited_unix_stream(helper)?;
+    if args.len() == 6 {
+        if args[4] != "--effects-home" || std::env::var("AB_SESSION_EFFECTS").as_deref() != Ok("1")
+        {
+            return Err(Error::Invalid);
+        }
+        #[cfg(feature = "rust-effects")]
+        {
+            let native = std::env::var("AB_NATIVE_FD")
+                .map_err(|_| Error::Invalid)?
+                .parse::<i32>()
+                .map_err(|_| Error::Invalid)?;
+            if native < 3 || native == gateway.as_raw_fd() || native == helper.as_raw_fd() {
+                return Err(Error::Invalid);
+            }
+            return ab_session::effects::relay(
+                gateway,
+                helper,
+                ab_sys::inherited_unix_stream(native)?,
+                std::path::Path::new(&args[5]),
+            );
+        }
+        #[cfg(not(feature = "rust-effects"))]
+        return Err(Error::Conflict);
+    }
+    if std::env::var("AB_SESSION_EFFECTS").as_deref() == Ok("1") {
+        return Err(Error::Conflict);
+    }
     ab_session::proxy::relay(gateway, helper)
 }
 

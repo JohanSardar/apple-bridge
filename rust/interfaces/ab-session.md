@@ -82,3 +82,37 @@ shortcuts.actions, plus shortcuts.run, are permit-gated native effects. The clos
 Swift catalogue is NativeServer.effectOperations. The proxy leaves effects disabled;
 AppleSession.runNative is exclusive with the IPC run loop and is not selected by the
 current raw Rust proxy. No live framework parity or production cutover was performed.
+
+## Opt-in effect routing
+
+Build ab-session with `--features rust-effects` and select both
+`AB_SESSION_PROXY=1` and `AB_SESSION_EFFECTS=1` before starting an isolated
+Helper. SessionProxy supplies `--effects-home` using the actual Helper home.
+The default remains the verbatim proxy. A binary without the feature rejects
+this selection; it never falls back to Swift dispatch. No live selection was
+changed by this implementation.
+
+The routed proxy keeps authentication and capture bytes intact, retains Prepare
+and Prepared bindings, consumes each ticket once, and binds Dispatch origin,
+command, fence and deadline. Rust fsyncs the authoritative dispatch guard before
+sending the native permit. Swift's IPC Dispatch entry point rejects calls in
+this mode; its compatibility guard uses a separate inactive directory. Swift
+validates and consumes its prepared ticket through native/1 and publishes the
+resulting captures. Rust correlates only acknowledged capture identities from
+frames sent after dispatch started, checks the request fingerprint, and fsyncs
+the Outcome before sending it. Missing commits, mismatched native IDs, transport
+failure or unavailable evidence remain indeterminate. Resolve returns the saved
+outcome without repeating an effect; unresolved guard entries are reported at
+Ready after restart. The default Swift path retains its existing resolution.
+
+Framework queries in the native effect catalogue also receive durable permits;
+read-only queries continue through IPC. Native query results currently support
+inline JSON only. Blob-producing queries remain indeterminate until native file
+references and IPC BlobRead ownership are integrated. Query cancellation has no
+native cancellation message; the connection read deadline bounds its wait.
+Operations outside the existing native effect catalogue cannot use Swift IPC
+Dispatch as a fallback. This is an isolated routing gate, not production effect
+qualification. Existing capabilities must be narrowed before enabling it for a
+production Helper. Authoritative Rust source selection is still rejected;
+reader scheduling, capture credit and checkpoint persistence integration remain
+separate work.

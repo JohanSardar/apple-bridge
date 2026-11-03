@@ -1,6 +1,8 @@
 #![forbid(unsafe_code)]
 
 #[cfg(feature = "rust-effects")]
+pub mod effects;
+#[cfg(feature = "rust-effects")]
 pub mod guard;
 pub mod ownership;
 pub mod proxy;
