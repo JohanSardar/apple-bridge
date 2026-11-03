@@ -1,0 +1,8 @@
+[
+  {
+    "source": "edge.json",
+    "unsigned": ".build/shortcuts/edge.unsigned.shortcut",
+    "mode": "unsigned",
+    "unsigned_sha256": "9f7b072f74afff26c152efc54469861a33b050369ce745520d68e156776c0d20"
+  }
+]

@@ -1,0 +1,38 @@
+[
+  {
+    "source": "packaging/shortcuts/ab-bridge-status.json",
+    "unsigned": ".build/shortcuts/ab-bridge-status.unsigned.shortcut",
+    "mode": "unsigned",
+    "unsigned_sha256": "35e08bd2fcbce3135f09dfaf191b5afdb4089ab044e10a5d8c3238d23ba7e90f"
+  },
+  {
+    "source": "packaging/shortcuts/ab-clock.json",
+    "unsigned": ".build/shortcuts/ab-clock.unsigned.shortcut",
+    "mode": "unsigned",
+    "unsigned_sha256": "bafa178e77ac9b4b967603c8cbdd97d1b193633a21cddd4dd397ce19d61502ba"
+  },
+  {
+    "source": "packaging/shortcuts/ab-echo.json",
+    "unsigned": ".build/shortcuts/ab-echo.unsigned.shortcut",
+    "mode": "unsigned",
+    "unsigned_sha256": "8d7d48a0e5cbc9a542b266388215ee64abc3254a7f607227442eae6ede716eda"
+  },
+  {
+    "source": "packaging/shortcuts/ab-focus.json",
+    "unsigned": ".build/shortcuts/ab-focus.unsigned.shortcut",
+    "mode": "unsigned",
+    "unsigned_sha256": "4bace11d1fbab5a95e6abf1454f6057158f9b9a0763527faaa243132d2a53904"
+  },
+  {
+    "source": "packaging/shortcuts/ab-pack-version.json",
+    "unsigned": ".build/shortcuts/ab-pack-version.unsigned.shortcut",
+    "mode": "unsigned",
+    "unsigned_sha256": "41e95bf7d71701ef14fe050b8c65498aece9344a1421f0f209cab01412363a3b"
+  },
+  {
+    "source": "packaging/shortcuts/noop.json",
+    "unsigned": ".build/shortcuts/noop.unsigned.shortcut",
+    "mode": "unsigned",
+    "unsigned_sha256": "cad5970c0076d54a85ceb464d2e73c935149e4f47739b2b599a5b96c39bc5d81"
+  }
+]

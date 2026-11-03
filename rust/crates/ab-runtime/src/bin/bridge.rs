@@ -15,11 +15,12 @@ impl Arguments {
         if verb == "token" && args.next().as_deref() != Some("create") {
             return Err(Error::Invalid);
         }
-        let action = if ["agent", "remote", "web", "connector"].contains(&verb.as_str()) {
-            args.next().ok_or(Error::Invalid)?
-        } else {
-            String::new()
-        };
+        let action =
+            if ["agent", "remote", "web", "connector", "shortcuts"].contains(&verb.as_str()) {
+                args.next().ok_or(Error::Invalid)?
+            } else {
+                String::new()
+            };
         let mut flags = HashMap::new();
         let mut value = String::new();
         while let Some(argument) = args.next() {
@@ -71,6 +72,7 @@ impl Arguments {
                     "blob-grace-ms",
                     "retention-rows",
                     "retention-age",
+                    "pack",
                 ]
                 .contains(&key.as_str())
                 {
@@ -182,6 +184,16 @@ fn offline(args: &Arguments, home: &std::path::Path) -> Result<bool, Error> {
 }
 async fn run() -> Result<(), Error> {
     let args = Arguments::parse()?;
+    if args.verb == "shortcuts" {
+        if args.action != "install-pack" || !args.value.is_empty() {
+            return Err(Error::Invalid);
+        }
+        let directory = PathBuf::from(args.flag("pack", ".build/shortcuts"));
+        return tokio::task::spawn_blocking(move || ab_shortcuts::cli::open_pack(&directory))
+            .await
+            .map_err(|_| Error::Invalid)?
+            .map_err(|error| Error::Io(std::io::Error::other(error.to_string())));
+    }
     let home = args
         .flags
         .get("home")

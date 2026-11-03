@@ -67,3 +67,15 @@ fn effective_uid() -> u32 {
     // SAFETY: geteuid has no arguments or memory effects.
     unsafe { libc::geteuid() }
 }
+
+#[allow(unsafe_code)]
+pub fn kill_process_group(pid: u32) {
+    let Ok(pid) = i32::try_from(pid) else {
+        return;
+    };
+    if pid <= 1 {
+        return;
+    }
+    // SAFETY: kill takes integer arguments only and has no memory effects.
+    unsafe { libc::kill(-pid, libc::SIGKILL) };
+}
