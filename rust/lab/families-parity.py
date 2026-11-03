@@ -11,12 +11,14 @@ BLOB_SCENARIOS = ['CORE-BLOB-CAP', 'CORE-BLOB-CORRUPT', 'CORE-BLOB-DUPLICATE-REF
 JOURNEY_SCENARIOS = ['CORE-CMD-IDEMPOTENT', 'CORE-CMD-ERA', 'CORE-CMD-LOST-RESPONSE', 'CORE-CMD-CONFLICT',
                      'CORE-CMD-READ-YOUR-WRITE', *BLOB_SCENARIOS]
 JOURNEY_RUST_ONLY = {'world_started'}
+IMPORT_SCENARIOS = ['messages/MSG-HISTORY-IMPORT', 'contacts/CON-IMPORT', 'notes/NOTE-IMPORT', 'usage/USE-IMPORT']
+MEDIA_SCENARIOS = ['web/WEB-MEDIA-VARIANTS', 'messages/MSG-MEDIA-CLEANUP']
 SCENARIOS = ['CORE-QUERY-ROUNDTRIP', 'CORE-QUERY-BLOB', 'CORE-QUERY-SCOPE', 'CORE-QUERY-DEADLINE',
              *JOURNEY_SCENARIOS]
 
 
 def ignored(scenario, name):
-    if name in HARNESS_ONLY:
+    if name in HARNESS_ONLY or name == 'world_started':
         return True
     return scenario in JOURNEY_SCENARIOS and name in JOURNEY_RUST_ONLY
 
@@ -37,11 +39,18 @@ def main():
     for name in ['families', 'go-lab', 'gateway', 'simapple', 'output']:
         parser.add_argument('--' + name, required=True)
     parser.add_argument('--scenario', action='append')
+    parser.add_argument('--import', dest='imports', action='store_true')
+    parser.add_argument('--media', dest='media', action='store_true')
     args = parser.parse_args()
+    if args.imports:
+        args.scenario = (args.scenario or []) + IMPORT_SCENARIOS
+    if args.media:
+        args.scenario = (args.scenario or []) + MEDIA_SCENARIOS
     out = Path(args.output).resolve()
     out.mkdir(mode=0o700, parents=True, exist_ok=False)
-    root = Path(__file__).resolve().parents[2] / 'lab' / 'scenarios' / 'core'
-    files = [str(root / f'{name}.yaml') for name in args.scenario or SCENARIOS]
+    root = Path(__file__).resolve().parents[2] / 'lab' / 'scenarios'
+    names = [n if '/' in n else f'core/{n}' for n in args.scenario or SCENARIOS]
+    files = [str(root / f'{name}.yaml') for name in names]
     with (out / 'go.jsonl').open('w') as stream:
         subprocess.run([args.go_lab, 'run', *files, '--level', 'sim', '--json'],
                        stdout=stream, timeout=900, check=True)

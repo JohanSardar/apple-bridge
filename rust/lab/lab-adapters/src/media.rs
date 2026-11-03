@@ -1,6 +1,7 @@
 #![allow(clippy::too_many_lines, clippy::unnecessary_wraps)]
 use crate::{
     http::{Client, random_id},
+    poster,
     replicas::{self, Endpoint},
     watch::Watcher,
 };
@@ -17,12 +18,18 @@ use std::{
 pub const MEDIA_SCENARIOS: [&str; 2] = ["WEB-MEDIA-VARIANTS", "WEB-MEDIA-CAP"];
 const SCOPE: &str = "messages:read,messages:write,system:read";
 const REPLICA_SCOPE: &str = "messages:read,system:read";
+const FREE_BOX: [u8; 8] = [0, 0, 0, 8, b'f', b'r', b'e', b'e'];
 const CAP: u64 = 9 * 1024 * 1024;
 const VIDEO_LANDSCAPE: &[u8] = include_bytes!("../../lab-simapple/assets/video-landscape.mp4");
 const VIDEO_PORTRAIT: &[u8] = include_bytes!("../../lab-simapple/assets/video-portrait.mp4");
 const VIDEO_PANORAMA: &[u8] = include_bytes!("../../lab-simapple/assets/video-panorama.mp4");
 const AUDIO: &[u8] = include_bytes!("../../lab-simapple/assets/audio.m4a");
 
+fn fixture(raw: &[u8]) -> Vec<u8> {
+    let mut data = raw.to_vec();
+    data.extend_from_slice(&FREE_BOX);
+    data
+}
 fn await_until(seconds: u64, mut condition: impl FnMut() -> bool) -> bool {
     let deadline = Instant::now() + Duration::from_secs(seconds);
     loop {
@@ -367,8 +374,8 @@ fn geometry(evidence: &mut Evidence, client: &Client, chat: &str, prefix: &str) 
         .iter()
         .map(|name| {
             let data = match *name {
-                "portrait" => VIDEO_PORTRAIT.to_vec(),
-                "panorama" => VIDEO_PANORAMA.to_vec(),
+                "portrait" => fixture(VIDEO_PORTRAIT),
+                "panorama" => fixture(VIDEO_PANORAMA),
                 _ => b"invalid synthetic video".to_vec(),
             };
             (format!("{prefix}-geometry-{name}.mov"), data)
@@ -409,23 +416,36 @@ fn geometry(evidence: &mut Evidence, client: &Client, chat: &str, prefix: &str) 
         );
         if name == "panorama" {
             let poster = &record["data"]["derivatives"]["poster"];
-            let content = blob(
-                client,
-                poster["digest"].as_str().unwrap_or_default(),
-                record["id"].as_str().unwrap_or_default(),
-            );
-            let size = content.as_deref().and_then(image_size);
-            let valid = size.is_some_and(|(w, h, _)| w * 200 == h * 1920);
+            let mut content = None;
+            await_until(15, || {
+                content = blob(
+                    client,
+                    poster["digest"].as_str().unwrap_or_default(),
+                    record["id"].as_str().unwrap_or_default(),
+                );
+                content.is_some()
+            });
+            let decoded = content.as_deref().and_then(poster::Image::decode);
+            let size = decoded.as_ref().map(|image| (image.width, image.height));
+            let (w, h) = size.unwrap_or((0, 0));
+            let valid = decoded
+                .as_ref()
+                .is_some_and(|image| w * 200 == h * 1920 && image.center_marker());
             evidence.check(
                 "source_geometry_center_marker_poster",
                 valid,
                 &format!("{size:?}"),
             );
-            let (w, h) = size.map_or((0, 0), |(w, h, _)| (w, h));
             evidence.check(
                 "panorama_poster_retina_cover_resolution",
-                size.is_some() && w.min(h) >= 360 && w * h <= 1_500_000,
+                decoded.is_some() && w.min(h) >= 360 && w * h <= 1_500_000,
                 &format!("{w}x{h}"),
+            );
+            let contrast = decoded.as_ref().map(poster::Image::edge_contrast);
+            evidence.check(
+                "panorama_poster_retina_edge_contrast",
+                contrast.is_some_and(|value| value >= 0.5),
+                &format!("{contrast:?}"),
             );
             let video = &record["data"]["derivatives"]["video"];
             evidence.check(
@@ -480,8 +500,8 @@ pub fn media_variants(world: &mut World, _: &Value, evidence: &mut Evidence) -> 
     let prefix = format!("ab-{run}");
     let files = vec![
         (format!("{prefix}.png"), png(2400, 1200, cap)),
-        (format!("{prefix}.mov"), VIDEO_LANDSCAPE.to_vec()),
-        (format!("{prefix}.caf"), AUDIO.to_vec()),
+        (format!("{prefix}.mov"), fixture(VIDEO_LANDSCAPE)),
+        (format!("{prefix}.caf"), fixture(AUDIO)),
     ];
     let clients = endpoints(world)?;
     let observers = clients

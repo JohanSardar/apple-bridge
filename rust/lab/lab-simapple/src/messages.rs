@@ -25,6 +25,17 @@ fn incoming(s: &mut State, key: &str, from_me: bool) {
     s.data["records"][key]["data"]["title"] = json!(format!("[ab-test] {key}"));
     s.data["records"][key]["data"]["is_from_me"] = json!(from_me);
 }
+pub(super) fn revalidate(s: &State, frame: &mut Value) {
+    let Some(observations) = frame["observations"].as_array_mut() else {
+        return;
+    };
+    for record in observations {
+        let current = &s.data["records"][string(record, "native_key")];
+        if !current.is_null() && record["kind"] != "absent" {
+            *record = current.clone();
+        }
+    }
+}
 pub(super) fn control_messages(
     state: &Shared,
     tx: &mpsc::Sender<Request>,
@@ -33,10 +44,20 @@ pub(super) fn control_messages(
     let mut s = lock(state)?;
     let action = string(input, "action");
     let key = string(input, "key");
+    let mut changed: Vec<String> = vec![];
     if !input["count"].is_null() && input["count"].as_u64().is_none_or(|n| n > 20000) {
         return Err(invalid("message count"));
     }
     match action.as_str() {
+        "bulk-pause" => {
+            s.bulk.target = key;
+            s.bulk.paused = true;
+            return Ok(json!({"effect_done":true}));
+        }
+        "bulk-release" => {
+            s.bulk.paused = false;
+            return Ok(json!({"effect_done":true}));
+        }
         "seed" => {
             put(
                 &mut s,
@@ -60,6 +81,7 @@ pub(super) fn control_messages(
             }
             incoming(&mut s, &format!("{key}-outgoing"), true);
             incoming(&mut s, &key, false);
+            changed = vec![format!("{key}-outgoing"), key.clone()];
         }
         "receipts" | "malformed" | "delete" => {
             let mut record = s.data["records"][&key].clone();
@@ -88,6 +110,7 @@ pub(super) fn control_messages(
                 }
             }
             s.put(record);
+            changed = vec![key.clone()];
         }
         "watcher-rearm" => {
             s.data["message_watcher_armed"] = json!(false);
@@ -129,12 +152,26 @@ pub(super) fn control_messages(
     if s.denied.get("messages") == Some(&true) {
         return Ok(json!({"effect_done":true}));
     }
+    if s.bulk.paused && !changed.is_empty() {
+        let observations: Vec<Value> = changed
+            .iter()
+            .map(|key| s.data["records"][key].clone())
+            .collect();
+        drop(s);
+        enqueue(
+            tx,
+            json!({"t":"Capture","source":"messages","observations":observations}),
+            true,
+        )?;
+        return Ok(json!({"effect_done":true}));
+    }
+    let wait = !s.bulk.paused;
     let capture = s.scan("messages")?;
     drop(s);
-    enqueue(tx, capture, true)?;
+    enqueue(tx, capture, wait)?;
     Ok(json!({"effect_done":true}))
 }
-impl Session {
+impl Session<'_> {
     pub(super) fn message_command(&mut self, state: &Shared, frame: &Value) -> Result<bool> {
         let command = string(frame, "command_id");
         if frame["t"] == "Prepare" && string(&frame["action"], "op").starts_with("messages.") {

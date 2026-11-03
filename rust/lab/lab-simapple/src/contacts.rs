@@ -154,7 +154,7 @@ fn member_available(s: &super::State, action: &Value) -> bool {
         && group["data"]["container_id"] == contact["data"]["container_id"]
 }
 
-impl Session {
+impl Session<'_> {
     fn contacts_conflict(&mut self, state: &Shared, frame: &Value, key: &str) -> Result<()> {
         let capture = {
             let s = lock(state)?;
