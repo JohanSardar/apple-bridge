@@ -56,6 +56,9 @@ func verifyNativeMediaGateway(ctx context.Context, s Scenario, e Evidence) Evide
 		if err != nil {
 			return err
 		}
+		if world.SessionMediaSource(string(source)) {
+			return w.StageSessionMedia(string(source), version, kind != "absent")
+		}
 		now := time.Now().UTC()
 		capture := contracts.Capture{
 			Source: source, Generation: "native-media-fixture",
@@ -82,9 +85,16 @@ func verifyNativeMediaGateway(ctx context.Context, s Scenario, e Evidence) Evide
 			}
 			r := result.Records[0]
 			var data struct {
-				Version int `json:"fixture_version"`
+				Version  int     `json:"fixture_version"`
+				Duration float64 `json:"duration"`
 			}
-			if json.Unmarshal(r.Data, &data) != nil || data.Version != version || r.Version != uint64(version) || id != "" && r.ID != id {
+			if json.Unmarshal(r.Data, &data) != nil {
+				return false
+			}
+			if world.SessionMediaSource(string(source)) {
+				data.Version = world.SessionMediaVersion(data.Duration)
+			}
+			if data.Version != version || r.Version != uint64(version) || id != "" && r.ID != id {
 				return false
 			}
 			id = r.ID

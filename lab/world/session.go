@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -192,4 +193,81 @@ func (w *World) writeSessionPeers(root string) error {
 		return err
 	}
 	return os.Rename(temporary, filepath.Join(directory, "sync.db"))
+}
+
+type sessionMedia struct {
+	file   string
+	script string
+}
+
+var sessionMediaFixtures = map[string]sessionMedia{
+	"phone": {
+		file: "CallHistory.storedata",
+		script: `import sqlite3,sys
+c=sqlite3.connect(sys.argv[1])
+c.execute("CREATE TABLE IF NOT EXISTS Z_METADATA(Z_UUID TEXT)")
+if not c.execute("SELECT COUNT(*) FROM Z_METADATA").fetchone()[0]:c.execute("INSERT INTO Z_METADATA VALUES('lab-calls')")
+c.execute("CREATE TABLE IF NOT EXISTS ZCALLRECORD(Z_PK INTEGER PRIMARY KEY,ZADDRESS TEXT,ZNAME TEXT,ZDATE REAL,ZDURATION REAL,ZORIGINATED INTEGER,ZANSWERED INTEGER,ZSERVICE_PROVIDER TEXT,ZCALLTYPE INTEGER)")
+c.execute("DELETE FROM ZCALLRECORD")
+if sys.argv[2]!="absent":c.execute("INSERT INTO ZCALLRECORD VALUES(1,'synthetic','Fixture',946684800.0,?,0,1,'com.apple.Telephony',1)",(100+int(sys.argv[2]),))
+c.commit();c.close()
+`,
+	},
+	"voicemail": {
+		file: "voicemail.db",
+		script: `import sqlite3,sys
+c=sqlite3.connect(sys.argv[1])
+c.execute("CREATE TABLE IF NOT EXISTS Z_METADATA(Z_UUID TEXT)")
+if not c.execute("SELECT COUNT(*) FROM Z_METADATA").fetchone()[0]:c.execute("INSERT INTO Z_METADATA VALUES('lab-voicemail')")
+c.execute("CREATE TABLE IF NOT EXISTS ZSTOREDMESSAGE(Z_PK INTEGER PRIMARY KEY,ZRECORDUUID TEXT,ZFROM TEXT,ZDATECREATED REAL,ZDURATION REAL,ZISREAD INTEGER,ZMAILBOXTYPE INTEGER,ZPROVIDER TEXT,ZMESSAGETYPE INTEGER)")
+c.execute("DELETE FROM ZSTOREDMESSAGE")
+if sys.argv[2]!="absent":c.execute("INSERT INTO ZSTOREDMESSAGE VALUES(1,'lab-voicemail-1','Synthetic',946684800.0,?,0,0,'com.apple.coretelephony',1)",(100+int(sys.argv[2]),))
+c.commit();c.close()
+`,
+	},
+	"voice_memos": {
+		file: "CloudRecordings.db",
+		script: `import sqlite3,sys
+c=sqlite3.connect(sys.argv[1])
+c.execute("CREATE TABLE IF NOT EXISTS Z_METADATA(Z_UUID TEXT)")
+if not c.execute("SELECT COUNT(*) FROM Z_METADATA").fetchone()[0]:c.execute("INSERT INTO Z_METADATA VALUES('lab-recordings')")
+c.execute("CREATE TABLE IF NOT EXISTS ZCLOUDRECORDING(Z_PK INTEGER PRIMARY KEY,ZUNIQUEID TEXT,ZCUSTOMLABEL TEXT,ZDATE REAL,ZDURATION REAL,ZEVICTIONDATE REAL,ZFOLDER INTEGER)")
+c.execute("DELETE FROM ZCLOUDRECORDING")
+if sys.argv[2]!="absent":c.execute("INSERT INTO ZCLOUDRECORDING VALUES(1,'lab-recording-1','Synthetic',946684800.0,?,NULL,1)",(100+int(sys.argv[2]),))
+c.commit();c.close()
+`,
+	},
+}
+
+func SessionMediaSource(source string) bool {
+	if _, ok := sessionMediaFixtures[source]; !ok {
+		return false
+	}
+	for _, candidate := range SessionSources() {
+		if candidate == source {
+			return true
+		}
+	}
+	return false
+}
+
+func SessionMediaVersion(duration float64) int {
+	return int(duration) - 100
+}
+
+func (w *World) StageSessionMedia(source string, version int, present bool) error {
+	fixture, ok := sessionMediaFixtures[source]
+	root := w.sessionRoots[source]
+	if !ok || root == "" {
+		return os.ErrInvalid
+	}
+	if os.Getenv("AB_LAB_SESSION_CONTROL") == "empty" {
+		return nil
+	}
+	state := "absent"
+	if present {
+		state = strconv.Itoa(version)
+	}
+	_, err := commandOutput(w.ctx, "python3", "-c", fixture.script, filepath.Join(root, fixture.file), state)
+	return err
 }

@@ -130,7 +130,7 @@ simapple) would dial the gateway, dials the gateway socket for every accepted co
 `AB_SESSION_RUST_SOURCES={"safari":{"root":"DIR"},"usage":{"root":"DIR","zone":"UTC","local_name":"..."}}`
 gives each Rust source its fixture directory (optional `generation`, default `rust-native/1`).
 `AB_SESSION_RUST_POLL_MS` (default 100) is the reader poll interval. Every Rust source must have
-a config entry and be in the supported list (`safari`, `usage`, `notes`); otherwise startup fails.
+a config entry and be in the supported list (`safari`, `usage`, `notes`, `phone`, `voicemail`, `voice_memos`); otherwise startup fails.
 
 Behaviour of `routed::relay(gateway, helper, readers, poll)` (framing and byte-credit accounting
 copy `effects.rs`: whole frame length including the 4-byte header is the credit):
@@ -175,6 +175,14 @@ Rolling out another source (what to copy, in order):
    scenario runs a corruption check over its fixture, so the session reads a pristine copy. Add a socketpair test in
    `tests/capture_producer.rs` for the frame rules.
 
+Calls, Voicemail and Voice Memos (`phone`, `voicemail`, `voice_memos`) follow the same pattern. Their
+fixture databases live in the source root as `CallHistory.storedata`, `voicemail.db` and
+`CloudRecordings.db`; the reader skips unchanged input by the database and `-wal` signature. Voice Memos
+returns no frame when a scan would carry blob handles, because the session cannot serve blobs yet. The lab
+world writes these databases in place (`World.StageSessionMedia`) from `verifyNativeMediaGateway` when the
+source is in `AB_LAB_SESSION_SOURCES`; the version travels in `duration` (100 + version).
+`AB_LAB_SESSION_CONTROL=empty` skips the writes and is the negative control. `AB_SESSION_RUST_POLL_MS` is
+not a reliable control when other sources keep committing, because any gate change wakes the poll loop.
 Notes: `readers::NotesReader` wraps `ab_native::notes_reader::Reader` over `<root>/NoteStore.sqlite`
 (staging beside the root as `<root>-staging`). `next` drains the hydration queue first (each
 hydration is its own flight with an empty scope), then reconciles when the file-tree signature
