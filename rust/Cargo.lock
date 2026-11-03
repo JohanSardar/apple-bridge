@@ -296,8 +296,10 @@ name = "ab-session"
 version = "0.0.0"
 dependencies = [
  "ab-sys",
+ "jiff",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "thiserror 2.0.21",
 ]
 

@@ -96,6 +96,14 @@ impl DispatchGuard {
         Ok(())
     }
 
+    pub fn unresolved(&self) -> Vec<Value> {
+        self.outcomes
+            .values()
+            .filter(|v| v["disposition"] == "indeterminate")
+            .cloned()
+            .collect()
+    }
+
     pub fn outcome(&self, id: &str) -> Option<&Value> {
         self.outcomes.get(id)
     }
