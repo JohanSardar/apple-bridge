@@ -15,7 +15,10 @@ pub use pairing::{Enrollment, PairCode, pair_proof};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
-pub use store::{CredentialStore, FileStore, KeychainStore, atomic_write};
+pub use store::{
+    CredentialStore, FileStore, KeychainStore, LibsecretStore, StoreEnvironment, atomic_write,
+    select,
+};
 
 pub fn decision_now() -> jiff::Timestamp {
     #[cfg(feature = "lab-harness")]

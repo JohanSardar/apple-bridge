@@ -50,3 +50,6 @@ replica-feed = ["dep:ab-replication"]
 [[example]]
 name = "frontdoor_fixture"
 required-features = ["replica-feed", "lab-harness"]
+
+[dev-dependencies]
+tempfile = "3"

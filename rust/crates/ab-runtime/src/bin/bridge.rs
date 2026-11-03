@@ -100,7 +100,10 @@ impl Arguments {
             peer_address: self.flag("peer-addr", ""),
             listen: self.flag("listen", ""),
             socket: self.flag("socket", ""),
-            helper_app: self.flag("helper-app", ""),
+            helper_app: ab_runtime::bundle::helper_app(
+                &self.flag("helper-app", ""),
+                std::env::current_exe().ok().as_deref(),
+            ),
             helper_lab_commands: self.flag("helper-lab-commands", "false") == "true",
             retention_rows: self
                 .flag("retention-rows", "0")
@@ -161,13 +164,6 @@ fn offline(args: &Arguments, home: &std::path::Path) -> Result<bool, Error> {
         println!("{report}");
         return Ok(true);
     }
-    if args.verb == "remote" {
-        println!(
-            "{}",
-            ab_remote::state::command(home, &args.action, &args.flag("via", "relay"))?
-        );
-        return Ok(true);
-    }
     if args.verb == "restore" {
         ab_runtime::maintenance::restore(
             home,
@@ -181,6 +177,19 @@ fn offline(args: &Arguments, home: &std::path::Path) -> Result<bool, Error> {
         return Ok(true);
     }
     Ok(false)
+}
+async fn remote(args: &Arguments, home: &std::path::Path) -> Result<(), Error> {
+    let mut out = std::io::stdout();
+    ab_remote::onboarding::command(
+        home,
+        &args.action,
+        &args.flag("via", "relay"),
+        &mut out,
+        Arc::new(ab_remote::onboarding::open_link),
+        std::time::Duration::from_millis(100),
+    )
+    .await?;
+    Ok(())
 }
 async fn run() -> Result<(), Error> {
     let args = Arguments::parse()?;
@@ -212,6 +221,9 @@ async fn run() -> Result<(), Error> {
         .await?;
         println!("{result}");
         return Ok(());
+    }
+    if args.verb == "remote" {
+        return remote(&args, &home).await;
     }
     if offline(&args, &home)? {
         return Ok(());
@@ -258,6 +270,7 @@ async fn run() -> Result<(), Error> {
                 )
             })?;
         }
+        "install-credentials" => {}
         #[cfg(feature = "lab-harness")]
         "lab-credential-lifecycle" => {
             ab_runtime::inspection::credential_lifecycle(&home)?;
