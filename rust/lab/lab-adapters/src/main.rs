@@ -1,6 +1,29 @@
 use lab_runner::Scenario;
 use lab_world::{RealConfig, World, WorldConfig};
-use std::{env, fs, path::PathBuf, process::ExitCode};
+use std::{
+    env, fs,
+    path::{Path, PathBuf},
+    process::{Command, ExitCode, Stdio},
+};
+fn require_lab_gateway(gateway: &Path, output: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    let home = output.join("gateway-capability-probe");
+    fs::create_dir_all(&home)?;
+    let status = Command::new(gateway)
+        .args(["lab-operation-catalog", "--home"])
+        .arg(&home)
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status();
+    let _ = fs::remove_dir_all(&home);
+    if status.is_ok_and(|status| status.success()) {
+        return Ok(());
+    }
+    Err(format!(
+        "gateway binary {} was built without the lab harness; build it with `cargo build --manifest-path rust/Cargo.toml -p ab-runtime --features lab-queries --bin bridge`",
+        gateway.display()
+    )
+    .into())
+}
 fn run() -> Result<bool, Box<dyn std::error::Error>> {
     let mut args = env::args().skip(1);
     if args.next().as_deref() != Some("run") {
@@ -46,6 +69,9 @@ fn run() -> Result<bool, Box<dyn std::error::Error>> {
         lab_world::require_signed_helper(helper.as_deref())?;
     }
     fs::create_dir_all(&output)?;
+    if !real {
+        require_lab_gateway(&gateway, &output)?;
+    }
     lab_adapters::replicas::configure(&gateway);
     lab_adapters::session_proxy::configure(&simapple);
     let registry = lab_adapters::registry();

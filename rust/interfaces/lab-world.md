@@ -1,5 +1,11 @@
 # G-E binary fixture contracts
 
+## Build recipe for `rust/lab/families-parity.py` and `lab-families`
+
+The gateway under test must be built with the lab harness: `cargo build --manifest-path rust/Cargo.toml -p ab-runtime --features lab-queries --bin bridge`. A plain `cargo build -p ab-runtime --bin bridge` lacks `lab-principal`, `lab-session`, `lab-operation-catalog` and the apply-boundary hooks, so scenarios that pair replicas (WEB-RELAY-AUTH, CORE-KILL-DURING-APPLY, replica-backed families) fail at `paired_world`. `lab-families` now refuses to run a sim scenario against such a binary and prints this command. Also build `lab-simapple` and `lab-adapters` (`cargo build --manifest-path rust/Cargo.toml -p lab-simapple -p lab-adapters`) and the Go lab (`go build -o bin/bridge-lab ./cmd/bridge-lab`). Relay scenarios other than WEB-RELAY-AUTH additionally need `AB_RELAY_FIXTURE` pointing at `cargo build -p ab-relay --examples`'s `lab_fixture`; `packaging/dev/gateway-matrix.sh` builds all of this.
+
+`replica_application_exactly_once` and `mcp_replica_application_exactly_once` are reported `passed: false, status: unverified, detail: "kill-during-apply check did not run"` by every scenario except CORE-KILL-DURING-APPLY, in the Go and Rust harnesses alike. That is the designed "not exercised here" marker (`record_integrity(.., None)`); parity and scenario verdicts treat `unverified` as non-failing. The real check is CORE-KILL-DURING-APPLY.
+
 ## CIMD selected-runtime fixture
 
 `WEB-AGENT-OAUTH-CIMD` drives the selected gateway's HTTP authorization and token endpoints. It starts an isolated TLS metadata server with a generated CA and leaf certificate, then restarts that gateway with `World.GatewayEnv`. Go requires the `lab` build tag; Rust requires `ab-runtime/lab-harness`. Production builds ignore these fixture variables.
