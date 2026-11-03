@@ -98,7 +98,10 @@ pub fn peer_post(
         body.len()
     );
     for (name, value) in headers {
-        head.push_str(&format!("{name}: {value}\r\n"));
+        head.push_str(name);
+        head.push_str(": ");
+        head.push_str(value);
+        head.push_str("\r\n");
     }
     head.push_str("\r\n");
     stream.write_all(head.as_bytes())?;

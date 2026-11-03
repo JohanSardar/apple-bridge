@@ -13,6 +13,7 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::{fs, path::Path};
 
+type Mutation = fn(&mut Value);
 const SCOPE: &str = "reminders:write,system:read";
 
 struct Owner {
@@ -32,15 +33,24 @@ impl Owner {
             .client
             .request_with(false, method, path, &headers, form.map(str::as_bytes), 15)
             .ok()?;
-        Some((reply.status, String::from_utf8_lossy(&reply.body).into_owned()))
+        Some((
+            reply.status,
+            String::from_utf8_lossy(&reply.body).into_owned(),
+        ))
     }
     fn decide(&self, id: &str, decision: &str) -> Option<u16> {
-        self.request("POST", &format!("/approvals/{id}"), Some(&format!("decision={decision}")))
-            .map(|(status, _)| status)
+        self.request(
+            "POST",
+            &format!("/approvals/{id}"),
+            Some(&format!("decision={decision}")),
+        )
+        .map(|(status, _)| status)
     }
     fn pending(&self, id: &str) -> bool {
         self.request("GET", "/approvals", None)
-            .is_some_and(|(status, body)| status == 200 && body.contains(&format!("/approvals/{id}")))
+            .is_some_and(|(status, body)| {
+                status == 200 && body.contains(&format!("/approvals/{id}"))
+            })
     }
 }
 struct Agent {
@@ -96,8 +106,10 @@ fn stored_state(world: &World, id: &str) -> String {
     )
     .ok()
     .and_then(|db| {
-        db.query_row("SELECT state FROM commands WHERE id=?", [id], |row| row.get(0))
-            .ok()
+        db.query_row("SELECT state FROM commands WHERE id=?", [id], |row| {
+            row.get(0)
+        })
+        .ok()
     })
     .unwrap_or_default()
 }
@@ -133,7 +145,11 @@ pub fn agents(world: &mut World, e: &mut Evidence) -> Result<()> {
         && gateway_client(world).is_ok_and(|client| {
             await_until(10, || {
                 client
-                    .call("records.query", &json!({"collection": "reminders.list"}), 10)
+                    .call(
+                        "records.query",
+                        &json!({"collection": "reminders.list"}),
+                        10,
+                    )
                     .ok()
                     .flatten()
                     .is_some_and(|v| v["records"].as_array().is_some_and(|r| !r.is_empty()))
@@ -216,7 +232,14 @@ pub fn agents(world: &mut World, e: &mut Evidence) -> Result<()> {
         "",
     );
     let full = create("full", e);
-    delegation(world, e, &endpoint, &replica, &gateway_identity.fingerprint, &full.id);
+    delegation(
+        world,
+        e,
+        &endpoint,
+        &replica,
+        &gateway_identity.fingerprint,
+        &full.id,
+    );
     let immediate = new_command()?;
     let (status, record) = call(&endpoint, &full.token, &immediate);
     e.check(
@@ -226,7 +249,10 @@ pub fn agents(world: &mut World, e: &mut Evidence) -> Result<()> {
     );
     let approve = create("approve", e);
     let pending = new_command()?;
-    let pending_id = pending["command_id"].as_str().unwrap_or_default().to_owned();
+    let pending_id = pending["command_id"]
+        .as_str()
+        .unwrap_or_default()
+        .to_owned();
     let (status, record) = call(&endpoint, &approve.token, &pending);
     let queued = status == 200 && record["state"] == "awaiting_approval";
     e.check("replica_approve_agent_queued_on_gateway", queued, "");
@@ -278,13 +304,25 @@ fn delegation(
         return;
     };
     let peer = world.runtime["peer_address"].as_str().unwrap_or_default();
-    let cases: [(&str, fn(&mut Value), bool); 6] = [
-        ("tampered_level", |d| d["local_level"] = json!("approve"), false),
+    let cases: [(&str, Mutation, bool); 6] = [
+        (
+            "tampered_level",
+            |d| d["local_level"] = json!("approve"),
+            false,
+        ),
         ("stale_signature", |d| d["iat"] = json!(now() - 61), true),
         ("future_signature", |d| d["iat"] = json!(now() + 3600), true),
         ("invalid_level", |d| d["local_level"] = json!("owner"), true),
-        ("read_level_write_scope", |d| d["local_level"] = json!("read"), true),
-        ("scope_escalation", |d| d["local_grants"] = json!(["admin"]), true),
+        (
+            "read_level_write_scope",
+            |d| d["local_level"] = json!("read"),
+            true,
+        ),
+        (
+            "scope_escalation",
+            |d| d["local_grants"] = json!(["admin"]),
+            true,
+        ),
     ];
     let list_id = world_lists(endpoint).unwrap_or_default();
     for (name, change, resign) in cases {
@@ -310,14 +348,26 @@ fn delegation(
         let signature = replica.sign(&original);
         change(&mut d);
         let raw = serde_json::to_vec(&d).unwrap_or_default();
-        let signature = if resign { replica.sign(&raw) } else { signature };
+        let signature = if resign {
+            replica.sign(&raw)
+        } else {
+            signature
+        };
         let header = format!(
             "{}.{}",
             URL_SAFE_NO_PAD.encode(&raw),
             URL_SAFE_NO_PAD.encode(signature)
         );
-        let body = serde_json::to_vec(&json!({"method": "submit", "command": c})).unwrap_or_default();
-        let reply = peer_post(peer, replica, pin, "/v1/commands", &[("X-Apple-Bridge-Delegation", &header)], &body);
+        let body =
+            serde_json::to_vec(&json!({"method": "submit", "command": c})).unwrap_or_default();
+        let reply = peer_post(
+            peer,
+            replica,
+            pin,
+            "/v1/commands",
+            &[("X-Apple-Bridge-Delegation", &header)],
+            &body,
+        );
         let code = reply
             .ok()
             .and_then(|r| serde_json::from_slice::<Value>(&r.body).ok())
@@ -335,7 +385,11 @@ fn now() -> i64 {
 fn world_lists(endpoint: &Endpoint) -> Option<String> {
     let value = endpoint
         .client()
-        .call("records.query", &json!({"collection": "reminders.list"}), 10)
+        .call(
+            "records.query",
+            &json!({"collection": "reminders.list"}),
+            10,
+        )
         .ok()
         .flatten()?;
     let records = value["records"].as_array().filter(|r| r.len() == 1)?;
@@ -382,7 +436,10 @@ fn approvals(
     let Ok(offline) = new_command() else {
         return;
     };
-    let offline_id = offline["command_id"].as_str().unwrap_or_default().to_owned();
+    let offline_id = offline["command_id"]
+        .as_str()
+        .unwrap_or_default()
+        .to_owned();
     let (status, row) = call(endpoint, &agent.token, &offline);
     e.check(
         "offline_fixture_pending",
@@ -397,7 +454,11 @@ fn approvals(
         "",
     );
     let restarted = replicas::restart(0);
-    e.check("replica_reconnects_for_fresh_approval", restarted.is_ok(), "");
+    e.check(
+        "replica_reconnects_for_fresh_approval",
+        restarted.is_ok(),
+        "",
+    );
     if restarted.is_err() {
         return;
     }
@@ -439,7 +500,10 @@ fn parent(
         return;
     };
     let scoped_id = scoped["command_id"].as_str().unwrap_or_default().to_owned();
-    let revoked_id = revoked["command_id"].as_str().unwrap_or_default().to_owned();
+    let revoked_id = revoked["command_id"]
+        .as_str()
+        .unwrap_or_default()
+        .to_owned();
     let (status, row) = call(endpoint, &agent.token, &scoped);
     e.check(
         "scope_fixture_pending",

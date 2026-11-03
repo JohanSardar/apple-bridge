@@ -1,5 +1,8 @@
 use crate::{Error, Result};
-use ed25519_dalek::{Signer, SigningKey, pkcs8::{DecodePrivateKey, EncodePrivateKey}};
+use ed25519_dalek::{
+    Signer, SigningKey,
+    pkcs8::{DecodePrivateKey, EncodePrivateKey},
+};
 use rustls::pki_types::{CertificateDer, pem::PemObject};
 use sha2::{Digest, Sha256};
 use std::path::Path;
