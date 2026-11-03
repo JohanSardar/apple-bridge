@@ -1,0 +1,40 @@
+[package]
+name = "ab-relay-control"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+default = []
+isolated-control = []
+
+[[bin]]
+name = "ab-relay-control"
+path = "src/main.rs"
+required-features = ["isolated-control"]
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+sha2.workspace = true
+rusqlite.workspace = true
+tokio.workspace = true
+axum.workspace = true
+ed25519-dalek.workspace = true
+base64 = "0.22"
+getrandom = "0.3"
+fs2 = "0.4"
+p256 = { version = "0.14", features = ["ecdsa"] }
+ciborium = "0.2"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+url = "2"
+jiff.workspace = true
+
+[dev-dependencies]
+tempfile = "3"
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"
