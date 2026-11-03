@@ -232,7 +232,8 @@ impl Authority {
                 .iter_mut()
                 .find(|p| p.id == id && p.kind == "replica")
                 .ok_or(Error::Unauthorized)?;
-            p.extra.insert("relay2".into(), serde_json::Value::Bool(true));
+            p.extra
+                .insert("relay2".into(), serde_json::Value::Bool(true));
             Ok(p.clone())
         })
     }
