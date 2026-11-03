@@ -1,0 +1,38 @@
+[
+  {
+    "scenario": "MSG-DB-REPLACED",
+    "simapple": "go",
+    "run": 1,
+    "passed": true
+  },
+  {
+    "scenario": "MSG-PERMISSION-LOSS",
+    "simapple": "go",
+    "run": 1,
+    "passed": true
+  },
+  {
+    "scenario": "MSG-RECEIPTS",
+    "simapple": "go",
+    "run": 1,
+    "passed": true
+  },
+  {
+    "scenario": "MSG-DB-REPLACED",
+    "simapple": "rust",
+    "run": 1,
+    "passed": true
+  },
+  {
+    "scenario": "MSG-PERMISSION-LOSS",
+    "simapple": "rust",
+    "run": 1,
+    "passed": true
+  },
+  {
+    "scenario": "MSG-RECEIPTS",
+    "simapple": "rust",
+    "run": 1,
+    "passed": true
+  }
+]

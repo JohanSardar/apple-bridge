@@ -86,8 +86,14 @@ impl State {
             .into_iter()
             .filter(|v| source(v["collection"].as_str().unwrap_or_default()) == src)
             .collect();
-        let scope: std::collections::BTreeSet<_> =
-            records.iter().map(|v| string(v, "collection")).collect();
+        let scope: std::collections::BTreeSet<_> = if src == "messages" {
+            ["chat", "handle", "message", "reaction", "attachment"]
+                .into_iter()
+                .map(|name| format!("messages.{name}"))
+                .collect()
+        } else {
+            records.iter().map(|v| string(v, "collection")).collect()
+        };
         Ok(
             json!({"t":"Capture","source":src,"observations":records,"scan_id":id("scan")?,"scope":scope,"scan_started_at":now(),"completion_evidence":"complete"}),
         )
@@ -139,6 +145,12 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
     }
     let mut s = lock(state)?;
     match route {
+        "/messages-status" => Ok(json!({
+            "generation":s.data["message_generation"].as_str().unwrap_or_else(|| s.data["generation"].as_str().unwrap_or_default()),
+            "watcher_armed":s.data["message_watcher_armed"] != false,
+            "poll_pending":s.data["message_poll_pending"] == true,
+            "permitted":s.denied.get("messages") != Some(&true)
+        })),
         "/inspect" => Ok(json!(s.records())),
         "/effects" => Ok(s.data["effects"].clone()),
         "/command-origins" => Ok(s.data["origins"].clone()),
@@ -351,19 +363,27 @@ struct Session {
     pending: VecDeque<Value>,
     checkpoints: BTreeMap<String, String>,
     generation: String,
+    message_generation: String,
     fence: u64,
     credit: usize,
     tickets: BTreeMap<String, Ticket>,
 }
 impl Session {
-    fn emit(&mut self, state: &Shared, frame: Value) -> Result<()> {
+    fn emit(&mut self, state: &Shared, mut frame: Value) -> Result<()> {
+        if let Some(observations) = frame["observations"].as_array_mut() {
+            observations.sort_by_key(|record| record["kind"] == "absent");
+        }
         let Some(observations) = frame["observations"].as_array().filter(|v| v.len() > 64) else {
             return self.emit_part(state, frame);
         };
         for (index, chunk) in observations.chunks(64).enumerate() {
             let mut part = frame.clone();
             part["observations"] = json!(chunk);
-            if (index + 1) * 64 < observations.len() {
+            if (index + 1) * 64 < observations.len()
+                && chunk
+                    .last()
+                    .is_some_and(|record| record["kind"] != "absent")
+            {
                 part.as_object_mut()
                     .ok_or_else(|| invalid("capture"))?
                     .remove("completion_evidence");
@@ -378,10 +398,23 @@ impl Session {
             return Ok(());
         }
         let src = string(&frame, "source");
+        if src == "messages" {
+            messages::aliases(&mut frame);
+        }
         if lock(state)?.denied.get(&src) == Some(&true) {
             return Ok(());
         }
-        frame["generation"] = json!(self.generation);
+        frame["generation"] = if src == "messages" {
+            lock(state)?.data["message_generation"]
+                .as_str()
+                .map_or_else(|| json!(self.generation), |v| json!(v))
+        } else {
+            json!(self.generation)
+        };
+        if src == "messages" && frame["generation"] != self.message_generation {
+            self.checkpoints.remove(&src);
+            self.message_generation = string(&frame, "generation");
+        }
         frame["predecessor"] = json!(self.checkpoints.get(&src).cloned().unwrap_or_default());
         let checkpoint = id("cp")?;
         frame["checkpoint"] = json!(checkpoint);
@@ -703,19 +736,31 @@ fn session(
             }
         }
     });
+    let message_generation = {
+        let s = lock(state)?;
+        s.data["message_generation"]
+            .as_str()
+            .map_or_else(|| string(&s.data, "generation"), str::to_owned)
+    };
     let mut session = Session {
         stream,
         incoming: rx,
         pending: VecDeque::new(),
         checkpoints: BTreeMap::new(),
         generation: string(&lock(state)?.data, "generation"),
+        message_generation,
         fence,
         credit: usize::try_from(credit).map_err(|_| invalid("credit"))?,
         tickets: BTreeMap::new(),
     };
     if let Some(checkpoints) = open["checkpoints"].as_object() {
         for (src, checkpoint) in checkpoints {
-            if checkpoint["generation"] == session.generation {
+            let generation = if src == "messages" {
+                &session.message_generation
+            } else {
+                &session.generation
+            };
+            if checkpoint["generation"] == *generation {
                 session
                     .checkpoints
                     .insert(src.clone(), string(checkpoint, "checkpoint"));
