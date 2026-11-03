@@ -27,6 +27,7 @@ pub mod media;
 pub mod messages_a;
 pub mod messages_b;
 pub mod native;
+pub mod native_runner;
 pub mod packaging;
 pub mod phone;
 pub mod pkginstall;
@@ -104,6 +105,8 @@ pub fn registry() -> Registry {
             messages_a::start(world, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && labcore::SCENARIOS.contains(&id) {
             labcore::start_world(world, id, usize::try_from(replicas).unwrap_or(0))?;
+        } else if native_runner::SCENARIOS.contains(&id) {
+            native_runner::start_world(world)?;
         } else if replicas != 0 && robust::SCENARIOS.contains(&id) {
             replicas::start(world, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && contacts_list::SCENARIOS.contains(&id) {
@@ -187,6 +190,7 @@ pub fn registry() -> Registry {
     registry.register("shortcuts_real_only", shortcuts::shortcuts_real_only);
     registry.register("mac", mac::mac);
     registry.register("calendar_journey", calendar::calendar_journey);
+    native_runner::register(&mut registry);
     registry
 }
 

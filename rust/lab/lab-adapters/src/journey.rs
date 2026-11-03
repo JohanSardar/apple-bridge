@@ -59,6 +59,9 @@ pub(crate) fn records(client: &Client) -> Result<(Value, Vec<Value>)> {
     }
 }
 pub fn seed(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result<()> {
+    if crate::native_runner::SCENARIOS.contains(&evidence.scenario.as_str()) {
+        return Ok(());
+    }
     let count = input["count"].as_u64().unwrap_or(4);
     world.control("/seed", &json!({"count": count}))?;
     let gateway = gateway_client(world)?;
@@ -139,7 +142,10 @@ pub(crate) fn record_set(client: &Client, collection: &str) -> Result<Vec<Value>
         .filter(|r| r["collection"] == collection)
         .collect())
 }
-pub fn command_journey(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> {
+pub fn command_journey(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result<()> {
+    if crate::native_runner::SCENARIOS.contains(&evidence.scenario.as_str()) {
+        return crate::native_runner::run(world, input, evidence);
+    }
     if !COMMAND_SCENARIOS.contains(&evidence.scenario.as_str()) {
         return Err(Error::Invalid(format!(
             "command_journey not ported for {}",
