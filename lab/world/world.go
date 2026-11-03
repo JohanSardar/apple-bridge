@@ -69,6 +69,7 @@ type World struct {
 	sessionSocket     string
 	sessionRoots      map[string]string
 	sessionUsage      map[string]*sessionDevice
+	sessionNotes      *sessionNotes
 	fixtureCopyMethod string
 	dialCode          string
 	remoteExtraHomes  []string
@@ -640,6 +641,12 @@ func (w *World) RestartReplica(index int) error {
 	return err
 }
 func (w *World) ControlAction(path string, action any) error {
+	if path == "/external-change" && w.sessionRoots["notes"] != "" {
+		if err := w.stageSessionNotes(action); err != nil {
+			fmt.Fprintf(os.Stderr, "lab session notes: %v\n", err)
+			return err
+		}
+	}
 	if path == "/usage" && w.sessionRoots["usage"] != "" {
 		if err := w.stageSessionUsage(action); err != nil {
 			fmt.Fprintf(os.Stderr, "lab session usage: %v\n", err)
