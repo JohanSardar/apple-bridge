@@ -1,5 +1,5 @@
 {
-  "wall_seconds": 95.24,
+  "wall_seconds": 151.259,
   "parallel": 12,
   "host": "linux",
   "complete": true,
@@ -72,7 +72,7 @@
     },
     {
       "id": "APP-PAIR-SIM",
-      "seconds": 2.32,
+      "seconds": 2.319,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -89,7 +89,7 @@
     },
     {
       "id": "AUD-SIM",
-      "seconds": 1.92,
+      "seconds": 1.968,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -99,7 +99,7 @@
     },
     {
       "id": "AUTH-SCOPES-METADATA",
-      "seconds": 0.114,
+      "seconds": 2.57,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -117,7 +117,7 @@
     },
     {
       "id": "CAL-ALLDAY",
-      "seconds": 2.287,
+      "seconds": 2.24,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -127,7 +127,7 @@
     },
     {
       "id": "CAL-ALLDAY-FUTURE",
-      "seconds": 2.54,
+      "seconds": 2.492,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -143,7 +143,7 @@
     },
     {
       "id": "CAL-CREATE-EXTERNAL",
-      "seconds": 3.095,
+      "seconds": 3.141,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -153,7 +153,7 @@
     },
     {
       "id": "CAL-CRUD",
-      "seconds": 4.599,
+      "seconds": 4.642,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -169,7 +169,7 @@
     },
     {
       "id": "CAL-DST",
-      "seconds": 2.292,
+      "seconds": 2.239,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -179,7 +179,7 @@
     },
     {
       "id": "CAL-FUTURE-RULE-MISMATCH",
-      "seconds": 2.394,
+      "seconds": 2.393,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -189,7 +189,7 @@
     },
     {
       "id": "CAL-ID-CHURN",
-      "seconds": 2.338,
+      "seconds": 2.291,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -199,7 +199,7 @@
     },
     {
       "id": "CAL-LARGE-CAPTURE",
-      "seconds": 5.949,
+      "seconds": 5.948,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -209,7 +209,7 @@
     },
     {
       "id": "CAL-MOVED-OCCURRENCE",
-      "seconds": 2.39,
+      "seconds": 2.389,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -219,7 +219,7 @@
     },
     {
       "id": "CAL-MOVED-OUTSIDE-WINDOW",
-      "seconds": 2.441,
+      "seconds": 2.442,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -229,7 +229,7 @@
     },
     {
       "id": "CAL-PERIODIC-VERIFICATION",
-      "seconds": 2.04,
+      "seconds": 1.99,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -239,7 +239,7 @@
     },
     {
       "id": "CAL-PERMISSION-LOSS",
-      "seconds": 2.692,
+      "seconds": 2.69,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -249,7 +249,7 @@
     },
     {
       "id": "CAL-READONLY",
-      "seconds": 2.22,
+      "seconds": 2.269,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -265,7 +265,7 @@
     },
     {
       "id": "CAL-RECUR-ALL-REJECT",
-      "seconds": 2.219,
+      "seconds": 2.272,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -281,7 +281,7 @@
     },
     {
       "id": "CAL-RECUR-FUTURE",
-      "seconds": 2.82,
+      "seconds": 2.921,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -297,7 +297,7 @@
     },
     {
       "id": "CAL-RECUR-THIS",
-      "seconds": 2.47,
+      "seconds": 2.52,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -313,7 +313,7 @@
     },
     {
       "id": "CAL-SPLIT-ATOMIC-ALLDAY",
-      "seconds": 2.571,
+      "seconds": 2.625,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -329,7 +329,7 @@
     },
     {
       "id": "CAL-SPLIT-ATOMIC-TIMED",
-      "seconds": 2.921,
+      "seconds": 2.971,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -339,7 +339,7 @@
     },
     {
       "id": "CAL-SPLIT-FRAME-CAP",
-      "seconds": 42.137,
+      "seconds": 42.839,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -365,7 +365,7 @@
     },
     {
       "id": "CAL-WINDOW-SLIDE",
-      "seconds": 2.269,
+      "seconds": 2.319,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -391,7 +391,7 @@
     },
     {
       "id": "CON-CRUD",
-      "seconds": 3.02,
+      "seconds": 3.07,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -407,7 +407,7 @@
     },
     {
       "id": "CON-DROP-EVERYTHING",
-      "seconds": 2.168,
+      "seconds": 2.169,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -417,7 +417,7 @@
     },
     {
       "id": "CON-EXTERNAL",
-      "seconds": 4.072,
+      "seconds": 4.022,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -427,7 +427,7 @@
     },
     {
       "id": "CON-GROUPS",
-      "seconds": 3.421,
+      "seconds": 3.521,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -447,16 +447,6 @@
     },
     {
       "id": "CON-IMAGE",
-      "seconds": 6.927,
-      "status": "pass",
-      "implementation": "gateway=rust",
-      "required_features": [
-        "internal/contracts"
-      ],
-      "blocked_on": []
-    },
-    {
-      "id": "CON-IMPORT",
       "seconds": 2.118,
       "status": "pass",
       "implementation": "gateway=rust",
@@ -466,8 +456,18 @@
       "blocked_on": []
     },
     {
+      "id": "CON-IMPORT",
+      "seconds": 2.168,
+      "status": "pass",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": []
+    },
+    {
       "id": "CON-PERMISSION-LOSS",
-      "seconds": 2.018,
+      "seconds": 2.068,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -477,7 +477,7 @@
     },
     {
       "id": "CON-READONLY-CONTAINER",
-      "seconds": 2.018,
+      "seconds": 2.068,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -493,7 +493,7 @@
     },
     {
       "id": "CON-RECIPIENT-LOOKUP",
-      "seconds": 12.236,
+      "seconds": 12.337,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -503,7 +503,7 @@
     },
     {
       "id": "CON-RESOLVE-RESTART",
-      "seconds": 7.93,
+      "seconds": 7.879,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -529,7 +529,7 @@
     },
     {
       "id": "CON-TOKEN-CRASH",
-      "seconds": 2.269,
+      "seconds": 2.319,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -560,12 +560,7 @@
         "internal/web"
       ],
       "blocked_on": [
-        "harness: lab/scenarios/connector_approval.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/connector_real.go still imports product implementations: remote, trust, web",
-        "harness: lab/scenarios/remote.go still imports product implementations: remote",
-        "harness: lab/scenarios/remote_checks.go still imports product implementations: remote",
-        "harness: lab/scenarios/remote_flow.go still imports product implementations: remote",
-        "harness: lab/scenarios/remote_private_real.go still imports product implementations: remote"
+        "harness: lab/scenarios/connector_approval.go still imports product implementations: trust, web"
       ]
     },
     {
@@ -591,17 +586,12 @@
         "internal/web"
       ],
       "blocked_on": [
-        "harness: lab/scenarios/connector_approval.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/connector_real.go still imports product implementations: remote, trust, web",
-        "harness: lab/scenarios/remote.go still imports product implementations: remote",
-        "harness: lab/scenarios/remote_checks.go still imports product implementations: remote",
-        "harness: lab/scenarios/remote_flow.go still imports product implementations: remote",
-        "harness: lab/scenarios/remote_private_real.go still imports product implementations: remote"
+        "harness: lab/scenarios/connector_approval.go still imports product implementations: trust, web"
       ]
     },
     {
       "id": "CONSENT-CONNECTOR",
-      "seconds": 2.119,
+      "seconds": 2.169,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -619,7 +609,7 @@
     },
     {
       "id": "CORE-BLOB-CAP",
-      "seconds": 2.318,
+      "seconds": 2.37,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -634,7 +624,7 @@
     },
     {
       "id": "CORE-BLOB-CORRUPT",
-      "seconds": 6.825,
+      "seconds": 6.827,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -649,7 +639,7 @@
     },
     {
       "id": "CORE-BLOB-DUPLICATE-REFERENCE",
-      "seconds": 2.218,
+      "seconds": 2.32,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -664,7 +654,7 @@
     },
     {
       "id": "CORE-BLOB-GATEWAY-RETRY",
-      "seconds": 42.785,
+      "seconds": 42.639,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -679,7 +669,7 @@
     },
     {
       "id": "CORE-BLOB-GC",
-      "seconds": 11.835,
+      "seconds": 11.888,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -694,7 +684,7 @@
     },
     {
       "id": "CORE-BLOB-INTERRUPT",
-      "seconds": 16.693,
+      "seconds": 16.795,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -709,7 +699,7 @@
     },
     {
       "id": "CORE-BLOB-NATIVE-STAGE",
-      "seconds": 1.818,
+      "seconds": 1.768,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -724,7 +714,7 @@
     },
     {
       "id": "CORE-BLOB-NO-DIGEST-AUTH",
-      "seconds": 6.976,
+      "seconds": 7.127,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -739,7 +729,7 @@
     },
     {
       "id": "CORE-BLOB-OFFLOADED",
-      "seconds": 2.268,
+      "seconds": 2.37,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -754,7 +744,7 @@
     },
     {
       "id": "CORE-BLOB-REFERENCE-INDEX",
-      "seconds": 3.971,
+      "seconds": 4.474,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -769,7 +759,7 @@
     },
     {
       "id": "CORE-BLOB-SLOW-READ",
-      "seconds": 6.976,
+      "seconds": 7.028,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -784,7 +774,7 @@
     },
     {
       "id": "CORE-BLOB-STAGE-DURING-TRANSFER",
-      "seconds": 2.92,
+      "seconds": 2.97,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -799,7 +789,7 @@
     },
     {
       "id": "CORE-BLOB-STAGE-SAME-DIGEST",
-      "seconds": 2.87,
+      "seconds": 2.92,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -814,7 +804,7 @@
     },
     {
       "id": "CORE-BOOT",
-      "seconds": 5.874,
+      "seconds": 5.876,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -824,7 +814,7 @@
     },
     {
       "id": "CORE-CAPTURE-ALIASES",
-      "seconds": 1.617,
+      "seconds": 1.668,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -839,7 +829,7 @@
     },
     {
       "id": "CORE-CLOCK-DELAY",
-      "seconds": 17.093,
+      "seconds": 16.994,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -862,7 +852,7 @@
     },
     {
       "id": "CORE-CLOCK-DELAY-GATEWAY-DIALS",
-      "seconds": 17.244,
+      "seconds": 17.497,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -885,7 +875,7 @@
     },
     {
       "id": "CORE-CMD-CLOCK-JUMP",
-      "seconds": 3.12,
+      "seconds": 3.171,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -901,7 +891,7 @@
     },
     {
       "id": "CORE-CMD-CONFLICT",
-      "seconds": 2.569,
+      "seconds": 2.62,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -917,7 +907,7 @@
     },
     {
       "id": "CORE-CMD-CRASH-AMBIGUOUS",
-      "seconds": 2.869,
+      "seconds": 2.971,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -933,7 +923,7 @@
     },
     {
       "id": "CORE-CMD-ERA",
-      "seconds": 14.391,
+      "seconds": 15.092,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -949,7 +939,7 @@
     },
     {
       "id": "CORE-CMD-EXPIRY",
-      "seconds": 9.18,
+      "seconds": 9.282,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -965,7 +955,7 @@
     },
     {
       "id": "CORE-CMD-IDEMPOTENT",
-      "seconds": 3.02,
+      "seconds": 3.121,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -981,7 +971,7 @@
     },
     {
       "id": "CORE-CMD-LOST-RESPONSE",
-      "seconds": 3.671,
+      "seconds": 3.621,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -997,7 +987,7 @@
     },
     {
       "id": "CORE-CMD-OFFLINE",
-      "seconds": 8.729,
+      "seconds": 8.882,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1013,7 +1003,7 @@
     },
     {
       "id": "CORE-CMD-READ-YOUR-WRITE",
-      "seconds": 2.669,
+      "seconds": 2.721,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1029,7 +1019,7 @@
     },
     {
       "id": "CORE-CREDENTIAL-STORE",
-      "seconds": 1.467,
+      "seconds": 1.469,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1047,7 +1037,7 @@
     },
     {
       "id": "CORE-DISCONNECT-DETECT",
-      "seconds": 18.095,
+      "seconds": 18.198,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1062,7 +1052,7 @@
     },
     {
       "id": "CORE-DOCTOR",
-      "seconds": 2.218,
+      "seconds": 2.22,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1085,7 +1075,7 @@
     },
     {
       "id": "CORE-FEED-PIPELINED-ACKS",
-      "seconds": 7.377,
+      "seconds": 6.778,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1100,7 +1090,7 @@
     },
     {
       "id": "CORE-FORGED-DELEGATION",
-      "seconds": 2.42,
+      "seconds": 2.819,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1118,7 +1108,7 @@
     },
     {
       "id": "CORE-GAP-REJECT",
-      "seconds": 4.422,
+      "seconds": 4.466,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1148,7 +1138,7 @@
     },
     {
       "id": "CORE-HELPER-RESTART",
-      "seconds": 3.671,
+      "seconds": 3.523,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1171,7 +1161,7 @@
     },
     {
       "id": "CORE-KILL-DURING-APPLY",
-      "seconds": 6.125,
+      "seconds": 6.126,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1186,7 +1176,7 @@
     },
     {
       "id": "CORE-KILL-GATEWAY-CAPTURE",
-      "seconds": 13.287,
+      "seconds": 12.989,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1201,7 +1191,7 @@
     },
     {
       "id": "CORE-LOCALHOST-DEFENSE",
-      "seconds": 2.719,
+      "seconds": 2.67,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1219,7 +1209,7 @@
     },
     {
       "id": "CORE-MESSAGES-SHAPE",
-      "seconds": 13.941,
+      "seconds": 13.99,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1247,7 +1237,7 @@
     },
     {
       "id": "CORE-QUERY-BLOB",
-      "seconds": 2.219,
+      "seconds": 2.319,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1263,22 +1253,6 @@
     },
     {
       "id": "CORE-QUERY-DEADLINE",
-      "seconds": 1.868,
-      "status": "pass",
-      "implementation": "gateway=rust",
-      "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/state",
-        "internal/trust"
-      ],
-      "blocked_on": []
-    },
-    {
-      "id": "CORE-QUERY-ROUNDTRIP",
       "seconds": 1.968,
       "status": "pass",
       "implementation": "gateway=rust",
@@ -1294,8 +1268,24 @@
       "blocked_on": []
     },
     {
+      "id": "CORE-QUERY-ROUNDTRIP",
+      "seconds": 2.018,
+      "status": "pass",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": []
+    },
+    {
       "id": "CORE-QUERY-SCOPE",
-      "seconds": 1.819,
+      "seconds": 1.818,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1311,7 +1301,7 @@
     },
     {
       "id": "CORE-REPLICA-CAPTURE-ATOMIC",
-      "seconds": 14.489,
+      "seconds": 14.54,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1326,7 +1316,7 @@
     },
     {
       "id": "CORE-REPLICA-CAPTURE-LEGACY",
-      "seconds": 35.674,
+      "seconds": 35.775,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1356,7 +1346,7 @@
     },
     {
       "id": "CORE-REPLICA-CAPTURE-STAGING",
-      "seconds": 26.711,
+      "seconds": 26.56,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1371,7 +1361,7 @@
     },
     {
       "id": "CORE-REST-MCP-PARITY",
-      "seconds": 4.072,
+      "seconds": 4.023,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1388,7 +1378,7 @@
     },
     {
       "id": "CORE-RESTORE-EPOCH",
-      "seconds": 8.73,
+      "seconds": 8.581,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1411,7 +1401,7 @@
     },
     {
       "id": "CORE-RESTORE-OLD-SCHEMA",
-      "seconds": 21.651,
+      "seconds": 21.656,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1434,7 +1424,7 @@
     },
     {
       "id": "CORE-RESUME",
-      "seconds": 33.171,
+      "seconds": 33.223,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1449,7 +1439,7 @@
     },
     {
       "id": "CORE-RETENTION-RACE",
-      "seconds": 10.332,
+      "seconds": 10.282,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1464,7 +1454,7 @@
     },
     {
       "id": "CORE-SCOPE-CHANGE",
-      "seconds": 4.522,
+      "seconds": 4.524,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1482,7 +1472,7 @@
     },
     {
       "id": "CORE-SCOPE-LEAK",
-      "seconds": 2.419,
+      "seconds": 2.421,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1500,7 +1490,7 @@
     },
     {
       "id": "CORE-SIM-PROGRESS-RECOVERY",
-      "seconds": 3.171,
+      "seconds": 3.17,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1523,7 +1513,7 @@
     },
     {
       "id": "CORE-SLOW-CONSUMER",
-      "seconds": 34.926,
+      "seconds": 34.878,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1538,7 +1528,7 @@
     },
     {
       "id": "CORE-SNAPSHOT-INTERRUPT",
-      "seconds": 14.088,
+      "seconds": 13.539,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1553,7 +1543,7 @@
     },
     {
       "id": "CORE-SNAPSHOT-POOL",
-      "seconds": 1.818,
+      "seconds": 1.819,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1568,7 +1558,7 @@
     },
     {
       "id": "CORE-SNAPSHOT-UNDER-LOAD",
-      "seconds": 13.988,
+      "seconds": 13.289,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1583,7 +1573,7 @@
     },
     {
       "id": "CORE-SOURCE-GRANTS",
-      "seconds": 7.277,
+      "seconds": 7.329,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1601,7 +1591,7 @@
     },
     {
       "id": "CORE-UPGRADE",
-      "seconds": 1.868,
+      "seconds": 1.769,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1616,7 +1606,7 @@
     },
     {
       "id": "FILE-COMMANDS",
-      "seconds": 3.822,
+      "seconds": 3.521,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1632,7 +1622,7 @@
     },
     {
       "id": "FILE-CRUD-REAL",
-      "seconds": 3.871,
+      "seconds": 3.521,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1648,7 +1638,7 @@
     },
     {
       "id": "FILE-OFFLOAD-REAL",
-      "seconds": 3.772,
+      "seconds": 3.472,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1658,7 +1648,7 @@
     },
     {
       "id": "HELPER-IPC-RESPONSIVE",
-      "seconds": 3.071,
+      "seconds": 2.92,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1680,8 +1670,8 @@
     },
     {
       "id": "LAB-MALFORMED-SCENARIO",
-      "seconds": 0.115,
-      "status": "fail",
+      "seconds": 1.168,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/contracts"
@@ -1690,7 +1680,7 @@
     },
     {
       "id": "LAB-SSE",
-      "seconds": 0.115,
+      "seconds": 17.395,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1700,8 +1690,8 @@
     },
     {
       "id": "LAB-TRUTH-MULTIPLICITY",
-      "seconds": 0.115,
-      "status": "fail",
+      "seconds": 1.969,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/contracts"
@@ -1720,7 +1710,7 @@
     },
     {
       "id": "MAC-ACTIONS",
-      "seconds": 2.17,
+      "seconds": 2.119,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1740,7 +1730,7 @@
     },
     {
       "id": "MAC-COMMANDS",
-      "seconds": 2.369,
+      "seconds": 2.269,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1750,7 +1740,7 @@
     },
     {
       "id": "MAC-EXTRAS-SIM",
-      "seconds": 2.169,
+      "seconds": 2.069,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1761,7 +1751,7 @@
     },
     {
       "id": "MAP-SIM",
-      "seconds": 1.968,
+      "seconds": 1.918,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1771,7 +1761,7 @@
     },
     {
       "id": "MSG-CAPABILITY-MATRIX",
-      "seconds": 1.868,
+      "seconds": 1.869,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1787,7 +1777,7 @@
     },
     {
       "id": "MSG-COMMAND-OBSERVED-IDS",
-      "seconds": 3.372,
+      "seconds": 3.221,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1817,7 +1807,7 @@
     },
     {
       "id": "MSG-DELETE",
-      "seconds": 2.119,
+      "seconds": 2.069,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1827,7 +1817,7 @@
     },
     {
       "id": "MSG-DELETE-REAL",
-      "seconds": 2.17,
+      "seconds": 2.119,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1847,7 +1837,7 @@
     },
     {
       "id": "MSG-FAILED-OBSERVED-IDS",
-      "seconds": 2.619,
+      "seconds": 2.57,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1857,7 +1847,7 @@
     },
     {
       "id": "MSG-HISTORY-IMPORT",
-      "seconds": 13.138,
+      "seconds": 13.04,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1867,7 +1857,7 @@
     },
     {
       "id": "MSG-INCOMING",
-      "seconds": 5.775,
+      "seconds": 5.726,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1877,46 +1867,6 @@
     },
     {
       "id": "MSG-MARK-READ",
-      "seconds": 2.12,
-      "status": "pass",
-      "implementation": "gateway=rust",
-      "required_features": [
-        "internal/contracts"
-      ],
-      "blocked_on": []
-    },
-    {
-      "id": "MSG-OWNER-TOKEN-SELFCHAT",
-      "seconds": 2.07,
-      "status": "pass",
-      "implementation": "gateway=rust",
-      "required_features": [
-        "internal/contracts"
-      ],
-      "blocked_on": []
-    },
-    {
-      "id": "MSG-PERMISSION-LOSS",
-      "seconds": 3.12,
-      "status": "pass",
-      "implementation": "gateway=rust",
-      "required_features": [
-        "internal/contracts"
-      ],
-      "blocked_on": []
-    },
-    {
-      "id": "MSG-REACT",
-      "seconds": 2.22,
-      "status": "pass",
-      "implementation": "gateway=rust",
-      "required_features": [
-        "internal/contracts"
-      ],
-      "blocked_on": []
-    },
-    {
-      "id": "MSG-READSTATE-REAL",
       "seconds": 2.069,
       "status": "pass",
       "implementation": "gateway=rust",
@@ -1926,8 +1876,48 @@
       "blocked_on": []
     },
     {
+      "id": "MSG-OWNER-TOKEN-SELFCHAT",
+      "seconds": 1.969,
+      "status": "pass",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": []
+    },
+    {
+      "id": "MSG-PERMISSION-LOSS",
+      "seconds": 3.271,
+      "status": "pass",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": []
+    },
+    {
+      "id": "MSG-REACT",
+      "seconds": 2.269,
+      "status": "pass",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": []
+    },
+    {
+      "id": "MSG-READSTATE-REAL",
+      "seconds": 2.119,
+      "status": "pass",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": []
+    },
+    {
       "id": "MSG-RECEIPTS",
-      "seconds": 2.621,
+      "seconds": 2.72,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1947,7 +1937,7 @@
     },
     {
       "id": "MSG-RESEND",
-      "seconds": 2.069,
+      "seconds": 2.12,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1957,7 +1947,7 @@
     },
     {
       "id": "MSG-SELFTEST",
-      "seconds": 3.171,
+      "seconds": 3.322,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1967,7 +1957,7 @@
     },
     {
       "id": "MSG-SEND-FILES",
-      "seconds": 3.622,
+      "seconds": 3.673,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1983,7 +1973,7 @@
     },
     {
       "id": "MSG-SEND-GHOST",
-      "seconds": 1.92,
+      "seconds": 1.969,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1999,7 +1989,7 @@
     },
     {
       "id": "MSG-SEND-IDENTICAL-MANUAL",
-      "seconds": 1.919,
+      "seconds": 2.02,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2015,7 +2005,7 @@
     },
     {
       "id": "MSG-SEND-NEW-HANDLE",
-      "seconds": 2.272,
+      "seconds": 2.322,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2031,7 +2021,7 @@
     },
     {
       "id": "MSG-SEND-SELF-EMAIL",
-      "seconds": 2.22,
+      "seconds": 2.321,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2047,7 +2037,7 @@
     },
     {
       "id": "MSG-SEND-SELF-TEXT",
-      "seconds": 2.22,
+      "seconds": 2.32,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2063,7 +2053,7 @@
     },
     {
       "id": "MSG-UI-INTERFERENCE",
-      "seconds": 1.972,
+      "seconds": 1.97,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2073,7 +2063,7 @@
     },
     {
       "id": "MSG-UNSEND",
-      "seconds": 2.371,
+      "seconds": 2.42,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2083,7 +2073,7 @@
     },
     {
       "id": "NOTE-CRUD",
-      "seconds": 3.172,
+      "seconds": 3.171,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2099,7 +2089,7 @@
     },
     {
       "id": "NOTE-EDIT-PARITY",
-      "seconds": 3.924,
+      "seconds": 3.923,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2109,7 +2099,7 @@
     },
     {
       "id": "NOTE-EXTERNAL",
-      "seconds": 2.72,
+      "seconds": 2.771,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2119,7 +2109,7 @@
     },
     {
       "id": "NOTE-EXTRAS",
-      "seconds": 2.124,
+      "seconds": 2.17,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2135,7 +2125,7 @@
     },
     {
       "id": "NOTE-IMPORT",
-      "seconds": 1.821,
+      "seconds": 1.819,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2145,7 +2135,7 @@
     },
     {
       "id": "NOTE-LIST",
-      "seconds": 2.571,
+      "seconds": 2.62,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2155,7 +2145,7 @@
     },
     {
       "id": "NOTE-RICH-REJECT",
-      "seconds": 1.97,
+      "seconds": 1.969,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2171,7 +2161,7 @@
     },
     {
       "id": "PDF-ANNOTATE",
-      "seconds": 1.669,
+      "seconds": 1.718,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2181,7 +2171,7 @@
     },
     {
       "id": "PDF-TEXT",
-      "seconds": 1.769,
+      "seconds": 1.82,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2201,9 +2191,8 @@
     },
     {
       "id": "RELAY-CAA-ACCOUNT",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 1.418,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -2211,21 +2200,15 @@
         "internal/contracts",
         "internal/iphone",
         "internal/relay",
-        "internal/remote",
         "internal/state",
         "internal/trust"
       ],
-      "blocked_on": [
-        "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: remote",
-        "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
-        "harness: lab/scenarios/remote_checks.go still imports product implementations: remote"
-      ]
+      "blocked_on": []
     },
     {
       "id": "RELAY-CT-INDEPENDENT",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 1.468,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -2233,15 +2216,10 @@
         "internal/contracts",
         "internal/iphone",
         "internal/relay",
-        "internal/remote",
         "internal/state",
         "internal/trust"
       ],
-      "blocked_on": [
-        "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: remote",
-        "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
-        "harness: lab/scenarios/remote_checks.go still imports product implementations: remote"
-      ]
+      "blocked_on": []
     },
     {
       "id": "RELAY-ENROLL",
@@ -2359,7 +2337,7 @@
     },
     {
       "id": "REM-CONFLICT",
-      "seconds": 2.669,
+      "seconds": 2.619,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2385,7 +2363,7 @@
     },
     {
       "id": "REM-CRUD",
-      "seconds": 3.671,
+      "seconds": 3.621,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2417,7 +2395,7 @@
     },
     {
       "id": "REM-LIST-CREATE",
-      "seconds": 1.819,
+      "seconds": 1.818,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2433,7 +2411,7 @@
     },
     {
       "id": "REM-LIST-MANAGE",
-      "seconds": 2.019,
+      "seconds": 2.068,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2449,7 +2427,7 @@
     },
     {
       "id": "REM-NATIVE-LIST-RACE",
-      "seconds": 2.37,
+      "seconds": 2.419,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2465,7 +2443,7 @@
     },
     {
       "id": "REM-OPERATION-SHAPES",
-      "seconds": 2.569,
+      "seconds": 2.57,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2481,7 +2459,7 @@
     },
     {
       "id": "REM-PERMISSION-LOSS",
-      "seconds": 2.018,
+      "seconds": 2.069,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2491,7 +2469,7 @@
     },
     {
       "id": "REM-READONLY-LIST",
-      "seconds": 2.67,
+      "seconds": 2.619,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2625,7 +2603,7 @@
     },
     {
       "id": "SESSION-PROXY-BYTES",
-      "seconds": 0.116,
+      "seconds": 1.568,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2636,7 +2614,7 @@
     },
     {
       "id": "USE-IMPORT",
-      "seconds": 1.818,
+      "seconds": 1.869,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2646,7 +2624,7 @@
     },
     {
       "id": "USE-LOCK-CLIP",
-      "seconds": 1.92,
+      "seconds": 1.969,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2666,7 +2644,7 @@
     },
     {
       "id": "USE-REMOTE-LAG",
-      "seconds": 1.87,
+      "seconds": 1.869,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2686,7 +2664,7 @@
     },
     {
       "id": "WEB-AGENT-ACTIVITY",
-      "seconds": 18.794,
+      "seconds": 19.248,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2705,7 +2683,7 @@
     },
     {
       "id": "WEB-AGENT-CREDENTIALS",
-      "seconds": 2.022,
+      "seconds": 2.019,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2743,7 +2721,7 @@
     },
     {
       "id": "WEB-AGENT-OAUTH",
-      "seconds": 1.869,
+      "seconds": 1.969,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2779,19 +2757,13 @@
         "internal/web"
       ],
       "blocked_on": [
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_auth_isolation.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_command_resolve.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_hosts.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_rate_limits_fixture.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_sources.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_sources_errors.go still imports product implementations: operations, state, trust, web"
+        "harness: lab/scenarios/agent_oauth_cimd.go still imports product implementations: trust, web"
       ]
     },
     {
       "id": "WEB-CAL-WRITE",
-      "seconds": 0.116,
-      "status": "fail",
+      "seconds": 4.475,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -2806,8 +2778,8 @@
     },
     {
       "id": "WEB-CON-LIST",
-      "seconds": 0.117,
-      "status": "fail",
+      "seconds": 2.421,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/contracts"
@@ -2816,28 +2788,18 @@
     },
     {
       "id": "WEB-MEDIA-CAP",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 4.023,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
         "internal/blobs",
         "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/publichttp",
         "internal/replication",
         "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/trust"
       ],
-      "blocked_on": [
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "WEB-RELAY-AGENTS",
@@ -2871,8 +2833,9 @@
     },
     {
       "id": "WEB-RELAY-AUTH",
-      "seconds": 0.115,
-      "status": "fail",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -2890,7 +2853,10 @@
         "internal/trust",
         "internal/web"
       ],
-      "blocked_on": []
+      "blocked_on": [
+        "harness: lab/scenarios/relay_auth.go still imports product implementations: replication, trust",
+        "harness: lab/scenarios/relay_auth_capture.go still imports product implementations: trust"
+      ]
     },
     {
       "id": "WEB-RELAY-PAIRING",
@@ -2921,8 +2887,8 @@
     },
     {
       "id": "WEB-RM-MEDIA-COLLECTION",
-      "seconds": 0.116,
-      "status": "fail",
+      "seconds": 2.223,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -2937,8 +2903,8 @@
     },
     {
       "id": "WEB-RM-REMINDERS-DEMO",
-      "seconds": 0.116,
-      "status": "fail",
+      "seconds": 2.471,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/contracts"
@@ -2947,8 +2913,8 @@
     },
     {
       "id": "WEB-RM-REMINDERS-HARDENING",
-      "seconds": 0.117,
-      "status": "fail",
+      "seconds": 70.976,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/contracts"
@@ -2957,8 +2923,8 @@
     },
     {
       "id": "WEB-RM-REMINDERS-LISTS",
-      "seconds": 0.117,
-      "status": "fail",
+      "seconds": 2.921,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/contracts"
@@ -2967,8 +2933,8 @@
     },
     {
       "id": "WEB-RM-SEARCH",
-      "seconds": 0.117,
-      "status": "fail",
+      "seconds": 3.373,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -2983,8 +2949,8 @@
     },
     {
       "id": "WEB-RM-THREAD-ORIGINATOR",
-      "seconds": 0.116,
-      "status": "fail",
+      "seconds": 13.438,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -2997,8 +2963,5 @@
       ],
       "blocked_on": []
     }
-  ],
-  "artifact_source_head": "d429a287d3b6f76bacfe827791eab65ebfdc7c36",
-  "harness_source_head": "d429a287d3b6f76bacfe827791eab65ebfdc7c36 plus audited Helper IPC and Vision SIM eligibility",
-  "artifact_sha256": "68be567ad88a8a323aca2ba50e285eef5b5fc23931ebb7e5b74c0e61a038a6ee"
+  ]
 }

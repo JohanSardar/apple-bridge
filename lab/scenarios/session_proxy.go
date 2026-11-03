@@ -64,7 +64,7 @@ func proxyPair() (*net.UnixConn, *os.File, error) {
 	return conn.(*net.UnixConn), child, nil
 }
 func runSessionProxy(ctx context.Context, s Scenario, level string) (e Evidence) {
-	e = Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, At: time.Now().UTC(), Passed: true, Conditions: map[string]string{"session_impl": "rust", "topology": "Go gateway <-> ab-session <-> SimApplePeer"}}
+	e = Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, At: time.Now().UTC(), Passed: true, Conditions: map[string]string{"session_impl": "rust", "topology": "selected gateway <-> ab-session <-> SimApplePeer"}}
 	add := func(name string, ok bool) {
 		e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok})
 		e.Passed = e.Passed && ok
@@ -178,7 +178,7 @@ func runSessionProxy(ctx context.Context, s Scenario, level string) (e Evidence)
 		<-done
 	}
 	a, b, c, d := sentGateway.snapshot(), receivedHelper.snapshot(), sentHelper.snapshot(), receivedGateway.snapshot()
-	e.Metrics = map[string]any{"gateway_to_helper_bytes": len(a), "helper_to_gateway_bytes": len(c)}
+	e.Metrics = map[string]any{"gateway_to_helper_bytes": len(a), "gateway_to_helper_received_bytes": len(b), "helper_to_gateway_bytes": len(c), "helper_to_gateway_received_bytes": len(d)}
 	add("gateway_to_helper_exact_transcript", len(a) > 0 && bytes.Equal(a, b))
 	add("helper_to_gateway_exact_transcript", len(c) > 0 && bytes.Equal(c, d))
 	return
