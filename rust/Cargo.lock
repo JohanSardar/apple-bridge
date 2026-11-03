@@ -8,6 +8,7 @@ version = "0.0.0"
 dependencies = [
  "ab-operations",
  "ab-wire",
+ "base64 0.22.1",
  "hex",
  "nix",
  "rand 0.8.8",

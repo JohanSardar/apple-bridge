@@ -1,5 +1,5 @@
 use ab_applepeer::{Commands, Server};
-use ab_operations::{Code, peer::ApplePeer};
+use ab_operations::{Code, Error, peer::ApplePeer};
 use ab_wire::messages::IpcFrame;
 use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
@@ -23,13 +23,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         commands: commands.clone(),
     });
     let task = tokio::spawn(server.serve(receiver));
-    let gateway = Arc::new(ab_operations::local::LocalGateway::new(
-        state,
+    let mut local = ab_operations::local::LocalGateway::new(
+        state.clone(),
         Arc::new(Identity),
         Arc::new(Codec),
         Arc::new(commands.clone()),
         Arc::new(Actions),
-    ));
+    );
+    local.query_store = Some(Arc::new(ab_operations::LocalQueryStore::open(
+        (*state).clone(),
+        std::path::Path::new(args.get(1).ok_or("socket")?)
+            .parent()
+            .ok_or("parent")?
+            .join("gateway-blobs"),
+        128 << 20,
+    )?));
+    let gateway = Arc::new(local);
     let mut lines = tokio::io::BufReader::new(tokio::io::stdin()).lines();
     while let Some(line) = lines.next_line().await? {
         let frame: IpcFrame = serde_json::from_str(&line)?;
@@ -86,6 +95,40 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         } else if frame.t == "Available" {
             serde_json::json!({"available": commands.available()})
+        } else if frame.t == "ReadBlob" {
+            let result = async {
+                let mut data = Vec::new();
+                while i64::try_from(data.len()).map_err(|_| Code::Corrupt)? < frame.length {
+                    let offset = i64::try_from(data.len()).map_err(|_| Code::Corrupt)?;
+                    let (bytes, done) = commands
+                        .read_blob(
+                            &frame.handle,
+                            offset,
+                            (frame.length - offset).min(128 << 10),
+                        )
+                        .await?;
+                    if bytes.is_empty()
+                        || offset + i64::try_from(bytes.len()).map_err(|_| Code::Corrupt)?
+                            > frame.length
+                    {
+                        return Err(Error::from(Code::Corrupt));
+                    }
+                    data.extend(bytes);
+                    if done && i64::try_from(data.len()).map_err(|_| Code::Corrupt)? != frame.length
+                    {
+                        return Err(Error::from(Code::Corrupt));
+                    }
+                }
+                Ok(data)
+            }
+            .await;
+            match result {
+                Ok(bytes) => {
+                    use base64::Engine;
+                    serde_json::json!({"bytes":base64::engine::general_purpose::STANDARD.encode(bytes),"eof":true})
+                }
+                Err(error) => serde_json::json!({"error":error}),
+            }
         } else if frame.t == "StaleDispatch" {
             #[cfg(feature = "lab-harness")]
             {

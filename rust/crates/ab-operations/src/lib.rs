@@ -1,7 +1,9 @@
 #![forbid(unsafe_code)]
 mod adapters;
 mod gateway_store;
+mod local_query;
 pub use gateway_store::GatewayStore;
+pub use local_query::LocalQueryStore;
 pub mod local;
 pub mod peer;
 pub use ab_trust::domain;

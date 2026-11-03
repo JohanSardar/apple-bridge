@@ -9,6 +9,7 @@ workspace = true
 ab-wire = { path = "../ab-wire" }
 ab-operations = { path = "../ab-operations" }
 serde_json.workspace = true
+base64 = "0.22"
 tokio.workspace = true
 thiserror.workspace = true
 rand = "0.8"

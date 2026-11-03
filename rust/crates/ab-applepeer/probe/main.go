@@ -4,9 +4,11 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"github.com/JohanSardar/apple-bridge/internal/blobs"
 	"github.com/JohanSardar/apple-bridge/internal/operations"
 	"github.com/JohanSardar/apple-bridge/internal/state"
 	"github.com/JohanSardar/apple-bridge/internal/trust"
+	"io"
 	"os"
 	"path/filepath"
 	"time"
@@ -47,7 +49,11 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	gateway := &operations.LocalGateway{State: store, Authority: authority, Peer: commands, Context: ctx}
+	blobStore, err := blobs.Open(filepath.Join(filepath.Dir(os.Args[1]), "gateway-blobs"), blobs.Config{})
+	if err != nil {
+		panic(err)
+	}
+	gateway := &operations.LocalGateway{Uploads: blobStore, State: store, Authority: authority, Peer: commands, Context: ctx}
 	go applepeer.Serve(ctx, applepeer.Config{Socket: os.Args[1], Secret: []byte{7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7}, Commands: commands,
 		NextFence:   store.NextFence,
 		Checkpoints: store.Checkpoints,
@@ -71,6 +77,19 @@ func main() {
 		}
 		if frame.T == "Available" {
 			encoder.Encode(map[string]bool{"available": commands.Available()})
+			continue
+		}
+		if frame.T == "ReadBlob" {
+			reader, err := commands.QueryBlob(ctx, contracts.QueryBlob{Handle: frame.Handle, Size: frame.Offset + frame.Length})
+			var data []byte
+			if err == nil {
+				data, err = io.ReadAll(reader)
+			}
+			if err != nil {
+				encoder.Encode(map[string]any{"error": err})
+			} else {
+				encoder.Encode(map[string]any{"bytes": data, "eof": true})
+			}
 			continue
 		}
 		p := owner

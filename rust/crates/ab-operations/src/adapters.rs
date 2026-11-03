@@ -18,7 +18,7 @@ fn state_error(error: &ab_state::Error) -> Error {
 fn raw<T: Serialize>(value: &T) -> Result<Box<RawValue>, Error> {
     serde_json::value::to_raw_value(value).map_err(|_| Code::Corrupt.into())
 }
-fn visibility(input: &Visibility) -> ab_state::Visibility {
+pub(crate) fn visibility(input: &Visibility) -> ab_state::Visibility {
     let mut result: ab_state::Visibility = input.iter().map(|(s, v)| (s.clone(), *v)).collect();
     if input.get("admin") == Some(&true) {
         for source in [

@@ -29,8 +29,14 @@ This is a foundation PR, not Phase 4 gateway qualification. It does not enable t
 - GatewayStore integrates G-A capture commits, source state, fences, aliases, durable ledger CAS and parts updates. Full database/history byte parity remains the shadow replay gate.
 - Runtime must connect Server, LocalGateway, the state/action adapters and Helper supervision. Frontdoor currently destructures the sole Remote variant, so adding Local requires its owner to update query-blob routing too.
 - Production ActionResolver adapters must port Go native argument conversion, visible object/container/series resolution, expected-version checks, native conflict capture binding, Notes content restrictions and upload staging. Only the synthetic resolver is supplied here.
-- Query transport is available; full local query input rewriting, rate accounting, query-blob hydration/grants and audit still need integration. BlobChunk/BlobUnavailable routing is not yet supplied by this server.
+- Query transport is available; full local query input rewriting, rate accounting, query-blob hydration/grants and audit still need integration. BlobChunk/BlobUnavailable routing, bounded reads, mail body ID rewriting and query result hydration/grants now exist. Document input rewriting/staging and query audit remain pending. Query protection expiry needs the G-A hook described in rust/interfaces/ab-applepeer.md.
 - Source-specific completion evidence validators and capture-blob persistence require their native/blob adapters. The generic correlation engine cannot qualify those operations alone.
 - The full --impl gateway=rust scenario matrix remains blocked on the executable wiring. Real smoke and shadow replay remain orchestrator-owned.
 
 No live home, live gateway, real-level scenario or permission prompt was accessed.
+
+## Continuation verification
+
+The matrix additionally reads a 262145-byte SimApplePeer query blob in bounded chunks, verifies its SHA-256 and exact size, checks missing/unavailable/offloaded error mappings, and hydrates a speech synthesis result into SQLite-backed query grants with no returned Helper handle. Receipt lookup uses a separate synchronous mutex so session traffic cannot make committed evidence disappear. A deterministic contention regression test covers this race. These checks still use the synthetic action resolver and do not establish production action conversion, all source validators or admission-era restore behavior.
+
+On quota-constrained Ubuntu hosts, set TMPDIR and GOTMPDIR to an owned directory under the build home for both compilation and scenarios. Use RUSTC_WRAPPER=$HOME/.cargo/bin/sccache when installed.

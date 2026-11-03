@@ -96,6 +96,7 @@ impl Server {
         while tasks.join_next().await.is_some() {}
         self.commands.session.lock().await.writer = None;
         self.commands.session.lock().await.waiting.clear();
+        self.commands.session.lock().await.blobs.clear();
         std::fs::remove_file(&self.socket).map_err(|_| Code::Unavailable)?;
         Ok(())
     }
@@ -245,7 +246,9 @@ impl Server {
                 {
                     let (f, size) = received?;
                     match f.t.as_str() {
-                        "QueryResult" | "QueryError" => self.commands.receive(fence, f).await,
+                        "BlobChunk" | "BlobUnavailable" | "QueryResult" | "QueryError" => {
+                            self.commands.receive(fence, f).await;
+                        }
                         "Capture" | "SourceState" | "Prepared" | "Rejected" | "Outcome" => {
                             let budget = match f.t.as_str() {
                                 "Capture" => &capture_budget,

@@ -59,6 +59,27 @@ def run(peer, lab, fault, lifecycle=False):
             assert (home/'peer.sock').stat().st_mode & 0o777 == 0o600
             query=exchange({'t':'LocalQuery','args':{'id':'qry_probe','op':'helper.version','args':{},'deadline_ms':1000}})
             assert query.get('id')=='qry_probe' and query.get('result_json'),query
+            blob=exchange({'t':'Query','id':'qry_blob','op':'test.blob','args':{'size':262145},'deadline_ms':1000})
+            assert blob.get('t')=='QueryResult',blob
+            ref=blob['blobs'][0]
+            content=exchange({'t':'ReadBlob','handle':ref['handle'],'length':ref['size']})
+            import base64
+            import hashlib
+            data=base64.b64decode(content.get('bytes',''))
+            assert len(data)==ref['size'] and hashlib.sha256(data).hexdigest()==ref['digest'] and content.get('eof'),content
+            missing=exchange({'t':'ReadBlob','handle':'missing-fixture','length':1})
+            assert missing.get('error',{}).get('code')=='not_found',missing
+            if not fault and not lifecycle:
+                for state,code in [('offloaded','unsupported'),('missing','not_found')]:
+                    control(str(home/'control.sock'),'POST','/blob-fixture',{'size':1,'state':state})
+                    unavailable=exchange({'t':'ReadBlob','handle':ref['handle'],'length':1})
+                    assert unavailable.get('error',{}).get('code')==code,unavailable
+                control(str(home/'control.sock'),'POST','/blob-fixture',{'size':1,'state':'present','unavailable_reads':1})
+                unavailable=exchange({'t':'ReadBlob','handle':hashlib.sha256(bytes(1)).hexdigest(),'length':1})
+                assert unavailable.get('error',{}).get('code')=='unavailable',unavailable
+                control(str(home/'control.sock'),'POST','/blob-fixture',{'size':1,'state':'present'})
+            hydrated=exchange({'t':'LocalQuery','args':{'id':'qry_audio','op':'speech.synthesize','args':{'text':'Bridge fixture'},'deadline_ms':1000}})
+            assert hydrated.get('id')=='qry_audio' and len(hydrated.get('blobs',[]))==1 and 'handle' not in hydrated['blobs'][0],hydrated
             if fault:
                 control(str(home/'control.sock'), 'POST', '/fault', {'name':fault})
             if lifecycle:

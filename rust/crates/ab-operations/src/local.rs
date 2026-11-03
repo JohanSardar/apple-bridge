@@ -91,6 +91,8 @@ pub struct LocalGateway {
     pub codec: Arc<dyn Codec>,
     pub peer: Arc<dyn ApplePeer>,
     pub actions: Arc<dyn ActionResolver>,
+    pub query_store: Option<Arc<crate::LocalQueryStore>>,
+    query_rates: Mutex<BTreeMap<String, (std::time::Instant, u32)>>,
     locks: Mutex<BTreeMap<String, Arc<AsyncMutex<()>>>>,
 }
 fn raw<T: Serialize>(value: &T) -> Result<Box<RawValue>, Error> {
@@ -116,6 +118,8 @@ impl LocalGateway {
             codec,
             peer,
             actions,
+            query_store: None,
+            query_rates: Mutex::default(),
             locks: Mutex::default(),
         }
     }
@@ -751,8 +755,6 @@ impl LocalGateway {
         if descriptor.kind != ab_catalog::OperationKind::Query {
             return Err(Code::Unsupported.into());
         }
-        let args: Value = serde_json::from_str(q.args.get()).map_err(|_| Code::Invalid)?;
-        validate_shape(&descriptor.input["properties"]["args"], &args)?;
         self.authorize(p, &q.op).map_err(|error| {
             if error.code == Code::Unauthorized {
                 Code::Forbidden.into()
@@ -760,6 +762,19 @@ impl LocalGateway {
                 error
             }
         })?;
+        {
+            let mut rates = self.query_rates.lock().map_err(|_| Code::Unavailable)?;
+            rates.retain(|_, (at, _)| at.elapsed() <= Duration::from_secs(1));
+            let (_, count) = rates
+                .entry(p.id.clone())
+                .or_insert((std::time::Instant::now(), 0));
+            *count += 1;
+            if *count > 100 {
+                return Err(Code::Capacity.into());
+            }
+        }
+        let args: Value = serde_json::from_str(q.args.get()).map_err(|_| Code::Invalid)?;
+        validate_shape(&descriptor.input["properties"]["args"], &args)?;
         if q.id.is_empty() {
             q.id = format!("qry_{}", ulid::Ulid::new());
         }
@@ -773,8 +788,16 @@ impl LocalGateway {
         if q.deadline_ms == 0 {
             q.deadline_ms = 1000;
         }
-        let frame = tokio::time::timeout(
-            Duration::from_millis(q.deadline_ms),
+        if q.op == "mail.body" {
+            q.args = self
+                .query_store
+                .as_ref()
+                .ok_or(Code::Unavailable)?
+                .mail_args(p, &args)?;
+        }
+        let deadline = tokio::time::Instant::now() + Duration::from_millis(q.deadline_ms);
+        let frame = tokio::time::timeout_at(
+            deadline,
             self.peer.exchange(IpcFrame {
                 t: "Query".into(),
                 id: q.id.clone(),
@@ -794,11 +817,30 @@ impl LocalGateway {
         }
         if frame.t != "QueryResult"
             || frame.result_json.is_none()
-            || frame.blobs.as_ref().is_some_and(|v| !v.is_empty())
+            || frame
+                .result_json
+                .as_ref()
+                .is_some_and(|v| v.get().len() > 1 << 20)
+            || frame.blobs.as_ref().is_some_and(|v| v.len() > 16)
         {
             return Err(Code::Corrupt.into());
         }
-        raw(&json!({"id": q.id, "result_json": frame.result_json, "blobs": []}))
+        let mut blobs: Vec<Value> = frame
+            .blobs
+            .unwrap_or_default()
+            .into_iter()
+            .map(|b| serde_json::from_str(b.get()).map_err(|_| Code::Corrupt))
+            .collect::<Result<_, _>>()?;
+        if !blobs.is_empty() {
+            let store = self.query_store.as_ref().ok_or(Code::Corrupt)?;
+            tokio::time::timeout_at(
+                deadline,
+                store.hydrate(self.peer.as_ref(), p, &q.id, &descriptor.scope, &mut blobs),
+            )
+            .await
+            .map_err(|_| Code::Deadline)??;
+        }
+        raw(&json!({"id": q.id, "result_json": frame.result_json, "blobs": blobs}))
     }
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
