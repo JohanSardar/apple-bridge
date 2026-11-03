@@ -1,3 +1,4 @@
+import NativeProtocol
 import PDFSource
 import CallsSource
 import FilesSource
@@ -41,7 +42,11 @@ public actor AppleSession: ObservationSink {
         let fence: UInt64
     }
     private var draining = false
-    private var wire: PeerWire?
+    var nativeFiles: NativeFiles?
+    var nativeSources: SessionSources.Builtins?
+    var nativeAuthority = false
+    var ipcRunning = false
+    var wire: PeerWire?
     private var fence: UInt64 = 0
     private var permissionStates: [String: String] = [:]
     private var credit = 0
@@ -53,17 +58,17 @@ public actor AppleSession: ObservationSink {
     private var tickets: [String: Ticket] = [:]
     private var preparing: UUID?
     private var commandActive = false
-    private var additionalSources: [String: any Source] = [:]
+    var additionalSources: [String: any Source] = [:]
     private var prefixedBlobReaders: [String: @Sendable (String, Int64, Int) async throws -> JSON] = [:]
     private var blobReader: (@Sendable (String, Int64, Int) async throws -> JSON)?
     private var captureTasks: [Task<Void, Never>] = []
     private var queryAudio: [String: (Data, Date)] = [:]
-    private var queryHandlers: [String: @Sendable (JSON) async throws -> QueryOutput] = [:]
-    private struct RegisteredBlobReader: Sendable {
+    var queryHandlers: [String: @Sendable (JSON) async throws -> QueryOutput] = [:]
+    struct RegisteredBlobReader: Sendable {
         let source: String
         let read: @Sendable (String, Int, Int) async throws -> JSON
     }
-    private var registeredBlobReaders: [String: RegisteredBlobReader] = [:]
+    var registeredBlobReaders: [String: RegisteredBlobReader] = [:]
     public func registerQuery(_ name: String, handler: @escaping @Sendable (JSON) async throws -> JSON) throws {
         try registerQueryOutput(name) { args in QueryOutput(result: try await handler(args)) }
     }
@@ -79,17 +84,17 @@ public actor AppleSession: ObservationSink {
     private var queryTasks: [String: Task<Void, Never>] = [:]
     private var frameTasks: [UUID: Task<Void, Never>] = [:]
     private let trace: CaptureTrace
-    private let sources: SessionSources.Builtins
-    private var contacts: ContactsSource { sources.contacts }
-    private var source: RemindersSource { sources.reminders }
+    let sources: SessionSources.Builtins
+    var contacts: ContactsSource { sources.contacts }
+    var source: RemindersSource { sources.reminders }
     private var remindersStore: RemindersStoreEnrichment { sources.remindersStore }
-    private var calendar: CalendarSource { sources.calendar }
+    var calendar: CalendarSource { sources.calendar }
     private var remindersRefreshHistogram = StoreRefreshHistogram()
     private let guardLog: DispatchGuard
     private let socket: String
     private let secretFile: String
     private let gatewayPID: Int32
-    private let home: URL
+    let home: URL
     private let labEnabled: Bool
 
     @MainActor
@@ -115,12 +120,15 @@ public actor AppleSession: ObservationSink {
     }
 
     public func run() async throws {
+        guard !nativeAuthority, !ipcRunning else { throw SourceFailure.conflict }
+        ipcRunning = true
+        defer { ipcRunning = false }
         for (name, source) in sources.additional { additionalSources[name] = source }
         var backoff = 100
         while !Task.isCancelled && kill(gatewayPID, 0) == 0 {
             do {
                 let socket = self.socket, secretFile = self.secretFile
-                let connected = try await Task.detached { try PeerWire(socket: socket, secretFile: secretFile) }.value
+                let connected = try await Task.detached { try PeerWire(socket: socket, secretFile: secretFile, nativeAdapter: self) }.value
                 wire = connected
                 let opened = try await receive(connected)
                 guard opened["t"].string == "Open", opened["protocol"].string == "ipc/1", opened["owner_fence"].number > 0, opened["byte_credit"].number > 0, opened["byte_credit"].number <= 4194304 else { throw SourceFailure.invalid }
@@ -521,7 +529,7 @@ public actor AppleSession: ObservationSink {
         }
     }
 
-    private func captureRoute(_ operation: String) -> String {
+    func captureRoute(_ operation: String) -> String {
         if ["mac.screen_record", "print.document"].contains(operation) { return "capture" }
         return operation.components(separatedBy: ".").first ?? ""
     }

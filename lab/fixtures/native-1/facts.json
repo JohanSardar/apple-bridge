@@ -1,0 +1,16 @@
+{
+  "agenda.calendars": [
+    {"kind":"upsert","collection":"calendar.calendar","native_key":"store-perf","data":{"title":"Bridge Test range perf","writable":true,"color":"#007aff","account":"demo"}}
+  ],
+  "agenda.events": [
+    {"kind":"upsert","collection":"calendar.event","native_key":"store-perf-0000","data":{"title":"Bridge Test 0000","start":"2026-05-01T08:00:00Z","end":"2026-05-01T08:30:00Z","all_day":false,"calendar_id":{"$ref":{"collection":"calendar.calendar","native_key":"store-perf"}}}}
+  ],
+  "contacts.contacts": [
+    {"kind":"upsert","collection":"contacts.contact","native_key":"con-list-alpha","data":{"given_name":"Zoe","family_name":"Adams","is_me":true,"organization":"Bridge Test","emails":[{"label":"work","value":"con-list@example.com"}],"thumbnail_image":{"digest":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","state":"present"}}},
+    {"kind":"upsert","collection":"contacts.contact","native_key":"con-list-beta","data":{"given_name":"Amy","family_name":"Zulu","organization":"Bridge Test"}},
+    {"kind":"upsert","collection":"contacts.contact","native_key":"con-list-number","data":{"organization":"123 Test","contact_type":"organization"}}
+  ],
+  "contacts.groups": [
+    {"kind":"upsert","collection":"contacts.group","native_key":"con-list-group","data":{"name":"Bridge Test List","member_ids":[{"$ref":{"collection":"contacts.contact","native_key":"con-list-alpha"}}]}}
+  ]
+}

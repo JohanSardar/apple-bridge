@@ -31,6 +31,7 @@ let package = Package(
     products: [.executable(name: "AppleBridgeHelper", targets: ["AppleBridgeHelper"])],
     targets: sourceTargets + [
         .target(name: "SourceSupport"),
+        .target(name: "NativeProtocol", dependencies: ["SourceSupport"]),
         .executableTarget(name: "MessagesSafetyChecks", dependencies: ["MessagesSource", "SourceSupport"]),
         .executableTarget(name: "FocusChecks", dependencies: ["FocusSource", "SourceSupport"]),
         .executableTarget(name: "CaptureChecks", dependencies: ["CaptureSource", "MacSource", "SourceSupport"]),
@@ -55,7 +56,8 @@ let package = Package(
         .executableTarget(name: "DecoderChecks", dependencies: ["Decoders"]),
         .executableTarget(name: "MessagesCaptureChecks", dependencies: ["MessagesSource", "SourceSupport", "MediaDerivatives"]),
         .executableTarget(name: "MessagesBench", dependencies: ["MessagesSource", "SourceSupport"]),
-        .target(name: "AppleSession", dependencies: sourceTargets.map { .target(name: $0.name) } + ["RemindersStore", "AgendaGate", "SourceSupport"]),
+        .target(name: "AppleSession", dependencies: sourceTargets.map { .target(name: $0.name) } + ["RemindersStore", "AgendaGate", "SourceSupport", "MediaDerivatives", "NativeProtocol"]),
+        .executableTarget(name: "NativeChecks", dependencies: ["NativeProtocol", "SourceSupport"]),
         .executableTarget(name: "CalendarChecks", dependencies: ["CalendarSource"], path: "Tests/CalendarChecks"),
         .executableTarget(name: "CommandOriginChecks", dependencies: ["SourceSupport"], path: "Tests/CommandOriginChecks"),
         .executableTarget(name: "AppleBridgeHelper", dependencies: ["AppleSession", "ShortcutsSource"])

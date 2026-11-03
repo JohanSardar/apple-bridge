@@ -405,6 +405,11 @@ public final class CalendarSource: Source {
         try await scan(into: sink, live: true, command: revision)
     }
 
+    public func nativeFacts(into sink: any ObservationSink) async throws {
+        forceFull = true
+        try await scan(into: sink, live: false)
+    }
+
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
         forceFull = true
         let changes = gate.changes(calendar: true)

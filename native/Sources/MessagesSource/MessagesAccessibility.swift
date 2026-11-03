@@ -13,7 +13,17 @@ public enum MessagesAction: String, Sendable {
 }
 
 @UIActor
-enum MessagesAccessibility {
+public enum MessagesAccessibility {
+    public static func nativeTarget(_ args: JSON) throws -> JSON {
+        guard Set(args.object.keys) == ["action", "native_state"], !args["action"]["native_key"].string.isEmpty else { throw SourceFailure.invalid }
+        let prepared = Prepared(nativeState: args["native_state"], fingerprint: "", action: args["action"])
+        let session = try uiSession()
+        try session.fence()
+        _ = try target(session.root, prepared: prepared)
+        try session.fence()
+        return snapshot(session.root, prepared: prepared)
+    }
+
     static var available: Bool { AXIsProcessTrusted() }
     static func value(_ element: AXUIElement, _ attribute: String) -> String {
         var result: CFTypeRef?
