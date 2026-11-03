@@ -24,6 +24,7 @@ struct Request {
     blob_offset: i64,
     method: String,
     command: Command,
+    #[serde(default)]
     query: CommandQuery,
     #[serde(default)]
     native_query: Option<NativeQuery>,

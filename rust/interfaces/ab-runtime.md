@@ -24,3 +24,7 @@ Capture hydration preserves explicit offloaded/missing reference states instead 
 ## CORE scope control
 
 The gateway CLI exposes `scope <replica-id> --scope <grants>` through Authority::change_scope. Trust persists the new grants and increments the revision; existing feed sessions close on revision mismatch, and replicas reset/backfill against the new revision. No trust or feed contract changes.
+
+## CORE direct command envelope
+
+Direct submit requests may omit the query field, as in Go. Forward defaults the unused CommandQuery and continues through delegation verification before command admission. Forged grants still produce Unauthorized without a native effect.
