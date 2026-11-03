@@ -127,6 +127,27 @@ async fn main() {
     }
 }
 fn offline(args: &Arguments, home: &std::path::Path) -> Result<bool, Error> {
+    #[cfg(feature = "lab-harness")]
+    if args.verb == "lab-operation-catalog" {
+        if !args.value.is_empty() || args.flags.keys().any(|key| key != "home") {
+            return Err(Error::Invalid);
+        }
+        let mut descriptors = ab_catalog::operations()?;
+        for name in ["test.echo", "test.sleep", "test.blob"] {
+            descriptors.push(ab_operations::descriptor_for(name)?);
+        }
+        let catalog = descriptors
+            .into_iter()
+            .map(|descriptor| {
+                (
+                    descriptor.name,
+                    serde_json::json!({"scope":descriptor.scope,"schema":descriptor.input}),
+                )
+            })
+            .collect::<std::collections::BTreeMap<_, _>>();
+        println!("{}", serde_json::to_string(&catalog)?);
+        return Ok(true);
+    }
     if args.verb == "status" || args.verb == "doctor" {
         let report = if args.verb == "status" {
             ab_runtime::inspection::status(home)?

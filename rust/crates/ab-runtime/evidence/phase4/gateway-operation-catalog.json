@@ -1,0 +1,35 @@
+{
+  "proofs": [
+    {
+      "implementation": "go",
+      "home_untouched": true,
+      "operations": 150
+    },
+    {
+      "implementation": "rust",
+      "home_untouched": true,
+      "operations": 150
+    }
+  ],
+  "ordinary_go_catalog_operations": 147,
+  "ordinary_go_catalog_equal": true,
+  "ordinary_go_catalog_differences": [],
+  "rust_lab_operations": [
+    "test.blob",
+    "test.echo",
+    "test.sleep"
+  ],
+  "full_lab_catalog_equal": false,
+  "full_lab_catalog_differences": [
+    "records.get",
+    "records.query",
+    "search",
+    "test.blob",
+    "test.echo",
+    "test.sleep"
+  ],
+  "remaining_lab_seams": {
+    "collection_enum": "Go lab registers labdummy.item; Rust State lab registration remains unavailable",
+    "query_metadata": "provided descriptor_for clones helper.version input for test queries; operation enum and argument schema differ"
+  }
+}
