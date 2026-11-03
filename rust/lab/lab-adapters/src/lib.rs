@@ -20,6 +20,7 @@ pub mod mac;
 pub mod mac_real;
 pub mod media;
 pub mod messages_a;
+pub mod messages_b;
 pub mod native;
 pub mod packaging;
 pub mod phone;
@@ -82,6 +83,8 @@ pub fn registry() -> Registry {
                 history::SCOPE,
                 0,
             )?;
+        } else if let (true, Some(scope)) = (replicas != 0, messages_b::scope(id)) {
+            replicas::start_with(world, usize::try_from(replicas).unwrap_or(0), scope, 0)?;
         } else if replicas != 0 && messages_a::SCENARIOS.contains(&id) {
             messages_a::start(world, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && labcore::SCENARIOS.contains(&id) {
@@ -132,7 +135,7 @@ pub fn registry() -> Registry {
     registry.register("seed", journey::seed);
     registry.register("converge", journey::converge);
     registry.register("media_variants", media::media_variants);
-    registry.register("messages_commands", cleanup::messages_commands);
+    registry.register("messages_commands", messages_b::dispatch);
     registry.register("files_native", files_native::files_native);
     registry.register("robustness", robust::dispatch);
     registry.register("command_journey", journey::command_journey);

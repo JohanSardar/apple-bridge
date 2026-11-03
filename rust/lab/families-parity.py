@@ -36,6 +36,10 @@ MAC_SCENARIOS = ['mac/MAC-ACTIONS', 'mac/MAC-COMMANDS', 'mac/MAC-CAPTURE', 'mac/
                  'mac/MAC-EXTRAS-SIM', 'mac/IWORK-REAL']
 WEB_SCENARIOS = ['web/WEB-CON-LIST', 'web/WEB-MEDIA-CAP']
 NATIVE_MEDIA_SCENARIOS = ['web/NATIVE-MEDIA-EXPORT-SAFETY', 'web/NATIVE-MEDIA-POSTERS', 'web/NATIVE-MEDIA-YIELD', 'web/WEB-REM-PARITY']
+MESSAGES_B_SCENARIOS = [f'messages/MSG-{name}' for name in [
+    'REACT', 'READSTATE-REAL', 'RECEIPTS', 'REPLY', 'RESEND', 'SELFTEST', 'SEND-FILES', 'SEND-GHOST',
+    'SEND-IDENTICAL-MANUAL', 'SEND-NEW-HANDLE', 'SEND-SELF-EMAIL', 'SEND-SELF-TEXT', 'UI-INTERFERENCE', 'UNSEND']]
+MESSAGES_B_NATIVE = ['messages/MSG-WATCHER-REARM']
 SCENARIOS = ['CORE-QUERY-ROUNDTRIP', 'CORE-QUERY-BLOB', 'CORE-QUERY-SCOPE', 'CORE-QUERY-DEADLINE',
              *JOURNEY_SCENARIOS, *CORE_SCENARIOS]
 FRONTDOOR_SCENARIOS = ['CORE-REST-MCP-PARITY', 'CORE-LOCALHOST-DEFENSE']
@@ -69,6 +73,8 @@ def main():
     parser.add_argument('--import', dest='imports', action='store_true')
     parser.add_argument('--messages-a', dest='messages_a', action='store_true')
     parser.add_argument('--media', dest='media', action='store_true')
+    parser.add_argument('--messages-b', dest='messages_b', action='store_true')
+    parser.add_argument('--messages-b-native', dest='messages_b_native', action='store_true')
     parser.add_argument('--web-rm', dest='web_rm', action='store_true')
     parser.add_argument('--native', dest='native', action='store_true')
     parser.add_argument('--iphone', dest='iphone', action='store_true')
@@ -87,6 +93,10 @@ def main():
             args.scenario = (args.scenario or []) + group
     if args.shortcuts:
         args.scenario = (args.scenario or []) + SHORTCUT_SCENARIOS
+    if args.messages_b:
+        args.scenario = (args.scenario or []) + MESSAGES_B_SCENARIOS
+    if args.messages_b_native:
+        args.scenario = (args.scenario or []) + MESSAGES_B_NATIVE
     if args.imports:
         args.scenario = (args.scenario or []) + IMPORT_SCENARIOS
     if args.messages_a:
