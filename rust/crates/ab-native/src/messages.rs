@@ -12,6 +12,9 @@ use std::{
     time::Duration,
 };
 
+#[cfg(target_os = "macos")]
+use std::os::macos::fs::MetadataExt as _;
+
 mod observations;
 
 #[derive(Debug, thiserror::Error)]
