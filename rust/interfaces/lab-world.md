@@ -6,6 +6,12 @@ The default Go control passes 201/201 (204.479s), with `make rust-ci` and the pa
 
 The fresh synthetic Go-Go command replay passes through Outcome, including all 14 seeded differences. The tap forwards and records 524340 identical bytes in each direction with fragmented frames, half-close and duration/lock proofs. Host-loopback isolation and saved-adapter refusal pass. The same current Rust artifact still rejects recorded admission 16 with `not_found` before Prepare. Its matching capture-only prefix has 16 records on each side, but 18/21 journal rows and 17/20 commit boundaries (Go/Rust). Contacts/messages/shortcuts source data has equal parsed values and different raw bytes, producing versions 1/2. Alias mapping and ledger tables agree. These are unexplained product differences; none is excluded by the comparator.
 
+### Synthetic shadow convergence follow-up (2026-11-03)
+
+The isolated implementation run fixes command admission visibility and source serialization. Runtime action resolution now expands admin visibility consistently with the read adapter. SourceState retains typed Coverage field order and distinguishes omitted/null capabilities from an explicit empty array. The capture-only fixture moves from four mismatched comparison tables to zero (20 journal rows and 19 commit boundaries on both sides). The full synthetic recorded command now completes through Outcome with zero mismatched tables (24 journal rows and 23 commit boundaries on both sides). Before admission repair, replay stopped at admission 16 with `not_found`; its incomplete homes differed in seven tables. Admission repair alone completed with five differing tables, and source field-order repair left two until null capabilities were preserved. The existing Go-Go proof passes all 14 seeded mismatch checks. No comparator exclusions or scenario assertions changed.
+
+This is synthetic REST-plus-IPC parity, not all-ingress or live qualification. Deterministic decision clocks and identity allocation for IDs embedded in opaque data/arguments remain unimplemented. MCP, delegated feed/direct commands, approval decisions and phone admissions still lack authenticated observation/replay preserving principal identity and causal order. The namespace and saved-adapter refusal remain mandatory. No live gateway was accessed.
+
 ### Exact remaining owner boundaries
 
 | Blocked default entries | Required boundary before G-E can preserve the assertions through binaries |
