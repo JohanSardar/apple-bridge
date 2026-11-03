@@ -88,3 +88,7 @@ Non-capture Mac commands now use ab-commands::native_action with authenticated o
 ## G-F Helper IPC and OCR SIM qualification
 
 HELPER-IPC-RESPONSIVE and VIS-OCR already use isolated binary worlds and wire-only fake peers, with no Go product implementation under test. Their original assertions pass against Go first and Rust second. The Helper probe proves authenticated bounded credit, command/capture ordering, blob reply progress and Ping/Pong while capture acknowledgment is held, then credit exhaustion closure. OCR proves the existing native query path. Narrow SIM eligibility now admits these audited paths; real and replica guards remain unchanged. All named assertions and the binary digest are retained in gateway-ipc-vision.json.
+
+## G-F session matrix prerequisite
+
+gateway-matrix builds ab-session and exports its actual Cargo executable unless AB_SESSION_BINARY is supplied. SESSION-PROXY-BYTES therefore executes the selected gateway through the Rust byte relay instead of failing its missing-prerequisite assertion. Evidence includes both sent and received byte totals without changing exact-transcript assertions. Eight isolated controls per implementation found one Go failure and three Rust failures after transient transcript equality, when the harness immediately closes both destination write halves while producers can still send frames. This is not a stable session qualification. The fixture needs an owner-approved deterministic shutdown/drain barrier; no production relay bytes or assertions have been altered to mask the mismatch.
