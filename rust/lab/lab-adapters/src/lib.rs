@@ -141,6 +141,8 @@ pub fn registry() -> Registry {
     registry.register("command_journey", journey::command_journey);
     registry.register("files_transform", shortcuts::files_transform);
     registry.register("shortcuts_actions", shortcuts::shortcuts_actions);
+    registry.register("shortcuts_checks", shortcuts::shortcuts_checks);
+    registry.register("shortcuts_real_only", shortcuts::shortcuts_real_only);
     registry.register("mac", mac::mac);
     registry
 }
