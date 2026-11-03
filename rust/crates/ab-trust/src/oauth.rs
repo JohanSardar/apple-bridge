@@ -12,10 +12,15 @@ pub struct Client {
     pub redirect_uris: Vec<String>,
     #[serde(default)]
     pub token_endpoint_auth_method: String,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "nullable_strings")]
     pub grant_types: Vec<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "nullable_strings")]
     pub response_types: Vec<String>,
+}
+fn nullable_strings<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Vec<String>, D::Error> {
+    Ok(Option::<Vec<String>>::deserialize(deserializer)?.unwrap_or_default())
 }
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Code {
@@ -348,5 +353,18 @@ impl Authority {
             p.grants = effective_grants(&p.grants, &e.grants);
         }
         Ok(p)
+    }
+}
+
+#[cfg(test)]
+mod compatibility_tests {
+    #[test]
+    fn registration_accepts_null_optional_arrays() -> Result<(), serde_json::Error> {
+        let client: super::Client = serde_json::from_str(
+            r#"{"client_name":"fixture","redirect_uris":["https://connector.example/callback"],"grant_types":null,"response_types":null}"#,
+        )?;
+        assert!(client.grant_types.is_empty());
+        assert!(client.response_types.is_empty());
+        Ok(())
     }
 }
