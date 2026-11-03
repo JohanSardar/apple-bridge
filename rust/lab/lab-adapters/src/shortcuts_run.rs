@@ -56,8 +56,10 @@ fn registered(world: &World) -> bool {
                 .ok()
                 .flatten()
         })
-        .is_some_and(|(status, value)| status == 403 || value["error"]["code"] == "forbidden");
-    eprintln!("registered listed={listed} gated={gated}");
+        .is_some_and(|(status, value)| {
+            eprintln!("gate {status} {value}");
+            status == 403 || value["error"]["code"] == "forbidden"
+        });
     listed && gated
 }
 
