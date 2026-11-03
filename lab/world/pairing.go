@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	"github.com/JohanSardar/apple-bridge/lab/wire"
 )
 
 func (w *World) PairingChecks() error {
@@ -35,11 +36,7 @@ func (w *World) PairingChecks() error {
 	if err != nil {
 		return err
 	}
-	rawCode, err := base32.StdEncoding.WithPadding(base32.NoPadding).DecodeString(strings.TrimPrefix(code, "ab1-"))
-	var decoded pairCode
-	if err == nil {
-		err = json.Unmarshal(rawCode, &decoded)
-	}
+	decoded, err := wire.DecodePairCode(code, time.Now())
 	if err != nil {
 		return err
 	}
@@ -67,7 +64,7 @@ func (w *World) PairingChecks() error {
 	if err != nil {
 		return err
 	}
-	var expiredCode pairCode
+	var expiredCode wire.PairCode
 	if err = json.Unmarshal(raw, &expiredCode); err != nil {
 		return err
 	}
@@ -134,14 +131,6 @@ func (w *World) Principal(endpoint Endpoint) (Principal, error) {
 		}
 	}
 	return Principal{}, fmt.Errorf("world principal unavailable")
-}
-
-type pairCode struct {
-	ID          string    `json:"id"`
-	Address     string    `json:"address"`
-	Fingerprint string    `json:"fingerprint"`
-	Secret      []byte    `json:"secret"`
-	ExpiresAt   time.Time `json:"expires_at"`
 }
 
 type enrollment struct {
