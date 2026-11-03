@@ -53,7 +53,8 @@ pub struct CommandEvent {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub evidence: Option<Box<RawValue>>,
 }
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(default)]
 pub struct BlobReference {
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub awaiting_variants: bool,
@@ -63,7 +64,8 @@ pub struct BlobReference {
     pub size: i64,
     pub state: String,
 }
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(default)]
 pub struct CommandError {
     pub code: String,
     pub message: String,

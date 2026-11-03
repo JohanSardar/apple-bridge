@@ -7,7 +7,7 @@ use crate::{
 use ab_domain::{Coverage, Source};
 use ab_wire::messages::{Capture, Checkpoint, Observation};
 use serde_json::{Value, value::RawValue};
-use std::os::unix::fs::PermissionsExt;
+use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
 use std::time::Duration;
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
@@ -615,12 +615,27 @@ impl State<Gateway> {
         Ok(())
     }
     pub fn backup(&self, path: impl AsRef<Path>) -> Result<()> {
-        self.db.execute(
-            "VACUUM INTO ?",
-            [path.as_ref().to_str().ok_or(ErrorCode::Invalid)?],
-        )?;
-        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))?;
-        Ok(())
+        let path = path.as_ref();
+        let parent = path
+            .parent()
+            .filter(|p| !p.as_os_str().is_empty())
+            .unwrap_or(Path::new("."));
+        let staged = parent.join(format!("backup-{}.db", new_id("")?));
+        let result = (|| {
+            self.db.execute(
+                "VACUUM INTO ?",
+                [staged.to_str().ok_or(ErrorCode::Invalid)?],
+            )?;
+            std::fs::set_permissions(&staged, std::fs::Permissions::from_mode(0o600))?;
+            std::fs::File::open(&staged)?.sync_all()?;
+            std::fs::rename(&staged, path)?;
+            std::fs::File::open(parent)?.sync_all()?;
+            Ok(())
+        })();
+        if staged.exists() {
+            let _ = std::fs::remove_file(staged);
+        }
+        result
     }
 }
 pub fn restore(
@@ -629,12 +644,25 @@ pub fn restore(
     accept_ledger_loss: bool,
 ) -> Result<()> {
     let home = home.as_ref();
+    let backup = backup.as_ref();
+    let current = home.join("state.db");
+    let backup = if backup.as_os_str().is_empty() {
+        if !accept_ledger_loss {
+            return Err(ErrorCode::Invalid.into());
+        }
+        current.as_path()
+    } else {
+        backup
+    };
     let source = Connection::open_with_flags(backup, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     let integrity: String = source.query_row("PRAGMA integrity_check", [], |r| r.get(0))?;
     if integrity != "ok" {
         return Err(ErrorCode::Corrupt.into());
     }
-    std::fs::create_dir_all(home)?;
+    std::fs::DirBuilder::new()
+        .recursive(true)
+        .mode(0o700)
+        .create(home)?;
     let path = home.join(format!("restore-{}.db", new_id("")?));
     let result = (|| {
         source.execute("VACUUM INTO ?", [path.to_str().ok_or(ErrorCode::Invalid)?])?;

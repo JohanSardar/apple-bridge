@@ -121,7 +121,8 @@ with tempfile.TemporaryDirectory(prefix='ab-gateway-parity-') as tmp:
  drivers=[Driver(GO,homes[0]),Driver(RUST,homes[1])]
  saved=[d.call(dict(op='command',id='parity-command')) for d in drivers]
  ledger_before=[sqlite3.connect(h/'ledger.db').execute('SELECT * FROM commands ORDER BY id').fetchall() for h in homes]
- for i,d in enumerate(drivers):d.call(dict(op='backup',path=str(homes[i]/'backup.db')))
+ for i,d in enumerate(drivers):
+  for repeat in range(2):d.call(dict(op='backup',path=str(homes[i]/'backup.db')))
  for d in drivers:d.close()
  for exe,home in zip([RUST,GO],homes):subprocess.run([exe,str(home),str(home/'backup.db')],check=True)
  drivers=[Driver(GO,homes[0]),Driver(RUST,homes[1])]
