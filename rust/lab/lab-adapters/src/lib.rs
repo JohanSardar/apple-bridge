@@ -39,6 +39,7 @@ pub mod messages_b;
 pub mod native;
 pub mod native_runner;
 pub mod notes;
+pub mod native_core;
 pub mod packaging;
 pub mod phone;
 pub mod pkginstall;
@@ -61,6 +62,7 @@ pub mod remote_real;
 pub mod replicas;
 pub mod restart;
 pub mod robust;
+pub mod robust_core;
 pub mod safari;
 pub mod search;
 pub mod session_proxy;
@@ -103,7 +105,8 @@ pub fn registry() -> Registry {
             || readmodels::SCENARIOS.contains(&id)
             || calls::NATIVE_SCENARIOS.contains(&id)
             || usage::NATIVE_SCENARIOS.contains(&id)
-            || helper_ipc::SCENARIOS.contains(&id);
+            || helper_ipc::SCENARIOS.contains(&id)
+            || robust_core::handles(id);
         if replicas != 0 && blobs::is_blob(id) {
             blobs::configure(world, id, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && calls::REPLICA_SCENARIOS.contains(&id) {
@@ -202,8 +205,6 @@ pub fn registry() -> Registry {
     registry.register("native_media_posters", native::media_posters);
     registry.register("native_media_export_safety", native::media_export_safety);
     registry.register("WEB-REM-PARITY", native::reminders_parity);
-    registry.register("seed", labcore::seed);
-    registry.register("converge", labcore::converge);
     registry.register("connect", labcore::connect);
     registry.register("partition", labcore::partition);
     registry.register("heal", labcore::heal);
@@ -215,15 +216,34 @@ pub fn registry() -> Registry {
     registry.register("stale_fence_rejected", labcore::stale_fence_rejected);
     registry.register("load_rejected", labcore::load_rejected);
     registry.register("relay_service", relay::relay_service);
-    registry.register("seed", journey::seed);
-    registry.register("converge", journey::converge);
+    registry.register("seed", |world, input, evidence| {
+        if robust_core::handles(&evidence.scenario) {
+            robust_core::seed(world, input, evidence)
+        } else {
+            labcore::seed(world, input, evidence)
+        }
+    });
+    registry.register("converge", |world, input, evidence| {
+        if robust_core::handles(&evidence.scenario) {
+            robust_core::converge(world, input, evidence)
+        } else {
+            labcore::converge(world, input, evidence)
+        }
+    });
     registry.register("media_variants", media::media_variants);
     registry.register("messages_commands", messages_b::dispatch);
     registry.register("files_native", files_native::files_native);
-    registry.register("robustness", robust::dispatch);
+    registry.register("robustness", |world, input, evidence| {
+        if robust_core::handles(&evidence.scenario) {
+            robust_core::run(world, input, evidence)
+        } else {
+            robust::dispatch(world, input, evidence)
+        }
+    });
     registry.register("command_journey", journey::command_journey);
     registry.register("files_transform", shortcuts::files_transform);
     registry.register("shortcuts_actions", shortcuts::shortcuts_actions);
+    registry.register("source_support", native_core::source_support);
     registry.register("shortcuts_checks", shortcuts::shortcuts_checks);
     registry.register("shortcuts_real_only", shortcuts::shortcuts_real_only);
     registry.register("mac", mac::mac);

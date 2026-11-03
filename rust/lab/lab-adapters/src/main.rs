@@ -54,6 +54,7 @@ fn run() -> Result<bool, Box<dyn std::error::Error>> {
         let mut scenario: Scenario = serde_saphyr::from_slice(&fs::read(path)?)?;
         lab_adapters::shortcuts::inject(&mut scenario);
         lab_adapters::connectors::inject(&mut scenario);
+        lab_adapters::native_core::inject(&mut scenario);
         if scenario.when.is_empty()
             && lab_adapters::readmodels::SCENARIOS.contains(&scenario.id.as_str())
         {
