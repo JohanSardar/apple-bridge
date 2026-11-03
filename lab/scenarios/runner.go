@@ -780,6 +780,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		ran++
 		fmt.Fprintln(os.Stderr, "running", s.ID, level)
 		duration := 3 * time.Minute
+		if level == "sim" && (s.ID == "CONN-CHATGPT" || s.ID == "CONN-CLAUDE-AI") {
+			duration = 6 * time.Minute
+		}
 		if s.ID == "HELPER-TCC-READY" {
 			duration = 10 * time.Minute
 		}

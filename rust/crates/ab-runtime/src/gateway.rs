@@ -143,10 +143,16 @@ pub async fn start(mut config: Config, authority: Arc<ab_trust::Authority>) -> R
     let router = frontdoor
         .router()
         .merge(phone_router.clone())
-        .fallback_service(web.router());
+        .fallback_service(web.clone().router());
     config.save()?;
     let (stop, receiver) = tokio::sync::watch::channel(false);
     let mut tasks = tokio::task::JoinSet::new();
+    let connector_listener = crate::connector::bind(&config.home)?;
+    tasks.spawn(crate::connector::serve(
+        connector_listener,
+        web,
+        receiver.clone(),
+    ));
     #[cfg(feature = "lab-harness")]
     {
         let home = config.home.clone();

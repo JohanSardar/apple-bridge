@@ -15,7 +15,7 @@ impl Arguments {
         if verb == "token" && args.next().as_deref() != Some("create") {
             return Err(Error::Invalid);
         }
-        let action = if ["agent", "remote", "web"].contains(&verb.as_str()) {
+        let action = if ["agent", "remote", "web", "connector"].contains(&verb.as_str()) {
             args.next().ok_or(Error::Invalid)?
         } else {
             String::new()
@@ -53,6 +53,8 @@ impl Arguments {
                     "name",
                     "level",
                     "expires-in",
+                    "request",
+                    "code",
                     "dial-replica",
                     "iphone",
                     "via-remote",
@@ -184,6 +186,17 @@ async fn run() -> Result<(), Error> {
         .flags
         .get("home")
         .map_or_else(default_home, |v| Ok(PathBuf::from(v)))?;
+    if args.verb == "connector" {
+        let result = ab_runtime::connector::command(
+            &home,
+            &args.action,
+            &args.flag("request", ""),
+            &args.flag("code", ""),
+        )
+        .await?;
+        println!("{result}");
+        return Ok(());
+    }
     if offline(&args, &home)? {
         return Ok(());
     }
