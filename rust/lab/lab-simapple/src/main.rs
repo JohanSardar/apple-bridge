@@ -1,5 +1,6 @@
 #![allow(clippy::too_many_lines)]
 mod messages;
+mod notes;
 use lab_wire::{receive, send};
 use serde_json::{Value, json};
 use std::{
@@ -450,6 +451,26 @@ impl Session {
             }
         }
     }
+    fn family(&self, state: &Shared, frame: &Value) -> Result<String> {
+        let op = match frame["t"].as_str() {
+            Some("Prepare") => string(&frame["action"], "op"),
+            Some("Dispatch") => self
+                .tickets
+                .get(&string(frame, "ticket"))
+                .map(|ticket| string(&ticket.prepare["action"], "op"))
+                .unwrap_or_default(),
+            Some("Resolve") => {
+                let s = lock(state)?;
+                let source = string(
+                    &s.data["evidence"][string(frame, "command_id")]["evidence"],
+                    "source",
+                );
+                return Ok(if source.is_empty() { "reminders".into() } else { source });
+            }
+            _ => String::new(),
+        };
+        Ok(op.split('.').next().unwrap_or_default().to_owned())
+    }
     fn reject(&mut self, frame: &Value, code: &str) -> Result<()> {
         send(
             &mut self.stream,
@@ -459,10 +480,24 @@ impl Session {
     }
     #[allow(clippy::needless_pass_by_value)]
     fn command(&mut self, state: &Shared, frame: Value) -> Result<()> {
+        let command = string(&frame, "command_id");
+        if matches!(frame["t"].as_str(), Some("Prepare" | "Dispatch")) {
+            let mut s = lock(state)?;
+            let kind = string(&frame, "t");
+            s.data["origins"][&command][&kind] = frame["origin"].clone();
+            if !frame["action"].is_null() {
+                s.data["origins"][&command]["action"] = frame["action"]["origin"].clone();
+            }
+        }
         if self.message_command(state, &frame)? {
             return Ok(());
         }
-        let command = string(&frame, "command_id");
+        let family = self.family(state, &frame)?;
+        match (family.as_str(), frame["t"].as_str()) {
+            ("notes", Some("Prepare")) => return self.note_prepare(state, &frame),
+            ("notes", Some("Dispatch")) => return self.note_dispatch(state, &frame),
+            _ => {}
+        }
         match frame["t"].as_str() {
             Some("Prepare") => {
                 let mut s = lock(state)?;
@@ -628,14 +663,14 @@ impl Session {
                     let key = string(&outcome["evidence"], "native_key");
                     let record = s.data["records"][&key].clone();
                     let capture = if record["kind"] == "absent" {
-                        s.scan("reminders")?
+                        s.scan(&family)?
                     } else {
-                        json!({"t":"Capture","source":"reminders","observations":[record]})
+                        json!({"t":"Capture","source":family,"observations":[record]})
                     };
                     drop(s);
                     self.emit(state, capture)?;
                     outcome["evidence"]["capture_checkpoint"] =
-                        json!(self.checkpoints.get("reminders"));
+                        json!(self.checkpoints.get(&family));
                     outcome["disposition"] = json!("locally_observed");
                     let mut s = lock(state)?;
                     s.data["evidence"][&command] = outcome.clone();
@@ -722,6 +757,14 @@ fn session(
         "reminders.delete_list"
     ]);
     capabilities["messages"] = json!(["messages.send", "messages.reply"]);
+    capabilities["notes"] = json!([
+        "notes.create",
+        "notes.update",
+        "notes.delete",
+        "notes.create_folder",
+        "notes.move",
+        "notes.rename_folder"
+    ]);
     send(
         &mut stream,
         &json!({"t":"Ready","protocol":"ipc/1","capabilities":capabilities,"coverage":coverage,"helper_build":"lab-simapple/rust","os_build":"sim"}),
