@@ -1,3 +1,4 @@
+#![allow(clippy::too_many_lines)]
 use crate::{
     assertions::{
         Observed, Observers, await_until, converged, read_all, record_integrity, replica_integrity,
@@ -76,13 +77,11 @@ fn progress(client: &Client) -> Option<Value> {
     let value = client.call("sources.status", &json!({}), 10).ok()??;
     Some(value["replica"]["blobs"].clone())
 }
-fn entry(progress: &Option<Value>, digest: &str) -> Value {
-    progress
-        .as_ref()
-        .map_or(Value::Null, |p| p["entries"][digest].clone())
+fn entry(progress: Option<&Value>, digest: &str) -> Value {
+    progress.map_or(Value::Null, |p| p["entries"][digest].clone())
 }
 fn state_of(client: &Client, digest: &str) -> String {
-    entry(&progress(client), digest)["state"]
+    entry(progress(client).as_ref(), digest)["state"]
         .as_str()
         .unwrap_or_default()
         .to_owned()
@@ -191,7 +190,7 @@ impl Context<'_> {
         )?];
         for endpoint in &self.replicas {
             let token = replicas::cli(&endpoint.home, &["token", "create", "--scope", scope])?;
-            out.push(Client::at(&endpoint.client().address().to_owned(), &token));
+            out.push(Client::at(endpoint.client().address(), &token));
         }
         Ok(out)
     }
@@ -216,7 +215,8 @@ pub fn blobs(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()
         }
     }
     if is_stage(&id) {
-        return native_stage(world, evidence, &gateway, &id);
+        native_stage(world, evidence, &gateway, &id);
+        return Ok(());
     }
     let mut context = Context {
         world,
@@ -306,7 +306,7 @@ fn duplicate(context: &mut Context) -> bool {
             p.as_ref()
                 .and_then(|p| p["entries"].as_object())
                 .is_some_and(|m| m.len() == 1)
-                && entry(&p, &digest)["state"] == "offloaded"
+                && entry(p.as_ref(), &digest)["state"] == "offloaded"
         });
         context.check("one_protected_digest_for_duplicate_fields", ok);
     }
@@ -438,7 +438,7 @@ fn single(context: &mut Context, id: &str) -> Result<bool> {
         "CORE-BLOB-CAP" => {
             let ok = await_until(10, || {
                 let p = progress(&replica);
-                entry(&p, &digest)["state"] == "over_cap"
+                entry(p.as_ref(), &digest)["state"] == "over_cap"
                     && p.as_ref()
                         .is_some_and(|p| p["bytes"].as_u64().unwrap_or(u64::MAX) <= CAP)
             });
@@ -511,7 +511,7 @@ fn no_digest_auth(context: &mut Context, digest: &str, record: &str) -> Result<b
             }
         }
         let status = progress(&scoped_client);
-        let leaked = !entry(&status, digest).is_null();
+        let leaked = !entry(status.as_ref(), digest).is_null();
         let empty = status
             .as_ref()
             .is_some_and(|p| p["bytes"].as_u64().unwrap_or(1) == 0);
@@ -528,12 +528,7 @@ fn no_digest_auth(context: &mut Context, digest: &str, record: &str) -> Result<b
     Ok(true)
 }
 
-fn native_stage(
-    world: &mut World,
-    evidence: &mut Evidence,
-    gateway: &Client,
-    id: &str,
-) -> Result<()> {
+fn native_stage(world: &mut World, evidence: &mut Evidence, gateway: &Client, id: &str) {
     let same = id == "CORE-BLOB-STAGE-SAME-DIGEST";
     evidence.check("isolated_world_ready", true, "world ready");
     let size: u64 = if same { 172_032 } else { 4 << 20 };
@@ -544,7 +539,7 @@ fn native_stage(
     let sent = world.control("/blob-fixture", &input).is_ok();
     evidence.check("slow_native_blob_fixture", sent, "slow fixture");
     if !sent {
-        return Ok(());
+        return;
     }
     let transferring = await_until(10, || {
         progress(gateway)
@@ -559,12 +554,12 @@ fn native_stage(
     });
     evidence.check("native_transfer_in_progress", transferring, "pending entry");
     if !transferring {
-        return Ok(());
+        return;
     }
     let staged = world.blob_control(&json!({"action":"relay-fixture"}));
     evidence.check("synthetic_blob_staged", staged.is_ok(), "relay fixture");
     let Ok(fixture) = staged else {
-        return Ok(());
+        return;
     };
     let digest = fixture["digest"].as_str().unwrap_or_default().to_owned();
     let title = fixture["title"].as_str().unwrap_or_default().to_owned();
@@ -581,7 +576,7 @@ fn native_stage(
             "part retired",
         );
         if !retired {
-            return Ok(());
+            return;
         }
     }
     let mut clients = vec![gateway.clone()];
@@ -600,7 +595,7 @@ fn native_stage(
         });
         evidence.check("fixture_record_visible", visible, "record visible");
         if !visible {
-            return Ok(());
+            return;
         }
         if id == "CORE-BLOB-STAGE-DURING-TRANSFER" && index > 0 {
             continue;
@@ -613,8 +608,7 @@ fn native_stage(
         });
         evidence.check("authorized_blob_bytes_match", matched, "digest verified");
         if !matched {
-            return Ok(());
+            return;
         }
     }
-    Ok(())
 }

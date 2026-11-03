@@ -628,7 +628,7 @@ impl<S: ReplicaState> Client<S> {
                                 refs.iter()
                                     .map(|r| ab_blobs::Reference {
                                         digest: r.digest.clone(),
-                                        size: u64::try_from(r.size).unwrap_or_default(),
+                                        size: r.size,
                                         state: r.state.clone(),
                                         ..ab_blobs::Reference::default()
                                     })

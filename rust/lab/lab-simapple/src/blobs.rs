@@ -77,7 +77,10 @@ pub fn fixture(state: &Shared, tx: &mpsc::Sender<Request>, input: &Value) -> Res
     s.blob.refresh = input["refresh_before_unavailable"] == true;
     s.blob.busy = input["unavailable_reads"].as_u64().unwrap_or_default();
     s.blob.drops = input["drop_reads"].as_u64().unwrap_or_default();
-    s.blob.state = input["state"].as_str().unwrap_or_default().to_owned();
+    input["state"]
+        .as_str()
+        .unwrap_or_default()
+        .clone_into(&mut s.blob.state);
     s.blob.delay_ms = input["slow_ms"].as_u64().unwrap_or_default();
     if input["delete"] == true {
         let keys: Vec<String> = s
@@ -156,7 +159,7 @@ pub fn history(state: &Shared, tx: &mpsc::Sender<Request>, input: &Value) -> Res
     enqueue(tx, frame, true)?;
     let elapsed = start.elapsed().as_secs_f64();
     Ok(
-        json!({"commit_ms":elapsed * 1000.0,"rows_per_second":rows as f64 / elapsed.max(f64::EPSILON)}),
+        json!({"commit_ms":elapsed * 1000.0,"rows_per_second":f64::from(u32::try_from(rows).unwrap_or(u32::MAX)) / elapsed.max(f64::EPSILON)}),
     )
 }
 
