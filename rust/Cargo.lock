@@ -2132,6 +2132,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "lab-simapple"
+version = "0.0.0"
+dependencies = [
+ "hex",
+ "jiff",
+ "lab-wire",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "lab-wire"
+version = "0.0.0"
+dependencies = [
+ "base64 0.22.1",
+ "hex",
+ "hmac 0.12.1",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

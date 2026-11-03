@@ -1,0 +1,14 @@
+[package]
+name = "lab-simapple"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+[lints]
+workspace = true
+[dependencies]
+lab-wire = { path = "../lab-wire" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+jiff.workspace = true
+hex = "0.4"
