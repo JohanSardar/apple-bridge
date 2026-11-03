@@ -1,0 +1,36 @@
+{
+  "before": {
+    "base_sha": "73c689ad22176ab0595684e2effea6b538244ccb",
+    "implementations": {
+      "gateway": "rust",
+      "replica": "go"
+    },
+    "passed": false,
+    "assertions": 15,
+    "failed_assertions": [
+      "replica_full_agent_forwarded",
+      "replica_approve_agent_queued_on_gateway"
+    ]
+  },
+  "after": {
+    "base_sha": "73c689ad22176ab0595684e2effea6b538244ccb",
+    "implementations": {
+      "gateway": "rust",
+      "replica": "go"
+    },
+    "passed": true,
+    "assertions": 37,
+    "failed_assertions": []
+  },
+  "go_reference": {
+    "base_sha": "73c689ad22176ab0595684e2effea6b538244ccb",
+    "implementations": {
+      "gateway": "go",
+      "replica": "go"
+    },
+    "passed": true,
+    "assertions": 37,
+    "failed_assertions": []
+  },
+  "baseline_setup": "Only enable WEB-RELAY-AGENTS in relayGatewaySimScenario; use unchanged scenario assertions."
+}

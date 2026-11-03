@@ -59,6 +59,7 @@ pub struct Server<S: GatewayState> {
     pub blobs: Option<Arc<Mutex<ab_blobs::Store>>>,
     pub authority: Arc<Authority>,
     pub uploads: Option<Arc<dyn crate::upstream::UploadHandler>>,
+    pub delegations: Arc<crate::delegation::Delegations>,
 }
 
 async fn receive<T: AsyncRead + AsyncWrite + Unpin>(
@@ -121,13 +122,58 @@ async fn transmit<S: GatewayState, T: AsyncRead + AsyncWrite + Unpin>(
 }
 
 impl<S: GatewayState> Server<S> {
+    fn forward_command(&self, context: &Session<'_>, frame: FeedFrame) -> Result<(), Error> {
+        if frame.id.is_empty() || frame.request.is_none() {
+            return Err(Error::Invalid);
+        }
+        let handler = self.uploads.clone().ok_or(Error::Invalid)?;
+        let mut commands = context.commands.lock().map_err(|_| Error::Disconnected)?;
+        commands.retain(|_, task| !task.is_finished());
+        if commands.len() >= 16 || commands.contains_key(&frame.id) {
+            return Err(Error::Invalid);
+        }
+        let certificate = context.certificate.to_vec();
+        let session = context.id.clone();
+        let outgoing = context.outgoing.clone();
+        let id = frame.id.clone();
+        commands.insert(
+            id.clone(),
+            tokio::spawn(async move {
+                let result = async {
+                    let request = frame.request.as_deref().ok_or(Error::Invalid)?;
+                    let timeout = crate::command::forward_timeout(request.get());
+                    let response = tokio::time::timeout(
+                        timeout,
+                        handler.control(&certificate, &session, &frame.delegation, request),
+                    )
+                    .await
+                    .map_err(|_| Error::Disconnected)??;
+                    let mut reply = crate::frame("CommandResponse");
+                    reply.id = id;
+                    reply.response = Some(raw(&response)?);
+                    Ok(reply)
+                }
+                .await;
+                let _ = outgoing.send(result).await;
+            }),
+        );
+        Ok(())
+    }
+
     async fn receive<T: AsyncRead + AsyncWrite + Unpin>(
         &self,
         socket: &mut WebSocketStream<T>,
         context: &Session<'_>,
     ) -> Result<FeedFrame, Error> {
         loop {
-            let message = socket.next().await.ok_or(Error::Disconnected)??;
+            let message = tokio::select! {
+                message = socket.next() => message.ok_or(Error::Disconnected)??,
+                outgoing = async { context.incoming.lock().await.recv().await } => {
+                    let outgoing = outgoing.ok_or(Error::Disconnected)??;
+                    socket.send(Message::Text(String::from_utf8(outgoing.encode()?).map_err(|_| Error::Invalid)?.into())).await?;
+                    continue;
+                }
+            };
             if let Some(frame) = self.upstream(socket, context, message).await? {
                 return Ok(frame);
             }
@@ -141,6 +187,10 @@ impl<S: GatewayState> Server<S> {
     ) -> Result<Option<FeedFrame>, Error> {
         let response = match message {
             Message::Text(text) => {
+                ab_trust::wire::framing::Frame::from_json(
+                    ab_trust::wire::framing::Protocol::Feed,
+                    text.as_bytes(),
+                )?;
                 let frame: FeedFrame = serde_json::from_str(&text)?;
                 if frame.t == "ClockPing" || frame.t == "ClockAck" {
                     if !context.clock {
@@ -157,7 +207,27 @@ impl<S: GatewayState> Server<S> {
                     }
                     return Ok(None);
                 }
-                if frame.t != "UploadControl" && frame.t != "CommandRequest" {
+                if frame.t == "DelegationResponse" {
+                    let registration = context.delegation.as_ref().ok_or(Error::Invalid)?;
+                    registration.session.deliver(&frame)?;
+                    return Ok(None);
+                }
+                if frame.t == "CommandCancel" {
+                    if let Some(task) = context
+                        .commands
+                        .lock()
+                        .map_err(|_| Error::Disconnected)?
+                        .remove(&frame.id)
+                    {
+                        task.abort();
+                    }
+                    return Ok(None);
+                }
+                if frame.t == "CommandRequest" {
+                    self.forward_command(context, frame)?;
+                    return Ok(None);
+                }
+                if frame.t != "UploadControl" {
                     return Ok(Some(frame));
                 }
                 if frame.id.is_empty() {
@@ -212,7 +282,12 @@ impl<S: GatewayState> Server<S> {
     ) -> Result<(), Error> {
         static NEXT_SESSION: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
         let principal = self.authority.authenticate_certificate(certificate)?;
+        let (outgoing, incoming) = tokio::sync::mpsc::channel(32);
         let mut context = Session {
+            delegation: None,
+            outgoing,
+            incoming: tokio::sync::Mutex::new(incoming),
+            commands: std::sync::Mutex::default(),
             clock: false,
             principal: &principal,
             certificate,
@@ -293,6 +368,9 @@ impl<S: GatewayState> Server<S> {
         if context.clock {
             welcome.clock_protocol = "ntp/1".into();
         }
+        if hello.delegation_protocol == "delegation/1" {
+            welcome.delegation_protocol = "delegation/1".into();
+        }
         welcome.gateway_id.clone_from(&self.authority.fingerprint);
         welcome.epoch.clone_from(&head.epoch);
         welcome.subscription_revision = p.revision;
@@ -305,6 +383,16 @@ impl<S: GatewayState> Server<S> {
             welcome.features = Some(vec![raw(&"capture_atomic")?]);
         }
         transmit(self, context, socket, welcome, None, limit).await?;
+        if hello.delegation_protocol == "delegation/1" {
+            context.delegation = Some(self.delegations.register(
+                p.id.clone(),
+                Arc::new(crate::delegation::Session {
+                    certificate: context.certificate.to_vec(),
+                    outgoing: context.outgoing.clone(),
+                    pending: std::sync::Mutex::default(),
+                }),
+            )?);
+        }
         let cursor = if resume {
             previous.ok_or(Error::Invalid)?
         } else {
@@ -416,6 +504,10 @@ impl<S: GatewayState> Server<S> {
                 _ = heartbeat.tick() => {
                     let mut f = frame("Heartbeat"); f.head = self.state.lock().await.head()?.sequence;
                     socket.send(Message::Text(String::from_utf8(f.encode()?).map_err(|_| Error::Invalid)?.into())).await?;
+                },
+                outgoing = async { context.incoming.lock().await.recv().await } => {
+                    let outgoing = outgoing.ok_or(Error::Disconnected)??;
+                    socket.send(Message::Text(String::from_utf8(outgoing.encode()?).map_err(|_| Error::Invalid)?.into())).await?;
                 },
                 message = socket.next() => { let message = message.ok_or(Error::Disconnected)??; let Some(f) = self.upstream(socket, context, message).await? else { continue; }; if f.t == "BlobWant" { blob_pending = Some(f); } else if f.t == "Ack" { window.acknowledge(&f)?; } else if f.t != "Heartbeat" { return Err(Error::Invalid); } },
             }
