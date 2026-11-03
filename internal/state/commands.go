@@ -8,7 +8,6 @@ import (
 	"github.com/JohanSardar/apple-bridge/internal/trust"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 )
@@ -226,7 +225,7 @@ func (s *Store) persistCommand(ctx context.Context, t CommandTransition, partsUp
 	if err != nil {
 		return r, err
 	}
-	event := contracts.CommandEvent{State: r.State, At: time.Now().UTC(), Evidence: r.Evidence}
+	event := contracts.CommandEvent{State: r.State, At: contracts.DecisionNow().UTC(), Evidence: r.Evidence}
 	if partsUpdated {
 		if cursor.Epoch != old.Cursor.Epoch || cursor.Sequence <= old.CommitSeq {
 			return old, contracts.ErrConflict

@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 mod completion;
 mod protection;
+pub mod replay;
 pub use protection::{BlobProtection, ReferenceSet};
 mod gateway;
 mod health;
@@ -385,7 +386,7 @@ impl State<Replica> {
         if begin.id.is_empty()
             || begin.count < 0
             || begin.digest.is_empty()
-            || expires < jiff::Timestamp::now()
+            || expires < crate::replay::now()
         {
             return Err(ErrorCode::Invalid.into());
         }
@@ -409,7 +410,7 @@ impl State<Replica> {
         if i.generation != self.generation
             || page.id != i.id
             || page.ordinal != i.ordinal
-            || i.expires < jiff::Timestamp::now()
+            || i.expires < crate::replay::now()
         {
             return Err(ErrorCode::Corrupt.into());
         }
@@ -436,13 +437,13 @@ impl State<Replica> {
         }
         commit(tx)?;
         i.ordinal += 1;
-        i.expires = jiff::Timestamp::now()
+        i.expires = crate::replay::now()
             .checked_add(std::time::Duration::from_secs(600))
             .map_err(|_| ErrorCode::Invalid)?;
         Ok(())
     }
     pub fn install_snapshot(&mut self, i: SnapshotInstall) -> Result<Cursor> {
-        if i.generation != self.generation || i.expires < jiff::Timestamp::now() {
+        if i.generation != self.generation || i.expires < crate::replay::now() {
             return Err(ErrorCode::Corrupt.into());
         }
         let tx = self.db.transaction()?;
@@ -722,12 +723,13 @@ impl<Role> State<Role> {
 fn apply(tx: &Transaction<'_>, epoch: &str, ch: &Change) -> Result<()> {
     projection::write(tx, &ch.record, ch.sequence)?;
     tx.execute(
-        "INSERT INTO journal(seq,epoch,source,payload,committed_at) VALUES(?,?,?,?,unixepoch())",
+        "INSERT INTO journal(seq,epoch,source,payload,committed_at) VALUES(?,?,?,?,?)",
         params![
             number(ch.sequence)?,
             epoch,
             source(&ch.record)?,
-            encoded(ch)?
+            encoded(ch)?,
+            crate::replay::now().as_second()
         ],
     )?;
     Ok(())
@@ -842,7 +844,7 @@ impl<Role> State<Role> {
         let transaction = self.db.transaction()?;
         transaction.execute(
             "DELETE FROM agent_activity WHERE at < ?",
-            [jiff::Timestamp::now().as_second() - 90 * 86400],
+            [crate::replay::now().as_second() - 90 * 86400],
         )?;
         transaction.execute("INSERT INTO agent_activity(id,principal,operation,kind,state,at,count,argument_bytes,argument_hash,sequence) VALUES(?,?,?,?,?,?,1,?,?,0) ON CONFLICT(id) DO UPDATE SET state=excluded.state,count=agent_activity.count+?,argument_bytes=excluded.argument_bytes,argument_hash=excluded.argument_hash WHERE agent_activity.kind='read' OR excluded.sequence>=agent_activity.sequence", params![string("id")?, string("principal")?, string("operation")?, string("kind")?, string("state")?, at, bytes, string("argument_hash")?, i64::from(string("kind")? == "read")])?;
         transaction.commit()?;

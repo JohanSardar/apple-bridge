@@ -111,7 +111,7 @@ impl<Role> State<Role> {
         }
         if let Some(status) = self.project_replica_status(visibility)? {
             result["replica"] = status.clone();
-            result["records"] = serde_json::json!([{"collection":"system.replica","id":"local","version":1,"source":"system","observed_at":jiff::Timestamp::now().to_string(),"deleted":false,"coverage":{"fields":"","missing":null},"data":status}]);
+            result["records"] = serde_json::json!([{"collection":"system.replica","id":"local","version":1,"source":"system","observed_at":crate::replay::now().to_string(),"deleted":false,"coverage":{"fields":"","missing":null},"data":status}]);
         }
         Ok(result)
     }

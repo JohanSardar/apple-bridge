@@ -137,7 +137,7 @@ impl crate::State<crate::Gateway> {
             id: id.try_into()?,
             version: old.map_or(1, |r| r.version + 1),
             source,
-            observed_at: jiff::Timestamp::now().to_string(),
+            observed_at: crate::replay::now().to_string(),
             deleted: false,
             coverage,
             data,

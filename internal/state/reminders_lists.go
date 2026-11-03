@@ -32,7 +32,7 @@ func (s *Store) ReminderLists(ctx context.Context, visibility trust.Visibility, 
 		return result, err
 	}
 	counts := newReminderCounts()
-	today := time.Now().In(zone).Format(time.DateOnly)
+	today := contracts.DecisionNow().In(zone).Format(time.DateOnly)
 	for _, reminder := range reminders {
 		var fields reminderFields
 		if err = json.Unmarshal(reminder.Data, &fields); err != nil {

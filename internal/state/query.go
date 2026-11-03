@@ -17,7 +17,7 @@ func (s *Store) SaveQueryBlobs(ctx context.Context, principal, id string, scope 
 		return err
 	}
 	defer tx.Rollback()
-	_, err = tx.ExecContext(ctx, `INSERT INTO query_blobs VALUES(?,?,?,?,?)`, id, principal, scope, payload, time.Now().Add(time.Hour).Unix())
+	_, err = tx.ExecContext(ctx, `INSERT INTO query_blobs VALUES(?,?,?,?,?)`, id, principal, scope, payload, contracts.DecisionNow().Add(time.Hour).Unix())
 	if err != nil {
 		return err
 	}
@@ -26,11 +26,11 @@ func (s *Store) SaveQueryBlobs(ctx context.Context, principal, id string, scope 
 		refs = append(refs, contracts.BlobReference{Digest: b.Digest, Size: b.Size, State: "present"})
 	}
 	raw, _ := json.Marshal(refs)
-	_, err = tx.ExecContext(ctx, `DELETE FROM blob_reference_sets WHERE owner IN (SELECT id FROM query_blobs WHERE expires<?)`, time.Now().Unix())
+	_, err = tx.ExecContext(ctx, `DELETE FROM blob_reference_sets WHERE owner IN (SELECT id FROM query_blobs WHERE expires<?)`, contracts.DecisionNow().Unix())
 	if err != nil {
 		return err
 	}
-	_, err = tx.ExecContext(ctx, `DELETE FROM query_blobs WHERE expires<?`, time.Now().Unix())
+	_, err = tx.ExecContext(ctx, `DELETE FROM query_blobs WHERE expires<?`, contracts.DecisionNow().Unix())
 	if err != nil {
 		return err
 	}
@@ -43,7 +43,7 @@ func (s *Store) SaveQueryBlobs(ctx context.Context, principal, id string, scope 
 func (s *Store) QueryBlobGrant(ctx context.Context, p trust.Principal, id string) (trust.RecordGrant, error) {
 	var scope contracts.Grant
 	var payload []byte
-	err := s.db.QueryRowContext(ctx, `SELECT scope,payload FROM query_blobs WHERE id=? AND principal=? AND expires>?`, id, p.ID, time.Now().Unix()).Scan(&scope, &payload)
+	err := s.db.QueryRowContext(ctx, `SELECT scope,payload FROM query_blobs WHERE id=? AND principal=? AND expires>?`, id, p.ID, contracts.DecisionNow().Unix()).Scan(&scope, &payload)
 	if err != nil || !trust.Subset([]contracts.Grant{scope}, p.Grants) {
 		return trust.RecordGrant{}, contracts.ErrForbidden
 	}

@@ -38,14 +38,14 @@ func (s *Store) Prune(ctx context.Context, policy Retention) error {
 	}
 	floor := head.Sequence - policy.Rows
 	var old sql.NullInt64
-	if err = tx.QueryRowContext(ctx, "SELECT MAX(seq) FROM journal WHERE committed_at < ?", time.Now().Add(-policy.Age).Unix()).Scan(&old); err != nil {
+	if err = tx.QueryRowContext(ctx, "SELECT MAX(seq) FROM journal WHERE committed_at < ?", contracts.DecisionNow().Add(-policy.Age).Unix()).Scan(&old); err != nil {
 		return err
 	}
 	if !old.Valid {
 		return nil
 	}
 	floor = min(floor, uint64(old.Int64))
-	now := time.Now()
+	now := contracts.DecisionNow()
 	for id, lease := range s.leases {
 		if now.After(lease.ExpiresAt) {
 			delete(s.leases, id)
@@ -84,10 +84,10 @@ func (f *FrozenSnapshot) Renew(ctx context.Context) error {
 	f.store.write.Lock()
 	defer f.store.write.Unlock()
 	lease, ok := f.store.leases[f.ID]
-	if !ok || time.Now().After(lease.ExpiresAt) {
+	if !ok || contracts.DecisionNow().After(lease.ExpiresAt) {
 		return contracts.ErrExpired
 	}
-	lease.ExpiresAt = time.Now().Add(10 * time.Minute)
+	lease.ExpiresAt = contracts.DecisionNow().Add(10 * time.Minute)
 	f.store.leases[f.ID] = lease
 	return ctx.Err()
 }

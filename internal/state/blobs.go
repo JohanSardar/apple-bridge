@@ -162,7 +162,7 @@ func (s *Store) commitProtectedAt(ctx context.Context, tx *sql.Tx) (time.Time, e
 			return time.Time{}, err
 		}
 		err := tx.Commit()
-		return time.Now(), err
+		return contracts.DecisionNow(), err
 	}
 	updates, err := changedBlobReferences(ctx, tx)
 	if err != nil {
@@ -188,7 +188,7 @@ func (s *Store) commitProtectedAt(ctx context.Context, tx *sql.Tx) (time.Time, e
 		}
 		return time.Time{}, err
 	}
-	committedAt := time.Now()
+	committedAt := contracts.DecisionNow()
 	if guard != "" {
 		updates[guard] = nil
 	}

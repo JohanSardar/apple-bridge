@@ -58,6 +58,8 @@ def main():
     os.umask(0o077)
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', required=True)
+    parser.add_argument('--go', default='bin/bridge')
+    parser.add_argument('--rust', default='bin/bridge')
     args = parser.parse_args()
     root = private_directory(args.output)
     if list(root.iterdir()):
@@ -149,6 +151,20 @@ def main():
         command = operation('reminders.create', {'command_id': 'cmd_shadow_synthetic', 'op': 'reminders.create', 'args': {'list_id': records[0]['id'], 'title': '[ab-test shadow] synthetic'}, 'wait_ms': 15000})
         if command.get('state') != 'observed':
             raise RuntimeError('synthetic command was not observed')
+        def http_call(method, path, body=None, extra=None):
+            headers = {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'Accept': 'application/json, text/event-stream'}
+            headers.update(extra or {})
+            request = urllib.request.Request(origin + path, data=None if body is None else json.dumps(body).encode(), headers=headers, method=method)
+            with urllib.request.urlopen(request, timeout=20) as response:
+                return json.load(response)
+        mcp = http_call('POST', '/mcp', {'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call', 'params': {'name': 'records_query', 'arguments': {'collection': 'reminders.list'}}})
+        if mcp.get('result', {}).get('isError'):
+            raise RuntimeError('synthetic MCP query failed')
+        mcp_command = http_call('POST', '/mcp', {'jsonrpc': '2.0', 'id': 2, 'method': 'tools/call', 'params': {'name': 'reminders_create', 'arguments': {'command_id': 'cmd_shadow_mcp', 'op': 'reminders.create', 'args': {'list_id': records[0]['id'], 'title': '[ab-test shadow] via mcp'}, 'wait_ms': 15000}}})
+        if mcp_command.get('result', {}).get('structuredContent', {}).get('state') != 'observed':
+            raise RuntimeError('synthetic MCP command was not observed')
+        http_call('GET', '/v1/records/reminders.list/' + records[0]['id'])
+        http_call('POST', '/v1/op/records.query', {'collection': 'reminders.list'}, {'X-Ingress': 'cli'})
         control = http.client.HTTPConnection('sim', timeout=5)
         control.sock = sockets.socket(sockets.AF_UNIX)
         control.sock.connect(str(root / 'sim.sock'))
@@ -232,7 +248,14 @@ def main():
     result = subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'replay', '--recording', str(recording), '--starting-home', str(root / 'starting'), '--output', str(root / 'replay'), '--go', 'bin/bridge', '--rust', 'bin/bridge'], capture_output=True, text=True)
     if result.returncode or not json.loads(result.stdout)['equal']:
         raise RuntimeError('synthetic Go-Go admission replay parity failed: ' + result.stderr.strip())
-    print(json.dumps({'alias_clock_equivalence': True, 'go_go_admission_replay_equal': True, 'synthetic_capture_recorded': True, 'identical_home_equal': True, 'changed_gojson_bytes_detected': True, 'record_data_key_order_detected': True, 'record_data_clock_detected': True, 'seeded_mismatches_detected': detected, 'frame_types': sorted(kinds)}))
+    manifest = root / 'decisions.json'
+    subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'decisions', '--recording', str(recording), '--home', str(home), '--output', str(manifest)], check=True, stdout=subprocess.DEVNULL)
+    result = subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'replay', '--recording', str(recording), '--starting-home', str(root / 'starting'), '--output', str(root / 'replay-exact'), '--go', args.go, '--rust', args.rust, '--decisions', str(manifest), '--exact'], capture_output=True, text=True)
+    report = json.loads(result.stdout) if result.stdout else {'digests': []}
+    if result.returncode or any(not row['equal'] for row in report['digests']):
+        raise RuntimeError('synthetic exact decision replay failed: ' + result.stderr.strip())
+    ingress = sorted({json.loads(line)['ingress'] for line in recording.read_text().splitlines() if json.loads(line).get('ingress')})
+    print(json.dumps({'exact_decision_replay_equal': True, 'ingress_kinds': ingress, 'alias_clock_equivalence': True, 'go_go_admission_replay_equal': True, 'synthetic_capture_recorded': True, 'identical_home_equal': True, 'changed_gojson_bytes_detected': True, 'record_data_key_order_detected': True, 'record_data_clock_detected': True, 'seeded_mismatches_detected': detected, 'frame_types': sorted(kinds)}))
 
 
 if __name__ == '__main__':

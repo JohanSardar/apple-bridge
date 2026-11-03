@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"slices"
-	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/internal/trust"
@@ -109,7 +108,7 @@ func refreshContactLinks(ctx context.Context, tx *sql.Tx, cursor *contracts.Curs
 		}
 		record.Data = linked
 		record.Version++
-		record.ObservedAt = time.Now().UTC()
+		record.ObservedAt = contracts.DecisionNow().UTC()
 		changed = append(changed, record)
 	}
 	if err == nil {

@@ -211,7 +211,7 @@ func fillSummary(ctx context.Context, tx *sql.Tx, v trust.Visibility, s *contrac
 	if value, ok := d["muted"].(bool); ok {
 		s.Muted = &value
 	} else if until, err := time.Parse(time.RFC3339Nano, fieldString(d, "muted_until")); err == nil {
-		value := until.After(time.Now())
+		value := until.After(contracts.DecisionNow())
 		s.Muted = &value
 	}
 	s.Title = fieldString(d, "display_name")

@@ -148,7 +148,7 @@ func (s *Store) NotesList(ctx context.Context, visibility trust.Visibility, quer
 		}
 		return cmp.Or(order, strings.Compare(a.item.Note.ID, b.item.Note.ID))
 	})
-	now := time.Now().In(zone)
+	now := contracts.DecisionNow().In(zone)
 	for _, item := range items {
 		key, title := noteDateSection(item, out.Sort, now, zone)
 		if len(out.Sections) == 0 || out.Sections[len(out.Sections)-1].Key != key {

@@ -47,3 +47,32 @@ Clock exclusions are limited to `records.observed_at`, the record envelope's `ob
 JSON is scanned with offsets and only selected scalar tokens are replaced. Other bytes are preserved, including whitespace, field order, escape spellings and number representations. **Record `data` bytes, versions, journal sequence numbers and op names, ledger state, dispositions, per-part results and transition order must match exactly.** Application data containing independently allocated bridge IDs can still differ; this is deliberately unexplained until an implementation-owned deterministic identity seam or a more specific reviewed contract exists. There is no generic JSON reserialization or timestamp scrub.
 
 Remaining live-run qualification includes every admission ingress, overlapping admissions and session replacement, wall-clock expiry/recovery behavior, incomplete recordings, and targets allocated after the starting snapshot. Replay follows recorded conversation order rather than original wall-clock delays and streams the transcript from disk. A 24-hour capacity/retention qualification has not run. The CLI needs repository Python files alongside bridge-lab.
+
+## Recorded decision clocks and all-HTTP ingress
+
+`shadow record` stamps every transcript row with a UTC nanosecond `wall` time and the admission proxy now forwards and records every `GET`/`POST`/`PUT`/`DELETE` under `/v1/` and `/mcp` (REST operations, record and change reads, and MCP tool calls). Each admission row carries `method` and `ingress` (`mcp` for `/mcp`, `rest` otherwise, or `cli`/`feed`/`iphone` when the client sends an `X-Ingress` header). Replay re-issues each row with its recorded method and compares status plus operation state/disposition/error (REST ops) or JSON-RPC id and `isError` (MCP).
+
+```sh
+python3 lab/shadow/shadow.py decisions --recording "$SHADOW/recording/ipc.shadow" --home "$FINAL_HOME_COPY" --output "$SHADOW/decisions.json"
+python3 lab/shadow/shadow.py replay --recording "$SHADOW/recording/ipc.shadow" --starting-home "$OFFLINE_STARTING_HOME" --output "$SHADOW/replayed" --go "$GO_LAB_BINARY" --rust "$RUST_LAB_BINARY" --decisions "$SHADOW/decisions.json" --exact
+```
+
+`decisions` reads `state.db` of a stopped copy of the home read-only for the allocated bridge IDs and sets `clock: recorded`. In that mode replay waits until the gateway's database files are quiet, then moves the lab clock to each row's recorded wall time before delivering it, so decision clocks follow the recorded conversation instead of replay speed. Replay also drains Ready and SourceState persistence before moving on. Go now emits Ready-time source states in sorted order (as Rust already does) so the journal order no longer depends on map iteration.
+
+`prove.py --go "$GO_LAB_BINARY" --rust "$RUST_LAB_BINARY"` records REST, MCP, record-read and `X-Ingress: cli` admissions, then requires the exact decision replay.
+
+Not covered: delegated feed and iPhone traffic reach the gateway over the peer listener, not the HTTP front door, so the recorder does not observe them and replay cannot re-issue them (their handshakes use fresh nonces and delegation certificates). A gateway-side lab observer at `LocalGateway.Submit`/`DecideApproval` plus a peer-protocol replayer is still required.
+
+## Explicit lab replay decisions
+
+Lab-tagged Go binaries and Rust binaries with `lab-harness` accept `APPLE_BRIDGE_LAB_REPLAY`, pointing at a private JSON manifest. `shadow replay --decisions <manifest> --exact` copies the manifest into each private replay directory and passes it to the cloned gateways. `--exact` compares every typed cell without the alias or envelope-clock exclusions; it does not compare SQLite file pages. The default comparison contract remains unchanged.
+
+The manifest has `now` (an RFC3339 nanosecond timestamp) and `aliases` (a map from `source + NUL + generation + NUL + collection + NUL + native_key` to the recorded bridge ID). State alias allocation consumes these IDs before resolving references into opaque record data. State decision clocks, journal commit clocks and operation admission/approval clocks use the supplied absolute time. Missing alias entries, unreadable manifests and malformed clocks fail closed. Production builds ignore this environment variable. Existing aliases in the starting home retain their persisted IDs.
+
+For the existing disposable synthetic fixture, a focused proof reads its stopped final home to recover the allocated IDs and first command's creation clock, then requires exact replay equality:
+
+```sh
+python3 lab/shadow/prove_decisions.py --fixture "$EXISTING_SYNTHETIC_PROOF" --output "$SHADOW/decision-proof" --go "$GO_LAB_BINARY" --rust "$RUST_LAB_BINARY"
+```
+
+This is a fixed-clock fixture seam, not a complete recording of clock decisions. It does not yet capture or replay advancing decision clocks, generated command IDs, trust/OAuth clocks or every ingress. The recorder still observes REST command admissions only; authenticated MCP, delegated feed, CLI and iPhone observation/replay remain required before a read-only live capture can be certified. Do not use this fixture manifest to claim a replay of arbitrary recorded live traffic. No live gateway was accessed to develop or verify this seam.
