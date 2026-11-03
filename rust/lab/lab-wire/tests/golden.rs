@@ -113,3 +113,26 @@ fn blob_frames() -> Result<(), Box<dyn std::error::Error>> {
     }
     Ok(())
 }
+
+#[test]
+fn independent_json_numbers_and_command_hashes() -> Result<(), Box<dyn std::error::Error>> {
+    use sha2::{Digest, Sha256};
+    for vector in corpus("json.json")?["vectors"]
+        .as_array()
+        .ok_or("vectors")?
+    {
+        let value = lab_wire::json::Json::decode(vector["input"].as_str().ok_or("input")?)?;
+        assert_eq!(value.encode(true)?, vector["record_data"]);
+        assert_eq!(value.encode(false)?, vector["query"]);
+        let preimage = format!(
+            "{{\"Op\":\"fixture.op\",\"Args\":{},\"Version\":7,\"Expires\":\"2026-01-02T03:04:05.123456789Z\",\"Era\":\"era-fixture\"}}",
+            value.encode(true)?
+        );
+        assert_eq!(preimage, vector["command_preimage"]);
+        assert_eq!(
+            hex::encode(Sha256::digest(preimage.as_bytes())),
+            vector["command_hash"]
+        );
+    }
+    Ok(())
+}

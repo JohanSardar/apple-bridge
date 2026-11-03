@@ -114,12 +114,17 @@ fn lock(state: &Shared) -> Result<std::sync::MutexGuard<'_, State>> {
 struct Request {
     frame: Value,
     done: Option<mpsc::Sender<()>>,
+    whole: bool,
 }
 fn enqueue(tx: &mpsc::Sender<Request>, frame: Value, wait: bool) -> Result<()> {
+    enqueue_mode(tx, frame, wait, false)
+}
+fn enqueue_mode(tx: &mpsc::Sender<Request>, frame: Value, wait: bool, whole: bool) -> Result<()> {
     let (done, rx) = mpsc::channel();
     tx.send(Request {
         frame,
         done: if wait { Some(done) } else { None },
+        whole,
     })
     .map_err(|_| invalid("session stopped"))?;
     if wait {
@@ -141,7 +146,22 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
             json!({"blob_digests":{},"scans":s.data["scans"],"source_scans":s.data["source_scans"],"revision":{},"committed":{}}),
         ),
         "/fault" => {
-            s.fault = string(&input, "name");
+            let name = string(&input, "name");
+            if ![
+                "",
+                "pause",
+                "crash-after-effect",
+                "crash-before-outcome",
+                "ambiguous-outcome",
+                "identical-manual-send",
+                "ui-interference",
+                "ui-interference-before",
+            ]
+            .contains(&name.as_str())
+            {
+                return Err(invalid("fault not implemented in Rust foundation"));
+            }
+            s.fault = name;
             s.pause = input["ms"].as_u64().unwrap_or_default();
             Ok(json!({"armed":true}))
         }
@@ -225,7 +245,7 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
             if frame["source"].is_null() {
                 frame["source"] = json!("reminders");
             }
-            enqueue(tx, frame, true)?;
+            enqueue_mode(tx, frame, true, route == "/capture-atomic")?;
             Ok(json!({"committed":true}))
         }
         "/flush" => {
@@ -753,7 +773,11 @@ fn session(
                         thread::park();
                     }
                 }
-                session.emit(state, request.frame)?;
+                if request.whole {
+                    session.emit_part(state, request.frame)?;
+                } else {
+                    session.emit(state, request.frame)?;
+                }
                 if let Some(done) = request.done {
                     let _ = done.send(());
                 }

@@ -35,7 +35,7 @@ def run(args):
             evidence = [json.loads(line) for line in destination.read_text().splitlines()]
             assert len(evidence) == len(SCENARIOS), (destination, 'incomplete suite')
             for item in evidence:
-                verdict = {a['name']: (a.get('passed', False), a.get('status', '')) for a in item['assertions']}
+                verdict = sorted((a['name'], a.get('passed', False), a.get('status', '')) for a in item['assertions'])
                 key = item['scenario']
                 assert item['passed'], (destination, key, 'failed')
                 assert item['conditions']['simapple_impl'] == implementation
