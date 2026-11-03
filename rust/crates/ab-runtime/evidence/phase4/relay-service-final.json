@@ -1,0 +1,566 @@
+{
+  "host": "build (Linux)",
+  "base_sha": "0bf8ac55de22b5e19d8547a055f7aa23accc24be",
+  "bridge_build": "cargo build --manifest-path rust/Cargo.toml -p ab-runtime --features lab-harness --bin bridge",
+  "scenario_command": "bin/bridge-lab run lab/scenarios/core/RELAY-ENROLL.yaml lab/scenarios/core/RELAY-LIMITS.yaml lab/scenarios/core/RELAY-PASSTHROUGH.yaml --level sim --impl gateway=rust --rust-binary $CARGO_TARGET_DIR/debug/bridge --json",
+  "qualification": "Execution passes count under FINAL-RUN-BRIEF.md. The unchanged loopback fixture uses internal/relay (Go); these results do not certify ab-relay or ab-remote Rust binary behavior. The matrix import audit remains blocked.",
+  "runs": {
+    "direct": [
+      {
+        "scenario": "RELAY-ENROLL",
+        "level": "sim",
+        "passed": false,
+        "assertions": [
+          {
+            "name": "binary_harness_required",
+            "passed": false,
+            "detail": "harness: native remote.relay journey requires AppleTruth/Helper; requires isolated binary-driven fixture adapter"
+          },
+          {
+            "name": "credential_backend_override_restored",
+            "passed": true
+          }
+        ],
+        "at": "2026-11-03T16:26:23.13580756Z",
+        "implementations": {
+          "gateway": "rust",
+          "replica": "go"
+        }
+      },
+      {
+        "scenario": "RELAY-LIMITS",
+        "level": "sim",
+        "passed": false,
+        "assertions": [
+          {
+            "name": "binary_harness_required",
+            "passed": false,
+            "detail": "harness: native remote.relay journey requires AppleTruth/Helper; requires isolated binary-driven fixture adapter"
+          },
+          {
+            "name": "credential_backend_override_restored",
+            "passed": true
+          }
+        ],
+        "at": "2026-11-03T16:26:23.276820823Z",
+        "implementations": {
+          "gateway": "rust",
+          "replica": "go"
+        }
+      },
+      {
+        "scenario": "RELAY-PASSTHROUGH",
+        "level": "sim",
+        "passed": false,
+        "assertions": [
+          {
+            "name": "binary_harness_required",
+            "passed": false,
+            "detail": "harness: native remote.relay journey requires AppleTruth/Helper; requires isolated binary-driven fixture adapter"
+          },
+          {
+            "name": "credential_backend_override_restored",
+            "passed": true
+          }
+        ],
+        "at": "2026-11-03T16:26:23.367492431Z",
+        "implementations": {
+          "gateway": "rust",
+          "replica": "go"
+        }
+      }
+    ],
+    "after": [
+      {
+        "scenario": "RELAY-ENROLL",
+        "level": "sim",
+        "passed": true,
+        "assertions": [
+          {
+            "name": "two_distinct_device_enrollments",
+            "passed": true
+          },
+          {
+            "name": "stable_hostname_after_restart",
+            "passed": true
+          },
+          {
+            "name": "old_credential_refused",
+            "passed": true
+          },
+          {
+            "name": "rotated_credential_accepted",
+            "passed": true
+          },
+          {
+            "name": "hostname_claim_by_other_key_refused",
+            "passed": true
+          },
+          {
+            "name": "key_possession_required",
+            "passed": true
+          },
+          {
+            "name": "revoke",
+            "passed": true
+          },
+          {
+            "name": "revocation_blocks_tunnel_and_reenrollment",
+            "passed": true
+          },
+          {
+            "name": "revocation_persists",
+            "passed": true
+          },
+          {
+            "name": "revoked_state",
+            "passed": true
+          },
+          {
+            "name": "private_state_no_bearer_credentials",
+            "passed": true
+          },
+          {
+            "name": "credential_backend_override_restored",
+            "passed": true
+          }
+        ],
+        "at": "2026-11-03T16:27:30.295856599Z",
+        "implementations": {
+          "gateway": "rust",
+          "replica": "go"
+        }
+      },
+      {
+        "scenario": "RELAY-LIMITS",
+        "level": "sim",
+        "passed": true,
+        "assertions": [
+          {
+            "name": "two_distinct_device_enrollments",
+            "passed": true
+          },
+          {
+            "name": "authenticated_device_tunnels",
+            "passed": true
+          },
+          {
+            "name": "cross_device_credential_refused",
+            "passed": true
+          },
+          {
+            "name": "hosts_reach_only_their_bridge",
+            "passed": true
+          },
+          {
+            "name": "unknown_sni_closed",
+            "passed": true
+          },
+          {
+            "name": "unknown_sni_opens_no_tunnel",
+            "passed": true
+          },
+          {
+            "name": "connection_policy",
+            "passed": true
+          },
+          {
+            "name": "stalled_tls_releases_slot",
+            "passed": true
+          },
+          {
+            "name": "stalled_tls_slot_reusable",
+            "passed": true
+          },
+          {
+            "name": "stalled_tls_probe_drains",
+            "passed": true
+          },
+          {
+            "name": "blocked_tunnel_write_releases_slot",
+            "passed": true
+          },
+          {
+            "name": "restore_origin_after_idle",
+            "passed": true
+          },
+          {
+            "name": "slot_reusable_after_idle",
+            "passed": true
+          },
+          {
+            "name": "idle_probe_drains",
+            "passed": true
+          },
+          {
+            "name": "first_connection_accepted",
+            "passed": true
+          },
+          {
+            "name": "excess_connection_rejected",
+            "passed": true
+          },
+          {
+            "name": "kill_switch",
+            "passed": true
+          },
+          {
+            "name": "kill_closes_active_connection",
+            "passed": true
+          },
+          {
+            "name": "kill_drains_stream",
+            "passed": true
+          },
+          {
+            "name": "kill_blocks_reattach",
+            "passed": true
+          },
+          {
+            "name": "bandwidth_policy",
+            "passed": true
+          },
+          {
+            "name": "aggregate_bandwidth_throttled",
+            "passed": true
+          },
+          {
+            "name": "monthly_policy",
+            "passed": true
+          },
+          {
+            "name": "monthly_budget_rejects",
+            "passed": true
+          },
+          {
+            "name": "monthly_usage_persisted",
+            "passed": true
+          },
+          {
+            "name": "other_device_unaffected",
+            "passed": true
+          },
+          {
+            "name": "relay_tunnel_buffers_contain_ciphertext_only",
+            "passed": true
+          },
+          {
+            "name": "credential_backend_override_restored",
+            "passed": true
+          }
+        ],
+        "at": "2026-11-03T16:27:31.78566836Z",
+        "implementations": {
+          "gateway": "rust",
+          "replica": "go"
+        }
+      },
+      {
+        "scenario": "RELAY-PASSTHROUGH",
+        "level": "sim",
+        "passed": true,
+        "assertions": [
+          {
+            "name": "two_distinct_device_enrollments",
+            "passed": true
+          },
+          {
+            "name": "authenticated_device_tunnels",
+            "passed": true
+          },
+          {
+            "name": "cross_device_credential_refused",
+            "passed": true
+          },
+          {
+            "name": "hosts_reach_only_their_bridge",
+            "passed": true
+          },
+          {
+            "name": "unknown_sni_closed",
+            "passed": true
+          },
+          {
+            "name": "unknown_sni_opens_no_tunnel",
+            "passed": true
+          },
+          {
+            "name": "listener_exit_active_stream",
+            "passed": true
+          },
+          {
+            "name": "listener_exit_returns_promptly",
+            "passed": true
+          },
+          {
+            "name": "listener_exit_closes_stream",
+            "passed": true
+          },
+          {
+            "name": "listener_exit_drains_streams",
+            "passed": true
+          },
+          {
+            "name": "relay_tunnel_buffers_contain_ciphertext_only",
+            "passed": true
+          },
+          {
+            "name": "credential_backend_override_restored",
+            "passed": true
+          }
+        ],
+        "at": "2026-11-03T16:27:38.934844833Z",
+        "implementations": {
+          "gateway": "rust",
+          "replica": "go"
+        }
+      }
+    ],
+    "go": [
+      {
+        "scenario": "RELAY-ENROLL",
+        "level": "sim",
+        "passed": true,
+        "assertions": [
+          {
+            "name": "two_distinct_device_enrollments",
+            "passed": true
+          },
+          {
+            "name": "stable_hostname_after_restart",
+            "passed": true
+          },
+          {
+            "name": "old_credential_refused",
+            "passed": true
+          },
+          {
+            "name": "rotated_credential_accepted",
+            "passed": true
+          },
+          {
+            "name": "hostname_claim_by_other_key_refused",
+            "passed": true
+          },
+          {
+            "name": "key_possession_required",
+            "passed": true
+          },
+          {
+            "name": "revoke",
+            "passed": true
+          },
+          {
+            "name": "revocation_blocks_tunnel_and_reenrollment",
+            "passed": true
+          },
+          {
+            "name": "revocation_persists",
+            "passed": true
+          },
+          {
+            "name": "revoked_state",
+            "passed": true
+          },
+          {
+            "name": "private_state_no_bearer_credentials",
+            "passed": true
+          },
+          {
+            "name": "credential_backend_override_restored",
+            "passed": true
+          }
+        ],
+        "at": "2026-11-03T16:27:28.126924395Z",
+        "implementations": {
+          "gateway": "go",
+          "replica": "go"
+        }
+      },
+      {
+        "scenario": "RELAY-LIMITS",
+        "level": "sim",
+        "passed": true,
+        "assertions": [
+          {
+            "name": "two_distinct_device_enrollments",
+            "passed": true
+          },
+          {
+            "name": "authenticated_device_tunnels",
+            "passed": true
+          },
+          {
+            "name": "cross_device_credential_refused",
+            "passed": true
+          },
+          {
+            "name": "hosts_reach_only_their_bridge",
+            "passed": true
+          },
+          {
+            "name": "unknown_sni_closed",
+            "passed": true
+          },
+          {
+            "name": "unknown_sni_opens_no_tunnel",
+            "passed": true
+          },
+          {
+            "name": "connection_policy",
+            "passed": true
+          },
+          {
+            "name": "stalled_tls_releases_slot",
+            "passed": true
+          },
+          {
+            "name": "stalled_tls_slot_reusable",
+            "passed": true
+          },
+          {
+            "name": "stalled_tls_probe_drains",
+            "passed": true
+          },
+          {
+            "name": "blocked_tunnel_write_releases_slot",
+            "passed": true
+          },
+          {
+            "name": "restore_origin_after_idle",
+            "passed": true
+          },
+          {
+            "name": "slot_reusable_after_idle",
+            "passed": true
+          },
+          {
+            "name": "idle_probe_drains",
+            "passed": true
+          },
+          {
+            "name": "first_connection_accepted",
+            "passed": true
+          },
+          {
+            "name": "excess_connection_rejected",
+            "passed": true
+          },
+          {
+            "name": "kill_switch",
+            "passed": true
+          },
+          {
+            "name": "kill_closes_active_connection",
+            "passed": true
+          },
+          {
+            "name": "kill_drains_stream",
+            "passed": true
+          },
+          {
+            "name": "kill_blocks_reattach",
+            "passed": true
+          },
+          {
+            "name": "bandwidth_policy",
+            "passed": true
+          },
+          {
+            "name": "aggregate_bandwidth_throttled",
+            "passed": true
+          },
+          {
+            "name": "monthly_policy",
+            "passed": true
+          },
+          {
+            "name": "monthly_budget_rejects",
+            "passed": true
+          },
+          {
+            "name": "monthly_usage_persisted",
+            "passed": true
+          },
+          {
+            "name": "other_device_unaffected",
+            "passed": true
+          },
+          {
+            "name": "relay_tunnel_buffers_contain_ciphertext_only",
+            "passed": true
+          },
+          {
+            "name": "credential_backend_override_restored",
+            "passed": true
+          }
+        ],
+        "at": "2026-11-03T16:27:30.687800326Z",
+        "implementations": {
+          "gateway": "go",
+          "replica": "go"
+        }
+      },
+      {
+        "scenario": "RELAY-PASSTHROUGH",
+        "level": "sim",
+        "passed": true,
+        "assertions": [
+          {
+            "name": "two_distinct_device_enrollments",
+            "passed": true
+          },
+          {
+            "name": "authenticated_device_tunnels",
+            "passed": true
+          },
+          {
+            "name": "cross_device_credential_refused",
+            "passed": true
+          },
+          {
+            "name": "hosts_reach_only_their_bridge",
+            "passed": true
+          },
+          {
+            "name": "unknown_sni_closed",
+            "passed": true
+          },
+          {
+            "name": "unknown_sni_opens_no_tunnel",
+            "passed": true
+          },
+          {
+            "name": "listener_exit_active_stream",
+            "passed": true
+          },
+          {
+            "name": "listener_exit_returns_promptly",
+            "passed": true
+          },
+          {
+            "name": "listener_exit_closes_stream",
+            "passed": true
+          },
+          {
+            "name": "listener_exit_drains_streams",
+            "passed": true
+          },
+          {
+            "name": "relay_tunnel_buffers_contain_ciphertext_only",
+            "passed": true
+          },
+          {
+            "name": "credential_backend_override_restored",
+            "passed": true
+          }
+        ],
+        "at": "2026-11-03T16:27:36.84836096Z",
+        "implementations": {
+          "gateway": "go",
+          "replica": "go"
+        }
+      }
+    ]
+  }
+}
