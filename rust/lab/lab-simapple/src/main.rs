@@ -2,6 +2,7 @@
 mod blobs;
 mod calendar;
 mod contacts;
+mod mac;
 mod media;
 mod messages;
 mod notes;
@@ -92,6 +93,7 @@ struct State {
     secret: Vec<u8>,
     calendar: calendar::Live,
     blob: blobs::Fixture,
+    clipboard: String,
 }
 impl State {
     fn save(&self) -> Result<()> {
@@ -189,6 +191,12 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
     }
     if route == "/messages" {
         return messages::control_messages(state, tx, &input);
+    }
+    if route == "/mac" {
+        return mac::control_mac(state, tx, &input);
+    }
+    if route == "/mac-notifications" {
+        return mac::control_notifications(state, &input);
     }
     if route == "/calendar" {
         return calendar::control_calendar(state, tx, &input);
@@ -727,6 +735,8 @@ impl Session<'_> {
             ("contacts", Some("Prepare")) => return self.contacts_prepare(state, &frame),
             ("contacts", Some("Dispatch")) => return self.contacts_dispatch(state, &frame),
             ("contacts", Some("Resolve")) => return self.contacts_resolve(state, &frame),
+            ("mac", Some("Prepare")) => return self.mac_prepare(state, &frame),
+            ("mac", Some("Dispatch")) => return self.mac_dispatch(state, &frame),
             ("reminders", Some("Prepare")) => return self.reminder_prepare(state, &frame),
             ("reminders", Some("Dispatch")) => return self.reminder_dispatch(state, &frame),
             (_, Some("Prepare")) => return self.reject(&frame, "unsupported"),
@@ -786,7 +796,10 @@ impl Session<'_> {
                     }
                     return Ok(());
                 }
-                let reply = query::query(&mut self.blobs, &frame);
+                let reply = match mac::query(state, &frame)? {
+                    Some(reply) => reply,
+                    None => query::query(&mut self.blobs, &frame),
+                };
                 send(&mut self.stream, &reply)?;
             }
             Some("BlobRead") => match blobs::read(state, &frame)? {
@@ -878,6 +891,7 @@ fn session(
         "safari",
         "voicemail",
         "voice_memos",
+        "mac",
     ];
     let mut capabilities = json!({});
     let mut coverage = json!({});
@@ -895,6 +909,7 @@ fn session(
         "reminders.rename_list",
         "reminders.delete_list"
     ]);
+    capabilities["mac"] = json!(mac::CAPABILITIES);
     capabilities["messages"] = json!(["messages.send", "messages.reply"]);
     capabilities["calendar"] = json!([
         "calendar.create_event",
@@ -1097,6 +1112,7 @@ fn run() -> Result<()> {
         secret: secret.clone(),
         calendar: calendar::Live::default(),
         blob,
+        clipboard: String::new(),
     }));
     {
         let mut s = lock(&state)?;

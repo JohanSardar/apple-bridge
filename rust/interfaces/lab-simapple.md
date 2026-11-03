@@ -125,3 +125,11 @@ WEB-MEDIA-CAP blob ordering is owned by S-BLOB-ORDER and is unchanged.
 `lab-adapters` registers `readmodels` (`readmodels.rs`, `search.rs`) for WEB-RM-MEDIA-COLLECTION and WEB-RM-SEARCH. Scenarios with no `when` step in YAML (WEB-RM-SEARCH) get a `readmodels` step injected by `lab-families`. The adapters seed through the SimApple `/readmodels` put route, resolve gateway aliases, call REST and MCP, mint scoped tokens, and for the search migration stop the gateway, rewrite `records_fts` and `fts_version` in `state.db` with rusqlite, and restart it. Assertion names match the Go harness (WEB-RM-SEARCH emits no `world_start` on success, as in Go).
 
 Gate: `python3 rust/lab/families-parity.py ... --web-rm` runs both scenarios against both harnesses; verdicts are identical (23 and 47 assertions).
+
+## Mac scenarios
+
+`lab-adapters` registers the `mac` step (`mac.rs` for sim, `mac_real.rs` for real-level adapters). The Rust SimApple peer gained a `mac` source (`mac.rs`): `/mac` upserts one `mac.*` record and emits a full-scan capture for the source, `/mac-notifications` sets the notification permission fixture (`mac.notify` is rejected `forbidden` unless authorized), `mac.*` commands answer with `{observed, fingerprint, readback}` evidence, and `mac.clipboard_read`, `mac.network_check`, `mac.bluetooth_devices`, `mac.time_machine_status` and `mac.recognize_song` answer the Go fixtures. The clipboard text lives in memory only so it never reaches a durable file.
+
+Gate: `python3 rust/lab/families-parity.py ... --mac` runs MAC-ACTIONS, MAC-COMMANDS, MAC-CAPTURE, MAC-IDLE, MAC-EXTRAS-SIM and IWORK-REAL (sim level) in one run against both harnesses.
+
+Real-level only (adapters compiled, never run at real level): BT-REAL, MAC-APPEARANCE-REAL, MAC-APPS-REAL, MAC-AUDIO-REAL, MAC-CLIPBOARD-REAL, MAC-KEEPAWAKE-REAL, MAC-NOTIFY-REAL, MAC-POWER-REAL, MAC-REPLICA, SHAZAM-REAL, TM-STATUS. The real halves of MAC-IDLE (`mac_real::idle`) and IWORK-REAL (`mac_real::iwork`) are also compiled only. The native-helper adapters read the helper app from `APPLE_BRIDGE_HELPER_APP`.
