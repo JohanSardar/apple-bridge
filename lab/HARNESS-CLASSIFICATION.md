@@ -384,3 +384,7 @@ A lab-owned JSON digest-reference decoder replaces `contracts.BlobReferences` in
 ## G-E delegation-wire continuation
 
 `delegation.go` now authenticates its replica read through the selected HTTP boundary, reads the frozen principal/certificate fixture, and constructs the deliberately scope-expanded command with lab-owned command-hash and Ed25519 delegation codecs. It no longer opens a Go Authority or calls product signing/hash semantics. Golden JSON/hash and delegation payload/signature vectors independently verify wire compatibility. CORE-FORGED-DELEGATION passes against Go with the original unauthorized/no-effects predicate. As before, that predicate does not identify the exact verifier rejection stage; no stronger security claim is made. Other delegated-agent and negative-authority journeys remain separate conversions.
+
+## G-E query and retention continuation
+
+`queries.go` creates query agents through the selected CLI. `vision_queries.go` uses the selected `doctor` CLI for document readiness; SIM PDF proofs do not certify that real/native branch. `replica_capture_staging.go` retains explicit offline legacy/clock fault injection but no longer opens a writable Go State to commit/prune a selected home. Its marker crosses Helper IPC, then the selected gateway applies its normal retention policy with the original one-row/one-second settings. Assertions remain unchanged. The standard restart helper retains its previous one-millisecond policy for existing callers.
