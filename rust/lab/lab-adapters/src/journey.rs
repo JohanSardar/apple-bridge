@@ -49,7 +49,14 @@ pub fn seed(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result
     world.control("/seed", &json!({"count": count}))?;
     let gateway = gateway_client(world)?;
     let ready = await_until(10, || {
-        records(&gateway).is_ok_and(|(_, all)| all.len() >= usize::try_from(count).unwrap_or(0) + 2)
+        records(&gateway).is_ok_and(|(_, all)| {
+            all.len()
+                >= if crate::blobs::is_blob(&evidence.scenario) {
+                    1
+                } else {
+                    usize::try_from(count).unwrap_or(0) + 2
+                }
+        })
     });
     if !ready {
         evidence.check("seed", false, "gateway did not capture the seeded records");

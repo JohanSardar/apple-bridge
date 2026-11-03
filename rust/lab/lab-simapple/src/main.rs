@@ -1,4 +1,5 @@
 #![allow(clippy::too_many_lines)]
+mod blobs;
 mod calendar;
 mod contacts;
 mod media;
@@ -78,6 +79,7 @@ struct State {
     socket: String,
     secret: Vec<u8>,
     calendar: calendar::Live,
+    blob: blobs::Fixture,
 }
 impl State {
     fn save(&self) -> Result<()> {
@@ -124,9 +126,9 @@ impl State {
         } else {
             fixed.iter().map(|name| format!("{src}.{name}")).collect()
         };
-        Ok(
-            json!({"t":"Capture","source":src,"observations":records,"scan_id":id("scan")?,"scope":scope,"scan_started_at":now(),"completion_evidence":"complete"}),
-        )
+        let mut frame = json!({"t":"Capture","source":src,"observations":records,"scan_id":id("scan")?,"scope":scope,"scan_started_at":now(),"completion_evidence":"complete"});
+        self.attach_handles(&mut frame);
+        Ok(frame)
     }
     fn put(&mut self, record: Value) {
         let key = string(&record, "native_key");
@@ -244,6 +246,18 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
                 false,
             )?;
             Ok(json!({"armed":true}))
+        }
+        "/blob-fixture" => {
+            drop(s);
+            blobs::fixture(state, tx, &input)
+        }
+        "/blob-history" => {
+            drop(s);
+            blobs::history(state, tx, &input)
+        }
+        "/blob-faults" => {
+            drop(s);
+            blobs::faults(state)
         }
         "/seed" => {
             s.put(observation(
@@ -838,15 +852,36 @@ impl Session {
                 let reply = query::query(&mut self.blobs, &frame);
                 send(&mut self.stream, &reply)?;
             }
-            Some("BlobRead") => {
-                let stored = contacts::blob(state, &frame)?;
-                let reply = if stored["t"] == "BlobUnavailable" {
-                    query::blob(&self.blobs, &frame).unwrap_or(stored)
-                } else {
-                    stored
-                };
-                send(&mut self.stream, &reply)?;
-            }
+            Some("BlobRead") => match blobs::read(state, &frame)? {
+                blobs::Read::Drop => {}
+                blobs::Read::Reply {
+                    frame: reply,
+                    delay_ms,
+                    refresh,
+                } => {
+                    if let Some(digest) = refresh {
+                        self.emit(state, blobs::refresh_frame(&digest))?;
+                    }
+                    if delay_ms > 0 {
+                        let finished = self.finished.clone();
+                        thread::spawn(move || {
+                            thread::sleep(Duration::from_millis(delay_ms));
+                            let _ = finished.send((String::new(), reply));
+                        });
+                    } else {
+                        send(&mut self.stream, &reply)?;
+                    }
+                }
+                blobs::Read::Foreign => {
+                    let stored = contacts::blob(state, &frame)?;
+                    let reply = if stored["t"] == "BlobUnavailable" {
+                        query::blob(&self.blobs, &frame).unwrap_or(stored)
+                    } else {
+                        stored
+                    };
+                    send(&mut self.stream, &reply)?;
+                }
+            },
             _ => return Err(invalid("session frame")),
         }
         Ok(())
@@ -1062,8 +1097,10 @@ fn session(
     }
     loop {
         if let Ok((id, reply)) = session.finished_rx.try_recv() {
-            session.sleeping.remove(&id);
-            lock(state)?.data["effects"][&id] = json!(0);
+            if !id.is_empty() {
+                session.sleeping.remove(&id);
+                lock(state)?.data["effects"][&id] = json!(0);
+            }
             send(&mut session.stream, &reply)?;
             continue;
         }
@@ -1134,6 +1171,7 @@ fn run() -> Result<()> {
         socket: socket.clone(),
         secret: secret.clone(),
         calendar: calendar::Live::default(),
+        blob: blobs::Fixture::default(),
     }));
     {
         let mut s = lock(&state)?;

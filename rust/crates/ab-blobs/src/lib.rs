@@ -458,6 +458,30 @@ impl Store {
         .collect();
         self.update_protection(&updates, false)
     }
+    pub fn protect_references(&mut self, references: Vec<Reference>) -> Result<(), Error> {
+        let updates = [("replica:current".into(), references)]
+            .into_iter()
+            .collect();
+        self.update_protection(&updates, false)
+    }
+    pub fn unavailable(&mut self, d: &Digest, reason: &str) -> Result<(), Error> {
+        let Some(entry) = self.manifest.entries.get_mut(&d.0) else {
+            return Ok(());
+        };
+        if entry.state == BlobState::Present {
+            return Ok(());
+        }
+        match reason {
+            "pending" | "unavailable" => return Ok(()),
+            "offloaded" => entry.state = BlobState::Offloaded,
+            "failed" => {
+                entry.state = BlobState::Failed;
+                "source_failed".clone_into(&mut entry.reason);
+            }
+            _ => entry.state = BlobState::Missing,
+        }
+        self.save()
+    }
     pub fn update_protection(
         &mut self,
         updates: &BTreeMap<String, Vec<Reference>>,

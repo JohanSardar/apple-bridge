@@ -230,7 +230,7 @@ impl<Role: std::fmt::Debug + Send + Sync> ReadStore for StateReads<Role> {
                 .open_authorized(&grant, &digest)
                 .map_err(|error| match error {
                     ab_blobs::Error::Unauthorized => Code::Unauthorized,
-                    _ => Code::NotFound,
+                    _ => Code::Unavailable,
                 })?;
             tokio::task::spawn_blocking(move || {
                 use std::io::Read;
