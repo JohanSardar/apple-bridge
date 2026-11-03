@@ -25,6 +25,7 @@ struct Request {
     action: String,
     pin: String,
     owner: String,
+    digest: String,
 }
 pub async fn serve(
     home: &Path,
@@ -111,6 +112,12 @@ async fn action(app: &App, request: Request) -> Result<Value, Error> {
             .await
             .release_pin(&request.pin)
             .map_err(|_| Error::Invalid)?,
+        "command" => app
+            .state
+            .with(|state| state.lab_command_blobs(&request.owner, &request.digest))?,
+        "command-release" => app
+            .state
+            .with(|state| state.lab_command_blobs(&request.owner, ""))?,
         "snapshot" => {
             let visibility = ab_trust::Visibility {
                 all: true,
