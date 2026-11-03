@@ -31,3 +31,7 @@ pub mod telephony;
 
 pub mod assets;
 pub mod voice_memo;
+
+pub mod mail;
+pub mod mail_body;
+pub mod mail_url;

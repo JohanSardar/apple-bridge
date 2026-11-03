@@ -79,8 +79,22 @@ fn identity(path: &Path) -> Result<Identity> {
 }
 
 #[derive(Debug)]
+pub struct Query {
+    pub rows: Vec<Row>,
+    pub complete: bool,
+}
+struct DeadlineReset<'a>(&'a std::sync::atomic::AtomicU64);
+impl Drop for DeadlineReset<'_> {
+    fn drop(&mut self) {
+        self.0.store(u64::MAX, std::sync::atomic::Ordering::Relaxed);
+    }
+}
+
+#[derive(Debug)]
 pub struct Snapshot {
     connection: Connection,
+    origin: Instant,
+    deadline: std::sync::Arc<std::sync::atomic::AtomicU64>,
     path: PathBuf,
     identity: Identity,
     pub generation: String,
@@ -88,14 +102,26 @@ pub struct Snapshot {
 impl Snapshot {
     pub fn open(path: &Path, generation_sql: &str) -> Result<Self> {
         let initial = identity(path)?;
-        let connection = Connection::open_with_flags(
+        let mut connection = Connection::open_with_flags(
             path,
             OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_FULL_MUTEX,
         )?;
         connection.busy_timeout(Duration::from_millis(250))?;
         connection.execute_batch("BEGIN")?;
+        let origin = Instant::now();
+        let deadline = std::sync::Arc::new(std::sync::atomic::AtomicU64::new(u64::MAX));
+        let bound = deadline.clone();
+        connection.progress_handler(
+            1000,
+            Some(move || {
+                origin.elapsed().as_nanos()
+                    >= u128::from(bound.load(std::sync::atomic::Ordering::Relaxed))
+            }),
+        )?;
         let mut snapshot = Self {
             connection,
+            origin,
+            deadline,
             path: path.into(),
             identity: initial,
             generation: String::new(),
@@ -136,7 +162,29 @@ impl Snapshot {
         max_rows: usize,
         timeout: Duration,
     ) -> Result<Vec<Row>> {
+        let result = self.query_partial(sql, params, max_rows, timeout)?;
+        if !result.complete {
+            return Err(Error::Incomplete);
+        }
+        Ok(result.rows)
+    }
+    pub fn query_partial(
+        &self,
+        sql: &str,
+        params: &[String],
+        max_rows: usize,
+        timeout: Duration,
+    ) -> Result<Query> {
+        use std::sync::atomic::Ordering;
         let start = Instant::now();
+        let bound = self
+            .origin
+            .elapsed()
+            .as_nanos()
+            .saturating_add(timeout.as_nanos());
+        self.deadline
+            .store(u64::try_from(bound).unwrap_or(u64::MAX), Ordering::Relaxed);
+        let _reset = DeadlineReset(&self.deadline);
         let mut statement = self.connection.prepare(sql)?;
         if !statement.readonly() || statement.parameter_count() != params.len() {
             return Err(Error::Unsupported);
@@ -147,9 +195,36 @@ impl Snapshot {
             .collect::<Vec<_>>();
         let mut result = Vec::new();
         let mut rows = statement.query(rusqlite::params_from_iter(params))?;
-        while let Some(row) = rows.next()? {
-            if result.len() >= max_rows || start.elapsed() > timeout {
-                return Err(Error::Incomplete);
+        loop {
+            if start.elapsed() >= timeout {
+                return Ok(Query {
+                    rows: result,
+                    complete: false,
+                });
+            }
+            let row = match rows.next() {
+                Ok(Some(row)) => row,
+                Ok(None) => {
+                    return Ok(Query {
+                        rows: result,
+                        complete: true,
+                    });
+                }
+                Err(rusqlite::Error::SqliteFailure(error, _))
+                    if error.code == rusqlite::ErrorCode::OperationInterrupted =>
+                {
+                    return Ok(Query {
+                        rows: result,
+                        complete: false,
+                    });
+                }
+                Err(error) => return Err(error.into()),
+            };
+            if result.len() >= max_rows {
+                return Ok(Query {
+                    rows: result,
+                    complete: false,
+                });
             }
             let mut value = BTreeMap::new();
             for (index, name) in columns.iter().enumerate() {
@@ -168,10 +243,6 @@ impl Snapshot {
             }
             result.push(value);
         }
-        if start.elapsed() > timeout {
-            return Err(Error::Incomplete);
-        }
-        Ok(result)
     }
     pub fn require(&self, required: &[(&str, &[&str])]) -> Result<()> {
         for (table, columns) in required {
@@ -191,10 +262,14 @@ impl Snapshot {
         }
         Ok(())
     }
+    pub fn is_current(&self, generation_sql: &str) -> Result<bool> {
+        if self.identity != identity(&self.path)? {
+            return Ok(false);
+        }
+        Ok(Self::open(&self.path, generation_sql)?.generation == self.generation)
+    }
     pub fn finish(&self, generation_sql: &str) -> Result<()> {
-        if self.identity != identity(&self.path)?
-            || Self::open(&self.path, generation_sql)?.generation != self.generation
-        {
+        if !self.is_current(generation_sql)? {
             return Err(Error::Conflict);
         }
         Ok(())
