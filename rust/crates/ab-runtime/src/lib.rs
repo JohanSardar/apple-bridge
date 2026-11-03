@@ -358,17 +358,7 @@ async fn track_status(
             )
             .map_err(|_| Error::Invalid)?;
         }
-        let entries = blobs.lock().await.entries().clone();
-        let mut entries = serde_json::to_value(entries)?;
-        if let Some(entries) = entries.as_object_mut() {
-            for entry in entries.values_mut() {
-                if let Some(entry) = entry.as_object_mut() {
-                    entry
-                        .entry("next_attempt_at")
-                        .or_insert_with(|| serde_json::json!("0001-01-01T00:00:00Z"));
-                }
-            }
-        }
+        let progress = blobs.lock().await.progress();
         let mut state = state.lock().map_err(|_| Error::Invalid)?;
         let cursor = state.head().map_err(|_| Error::Invalid)?;
         state.set_replica_status(serde_json::json!({
@@ -377,7 +367,7 @@ async fn track_status(
                 "role": "replica", "schema": current.schema, "snapshot_sequence": current.snapshot_sequence,
                 "lag": current.gateway_head.saturating_sub(cursor.sequence), "blob_backlog": 0,
                 "staleness_ms": current.last_heartbeat.parse::<jiff::Timestamp>().map_or(0, |t| jiff::Timestamp::now().as_millisecond().saturating_sub(t.as_millisecond())),
-                "blobs": {"entries": entries},
+                "blobs": progress,
                 "snapshots": current.snapshots, "resumes": current.resumes,
                 "snapshot_pages": current.snapshot_pages,
                 "last_heartbeat": current.last_heartbeat

@@ -714,6 +714,8 @@ impl<Role> State<Role> {
             }
         }
         if b.partial && !i.parts {
+            #[cfg(feature = "lab")]
+            capture_observer_reset(&self.db);
             return Err(ErrorCode::Reset.into());
         }
         i.cursor.sequence = b.through;
@@ -803,6 +805,21 @@ pub fn is_capacity(error: &Error) -> bool {
         Error::Sqlite(rusqlite::Error::SqliteFailure(code, _)) => code.extended_code & 255 == 13,
         Error::Io(error) => error.raw_os_error() == Some(28),
         _ => false,
+    }
+}
+
+#[cfg(feature = "lab")]
+fn capture_observer_reset(db: &Connection) {
+    use std::io::Write;
+    let Some(home) = db.path().and_then(|p| Path::new(p).parent()) else {
+        return;
+    };
+    if let Ok(mut file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(home.join("lab-capture-observer-resets"))
+    {
+        let _written = file.write_all(b"reset\n");
     }
 }
 
