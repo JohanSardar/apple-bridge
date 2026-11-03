@@ -36,6 +36,7 @@ final class SessionProxy: @unchecked Sendable {
         var spawned: pid_t = 0
         var arguments = [binary, "--gateway-fd", "198", "--helper-fd", "199"]
         if ProcessInfo.processInfo.environment["AB_SESSION_EFFECTS"] == "1" { arguments += ["--effects-home", home] }
+        if FileManager.default.fileExists(atPath: (home as NSString).appendingPathComponent("session/rust-capture.json")) { arguments += ["--capture-home", home] }
         let pointers = arguments.map { strdup($0) } + [nil]
         defer { for pointer in pointers { free(pointer) } }
         let environment = ProcessInfo.processInfo.environment.filter { $0.key != "AB_NATIVE_FD" }.map { strdup($0.key + "=" + $0.value) } + [strdup("AB_NATIVE_FD=200"), nil]

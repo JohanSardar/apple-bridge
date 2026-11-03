@@ -1,5 +1,7 @@
 #![deny(unsafe_code)]
 
+pub mod watch;
+
 use std::{
     io,
     os::{fd::FromRawFd, unix::net::UnixStream},

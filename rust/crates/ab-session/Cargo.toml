@@ -9,7 +9,7 @@ workspace = true
 
 [features]
 default = []
-rust-effects = ["dep:sha2", "dep:jiff"]
+rust-effects = ["dep:sha2", "dep:jiff", "rust-capture"]
 rust-capture = ["dep:ab-native"]
 
 [dependencies]

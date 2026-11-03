@@ -7,11 +7,15 @@ mod frame;
 #[cfg(feature = "rust-effects")]
 pub mod guard;
 pub mod ownership;
+#[cfg(feature = "rust-capture")]
+pub mod production;
 pub mod proxy;
 #[cfg(feature = "rust-capture")]
 pub mod readers;
 #[cfg(feature = "rust-capture")]
 pub mod routed;
+#[cfg(feature = "rust-capture")]
+pub mod store;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
