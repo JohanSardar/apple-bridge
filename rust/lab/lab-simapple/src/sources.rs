@@ -75,7 +75,11 @@ pub(super) fn control_source(
             string(record, "collection"),
             string(record, "native_key")
         );
-        let storage_key = if route == "/phone" { string(record, "native_key") } else { key };
+        let storage_key = if route == "/phone" {
+            string(record, "native_key")
+        } else {
+            key
+        };
         s.data["records"][storage_key] = record.clone();
     }
     s.save()?;
@@ -90,10 +94,35 @@ pub(super) fn control_source(
 
 fn validate_recording(collection: &str, data: &Value) -> Result<()> {
     let fields: &[(&str, char)] = match collection {
-        "phone.call" => &[("direction", 's'), ("handle", 's'), ("name", 's'), ("date", 't'), ("duration", 'n'), ("service", 's'), ("answered", 'b')],
+        "phone.call" => &[
+            ("direction", 's'),
+            ("handle", 's'),
+            ("name", 's'),
+            ("date", 't'),
+            ("duration", 'n'),
+            ("service", 's'),
+            ("answered", 'b'),
+        ],
         "voice_memos.folder" => &[("name", 's'), ("count", 'n')],
-        "voice_memos.recording" => &[("title", 's'), ("date", 't'), ("duration", 'n'), ("folder", 's'), ("recently_deleted", 'b'), ("transcript_state", 's'), ("audio_state", 's')],
-        "voicemail.message" => &[("sender", 's'), ("date", 't'), ("duration", 'n'), ("read", 'b'), ("mailbox", 's'), ("type", 's'), ("transcript_state", 's'), ("audio_state", 's')],
+        "voice_memos.recording" => &[
+            ("title", 's'),
+            ("date", 't'),
+            ("duration", 'n'),
+            ("folder", 's'),
+            ("recently_deleted", 'b'),
+            ("transcript_state", 's'),
+            ("audio_state", 's'),
+        ],
+        "voicemail.message" => &[
+            ("sender", 's'),
+            ("date", 't'),
+            ("duration", 'n'),
+            ("read", 'b'),
+            ("mailbox", 's'),
+            ("type", 's'),
+            ("transcript_state", 's'),
+            ("audio_state", 's'),
+        ],
         _ => return Err(invalid("source collection")),
     };
     let object = data.as_object().ok_or_else(|| invalid("source data"))?;
@@ -103,17 +132,27 @@ fn validate_recording(collection: &str, data: &Value) -> Result<()> {
             's' => value.is_string(),
             'n' => value.is_number(),
             'b' => value.is_boolean(),
-            _ => value.as_str().is_some_and(|v| v.contains('T') && v.parse::<jiff::Timestamp>().is_ok()),
+            _ => value
+                .as_str()
+                .is_some_and(|v| v.contains('T') && v.parse::<jiff::Timestamp>().is_ok()),
         };
-        if !valid { return Err(invalid("source field")); }
+        if !valid {
+            return Err(invalid("source field"));
+        }
     }
     for (name, value) in object {
-        if fields.iter().any(|(field, _)| field == name) { continue; }
-        if collection != "voice_memos.recording" || !match name.as_str() {
-            "transcript" => value.is_null() || value.is_array(),
-            "audio" => value.is_null() || value.is_object(),
-            _ => false,
-        } { return Err(invalid("unknown source field")); }
+        if fields.iter().any(|(field, _)| field == name) {
+            continue;
+        }
+        if collection != "voice_memos.recording"
+            || !match name.as_str() {
+                "transcript" => value.is_null() || value.is_array(),
+                "audio" => value.is_null() || value.is_object(),
+                _ => false,
+            }
+        {
+            return Err(invalid("unknown source field"));
+        }
     }
     Ok(())
 }
