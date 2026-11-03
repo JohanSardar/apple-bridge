@@ -98,7 +98,10 @@ impl Arguments {
             peer_address: self.flag("peer-addr", ""),
             listen: self.flag("listen", ""),
             socket: self.flag("socket", ""),
-            helper_app: self.flag("helper-app", ""),
+            helper_app: ab_runtime::bundle::helper_app(
+                &self.flag("helper-app", ""),
+                std::env::current_exe().ok().as_deref(),
+            ),
             helper_lab_commands: self.flag("helper-lab-commands", "false") == "true",
             retention_rows: self
                 .flag("retention-rows", "0")
@@ -246,6 +249,7 @@ async fn run() -> Result<(), Error> {
                 )
             })?;
         }
+        "install-credentials" => {}
         #[cfg(feature = "lab-harness")]
         "lab-credential-lifecycle" => {
             ab_runtime::inspection::credential_lifecycle(&home)?;

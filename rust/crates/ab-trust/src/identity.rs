@@ -1,5 +1,5 @@
 use crate::{
-    CredentialStore, Credentials, Enrollment, Error, FileStore, Grant, Principal, atomic_write,
+    CredentialStore, Credentials, Enrollment, Error, Grant, Principal, atomic_write,
     effective_grants, fingerprint, subset,
 };
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
@@ -45,7 +45,7 @@ impl Authority {
             .mode(0o600)
             .open(home.join("credentials.lock"))?;
         fs2::FileExt::lock_exclusive(&lock)?;
-        let store = FileStore::new(&home)?;
+        let store = crate::select(&home, &crate::StoreEnvironment::current())?;
         if !home.join("identity.pem").exists() {
             let key = rcgen::KeyPair::generate_for(&rcgen::PKCS_ED25519)
                 .map_err(|e| Error::Identity(e.to_string()))?;
