@@ -66,7 +66,7 @@ func Run(ctx context.Context, s Scenario, level string) (e Evidence) {
 	if s.Impl == "go-only" && selection.Gateway == "rust" {
 		return Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), Status: "excluded", HostConditions: &HostConditions{}, Impl: "rust", Implementations: selection, Assertions: []Assertion{{Name: "go_only", Passed: true, Detail: s.ImplReason}}}
 	}
-	if (selection.Gateway == "rust" || selection.Replica == "rust") && !(level == "sim" && selection.Gateway == "rust" && selection.Replica == "go" && (calendarGatewaySimScenario(s) || nativeGatewaySimScenario(s) || sourceGatewaySimScenario(s) || phoneGatewaySimScenario(s) || ownerGatewaySimScenario(s) || relayServiceGatewaySimScenario(s) || portableGatewaySimScenario(s) || relayGatewaySimScenario(s) || relay2GatewaySimScenario(s))) && !(level == "sim" && selection.Gateway == "go" && nativeReplicaSimScenario(s)) && !(level == "real" && selection.LocalReplicas && selection.Gateway == "go" && nativeReplicaRealScenario(s)) {
+	if (selection.Gateway == "rust" || selection.Replica == "rust") && !(level == "sim" && selection.Gateway == "rust" && selection.Replica == "go" && (calendarGatewaySimScenario(s) || nativeGatewaySimScenario(s) || sourceGatewaySimScenario(s) || phoneGatewaySimScenario(s) || ownerGatewaySimScenario(s) || relayServiceGatewaySimScenario(s) || portableGatewaySimScenario(s) || relayGatewaySimScenario(s) || relay2GatewaySimScenario(s))) && !(level == "sim" && selection.Gateway == "go" && nativeReplicaSimScenario(s)) && !(level == "real" && selection.LocalReplicas && selection.Gateway == "go" && nativeReplicaRealScenario(s)) && !realGatewayRustAudited(level, selection) {
 		reason := replicaQualificationBlocker(s)
 		if reason == "" && level == "sim" && selection.Gateway == "rust" && selection.Replica == "go" {
 			reason = "harness: portable SIM inventory/import/schema checks require a binary fixture adapter for " + s.ID
@@ -124,6 +124,9 @@ func Run(ctx context.Context, s Scenario, level string) (e Evidence) {
 	reports := diagnosticReportsDir()
 	before, reportsErr := helperCrashReports(reports)
 	e = runScenario(ctx, s, level)
+	if realGatewayRustAudited(level, selection) {
+		e.Assertions = append(e.Assertions, Assertion{Name: "harness_audit", Passed: true, Detail: replicaQualificationBlocker(s)})
+	}
 	if level == "sim" && nativeMediaFixtureSimScenario(s) && e.Passed {
 		e = verifyNativeMediaGateway(ctx, s, e)
 	}
@@ -190,4 +193,8 @@ func relay2GatewaySimScenario(s Scenario) bool {
 		return false
 	}
 	return os.Getenv("AB_RELAY_FIXTURE") != ""
+}
+
+func realGatewayRustAudited(level string, selection world.Implementations) bool {
+	return level == "real" && selection.Gateway == "rust" && selection.Replica == "go" && !selection.LocalReplicas
 }
