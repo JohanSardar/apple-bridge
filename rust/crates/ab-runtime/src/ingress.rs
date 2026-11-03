@@ -240,7 +240,8 @@ async fn connection(
                 #[cfg(not(feature = "lab-harness"))]
                 let lab_private_feed = false;
                 #[cfg(feature = "lab-harness")]
-                let lab_private_feed = host == "localhost:7780" && std::env::var_os("APPLE_BRIDGE_LAB_PRIVATE_FEED").is_some();
+                let lab_private_feed = host == "localhost:7780"
+                    && std::env::var_os("APPLE_BRIDGE_LAB_PRIVATE_FEED").is_some();
                 if request.uri().path() == "/v1/feed" && !lab_private_feed {
                     if !hosts(
                         &selected(&app.home).unwrap_or_default(),
