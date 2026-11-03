@@ -192,3 +192,11 @@ Gate: `python3 rust/lab/families-parity.py ... --maps` runs MAP-SIM, LOC-SIM, FI
 Compile-only real adapters: SAF-IDLE (`idle_real`), SAF-BOOKMARKS-REAL and SAF-HISTORY-REAL (standalone; native checks against an independent Python truth), FILE-REPLICA (`filerep.rs`, local replica instead of the Ubuntu replica) and PKG-INSTALL/PKG-BACKGROUND (`pkginstall.rs`, standalone). None of these has been run.
 
 QUERY-AGENT and AGENT-SUITE are not ported: they drive a Codex agent over MCP (`lab/agent/codex.py`) and need an LLM, its credentials and the agent task suite.
+
+## Core bulk port A (Phase 8)
+
+`lab-adapters` ports CORE-ACK-DURABLE, CORE-CAPTURE-ALIASES, CORE-CREDENTIAL-STORE, CORE-BOOT, CORE-DISCONNECT-DETECT, CORE-DOCTOR and CORE-CLOCK-DELAY (`core.rs`, `core_journey.rs`, `core_robust.rs`, plus the `labcore.rs` journey prologue and `robust.rs` robustness tail). One run of `families-parity.py` over the seven unchanged YAML files gives identical per-assertion verdicts for the Go harness and the Rust gateway.
+
+Stable additions: the peer control route `/capture-exact` sends a Capture frame unchanged (explicit generation, predecessor, checkpoint, aliases) and waits for its Committed; `lab-world` gains `World::blackhole` (silently drops proxied bytes until `heal`) and `World::delay_both` (delays both proxied directions); `lab-runner` runs a registered `scenario:<id>` step for YAML files with no steps and a registered `finish:<id>` step before cleanup. The `robustness` cases `doctor`, `clock-delay` and `cred-lifecycle` join the shared robustness tail; `cred-lifecycle` has no sim level, so it is compiled only.
+
+Not ported in this slice: CORE-BENCH (the peer messages seed lacks the `needle` fixture), CORE-DISK-FULL (`hdiutil` capped volume, Darwin only), CORE-GAP-REJECT and CORE-FEED-PIPELINED-ACKS (frame-level TLS/WebSocket proxy), CORE-FORGED-DELEGATION, CORE-GATEWAY-DIALS and CORE-CLOCK-DELAY-GATEWAY-DIALS (mTLS dial worlds).

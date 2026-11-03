@@ -107,7 +107,7 @@ pub fn read_all(client: &Client, deleted: bool, aliases: bool) -> Result<Read> {
         }
     }
 }
-fn alias_key(source: &str, collection: &str, native: &str) -> String {
+pub fn alias_key(source: &str, collection: &str, native: &str) -> String {
     format!("{source}/{collection}/{native}")
 }
 pub fn collection_source(collection: &str) -> &str {

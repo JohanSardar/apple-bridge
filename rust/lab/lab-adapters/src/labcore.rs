@@ -21,8 +21,16 @@ use std::{
     time::{Duration, Instant},
 };
 
-pub const JOURNEYS: [&str; 3] = ["CORE-RESUME", "LAB-SSE", "LAB-TRUTH-MULTIPLICITY"];
-pub const SCENARIOS: [&str; 5] = [
+pub const JOURNEYS: [&str; 5] = [
+    "CORE-RESUME",
+    "LAB-SSE",
+    "LAB-TRUTH-MULTIPLICITY",
+    "CORE-BOOT",
+    "CORE-DISCONNECT-DETECT",
+];
+pub const SCENARIOS: [&str; 7] = [
+    "CORE-BOOT",
+    "CORE-DISCONNECT-DETECT",
     "CORE-RESUME",
     "LAB-SSE",
     "LAB-TRUTH-MULTIPLICITY",
@@ -31,8 +39,8 @@ pub const SCENARIOS: [&str; 5] = [
 ];
 const COLLECTION: &str = "reminders.reminder";
 
-struct Run {
-    observed: Observed,
+pub(crate) struct Run {
+    pub(crate) observed: Observed,
     observers: Observers,
     effects: Vec<String>,
     partition_effects: Vec<String>,
@@ -49,7 +57,7 @@ fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
 fn title(key: &str) -> String {
     format!("[ab-test] {key}")
 }
-fn change(world: &World, run: &mut Run, key: &str, measured: bool) -> Result<()> {
+pub(crate) fn change(world: &World, run: &mut Run, key: &str, measured: bool) -> Result<()> {
     world.control("/external-change", &json!({"key": key}))?;
     if measured {
         run.effects.push(key.to_owned());
@@ -59,7 +67,7 @@ fn change(world: &World, run: &mut Run, key: &str, measured: bool) -> Result<()>
     Ok(())
 }
 pub fn start_world(world: &mut World, id: &str, replicas: usize) -> Result<()> {
-    if id == "CORE-RESUME" {
+    if id == "CORE-RESUME" || id == "CORE-DISCONNECT-DETECT" {
         world.install_proxy()?;
     }
     replicas::start(world, replicas)
@@ -112,7 +120,7 @@ pub fn seed(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result
     *lock(&RUN) = Some(run);
     Ok(())
 }
-fn with_run<T>(body: impl FnOnce(&mut Run) -> Result<T>) -> Result<T> {
+pub(crate) fn with_run<T>(body: impl FnOnce(&mut Run) -> Result<T>) -> Result<T> {
     let mut guard = lock(&RUN);
     let run = guard
         .as_mut()
@@ -212,7 +220,7 @@ pub fn truth_multiplicity(world: &mut World, _: &Value, evidence: &mut Evidence)
     *lock(&RUN) = None;
     Ok(())
 }
-fn settle(world: &World, evidence: &mut Evidence) -> Result<()> {
+pub(crate) fn settle(world: &World, evidence: &mut Evidence) -> Result<()> {
     with_run(|run| {
         if run.settled {
             return Ok(());
@@ -259,6 +267,15 @@ pub fn oversized_resets(world: &World, evidence: &mut Evidence) {
         &format!("capture observer resets: {resets}"),
     );
 }
+pub fn finish_hook(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> {
+    if lock(&RUN).is_none() {
+        return Ok(());
+    }
+    let settled = settle(world, evidence);
+    let finished = finish(world, evidence);
+    *lock(&RUN) = None;
+    settled.and(finished)
+}
 fn finish(world: &World, evidence: &mut Evidence) -> Result<()> {
     with_run(|run| {
         if !await_until(15, || converged(world, &run.observed)) {
@@ -286,7 +303,7 @@ fn finish(world: &World, evidence: &mut Evidence) -> Result<()> {
         Ok(())
     })?;
     *lock(&RUN) = None;
-    if evidence.scenario == "CORE-RESUME" {
+    if matches!(evidence.scenario.as_str(), "CORE-RESUME" | "CORE-DISCONNECT-DETECT") {
         oversized_resets(world, evidence);
     }
     Ok(())
@@ -294,7 +311,9 @@ fn finish(world: &World, evidence: &mut Evidence) -> Result<()> {
 pub fn converge(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result<()> {
     match evidence.scenario.as_str() {
         "LAB-TRUTH-MULTIPLICITY" => Ok(()),
-        "CORE-RESUME" | "LAB-SSE" => settle(world, evidence),
+        "CORE-RESUME" | "LAB-SSE" | "CORE-BOOT" | "CORE-DISCONNECT-DETECT" => {
+            settle(world, evidence)
+        }
         _ => journey::converge(world, input, evidence),
     }
 }
