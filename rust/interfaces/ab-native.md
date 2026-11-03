@@ -53,8 +53,8 @@ transfer each responsibility after its separate shadow-comparison gate.
 
 ## Pending source work
 
-Mail and Notes readers are pending. Screen Time, Safari, Calls, Voicemail
-and Voice Memos have synthetic stream evidence below. No 24-hour shadow evidence
+The Notes reader is pending. Screen Time, Safari, Calls, Voicemail, Voice
+Memos and Mail have synthetic stream evidence below. No 24-hour shadow evidence
 is claimed.
 
 ## Messages worker coordination (t3/rust-messages-reader)
@@ -343,3 +343,47 @@ source mutation, bounded ranges, deletion/folder counts, path and symlink
 escapes, embedded NUL/invalid UTF-8, malformed/limited scans and three generation epochs. All observation
 Data hashes are compared through Go JSON; opaque generations use the same
 bijective epoch normalization as Calls. No live source has been enabled.
+
+## Mail capture and MIME
+
+`mail::Reader::poll(database, context, max_rows)` emits full Swift-style Mail
+snapshots when their observation material changes. `snapshot` returns a pending
+snapshot without suppression; update_state=false supports a qualification read.
+Commit only after acknowledgement. Partial message scans emit available rows
+and account/mailbox counts with partial evidence, retain committed deletion
+candidates, and emit no absence. Only complete message scans update those keys.
+Account/mailbox absence is not inferred. Physical replacement starts a new
+generation. Stale acknowledgements fail. Swift Mail absence iteration now sorts
+keys, making the previously unordered Set traversal reproducible in both readers.
+
+`capture::Snapshot::query_partial` exposes rows plus completeness. Its progress
+handler interrupts SQLite VM execution on deadline (including work before the
+first row) and resets after every query. Strict query callers continue to reject
+all incomplete results. Embedded NUL is preserved; invalid UTF-8 is rejected.
+
+`mail_body::read(args, root)` requires one numeric message_id and an explicit
+Mail fixture/data root. It skips hidden paths, rejects duplicates, traversal
+failures, out-of-root paths and nonregular/symlink emlx entries. Dataless files
+remain offloaded. `decode` ports bounded emlx/MIME, multipart, base64,
+quoted-printable, charset and escaped HTML/plain-text fallback behavior. It
+preserves Foundation's observed noncanonical base64 padding behavior. No Mail
+commands, AppleScript or network activity are used by either reader.
+
+The lab CLI source mail accepts scan/row-limit commands or `body JSON_ARGS`.
+The unchanged Swift snapshot method is wrapped with the same capture material
+suppression as MailSource.capture. The injected script closure always refuses
+execution. A 19-stage retained-WAL replay covers the 1000-message fixture,
+partial-prefix reads and later deletion outside that prefix, full snapshot
+updates, invalid joins/URLs/text, unchanged suppression and database replacement.
+Ordered observations, coverage/evidence/checkpoint metadata and Go Data hashes
+match; only opaque machine generations are renamed bijectively (two epochs).
+
+`parity/mail/body-fixtures.py` checks all four existing mail fixtures, every
+MailBodyChecks content case (including the 1.1 MB body), and malformed MIME /
+base64 / depth cases: 39 complete results and Go Data hashes. It additionally
+checks 11 explicit-path and invalid-argument controls, including hidden duplicates,
+offloaded IDs, duplicate files, escapes and symlinks. Rust runs every codec
+fixture as a test; a separate race/clock test proves acknowledgement ordering,
+state preservation on failed reads and deadline recovery. 32 Swift URL vectors
+cover account/host case, percent encoding, Unicode, IPv6, invalid ports and path
+components. No HTTP/URL networking dependency was added.

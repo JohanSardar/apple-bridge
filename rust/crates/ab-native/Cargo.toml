@@ -15,7 +15,7 @@ serde_json = { workspace = true, features = ["float_roundtrip"] }
 sha2.workspace = true
 thiserror.workspace = true
 flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
-rusqlite.workspace = true
+rusqlite = { workspace = true, features = ["hooks"] }
 jiff.workspace = true
 plist = { version = "=1.10.3", default-features = false, features = ["enable_unstable_features_that_may_break_with_minor_version_bumps"] }
 

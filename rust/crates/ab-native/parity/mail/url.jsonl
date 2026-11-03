@@ -1,0 +1,32 @@
+{"host":"example.invalid","input":"imap://user@example.invalid/INBOX","last":"INBOX","path":"/INBOX","scheme":"imap","user":"user","valid":true}
+{"host":"EXAMPLE.invalid","input":"imap://user%40test:password@EXAMPLE.invalid/My%20Folder/","last":"My Folder","path":"/My Folder","scheme":"imap","user":"user@test","valid":true}
+{"host":"EXAMPLE.invalid","input":"imap://EXAMPLE.invalid/A%2FB","last":"A/B","path":"/A/B","scheme":"imap","user":null,"valid":true}
+{"host":"2001:db8::1","input":"imap://[2001:db8::1]:993/Inbox","last":"Inbox","path":"/Inbox","scheme":"imap","user":null,"valid":true}
+{"host":"example.invalid","input":"imap://@example.invalid/INBOX","last":"INBOX","path":"/INBOX","scheme":"imap","user":"","valid":true}
+{"host":"example.invalid","input":"imap://user@example.invalid","last":"","path":"","scheme":"imap","user":"user","valid":true}
+{"host":"example.invalid","input":"imap://user@example.invalid/","last":"/","path":"/","scheme":"imap","user":"user","valid":true}
+{"host":"example.invalid","input":"imap://user@example.invalid/a/../Sent","last":"Sent","path":"/a/../Sent","scheme":"imap","user":"user","valid":true}
+{"host":"example.invalid","input":"imap://user@example.invalid/Café","last":"Café","path":"/Café","scheme":"imap","user":"user","valid":true}
+{"host":"example.invalid","input":"imap://user@example.invalid/a?x#y","last":"a","path":"/a","scheme":"imap","user":"user","valid":true}
+{"host":"localhost","input":"file://localhost/Synthetic","last":"Synthetic","path":"/Synthetic","scheme":"file","user":null,"valid":true}
+{"host":null,"input":"invalid","last":"invalid","path":"invalid","scheme":null,"user":null,"valid":true}
+{"host":"EXAMPLE.invalid","input":"https://EXAMPLE.invalid/Inbox","last":"Inbox","path":"/Inbox","scheme":"https","user":null,"valid":true}
+{"host":"example.invalid","input":"imap://us%3Aer@exa%6Dple.invalid/Inbox","last":"Inbox","path":"/Inbox","scheme":"imap","user":"us:er","valid":true}
+{"host":"host","input":"imap://host///","last":"/","path":"/","scheme":"imap","user":null,"valid":true}
+{"host":"host","input":"imap://host/a//","last":"a","path":"/a","scheme":"imap","user":null,"valid":true}
+{"host":"host","input":"imap://host//a//b/","last":"b","path":"//a//b","scheme":"imap","user":null,"valid":true}
+{"host":"Host","input":"//Host/Inbox","last":"Inbox","path":"/Inbox","scheme":null,"user":null,"valid":true}
+{"host":null,"input":"imap:///INBOX","last":"INBOX","path":"/INBOX","scheme":"imap","user":null,"valid":true}
+{"host":"bad host","input":"imap://bad host/Inbox","last":"Inbox","path":"/Inbox","scheme":"imap","user":null,"valid":true}
+{"host":null,"input":"imap://host:broken/Inbox","last":null,"path":null,"scheme":null,"user":null,"valid":false}
+{"host":"broken","input":"imap://[broken]/Inbox","last":"Inbox","path":"/Inbox","scheme":"imap","user":null,"valid":true}
+{"host":"例.invalid","input":"imap://例.invalid/收件箱","last":"收件箱","path":"/收件箱","scheme":"imap","user":null,"valid":true}
+{"host":"ÉXAMPLE.invalid","input":"imap://ÉXAMPLE.invalid/Inbox","last":"Inbox","path":"/Inbox","scheme":"imap","user":null,"valid":true}
+{"host":"host","input":"imap://user@host/%FF","last":"","path":"","scheme":"imap","user":"user","valid":true}
+{"host":"host","input":"imap://user@host/%zz","last":"%zz","path":"/%zz","scheme":"imap","user":"user","valid":true}
+{"host":"host","input":"imap://us%00er@host/Inbox","last":"Inbox","path":"/Inbox","scheme":"imap","user":"us\u0000er","valid":true}
+{"host":"host","input":"imap://host/a%2F","last":"a/","path":"/a","scheme":"imap","user":null,"valid":true}
+{"host":"host","input":"imap://host/./Inbox","last":"Inbox","path":"/./Inbox","scheme":"imap","user":null,"valid":true}
+{"host":"host","input":"imap://host/..","last":"..","path":"/..","scheme":"imap","user":null,"valid":true}
+{"host":"host","input":"imap://host/a#fragment","last":"a","path":"/a","scheme":"imap","user":null,"valid":true}
+{"host":"host","input":"imap://user@@host/Inbox","last":"Inbox","path":"/Inbox","scheme":"imap","user":"user@","valid":true}

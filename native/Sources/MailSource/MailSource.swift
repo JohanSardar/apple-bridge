@@ -49,7 +49,7 @@ public actor MailSource: Source {
             observations.append(.object(observation))
         }
         if scan.complete && updateState {
-            for key in scan.absentKeys { observations.append(.object(["kind": .string("absent"), "revalidated": .bool(true), "collection": .string("mail.message"), "native_key": .string(key), "observed_at": .string(timestamp())])) }
+            for key in scan.absentKeys.sorted() { observations.append(.object(["kind": .string("absent"), "revalidated": .bool(true), "collection": .string("mail.message"), "native_key": .string(key), "observed_at": .string(timestamp())])) }
             keys = Set(scan.rows.compactMap { $0["native_key"]?.text })
             generation = reader.generation
         }

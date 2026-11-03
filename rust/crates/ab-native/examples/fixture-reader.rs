@@ -54,7 +54,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "usage: fixture-reader SOURCE FIXTURE_DIRECTORY [--interactive] [--frames]".into(),
         );
     };
-    if !["usage", "safari", "calls", "voicemail", "voice-memos"].contains(&source.as_str())
+    if ![
+        "usage",
+        "safari",
+        "calls",
+        "voicemail",
+        "voice-memos",
+        "mail",
+    ]
+    .contains(&source.as_str())
         || options
             .iter()
             .any(|o| o != "--interactive" && o != "--frames")
@@ -70,6 +78,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     if source == "voice-memos" {
         return voice_memos(root, options);
+    }
+    if source == "mail" {
+        return mail(root, options);
     }
     let mut reader = Reader::default();
     let frames = options.iter().any(|o| o == "--frames");
@@ -281,6 +292,51 @@ fn voice_memos(root: &Path, options: &[String]) -> Result<(), Box<dyn std::error
             output.flush()?;
         }
         index += 1;
+        Ok(())
+    };
+    if options.iter().any(|o| o == "--interactive") {
+        for line in std::io::stdin().lock().lines() {
+            run(&line?)?;
+        }
+    } else {
+        run("scan")?;
+    }
+    Ok(())
+}
+
+fn mail(root: &Path, options: &[String]) -> Result<(), Box<dyn std::error::Error>> {
+    use ab_native::{capture::Context, mail::Reader, mail_body};
+    let mut reader = Reader::default();
+    let frames = options.iter().any(|o| o == "--frames");
+    let mut run = |line: &str| -> Result<(), Box<dyn std::error::Error>> {
+        if let Some(args) = line.strip_prefix("body ") {
+            let args: serde_json::Value = serde_json::from_str(args)?;
+            let value = mail_body::read(&args, &root.join("bodies"))
+                .unwrap_or_else(|_| serde_json::json!({"kind":"failed_body"}));
+            let mut output = std::io::stdout().lock();
+            write_json(&mut output, &value)?;
+            output.flush()?;
+            return Ok(());
+        }
+        let context: Context = serde_json::from_slice(&std::fs::read(root.join("context.json"))?)?;
+        if let Ok(result) = reader.poll(
+            &root.join("store.db"),
+            &context,
+            line.parse().unwrap_or(100_000),
+        ) {
+            if let Some(pending) = result {
+                emit_capture(&pending.batch, frames)?;
+                reader.commit(pending)?;
+            } else {
+                let mut output = std::io::stdout().lock();
+                write_json(&mut output, &serde_json::json!({"kind":"idle"}))?;
+                output.flush()?;
+            }
+        } else {
+            let mut output = std::io::stdout().lock();
+            write_json(&mut output, &serde_json::json!({"kind":"failed_scan"}))?;
+            output.flush()?;
+        }
         Ok(())
     };
     if options.iter().any(|o| o == "--interactive") {
