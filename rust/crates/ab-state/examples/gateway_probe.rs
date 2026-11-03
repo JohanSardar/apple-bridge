@@ -29,7 +29,7 @@ fn invoke(
                 serde_json::from_value(q["source"].clone())?,
                 "ready",
                 serde_json::from_value(json!({"fields":"complete","missing":[]}))?,
-                &[],
+                Some(&[]),
                 "",
             )?;
             json!({})

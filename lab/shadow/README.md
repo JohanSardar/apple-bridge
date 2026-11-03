@@ -30,6 +30,12 @@ The tap proof uses fragmented binary and JSON frames, compares every byte receiv
 
 Replay refuses active recordings using an exclusive-writer/shared-reader file lock, locks the offline starting home, refuses symlinks and creates two new homes with SQLite backup including WAL contents. Only clones run, with file credentials, ephemeral loopback ports and explicit sockets. Fresh nonce authentication replaces the handshake. A read-only SourceState persistence barrier drains final source changes; an IPC Pong alone does not acknowledge them. The final Helper connection stays open until gateway shutdown to avoid adding unrecorded disconnect transactions. Recordings, logs and cloned homes remain local, mode 0600/0700, and must never be committed or uploaded as evidence. Remove them after the orchestrator's retention window.
 
+## Verified synthetic parity
+
+The 2026-11-03 implementation follow-up replays the existing capture-only prefix and a fresh full synthetic command recording against Go and Rust with zero mismatched comparison tables. The full fixture has 24 journal rows and 23 commit boundaries on each side; the prefix has 20 and 19. Rust admission uses the same admin visibility expansion as reads. SourceState preserves Go Coverage field order and null-versus-empty capabilities, avoiding spurious versions and journal transactions when opening Go snapshots. The Go-Go proof and all 14 seeded mismatch checks pass without changing the comparator.
+
+This evidence covers synthetic IPC and REST admission. Deterministic decision clocks, newly allocated IDs embedded in opaque data or arguments, and authenticated observation/replay for MCP, delegated commands, approval decisions and phone ingress remain qualification blockers. The existing offset clock is not a deterministic replay clock. No live traffic was recorded or tapped for this proof.
+
 ## Comparison contract
 
 Diff locks stopped homes and opens databases read-only. It compares typed cells and column metadata for records, journal, journal commit boundaries, aliases, checkpoints, state metadata, ledger commands, dedupe and ledger metadata. Missing tables or malformed payloads fail closed. The report contains only fixed table names, SHA-256 digests and equality flags; exit 0 means equal, exit 1 means a mismatch or comparison failure.
