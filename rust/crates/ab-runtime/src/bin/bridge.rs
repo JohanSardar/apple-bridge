@@ -55,6 +55,29 @@ impl Arguments {
         }
         Ok(Self { verb, value, flags })
     }
+    fn config(&self, home: PathBuf) -> Result<Config, Error> {
+        Ok(Config {
+            role: self.flag("role", "gateway"),
+            home,
+            api_address: self.flag("api-addr", "127.0.0.1:7780"),
+            peer_address: self.flag("peer-addr", ""),
+            listen: self.flag("listen", ""),
+            socket: self.flag("socket", ""),
+            retention_rows: self
+                .flag("retention-rows", "0")
+                .parse()
+                .map_err(|_| Error::Invalid)?,
+            retention_age: ab_runtime::duration::parse(&self.flag("retention-age", "0"))?,
+            blob_cap: self
+                .flag("blob-cap", "0")
+                .parse()
+                .map_err(|_| Error::Invalid)?,
+            blob_grace_ms: self
+                .flag("blob-grace-ms", "0")
+                .parse()
+                .map_err(|_| Error::Invalid)?,
+        })
+    }
     fn flag(&self, key: &str, default: &str) -> String {
         self.flags
             .get(key)
@@ -74,6 +97,15 @@ async fn run() -> Result<(), Error> {
         .flags
         .get("home")
         .map_or_else(default_home, |v| Ok(PathBuf::from(v)))?;
+    if args.verb == "status" || args.verb == "doctor" {
+        let report = if args.verb == "status" {
+            ab_runtime::inspection::status(&home)?
+        } else {
+            ab_runtime::inspection::doctor(&home)?
+        };
+        println!("{report}");
+        return Ok(());
+    }
     let authority = Arc::new(
         ab_trust::Authority::open(&home)
             .map_err(|_| Error::Operation(ab_operations::Code::Unavailable.into()))?,
@@ -118,36 +150,23 @@ async fn run() -> Result<(), Error> {
             } else {
                 authority.join_listen(&args.value, &listen).await
             };
-            result.map_err(|_| Error::Operation(ab_operations::Code::Unavailable.into()))?;
+            result.map_err(|e| {
+                Error::Operation(
+                    if matches!(e, ab_trust::Error::Unauthorized) {
+                        ab_operations::Code::Unauthorized
+                    } else {
+                        ab_operations::Code::Unavailable
+                    }
+                    .into(),
+                )
+            })?;
         }
-        "status" => {
-            let config = Config::load(&home)?;
-            let state = ab_state::State::<ab_state::Replica>::open(&home)
-                .map_err(|_| Error::Operation(ab_operations::Code::Unavailable.into()))?;
-            println!(
-                "{}",
-                serde_json::json!({"role":config.role,"cursor":state.head().map_err(|_| Error::Invalid)?,"enrolled":authority.enrollment().map_err(|_| Error::Invalid)?.is_some()})
-            );
-        }
-        "doctor" => {
-            use std::os::unix::fs::PermissionsExt;
-            let private = std::fs::metadata(&home)?.permissions().mode() & 0o777 == 0o700;
-            println!(
-                "{}",
-                serde_json::json!({"private_modes":private,"credentials":{"store":"file"},"disk_encryption":"unknown","clock_skew":"unknown","versions":{"bridge":"rust"},"warnings":["replica doctor checks incomplete"]})
-            );
+        #[cfg(feature = "lab-harness")]
+        "lab-credential-lifecycle" => {
+            ab_runtime::inspection::credential_lifecycle(&home)?;
         }
         "start" => {
-            let config = Config {
-                role: args.flag("role", "gateway"),
-                home,
-                api_address: args.flag("api-addr", "127.0.0.1:7780"),
-                peer_address: args.flag("peer-addr", ""),
-                listen: args.flag("listen", ""),
-                socket: args.flag("socket", ""),
-                retention_rows: 0,
-                retention_age: 0,
-            };
+            let config = args.config(home)?;
             config.validate()?;
             ab_runtime::start(config, authority).await?;
         }

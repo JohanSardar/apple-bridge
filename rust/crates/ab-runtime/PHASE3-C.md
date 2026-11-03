@@ -1,27 +1,28 @@
-# Worker C implementation checkpoint
+# Phase 3 C integration
 
-This is an integration checkpoint, not a Phase 3 exit-gate pass. No live home or gateway was used. Builds and scenarios ran on Ubuntu in `/home/johan/ab-phase3-c` against copies of workers A/B's draft crates.
+The runtime uses the merged State, Trust, Replication and Blobs crates. `replica-feed` is enabled by default. The home singleton lock precedes State/feed startup; actual API and inbound feed listen addresses are persisted. Commands use B's authenticated transport for direct mTLS and gateway-dials sessions, with cancellation and same-ID lookup recovery.
 
-Implemented: descriptor-backed REST and rmcp 3.8 tools, loopback serving, bearer authentication including health, exact Host/Origin lists, 1 MiB input limit, per-principal rate windows, redacted audit sink, Go error status mapping, SSE changes, concrete State read and Trust identity adapters, signed direct mTLS command forwarding, same-ID status recovery after unavailable submission, lookup-only handling, 15-second read-your-write wait, optional generated command IDs, forwarded wait_ms, private config/audit/lock files, join (including listen), token creation and revocation CLI entry points.
+REST and MCP use the same operations service. Specialized reads include contacts lookup, Health, paired iPhones and both status projections. Legacy result serialization follows Go struct field order, including nested read models. Command envelopes, descriptor argument shapes, required versions and wait bounds are checked before forwarding. The Go gateway remains the command/expiry authority; caller expiry and admission-era values are forwarded unchanged so retries retain lookup semantics.
 
-Current default build intentionally refuses `start`: `replica-feed` integration is gated until State provides `restrict(&Visibility)` and `blob_references()`. The adapter is written against those requested interfaces in `rust/INTERFACES.md`; it is not verified. Do not present this binary as a functioning replica yet. The draft feed crate also lacked command request exchange when inspected. Gateway-dialed command forwarding therefore remains unavailable; no fallback to direct HTTP is made for that route.
+Doctor opens SQLite read-only and checks integrity, journal application, shape violations, recursive private modes, versions, storage encryption and authenticated four-timestamp clock samples. Status is read-only. CLI retention durations use Go units; SIGINT/SIGTERM initiate graceful shutdown with a ten-second drain bound.
 
-Remaining worker C work:
+Query blob grants use the frozen SQLite tables, are principal/scope/expiry checked, and authorize verified cached blob reads. Uncached query blobs are fetched in bounded signed chunks, digest verified and persisted; range responses are supported.
 
-- Integrate and verify the feed State adapter, then enable replica-feed by default. Acquire the home singleton lock before opening State or starting the feed, and persist actual listen addresses.
-- Connect the authenticated feed command exchange to GatewayTransport, including session cancellation and pending request cleanup.
-- Complete replica.status and sources.status projection, all specialized reads, contacts lookup, native query forwarding and convenience blob reads. State currently owns only a subset of read models.
-- Match command validation and expiry rules fully. Current command validation covers IDs, operation envelope, scope and wait_ms; the Go gateway remains authoritative for arguments.
-- Complete doctor (integrity, file modes recursively, versions, encryption and clock) and status without writable inspection. Current doctor explicitly reports incomplete checks.
-- Match remaining CLI flags and signal shutdown behavior. Current runtime only handles Ctrl-C gracefully.
-- Run full MCP golden authorization/cancellation/legacy coverage through the product adapter. The frozen fourth exchange calls an unauthenticated internal Go handler; the outer Rust router requires bearer authentication. It has not been replaced or weakened.
-- Prove byte-for-byte reads against a Go replica on identical synthetic data and a command against a Go gateway. Neither has been proven.
+## Validation on Ubuntu
 
-Fresh Ubuntu evidence:
+- `make rust-ci` and lab-feature workspace Clippy have passed during integration; final receipts are collected at the frozen implementation commit.
+- The product-adapter frontdoor scenario passes 30 checks: all four unchanged MCP exchanges in JSON and SSE, external authorization/limits, legacy initialization and cancellation notifications. Its unauthenticated golden route is a lab-only internal-handler seam matching the Go golden fixture. Production routes remain authenticated.
+- `go run ./lab/replica-parity <Rust binary>` checks sixteen REST and sixteen MCP reads on synthetic Go/Rust replicas, actual command forwarding with independently inspected gateway ledger disposition, and active REST/MCP cancellation through the real SyntheticApple peer. It passes. The user authorized checking heartbeat timestamps, staleness, local replica observation time and read-model timing separately; deterministic payload bytes, including the MCP text payload's field order, must match.
+- Mixed Go/Rust convergence has passed with identical snapshot digests.
+- The latest completed full matrix before freezing passed 24/25 runnable scenarios. CORE-GATEWAY-DIALS had a lost-response MCP retry failure; its focused scenario and a direct REST/MCP recovery reproduction passed. A fresh immutable-binary full matrix is required before merge. Existing scenarios and frozen corpora have not been edited.
+- The requested thirteen native scenarios remain **pending Air real run**, unrun. The current harness reports twenty-two blocked cases overall, including additional native/remote/relay cases; blocked cases are not executed.
 
-- `cargo clippy --manifest-path rust/Cargo.toml -p ab-runtime -p ab-frontdoor -p ab-operations --all-targets --no-deps -- -D warnings`: pass with default features. Dependency crates are excluded from this Clippy claim.
-- `go run ./tools/lint .`: pass.
-- `cargo test --manifest-path rust/Cargo.toml -p ab-wire -p ab-catalog --locked`: 15 integration tests pass.
-- Build `frontdoor_fixture`, then run `python3 rust/crates/ab-runtime/scenarios/frontdoor.py rust/target/debug/examples/frontdoor_fixture`: 24 synthetic checks pass across JSON and SSE, including three golden exchanges per mode. These use typed mock Identity/State/Transport; they do not establish State read parity or real forwarding.
+## Commands
 
-The parent integration must regenerate Cargo.lock with the final A/B manifests and run full rust-ci. No dependency graph or existing scenario was weakened. No PR was created because the requested gates are incomplete.
+Production binary (on Ubuntu):
+
+```
+CARGO_TARGET_DIR=$HOME/ab-cargo-target cargo build --manifest-path rust/Cargo.toml --bin bridge
+```
+
+Harness binary adds `--features ab-runtime/lab-queries`. `make replica-matrix` selects that feature automatically. Set `AB_LAB_ROOT` and `TMPDIR` to directories on the Ubuntu home filesystem when `/tmp` quotas prevent staging executables. This override preserves the default harness root and all assertions. Go 1.27.3 was installed from the official archive under `~/go-sdk`; put `~/go-sdk/bin` and `~/.cargo/bin` on PATH.

@@ -22,6 +22,14 @@ ab-blobs = { path = "../ab-blobs" }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
 
 jiff.workspace = true
+rusqlite.workspace = true
 
 [features]
+lab-queries = ["lab-harness", "ab-frontdoor/lab-queries"]
+lab-harness = ["ab-frontdoor/lab-harness", "ab-operations/lab-harness"]
+default = ["replica-feed"]
 replica-feed = ["dep:ab-replication"]
+
+[[example]]
+name = "frontdoor_fixture"
+required-features = ["replica-feed", "lab-harness"]

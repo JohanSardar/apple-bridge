@@ -11,6 +11,13 @@ serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
+jiff.workspace = true
+ab-blobs = { path = "../ab-blobs" }
 ab-state = { path = "../ab-state" }
 ab-trust = { path = "../ab-trust" }
 ulid = "1"
+
+base64 = "0.22"
+
+[features]
+lab-harness = []

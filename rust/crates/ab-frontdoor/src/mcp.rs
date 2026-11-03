@@ -21,7 +21,7 @@ use tower::ServiceExt;
 #[derive(Debug, Clone)]
 struct Handler {
     frontdoor: Arc<Frontdoor>,
-    principal: Principal,
+    principal: Option<Principal>,
     tools: Vec<Tool>,
 }
 impl ServerHandler for Handler {
@@ -42,8 +42,15 @@ impl ServerHandler for Handler {
         request: CallToolRequestParams,
         context: RequestContext<RoleServer>,
     ) -> Result<CallToolResponse, ErrorData> {
+        let principal = self.principal.as_ref().ok_or_else(|| {
+            ErrorData::new(
+                rmcp::model::ErrorCode(0),
+                "unauthorized: credential or scope rejected",
+                None,
+            )
+        })?;
         let descriptors =
-            ab_catalog::operations().map_err(|_| ErrorData::internal_error("catalog", None))?;
+            tool_descriptors().map_err(|_| ErrorData::internal_error("catalog", None))?;
         let descriptor = descriptors
             .iter()
             .find(|d| d.name.replace('.', "_") == request.name)
@@ -55,12 +62,12 @@ impl ServerHandler for Handler {
         let started = std::time::Instant::now();
         let result = tokio::select! {
             () = context.ct.cancelled() => return Err(ErrorData::new(rmcp::model::ErrorCode(-32800), "cancelled", None)),
-            result = self.frontdoor.service.invoke(&self.principal, &descriptor.name, &input) => result,
+            result = self.frontdoor.service.invoke(principal, &descriptor.name, &input) => result,
         };
         let is_error = result.is_err();
         let raw = match result {
             Ok(value) => value.get().as_bytes().to_vec(),
-            Err(error) => serde_json::to_vec(&json!({"error":error}))
+            Err(error) => serde_json::to_vec(&ab_operations::Problem { error: &error })
                 .map_err(|_| ErrorData::internal_error("encoding", None))?,
         };
         let bytes = self
@@ -82,11 +89,11 @@ impl ServerHandler for Handler {
     }
 }
 pub async fn handle(State(frontdoor): State<Arc<Frontdoor>>, request: Request) -> Response {
-    let Some(principal) = request.extensions().get::<Principal>().cloned() else {
-        return problem(Code::Unauthorized.into());
+    let principal = request.extensions().get::<Principal>().cloned();
+    let Ok(descriptors) = tool_descriptors() else {
+        return problem(Code::Corrupt.into());
     };
-    let Ok(tools) = ab_catalog::operations()
-        .and_then(|ds| serde_json::from_value(ab_catalog::mcp_tools(&ds)["tools"].clone()))
+    let Ok(tools) = serde_json::from_value(ab_catalog::mcp_tools(&descriptors)["tools"].clone())
     else {
         return problem(Code::Corrupt.into());
     };
@@ -115,8 +122,101 @@ pub async fn handle(State(frontdoor): State<Arc<Frontdoor>>, request: Request) -
             if json && response.status() == axum::http::StatusCode::UNSUPPORTED_MEDIA_TYPE {
                 *response.status_mut() = axum::http::StatusCode::BAD_REQUEST;
             }
-            response
+            normalize(response).await
         }
         Err(_) => problem(Error::from(Code::Unavailable)),
     }
+}
+
+#[derive(serde::Serialize)]
+struct ToolResult<'a> {
+    #[serde(rename = "_meta", skip_serializing_if = "Option::is_none")]
+    meta: Option<&'a serde_json::value::RawValue>,
+    content: &'a serde_json::value::RawValue,
+    #[serde(rename = "structuredContent")]
+    structured: &'a serde_json::value::RawValue,
+    #[serde(rename = "isError", skip_serializing_if = "std::ops::Not::not")]
+    is_error: bool,
+}
+#[derive(serde::Serialize)]
+struct Envelope<'a> {
+    jsonrpc: &'a serde_json::value::RawValue,
+    id: &'a serde_json::value::RawValue,
+    result: &'a serde_json::value::RawValue,
+}
+
+fn normalize_json(bytes: &[u8]) -> Option<Vec<u8>> {
+    use serde_json::value::RawValue;
+    let mut envelope: std::collections::BTreeMap<String, Box<RawValue>> =
+        serde_json::from_slice(bytes).ok()?;
+    let result: std::collections::BTreeMap<String, Box<RawValue>> =
+        serde_json::from_str(envelope.get("result")?.get()).ok()?;
+    let content = result.get("content")?;
+    let items: serde_json::Value = serde_json::from_str(content.get()).ok()?;
+    let structured = RawValue::from_string(items[0]["text"].as_str()?.to_owned()).ok()?;
+    let result = ToolResult {
+        meta: result.get("_meta").map(AsRef::as_ref),
+        content,
+        structured: &structured,
+        is_error: result.get("isError").is_some_and(|v| v.get() == "true"),
+    };
+    envelope.insert(
+        "result".into(),
+        serde_json::value::to_raw_value(&result).ok()?,
+    );
+    serde_json::to_vec(&Envelope {
+        jsonrpc: envelope.get("jsonrpc")?,
+        id: envelope.get("id")?,
+        result: envelope.get("result")?,
+    })
+    .ok()
+}
+async fn normalize(response: Response) -> Response {
+    let (parts, body) = response.into_parts();
+    let Ok(bytes) = axum::body::to_bytes(body, 16 << 20).await else {
+        return problem(Code::Corrupt.into());
+    };
+    let json = parts
+        .headers
+        .get("content-type")
+        .is_some_and(|v| v.to_str().is_ok_and(|s| s.starts_with("application/json")));
+    let normalized = if json {
+        normalize_json(&bytes).unwrap_or_else(|| bytes.to_vec())
+    } else {
+        String::from_utf8_lossy(&bytes)
+            .split_inclusive('\n')
+            .map(|line| {
+                if let Some(data) = line.strip_prefix("data:")
+                    && let Some(result) = normalize_json(data.trim().as_bytes())
+                {
+                    return format!("data: {}\n", String::from_utf8_lossy(&result));
+                }
+                line.to_owned()
+            })
+            .collect::<String>()
+            .into_bytes()
+    };
+    let mut response = Response::from_parts(parts, axum::body::Body::from(normalized));
+    response.headers_mut().remove("content-length");
+    response
+}
+
+#[cfg(feature = "lab-harness")]
+pub fn golden_router(frontdoor: Arc<Frontdoor>) -> axum::Router {
+    axum::Router::new()
+        .route("/golden-mcp", axum::routing::any(handle))
+        .with_state(frontdoor)
+}
+
+fn tool_descriptors() -> Result<Vec<ab_catalog::OperationDescriptor>, Error> {
+    let descriptors = ab_catalog::operations().map_err(|_| Code::Corrupt)?;
+    #[cfg(feature = "lab-queries")]
+    let descriptors = {
+        let mut descriptors = descriptors;
+        for name in ["test.echo", "test.sleep", "test.blob"] {
+            descriptors.push(ab_operations::descriptor_for(name)?);
+        }
+        descriptors
+    };
+    Ok(descriptors)
 }

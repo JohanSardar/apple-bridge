@@ -485,7 +485,7 @@ pub struct Coverage {
     pub fields: String,
     pub missing: Option<Vec<String>>,
 }
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct Record {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub tombstone_reason: String,
@@ -497,6 +497,41 @@ pub struct Record {
     pub deleted: bool,
     pub coverage: Coverage,
     pub data: Box<serde_json::value::RawValue>,
+}
+impl<'de> Deserialize<'de> for Record {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        struct Fields {
+            #[serde(default)]
+            tombstone_reason: String,
+            collection: Collection,
+            id: String,
+            version: u64,
+            source: Source,
+            observed_at: String,
+            deleted: bool,
+            coverage: Coverage,
+            data: Box<serde_json::value::RawValue>,
+        }
+        let fields = Fields::deserialize(deserializer)?;
+        let id = if fields.collection == Collection::SystemCommand {
+            CommandId::try_from(fields.id.clone()).map_err(serde::de::Error::custom)?;
+            RecordId(fields.id)
+        } else {
+            RecordId::try_from(fields.id).map_err(serde::de::Error::custom)?
+        };
+        Ok(Self {
+            tombstone_reason: fields.tombstone_reason,
+            collection: fields.collection,
+            id,
+            version: fields.version,
+            source: fields.source,
+            observed_at: fields.observed_at,
+            deleted: fields.deleted,
+            coverage: fields.coverage,
+            data: fields.data,
+        })
+    }
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ErrorCode {
@@ -663,6 +698,10 @@ impl CommandId {
 
 impl Record {
     pub fn validate(&self) -> Result<(), ErrorCode> {
+        if self.collection == Collection::SystemCommand {
+            CommandId::try_from(self.id.as_str().to_owned())?;
+            return Ok(());
+        }
         if self.id.collection()? != self.collection || self.source != self.collection.source() {
             return Err(ErrorCode::Invalid);
         }

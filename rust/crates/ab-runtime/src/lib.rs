@@ -1,6 +1,10 @@
 #![forbid(unsafe_code)]
+pub mod duration;
+pub mod inspection;
 #[cfg(feature = "replica-feed")]
 mod replica;
+mod shape;
+#[cfg(feature = "replica-feed")]
 pub mod transport;
 use ab_operations::{Code, Command, Error as OperationError};
 use ab_wire::gojson::{self, CommandHash, EscapeMode, GoTime};
@@ -9,7 +13,7 @@ use sha2::{Digest, Sha256};
 use std::{
     fs::{self, File, OpenOptions},
     io::Write,
-    net::{Ipv4Addr, SocketAddr},
+    net::SocketAddr,
     os::unix::fs::{DirBuilderExt, OpenOptionsExt, PermissionsExt},
     path::{Path, PathBuf},
     sync::Mutex,
@@ -66,12 +70,16 @@ pub struct Config {
     #[serde(default)]
     pub retention_rows: u64,
     #[serde(default)]
-    pub retention_age: u64,
+    pub blob_cap: u64,
+    #[serde(default)]
+    pub blob_grace_ms: u64,
+    #[serde(default)]
+    pub retention_age: i64,
 }
 impl Config {
     pub fn validate(&self) -> Result<SocketAddr, Error> {
         let address: SocketAddr = self.api_address.parse().map_err(|_| Error::Invalid)?;
-        if self.role != "replica" || address.ip() != Ipv4Addr::LOCALHOST {
+        if self.role != "replica" || !address.ip().is_loopback() {
             return Err(Error::Invalid);
         }
         Ok(address)
@@ -159,7 +167,6 @@ pub async fn serve(
     service: std::sync::Arc<ab_operations::Service>,
 ) -> Result<(), Error> {
     let address = config.validate()?;
-    let _lock = HomeLock::acquire(&config.home)?;
     let listener = tokio::net::TcpListener::bind(address).await?;
     config.api_address = listener.local_addr()?.to_string();
     let audit = std::sync::Arc::new(AuditLog::open(&config.home)?);
@@ -177,11 +184,16 @@ pub async fn serve(
         audit,
     );
     config.save()?;
-    axum::serve(listener, frontdoor.router())
-        .with_graceful_shutdown(async {
-            let _signal = tokio::signal::ctrl_c().await;
-        })
-        .await?;
+    let (shutdown, mut receiver) = tokio::sync::watch::channel(false);
+    let signal = async {
+        shutdown_signal().await;
+        let _sent = shutdown.send(true);
+        tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+    };
+    let server = axum::serve(listener, frontdoor.router()).with_graceful_shutdown(async move {
+        let _signal = receiver.wait_for(|stopping| *stopping).await;
+    });
+    tokio::select! { result=server=>result?, ()=signal=>{} }
     Ok(())
 }
 
@@ -194,14 +206,12 @@ pub fn start(
 }
 #[cfg(feature = "replica-feed")]
 pub async fn start(
-    config: Config,
+    mut config: Config,
     authority: std::sync::Arc<ab_trust::Authority>,
 ) -> Result<(), Error> {
-    use std::sync::{
-        Arc,
-        atomic::{AtomicBool, Ordering},
-    };
+    use std::sync::Arc;
     config.validate()?;
+    let _lock = HomeLock::acquire(&config.home)?;
     let enrollment = authority
         .enrollment()
         .map_err(|_| Error::Invalid)?
@@ -209,15 +219,17 @@ pub async fn start(
     let state = Arc::new(Mutex::new(
         ab_state::State::<ab_state::Replica>::open(&config.home).map_err(|_| Error::Invalid)?,
     ));
-    let reads = Arc::new(ab_operations::StateReads(state.clone()));
-    let blobs = ab_blobs::Store::open(&config.home, 0).map_err(|_| Error::Invalid)?;
+    let blobs = ab_blobs::Store::open(&config.home, config.blob_cap).map_err(|_| Error::Invalid)?;
+    let blobs = Arc::new(tokio::sync::Mutex::new(blobs));
+    let reads = Arc::new(ab_operations::StateReads(state.clone(), blobs.clone()));
     let client = Arc::new(ab_replication::Client::new(
-        Arc::new(tokio::sync::Mutex::new(replica::StateAdapter(state))),
+        Arc::new(tokio::sync::Mutex::new(replica::StateAdapter(
+            state.clone(),
+        ))),
         authority.clone(),
-        Some(Arc::new(tokio::sync::Mutex::new(blobs))),
+        Some(blobs.clone()),
     ));
     let identity = Arc::new(ab_operations::TrustIdentity(authority.clone()));
-    let connected = Arc::new(AtomicBool::new(false));
     let codec = Arc::new(GoJson);
     let route = if enrollment.remote || !enrollment.dial.is_empty() {
         ab_operations::GatewayRoute::Feed
@@ -229,10 +241,9 @@ pub async fn start(
     };
     let remote = Arc::new(ab_operations::RemoteGateway {
         route,
-        transport: Arc::new(transport::DirectTransport {
-            authority,
-            connected: connected.clone(),
-        }),
+        transport: Arc::new(transport::ReplicaGatewayTransport(
+            client.gateway_transport(),
+        )),
         identity: identity.clone(),
         store: reads.clone(),
         codec: codec.clone(),
@@ -245,28 +256,66 @@ pub async fn start(
     });
     let (stop, receiver) = tokio::sync::watch::channel(false);
     let mut status = client.status();
-    let listen = config.listen.clone();
+    let listener = if config.listen.is_empty() {
+        None
+    } else {
+        let listener = tokio::net::TcpListener::bind(&config.listen).await?;
+        config.listen = listener.local_addr()?.to_string();
+        Some(listener)
+    };
     let follow = async {
-        if listen.is_empty() {
-            client.follow(receiver).await
+        if let Some(listener) = listener {
+            client.listen_bound(listener, receiver).await
         } else {
-            client.listen(&listen, receiver).await
+            client.follow(receiver).await
         }
     };
+    let clock_home = config.home.clone();
     let track = async {
+        let mut last_clock = None;
         while status.changed().await.is_ok() {
-            connected.store(
-                matches!(
-                    status.borrow().state,
-                    ab_replication::ConnectionState::Connected
-                ),
-                Ordering::Release,
-            );
+            let current = status.borrow().clone();
+            if let Some(sample) = &current.clock_sample
+                && last_clock.as_ref() != Some(sample)
+            {
+                last_clock = Some(sample.clone());
+                ab_trust::atomic_write(
+                    &clock_home.join("gateway-clock.json"),
+                    &serde_json::to_vec(sample)?,
+                )
+                .map_err(|_| Error::Invalid)?;
+            }
+            let entries = blobs.lock().await.entries().clone();
+            let mut state = state.lock().map_err(|_| Error::Invalid)?;
+            let cursor = state.head().map_err(|_| Error::Invalid)?;
+            state.set_replica_status(serde_json::json!({
+                "state": current.state, "mode": current.mode,
+                "gateway_head": current.gateway_head, "cursor": cursor,
+                "role": "replica", "schema": current.schema, "snapshot_sequence": current.snapshot_sequence,
+                "lag": current.gateway_head.saturating_sub(cursor.sequence), "blob_backlog": entries.values().filter(|e| e.state != ab_blobs::BlobState::Present).count(),
+                "staleness_ms": current.last_heartbeat.parse::<jiff::Timestamp>().map_or(0, |t| jiff::Timestamp::now().as_millisecond().saturating_sub(t.as_millisecond())),
+                "blobs": {"entries": entries},
+                "snapshots": current.snapshots, "resumes": current.resumes,
+                "snapshot_pages": current.snapshot_pages,
+                "last_heartbeat": current.last_heartbeat
+            })).map_err(|_| Error::Invalid)?;
         }
+        Ok::<(), Error>(())
     };
     tokio::select! {
         result = serve(config, service) => { let _sent = stop.send(true); result },
         result = follow => { result.map_err(|_| Error::Operation(Code::Unavailable.into())) },
-        () = track => Err(Error::Operation(Code::Unavailable.into())),
+        result = track => result,
     }
+}
+
+async fn shutdown_signal() {
+    #[cfg(unix)]
+    if let Ok(mut terminate) =
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+    {
+        tokio::select! { _ = tokio::signal::ctrl_c() => {}, _ = terminate.recv() => {} }
+        return;
+    }
+    let _signal = tokio::signal::ctrl_c().await;
 }

@@ -35,6 +35,40 @@ dependencies = [
 ]
 
 [[package]]
+name = "ab-frontdoor"
+version = "0.0.0"
+dependencies = [
+ "ab-catalog",
+ "ab-operations",
+ "axum",
+ "base64 0.22.1",
+ "futures-util",
+ "rmcp",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tower",
+]
+
+[[package]]
+name = "ab-operations"
+version = "0.0.0"
+dependencies = [
+ "ab-blobs",
+ "ab-catalog",
+ "ab-state",
+ "ab-trust",
+ "base64 0.22.1",
+ "jiff",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "ulid",
+]
+
+[[package]]
 name = "ab-replication"
 version = "0.0.0"
 dependencies = [
@@ -53,6 +87,28 @@ dependencies = [
  "tokio",
  "tokio-rustls",
  "tokio-tungstenite",
+]
+
+[[package]]
+name = "ab-runtime"
+version = "0.0.0"
+dependencies = [
+ "ab-blobs",
+ "ab-frontdoor",
+ "ab-operations",
+ "ab-replication",
+ "ab-state",
+ "ab-trust",
+ "ab-wire",
+ "axum",
+ "jiff",
+ "reqwest",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror",
+ "tokio",
 ]
 
 [[package]]
@@ -2525,6 +2581,16 @@ name = "typenum"
 version = "1.20.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20"
+
+[[package]]
+name = "ulid"
+version = "1.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "470dbf6591da1b39d43c14523b2b469c86879a53e8b758c8e090a470fe7b1fbe"
+dependencies = [
+ "rand 0.9.5",
+ "web-time",
+]
 
 [[package]]
 name = "unicode-ident"

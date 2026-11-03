@@ -17,3 +17,7 @@ thiserror.workspace = true
 tower = { version = "0.5", features = ["util"] }
 base64 = "0.22"
 futures-util = "0.3"
+
+[features]
+lab-harness = []
+lab-queries = ["ab-operations/lab-harness"]

@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
+mod clock;
 mod command;
+mod listener;
 mod state;
 use ab_blobs::{Digest, Reference, Store as BlobStore};
 use ab_trust::wire::{
@@ -77,9 +79,12 @@ pub enum ConnectionState {
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct FollowStatus {
     pub partial_batches: u64,
+    pub clock_sample: Option<serde_json::Value>,
     pub state: ConnectionState,
     pub mode: String,
     pub gateway_head: u64,
+    pub schema: i64,
+    pub snapshot_sequence: u64,
     pub snapshots: u64,
     pub resumes: u64,
     pub snapshot_pages: u64,
@@ -150,7 +155,7 @@ impl<S: ReplicaState> Client<S> {
             }
             self.status
                 .send_modify(|s| s.state = ConnectionState::Connecting);
-            tokio::select! { _=stop.changed()=>return Ok(()), _=self.connect()=>{} }
+            tokio::select! { _=stop.changed()=>return Ok(()), result=self.connect()=>{ if let Err(error) = result { eprintln!("replica feed: {error}"); } } }
             self.status
                 .send_modify(|s| s.state = ConnectionState::Disconnected);
             tokio::select! { _=stop.changed()=>return Ok(()), ()=tokio::time::sleep(Duration::from_secs(1))=>{} }
@@ -178,9 +183,14 @@ impl<S: ReplicaState> Client<S> {
         self.consume(ws, e).await
     }
     #[allow(clippy::result_large_err)]
-    pub async fn listen(
+    pub async fn listen(&self, address: &str, stop: watch::Receiver<bool>) -> Result<(), Error> {
+        self.listen_bound(TcpListener::bind(address).await?, stop)
+            .await
+    }
+    #[allow(clippy::result_large_err)]
+    pub async fn listen_bound(
         &self,
-        address: &str,
+        listener: TcpListener,
         mut stop: watch::Receiver<bool>,
     ) -> Result<(), Error> {
         let e = self.authority.enrollment()?.ok_or(Error::Invalid)?;
@@ -189,7 +199,6 @@ impl<S: ReplicaState> Client<S> {
         }
         let acceptor =
             tokio_rustls::TlsAcceptor::from(Arc::new(self.authority.server_tls(&e.fingerprint)?));
-        let listener = TcpListener::bind(address).await?;
         loop {
             let (socket, _) =
                 tokio::select! { _=stop.changed()=>return Ok(()), r=listener.accept()=>r? };
@@ -197,6 +206,13 @@ impl<S: ReplicaState> Client<S> {
                 let tls = tokio::time::timeout(Duration::from_secs(15), acceptor.accept(socket))
                     .await
                     .map_err(|_| Error::Disconnected)??;
+                let Some(tls) =
+                    tokio::time::timeout(Duration::from_secs(15), listener::request(tls))
+                        .await
+                        .map_err(|_| Error::Disconnected)??
+                else {
+                    return Ok(());
+                };
                 let ws = tokio_tungstenite::accept_hdr_async(
                     tls,
                     |request: &tokio_tungstenite::tungstenite::handshake::server::Request,
@@ -263,6 +279,7 @@ impl<S: ReplicaState> Client<S> {
             let head = self.state.lock().await.head()?;
             let mut hello = frame("Hello");
             hello.protocol = "feed/1".into();
+            hello.clock_protocol = "ntp/1".into();
             hello.delegation_protocol = "delegation/1".into();
             hello.features = Some(vec![raw(&"capture_atomic")?]);
             hello.replica_id = enrollment.replica_id.clone();
@@ -271,6 +288,7 @@ impl<S: ReplicaState> Client<S> {
             hello.credits = 4 << 20;
             writer.send(hello).await?;
             let mut welcome: Option<FeedFrame> = None;
+            let mut clock = clock::Probe::default();
             let mut install = None;
             let mut active_blob: Option<Digest> = None;
             let mut ignored_blob = false;
@@ -281,7 +299,8 @@ impl<S: ReplicaState> Client<S> {
             let mut last = tokio::time::Instant::now();
             loop {
                 let message = tokio::select! {
-                    _=tick.tick()=>{ if last.elapsed()>Duration::from_secs(15) {return Err(Error::Disconnected);}let mut heartbeat=frame("Heartbeat");heartbeat.at=serde_json::from_value(serde_json::json!(jiff::Timestamp::now().to_string()))?;writer.send(heartbeat).await?;continue;},
+                    _=tick.tick()=>{ if last.elapsed()>Duration::from_secs(15) {return Err(Error::Disconnected);}
+                        if welcome.as_ref().is_some_and(|w| w.clock_protocol == "ntp/1") { clock.ping(&writer).await?; }let mut heartbeat=frame("Heartbeat");heartbeat.at=serde_json::from_value(serde_json::json!(jiff::Timestamp::now().to_string()))?;writer.send(heartbeat).await?;continue;},
                     m=source.next()=>m.ok_or(Error::Disconnected)??,
                 };
                 if let Message::Binary(bytes) = message {
@@ -301,6 +320,9 @@ impl<S: ReplicaState> Client<S> {
                             Err(e) => return Err(e.into()),
                         }
                     }
+                    last = tokio::time::Instant::now();
+                    self.status
+                        .send_modify(|s| s.last_heartbeat = jiff::Timestamp::now().to_string());
                     continue;
                 }
                 let Message::Text(text) = message else {
@@ -320,6 +342,11 @@ impl<S: ReplicaState> Client<S> {
                 last = tokio::time::Instant::now();
                 self.status
                     .send_modify(|s| s.last_heartbeat = jiff::Timestamp::now().to_string());
+                if f.t == "ClockPong" {
+                    let sample = clock.complete(&f, jiff::Timestamp::now())?;
+                    self.status.send_modify(|s| s.clock_sample = Some(sample));
+                    continue;
+                }
                 if f.t == "CommandResponse" {
                     registration.session.deliver(&f)?;
                     continue;
@@ -338,6 +365,9 @@ impl<S: ReplicaState> Client<S> {
                 ack.credits = i64::try_from(text.len()).map_err(|_| Error::Invalid)?;
                 match f.t.as_str() {
                     "Welcome" => {
+                        if f.clock_protocol == "ntp/1" {
+                            clock.ping(&writer).await?;
+                        }
                         let scope: Vec<Grant> = f
                             .scope
                             .as_ref()
@@ -370,6 +400,7 @@ impl<S: ReplicaState> Client<S> {
                         self.authority.save_enrollment(enrollment.clone())?;
                         self.status.send_modify(|s| {
                             s.gateway_head = f.head;
+                            s.schema = f.schema;
                             s.mode.clone_from(&f.reason);
                             if f.reason == "resume" {
                                 s.resumes += 1;
@@ -393,6 +424,7 @@ impl<S: ReplicaState> Client<S> {
                         self.status.send_modify(|s| {
                             s.state = ConnectionState::Snapshot;
                             s.snapshot_pages = 0;
+                            s.snapshot_sequence = f.s;
                         });
                     }
                     "SnapshotPage" => {

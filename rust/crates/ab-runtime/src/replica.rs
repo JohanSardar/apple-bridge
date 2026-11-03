@@ -11,7 +11,7 @@ impl StateAdapter {
     }
 }
 fn state_error(error: ab_state::Error) -> Error {
-    Error::State(error.to_string())
+    Error::Storage(error)
 }
 fn cursor(value: ab_state::Cursor) -> Cursor {
     Cursor {

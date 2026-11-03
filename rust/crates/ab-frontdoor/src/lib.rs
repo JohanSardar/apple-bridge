@@ -14,6 +14,8 @@ use axum::{
     routing::{any, get, post},
 };
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
+#[cfg(feature = "lab-harness")]
+pub use mcp::golden_router;
 use serde::Serialize;
 use serde_json::json;
 use std::{
@@ -65,6 +67,7 @@ impl Frontdoor {
             .route("/v1/openapi.json", get(openapi))
             .route("/v1/op/{name}", post(invoke))
             .route("/v1/records/{collection}/{id}", get(record))
+            .route("/v1/blobs/{digest}", get(blob))
             .route("/v1/changes", get(changes))
             .route("/mcp", any(mcp::handle))
             .fallback(|| async { problem(Code::NotFound.into()) })
@@ -91,7 +94,7 @@ pub fn problem(error: Error) -> Response {
         Code::Unsupported => StatusCode::UNPROCESSABLE_ENTITY,
         _ => StatusCode::BAD_REQUEST,
     };
-    let raw = serde_json::to_vec(&json!({"error":error})).unwrap_or_else(|_| b"{\"error\":{\"code\":\"unavailable\",\"message\":\"peer unavailable\",\"retryable\":true}}".to_vec());
+    let raw = serde_json::to_vec(&ab_operations::Problem {error:&error}).unwrap_or_else(|_| b"{\"error\":{\"code\":\"unavailable\",\"message\":\"peer unavailable\",\"retryable\":true}}".to_vec());
     let mut response = raw_response(raw);
     *response.status_mut() = status;
     response
@@ -313,4 +316,61 @@ async fn changes(
                 .text("heartbeat"),
         )
         .into_response()
+}
+
+async fn blob(
+    State(frontdoor): State<Arc<Frontdoor>>,
+    Path(digest): Path<String>,
+    Query(query): Query<HashMap<String, String>>,
+    axum::Extension(principal): axum::Extension<Principal>,
+    headers: axum::http::HeaderMap,
+) -> Response {
+    let Some(record) = query.get("record") else {
+        return problem(Code::Invalid.into());
+    };
+    let current = match frontdoor.service.identity.current(&principal) {
+        Ok(p) => p,
+        Err(e) => return problem(e),
+    };
+    let result = if record.starts_with("qry_") {
+        let ab_operations::CommandTarget::Remote(target) = &frontdoor.service.target;
+        target.query_blob(&current, record, &digest).await
+    } else {
+        frontdoor
+            .service
+            .store
+            .blob(&current.visibility(), record, &digest)
+            .await
+    };
+    match result {
+        Ok(bytes) => blob_response(bytes, &headers),
+        Err(e) => problem(e),
+    }
+}
+
+fn blob_response(bytes: Vec<u8>, headers: &axum::http::HeaderMap) -> Response {
+    if let Some(range) = headers
+        .get(header::RANGE)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.strip_prefix("bytes="))
+        && let Some((start, end)) = range.split_once('-')
+        && let (Ok(start), Ok(end)) = (start.parse::<usize>(), end.parse::<usize>())
+        && start <= end
+        && end < bytes.len()
+    {
+        let total = bytes.len();
+        return (
+            StatusCode::PARTIAL_CONTENT,
+            [
+                (header::CONTENT_TYPE, "application/octet-stream".to_owned()),
+                (
+                    header::CONTENT_RANGE,
+                    format!("bytes {start}-{end}/{total}"),
+                ),
+            ],
+            bytes[start..=end].to_vec(),
+        )
+            .into_response();
+    }
+    ([(header::CONTENT_TYPE, "application/octet-stream")], bytes).into_response()
 }

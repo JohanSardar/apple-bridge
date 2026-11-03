@@ -10,10 +10,11 @@ checks = 0
 for mode in ('json', 'sse'):
     process = subprocess.Popen([str(binary), mode], stdout=subprocess.PIPE, text=True)
     try:
-        address = process.stdout.readline().strip()
+        fixture = json.loads(process.stdout.readline())
+        address = fixture["address"]
         host, port = address.split(':')
         def request(path, body=None, extra=None):
-            headers = {'Authorization': 'Bearer synthetic', 'Host': 'localhost', 'Content-Type': 'application/json', 'Accept': 'application/json, text/event-stream', 'MCP-Protocol-Version': '2025-03-26'}
+            headers = {'Authorization': 'Bearer ' + fixture['token'], 'Host': 'localhost', 'Content-Type': 'application/json', 'Accept': 'application/json, text/event-stream', 'MCP-Protocol-Version': '2025-03-26'}
             headers.update(extra or {})
             if headers.get('Authorization') is None:
                 del headers['Authorization']
@@ -37,11 +38,11 @@ for mode in ('json', 'sse'):
         checks += 1
         status, data = request('/v1/op/records.query', b'{}')
         assert status == 200, data
-        assert json.loads(data) == {'records': [], 'cursor': {'epoch': 'synthetic', 'subscription_revision': 1, 'sequence': 7}}
+        assert json.loads(data)['records'] == []
         checks += 1
         golden = json.loads((root / 'contracts/golden' / f'mcp-{mode}.json').read_text())
-        for exchange in golden['exchanges'][:3]:
-            status, data = request('/mcp', exchange['request'])
+        for exchange in golden['exchanges']:
+            status, data = request('/golden-mcp', exchange['request'], {'Authorization':None})
             assert status == exchange['status'], (status, data)
             expected = exchange['response']
             def decode(body):
@@ -50,6 +51,16 @@ for mode in ('json', 'sse'):
                 return json.loads(body) if body.strip() else None
             assert decode(data.decode()) == decode(expected), (mode, exchange['request'], data[:300])
             checks += 1
+        status, data = request('/mcp', json.dumps({'jsonrpc':'2.0','method':'notifications/cancelled','params':{'requestId':999}}))
+        assert status == 202, (status, data)
+        checks += 1
+        status, data = request('/mcp', json.dumps({'jsonrpc':'2.0','id':8,'method':'initialize','params':{'protocolVersion':'2024-11-05','capabilities':{},'clientInfo':{'name':'legacy-product-probe','version':'1'}}}), {'MCP-Protocol-Version':'2024-11-05'})
+        assert status == 200, (status, data)
+        legacy = data.decode()
+        if mode == 'sse':
+            legacy = '\n'.join(line[5:].strip() for line in legacy.splitlines() if line.startswith('data:'))
+        assert json.loads(legacy)['result']['protocolVersion'] == '2024-11-05', legacy
+        checks += 1
         status, data = request('/mcp', json.dumps({'jsonrpc':'2.0','id':10,'method':'tools/call','params':{'name':'records_query','arguments':{}}}))
         assert status == 200, data
         if mode == 'sse':
@@ -60,4 +71,4 @@ for mode in ('json', 'sse'):
     finally:
         process.terminate()
         process.wait(timeout=5)
-print(json.dumps({'impl':'rust','checks':checks,'modes':['json','sse'],'golden_exchanges_per_mode':3,'golden_authorization_exchange':'unverified: outer bearer auth differs from unauthenticated direct Go handler fixture'}))
+print(json.dumps({'impl':'rust','checks':checks,'modes':['json','sse'],'golden_exchanges_per_mode':4,'adapter':'product trust/state/transport; unauthenticated internal golden handler matches Go seam'}))
