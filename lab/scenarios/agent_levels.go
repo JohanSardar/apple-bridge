@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
-	"github.com/JohanSardar/apple-bridge/internal/trust"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 	"os"
 	"path/filepath"
@@ -14,15 +13,15 @@ import (
 )
 
 func runAgentLevels(ctx context.Context, w *world.World, c *webClient, e *Evidence, add func(string, bool)) {
-	authority, err := trust.Open(w.Gateway.Home)
+	_, err := w.GatewayCommand("agent", "list")
 	if err != nil {
 		add("authority", false)
 		return
 	}
-	create := func(level string) (trust.Agent, string) {
-		agent, token, err := authority.CreateAgent("Bridge Test "+level, trust.AgentLevel(level), []contracts.Grant{"messages:write"})
+	create := func(level string) string {
+		token, err := binaryAgentToken(w, "Bridge Test "+level, level, "messages:write")
 		add("create_"+level, err == nil && token != "")
-		return agent, token
+		return token
 	}
 	add("message_fixture", w.ControlAction("/messages", map[string]any{"action": "seed", "count": 0}) == nil)
 	var chats contracts.ReadResult
@@ -50,13 +49,13 @@ func runAgentLevels(ctx context.Context, w *world.World, c *webClient, e *Eviden
 		json.Unmarshal(raw, &r)
 		return r
 	}
-	_, readToken := create("read")
+	readToken := create("read")
 	readCommand := command()
 	code, _ := call(readToken, readCommand)
 	add("read_command_rejected", code == 401)
 	effects, _ := w.Effects()
 	add("read_no_effect", effects[readCommand.ID] == 0)
-	_, approveToken := create("")
+	approveToken := create("")
 	pending := command()
 	code, row := call(approveToken, pending)
 	add("default_awaiting_approval", code == 200 && row.State == contracts.CommandAwaitingApproval && row.Disposition == contracts.DispositionAwaitingApproval)
@@ -124,7 +123,7 @@ func runAgentLevels(ctx context.Context, w *world.World, c *webClient, e *Eviden
 	add("expired_original_request_executes_after_approval", err == nil && row.ExpiresAt.After(approvedAt) && row.ExpiresAt.After(durable.ExpiresAt))
 	e.Assertions[len(e.Assertions)-1].Detail = "state=" + string(row.State) + " disposition=" + string(row.Disposition)
 	runAgentReplicaBoundary(ctx, w, chats.Records[0].ID, command, add)
-	_, fullToken := create("full")
+	fullToken := create("full")
 	fullCommand := command()
 	code, row = call(fullToken, fullCommand)
 	add("full_executes_directly", code == 200 && row.State == contracts.CommandObserved)

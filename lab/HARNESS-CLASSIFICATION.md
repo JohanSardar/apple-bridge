@@ -360,3 +360,10 @@ The baseline table above remains a historical inventory, not a current pass coun
 `blob_journey.go` uses the frozen contract progress type and read-only post-migration inspection. CORE-BLOB-GC preserves offline legacy-index fault injection followed by selected-binary restart and migration, proved against Go with its existing assertions.
 
 Remaining P/D conversions are not complete. Concrete missing fixture contracts and their affected families are in `rust/interfaces/lab-world.md`. Product imports in the remaining files continue to block their Rust qualification; changing an inventory label does not convert a journey. Shadow tool semantics, reproducible synthetic proofs and unresolved live-run requirements are in `lab/shadow/README.md`.
+
+
+## G-E binary owner-session continuation
+
+`agent_access.go`, `agent_activity.go`, `agent_levels.go` and `agent_level_boundaries.go` now use the selected gateway/replica CLIs and normal software WebAuthn enrollment instead of opening Go Authority instances. Enrollment uses the frozen cookie name and owner tokens remain inside disposable homes. The same Go assertions pass for consent, OAuth, CIMD, capture observers, activity, levels and replica delegation. Activity-age and command-clock fixtures remain explicit lab-owned data faults; no product constructors implement them.
+
+Only WEB-AGENT-ACTIVITY and WEB-AGENT-LEVELS receive the new Rust-gateway SIM entry allowance. Their callback roots and common wire-client files are explicitly inventoried, avoiding unrelated branches of the shared web dispatcher while retaining import/semantic-helper checks. Their real-level and Rust-replica combinations remain outside this allowance. The existing rate-window function is preserved byte-for-byte in `web_rate_limits_fixture.go`; its Go Handler/RateClock coupling remains unconverted. WEB-AUTH-RATELIMIT and WEB-AUTH-SOFTWARE have no registered YAML in this tree; private attempts to run those dormant bodies failed their existing assertions and are not qualification evidence.

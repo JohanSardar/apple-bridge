@@ -30,6 +30,8 @@ def generate(manifest):
         swift_dependencies[name] = set(re.findall(r'"([^"]+)"', dependencies_text))
     selection = defaultdict(list)
     entries = []
+    callback_roots = {'WEB-AGENT-LEVELS': {'runAgentAccess', 'runAgentLevels'}, 'WEB-AGENT-ACTIVITY': {'runAgentActivity'}}
+    callback_helpers = {'lab/scenarios/web_server.go', 'lab/scenarios/web_authenticator.go', 'lab/scenarios/consent_activity.go'}
     for scenario in data['scenarios']:
         identity, feature = scenario['ID'], scenario['Feature']
         candidates = sorted(p for p in Path('lab/scenarios').rglob('*.yaml') if re.search(r'^id:\s*' + re.escape(identity) + r'\s*$', p.read_text(), re.M))
@@ -41,6 +43,8 @@ def generate(manifest):
             condition, root = match.groups()
             if '"' + identity + '"' in condition or '"' + feature + '"' in condition or any(identity.startswith(p) for p in re.findall(r'HasPrefix\(s.ID, "([^"]+)"', condition)):
                 roots.add(root)
+        if identity in callback_roots:
+            roots = callback_roots[identity]
         if not roots:
             roots.add('runScenario')
         reached = set()
@@ -52,7 +56,7 @@ def generate(manifest):
             reached.add(name)
             body = functions[name][1]
             pending.extend(n for n in re.findall(r'\b(\w+)\(', body) if n in functions and n not in reached)
-        paths = sorted({functions[n][0] for n in reached})
+        paths = sorted({functions[n][0] for n in reached} | (callback_helpers if identity in callback_roots else set()))
         imports = sorted({p for source in paths for p in re.findall(r'"github.com/JohanSardar/apple-bridge/(internal/[^\"]+)"', sources[source])})
         packages = set(imports)
         swift = set()
@@ -108,7 +112,8 @@ def generate(manifest):
         overrides = {
             'CORE-REPLICA-CAPTURE-OBSERVERS': ('convert', 'Capture-observer assertions use REST SSE, consent pages and replicated command records; convert remaining implementation imports before Rust qualification.'),
             'WEB-RM-THREAD-ORIGINATOR': ('convert', 'REST/MCP originator checks and REST SSE observers preserve filtered windows; retain binary execution for Rust qualification.'),
-            'WEB-AGENT-ACTIVITY': ('convert', 'Replace product state.Open activity inspection with a supported binary API or read-only SQLite oracle.'),
+            'WEB-AGENT-ACTIVITY': ('keep', 'Selected-binary CLI agents and software owner enrollment; read-only activity oracle and unchanged capture assertions.'),
+            'WEB-AGENT-LEVELS': ('keep', 'Selected gateway and replica CLIs plus software enrollment; unchanged approval, expiry and delegation assertions.'),
             'WEB-CAL-WRITE': ('convert', 'Stale browser-level metadata blocks SIM loading; preserve Calendar write assertions in the binary journey.'),
             'WEB-REM-PARITY': ('convert', 'Stale browser-level metadata blocks SIM loading; preserve Reminders parity assertions in the binary journey.'),
         }

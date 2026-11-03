@@ -5,33 +5,29 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
-	"github.com/JohanSardar/apple-bridge/internal/trust"
-	bridgeweb "github.com/JohanSardar/apple-bridge/internal/web"
 	"github.com/JohanSardar/apple-bridge/lab/world"
-	"net/http"
 	"net/url"
 	"os/exec"
 	"path/filepath"
-	"strings"
 )
 
 func runAgentActivity(ctx context.Context, w *world.World, add func(string, bool)) {
-	authority, err := trust.Open(w.Gateway.Home)
+	_, err := w.GatewayCommand("agent", "list")
 	if err != nil {
 		add("activity_authority", false)
 		return
 	}
-	agent, token, err := authority.CreateAgent("Bridge Test activity", trust.AgentRead, []contracts.Grant{"messages:write"})
+	created, err := binaryCreateAgent(w, w.Gateway, "Bridge Test activity", "read", "messages:write")
+	agent, token := created.Agent, created.Token
 	if err != nil {
 		add("activity_agent", false)
 		return
 	}
-	session, _, err := authority.CreateDeviceSession("trusted")
+	owner, err := binaryOwnerSession(ctx, w, "trusted")
 	if err != nil {
 		add("activity_owner", false)
 		return
 	}
-	owner := &webClient{home: w.Gateway.Home, ctx: ctx, origin: strings.Replace(w.Gateway.URL, "127.0.0.1", "localhost", 1), cookie: &http.Cookie{Name: bridgeweb.LocalSessionCookie, Value: session}}
 	principal := w.Gateway
 	principal.Token = token
 	var out map[string]any

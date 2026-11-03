@@ -69,6 +69,10 @@ func (w *World) CommandLedgerLossBlocked() bool {
 }
 
 func (w *World) GatewayCommand(args ...string) ([]byte, error) {
-	output, err := w.execute(false, w.bridge, append(args, "--home", w.Gateway.Home)...)
+	return w.EndpointCommand(w.Gateway, args...)
+}
+
+func (w *World) EndpointCommand(endpoint Endpoint, args ...string) ([]byte, error) {
+	output, err := w.execute(endpoint.Remote, w.endpointBinary(endpoint), append(args, "--home", endpoint.Home)...)
 	return []byte(output), err
 }
