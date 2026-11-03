@@ -29,6 +29,7 @@ NOTES_SCENARIOS = ['notes/NOTE-CRUD', 'notes/NOTE-RICH-REJECT', 'notes/NOTE-EXTE
 PIM_NATIVE_SCENARIOS = ['notes/NOTE-DECODE', 'mail/MAIL-CAPTURE', 'mail/MAIL-BODY', 'mail/MAIL-COMMANDS',
                         'mail/MAIL-IDLE', 'mail/MAIL-LIVE', 'mail/MAIL-NO-FALSE-DELETE']
 MEDIA_SCENARIOS = ['web/WEB-MEDIA-VARIANTS', 'messages/MSG-MEDIA-CLEANUP']
+WEB_RELAY_SCENARIOS = ['web/WEB-RELAY-AUTH', 'web/WEB-RELAY-PAIRING']
 WEB_RM_SCENARIOS = ['web/WEB-RM-MEDIA-COLLECTION', 'web/WEB-RM-SEARCH', 'web/WEB-RM-THREAD-ORIGINATOR',
                     'web/WEB-RM-THREAD-ORIGINATOR-PERF', 'web/WEB-RM-REMINDERS-DEMO']
 NATIVE_SCENARIOS = ['packaging/Q1-SETUP', 'packaging/R1-RELEASE-SIM', 'files/FILE-IDLE', 'files/FILE-CAPTURE',
@@ -116,6 +117,7 @@ def main():
     parser.add_argument('--messages-b', dest='messages_b', action='store_true')
     parser.add_argument('--messages-b-native', dest='messages_b_native', action='store_true')
     parser.add_argument('--web-rm', dest='web_rm', action='store_true')
+    parser.add_argument('--web-relay', dest='web_relay', action='store_true')
     parser.add_argument('--native', dest='native', action='store_true')
     parser.add_argument('--iphone', dest='iphone', action='store_true')
     parser.add_argument('--maps', dest='maps', action='store_true')
@@ -153,6 +155,8 @@ def main():
         args.scenario = (args.scenario or []) + MESSAGES_A_COMMAND_SCENARIOS
     if args.media:
         args.scenario = (args.scenario or []) + MEDIA_SCENARIOS
+    if args.web_relay:
+        args.scenario = (args.scenario or []) + WEB_RELAY_SCENARIOS
     if args.web_rm:
         args.scenario = (args.scenario or []) + WEB_RM_SCENARIOS
     if args.native:

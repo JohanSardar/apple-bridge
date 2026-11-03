@@ -68,6 +68,7 @@ pub mod threads;
 pub mod usage;
 pub mod vision;
 pub mod watch;
+pub mod web_relay;
 pub mod webauthn;
 use lab_runner::Registry;
 use lab_world::Error;
@@ -155,6 +156,7 @@ pub fn registry() -> Registry {
         evidence.check("world_started", true, "gateway and SimApple peer ready");
         Ok(())
     });
+    registry.register("web", web_relay::web_relay);
     registry.register("queries", |world, input, evidence| {
         if maps::SIM.contains(&evidence.scenario.as_str()) {
             maps::sim(world, evidence)

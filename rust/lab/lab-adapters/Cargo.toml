@@ -13,6 +13,7 @@ lab-world = { path = "../lab-world" }
 lab-runner = { path = "../lab-runner" }
 lab-wire = { path = "../lab-wire" }
 lab-demo = { path = "../lab-demo" }
+lab-relay = { path = "../lab-relay" }
 jiff.workspace = true
 serde_json.workspace = true
 sha2.workspace = true

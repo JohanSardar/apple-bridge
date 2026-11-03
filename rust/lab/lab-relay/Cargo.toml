@@ -1,0 +1,24 @@
+[package]
+name = "lab-relay"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+[lints]
+workspace = true
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+sha2.workspace = true
+hmac = "0.12"
+hex = "0.4"
+base64 = "0.22"
+data-encoding = "2"
+rand = "0.8"
+rustls.workspace = true
+tungstenite = { version = "0.28", default-features = false, features = ["handshake"] }
+rcgen = "0.14"
+x509-parser = "0.18"
+ed25519-dalek = { workspace = true, features = ["pkcs8", "pem"] }
+jiff.workspace = true
+time = "0.3"

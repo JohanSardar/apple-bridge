@@ -55,39 +55,42 @@ impl Arguments {
                 } else {
                     (flag.to_owned(), args.next().ok_or(Error::Invalid)?)
                 };
-                if ![
-                    "home",
-                    "host",
-                    "public",
-                    "helper-app",
-                    "helper-lab-commands",
-                    "via",
-                    "name",
-                    "level",
-                    "expires-in",
-                    "request",
-                    "code",
-                    "dial-replica",
-                    "iphone",
-                    "via-remote",
-                    "backup",
-                    "accept-ledger-loss",
-                    "role",
-                    "listen",
-                    "api-addr",
-                    "peer-addr",
-                    "socket",
-                    "scope",
-                    "remote",
-                    "blob-cap",
-                    "blob-grace-ms",
-                    "retention-rows",
-                    "retention-age",
-                    "pack",
-                    "no-ui",
-                    "force",
-                ]
-                .contains(&key.as_str())
+                let lab_flag =
+                    cfg!(feature = "lab-harness") && ["id", "fingerprint"].contains(&key.as_str());
+                if !lab_flag
+                    && ![
+                        "home",
+                        "host",
+                        "public",
+                        "helper-app",
+                        "helper-lab-commands",
+                        "via",
+                        "name",
+                        "level",
+                        "expires-in",
+                        "request",
+                        "code",
+                        "dial-replica",
+                        "iphone",
+                        "via-remote",
+                        "backup",
+                        "accept-ledger-loss",
+                        "role",
+                        "listen",
+                        "api-addr",
+                        "peer-addr",
+                        "socket",
+                        "scope",
+                        "remote",
+                        "blob-cap",
+                        "blob-grace-ms",
+                        "retention-rows",
+                        "retention-age",
+                        "pack",
+                        "no-ui",
+                        "force",
+                    ]
+                    .contains(&key.as_str())
                 {
                     return Err(Error::Invalid);
                 }
@@ -337,6 +340,10 @@ async fn run() -> Result<(), Error> {
         "lab-credential-lifecycle" => {
             ab_runtime::inspection::credential_lifecycle(&home)?;
         }
+        #[cfg(feature = "lab-harness")]
+        "lab-session" => lab_session(&authority)?,
+        #[cfg(feature = "lab-harness")]
+        "lab-principal" => lab_principal(&args, &authority)?,
         "start" => {
             let config = args.config(home)?;
             ab_runtime::start(config, authority).await?;
@@ -346,6 +353,41 @@ async fn run() -> Result<(), Error> {
     Ok(())
 }
 
+fn remote_address(home: &std::path::Path) -> Result<String, Error> {
+    #[cfg(feature = "lab-harness")]
+    if let Some(address) = std::env::var_os("APPLE_BRIDGE_LAB_PAIR_URL") {
+        return address.into_string().map_err(|_| Error::Invalid);
+    }
+    let status: serde_json::Value = ab_remote::state::read(home, "status")?;
+    if status["state"] != "on" {
+        return Err(ab_trust::Error::Unavailable.into());
+    }
+    Ok(status["url"].as_str().ok_or(Error::Invalid)?.to_owned())
+}
+#[cfg(feature = "lab-harness")]
+fn lab_session(authority: &ab_trust::Authority) -> Result<(), Error> {
+    let (session, _) = authority.create_device_session("trusted")?;
+    println!(
+        "{}",
+        serde_json::json!({"name":"ab_session_local","value":session})
+    );
+    Ok(())
+}
+#[cfg(feature = "lab-harness")]
+fn lab_principal(args: &Arguments, authority: &ab_trust::Authority) -> Result<(), Error> {
+    let id = args.flag("id", "");
+    let fingerprint = args.flag("fingerprint", "");
+    let principal = match (id.is_empty(), fingerprint.is_empty()) {
+        (false, true) => authority.principal(&id)?,
+        (true, false) => authority.principal_by_fingerprint(&fingerprint)?,
+        _ => return Err(Error::Invalid),
+    };
+    println!(
+        "{}",
+        serde_json::json!({"id":principal.id,"kind":principal.kind,"fingerprint":principal.fingerprint,"grants":principal.grants,"revision":principal.revision,"relay2":principal.relay2()})
+    );
+    Ok(())
+}
 fn grants(args: &Arguments) -> Result<Vec<ab_trust::Grant>, Error> {
     args.flag("scope", "reminders:read,system:read")
         .split(',')
@@ -469,16 +511,13 @@ fn manage(
                 );
             } else {
                 if args.flag("via-remote", "false") == "true" {
-                    let status: serde_json::Value = ab_remote::state::read(home, "status")?;
-                    if status["state"] != "on" {
-                        return Err(ab_trust::Error::Unavailable.into());
+                    if args.flags.contains_key("peer-addr")
+                        || args.flags.contains_key("dial-replica")
+                    {
+                        return Err(Error::Invalid);
                     }
-                    let address = status["url"].as_str().ok_or(Error::Invalid)?;
-                    let raw = authority.pair_with_ttl(address, "", grants(args)?, ttl)?;
-                    let mut code = ab_trust::PairCode::decode(&raw)?;
-                    code.remote = true;
-                    let bytes = serde_json::to_vec(&code)?;
-                    println!("ab1-{}", data_encoding::BASE32_NOPAD.encode(&bytes));
+                    let address = remote_address(home)?;
+                    println!("{}", authority.pair_remote(&address, grants(args)?, ttl)?);
                     return Ok(true);
                 }
                 println!(
