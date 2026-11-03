@@ -523,7 +523,13 @@ impl NotesReader {
                 scan_id: context.scan_id.clone(),
             },
             coverage: serde_json::json!({}),
-            facts: notes_reader::Facts::default(),
+            facts: notes_reader::Facts {
+                mime: std::collections::BTreeMap::from([(
+                    "com.apple.notes.inlinetextattachment.hashtag".to_owned(),
+                    None,
+                )]),
+                ..notes_reader::Facts::default()
+            },
             asset_paths: Vec::new(),
         })
     }

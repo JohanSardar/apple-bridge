@@ -483,6 +483,9 @@ func newEnvironment(ctx context.Context, level string, replicas, seed int, nativ
 			return (&net.Dialer{}).DialContext(ctx, "unix", control)
 		}}
 		w.Control = &http.Client{Transport: transport, Timeout: 5 * time.Second}
+		if w.sessionRoots["notes"] != "" {
+			w.startSessionNotes()
+		}
 		if err = w.Await(10*time.Second, func() bool {
 			if restored != "" {
 				response, err := w.Control.Get("http://sim/stats")
@@ -554,6 +557,7 @@ func freeAddress() (string, error) {
 	return address, nil
 }
 func (w *World) Close() {
+	w.stopSessionNotes()
 	w.recordCaptureMetrics()
 	if w.nativeCleanup != nil {
 		cleanup := w.nativeCleanup
@@ -647,12 +651,6 @@ func (w *World) RestartReplica(index int) error {
 	return err
 }
 func (w *World) ControlAction(path string, action any) error {
-	if path == "/external-change" && w.sessionRoots["notes"] != "" {
-		if err := w.stageSessionNotes(action); err != nil {
-			fmt.Fprintf(os.Stderr, "lab session notes: %v\n", err)
-			return err
-		}
-	}
 	if path == "/usage" && w.sessionRoots["usage"] != "" {
 		if err := w.stageSessionUsage(action); err != nil {
 			fmt.Fprintf(os.Stderr, "lab session usage: %v\n", err)
@@ -668,6 +666,11 @@ func (w *World) ControlAction(path string, action any) error {
 	err := w.controlAction(w.Control, path, action)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "lab control %s: %v\n", path, err)
+	}
+	if err == nil && path == "/external-change" && w.sessionRoots["notes"] != "" {
+		if problem := w.syncSessionNotes(); problem != nil {
+			fmt.Fprintf(os.Stderr, "lab session notes: %v\n", problem)
+		}
 	}
 	return err
 }

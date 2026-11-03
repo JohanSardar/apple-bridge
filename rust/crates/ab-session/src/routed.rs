@@ -54,6 +54,7 @@ struct Flight {
     rust: bool,
     last: bool,
     covers: Covers,
+    keys: Vec<String>,
 }
 
 type Covers = Vec<(String, u64)>;
@@ -69,6 +70,9 @@ struct Shared {
     committed: BTreeMap<String, (String, String)>,
     flights: BTreeMap<String, Flight>,
     saved: BTreeMap<String, String>,
+    sequence: u64,
+    observed: BTreeMap<String, (String, u64)>,
+    dispatched: BTreeMap<String, u64>,
 }
 
 #[derive(Debug)]
@@ -249,11 +253,84 @@ fn register(
         rust: false,
         last: true,
         covers: Vec::new(),
+        keys: Vec::new(),
     };
     if shared.flights.insert(source.to_owned(), flight).is_some() {
         return Err(Error::Conflict);
     }
     Ok(())
+}
+
+fn capture_keys(capture: &Value) -> Vec<String> {
+    capture["observations"]
+        .as_array()
+        .map(|rows| {
+            rows.iter()
+                .filter_map(|row| row["native_key"].as_str().map(str::to_owned))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn note_dispatch(shared: &mut Shared, value: &Value) {
+    let sequence = shared.sequence;
+    if let Some(id) = value["command_id"].as_str() {
+        shared.dispatched.insert(id.to_owned(), sequence);
+    }
+}
+
+fn note_observed(shared: &mut Shared, flight: &Flight) {
+    shared.sequence += 1;
+    let sequence = shared.sequence;
+    for key in &flight.keys {
+        shared
+            .observed
+            .insert(key.clone(), (flight.checkpoint.clone(), sequence));
+    }
+}
+
+fn bind_outcome(gate: &Gate, value: &mut Value) -> Result<bool, Error> {
+    let key = match value["evidence"]["native_key"].as_str() {
+        Some(key) if value["evidence"]["capture_checkpoint"].is_string() => key.to_owned(),
+        _ => return Ok(false),
+    };
+    let mut shared = gate.lock()?;
+    let after = value["command_id"]
+        .as_str()
+        .and_then(|id| shared.dispatched.remove(id))
+        .unwrap_or(shared.sequence);
+    let deadline = std::time::Instant::now() + Duration::from_secs(15);
+    loop {
+        if let Some((checkpoint, sequence)) = shared.observed.get(&key)
+            && *sequence > after
+        {
+            value["evidence"]["capture_checkpoint"] = Value::String(checkpoint.clone());
+            return Ok(true);
+        }
+        if shared.closed || std::time::Instant::now() >= deadline {
+            return Ok(false);
+        }
+        shared = gate
+            .changed
+            .wait_timeout(shared, Duration::from_millis(50))
+            .map_err(|_| Error::WorkerPanicked)?
+            .0;
+    }
+}
+
+fn forward_outcome(
+    gate: &Gate,
+    to_gateway: &Mutex<UnixStream>,
+    value: &mut Value,
+) -> Result<bool, Error> {
+    if !bind_outcome(gate, value)? {
+        return Ok(false);
+    }
+    send(
+        &mut *to_gateway.lock().map_err(|_| Error::WorkerPanicked)?,
+        value,
+    )?;
+    Ok(true)
 }
 
 fn send_scan(
@@ -315,6 +392,7 @@ fn send_scan(
                 } else {
                     Vec::new()
                 },
+                keys: capture_keys(&chunk),
             },
         );
         drop(shared);
@@ -564,6 +642,9 @@ fn gateway_frame(
                 (flight.generation.clone(), flight.checkpoint.clone()),
             );
             drop(shared);
+            if flight.rust {
+                note_observed(&mut *gate.lock()?, &flight);
+            }
             gate.changed.notify_all();
             if flight.rust {
                 if flight.last {
@@ -578,6 +659,10 @@ fn gateway_frame(
                 }
                 return Ok(false);
             }
+            Ok(true)
+        }
+        Some("Dispatch") => {
+            note_dispatch(&mut *gate.lock()?, value);
             Ok(true)
         }
         _ => Ok(true),
@@ -680,7 +765,7 @@ pub fn relay_layered(
         });
         let result = (|| -> Result<(), Error> {
             loop {
-                let (bytes, value) = read_frame(&mut helper_read)?;
+                let (bytes, mut value) = read_frame(&mut helper_read)?;
                 match value["t"].as_str() {
                     Some("Capture") => {
                         let source = text(&value, "source")?;
@@ -701,6 +786,14 @@ pub fn relay_layered(
                             continue;
                         }
                         register(&gate, source, generation, checkpoint, size)?;
+                    }
+                    Some("Outcome") if !rust.is_empty() => {
+                        if forward_outcome(&gate, &to_gateway, &mut value)? {
+                            if let Some(layer) = layer {
+                                layer.helper(&value, bytes.len())?;
+                            }
+                            continue;
+                        }
                     }
                     Some("Ready") => {
                         if let Some(layer) = layer {

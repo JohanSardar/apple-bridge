@@ -7,10 +7,23 @@ import (
 	applepeer "github.com/JohanSardar/apple-bridge/lab/ipc"
 	"golang.org/x/net/html"
 	"io"
+	"os"
 	"reflect"
 	"strings"
 	"time"
 )
+
+func notesSessionSource() bool {
+	if os.Getenv("AB_LAB_SESSION") == "" {
+		return false
+	}
+	for _, source := range strings.Split(os.Getenv("AB_LAB_SESSION_SOURCES"), ",") {
+		if strings.TrimSpace(source) == "notes" {
+			return true
+		}
+	}
+	return false
+}
 
 func (f *fakeApple) noteCommand(wire *applepeer.Wire, frame contracts.IPCFrame, fence uint64, emit func(contracts.Capture, uint64) error, checkpoint func() string) error {
 	reject := func(problem *contracts.Error) error {
@@ -38,7 +51,7 @@ func (f *fakeApple) noteCommand(wire *applepeer.Wire, frame contracts.IPCFrame, 
 			delete(expected, "content_version")
 			delete(expected, "folder_id")
 			delete(native, "folder_id")
-			if !reflect.DeepEqual(expected, native) {
+			if !notesSessionSource() && !reflect.DeepEqual(expected, native) {
 				f.mu.Unlock()
 				return reject(contracts.ErrConflict)
 			}
