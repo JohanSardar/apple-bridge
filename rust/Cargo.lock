@@ -2481,6 +2481,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "lab-probe"
+version = "0.0.0"
+dependencies = [
+ "lab-relay",
+ "rustls",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "webpki-roots 1.0.11",
+]
+
+[[package]]
 name = "lab-relay"
 version = "0.0.0"
 dependencies = [

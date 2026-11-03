@@ -1,0 +1,18 @@
+[package]
+name = "lab-probe"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+[lints]
+workspace = true
+[[bin]]
+name = "lab-probe"
+path = "src/main.rs"
+[dependencies]
+serde.workspace = true
+webpki-roots = "1"
+serde_json.workspace = true
+thiserror.workspace = true
+rustls.workspace = true
+[dev-dependencies]
+lab-relay = { path = "../lab-relay" }
