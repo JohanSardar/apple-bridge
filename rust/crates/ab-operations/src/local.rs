@@ -1482,8 +1482,8 @@ fn resolvable(r: &CommandRecord) -> bool {
                     }))
 }
 #[cfg(test)]
-#[path = "local_races.rs"]
-mod races;
-#[cfg(test)]
 #[path = "local_evidence.rs"]
 mod evidence;
+#[cfg(test)]
+#[path = "local_races.rs"]
+mod races;

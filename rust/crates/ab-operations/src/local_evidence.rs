@@ -11,7 +11,8 @@ fn prepared_evidence_uses_go_struct_order() {
 
 #[test]
 fn clipboard_arguments_are_still_redacted() {
-    let record = serde_json::json!({"command": {"op": "mac.clipboard_write", "args": {"text": "secret"}}});
+    let record =
+        serde_json::json!({"command": {"op": "mac.clipboard_write", "args": {"text": "secret"}}});
     let redacted = raw(&record).unwrap();
     assert!(!redacted.get().contains("secret"));
 }
