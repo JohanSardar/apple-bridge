@@ -72,7 +72,9 @@ pub enum Error {
     #[error("invalid replica configuration")]
     Invalid,
 }
-pub(crate) fn tolerate_capacity<T>(result: Result<T, OperationError>) -> Result<(), OperationError> {
+pub(crate) fn tolerate_capacity<T>(
+    result: Result<T, OperationError>,
+) -> Result<(), OperationError> {
     match result {
         Err(error) if error.code == Code::Capacity => Ok(()),
         other => other.map(|_| ()),
