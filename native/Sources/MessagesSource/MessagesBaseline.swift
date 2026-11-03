@@ -4,8 +4,8 @@ import Decoders
 
 final class MessagesBaseline {
     private var connection: OpaquePointer?
-    init(path: String) throws {
-        let directory = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/AppleBridge/messages", isDirectory: true)
+    init(path: String, home: URL = FileManager.default.homeDirectoryForCurrentUser) throws {
+        let directory = home.appendingPathComponent("Library/Application Support/AppleBridge/messages", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let url = directory.appendingPathComponent(BodyDigest.hash(Data(path.utf8)) + ".sqlite")
         if !FileManager.default.fileExists(atPath: url.path) { _ = FileManager.default.createFile(atPath: url.path, contents: nil, attributes: [.posixPermissions: 0o600]) }
