@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"github.com/JohanSardar/apple-bridge/internal/publichttp"
 	"io"
@@ -19,6 +20,8 @@ import (
 )
 
 type ClientMetadataFetcher struct {
+	TLSConfig   *tls.Config
+	Now         func() time.Time
 	Resolve     func(context.Context, string) ([]net.IPAddr, error)
 	Transport   http.RoundTripper
 	DialContext func(context.Context, string, string) (net.Conn, error)
@@ -48,6 +51,10 @@ func (f *ClientMetadataFetcher) addresses(ctx context.Context, host string) ([]n
 }
 func (f *ClientMetadataFetcher) Fetch(ctx context.Context, id, redirect string) (trust.OAuthClient, error) {
 	empty := trust.OAuthClient{}
+	now := time.Now
+	if f.Now != nil {
+		now = f.Now
+	}
 	u, err := metadataURL(id)
 	if err != nil {
 		return empty, err
@@ -55,7 +62,7 @@ func (f *ClientMetadataFetcher) Fetch(ctx context.Context, id, redirect string) 
 	f.mu.Lock()
 	entry, ok := f.cache[id]
 	f.mu.Unlock()
-	if ok && time.Now().Before(entry.expires) {
+	if ok && now().Before(entry.expires) {
 		if !slices.Contains(entry.client.RedirectURIs, redirect) {
 			return empty, contracts.ErrInvalid
 		}
@@ -68,7 +75,7 @@ func (f *ClientMetadataFetcher) Fetch(ctx context.Context, id, redirect string) 
 	}
 	transport := f.Transport
 	if transport == nil {
-		client, close := (&publichttp.Guard{Resolve: f.Resolve, DialContext: f.DialContext}).Client()
+		client, close := (&publichttp.Guard{Resolve: f.Resolve, DialContext: f.DialContext, TLSConfig: f.TLSConfig}).Client()
 		defer close()
 		transport = client.Transport
 	}
@@ -133,7 +140,7 @@ func (f *ClientMetadataFetcher) Fetch(ctx context.Context, id, redirect string) 
 		if len(f.cache) >= 1000 {
 			clear(f.cache)
 		}
-		f.cache[id] = clientMetadataEntry{c, time.Now().Add(ttl)}
+		f.cache[id] = clientMetadataEntry{c, now().Add(ttl)}
 		f.mu.Unlock()
 	}
 	return c, nil

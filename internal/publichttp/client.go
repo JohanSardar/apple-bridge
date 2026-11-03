@@ -2,6 +2,7 @@ package publichttp
 
 import (
 	"context"
+	"crypto/tls"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"net"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 )
 
 type Guard struct {
+	TLSConfig   *tls.Config
 	Resolve     func(context.Context, string) ([]net.IPAddr, error)
 	DialContext func(context.Context, string, string) (net.Conn, error)
 }
@@ -59,7 +61,7 @@ func URL(raw string) (*url.URL, error) {
 	return u, nil
 }
 func (f *Guard) Client() (*http.Client, func()) {
-	t := &http.Transport{DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
+	t := &http.Transport{TLSClientConfig: f.TLSConfig, DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
 		host, port, e := net.SplitHostPort(address)
 		if e != nil {
 			return nil, e
