@@ -65,6 +65,10 @@ type NativeSetup struct {
 
 type World struct {
 	GatewayEnv        []string
+	sessionEnv        []string
+	sessionSocket     string
+	sessionRoots      map[string]string
+	sessionUsage      map[string]*sessionDevice
 	fixtureCopyMethod string
 	dialCode          string
 	remoteExtraHomes  []string
@@ -161,6 +165,9 @@ func (w *World) start(name string, remote bool, home string, binary string, args
 		return nil, err
 	}
 	cmd := exec.Command(binary, args...)
+	if name == "session" {
+		cmd.Env = append(os.Environ(), w.sessionEnv...)
+	}
 	if name == "gateway" {
 		cmd.Env = append(os.Environ(), w.GatewayEnv...)
 		if w.blobOptions.Corrupt {
@@ -456,7 +463,11 @@ func newEnvironment(ctx context.Context, level string, replicas, seed int, nativ
 	w.Gateway = Endpoint{Impl: ImplementationSelection(ctx).Gateway, Binary: gatewayBinary, URL: "http://" + cfg.APIAddress, Host: cfg.APIAddress, Token: token, Home: gatewayHome}
 	if !native {
 		control := filepath.Join(w.Dir, "sim.sock")
-		simArgs := []string{"simapple", "--socket", cfg.Socket, "--secret-file", filepath.Join(gatewayHome, "apple-secret"), "--control", control}
+		helperSocket, err := w.startSession(ctx, cfg.Socket)
+		if err != nil {
+			return nil, err
+		}
+		simArgs := []string{"simapple", "--socket", helperSocket, "--secret-file", filepath.Join(gatewayHome, "apple-secret"), "--control", control}
 		if legacy, _ := ctx.Value(legacyHelperKey{}).(bool); legacy {
 			simArgs = append(simArgs, "--legacy-sources")
 		}
@@ -629,6 +640,12 @@ func (w *World) RestartReplica(index int) error {
 	return err
 }
 func (w *World) ControlAction(path string, action any) error {
+	if path == "/usage" && w.sessionRoots["usage"] != "" {
+		if err := w.stageSessionUsage(action); err != nil {
+			fmt.Fprintf(os.Stderr, "lab session usage: %v\n", err)
+			return err
+		}
+	}
 	err := w.controlAction(w.Control, path, action)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "lab control %s: %v\n", path, err)

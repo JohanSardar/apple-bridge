@@ -1,12 +1,13 @@
 use crate::{
     Error,
+    frame::{read_frame, send, text},
     guard::{DispatchGuard, PreparedEffect},
 };
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::{
     collections::BTreeMap,
-    io::{Read, Write},
+    io::Write,
     net::Shutdown,
     os::unix::net::UnixStream,
     path::Path,
@@ -18,7 +19,6 @@ use std::{
     time::{Duration, Instant},
 };
 
-const MAX_FRAME: usize = 262_144;
 const EFFECT_QUERIES: &[&str] = &[
     "media.derive",
     "vision.ocr",
@@ -43,41 +43,6 @@ const EFFECT_QUERIES: &[&str] = &[
     "mac.recognize_song",
     "mac.iwork_export",
 ];
-
-fn read_frame(stream: &mut UnixStream) -> Result<(Vec<u8>, Value), Error> {
-    let mut header = [0; 4];
-    stream.read_exact(&mut header)?;
-    let size = usize::try_from(u32::from_be_bytes(header)).map_err(|_| Error::Invalid)?;
-    if size == 0 || size > 1_114_112 {
-        return Err(Error::Invalid);
-    }
-    let mut bytes = vec![0; size];
-    stream.read_exact(&mut bytes)?;
-    let value: Value = serde_json::from_slice(&bytes)?;
-    if !value.is_object()
-        || value["t"].as_str().is_none()
-        || (size > MAX_FRAME && value["t"] != "QueryResult")
-    {
-        return Err(Error::Invalid);
-    }
-    let mut frame = header.to_vec();
-    frame.extend(bytes);
-    Ok((frame, value))
-}
-
-fn send(stream: &mut UnixStream, value: &Value) -> Result<(), Error> {
-    let bytes = serde_json::to_vec(value)?;
-    if bytes.is_empty() || bytes.len() > MAX_FRAME {
-        return Err(Error::Invalid);
-    }
-    stream.write_all(
-        &u32::try_from(bytes.len())
-            .map_err(|_| Error::Invalid)?
-            .to_be_bytes(),
-    )?;
-    stream.write_all(&bytes)?;
-    Ok(())
-}
 
 pub fn request_hash(args: &Value) -> Result<String, Error> {
     fn valid(value: &Value) -> bool {
@@ -199,13 +164,6 @@ impl State {
         }
         Ok(())
     }
-}
-
-fn text<'a>(value: &'a Value, field: &str) -> Result<&'a str, Error> {
-    value[field]
-        .as_str()
-        .filter(|v| !v.is_empty())
-        .ok_or(Error::Invalid)
 }
 
 fn correlate(state: &State, evidence: &Value, command: &Value, after: u64) -> Option<Value> {

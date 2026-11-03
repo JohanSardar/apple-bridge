@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	"github.com/JohanSardar/apple-bridge/lab/world"
 	"math"
 	"os"
 	"os/exec"
@@ -104,5 +105,5 @@ for name in ['History.db','CloudTabs.db']:
 	if !e.Passed {
 		return e
 	}
-	return safariGateway(ctx, e, observations)
+	return safariGateway(world.WithSessionRoot(ctx, "safari", dir), e, observations)
 }

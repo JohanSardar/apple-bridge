@@ -2,10 +2,16 @@
 
 #[cfg(feature = "rust-effects")]
 pub mod effects;
+#[cfg(any(feature = "rust-effects", feature = "rust-capture"))]
+mod frame;
 #[cfg(feature = "rust-effects")]
 pub mod guard;
 pub mod ownership;
 pub mod proxy;
+#[cfg(feature = "rust-capture")]
+pub mod readers;
+#[cfg(feature = "rust-capture")]
+pub mod routed;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -19,6 +25,8 @@ pub enum Error {
     Conflict,
     #[error("dispatch already started")]
     AlreadyStarted,
+    #[error("source reader: {0}")]
+    Reader(String),
     #[error("session worker panicked")]
     WorkerPanicked,
 }

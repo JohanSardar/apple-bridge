@@ -10,8 +10,10 @@ workspace = true
 [features]
 default = []
 rust-effects = ["dep:sha2", "dep:jiff"]
+rust-capture = ["dep:ab-native"]
 
 [dependencies]
+ab-native = { path = "../ab-native", optional = true }
 ab-sys = { path = "../ab-sys" }
 serde.workspace = true
 serde_json.workspace = true
@@ -19,3 +21,6 @@ thiserror.workspace = true
 
 sha2 = { workspace = true, optional = true }
 jiff = { workspace = true, optional = true }
+
+[dev-dependencies]
+rusqlite.workspace = true

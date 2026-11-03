@@ -67,6 +67,25 @@ impl Selection {
         Ok(())
     }
 
+    pub fn rust_sources(&self) -> Vec<SourceId> {
+        self.sources
+            .iter()
+            .filter(|(_, producer)| **producer == Producer::Rust)
+            .map(|(source, _)| source.clone())
+            .collect()
+    }
+
+    pub fn validate_routed(&self, supported: &[&str]) -> Result<(), Error> {
+        if self
+            .rust_sources()
+            .iter()
+            .any(|source| !supported.contains(&source.0.as_str()))
+        {
+            return Err(Error::Conflict);
+        }
+        Ok(())
+    }
+
     pub fn validate_proxy(&self) -> Result<(), Error> {
         if self.sources.values().any(|p| *p == Producer::Rust) {
             return Err(Error::Conflict);
