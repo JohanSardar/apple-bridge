@@ -28,7 +28,7 @@ impl Cursor {
             sequence: value["sequence"].as_u64().unwrap_or(0),
         }
     }
-    fn event_id(&self) -> String {
+    pub(crate) fn event_id(&self) -> String {
         let raw = json!({
             "epoch": self.epoch,
             "subscription_revision": self.revision,
