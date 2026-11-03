@@ -73,6 +73,7 @@ type World struct {
 	sessionRoots      map[string]string
 	sessionUsage      map[string]*sessionDevice
 	sessionNotes      *sessionNotes
+	sessionMail       sessionMailStore
 	fixtureCopyMethod string
 	dialCode          string
 	remoteExtraHomes  []string
@@ -655,6 +656,12 @@ func (w *World) ControlAction(path string, action any) error {
 	if path == "/usage" && w.sessionRoots["usage"] != "" {
 		if err := w.stageSessionUsage(action); err != nil {
 			fmt.Fprintf(os.Stderr, "lab session usage: %v\n", err)
+			return err
+		}
+	}
+	if path == "/dataset" && w.sessionRoots["mail"] != "" {
+		if err := w.stageSessionMail(action); err != nil {
+			fmt.Fprintf(os.Stderr, "lab session mail: %v\n", err)
 			return err
 		}
 	}

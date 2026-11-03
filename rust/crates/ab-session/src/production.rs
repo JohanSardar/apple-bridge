@@ -13,6 +13,7 @@ use std::{
 };
 
 pub const SUPPORTED: &[&str] = &[
+    "mail",
     "safari",
     "usage",
     "notes",
