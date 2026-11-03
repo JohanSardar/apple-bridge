@@ -28,6 +28,8 @@ IPHONE_SCENARIOS = ['iphone/APP-ALARM-SIM', 'iphone/APP-SHELL-SIM', 'iphone/APP-
 RELAY_SCENARIOS = ['RELAY-ENROLL', 'RELAY-PASSTHROUGH', 'RELAY-LIMITS', 'RELAY-ROTATE-GATED']
 REMINDER_SCENARIOS = ['REM-CONFLICT', 'REM-EXTERNAL-RACE', 'REM-NATIVE-LIST-RACE', 'REM-OPERATION-SHAPES',
                       'REM-READONLY-LIST']
+MAC_SCENARIOS = ['mac/MAC-ACTIONS', 'mac/MAC-COMMANDS', 'mac/MAC-CAPTURE', 'mac/MAC-IDLE',
+                 'mac/MAC-EXTRAS-SIM', 'mac/IWORK-REAL']
 SCENARIOS = ['CORE-QUERY-ROUNDTRIP', 'CORE-QUERY-BLOB', 'CORE-QUERY-SCOPE', 'CORE-QUERY-DEADLINE',
              *JOURNEY_SCENARIOS, *CORE_SCENARIOS]
 
@@ -63,6 +65,7 @@ def main():
     parser.add_argument('--shortcuts', dest='shortcuts', action='store_true')
     parser.add_argument('--relay', dest='relay', action='store_true')
     parser.add_argument('--reminders', dest='reminders', action='store_true')
+    parser.add_argument('--mac', dest='mac', action='store_true')
     args = parser.parse_args()
     if args.shortcuts:
         args.scenario = (args.scenario or []) + SHORTCUT_SCENARIOS
@@ -82,6 +85,8 @@ def main():
         args.scenario = (args.scenario or []) + RELAY_SCENARIOS
     if args.reminders:
         args.scenario = (args.scenario or []) + REMINDER_SCENARIOS
+    if args.mac:
+        args.scenario = (args.scenario or []) + MAC_SCENARIOS
     out = Path(args.output).resolve()
     out.mkdir(mode=0o700, parents=True, exist_ok=False)
     root = Path(__file__).resolve().parents[2] / 'lab' / 'scenarios'

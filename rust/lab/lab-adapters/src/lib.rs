@@ -13,6 +13,8 @@ pub mod iphone_real;
 pub mod journey;
 pub mod labcore;
 pub mod live;
+pub mod mac;
+pub mod mac_real;
 pub mod media;
 pub mod messages_a;
 pub mod packaging;
@@ -103,5 +105,6 @@ pub fn registry() -> Registry {
     registry.register("command_journey", journey::command_journey);
     registry.register("files_transform", shortcuts::files_transform);
     registry.register("shortcuts_actions", shortcuts::shortcuts_actions);
+    registry.register("mac", mac::mac);
     registry
 }
