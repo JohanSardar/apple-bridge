@@ -19,6 +19,7 @@ pub fn helper_app(explicit: &str, executable: Option<&Path>) -> String {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     fn packaged(root: &Path) -> PathBuf {

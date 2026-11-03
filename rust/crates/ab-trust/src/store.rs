@@ -221,6 +221,7 @@ pub fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), Error> {
     result
 }
 #[cfg(all(test, target_os = "linux"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     fn environment(root: &Path) -> StoreEnvironment {

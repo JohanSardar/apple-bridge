@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use std::{path::Path, process::Command};
 
 fn bridge(home: &Path, config: &Path, store: Option<&str>) -> std::process::Output {
@@ -20,7 +21,7 @@ fn install_credentials_creates_the_identity_and_is_idempotent() {
     let home = root.path().join("home");
     let first = bridge(&home, &root.path().join("config"), Some("file"));
     assert!(first.status.success(), "{first:?}");
-    assert!(first.stdout.is_empty());
+    assert_eq!(first.stdout, Vec::<u8>::new());
     let certificate = std::fs::read(home.join("identity.pem")).unwrap();
     assert_eq!(std::fs::read_dir(home.join("secrets")).unwrap().count(), 1);
     assert!(!home.join("identity-key.pem").exists());
