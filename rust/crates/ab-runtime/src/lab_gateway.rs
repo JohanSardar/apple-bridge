@@ -14,6 +14,7 @@ use tower::ServiceExt;
 
 #[derive(Debug)]
 struct App {
+    home: std::path::PathBuf,
     state: GatewayStore,
     blobs: Arc<Mutex<ab_blobs::Store>>,
     snapshots: Mutex<BTreeMap<String, String>>,
@@ -41,6 +42,7 @@ pub async fn serve(
     std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600))?;
     let uid = std::fs::metadata(&path)?.uid();
     let app = Arc::new(App {
+        home: home.to_owned(),
         state,
         blobs,
         snapshots: Mutex::default(),
@@ -103,6 +105,46 @@ async fn stage(app: &App, bytes: Vec<u8>) -> Result<(ab_blobs::Digest, String), 
 async fn action(app: &App, request: Request) -> Result<Value, Error> {
     match request.action.as_str() {
         "phone-command" => return Ok(serde_json::to_value(app.state.command(&request.owner)?)?),
+        "phone-delegated" => {
+            use ab_trust::domain::CommandState::{Admitted, Dispatched, Prepared};
+            let mut row = app.state.command(&request.owner)?;
+            row.command.id = request.pin;
+            row.principal = request.digest;
+            row.state = Admitted;
+            row.expires_at =
+                (jiff::Timestamp::now() + jiff::SignedDuration::from_secs(300)).to_string();
+            row.history.clear();
+            row.cursor = Default::default();
+            row.evidence = None;
+            row.disposition = None;
+            row.error = None;
+            let mut row = app.state.transition(None, row)?;
+            for next in [Prepared, Dispatched] {
+                let previous = row.state;
+                row.state = next;
+                row = app.state.transition(Some(previous), row)?;
+            }
+            return Ok(serde_json::to_value(row)?);
+        }
+        "phone-delegated-mode" => {
+            let _ = std::fs::remove_file(app.home.join("phone-delegated-authorized"));
+            std::fs::write(app.home.join("phone-delegated-mode"), request.owner)?;
+        }
+        "phone-blob-grant" => {
+            let allowed = app
+                .state
+                .with(|state| state.query_blob_grant(&request.owner, &request.pin))
+                .ok()
+                .is_some_and(|(_, grants)| {
+                    grants
+                        .as_array()
+                        .is_some_and(|grants| grants.iter().any(|g| g["digest"] == request.digest))
+                });
+            return Ok(json!({"allowed": allowed}));
+        }
+        "phone-delegated-authorized" => {
+            return Ok(json!({"authorized": app.home.join("phone-delegated-authorized").exists()}));
+        }
         "phone-expired" => {
             let mut row = app.state.command(&request.owner)?;
             row.command.id = request.pin;

@@ -204,3 +204,21 @@ REM-LIST-LOST-ACK is real-only: `native_runner.rs` compiles its flow (arming `he
 Other Go scenarios that reach `runNativeScenario`, so their families should build on `native_runner.rs` rather than re-port it: HELPER-LIVE-BACKFILL, HELPER-SESSION-SOAK, HELPER-RESTART-REAL and HELPER-TCC-READY (all real-only; they need `Truth`, `RestartHelper`, helper-home pause files and the signed helper app, so compile-only), and CORE-LIVE-LATENCY at the real level (its sim and replica levels use the `changes` action instead). Their shared prologue (`reminders_ready`, `ready`) and epilogue (`replica_convergence`, per-endpoint `no_scope_leak`) are `Native::protocol` and `Native::epilogue`.
 
 Gate: `python3 rust/lab/families-parity.py ... --reminders` now also runs the seven native files above (`core/REM-CRUD` and `reminders/REM-CRUD` both included). `verdicts()` keys a repeated scenario ID with a trailing `#`, so duplicate IDs are compared pairwise in order. Verdicts are identical for the Go harness and the Rust harness against the Rust gateway on Linux.
+
+## Owner passkey session (`lab-adapters/src/webauthn.rs`)
+
+Scenarios that end in an owner approval need an owner session, and the gateway has no CLI to mint one. The Rust lab ports the Go virtual WebAuthn authenticator into a lab-owned module with no `ab-*` dependency (`p256`, `sha2`, `serde_json`, `curl`):
+
+- `Authenticator` holds a P-256 key, a random 32-byte credential ID, a counter and a user-verified flag. `credential(create, challenge, origin, rp)` builds the same `none`-attestation registration and ES256 assertion the Go authenticator builds (hand-written CBOR, internal transport, user handle `apple-bridge-owner`).
+- `Owner::enroll(&Gateway)` runs `bridge web enroll --host http://localhost:PORT`, drives `/auth/enroll/options` and `/auth/enroll/finish` over HTTP with an `Origin` header, and keeps the `ab_session_local` cookie. `Owner::login()` runs the discoverable-login ceremony with the enrolled key. `Owner::decide(id, "approve"|"reject")` posts the `/approvals/{id}` form and parses the command record out of the status page.
+- The ceremony is the real one: the gateway verifies the attestation, stores the passkey, and verifies the assertion signature and counter. APP-CMD-SIM and APP-NOTIFY-SIM use it for `owner_device`, `owner_authenticated` and `iphone_owner_approval_without_helper`.
+
+## iPhone command and capture lab hooks
+
+`lab-harness` builds of the gateway add these actions on the lab socket for the iPhone capture scenario, which Go drives in-process:
+
+- `phone-delegated` clones a command into an admitted-prepared-dispatched row for a delegated principal.
+- `phone-delegated-mode` (`allow <request_hash>` or `deny`) controls the delegated re-authorization check in the phone gateway adapter. `phone-delegated-authorized` reports whether that check ran for the allowed row.
+- `phone-blob-grant` reports whether a principal holds a query-blob grant for a digest.
+
+Production builds contain none of this.

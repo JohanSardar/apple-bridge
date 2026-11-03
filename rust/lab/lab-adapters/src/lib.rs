@@ -14,6 +14,8 @@ pub mod history;
 pub mod http;
 pub mod imports;
 pub mod iphone;
+pub mod iphone_capture;
+pub mod iphone_command;
 pub mod iphone_gateway;
 pub mod iphone_push;
 pub mod iphone_real;
@@ -48,6 +50,7 @@ pub mod search;
 pub mod shortcuts;
 pub mod usage;
 pub mod watch;
+pub mod webauthn;
 use lab_runner::Registry;
 use lab_world::Error;
 
