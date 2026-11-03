@@ -1,0 +1,14 @@
+id: LIVE-ACK-DURABLE
+feature: lab.live-fault
+levels: [sim]
+given:
+  - world: {replicas: 0}
+when:
+  - control:
+      route: /external-change
+      input: {key: live-ack-record, collection: reminders.reminder, data: {title: '[ab-test] acked data must be durable', completed: false}}
+  - control: {route: /flush, input: {}}
+then:
+  - protocol_gate: {check: acked-data-visible}
+cleanup:
+  - world: {}
