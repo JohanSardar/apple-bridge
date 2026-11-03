@@ -216,6 +216,7 @@ impl State<Gateway> {
             ledger: None,
             blob_protection: None,
             capacity: HashMap::new(),
+            capture_failures: HashMap::new(),
             snapshot_refs: HashMap::new(),
             leases: HashMap::new(),
             pending: None,
@@ -281,6 +282,30 @@ impl State<Gateway> {
                 .as_str()
                 .unwrap_or("")
                 .to_owned();
+            match &result {
+                Ok(_) => {
+                    if let Some(failure) = self.capture_failures.get_mut(&name) {
+                        failure.2 = false;
+                    }
+                }
+                Err(error) if !matches!(error, crate::Error::Contract(ErrorCode::Reset)) => {
+                    let code = match error {
+                        crate::Error::Sqlite(rusqlite::Error::SqliteFailure(code, _)) => {
+                            format!("sqlite_{}", code.extended_code)
+                        }
+                        _ => "capture_error".into(),
+                    };
+                    let failure = self.capture_failures.entry(name.clone()).or_default();
+                    failure.0 += 1;
+                    failure.1.clone_from(&code);
+                    failure.2 = true;
+                    eprintln!(
+                        "{}",
+                        serde_json::json!({"stage":"gateway_capture_rejected","source":name,"error_code":code,"observations":c.observations.as_ref().map_or(0, Vec::len)})
+                    );
+                }
+                Err(_) => {}
+            }
             if result.as_ref().is_err_and(crate::is_capacity) {
                 self.capacity.insert(name, true);
             } else if result.is_ok() {
