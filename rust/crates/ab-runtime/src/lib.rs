@@ -3,6 +3,7 @@
 mod actions;
 #[cfg(feature = "replica-feed")]
 mod approvals;
+pub mod bundle;
 #[cfg(feature = "replica-feed")]
 mod calendar_actions;
 #[cfg(feature = "replica-feed")]
@@ -321,7 +322,13 @@ pub async fn start(
         }
     };
     let clock_home = config.home.clone();
-    let track = track_status(client.status(), blobs, state, clock_home);
+    let track = track_status(
+        client.status(),
+        blobs,
+        state,
+        clock_home,
+        gateway_status::grace_seconds(config.blob_grace_ms)?,
+    );
     tokio::select! {
         result = serve(config, service) => { let _sent = stop.send(true); result },
         result = follow => { result.map_err(|_| Error::Operation(Code::Unavailable.into())) },
@@ -346,8 +353,10 @@ async fn track_status(
     blobs: std::sync::Arc<tokio::sync::Mutex<ab_blobs::Store>>,
     state: std::sync::Arc<Mutex<ab_state::State<ab_state::Replica>>>,
     clock_home: PathBuf,
+    grace: i64,
 ) -> Result<(), Error> {
     let mut last_clock = None;
+    let mut last_collect = std::time::Instant::now();
     loop {
         tokio::select! {
             changed = status.changed() => {
@@ -367,6 +376,21 @@ async fn track_status(
                 &serde_json::to_vec(sample)?,
             )
             .map_err(|_| Error::Invalid)?;
+        }
+        if last_collect.elapsed() >= std::time::Duration::from_secs(1) {
+            last_collect = std::time::Instant::now();
+            let mut owned = blobs.clone().lock_owned().await;
+            if let Err(error) = tokio::task::spawn_blocking(move || {
+                owned.gc(jiff::Timestamp::now(), grace)
+            })
+            .await
+            .map_err(|_| Error::Invalid)?
+            {
+                eprintln!(
+                    "{}",
+                    serde_json::json!({"stage":"blob_gc_deferred","error":error.to_string()})
+                );
+            }
         }
         let progress = blobs.lock().await.progress();
         let staleness_ms = current

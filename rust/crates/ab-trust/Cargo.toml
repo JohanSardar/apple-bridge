@@ -41,3 +41,6 @@ rusqlite.workspace = true
 
 [features]
 lab-harness = ["ab-domain/lab"]
+
+[dev-dependencies]
+tempfile = "3"
