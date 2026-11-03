@@ -68,6 +68,7 @@ impl ReadStore for StateReads {
             let grant = ab_blobs::RecordGrant::from_record(
                 &ab_trust::Visibility {
                     all: true,
+                    commands_all: true,
                     ..ab_trust::Visibility::default()
                 },
                 &record,
