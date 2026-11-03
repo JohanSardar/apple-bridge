@@ -129,7 +129,7 @@ func validateScenario(s Scenario) error {
 					return fmt.Errorf("%s[%d].%s: %w", phase, i, action, fmt.Errorf("%s: %w", strings.TrimSpace(string(raw)), err))
 				}
 				for key, value := range options {
-					if n, ok := value.(int); ok && (n < 0 || (n == 0 && !(phase == "given" && action == "seed"))) {
+					if n, ok := value.(int); ok && (n < 0 || (n == 0 && !(phase == "given" && (action == "seed" || (action == "world" && key == "replicas"))))) {
 						return fmt.Errorf("%s[%d].%s.%s: expected positive integer", phase, i, action, key)
 					}
 				}
