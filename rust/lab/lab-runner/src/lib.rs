@@ -1,5 +1,5 @@
 pub mod safety;
-use lab_world::{Error, Result, World};
+use lab_world::{Error, RealConfig, Result, World};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
@@ -59,13 +59,64 @@ impl Evidence {
     }
 }
 pub type Handler = fn(&mut World, &Value, &mut Evidence) -> Result<()>;
+pub type RealHandler = fn(&mut World, &mut Evidence) -> Result<()>;
 #[derive(Debug, Default)]
 pub struct Registry {
     handlers: BTreeMap<String, Handler>,
+    real: BTreeMap<String, RealHandler>,
+}
+#[must_use]
+pub fn supports_level(scenario: &Scenario, level: &str) -> bool {
+    scenario.levels.iter().any(|s| s == level)
+        || (level == "real"
+            && matches!(scenario.id.as_str(), "MAC-REPLICA" | "FILE-REPLICA")
+            && scenario.levels.iter().any(|s| s == "replica"))
 }
 impl Registry {
     pub fn register(&mut self, name: &str, handler: Handler) {
         self.handlers.insert(name.into(), handler);
+    }
+    pub fn register_real(&mut self, id: &str, handler: RealHandler) {
+        self.real.insert(id.into(), handler);
+    }
+    #[must_use]
+    pub fn has_real(&self, id: &str) -> bool {
+        self.real.contains_key(id)
+    }
+    fn real_blocked(&self, scenario: &Scenario) -> Option<Evidence> {
+        let mut evidence = Evidence {
+            scenario: scenario.id.clone(),
+            passed: true,
+            assertions: vec![],
+        };
+        if !supports_level(scenario, "real") {
+            evidence.check("real_level", false, "unsupported level");
+        } else if !self.has_real(&scenario.id) {
+            evidence.check("real_adapter", false, "no real adapter registered");
+        } else {
+            return None;
+        }
+        Some(evidence)
+    }
+    pub fn run_real(&self, scenario: &Scenario, config: RealConfig) -> Result<Evidence> {
+        if let Some(blocked) = self.real_blocked(scenario) {
+            return Ok(blocked);
+        }
+        let mut world = World::start_real(config)?;
+        let mut evidence = Evidence {
+            scenario: scenario.id.clone(),
+            passed: true,
+            assertions: vec![],
+        };
+        if let Some(handler) = self.real.get(&scenario.id)
+            && let Err(error) = handler(&mut world, &mut evidence)
+        {
+            evidence.check("action", false, &error.to_string());
+        }
+        if evidence.assertions.is_empty() {
+            evidence.check("assertions_present", false, "scenario made no assertions");
+        }
+        Ok(evidence)
     }
     pub fn run(&self, scenario: &Scenario, world: &mut World) -> Evidence {
         let mut evidence = Evidence {
@@ -73,7 +124,7 @@ impl Registry {
             passed: true,
             assertions: vec![],
         };
-        if !scenario.levels.iter().any(|s| s == "sim") {
+        if !supports_level(scenario, "sim") {
             evidence.check("sim_level", false, "unsupported level");
             return evidence;
         }

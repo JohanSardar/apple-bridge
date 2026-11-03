@@ -141,3 +141,16 @@ Real-level only (adapters compiled, never run at real level): BT-REAL, MAC-APPEA
 `native.rs` shells out to the Swift check binaries through `packaging/dev/build-native.sh` and `native/.build/native-output-1`, so it runs on Darwin only. The three NATIVE-MEDIA scenarios also run the selected-gateway fixture check (`selected_gateway_*`): two versions and a tombstone for one `messages.attachment` posted to the SimApple `/capture` route and read back through `records.query`. The runner treats a scenario with no given/when/then steps as one implicit step named after the scenario id, which is how WEB-REM-PARITY (and any later step-less scenario) selects its adapter. `Scenario` accepts the optional `web` block that WEB-REM-WRITE carries.
 
 Not ported: WEB-AGENT-ACTIVITY, WEB-AGENT-CREDENTIALS, WEB-AGENT-LEVELS, WEB-AGENT-OAUTH and WEB-AGENT-OAUTH-CIMD need an owner web session (a software WebAuthn authenticator: CBOR, P-256, enrollment and login ceremonies, session cookie and CSRF) that the Rust lab does not have yet. WEB-CAL-WRITE needs the CAL-CRUD calendar protocol journey. WEB-REM-WRITE is real-level only.
+
+## Real-level runner (Phase 8)
+
+`lab-runner` and `lab-families` accept `--level sim|real` (default `sim`) and `--helper-app APP`. `--simapple` is only required at sim level.
+
+The real level mirrors Go's `world.NewReal` protections and is compile-only in CI: nothing in the Phase 8 work runs it.
+
+- `--level real` refuses to start unless `--helper-app` names a bundle with `Contents/MacOS/AppleBridgeHelper` that passes `codesign --verify --strict` and carries a `TeamIdentifier` (ad-hoc signatures are rejected). The refusal happens before any output directory or gateway exists.
+- `World::start_real(RealConfig)` creates a fresh `0700` directory, refuses to run when it is inside, equal to or above the live home (`~/Library/Application Support/AppleBridge`, `$XDG_DATA_HOME/apple-bridge`, `~/.local/share/apple-bridge`), starts the gateway with `--home <directory>/gateway --helper-app APP --helper-lab-commands`, and waits for `helper/helper.pid`. There is no SimApple peer and no `sim.sock`, so `World::control` is unavailable.
+- `Registry::register_real(id, handler)` registers a handler `fn(&mut World, &mut Evidence) -> Result<()>` for a scenario ID. `Registry::run_real(scenario, RealConfig)` fails the scenario with `real_adapter` (no world started) when the scenario does not list `real` (MAC-REPLICA and FILE-REPLICA list `replica` and count as `real`, as in Go) or has no registered handler.
+- Real-only scenarios are reachable by adding one `register_real` line in `lab-adapters/src/lib.rs`. Handlers mint scoped tokens with `Client::new(world, scope)`; the world token scope is `location:read,maps:read,maps:write,files:read,files:write,safari:read,system:read`.
+
+Unit tests cover the refusals (no Helper, unsigned Helper, live home) and an unrelated directory.

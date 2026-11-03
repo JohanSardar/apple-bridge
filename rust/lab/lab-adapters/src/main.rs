@@ -1,29 +1,44 @@
 use lab_runner::Scenario;
-use lab_world::{World, WorldConfig};
+use lab_world::{RealConfig, World, WorldConfig};
 use std::{env, fs, path::PathBuf, process::ExitCode};
 fn run() -> Result<bool, Box<dyn std::error::Error>> {
     let mut args = env::args().skip(1);
     if args.next().as_deref() != Some("run") {
         return Err(
-            "usage: lab-families run YAML... --gateway BIN --simapple BIN --output DIR".into(),
+            "usage: lab-families run YAML... --gateway BIN --simapple BIN --output DIR [--level sim|real --helper-app APP]".into(),
         );
     }
     let mut paths = vec![];
     let mut gateway = None;
     let mut simapple = None;
     let mut output = None;
+    let mut helper = None;
+    let mut level = "sim".to_owned();
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "--gateway" => gateway = args.next().map(PathBuf::from),
             "--simapple" => simapple = args.next().map(PathBuf::from),
             "--output" => output = args.next().map(PathBuf::from),
+            "--helper-app" => helper = args.next().map(PathBuf::from),
+            "--level" => level = args.next().ok_or("--level value required")?,
             _ if arg.starts_with('-') => return Err(format!("unknown option {arg}").into()),
             _ => paths.push(PathBuf::from(arg)),
         }
     }
+    if level != "sim" && level != "real" {
+        return Err("--level must be sim or real".into());
+    }
+    let real = level == "real";
     let gateway = gateway.ok_or("--gateway required")?.canonicalize()?;
-    let simapple = simapple.ok_or("--simapple required")?.canonicalize()?;
+    let simapple = if real {
+        PathBuf::new()
+    } else {
+        simapple.ok_or("--simapple required")?.canonicalize()?
+    };
     let output = output.ok_or("--output required")?;
+    if real {
+        lab_world::require_signed_helper(helper.as_deref())?;
+    }
     fs::create_dir_all(&output)?;
     lab_adapters::replicas::configure(&gateway);
     let registry = lab_adapters::registry();
@@ -35,6 +50,20 @@ fn run() -> Result<bool, Box<dyn std::error::Error>> {
             && lab_adapters::readmodels::SCENARIOS.contains(&scenario.id.as_str())
         {
             scenario.when.push(serde_json::json!({"readmodels": {}}));
+        }
+        if real {
+            let evidence = registry.run_real(
+                &scenario,
+                RealConfig {
+                    gateway: gateway.clone(),
+                    helper_app: helper.clone(),
+                    directory: output.join(format!("world-{index}")),
+                    scope: "location:read,maps:read,maps:write,files:read,files:write,safari:read,system:read".into(),
+                },
+            )?;
+            passed &= evidence.passed;
+            println!("{}", serde_json::to_string(&evidence)?);
+            continue;
         }
         if let Some(evidence) = lab_adapters::iphone::run(&scenario) {
             passed &= evidence.passed;
