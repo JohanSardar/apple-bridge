@@ -175,6 +175,9 @@ func (w *World) writeSessionNotes(root string) error {
 	for index, key := range state.Order {
 		note := state.Notes[key]
 		folder, ok := folderPK[note.Folder]
+		if !ok && len(folderKeys) > 0 {
+			folder, ok = folderPK[folderKeys[0]]
+		}
 		if !ok {
 			continue
 		}
