@@ -1,0 +1,7 @@
+id: CORE-ACK-DURABLE
+feature: core.recovery
+levels: [sim]
+given: [{world: {replicas: 0}}]
+when: [{external_change: {key: ack-durable-record, collection: reminders.reminder}}]
+then: [{acked_data_visible: {}}]
+cleanup: [{world: {}}]

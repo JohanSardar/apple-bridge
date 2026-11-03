@@ -493,24 +493,26 @@ func newEnvironment(ctx context.Context, level string, replicas, seed int, nativ
 		}); err != nil {
 			return nil, err
 		}
-		if restored == "" {
-			if err = w.ControlAction("/seed", map[string]int{"count": seed}); err != nil {
-				return nil, err
-			}
-			minimum := seed + 2
-			if w.blobOptions.Scope != "" {
-				minimum = 1
-			}
-			if err = w.Await(10*time.Second, func() bool { records, err := w.Records(w.Gateway); return err == nil && len(records) >= minimum }); err != nil {
-				return nil, err
-			}
-		} else {
-			if err = w.Await(10*time.Second, func() bool {
-				var page contracts.ReadResult
-				_, err := Request(w.ctx, w.Gateway, "/v1/op/records.query", contracts.ReadQuery{Limit: 1}, &page)
-				return err == nil && len(page.Records) > 0
-			}); err != nil {
-				return nil, err
+		if !options.WithoutAcknowledgedCapture {
+			if restored == "" {
+				if err = w.ControlAction("/seed", map[string]int{"count": seed}); err != nil {
+					return nil, err
+				}
+				minimum := seed + 2
+				if w.blobOptions.Scope != "" {
+					minimum = 1
+				}
+				if err = w.Await(10*time.Second, func() bool { records, err := w.Records(w.Gateway); return err == nil && len(records) >= minimum }); err != nil {
+					return nil, err
+				}
+			} else {
+				if err = w.Await(10*time.Second, func() bool {
+					var page contracts.ReadResult
+					_, err := Request(w.ctx, w.Gateway, "/v1/op/records.query", contracts.ReadQuery{Limit: 1}, &page)
+					return err == nil && len(page.Records) > 0
+				}); err != nil {
+					return nil, err
+				}
 			}
 		}
 	} else {
@@ -666,6 +668,11 @@ func (w *World) FlushCaptures(timeout time.Duration) error {
 }
 func (w *World) ControlResult(path string, action any, result any) error {
 	return w.controlResult(w.Control, path, action, result)
+}
+func (w *World) ControlResultWithin(path string, action any, result any, timeout time.Duration) error {
+	client := *w.Control
+	client.Timeout = timeout
+	return w.controlResult(&client, path, action, result)
 }
 func (w *World) controlAction(client *http.Client, path string, action any) error {
 	return w.controlResult(client, path, action, nil)
