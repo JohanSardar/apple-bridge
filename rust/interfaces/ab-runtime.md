@@ -72,3 +72,7 @@ The location scenario retains the Swift fake adapter proof and sends its five lo
 ## G-F owner approval metadata
 
 The runtime Approvals adapter renders the same redacted argument metadata as Go: argument_bytes counts the original raw JSON bytes and argument_hash is their SHA-256 fingerprint. The authenticated owner_arguments field retains the full pretty JSON. WEB-AGENT-LEVELS owner_receives_full_text now passes; its pending hash conflict, delegated authorization and activity failures remain explicit. Linux remains 116 pass / 35 fail / 50 blocked. The latest separate full Darwin matrix is 14 pass / 25 fail / 23 blocked, including two 50-second timeouts counted as failures; all 62 default cases ran serially. Its binary source is 05de2f4b and does not include this metadata-only change.
+
+## G-F lab catalog CLI
+
+lab-harness builds expose lab-operation-catalog before opening Authority or the requested home, returning catalog scope/schema entries and the three provided test-query descriptors. MSG-CAPABILITY-MATRIX passes against the selected Rust binary. A direct Go oracle without lab registration matches all 147 ordinary product descriptors exactly. Full lab metadata is not equal: Go alone registers labdummy.item in the three read collection enums, and the provided test query descriptors clone helper.version input rather than their operation-specific argument schemas. Those remaining owner seams are retained as failed full-lab comparison evidence, not hidden by modifying exported schemas in runtime.

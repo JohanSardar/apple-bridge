@@ -18,3 +18,7 @@ Document input grants/staging, query audit/activity hooks and source completion 
 ## G-F LocalGateway matrix follow-up
 
 With session-bound hydration, owner CLI and LabClock installed, CORE-CMD-CLOCK-JUMP and capture-observer checks pass. WEB-AGENT-LEVELS still accepts a changed body under an existing pending command ID instead of returning Conflict; compare request hashes before returning pending status. Replica delegated approval currently fails closed through TrustIdentity::approval_principal. CORE-QUERY-ROUNDTRIP's native REST path passes; MCP test queries need the existing lab-queries feature enabled in the matrix artifact. Runtime query audit file wiring follows separately.
+
+## G-F lab-query descriptor finding
+
+The runtime lab-operation-catalog now exports the public descriptor_for values for test.echo/test.sleep/test.blob. Their input currently retains op.enum=[helper.version] from the cloned base; test.sleep needs args.ms and test.blob needs args.size bounds, while test.echo accepts arbitrary args. Go lab metadata differs for these three operations even though functional query matrix tests pass. Please correct these operation-specific schemas in the owning ab-operations lab descriptor builder; runtime must expose actual descriptors rather than synthesize a second schema definition.
