@@ -394,7 +394,9 @@ fn native_action(command: &Command) -> Result<PreparedAction, Error> {
         }))
         .map_err(|_| Code::Corrupt)?,
         expected_state: None,
-        collection: if command.op.starts_with("files.") {
+        collection: if command.op == "pdf.annotate" {
+            "pdf.artifact"
+        } else if command.op.starts_with("files.") {
             "files.item"
         } else {
             ""
@@ -410,7 +412,11 @@ fn native_action(command: &Command) -> Result<PreparedAction, Error> {
 }
 
 fn native_command(op: &str) -> bool {
-    op.starts_with("files.") || matches!(op, "maps.open" | "speech.say" | "capture.play_sound")
+    op.starts_with("files.")
+        || matches!(
+            op,
+            "pdf.annotate" | "maps.open" | "speech.say" | "capture.play_sound"
+        )
 }
 
 #[cfg(test)]

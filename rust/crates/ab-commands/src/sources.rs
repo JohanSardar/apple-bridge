@@ -21,6 +21,8 @@ pub(crate) fn validate(c: &Command, now: Timestamp) -> Result<Args, Error> {
         mac(c, &a)?;
     } else if op.starts_with("files.") {
         files(c, &a)?;
+    } else if op == "pdf.annotate" {
+        pdf(c, &a)?;
     } else if op == "focus.set" {
         check(p(&a, "on") && s(&a, "mode") == "Do Not Disturb")?;
         if !s(&a, "until").is_empty() {
@@ -79,8 +81,42 @@ pub(crate) fn validate(c: &Command, now: Timestamp) -> Result<Args, Error> {
     }
     Ok(a)
 }
+fn pdf(c: &Command, a: &Args) -> Result<(), Error> {
+    check(
+        c.expected_version == 0
+            && !arr(a, "annotations").is_empty()
+            && arr(a, "annotations").len() <= 100,
+    )?;
+    let inputs = usize::from(!s(a, "data_base64").is_empty())
+        + usize::from(!s(a, "file").is_empty())
+        + usize::from(p(a, "blob"));
+    check(inputs == 1)?;
+    if !s(a, "data_base64").is_empty() {
+        let data = base64(s(a, "data_base64"))?;
+        check(!data.is_empty() && data.len() <= 8 << 20)?;
+    }
+    if !s(a, "file").is_empty() {
+        check(b(a, "allow_file") && s(a, "file").starts_with('/'))?;
+    }
+    for annotation in arr(a, "annotations") {
+        let a = annotation.as_object().ok_or(Error::Invalid)?;
+        check(
+            (1.0..=1000.0).contains(&n(a, "page"))
+                && ["note", "highlight"].contains(&s(a, "type"))
+                && s(a, "text").len() <= 4096
+                && (s(a, "type") != "note" || !s(a, "text").is_empty()),
+        )?;
+        for field in ["x", "y", "width", "height"] {
+            check(n(a, field).is_finite() && (0.0..=100_000.0).contains(&n(a, field)))?;
+        }
+        check(n(a, "width") > 0.0 && n(a, "height") > 0.0)?;
+    }
+    Ok(())
+}
 pub(crate) fn shape(op: &str) -> &'static str {
-    if op.starts_with("reminders.") {
+    if op == "pdf.annotate" {
+        "PDFAnnotateArgs"
+    } else if op.starts_with("reminders.") {
         "ReminderArgs"
     } else if op.starts_with("calendar.") {
         "CalendarArgs"

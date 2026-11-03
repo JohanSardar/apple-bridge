@@ -733,6 +733,70 @@ const IPHONEHEALTHARGS: &[Field] = &[
 ];
 pub fn fields(name: &str) -> &'static [Field] {
     match name {
+        "PDFAnnotateArgs" => &[
+            Field {
+                name: "data_base64",
+                kind: "string",
+                omit: true,
+            },
+            Field {
+                name: "file",
+                kind: "string",
+                omit: true,
+            },
+            Field {
+                name: "allow_file",
+                kind: "bool",
+                omit: true,
+            },
+            Field {
+                name: "blob",
+                kind: "raw",
+                omit: true,
+            },
+            Field {
+                name: "annotations",
+                kind: "[]PDFAnnotation",
+                omit: false,
+            },
+        ],
+        "PDFAnnotation" => &[
+            Field {
+                name: "page",
+                kind: "int",
+                omit: false,
+            },
+            Field {
+                name: "type",
+                kind: "string",
+                omit: false,
+            },
+            Field {
+                name: "text",
+                kind: "string",
+                omit: false,
+            },
+            Field {
+                name: "x",
+                kind: "float64",
+                omit: false,
+            },
+            Field {
+                name: "y",
+                kind: "float64",
+                omit: false,
+            },
+            Field {
+                name: "width",
+                kind: "float64",
+                omit: false,
+            },
+            Field {
+                name: "height",
+                kind: "float64",
+                omit: false,
+            },
+        ],
         "ReminderArgs" => REMINDERARGS,
         "CalendarArgs" => CALENDARARGS,
         "CalendarRecurrence" => CALENDARRECURRENCE,
