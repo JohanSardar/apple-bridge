@@ -333,7 +333,7 @@ pub(crate) fn native_target(
     names: (&str, &str),
 ) -> Option<PathBuf> {
     let existing = native_directory().map(|d| d.join(target));
-    if let Some(binary) = existing.filter(|b| fresh(b, inputs)) {
+    if let Some(binary) = existing.filter(|b| !inputs.is_empty() && fresh(b, inputs)) {
         evidence.check(names.1, true, "native output directory");
         return Some(binary);
     }
@@ -414,7 +414,7 @@ pub fn shortcuts_checks(world: &mut World, _: &Value, evidence: &mut Evidence) -
         let binary = native_target(
             evidence,
             "ShortcutsChecks",
-            &SHORTCUTS_NATIVE_INPUTS,
+            &[],
             (
                 "native_timer_snapshot_build",
                 "native_timer_snapshot_output",
