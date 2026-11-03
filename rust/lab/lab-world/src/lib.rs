@@ -387,6 +387,18 @@ impl World {
             .map(FaultProxy::partition)
             .ok_or_else(|| Error::Invalid("no fault proxy".into()))
     }
+    pub fn delay_both(&self, delay: Duration) -> Result<()> {
+        self.proxy
+            .as_ref()
+            .map(|proxy| proxy.delay(delay, true))
+            .ok_or_else(|| Error::Invalid("no fault proxy".into()))
+    }
+    pub fn blackhole(&self) -> Result<()> {
+        self.proxy
+            .as_ref()
+            .map(FaultProxy::blackhole)
+            .ok_or_else(|| Error::Invalid("no fault proxy".into()))
+    }
     pub fn heal(&self) -> Result<()> {
         self.proxy
             .as_ref()
