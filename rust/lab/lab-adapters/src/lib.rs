@@ -40,6 +40,7 @@ pub mod search;
 pub mod shortcuts;
 pub mod usage;
 pub mod watch;
+pub mod web_relay;
 use lab_runner::Registry;
 use lab_world::Error;
 
@@ -104,6 +105,7 @@ pub fn registry() -> Registry {
         evidence.check("world_started", true, "gateway and SimApple peer ready");
         Ok(())
     });
+    registry.register("web", web_relay::web_relay);
     registry.register("queries", queries::queries);
     registry.register("readmodels", readmodels::readmodels);
     registry.register("blobs", blobs::blobs);

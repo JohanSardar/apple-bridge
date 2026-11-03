@@ -186,3 +186,9 @@ Both gateways, built with `lab-harness`/`-tags lab` only:
 - `bridge lab-session --home H` creates an owner device session and prints `{"name":"ab_session_local","value":"..."}`; send it as that cookie to the owner web routes (approvals, devices).
 - `bridge lab-principal --home H (--id ID | --fingerprint FP)` prints `{"id","kind","fingerprint","grants","revision","relay2"}` for an active principal and exits nonzero otherwise. Revision is the subscription revision relay/2 reports after a scope change.
 - `bridge pair --via-remote` honours `APPLE_BRIDGE_LAB_PAIR_URL` and pairs against that URL instead of the Remote status URL. The URL is validated exactly as the product validates its Remote URL (`https`, no userinfo, path, query, fragment, port 1..65535); an invalid URL exits nonzero with `invalid`. The Rust product path now validates through the same `pair_remote` helper.
+
+### WEB-RELAY adapters (Phase 8)
+
+`web_relay.rs` registers the `web` action for WEB-RELAY-AUTH and WEB-RELAY-PAIRING. Each scenario writes `lab-relay.json`, restarts the gateway so it rebinds the lab listener, and drives it with `lab-relay`; gateway state changes use the CLI (`scope`, `revoke`, `pair --via-remote`, `lab-principal`). Assertion names and order match Go. Differences from Go's in-process fixture: the revocation timer starts when the `revoke` command returns, not before it; replica enrollment persistence is asserted from the join result and the gateway's `lab-principal` record because the lab client keeps no enrollment file.
+
+Gate: `python3 rust/lab/families-parity.py ... --web-relay` gives identical per-assertion verdicts for the Go harness against a Rust gateway (`lab-queries`) and against the Go `-tags lab` gateway.
