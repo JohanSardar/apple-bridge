@@ -299,11 +299,16 @@ fn valid_id(value: &str, prefix: &str) -> bool {
         .strip_prefix(prefix)
         .and_then(|v| v.strip_prefix('_'))
         .is_some_and(|body| {
-            body.len() == 26
-                && body.as_bytes()[0] <= b'7'
+            (prefix == "hsm"
+                && body.len() == 64
                 && body
                     .bytes()
-                    .all(|b| b"0123456789ABCDEFGHJKMNPQRSTVWXYZ".contains(&b))
+                    .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)))
+                || body.len() == 26
+                    && body.as_bytes()[0] <= b'7'
+                    && body
+                        .bytes()
+                        .all(|b| b"0123456789ABCDEFGHJKMNPQRSTVWXYZ".contains(&b))
         })
 }
 macro_rules! typed_id {

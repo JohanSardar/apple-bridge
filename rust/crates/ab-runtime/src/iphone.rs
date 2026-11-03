@@ -177,11 +177,29 @@ impl Gateway for PhoneGateway {
     }
     fn ingest_health(
         &mut self,
-        _device: &str,
-        _batch: &HealthBatch,
-        _digest: &str,
+        device: &str,
+        batch: &HealthBatch,
+        digest: &str,
     ) -> Result<(), Error> {
-        Err(Error::Unavailable)
+        batch.validate()?;
+        let samples = batch
+            .samples
+            .iter()
+            .flatten()
+            .map(|sample| Ok((sample.id.clone(), serde_json::to_value(sample)?)))
+            .collect::<Result<Vec<_>, Error>>()?;
+        self.state
+            .with(|state| {
+                state.ingest_health(
+                    device,
+                    &batch.stream,
+                    batch.sequence,
+                    digest,
+                    &samples,
+                    batch.deleted.as_deref().unwrap_or(&[]),
+                )
+            })
+            .map_err(|error_value| error(&error_value))
     }
     fn ingest_locations(&mut self, device: &str, records: &[LocationRecord]) -> Result<(), Error> {
         ab_iphone::delivery::validate_locations(records)?;
