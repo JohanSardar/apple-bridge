@@ -127,7 +127,11 @@ pub fn doctor(home: &Path) -> Result<Value, Error> {
             .ok_or(Error::Invalid)?
             .push(json!(warning));
     }
-    clock(home, &mut result)?;
+    if Config::load(home)?.role == "gateway" {
+        result["clock_skew"] = json!("n/a");
+    } else {
+        clock(home, &mut result)?;
+    }
     Ok(result)
 }
 #[cfg(feature = "lab-harness")]

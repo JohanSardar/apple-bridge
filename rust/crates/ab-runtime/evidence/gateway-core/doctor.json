@@ -1,0 +1,1 @@
+{"host":"build","level":"sim","scenario":"CORE-DOCTOR","go":"pass","rust_before":"fail: gateway_clock_not_applicable","rust_after":"pass","checks":["gateway clock not applicable","authenticated replica clock sample","clock skew and missing-sample warnings actionable","truth gateway replica convergence"]}
