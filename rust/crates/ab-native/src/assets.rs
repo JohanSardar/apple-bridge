@@ -72,10 +72,24 @@ impl Store {
             return Err(Error::Corrupt);
         }
         std::fs::set_permissions(root, std::fs::Permissions::from_mode(0o700))?;
+        let root = root.canonicalize()?;
+        let mut files = BTreeMap::new();
+        for entry in std::fs::read_dir(&root)? {
+            let entry = entry?;
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if name.len() == 64
+                && name
+                    .bytes()
+                    .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+                && entry.metadata()?.is_file()
+            {
+                files.insert(name, entry.path());
+            }
+        }
         Ok(Self {
-            root: root.canonicalize()?,
+            root,
             prefix,
-            files: BTreeMap::new(),
+            files,
         })
     }
     fn temporary(&self) -> Result<(Temporary, File)> {
