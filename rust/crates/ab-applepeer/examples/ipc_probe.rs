@@ -30,6 +30,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Arc::new(commands.clone()),
         Arc::new(Actions),
     );
+    #[cfg(feature = "lab-harness")]
+    {
+        local.clock = Arc::new(ab_operations::clock::LabClock(
+            std::path::Path::new(args.get(1).ok_or("socket")?)
+                .parent()
+                .ok_or("parent")?
+                .to_path_buf(),
+        ));
+    }
     local.query_store = Some(Arc::new(ab_operations::LocalQueryStore::open(
         (*state).clone(),
         std::path::Path::new(args.get(1).ok_or("socket")?)

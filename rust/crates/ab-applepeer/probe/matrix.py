@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import threading
 
 class UnixHTTP(http.client.HTTPConnection):
     def __init__(self, path):
@@ -35,13 +36,13 @@ def normalized_evidence(value):
     generated={'native_key','capture_checkpoint','ticket','expires_at','blob_id'}
     return {key: ('<generated>' if item else item) if key in generated else normalized_evidence(item) for key,item in value.items()}
 
-def run(peer, lab, fault, lifecycle=False, artifact=None, missing_uploads=False, multipart=False, resolve_fault=None):
+def run(peer, lab, fault, lifecycle=False, artifact=None, missing_uploads=False, multipart=False, resolve_fault=None, clock_offset=None, clock_expiry=None):
     with tempfile.TemporaryDirectory(prefix='gb-ipc-') as directory:
         home = Path(directory)
         secret = home / 'secret'
         secret.write_bytes(bytes([7]*32))
         secret.chmod(0o600)
-        server = subprocess.Popen([peer, str(home/'peer.sock')], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+        server = subprocess.Popen([peer, str(home/'peer.sock')], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True,env=dict(os.environ,APPLE_BRIDGE_HOME=str(home)))
         apple = subprocess.Popen([lab, 'simapple', '--socket', str(home/'peer.sock'), '--secret-file', str(secret), '--control', str(home/'control.sock')], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
         def exchange(frame):
             server.stdin.write(json.dumps(frame)+'\n')
@@ -49,6 +50,7 @@ def run(peer, lab, fault, lifecycle=False, artifact=None, missing_uploads=False,
             line = server.stdout.readline()
             assert line, (server.poll(), apple.poll(), 'probe exited')
             return json.loads(line)
+        clock_worker=None
         try:
             deadline = time.monotonic()+15
             while time.monotonic() < deadline:
@@ -102,7 +104,29 @@ def run(peer, lab, fault, lifecycle=False, artifact=None, missing_uploads=False,
                     assert exchange({'t':'DisableUploads'})=={'disabled':True}
                 if fault=='expiry':
                     command['expires_at']='2000-01-01T00:00:00Z'
+                shifted=[]
+                if clock_offset is not None:
+                    command['expires_at']=clock_expiry or (datetime.datetime.now(datetime.timezone.utc)+datetime.timedelta(seconds=30)).isoformat().replace('+00:00','Z')
+                    control(str(home/'control.sock'),'POST','/fault',{'name':'pause','ms':400})
+                    def shift_clock():
+                        until=time.monotonic()+10
+                        while time.monotonic()<until:
+                            with sqlite3.connect(home/'gateway-state'/'ledger.db') as db:
+                                row=db.execute("SELECT payload FROM commands WHERE id='cmd_local'").fetchone()
+                            if row:
+                                assert control(str(home/'control.sock'),'GET','/effects').get('cmd_local',0)==0
+                                (home/'clock-offset').write_text(str(clock_offset))
+                                shifted.append(True)
+                                return
+                            time.sleep(.002)
+                    clock_worker=threading.Thread(target=shift_clock)
+                    clock_worker.start()
                 submitted=exchange({'t':'Submit','principal':who,'args':command})
+                if clock_worker:
+                    clock_worker.join(timeout=11)
+                    (home/'clock-offset').write_text('0')
+                    assert shifted==[True] and submitted.get('state')=='observed',submitted
+
                 if missing_uploads:
                     assert submitted.get('error',{}).get('code')=='unavailable',submitted
                     status=exchange({'t':'Status','principal':who,'command_id':'cmd_local'})
@@ -165,7 +189,7 @@ def run(peer, lab, fault, lifecycle=False, artifact=None, missing_uploads=False,
                 assert era_resolved.get('state')==after_era.get('state'),(after_era,era_resolved)
                 assert control(str(home/'control.sock'),'GET','/effects')==before
                 assert dispatches()==dispatch_count
-                return {'dispatch_count':dispatch_count,'old_expiry_retry':'stored','old_era_retry':'stored','stale_era_admission':'expired','state':row['state'],'disposition':row.get('disposition'),'resolved_state':resolved.get('state'),'parts':[{'index':p['index'],'disposition':p['disposition'],'record_id':bool(p.get('record_id'))} for p in row.get('parts',[])],'resolved_parts':[{'index':p['index'],'disposition':p['disposition'],'record_id':bool(p.get('record_id'))} for p in resolved.get('parts',[])],'resolved_evidence':normalized_evidence(resolved.get('evidence')),'effect_count':before.get('cmd_local',0),'observed_ids':bool(row.get('observed_record_ids')),'evidence':normalized_evidence(row.get('evidence'))}
+                return {'clock_jump_ms':clock_offset,'dispatch_count':dispatch_count,'old_expiry_retry':'stored','old_era_retry':'stored','stale_era_admission':'expired','state':row['state'],'disposition':row.get('disposition'),'resolved_state':resolved.get('state'),'parts':[{'index':p['index'],'disposition':p['disposition'],'record_id':bool(p.get('record_id'))} for p in row.get('parts',[])],'resolved_parts':[{'index':p['index'],'disposition':p['disposition'],'record_id':bool(p.get('record_id'))} for p in resolved.get('parts',[])],'resolved_evidence':normalized_evidence(resolved.get('evidence')),'effect_count':before.get('cmd_local',0),'observed_ids':bool(row.get('observed_record_ids')),'evidence':normalized_evidence(row.get('evidence'))}
             messages = fault in ['identical-manual-send', 'ui-interference', 'ui-interference-before', 'outcome-before-capture']
             action = {'op':'reminders.create_list','args':{'title':'Synthetic list'}}
             if messages:
@@ -215,6 +239,7 @@ def run(peer, lab, fault, lifecycle=False, artifact=None, missing_uploads=False,
                 assert evidence.get('fingerprint')=='fingerprint', outcome
             return {'disposition':outcome.get('disposition'), 'observed':evidence.get('observed'), 'ambiguous':evidence.get('ambiguous',False), 'candidate_count':evidence.get('candidate_count',0), 'resolved_disposition':resolved.get('disposition'), 'effect_count':count, 'evidence':normalized_evidence(evidence)}
         finally:
+            if clock_worker:clock_worker.join(timeout=11)
             apple.terminate()
             server.stdin.close()
             try: apple.wait(timeout=5)
@@ -256,3 +281,10 @@ if __name__=='__main__':
         actual=run(rust,lab,fault,lifecycle=True,multipart=True,resolve_fault=resolve_fault)
         assert actual==expected,(fault,resolve_fault,expected,actual)
         print(json.dumps({'multipart':fault or 'ordinary','resolve_fault':resolve_fault,'go':expected,'rust':actual,'match':True}),flush=True)
+
+    for offset in [3600000,-3600000]:
+        expiry=(datetime.datetime.now(datetime.timezone.utc)+datetime.timedelta(seconds=30)).isoformat().replace('+00:00','Z')
+        expected=run(go,lab,'',lifecycle=True,clock_offset=offset,clock_expiry=expiry)
+        actual=run(rust,lab,'',lifecycle=True,clock_offset=offset,clock_expiry=expiry)
+        assert actual==expected,(offset,expected,actual)
+        print(json.dumps({'clock_jump_ms':offset,'go':expected,'rust':actual,'match':True}),flush=True)

@@ -182,6 +182,7 @@ pub struct LocalGateway {
     pub codec: Arc<dyn Codec>,
     pub peer: Arc<dyn ApplePeer>,
     pub actions: Arc<dyn ActionResolver>,
+    pub clock: Arc<dyn crate::clock::Clock>,
     pub query_store: Option<Arc<crate::LocalQueryStore>>,
     pub query_audit: Option<Arc<dyn crate::QueryAuditSink>>,
     pub phone_notify: Option<Arc<tokio::sync::Notify>>,
@@ -191,9 +192,6 @@ pub struct LocalGateway {
 }
 fn raw<T: Serialize>(value: &T) -> Result<Box<RawValue>, Error> {
     serde_json::value::to_raw_value(value).map_err(|_| Code::Corrupt.into())
-}
-fn now() -> jiff::Timestamp {
-    jiff::Timestamp::now()
 }
 fn timestamp(value: &str) -> Result<jiff::Timestamp, Error> {
     value.parse().map_err(|_| Code::Invalid.into())
@@ -212,6 +210,7 @@ impl LocalGateway {
             codec,
             peer,
             actions,
+            clock: Arc::new(crate::clock::SystemClock),
             query_store: None,
             query_audit: None,
             phone_notify: None,
@@ -259,7 +258,7 @@ impl LocalGateway {
         self.state.transition(Some(from), r)
     }
     fn expire(&self, r: CommandRecord) -> Result<CommandRecord, Error> {
-        if r.state == State::AwaitingApproval && timestamp(&r.expires_at)? <= now() {
+        if r.state == State::AwaitingApproval && timestamp(&r.expires_at)? <= self.clock.now() {
             self.transition(r, State::Expired, Some(Disposition::Expired), None, None)
         } else {
             Ok(r)
@@ -328,13 +327,15 @@ impl LocalGateway {
         if !command.admission_era.is_empty() && command.admission_era != era {
             return Err(Code::Expired.into());
         }
-        let created = now();
+        let created = self.clock.now();
         let requested = if command.expires_at == "0001-01-01T00:00:00Z" {
             None
         } else {
             Some(timestamp(&command.expires_at)?)
         };
         let expiry = crate::command_contract::expiry(&command.op, created, requested)?;
+        let deadline = tokio::time::Instant::now()
+            + Duration::try_from(expiry.duration_since(created)).map_err(|_| Code::Expired)?;
         let approval = p.is_agent() && (p.level == "approve" || command.op == "focus.set");
         if !(approval
             || self.peer.available()
@@ -394,7 +395,7 @@ impl LocalGateway {
             return raw(&r);
         }
         let gateway = self.clone();
-        let mut task = tokio::spawn(async move { gateway.execute(r, p).await });
+        let mut task = tokio::spawn(async move { gateway.execute(r, p, deadline).await });
         match tokio::time::timeout(Duration::from_millis(wait), &mut task).await {
             Ok(result) => {
                 let record = result.map_err(|_| Code::Unavailable)??;
@@ -407,19 +408,21 @@ impl LocalGateway {
         }
     }
     #[allow(clippy::too_many_lines)]
-    async fn execute(&self, mut r: CommandRecord, p: Principal) -> Result<CommandRecord, Error> {
+    async fn execute(
+        &self,
+        mut r: CommandRecord,
+        p: Principal,
+        deadline: tokio::time::Instant,
+    ) -> Result<CommandRecord, Error> {
         if r.source == "iphone"
             && let Some(notify) = &self.phone_notify
         {
             notify.notify_one();
             return Ok(r);
         }
-        let remaining = timestamp(&r.expires_at)?.duration_since(now());
-        if remaining.is_negative() {
+        if tokio::time::Instant::now() >= deadline {
             return self.transition(r, State::Expired, Some(Disposition::Expired), None, None);
         }
-        let deadline = tokio::time::Instant::now()
-            + Duration::try_from(remaining).map_err(|_| Code::Expired)?;
         let key = match self.actions.serialization_key(&p, &r.command) {
             Ok(plan) => plan,
             Err(error) => {
@@ -892,7 +895,7 @@ impl LocalGateway {
                     )?;
                 }
                 State::Admitted | State::Prepared => {
-                    if timestamp(&r.expires_at)? <= now() {
+                    if timestamp(&r.expires_at)? <= self.clock.now() {
                         self.transition(r, State::Expired, Some(Disposition::Expired), None, None)?;
                     } else {
                         self.transition(
@@ -987,21 +990,23 @@ impl LocalGateway {
             return Err(Code::Unavailable.into());
         }
         let ttl = if r.command.expires_at == "0001-01-01T00:00:00Z" {
-            if r.source == "messages" { 60 } else { 300 }
+            jiff::SignedDuration::from_secs(if r.source == "messages" { 60 } else { 300 })
         } else {
-            timestamp(&r.command.expires_at)?
-                .duration_since(timestamp(&r.created_at)?)
-                .as_secs()
+            timestamp(&r.command.expires_at)?.duration_since(timestamp(&r.created_at)?)
         };
-        r.expires_at = now()
-            .checked_add(jiff::SignedDuration::from_secs(ttl))
+        let deadline =
+            tokio::time::Instant::now() + Duration::try_from(ttl).map_err(|_| Code::Expired)?;
+        r.expires_at = self
+            .clock
+            .now()
+            .checked_add(ttl)
             .map_err(|_| Code::Invalid)?
             .to_string();
         r = self.transition(r, State::Admitted, None, None, None)?;
         let result = raw(&r)?;
         let gateway = self.clone();
         tokio::spawn(async move {
-            let _ = gateway.execute(r, p).await;
+            let _ = gateway.execute(r, p, deadline).await;
         });
         Ok(result)
     }

@@ -120,11 +120,15 @@ impl GatewayState for GatewayStore {
                     ..Default::default()
                 },
             )
-        }) else { return Ok(key); };
+        }) else {
+            return Ok(key);
+        };
         let Some(record) = result.records.first() else {
             return Ok(key);
         };
-        let Ok(data) = serde_json::from_str::<serde_json::Value>(record.data.get()) else { return Ok(key); };
+        let Ok(data) = serde_json::from_str::<serde_json::Value>(record.data.get()) else {
+            return Ok(key);
+        };
         let series = data["series_id"].as_str().unwrap_or_default();
         if series.is_empty() {
             return Ok(key);

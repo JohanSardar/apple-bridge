@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 mod adapters;
+pub mod clock;
 pub mod command_contract;
 mod gateway_store;
 mod local_query;

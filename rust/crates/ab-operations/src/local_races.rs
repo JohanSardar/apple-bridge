@@ -140,7 +140,15 @@ async fn queued_version_is_checked_after_the_preceding_object_lock()
         resource: String::new(),
         remote: false,
     };
-    let task = tokio::spawn(async move { gateway.execute(record, p).await });
+    let task = tokio::spawn(async move {
+        gateway
+            .execute(
+                record,
+                p,
+                tokio::time::Instant::now() + Duration::from_secs(1),
+            )
+            .await
+    });
     tokio::time::timeout(Duration::from_secs(1), actions.selected.notified()).await?;
     assert_eq!(actions.calls.load(Ordering::SeqCst), 0);
     actions.version.store(2, Ordering::SeqCst);
