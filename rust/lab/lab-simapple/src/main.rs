@@ -452,7 +452,9 @@ impl Session {
                     self.credit += n;
                     return Ok(());
                 }
-                Some("Prepare" | "Dispatch" | "Resolve") => self.pending.push_back(reply),
+                Some("Prepare" | "Dispatch" | "Resolve" | "Query" | "QueryCancel" | "BlobRead") => {
+                    self.pending.push_back(reply);
+                }
                 Some("Ping") => {
                     send(&mut self.stream, &json!({"t":"Pong"}))?;
                 }

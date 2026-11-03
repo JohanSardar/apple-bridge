@@ -86,7 +86,14 @@ impl Client {
             Some(&body),
             seconds,
         )?;
-        accepted(&reply, serde_json::from_slice(&reply.body)?)
+        let value = serde_json::from_slice(&reply.body).map_err(|e| {
+            Error::Invalid(format!(
+                "response {} {e}: {}",
+                reply.status,
+                String::from_utf8_lossy(&reply.body[..reply.body.len().min(80)])
+            ))
+        })?;
+        accepted(&reply, value)
     }
     pub fn call_mcp(&self, operation: &str, input: &Value, seconds: u64) -> Result<Option<Value>> {
         let body = serde_json::to_vec(&json!({
