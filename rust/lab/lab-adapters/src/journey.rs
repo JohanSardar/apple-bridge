@@ -95,7 +95,7 @@ fn finish(world: &World, observed: &Observed, evidence: &mut Evidence) -> Result
 pub fn is_error(value: &Value, code: &str) -> bool {
     value["error"]["code"] == code
 }
-fn all_endpoints(world: &World) -> Result<Vec<(Option<usize>, Client, String)>> {
+pub(crate) fn all_endpoints(world: &World) -> Result<Vec<(Option<usize>, Client, String)>> {
     let mut out = vec![(
         None,
         gateway_client(world)?,
@@ -125,7 +125,7 @@ pub(crate) fn observed(value: &Value) -> bool {
         && value["disposition"] == "locally_observed"
         && value["commit_seq"].as_u64().unwrap_or(0) > 0
 }
-fn record_set(client: &Client, collection: &str) -> Result<Vec<Value>> {
+pub(crate) fn record_set(client: &Client, collection: &str) -> Result<Vec<Value>> {
     Ok(records(client)?
         .1
         .into_iter()
@@ -236,7 +236,7 @@ fn latency_assertions(seen_at: &[Option<Duration>], evidence: &mut Evidence) {
         );
     }
 }
-fn scope_probe(
+pub(crate) fn scope_probe(
     scoped: &[(Option<usize>, Client, String)],
     reminders: &[Value],
     evidence: &mut Evidence,

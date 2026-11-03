@@ -9,6 +9,7 @@ pub mod imports;
 pub mod iphone;
 pub mod iphone_gateway;
 pub mod journey;
+pub mod labcore;
 pub mod media;
 pub mod messages_a;
 pub mod packaging;
@@ -54,6 +55,8 @@ pub fn registry() -> Registry {
             )?;
         } else if replicas != 0 && messages_a::SCENARIOS.contains(&id) {
             messages_a::start(world, usize::try_from(replicas).unwrap_or(0))?;
+        } else if replicas != 0 && labcore::SCENARIOS.contains(&id) {
+            labcore::start_world(world, id, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && !PORTED.contains(&id) && !self_started {
             return Err(Error::Invalid(format!("replica world not ported for {id}")));
         }
@@ -69,8 +72,18 @@ pub fn registry() -> Registry {
     registry.register("contacts", imports::contacts);
     registry.register("notes", imports::notes);
     registry.register("usage", imports::usage);
-    registry.register("seed", journey::seed);
-    registry.register("converge", journey::converge);
+    registry.register("seed", labcore::seed);
+    registry.register("converge", labcore::converge);
+    registry.register("connect", labcore::connect);
+    registry.register("partition", labcore::partition);
+    registry.register("heal", labcore::heal);
+    registry.register("resumed", labcore::resumed);
+    registry.register("truth_multiplicity", labcore::truth_multiplicity);
+    registry.register("sse_resume", labcore::sse_resume_all);
+    registry.register("sse_idle", labcore::sse_idle_all);
+    registry.register("stale_frame", labcore::stale_frame);
+    registry.register("stale_fence_rejected", labcore::stale_fence_rejected);
+    registry.register("load_rejected", labcore::load_rejected);
     registry.register("media_variants", media::media_variants);
     registry.register("messages_commands", cleanup::messages_commands);
     registry.register("files_native", files_native::files_native);
