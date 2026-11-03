@@ -22,6 +22,9 @@ WEB_RM_SCENARIOS = ['web/WEB-RM-MEDIA-COLLECTION', 'web/WEB-RM-SEARCH']
 NATIVE_SCENARIOS = ['packaging/Q1-SETUP', 'packaging/R1-RELEASE-SIM', 'files/FILE-IDLE', 'files/FILE-CAPTURE']
 MESSAGES_A_SCENARIOS = ['messages/MSG-DB-REPLACED', 'messages/MSG-PERMISSION-LOSS', 'messages/MSG-INCOMING',
                         'messages/MSG-DECODE']
+USAGE_SCENARIOS = ['usage/USE-LOCK-CLIP', 'usage/USE-READONLY', 'usage/USE-REMOTE-LAG']
+DARWIN_USAGE_SCENARIOS = ['usage/USE-SEGB-DECODE', 'usage/USE-ACTION-PROBE']
+CALLS_SCENARIOS = ['phone/CALL-CAPTURE', 'phone/VM-CAPTURE', 'phone/VMEMO-CAPTURE', 'phone/VMEMO-LATE-ASSETS']
 IPHONE_SCENARIOS = ['iphone/APP-ALARM-SIM', 'iphone/APP-SHELL-SIM', 'iphone/APP-PAIR-SIM', 'iphone/APP-DEVICE-SIM',
                     'iphone/APP-MOTION-SIM', 'iphone/APP-HEALTH-WRITE-SIM', 'iphone/APP-SCREENTIME-SIM',
                     'iphone/APP-HEALTH-SIM', 'iphone/APP-LOC-SIM', 'iphone/APP-LIVE-SIM', 'iphone/APP-APPROVE-SIM']
@@ -70,7 +73,13 @@ def main():
     parser.add_argument('--relay', dest='relay', action='store_true')
     parser.add_argument('--reminders', dest='reminders', action='store_true')
     parser.add_argument('--mac', dest='mac', action='store_true')
+    parser.add_argument('--usage', action='store_true')
+    parser.add_argument('--darwin-usage', dest='darwin_usage', action='store_true')
+    parser.add_argument('--calls', action='store_true')
     args = parser.parse_args()
+    for flag, group in [(args.usage, USAGE_SCENARIOS), (args.darwin_usage, DARWIN_USAGE_SCENARIOS), (args.calls, CALLS_SCENARIOS)]:
+        if flag:
+            args.scenario = (args.scenario or []) + group
     if args.shortcuts:
         args.scenario = (args.scenario or []) + SHORTCUT_SCENARIOS
     if args.imports:

@@ -239,7 +239,7 @@ pub fn notes(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()
     );
     Ok(())
 }
-fn usage_totals(client: &Client, device: &str) -> (f64, f64) {
+pub fn usage_totals(client: &Client, device: &str) -> (f64, f64) {
     let Ok(read) = read_all(client, false, true) else {
         return (-1.0, -1.0);
     };
@@ -319,6 +319,9 @@ pub fn usage(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()
         }),
         "remote totals reach the gateway",
     );
+    usage_tail(&gateway, &observed, evidence)
+}
+pub fn usage_tail(gateway: &Client, observed: &Observed, evidence: &mut Evidence) -> Result<()> {
     evidence.check(
         "replica_converged",
         await_until(30, || {
@@ -332,7 +335,7 @@ pub fn usage(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()
                         .collect::<Vec<_>>()
                 })
             };
-            let gateway_records = usage_only(&gateway);
+            let gateway_records = usage_only(gateway);
             replicas::endpoints().iter().all(|endpoint| {
                 match (&gateway_records, usage_only(&endpoint.client())) {
                     (Ok(left), Ok(right)) => {
@@ -342,11 +345,11 @@ pub fn usage(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()
                     }
                     _ => false,
                 }
-            }) && replica_integrity(&observed)
+            }) && replica_integrity(observed)
         }),
         "replica usage records equal the gateway",
     );
-    let read = read_all(&gateway, false, false)?;
+    let read = read_all(gateway, false, false)?;
     let mut metadata = true;
     let (mut devices, mut days) = (0, 0);
     let mut names = std::collections::BTreeSet::new();

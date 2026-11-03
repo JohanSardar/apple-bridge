@@ -1,5 +1,6 @@
 pub mod assertions;
 pub mod blobs;
+pub mod calls;
 pub mod cleanup;
 pub mod commands;
 pub mod files_native;
@@ -33,6 +34,7 @@ pub mod restart;
 pub mod robust;
 pub mod search;
 pub mod shortcuts;
+pub mod usage;
 pub mod watch;
 use lab_runner::Registry;
 use lab_world::Error;
@@ -52,13 +54,24 @@ pub fn registry() -> Registry {
         let id = evidence.scenario.as_str();
         let self_started = media::MEDIA_SCENARIOS.contains(&id)
             || id == "MSG-MEDIA-CLEANUP"
-            || readmodels::SCENARIOS.contains(&id);
+            || readmodels::SCENARIOS.contains(&id)
+            || calls::NATIVE_SCENARIOS.contains(&id)
+            || usage::NATIVE_SCENARIOS.contains(&id);
         if replicas != 0 && blobs::is_blob(id) {
             blobs::configure(world, id, usize::try_from(replicas).unwrap_or(0))?;
+        } else if replicas != 0 && calls::REPLICA_SCENARIOS.contains(&id) {
+            replicas::start_with(
+                world,
+                usize::try_from(replicas).unwrap_or(0),
+                calls::SCOPE,
+                0,
+            )?;
         } else if replicas != 0 && journey::COMMAND_SCENARIOS.contains(&id) {
             replicas::start(world, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0
-            && (history::SCENARIOS.contains(&id) || imports::SCENARIOS.contains(&id))
+            && (history::SCENARIOS.contains(&id)
+                || imports::SCENARIOS.contains(&id)
+                || usage::SCENARIOS.contains(&id))
         {
             replicas::start_with(
                 world,
@@ -86,7 +99,8 @@ pub fn registry() -> Registry {
     registry.register("messages_truth", history::messages_truth);
     registry.register("contacts", imports::contacts);
     registry.register("notes", imports::notes);
-    registry.register("usage", imports::usage);
+    registry.register("usage", usage::cases);
+    registry.register("phone", calls::phone);
     registry.register("seed", labcore::seed);
     registry.register("converge", labcore::converge);
     registry.register("connect", labcore::connect);
