@@ -57,7 +57,7 @@ fn shapes(replica: bool) -> Result<&'static Shapes, Error> {
         compile(&shapes).map_err(|e| e.code)
     })
     .as_ref()
-    .map_err(|code| Error::from(*code))
+    .map_err(|code| Error::from(code.clone()))
 }
 fn leaf(value: &Value, out: &mut Vec<u8>) -> Result<(), Error> {
     serde_json::to_writer(out, value).map_err(|_| Code::Corrupt.into())
