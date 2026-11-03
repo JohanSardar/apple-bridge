@@ -156,11 +156,16 @@ fn member_available(s: &super::State, action: &Value) -> bool {
 
 impl Session<'_> {
     fn contacts_conflict(&mut self, state: &Shared, frame: &Value, key: &str) -> Result<()> {
-        let capture = {
-            let s = lock(state)?;
-            snapshot(&s, false)?
-        };
-        self.emit(state, capture)?;
+        let record = lock(state)?.data["records"][key].clone();
+        if !record.is_null() {
+            let mut record = record;
+            record["observed_at"] = json!(now());
+            let collection = string(&record, "collection");
+            self.emit(
+                state,
+                json!({"t":"Capture","source":"contacts","observations":[record],"scan_id":id("scan")?,"scope":[collection],"scan_started_at":now(),"completion_evidence":"complete"}),
+            )?;
+        }
         send(
             &mut self.stream,
             &json!({"t":"Rejected","command_id":frame["command_id"],"disposition":"rejected_before_dispatch","error":{"code":"conflict","message":"conflict","retryable":false},"evidence":{"native_key":key,"capture_checkpoint":self.checkpoints.get("contacts").cloned().unwrap_or_default()}}),

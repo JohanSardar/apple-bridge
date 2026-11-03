@@ -448,6 +448,10 @@ impl World {
         self.stop_gateway();
         self.start_gateway()
     }
+    #[must_use]
+    pub fn config(&self) -> &WorldConfig {
+        &self.config
+    }
     pub fn close(&mut self) {
         if let Some(proxy) = self.proxy.take() {
             proxy.close();
