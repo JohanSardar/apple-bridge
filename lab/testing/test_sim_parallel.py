@@ -17,7 +17,28 @@ class RunnerTests(unittest.TestCase):
             binary.write_text('#!/bin/sh\n' + command + '\n')
             binary.chmod(0o700)
             with patch.object(runner.platform, 'system', return_value='Linux'):
-                return runner.execute({'id': 'fixture', 'path': 'fixture.yaml'}, str(binary), timeout, root)
+                return runner.execute({'id': 'fixture', 'path': 'fixture.yaml'}, str(binary), timeout, root, 'gateway=go', '', '')
+
+    def test_static_blocker_prevents_execution(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            marker = root / 'executed'
+            binary = root / 'lab'
+            binary.write_text('#!/bin/sh\ntouch "' + str(marker) + '"\n')
+            binary.chmod(0o700)
+            source = root / 'blocked.go'
+            source.write_text('package fixture\nimport "github.com/JohanSardar/apple-bridge/internal/runtime"\n')
+            entry = {'id':'blocked','path':'fixture.yaml','packages':['internal/runtime'],'code_paths':[str(source)]}
+            with patch.object(runner.platform,'system',return_value='Linux'):
+                row = runner.execute(entry,str(binary),5,root,'gateway=rust','/usr/bin/true','')
+            self.assertFalse(marker.exists(),'statically blocked scenario process was started')
+            self.assertEqual(row['status'],'blocked')
+            self.assertEqual(row['execution_status'],'not-started')
+            self.assertTrue(row['blocked_on'])
+            with patch.object(runner.platform,'system',return_value='Linux'):
+                control = runner.execute(entry,str(binary),5,root,'gateway=go','','')
+            self.assertTrue(marker.exists())
+            self.assertEqual(control['status'],'pass')
 
     def test_native_start_handshake(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -27,7 +48,7 @@ class RunnerTests(unittest.TestCase):
             wrapper.write_text('#!/bin/sh\nexec \"$@\"\n')
             wrapper.chmod(0o700)
             with patch.object(runner.platform, 'system', return_value='Darwin'), patch.object(runner.Path, 'home', return_value=root):
-                row = runner.execute({'id': 'native', 'path': 'fixture.yaml'}, '/usr/bin/true', 5, root)
+                row = runner.execute({'id': 'native', 'path': 'fixture.yaml'}, '/usr/bin/true', 5, root, 'gateway=go', '', '')
             self.assertEqual(row['status'], 'pass')
             self.assertTrue((root / 'native.started').exists())
 
@@ -38,8 +59,8 @@ class RunnerTests(unittest.TestCase):
             binary.write_text('#!/bin/sh\nprintf \"%s\\n\" \"$@\"\n')
             binary.chmod(0o700)
             with patch.object(runner.platform, 'system', return_value='Linux'):
-                runner.execute({'id': 'fixture', 'path': 'fixture.yaml'}, str(binary), 5, root)
-            self.assertEqual((root / 'fixture.log').read_text().splitlines(), ['run', 'fixture.yaml', '--level', 'sim', '--prebuilt', '--json'])
+                runner.execute({'id': 'fixture', 'path': 'fixture.yaml'}, str(binary), 5, root, 'gateway=go', '', '')
+            self.assertEqual((root / 'fixture.log').read_text().splitlines(), ['run', 'fixture.yaml', '--level', 'sim', '--prebuilt', '--json', '--impl', 'gateway=go'])
 
     def test_default_and_end_sets(self):
         import json

@@ -1,0 +1,5 @@
+{
+  "behavior": "Rust scenarios with static harness blockers are reported blocked before starting the scenario process",
+  "red": "statically blocked scenario process was started; marker existed",
+  "green": "8 sim_parallel tests passed; Rust blocker left no execution marker; Go control executed; CLI flags, native handshake, default/end selection and hard timeout checks retained"
+}
