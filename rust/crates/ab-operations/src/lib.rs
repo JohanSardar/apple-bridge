@@ -1,5 +1,8 @@
 #![forbid(unsafe_code)]
 mod adapters;
+pub mod local;
+pub mod peer;
+pub use ab_trust::domain;
 mod legacy;
 use ab_catalog::{OperationKind, operations};
 pub use adapters::{StateReads, TrustIdentity};
@@ -12,6 +15,7 @@ pub type Visibility = BTreeMap<String, bool>;
 #[serde(rename_all = "snake_case")]
 pub enum Code {
     Invalid,
+    IdReused,
     Unauthorized,
     Forbidden,
     Unavailable,
@@ -47,6 +51,7 @@ pub struct Problem<'a> {
 impl From<Code> for Error {
     fn from(code: Code) -> Self {
         let message = match code {
+            Code::IdReused => "command ID already identifies another request",
             Code::Invalid => "invalid input",
             Code::Unauthorized => "credential or scope rejected",
             Code::Forbidden => "query grant rejected",
