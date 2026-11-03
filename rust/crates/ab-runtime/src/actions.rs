@@ -20,7 +20,13 @@ impl ActionResolver for Actions {
         if native_command(&command.op) {
             return native_action(command);
         }
-        self.reminder(principal, command)
+        self.prepare(principal, command).map_err(|error| {
+            if command.op.starts_with("notes.") {
+                note_failure(error)
+            } else {
+                error
+            }
+        })
     }
     fn conflict(
         &self,
@@ -44,18 +50,7 @@ impl ActionResolver for Actions {
         }
         let args: Value = serde_json::from_str(command.args.get()).map_err(|_| Code::Invalid)?;
         let id = args["id"].as_str().ok_or(Code::Corrupt)?;
-        let source = if command.op.starts_with("calendar.") {
-            "calendar"
-        } else {
-            "reminders"
-        };
-        let collection = if source == "calendar" {
-            "calendar.event"
-        } else if command.op.ends_with("_list") {
-            "reminders.list"
-        } else {
-            "reminders.reminder"
-        };
+        let collection = collection(&command.op);
         let native_key = self.state.with(|state| state.native_key(collection, id))?;
         let evidence: Value =
             serde_json::from_str(frame.evidence.as_ref().ok_or(Code::Corrupt)?.get())
@@ -66,7 +61,7 @@ impl ActionResolver for Actions {
         let cursor = self
             .peer
             .captured(
-                source,
+                command.op.split('.').next().ok_or(Code::Invalid)?,
                 evidence["capture_checkpoint"]
                     .as_str()
                     .ok_or(Code::Corrupt)?,
@@ -99,51 +94,119 @@ impl ActionResolver for Actions {
     }
 }
 
-fn native_action(command: &Command) -> Result<PreparedAction, Error> {
-    Ok(PreparedAction {
-        action: serde_json::value::to_raw_value(&json!({
-            "op": command.op, "args": command.args, "origin": command.origin
-        }))
-        .map_err(|_| Code::Corrupt)?,
-        expected_state: None,
-        collection: if command.op.starts_with("files.") {
-            "files.item"
+fn collection(op: &str) -> &str {
+    if op.starts_with("calendar.") {
+        "calendar.event"
+    } else if op.starts_with("contacts.") {
+        if op.contains("group") || op.ends_with("_member") {
+            "contacts.group"
         } else {
-            ""
+            "contacts.contact"
         }
-        .into(),
-        serialization_key: if command.op.starts_with("files.") {
-            "files"
+    } else if op.starts_with("notes.") {
+        if op.ends_with("_folder") {
+            "notes.folder"
         } else {
-            &command.op
+            "notes.note"
         }
-        .into(),
-    })
+    } else if op.ends_with("_list") {
+        "reminders.list"
+    } else {
+        "reminders.reminder"
+    }
+}
+impl Actions {
+    fn visible_key(
+        &self,
+        principal: &Principal,
+        collection: &str,
+        id: &str,
+    ) -> Result<String, Error> {
+        self.state.with(|state| {
+            let result = state.read(
+                &principal.visibility().into_iter().collect(),
+                &ab_state::ReadQuery {
+                    collection: collection.into(),
+                    id: id.into(),
+                    ..ab_state::ReadQuery::default()
+                },
+            )?;
+            if result.records.is_empty() {
+                return Err(ab_state::Error::Contract(
+                    ab_trust::domain::ErrorCode::NotFound,
+                ));
+            }
+            state.native_key(collection, id)
+        })
+    }
+    fn writable_folder(&self, principal: &Principal, id: &str) -> Result<(), Error> {
+        let mut id = id.to_owned();
+        let mut seen = std::collections::BTreeSet::new();
+        while !id.is_empty() {
+            if !seen.insert(id.clone()) {
+                return Err(Code::Corrupt.into());
+            }
+            let result = self.state.with(|state| {
+                state.read(
+                    &principal.visibility().into_iter().collect(),
+                    &ab_state::ReadQuery {
+                        collection: "notes.folder".into(),
+                        id: id.clone(),
+                        ..ab_state::ReadQuery::default()
+                    },
+                )
+            })?;
+            let record = result.records.first().ok_or(Code::NotFound)?;
+            let data: Value = serde_json::from_str(record.data.get()).map_err(|_| Code::Corrupt)?;
+            if data["read_only"] == true || data["recently_deleted"] == true {
+                return Err(Code::Unsupported.into());
+            }
+            id = data["parent_id"].as_str().unwrap_or_default().into();
+        }
+        Ok(())
+    }
 }
 
-fn native_command(op: &str) -> bool {
-    op.starts_with("files.") || matches!(op, "maps.open" | "speech.say" | "capture.play_sound")
+fn command_error(error: ab_commands::Error) -> Error {
+    match error {
+        ab_commands::Error::Invalid => Code::Invalid,
+        ab_commands::Error::Unsupported => Code::Unsupported,
+        ab_commands::Error::TooLarge => Code::TooLarge,
+        ab_commands::Error::Expired => Code::Expired,
+    }
+    .into()
 }
 
 impl Actions {
-    fn reminder(&self, principal: &Principal, command: &Command) -> Result<PreparedAction, Error> {
-        if !command.op.starts_with("reminders.") {
+    #[allow(clippy::too_many_lines)]
+    fn prepare(&self, principal: &Principal, command: &Command) -> Result<PreparedAction, Error> {
+        if !["reminders.", "contacts.", "notes."]
+            .iter()
+            .any(|prefix| command.op.starts_with(prefix))
+        {
             return Err(Code::Unsupported.into());
         }
+        let validated_command = ab_commands::Command {
+            id: command.id.clone(),
+            op: command.op.clone(),
+            args: command.args.clone(),
+            expected_version: command.expected_version,
+            wait_ms: i64::try_from(command.wait_ms).map_err(|_| Code::Invalid)?,
+        };
+        ab_commands::validate(&validated_command, jiff::Timestamp::now()).map_err(command_error)?;
         let args: Value = serde_json::from_str(command.args.get()).map_err(|_| Code::Invalid)?;
         let id = args["id"].as_str().unwrap_or_default();
         let mut list_id = args["list_id"].as_str().unwrap_or_default().to_owned();
-        let collection = if matches!(
-            command.op.as_str(),
-            "reminders.rename_list" | "reminders.delete_list" | "reminders.create_list"
-        ) {
-            "reminders.list"
-        } else {
-            "reminders.reminder"
-        };
+        let collection = collection(&command.op);
         let mut action = json!({"op":command.op,"args":args});
         if !command.origin.is_empty() {
             action["origin"] = json!(command.origin);
+        }
+        if command.op.starts_with("notes.") {
+            action["note_args"] = args.clone();
+        }
+        if let Some(contact) = args["contact_id"].as_str() {
+            action["list_key"] = json!(self.visible_key(principal, "contacts.contact", contact)?);
         }
         let mut expected_state = None;
         if !id.is_empty() {
@@ -162,7 +225,7 @@ impl Actions {
                         ab_state::Error::Contract(ab_trust::domain::ErrorCode::NotFound)
                     })
                 })?;
-            if record.version != command.expected_version {
+            if !command.op.starts_with("notes.") && record.version != command.expected_version {
                 let mut error = Error::from(Code::Conflict);
                 error.current =
                     Some(serde_json::value::to_raw_value(&record).map_err(|_| Code::Corrupt)?);
@@ -171,7 +234,7 @@ impl Actions {
             action["native_key"] =
                 json!(self.state.with(|state| state.native_key(collection, id))?);
             let data: Value = serde_json::from_str(record.data.get()).map_err(|_| Code::Corrupt)?;
-            if collection != "reminders.list" {
+            if collection == "reminders.reminder" {
                 let container = data["list_id"].as_str().ok_or(Code::Corrupt)?;
                 action["expected_list_key"] = json!(
                     self.state
@@ -181,7 +244,61 @@ impl Actions {
                     list_id = container.into();
                 }
             }
-            expected_state = Some(record.data);
+            if command.op.starts_with("notes.") {
+                if command.op == "notes.rename_folder" {
+                    self.writable_folder(principal, id)?;
+                    if !data["title"]
+                        .as_str()
+                        .unwrap_or_default()
+                        .starts_with("Bridge Test [ab-test")
+                    {
+                        return Err(Code::Unsupported.into());
+                    }
+                }
+                let content_version = data["content_version"]
+                    .as_u64()
+                    .filter(|version| *version > 0)
+                    .unwrap_or(record.version)
+                    .min(record.version);
+                if command.expected_version < content_version
+                    || command.expected_version > record.version
+                {
+                    let mut error = Error::from(Code::Conflict);
+                    error.current =
+                        Some(serde_json::value::to_raw_value(&record).map_err(|_| Code::Corrupt)?);
+                    return Err(error);
+                }
+                if command.op == "notes.update"
+                    && args["html"].as_str().is_some_and(|html| {
+                        !ab_commands::note_html_compatible(record.data.get().as_bytes(), html)
+                    })
+                {
+                    return Err(Code::Unsupported.into());
+                }
+                if data["recently_deleted"] == true
+                    || command.op == "notes.update"
+                        && (data["locked"] == true
+                            || args["html"].is_null() && data["editable"] != "plain")
+                {
+                    return Err(Code::Unsupported.into());
+                }
+                if let Some(folder) = data["folder_id"].as_str() {
+                    self.writable_folder(principal, folder)?;
+                }
+            }
+            let mut expected = data;
+            if collection == "contacts.group"
+                && let Some(members) = expected["member_ids"].as_array_mut()
+            {
+                for member in members {
+                    let key = self.state.with(|state| {
+                        state.native_key("contacts.contact", member.as_str().unwrap_or_default())
+                    })?;
+                    *member = json!({"$ref":{"collection":"contacts.contact","native_key":key}});
+                }
+            }
+            expected_state =
+                Some(serde_json::value::to_raw_value(&expected).map_err(|_| Code::Corrupt)?);
         }
         if !list_id.is_empty() {
             let visibility = principal.visibility().into_iter().collect();
@@ -206,8 +323,17 @@ impl Actions {
                     .with(|state| state.native_key("reminders.list", &list_id))?
             );
         }
+        if let Some(folder) = args["folder_id"].as_str() {
+            self.writable_folder(principal, folder)?;
+            action["folder_key"] = json!(self.visible_key(principal, "notes.folder", folder)?);
+        }
         Ok(PreparedAction {
-            action: serde_json::value::to_raw_value(&action).map_err(|_| Code::Corrupt)?,
+            action: {
+                let context = serde_json::from_value(action).map_err(|_| Code::Corrupt)?;
+                let bytes = ab_commands::native_action(&validated_command, &context)
+                    .map_err(command_error)?;
+                serde_json::from_slice(&bytes).map_err(|_| Code::Corrupt)?
+            },
             expected_state,
             collection: collection.into(),
             serialization_key: if !id.is_empty() {
@@ -219,4 +345,43 @@ impl Actions {
             },
         })
     }
+}
+
+fn note_failure(mut error: Error) -> Error {
+    error.message = match error.code {
+        Code::Unsupported => "Notes can't apply this change. Use a writable plain-text note, or preserve the existing formatting in an HTML update. Edit locked or unsupported content in Notes.",
+        Code::Conflict => "This note or folder changed. Refresh it and try again.",
+        Code::Unavailable => "Notes didn't respond. Open Notes, check its Automation access, and try again.",
+        Code::NotFound => "This note or folder is no longer available. Refresh Notes and try again.",
+        Code::Unauthorized => "This connection can't change Notes. Reconnect with Notes write access.",
+        Code::Invalid => "The Notes request is incomplete or invalid. Check the note or folder details and try again.",
+        _ => return error,
+    }.into();
+    error
+}
+
+fn native_action(command: &Command) -> Result<PreparedAction, Error> {
+    Ok(PreparedAction {
+        action: serde_json::value::to_raw_value(&json!({
+            "op": command.op, "args": command.args, "origin": command.origin
+        }))
+        .map_err(|_| Code::Corrupt)?,
+        expected_state: None,
+        collection: if command.op.starts_with("files.") {
+            "files.item"
+        } else {
+            ""
+        }
+        .into(),
+        serialization_key: if command.op.starts_with("files.") {
+            "files"
+        } else {
+            &command.op
+        }
+        .into(),
+    })
+}
+
+fn native_command(op: &str) -> bool {
+    op.starts_with("files.") || matches!(op, "maps.open" | "speech.say" | "capture.play_sound")
 }

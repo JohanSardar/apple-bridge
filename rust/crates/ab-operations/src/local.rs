@@ -225,18 +225,25 @@ impl LocalGateway {
             command.op.as_str(),
             "maps.open" | "speech.say" | "capture.play_sound"
         );
-        if !transient {
-            validate_shape(&descriptor.input["properties"]["args"], &args)?;
-        }
         crate::native_commands::validate(&command, &args)?;
-        if !args.is_object()
-            || !transient
-                && descriptor.input["required"]
-                    .as_array()
-                    .is_some_and(|v| v.iter().any(|k| k == "expected_version"))
-                && command.expected_version == 0
+        if ["contacts.", "notes.", "reminders."]
+            .iter()
+            .any(|prefix| command.op.starts_with(prefix))
         {
-            return Err(Code::Invalid.into());
+            crate::validate_source_command(&command)?;
+        } else {
+            if !transient {
+                validate_shape(&descriptor.input["properties"]["args"], &args)?;
+            }
+            if !args.is_object()
+                || !transient
+                    && descriptor.input["required"]
+                        .as_array()
+                        .is_some_and(|v| v.iter().any(|k| k == "expected_version"))
+                    && command.expected_version == 0
+            {
+                return Err(Code::Invalid.into());
+            }
         }
         command.origin = if p.kind == "device"
             || p.is_agent() && matches!(p.level.as_str(), "full" | "approve")
@@ -961,7 +968,9 @@ fn target_collection(op: &str) -> String {
         "notes.create_folder" | "notes.rename_folder" => "notes.folder",
         op if op.starts_with("reminders.") => "reminders.reminder",
         op if op.starts_with("calendar.") => "calendar.event",
-        op if op.starts_with("contacts.") && op.contains("group") => "contacts.group",
+        op if op.starts_with("contacts.") && (op.contains("group") || op.ends_with("_member")) => {
+            "contacts.group"
+        }
         op if op.starts_with("contacts.") => "contacts.contact",
         op if op.starts_with("notes.") => "notes.note",
         "messages.mark_read" | "messages.mark_unread" | "messages.delete_chat" => "messages.chat",

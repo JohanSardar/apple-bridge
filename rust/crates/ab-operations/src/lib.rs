@@ -601,14 +601,18 @@ impl Service {
                 return Err(Code::Unsupported.into());
             }
             let transient = matches!(name, "maps.open" | "speech.say" | "capture.play_sound");
-            if !transient {
+            native_commands::validate(&command, &args)?;
+            let source_validated = ["contacts.", "notes.", "reminders."]
+                .iter()
+                .any(|prefix| name.starts_with(prefix));
+            if !source_validated && !transient {
                 validate_shape(&descriptor.input["properties"]["args"], &args)?;
             }
-            native_commands::validate(&command, &args)?;
             if !args.is_object() {
                 return Err(Code::Invalid.into());
             }
-            if !transient
+            if !source_validated
+                && !transient
                 && descriptor.input["required"]
                     .as_array()
                     .is_some_and(|fields| fields.iter().any(|field| field == "expected_version"))
@@ -625,6 +629,9 @@ impl Service {
             }
             if command.id.is_empty() {
                 command.id = format!("cmd_{}", ulid::Ulid::new());
+            }
+            if source_validated {
+                validate_source_command(&command)?;
             }
             return match &self.target {
                 CommandTarget::Remote(target) => target.submit(&principal, command).await,
@@ -793,4 +800,26 @@ pub fn descriptor_for(name: &str) -> Result<ab_catalog::OperationDescriptor, Err
         .into_iter()
         .find(|d| d.name == name)
         .ok_or_else(|| Code::Unsupported.into())
+}
+
+fn validate_source_command(command: &Command) -> Result<(), Error> {
+    ab_commands::validate(
+        &ab_commands::Command {
+            id: command.id.clone(),
+            op: command.op.clone(),
+            args: command.args.clone(),
+            expected_version: command.expected_version,
+            wait_ms: i64::try_from(command.wait_ms).map_err(|_| Code::Invalid)?,
+        },
+        jiff::Timestamp::now(),
+    )
+    .map(|_| ())
+    .map_err(|error| {
+        Error::from(match error {
+            ab_commands::Error::Invalid => Code::Invalid,
+            ab_commands::Error::Unsupported => Code::Unsupported,
+            ab_commands::Error::TooLarge => Code::TooLarge,
+            ab_commands::Error::Expired => Code::Expired,
+        })
+    })
 }
