@@ -33,6 +33,8 @@ REMINDER_SCENARIOS = ['REM-CONFLICT', 'REM-EXTERNAL-RACE', 'REM-NATIVE-LIST-RACE
                       'REM-READONLY-LIST']
 MAC_SCENARIOS = ['mac/MAC-ACTIONS', 'mac/MAC-COMMANDS', 'mac/MAC-CAPTURE', 'mac/MAC-IDLE',
                  'mac/MAC-EXTRAS-SIM', 'mac/IWORK-REAL']
+WEB_SCENARIOS = ['web/WEB-CON-LIST', 'web/WEB-MEDIA-CAP']
+NATIVE_MEDIA_SCENARIOS = ['web/NATIVE-MEDIA-EXPORT-SAFETY', 'web/NATIVE-MEDIA-POSTERS', 'web/NATIVE-MEDIA-YIELD', 'web/WEB-REM-PARITY']
 SCENARIOS = ['CORE-QUERY-ROUNDTRIP', 'CORE-QUERY-BLOB', 'CORE-QUERY-SCOPE', 'CORE-QUERY-DEADLINE',
              *JOURNEY_SCENARIOS, *CORE_SCENARIOS]
 FRONTDOOR_SCENARIOS = ['CORE-REST-MCP-PARITY', 'CORE-LOCALHOST-DEFENSE']
@@ -76,6 +78,8 @@ def main():
     parser.add_argument('--usage', action='store_true')
     parser.add_argument('--darwin-usage', dest='darwin_usage', action='store_true')
     parser.add_argument('--calls', action='store_true')
+    parser.add_argument('--web', dest='web', action='store_true')
+    parser.add_argument('--native-media', dest='native_media', action='store_true')
     args = parser.parse_args()
     for flag, group in [(args.usage, USAGE_SCENARIOS), (args.darwin_usage, DARWIN_USAGE_SCENARIOS), (args.calls, CALLS_SCENARIOS)]:
         if flag:
@@ -100,6 +104,10 @@ def main():
         args.scenario = (args.scenario or []) + REMINDER_SCENARIOS
     if args.mac:
         args.scenario = (args.scenario or []) + MAC_SCENARIOS
+    if args.web:
+        args.scenario = (args.scenario or []) + WEB_SCENARIOS
+    if args.native_media:
+        args.scenario = (args.scenario or []) + NATIVE_MEDIA_SCENARIOS
     out = Path(args.output).resolve()
     out.mkdir(mode=0o700, parents=True, exist_ok=False)
     root = Path(__file__).resolve().parents[2] / 'lab' / 'scenarios'

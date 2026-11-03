@@ -22,6 +22,8 @@ pub struct Scenario {
     pub then: Vec<Value>,
     #[serde(default)]
     pub cleanup: Vec<Value>,
+    #[serde(default)]
+    pub web: Option<Value>,
 }
 #[derive(Debug, Serialize)]
 pub struct Assertion {
@@ -75,11 +77,22 @@ impl Registry {
             evidence.check("sim_level", false, "unsupported level");
             return evidence;
         }
+        let implicit = [Value::Object(
+            std::iter::once((scenario.id.clone(), json!({}))).collect(),
+        )];
+        let declared = scenario
+            .given
+            .iter()
+            .chain(&scenario.when)
+            .chain(&scenario.then)
+            .count();
+        let steps: &[Value] = if declared == 0 { &implicit } else { &[] };
         for step in scenario
             .given
             .iter()
             .chain(&scenario.when)
             .chain(&scenario.then)
+            .chain(steps)
         {
             if let Err(error) = self.step(step, world, &mut evidence) {
                 evidence.check("action", false, &error.to_string());
