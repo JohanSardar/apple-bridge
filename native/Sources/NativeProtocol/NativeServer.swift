@@ -127,6 +127,12 @@ public actor NativeServer {
         if frame["snapshot"] == .null {
             guard frame["cursor"] == .null, snapshots.count < 8 else { throw SourceFailure.invalid }
             let facts = try await adapter.facts(op, args: frame["args"])
+            guard !facts.generation.isEmpty else { throw SourceFailure.invalid }
+            switch facts.scope {
+            case .string(let scope): guard !scope.isEmpty else { throw SourceFailure.invalid }
+            case .object(let scope): guard !scope.isEmpty else { throw SourceFailure.invalid }
+            default: throw SourceFailure.invalid
+            }
             guard facts.items.count <= 100000, try JSONEncoder().encode(JSON.array(facts.items)).count <= 32 * 1024 * 1024 else { throw SourceFailure.unavailable }
             token = UUID().uuidString; offset = 0
             snapshot = Snapshot(operation: op, args: frame["args"], facts: facts, expiry: Date().addingTimeInterval(60))

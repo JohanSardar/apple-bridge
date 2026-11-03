@@ -8,7 +8,7 @@ actor FakeNative: NativeAdapter {
     var reads = 0
     func facts(_ operation: String, args: JSON) async throws -> NativeFacts {
         reads += 1
-        return NativeFacts(items: (0..<5).map { .object(["native_key": .string("fixture-\($0)"), "data": .object(["title": .string("synthetic-\($0)")])]) }, scope: .array([.string(operation)]), generation: "fixture-1", complete: args["partial"] != .bool(true))
+        return NativeFacts(items: (0..<5).map { .object(["native_key": .string("fixture-\($0)"), "data": .object(["title": .string("synthetic-\($0)")])]) }, scope: .string(operation), generation: "fixture-1", complete: args["partial"] != .bool(true))
     }
     func effect(_ operation: String, args: JSON, permit: JSON) async throws -> JSON {
         effects += 1

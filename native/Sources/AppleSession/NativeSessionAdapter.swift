@@ -46,12 +46,12 @@ extension AppleSession: NativeAdapter {
             return await sink.result(collection: collection)
         case "location.status":
             let ready = await LocationStatus().open()
-            return NativeFacts(items: [.object(["state": .string(ready.state), "reason": .string(ready.reason)])], scope: .array([.string("location.status")]), generation: "native/1", complete: true)
+            return NativeFacts(items: [.object(["state": .string(ready.state), "reason": .string(ready.reason)])], scope: .string("location.status"), generation: "native/1", complete: true)
         case "focus.status":
-            return NativeFacts(items: [await FocusSource.status()], scope: .array([.string("focus.status")]), generation: "native/1", complete: true)
+            return NativeFacts(items: [await FocusSource.status()], scope: .string("focus.status"), generation: "native/1", complete: true)
         case "permissions.status":
             let states = await nativePermissionStatus()
-            return NativeFacts(items: [states], scope: .array([.string("permissions.status")]), generation: "native/1", complete: true)
+            return NativeFacts(items: [states], scope: .string("permissions.status"), generation: "native/1", complete: true)
         case "mac.state":
             let mac = await MacSource()
             try await mac.nativeFacts(into: sink)
@@ -61,7 +61,7 @@ extension AppleSession: NativeAdapter {
         case "ui.actions":
             guard let messages = additionalSources["messages"] else { throw SourceFailure.unavailable }
             let ready = await messages.open()
-            return NativeFacts(items: ready.capabilities.map(JSON.string), scope: .array([.string("ui.actions")]), generation: "native/1", complete: true)
+            return NativeFacts(items: ready.capabilities.map(JSON.string), scope: .string("ui.actions"), generation: "native/1", complete: true)
         default: throw SourceFailure.unsupported
         }
     }
