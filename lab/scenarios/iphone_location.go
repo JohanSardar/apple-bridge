@@ -4,18 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
-	"github.com/JohanSardar/apple-bridge/internal/iphone"
-	"github.com/JohanSardar/apple-bridge/internal/operations"
-	"github.com/JohanSardar/apple-bridge/internal/state"
-	"github.com/JohanSardar/apple-bridge/internal/trust"
 	"github.com/JohanSardar/apple-bridge/lab/simapple"
 )
 
@@ -51,56 +45,30 @@ func runIPhoneLocation(ctx context.Context, s Scenario, level string) Evidence {
 	if err != nil {
 		return e
 	}
-	a, err := trust.Open(filepath.Join(dir, "trust"))
-	add("authority", err == nil)
+	gateway, phone, token, err := iphoneBinaryFixture(ctx, dir)
+	add("binary_gateway_fixture", err == nil)
 	if err != nil {
 		return e
 	}
-	store, err := state.Open(filepath.Join(dir, "state"))
-	add("state", err == nil)
-	if err != nil {
-		return e
-	}
-	defer store.Close()
-	delivery := iphone.NewDelivery(store, a)
-	mux := http.NewServeMux()
-	mux.Handle("/v1/iphone/pair", a.IPhoneHandler())
-	mux.Handle("/v1/iphone/", delivery.Handler())
-	server := httptest.NewTLSServer(mux)
-	defer server.Close()
-	code, err := a.PairIPhoneCode(server.URL, false, time.Minute)
-	add("pair_code", err == nil)
-	phone, err := simapple.NewIPhone()
-	add("phone", err == nil)
-	if err != nil {
-		return e
-	}
-	status, err := phone.Pair(server.Client(), server.URL, code)
-	add("paired", err == nil && status == 200)
+	defer gateway.Close()
+	readToken, err := gateway.Command("token", "create", "--scope", "iphone:read")
+	add("read_grant", err == nil)
 	raw, err := os.ReadFile(fixture)
 	add("fixture", err == nil)
 	for i := 0; i < 2; i++ {
-		response, err := phone.Request(server.Client(), server.URL, "/v1/iphone/location-records", raw)
+		response, err := phone.Request(gateway.Client, gateway.URL, "/v1/iphone/location-records", raw)
 		ok := err == nil && response.StatusCode == 200
 		if response != nil {
 			response.Body.Close()
 		}
 		add("signed_records_accepted", ok)
 	}
-	result, err := store.Read(ctx, trust.Visibility{contracts.IPhone: true}, contracts.ReadQuery{Collection: "iphone.location", Limit: 100})
+	var result contracts.ReadResult
+	err = gateway.Invoke("records.query", contracts.ReadQuery{Collection: "iphone.location", Limit: 100}, readToken, &result)
 	add("durable_deduplicated_location_records", err == nil && len(result.Records) == 5)
-	args, _ := json.Marshal(map[string]any{"device_id": phone.ID, "name": "[ab-test] fence", "latitude": 12, "longitude": 34, "radius": 150})
-	add("geofence_command_registered", contracts.ValidateIPhoneCommand(contracts.Command{ID: "cmd_loc", Op: "iphone.geofence.add", Args: args}) == nil)
 	invalid, _ := json.Marshal(map[string]any{"device_id": phone.ID, "name": "[ab-test] fence", "latitude": 91, "longitude": 34, "radius": 150})
-	add("invalid_geofence_rejected", contracts.ValidateIPhoneCommand(contracts.Command{ID: "cmd_loc", Op: "iphone.geofence.add", Args: invalid}) != nil)
-
-	add("command_ledger", store.InitCommands(ctx) == nil)
-	gateway := &operations.LocalGateway{State: store, Authority: a, Context: ctx, IPhone: delivery}
-	delivery.Authorize = gateway.ReauthorizeIPhone
-	token, err := a.CreateToken([]contracts.Grant{"iphone:write"})
-	add("command_grant", err == nil)
-	principal, err := a.AuthenticateToken(token)
-	add("command_principal", err == nil)
+	status, err := gateway.Request("/v1/op/iphone.geofence.add", contracts.Command{ID: "cmd_loc_invalid", Args: invalid}, token, nil)
+	add("invalid_geofence_rejected", err == nil && status == 400)
 	for index, op := range []string{"iphone.location.current", "iphone.geofence.add", "iphone.geofence.list", "iphone.geofence.remove", "iphone.location.significant"} {
 		values := map[string]any{"device_id": phone.ID}
 		switch op {
@@ -116,39 +84,44 @@ func runIPhoneLocation(ctx context.Context, s Scenario, level string) Evidence {
 		}
 		input, _ := json.Marshal(values)
 		command := contracts.Command{ID: fmt.Sprintf("cmd_location_%d", index), Op: op, Args: input}
-		admitted, err := gateway.Submit(ctx, principal, command)
+		var admitted contracts.CommandRecord
+		err := gateway.Invoke(op, command, token, &admitted)
 		add("location_command_admitted", err == nil && admitted.State == contracts.CommandAdmitted)
-		response, err := phone.Request(server.Client(), server.URL, "/v1/iphone/pending", nil)
+		if op == "iphone.geofence.add" {
+			add("geofence_command_registered", err == nil && admitted.State == contracts.CommandAdmitted)
+		}
+		response, err := phone.Request(gateway.Client, gateway.URL, "/v1/iphone/pending", nil)
 		if err != nil {
 			add("pending_command", false)
 			return e
 		}
-		var packets []iphone.Packet
+		var packets []simapple.IPhonePacket
 		err = json.NewDecoder(response.Body).Decode(&packets)
 		response.Body.Close()
 		add("encrypted_location_command", err == nil && len(packets) == 1)
 		if len(packets) != 1 {
 			return e
 		}
-		plain, err := iphone.Open(phone.Encryption, phone.ID, packets[0], phone.Gateway)
-		var job iphone.Job
+		plain, err := phone.Open(packets[0])
+		var job simapple.IPhoneJob
 		add("location_command_decrypted", err == nil && json.Unmarshal(plain, &job) == nil && job.Command.Op == op)
-		summary := iphone.Result{ID: command.ID, Hash: job.Hash, State: contracts.CommandObserved, Data: json.RawMessage(`{"count":1,"significant":true}`)}
+		summary := simapple.IPhoneResult{ID: command.ID, Hash: job.Hash, State: contracts.CommandObserved, Data: json.RawMessage(`{"count":1,"significant":true}`)}
 		unsafe := summary
 		unsafe.Data = json.RawMessage(`{"count":1,"significant":true,"latitude":12,"longitude":34}`)
 		unsafeBody, _ := json.Marshal(unsafe)
-		unsafeResponse, unsafeErr := phone.Request(server.Client(), server.URL, "/v1/iphone/result", unsafeBody)
+		unsafeResponse, unsafeErr := phone.Request(gateway.Client, gateway.URL, "/v1/iphone/result", unsafeBody)
 		add("coordinate_bearing_receipt_rejected", unsafeErr == nil && unsafeResponse.StatusCode == 400)
 		if unsafeResponse != nil {
 			unsafeResponse.Body.Close()
 		}
 		body, _ := json.Marshal(summary)
-		response, err = phone.Request(server.Client(), server.URL, "/v1/iphone/result", body)
+		response, err = phone.Request(gateway.Client, gateway.URL, "/v1/iphone/result", body)
 		add("location_completion_accepted", err == nil && response.StatusCode == 200)
 		if response != nil {
 			response.Body.Close()
 		}
-		completed, err := store.Command(ctx, command.ID)
+		var completed contracts.CommandRecord
+		err = gateway.Invoke("commands.status", map[string]string{"command_id": command.ID}, token, &completed)
 		add("location_completion_observed", err == nil && completed.State == contracts.CommandObserved)
 		var receipt struct {
 			Payload []byte `json:"payload"`

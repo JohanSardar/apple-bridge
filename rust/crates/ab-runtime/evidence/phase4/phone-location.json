@@ -1,0 +1,416 @@
+{
+  "artifact": {
+    "head": "05de2f4b30ae4b762493abb3489ea7822865d721",
+    "sha256": "8f057f84177e9840a97caf1f58e7d1a8f8be1b31b53bc4d14ec8164f709be7fd"
+  },
+  "phone_checkout_head": "159cff434ec7cdda260c68797aa327e805e0ddd4",
+  "proofs": [
+    {
+      "implementation": "gateway=go",
+      "summary": {
+        "id": "APP-LOC-SIM",
+        "seconds": 9.221,
+        "status": "pass",
+        "implementation": "gateway=go"
+      },
+      "assertions": [
+        {
+          "name": "isolated_home",
+          "passed": true
+        },
+        {
+          "name": "swift_adapter_build",
+          "passed": true
+        },
+        {
+          "name": "fake_adapter_current_geofence_events_significant_restart_permission",
+          "passed": true
+        },
+        {
+          "name": "binary_gateway_fixture",
+          "passed": true
+        },
+        {
+          "name": "read_grant",
+          "passed": true
+        },
+        {
+          "name": "fixture",
+          "passed": true
+        },
+        {
+          "name": "signed_records_accepted",
+          "passed": true
+        },
+        {
+          "name": "signed_records_accepted",
+          "passed": true
+        },
+        {
+          "name": "durable_deduplicated_location_records",
+          "passed": true
+        },
+        {
+          "name": "invalid_geofence_rejected",
+          "passed": true
+        },
+        {
+          "name": "location_command_admitted",
+          "passed": true
+        },
+        {
+          "name": "encrypted_location_command",
+          "passed": true
+        },
+        {
+          "name": "location_command_decrypted",
+          "passed": true
+        },
+        {
+          "name": "coordinate_bearing_receipt_rejected",
+          "passed": true
+        },
+        {
+          "name": "location_completion_accepted",
+          "passed": true
+        },
+        {
+          "name": "location_completion_observed",
+          "passed": true
+        },
+        {
+          "name": "coordinate_free_receipt",
+          "passed": true
+        },
+        {
+          "name": "location_command_admitted",
+          "passed": true
+        },
+        {
+          "name": "geofence_command_registered",
+          "passed": true
+        },
+        {
+          "name": "encrypted_location_command",
+          "passed": true
+        },
+        {
+          "name": "location_command_decrypted",
+          "passed": true
+        },
+        {
+          "name": "coordinate_bearing_receipt_rejected",
+          "passed": true
+        },
+        {
+          "name": "location_completion_accepted",
+          "passed": true
+        },
+        {
+          "name": "location_completion_observed",
+          "passed": true
+        },
+        {
+          "name": "coordinate_free_receipt",
+          "passed": true
+        },
+        {
+          "name": "location_command_admitted",
+          "passed": true
+        },
+        {
+          "name": "encrypted_location_command",
+          "passed": true
+        },
+        {
+          "name": "location_command_decrypted",
+          "passed": true
+        },
+        {
+          "name": "coordinate_bearing_receipt_rejected",
+          "passed": true
+        },
+        {
+          "name": "location_completion_accepted",
+          "passed": true
+        },
+        {
+          "name": "location_completion_observed",
+          "passed": true
+        },
+        {
+          "name": "coordinate_free_receipt",
+          "passed": true
+        },
+        {
+          "name": "location_command_admitted",
+          "passed": true
+        },
+        {
+          "name": "encrypted_location_command",
+          "passed": true
+        },
+        {
+          "name": "location_command_decrypted",
+          "passed": true
+        },
+        {
+          "name": "coordinate_bearing_receipt_rejected",
+          "passed": true
+        },
+        {
+          "name": "location_completion_accepted",
+          "passed": true
+        },
+        {
+          "name": "location_completion_observed",
+          "passed": true
+        },
+        {
+          "name": "coordinate_free_receipt",
+          "passed": true
+        },
+        {
+          "name": "location_command_admitted",
+          "passed": true
+        },
+        {
+          "name": "encrypted_location_command",
+          "passed": true
+        },
+        {
+          "name": "location_command_decrypted",
+          "passed": true
+        },
+        {
+          "name": "coordinate_bearing_receipt_rejected",
+          "passed": true
+        },
+        {
+          "name": "location_completion_accepted",
+          "passed": true
+        },
+        {
+          "name": "location_completion_observed",
+          "passed": true
+        },
+        {
+          "name": "coordinate_free_receipt",
+          "passed": true
+        },
+        {
+          "name": "credential_backend_override_restored",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "implementation": "gateway=rust",
+      "summary": {
+        "id": "APP-LOC-SIM",
+        "seconds": 4.354,
+        "status": "pass",
+        "implementation": "gateway=rust",
+        "required_features": [
+          "internal/applepeer",
+          "internal/blobs",
+          "internal/contracts",
+          "internal/iphone",
+          "internal/state",
+          "internal/trust"
+        ],
+        "blocked_on": []
+      },
+      "assertions": [
+        {
+          "name": "isolated_home",
+          "passed": true
+        },
+        {
+          "name": "swift_adapter_build",
+          "passed": true
+        },
+        {
+          "name": "fake_adapter_current_geofence_events_significant_restart_permission",
+          "passed": true
+        },
+        {
+          "name": "binary_gateway_fixture",
+          "passed": true
+        },
+        {
+          "name": "read_grant",
+          "passed": true
+        },
+        {
+          "name": "fixture",
+          "passed": true
+        },
+        {
+          "name": "signed_records_accepted",
+          "passed": true
+        },
+        {
+          "name": "signed_records_accepted",
+          "passed": true
+        },
+        {
+          "name": "durable_deduplicated_location_records",
+          "passed": true
+        },
+        {
+          "name": "invalid_geofence_rejected",
+          "passed": true
+        },
+        {
+          "name": "location_command_admitted",
+          "passed": true
+        },
+        {
+          "name": "encrypted_location_command",
+          "passed": true
+        },
+        {
+          "name": "location_command_decrypted",
+          "passed": true
+        },
+        {
+          "name": "coordinate_bearing_receipt_rejected",
+          "passed": true
+        },
+        {
+          "name": "location_completion_accepted",
+          "passed": true
+        },
+        {
+          "name": "location_completion_observed",
+          "passed": true
+        },
+        {
+          "name": "coordinate_free_receipt",
+          "passed": true
+        },
+        {
+          "name": "location_command_admitted",
+          "passed": true
+        },
+        {
+          "name": "geofence_command_registered",
+          "passed": true
+        },
+        {
+          "name": "encrypted_location_command",
+          "passed": true
+        },
+        {
+          "name": "location_command_decrypted",
+          "passed": true
+        },
+        {
+          "name": "coordinate_bearing_receipt_rejected",
+          "passed": true
+        },
+        {
+          "name": "location_completion_accepted",
+          "passed": true
+        },
+        {
+          "name": "location_completion_observed",
+          "passed": true
+        },
+        {
+          "name": "coordinate_free_receipt",
+          "passed": true
+        },
+        {
+          "name": "location_command_admitted",
+          "passed": true
+        },
+        {
+          "name": "encrypted_location_command",
+          "passed": true
+        },
+        {
+          "name": "location_command_decrypted",
+          "passed": true
+        },
+        {
+          "name": "coordinate_bearing_receipt_rejected",
+          "passed": true
+        },
+        {
+          "name": "location_completion_accepted",
+          "passed": true
+        },
+        {
+          "name": "location_completion_observed",
+          "passed": true
+        },
+        {
+          "name": "coordinate_free_receipt",
+          "passed": true
+        },
+        {
+          "name": "location_command_admitted",
+          "passed": true
+        },
+        {
+          "name": "encrypted_location_command",
+          "passed": true
+        },
+        {
+          "name": "location_command_decrypted",
+          "passed": true
+        },
+        {
+          "name": "coordinate_bearing_receipt_rejected",
+          "passed": true
+        },
+        {
+          "name": "location_completion_accepted",
+          "passed": true
+        },
+        {
+          "name": "location_completion_observed",
+          "passed": true
+        },
+        {
+          "name": "coordinate_free_receipt",
+          "passed": true
+        },
+        {
+          "name": "location_command_admitted",
+          "passed": true
+        },
+        {
+          "name": "encrypted_location_command",
+          "passed": true
+        },
+        {
+          "name": "location_command_decrypted",
+          "passed": true
+        },
+        {
+          "name": "coordinate_bearing_receipt_rejected",
+          "passed": true
+        },
+        {
+          "name": "location_completion_accepted",
+          "passed": true
+        },
+        {
+          "name": "location_completion_observed",
+          "passed": true
+        },
+        {
+          "name": "coordinate_free_receipt",
+          "passed": true
+        },
+        {
+          "name": "credential_backend_override_restored",
+          "passed": true
+        }
+      ]
+    }
+  ]
+}
