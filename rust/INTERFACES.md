@@ -136,3 +136,18 @@ python3 rust/crates/ab-iphone/interop/run.py "${CARGO_TARGET_DIR:-rust/target}/d
 This is not APP-PAIR-SIM/APP-CMD-SIM qualification: the runtime on the initial Phase 4 baseline rejects non-replica roles. OAuth/consent, product WebAuthn/advisory resolution, relay/smux ingress, LocalAPI, command delivery and record ingestion remain G-D work. No live gateway, home, passkey or device was accessed.
 
 Direct execution of APP-PAIR-SIM and APP-CMD-SIM with `--impl gateway=rust --rust-binary <Rust bridge>` returned `status=blocked`, `binary_harness_required`: `harness: native iphone.pairing journey requires AppleTruth/Helper; requires isolated binary-driven fixture adapter` (and the equivalent `iphone.delivery` detail). G-E owns replacing these verdict paths; neither was counted as a gateway product pass. The suite performed no device operation.
+# Phase 4 interfaces
+
+## G-A: gateway state and ledger
+
+`State<Gateway>::open(home)` opens schema-v2 `state.db` and initializes/checks the separate live `ledger.db`. Missing ledger with prior command evidence fails with `LedgerMissing`. Calls are synchronous and require the caller's blocking executor/mutex, as for Replica.
+
+- `commit_capture(&mut self, &ab_wire::messages::Capture) -> Result<CommitResult>`; result fields `duplicate, after, through, degraded` match Go. Capture alias/reference resolution, records, journal and checkpoint share one transaction.
+- `head`, `retention_floor`, `read`, `changes`, `feed_changes`, `next_changes`, `read_model`, `blob_references`, `save_query_blobs`, `query_blob_grant` have the existing replica signatures.
+- `next_fence(&mut self) -> Result<u64>`; `checkpoints(&self) -> Result<HashMap<String, ab_wire::messages::Checkpoint>>`; `native_key(&self, collection: &str, id: &str) -> Result<String>`; `observed_record_id(&self, collection: &str, native_key: &str, cursor: &Cursor) -> Result<String>`.
+- `freeze_snapshot(&mut self, &Visibility, revision: u64) -> Result<FrozenSnapshot>` returns public `id, cursor, count, digest, expires_at, records`; `renew_snapshot(&mut self, id: &str)`, `close_snapshot(&mut self, id: &str)` manage the ten-minute lease. `prune(&mut self, rows: u64, age: Duration)` honors leases and capture boundaries.
+- `admission_era(&self) -> Result<String>`; `command(&self, id: &str) -> Result<CommandRecord>`; `commands(&self) -> Result<Vec<CommandRecord>>`; `pending_approvals(&self) -> Result<Vec<CommandRecord>>`.
+- `transition_command(&mut self, from: Option<ab_domain::CommandState>, record: CommandRecord) -> Result<CommandRecord>` and `update_command_parts(&mut self, record: CommandRecord)` implement ledger CAS. Initial admission uses `None`; retries look up `command` first and compare principal/hash. `CommandRecord` and nested `Command`, `CommandEvent`, `CommandPart` are exported by ab-state with Go JSON field names and typed IDs/states. Evidence and operation-specific payloads remain RawValue.
+- `backup(&self, path: impl AsRef<Path>) -> Result<()>`; `restore(home, backup, accept_ledger_loss: bool) -> Result<()>` is an offline operation: caller must close the state first. It keeps the live ledger, resets journal and rotates epoch/era.
+
+G-B owns lifecycle evidence validation before requesting an observed transition; G-A additionally enforces the capture commit ordering invariant at persistence. G-C should retain snapshot leases during transfer and close them on all exits. No changes to `ipc/1`, schema v2, or ledger schema are planned.
