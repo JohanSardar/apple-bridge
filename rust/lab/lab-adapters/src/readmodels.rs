@@ -254,6 +254,7 @@ pub fn readmodels(world: &mut World, _: &Value, evidence: &mut Evidence) -> Resu
         "MSG-DECODE-BALLOON" | "MSG-DECODE-FORMATTING" => {
             crate::messages_a::decode::run(world, evidence)
         }
+        "REM-STORE-DECODE" => crate::reminders_store::run(world, evidence),
         "WEB-CON-LIST" => crate::contacts_list::readmodels(world, evidence),
         "WEB-RM-THREAD-ORIGINATOR" | "WEB-RM-THREAD-ORIGINATOR-PERF" => {
             crate::threads::originator(world, evidence)
