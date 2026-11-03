@@ -41,6 +41,7 @@ pub mod shortcuts;
 pub mod usage;
 pub mod watch;
 pub mod web_relay;
+pub mod web_relay_agents;
 use lab_runner::Registry;
 use lab_world::Error;
 

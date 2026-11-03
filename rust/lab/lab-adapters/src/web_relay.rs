@@ -86,6 +86,7 @@ pub fn web_relay(world: &mut World, _input: &Value, evidence: &mut Evidence) -> 
             auth(world, evidence);
             Ok(())
         }
+        "WEB-RELAY-AGENTS" => crate::web_relay_agents::agents(world, evidence),
         "WEB-RELAY-PAIRING" => {
             pairing(world, evidence);
             Ok(())
