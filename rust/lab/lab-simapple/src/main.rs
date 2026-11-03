@@ -1,4 +1,5 @@
 #![allow(clippy::too_many_lines)]
+mod calendar;
 mod contacts;
 mod messages;
 mod notes;
@@ -161,6 +162,9 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
     if route == "/messages" {
         return messages::control_messages(state, tx, &input);
     }
+    if route == "/calendar" {
+        return calendar::control_calendar(state, tx, &input);
+    }
     if route == "/contacts" {
         return contacts::control_contacts(state, tx, &input);
     }
@@ -204,6 +208,8 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
                 return Err(invalid("source state"));
             }
             s.denied.insert(src.clone(), true);
+            s.data["denied"][&src] = json!(true);
+            s.save()?;
             drop(s);
             enqueue(
                 tx,
@@ -559,6 +565,8 @@ impl Session {
         match (family.as_str(), frame["t"].as_str()) {
             ("notes", Some("Prepare")) => return self.note_prepare(state, &frame),
             ("notes", Some("Dispatch")) => return self.note_dispatch(state, &frame),
+            ("calendar", Some("Prepare")) => return self.calendar_prepare(state, &frame),
+            ("calendar", Some("Dispatch")) => return self.calendar_dispatch(state, &frame),
             ("contacts", Some("Prepare")) => return self.contacts_prepare(state, &frame),
             ("contacts", Some("Dispatch")) => return self.contacts_dispatch(state, &frame),
             ("contacts", Some("Resolve")) => return self.contacts_resolve(state, &frame),
@@ -844,6 +852,12 @@ fn session(
         "reminders.delete_list"
     ]);
     capabilities["messages"] = json!(["messages.send", "messages.reply"]);
+    capabilities["calendar"] = json!([
+        "calendar.create_event",
+        "calendar.update_event",
+        "calendar.delete_event",
+        "calendar.create_calendar"
+    ]);
     capabilities["contacts"] = json!([
         "contacts.create",
         "contacts.update",
@@ -1018,6 +1032,16 @@ fn run() -> Result<()> {
         pause: 0,
         denied: BTreeMap::new(),
     }));
+    {
+        let mut s = lock(&state)?;
+        let denied: Vec<String> = s.data["denied"]
+            .as_object()
+            .map(|m| m.keys().cloned().collect())
+            .unwrap_or_default();
+        for src in denied {
+            s.denied.insert(src, true);
+        }
+    }
     lock(&state)?.save()?;
     match fs::remove_file(&control) {
         Ok(()) => {}
