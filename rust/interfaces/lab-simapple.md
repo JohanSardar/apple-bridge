@@ -100,7 +100,7 @@ Unit tests compare thumbhash, geometry, poster dimensions, MIME sniffing and var
 
 The WEB-MEDIA-VARIANTS cleanup proof and MSG-MEDIA-CLEANUP shell out to the native `MessagesSafetyChecks` binary (located through `AB_LAB_NATIVE_OUTPUT` or `native/.build/native-output-1`). Without it, both fail with `native_cleanup_checks_build`, exactly as the Go harness does on a host without the Swift build, so they only pass on Darwin.
 
-Known blocker: WEB-MEDIA-CAP fails `display_authorized_blob_1` and `variants_fit_cap_original_deferred` on the Rust gateway. The replica fetches the 8.6 MB original before the 1 MB display variant, so the variant ends `over_cap`. `ab-replication` sorts variant references first, so the queue is probably built from a snapshot that lacks the derivative references; not yet isolated.
+WEB-MEDIA-CAP passes with identical verdicts on the Rust gateway since `fix(replication): defer originals while a media variant is still pending`.
 
 ## Calendar completion (Phase 8)
 
@@ -118,8 +118,6 @@ Gate: `python3 rust/lab/families-parity.py --families $T/lab-families --go-lab b
 
 `--media` runs WEB-MEDIA-VARIANTS and MSG-MEDIA-CLEANUP the same way and needs the native `MessagesSafetyChecks` binary (`AB_LAB_NATIVE_OUTPUT`), so it runs on Darwin. Verdicts are identical on the MacBook Pro: MSG-MEDIA-CLEANUP passes its 19 fixture cases in both harnesses, WEB-MEDIA-VARIANTS passes all 98 shared assertions. Two adapter bugs were fixed to get there: the sent video and audio fixtures lacked the trailing `free` box that Go's `MediaFixture` appends (so the panorama source geometry fell back to the default clip), and the panorama poster was fetched once instead of awaited, with no pixel checks. The adapter now decodes the poster (`zune-png`, `zune-jpeg`) and ports the centre-marker and edge-contrast checks.
 
-WEB-MEDIA-CAP blob ordering is owned by S-BLOB-ORDER and is unchanged.
-
 ## Web read-model adapters (Phase 8)
 
 `lab-adapters` registers `readmodels` (`readmodels.rs`, `search.rs`) for WEB-RM-MEDIA-COLLECTION and WEB-RM-SEARCH. Scenarios with no `when` step in YAML (WEB-RM-SEARCH) get a `readmodels` step injected by `lab-families`. The adapters seed through the SimApple `/readmodels` put route, resolve gateway aliases, call REST and MCP, mint scoped tokens, and for the search migration stop the gateway, rewrite `records_fts` and `fts_version` in `state.db` with rusqlite, and restart it. Assertion names match the Go harness (WEB-RM-SEARCH emits no `world_start` on success, as in Go).
@@ -133,3 +131,13 @@ Gate: `python3 rust/lab/families-parity.py ... --web-rm` runs both scenarios aga
 Gate: `python3 rust/lab/families-parity.py ... --mac` runs MAC-ACTIONS, MAC-COMMANDS, MAC-CAPTURE, MAC-IDLE, MAC-EXTRAS-SIM and IWORK-REAL (sim level) in one run against both harnesses.
 
 Real-level only (adapters compiled, never run at real level): BT-REAL, MAC-APPEARANCE-REAL, MAC-APPS-REAL, MAC-AUDIO-REAL, MAC-CLIPBOARD-REAL, MAC-KEEPAWAKE-REAL, MAC-NOTIFY-REAL, MAC-POWER-REAL, MAC-REPLICA, SHAZAM-REAL, TM-STATUS. The real halves of MAC-IDLE (`mac_real::idle`) and IWORK-REAL (`mac_real::iwork`) are also compiled only. The native-helper adapters read the helper app from `APPLE_BRIDGE_HELPER_APP`.
+
+## Web, media and native scenarios (Phase 8)
+
+`--web` runs WEB-CON-LIST and WEB-MEDIA-CAP; `--native-media` runs NATIVE-MEDIA-EXPORT-SAFETY, NATIVE-MEDIA-POSTERS, NATIVE-MEDIA-YIELD and WEB-REM-PARITY. Both flags use the same one-run gate as `--import` and `--media`.
+
+`contacts_list.rs` is dispatched from `readmodels` for WEB-CON-LIST: one replica with the contacts, messages and system read scopes, six synthetic fixtures through `/external-change`, then `contacts.list` over REST and MCP on the gateway and the replica (membership sections, name/identity/photo, linked conversations, group counts, device preferences, invalid input, scoped tokens and deletion counts).
+
+`native.rs` shells out to the Swift check binaries through `packaging/dev/build-native.sh` and `native/.build/native-output-1`, so it runs on Darwin only. The three NATIVE-MEDIA scenarios also run the selected-gateway fixture check (`selected_gateway_*`): two versions and a tombstone for one `messages.attachment` posted to the SimApple `/capture` route and read back through `records.query`. The runner treats a scenario with no given/when/then steps as one implicit step named after the scenario id, which is how WEB-REM-PARITY (and any later step-less scenario) selects its adapter. `Scenario` accepts the optional `web` block that WEB-REM-WRITE carries.
+
+Not ported: WEB-AGENT-ACTIVITY, WEB-AGENT-CREDENTIALS, WEB-AGENT-LEVELS, WEB-AGENT-OAUTH and WEB-AGENT-OAUTH-CIMD need an owner web session (a software WebAuthn authenticator: CBOR, P-256, enrollment and login ceremonies, session cookie and CSRF) that the Rust lab does not have yet. WEB-CAL-WRITE needs the CAL-CRUD calendar protocol journey. WEB-REM-WRITE is real-level only.

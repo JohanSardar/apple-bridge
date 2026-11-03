@@ -3,6 +3,7 @@ pub mod blobs;
 pub mod calls;
 pub mod cleanup;
 pub mod commands;
+pub mod contacts_list;
 pub mod files_native;
 pub mod frontdoor;
 pub mod history;
@@ -19,6 +20,7 @@ pub mod mac;
 pub mod mac_real;
 pub mod media;
 pub mod messages_a;
+pub mod native;
 pub mod packaging;
 pub mod phone;
 pub mod poster;
@@ -85,6 +87,13 @@ pub fn registry() -> Registry {
             labcore::start_world(world, id, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && robust::SCENARIOS.contains(&id) {
             replicas::start(world, usize::try_from(replicas).unwrap_or(0))?;
+        } else if replicas != 0 && contacts_list::SCENARIOS.contains(&id) {
+            replicas::start_with(
+                world,
+                usize::try_from(replicas).unwrap_or(0),
+                contacts_list::SCOPE,
+                0,
+            )?;
         } else if replicas != 0 && !PORTED.contains(&id) && !self_started {
             return Err(Error::Invalid(format!("replica world not ported for {id}")));
         }
@@ -101,6 +110,11 @@ pub fn registry() -> Registry {
     registry.register("notes", imports::notes);
     registry.register("usage", usage::cases);
     registry.register("phone", calls::phone);
+    registry.register("usage", imports::usage);
+    registry.register("native_media_yield", native::media_yield);
+    registry.register("native_media_posters", native::media_posters);
+    registry.register("native_media_export_safety", native::media_export_safety);
+    registry.register("WEB-REM-PARITY", native::reminders_parity);
     registry.register("seed", labcore::seed);
     registry.register("converge", labcore::converge);
     registry.register("connect", labcore::connect);
