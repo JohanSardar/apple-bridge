@@ -65,6 +65,7 @@ pub mod safari;
 pub mod search;
 pub mod session_proxy;
 pub mod shortcuts;
+pub mod shortcuts_run;
 pub mod siri;
 pub mod threads;
 pub mod usage;
@@ -226,6 +227,8 @@ pub fn registry() -> Registry {
     registry.register("shortcuts_actions", shortcuts::shortcuts_actions);
     registry.register("shortcuts_checks", shortcuts::shortcuts_checks);
     registry.register("shortcuts_real_only", shortcuts::shortcuts_real_only);
+    registry.register("shortcuts_run", shortcuts_run::shortcuts_run);
+    registry.register("focus_sim", shortcuts_run::focus_sim);
     registry.register("mac", mac::mac);
     registry.register("calendar_journey", calendar::calendar_journey);
     native_runner::register(&mut registry);
