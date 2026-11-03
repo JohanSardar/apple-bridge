@@ -10,7 +10,7 @@ bridge-lab shadow replay --recording "$SHADOW/recording/ipc.shadow" --starting-h
 bridge-lab shadow diff --left "$SHADOW/replayed/go" --right "$SHADOW/replayed/rust"
 ```
 
-`SHADOW` must be an owner-only directory outside every checkout. The starting home must be an offline snapshot from before recording, including credentials for admitted API requests. Helper connections must explicitly use the tap, and API clients must explicitly use the admission listener. The tool never discovers, replaces or renames sockets. An IPC-only recording cannot reconstruct command admission. The API proxy currently supports POST `/v1/op/*` with Content-Length; it is not coverage of MCP, replicated commands, OAuth, approval routes or iPhone ingress.
+`SHADOW` must be an owner-only directory outside every checkout. The starting home must be an offline snapshot from before recording, including credentials for admitted API requests. Replay is Linux-only and requires a network namespace containing only loopback; it attempts an unprivileged `unshare` when needed and never falls back to launching in the host network. Saved nonempty `remote/` adapters are refused because host Unix sockets are not isolated by a network namespace. Helper connections must explicitly use the tap, and API clients must explicitly use the admission listener. The tool never discovers, replaces or renames sockets. An IPC-only recording cannot reconstruct command admission. The API proxy currently supports POST `/v1/op/*` with Content-Length; it is not coverage of MCP, replicated commands, OAuth, approval routes or iPhone ingress.
 
 The admission proxy records the method's operation path, authenticated headers and original request body before forwarding to the configured API listener. Admissions, completed API responses and IPC frames share one ordered transcript. Response boundaries preserve the causal order of commands followed by later captures/source states. Replay submits admissions asynchronously so a waiting API request cannot deadlock the Helper conversation. The original credentials must exist in the starting snapshot. It checks HTTP and operation errors, bounds response waits, and requires recorded Prepare/Dispatch traffic to match. A missing admission or differing command request fails. Command arguments referencing bridge IDs created after the starting snapshot are not rewritten: unsupported identity references fail visibly rather than changing the request hash.
 
@@ -19,7 +19,12 @@ Record forwards original IPC length prefixes and payload bytes, including authen
 ```sh
 python3 lab/shadow/prove_tap.py --output "$SHADOW/tap-proof"
 python3 lab/shadow/prove.py --output "$SHADOW/synthetic-proof"
+python3 lab/shadow/prove_isolation.py --output "$SHADOW/isolation-proof"
 ```
+
+On a Linux build host that disables unprivileged user namespaces, an operator can prepare the replay shell with `sudo unshare --net sh`, enable `lo` with `ip link set lo up`, then drop to the normal build user with `setpriv --reuid <user> --regid <group> --init-groups sh`. Run the workflow or synthetic proof inside that shell. The tool itself never invokes sudo. For the isolation proof only, `--privileged-namespace` explicitly requests a sudo-created namespace and drops privileges before inspecting the fixture. A replay failure retains its private clone/log evidence and never retries outside isolation.
+
+The isolation proof holds a listening sentinel on the host loopback while a child namespace proves that sentinel unreachable, verifies its own loopback is usable, and refuses a saved remote adapter without changing the starting home. This covers IP egress separation; saved adapters require a product-owned offline replay mode before such homes can be accepted.
 
 The tap proof uses fragmented binary and JSON frames, compares every byte received in both directions and every recorded byte, checks half-close responses and duration exit. The synthetic proof starts isolated Go gateways and SimApplePeer, records captures and authenticated command admission through Outcome, requires Go-Go replay parity and seeds record-data, version, journal sequence/op, ledger disposition, expiry, alias, checkpoint and dedupe faults. It prints only booleans and fixed names.
 

@@ -3,6 +3,7 @@ import concurrent.futures
 import http.client
 import http.server
 import base64
+from isolation import require_isolation, require_home
 from contextlib import ExitStack
 from datetime import datetime
 import hashlib
@@ -362,6 +363,8 @@ def recording_rows(path):
 
 
 def replay(args):
+    require_isolation()
+    require_home(args.starting_home)
     destination = private_directory(args.output)
     original = Path(args.starting_home).resolve()
     if destination.is_relative_to(original) or original.is_relative_to(destination):
