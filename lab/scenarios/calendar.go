@@ -554,15 +554,24 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			add("calendar_native_phase_timestamps", len(e.NativeTimings) == 10 && e.Latency["refetch_duration"].Samples == 10 && e.Latency["capture_sent→gateway_commit"].Samples == 10 && e.Latency["gateway_commit→replica_visible"].Samples == 10)
 		}
 	case "CAL-CRUD":
-		current := records(w.Gateway)[0]
+		available := records(w.Gateway)
+		if len(available) != 1 {
+			return fail("created_record_available_for_update", nil)
+		}
+		current := available[0]
 		if err = submit("calendar.update_event", map[string]any{"id": current.ID, "span": "this", "title": tag + " updated", "notes": tag + " changed notes", "location": tag + " changed location", "url": "https://example.com/updated", "availability": 2, "alarms": []any{map[string]any{"relative_offset": -300}}}, current.Version); err != nil {
 			return fail("update_event", err)
 		}
 		if !awaitCount(1) {
 			return fail("updated_visible", nil)
 		}
-		add("update_preserves_bridge_id", records(w.Gateway)[0].ID == current.ID)
-		fields := raw(records(w.Gateway)[0])
+		available = records(w.Gateway)
+		if len(available) != 1 {
+			return fail("updated_record_available", nil)
+		}
+		updated := available[0]
+		add("update_preserves_bridge_id", updated.ID == current.ID)
+		fields := raw(updated)
 		alarms, _ := fields["alarms"].([]any)
 		alarmMatches := false
 		if len(alarms) == 1 {
@@ -570,7 +579,7 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			alarmMatches = alarm["relative_offset"] == float64(-300)
 		}
 		add("event_fields_and_alarm_updated", fields["notes"] == tag+" changed notes" && fields["location"] == tag+" changed location" && fields["url"] == "https://example.com/updated" && fields["availability"] == float64(2) && alarmMatches)
-		current = records(w.Gateway)[0]
+		current = updated
 		if level != "sim" {
 			truth, truthErr := w.Truth("observe", map[string]any{"source": "calendar", "tag": tag})
 			values, _ := truth["records"].([]any)
@@ -603,7 +612,11 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			values, _ := truth["records"].([]any)
 			add("truth_created_series_occurrences", truthErr == nil && len(values) == 3)
 		}
-		created := records(w.Gateway)[0]
+		available = records(w.Gateway)
+		if len(available) != 3 {
+			return fail("created_series_records_available", nil)
+		}
+		created := available[0]
 		if err = submit("calendar.delete_event", map[string]any{"id": created.ID, "span": "future"}, created.Version); err != nil {
 			return fail("delete_created_series", err)
 		}

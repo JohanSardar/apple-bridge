@@ -16,7 +16,7 @@ func runFiles(ctx context.Context, s Scenario, level string) Evidence {
 		return runFileCommands(ctx, s)
 	}
 	if s.ID == "FILE-REPLICA" {
-		return runFilesReplica(ctx, s)
+		return runFilesReplica(ctx, s, level)
 	}
 	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, At: time.Now().UTC(), Passed: true, Metrics: map[string]any{}}
 	add := func(name string, ok bool) {

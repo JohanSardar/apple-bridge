@@ -19,8 +19,8 @@ import (
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
-func runFilesReplica(ctx context.Context, s Scenario) Evidence {
-	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: "replica", At: time.Now().UTC(), Passed: true, Hosts: []string{"air", "ubuntu"}}
+func runFilesReplica(ctx context.Context, s Scenario, level string) Evidence {
+	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, At: time.Now().UTC(), Passed: true, Hosts: []string{"air", "ubuntu"}}
 	add := func(name string, ok bool) bool {
 		e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok})
 		e.Passed = e.Passed && ok
@@ -42,7 +42,7 @@ func runFilesReplica(ctx context.Context, s Scenario) Evidence {
 		return e
 	}
 	ctx = world.WithOptions(ctx, world.Options{GatewayDials: true, Scope: "files:read,files:write,system:read"})
-	w, err := world.NewRealWithSetup(ctx, "replica", 1, world.NativeSetup{FilesystemTruth: true})
+	w, err := world.NewRealWithSetup(ctx, level, 1, world.NativeSetup{FilesystemTruth: true})
 	if !add("ubuntu_replica_started", err == nil) {
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
