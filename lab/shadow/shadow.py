@@ -498,6 +498,8 @@ def replay(args):
             decisions = Path(args.decisions).resolve()
             manifest = json.loads(decisions.read_bytes())
             timestamp_ns(manifest['now'])
+            if not isinstance(manifest.get('command_ids', []), list) or any(not isinstance(i, str) or not i for i in manifest.get('command_ids', [])):
+                raise ValueError('invalid replay command id decisions')
             if not isinstance(manifest['aliases'], dict) or any(not isinstance(k, str) or not isinstance(v, str) or not v for k, v in manifest['aliases'].items()):
                 raise ValueError('invalid replay alias decisions')
             decision_copy = destination / (name + '-decisions.json')
@@ -559,12 +561,24 @@ def decisions(args):
     path = Path(args.home).resolve() / 'state.db'
     with sqlite3.connect(path.as_uri() + '?mode=ro', uri=True) as db:
         aliases = {'\0'.join(row[:4]): row[4] for row in db.execute('SELECT source,generation,collection,native_key,record_id FROM aliases')}
+    command_ids = generated_command_ids(args)
     output = Path(args.output).resolve()
     if output.exists() or output.parent.stat().st_mode & 0o077:
         raise ValueError('decision manifest must be new in an owner-only directory')
     with open(output, 'x', opener=lambda p, f: os.open(p, f, 0o600)) as manifest:
-        manifest.write(json.dumps({'now': first, 'clock': 'recorded', 'aliases': aliases}))
-    print(json.dumps({'aliases': len(aliases), 'clock': 'recorded'}))
+        manifest.write(json.dumps({'now': first, 'clock': 'recorded', 'aliases': aliases, 'command_ids': command_ids}))
+    print(json.dumps({'aliases': len(aliases), 'command_ids': len(command_ids), 'clock': 'recorded'}))
+
+
+def generated_command_ids(args):
+    def ledger(home):
+        path = Path(home).resolve() / 'ledger.db'
+        with sqlite3.connect(path.as_uri() + '?mode=ro', uri=True) as db:
+            return [(row[0], timestamp_ns(json.loads(row[1])['created_at'])) for row in db.execute('SELECT id,payload FROM commands ORDER BY rowid')]
+    known = {identifier for identifier, _ in ledger(args.starting_home)} if args.starting_home else set()
+    supplied = b''.join(base64.b64decode(row['raw']) for row in recording_rows(args.recording) if row['direction'] == 'admission')
+    pending = [(created, identifier) for identifier, created in ledger(args.home) if identifier not in known and identifier.encode() not in supplied]
+    return [identifier for _, identifier in sorted(pending, key=lambda item: item[0])]
 
 
 def duration(value):
@@ -725,6 +739,7 @@ def main():
     p = sub.add_parser('decisions')
     for option in ('recording', 'home', 'output'):
         p.add_argument('--' + option, required=True)
+    p.add_argument('--starting-home')
     p = sub.add_parser('diff')
     p.add_argument('--exact', action='store_true')
     p.add_argument('--left', required=True)

@@ -274,7 +274,12 @@ func CommandTTL(op string) (time.Duration, time.Duration) {
 	return 5 * time.Minute, time.Hour
 }
 
-func NewCommandID() string { return NewID("cmd") }
+func NewCommandID() string {
+	if id, ok := ReplayCommandID(); ok {
+		return id
+	}
+	return NewID("cmd")
+}
 
 func ReminderArgumentFields(op string) []string {
 	switch op {

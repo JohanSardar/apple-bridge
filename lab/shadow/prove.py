@@ -151,6 +151,9 @@ def main():
         command = operation('reminders.create', {'command_id': 'cmd_shadow_synthetic', 'op': 'reminders.create', 'args': {'list_id': records[0]['id'], 'title': '[ab-test shadow] synthetic'}, 'wait_ms': 15000})
         if command.get('state') != 'observed':
             raise RuntimeError('synthetic command was not observed')
+        generated = operation('reminders.create', {'op': 'reminders.create', 'args': {'list_id': records[0]['id'], 'title': '[ab-test shadow] generated id'}, 'wait_ms': 15000})
+        if generated.get('state') != 'observed' or not generated.get('command', {}).get('id', generated.get('id', '')).startswith('cmd_'):
+            raise RuntimeError('gateway-generated command id was not observed')
         def http_call(method, path, body=None, extra=None):
             headers = {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'Accept': 'application/json, text/event-stream'}
             headers.update(extra or {})
@@ -249,7 +252,7 @@ def main():
     if result.returncode or not json.loads(result.stdout)['equal']:
         raise RuntimeError('synthetic Go-Go admission replay parity failed: ' + result.stderr.strip())
     manifest = root / 'decisions.json'
-    subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'decisions', '--recording', str(recording), '--home', str(home), '--output', str(manifest)], check=True, stdout=subprocess.DEVNULL)
+    subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'decisions', '--recording', str(recording), '--home', str(home), '--starting-home', str(root / 'starting'), '--output', str(manifest)], check=True, stdout=subprocess.DEVNULL)
     result = subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'replay', '--recording', str(recording), '--starting-home', str(root / 'starting'), '--output', str(root / 'replay-exact'), '--go', args.go, '--rust', args.rust, '--decisions', str(manifest), '--exact'], capture_output=True, text=True)
     report = json.loads(result.stdout) if result.stdout else {'digests': []}
     if result.returncode or any(not row['equal'] for row in report['digests']):

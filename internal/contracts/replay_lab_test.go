@@ -46,3 +46,21 @@ func TestRecordedDecisions(t *testing.T) {
 	os.Remove(path)
 	mustPanic(func() { DecisionNow() })
 }
+
+func TestRecordedCommandIDs(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "decisions.json")
+	t.Setenv("APPLE_BRIDGE_LAB_REPLAY", path)
+	if err := os.WriteFile(path, []byte(`{"now":"2026-11-03T12:00:00Z","aliases":{},"command_ids":["cmd_first","cmd_second"]}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	replayCommandCursor.Store(0)
+	if NewCommandID() != "cmd_first" || NewCommandID() != "cmd_second" {
+		t.Fatal("command ids not consumed in order")
+	}
+	defer func() {
+		if recover() == nil {
+			t.Error("replay generated an unrecorded command id")
+		}
+	}()
+	NewCommandID()
+}

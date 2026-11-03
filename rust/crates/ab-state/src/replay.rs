@@ -11,6 +11,29 @@ pub fn now() -> jiff::Timestamp {
 }
 
 #[cfg(feature = "lab")]
+static COMMAND_CURSOR: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+pub fn command_id() -> Option<String> {
+    #[cfg(feature = "lab")]
+    if let Some(decisions) = decisions() {
+        let index = COMMAND_CURSOR.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        let id = decisions["command_ids"]
+            .get(index)
+            .and_then(serde_json::Value::as_str)
+            .filter(|id| {
+                !id.is_empty()
+                    && id.len() <= 128
+                    && id
+                        .chars()
+                        .all(|c| c.is_ascii_alphanumeric() || "._:-".contains(c))
+            })
+            .unwrap_or_else(|| panic!("lab replay command id missing"));
+        return Some(id.to_owned());
+    }
+    None
+}
+
+#[cfg(feature = "lab")]
 fn decisions() -> Option<serde_json::Value> {
     let path = std::env::var_os("APPLE_BRIDGE_LAB_REPLAY")?;
     let raw = std::fs::read(path).unwrap_or_else(|_| panic!("lab replay decisions unavailable"));
@@ -55,6 +78,9 @@ mod tests {
             super::record_id("reminders", "generation", "reminders.list", "native").as_deref(),
             Some("rl_recorded")
         );
+        assert_eq!(super::command_id().as_deref(), Some("cmd_first"));
+        assert_eq!(super::command_id().as_deref(), Some("cmd_second"));
+        assert!(std::panic::catch_unwind(super::command_id).is_err());
     }
 
     #[test]
@@ -72,7 +98,7 @@ mod tests {
         };
         std::fs::write(
             &path,
-            r#"{"now":"2026-11-03T12:00:00.123456789Z","aliases":{"reminders\u0000generation\u0000reminders.list\u0000native":"rl_recorded"}}"#,
+            r#"{"now":"2026-11-03T12:00:00.123456789Z","aliases":{"reminders\u0000generation\u0000reminders.list\u0000native":"rl_recorded"},"command_ids":["cmd_first","cmd_second"]}"#,
         )?;
         assert!(run()?);
         std::fs::write(

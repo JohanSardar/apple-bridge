@@ -5,12 +5,16 @@ package contracts
 import (
 	"encoding/json"
 	"os"
+	"sync/atomic"
 	"time"
 )
 
+var replayCommandCursor atomic.Int64
+
 type replayDecisions struct {
-	Now     string            `json:"now"`
-	Aliases map[string]string `json:"aliases"`
+	Now        string            `json:"now"`
+	Aliases    map[string]string `json:"aliases"`
+	CommandIDs []string          `json:"command_ids"`
 }
 
 func loadReplayDecisions() *replayDecisions {
@@ -50,4 +54,16 @@ func ReplayRecordID(source Source, generation, collection, native string) (strin
 		return id, true
 	}
 	return "", false
+}
+
+func ReplayCommandID() (string, bool) {
+	decisions := loadReplayDecisions()
+	if decisions == nil {
+		return "", false
+	}
+	index := int(replayCommandCursor.Add(1)) - 1
+	if index >= len(decisions.CommandIDs) || !ValidCommandID(decisions.CommandIDs[index]) {
+		panic("lab replay command id missing")
+	}
+	return decisions.CommandIDs[index], true
 }
