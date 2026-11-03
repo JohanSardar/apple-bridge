@@ -521,20 +521,31 @@ impl<S: GatewayState> Server<S> {
         if want.offset < 0 {
             return Err(Error::Invalid);
         }
+        let mut unavailable_reason = "unauthorized";
         let file = async {
             let grant = self
                 .state
                 .lock()
                 .await
                 .blob_grant(&p.visibility(), &digest)?;
-            let blobs = self.blobs.as_ref().ok_or(Error::Invalid)?;
-            Ok::<_, Error>(blobs.lock().await.open_authorized(&grant, &digest)?)
+            unavailable_reason = "unavailable";
+            let blobs = self.blobs.as_ref().ok_or(Error::Invalid)?.lock().await;
+            unavailable_reason = blobs
+                .entries()
+                .get(digest.as_str())
+                .map_or("missing", |entry| match entry.state {
+                    ab_blobs::BlobState::Offloaded => "offloaded",
+                    ab_blobs::BlobState::Failed => "failed",
+                    ab_blobs::BlobState::Missing => "missing",
+                    _ => "pending",
+                });
+            Ok::<_, Error>(blobs.open_authorized(&grant, &digest)?)
         }
         .await;
         let Ok(file) = file else {
             let mut unavailable = frame("BlobUnavailable");
             unavailable.digest = want.digest;
-            unavailable.reason = "unavailable".into();
+            unavailable.reason = unavailable_reason.into();
             socket
                 .send(Message::Text(
                     String::from_utf8(unavailable.encode()?)

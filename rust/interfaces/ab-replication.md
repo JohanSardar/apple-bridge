@@ -10,3 +10,7 @@ The runtime also starts Server::dial concurrently with listeners. Fresh challeng
 ## CORE gateway clock parity
 
 The feed server negotiates `clock_protocol=ntp/1` only when offered in Hello. Both normal and gateway-dialed sessions handle ClockPing/ClockAck through the shared authenticated upstream path, including while waiting for frame acknowledgments. ClockPong preserves the probe ID and t0, stamps gateway receive/send times, and leaves t3 zero. ClockAck rejects zero timestamps, reversed intervals, and negative network round trips. No wire format changes.
+
+## CORE blob unavailability parity
+
+Authenticated BlobWant requests receive the manifest state (`offloaded`, `failed`, `missing`, or `pending`) when bytes cannot be opened. Requests without a visible record grant receive `unauthorized` without consulting the manifest state. This lets Go replicas preserve offloaded metadata instead of retrying it as generic unavailable data. Wire formats remain unchanged.
