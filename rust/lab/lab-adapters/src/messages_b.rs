@@ -28,6 +28,16 @@ pub const COMMANDS: [&str; 13] = [
     "MSG-UI-INTERFERENCE",
     "MSG-UNSEND",
 ];
+#[must_use]
+pub fn scope(id: &str) -> Option<&'static str> {
+    if COMMANDS.contains(&id) {
+        Some(SCOPE)
+    } else if READS.contains(&id) {
+        Some(history::SCOPE)
+    } else {
+        None
+    }
+}
 pub const READS: [&str; 2] = ["MSG-RECEIPTS", "MSG-WATCHER-REARM"];
 
 fn action(world: &World, name: &str, key: &str, count: u64) -> bool {

@@ -83,20 +83,8 @@ pub fn registry() -> Registry {
                 history::SCOPE,
                 0,
             )?;
-        } else if replicas != 0 && messages_b::COMMANDS.contains(&id) {
-            replicas::start_with(
-                world,
-                usize::try_from(replicas).unwrap_or(0),
-                messages_b::SCOPE,
-                0,
-            )?;
-        } else if replicas != 0 && messages_b::READS.contains(&id) {
-            replicas::start_with(
-                world,
-                usize::try_from(replicas).unwrap_or(0),
-                history::SCOPE,
-                0,
-            )?;
+        } else if let (true, Some(scope)) = (replicas != 0, messages_b::scope(id)) {
+            replicas::start_with(world, usize::try_from(replicas).unwrap_or(0), scope, 0)?;
         } else if replicas != 0 && messages_a::SCENARIOS.contains(&id) {
             messages_a::start(world, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && labcore::SCENARIOS.contains(&id) {
