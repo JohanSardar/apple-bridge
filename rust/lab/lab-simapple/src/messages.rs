@@ -1,3 +1,4 @@
+use super::media;
 use super::{
     Duration, Instant, Request, Result, Session, Shared, State, Ticket, Value, enqueue, id,
     invalid, json, lock, mpsc, now, observation, send, string,
@@ -209,7 +210,48 @@ impl Session {
                 chat = string(&ticket.before["chat_id"]["$ref"], "native_key");
             }
             let key = id("message")?;
-            message(&mut s, &key, &text, &chat);
+            let files = action["messages"]["files"]
+                .as_array()
+                .cloned()
+                .unwrap_or_default();
+            if !text.is_empty() || files.is_empty() {
+                message(&mut s, &key, &text, &chat);
+            }
+            let mut parts = Vec::new();
+            for file in &files {
+                let Ok(bytes) = std::fs::read(string(file, "path")) else {
+                    drop(s);
+                    self.reject(frame, "invalid")?;
+                    return Ok(true);
+                };
+                let digest = media::digest(&bytes);
+                if digest != string(file, "digest") {
+                    drop(s);
+                    self.reject(frame, "invalid")?;
+                    return Ok(true);
+                }
+                self.blobs.insert(digest.clone(), bytes.clone());
+                let name = string(file, "name");
+                let derived = media::derive(&name, &bytes);
+                for (blob_digest, blob) in &derived.blobs {
+                    self.blobs.insert(blob_digest.clone(), blob.clone());
+                }
+                let attachment = id("attachment")?;
+                let owner = id("message")?;
+                put(
+                    &mut s,
+                    "message",
+                    &owner,
+                    json!({"chat_id":reference("chat",&chat),"text":"","parts":[{"index":0,"kind":"attachment","attachment_id":reference("attachment",&attachment)}],"is_from_me":true,"sent_at":now(),"decode_status":"decoded","kind":"message","error_code":0}),
+                );
+                put(
+                    &mut s,
+                    "attachment",
+                    &attachment,
+                    json!({"message_id":reference("message",&owner),"filename":name,"size":bytes.len(),"mime_type":media::mime(&name,&bytes),"blob":{"digest":digest,"state":"present"},"derivatives":derived.derivatives,"media":derived.media}),
+                );
+                parts.push(json!({"index":parts.len(),"kind":"attachment","native_key":owner,"disposition":"locally_observed","observed":true}));
+            }
             if fault == "identical-manual-send" {
                 message(&mut s, &format!("{key}-manual"), &text, &chat);
             }
@@ -220,7 +262,7 @@ impl Session {
             } else {
                 "locally_observed"
             };
-            let mut outcome = json!({"t":"Outcome","command_id":command,"disposition":disposition,"evidence":{"source":"messages","collection":"messages.message","native_key":key,"fingerprint":ticket.prepare["request_hash"],"observed":disposition=="locally_observed","candidate_count":if fault=="identical-manual-send"{2}else{1},"parts":[]}});
+            let mut outcome = json!({"t":"Outcome","command_id":command,"disposition":disposition,"evidence":{"source":"messages","collection":"messages.message","native_key":key,"fingerprint":ticket.prepare["request_hash"],"observed":disposition=="locally_observed","candidate_count":if fault=="identical-manual-send"{2}else{1},"parts":parts}});
             s.data["evidence"][&command] = outcome.clone();
             s.save()?;
             if fault == "crash-after-effect" {
