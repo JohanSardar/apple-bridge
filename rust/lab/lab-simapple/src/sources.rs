@@ -346,7 +346,7 @@ pub(super) fn readmodels(
                 } else {
                     "rm-chat-000".to_owned()
                 };
-                let sent = jiff::Timestamp::from_second(1_767_225_600 + i64::try_from(i / 2)?)
+                let sent = jiff::Timestamp::from_second(1_767_225_600 + i64::try_from(i / 2).map_err(|_| invalid("readmodel index"))?)
                     .map_err(|_| invalid("readmodel time"))?;
                 records.push(observation(
                     "messages.message",
