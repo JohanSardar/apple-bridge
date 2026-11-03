@@ -27,6 +27,11 @@ impl<G: Gateway + 'static> Delivery<G> {
         ordinary
             .merge(
                 Router::new()
+                    .route("/v1/iphone/capture", post(handle::<G>))
+                    .layer(DefaultBodyLimit::max(24 << 20)),
+            )
+            .merge(
+                Router::new()
                     .route("/v1/iphone/health", post(handle::<G>))
                     .layer(DefaultBodyLimit::max(16 << 20)),
             )

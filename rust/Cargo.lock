@@ -95,6 +95,7 @@ dependencies = [
  "ab-trust",
  "ab-wire",
  "axum",
+ "base64 0.22.1",
  "jiff",
  "reqwest",
  "serde",

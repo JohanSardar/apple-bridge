@@ -8,6 +8,7 @@ license.workspace = true
 workspace = true
 
 [dependencies]
+base64 = "0.22"
 ab-wire = { path = "../ab-wire" }
 ab-trust = { path = "../ab-trust" }
 serde.workspace = true

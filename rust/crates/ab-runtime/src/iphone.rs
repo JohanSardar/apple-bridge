@@ -1,6 +1,8 @@
 use ab_iphone::{
     Error,
-    delivery::{Gateway, HealthBatch, LocationRecord, QueuedCommand},
+    delivery::{
+        CaptureReceipt, CaptureUpload, Gateway, HealthBatch, LocationRecord, QueuedCommand,
+    },
 };
 use ab_operations::{
     Code, GatewayStore,
@@ -23,6 +25,7 @@ pub struct PhoneGateway {
     pub state: GatewayStore,
     pub local: Weak<LocalGateway>,
     pub authority: Arc<Authority>,
+    pub blobs: Arc<tokio::sync::Mutex<ab_blobs::Store>>,
 }
 fn error(error: &ab_operations::Error) -> Error {
     match error.code {
@@ -114,6 +117,63 @@ impl Gateway for PhoneGateway {
             .block_on(local.decide_phone(command_id, hash, approve))
             .map_err(|error_value| error(&error_value))?;
         Ok(())
+    }
+    fn capture(
+        &mut self,
+        row: &QueuedCommand,
+        upload: &CaptureUpload,
+        bytes: &[u8],
+    ) -> Result<CaptureReceipt, Error> {
+        let receipt = CaptureReceipt {
+            blob_id: format!(
+                "qry_{}",
+                ab_trust::fingerprint(
+                    format!("{}\0{}", upload.command_id, upload.request_hash).as_bytes()
+                )
+            ),
+            digest: ab_trust::fingerprint(bytes),
+            size: u64::try_from(bytes.len()).map_err(|_| Error::Invalid)?,
+            content_type: upload.content_type.clone(),
+        };
+        if let Ok((_, grants)) = self
+            .state
+            .with(|state| state.query_blob_grant(&row.principal, &receipt.blob_id))
+        {
+            if !grants
+                .as_array()
+                .is_some_and(|grants| grants.iter().any(|grant| grant["digest"] == receipt.digest))
+            {
+                return Err(Error::Invalid);
+            }
+            return Ok(receipt);
+        }
+        let (_, pin) = self
+            .blobs
+            .blocking_lock()
+            .stage(bytes)
+            .map_err(|_| Error::Unavailable)?;
+        let saved = self.state.with(|state| {
+            state.save_query_blobs(
+                &row.principal,
+                &receipt.blob_id,
+                "iphone:write",
+                &serde_json::json!([{"digest":receipt.digest,"size":receipt.size}]),
+            )
+        });
+        if saved.is_ok() {
+            let protection = Arc::new(ab_replication::gateway::ProtectionAdapter(
+                self.blobs.clone(),
+            ));
+            self.state
+                .with(|state| state.set_blob_protection(protection))
+                .map_err(|error_value| error(&error_value))?;
+        }
+        self.blobs
+            .blocking_lock()
+            .release_pin(&pin)
+            .map_err(|_| Error::Unavailable)?;
+        saved.map_err(|error_value| error(&error_value))?;
+        Ok(receipt)
     }
     fn ingest_health(
         &mut self,
