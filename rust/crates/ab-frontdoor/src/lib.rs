@@ -157,6 +157,9 @@ async fn guard(
     {
         return problem(Code::Unauthorized.into());
     }
+    if request.uri().path() == "/v1/health" && !frontdoor.config.public {
+        return next.run(request).await;
+    }
     let principal = request
         .headers()
         .get(header::AUTHORIZATION)
