@@ -214,3 +214,16 @@ pub fn cancel(home: &Path, id: &str, via: &str) -> Result<()> {
     write(home, "config", &config)?;
     write(home, "ingresses", &selections)
 }
+
+pub fn command(home: &Path, action: &str, via: &str) -> Result<serde_json::Value> {
+    if action != "status" {
+        select(home, action, via, &token())?;
+    }
+    match read::<BTreeMap<String, bool>>(home, "ingresses") {
+        Ok(selections) => Ok(serde_json::to_value(selections)?),
+        Err(Error::Io(e)) if e.kind() == std::io::ErrorKind::NotFound => {
+            Ok(serde_json::json!({}))
+        }
+        Err(e) => Err(e),
+    }
+}
