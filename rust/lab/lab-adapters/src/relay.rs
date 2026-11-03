@@ -719,13 +719,21 @@ pub fn cred(value: &Value, key: &str) -> String {
 
 pub fn relay_service(world: &mut World, _input: &Value, evidence: &mut Evidence) -> Result<()> {
     let id = evidence.scenario.clone();
-    let binary = fixture_binary()?;
+    let certificates = matches!(id.as_str(), "RELAY-CT-INDEPENDENT" | "RELAY-CAA-ACCOUNT");
+    let binary = if certificates {
+        PathBuf::new()
+    } else {
+        fixture_binary()?
+    };
     let workspace = Workspace::create(world, &format!("relay-{}", id.to_ascii_lowercase()))?;
     match id.as_str() {
         "RELAY-ENROLL" | "RELAY-PASSTHROUGH" | "RELAY-LIMITS" => {
             crate::relay_service::run(&id, &binary, &workspace.directory, evidence)
         }
         "RELAY-ROTATE-GATED" => crate::relay_gated::run(&binary, &workspace.directory, evidence),
+        "RELAY-CT-INDEPENDENT" | "RELAY-CAA-ACCOUNT" => {
+            crate::relay_certs::run(&id, &workspace.directory, evidence)
+        }
         _ => Err(Error::Invalid(format!("relay scenario not ported: {id}"))),
     }
 }
