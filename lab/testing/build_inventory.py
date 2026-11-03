@@ -30,7 +30,7 @@ def generate(manifest):
         swift_dependencies[name] = set(re.findall(r'"([^"]+)"', dependencies_text))
     selection = defaultdict(list)
     entries = []
-    callback_roots = {'WEB-AGENT-LEVELS': {'runAgentAccess', 'runAgentLevels'}, 'WEB-AGENT-ACTIVITY': {'runAgentActivity'}, 'WEB-AGENT-CREDENTIALS': {'runAgentCredentials'}, 'WEB-AGENT-OAUTH': {'runAgentAccess', 'runAgentOAuth'}}
+    callback_roots = {'CORE-REPLICA-CAPTURE-OBSERVERS': {'runAgentAccess', 'runCaptureObservers'}, 'WEB-AGENT-LEVELS': {'runAgentAccess', 'runAgentLevels'}, 'WEB-AGENT-ACTIVITY': {'runAgentActivity'}, 'WEB-AGENT-CREDENTIALS': {'runAgentCredentials'}, 'WEB-AGENT-OAUTH': {'runAgentAccess', 'runAgentOAuth'}}
     callback_helpers = {'lab/scenarios/web_server.go', 'lab/scenarios/web_authenticator.go', 'lab/scenarios/consent_activity.go'}
     for scenario in data['scenarios']:
         identity, feature = scenario['ID'], scenario['Feature']
@@ -110,7 +110,7 @@ def generate(manifest):
         elif identity.startswith('WEB-') and feature.startswith('web.'):
             recommendation, reason = 'merge', 'Candidate overlap with API journey in this feature; compare assertions before consolidation.'
         overrides = {
-            'CORE-REPLICA-CAPTURE-OBSERVERS': ('convert', 'Capture-observer assertions use REST SSE, consent pages and replicated command records; convert remaining implementation imports before Rust qualification.'),
+            'CORE-REPLICA-CAPTURE-OBSERVERS': ('keep', 'Selected CLI agents and owner enrollment; unchanged REST SSE, consent and replicated command assertions.'),
             'WEB-RM-THREAD-ORIGINATOR': ('convert', 'REST/MCP originator checks and REST SSE observers preserve filtered windows; retain binary execution for Rust qualification.'),
             'WEB-AGENT-ACTIVITY': ('keep', 'Selected-binary CLI agents and software owner enrollment; read-only activity oracle and unchanged capture assertions.'),
             'WEB-AGENT-LEVELS': ('keep', 'Selected gateway and replica CLIs plus software enrollment; unchanged approval, expiry and delegation assertions.'),

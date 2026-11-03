@@ -7,14 +7,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
-	_ "github.com/JohanSardar/apple-bridge/internal/sourcefixture"
-	"github.com/JohanSardar/apple-bridge/internal/state"
-	"github.com/JohanSardar/apple-bridge/internal/trust"
-	bridgeweb "github.com/JohanSardar/apple-bridge/internal/web"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 	"net/http"
 	"net/url"
-	"os/exec"
 	"strings"
 	"time"
 )
@@ -24,14 +19,19 @@ func runSourceGrants(ctx context.Context, w *world.World, add func(string, bool)
 		status, raw, _ := agentRequest(ctx, w.Gateway.URL, "", "GET", path, nil)
 		add("dummy_grants_"+path, status == 200 && bytes.Contains(raw, []byte("labdummy:read")) && bytes.Contains(raw, []byte("labdummy:write")))
 	}
-	authority, err := trust.Open(w.Gateway.Home)
+	_, err := w.GatewayCommand("agent", "list")
 	add("grants_authority", err == nil)
 	if err != nil {
 		return
 	}
-	cookie, _, err := authority.CreateDeviceSession("trusted")
-	owner := &webClient{ctx: ctx, origin: strings.Replace(w.Gateway.URL, "127.0.0.1", "localhost", 1), cookie: &http.Cookie{Name: bridgeweb.LocalSessionCookie, Value: cookie}}
-	client, err := authority.RegisterOAuth(trust.OAuthClient{Name: "Bridge Test grants", RedirectURIs: []string{"https://connector.example/callback"}})
+	oauth, err := newBinaryOAuthFixture(ctx, w, w.Gateway.URL)
+	if err != nil {
+		add("consent_dummy_group", false)
+		return
+	}
+	owner := oauth.owner
+	client, err := oauth.register(oauthClientFixture{Name: "Bridge Test grants", RedirectURIs: []string{"https://connector.example/callback"}})
+
 	challenge := sha256.Sum256([]byte(strings.Repeat("a", 43)))
 	query := url.Values{"client_id": {client.ID}, "redirect_uri": {"https://connector.example/callback"}, "response_type": {"code"}, "resource": {owner.origin + "/mcp"}, "code_challenge_method": {"S256"}, "code_challenge": {base64.RawURLEncoding.EncodeToString(challenge[:])}, "scope": {"labdummy:read labdummy:write"}}
 	req, _ := http.NewRequestWithContext(ctx, "GET", owner.origin+"/oauth/authorize?"+query.Encode()+"&format=json", nil)
@@ -51,16 +51,15 @@ func runSourceGrants(ctx context.Context, w *world.World, add func(string, bool)
 	} else {
 		add("consent_dummy_group", false)
 	}
-	store, err := state.Open(w.Gateway.Home)
+	_, err = w.Records(w.Gateway)
 	add("dummy_store", err == nil)
 	if err != nil {
 		return
 	}
-	defer store.Close()
-	_, err = store.CommitCapture(ctx, contracts.Capture{Source: "labdummy", Generation: "lab-grants", Checkpoint: "1", Observations: []contracts.Observation{{Kind: "upsert", Collection: "labdummy.item", NativeKey: "fixture", ObservedAt: time.Now().UTC(), Data: json.RawMessage(`{"title":"Bridge Test grants"}`)}, {Kind: "upsert", Collection: "system.source", NativeKey: "labdummy", ObservedAt: time.Now().UTC(), Data: json.RawMessage(`{"source":"labdummy","state":"ready"}`)}}})
+	err = w.ControlAction("/capture", contracts.Capture{Source: "labdummy", Generation: "lab-grants", Checkpoint: "1", Observations: []contracts.Observation{{Kind: "upsert", Collection: "labdummy.item", NativeKey: "fixture", ObservedAt: time.Now().UTC(), Data: json.RawMessage(`{"title":"Bridge Test grants"}`)}, {Kind: "upsert", Collection: "system.source", NativeKey: "labdummy", ObservedAt: time.Now().UTC(), Data: json.RawMessage(`{"source":"labdummy","state":"ready"}`)}}})
 	add("dummy_record_captured", err == nil)
 	for _, scope := range []string{"messages:read", "labdummy:read", "labdummy:write"} {
-		_, token, err := authority.CreateAgent("Bridge Test grants", trust.AgentApprove, []contracts.Grant{contracts.Grant(scope)})
+		token, err := binaryAgentToken(w, "Bridge Test grants", "approve", scope)
 		status, raw, _ := agentRequest(ctx, w.Gateway.URL, token, "POST", "/v1/op/records.query", contracts.ReadQuery{Collection: "labdummy.item"})
 		var result contracts.ReadResult
 		json.Unmarshal(raw, &result)
@@ -70,7 +69,7 @@ func runSourceGrants(ctx context.Context, w *world.World, add func(string, bool)
 		}
 		add("dummy_visibility_"+scope, err == nil && status == 200 && len(result.Records) == expected)
 	}
-	ownerToken, tokenErr := authority.CreateToken([]contracts.Grant{"admin"})
+	ownerToken, tokenErr := w.ScopedToken(w.Gateway, "admin")
 	add("source_status_owner_token", tokenErr == nil)
 	var statuses contracts.ReadResult
 	status, raw, _ := agentRequest(ctx, w.Gateway.URL, ownerToken, "POST", "/v1/op/sources.status", map[string]any{})
@@ -87,7 +86,7 @@ func runSourceGrants(ctx context.Context, w *world.World, add func(string, bool)
 	}
 	add("source_status_dummy_grants", status == 200 && found)
 	for _, scope := range []string{"labdummy:read", "labdummy:write", "labdummy:unknown"} {
-		err := exec.CommandContext(ctx, "bin/bridge", "agent", "create", "--home", w.Gateway.Home, "--name", "Bridge Test CLI grants", "--scope", scope).Run()
+		_, err := w.GatewayCommand("agent", "create", "--name", "Bridge Test CLI grants", "--scope", scope)
 		add("cli_grant_"+scope, (err == nil) == (scope != "labdummy:unknown"))
 	}
 }

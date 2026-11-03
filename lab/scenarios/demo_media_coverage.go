@@ -8,6 +8,7 @@ import (
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/lab/demo"
 	"github.com/JohanSardar/apple-bridge/lab/scripted"
+	labwire "github.com/JohanSardar/apple-bridge/lab/wire"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 	"sort"
 	"strings"
@@ -55,7 +56,7 @@ func demoMediaCoverage(ctx context.Context, w *world.World, dataset demo.Dataset
 	checked := map[string]bool{}
 	blobsOK := true
 	for _, record := range mediaRecords {
-		for _, ref := range contracts.BlobReferences(record.Data) {
+		for _, ref := range labwire.BlobReferences(record.Data) {
 			if checked[ref.Digest] {
 				continue
 			}

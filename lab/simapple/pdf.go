@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	labwire "github.com/JohanSardar/apple-bridge/lab/wire"
 	"io"
 	"os"
 	"path/filepath"
@@ -51,7 +52,7 @@ func (f *fakeApple) simulatePDFQuery(op string, raw json.RawMessage) (string, js
 		f.mu.Lock()
 		for _, record := range f.records {
 			if record.Collection == "pdf.artifact" {
-				for _, ref := range contracts.BlobReferences(record.Data) {
+				for _, ref := range labwire.BlobReferences(record.Data) {
 					if ref.Digest == digest {
 						known = true
 					}
