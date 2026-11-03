@@ -476,6 +476,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "RMT-PRIVATE-CONNECT" {
 		return runPrivateConnect(ctx, s, level)
 	}
+	if s.ID == "RELAY-CT-INDEPENDENT" || s.ID == "RELAY-CAA-ACCOUNT" {
+		return runRelayCertificates(ctx, s, level)
+	}
 	if s.ID == "RELAY-ROTATE-GATED" || s.ID == "RELAY-TLS-SPLICE" {
 		return runRelayContainment(ctx, s, level)
 	}

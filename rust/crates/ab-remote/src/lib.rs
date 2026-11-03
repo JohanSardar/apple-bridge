@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 
 pub mod certificate;
+pub mod ct;
 pub mod relay;
 mod smux;
 pub mod state;

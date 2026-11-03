@@ -1,0 +1,83 @@
+{
+  "impl": "rust",
+  "level": "sim",
+  "scope": "focused Rust integration scenarios with fixture CT and DNS adapters; no live relay or production CA",
+  "build_host": "build",
+  "scenarios": {
+    "RELAY-CT-INDEPENDENT": [
+      "relay all-clear has no input authority",
+      "assigned and custom names",
+      "parent wildcard query",
+      "unknown precertificate",
+      "local known fingerprint",
+      "aggregator outage remains unknown",
+      "lag remains unknown",
+      "sticky findings",
+      "stale and future report times",
+      "doctor warnings",
+      "persisted notification hook",
+      "DER poison extension",
+      "compile and local opt-in gates"
+    ],
+    "RELAY-CAA-ACCOUNT": [
+      "exact per-host CAA RRset",
+      "wrong-account denial",
+      "http-01 denial",
+      "tls-alpn-01 denial",
+      "alternate-issuer denial",
+      "wildcard denial",
+      "CNAME target traversal",
+      "target CAA replacement residual risk",
+      "wrong signing key",
+      "rotation",
+      "recovery",
+      "revision replay denial",
+      "expired proof denial",
+      "CAA parameter injection denial",
+      "DNS failure preserves binding",
+      "runtime opt-in gate"
+    ]
+  },
+  "ca": "RFC 8657 authorization fixture; Docker and Pebble absent on build host",
+  "limitations": [
+    "bridge-lab sim component scenarios; not live gateway qualification",
+    "control-service worker must bind authenticated enrollment to caa::Control::apply and implement durable DNS adapter",
+    "iPhone worker must implement IphonePush for APNs delivery",
+    "legacy Go forwarder DNS routes are outside this PR",
+    "public CT availability and completeness cannot be proven offline"
+  ],
+  "commands": [
+    "go run ./cmd/bridge-lab run lab/scenarios/core/RELAY-CT-INDEPENDENT.yaml lab/scenarios/core/RELAY-CAA-ACCOUNT.yaml --level sim --json",
+    "cargo test -p ab-remote -p ab-relay-control --features r2-certificates --locked",
+    "cargo test -p ab-remote -p ab-relay-control --no-default-features --locked",
+    "cargo clippy -p ab-remote -p ab-relay-control --all-targets --features r2-certificates --locked -- -D warnings",
+    "cargo check -p ab-runtime --features r2-certificates --locked",
+    "cargo fmt --all --check",
+    "AB_REMOTE_BINARY=<target>/debug/examples/bridge go test ./rust/crates/ab-remote/fixture -count=1",
+    "go run ./tools/lint .",
+    "python3 rust/check-native-graph.py"
+  ],
+  "verified_code_head": "e3a684ea4ccaa116bf13da3af2245eb3458c9f46",
+  "bridge_lab_results": {
+    "RELAY-CT-INDEPENDENT": {
+      "passed": true,
+      "impl": "rust",
+      "assertions_passed": 11
+    },
+    "RELAY-CAA-ACCOUNT": {
+      "passed": true,
+      "impl": "rust",
+      "assertions_passed": 11
+    }
+  },
+  "gate_results": {
+    "all_feature_rust_tests": 14,
+    "default_mode_rust_tests": 2,
+    "all_feature_clippy": "passed",
+    "runtime_check": "passed",
+    "cargo_fmt": "passed",
+    "make_lint_including_go_vet": "passed",
+    "native_dependency_graph": "passed",
+    "featuregraph_and_scenario_validation": "passed"
+  }
+}

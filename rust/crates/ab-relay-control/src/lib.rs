@@ -1,4 +1,5 @@
 mod auth;
+pub mod caa;
 mod http;
 mod ids;
 mod policy;

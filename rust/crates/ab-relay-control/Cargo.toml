@@ -10,6 +10,7 @@ workspace = true
 [features]
 default = []
 isolated-control = []
+r2-certificates = []
 
 [[bin]]
 name = "ab-relay-control"
@@ -38,3 +39,7 @@ jiff.workspace = true
 tempfile = "3"
 tower = { version = "0.5", features = ["util"] }
 http-body-util = "0.1"
+
+[[test]]
+name = "relay_caa_account"
+required-features = ["r2-certificates"]
