@@ -128,7 +128,7 @@ fn blob(world: &World, evidence: &mut Evidence) -> Result<()> {
 fn error_code(raw: Option<&(u16, Value)>) -> Option<String> {
     raw?.1["error"]["code"].as_str().map(str::to_owned)
 }
-fn agent_token(world: &World, name: &str, level: &str, scope: &str) -> Result<Option<String>> {
+pub(crate) fn agent_token(world: &World, name: &str, level: &str, scope: &str) -> Result<Option<String>> {
     let Ok(raw) = world.gateway_cli(&[
         "agent", "create", "--name", name, "--level", level, "--scope", scope,
     ]) else {

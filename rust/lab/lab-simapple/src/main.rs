@@ -11,6 +11,7 @@ mod messages_commands;
 mod notes;
 mod query;
 mod reminders;
+mod shortcuts;
 mod sources;
 mod stale;
 mod vision;
@@ -750,6 +751,8 @@ impl Session<'_> {
             ("mac", Some("Dispatch")) => return self.mac_dispatch(state, &frame),
             ("maps", Some("Prepare")) => return self.maps_prepare(state, &frame),
             ("maps", Some("Dispatch")) => return self.maps_dispatch(state, &frame),
+            ("shortcuts", Some("Prepare")) => return self.shortcuts_prepare(&frame),
+            ("shortcuts", Some("Dispatch")) => return self.shortcuts_dispatch(state, &frame),
             ("reminders", Some("Prepare")) => return self.reminder_prepare(state, &frame),
             ("reminders", Some("Dispatch")) => return self.reminder_dispatch(state, &frame),
             (_, Some("Prepare")) => return self.reject(&frame, "unsupported"),

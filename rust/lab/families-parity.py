@@ -17,7 +17,8 @@ CORE_SCENARIOS = ['CORE-RESUME', 'CORE-STALE-FENCE', 'LAB-MALFORMED-SCENARIO', '
                   'LAB-TRUTH-MULTIPLICITY']
 IMPORT_SCENARIOS = ['messages/MSG-HISTORY-IMPORT', 'contacts/CON-IMPORT', 'notes/NOTE-IMPORT', 'usage/USE-IMPORT']
 SHORTCUT_SCENARIOS = ['shortcuts/FILES-TRANSFORM', 'shortcuts/SC-ACTIONS', 'shortcuts/SC-CAPTURE', 'shortcuts/SC-RUN-REAL',
-                      'shortcuts/CLK-SIM', 'shortcuts/CLK-ALARM-REAL', 'shortcuts/CLK-TIMER-REAL']
+                      'shortcuts/CLK-SIM', 'shortcuts/CLK-ALARM-REAL', 'shortcuts/CLK-TIMER-REAL',
+                      'shortcuts/SC-RUN', 'shortcuts/FOC-SIM', 'shortcuts/FOC-PHONE-SYNC']
 CONTACTS_SCENARIOS = ['contacts/CON-CRUD', 'contacts/CON-CONFLICT', 'contacts/CON-DROP-EVERYTHING',
                       'contacts/CON-EXTERNAL', 'contacts/CON-GROUPS', 'contacts/CON-HANDLE-LINK',
                       'contacts/CON-IMAGE', 'contacts/CON-PERMISSION-LOSS',
