@@ -1,5 +1,6 @@
 #![allow(clippy::too_many_lines)]
 mod messages;
+mod sources;
 use lab_wire::{receive, send};
 use serde_json::{Value, json};
 use std::{
@@ -143,6 +144,9 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
     if route == "/messages" {
         return messages::control_messages(state, tx, &input);
     }
+    if matches!(route, "/phone" | "/recordings" | "/safari" | "/usage") {
+        return sources::control_source(state, tx, route, &input);
+    }
     let mut s = lock(state)?;
     match route {
         "/messages-status" => Ok(json!({
@@ -281,7 +285,9 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
                 .as_array()
                 .ok_or_else(|| invalid("records"))?;
             for record in records {
-                s.put(record.clone());
+                let mut record = record.clone();
+                sources::dataset_alias(&mut record);
+                s.put(record);
             }
             s.save()?;
             let sources: std::collections::BTreeSet<_> = records
@@ -704,6 +710,9 @@ fn session(
         "mail",
         "phone",
         "files",
+        "safari",
+        "voicemail",
+        "voice_memos",
     ];
     let mut capabilities = json!({});
     let mut coverage = json!({});
