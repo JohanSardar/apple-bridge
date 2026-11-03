@@ -185,6 +185,7 @@ pub struct LocalGateway {
     pub clock: Arc<dyn crate::clock::Clock>,
     pub query_store: Option<Arc<crate::LocalQueryStore>>,
     pub query_audit: Option<Arc<dyn crate::QueryAuditSink>>,
+    pub reauthorize: Option<Arc<dyn ab_trust::ApprovalReauthorizer>>,
     pub phone_notify: Option<Arc<tokio::sync::Notify>>,
     query_rates: Mutex<BTreeMap<String, (std::time::Instant, u32)>>,
     locks: Mutex<BTreeMap<String, Arc<AsyncMutex<()>>>>,
@@ -226,6 +227,7 @@ impl LocalGateway {
             query_store: None,
             query_audit: None,
             phone_notify: None,
+            reauthorize: None,
             query_rates: Mutex::default(),
             locks: Mutex::default(),
             stopping: std::sync::atomic::AtomicBool::new(false),
@@ -249,7 +251,11 @@ impl LocalGateway {
     }
     fn authorize(&self, p: &Principal, op: &str) -> Result<Principal, Error> {
         let current = self.identity.current(p)?;
-        current.authorize(&descriptor_for(op)?.scope)?;
+        let scope = descriptor_for(op)?.scope;
+        if current.is_agent() && current.level == "read" && scope.ends_with(":write") {
+            return Err(Code::Unauthorized.into());
+        }
+        current.authorize(&scope)?;
         Ok(current)
     }
     fn transition(
@@ -1002,11 +1008,31 @@ impl LocalGateway {
                 None,
             )?);
         }
-        let p = match self
-            .identity
-            .approval_principal(&r.principal, &r.command.id, &r.request_hash)
-            .and_then(|p| self.authorize(&p, &r.command.op))
-        {
+        let principal = if r.principal.contains("/agent:") {
+            let reauthorize = self.reauthorize.as_ref().ok_or(Code::Unavailable)?;
+            reauthorize
+                .reauthorize(&r.principal, &r.command.id, &r.request_hash)
+                .await
+                .map(|p| Principal {
+                    id: p.id,
+                    kind: p.kind,
+                    level: p.level,
+                    grants: p.grants.iter().map(|g| g.as_str().to_owned()).collect(),
+                    resource: String::new(),
+                    remote: p.remote,
+                })
+                .map_err(|e| {
+                    Error::from(if matches!(e, ab_trust::Error::Unauthorized) {
+                        Code::Unauthorized
+                    } else {
+                        Code::Unavailable
+                    })
+                })
+        } else {
+            self.identity
+                .approval_principal(&r.principal, &r.command.id, &r.request_hash)
+        };
+        let p = match principal.and_then(|p| self.authorize(&p, &r.command.op)) {
             Ok(p) => p,
             Err(error) if error.code == Code::Unavailable => return Err(error),
             Err(error) => {

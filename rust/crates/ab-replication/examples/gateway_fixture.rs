@@ -107,6 +107,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         blobs.clone(),
     ));
     let server = Arc::new(Server {
+        delegations: Arc::new(ab_replication::delegation::Delegations::new(
+            authority.clone(),
+        )),
         uploads: Some(uploads),
         blobs: Some(blobs),
         state: Arc::new(Mutex::new(StateAdapter(state.clone()))),
