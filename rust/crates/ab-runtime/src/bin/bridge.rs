@@ -15,7 +15,7 @@ impl Arguments {
         if verb == "token" && args.next().as_deref() != Some("create") {
             return Err(Error::Invalid);
         }
-        let action = if verb == "remote" {
+        let action = if ["agent", "remote"].contains(&verb.as_str()) {
             args.next().ok_or(Error::Invalid)?
         } else {
             String::new()
@@ -31,6 +31,8 @@ impl Arguments {
                     (key.to_owned(), content.to_owned())
                 } else if [
                     "remote",
+                    "iphone",
+                    "via-remote",
                     "helper-lab-commands",
                     "accept-ledger-loss",
                 ]
@@ -45,6 +47,12 @@ impl Arguments {
                     "helper-app",
                     "helper-lab-commands",
                     "via",
+                    "name",
+                    "level",
+                    "expires-in",
+                    "dial-replica",
+                    "iphone",
+                    "via-remote",
                     "backup",
                     "accept-ledger-loss",
                     "role",
@@ -159,6 +167,9 @@ async fn run() -> Result<(), Error> {
         ab_trust::Authority::open(&home)
             .map_err(|_| Error::Operation(ab_operations::Code::Unavailable.into()))?,
     );
+    if manage(&args, &home, &authority)? {
+        return Ok(());
+    }
     match args.verb.as_str() {
         "token" => {
             let grants = args
@@ -171,23 +182,6 @@ async fn run() -> Result<(), Error> {
                 .create_token(grants, args.flag("remote", "false") == "true")
                 .map_err(|_| Error::Operation(ab_operations::Code::Unauthorized.into()))?;
             println!("{token}");
-        }
-        "revoke" => {
-            authority
-                .update(|credentials| {
-                    let principal = credentials
-                        .principals
-                        .iter_mut()
-                        .find(|p| p.id == args.value)
-                        .ok_or(ab_trust::Error::Invalid)?;
-                    principal.extra.insert(
-                        "revoked_at".into(),
-                        serde_json::Value::String(jiff::Timestamp::now().to_string()),
-                    );
-                    principal.revision += 1;
-                    Ok(())
-                })
-                .map_err(|_| Error::Invalid)?;
         }
         "join" => {
             if args.value.is_empty() {
@@ -221,4 +215,86 @@ async fn run() -> Result<(), Error> {
         _ => return Err(Error::Invalid),
     }
     Ok(())
+}
+
+fn grants(args: &Arguments) -> Result<Vec<ab_trust::Grant>, Error> {
+    args.flag("scope", "reminders:read,system:read")
+        .split(',')
+        .map(ab_trust::Grant::parse)
+        .collect::<Result<_, _>>()
+        .map_err(Error::from)
+}
+fn manage(
+    args: &Arguments,
+    home: &std::path::Path,
+    authority: &ab_trust::Authority,
+) -> Result<bool, Error> {
+    match args.verb.as_str() {
+        "revoke" => authority.revoke(&args.value)?,
+        "agent" => match args.action.as_str() {
+            "list" => println!("{}", serde_json::to_string(&authority.agents()?)?),
+            "create" => {
+                let level = match args.flag("level", "approve").as_str() {
+                    "read" => ab_trust::AgentLevel::Read,
+                    "approve" => ab_trust::AgentLevel::Approve,
+                    "full" => ab_trust::AgentLevel::Full,
+                    _ => return Err(Error::Invalid),
+                };
+                let (agent, token) =
+                    authority.create_agent(&args.flag("name", ""), level, grants(args)?)?;
+                println!("{}", serde_json::json!({"agent":agent,"token":token}));
+            }
+            "revoke" => {
+                if !args.value.starts_with("agent:") {
+                    return Err(Error::Invalid);
+                }
+                authority.revoke(&args.value)?;
+            }
+            _ => return Err(Error::Invalid),
+        },
+        "pair" => {
+            let config = Config::load(home)?;
+            if config.role != "gateway" {
+                return Err(Error::Invalid);
+            }
+            let nanos = ab_runtime::duration::parse(&args.flag("expires-in", "10m"))?;
+            let ttl =
+                std::time::Duration::from_nanos(u64::try_from(nanos).map_err(|_| Error::Invalid)?);
+            if args.flag("iphone", "false") == "true" {
+                if args.flag("via-remote", "false") != "true"
+                    || args.flags.contains_key("peer-addr")
+                    || args.flags.contains_key("dial-replica")
+                {
+                    return Err(Error::Invalid);
+                }
+                let status: serde_json::Value = ab_remote::state::read(home, "status")?;
+                if status["state"] != "on" {
+                    return Err(ab_trust::Error::Unavailable.into());
+                }
+                println!(
+                    "{}",
+                    authority.pair_iphone_code(
+                        status["url"].as_str().ok_or(Error::Invalid)?,
+                        true,
+                        ttl
+                    )?
+                );
+            } else {
+                if args.flag("via-remote", "false") == "true" {
+                    return Err(ab_trust::Error::Unavailable.into());
+                }
+                println!(
+                    "{}",
+                    authority.pair(
+                        &args.flag("peer-addr", &config.peer_address),
+                        &args.flag("dial-replica", ""),
+                        grants(args)?,
+                        i64::try_from(ttl.as_secs()).map_err(|_| Error::Invalid)?
+                    )?
+                );
+            }
+        }
+        _ => return Ok(false),
+    }
+    Ok(true)
 }

@@ -31,6 +31,8 @@ pub enum Error {
     #[error(transparent)]
     State(#[from] ab_state::Error),
     #[error(transparent)]
+    Trust(#[from] ab_trust::Error),
+    #[error(transparent)]
     Remote(#[from] ab_remote::Error),
     #[error("gateway assembly blocked: ab-applepeer and local command lifecycle are not available")]
     GatewayIntegrationPending,

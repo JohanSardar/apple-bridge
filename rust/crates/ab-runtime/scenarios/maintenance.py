@@ -48,6 +48,19 @@ with tempfile.TemporaryDirectory(prefix='ab-gf-cli-') as root:
     checks.append('remote both/on/off/status and invalid backend')
     assert not json.loads((home/'remote/config.json').read_text())['backend']=='both'
     checks.append('remote selection keeps Go-readable legacy backend')
+    agent=json.loads(run('agent','create','--home',str(home),'--name','fixture','--scope','messages:read','--level','read'))
+    assert agent['token'] and agent['agent']['id'].startswith('agent:')
+    agents=json.loads(run('agent','list','--home',str(home)))
+    assert any(v['id']==agent['agent']['id'] for v in agents)
+    legacy=subprocess.run([go,'agent','list','--home',str(home)],env=env,capture_output=True,text=True,timeout=15)
+    assert legacy.returncode==0
+    assert any(v['id']==agent['agent']['id'] for v in json.loads(legacy.stdout))
+    run('agent','revoke',agent['agent']['id'],'--home',str(home))
+    checks.append('agent create/list/revoke and Go credential interoperability')
+    assert run('pair','--home',str(home)).strip().startswith('ab1-')
+    run('pair','--home',str(home),'--iphone',ok=False)
+    run('pair','--home',str(home),'--iphone','--via-remote',ok=False)
+    checks.append('direct pairing and HTTPS-only phone pairing admission')
     token=run('token','create','--home',str(home),'--remote=false').strip()
     assert token
     checks.append('token create accepts explicit false boolean')
