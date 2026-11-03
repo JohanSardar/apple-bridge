@@ -284,6 +284,18 @@ impl<Role> State<Role> {
             "sources.status" => {
                 let mut result = super::specialized::sources(&tx, visibility)?;
                 for record in result["records"].as_array_mut().into_iter().flatten() {
+                    if let Some((count, code, active)) = record["data"]["source"]
+                        .as_str()
+                        .and_then(|source| self.capture_failures.get(source))
+                    {
+                        let reason = format!("gateway_capture_rejected:{code}");
+                        record["data"]["capture_rejected_count"] = (*count).into();
+                        record["data"]["last_capture_rejected_reason"] = reason.clone().into();
+                        if *active {
+                            record["data"]["state"] = "degraded".into();
+                            record["data"]["reason"] = reason.into();
+                        }
+                    }
                     if record["data"]["source"]
                         .as_str()
                         .is_some_and(|s| self.capacity.get(s) == Some(&true))
