@@ -240,6 +240,8 @@ impl Visibility {
             self.sources.iter().map(|s| (s.clone(), true)).collect();
         if self.all {
             for source in [
+                #[cfg(feature = "lab-harness")]
+                "labdummy",
                 "location",
                 "audio",
                 "calendar",
