@@ -43,6 +43,22 @@ pub struct PushClient {
 }
 impl PushClient {
     pub fn new(endpoint: &str, hostname: String, credential: String) -> Result<Self, Error> {
+        Self::with_client(
+            endpoint,
+            hostname,
+            credential,
+            reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(10))
+                .redirect(reqwest::redirect::Policy::none())
+                .build()?,
+        )
+    }
+    pub fn with_client(
+        endpoint: &str,
+        hostname: String,
+        credential: String,
+        client: reqwest::Client,
+    ) -> Result<Self, Error> {
         let mut endpoint = reqwest::Url::parse(endpoint).map_err(|_| Error::Unavailable)?;
         if endpoint.scheme() != "https"
             || endpoint.host_str().is_none()
@@ -59,10 +75,6 @@ impl PushClient {
             "{}/iphone/push",
             endpoint.path().trim_end_matches('/')
         ));
-        let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(10))
-            .redirect(reqwest::redirect::Policy::none())
-            .build()?;
         Ok(Self {
             endpoint,
             hostname,

@@ -361,10 +361,10 @@ impl<G: Gateway> Delivery<G> {
                     continue;
                 }
             }
-            if !dispatch {
+            let live = row.live()?;
+            if !dispatch && !live {
                 continue;
             }
-            let live = row.live()?;
             if live && (!allow_live || row.state == CommandState::Dispatched) {
                 continue;
             }
@@ -429,6 +429,9 @@ impl<G: Gateway> Delivery<G> {
                 expires,
             })?,
         )?)
+    }
+    pub async fn notified(&self) {
+        self.wake.notified().await;
     }
     pub fn wake(&self) {
         self.wake.notify_one();

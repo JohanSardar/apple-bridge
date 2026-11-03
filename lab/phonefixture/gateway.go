@@ -139,7 +139,7 @@ func fixtureCertificate() ([]byte, []byte, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	cert := &x509.Certificate{SerialNumber: serial, Subject: pkix.Name{CommonName: "node.fixture.test"}, DNSNames: []string{"node.fixture.test"}, NotBefore: time.Now().Add(-time.Minute), NotAfter: time.Now().Add(time.Hour), IsCA: true, BasicConstraintsValid: true, KeyUsage: x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign, ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}}
+	cert := &x509.Certificate{SerialNumber: serial, Subject: pkix.Name{CommonName: "node.fixture.test"}, DNSNames: []string{"node.fixture.test"}, IPAddresses: []net.IP{net.ParseIP("127.0.0.1")}, NotBefore: time.Now().Add(-time.Minute), NotAfter: time.Now().Add(time.Hour), IsCA: false, BasicConstraintsValid: true, KeyUsage: x509.KeyUsageDigitalSignature, ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}}
 	der, err := x509.CreateCertificate(rand.Reader, cert, cert, public, key)
 	if err != nil {
 		return nil, nil, err
@@ -207,12 +207,17 @@ func (g *Gateway) Stop() {
 }
 
 func (g *Gateway) Restart() error {
+	leasePath := filepath.Join(g.Home, "remote", "lease.json")
+	_, leaseErr := os.Stat(leasePath)
+	requireIngress := leaseErr == nil
 	g.Stop()
 	var err error
 	g.log, err = os.OpenFile(filepath.Join(filepath.Dir(g.Home), "gateway.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
 	if err != nil {
 		return err
 	}
+	reenabled := false
+	started := time.Now()
 	g.cmd = exec.CommandContext(g.ctx, g.binary, "start", "--role", "gateway", "--home", g.Home, "--api-addr", "127.0.0.1:0", "--peer-addr", "127.0.0.1:0")
 	g.cmd.Env, g.cmd.Stdout, g.cmd.Stderr = g.env, g.log, g.log
 	if err = g.cmd.Start(); err != nil {
@@ -236,9 +241,48 @@ func (g *Gateway) Restart() error {
 		case <-until.C:
 			return fmt.Errorf("gateway readiness timed out")
 		case <-tick.C:
-			if _, err = os.Stat(filepath.Join(g.Home, "run", "peer.sock")); err == nil {
-				return nil
+			configPath := filepath.Join(g.Home, "runtime.json")
+			info, statErr := os.Stat(configPath)
+			if statErr != nil || info.ModTime().Before(started) {
+				continue
 			}
+			var runtime struct {
+				APIAddress string `json:"api_address"`
+			}
+			raw, readErr := os.ReadFile(configPath)
+			if readErr != nil || json.Unmarshal(raw, &runtime) != nil {
+				continue
+			}
+			api, apiErr := net.DialTimeout("tcp", runtime.APIAddress, 100*time.Millisecond)
+			if apiErr != nil {
+				continue
+			}
+			api.Close()
+			socket, dialErr := net.DialTimeout("unix", filepath.Join(g.Home, "run", "peer.sock"), 100*time.Millisecond)
+			if dialErr != nil {
+				continue
+			}
+			socket.Close()
+			if requireIngress {
+				if !reenabled {
+					if _, enableErr := g.Command("remote", "on", "--via", "tailscale-app"); enableErr != nil {
+						return enableErr
+					}
+					reenabled = true
+				}
+				if leaseInfo, leaseErr := os.Stat(leasePath); leaseErr != nil || leaseInfo.ModTime().Before(started) {
+					continue
+				}
+				response, probeErr := g.Client.Get(g.URL + "/")
+				if probeErr != nil {
+					continue
+				}
+				response.Body.Close()
+				if response.StatusCode == 502 || response.StatusCode == 503 {
+					continue
+				}
+			}
+			return nil
 		}
 	}
 }

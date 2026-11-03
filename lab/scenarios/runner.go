@@ -410,7 +410,7 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 		return runIPhoneCommand(ctx, s, level)
 	}
 	if s.ID == "APP-NOTIFY-SIM" {
-		return runIPhoneCommand(ctx, s, level)
+		return runIPhoneNotification(ctx, s, level)
 	}
 	if s.ID == "APP-CMD-SIM" {
 		return runIPhoneCommand(ctx, s, level)

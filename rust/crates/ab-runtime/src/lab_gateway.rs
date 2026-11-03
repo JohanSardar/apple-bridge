@@ -1,5 +1,5 @@
 use crate::Error;
-use ab_operations::GatewayStore;
+use ab_operations::{GatewayStore, local::GatewayState};
 use axum::{Router, body::Body, response::IntoResponse};
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -102,6 +102,16 @@ async fn stage(app: &App, bytes: Vec<u8>) -> Result<(ab_blobs::Digest, String), 
 }
 async fn action(app: &App, request: Request) -> Result<Value, Error> {
     match request.action.as_str() {
+        "phone-command" => return Ok(serde_json::to_value(app.state.command(&request.owner)?)?),
+        "phone-expired" => {
+            let mut row = app.state.command(&request.owner)?;
+            row.command.id = request.pin;
+            row.state = ab_trust::domain::CommandState::Admitted;
+            row.expires_at = "2000-01-01T00:00:00Z".into();
+            row.history.clear();
+            row.cursor = Default::default();
+            app.state.transition(None, row)?;
+        }
         "stage" => {
             let (digest, pin) = stage(app, b"[ab-test] pinned blob".to_vec()).await?;
             return Ok(json!({"digest":digest,"pin":pin}));
