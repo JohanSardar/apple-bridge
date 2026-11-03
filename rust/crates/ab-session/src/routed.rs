@@ -306,14 +306,10 @@ pub fn relay(
                 match value["t"].as_str() {
                     Some("Capture") => {
                         let source = text(&value, "source")?;
-                        let checkpoint = value["checkpoint"]
-                            .as_str()
-                            .unwrap_or_default()
-                            .to_owned();
-                        let generation = value["generation"]
-                            .as_str()
-                            .unwrap_or_default()
-                            .to_owned();
+                        let checkpoint =
+                            value["checkpoint"].as_str().unwrap_or_default().to_owned();
+                        let generation =
+                            value["generation"].as_str().unwrap_or_default().to_owned();
                         let size = u64::try_from(bytes.len()).map_err(|_| Error::Invalid)?;
                         if rust.contains(source) {
                             send(
