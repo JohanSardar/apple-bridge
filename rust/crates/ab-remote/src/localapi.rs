@@ -233,6 +233,7 @@ pub async fn certificate_expiry(host: &str, port: u16) -> Result<String> {
             target = address;
         }
         if let Some(path) = std::env::var_os("APPLE_BRIDGE_LAB_TLS_ROOT") {
+            use rustls::pki_types::pem::PemObject;
             let pem = std::fs::read(path)?;
             for certificate in rustls::pki_types::CertificateDer::pem_slice_iter(&pem)
                 .filter_map(std::result::Result::ok)
