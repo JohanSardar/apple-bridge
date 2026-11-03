@@ -214,8 +214,13 @@ func runUsageData(ctx context.Context, s Scenario, level string) Evidence {
 			if send("remote", "iphone", event(-86400, true, app), event(-85800, false, app)) != nil {
 				return fail("remote_initial_batch")
 			}
-			before, _, fresh := totals(w.Gateway, "remote")
-			add("remote_older_freshness", before == 600 && fresh != "")
+			var before float64
+			var fresh string
+			settled := w.Await(10*time.Second, func() bool {
+				before, _, fresh = totals(w.Gateway, "remote")
+				return before == 600 && fresh != ""
+			})
+			add("remote_older_freshness", settled == nil && before == 600 && fresh != "")
 			started := time.Now()
 			if send("remote", "iphone", event(-85000, true, app), event(-84700, false, app)) != nil {
 				return fail("remote_delayed_batch")

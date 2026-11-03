@@ -57,15 +57,13 @@ for name in ['History.db','CloudTabs.db']:
 	if err != nil {
 		return e
 	}
-	sessionRoot := ""
+	sessionRoot, pristine := "", ""
 	if slices.Contains(world.SessionSources(), "safari") {
 		sessionRoot = dir + "-session"
 		defer os.RemoveAll(sessionRoot)
-		if os.Getenv("AB_LAB_SESSION_CONTROL") == "empty" {
-			add("session_fixture_copy", os.MkdirAll(sessionRoot, 0700) == nil)
-		} else {
-			add("session_fixture_copy", copyFixture(dir, sessionRoot) == nil)
-		}
+		pristine = dir + "-pristine"
+		defer os.RemoveAll(pristine)
+		add("session_fixture_root", os.MkdirAll(sessionRoot, 0700) == nil && copyFixture(dir, pristine) == nil)
 		if !e.Passed {
 			return e
 		}
@@ -119,7 +117,11 @@ for name in ['History.db','CloudTabs.db']:
 	if !e.Passed {
 		return e
 	}
-	return safariGateway(world.WithSessionRoot(ctx, "safari", sessionRoot), e, observations)
+	stage := func() error { return nil }
+	if sessionRoot != "" && os.Getenv("AB_LAB_SESSION_CONTROL") != "empty" {
+		stage = func() error { return copyFixture(pristine, sessionRoot) }
+	}
+	return safariGateway(world.WithSessionRoot(ctx, "safari", sessionRoot), e, observations, stage)
 }
 
 func copyFixture(source, target string) error {
@@ -138,7 +140,11 @@ func copyFixture(source, target string) error {
 		if err != nil {
 			return err
 		}
-		if err = os.WriteFile(filepath.Join(target, entry.Name()), data, 0600); err != nil {
+		staging := filepath.Join(target, "."+entry.Name()+".staging")
+		if err = os.WriteFile(staging, data, 0600); err != nil {
+			return err
+		}
+		if err = os.Rename(staging, filepath.Join(target, entry.Name())); err != nil {
 			return err
 		}
 	}
