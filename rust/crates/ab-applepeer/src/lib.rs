@@ -345,6 +345,7 @@ impl Commands {
 mod tests {
     use super::*;
     #[tokio::test]
+    #[allow(clippy::expect_used)]
     async fn receipt_lookup_is_independent_of_session_contention() {
         let commands = Commands::default();
         let cursor = Cursor {
