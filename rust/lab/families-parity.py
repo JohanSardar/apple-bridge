@@ -61,6 +61,8 @@ CALENDAR_SCENARIOS = ['calendar/' + n for n in [
     'CAL-SPLIT-FRAME-CAP', 'CAL-STAMP-FIELDS', 'CAL-WINDOW-SLIDE']]
 CALENDAR_NATIVE = ['calendar/CAL-STORE-READ', 'calendar/CAL-FUTURE-COUNT-MATH', 'calendar/CAL-HINT-COVERAGE',
                    'calendar/CAL-INVALIDATED-EVENT']
+VISION_SCENARIOS = ['vision/AUD-SIM', 'vision/PDF-ANNOTATE', 'vision/PDF-TEXT', 'vision/VIS-OCR']
+VISION_NATIVE_SCENARIOS = ['vision/CAP-SIM']
 SCENARIOS = ['CORE-QUERY-ROUNDTRIP', 'CORE-QUERY-BLOB', 'CORE-QUERY-SCOPE', 'CORE-QUERY-DEADLINE',
              *JOURNEY_SCENARIOS, *CORE_SCENARIOS]
 FRONTDOOR_SCENARIOS = ['CORE-REST-MCP-PARITY', 'CORE-LOCALHOST-DEFENSE']
@@ -115,6 +117,8 @@ def main():
     parser.add_argument('--native-media', dest='native_media', action='store_true')
     parser.add_argument('--calendar', dest='calendar', action='store_true')
     parser.add_argument('--calendar-native', dest='calendar_native', action='store_true')
+    parser.add_argument('--vision', action='store_true')
+    parser.add_argument('--vision-native', dest='vision_native', action='store_true')
     args = parser.parse_args()
     for flag, group in [(args.usage, USAGE_SCENARIOS), (args.darwin_usage, DARWIN_USAGE_SCENARIOS), (args.calls, CALLS_SCENARIOS)]:
         if flag:
@@ -147,6 +151,10 @@ def main():
         args.scenario = (args.scenario or []) + MAC_SCENARIOS
     if args.web:
         args.scenario = (args.scenario or []) + WEB_SCENARIOS
+    if args.vision:
+        args.scenario = (args.scenario or []) + VISION_SCENARIOS
+    if args.vision_native:
+        args.scenario = (args.scenario or []) + VISION_NATIVE_SCENARIOS
     if args.native_media:
         args.scenario = (args.scenario or []) + NATIVE_MEDIA_SCENARIOS
     if args.maps:

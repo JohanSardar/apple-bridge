@@ -49,6 +49,7 @@ pub mod safari;
 pub mod search;
 pub mod shortcuts;
 pub mod usage;
+pub mod vision;
 pub mod watch;
 pub mod webauthn;
 use lab_runner::Registry;
