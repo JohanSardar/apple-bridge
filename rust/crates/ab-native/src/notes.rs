@@ -346,29 +346,7 @@ fn html(blocks: &[Value]) -> String {
                     v = format!("<{tag}>{v}</{tag}>");
                 }
             }
-            let mut styles = Vec::new();
-            if let Some(s) = r["color"].as_str() {
-                styles.push(format!("color:{s}"));
-            }
-            if let Some(s) = r["font_size"].as_f64() {
-                styles.push(format!("font-size:{s:.1}pt"));
-            }
-            if let Some(s) = r["font"].as_str().filter(|s| {
-                s.chars().count() <= 128
-                    && s.chars().all(|c| c.is_alphanumeric() || " -_.".contains(c))
-            }) {
-                styles.push(format!("font-family:'{s}'"));
-            }
-            if let Some(c) = match string(r, "highlight") {
-                "purple" => Some("#d9b8ff"),
-                "pink" => Some("#ffb8d6"),
-                "orange" => Some("#ffcf99"),
-                "mint" => Some("#b0e8cc"),
-                "blue" => Some("#b8daff"),
-                _ => None,
-            } {
-                styles.push(format!("background-color:{c}"));
-            }
+            let styles = run_styles(r);
             if !styles.is_empty() {
                 v = format!("<span style=\"{}\">{v}</span>", escape(&styles.join(";")));
             }
@@ -937,4 +915,34 @@ fn table_target(m: &Message, count: usize) -> Result<u64> {
         return Err(DecodeError::Malformed);
     }
     Ok(id)
+}
+
+fn run_styles(r: &Value) -> Vec<String> {
+    let mut styles = Vec::new();
+    if let Some(s) = r["color"].as_str() {
+        styles.push(format!("color:{s}"));
+    }
+    if let Some(s) = r["font_size"].as_f64() {
+        styles.push(format!(
+            "font-size:{}pt",
+            crate::native_json::description(s).unwrap_or_default()
+        ));
+    }
+    if let Some(s) = r["font"].as_str().filter(|s| {
+        s.chars().count() <= 128 && s.chars().all(|c| c.is_alphanumeric() || " -_.".contains(c))
+    }) {
+        styles.push(format!("font-family:'{s}'"));
+    }
+    if let Some(c) = match string(r, "highlight") {
+        "purple" => Some("#d9b8ff"),
+        "pink" => Some("#ffb8d6"),
+        "orange" => Some("#ffcf99"),
+        "mint" => Some("#b0e8cc"),
+        "blue" => Some("#b8daff"),
+        _ => None,
+    } {
+        styles.push(format!("background-color:{c}"));
+    }
+
+    styles
 }

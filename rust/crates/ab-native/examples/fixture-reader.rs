@@ -1,7 +1,6 @@
 #![forbid(unsafe_code)]
 
 use ab_native::usage::{Context, Reader};
-use ab_wire::gojson::{self, EscapeMode};
 use std::{
     io::{BufRead, Write},
     path::Path,
@@ -42,7 +41,7 @@ fn write_json(
     output: &mut impl Write,
     value: &serde_json::Value,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let bytes = gojson::record_data(&serde_json::to_vec(value)?, EscapeMode::Html)?;
+    let bytes = ab_native::native_json::record_data(value)?;
     output.write_all(&bytes)?;
     output.write_all(b"\n")?;
     Ok(())

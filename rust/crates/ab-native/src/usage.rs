@@ -1,5 +1,5 @@
 use crate::infocus::{self, InFocusEvent};
-use ab_wire::gojson::{self, EscapeMode};
+use ab_wire::gojson;
 use rusqlite::{Connection, OpenFlags};
 use serde_json::{Value, json};
 use std::{collections::BTreeMap, path::Path};
@@ -28,6 +28,8 @@ pub enum Error {
     Json(#[from] serde_json::Error),
     #[error("usage wire JSON: {0}")]
     Wire(#[from] gojson::Error),
+    #[error("native JSON: {0}")]
+    NativeJson(#[from] crate::native_json::Error),
     #[error("invalid usage time or timezone")]
     Time,
     #[error("incomplete usage input")]
@@ -101,26 +103,10 @@ pub struct Reader {
     checkpoint: String,
 }
 
-fn normalize(value: &mut Value) {
-    match value {
-        Value::Array(values) => values.iter_mut().for_each(normalize),
-        Value::Object(values) => values.values_mut().for_each(normalize),
-        Value::Number(n) if n.is_f64() => {
-            if let Some(v) = n
-                .as_f64()
-                .filter(|v| v.fract() == 0.0)
-                .and_then(|v| v.to_string().parse::<i64>().ok())
-            {
-                *value = json!(v);
-            }
-        }
-        _ => {}
-    }
-}
-fn data_bytes(mut value: Value) -> Result<Box<serde_json::value::RawValue>> {
-    normalize(&mut value);
-    let bytes = gojson::record_data(&serde_json::to_vec(&value)?, EscapeMode::Html)?;
-    Ok(serde_json::from_slice(&bytes)?)
+fn data_bytes(value: &Value) -> Result<Box<serde_json::value::RawValue>> {
+    Ok(serde_json::from_slice(&crate::native_json::record_data(
+        value,
+    )?)?)
 }
 
 #[allow(clippy::cast_possible_truncation)]
@@ -376,7 +362,7 @@ impl Reader {
                     native_key: native.into(),
                     scoped_alias: format!("usage/{key}"),
                     observed_at: context.observed_at.clone(),
-                    data: data_bytes(current.get(key).cloned().ok_or(Error::Incomplete)?)?,
+                    data: data_bytes(current.get(key).ok_or(Error::Incomplete)?)?,
                 });
             }
         }

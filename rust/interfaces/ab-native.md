@@ -215,3 +215,24 @@ example and `parity/usage/data-bytes.go` on the build host, then run
 /home/johan/targets/phase6-native/debug/examples/fixture-reader` on the Air.
 The Go helper path expected by that script is
 `~/targets/phase6-native/fixture-data-bytes` on `ssh build`.
+
+## Native JSON byte encoding
+
+`native_json::record_data` encodes source projections with Swift JSONEncoder's
+floating-point token rules, then applies `ab-wire::gojson` HTML-mode record
+encoding. It preserves negative zero, Swift's scientific-notation thresholds,
+exponent signs/padding and shortest decimal digits. `foundation_data` retains
+Foundation's slash escaping for native fingerprints and body blobs.
+`description` formats Swift Double interpolation, including integer `.0`.
+
+The codec is checked against 11,825 deterministic IEEE-754 vectors emitted by
+Swift, plus control/Unicode/slash string vectors and Double descriptions.
+A fractional-font Notes protobuf fixture verifies HTML font sizes retain their
+full precision. Screen Time and the fixture JSONL writer use this typed native
+encoding path. Other native reader implementations can call the same functions.
+
+Mac build check: the build-host `aarch64-apple-darwin` metadata probe caught
+E0599 for `Metadata::st_flags()` with only the Unix MetadataExt trait in scope.
+The Messages module now imports macOS MetadataExt under its target cfg. This
+is a platform build fix; the separate Messages worker retains reader ownership.
+The probe performs no filesystem read or runtime launch.
