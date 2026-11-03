@@ -35,6 +35,8 @@ func run(ctx context.Context, args []string) error {
 		return command.Run()
 	case "shadow-feed":
 		return feedSend(ctx, args[1:])
+	case "iphone-device":
+		return iphoneDevice(args[1:])
 	case "inventory":
 		return inventory(args[1:])
 	case "wire-checks":

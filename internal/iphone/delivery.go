@@ -116,7 +116,7 @@ func (d *Delivery) packets(ctx context.Context, p trust.Principal, dispatch bool
 		}
 	}
 	for _, r := range rows {
-		if r.State == contracts.CommandAwaitingApproval && time.Now().Before(r.ExpiresAt) {
+		if r.State == contracts.CommandAwaitingApproval && now().Before(r.ExpiresAt) {
 			args, _ := json.Marshal(map[string]string{"device_id": p.ID, "title": "Apple Bridge approval", "body": r.Command.Op + "\nAgent: " + r.Principal + "\n" + string(r.Command.Args)})
 			plain, _ := json.Marshal(Job{Command: contracts.Command{ID: r.Command.ID, Op: "bridge.approval", Args: args}, Hash: r.RequestHash, Expires: r.ExpiresAt.Unix()})
 			packet, sealErr := Seal(p.IPhoneEncryptionKey, p.ID, plain, d.Authority.SignIPhone)
@@ -132,7 +132,7 @@ func (d *Delivery) packets(ctx context.Context, p trust.Principal, dispatch bool
 		if r.State != contracts.CommandAdmitted && r.State != contracts.CommandPrepared && r.State != contracts.CommandDispatched {
 			continue
 		}
-		if !time.Now().Before(r.ExpiresAt) {
+		if !now().Before(r.ExpiresAt) {
 			to, disposition := contracts.CommandExpired, contracts.DispositionExpired
 			if r.State == contracts.CommandDispatched {
 				to, disposition = contracts.CommandIndeterminate, contracts.DispositionIndeterminate
@@ -169,7 +169,7 @@ func (d *Delivery) packets(ctx context.Context, p trust.Principal, dispatch bool
 			if r.State == contracts.CommandDispatched || d.Push == nil {
 				continue
 			}
-			token, aps, liveErr := LivePayload(p, r.Command, time.Now())
+			token, aps, liveErr := LivePayload(p, r.Command, now())
 			if liveErr != nil {
 				continue
 			}
@@ -190,7 +190,7 @@ func (d *Delivery) packets(ctx context.Context, p trust.Principal, dispatch bool
 			}
 			packet.LiveActivity = aps
 			bounded, cancel := context.WithTimeout(ctx, 10*time.Second)
-			d.Push(bounded, token, packet, time.Now().Add(time.Minute))
+			d.Push(bounded, token, packet, now().Add(time.Minute))
 			cancel()
 			continue
 		}
@@ -261,6 +261,10 @@ func (d *Delivery) Complete(ctx context.Context, p trust.Principal, request trus
 }
 
 func (d *Delivery) Handler() http.Handler {
+	return observe(d.handler())
+}
+
+func (d *Delivery) handler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		limit := int64(32768)
 		if r.URL.Path == "/v1/iphone/capture" {
@@ -388,7 +392,7 @@ func (d *Delivery) Run(ctx context.Context) {
 			}
 			for _, packet := range packets {
 				bounded, cancel := context.WithTimeout(ctx, 10*time.Second)
-				d.Push(bounded, p.IPhonePushToken, packet, time.Now().Add(time.Minute))
+				d.Push(bounded, p.IPhonePushToken, packet, now().Add(time.Minute))
 				cancel()
 			}
 		}
@@ -407,7 +411,7 @@ func (d *Delivery) Sweep(ctx context.Context) {
 			continue
 		}
 		phone, err := d.Authority.Principal(targetOf(r))
-		expired := !time.Now().Before(r.ExpiresAt)
+		expired := !now().Before(r.ExpiresAt)
 		if !expired && err == nil && phone.Kind == "iphone" {
 			continue
 		}

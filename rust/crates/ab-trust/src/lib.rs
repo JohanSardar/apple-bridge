@@ -17,6 +17,21 @@ use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 pub use store::{CredentialStore, FileStore, KeychainStore, atomic_write};
 
+pub fn decision_now() -> jiff::Timestamp {
+    #[cfg(feature = "lab-harness")]
+    if let Some(path) = std::env::var_os("APPLE_BRIDGE_LAB_REPLAY") {
+        let raw =
+            std::fs::read(path).unwrap_or_else(|_| panic!("lab replay decisions unavailable"));
+        let value: serde_json::Value =
+            serde_json::from_slice(&raw).unwrap_or_else(|_| panic!("invalid lab replay decisions"));
+        return value["now"]
+            .as_str()
+            .and_then(|now| now.parse().ok())
+            .unwrap_or_else(|| panic!("invalid lab replay clock"));
+    }
+    jiff::Timestamp::now()
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error(transparent)]

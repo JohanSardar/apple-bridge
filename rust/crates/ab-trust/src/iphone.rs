@@ -213,7 +213,7 @@ impl Authority {
     }
     pub fn verify_iphone(&self, path: &str, req: &Request) -> Result<(Principal, Vec<u8>), Error> {
         let p = self.principal(&req.device_id)?;
-        let now = jiff::Timestamp::now();
+        let now = crate::decision_now();
         let at = jiff::Timestamp::from_second(req.at).map_err(|_| Error::Unauthorized)?;
         if p.kind != "iphone" || (now.as_nanosecond() - at.as_nanosecond()).abs() > 60_000_000_000 {
             return Err(Error::Unauthorized);

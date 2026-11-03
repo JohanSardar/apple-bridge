@@ -83,7 +83,7 @@ func IPhoneMessage(path string, at int64, payload []byte) []byte {
 
 func (a *Authority) VerifyIPhone(path string, req IPhoneRequest) (Principal, error) {
 	p, err := a.Principal(req.DeviceID)
-	if err != nil || p.Kind != "iphone" || len(p.IPhoneSigningKey) != ed25519.PublicKeySize || time.Since(time.Unix(req.At, 0)) > time.Minute || time.Until(time.Unix(req.At, 0)) > time.Minute || !ed25519.Verify(p.IPhoneSigningKey, IPhoneMessage(path, req.At, req.Payload), req.Signature) {
+	if err != nil || p.Kind != "iphone" || len(p.IPhoneSigningKey) != ed25519.PublicKeySize || contracts.DecisionNow().Sub(time.Unix(req.At, 0)) > time.Minute || time.Unix(req.At, 0).Sub(contracts.DecisionNow()) > time.Minute || !ed25519.Verify(p.IPhoneSigningKey, IPhoneMessage(path, req.At, req.Payload), req.Signature) {
 		return Principal{}, contracts.ErrUnauthorized
 	}
 	return p, nil
