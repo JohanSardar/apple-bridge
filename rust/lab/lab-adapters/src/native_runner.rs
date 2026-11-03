@@ -611,7 +611,30 @@ pub fn register(registry: &mut lab_runner::Registry) {
     ] {
         registry.register(step, run);
     }
+    registry.register("reminders_store", |world, _, evidence| {
+        crate::reminders_store::run(world, evidence)
+    });
+    registry.register("reminders_store_perf", |world, _, evidence| {
+        crate::reminders_store::run(world, evidence)
+    });
+    registry.register("latency", |_, _, evidence| {
+        if evidence.scenario == "REM-STORE-PERF" {
+            Ok(())
+        } else {
+            Err(Error::Invalid(format!(
+                "latency not ported for {}",
+                evidence.scenario
+            )))
+        }
+    });
     registry.register("fixture", |_, _, _| Ok(()));
+}
+
+#[must_use]
+pub fn starts_world(id: &str) -> bool {
+    SCENARIOS.contains(&id)
+        || crate::reminders_dates::SCENARIOS.contains(&id)
+        || crate::reminders_store::SCENARIOS.contains(&id)
 }
 
 pub fn start_world(world: &mut World) -> Result<()> {
@@ -627,6 +650,12 @@ pub fn start_world(world: &mut World) -> Result<()> {
 
 pub fn run(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> {
     let id = evidence.scenario.clone();
+    if crate::reminders_dates::SCENARIOS.contains(&id.as_str()) {
+        return crate::reminders_dates::run(world, evidence);
+    }
+    if crate::reminders_store::SCENARIOS.contains(&id.as_str()) {
+        return crate::reminders_store::run(world, evidence);
+    }
     if !SCENARIOS.contains(&id.as_str()) {
         return Err(Error::Invalid(format!("native scenario {id} not ported")));
     }
