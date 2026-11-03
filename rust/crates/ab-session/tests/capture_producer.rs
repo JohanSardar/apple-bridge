@@ -29,10 +29,11 @@ fn receive(socket: &mut UnixStream) -> Fallible<(usize, Value)> {
 
 fn history(directory: &Path, visits: u32) -> Fallible<()> {
     let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs_f64() - 978_307_200.0;
-    let _ = std::fs::remove_file(directory.join("History.db"));
-    let connection = rusqlite::Connection::open(directory.join("History.db"))?;
+    let staged = directory.join("History.db.staged");
+    let _ = std::fs::remove_file(&staged);
+    let connection = rusqlite::Connection::open(&staged)?;
     connection.execute_batch(
-        "CREATE TABLE history_items(id INTEGER PRIMARY KEY,url TEXT,visit_count INTEGER);
+        "BEGIN;CREATE TABLE history_items(id INTEGER PRIMARY KEY,url TEXT,visit_count INTEGER);
          CREATE TABLE history_visits(id INTEGER PRIMARY KEY,history_item INTEGER,visit_time REAL,title TEXT);
          INSERT INTO history_items VALUES(1,'https://example.com/',2);",
     )?;
@@ -42,6 +43,9 @@ fn history(directory: &Path, visits: u32) -> Fallible<()> {
             rusqlite::params![visit + 1, now - f64::from(visit), format!("Visit {visit}")],
         )?;
     }
+    connection.execute_batch("COMMIT")?;
+    drop(connection);
+    std::fs::rename(&staged, directory.join("History.db"))?;
     Ok(())
 }
 
