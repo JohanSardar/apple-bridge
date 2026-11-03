@@ -71,6 +71,7 @@ pub mod usage;
 pub mod vision;
 pub mod watch;
 pub mod web_relay;
+pub mod web_relay_agents;
 pub mod web_reminders;
 pub mod webauthn;
 use lab_runner::Registry;
@@ -161,7 +162,6 @@ pub fn registry() -> Registry {
         evidence.check("world_started", true, "gateway and SimApple peer ready");
         Ok(())
     });
-    registry.register("web", web_relay::web_relay);
     registry.register("queries", |world, input, evidence| {
         if maps::SIM.contains(&evidence.scenario.as_str()) {
             maps::sim(world, evidence)
@@ -271,7 +271,13 @@ fn register_pim(registry: &mut Registry) {
     });
     registry.register("contacts", contacts::run);
     registry.register("notes", notes::run);
-    registry.register("web", notes::run);
+    registry.register("web", |world, input, evidence| {
+        if web_relay::SCENARIOS.contains(&evidence.scenario.as_str()) {
+            web_relay::web_relay(world, input, evidence)
+        } else {
+            notes::run(world, input, evidence)
+        }
+    });
     registry.register("fixture", |_, _, _| Ok(()));
     registry.register("by_id", by_id);
 }

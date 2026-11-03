@@ -143,7 +143,12 @@ pub fn select(home: &Path, action: &str, via: &str, id: &str) -> Result<Config> 
             let mut entries = BTreeMap::new();
             match read::<Config>(home, "config") {
                 Ok(config) => {
-                    entries.insert(config.backend, config.enabled);
+                    let backend = if config.backend == "embedded" {
+                        "relay".to_owned()
+                    } else {
+                        config.backend
+                    };
+                    entries.insert(backend, config.enabled);
                 }
                 Err(Error::Io(e)) if e.kind() == std::io::ErrorKind::NotFound => {}
                 Err(e) => return Err(e),
@@ -223,5 +228,74 @@ pub fn command(home: &Path, action: &str, via: &str) -> Result<serde_json::Value
         Ok(selections) => Ok(serde_json::to_value(selections)?),
         Err(Error::Io(e)) if e.kind() == std::io::ErrorKind::NotFound => Ok(serde_json::json!({})),
         Err(e) => Err(e),
+    }
+}
+
+pub fn annotate(home: &Path, name: &str) -> Result<()> {
+    use std::os::unix::fs::OpenOptionsExt;
+    let dir = home.join("remote");
+    fs::create_dir_all(&dir)?;
+    fs::set_permissions(&dir, fs::Permissions::from_mode(0o700))?;
+    let lock = fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .mode(0o600)
+        .open(dir.join("config.lock"))?;
+    fs2::FileExt::lock_exclusive(&lock)?;
+    let mut config = match read::<Config>(home, "config") {
+        Ok(value) => value,
+        Err(Error::Io(e)) if e.kind() == std::io::ErrorKind::NotFound => Config::default(),
+        Err(e) => return Err(e),
+    };
+    config.name = name.into();
+    write(home, "config", &config)
+}
+
+pub fn snippets(home: &Path) -> Result<String> {
+    let status: Status = read(home, "status")?;
+    if status.state != "on" || status.url.is_empty() {
+        return Err(Error::Contract("remote is not ready"));
+    }
+    let url = &status.url;
+    Ok(format!(
+        "Claude Code: claude mcp add --transport http apple-bridge {url}/mcp\nclaude.ai connector: {url}/mcp\nChatGPT connector: {url}/mcp\nCodex config.toml:\n[mcp_servers.apple-bridge]\nurl = \"{url}/mcp\"\nGrok connector URL: {url}/mcp\nGrok (xai_sdk.tools): mcp(server_url=\"{url}/mcp\", server_label=\"apple-bridge\", authorization=\"Bearer <agent-token>\")\n"
+    ))
+}
+
+#[cfg(test)]
+mod flag_tests {
+    use super::*;
+    type Check = std::result::Result<(), Box<dyn std::error::Error>>;
+
+    #[test]
+    fn snippets_require_a_ready_remote_and_match_go_text() -> Check {
+        let home = tempfile::tempdir()?;
+        assert!(snippets(home.path()).is_err());
+        let mut status = Status {
+            state: "starting".into(),
+            url: "https://h.example".into(),
+            ..Status::default()
+        };
+        write(home.path(), "status", &status)?;
+        assert!(snippets(home.path()).is_err());
+        status.state = "on".into();
+        write(home.path(), "status", &status)?;
+        assert_eq!(
+            snippets(home.path())?,
+            "Claude Code: claude mcp add --transport http apple-bridge https://h.example/mcp\nclaude.ai connector: https://h.example/mcp\nChatGPT connector: https://h.example/mcp\nCodex config.toml:\n[mcp_servers.apple-bridge]\nurl = \"https://h.example/mcp\"\nGrok connector URL: https://h.example/mcp\nGrok (xai_sdk.tools): mcp(server_url=\"https://h.example/mcp\", server_label=\"apple-bridge\", authorization=\"Bearer <agent-token>\")\n"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn annotate_keeps_the_name_through_selection() -> Check {
+        let home = tempfile::tempdir()?;
+        annotate(home.path(), "laptop")?;
+        let config = select(home.path(), "on", "relay", "id1")?;
+        assert_eq!(config.name, "laptop");
+        assert_eq!(read::<Config>(home.path(), "config")?.name, "laptop");
+        Ok(())
     }
 }

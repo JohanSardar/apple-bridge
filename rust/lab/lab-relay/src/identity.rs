@@ -1,5 +1,8 @@
 use crate::{Error, Result};
-use ed25519_dalek::{Signer, SigningKey, pkcs8::DecodePrivateKey};
+use ed25519_dalek::{
+    Signer, SigningKey,
+    pkcs8::{DecodePrivateKey, EncodePrivateKey},
+};
 use rustls::pki_types::{CertificateDer, pem::PemObject};
 use sha2::{Digest, Sha256};
 use std::path::Path;
@@ -64,6 +67,14 @@ impl Identity {
             certificate,
             key,
         })
+    }
+    pub fn pkcs8(&self) -> Result<Vec<u8>> {
+        Ok(self
+            .key
+            .to_pkcs8_der()
+            .map_err(|e| Error::Certificate(e.to_string()))?
+            .as_bytes()
+            .to_vec())
     }
     pub fn sign(&self, bytes: &[u8]) -> Vec<u8> {
         self.key.sign(bytes).to_bytes().to_vec()
