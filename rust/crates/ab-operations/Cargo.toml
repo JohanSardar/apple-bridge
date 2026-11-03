@@ -22,3 +22,4 @@ base64 = "0.22"
 
 [features]
 lab-harness = ["ab-trust/lab-harness", "ab-state/lab"]
+seeded-faults = ["lab-harness"]

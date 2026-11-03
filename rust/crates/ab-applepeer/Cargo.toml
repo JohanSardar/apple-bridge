@@ -18,3 +18,4 @@ subtle = "2"
 nix = { version = "0.30", features = ["user"] }
 [features]
 lab-harness = ["ab-operations/lab-harness"]
+seeded-faults = ["lab-harness"]
