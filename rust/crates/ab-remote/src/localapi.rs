@@ -268,6 +268,7 @@ pub async fn certificate_expiry(host: &str, port: u16) -> Result<String> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

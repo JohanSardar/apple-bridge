@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use ab_remote::{localapi::LocalApi, tailscale::Tailscale};
 use serde_json::{Value, json};
 use std::sync::{Arc, Mutex};
