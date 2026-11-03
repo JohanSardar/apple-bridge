@@ -70,6 +70,9 @@ pub mod threads;
 pub mod usage;
 pub mod vision;
 pub mod watch;
+pub mod web_agent_activity;
+pub mod web_agent_levels;
+pub mod web_agents;
 pub mod web_relay;
 pub mod web_relay_agents;
 pub mod web_reminders;
@@ -156,6 +159,8 @@ pub fn registry() -> Registry {
             replicas::start_with(world, 1, calendar::SCOPE, 0)?;
         } else if let (true, Some(scope)) = (replicas != 0, pim_scope(id)) {
             replicas::start_with(world, usize::try_from(replicas).unwrap_or(0), scope, 0)?;
+        } else if replicas != 0 && web_agents::SCENARIOS.contains(&id) {
+            web_agents::start(world, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && !PORTED.contains(&id) && !self_started {
             return Err(Error::Invalid(format!("replica world not ported for {id}")));
         }
@@ -272,7 +277,9 @@ fn register_pim(registry: &mut Registry) {
     registry.register("contacts", contacts::run);
     registry.register("notes", notes::run);
     registry.register("web", |world, input, evidence| {
-        if web_relay::SCENARIOS.contains(&evidence.scenario.as_str()) {
+        if web_agents::SCENARIOS.contains(&evidence.scenario.as_str()) {
+            web_agents::web(world, input, evidence)
+        } else if web_relay::SCENARIOS.contains(&evidence.scenario.as_str()) {
             web_relay::web_relay(world, input, evidence)
         } else {
             notes::run(world, input, evidence)
