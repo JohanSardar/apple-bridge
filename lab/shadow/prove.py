@@ -60,6 +60,7 @@ def main():
     parser.add_argument('--output', required=True)
     parser.add_argument('--go', default='bin/bridge')
     parser.add_argument('--rust', default='bin/bridge')
+    parser.add_argument('--go-go-runs', type=int, default=8)
     args = parser.parse_args()
     root = private_directory(args.output)
     if list(root.iterdir()):
@@ -248,17 +249,20 @@ def main():
     result = subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'diff', '--left', str(home), '--right', str(aligned)], capture_output=True, text=True)
     if result.returncode or not json.loads(result.stdout)['equal']:
         raise RuntimeError('alias identity and envelope clock equivalence failed')
-    result = subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'replay', '--recording', str(recording), '--starting-home', str(root / 'starting'), '--output', str(root / 'replay'), '--go', 'bin/bridge', '--rust', 'bin/bridge'], capture_output=True, text=True)
-    if result.returncode or not json.loads(result.stdout)['equal']:
-        raise RuntimeError('synthetic Go-Go admission replay parity failed: ' + result.stderr.strip())
     manifest = root / 'decisions.json'
     subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'decisions', '--recording', str(recording), '--home', str(home), '--starting-home', str(root / 'starting'), '--output', str(manifest)], check=True, stdout=subprocess.DEVNULL)
+    for run in range(args.go_go_runs):
+        result = subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'replay', '--recording', str(recording), '--starting-home', str(root / 'starting'), '--output', str(root / ('replay-go-go-' + str(run))), '--go', args.go, '--rust', args.go, '--decisions', str(manifest), '--exact'], capture_output=True, text=True)
+        report = json.loads(result.stdout) if result.stdout else {'digests': []}
+        if result.returncode or not report['digests'] or any(not row['equal'] for row in report['digests']):
+            raise RuntimeError('synthetic Go-Go exact replay failed in run ' + str(run) + ': ' + result.stderr.strip())
+        shutil.rmtree(root / ('replay-go-go-' + str(run)))
     result = subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'replay', '--recording', str(recording), '--starting-home', str(root / 'starting'), '--output', str(root / 'replay-exact'), '--go', args.go, '--rust', args.rust, '--decisions', str(manifest), '--exact'], capture_output=True, text=True)
     report = json.loads(result.stdout) if result.stdout else {'digests': []}
     if result.returncode or any(not row['equal'] for row in report['digests']):
         raise RuntimeError('synthetic exact decision replay failed: ' + result.stderr.strip())
     ingress = sorted({json.loads(line)['ingress'] for line in recording.read_text().splitlines() if json.loads(line).get('ingress')})
-    print(json.dumps({'exact_decision_replay_equal': True, 'ingress_kinds': ingress, 'alias_clock_equivalence': True, 'go_go_admission_replay_equal': True, 'synthetic_capture_recorded': True, 'identical_home_equal': True, 'changed_gojson_bytes_detected': True, 'record_data_key_order_detected': True, 'record_data_clock_detected': True, 'seeded_mismatches_detected': detected, 'frame_types': sorted(kinds)}))
+    print(json.dumps({'exact_decision_replay_equal': True, 'ingress_kinds': ingress, 'alias_clock_equivalence': True, 'go_go_exact_replay_runs_equal': args.go_go_runs, 'rust_diff_tables': len(report['digests']), 'synthetic_capture_recorded': True, 'identical_home_equal': True, 'changed_gojson_bytes_detected': True, 'record_data_key_order_detected': True, 'record_data_clock_detected': True, 'seeded_mismatches_detected': detected, 'frame_types': sorted(kinds)}))
 
 
 if __name__ == '__main__':
