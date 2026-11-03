@@ -361,7 +361,7 @@ impl Session {
             && data["recurrence"].as_array().is_some_and(|r| !r.is_empty())
         {
             writes = expand(&data, &key, &scope(&s, &list))?;
-            key = writes[0].0.clone();
+            key.clone_from(&writes[0].0);
             data = writes[0].1.clone();
         }
         for (target, value) in writes {
