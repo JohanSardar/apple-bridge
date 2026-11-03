@@ -87,3 +87,7 @@ func replicaRequirements(s Scenario) string {
 	}
 	return base
 }
+
+func sourceGatewaySimScenario(s Scenario) bool {
+	return strings.HasPrefix(s.ID, "CON-") || strings.HasPrefix(s.ID, "NOTE-") || strings.HasPrefix(s.ID, "REM-")
+}
