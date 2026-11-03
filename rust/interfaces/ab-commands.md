@@ -8,7 +8,7 @@ Interface: `validate(&Command, now: jiff::Timestamp) -> Result<Validated, Error>
 
 Helper policy remains authoritative for recipient discovery, route proofs, lab gates, parts and variant capability: Go contracts reject unknown `parts` and `variant` fields. Do not broaden that surface. Owner self origin applies only to local owner tokens and messages.send; the unchanged Helper verifies own recipients again at dispatch. Calendar count-to-end normalization occurs in the unchanged Helper, not the Go gateway; preserve count in Prepare.
 
-The implementation is available in `rust/crates/ab-commands`; the Go oracle and regeneration commands are in `tools/command-vectors`.
+The implementation is available in `rust/crates/ab-commands`. `vectors.json` and `policy-vectors.json` there are frozen goldens that the Rust tests read directly; the Go generator in `tools/command-vectors` is kept only until the Go tree is deleted and no build or CI step runs it.
 
 ## G-B2 integration contract
 

@@ -1,8 +1,8 @@
 # Signed shortcut builds (G0-6)
 
-`go run ./tools/shortcuts build` compiles every `packaging/shortcuts/*.json` source into `.build/shortcuts/`, then signs each workflow using the system `/usr/bin/shortcuts sign`. Use `-source path.json` for one source, `-out directory` for another build directory, and `-unsigned` for portable compilation without signing. Signing defaults to `-mode auto`: try `anyone`, then `people-who-know-me`. Explicit modes disable fallback. The JSON stdout and `manifest.json` record the actual mode and unsigned SHA-256 for each file. A failed signer exits nonzero and never publishes its partial signed file.
+`cargo run --manifest-path rust/Cargo.toml -p ab-shortcuts -- build` compiles every `packaging/shortcuts/*.json` source into `.build/shortcuts/`, then signs each workflow using the system `/usr/bin/shortcuts sign`. Use `-source path.json` for one source, `-out directory` for another build directory, and `-unsigned` for portable compilation without signing. Signing defaults to `-mode auto`: try `anyone`, then `people-who-know-me`. Explicit modes disable fallback. The JSON stdout and `manifest.json` record the actual mode and unsigned SHA-256 for each file. A failed signer exits nonzero and never publishes its partial signed file.
 
-`go run ./tools/shortcuts open ".build/shortcuts/[ab-test noop] Apple Bridge Signing Test.shortcut"` opens the signed file with macOS `open` for the user's import review. Build never opens or imports a workflow. CORE-SHORTCUT-SIGN never opens, imports or runs it.
+`cargo run --manifest-path rust/Cargo.toml -p ab-shortcuts -- open ".build/shortcuts/[ab-test noop] Apple Bridge Signing Test.shortcut"` opens the signed file with macOS `open` for the user's import review. Build never opens or imports a workflow. CORE-SHORTCUT-SIGN never opens, imports or runs it.
 
 ## Source format
 

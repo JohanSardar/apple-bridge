@@ -106,7 +106,11 @@ func runFocusPack(ctx context.Context, s Scenario, level string) Evidence {
 			return e
 		}
 		defer os.RemoveAll(dir)
-		output, err := exec.CommandContext(ctx, "go", "run", "./tools/shortcuts", "build", "-source", "packaging/shortcuts/ab-focus.json", "-out", dir, "-unsigned").CombinedOutput()
+		tool, err := buildShortcutsTool(ctx)
+		var output []byte
+		if err == nil {
+			output, err = exec.CommandContext(ctx, tool, "build", "-source", "packaging/shortcuts/ab-focus.json", "-out", dir, "-unsigned").CombinedOutput()
+		}
 		add("pack_compiles", err == nil)
 		if err != nil {
 			os.Stderr.Write(output)

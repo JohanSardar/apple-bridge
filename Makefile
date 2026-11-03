@@ -16,14 +16,18 @@ build:
 native:
 	packaging/dev/heavy.sh packaging/dev/build-native.sh
 
-lint:
+lint: lint-rust-sources
 	python3 packaging/dev/test_source_registrations.py
 	gofmt -l $$(find . -name '*.go' -not -path './.worktrees/*' -not -path '*/node_modules/*' -not -path './.build/*') | grep -v '^$$' && exit 1 || true
 	go vet ./...
 	go run ./tools/lint .
 
+.PHONY: lint-rust-sources
+lint-rust-sources:
+	rust/check.sh run -q -p ab-lint -- $(CURDIR)
+
 features:
-	go run ./tools/featuregraph -html design/features.html
+	rust/check.sh run -q -p ab-featuregraph -- -root $(CURDIR) -html $(CURDIR)/design/features.html
 
 SCENARIOS ?= lab/scenarios
 
@@ -55,7 +59,7 @@ decoder-checks:
 rust-check:
 	rust/check.sh check --workspace
 
-rust-lint:
+rust-lint: lint-rust-sources
 	rust/check.sh fmt --all -- --check
 	rust/check.sh clippy --workspace --all-targets -- -D warnings
 	rust/check.sh clippy -p ab-session --all-targets --features rust-effects,rust-capture -- -D warnings

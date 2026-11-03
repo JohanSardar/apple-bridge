@@ -27,8 +27,7 @@ func runShortcutSign(ctx context.Context, s Scenario, level string) Evidence {
 		return e
 	}
 	defer os.RemoveAll(dir)
-	tool := filepath.Join(dir, "shortcuts-tool")
-	err = exec.CommandContext(ctx, "go", "build", "-p", "2", "-o", tool, "./tools/shortcuts").Run()
+	tool, err := buildShortcutsTool(ctx)
 	add("tool_build", err == nil)
 	if err != nil {
 		return e

@@ -1,6 +1,8 @@
-# Go command oracle
+# Go command oracle (frozen)
 
-Run at the repository root on a build host:
+`rust/crates/ab-commands/vectors.json` and `rust/crates/ab-commands/policy-vectors.json` are frozen goldens. The Rust tests (`rust/crates/ab-commands/tests/vectors.rs`, `policy.rs`) read them directly and do not depend on this generator, on Go or on Python. No Makefile target or CI step runs the generator.
+
+The generator is kept only as the record of how the goldens were produced. It is deleted with the Go tree. To regenerate before that point, at the repository root on a build host:
 
 ```sh
 python3 tools/command-vectors/inputs.py > /tmp/ab-command-inputs.json
