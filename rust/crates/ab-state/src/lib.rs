@@ -225,6 +225,29 @@ pub(crate) fn records(
     }
     Ok(out)
 }
+fn upgrade_schema(db: &mut Connection, home: &Path) -> Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+    let backup = home.join("before-schema-2.db");
+    if !backup.exists() {
+        db.execute(
+            "VACUUM INTO ?",
+            [backup.to_str().ok_or(ErrorCode::Invalid)?],
+        )?;
+        std::fs::set_permissions(&backup, std::fs::Permissions::from_mode(0o600))?;
+    }
+    let tx = db.transaction()?;
+    let columns: i64 = tx.query_row(
+        "SELECT count(*) FROM pragma_table_info('journal') WHERE name='committed_at'",
+        [],
+        |r| r.get(0),
+    )?;
+    if columns == 0 {
+        tx.execute_batch("ALTER TABLE journal ADD COLUMN committed_at INTEGER NOT NULL DEFAULT 0")?;
+    }
+    tx.execute_batch("UPDATE journal SET committed_at=unixepoch() WHERE committed_at=0; UPDATE meta SET value='2' WHERE key='schema_version'")?;
+    tx.commit()?;
+    Ok(())
+}
 impl State<Replica> {
     pub fn open(home: impl AsRef<Path>) -> Result<Self> {
         use std::os::unix::fs::{DirBuilderExt, OpenOptionsExt, PermissionsExt};
@@ -263,9 +286,12 @@ impl State<Replica> {
             })?;
         if existing
             .as_deref()
-            .is_some_and(|visibility| visibility != "2")
+            .is_some_and(|visibility| visibility != "2" && visibility != "1")
         {
             return Err(ErrorCode::Unsupported.into());
+        }
+        if existing.as_deref() == Some("1") {
+            upgrade_schema(&mut db, home)?;
         }
         let tx = db.transaction()?;
         tx.execute_batch(include_str!("schema.sql"))?;
