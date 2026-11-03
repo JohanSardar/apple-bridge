@@ -258,13 +258,16 @@ pub async fn start(
     let blobs = ab_blobs::Store::open(&config.home, config.blob_cap).map_err(|_| Error::Invalid)?;
     let blobs = Arc::new(tokio::sync::Mutex::new(blobs));
     let reads = Arc::new(ab_operations::StateReads(state.clone(), blobs.clone()));
-    let client = Arc::new(ab_replication::Client::new(
+    let client = ab_replication::Client::new(
         Arc::new(tokio::sync::Mutex::new(replica::StateAdapter(
             state.clone(),
         ))),
         authority.clone(),
         Some(blobs.clone()),
-    ));
+    );
+    #[cfg(feature = "lab-harness")]
+    let client = client.with_apply_delay(config.home.join("command-apply-delay"));
+    let client = Arc::new(client);
     let identity = Arc::new(ab_operations::TrustIdentity(authority.clone()));
     let codec = Arc::new(GoJson);
     let route = if enrollment.remote || !enrollment.dial.is_empty() {

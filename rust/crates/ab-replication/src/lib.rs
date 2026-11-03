@@ -151,6 +151,8 @@ pub struct Client<S: ReplicaState> {
     pub blobs: Option<Arc<Mutex<BlobStore>>>,
     status: watch::Sender<FollowStatus>,
     commands: Arc<command::Hub>,
+    #[cfg(feature = "lab-harness")]
+    apply_delay: Option<std::path::PathBuf>,
 }
 fn raw<T: Serialize>(v: &T) -> Result<Box<serde_json::value::RawValue>, Error> {
     Ok(serde_json::value::to_raw_value(v)?)
@@ -174,6 +176,31 @@ impl<S: ReplicaState> Client<S> {
             blobs,
             status,
             commands: Arc::default(),
+            #[cfg(feature = "lab-harness")]
+            apply_delay: None,
+        }
+    }
+    #[cfg(feature = "lab-harness")]
+    #[must_use]
+    pub fn with_apply_delay(mut self, path: std::path::PathBuf) -> Self {
+        self.apply_delay = Some(path);
+        self
+    }
+    #[cfg(feature = "lab-harness")]
+    async fn lab_apply_delay(&self) {
+        let Some(path) = &self.apply_delay else {
+            return;
+        };
+        let Ok(text) = std::fs::read_to_string(path) else {
+            return;
+        };
+        if std::fs::remove_file(path).is_err() {
+            return;
+        }
+        if let Ok(ms) = text.trim().parse::<u64>()
+            && ms <= 5000
+        {
+            tokio::time::sleep(Duration::from_millis(ms)).await;
         }
     }
     pub fn status(&self) -> watch::Receiver<FollowStatus> {
@@ -514,6 +541,8 @@ impl<S: ReplicaState> Client<S> {
                             return Err(Error::Invalid);
                         }
                         Self::validate_records(&f, enrollment)?;
+                        #[cfg(feature = "lab-harness")]
+                        self.lab_apply_delay().await;
                         let cursor = self.state.lock().await.apply_batch(batch)?;
                         if batch.partial {
                             self.status.send_modify(|s| s.partial_batches += 1);

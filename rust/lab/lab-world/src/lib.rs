@@ -100,6 +100,14 @@ impl World {
         self.launch_peer()
     }
     fn launch_gateway(&mut self) -> Result<()> {
+        let peer = self.runtime["peer_address"]
+            .as_str()
+            .unwrap_or("127.0.0.1:0")
+            .to_owned();
+        let api = self.runtime["api_address"]
+            .as_str()
+            .unwrap_or("127.0.0.1:0")
+            .to_owned();
         let log = fs::File::options()
             .create(true)
             .append(true)
@@ -108,7 +116,7 @@ impl World {
             Command::new(&self.config.gateway)
                 .args(["start", "--role", "gateway", "--home"])
                 .arg(&self.gateway_home)
-                .args(["--peer-addr", "127.0.0.1:0", "--api-addr", "127.0.0.1:0"])
+                .args(["--peer-addr", &peer, "--api-addr", &api])
                 .env("APPLE_BRIDGE_SECRET_STORE", "file")
                 .stdout(log.try_clone()?)
                 .stderr(log)
@@ -200,10 +208,16 @@ impl World {
         }
         Ok(value)
     }
-    pub fn restart_gateway(&mut self) -> Result<()> {
+    pub fn stop_gateway(&mut self) {
         stop(&mut self.gateway);
         let _ = fs::remove_file(self.gateway_home.join("runtime.json"));
+    }
+    pub fn start_gateway(&mut self) -> Result<()> {
         self.launch_gateway()
+    }
+    pub fn restart_gateway(&mut self) -> Result<()> {
+        self.stop_gateway();
+        self.start_gateway()
     }
     pub fn close(&mut self) {
         stop(&mut self.peer);

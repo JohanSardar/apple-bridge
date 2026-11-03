@@ -1,5 +1,6 @@
 pub mod assertions;
 pub mod cleanup;
+pub mod commands;
 pub mod http;
 pub mod journey;
 pub mod media;

@@ -1,7 +1,9 @@
 use crate::{
     assertions::{
-        Observed, await_until, converged, record_integrity, sse_observers, stream_assertions,
+        Observed, Observers, await_until, converged, record_integrity, sse_observers,
+        stream_assertions,
     },
+    commands,
     http::{Client, random_id},
     replicas::{self, Endpoint},
 };
@@ -10,13 +12,17 @@ use lab_world::{Error, Result, World};
 use serde_json::{Value, json};
 use std::time::{Duration, Instant};
 
-pub const COMMAND_SCENARIOS: [&str; 1] = ["CORE-CMD-IDEMPOTENT"];
-const GATEWAY_SCOPE: &str = "reminders:read,reminders:write,system:read";
+pub const COMMAND_SCENARIOS: [&str; 3] = [
+    "CORE-CMD-IDEMPOTENT",
+    "CORE-CMD-ERA",
+    "CORE-CMD-LOST-RESPONSE",
+];
+pub(crate) const GATEWAY_SCOPE: &str = "reminders:read,reminders:write,system:read";
 
-fn gateway_client(world: &World) -> Result<Client> {
+pub(crate) fn gateway_client(world: &World) -> Result<Client> {
     Client::new(world, GATEWAY_SCOPE)
 }
-fn records(client: &Client) -> Result<(Value, Vec<Value>)> {
+pub(crate) fn records(client: &Client) -> Result<(Value, Vec<Value>)> {
     let mut out = vec![];
     let mut after = String::new();
     let mut cursor = Value::Null;
@@ -93,14 +99,14 @@ fn all_endpoints(world: &World) -> Result<Vec<(Option<usize>, Client, String)>> 
     }
     Ok(out)
 }
-fn effect_count(world: &World, id: &str) -> Option<u64> {
+pub(crate) fn effect_count(world: &World, id: &str) -> Option<u64> {
     let effects = world.control("/effects", &Value::Null).ok()?;
     Some(effects[id].as_u64().unwrap_or(0))
 }
-fn command(op: &str, args: &Value) -> Result<Value> {
+pub(crate) fn command(op: &str, args: &Value) -> Result<Value> {
     Ok(json!({"command_id": random_id("cmd")?, "op": op, "args": args, "wait_ms": 15000}))
 }
-fn observed(value: &Value) -> bool {
+pub(crate) fn observed(value: &Value) -> bool {
     value["error"].is_null()
         && value["disposition"] == "locally_observed"
         && value["commit_seq"].as_u64().unwrap_or(0) > 0
@@ -203,12 +209,25 @@ pub fn command_journey(world: &mut World, _: &Value, evidence: &mut Evidence) ->
         seen_at.iter().all(Option::is_some)
     });
     scope_commands(world, &scoped, &list_id, evidence)?;
-    idempotent(world, &gateway, &list_id, evidence)?;
+    run_scenario(world, &gateway, &list_id, &observers, evidence)?;
     finish(world, &observed, evidence)?;
     latency_assertions(&seen_at, evidence);
     stream_assertions(world, &observed, &observers, evidence);
     record_integrity(evidence, &observed, None);
     Ok(())
+}
+fn run_scenario(
+    world: &mut World,
+    gateway: &Client,
+    list_id: &str,
+    observers: &Observers,
+    evidence: &mut Evidence,
+) -> Result<()> {
+    match evidence.scenario.as_str() {
+        "CORE-CMD-ERA" => commands::era(world, list_id, observers, evidence),
+        "CORE-CMD-LOST-RESPONSE" => commands::lost_response(world, list_id, evidence),
+        _ => idempotent(world, gateway, list_id, evidence),
+    }
 }
 fn latency_assertions(seen_at: &[Option<Duration>], evidence: &mut Evidence) {
     for (index, seen) in seen_at.iter().enumerate() {

@@ -10,7 +10,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-const SCOPE: &str = "reminders:read,system:read";
+const SCOPE: &str = "reminders:read,reminders:write,system:read";
 static GATEWAY: OnceLock<PathBuf> = OnceLock::new();
 static CHILDREN: Mutex<Vec<Child>> = Mutex::new(Vec::new());
 static ENDPOINTS: Mutex<Vec<Endpoint>> = Mutex::new(Vec::new());
@@ -31,7 +31,7 @@ impl Endpoint {
 pub fn configure(gateway: &Path) {
     let _ = GATEWAY.set(gateway.to_owned());
 }
-fn binary() -> Result<&'static Path> {
+pub(crate) fn binary() -> Result<&'static Path> {
     GATEWAY
         .get()
         .map(PathBuf::as_path)
