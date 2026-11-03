@@ -125,6 +125,7 @@ version = "0.0.0"
 dependencies = [
  "ab-blobs",
  "ab-catalog",
+ "ab-commands",
  "ab-state",
  "ab-trust",
  "base64 0.22.1",

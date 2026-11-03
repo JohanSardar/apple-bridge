@@ -98,6 +98,7 @@ pub fn problem(error: Error) -> Response {
         Code::Conflict | Code::Reset => StatusCode::CONFLICT,
         Code::Unavailable => StatusCode::SERVICE_UNAVAILABLE,
         Code::Capacity => StatusCode::INSUFFICIENT_STORAGE,
+        Code::TooLarge => StatusCode::PAYLOAD_TOO_LARGE,
         Code::Unsupported => StatusCode::UNPROCESSABLE_ENTITY,
         _ => StatusCode::BAD_REQUEST,
     };

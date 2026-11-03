@@ -1,7 +1,6 @@
 #![forbid(unsafe_code)]
 #[cfg(feature = "replica-feed")]
 mod actions;
-mod message_actions;
 #[cfg(feature = "replica-feed")]
 mod approvals;
 #[cfg(feature = "replica-feed")]
@@ -20,6 +19,8 @@ pub mod helper;
 pub mod helper_blobs;
 pub mod inspection;
 pub mod maintenance;
+#[cfg(feature = "replica-feed")]
+mod message_actions;
 #[cfg(feature = "replica-feed")]
 mod replica;
 mod shape;

@@ -201,6 +201,26 @@ impl LocalGateway {
         if command.op.starts_with("calendar.") && args["span"] == "all" {
             return Err(Code::Unsupported.into());
         }
+        if command.op.starts_with("messages.") {
+            ab_commands::validate(
+                &ab_commands::Command {
+                    id: command.id.clone(),
+                    op: command.op.clone(),
+                    args: command.args.clone(),
+                    expected_version: command.expected_version,
+                    wait_ms: i64::try_from(command.wait_ms).map_err(|_| Code::Invalid)?,
+                },
+                now(),
+            )
+            .map_err(|error| {
+                Error::from(match error {
+                    ab_commands::Error::Invalid => Code::Invalid,
+                    ab_commands::Error::Unsupported => Code::Unsupported,
+                    ab_commands::Error::TooLarge => Code::TooLarge,
+                    ab_commands::Error::Expired => Code::Expired,
+                })
+            })?;
+        }
         validate_shape(&descriptor.input["properties"]["args"], &args)?;
         if !args.is_object()
             || descriptor.input["required"]

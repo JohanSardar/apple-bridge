@@ -87,7 +87,9 @@ impl GatewayStore {
         let capabilities: Vec<String> = frame
             .capabilities
             .get(&key)
-            .map(|v| serde_json::from_str::<Option<Vec<String>>>(v.get()).map_err(|_| Code::Corrupt))
+            .map(|v| {
+                serde_json::from_str::<Option<Vec<String>>>(v.get()).map_err(|_| Code::Corrupt)
+            })
             .transpose()?
             .flatten()
             .unwrap_or_default();

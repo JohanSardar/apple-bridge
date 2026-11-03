@@ -6,6 +6,7 @@ license.workspace = true
 [lints]
 workspace = true
 [dependencies]
+ab-commands = { path = "../ab-commands" }
 ab-catalog = { path = "../ab-catalog" }
 serde.workspace = true
 serde_json.workspace = true
