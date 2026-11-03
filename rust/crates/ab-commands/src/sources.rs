@@ -380,10 +380,14 @@ fn calendar(c: &Command, a: &Args) -> Result<(), Error> {
         }
     }
     if times.len() == 2 {
-        let ordered = match (times[0].parse::<Timestamp>(), times[1].parse::<Timestamp>()) {
-            (Ok(x), Ok(y)) => y > x,
-            _ => times[1] > times[0],
+        let to_time = |text: &str| {
+            text.parse::<Timestamp>()
+                .or_else(|_| format!("{text}T00:00:00Z").parse())
         };
+        let start = to_time(&times[0]).map_err(|_| Error::Invalid)?;
+        let end = to_time(&times[1]).map_err(|_| Error::Invalid)?;
+        let zero = "0001-01-01T00:00:00Z";
+        let ordered = start.to_string() == zero || end.to_string() == zero || end > start;
         check(ordered)?;
     }
     if !s(a, "time_zone").is_empty() {
@@ -468,11 +472,7 @@ fn mac(c: &Command, a: &Args) -> Result<(), Error> {
             !s(a, "title").is_empty()
                 && s(a, "title").len() <= 256
                 && s(a, "body").len() <= 4096
-                && (s(a, "action_url").is_empty()
-                    || s(a, "action_url")
-                        .strip_prefix("https://")
-                        .or_else(|| s(a, "action_url").strip_prefix("http://"))
-                        .is_some_and(|x| !x.split('/').next().unwrap_or("").is_empty()))
+                && (s(a, "action_url").is_empty() || action_url(s(a, "action_url")))
         }
         "mac.set_wallpaper" => {
             let v = base64(s(a, "image_blob"))?;
@@ -788,4 +788,80 @@ fn iphone(c: &Command, a: &Args, now: Timestamp) -> Result<(), Error> {
         }
     }
     Ok(())
+}
+
+fn action_url(raw: &str) -> bool {
+    if raw.bytes().any(|b| b < 32 || b == 127) {
+        return false;
+    }
+    let Some((scheme, rest)) = raw.split_once("://") else {
+        return false;
+    };
+    if !["http", "https"]
+        .iter()
+        .any(|value| scheme.eq_ignore_ascii_case(value))
+    {
+        return false;
+    }
+    let authority = rest.split(['/', '?', '#']).next().unwrap_or("");
+    let host = authority.rsplit('@').next().unwrap_or("");
+    if host.is_empty() {
+        return false;
+    }
+    let valid_escapes = |text: &str| {
+        let bytes = text.as_bytes();
+        let mut i = 0;
+        while i < bytes.len() {
+            if bytes[i] == b'%' {
+                if bytes.get(i + 1).is_none_or(|v| !v.is_ascii_hexdigit())
+                    || bytes.get(i + 2).is_none_or(|v| !v.is_ascii_hexdigit())
+                {
+                    return false;
+                }
+                i += 3;
+            } else {
+                i += 1;
+            }
+        }
+        true
+    };
+    let before_fragment = raw.split('#').next().unwrap_or("");
+    if !valid_escapes(before_fragment.split('?').next().unwrap_or(""))
+        || !valid_escapes(raw.split_once('#').map_or("", |(_, fragment)| fragment))
+    {
+        return false;
+    }
+    let port = if let Some(bracket) = host.strip_prefix('[') {
+        let Some((address, suffix)) = bracket.split_once(']') else {
+            return false;
+        };
+        let ip = address.split("%25").next().unwrap_or("");
+        if ip.parse::<std::net::Ipv6Addr>().is_err() {
+            return false;
+        }
+        suffix
+    } else {
+        host.find(':').map_or("", |i| &host[i..])
+    };
+    if !port.is_empty()
+        && (!port.starts_with(':') || !port[1..].bytes().all(|b| b.is_ascii_digit()))
+    {
+        return false;
+    }
+    if host
+        .bytes()
+        .any(|b| b.is_ascii() && !b.is_ascii_alphanumeric() && !b"-._~!$&'()*+,;=:[]%".contains(&b))
+    {
+        return false;
+    }
+    let bytes = host.as_bytes();
+    for (i, b) in bytes.iter().enumerate() {
+        if *b == b'%'
+            && bytes.get(i + 1).is_some_and(|v| *v < b'8')
+            && bytes.get(i..i + 3) != Some(b"%25")
+        {
+            return false;
+        }
+    }
+    true
 }

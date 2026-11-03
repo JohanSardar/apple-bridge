@@ -48,4 +48,8 @@ for value in [0.0,-0.0,1.0,1e-7,1e-6,0.12345678901234567]:
  inputs.append({'command':{'command_id':'c','op':'mac.set_volume','args':{'volume':value}},'context':{}})
 for value in [0,1,None]:
  inputs.append({'command':{'command_id':'c','op':'capture.camera_photo','args':{'display':value}},'context':{}})
+for url in ['http://x','https://user:pass@x:99999/p%20x?%#ok','http://x y','http://user@','http://x:bad','http://[::1]:80','http://[bad]','http://x/%ZZ','http://x?%','http://x#%','HTTP://x','http://x\n']:
+ inputs.append({'command':{'command_id':'c','op':'mac.notify','args':{'title':'x','action_url':url}},'context':{}})
+for start,end in [('2030-01-01','2030-01-01T00:00:00Z'),('2030-01-01T00:00:00Z','2030-01-01'),('0001-01-01T00:00:00Z','0000-01-01T00:00:00Z')]:
+ inputs.append({'command':{'command_id':'c','op':'calendar.update_event','expected_version':1,'args':{'id':'e','span':'this','start':start,'end':end}},'context':{}})
 print(json.dumps(inputs))

@@ -22,3 +22,9 @@ The implementation is available in `rust/crates/ab-commands`; the Go oracle and 
 - Notes current-state HTML compatibility is exposed as `note_html_compatible`. Folder writability, content-version conflicts, locks and recently-deleted checks remain lifecycle work. `clock_estimate` returns offset and uncertainty in nanoseconds.
 
 No ab-operations or ab-applepeer lifecycle source is edited by this worker. Frozen IPC golden checks plus the new Go oracle compare validators and Prepare encoding; they do not claim runtime wiring or native-effects parity.
+
+## Verification evidence
+
+The Go-generated corpus has 2,980 validator vectors (accept/reject, exact error code and safe message), including 540 successful NativeAction and complete Prepare byte comparisons. A separate 65-vector corpus covers expiry, clock estimates and Notes HTML structure. Regeneration uses the product Go contracts and typed structs; no personal data or live gateway was used.
+
+`make rust-ci` passes on Ubuntu, including lint, workspace tests, formatting, strict Clippy, dependency policy and frozen golden corpora. The core.commands Rust gateway sim selection was attempted: all nine scenarios were blocked before execution because the gateway startup probe reported `gateway assembly blocked: ab-applepeer and local command lifecycle are not available`. This is evidence from the pre-#546 runtime and must be rerun after gateway assembly/wiring; it is not claimed as scenario success.
