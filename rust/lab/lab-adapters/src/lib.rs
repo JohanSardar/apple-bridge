@@ -57,6 +57,8 @@ pub mod reminders;
 pub mod reminders_demo;
 pub mod remote_real;
 pub mod replicas;
+pub mod reminders_dates;
+pub mod reminders_store;
 pub mod restart;
 pub mod robust;
 pub mod safari;
@@ -132,7 +134,7 @@ pub fn registry() -> Registry {
             messages_a::start(world, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && labcore::SCENARIOS.contains(&id) {
             labcore::start_world(world, id, usize::try_from(replicas).unwrap_or(0))?;
-        } else if native_runner::SCENARIOS.contains(&id) {
+        } else if native_runner::starts_world(id) {
             native_runner::start_world(world)?;
         } else if replicas != 0 && robust::SCENARIOS.contains(&id) {
             replicas::start(world, usize::try_from(replicas).unwrap_or(0))?;
