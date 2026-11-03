@@ -13,6 +13,7 @@ struct SQLiteRow {
 final class MessagesReader {
     let path: String
     let pinsURL: URL?
+    private let attachmentHome: URL
     private let dateFormat: ISO8601DateFormatter = { let value = ISO8601DateFormatter(); value.formatOptions = [.withInternetDateTime, .withFractionalSeconds]; return value }()
     private var connection: OpaquePointer?
     private var identity = ""
@@ -20,7 +21,8 @@ final class MessagesReader {
     private var schemaVersion: Int64 = 0
     private(set) var generation = ""
     private(set) var columns: [String: Set<String>] = [:]
-    init(path: String, pinsURL: URL? = nil) throws {
+    init(path: String, pinsURL: URL? = nil, attachmentHome: URL = FileManager.default.homeDirectoryForCurrentUser) throws {
+        self.attachmentHome = attachmentHome
         self.path = path
         self.pinsURL = pinsURL
         guard sqlite3_open_v2(path, &connection, SQLITE_OPEN_READONLY | SQLITE_OPEN_FULLMUTEX, nil) == SQLITE_OK else {
@@ -323,9 +325,9 @@ final class MessagesReader {
     }
     func attachmentURL(_ path: String) -> URL? {
         guard !path.isEmpty else { return nil }
-        let expanded = (path as NSString).expandingTildeInPath
+        let expanded = path.hasPrefix("~/") ? attachmentHome.appendingPathComponent(String(path.dropFirst(2))).path : (path as NSString).expandingTildeInPath
         let url = URL(fileURLWithPath: expanded).standardizedFileURL.resolvingSymlinksInPath()
-        let root = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/Attachments").resolvingSymlinksInPath().path + "/"
+        let root = attachmentHome.appendingPathComponent("Library/Messages/Attachments").resolvingSymlinksInPath().path + "/"
         return url.path.hasPrefix(root) ? url : nil
     }
 }

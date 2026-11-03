@@ -74,3 +74,97 @@ Data(Vec<u8>), String, Uid(usize), Array and Dictionary(BTreeMap) variants.
 `rich::balloon`, `sticker` and `chat_properties` return serde_json Values.
 Messages capture ownership is unchanged by this merge. Readers should encode
 record data through `ab_wire::gojson::record_data(..., EscapeMode::Html)`.
+
+## Messages capture API
+
+`messages::Reader::open(database, synthetic_or_user_home)` opens the supplied
+path read-only; there is no default protected path. `poll(reconcile)` returns
+changed `Batch` values with a generation, live/bulk priority and a complete
+marker. Call with `false` for changes, and `true` for complete reconciliation.
+An unchanged connection-local data version skips all row reads, decodes and
+hashes, including complete requests already satisfied for that version. The
+caller owns watcher coalescing (100 ms), fallback polling (2 s), wake and 15 min
+reconciliation, IPC credits and Committed/checkpoint persistence. This library
+is not registered as the active producer; Swift remains authoritative.
+
+`Observation::bytes` uses gojson HTML mode. Observation timestamps and scan IDs
+belong to the session boundary, outside the deterministic data projection.
+`work_counts` exposes rows materialized and fingerprints computed for idle
+regression evidence. `read_blob` accepts a native attachment GUID and a bounded
+range; paths resolve under the configured Attachments directory. It refuses
+dataless files on macOS and never requests an iCloud download.
+
+Polls hold a read transaction for a consistent snapshot. A failed scan rolls
+back only touched fingerprint entries; it does not copy the history-sized
+cache on each change. Absence is emitted only with complete evidence, and a
+missing table/identity column cannot establish absence for that collection.
+Database/schema replacement reopens the connection and invalidates local data
+version checkpoints. Prior keys remain candidates for complete reconciliation.
+
+For session integration, prefer `step(request_reconciliation)` and
+`reconciliation_pending()`. Each call checks live changes first, then at most
+128 history rows, and releases its SQLite snapshot before returning. A data
+version change during a paged scan restarts completeness tracking; no absence
+is published from interrupted pages. `poll(true)` is the synchronous fixture
+convenience that drains history in one call. New inserts precede small-table
+and bounded mutation work; live work precedes bulk pages. The caller should
+feed every returned batch before taking another step.
+
+## CPU finding from the Swift implementation
+
+`Messages.emitMessages` sorts every row's scalar/blob field names, builds an
+intermediate concatenated Data value, separately hashes every blob and hashes
+the whole row before it can suppress an unchanged observation. `live` does this
+for the recent 2,000 rows on each changed data version; `reconcile` repeats it
+for every historical row. `smallChanges` and `emit` add JSON serialization and
+hashing of the projected observations. Reopening invalidates the data-version
+checkpoint; capture restart also clears the fingerprint caches. Sustained
+reconciliation or repeated reopen/restart therefore fits the supplied sample's
+String hashing + SQLite hot stacks. This is a static finding, not a new live
+profile or proof of which restart trigger was active. The existing Swift
+version guard already skips unchanged idle polls.
+
+Rust uses a streaming SHA-256 fingerprint over ordered row fields, cached
+prepared statements, only touched-entry rollback journals, and separate native
+and observation fingerprints. Idle work counters must remain identical across
+21 unchanged polls. Paged reconciliation releases each read transaction and
+checks live work before reading another 128 history rows. Session integration
+must preserve the connection and these caches rather than reopening per poll.
+
+`resume_candidates(collection, native_keys)` accepts previously committed
+identities from session checkpoint storage. They are candidates only: missing
+identity columns or an interrupted scan cannot turn them into absence. A
+complete scan additionally rechecks missing message GUIDs so a reaction/message
+classification change cannot falsely delete a GUID that still exists.
+
+Synthetic replay reproduction:
+
+- On macOS: `bash rust/crates/ab-native/parity/messages-build-swift.sh /tmp/ab-messages-parity`
+- Run `python3 rust/crates/ab-native/parity/messages-sequence.py /tmp/ab-messages-parity/messages-oracle lab/fixtures/messages /tmp/messages-swift.json`.
+- On a Linux build host: build the `messages-reader` example; run the same
+  sequence with its binary and `/tmp/messages-rust.json` as the output path.
+  Repeat with `MESSAGES_PAGED=1` for the live-priority paged entry point.
+- Copy the Swift result to that host; run
+  `go run rust/crates/ab-native/parity/messages-compare.go /tmp/messages-swift.json /tmp/messages-rust.json`.
+
+The oracle compiles the real Swift reader and uses only an explicitly supplied
+synthetic database and attachment home. Pins use fixture preferences; dataless metadata is stubbed
+in this portable projection oracle. It compares ordered, deduplicated
+kind/collection/native_key/data observations after each mutation; Swift JSON
+passes through Go's encoder and Rust observations pass through gojson. Session
+timestamps, random scan IDs, generation values and asynchronous media
+framework derivatives are outside this deterministic reader gate. No active
+Helper or native capture registration is exercised by this proof.
+
+Verified synthetic gate: 46 stages, 10,095 observations, zero byte mismatches
+against Swift/Go for both synchronous and paged Rust paths. The evidence is
+`rust/crates/ab-native/parity/messages-evidence.json`. Full `make rust-ci`
+passed, including the workspace rebased onto main. The replay includes binary
+pin preferences, SQLite REAL values, cold generations, schema gaps, replacement,
+21 unchanged polls, resumed candidates and interrupted history pages.
+
+Two compatibility details established by the oracle: generation changes must
+republish unchanged records while retaining previous identities as absence
+candidates; a NULL attachment filename currently becomes the process working
+directory's last path component in Swift. Rust retains that filename behavior;
+the fixture processes use a common synthetic working-directory name.
