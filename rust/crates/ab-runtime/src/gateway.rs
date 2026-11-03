@@ -87,6 +87,8 @@ pub async fn start(mut config: Config, authority: Arc<ab_trust::Authority>) -> R
         state: (*store).clone(),
         blobs: blobs.clone(),
         jobs,
+        #[cfg(feature = "lab-harness")]
+        home: config.home.clone(),
     });
     let peer = Arc::new(ab_applepeer::Server {
         socket: config.socket.clone().into(),
@@ -139,6 +141,15 @@ pub async fn start(mut config: Config, authority: Arc<ab_trust::Authority>) -> R
     config.save()?;
     let (stop, receiver) = tokio::sync::watch::channel(false);
     let mut tasks = tokio::task::JoinSet::new();
+    #[cfg(feature = "lab-harness")]
+    {
+        let home = config.home.clone();
+        let state = (*store).clone();
+        let blobs = blobs.clone();
+        let stop = receiver.clone();
+        tasks.spawn(async move { crate::lab_gateway::serve(&home, state, blobs, stop).await });
+    }
+
     let ingress_stop = receiver.clone();
     let ingress = Arc::new(crate::ingress::App::new(
         config.home.clone(),

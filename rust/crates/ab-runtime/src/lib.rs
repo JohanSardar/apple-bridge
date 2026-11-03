@@ -22,6 +22,8 @@ mod ingress;
 pub mod inspection;
 #[cfg(feature = "replica-feed")]
 mod iphone;
+#[cfg(all(feature = "lab-harness", feature = "replica-feed"))]
+mod lab_gateway;
 pub mod maintenance;
 #[cfg(feature = "replica-feed")]
 mod message_actions;
