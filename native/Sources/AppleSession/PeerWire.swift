@@ -2,15 +2,18 @@ import Foundation
 import Darwin
 import CryptoKit
 import SourceSupport
+import NativeProtocol
 
 final class PeerWire: @unchecked Sendable {
-    let descriptor: Int32
+    private(set) var descriptor: Int32
     private let writeLock = NSLock()
     private let closeLock = NSLock()
     private let blobWrites = DispatchQueue(label: "applebridge.ipc.blobs", qos: .utility)
     private var closed = false
+    private var proxy: SessionProxy?
+    private var nativeTask: Task<Void, Never>?
 
-    init(socket path: String, secretFile: String) throws {
+    init(socket path: String, secretFile: String, nativeAdapter: (any NativeAdapter)? = nil) throws {
         var info = stat()
         guard lstat(secretFile, &info) == 0, info.st_uid == getuid(), info.st_mode & 0o777 == 0o600, info.st_mode & S_IFMT == S_IFREG else { throw SourceFailure.invalid }
         let secret = try Data(contentsOf: URL(fileURLWithPath: secretFile))
@@ -34,6 +37,19 @@ final class PeerWire: @unchecked Sendable {
             var uid: uid_t = 0
             var gid: gid_t = 0
             guard getpeereid(descriptor, &uid, &gid) == 0, uid == getuid() else { throw SourceFailure.invalid }
+            if ProcessInfo.processInfo.environment["AB_SESSION_PROXY"] == "1" {
+                let binary = ProcessInfo.processInfo.environment["AB_SESSION_BINARY"] ?? Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/ab-session").path
+                let child = try SessionProxy(gateway: descriptor, binary: binary)
+                Darwin.close(descriptor)
+                descriptor = child.descriptor
+                proxy = child
+                if let nativeAdapter {
+                    nativeTask = Task {
+                        defer { Darwin.close(child.nativeDescriptor) }
+                        try? await NativeServer(adapter: nativeAdapter).run(descriptor: child.nativeDescriptor)
+                    }
+                }
+            }
             var timeout = timeval(tv_sec: 15, tv_usec: 0)
             setsockopt(descriptor, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
             setsockopt(descriptor, SOL_SOCKET, SO_SNDTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
@@ -56,6 +72,7 @@ final class PeerWire: @unchecked Sendable {
             guard difference == 0 else { throw SourceFailure.invalid }
         } catch {
             Darwin.close(descriptor)
+            stopProxy()
             throw error
         }
     }
@@ -71,6 +88,16 @@ final class PeerWire: @unchecked Sendable {
         writeLock.lock()
         Darwin.close(descriptor)
         writeLock.unlock()
+        stopProxy()
+    }
+
+    private func stopProxy() {
+        nativeTask?.cancel()
+        if let proxy {
+            shutdown(proxy.nativeDescriptor, SHUT_RDWR)
+            proxy.reap()
+            if nativeTask == nil { Darwin.close(proxy.nativeDescriptor) }
+        }
     }
 
     private func read(_ size: Int) throws -> Data {

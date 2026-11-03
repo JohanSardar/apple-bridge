@@ -222,6 +222,11 @@ public final class RemindersSource: Source {
         try await sink.emit(source: name, generation: generation, observations: [absent], scanID: UUID().uuidString, scanStartedAt: started, scope: [collection], completionEvidence: "complete", blobHandles: [:], live: true)
     }
 
+    public func nativeFacts(into sink: any ObservationSink) async throws {
+        forceFull = true
+        try await scan(into: sink, live: false, fullRead: true)
+    }
+
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
         forceFull = true
         hasLiveBaseline = false

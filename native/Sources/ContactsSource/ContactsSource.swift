@@ -258,6 +258,18 @@ public final class ContactsSource: Source {
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: baselineURL.path)
         completed = true
     }
+    public func nativeHistory(_ starting: String) throws -> JSON {
+        guard let bytes = Data(base64Encoded: starting), !bytes.isEmpty else { throw SourceFailure.invalid }
+        let batch = try history(bytes)
+        guard !batch.droppedEverything, !batch.requiresFullScan else { throw SourceFailure.expired }
+        return .object(["history_token": .string(batch.token.base64EncodedString()), "changed_contact_ids": .array(batch.changedContactIdentifiers.map(JSON.string)), "changed_group_ids": .array(batch.changedGroupIdentifiers.map(JSON.string))])
+    }
+
+    public func nativeFacts(into sink: any ObservationSink) async throws {
+        guard authorized else { throw SourceFailure.permissionMissing }
+        try await scan(into: sink, live: false, force: true)
+    }
+
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
         token = Data(base64Encoded: resume["checkpoint"].string)
         generation = resume["generation"].string.isEmpty ? UUID().uuidString : resume["generation"].string

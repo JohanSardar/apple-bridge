@@ -104,6 +104,10 @@ public final class MacSource: Source {
         try await sink.emitCheckpoint(source: name, generation: generation, checkpoint: UUID().uuidString, observations: observations, scanID: UUID().uuidString, scanStartedAt: started, scope: ["mac.audio_device", "mac.display", "mac.power", "mac.network", "mac.app"], completionEvidence: "complete", blobHandles: [:], live: live)
         committed = current
     }
+    public func nativeFacts(into sink: any ObservationSink) async throws {
+        try await scan(sink, live: false)
+    }
+
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
         if !resume["generation"].string.isEmpty { generation = resume["generation"].string }
         let initialDevices = Set(try audio().compactMap { UInt32($0.0) } + [AudioObjectID(kAudioObjectSystemObject)])
