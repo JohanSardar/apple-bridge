@@ -63,7 +63,9 @@ public actor Messages: Source {
     private var mediaPressureChecked = ContinuousClock.now
     private var mediaPressure = false
     private var variantURLs: [String: URL] = [:]
-    public init(path: String? = nil, diagnostics: URL? = nil, watcherEventsEnabled: Bool = true, labCommands: Bool = false, pinsURL: URL? = nil) {
+    private let attachmentHome: URL
+    public init(path: String? = nil, diagnostics: URL? = nil, watcherEventsEnabled: Bool = true, labCommands: Bool = false, pinsURL: URL? = nil, attachmentHome: URL = FileManager.default.homeDirectoryForCurrentUser) {
+        self.attachmentHome = attachmentHome
         self.pinsURL = pinsURL
  commands = MessagesCommands(path:path, labCommands:labCommands, agentPolicy: diagnostics?.deletingLastPathComponent().appendingPathComponent("agent-message-policy.json"))
         self.watcherEventsEnabled = watcherEventsEnabled
@@ -104,13 +106,13 @@ public actor Messages: Source {
     }
     @discardableResult private func reopen() throws -> Bool {
         if baseline == nil {
-            let saved = try MessagesBaseline(path: path)
+            let saved = try MessagesBaseline(path: path, home: attachmentHome)
             candidates = try saved.identities()
             baseline = saved
             blobDigests = try saved.blobs()
         }
         if let reader, try reader.isCurrent() { return false }
-        let fresh = try MessagesReader(path: path, pinsURL: pinsURL)
+        let fresh = try MessagesReader(path: path, pinsURL: pinsURL, attachmentHome: attachmentHome)
         let changed = generation != fresh.generation
         if changed {
             generation = fresh.generation

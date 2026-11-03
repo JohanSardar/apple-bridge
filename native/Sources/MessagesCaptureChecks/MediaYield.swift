@@ -68,15 +68,13 @@ struct MediaYieldChecks {
     static func run(change: Bool = false, delayed: Bool = false, metadata: Bool = false) async throws {
         let tag = "ab-test-yield-" + UUID().uuidString
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(tag)
-        let attachments = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/Attachments/" + tag)
+        let attachments = root.appendingPathComponent("Library/Messages/Attachments/" + tag)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
-        try FileManager.default.createDirectory(at: attachments, withIntermediateDirectories: false)
+        try FileManager.default.createDirectory(at: attachments, withIntermediateDirectories: true)
         let image = attachments.appendingPathComponent("still.heic"), path = root.appendingPathComponent("chat.db").path
         var caches: [URL] = []
         defer {
             for cache in caches { try? FileManager.default.removeItem(at: cache) }
-            let identity = SHA256.hash(data: Data(path.utf8)).map { String(format: "%02x", $0) }.joined()
-            for suffix in ["", "-wal", "-shm"] { try? FileManager.default.removeItem(atPath: NSHomeDirectory() + "/Library/Application Support/AppleBridge/messages/" + identity + ".sqlite" + suffix) }
             try? FileManager.default.removeItem(at: attachments)
             try? FileManager.default.removeItem(at: root)
         }
@@ -101,7 +99,7 @@ struct MediaYieldChecks {
         let filename = image.path.replacingOccurrences(of: "'", with: "''")
         try db.execute("PRAGMA journal_mode=WAL; CREATE TABLE message(guid TEXT,text TEXT); INSERT INTO message VALUES('synthetic-yield-message','synthetic'); CREATE TABLE attachment(guid TEXT,filename TEXT,mime_type TEXT,uti TEXT,total_bytes INTEGER,transfer_state INTEGER); INSERT INTO attachment VALUES('synthetic-yield-attachment','" + filename + "','image/heic','public.heic',0,0); CREATE TABLE message_attachment_join(message_id INTEGER,attachment_id INTEGER); INSERT INTO message_attachment_join VALUES(1,1);")
         if !delayed { try db.execute("INSERT INTO attachment VALUES('synthetic-yield-motion','" + movie.path.replacingOccurrences(of: "'", with: "''") + "','video/quicktime','com.apple.quicktime-movie',0,0);") }
-        let source = Messages(path: path, diagnostics: root.appendingPathComponent("diagnostics.json"), labCommands: true), sink = YieldSink()
+        let source = Messages(path: path, diagnostics: root.appendingPathComponent("diagnostics.json"), labCommands: true, pinsURL: root.appendingPathComponent("pins.plist"), attachmentHome: root), sink = YieldSink()
         let capture = Task { try await source.capture(.null, into: sink) }
         defer { capture.cancel() }
         try MessagesCaptureChecks.require(await MessagesCaptureChecks.wait(15) { await sink.count() > 0 }, "completed image stage before burst")
