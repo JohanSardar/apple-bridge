@@ -112,9 +112,11 @@ func Run(ctx context.Context, s Scenario, level string) (e Evidence) {
 	before, reportsErr := helperCrashReports(reports)
 	e = runScenario(ctx, s, level)
 	e.Implementations = world.ImplementationSelection(ctx)
-	e.Impl = e.Implementations.Replica
-	if e.Implementations.Gateway != e.Implementations.Replica {
-		e.Impl = "mixed"
+	if e.Impl == "" {
+		e.Impl = e.Implementations.Replica
+		if e.Implementations.Gateway != e.Implementations.Replica {
+			e.Impl = "mixed"
+		}
 	}
 	if reportsErr == nil {
 		if strings.HasPrefix(s.ID, "NOTE-") {

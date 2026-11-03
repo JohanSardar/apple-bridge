@@ -1,6 +1,8 @@
 #![allow(clippy::unwrap_used, clippy::too_many_lines)]
 
-use ab_relay_control::caa::{Binding, CaaRecord, Change, Control, DnsAdapter, Error, Operation, Result};
+use ab_relay_control::caa::{
+    Binding, CaaRecord, Change, Control, DnsAdapter, Error, Operation, Result,
+};
 use ed25519_dalek::{Signer, SigningKey};
 use std::collections::BTreeMap;
 
@@ -113,6 +115,7 @@ fn relay_caa_account() {
         Some(mac.verifying_key().to_bytes()),
     )
     .unwrap();
+    println!("R2_ASSERT\tenrollment_caa_records");
     let dns = control.adapter();
     assert_eq!(dns.records[&change.binding.host], change.binding.records());
     let issue =
@@ -153,6 +156,10 @@ fn relay_caa_account() {
         "dns-01",
         "letsencrypt.org"
     ));
+    println!("R2_ASSERT\twrong_account_denied");
+    println!("R2_ASSERT\twrong_method_denied");
+    println!("R2_ASSERT\talternate_issuer_denied");
+    println!("R2_ASSERT\twildcard_denied");
     assert!(apply(&mut control, &change, &mac, None).is_err());
     change.operation = Operation::Rotate;
     change.binding.revision = 1;
@@ -166,6 +173,7 @@ fn relay_caa_account() {
     change.binding.mac_key = mac.verifying_key().to_bytes();
     assert!(apply(&mut control, &change, &attacker, None).is_err());
     apply(&mut control, &change, &recovery, None).unwrap();
+    println!("R2_ASSERT\tsigned_rotation_recovery");
     change.binding.revision = 3;
     change.expires = 99;
     assert!(apply(&mut control, &change, &recovery, None).is_err());
@@ -194,6 +202,7 @@ fn relay_caa_account() {
         "dns-01",
         "letsencrypt.org"
     ));
+    println!("R2_ASSERT\tcname_target_policy");
     target.account_uri = "https://ca.test/acct/attacker".into();
     dns.records
         .insert(target.host.clone(), target.records().into());
@@ -204,6 +213,7 @@ fn relay_caa_account() {
         "dns-01",
         "letsencrypt.org"
     ));
+    println!("R2_ASSERT\tdns_operator_residual_risk");
     let mut failure = Dns {
         fail: true,
         ..Dns::default()
@@ -221,6 +231,7 @@ fn relay_caa_account() {
         failed_control.adapter().bindings["mac.example.test"],
         previous
     );
+    println!("R2_ASSERT\tdns_failure_preserves_binding");
     let mut disabled = Control::new(Dns::default(), false);
     assert!(matches!(
         apply(&mut disabled, &change, &mac, None),

@@ -1,0 +1,4 @@
+id: RELAY-CAA-ACCOUNT
+feature: remote.relay
+levels: [sim]
+when: [{relay_service: {}}]

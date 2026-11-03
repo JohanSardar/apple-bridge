@@ -61,15 +61,22 @@ async fn relay_ct_independent() {
     )
     .await;
     assert_eq!(report.unexpected.len(), 2);
+    assert!(report.unexpected.contains_key("wildcard"));
+    println!("R2_ASSERT\tfake_all_clear_ignored");
+    println!("R2_ASSERT\tunexpected_wildcard");
     assert!(report.unexpected["precert"].precertificate);
+    println!("R2_ASSERT\tunexpected_precertificate");
     assert!(!report.unexpected.contains_key("known"));
     assert!(!report.unexpected.contains_key("unrelated"));
     assert_ne!(report.unknown.len(), 0);
+    println!("R2_ASSERT\taggregator_lag_unknown");
     let outage = ct::check(&Fixture { outage: true }, names, &known, &report, 200).await;
     assert_eq!(outage.unexpected.len(), 2);
     assert!(outage.unknown.iter().any(|s| s.contains("unavailable")));
+    println!("R2_ASSERT\taggregator_outage_unknown");
     assert!(outage.warnings(1200).iter().any(|s| s.contains("stale")));
     assert!(outage.warnings(100).iter().any(|s| s.contains("stale")));
+    println!("R2_ASSERT\tstale_monitor_unknown");
     let home = tempfile::tempdir().unwrap();
     state::write(home.path(), "r2-certificates", &true).unwrap();
     assert_ne!(ct::doctor(home.path(), 100).len(), 0);
@@ -87,6 +94,7 @@ async fn relay_ct_independent() {
     .unwrap();
     let alert: Report = state::read(home.path(), "ct-alert").unwrap();
     assert_eq!(alert.unexpected.len(), 2);
+    println!("R2_ASSERT\tdoctor_and_push_hook");
     ct::remember(home.path(), "locally-issued").unwrap();
     let known: BTreeSet<String> = state::read(home.path(), "ct-known").unwrap();
     assert!(known.contains("locally-issued"));
@@ -120,6 +128,7 @@ async fn relay_ct_independent() {
     assert!(running.names.contains("mac.example.test"));
     assert!(running.names.contains("custom.other.test"));
     assert!(running.names.contains("*.extra.test"));
+    println!("R2_ASSERT\tall_owned_names");
     assert!(running.unexpected.contains_key("wildcard"));
     state::write(home.path(), "r2-certificates", &false).unwrap();
     assert_eq!(ct::doctor(home.path(), 100).len(), 0);
@@ -139,4 +148,5 @@ fn ct_der_fixture() {
     assert_eq!(observed.names, vec!["*.example.test"]);
     assert_eq!(observed.fingerprint.len(), 64);
     assert!(Certificate::from_der(b"invalid DER").is_err());
+    println!("R2_ASSERT\tprecertificate_der");
 }
