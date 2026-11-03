@@ -67,6 +67,9 @@ type World struct {
 	GatewayEnv        []string
 	sessionEnv        []string
 	sessionSocket     string
+	sessionState      string
+	sessionListen     string
+	sessionGateway    string
 	sessionRoots      map[string]string
 	sessionUsage      map[string]*sessionDevice
 	sessionNotes      *sessionNotes

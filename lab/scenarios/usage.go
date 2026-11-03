@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"reflect"
+	"slices"
 	"strings"
 	"time"
 )
@@ -193,6 +194,13 @@ func runUsageData(ctx context.Context, s Scenario, level string) Evidence {
 			return fail("mac_lock_clipped")
 		}
 		add("mac_lock_clipped", true)
+		if os.Getenv("AB_LAB_SESSION_RESTART") == "1" && slices.Contains(world.SessionSources(), "usage") {
+			before := w.SessionCheckpoint("usage")
+			add("session_checkpoint_persisted", before != "")
+			add("session_restarted", w.RestartSession() == nil)
+			time.Sleep(3 * time.Second)
+			add("session_resumed_without_rescan", before != "" && w.SessionCheckpoint("usage") == before)
+		}
 		switch s.ID {
 		case "USE-IMPORT":
 			add("remote_import", send("remote", "iphone", event(0, true, app), event(120, false, app)) == nil)

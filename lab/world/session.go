@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -78,8 +79,10 @@ func (w *World) startSession(ctx context.Context, gatewaySocket string) (string,
 	if err != nil {
 		return "", err
 	}
-	w.sessionEnv = []string{"AB_SESSION_PRODUCERS=" + string(producerJSON), "AB_SESSION_RUST_SOURCES=" + string(configJSON)}
+	w.sessionState = filepath.Join(w.Dir, "session-state")
+	w.sessionEnv = []string{"AB_SESSION_PRODUCERS=" + string(producerJSON), "AB_SESSION_RUST_SOURCES=" + string(configJSON), "AB_SESSION_RUST_STATE=" + w.sessionState}
 	listen := filepath.Join(w.Dir, "session.sock")
+	w.sessionListen, w.sessionGateway = listen, gatewaySocket
 	if _, err = w.start("session", false, w.Dir, os.Getenv("AB_LAB_SESSION"), "--lab-listen", listen, "--lab-gateway", gatewaySocket); err != nil {
 		return "", err
 	}
@@ -88,6 +91,35 @@ func (w *World) startSession(ctx context.Context, gatewaySocket string) (string,
 	}
 	w.sessionSocket = listen
 	return listen, nil
+}
+
+func (w *World) SessionCheckpoint(source string) string {
+	raw, err := os.ReadFile(filepath.Join(w.sessionState, source+".json"))
+	if err != nil {
+		return ""
+	}
+	var record struct {
+		Checkpoint string `json:"checkpoint"`
+	}
+	if json.Unmarshal(raw, &record) != nil {
+		return ""
+	}
+	return record.Checkpoint
+}
+
+func (w *World) RestartSession() error {
+	binary := os.Getenv("AB_LAB_SESSION")
+	for _, p := range w.processes {
+		if p != nil && !p.stopped && p.command.Path == binary {
+			p.command.Process.Signal(syscall.SIGKILL)
+			p.Stop()
+		}
+	}
+	os.Remove(w.sessionListen)
+	if _, err := w.start("session", false, w.Dir, binary, "--lab-listen", w.sessionListen, "--lab-gateway", w.sessionGateway); err != nil {
+		return err
+	}
+	return w.Await(10*time.Second, func() bool { _, err := os.Stat(w.sessionListen); return err == nil })
 }
 
 type sessionDevice struct {
