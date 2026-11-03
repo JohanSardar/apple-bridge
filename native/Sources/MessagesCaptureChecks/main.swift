@@ -10,6 +10,7 @@ final class SyntheticDatabase {
     private var connection: OpaquePointer?
     init(_ path: String) throws {
         guard sqlite3_open(path, &connection) == SQLITE_OK else { throw SourceFailure.unavailable }
+        sqlite3_busy_timeout(connection, 10_000)
     }
     deinit { sqlite3_close(connection) }
     func execute(_ sql: String) throws {
