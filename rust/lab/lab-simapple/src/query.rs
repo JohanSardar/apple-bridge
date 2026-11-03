@@ -1,6 +1,59 @@
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
-use std::{collections::BTreeMap, thread, time::Duration};
+use std::{
+    collections::BTreeMap,
+    sync::{Arc, Condvar, Mutex, mpsc},
+    thread,
+    time::{Duration, Instant},
+};
+
+pub type Cancel = Arc<(Mutex<bool>, Condvar)>;
+
+pub fn cancel(token: &Cancel) {
+    if let Ok(mut flag) = token.0.lock() {
+        *flag = true;
+        token.1.notify_all();
+    }
+}
+
+pub fn sleep_request(frame: &Value) -> Option<u64> {
+    if frame["op"] != "test.sleep" {
+        return None;
+    }
+    let args = frame.get("args").cloned().unwrap_or_else(|| json!({}));
+    number(&args, "ms").filter(|ms| *ms <= 60000)
+}
+
+pub fn sleep(
+    id: Value,
+    ms: u64,
+    deadline: u64,
+    token: Cancel,
+    done: mpsc::Sender<(String, Value)>,
+) {
+    thread::spawn(move || {
+        let wait = ms.min(deadline);
+        let end = Instant::now() + Duration::from_millis(wait);
+        let mut cancelled = token.0.lock().is_ok_and(|g| *g);
+        while !cancelled {
+            let left = end.saturating_duration_since(Instant::now());
+            if left.is_zero() {
+                break;
+            }
+            let Ok(guard) = token.0.lock() else { break };
+            let Ok((guard, _)) = token.1.wait_timeout(guard, left) else {
+                break;
+            };
+            cancelled = *guard;
+        }
+        let reply = if cancelled || ms > deadline {
+            failure(&id, "deadline")
+        } else {
+            json!({"t":"QueryResult","id":id,"result_json":{"ms":ms},"blobs":[]})
+        };
+        let _ = done.send((id.as_str().unwrap_or_default().to_owned(), reply));
+    });
+}
 
 const MAX_BLOB: u64 = 64 << 20;
 const MAX_CHUNK: u64 = 128 << 10;
@@ -36,23 +89,12 @@ fn failure(id: &Value, code: &str) -> Value {
 pub fn query(blobs: &mut BTreeMap<String, Vec<u8>>, frame: &Value) -> Value {
     let id = &frame["id"];
     let args = frame.get("args").cloned().unwrap_or_else(|| json!({}));
-    let deadline = frame["deadline_ms"].as_u64().unwrap_or(0);
     match frame["op"].as_str() {
         Some("test.echo") => json!({"t":"QueryResult","id":id,"result_json":args,"blobs":[]}),
         Some("helper.version") => {
             json!({"t":"QueryResult","id":id,"result_json":{"version":"sim","protocol":"ipc/1"},"blobs":[]})
         }
-        Some("test.sleep") => {
-            let Some(ms) = number(&args, "ms").filter(|ms| *ms <= 60000) else {
-                return failure(id, "invalid");
-            };
-            if ms > deadline {
-                thread::sleep(Duration::from_millis(deadline));
-                return failure(id, "deadline");
-            }
-            thread::sleep(Duration::from_millis(ms));
-            json!({"t":"QueryResult","id":id,"result_json":args,"blobs":[]})
-        }
+        Some("test.sleep") => failure(id, "invalid"),
         Some("test.blob") => {
             let Some(size) = number(&args, "size").filter(|size| *size <= MAX_BLOB) else {
                 return failure(id, "invalid");
