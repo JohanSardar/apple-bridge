@@ -104,3 +104,12 @@ func phoneGatewaySimScenario(s Scenario) bool {
 		return false
 	}
 }
+
+func relayServiceGatewaySimScenario(s Scenario) bool {
+	switch s.ID {
+	case "RELAY-ENROLL", "RELAY-LIMITS", "RELAY-PASSTHROUGH":
+		return true
+	default:
+		return false
+	}
+}
