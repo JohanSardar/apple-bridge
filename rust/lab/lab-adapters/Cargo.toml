@@ -15,4 +15,4 @@ lab-wire = { path = "../lab-wire" }
 serde_json.workspace = true
 sha2.workspace = true
 hex = "0.4"
-serde_yaml = "0.9"
+serde-saphyr = "2.1"
