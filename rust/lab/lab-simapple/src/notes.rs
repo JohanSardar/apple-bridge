@@ -159,7 +159,10 @@ impl Session {
             if let Some(object) = native.as_object_mut() {
                 object.remove("folder_id");
             }
-            if expected != native && !(expected.is_null() && native.as_object().is_some_and(serde_json::Map::is_empty)) {
+            if expected != native
+                && !(expected.is_null()
+                    && native.as_object().is_some_and(serde_json::Map::is_empty))
+            {
                 drop(s);
                 return self.reject(frame, "conflict");
             }

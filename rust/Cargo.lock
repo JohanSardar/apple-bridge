@@ -2332,11 +2332,13 @@ dependencies = [
 name = "lab-simapple"
 version = "0.0.0"
 dependencies = [
+ "base64 0.22.1",
  "hex",
  "jiff",
  "lab-wire",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "thiserror 2.0.21",
 ]
 
