@@ -1,0 +1,31 @@
+{
+  "implementations": {
+    "gateway": "rust",
+    "replica": "go"
+  },
+  "impl": "mixed",
+  "host_conditions": {
+    "quiet": false,
+    "summary": ""
+  },
+  "status": "blocked",
+  "run_id": "",
+  "scenario": "APP-ALARM-SIM",
+  "level": "sim",
+  "passed": false,
+  "git_sha": "",
+  "at": "2026-11-03T02:23:03.733623853Z",
+  "assertions": [
+    {
+      "name": "binary_harness_required",
+      "passed": false,
+      "detail": "harness: native iphone.alarms journey requires AppleTruth/Helper; requires isolated binary-driven fixture adapter"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

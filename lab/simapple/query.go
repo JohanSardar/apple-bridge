@@ -6,8 +6,8 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"github.com/JohanSardar/apple-bridge/internal/applepeer"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	applepeer "github.com/JohanSardar/apple-bridge/lab/ipc"
 	"sync"
 	"time"
 )

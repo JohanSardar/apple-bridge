@@ -1,6 +1,9 @@
 #![forbid(unsafe_code)]
+pub mod activity;
+mod gateway;
 mod identity;
 pub mod iphone;
+pub use gateway::{AgentLevel, VerifiedDelegation};
 mod pairing;
 mod store;
 pub mod tls;
@@ -13,6 +16,8 @@ pub use store::{CredentialStore, FileStore, KeychainStore, atomic_write};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error(transparent)]
+    Sqlite(#[from] rusqlite::Error),
     #[error(transparent)]
     Io(#[from] std::io::Error),
     #[error(transparent)]
@@ -198,7 +203,7 @@ impl Visibility {
 }
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Credentials {
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_default")]
     pub principals: Vec<Principal>,
     #[serde(default)]
     pub pairings: BTreeMap<String, serde_json::Value>,
@@ -261,3 +266,11 @@ impl Visibility {
 
 pub use ab_domain as domain;
 pub use ab_wire as wire;
+
+fn null_default<'de, D, T>(deserializer: D) -> Result<T, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: Deserialize<'de> + Default,
+{
+    Ok(Option::<T>::deserialize(deserializer)?.unwrap_or_default())
+}

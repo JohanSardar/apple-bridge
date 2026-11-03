@@ -33,3 +33,5 @@ hyper-util = { version = "0.1", features = ["tokio", "server", "http1"] }
 http-body-util = "0.1"
 time = "0.3"
 ulid = "1"
+
+rusqlite.workspace = true

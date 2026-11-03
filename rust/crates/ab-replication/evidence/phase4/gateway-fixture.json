@@ -1,0 +1,1 @@
+{"blobs_both":true,"cursor":{"epoch":"fixture-epoch","sequence":2,"subscription_revision":2},"gateway":"rust-fixture","go_resumes":1,"go_revocation_ms":59,"mixed_digest":"8995066863ba15defb08ab49cbad742c1c99fe4c0827d8d1a042d0fc6f407804","paired":true,"replica":"go","rust_paired_snapshot_live_resume_scope":true,"rust_revocation_ms":128,"snapshots":2}

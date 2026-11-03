@@ -3,8 +3,8 @@ package simapple
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/JohanSardar/apple-bridge/internal/applepeer"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	applepeer "github.com/JohanSardar/apple-bridge/lab/ipc"
 	"golang.org/x/net/html"
 	"io"
 	"reflect"

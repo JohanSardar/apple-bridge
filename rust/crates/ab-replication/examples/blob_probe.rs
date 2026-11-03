@@ -26,10 +26,33 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     let now = jiff::Timestamp::now();
     store.protect([d.as_str().into()].into_iter().collect())?;
+    let owner_refs = [(
+        "gateway:fixture".into(),
+        vec![ab_blobs::Reference {
+            digest: d.as_str().into(),
+            size: 7,
+            ..ab_blobs::Reference::default()
+        }],
+    )]
+    .into_iter()
+    .collect();
+    store.update_protection(&owner_refs, true)?;
     store.release_pin(&pin)?;
     store.gc(now, 0)?;
     store.open_authorized(&grant, &d)?;
     store.protect(std::collections::BTreeSet::default())?;
+    store.gc(now, 0)?;
+    store.open_authorized(&grant, &d)?;
+    drop(store);
+    let mut store = Store::open(&home, 10)?;
+    store.gc(now, 0)?;
+    store.open_authorized(&grant, &d)?;
+    store.update_protection(
+        &[("gateway:fixture".into(), Vec::new())]
+            .into_iter()
+            .collect(),
+        false,
+    )?;
     let later = now.checked_add(std::time::Duration::from_hours(25))?;
     if store.gc(later, 24 * 3600)? < 1 {
         return Err("GC".into());

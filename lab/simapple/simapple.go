@@ -14,8 +14,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/JohanSardar/apple-bridge/internal/applepeer"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	applepeer "github.com/JohanSardar/apple-bridge/lab/ipc"
 )
 
 type Config struct {
@@ -437,7 +437,7 @@ var errClosed = contracts.ErrUnavailable
 
 func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []byte, generation string) error {
 	wire := &applepeer.Wire{Conn: conn}
-	if err := applepeer.Authenticate(wire, secret, false); err != nil {
+	if err := applepeer.Authenticate(wire, secret); err != nil {
 		return err
 	}
 	open, _, err := wire.Receive()
