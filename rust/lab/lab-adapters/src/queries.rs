@@ -168,7 +168,12 @@ fn scope(world: &World, evidence: &mut Evidence) -> Result<()> {
         None => false,
     };
     evidence.check("read_agent_allowed", allowed, "read agent queries");
-    let approve = agent_token(world, "Bridge Test query approve", "approve", "reminders:write")?;
+    let approve = agent_token(
+        world,
+        "Bridge Test query approve",
+        "approve",
+        "reminders:write",
+    )?;
     evidence.check(
         "approve_agent_created",
         approve.is_some(),

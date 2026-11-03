@@ -120,7 +120,11 @@ impl Client {
     }
     pub fn spawn_call(&self, operation: &str, input: &Value, mcp: bool) -> Result<Child> {
         let (path, headers, body) = if mcp {
-            ("/mcp".to_owned(), MCP_HEADERS.to_vec(), mcp_body(operation, input)?)
+            (
+                "/mcp".to_owned(),
+                MCP_HEADERS.to_vec(),
+                mcp_body(operation, input)?,
+            )
         } else {
             (
                 format!("/v1/op/{operation}"),
@@ -130,7 +134,15 @@ impl Client {
         };
         let mut command = Command::new("curl");
         command
-            .args(["--silent", "--show-error", "--max-time", "30", "-X", "POST", "-H"])
+            .args([
+                "--silent",
+                "--show-error",
+                "--max-time",
+                "30",
+                "-X",
+                "POST",
+                "-H",
+            ])
             .arg(format!("Authorization: Bearer {}", self.token));
         for (name, value) in headers {
             command.args(["-H", &format!("{name}: {value}")]);
