@@ -1,5 +1,6 @@
 #![allow(clippy::too_many_lines)]
 mod messages;
+mod query;
 mod sources;
 use lab_wire::{receive, send};
 use serde_json::{Value, json};
@@ -376,6 +377,7 @@ struct Session {
     fence: u64,
     credit: usize,
     tickets: BTreeMap<String, Ticket>,
+    blobs: BTreeMap<String, Vec<u8>>,
 }
 impl Session {
     fn emit(&mut self, state: &Shared, mut frame: Value) -> Result<()> {
@@ -657,11 +659,14 @@ impl Session {
                 send(&mut self.stream, &json!({"t":"Pong"}))?;
             }
             Some("Pong") => {}
+            Some("Query") => {
+                let reply = query::query(&mut self.blobs, &frame);
+                send(&mut self.stream, &reply)?;
+            }
+            Some("QueryCancel") => {}
             Some("BlobRead") => {
-                send(
-                    &mut self.stream,
-                    &json!({"t":"BlobUnavailable","handle":frame["handle"],"reason":"unavailable"}),
-                )?;
+                let reply = query::blob(&self.blobs, &frame).ok_or_else(|| invalid("blob read"))?;
+                send(&mut self.stream, &reply)?;
             }
             _ => return Err(invalid("session frame")),
         }
@@ -764,6 +769,7 @@ fn session(
         fence,
         credit: usize::try_from(credit).map_err(|_| invalid("credit"))?,
         tickets: BTreeMap::new(),
+        blobs: BTreeMap::new(),
     };
     if let Some(checkpoints) = open["checkpoints"].as_object() {
         for (src, checkpoint) in checkpoints {
