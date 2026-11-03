@@ -65,3 +65,20 @@ func (a *Authority) JoinRelay(ctx context.Context, conn *websocket.Conn, code Pa
 	}
 	return a.SaveEnrollment(Enrollment{Remote: true, PairingID: code.ID, ReplicaID: principal.ID, Address: code.Address, Fingerprint: code.Fingerprint, Grants: principal.Grants, Ceiling: principal.Grants})
 }
+
+func (a *Authority) joinRelay2(ctx context.Context, conn *websocket.Conn, code PairCode, binding []byte) error {
+	if !code.Remote || code.Dial != "" || code.ID == "" || len(code.Secret) != 20 || len(code.Fingerprint) != 64 {
+		return contracts.ErrInvalid
+	}
+	if _, err := relayURL(code.Address); err != nil {
+		return err
+	}
+	if time.Now().After(code.ExpiresAt) {
+		return contracts.ErrExpired
+	}
+	principal, err := a.Relay2Client(ctx, conn, code.Fingerprint, &code, binding)
+	if err != nil {
+		return err
+	}
+	return a.SaveEnrollment(Enrollment{Remote: true, PairingID: code.ID, ReplicaID: principal.ID, Address: code.Address, Fingerprint: code.Fingerprint, Grants: principal.Grants, Ceiling: principal.Grants})
+}

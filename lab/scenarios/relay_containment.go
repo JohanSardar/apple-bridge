@@ -19,7 +19,7 @@ import (
 
 func runRelayContainment(ctx context.Context, s Scenario, level string) Evidence {
 	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
-	e := Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), GitSHA: strings.TrimSpace(string(sha)), RunID: "relay-r0-" + strings.ToLower(s.ID), Hosts: []string{"air"}, NetworkPath: "synthetic loopback only"}
+	e := Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), GitSHA: strings.TrimSpace(string(sha)), RunID: "relay-r3-" + strings.ToLower(s.ID), Hosts: []string{"build"}, NetworkPath: "synthetic loopback only"}
 	e.Impl = "go"
 	if os.Getenv("AB_RELAY_FIXTURE") != "" {
 		e.Impl = "rust"
@@ -36,7 +36,7 @@ func runRelayContainment(ctx context.Context, s Scenario, level string) Evidence
 	}
 	defer os.RemoveAll(dir)
 	defer relay.Cleanup(dir)
-	if s.ID == "RELAY-TLS-SPLICE" {
+	if s.ID == "RELAY-TLS-SPLICE" || s.ID == "RELAY-DOWNGRADE" {
 		relayTLSSplice(ctx, dir, add)
 	} else {
 		relayRotateGated(dir, add)

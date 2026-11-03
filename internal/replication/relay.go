@@ -1,6 +1,7 @@
 package replication
 
 import (
+	"github.com/JohanSardar/apple-bridge/internal/trust"
 	"net/http"
 
 	"github.com/coder/websocket"
@@ -12,12 +13,17 @@ func (s *Server) RelayHandler() http.Handler {
 			http.Error(w, "unauthorized", 401)
 			return
 		}
+		binding, err := trust.RelayBinding(r.TLS)
+		if err != nil {
+			http.Error(w, "unauthorized", 401)
+			return
+		}
 		conn, err := websocket.Accept(w, r, nil)
 		if err != nil {
 			return
 		}
 		defer conn.CloseNow()
-		principal, certificate, err := s.Authority.RelayServer(r.Context(), conn)
+		principal, certificate, err := s.Authority.Relay2Server(r.Context(), conn, binding)
 		if err != nil {
 			return
 		}

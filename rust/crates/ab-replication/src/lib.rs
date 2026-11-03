@@ -4,6 +4,7 @@ mod command;
 mod dial;
 pub mod gateway;
 mod listener;
+pub mod relay;
 pub mod server;
 mod state;
 pub mod upstream;
@@ -192,8 +193,22 @@ impl<S: ReplicaState> Client<S> {
     }
     pub async fn connect(&self) -> Result<(), Error> {
         let e = self.authority.enrollment()?.ok_or(Error::Invalid)?;
-        if e.remote || !e.dial.is_empty() {
+        if !e.dial.is_empty() {
             return Err(Error::Invalid);
+        }
+        if e.remote {
+            let mut ws = relay::dial(&e.address).await?;
+            let binding = relay::client_binding(&ws)?;
+            let principal = tokio::time::timeout(
+                Duration::from_secs(5),
+                relay::client(&self.authority, &mut ws, &binding, &e.fingerprint, None),
+            )
+            .await
+            .map_err(|_| Error::Disconnected)??;
+            if principal.id != e.replica_id {
+                return Err(Error::Invalid);
+            }
+            return self.consume(ws, e).await;
         }
         let connector = tokio_tungstenite::Connector::Rustls(Arc::new(
             self.authority.client_tls(&e.fingerprint)?,

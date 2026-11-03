@@ -261,6 +261,12 @@ impl Authority {
         ed25519_dalek::SigningKey::from_pkcs8_der(&self.key)
             .map_err(|e| Error::Identity(e.to_string()))
     }
+    pub fn sign_relay_transcript(&self, input: &[u8]) -> Result<[u8; 64], Error> {
+        if !input.starts_with(b"apple-bridge-relay/2\0") {
+            return Err(Error::Invalid);
+        }
+        Ok(self.iphone_signing_key()?.sign(input).to_bytes())
+    }
     pub fn sign_delegation(
         &self,
         principal: &Principal,

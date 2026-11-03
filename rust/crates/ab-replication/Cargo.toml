@@ -23,6 +23,10 @@ base64 = "0.22"
 hyper.workspace = true
 hyper-util = { version = "0.1", features = ["tokio", "server", "http1"] }
 http-body-util = "0.1"
-[dev-dependencies]
+ed25519-dalek = { workspace = true, features = ["pkcs8"] }
+rand = "0.8"
+url = "2"
+x509-parser = "0.18"
 sha2.workspace = true
+[dev-dependencies]
 tempfile = "3"

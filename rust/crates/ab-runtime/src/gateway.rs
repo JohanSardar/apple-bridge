@@ -173,6 +173,7 @@ pub async fn start(mut config: Config, authority: Arc<ab_trust::Authority>) -> R
         audit,
         approvals,
         phone_router,
+        feed.clone(),
     ));
     tasks.spawn(crate::ingress::run(ingress, ingress_stop));
     let phone_stop = receiver.clone();

@@ -60,7 +60,7 @@ func samplesQuiet(samples map[string]world.HostSample) bool {
 
 func Run(ctx context.Context, s Scenario, level string) (e Evidence) {
 	selection := world.ImplementationSelection(ctx)
-	if (selection.Gateway == "rust" || selection.Replica == "rust") && !(level == "sim" && selection.Gateway == "rust" && selection.Replica == "go" && (calendarGatewaySimScenario(s) || nativeGatewaySimScenario(s) || sourceGatewaySimScenario(s) || phoneGatewaySimScenario(s) || ownerGatewaySimScenario(s) || relayServiceGatewaySimScenario(s) || portableGatewaySimScenario(s) || relayGatewaySimScenario(s))) && !(level == "sim" && selection.Gateway == "go" && nativeReplicaSimScenario(s)) && !(level == "real" && selection.LocalReplicas && selection.Gateway == "go" && nativeReplicaRealScenario(s)) {
+	if (selection.Gateway == "rust" || selection.Replica == "rust") && !(level == "sim" && selection.Gateway == "rust" && selection.Replica == "go" && (calendarGatewaySimScenario(s) || nativeGatewaySimScenario(s) || sourceGatewaySimScenario(s) || phoneGatewaySimScenario(s) || ownerGatewaySimScenario(s) || relayServiceGatewaySimScenario(s) || portableGatewaySimScenario(s) || relayGatewaySimScenario(s) || relay2GatewaySimScenario(s))) && !(level == "sim" && selection.Gateway == "go" && nativeReplicaSimScenario(s)) && !(level == "real" && selection.LocalReplicas && selection.Gateway == "go" && nativeReplicaRealScenario(s)) {
 		reason := replicaQualificationBlocker(s)
 		if reason == "" && level == "sim" && selection.Gateway == "rust" && selection.Replica == "go" {
 			reason = "harness: portable SIM inventory/import/schema checks require a binary fixture adapter for " + s.ID
@@ -124,7 +124,7 @@ func Run(ctx context.Context, s Scenario, level string) (e Evidence) {
 	}
 	if level == "sim" && os.Getenv("AB_RELAY_FIXTURE") != "" {
 		switch s.ID {
-		case "RELAY-ENROLL", "RELAY-PASSTHROUGH", "RELAY-LIMITS", "RELAY-ACME", "RELAY-OWN-DOMAIN", "RELAY-STREAMS", "RELAY-ROTATE-GATED", "RELAY-TLS-SPLICE":
+		case "RELAY-ENROLL", "RELAY-PASSTHROUGH", "RELAY-LIMITS", "RELAY-ACME", "RELAY-OWN-DOMAIN", "RELAY-STREAMS", "RELAY-ROTATE-GATED", "RELAY-TLS-SPLICE", "RELAY-DOWNGRADE":
 			e.Impl = "rust"
 			if e.GitSHA == "" {
 				e.GitSHA = os.Getenv("AB_LAB_GIT_SHA")
@@ -171,4 +171,11 @@ func latencyCritical(s Scenario) bool {
 		}
 	}
 	return false
+}
+
+func relay2GatewaySimScenario(s Scenario) bool {
+	if s.ID != "RELAY-TLS-SPLICE" && s.ID != "RELAY-DOWNGRADE" {
+		return false
+	}
+	return os.Getenv("AB_RELAY_FIXTURE") != ""
 }

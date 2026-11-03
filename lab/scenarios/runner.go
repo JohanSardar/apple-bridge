@@ -478,7 +478,7 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "RELAY-CT-INDEPENDENT" || s.ID == "RELAY-CAA-ACCOUNT" {
 		return runRelayCertificates(ctx, s, level)
 	}
-	if s.ID == "RELAY-ROTATE-GATED" || s.ID == "RELAY-TLS-SPLICE" {
+	if s.ID == "RELAY-ROTATE-GATED" || (s.ID == "RELAY-TLS-SPLICE" || s.ID == "RELAY-DOWNGRADE") {
 		return runRelayContainment(ctx, s, level)
 	}
 	if s.Feature == "remote.relay" {

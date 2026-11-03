@@ -603,3 +603,51 @@ impl<S: GatewayState> Server<S> {
         Ok(())
     }
 }
+
+impl<S: GatewayState + 'static> Server<S> {
+    pub fn relay_http<B>(
+        self: Arc<Self>,
+        mut request: hyper::Request<B>,
+        binding: Option<[u8; 32]>,
+    ) -> hyper::Response<http_body_util::Full<hyper::body::Bytes>> {
+        let upgrade = hyper::upgrade::on(&mut request);
+        let request = request.map(|_| ());
+        let result = (|| {
+            let binding = binding.ok_or(Error::Invalid)?;
+            if request.method() != hyper::Method::GET || request.headers().contains_key("origin") {
+                return Err(Error::Invalid);
+            }
+            let response =
+                tokio_tungstenite::tungstenite::handshake::server::create_response(&request)?;
+            Ok::<_, Error>((response, binding))
+        })();
+        let Ok((response, binding)) = result else {
+            let mut response =
+                hyper::Response::new(http_body_util::Full::new(hyper::body::Bytes::new()));
+            *response.status_mut() = hyper::StatusCode::UNAUTHORIZED;
+            return response;
+        };
+        tokio::spawn(async move {
+            if let Ok(upgraded) = upgrade.await {
+                let mut ws = WebSocketStream::from_raw_socket(
+                    hyper_util::rt::TokioIo::new(upgraded),
+                    tokio_tungstenite::tungstenite::protocol::Role::Server,
+                    Some(
+                        tokio_tungstenite::tungstenite::protocol::WebSocketConfig::default()
+                            .max_message_size(Some((1 << 20) + 64)),
+                    ),
+                )
+                .await;
+                let auth = tokio::time::timeout(
+                    Duration::from_secs(5),
+                    crate::relay::server(&self.authority, &mut ws, &binding),
+                )
+                .await;
+                if let Ok(Ok(cert)) = auth {
+                    let _ = self.serve(ws, &cert).await;
+                }
+            }
+        });
+        response.map(|()| http_body_util::Full::new(hyper::body::Bytes::new()))
+    }
+}
