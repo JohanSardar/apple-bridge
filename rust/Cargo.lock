@@ -2442,6 +2442,7 @@ dependencies = [
  "hex",
  "hmac 0.12.1",
  "jiff",
+ "lab-relay",
  "lab-runner",
  "lab-wire",
  "lab-world",
@@ -2456,6 +2457,28 @@ dependencies = [
  "zune-core",
  "zune-jpeg",
  "zune-png",
+]
+
+[[package]]
+name = "lab-relay"
+version = "0.0.0"
+dependencies = [
+ "base64 0.22.1",
+ "data-encoding",
+ "ed25519-dalek",
+ "hex",
+ "hmac 0.12.1",
+ "jiff",
+ "rand 0.8.8",
+ "rcgen",
+ "rustls",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "thiserror 2.0.21",
+ "time",
+ "tungstenite 0.28.0",
+ "x509-parser",
 ]
 
 [[package]]
