@@ -95,3 +95,5 @@ func sourceGatewaySimScenario(s Scenario) bool {
 func ownerGatewaySimScenario(s Scenario) bool {
 	return s.ID == "WEB-AGENT-LEVELS" || s.ID == "WEB-AGENT-ACTIVITY"
 }
+
+func phoneGatewaySimScenario(s Scenario) bool { return s.ID == "APP-PAIR-SIM" }
