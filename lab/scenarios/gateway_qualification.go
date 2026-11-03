@@ -13,6 +13,10 @@ var gatewayProductImport = regexp.MustCompile(`"github.com/JohanSardar/apple-bri
 var gatewaySemanticCall = regexp.MustCompile(`contracts\.(CommandHash|Descriptor|GrantsForSource|IPhoneCompletionEvidence|MacCompletionEvidence|MacDescriptors|NormalizeContactHandle|OperationSchema|ValidateCommand|ValidateIPhoneCommand|BlobReferences)\(`)
 
 func portableGatewaySimScenario(s Scenario) bool {
+	switch s.ID {
+	case "RELAY-ROTATE-GATED", "SC-RUN-REAL":
+		return true
+	}
 	raw, err := os.ReadFile("lab/test-selection.json")
 	if err != nil {
 		return false
