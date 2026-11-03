@@ -33,7 +33,7 @@ use x25519_dalek::{PublicKey, StaticSecret};
 
 type HmacSha256 = Hmac<Sha256>;
 
-fn random<const N: usize>() -> Result<[u8; N]> {
+pub(crate) fn random<const N: usize>() -> Result<[u8; N]> {
     let mut bytes = [0u8; N];
     fs::File::open("/dev/urandom")?.read_exact(&mut bytes)?;
     Ok(bytes)
@@ -67,9 +67,9 @@ pub struct Gateway {
     pub api_address: String,
 }
 
-type Request = (String, String, Vec<(String, String)>, Vec<u8>);
+pub(crate) type Request = (String, String, Vec<(String, String)>, Vec<u8>);
 
-fn read_request<R: Read>(stream: &mut R) -> Option<Request> {
+pub(crate) fn read_request<R: Read>(stream: &mut R) -> Option<Request> {
     let mut data = Vec::new();
     let mut byte = [0u8; 1];
     while !data.ends_with(b"\r\n\r\n") {
@@ -95,6 +95,31 @@ fn read_request<R: Read>(stream: &mut R) -> Option<Request> {
     let mut body = vec![0u8; length];
     stream.read_exact(&mut body).ok()?;
     Some((method, path, headers, body))
+}
+
+pub(crate) fn tls_server(names: &[&str], ca: bool) -> Result<(Arc<ServerConfig>, String)> {
+    let mut params =
+        rcgen::CertificateParams::new(names.iter().map(|n| (*n).to_owned()).collect::<Vec<_>>())
+            .map_err(|e| invalid(e.to_string()))?;
+    if ca {
+        params.is_ca = rcgen::IsCa::Ca(rcgen::BasicConstraints::Unconstrained);
+    }
+    let key = rcgen::KeyPair::generate().map_err(|e| invalid(e.to_string()))?;
+    let cert = params
+        .self_signed(&key)
+        .map_err(|e| invalid(e.to_string()))?;
+    let config =
+        ServerConfig::builder_with_provider(Arc::new(rustls::crypto::ring::default_provider()))
+            .with_safe_default_protocol_versions()
+            .map_err(|e| invalid(e.to_string()))?
+            .with_no_client_auth()
+            .with_single_cert(
+                vec![pki_types::CertificateDer::from(cert.der().to_vec())],
+                pki_types::PrivateKeyDer::try_from(key.serialize_der())
+                    .map_err(|e| invalid(e.to_string()))?,
+            )
+            .map_err(|e| invalid(e.to_string()))?;
+    Ok((Arc::new(config), cert.pem()))
 }
 
 fn serve_local(stream: &mut UnixStream, state: &Mutex<LocalState>) {
@@ -228,27 +253,9 @@ impl Gateway {
                 }
             });
         }
-        let mut params = rcgen::CertificateParams::new(vec!["node.fixture.test".to_owned()])
-            .map_err(|e| invalid(e.to_string()))?;
-        params.is_ca = rcgen::IsCa::Ca(rcgen::BasicConstraints::Unconstrained);
-        let key = rcgen::KeyPair::generate().map_err(|e| invalid(e.to_string()))?;
-        let cert = params
-            .self_signed(&key)
-            .map_err(|e| invalid(e.to_string()))?;
+        let (config, pem) = tls_server(&["node.fixture.test"], true)?;
         let cert_path = dir.join("fixture.pem");
-        fs::write(&cert_path, cert.pem())?;
-        let config =
-            ServerConfig::builder_with_provider(Arc::new(rustls::crypto::ring::default_provider()))
-                .with_safe_default_protocol_versions()
-                .map_err(|e| invalid(e.to_string()))?
-                .with_no_client_auth()
-                .with_single_cert(
-                    vec![pki_types::CertificateDer::from(cert.der().to_vec())],
-                    pki_types::PrivateKeyDer::try_from(key.serialize_der())
-                        .map_err(|e| invalid(e.to_string()))?,
-                )
-                .map_err(|e| invalid(e.to_string()))?;
-        let config = Arc::new(config);
+        fs::write(&cert_path, pem)?;
         let public = TcpListener::bind("127.0.0.1:0")?;
         let public_address = public.local_addr()?;
         {
@@ -437,11 +444,17 @@ impl Gateway {
         Ok((reply.status, reply.body))
     }
 
-    pub fn public_address(&self) -> SocketAddr {
-        self.public_address
+    #[must_use]
+    pub fn certificate_path(&self) -> PathBuf {
+        self.dir.join("fixture.pem")
     }
 
-    pub fn close(&mut self) {
+    #[must_use]
+    pub fn log(&self) -> String {
+        fs::read_to_string(self.dir.join("gateway.log")).unwrap_or_default()
+    }
+
+    fn stop_child(&mut self) {
         if let Some(mut child) = self.child.take() {
             let _ = Command::new("kill").arg(child.id().to_string()).status();
             let until = Instant::now() + Duration::from_secs(10);
@@ -451,6 +464,100 @@ impl Gateway {
             let _ = child.kill();
             let _ = child.wait();
         }
+    }
+
+    pub fn restart(&mut self) -> Result<()> {
+        let lease = self.home.join("remote/lease.json");
+        let ingress = lease.exists();
+        self.stop_child();
+        let started = SystemTime::now();
+        self.launch()?;
+        if !ingress {
+            return Ok(());
+        }
+        self.command(&["remote", "on", "--via", "tailscale-app"])?;
+        let certificate = self.certificate_path();
+        let port = self.public_address.port();
+        self.wait(Duration::from_secs(30), "ingress readiness", |g| {
+            fs::metadata(&lease)
+                .and_then(|m| m.modified())
+                .is_ok_and(|m| m >= started)
+                && Command::new("curl")
+                    .args([
+                        "--silent",
+                        "--output",
+                        "/dev/null",
+                        "--max-time",
+                        "5",
+                        "--cacert",
+                    ])
+                    .arg(&certificate)
+                    .args(["--resolve", &format!("node.fixture.test:{port}:127.0.0.1")])
+                    .args(["--write-out", "%{http_code}"])
+                    .arg(format!("https://node.fixture.test:{port}/"))
+                    .output()
+                    .is_ok_and(|o| {
+                        let code = String::from_utf8_lossy(&o.stdout).into_owned();
+                        o.status.success() && code != "502" && code != "503" && g.child.is_some()
+                    })
+        })
+    }
+
+    pub fn agent(&self, level: &str) -> Result<(String, String)> {
+        let raw = self.command(&[
+            "agent",
+            "create",
+            "--name",
+            &format!("[ab-test] {level}"),
+            "--level",
+            level,
+            "--scope",
+            "iphone:write",
+        ])?;
+        let value: Value = serde_json::from_str(&raw)?;
+        Ok((
+            value["token"].as_str().unwrap_or_default().to_owned(),
+            value["agent"]["id"].as_str().unwrap_or_default().to_owned(),
+        ))
+    }
+
+    pub fn lab(&self, action: &str, owner: &str, pin: &str) -> Result<Value> {
+        let body = serde_json::to_vec(&json!({"action": action, "owner": owner, "pin": pin}))?;
+        let mut stream = UnixStream::connect(self.home.join("run/blobs-lab.sock"))?;
+        stream.set_read_timeout(Some(Duration::from_secs(5)))?;
+        write!(
+            stream,
+            "POST / HTTP/1.1\r\nHost: lab\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+            body.len()
+        )?;
+        stream.write_all(&body)?;
+        let mut raw = Vec::new();
+        stream.read_to_end(&mut raw)?;
+        let text = String::from_utf8_lossy(&raw).into_owned();
+        let (head, payload) = text.split_once("\r\n\r\n").unwrap_or((&text, ""));
+        if !head.starts_with("HTTP/1.1 200") {
+            return Err(invalid(format!(
+                "lab fixture {}",
+                head.lines().next().unwrap_or_default()
+            )));
+        }
+        Ok(serde_json::from_str(payload).unwrap_or(Value::Null))
+    }
+
+    pub fn expire(&self, source: &str, id: &str) -> Result<()> {
+        self.lab("phone-expired", source, id).map(|_| ())
+    }
+
+    pub fn record(&self, id: &str) -> Result<Value> {
+        self.lab("phone-command", id, "")
+    }
+
+    pub fn public_address(&self) -> SocketAddr {
+        self.public_address
+    }
+
+    pub fn close(&mut self) {
+        self.stop_child();
         if !self.stop.swap(true, Ordering::SeqCst) {
             let _ = UnixStream::connect(&self.local_path);
             let _ = TcpStream::connect(self.public_address);
