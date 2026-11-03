@@ -40,7 +40,7 @@ func isolatedDarwinSimScenario(s Scenario) bool {
 
 func nativeReplicaSimScenario(s Scenario) bool {
 	switch s.ID {
-	case "CAL-CRUD", "CAL-WINDOW-SLIDE", "CAL-MOVED-OUTSIDE-WINDOW", "CAL-SPLIT-ATOMIC-ALLDAY", "CAL-SPLIT-ATOMIC-TIMED", "CAL-RECUR-THIS", "CAL-RECUR-FUTURE", "REM-CRUD", "NOTE-CRUD":
+	case "CAL-CRUD", "CAL-WINDOW-SLIDE", "CAL-MOVED-OUTSIDE-WINDOW", "CAL-SPLIT-ATOMIC-ALLDAY", "CAL-SPLIT-ATOMIC-TIMED", "CAL-RECUR-THIS", "CAL-RECUR-FUTURE", "REM-CRUD", "NOTE-CRUD", "WEB-MEDIA-CAP":
 		return true
 	default:
 		return false
