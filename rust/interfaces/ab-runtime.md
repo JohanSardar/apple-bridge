@@ -54,3 +54,9 @@ FIX-CON-NOTE-REM: the runtime resolver now admits Contacts and Notes alongside R
 With lab-harness only, the runtime exposes the owner-only run/blobs-lab.sock control fixture through its existing shared State and blob Store. Stage/release, frozen snapshot leases and the synthetic relay blob capture call product APIs. The synthetic capture is committed before releasing its staging pin. Capture crash gates park after the State commit and before the IPC acknowledgment; the command capture FIFO gate parks before command receipt resolution. Ordinary builds include neither the listener nor the gates.
 
 Unchanged CORE-BLOB-NATIVE-STAGE, CORE-BLOB-STAGE-DURING-TRANSFER, CORE-BLOB-STAGE-SAME-DIGEST and CORE-KILL-GATEWAY-CAPTURE pass against Go and Rust. Command-reference GC control awaits the State seam requested in ab-state.md; it must not be emulated in the fixture.
+
+## G-F session and owner ceremony wiring
+
+Capture hydration carries the authenticated PeerSession from Backend::commit_from through each queued blob request and calls Commands::read_blob_from. Replaced owners cannot satisfy old handles; sessionless captures containing handles fail before State commit. Runtime installs the provided QueryActivity sink and lab-only LabClock on the single LocalGateway.
+
+The CLI supports web enroll --host / --public using Authority::create_web_enroll, and agent create/list render the public Go-shaped summary (scopes, timestamps, no credential hashes). An explicitly empty agent level selects approve, matching Go. Enrollment terminal QR rendering remains outside this slice.

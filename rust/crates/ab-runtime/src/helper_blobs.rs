@@ -1,7 +1,10 @@
-use ab_operations::Code;
+use ab_operations::{
+    Code,
+    peer::{ApplePeer, PeerSession},
+};
 
 #[derive(Debug)]
-pub struct HelperBlobs(pub ab_applepeer::Commands);
+pub struct HelperBlobs(pub ab_applepeer::Commands, pub PeerSession);
 impl ab_blobs::BlobRead for HelperBlobs {
     async fn read(
         &self,
@@ -10,7 +13,8 @@ impl ab_blobs::BlobRead for HelperBlobs {
         length: usize,
     ) -> Result<(Vec<u8>, bool), ab_blobs::Error> {
         self.0
-            .read_blob(
+            .read_blob_from(
+                self.1,
                 handle,
                 i64::try_from(offset).map_err(|_| ab_blobs::Error::Invalid)?,
                 i64::try_from(length).map_err(|_| ab_blobs::Error::Invalid)?,

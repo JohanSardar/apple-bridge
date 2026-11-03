@@ -10,3 +10,9 @@ G-D1 algorithm policy is now explicitly ES256/P-256 and EdDSA/Ed25519 (ADR 0027 
 
 G-F assembly contract: construct Web after binding the listener so its port matches the serving origin, provide the actual public hostname and an Approvals adapter backed by the single command authority. Mount Web outside API bearer middleware; mark SecureTransport only at actual TLS termination. `pending` and `command` return current rows; `decide` must reauthorize owner, enforce expiry/hash/state and delegate to the common command authority. Mount pending_connectors/decide_connector only in the owner control channel. G-D1 owns auth/pages and exports these adapters; G-F owns gateway listener, CLI, command authority adapter and ingress assembly. The consent fixture qualifies Rust auth/pages against a Go backend, not the assembled Rust gateway.
 
+
+## G-F assembled binary findings
+
+WEB-AGENT-OAUTH reaches the selected Rust gateway after owner enrollment; missing/invalid bearer responses on /mcp and /v1/op/messages.chats lack the Go WWW-Authenticate discovery challenge. Frontdoor::guard currently returns problem(error) directly. G-D owns challenge/metadata behavior; please expose it through the common guard using the verified request origin, without trusting caller headers for transport security.
+
+WEB-AGENT-ACTIVITY reaches the binary but Frontdoor::AuditEntry has only principal/method/matched route/status, so the runtime adapter cannot record operation names, argument hashes/bytes or denied command IDs. G-C/G-B activity integration needs a public operation/command audit sink at Service/LocalGateway boundaries; runtime already installs QueryActivity for native queries. Do not derive semantic records from the generic HTTP audit row.

@@ -46,6 +46,11 @@ pub async fn start(mut config: Config, authority: Arc<ab_trust::Authority>) -> R
             peer: Arc::new(commands.clone()),
         }),
     );
+    local.query_audit = Some(Arc::new(ab_operations::QueryActivity::open(&config.home)?));
+    #[cfg(feature = "lab-harness")]
+    {
+        local.clock = Arc::new(ab_operations::clock::LabClock(config.home.clone()));
+    }
     let phone_notify = Arc::new(tokio::sync::Notify::new());
     local.phone_notify = Some(phone_notify.clone());
     local.query_store = Some(Arc::new(ab_operations::LocalQueryStore {
@@ -83,7 +88,7 @@ pub async fn start(mut config: Config, authority: Arc<ab_trust::Authority>) -> R
         Err(error) => return Err(error.into()),
     };
     let (jobs, hydration) = tokio::sync::mpsc::channel(64);
-    let blob_source = crate::helper_blobs::HelperBlobs(commands.clone());
+    let blob_source = commands.clone();
     let backend = Arc::new(crate::capture::Backend {
         state: (*store).clone(),
         blobs: blobs.clone(),
