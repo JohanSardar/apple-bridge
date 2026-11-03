@@ -3,6 +3,7 @@ package state
 import (
 	"context"
 	"database/sql"
+	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/internal/trust"
 	"time"
 )
@@ -61,12 +62,12 @@ func RedactedArguments(args []byte) map[string]any {
 func (s *Store) PruneAgentActivity(ctx context.Context) error {
 	s.write.Lock()
 	defer s.write.Unlock()
-	_, err := s.db.ExecContext(ctx, "DELETE FROM agent_activity WHERE at < ?", time.Now().Add(-90*24*time.Hour).Unix())
+	_, err := s.db.ExecContext(ctx, "DELETE FROM agent_activity WHERE at < ?", contracts.DecisionNow().Add(-90*24*time.Hour).Unix())
 	return err
 }
 
 func writeAgentActivity(ctx context.Context, tx *sql.Tx, a AgentActivity) error {
-	if _, err := tx.ExecContext(ctx, "DELETE FROM agent_activity WHERE at < ?", time.Now().Add(-90*24*time.Hour).Unix()); err != nil {
+	if _, err := tx.ExecContext(ctx, "DELETE FROM agent_activity WHERE at < ?", contracts.DecisionNow().Add(-90*24*time.Hour).Unix()); err != nil {
 		return err
 	}
 	increment := 0

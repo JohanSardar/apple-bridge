@@ -7,9 +7,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"maps"
 	"net"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 	"time"
 
@@ -220,13 +222,13 @@ func Serve(ctx context.Context, cfg Config) error {
 				defer mu.Unlock()
 				if active == conn {
 					active = nil
-					for source, coverage := range ready.Coverage {
-						cfg.SourceState(ctx, source, "degraded", coverage, ready.Capabilities[source], "helper_disconnected")
+					for _, source := range slices.Sorted(maps.Keys(ready.Coverage)) {
+						cfg.SourceState(ctx, source, "degraded", ready.Coverage[source], ready.Capabilities[source], "helper_disconnected")
 					}
 				}
 			}()
-			for source, coverage := range ready.Coverage {
-				if err = cfg.SourceState(ctx, source, "ready", coverage, ready.Capabilities[source], ""); err != nil {
+			for _, source := range slices.Sorted(maps.Keys(ready.Coverage)) {
+				if err = cfg.SourceState(ctx, source, "ready", ready.Coverage[source], ready.Capabilities[source], ""); err != nil {
 					return
 				}
 			}

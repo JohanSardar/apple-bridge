@@ -78,7 +78,7 @@ impl State<Gateway> {
                 id: id.try_into()?,
                 version: old.as_ref().map_or(1, |row| row.version + 1),
                 source: Source::Health,
-                observed_at: jiff::Timestamp::now().to_string(),
+                observed_at: crate::replay::now().to_string(),
                 deleted: sample.is_none(),
                 coverage: Coverage {
                     pack_version: String::new(),

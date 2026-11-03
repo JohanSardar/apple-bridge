@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 )
@@ -38,7 +37,7 @@ func (s *Store) SourceState(ctx context.Context, source contracts.Source, status
 	if string(data) == string(old.Data) {
 		return nil
 	}
-	r := contracts.Record{Collection: "system.source", ID: id, Version: old.Version + 1, Source: source, ObservedAt: time.Now().UTC(), Coverage: coverage, Data: data}
+	r := contracts.Record{Collection: "system.source", ID: id, Version: old.Version + 1, Source: source, ObservedAt: contracts.DecisionNow().UTC(), Coverage: coverage, Data: data}
 	c.Sequence++
 	if err = writeRecord(ctx, tx, r, c.Sequence); err != nil {
 		return err

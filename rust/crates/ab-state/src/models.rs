@@ -776,7 +776,7 @@ fn summary(db: &Connection, visibility: &Visibility, record: &Record) -> Result<
         s(&fields, "muted_until")
             .parse::<jiff::Timestamp>()
             .ok()
-            .map_or(Value::Null, |t| json!(t > jiff::Timestamp::now()))
+            .map_or(Value::Null, |t| json!(t > crate::replay::now()))
     };
     let mut known = fields["filter"].is_null() || s(&fields, "filter") == "known";
     let mut avatars = Vec::new();

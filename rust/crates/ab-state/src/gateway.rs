@@ -30,7 +30,7 @@ pub struct FrozenSnapshot {
 pub(crate) fn new_id(prefix: &str) -> Result<String> {
     let mut bytes = [0u8; 16];
     std::fs::File::open("/dev/urandom")?.read_exact(&mut bytes)?;
-    let millis = jiff::Timestamp::now().as_millisecond().to_be_bytes();
+    let millis = crate::replay::now().as_millisecond().to_be_bytes();
     bytes[..6].copy_from_slice(&millis[2..]);
     let mut n = u128::from_be_bytes(bytes);
     let alphabet = b"0123456789ABCDEFGHJKMNPQRSTVWXYZ";
@@ -69,7 +69,12 @@ pub(crate) fn resolve(
     if id.is_none() && create {
         let col: Collection = serde_json::from_value(Value::String(o.collection.clone()))
             .map_err(|_| ErrorCode::Invalid)?;
-        id = Some(new_id(col.prefix())?);
+        id = Some(
+            match crate::replay::record_id(&source, &c.generation, &o.collection, &o.native_key) {
+                Some(id) => id,
+                None => new_id(col.prefix())?,
+            },
+        );
     }
     if let Some(id) = &id {
         db.execute(
@@ -511,7 +516,7 @@ impl State<Gateway> {
                 }
                 r.data = raw;
                 r.version += 1;
-                r.observed_at = jiff::Timestamp::now().to_string();
+                r.observed_at = crate::replay::now().to_string();
                 cursor.sequence += 1;
                 apply(
                     &tx,
@@ -548,7 +553,7 @@ impl State<Gateway> {
                 visible.push(project(record, visibility)?);
             }
         }
-        let expires = jiff::Timestamp::now()
+        let expires = crate::replay::now()
             .checked_add(Duration::from_secs(600))
             .map_err(|_| ErrorCode::Invalid)?;
         let id = new_id("snap")?;
@@ -579,9 +584,9 @@ impl State<Gateway> {
         let lease = self
             .leases
             .get_mut(id)
-            .filter(|(_, expires)| *expires >= jiff::Timestamp::now())
+            .filter(|(_, expires)| *expires >= crate::replay::now())
             .ok_or(ErrorCode::Expired)?;
-        lease.1 = jiff::Timestamp::now()
+        lease.1 = crate::replay::now()
             .checked_add(Duration::from_secs(600))
             .map_err(|_| ErrorCode::Invalid)?;
         Ok(())
@@ -603,7 +608,7 @@ impl State<Gateway> {
         if h.sequence <= rows {
             return Ok(());
         }
-        let cutoff = jiff::Timestamp::now()
+        let cutoff = crate::replay::now()
             .as_second()
             .saturating_sub(i64::try_from(age.as_secs()).map_err(|_| ErrorCode::Invalid)?);
         let old: Option<i64> = tx.query_row(
@@ -617,7 +622,7 @@ impl State<Gateway> {
         let mut floor =
             (h.sequence - rows).min(u64::try_from(old).map_err(|_| ErrorCode::Corrupt)?);
         self.leases
-            .retain(|_, (_, expires)| *expires >= jiff::Timestamp::now());
+            .retain(|_, (_, expires)| *expires >= crate::replay::now());
         for (seq, _) in self.leases.values() {
             floor = floor.min(*seq);
         }

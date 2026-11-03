@@ -9,7 +9,7 @@ impl<Role> State<Role> {
         scope: &str,
         blobs: &Value,
     ) -> Result<()> {
-        let now = jiff::Timestamp::now().as_second();
+        let now = crate::replay::now().as_second();
         let tx = self.db.transaction()?;
         tx.execute(
             "INSERT INTO query_blobs VALUES(?,?,?,?,?)",
@@ -34,7 +34,7 @@ impl<Role> State<Role> {
             .db
             .query_row(
                 "SELECT scope,payload FROM query_blobs WHERE id=? AND principal=? AND expires>?",
-                params![id, principal, jiff::Timestamp::now().as_second()],
+                params![id, principal, crate::replay::now().as_second()],
                 |r| Ok((r.get(0)?, r.get(1)?)),
             )
             .map_err(|_| ErrorCode::Forbidden)?;
