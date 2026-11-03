@@ -72,7 +72,7 @@ fn cases() -> Vec<(&'static str, Patch, bool, bool)> {
             |v| {
                 v["candidates"] = json!([description(&format!(
                     "Your iMessage, 0-{FILE}, Text Document · 66 bytes, 3:45 PM"
-                ))])
+                ))]);
             },
             true,
             true,
@@ -93,7 +93,7 @@ fn cases() -> Vec<(&'static str, Patch, bool, bool)> {
             |v| {
                 v["candidates"] = json!([description(&format!(
                     "Your iMessage, prefix-{FILE}, Text Document · 66 bytes, 3:45 PM"
-                ))])
+                ))]);
             },
             true,
             false,
@@ -113,7 +113,7 @@ fn cases() -> Vec<(&'static str, Patch, bool, bool)> {
             "photo_preview_filename_with_generic_description",
             |v| {
                 v["candidates"] =
-                    json!([{"description": "Your iMessage, Photo, 3:45 PM", "values": [FILE]}])
+                    json!([{"description": "Your iMessage, Photo, 3:45 PM", "values": [FILE]}]);
             },
             true,
             true,
