@@ -20,8 +20,16 @@ enum BlobDigest {
         let home = URL(fileURLWithPath: CommandLine.arguments[2])
         var reader = try MessagesReader(path: path, pinsURL: home.appendingPathComponent("Library/Preferences/com.apple.messages.pinning.plist"), attachmentHome: home)
         var prior: [String: Data] = [:]
+        var candidates: Set<String> = []
         while let request = readLine() {
-            if try !reader.isCurrent() { reader = try MessagesReader(path: path, pinsURL: home.appendingPathComponent("Library/Preferences/com.apple.messages.pinning.plist"), attachmentHome: home) }
+            if try !reader.isCurrent() {
+                let fresh = try MessagesReader(path: path, pinsURL: home.appendingPathComponent("Library/Preferences/com.apple.messages.pinning.plist"), attachmentHome: home)
+                if fresh.generation != reader.generation {
+                    candidates.formUnion(prior.keys)
+                    prior.removeAll()
+                }
+                reader = fresh
+            }
             var items = try reader.smallObservations()
             var position: Int64 = 0
             while true {
@@ -42,15 +50,17 @@ enum BlobDigest {
                 }
             }
             if request == "complete" {
-                for identity in Set(prior.keys).subtracting(seen).sorted() {
+                for identity in Set(prior.keys).union(candidates).subtracting(seen).sorted() {
                     let fields = identity.split(separator: "/", maxSplits: 1).map(String.init)
                     let table = fields[0] == "messages.chat" ? "chat" : fields[0] == "messages.handle" ? "handle" : fields[0] == "messages.attachment" ? "attachment" : "message"
                     let required = table == "handle" ? ["id", "service"] : ["guid"]
                     guard required.allSatisfy({ reader.columns[table]?.contains($0) == true }) else { continue }
                     output.append(["kind": "absent", "collection": fields[0], "native_key": fields[1], "data": [:]])
                     prior.removeValue(forKey: identity)
+                    candidates.remove(identity)
                 }
             }
+            candidates.subtract(seen)
             output.sort { a,b in
                 let left = ["collection","native_key","kind"].map { a[$0] as? String ?? "" }
                 let right = ["collection","native_key","kind"].map { b[$0] as? String ?? "" }

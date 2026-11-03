@@ -114,6 +114,7 @@ pub struct Reader {
     path: PathBuf,
     root: PathBuf,
     home: PathBuf,
+    cwd_name: String,
     db: Connection,
     identity: (u64, u64),
     wal_identity: Option<u64>,
@@ -178,6 +179,13 @@ impl Reader {
             pins_stamp: None,
             path: path.into(),
             home: home.into(),
+            cwd_name: std::env::current_dir()
+                .ok()
+                .map(|p| {
+                    p.file_name()
+                        .map_or_else(|| "/".into(), |n| n.to_string_lossy().into_owned())
+                })
+                .unwrap_or_default(),
             root: home.join("Library/Messages/Attachments"),
             db,
             identity,
@@ -549,10 +557,16 @@ impl Reader {
         if !self.current()? {
             let fresh = Self::open(&self.path, &self.home)?;
             let prior = std::mem::take(&mut self.hashes);
-            let candidates = std::mem::take(&mut self.candidates);
+            let mut candidates = std::mem::take(&mut self.candidates);
+            let changed = fresh.generation != self.generation;
+            if changed {
+                candidates.extend(prior.keys().cloned());
+            }
             *self = fresh;
             self.candidates = candidates;
-            self.hashes = prior;
+            if !changed {
+                self.hashes = prior;
+            }
             self.version = None;
         }
         let pins_changed = self.refresh_pins();

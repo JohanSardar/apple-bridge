@@ -1,7 +1,8 @@
 import json, os, pathlib, plistlib, shutil, sqlite3, subprocess, sys, tempfile
 
 binary, fixtures, output = sys.argv[1:]
-fixtures = pathlib.Path(fixtures)
+binary = str(pathlib.Path(binary).resolve())
+fixtures = pathlib.Path(fixtures).resolve()
 root = pathlib.Path(tempfile.mkdtemp(prefix='ab-messages-synthetic-'))
 home = root / 'home'
 attachments = home / 'Library/Messages/Attachments'
@@ -32,7 +33,9 @@ def seed(path):
     return db
 
 db=seed(path)
-process=subprocess.Popen([binary,str(path),str(home)]+(["--paged"] if os.environ.get("MESSAGES_PAGED")=="1" else []),stdin=subprocess.PIPE,stdout=subprocess.PIPE,text=True)
+cwd=root/'synthetic-cwd'
+cwd.mkdir()
+process=subprocess.Popen([binary,str(path),str(home)]+(["--paged"] if os.environ.get("MESSAGES_PAGED")=="1" else []),stdin=subprocess.PIPE,stdout=subprocess.PIPE,text=True,cwd=cwd)
 results=[]
 raw_results=[]
 metrics=[]
@@ -127,7 +130,7 @@ try:
     replacement=root/'replacement.db'
     fresh=seed(replacement)
     fresh.execute("DELETE FROM message WHERE guid!='synthetic-0000'")
-    fresh.commit();fresh.execute('PRAGMA wal_checkpoint(TRUNCATE)');fresh.close()
+    fresh.commit();fresh.execute('PRAGMA wal_checkpoint(TRUNCATE)');fresh.execute('PRAGMA journal_mode=DELETE');fresh.close()
     os.replace(replacement,path)
     for suffix in ['-wal','-shm']:
         try:os.unlink(str(path)+suffix)
@@ -179,5 +182,6 @@ try:
         assert db.execute('PRAGMA wal_checkpoint(TRUNCATE)').fetchone()[0]==0, 'reader pinned WAL between pages'
     print('synthetic stages',len(results),'observations',sum(len(s['observations']) for s in results))
 finally:
+    if not pathlib.Path(output).exists():pathlib.Path(output+'.partial').write_text('['+','.join(raw_results)+']')
     process.stdin.close();process.wait(timeout=10)
     db.close();shutil.rmtree(root)

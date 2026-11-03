@@ -155,3 +155,16 @@ passes through Go's encoder and Rust observations pass through gojson. Session
 timestamps, random scan IDs, generation values and asynchronous media
 framework derivatives are outside this deterministic reader gate. No active
 Helper or native capture registration is exercised by this proof.
+
+Verified synthetic gate: 46 stages, 10,095 observations, zero byte mismatches
+against Swift/Go for both synchronous and paged Rust paths. The evidence is
+`rust/crates/ab-native/parity/messages-evidence.json`. Full `make rust-ci`
+passed, including the workspace rebased onto main. The replay includes binary
+pin preferences, SQLite REAL values, cold generations, schema gaps, replacement,
+21 unchanged polls, resumed candidates and interrupted history pages.
+
+Two compatibility details established by the oracle: generation changes must
+republish unchanged records while retaining previous identities as absence
+candidates; a NULL attachment filename currently becomes the process working
+directory's last path component in Swift. Rust retains that filename behavior;
+the fixture processes use a common synthetic working-directory name.

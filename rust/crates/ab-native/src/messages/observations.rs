@@ -244,7 +244,7 @@ impl Reader {
                 let meta=path.as_ref().and_then(|p|fs::metadata(p).ok());
                 let state=if meta.as_ref().is_some_and(dataless){"offloaded"}else if meta.is_some(){"present"}else if row.int("transfer_state")==0{"pending"}else if row.text("filename").is_empty(){"missing"}else{"offloaded"};
                 let mut blob=json!({"state":state});if meta.is_some(){blob["handle"]=json!(row.text("guid"));}
-                let mut data=json!({"filename":std::path::Path::new(row.text("filename")).file_name().unwrap_or_default().to_string_lossy(),"mime_type":self.mime(&row),"uti":row.text("uti"),"size":row.int("total_bytes"),"blob":blob,"is_sticker":row.flag("is_sticker"),"hidden":row.flag("hide_attachment"),"genmoji":!row.text("emoji_image_content_identifier").is_empty()});
+                let mut data=json!({"filename":if row.text("filename").is_empty(){self.cwd_name.clone()}else{std::path::Path::new(row.text("filename")).file_name().map_or_else(||"/".into(),|s|s.to_string_lossy().into_owned())},"mime_type":self.mime(&row),"uti":row.text("uti"),"size":row.int("total_bytes"),"blob":blob,"is_sticker":row.flag("is_sticker"),"hidden":row.flag("hide_attachment"),"genmoji":!row.text("emoji_image_content_identifier").is_empty()});
                 if !row.text("message_guid").is_empty(){data["message_id"]=reference("message",row.text("message_guid"));}
                 if !row.text("emoji_image_short_description").is_empty(){data["description"]=json!(row.text("emoji_image_short_description"));}
                 if let Some(bytes)=row.blobs.get("sticker_user_info").filter(|_|self.has("message",&["associated_message_guid"]))
