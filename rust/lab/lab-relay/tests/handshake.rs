@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used)]
 use lab_relay::{
     Ca, Frame, Identity, Link, PairCode, client_config, fingerprint, hello, input1, input2,
     random_nonce, replay_gateway, valid_remote_address,
