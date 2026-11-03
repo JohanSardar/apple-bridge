@@ -271,12 +271,23 @@ impl<S: GatewayState> Server<S> {
             .as_ref()
             .map(|v| serde_json::from_str(v.get()))
             .transpose()?;
-        let resume = previous.as_ref().is_some_and(|c| {
+        let mut resume = previous.as_ref().is_some_and(|c| {
             c.epoch == head.epoch
                 && c.subscription_revision == p.revision
                 && c.sequence <= head.sequence
                 && c.sequence >= floor
         });
+        if resume && !atomic {
+            let mut state = self.state.lock().await;
+            let mut iterator =
+                state.changes(&visibility, previous.clone().ok_or(Error::Invalid)?, false)?;
+            if matches!(
+                state.next_changes(&mut iterator),
+                Err(Error::Contract(ab_trust::domain::ErrorCode::Reset))
+            ) {
+                resume = false;
+            }
+        }
         let mut welcome = frame("Welcome");
         welcome.protocol = "feed/1".into();
         if context.clock {
