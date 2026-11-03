@@ -12,10 +12,12 @@ use lab_world::{Error, Result, World};
 use serde_json::{Value, json};
 use std::time::{Duration, Instant};
 
-pub const COMMAND_SCENARIOS: [&str; 3] = [
+pub const COMMAND_SCENARIOS: [&str; 5] = [
     "CORE-CMD-IDEMPOTENT",
     "CORE-CMD-ERA",
     "CORE-CMD-LOST-RESPONSE",
+    "CORE-CMD-CONFLICT",
+    "CORE-CMD-READ-YOUR-WRITE",
 ];
 pub(crate) const GATEWAY_SCOPE: &str = "reminders:read,reminders:write,system:read";
 
@@ -216,7 +218,8 @@ pub fn command_journey(world: &mut World, _: &Value, evidence: &mut Evidence) ->
         seen_at.iter().all(Option::is_some)
     });
     scope_commands(world, &scoped, &list_id, evidence)?;
-    run_scenario(world, &gateway, &list_id, &observers, evidence)?;
+    let reminder = reminders.last().cloned().unwrap_or(Value::Null);
+    run_scenario(world, &gateway, &list_id, &reminder, &observers, evidence)?;
     finish(world, &observed, evidence)?;
     latency_assertions(&seen_at, evidence);
     stream_assertions(world, &observed, &observers, evidence);
@@ -227,10 +230,15 @@ fn run_scenario(
     world: &mut World,
     gateway: &Client,
     list_id: &str,
+    reminder: &Value,
     observers: &Observers,
     evidence: &mut Evidence,
 ) -> Result<()> {
     match evidence.scenario.as_str() {
+        "CORE-CMD-CONFLICT" => commands::conflict(world, reminder, evidence),
+        "CORE-CMD-READ-YOUR-WRITE" => {
+            commands::read_your_write(world, gateway, list_id, observers, evidence)
+        }
         "CORE-CMD-ERA" => commands::era(world, list_id, observers, evidence),
         "CORE-CMD-LOST-RESPONSE" => commands::lost_response(world, list_id, evidence),
         _ => idempotent(world, gateway, list_id, evidence),
