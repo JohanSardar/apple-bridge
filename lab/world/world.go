@@ -355,12 +355,12 @@ func newEnvironment(ctx context.Context, level string, replicas, seed int, nativ
 			}
 		}
 	}
+	w.bridge, err = ImplementationSelection(ctx).Binary(ImplementationSelection(ctx).Gateway, w.goBridge)
+	if err != nil {
+		return nil, err
+	}
 	if gatewayBinary == "" {
-		gatewayBinary, err = ImplementationSelection(ctx).Binary(ImplementationSelection(ctx).Gateway, w.bridge)
-		if err != nil {
-			return nil, err
-		}
-		w.bridge = gatewayBinary
+		gatewayBinary = w.bridge
 	}
 	if native {
 		w.HelperApp = filepath.Join(w.Dir, "apps", "AppleBridgeHelper.app")
