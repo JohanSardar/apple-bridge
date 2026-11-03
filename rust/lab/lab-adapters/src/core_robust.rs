@@ -46,7 +46,7 @@ fn clock_warnings(endpoint: &Endpoint) -> Result<(bool, bool)> {
     let _ = replicas::signal(0, "CONT");
     outcome
 }
-pub fn doctor_case(world: &World, evidence: &mut Evidence) -> bool {
+fn doctor_case(world: &World, evidence: &mut Evidence) -> bool {
     let Some(endpoint) = replicas::endpoints().into_iter().next() else {
         return false;
     };
@@ -81,7 +81,7 @@ pub fn doctor_case(world: &World, evidence: &mut Evidence) -> bool {
     );
     true
 }
-pub fn clock_delay_case(world: &World, evidence: &mut Evidence) -> bool {
+fn clock_delay_case(world: &World, evidence: &mut Evidence) -> bool {
     let Some(endpoint) = replicas::endpoints().into_iter().next() else {
         return false;
     };
@@ -158,7 +158,7 @@ pub fn clock_delay_case(world: &World, evidence: &mut Evidence) -> bool {
     );
     recovered
 }
-pub fn cred_lifecycle_case(world: &World, evidence: &mut Evidence) -> bool {
+fn cred_lifecycle_case(world: &World, evidence: &mut Evidence) -> bool {
     let home = world.directory.join("credentials").display().to_string();
     let Ok(binary) = replicas::binary() else {
         return false;
@@ -188,4 +188,11 @@ pub fn cred_lifecycle_case(world: &World, evidence: &mut Evidence) -> bool {
         "credential created, used, rotated and revoked",
     );
     true
+}
+pub fn run(case: &str, world: &World, evidence: &mut Evidence) -> bool {
+    match case {
+        "doctor" => doctor_case(world, evidence),
+        "clock-delay" => clock_delay_case(world, evidence),
+        _ => cred_lifecycle_case(world, evidence),
+    }
 }
