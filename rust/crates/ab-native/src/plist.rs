@@ -161,7 +161,88 @@ impl Reader<'_> {
     }
 }
 
+fn portable(
+    event: ::plist::stream::OwnedEvent,
+    events: &mut impl Iterator<Item = std::result::Result<::plist::stream::OwnedEvent, ::plist::Error>>,
+    depth: usize,
+    remaining: &mut usize,
+) -> Result<Value> {
+    use ::plist::stream::Event;
+    if depth >= 64 || *remaining == 0 {
+        return Err(DecodeError::Limit);
+    }
+    *remaining -= 1;
+    Ok(match event {
+        Event::StartArray(_) => {
+            let mut values = Vec::new();
+            loop {
+                let event = events
+                    .next()
+                    .ok_or(DecodeError::Malformed)?
+                    .map_err(|_| DecodeError::Malformed)?;
+                if matches!(event, Event::EndCollection) {
+                    break;
+                }
+                values.push(portable(event, events, depth + 1, remaining)?);
+            }
+            Value::Array(values)
+        }
+        Event::StartDictionary(_) => {
+            let mut values = BTreeMap::new();
+            loop {
+                let event = events
+                    .next()
+                    .ok_or(DecodeError::Malformed)?
+                    .map_err(|_| DecodeError::Malformed)?;
+                if matches!(event, Event::EndCollection) {
+                    break;
+                }
+                let Event::String(key) = event else {
+                    return Err(DecodeError::Malformed);
+                };
+                let event = events
+                    .next()
+                    .ok_or(DecodeError::Malformed)?
+                    .map_err(|_| DecodeError::Malformed)?;
+                let value = portable(event, events, depth + 1, remaining)?;
+                values.insert(key.into_owned(), value);
+            }
+            Value::Dictionary(values)
+        }
+        Event::Boolean(v) => Value::Bool(v),
+        Event::Data(v) => Value::Data(v.into_owned()),
+        Event::String(v) => Value::String(v.into_owned()),
+        Event::Real(v) => Value::Real(v),
+        Event::Integer(v) => Value::Integer(v.as_signed().ok_or(DecodeError::Limit)?),
+        Event::Date(v) => {
+            let t: std::time::SystemTime = v.into();
+            let epoch = std::time::UNIX_EPOCH + std::time::Duration::from_hours(271_752);
+            Value::Date(match t.duration_since(epoch) {
+                Ok(d) => d.as_secs_f64(),
+                Err(e) => -e.duration().as_secs_f64(),
+            })
+        }
+        Event::Uid(v) => Value::Uid(usize::try_from(v.get()).map_err(|_| DecodeError::Limit)?),
+        _ => return Err(DecodeError::Unsupported),
+    })
+}
+
 pub fn decode(data: &[u8]) -> Result<Value> {
+    if !data.starts_with(b"bplist00") {
+        if data.len() > 16 * 1024 * 1024 {
+            return Err(DecodeError::Limit);
+        }
+        let mut events = ::plist::stream::Reader::new(std::io::Cursor::new(data));
+        let event = events
+            .next()
+            .ok_or(DecodeError::Malformed)?
+            .map_err(|_| DecodeError::Malformed)?;
+        let value = portable(event, &mut events, 0, &mut 200_000)?;
+        if events.next().is_some() {
+            return Err(DecodeError::Malformed);
+        }
+        return Ok(value);
+    }
     if data.len() < 40 || data.len() > 16 * 1024 * 1024 || !data.starts_with(b"bplist00") {
         return Err(DecodeError::Malformed);
     }
