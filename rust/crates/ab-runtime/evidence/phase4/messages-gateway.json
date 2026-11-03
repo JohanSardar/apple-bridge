@@ -12,15 +12,21 @@
     "Go null capability lists disconnected the peer; capability_unproven was missing from typed command errors"
   ],
   "checks": {
-    "make rust-ci": "pass on source_commit after rebase onto main 57d339ab",
+    "make rust-ci": "pass on final_source_head after rebase onto main 60e78a51",
     "lint": "pass as part of rust-ci",
-    "scenario_yaml_or_assertion_edits": false
+    "scenario_yaml_or_assertion_edits": false,
+    "full_integrated_rust_batch": "27/27 execution pass after Calendar resolver integration",
+    "final_base_attachment_regression": {
+      "MSG-COMMAND-PARTS": "pass",
+      "MSG-SEND-FILES": "pass"
+    }
   },
   "notes": [
     "All scenario YAML and assertions are unchanged.",
     "Parallel compilation caused a Rust incoming timing failure and a Go multipart delayed-capture timing failure; both unchanged scenarios passed isolated reruns. Batch statuses are retained per row.",
     "Matrix qualification remains blocked by pre-existing static import and semantic-helper audits; scenario execution pass is distinct from qualification.",
-    "A later rebased-head MSG-INCOMING run again failed all_messages_under_one_second. An independent Go incoming run also failed that same assertion. Treat incoming latency as a pre-existing intermittent host-sensitive failure, not a reliable all-green matrix claim."
+    "A later rebased-head MSG-INCOMING run again failed all_messages_under_one_second. An independent Go incoming run also failed that same assertion. Treat incoming latency as a pre-existing intermittent host-sensitive failure, not a reliable all-green matrix claim.",
+    "A final full-family batch on 096fd897 passed all 27 Rust executions. Earlier timing failures and isolated reruns remain recorded."
   ],
   "qualification_blockers": [
     "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
@@ -45,7 +51,9 @@
       "rust_batch_status": "pass",
       "go_batch_status": "pass",
       "isolated_rerun": false,
-      "matrix_classification": "blocked"
+      "matrix_classification": "blocked",
+      "latest_integrated_rust_execution": "pass",
+      "latest_integrated_matrix_classification": "blocked"
     },
     {
       "id": "MSG-COMMAND-OBSERVED-IDS",
@@ -59,7 +67,9 @@
       "rust_batch_status": "pass",
       "go_batch_status": "pass",
       "isolated_rerun": false,
-      "matrix_classification": "blocked"
+      "matrix_classification": "blocked",
+      "latest_integrated_rust_execution": "pass",
+      "latest_integrated_matrix_classification": "blocked"
     },
     {
       "id": "MSG-COMMAND-PARTS",
@@ -73,7 +83,9 @@
       "rust_batch_status": "pass",
       "go_batch_status": "fail",
       "isolated_rerun": true,
-      "matrix_classification": "blocked"
+      "matrix_classification": "blocked",
+      "latest_integrated_rust_execution": "pass",
+      "latest_integrated_matrix_classification": "blocked"
     },
     {
       "id": "MSG-DB-REPLACED",
@@ -87,7 +99,9 @@
       "rust_batch_status": "pass",
       "go_batch_status": "pass",
       "isolated_rerun": false,
-      "matrix_classification": "blocked"
+      "matrix_classification": "blocked",
+      "latest_integrated_rust_execution": "pass",
+      "latest_integrated_matrix_classification": "blocked"
     },
     {
       "id": "MSG-DELETE",
@@ -101,7 +115,9 @@
       "rust_batch_status": "pass",
       "go_batch_status": "pass",
       "isolated_rerun": false,
-      "matrix_classification": "blocked"
+      "matrix_classification": "blocked",
+      "latest_integrated_rust_execution": "pass",
+      "latest_integrated_matrix_classification": "blocked"
     },
     {
       "id": "MSG-DELETE-REAL",
@@ -115,7 +131,9 @@
       "rust_batch_status": "pass",
       "go_batch_status": "pass",
       "isolated_rerun": false,
-      "matrix_classification": "blocked"
+      "matrix_classification": "blocked",
+      "latest_integrated_rust_execution": "pass",
+      "latest_integrated_matrix_classification": "blocked"
     },
     {
       "id": "MSG-EDIT",
@@ -129,7 +147,9 @@
       "rust_batch_status": "pass",
       "go_batch_status": "pass",
       "isolated_rerun": false,
-      "matrix_classification": "blocked"
+      "matrix_classification": "blocked",
+      "latest_integrated_rust_execution": "pass",
+      "latest_integrated_matrix_classification": "blocked"
     },
     {
       "id": "MSG-FAILED-OBSERVED-IDS",
@@ -143,7 +163,9 @@
       "rust_batch_status": "pass",
       "go_batch_status": "pass",
       "isolated_rerun": false,
-      "matrix_classification": "blocked"
+      "matrix_classification": "blocked",
+      "latest_integrated_rust_execution": "pass",
+      "latest_integrated_matrix_classification": "blocked"
     },
     {
       "id": "MSG-HISTORY-IMPORT",
@@ -157,7 +179,9 @@
       "rust_batch_status": "pass",
       "go_batch_status": "pass",
       "isolated_rerun": false,
-      "matrix_classification": "blocked"
+      "matrix_classification": "blocked",
+      "latest_integrated_rust_execution": "pass",
+      "latest_integrated_matrix_classification": "blocked"
     },
     {
       "id": "MSG-INCOMING",
@@ -173,7 +197,9 @@
       "isolated_rerun": true,
       "matrix_classification": "blocked",
       "pre_existing_intermittent": "Go and Rust both intermittently fail all_messages_under_one_second; each also has passing runs",
-      "latest_rebased_execution": "fail: all_messages_under_one_second"
+      "latest_rebased_execution": "fail: all_messages_under_one_second",
+      "latest_integrated_rust_execution": "pass",
+      "latest_integrated_matrix_classification": "blocked"
     },
     {
       "id": "MSG-MARK-READ",
@@ -187,7 +213,9 @@
       "rust_batch_status": "pass",
       "go_batch_status": "pass",
       "isolated_rerun": false,
-      "matrix_classification": "blocked"
+      "matrix_classification": "blocked",
+      "latest_integrated_rust_execution": "pass",
+      "latest_integrated_matrix_classification": "blocked"
     },
     {
       "id": "MSG-OWNER-TOKEN-SELFCHAT",
@@ -201,7 +229,9 @@
       "rust_batch_status": "pass",
       "go_batch_status": "pass",
       "isolated_rerun": false,
-      "matrix_classification": "blocked"
+      "matrix_classification": "blocked",
+      "latest_integrated_rust_execution": "pass",
+      "latest_integrated_matrix_classification": "blocked"
     },
     {
       "id": "MSG-PERMISSION-LOSS",
@@ -215,7 +245,9 @@
       "rust_batch_status": "pass",
       "go_batch_status": "pass",
       "isolated_rerun": false,
-      "matrix_classification": "blocked"
+      "matrix_classification": "blocked",
+      "latest_integrated_rust_execution": "pass",
+      "latest_integrated_matrix_classification": "blocked"
     },
     {
       "id": "MSG-REACT",
@@ -229,7 +261,9 @@
       "rust_batch_status": "pass",
       "go_batch_status": "pass",
       "isolated_rerun": false,
-      "matrix_classification": "blocked"
+      "matrix_classification": "blocked",
+      "latest_integrated_rust_execution": "pass",
+      "latest_integrated_matrix_classification": "blocked"
     },
     {
       "id": "MSG-READSTATE-REAL",
@@ -243,7 +277,9 @@
       "rust_batch_status": "pass",
       "go_batch_status": "pass",
       "isolated_rerun": false,
-      "matrix_classification": "blocked"
+      "matrix_classification": "blocked",
+      "latest_integrated_rust_execution": "pass",
+      "latest_integrated_matrix_classification": "blocked"
     },
     {
       "id": "MSG-RECEIPTS",
@@ -257,7 +293,9 @@
       "rust_batch_status": "pass",
       "go_batch_status": "pass",
       "isolated_rerun": false,
-      "matrix_classification": "blocked"
+      "matrix_classification": "blocked",
+      "latest_integrated_rust_execution": "pass",
+      "latest_integrated_matrix_classification": "blocked"
     },
     {
       "id": "MSG-REPLY",
@@ -271,7 +309,9 @@
       "rust_batch_status": "pass",
       "go_batch_status": "pass",
       "isolated_rerun": false,
-      "matrix_classification": "blocked"
+      "matrix_classification": "blocked",
+      "latest_integrated_rust_execution": "pass",
+      "latest_integrated_matrix_classification": "blocked"
     },
     {
       "id": "MSG-RESEND",
@@ -285,7 +325,9 @@
       "rust_batch_status": "pass",
       "go_batch_status": "pass",
       "isolated_rerun": false,
-      "matrix_classification": "blocked"
+      "matrix_classification": "blocked",
+      "latest_integrated_rust_execution": "pass",
+      "latest_integrated_matrix_classification": "blocked"
     },
     {
       "id": "MSG-SELFTEST",
@@ -299,7 +341,9 @@
       "rust_batch_status": "pass",
       "go_batch_status": "pass",
       "isolated_rerun": false,
-      "matrix_classification": "blocked"
+      "matrix_classification": "blocked",
+      "latest_integrated_rust_execution": "pass",
+      "latest_integrated_matrix_classification": "blocked"
     },
     {
       "id": "MSG-SEND-FILES",
@@ -313,7 +357,9 @@
       "rust_batch_status": "pass",
       "go_batch_status": "pass",
       "isolated_rerun": false,
-      "matrix_classification": "blocked"
+      "matrix_classification": "blocked",
+      "latest_integrated_rust_execution": "pass",
+      "latest_integrated_matrix_classification": "blocked"
     },
     {
       "id": "MSG-SEND-GHOST",
@@ -327,7 +373,9 @@
       "rust_batch_status": "pass",
       "go_batch_status": "pass",
       "isolated_rerun": false,
-      "matrix_classification": "blocked"
+      "matrix_classification": "blocked",
+      "latest_integrated_rust_execution": "pass",
+      "latest_integrated_matrix_classification": "blocked"
     },
     {
       "id": "MSG-SEND-IDENTICAL-MANUAL",
@@ -341,7 +389,9 @@
       "rust_batch_status": "pass",
       "go_batch_status": "pass",
       "isolated_rerun": false,
-      "matrix_classification": "blocked"
+      "matrix_classification": "blocked",
+      "latest_integrated_rust_execution": "pass",
+      "latest_integrated_matrix_classification": "blocked"
     },
     {
       "id": "MSG-SEND-NEW-HANDLE",
@@ -355,7 +405,9 @@
       "rust_batch_status": "pass",
       "go_batch_status": "pass",
       "isolated_rerun": false,
-      "matrix_classification": "blocked"
+      "matrix_classification": "blocked",
+      "latest_integrated_rust_execution": "pass",
+      "latest_integrated_matrix_classification": "blocked"
     },
     {
       "id": "MSG-SEND-SELF-EMAIL",
@@ -369,7 +421,9 @@
       "rust_batch_status": "pass",
       "go_batch_status": "pass",
       "isolated_rerun": false,
-      "matrix_classification": "blocked"
+      "matrix_classification": "blocked",
+      "latest_integrated_rust_execution": "pass",
+      "latest_integrated_matrix_classification": "blocked"
     },
     {
       "id": "MSG-SEND-SELF-TEXT",
@@ -383,7 +437,9 @@
       "rust_batch_status": "pass",
       "go_batch_status": "pass",
       "isolated_rerun": false,
-      "matrix_classification": "blocked"
+      "matrix_classification": "blocked",
+      "latest_integrated_rust_execution": "pass",
+      "latest_integrated_matrix_classification": "blocked"
     },
     {
       "id": "MSG-UI-INTERFERENCE",
@@ -397,7 +453,9 @@
       "rust_batch_status": "pass",
       "go_batch_status": "pass",
       "isolated_rerun": false,
-      "matrix_classification": "blocked"
+      "matrix_classification": "blocked",
+      "latest_integrated_rust_execution": "pass",
+      "latest_integrated_matrix_classification": "blocked"
     },
     {
       "id": "MSG-UNSEND",
@@ -411,7 +469,12 @@
       "rust_batch_status": "pass",
       "go_batch_status": "pass",
       "isolated_rerun": false,
-      "matrix_classification": "blocked"
+      "matrix_classification": "blocked",
+      "latest_integrated_rust_execution": "pass",
+      "latest_integrated_matrix_classification": "blocked"
     }
-  ]
+  ],
+  "full_family_tested_head": "096fd897725db1b9d3b91b0a3860e1faed54b573",
+  "latest_main_base": "60e78a51922f19bd0d17785e641861f13733858b",
+  "final_source_head": "6a1b838f114c540ee0a6cbdaed80c2705f3cb20e"
 }
