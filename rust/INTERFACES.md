@@ -112,3 +112,27 @@ Hello advertises `capture_atomic`. Negotiated partial batches enter State stagin
 ## Worker D
 
 The selected replica binary must expose the test-build-only command `lab-credential-lifecycle --home <isolated-directory>`. It executes create, get, overwrite, get, delete and get-not-found through its own credential store, using two independently random 32-byte values. It prints one JSON object with `backend` (string) and `created`, `used`, `rotated`, `revoked` (booleans). It must compare retrieved bytes, verify rotation differs from the first value and require the typed not-found error after deletion. Errors exit nonzero. It must delete the test key on every exit and never print the values. This command qualifies CORE-CRED-LIFECYCLE without linking the Go SecretStore into the lab verdict path. The Go implementation is in `cmd/bridge/credentials_lab.go`; production builds omit it.
+
+## Phase 4 G-D: iPhone authentication and delivery integration
+
+`ab_trust::iphone::{PairRequest, Request, Device}` retain the Go JSON field names and padded standard-base64 byte fields. `Authority::pair_iphone_code(address, remote, ttl)` creates the existing `ab1-` phone-purpose code and durable hashed-secret pairing entry. `pair_iphone(&PairRequest)` validates self-signature, purpose, expiry, attempt ceiling and HMAC, then consumes the code and installs the phone in one credential-lock update. Existing Go-created codes/homes work without migration. These methods live in the G-D-owned `ab-trust/src/iphone.rs`; G-C should preserve that module when editing Trust.
+
+Runtime/frontdoor should mount POST `/v1/iphone/pair` (8192-byte body cap) through `pair_iphone`, and `/v1/iphone/status` (8192 bytes) through `verify_iphone` followed by `iphone_gateway_key`. Other phone delivery routes must verify their exact URL path before interpreting the decoded payload. `verify_iphone(path, &Request)` reloads the current active principal, enforces the signed ±60-second timestamp window and returns `(Principal, Vec<u8>)`. `seal_iphone(&Principal, plaintext)` reloads the principal and creates a fresh encrypted/signed `ab_wire::crypto::Packet`; private signing material stays inside Trust. `set_iphone_push_token`, `set_iphone_live_token` and `iphones` retain Go credential storage. The signed-request format intentionally has the existing replay window, without an invented nonce protocol.
+
+`ab_iphone::PushClient::new(endpoint, hostname, credential)` creates an independent HTTPS APNs-relay client with a ten-second timeout and redirects disabled. `push(token, packet, expires)` posts the Go-shaped request to `/iphone/push` and accepts only 204. It has no shared remote-backend selection or shutdown state; runtime can retain it while both relay and Tailscale ingress run. This does not yet implement those ingress adapters.
+
+Pending G-A/G-B interfaces for full iPhone delivery: command enumeration and lookup; compare-and-set command transitions preserving signed evidence; current authorization; command approval decision; query-blob grants/staging; location and health record ingestion through the gateway transaction. Follow the existing Go `internal/iphone/{delivery,capture,location,live}.go` semantics, including dispatched expiry → indeterminate, no command redispatch for live activities and conservative result strengthening. These adapters and runtime HTTP wiring are not implemented by the authentication/transport slice.
+
+Ubuntu verification for this slice: `make rust-ci` passed, including lint, workspace tests, formatting, Clippy, cargo-deny and Go golden corpora. The isolated process-driven interop runner passed 76 assertions with zero failures across Rust/Go code creation × Rust/Go pairing, competing pairing processes, signed current/stale/future requests, wrong-path signatures, encrypted packet decryption/tampering/device binding, Go reopening Rust-stored push/live tokens, and byte-identical APNs relay request encoding. Rust packet-byte equivalence is covered by the existing `ab-wire` frozen iPhone codec test. The APNs HTTPS request has not yet been exercised against a local relay fixture.
+
+Reproduce from an isolated checkout on Ubuntu (set PATH for Cargo and Go first):
+
+```sh
+cargo build --manifest-path rust/Cargo.toml -p ab-iphone --example interop
+go build -o /tmp/ab-gd-iphone-oracle ./rust/crates/ab-iphone/interop
+python3 rust/crates/ab-iphone/interop/run.py "${CARGO_TARGET_DIR:-rust/target}/debug/examples/interop" /tmp/ab-gd-iphone-oracle
+```
+
+This is not APP-PAIR-SIM/APP-CMD-SIM qualification: the runtime on the initial Phase 4 baseline rejects non-replica roles. OAuth/consent, product WebAuthn/advisory resolution, relay/smux ingress, LocalAPI, command delivery and record ingestion remain G-D work. No live gateway, home, passkey or device was accessed.
+
+Direct execution of APP-PAIR-SIM and APP-CMD-SIM with `--impl gateway=rust --rust-binary <Rust bridge>` returned `status=blocked`, `binary_harness_required`: `harness: native iphone.pairing journey requires AppleTruth/Helper; requires isolated binary-driven fixture adapter` (and the equivalent `iphone.delivery` detail). G-E owns replacing these verdict paths; neither was counted as a gateway product pass. The suite performed no device operation.

@@ -1,0 +1,16 @@
+[package]
+name = "ab-iphone"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+ab-wire = { path = "../ab-wire" }
+ab-trust = { path = "../ab-trust" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }

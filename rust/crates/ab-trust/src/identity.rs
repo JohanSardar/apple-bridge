@@ -222,6 +222,10 @@ impl Authority {
         )
         .map_err(|e| Error::Identity(e.to_string()))
     }
+    pub(super) fn iphone_signing_key(&self) -> Result<ed25519_dalek::SigningKey, Error> {
+        ed25519_dalek::SigningKey::from_pkcs8_der(&self.key)
+            .map_err(|e| Error::Identity(e.to_string()))
+    }
     pub fn sign_delegation(
         &self,
         principal: &Principal,
