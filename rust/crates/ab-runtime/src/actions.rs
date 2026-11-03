@@ -415,7 +415,17 @@ fn native_command(op: &str) -> bool {
     op.starts_with("files.")
         || matches!(
             op,
-            "pdf.annotate" | "maps.open" | "speech.say" | "capture.play_sound"
+            "pdf.annotate"
+                | "maps.open"
+                | "speech.say"
+                | "capture.play_sound"
+                | "capture.screenshot"
+                | "capture.camera_photo"
+                | "capture.record_audio"
+                | "mac.screen_record"
+                | "print.document"
+                | "shortcuts.run"
+                | "focus.set"
         )
 }
 
