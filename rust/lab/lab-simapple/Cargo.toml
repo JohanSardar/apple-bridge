@@ -12,3 +12,4 @@ serde_json.workspace = true
 thiserror.workspace = true
 jiff.workspace = true
 hex = "0.4"
+sha2.workspace = true

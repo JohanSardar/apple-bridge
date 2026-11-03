@@ -57,3 +57,15 @@ The four required mutant names are `skip-checkpoint-commit`, `accept-stale-fence
 Four `LAB-TRACE-*` YAML scenarios run the same healthy and seeded protocol event traces through independently implemented Go and Rust observers. They catch a missing checkpoint on reopen, acceptance with an old owner fence, an ack without a preceding commit, and a returned source outside the allowed scope. Evidence explicitly labels these as protocol trace sensitivity checks. They are not live gateway mutation gates. Connecting real gateway fault injection and authenticated protocol observations to these invariants remains required for Phase 8 acceptance.
 
 Reproduce with `python3 rust/lab/runner-parity.py --runner /path/to/lab-runner --go-lab /path/to/bridge-lab --gateway /path/to/bridge --simapple /path/to/lab-simapple --output /new/private/output`. This runs six Rust-runner scenarios and the four Go trace scenarios, checks verdict parity for the four named faults, and records binary hashes. Run once with each selected gateway binary. It does not invoke the Go harness from the Rust runner.
+
+## Family adapters (Phase 8, query and blob)
+
+`rust/lab/lab-adapters` has no `ab-*` dependency and produces `lab-families`, which wraps `lab_runner::Registry::standard()` with family adapters and the same CLI as `lab-runner`, leaving the runner files untouched. Adapters register through `lab_adapters::registry()`; a later merge may move them into `lab-runner/src/main.rs`.
+
+Ported: the `queries` action for CORE-QUERY-ROUNDTRIP (ten echoes, latency budget, REST/MCP parity, audit sizes only, invalid deadline rejected) and CORE-QUERY-BLOB (digest, range, scope). The `world` action accepts `replicas` only for these two scenarios, whose sim steps use the gateway alone. Any other scenario with replicas fails explicitly. Assertion names and order match the Go harness; the Go-only `credential_backend_override_restored` assertion has no Rust equivalent and is ignored by the parity script.
+
+The Rust SimApple peer now answers `Query` (`test.echo`, `test.sleep`, `test.blob`, `helper.version`) and `BlobRead` with `BlobChunk` frames, and queues them during a capture commit wait. `test.sleep` blocks the session loop, so `QueryCancel` is ignored and CORE-QUERY-DEADLINE (cancellation assertions) stays unported.
+
+Not ported: `command_journey` (CORE-CMD-*, needs replica worlds, `seed`, `converge`), `blobs` journeys (CORE-BLOB-*, need replicas, native staging, fault controls), media transfer, history-import scheduling, CORE-QUERY-SCOPE (agent token creation). Source-family simulators belong to S-P8-PIM and S-P8-MEDIA.
+
+Gate: `python3 rust/lab/families-parity.py --families $T/lab-families --go-lab bridge-lab --gateway BRIDGE --simapple $T/lab-simapple --output /new/dir`, once with a `-tags lab` Go gateway and once with the Rust gateway built with `--features lab-queries`.
