@@ -15,12 +15,21 @@ impl Arguments {
         if verb == "token" && args.next().as_deref() != Some("create") {
             return Err(Error::Invalid);
         }
-        let action =
-            if ["agent", "remote", "web", "connector", "shortcuts"].contains(&verb.as_str()) {
-                args.next().ok_or(Error::Invalid)?
-            } else {
-                String::new()
-            };
+        let action = if [
+            "agent",
+            "remote",
+            "web",
+            "connector",
+            "shortcuts",
+            "permissions",
+            "selftest",
+        ]
+        .contains(&verb.as_str())
+        {
+            args.next().ok_or(Error::Invalid)?
+        } else {
+            String::new()
+        };
         let mut flags = HashMap::new();
         let mut value = String::new();
         while let Some(argument) = args.next() {
@@ -37,6 +46,8 @@ impl Arguments {
                     "via-remote",
                     "helper-lab-commands",
                     "accept-ledger-loss",
+                    "no-ui",
+                    "force",
                 ]
                 .contains(&flag)
                 {
@@ -73,6 +84,8 @@ impl Arguments {
                     "retention-rows",
                     "retention-age",
                     "pack",
+                    "no-ui",
+                    "force",
                 ]
                 .contains(&key.as_str())
                 {
@@ -132,6 +145,52 @@ async fn main() {
         eprintln!("{error}");
         std::process::exit(1);
     }
+}
+fn product_verb(args: &Arguments) -> Result<bool, Error> {
+    use ab_runtime::product_cli;
+    match args.verb.as_str() {
+        "permissions" if args.action == "request" => {
+            if args.value.is_empty() || args.flags.keys().any(|key| key != "helper-app") {
+                return Err(Error::Invalid);
+            }
+            product_cli::permissions_request(
+                std::path::Path::new("open"),
+                &product_cli::default_report_dir(),
+                &args.flag("helper-app", ""),
+                &args.value,
+                None,
+            )?;
+        }
+        "selftest" | "setup" => {
+            if args.verb == "selftest" && args.action != "messages" {
+                return Err(Error::Invalid);
+            }
+            let mut app = args.flag("helper-app", "");
+            if app.is_empty()
+                && let Some(bundle) = product_cli::detect_helper_app()
+            {
+                app = bundle.to_string_lossy().into_owned();
+            }
+            let result = product_cli::messages_selftest(
+                std::path::Path::new("open"),
+                &product_cli::default_report_dir(),
+                &app,
+                args.flag("force", "false") == "true",
+                args.flag("no-ui", "false") != "true",
+                None,
+            )?;
+            println!("{}", result.data);
+            if !result.proven() {
+                eprintln!(
+                    "messages self-test {}; failed operations remain unproven",
+                    result.state
+                );
+                std::process::exit(1);
+            }
+        }
+        _ => return Ok(false),
+    }
+    Ok(true)
 }
 fn offline(args: &Arguments, home: &std::path::Path) -> Result<bool, Error> {
     #[cfg(feature = "lab-harness")]
@@ -207,6 +266,9 @@ async fn run() -> Result<(), Error> {
         .flags
         .get("home")
         .map_or_else(default_home, |v| Ok(PathBuf::from(v)))?;
+    if product_verb(&args)? {
+        return Ok(());
+    }
     if args.verb == "connect" {
         ab_remote::private::connect(&args.value, &args.flag("listen", "127.0.0.1:7780")).await?;
         return Ok(());
@@ -339,6 +401,10 @@ fn manage(
 ) -> Result<bool, Error> {
     match args.verb.as_str() {
         "web" if args.action == "enroll" => web_enroll(args, home, authority)?,
+        "web" if args.action == "lock" => authority.lock_web()?,
+        "web" if args.action == "devices" => {
+            println!("{}", serde_json::to_string(&authority.device_sessions()?)?);
+        }
         "revoke" => authority.revoke(&args.value)?,
         "scope" => authority.change_scope(&args.value, grants(args)?)?,
         "agent" => match args.action.as_str() {
