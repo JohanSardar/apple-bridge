@@ -9,6 +9,7 @@ use lab_world::{Error, Result, World};
 use serde_json::{Value, json};
 use std::{
     fs,
+    sync::{Arc, Barrier},
     process::{Command, Stdio},
     thread,
     time::{Duration, Instant},
@@ -384,5 +385,129 @@ fn resumed_streams(
         }),
         "every stream observer advanced past the probe",
     );
+    Ok(())
+}
+
+fn title_of(record: &Value) -> &str {
+    record["data"]["title"].as_str().unwrap_or_default()
+}
+pub fn conflict(world: &World, reminder: &Value, evidence: &mut Evidence) -> Result<()> {
+    let version = reminder["version"].as_u64().unwrap_or(0);
+    let id = reminder["id"].clone();
+    let barrier = Arc::new(Barrier::new(2));
+    let mut attempts = vec![];
+    thread::scope(|scope| -> Result<()> {
+        let mut handles = vec![];
+        for index in 0..2 {
+            let client = replica_writer(index)?;
+            let mut c = command(
+                "reminders.update",
+                &json!({"id": id, "title": format!("[ab-test] concurrent edit {index}")}),
+            )?;
+            c["expected_version"] = json!(version);
+            let barrier = Arc::clone(&barrier);
+            handles.push(scope.spawn(move || {
+                barrier.wait();
+                let reply = submit(&client, &c, false);
+                (c, reply)
+            }));
+        }
+        for handle in handles {
+            let (c, reply) = handle
+                .join()
+                .map_err(|_| Error::Invalid("concurrent submit panicked".into()))?;
+            attempts.push((c, reply?));
+        }
+        Ok(())
+    })?;
+    let (mut wins, mut conflicts, mut truth_counts) = (0, 0, true);
+    for (c, reply) in &attempts {
+        if observed(reply) {
+            wins += 1;
+            truth_counts &= count(world, c, 1);
+        } else {
+            if error_code(reply) == "conflict"
+                && reply["error"]["current"]["version"].as_u64().unwrap_or(0) > version
+            {
+                conflicts += 1;
+            }
+            truth_counts &= count(world, c, 0);
+        }
+    }
+    evidence.check(
+        "concurrent_same_version_exactly_one_winner",
+        wins == 1 && conflicts == 1,
+        "two replicas editing one version yield one winner and one conflict",
+    );
+    evidence.check(
+        "concurrent_loser_has_no_truth_effect",
+        truth_counts,
+        "the losing edit has no native effect",
+    );
+    Ok(())
+}
+pub fn read_your_write(
+    world: &World,
+    gateway: &Client,
+    list_id: &str,
+    observers: &Observers,
+    evidence: &mut Evidence,
+) -> Result<()> {
+    const TITLE: &str = "[ab-test] read-your-write";
+    let client = replica_writer(0)?;
+    let c = create(list_id, "read-your-write")?;
+    let reply = submit(&client, &c, false)?;
+    evidence.check("command_observed", observed(&reply), "command observed locally");
+    let read = client.call(
+        "records.query",
+        &json!({"collection":"reminders.reminder"}),
+        20,
+    )?;
+    let records = read
+        .as_ref()
+        .and_then(|page| page["records"].as_array().cloned())
+        .unwrap_or_default();
+    let commit = reply["commit_seq"].as_u64().unwrap_or(u64::MAX);
+    let sequence = read
+        .as_ref()
+        .and_then(|page| page["cursor"]["sequence"].as_u64())
+        .unwrap_or(0);
+    evidence.check(
+        "local_read_at_commit_seq",
+        read.is_some() && records.iter().any(|r| title_of(r) == TITLE) && sequence >= commit,
+        "local read at the commit sequence includes the write",
+    );
+    let mut capture = None;
+    let found = await_until(5, || {
+        capture = observers
+            .watchers
+            .first()
+            .and_then(|w| w.first_seen_sequence("reminders.reminder", TITLE));
+        capture.is_some()
+    });
+    evidence.check(
+        "commit_seq_identifies_observing_capture",
+        found && capture == reply["commit_seq"].as_u64(),
+        "commit sequence identifies the observing capture",
+    );
+    let written = records
+        .iter()
+        .find(|r| title_of(r) == TITLE)
+        .cloned()
+        .unwrap_or(Value::Null);
+    let before = Client::cursor(gateway)?;
+    let mut noop = command("reminders.uncomplete", &json!({"id": written["id"]}))?;
+    noop["expected_version"] = written["version"].clone();
+    let no_change = submit(&client, &noop, false)?;
+    evidence.check(
+        "noop_commit_seq_identifies_fresh_observation",
+        observed(&no_change)
+            && no_change["commit_seq"].as_u64().unwrap_or(0) > before.sequence
+            && no_change["cursor"]["sequence"].as_u64().unwrap_or(0)
+                > no_change["commit_seq"].as_u64().unwrap_or(u64::MAX)
+            && count(world, &noop, 1),
+        "a no-op command commits at a fresh observation",
+    );
+    evidence.check("one_truth_effect", count(world, &c, 1), "one native effect");
     Ok(())
 }
