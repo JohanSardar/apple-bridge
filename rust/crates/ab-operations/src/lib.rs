@@ -105,6 +105,7 @@ pub struct Error {
     pub message: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub current: Option<Box<RawValue>>,
+    #[serde(default)]
     pub retryable: bool,
 }
 #[derive(Debug, Serialize)]
