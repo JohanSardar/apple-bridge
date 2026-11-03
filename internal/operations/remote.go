@@ -185,6 +185,14 @@ func (g *RemoteGateway) List(ctx context.Context, p trust.Principal, q contracts
 	return r, err
 }
 func (g *LocalGateway) Forward(ctx context.Context, cert *x509.Certificate, header string, raw json.RawMessage) (contracts.CommandResponse, error) {
+	done := observeForward(header, raw)
+	response, err := g.forward(ctx, cert, header, raw)
+	if done != nil {
+		done(response, err)
+	}
+	return response, err
+}
+func (g *LocalGateway) forward(ctx context.Context, cert *x509.Certificate, header string, raw json.RawMessage) (contracts.CommandResponse, error) {
 	response := contracts.CommandResponse{}
 	var f forwarded
 	var result any
