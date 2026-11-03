@@ -1,0 +1,1 @@
+{"host":"build","level":"sim","scenario":"CORE-SCOPE-CHANGE","go":"pass","rust_before":"fail: narrow_scope","rust_after":"pass","checks":["narrowed subscription physically purges messages","narrowed and widened scopes advance subscription revision","widened scope backfills","truth gateway replica convergence"]}

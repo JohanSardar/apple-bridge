@@ -228,6 +228,7 @@ fn manage(
 ) -> Result<bool, Error> {
     match args.verb.as_str() {
         "revoke" => authority.revoke(&args.value)?,
+        "scope" => authority.change_scope(&args.value, grants(args)?)?,
         "agent" => match args.action.as_str() {
             "list" => println!("{}", serde_json::to_string(&authority.agents()?)?),
             "create" => {
