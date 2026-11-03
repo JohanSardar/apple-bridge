@@ -175,13 +175,15 @@ pub fn shadow_once(
     selection: &Selection,
     source: &SourceId,
     swift: &mut impl ShadowReader,
-    rust: &mut impl ShadowReader,
+    rust: &mut (impl ShadowReader + Send),
 ) -> Result<ShadowDiff, Error> {
     if selection.producer(source) != Producer::Shadow {
         return Err(Error::Conflict);
     }
-    Ok(compare_shadow(
-        &swift.snapshot(source)?,
-        &rust.snapshot(source)?,
-    ))
+    std::thread::scope(|scope| {
+        let reader = scope.spawn(|| rust.snapshot(source));
+        let authoritative = swift.snapshot(source);
+        let shadow = reader.join().map_err(|_| Error::WorkerPanicked)?;
+        Ok(compare_shadow(&authoritative?, &shadow?))
+    })
 }

@@ -64,7 +64,7 @@ Swift integration agreement: Helper reserves separate native socketpair child fd
 
 Binary selection configuration: AB_SESSION_PRODUCERS JSON object maps source names to
 "Swift", "Shadow", "Rust". Default Swift. Rust fails closed in this proxy build.
-Reader integration: implement ownership::ShadowReader::snapshot(SourceId) -> ObservationSet;
+Reader integration: session-owned adapters wrap ab-native readers and implement ownership::ShadowReader::snapshot(SourceId) -> ObservationSet (ab-native must not depend on ab-session);
 call shadow_once with Swift fact adapter and ab-native reader. API accepts no writer or
 checkpoint sink and returns Equal/Incomplete/Different. Records are canonical JSON bytes
 keyed by native key; no duplicate keys. ab-native adapters remain worker-owned.
