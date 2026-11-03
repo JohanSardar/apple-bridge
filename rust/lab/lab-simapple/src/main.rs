@@ -6,6 +6,7 @@ mod media;
 mod messages;
 mod notes;
 mod query;
+mod reminders;
 mod sources;
 mod stale;
 use lab_wire::{receive, send};
@@ -238,6 +239,8 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
                 "ui-interference",
                 "ui-interference-before",
                 "calendar-rule-mismatch",
+                "external-move-before-prepare",
+                "external-edit-between-prepare-and-dispatch",
             ]
             .contains(&name.as_str())
             {
@@ -697,7 +700,7 @@ impl Session<'_> {
     fn reject(&mut self, frame: &Value, code: &str) -> Result<()> {
         send(
             &mut self.stream,
-            &json!({"t":"Rejected","command_id":frame["command_id"],"disposition":"rejected_before_dispatch","error":{"code":code,"message":code}}),
+            &json!({"t":"Rejected","command_id":frame["command_id"],"disposition":"rejected_before_dispatch","error":{"code":code,"message":code,"retryable":false}}),
         )?;
         Ok(())
     }
@@ -724,162 +727,12 @@ impl Session<'_> {
             ("contacts", Some("Prepare")) => return self.contacts_prepare(state, &frame),
             ("contacts", Some("Dispatch")) => return self.contacts_dispatch(state, &frame),
             ("contacts", Some("Resolve")) => return self.contacts_resolve(state, &frame),
+            ("reminders", Some("Prepare")) => return self.reminder_prepare(state, &frame),
+            ("reminders", Some("Dispatch")) => return self.reminder_dispatch(state, &frame),
+            (_, Some("Prepare")) => return self.reject(&frame, "unsupported"),
             _ => {}
         }
         match frame["t"].as_str() {
-            Some("Prepare") => {
-                let mut s = lock(state)?;
-                let action = &frame["action"];
-                let op = string(action, "op");
-                if !op.starts_with("reminders.") {
-                    drop(s);
-                    return self.reject(&frame, "unsupported");
-                }
-                if string(&frame, "principal").is_empty()
-                    || string(&frame, "request_hash").is_empty()
-                {
-                    drop(s);
-                    return self.reject(&frame, "invalid");
-                }
-                let key = string(action, "native_key");
-                let before = s.data["records"][&key]["data"].clone();
-                if !key.is_empty() && before.is_null() {
-                    drop(s);
-                    return self.reject(&frame, "not_found");
-                }
-                if !op.ends_with("_list")
-                    && s.data["records"][string(action, "list_key")]["data"]["writable"] != true
-                {
-                    drop(s);
-                    return self.reject(&frame, "unsupported");
-                }
-                self.tickets.retain(|_, t| Instant::now() < t.deadline);
-                if !self.tickets.is_empty() {
-                    drop(s);
-                    return self.reject(&frame, "unavailable");
-                }
-                s.data["origins"][&command] =
-                    json!({"Prepare":frame["origin"],"action":action["origin"]});
-                let ticket = id("ticket")?;
-                let requested = string(&frame, "expires_at")
-                    .parse::<jiff::Timestamp>()
-                    .map_err(|_| invalid("expiry"))?;
-                let millis = (requested.as_millisecond() - jiff::Timestamp::now().as_millisecond())
-                    .clamp(0, 30_000);
-                self.tickets.insert(
-                    ticket.clone(),
-                    Ticket {
-                        prepare: frame.clone(),
-                        before: before.clone(),
-                        deadline: Instant::now() + Duration::from_millis(millis.cast_unsigned()),
-                    },
-                );
-                let pause = if s.fault == "pause" {
-                    s.fault.clear();
-                    s.pause
-                } else {
-                    0
-                };
-                drop(s);
-                thread::sleep(Duration::from_millis(pause));
-                send(
-                    &mut self.stream,
-                    &json!({"t":"Prepared","command_id":command,"ticket":ticket,"native_state":before,"route":"sim-reminders","fingerprint":frame["request_hash"],"candidate_ids":[key]}),
-                )?;
-            }
-            Some("Dispatch") => {
-                let Some(ticket) = self.tickets.remove(&string(&frame, "ticket")) else {
-                    return self.reject(&frame, "expired");
-                };
-                if ticket.prepare["command_id"] != command
-                    || frame["owner_fence"].as_u64() != Some(self.fence)
-                    || Instant::now() >= ticket.deadline
-                {
-                    return self.reject(&frame, "expired");
-                }
-                let action = &ticket.prepare["action"];
-                let op = string(action, "op");
-                let mut key = string(action, "native_key");
-                let mut s = lock(state)?;
-                if !key.is_empty() && s.data["records"][&key]["data"] != ticket.before {
-                    drop(s);
-                    return self.reject(&frame, "conflict");
-                }
-                s.guard(
-                    &json!({"command_id":command,"ticket":frame["ticket"],"started_at":now()}),
-                )?;
-                if key.is_empty() {
-                    key = id("native")?;
-                }
-                let collection = if op.ends_with("_list") {
-                    "reminders.list"
-                } else {
-                    "reminders.reminder"
-                };
-                let mut data = if ticket.before.is_object() {
-                    ticket.before
-                } else {
-                    json!({})
-                };
-                if let Some(args) = action["args"].as_object() {
-                    for (k, v) in args {
-                        if k != "id" && k != "list_id" {
-                            data[k] = v.clone();
-                        }
-                    }
-                }
-                if collection == "reminders.list" {
-                    data["writable"] = json!(true);
-                } else {
-                    if data["completed"].is_null() {
-                        data["completed"] = json!(false);
-                    }
-                    data["list_id"] = json!({"$ref":{"collection":"reminders.list","native_key":action["list_key"]}});
-                }
-                if op == "reminders.complete" {
-                    data["completed"] = json!(true);
-                }
-                if op == "reminders.uncomplete" {
-                    data["completed"] = json!(false);
-                }
-                let mut record = observation(collection, &key, data);
-                if op == "reminders.delete" || op == "reminders.delete_list" {
-                    record["kind"] = json!("absent");
-                    record["revalidated"] = json!(true);
-                }
-                s.put(record.clone());
-                let count = s.data["effects"][&command].as_u64().unwrap_or_default() + 1;
-                s.data["effects"][&command] = json!(count);
-                s.data["origins"][&command]["Dispatch"] = frame["origin"].clone();
-                let mut outcome = json!({"t":"Outcome","command_id":command,"disposition":"locally_observed","evidence":{"native_key":key,"fingerprint":ticket.prepare["request_hash"],"observed":true,"absent":record["kind"]=="absent"}});
-                s.data["evidence"][&command] = outcome.clone();
-                s.save()?;
-                let fault = std::mem::take(&mut s.fault);
-                if fault == "crash-after-effect" {
-                    std::process::exit(78);
-                }
-                let capture = if record["kind"] == "absent" {
-                    s.scan("reminders")?
-                } else {
-                    json!({"t":"Capture","source":"reminders","observations":[record]})
-                };
-                drop(s);
-                self.emit(state, capture)?;
-                outcome["evidence"]["capture_checkpoint"] =
-                    json!(self.checkpoints.get("reminders"));
-                let mut s = lock(state)?;
-                s.data["evidence"][&command] = outcome.clone();
-                s.save()?;
-                if fault == "crash-before-outcome" {
-                    std::process::exit(78);
-                }
-                if fault == "ambiguous-outcome" {
-                    outcome["disposition"] = json!("indeterminate");
-                }
-                s.guard(&json!({"command_id":command,"outcome":outcome}))?;
-                drop(s);
-                send(&mut self.stream, &outcome)?;
-            }
             Some("Resolve") => {
                 let s = lock(state)?;
                 let mut outcome = s.data["evidence"][&command].clone();
