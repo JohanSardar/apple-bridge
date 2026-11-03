@@ -5,8 +5,10 @@ use std::{
     sync::{
         Arc, Mutex,
         atomic::{AtomicBool, AtomicU64, Ordering},
+        mpsc,
     },
     thread,
+    time::{Duration, Instant},
 };
 
 #[derive(Debug)]
@@ -15,6 +17,9 @@ struct State {
     partitioned: AtomicBool,
     closed: AtomicBool,
     next: AtomicU64,
+    delay_ms: AtomicU64,
+    established: AtomicU64,
+    upstream_closed: AtomicU64,
     connections: Mutex<HashMap<u64, TcpStream>>,
 }
 
@@ -33,6 +38,9 @@ impl FaultProxy {
             partitioned: AtomicBool::new(false),
             closed: AtomicBool::new(false),
             next: AtomicU64::new(0),
+            delay_ms: AtomicU64::new(0),
+            established: AtomicU64::new(0),
+            upstream_closed: AtomicU64::new(0),
             connections: Mutex::new(HashMap::new()),
         });
         let accepting = state.clone();
@@ -68,6 +76,20 @@ impl FaultProxy {
         self.state.partitioned.store(false, Ordering::SeqCst);
     }
 
+    pub fn delay(&self, milliseconds: u64) {
+        self.state.delay_ms.store(milliseconds, Ordering::SeqCst);
+    }
+
+    #[must_use]
+    pub fn established(&self) -> u64 {
+        self.state.established.load(Ordering::SeqCst)
+    }
+
+    #[must_use]
+    pub fn upstream_closed(&self) -> u64 {
+        self.state.upstream_closed.load(Ordering::SeqCst)
+    }
+
     pub fn close(&self) {
         self.state.closed.store(true, Ordering::SeqCst);
         self.partition();
@@ -90,6 +112,7 @@ fn forward(state: &Arc<State>, downstream: TcpStream) {
         return;
     };
     let id = state.next.fetch_add(1, Ordering::SeqCst);
+    state.established.fetch_add(1, Ordering::SeqCst);
     let (Ok(down_a), Ok(down_b), Ok(up_a), Ok(up_b)) = (
         downstream.try_clone(),
         downstream.try_clone(),
@@ -107,7 +130,7 @@ fn forward(state: &Arc<State>, downstream: TcpStream) {
         connections.insert(id | 1 << 63, upstream);
     }
     let first = thread::spawn(move || pipe(&down_a, &up_a));
-    pipe(&up_b, &down_b);
+    pipe_delayed(state, &up_b, &down_b);
     let _ = first.join();
     let mut connections = lock(&state.connections);
     connections.remove(&id);
@@ -130,4 +153,44 @@ fn pipe(from: &TcpStream, to: &TcpStream) {
     }
     let _ = from.shutdown(Shutdown::Both);
     let _ = to.shutdown(Shutdown::Both);
+}
+
+fn pipe_delayed(state: &Arc<State>, from: &TcpStream, to: &TcpStream) {
+    let (sender, receiver) = mpsc::channel::<(Instant, Vec<u8>)>();
+    let reader_state = state.clone();
+    let Ok(source) = from.try_clone() else {
+        return;
+    };
+    let reader = thread::spawn(move || {
+        let mut source = source;
+        let mut buffer = vec![0_u8; 32 * 1024];
+        loop {
+            match source.read(&mut buffer) {
+                Ok(0) | Err(_) => {
+                    reader_state.upstream_closed.fetch_add(1, Ordering::SeqCst);
+                    break;
+                }
+                Ok(n) => {
+                    let due = Instant::now()
+                        + Duration::from_millis(reader_state.delay_ms.load(Ordering::SeqCst));
+                    if sender.send((due, buffer[..n].to_vec())).is_err() {
+                        break;
+                    }
+                }
+            }
+        }
+    });
+    let mut sink = to;
+    for (due, bytes) in receiver {
+        let now = Instant::now();
+        if due > now {
+            thread::sleep(due - now);
+        }
+        if sink.write_all(&bytes).is_err() {
+            break;
+        }
+    }
+    let _ = from.shutdown(Shutdown::Both);
+    let _ = to.shutdown(Shutdown::Both);
+    let _ = reader.join();
 }
