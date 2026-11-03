@@ -27,6 +27,7 @@ futures-util = { version = "0.3", features = ["sink"] }
 instant-acme = { version = "0.8.5", default-features = false, features = ["hyper-rustls", "ring"] }
 rcgen = { version = "0.14", default-features = false, features = ["pem", "ring"] }
 x509-parser = "0.18"
+webpki-roots = "1"
 sec1 = { version = "0.7", features = ["pem", "std"] }
 pkcs8 = { version = "0.10", features = ["pem", "std"] }
 

@@ -75,11 +75,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }));
     }
     if via == "tailscale-app" || via == "both" {
-        adapters.push(Box::new(Tailscale {
-            home,
-            client: reqwest::Client::new(),
-            endpoint: option("--localapi").ok_or("--localapi required")?,
-        }));
+        let localapi = option("--localapi").ok_or("--localapi required")?;
+        let port = localapi
+            .rsplit(':')
+            .next()
+            .and_then(|port| port.trim_end_matches('/').parse::<u16>().ok())
+            .ok_or("--localapi must end with a port")?;
+        adapters.push(Box::new(Tailscale::tcp(home, port, "fixture".into())));
     }
     let (stop, receiver) = tokio::sync::watch::channel(false);
     let run = ab_remote::run_all(&adapters, gateway, receiver.clone());

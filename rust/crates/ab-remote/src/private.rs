@@ -9,14 +9,14 @@ use std::{
 use subtle::ConstantTimeEq;
 use tokio::{
     io::{AsyncRead, AsyncReadExt, AsyncWriteExt},
-    net::{TcpStream, UnixStream},
+    net::TcpStream,
     sync::{Mutex, watch},
     task::JoinSet,
 };
 
 pub fn socket_path() -> PathBuf {
     std::env::var_os("APPLE_BRIDGE_TAILSCALE_SOCKET")
-        .map_or_else(|| "/var/run/tailscaled.socket".into(), PathBuf::from)
+        .map_or_else(|| crate::localapi::DEFAULT_SOCKET.into(), PathBuf::from)
 }
 #[derive(Serialize, Deserialize)]
 struct Invitation {
@@ -198,9 +198,11 @@ fn rewrite(text: &str, session: Option<&str>) -> Result<String> {
     out.push_str("\r\n");
     Ok(out)
 }
-async fn dial(host: &str) -> Result<UnixStream> {
-    let mut socket = UnixStream::connect(socket_path()).await?;
-    socket.write_all(format!("POST /localapi/v0/dial HTTP/1.1\r\nHost: local-tailscaled.sock\r\nConnection: upgrade\r\nUpgrade: ts-dial\r\nDial-Host: {host}\r\nDial-Port: 7780\r\nDial-Network: tcp\r\nContent-Length: 0\r\n\r\n").as_bytes()).await?;
+async fn dial(host: &str) -> Result<Box<dyn crate::localapi::Stream>> {
+    let (mut socket, authorization) = crate::localapi::LocalApi::Discover.connect().await?;
+    let authorization =
+        authorization.map_or_else(String::new, |value| format!("Authorization: {value}\r\n"));
+    socket.write_all(format!("POST /localapi/v0/dial HTTP/1.1\r\nHost: local-tailscaled.sock\r\n{authorization}Tailscale-Cap: 142\r\nConnection: upgrade\r\nUpgrade: ts-dial\r\nDial-Host: {host}\r\nDial-Port: 7780\r\nDial-Network: tcp\r\nContent-Length: 0\r\n\r\n").as_bytes()).await?;
     if !head(&mut socket).await?.starts_with("HTTP/1.1 101 ") {
         return Err(Error::Contract("Tailscale private dial rejected"));
     }
