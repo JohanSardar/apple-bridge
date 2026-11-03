@@ -463,3 +463,31 @@ full decoder fixtures remain unchanged.
 Real-data shadow comparisons, source cutover and session/gateway wiring remain
 orchestrator work. These readers and the fixture CLI provide the independent
 Phase 6 pieces for that later gate.
+
+## Calendar and Contacts diffing
+
+`agenda::Reader` and `contacts::Reader` consume complete aggregate native fact
+observations with explicit scopes and generations. They return pending batches
+and advance their baseline only after acknowledgement. Incomplete snapshots,
+duplicate identities, changed scopes and stale acknowledgements fail closed.
+Generation changes replay current observations and retain prior deletion
+candidates. Calendar absence or window eviction and Contacts contact/group
+absence require explicit revalidation facts; notifications alone are insufficient.
+
+The synthetic gate in `parity/agenda-contacts` compares nine Calendar and ten
+Contacts stages against the exact current Swift diff loops and actual Calendar
+time/scope helpers. Complete observations and independently emitted Swift Data
+bytes match the Rust native encoder through Go JSON. Five tests cover the replay,
+source hashes, incomplete/scoped/duplicate input, stale acknowledgements and
+generation changes. No framework enumeration, database or permissions are used.
+Calendar lookup/window revalidation and Contacts per-identifier absence facts
+still need native/1 adapters, followed by aggregate scope/capture integration.
+Neither source is enabled or qualified for a production flip.
+
+Fresh local synthetic source replays are recorded in
+`parity/p6-usage-safari-evidence.json` and `parity/p6-remaining/evidence.json`.
+Screen Time, Safari, Calls, Voicemail, Voice Memos, Mail and Notes each match
+the actual Swift scan output and Go Data hashes with zero differences. Notes
+retains its already confined attachment watcher paths so lexical `/var` change
+notifications continue to match on Darwin instead of becoming `/private/var`
+only. All source capture routing remains disabled pending session integration.

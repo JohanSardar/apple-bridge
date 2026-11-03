@@ -8,10 +8,15 @@ import subprocess
 import sys
 import tempfile
 
-oracle, rust_binary = sys.argv[1:]
+local_mode = "--local" in sys.argv
+arguments = [argument for argument in sys.argv[1:] if argument != "--local"]
+oracle, rust_binary = arguments
+data_bytes = os.environ.get("AB_PARITY_DATA_BYTES")
+if local_mode and not data_bytes:
+    raise SystemExit("--local requires AB_PARITY_DATA_BYTES")
 script = pathlib.Path(__file__).with_name("generate.py")
 local = pathlib.Path.home() / "bin/ab-local"
-remote = subprocess.check_output(["ssh", "build", "mktemp -d ~/w/phase6-usage-XXXXXX"], text=True).strip()
+remote = None if local_mode else subprocess.check_output(["ssh", "build", "mktemp -d ~/w/phase6-usage-XXXXXX"], text=True).strip()
 try:
     with tempfile.TemporaryDirectory(prefix="ab-native-usage-") as temporary:
         root = pathlib.Path(temporary) / "fixture"
@@ -20,11 +25,14 @@ try:
         context = json.loads(context_path.read_text())
         processes = []
         def sync():
-            subprocess.run(["rsync", "-acz", "--delete", str(root) + "/", "build:" + remote + "/"], check=True)
+            if not local_mode:
+                subprocess.run(["rsync", "-acz", "--delete", str(root) + "/", "build:" + remote + "/"], check=True)
         sync()
+        swift_command = [oracle] if local_mode else [str(local), oracle]
+        rust_command = [rust_binary, "usage", str(root)] if local_mode else ["ssh", "build", shlex.join([rust_binary, "usage", remote])]
         swift_env = dict(os.environ, TZ=context["zone"])
-        processes.append(subprocess.Popen([str(local), oracle, str(root), "--interactive"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, env=swift_env))
-        processes.append(subprocess.Popen(["ssh", "build", shlex.join([rust_binary, "usage", remote, "--interactive", "--frames"])], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True))
+        processes.append(subprocess.Popen(swift_command + [str(root), "--interactive"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, env=swift_env))
+        processes.append(subprocess.Popen(([rust_binary, "usage", str(root), "--interactive", "--frames"] if local_mode else ["ssh", "build", shlex.join([rust_binary, "usage", remote, "--interactive", "--frames"])]), stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True))
         try:
             captures = []
             for stage in range(5):
@@ -51,7 +59,7 @@ try:
                     frames.append(json.loads(line))
                 if frames[0] != frames[1]:
                     raise AssertionError(f"stage {stage}: Swift {frames[0]} != Rust {frames[1]}")
-                digests = subprocess.check_output(["ssh", "build", "~/targets/phase6-native/fixture-data-bytes"], input="".join(raw_frames), text=True).splitlines()
+                digests = subprocess.check_output(([data_bytes] if local_mode else ["ssh", "build", "~/targets/phase6-native/fixture-data-bytes"]), input="".join(raw_frames), text=True).splitlines()
                 assert len(digests) == 2 and digests[0] == digests[1], f"data byte mismatch at stage {stage}"
                 captures.append(frames[0])
             assert captures[1]["observations"] == []
@@ -72,12 +80,13 @@ try:
                     database.execute("DROP TABLE DevicePeer")
             sync()
             checks = [
-                ([str(local), oracle, str(root)], swift_env),
-                (["ssh", "build", shlex.join([rust_binary, "usage", remote])], None),
+                (swift_command + [str(root)], swift_env),
+                (rust_command, None),
             ]
             for command, environment in checks:
                 result = subprocess.run(command, env=environment, text=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
                 assert result.returncode != 0 and not result.stdout, f"{failure}: incomplete input emitted a capture"
         print("Screen Time failed-input controls: both readers emitted zero captures")
 finally:
-    subprocess.run(["ssh", "build", "rm -rf -- " + shlex.quote(remote)], check=True)
+    if not local_mode:
+        subprocess.run(["ssh", "build", "rm -rf -- " + shlex.quote(remote)], check=True)

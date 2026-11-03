@@ -1,0 +1,80 @@
+{
+  "live_sources_opened": false,
+  "normalization": "Existing Swift fixture sinks supply deterministic capture metadata; complete frames and observation Data hashes compare without key/data normalization.",
+  "permission_prompts": false,
+  "platform": "MacBook Pro / Darwin arm64",
+  "recorded_at": "2026-11-03T16:32:20.887837+00:00",
+  "reproduce": [
+    "export CARGO_TARGET_DIR=\"$HOME/ab-targets/p6\"",
+    "cargo build --manifest-path rust/Cargo.toml -p ab-native --example fixture-reader",
+    "AB_PARITY_LOCAL=1 bash rust/crates/ab-native/parity/usage/build-swift.sh /tmp/ab-p6-usage-tools",
+    "AB_PARITY_LOCAL=1 bash rust/crates/ab-native/parity/safari/build-swift.sh /tmp/ab-p6-safari-tools /tmp/ab-p6-usage-tools",
+    "go build -o /tmp/ab-p6-data-bytes rust/crates/ab-native/parity/usage/data-bytes.go",
+    "AB_PARITY_DATA_BYTES=/tmp/ab-p6-data-bytes python3 rust/crates/ab-native/parity/usage/compare.py --local /tmp/ab-p6-usage-tools/usage-oracle \"$CARGO_TARGET_DIR/debug/examples/fixture-reader\"",
+    "AB_PARITY_DATA_BYTES=/tmp/ab-p6-data-bytes python3 rust/crates/ab-native/parity/safari/compare.py --local /tmp/ab-p6-safari-tools/safari-oracle \"$CARGO_TARGET_DIR/debug/examples/fixture-reader\""
+  ],
+  "results": {
+    "safari": {
+      "exit_code": 0,
+      "production_routing": "disabled; not exercised",
+      "shadow_gate": "zero differences",
+      "stderr": [],
+      "stdout": [
+        "history-title: identical",
+        "bookmarks-empty: identical",
+        "bookmarks-xml: identical",
+        "cloud-clear: identical",
+        "history-clear: identical",
+        "history-add: identical",
+        "history-replace: identical",
+        "history-broken: identical",
+        "history-repair: identical",
+        "bookmarks-broken: identical",
+        "bookmarks-xml: identical",
+        "history-add: identical",
+        "expiry: identical",
+        "identity-cache restart: identical",
+        "Safari: 19 identical frames, Go Data byte hashes identical; unchanged input suppressed; malformed input produced no absence"
+      ]
+    },
+    "usage": {
+      "exit_code": 0,
+      "production_routing": "disabled; not exercised",
+      "shadow_gate": "zero differences",
+      "stderr": [],
+      "stdout": [
+        "Screen Time synthetic streams: 5 checkpoints, zero differences in observations and Go JSON data hashes",
+        "Screen Time failed-input controls: both readers emitted zero captures"
+      ]
+    }
+  },
+  "schema": 1,
+  "source_sha256": {
+    "native/Sources/SafariSource/SafariCaptureCache.swift": "907b4206802ba0095bef52c13140ba2d209f1911ccf19cda9000b7d68aa212dc",
+    "native/Sources/SafariSource/SafariCleanup.swift": "4254784fa356dc9900424610ffa403f15283fbcfdfda71ed5c0143fb24d4d203",
+    "native/Sources/SafariSource/SafariInputs.swift": "b7738149809a68f040d59561ea9af13027d49d6b56a82a04830db46398998bbf",
+    "native/Sources/SafariSource/SafariSource.swift": "1698da65fde726e46f1cba277bfff401f8db444cc621b32e944a0ddd91439ed3",
+    "native/Sources/SafariSource/SafariTabs.swift": "5fadcc15e0db07691169c4557fb64233ffef39ff18b25ad6b750cb8041aada29",
+    "native/Sources/UsageSource/UsageHistory.swift": "b35ea0a44444832d1f37bafafa877db1db5522b2c8fd5dc36f1e88e40a951188",
+    "native/Sources/UsageSource/UsageInputs.swift": "a6e4476119b1b4beea8bf8cd2637984ebf946c17b53af039b0bc362ff7f6cf7f",
+    "native/Sources/UsageSource/UsageRollup.swift": "af4de9bb541133daf026edd8bd320744c99accc0d83c9be06e4c36cae34d7a72",
+    "native/Sources/UsageSource/UsageSource.swift": "60673efa8057018397c3975710702d746affd6713ed674b2055e07eec5e90fc6",
+    "native/Sources/UsageSource/UsageWatcher.swift": "bfabd8bdf01f8174e1b0406348762cee4d13b2fbe9e45a160e2a696c769ed2be",
+    "rust/crates/ab-native/examples/fixture-reader.rs": "3dbe8354d757130fe53d21af25af047adc22ec3fbdcd535466f2e0ae76a9f9ec",
+    "rust/crates/ab-native/parity/safari/build-swift.sh": "7db4ff008598025ab8510306708dc0408a1811e5f4783796d266bad2ac693744",
+    "rust/crates/ab-native/parity/safari/compare.py": "01235fbf5a90f7c41b01c251ab8c5d673e9ce883fda5741a613ba4aa60d6c6bc",
+    "rust/crates/ab-native/parity/safari/generate.py": "e12d5fd5b35687d468cec01beda188b378f664ac14b2e02b0aa6b1a6a9fe91e0",
+    "rust/crates/ab-native/parity/safari/oracle.swift": "66de8157fbed0d9ec126d9895a6950a51d4a92099cf6a7b5f74f1fee820ff431",
+    "rust/crates/ab-native/parity/usage/build-swift.sh": "6141c5419bbc9dad99b1892bfbdc051bbf3ef878f10c5db546f1ba5f0ce1ac44",
+    "rust/crates/ab-native/parity/usage/compare.py": "b0cf7ae12d0c6bdab496b600ccf0fce3916563fb31093b650a03b3bf5c331404",
+    "rust/crates/ab-native/parity/usage/data-bytes.go": "721ddb012b65f3ad128b12ae7d4e87948779a5d310ad0dc249cb78480bd3e270",
+    "rust/crates/ab-native/parity/usage/generate.py": "d9761e8dbc96df08974dd303825d6b221f86324697f24fa80f5cce4bc9073c8c",
+    "rust/crates/ab-native/parity/usage/reader.swift": "6afd8469f6040dbbdae71c512c523b34ac40517c6bbca7556f3addb28b4d24e2",
+    "rust/crates/ab-native/parity/usage/rollup-expected.jsonl": "305cf00e8088b777b5c5f8ce7f6f3b8a049ae5c97cc43f47f0e18a41223da413",
+    "rust/crates/ab-native/parity/usage/rollup-input.json": "9697a428fb47d6d2309e996501a8f6e2323180a2f35618425668902a7ba80f85",
+    "rust/crates/ab-native/parity/usage/rollup.swift": "089e32b5c7071fd498c876ce3cd6d422fa256f0dbac0d98171fcd5d0cc9d56b9",
+    "rust/crates/ab-native/src/safari.rs": "5d5b7a64e0286572ef2fe610f537fd5f679aa9202b14b7986e5a4b80f81af29a",
+    "rust/crates/ab-native/src/usage.rs": "4610f81ee937922d5b033b17860596bb8d49ef2e7cd4844b019213be5ffead68"
+  },
+  "synthetic_only": true
+}

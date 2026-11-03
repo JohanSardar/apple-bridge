@@ -1,0 +1,1316 @@
+[
+  {
+    "source": "contacts",
+    "name": "initial",
+    "snapshot": {
+      "generation": "g1",
+      "scope": [
+        "contacts.contact",
+        "contacts.group",
+        "contacts.container"
+      ],
+      "complete": true,
+      "records": [
+        {
+          "kind": "upsert",
+          "collection": "contacts.container",
+          "native_key": "c",
+          "data": {
+            "name": "Synthetic",
+            "type": 1
+          },
+          "scoped_alias": "",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        },
+        {
+          "kind": "upsert",
+          "collection": "contacts.contact",
+          "native_key": "a",
+          "data": {
+            "given_name": "Fixture",
+            "phones": [],
+            "is_me": true
+          },
+          "scoped_alias": "contacts/contacts.contact/a",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        },
+        {
+          "kind": "upsert",
+          "collection": "contacts.group",
+          "native_key": "g",
+          "data": {
+            "name": "Fixture Group",
+            "members": [
+              "a"
+            ]
+          },
+          "scoped_alias": "contacts/contacts.group/g",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        }
+      ],
+      "revalidated": {},
+      "force": true
+    },
+    "context": {
+      "observed_at": "2026-11-03T00:00:00.000Z",
+      "checkpoint": "checkpoint-0",
+      "scan_id": "scan-0"
+    },
+    "drop": false,
+    "token_nil": true,
+    "lookup": {},
+    "expected": [
+      {
+        "collection": "contacts.contact",
+        "data": {
+          "given_name": "Fixture",
+          "is_me": true,
+          "phones": []
+        },
+        "kind": "upsert",
+        "native_key": "a",
+        "observed_at": "2026-11-03T00:00:00.000Z",
+        "scoped_alias": "contacts/contacts.contact/a"
+      },
+      {
+        "collection": "contacts.container",
+        "data": {
+          "name": "Synthetic",
+          "type": 1
+        },
+        "kind": "upsert",
+        "native_key": "c",
+        "observed_at": "2026-11-03T00:00:00.000Z",
+        "scoped_alias": ""
+      },
+      {
+        "collection": "contacts.group",
+        "data": {
+          "members": [
+            "a"
+          ],
+          "name": "Fixture Group"
+        },
+        "kind": "upsert",
+        "native_key": "g",
+        "observed_at": "2026-11-03T00:00:00.000Z",
+        "scoped_alias": "contacts/contacts.group/g"
+      }
+    ],
+    "expected_data": [
+      "{\"given_name\":\"Fixture\",\"is_me\":true,\"phones\":[]}",
+      "{\"name\":\"Synthetic\",\"type\":1}",
+      "{\"members\":[\"a\"],\"name\":\"Fixture Group\"}"
+    ]
+  },
+  {
+    "source": "contacts",
+    "name": "unchanged-numeric-equivalence",
+    "snapshot": {
+      "generation": "g1",
+      "scope": [
+        "contacts.contact",
+        "contacts.group",
+        "contacts.container"
+      ],
+      "complete": true,
+      "records": [
+        {
+          "kind": "upsert",
+          "collection": "contacts.container",
+          "native_key": "c",
+          "data": {
+            "name": "Synthetic",
+            "type": 1
+          },
+          "scoped_alias": "",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        },
+        {
+          "kind": "upsert",
+          "collection": "contacts.contact",
+          "native_key": "a",
+          "data": {
+            "given_name": "Fixture",
+            "phones": [],
+            "is_me": true,
+            "score": 1
+          },
+          "scoped_alias": "contacts/contacts.contact/a",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        },
+        {
+          "kind": "upsert",
+          "collection": "contacts.group",
+          "native_key": "g",
+          "data": {
+            "name": "Fixture Group",
+            "members": [
+              "a"
+            ]
+          },
+          "scoped_alias": "contacts/contacts.group/g",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        }
+      ],
+      "revalidated": {},
+      "force": false
+    },
+    "context": {
+      "observed_at": "2026-11-03T00:00:00.000Z",
+      "checkpoint": "checkpoint-1",
+      "scan_id": "scan-1"
+    },
+    "drop": false,
+    "token_nil": false,
+    "lookup": {},
+    "expected": [
+      {
+        "collection": "contacts.contact",
+        "data": {
+          "given_name": "Fixture",
+          "is_me": true,
+          "phones": [],
+          "score": 1
+        },
+        "kind": "upsert",
+        "native_key": "a",
+        "observed_at": "2026-11-03T00:00:00.000Z",
+        "scoped_alias": "contacts/contacts.contact/a"
+      }
+    ],
+    "expected_data": [
+      "{\"given_name\":\"Fixture\",\"is_me\":true,\"phones\":[],\"score\":1}"
+    ]
+  },
+  {
+    "source": "contacts",
+    "name": "integer-versus-double",
+    "snapshot": {
+      "generation": "g1",
+      "scope": [
+        "contacts.contact",
+        "contacts.group",
+        "contacts.container"
+      ],
+      "complete": true,
+      "records": [
+        {
+          "kind": "upsert",
+          "collection": "contacts.container",
+          "native_key": "c",
+          "data": {
+            "name": "Synthetic",
+            "type": 1
+          },
+          "scoped_alias": "",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        },
+        {
+          "kind": "upsert",
+          "collection": "contacts.contact",
+          "native_key": "a",
+          "data": {
+            "given_name": "Fixture",
+            "phones": [],
+            "is_me": true,
+            "score": 1.0
+          },
+          "scoped_alias": "contacts/contacts.contact/a",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        },
+        {
+          "kind": "upsert",
+          "collection": "contacts.group",
+          "native_key": "g",
+          "data": {
+            "name": "Fixture Group",
+            "members": [
+              "a"
+            ]
+          },
+          "scoped_alias": "contacts/contacts.group/g",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        }
+      ],
+      "revalidated": {},
+      "force": false
+    },
+    "context": {
+      "observed_at": "2026-11-03T00:00:00.000Z",
+      "checkpoint": "checkpoint-2",
+      "scan_id": "scan-2"
+    },
+    "drop": false,
+    "token_nil": false,
+    "lookup": {},
+    "expected": [],
+    "expected_data": []
+  },
+  {
+    "source": "contacts",
+    "name": "changed-data",
+    "snapshot": {
+      "generation": "g1",
+      "scope": [
+        "contacts.contact",
+        "contacts.group",
+        "contacts.container"
+      ],
+      "complete": true,
+      "records": [
+        {
+          "kind": "upsert",
+          "collection": "contacts.container",
+          "native_key": "c",
+          "data": {
+            "name": "Synthetic",
+            "type": 1
+          },
+          "scoped_alias": "",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        },
+        {
+          "kind": "upsert",
+          "collection": "contacts.contact",
+          "native_key": "a",
+          "data": {
+            "given_name": "Changed <&> /é",
+            "phones": [],
+            "is_me": true,
+            "score": 1.0
+          },
+          "scoped_alias": "contacts/contacts.contact/a",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        },
+        {
+          "kind": "upsert",
+          "collection": "contacts.group",
+          "native_key": "g",
+          "data": {
+            "name": "Fixture Group",
+            "members": [
+              "a"
+            ]
+          },
+          "scoped_alias": "contacts/contacts.group/g",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        }
+      ],
+      "revalidated": {},
+      "force": false
+    },
+    "context": {
+      "observed_at": "2026-11-03T00:00:00.000Z",
+      "checkpoint": "checkpoint-3",
+      "scan_id": "scan-3"
+    },
+    "drop": false,
+    "token_nil": false,
+    "lookup": {},
+    "expected": [
+      {
+        "collection": "contacts.contact",
+        "data": {
+          "given_name": "Changed <&> /é",
+          "is_me": true,
+          "phones": [],
+          "score": 1
+        },
+        "kind": "upsert",
+        "native_key": "a",
+        "observed_at": "2026-11-03T00:00:00.000Z",
+        "scoped_alias": "contacts/contacts.contact/a"
+      }
+    ],
+    "expected_data": [
+      "{\"given_name\":\"Changed <&> \\/é\",\"is_me\":true,\"phones\":[],\"score\":1}"
+    ]
+  },
+  {
+    "source": "contacts",
+    "name": "alias-is-not-contact-data",
+    "snapshot": {
+      "generation": "g1",
+      "scope": [
+        "contacts.contact",
+        "contacts.group",
+        "contacts.container"
+      ],
+      "complete": true,
+      "records": [
+        {
+          "kind": "upsert",
+          "collection": "contacts.container",
+          "native_key": "c",
+          "data": {
+            "name": "Synthetic",
+            "type": 1
+          },
+          "scoped_alias": "",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        },
+        {
+          "kind": "upsert",
+          "collection": "contacts.contact",
+          "native_key": "a",
+          "data": {
+            "given_name": "Changed <&> /é",
+            "phones": [],
+            "is_me": true,
+            "score": 1.0
+          },
+          "scoped_alias": "replacement-alias",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        },
+        {
+          "kind": "upsert",
+          "collection": "contacts.group",
+          "native_key": "g",
+          "data": {
+            "name": "Fixture Group",
+            "members": [
+              "a"
+            ]
+          },
+          "scoped_alias": "contacts/contacts.group/g",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        }
+      ],
+      "revalidated": {},
+      "force": false
+    },
+    "context": {
+      "observed_at": "2026-11-03T00:00:00.000Z",
+      "checkpoint": "checkpoint-4",
+      "scan_id": "scan-4"
+    },
+    "drop": false,
+    "token_nil": false,
+    "lookup": {},
+    "expected": [],
+    "expected_data": []
+  },
+  {
+    "source": "contacts",
+    "name": "revalidated-deletions",
+    "snapshot": {
+      "generation": "g1",
+      "scope": [
+        "contacts.contact",
+        "contacts.group",
+        "contacts.container"
+      ],
+      "complete": true,
+      "records": [
+        {
+          "kind": "upsert",
+          "collection": "contacts.container",
+          "native_key": "c",
+          "data": {
+            "name": "Synthetic",
+            "type": 1
+          },
+          "scoped_alias": "",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        }
+      ],
+      "revalidated": {
+        "contacts.contact/a": "absent",
+        "contacts.group/g": "absent"
+      },
+      "force": false
+    },
+    "context": {
+      "observed_at": "2026-11-03T00:00:00.000Z",
+      "checkpoint": "checkpoint-5",
+      "scan_id": "scan-5"
+    },
+    "drop": false,
+    "token_nil": false,
+    "lookup": {},
+    "expected": [
+      {
+        "collection": "contacts.contact",
+        "data": {
+          "given_name": "Changed <&> /é",
+          "is_me": true,
+          "phones": [],
+          "score": 1
+        },
+        "kind": "absent",
+        "native_key": "a",
+        "observed_at": "2026-11-03T00:00:00.000Z",
+        "revalidated": true,
+        "scoped_alias": "replacement-alias"
+      },
+      {
+        "collection": "contacts.group",
+        "data": {
+          "members": [
+            "a"
+          ],
+          "name": "Fixture Group"
+        },
+        "kind": "absent",
+        "native_key": "g",
+        "observed_at": "2026-11-03T00:00:00.000Z",
+        "revalidated": true,
+        "scoped_alias": "contacts/contacts.group/g"
+      }
+    ],
+    "expected_data": [
+      "{\"given_name\":\"Changed <&> \\/é\",\"is_me\":true,\"phones\":[],\"score\":1}",
+      "{\"members\":[\"a\"],\"name\":\"Fixture Group\"}"
+    ]
+  },
+  {
+    "source": "contacts",
+    "name": "generation-drop-without-false-deletion",
+    "snapshot": {
+      "generation": "g2",
+      "scope": [
+        "contacts.contact",
+        "contacts.group",
+        "contacts.container"
+      ],
+      "complete": true,
+      "records": [
+        {
+          "kind": "upsert",
+          "collection": "contacts.contact",
+          "native_key": "b",
+          "data": {
+            "given_name": "Second",
+            "phones": []
+          },
+          "scoped_alias": "contacts/contacts.contact/b",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        }
+      ],
+      "revalidated": {},
+      "force": false
+    },
+    "context": {
+      "observed_at": "2026-11-03T00:00:00.000Z",
+      "checkpoint": "checkpoint-6",
+      "scan_id": "scan-6"
+    },
+    "drop": true,
+    "token_nil": false,
+    "lookup": {},
+    "expected": [
+      {
+        "collection": "contacts.contact",
+        "data": {
+          "given_name": "Second",
+          "phones": []
+        },
+        "kind": "upsert",
+        "native_key": "b",
+        "observed_at": "2026-11-03T00:00:00.000Z",
+        "scoped_alias": "contacts/contacts.contact/b"
+      }
+    ],
+    "expected_data": [
+      "{\"given_name\":\"Second\",\"phones\":[]}"
+    ]
+  },
+  {
+    "source": "contacts",
+    "name": "container-complete-absence",
+    "snapshot": {
+      "generation": "g2",
+      "scope": [
+        "contacts.contact",
+        "contacts.group",
+        "contacts.container"
+      ],
+      "complete": true,
+      "records": [
+        {
+          "kind": "upsert",
+          "collection": "contacts.contact",
+          "native_key": "b",
+          "data": {
+            "given_name": "Second",
+            "phones": []
+          },
+          "scoped_alias": "contacts/contacts.contact/b",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        }
+      ],
+      "revalidated": {},
+      "force": false
+    },
+    "context": {
+      "observed_at": "2026-11-03T00:00:00.000Z",
+      "checkpoint": "checkpoint-7",
+      "scan_id": "scan-7"
+    },
+    "drop": false,
+    "token_nil": false,
+    "lookup": {},
+    "expected": [
+      {
+        "collection": "contacts.container",
+        "data": {
+          "name": "Synthetic",
+          "type": 1
+        },
+        "kind": "absent",
+        "native_key": "c",
+        "observed_at": "2026-11-03T00:00:00.000Z",
+        "revalidated": true,
+        "scoped_alias": ""
+      }
+    ],
+    "expected_data": [
+      "{\"name\":\"Synthetic\",\"type\":1}"
+    ]
+  },
+  {
+    "source": "contacts",
+    "name": "force-replay",
+    "snapshot": {
+      "generation": "g2",
+      "scope": [
+        "contacts.contact",
+        "contacts.group",
+        "contacts.container"
+      ],
+      "complete": true,
+      "records": [
+        {
+          "kind": "upsert",
+          "collection": "contacts.contact",
+          "native_key": "b",
+          "data": {
+            "given_name": "Second",
+            "phones": []
+          },
+          "scoped_alias": "contacts/contacts.contact/b",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        }
+      ],
+      "revalidated": {},
+      "force": true
+    },
+    "context": {
+      "observed_at": "2026-11-03T00:00:00.000Z",
+      "checkpoint": "checkpoint-8",
+      "scan_id": "scan-8"
+    },
+    "drop": false,
+    "token_nil": false,
+    "lookup": {},
+    "expected": [
+      {
+        "collection": "contacts.contact",
+        "data": {
+          "given_name": "Second",
+          "phones": []
+        },
+        "kind": "upsert",
+        "native_key": "b",
+        "observed_at": "2026-11-03T00:00:00.000Z",
+        "scoped_alias": "contacts/contacts.contact/b"
+      }
+    ],
+    "expected_data": [
+      "{\"given_name\":\"Second\",\"phones\":[]}"
+    ]
+  },
+  {
+    "source": "contacts",
+    "name": "complete-empty",
+    "snapshot": {
+      "generation": "g2",
+      "scope": [
+        "contacts.contact",
+        "contacts.group",
+        "contacts.container"
+      ],
+      "complete": true,
+      "records": [],
+      "revalidated": {
+        "contacts.contact/b": "absent"
+      },
+      "force": false
+    },
+    "context": {
+      "observed_at": "2026-11-03T00:00:00.000Z",
+      "checkpoint": "checkpoint-9",
+      "scan_id": "scan-9"
+    },
+    "drop": false,
+    "token_nil": false,
+    "lookup": {},
+    "expected": [
+      {
+        "collection": "contacts.contact",
+        "data": {
+          "given_name": "Second",
+          "phones": []
+        },
+        "kind": "absent",
+        "native_key": "b",
+        "observed_at": "2026-11-03T00:00:00.000Z",
+        "revalidated": true,
+        "scoped_alias": "contacts/contacts.contact/b"
+      }
+    ],
+    "expected_data": [
+      "{\"given_name\":\"Second\",\"phones\":[]}"
+    ]
+  },
+  {
+    "source": "calendar",
+    "name": "initial",
+    "snapshot": {
+      "generation": "g1",
+      "scope": [
+        "calendar.calendar",
+        "calendar.event"
+      ],
+      "complete": true,
+      "records": [
+        {
+          "kind": "upsert",
+          "collection": "calendar.calendar",
+          "native_key": "c",
+          "data": {
+            "title": "Synthetic",
+            "writable": true
+          },
+          "scoped_alias": "",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        },
+        {
+          "kind": "upsert",
+          "collection": "calendar.event",
+          "native_key": "e",
+          "data": {
+            "title": "First",
+            "start": "2026-11-04T10:00:00.000Z",
+            "end": "2026-11-04T11:00:00.000Z",
+            "all_day": false,
+            "time_zone": "UTC"
+          },
+          "scoped_alias": "source/c/external",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        },
+        {
+          "kind": "upsert",
+          "collection": "calendar.event",
+          "native_key": "f",
+          "data": {
+            "title": "Second",
+            "start": "2026-11-04T10:00:00.000Z",
+            "end": "2026-11-04T11:00:00.000Z",
+            "all_day": false,
+            "time_zone": "UTC"
+          },
+          "scoped_alias": "source/c/second",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        }
+      ],
+      "revalidated": {},
+      "force": true
+    },
+    "context": {
+      "observed_at": "2026-11-03T00:00:00.000Z",
+      "checkpoint": "checkpoint-10",
+      "scan_id": "scan-10"
+    },
+    "drop": false,
+    "token_nil": false,
+    "lookup": {},
+    "expected": [
+      {
+        "collection": "calendar.calendar",
+        "data": {
+          "title": "Synthetic",
+          "writable": true
+        },
+        "kind": "upsert",
+        "native_key": "c",
+        "observed_at": "2026-11-03T00:00:00.000Z",
+        "scoped_alias": ""
+      },
+      {
+        "collection": "calendar.event",
+        "data": {
+          "all_day": false,
+          "end": "2026-11-04T11:00:00.000Z",
+          "start": "2026-11-04T10:00:00.000Z",
+          "time_zone": "UTC",
+          "title": "First"
+        },
+        "kind": "upsert",
+        "native_key": "e",
+        "observed_at": "2026-11-03T00:00:00.000Z",
+        "scoped_alias": "source/c/external"
+      },
+      {
+        "collection": "calendar.event",
+        "data": {
+          "all_day": false,
+          "end": "2026-11-04T11:00:00.000Z",
+          "start": "2026-11-04T10:00:00.000Z",
+          "time_zone": "UTC",
+          "title": "Second"
+        },
+        "kind": "upsert",
+        "native_key": "f",
+        "observed_at": "2026-11-03T00:00:00.000Z",
+        "scoped_alias": "source/c/second"
+      }
+    ],
+    "expected_data": [
+      "{\"title\":\"Synthetic\",\"writable\":true}",
+      "{\"all_day\":false,\"end\":\"2026-11-04T11:00:00.000Z\",\"start\":\"2026-11-04T10:00:00.000Z\",\"time_zone\":\"UTC\",\"title\":\"First\"}",
+      "{\"all_day\":false,\"end\":\"2026-11-04T11:00:00.000Z\",\"start\":\"2026-11-04T10:00:00.000Z\",\"time_zone\":\"UTC\",\"title\":\"Second\"}"
+    ]
+  },
+  {
+    "source": "calendar",
+    "name": "unchanged",
+    "snapshot": {
+      "generation": "g1",
+      "scope": [
+        "calendar.calendar",
+        "calendar.event"
+      ],
+      "complete": true,
+      "records": [
+        {
+          "kind": "upsert",
+          "collection": "calendar.calendar",
+          "native_key": "c",
+          "data": {
+            "title": "Synthetic",
+            "writable": true
+          },
+          "scoped_alias": "",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        },
+        {
+          "kind": "upsert",
+          "collection": "calendar.event",
+          "native_key": "e",
+          "data": {
+            "title": "First",
+            "start": "2026-11-04T10:00:00.000Z",
+            "end": "2026-11-04T11:00:00.000Z",
+            "all_day": false,
+            "time_zone": "UTC"
+          },
+          "scoped_alias": "source/c/external",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        },
+        {
+          "kind": "upsert",
+          "collection": "calendar.event",
+          "native_key": "f",
+          "data": {
+            "title": "Second",
+            "start": "2026-11-04T10:00:00.000Z",
+            "end": "2026-11-04T11:00:00.000Z",
+            "all_day": false,
+            "time_zone": "UTC"
+          },
+          "scoped_alias": "source/c/second",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        }
+      ],
+      "revalidated": {},
+      "force": false
+    },
+    "context": {
+      "observed_at": "2026-11-03T00:00:00.000Z",
+      "checkpoint": "checkpoint-11",
+      "scan_id": "scan-11"
+    },
+    "drop": false,
+    "token_nil": false,
+    "lookup": {},
+    "expected": [],
+    "expected_data": []
+  },
+  {
+    "source": "calendar",
+    "name": "changed-event",
+    "snapshot": {
+      "generation": "g1",
+      "scope": [
+        "calendar.calendar",
+        "calendar.event"
+      ],
+      "complete": true,
+      "records": [
+        {
+          "kind": "upsert",
+          "collection": "calendar.calendar",
+          "native_key": "c",
+          "data": {
+            "title": "Synthetic",
+            "writable": true
+          },
+          "scoped_alias": "",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        },
+        {
+          "kind": "upsert",
+          "collection": "calendar.event",
+          "native_key": "e",
+          "data": {
+            "title": "Changed <&> /é",
+            "start": "2026-11-04T10:00:00.000Z",
+            "end": "2026-11-04T11:00:00.000Z",
+            "all_day": false,
+            "time_zone": "UTC"
+          },
+          "scoped_alias": "source/c/external",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        },
+        {
+          "kind": "upsert",
+          "collection": "calendar.event",
+          "native_key": "f",
+          "data": {
+            "title": "Second",
+            "start": "2026-11-04T10:00:00.000Z",
+            "end": "2026-11-04T11:00:00.000Z",
+            "all_day": false,
+            "time_zone": "UTC"
+          },
+          "scoped_alias": "source/c/second",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        }
+      ],
+      "revalidated": {},
+      "force": false
+    },
+    "context": {
+      "observed_at": "2026-11-03T00:00:00.000Z",
+      "checkpoint": "checkpoint-12",
+      "scan_id": "scan-12"
+    },
+    "drop": false,
+    "token_nil": false,
+    "lookup": {},
+    "expected": [
+      {
+        "collection": "calendar.event",
+        "data": {
+          "all_day": false,
+          "end": "2026-11-04T11:00:00.000Z",
+          "start": "2026-11-04T10:00:00.000Z",
+          "time_zone": "UTC",
+          "title": "Changed <&> /é"
+        },
+        "kind": "upsert",
+        "native_key": "e",
+        "observed_at": "2026-11-03T00:00:00.000Z",
+        "scoped_alias": "source/c/external"
+      }
+    ],
+    "expected_data": [
+      "{\"all_day\":false,\"end\":\"2026-11-04T11:00:00.000Z\",\"start\":\"2026-11-04T10:00:00.000Z\",\"time_zone\":\"UTC\",\"title\":\"Changed <&> \\/é\"}"
+    ]
+  },
+  {
+    "source": "calendar",
+    "name": "changed-scoped-alias",
+    "snapshot": {
+      "generation": "g1",
+      "scope": [
+        "calendar.calendar",
+        "calendar.event"
+      ],
+      "complete": true,
+      "records": [
+        {
+          "kind": "upsert",
+          "collection": "calendar.calendar",
+          "native_key": "c",
+          "data": {
+            "title": "Synthetic",
+            "writable": true
+          },
+          "scoped_alias": "",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        },
+        {
+          "kind": "upsert",
+          "collection": "calendar.event",
+          "native_key": "e",
+          "data": {
+            "title": "Changed <&> /é",
+            "start": "2026-11-04T10:00:00.000Z",
+            "end": "2026-11-04T11:00:00.000Z",
+            "all_day": false,
+            "time_zone": "UTC"
+          },
+          "scoped_alias": "source/c/new-external",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        },
+        {
+          "kind": "upsert",
+          "collection": "calendar.event",
+          "native_key": "f",
+          "data": {
+            "title": "Second",
+            "start": "2026-11-04T10:00:00.000Z",
+            "end": "2026-11-04T11:00:00.000Z",
+            "all_day": false,
+            "time_zone": "UTC"
+          },
+          "scoped_alias": "source/c/second",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        }
+      ],
+      "revalidated": {},
+      "force": false
+    },
+    "context": {
+      "observed_at": "2026-11-03T00:00:00.000Z",
+      "checkpoint": "checkpoint-13",
+      "scan_id": "scan-13"
+    },
+    "drop": false,
+    "token_nil": false,
+    "lookup": {},
+    "expected": [
+      {
+        "collection": "calendar.event",
+        "data": {
+          "all_day": false,
+          "end": "2026-11-04T11:00:00.000Z",
+          "start": "2026-11-04T10:00:00.000Z",
+          "time_zone": "UTC",
+          "title": "Changed <&> /é"
+        },
+        "kind": "upsert",
+        "native_key": "e",
+        "observed_at": "2026-11-03T00:00:00.000Z",
+        "scoped_alias": "source/c/new-external"
+      }
+    ],
+    "expected_data": [
+      "{\"all_day\":false,\"end\":\"2026-11-04T11:00:00.000Z\",\"start\":\"2026-11-04T10:00:00.000Z\",\"time_zone\":\"UTC\",\"title\":\"Changed <&> \\/é\"}"
+    ]
+  },
+  {
+    "source": "calendar",
+    "name": "same-alias-replaces-native-identity",
+    "snapshot": {
+      "generation": "g1",
+      "scope": [
+        "calendar.calendar",
+        "calendar.event"
+      ],
+      "complete": true,
+      "records": [
+        {
+          "kind": "upsert",
+          "collection": "calendar.calendar",
+          "native_key": "c",
+          "data": {
+            "title": "Synthetic",
+            "writable": true
+          },
+          "scoped_alias": "",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        },
+        {
+          "kind": "upsert",
+          "collection": "calendar.event",
+          "native_key": "e-moved",
+          "data": {
+            "title": "Changed <&> /é",
+            "start": "2026-11-04T10:00:00.000Z",
+            "end": "2026-11-04T11:00:00.000Z",
+            "all_day": false,
+            "time_zone": "UTC"
+          },
+          "scoped_alias": "source/c/new-external",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        },
+        {
+          "kind": "upsert",
+          "collection": "calendar.event",
+          "native_key": "f",
+          "data": {
+            "title": "Second",
+            "start": "2026-11-04T10:00:00.000Z",
+            "end": "2026-11-04T11:00:00.000Z",
+            "all_day": false,
+            "time_zone": "UTC"
+          },
+          "scoped_alias": "source/c/second",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        }
+      ],
+      "revalidated": {},
+      "force": false
+    },
+    "context": {
+      "observed_at": "2026-11-03T00:00:00.000Z",
+      "checkpoint": "checkpoint-14",
+      "scan_id": "scan-14"
+    },
+    "drop": false,
+    "token_nil": false,
+    "lookup": {},
+    "expected": [
+      {
+        "collection": "calendar.event",
+        "data": {
+          "all_day": false,
+          "end": "2026-11-04T11:00:00.000Z",
+          "start": "2026-11-04T10:00:00.000Z",
+          "time_zone": "UTC",
+          "title": "Changed <&> /é"
+        },
+        "kind": "upsert",
+        "native_key": "e-moved",
+        "observed_at": "2026-11-03T00:00:00.000Z",
+        "scoped_alias": "source/c/new-external"
+      }
+    ],
+    "expected_data": [
+      "{\"all_day\":false,\"end\":\"2026-11-04T11:00:00.000Z\",\"start\":\"2026-11-04T10:00:00.000Z\",\"time_zone\":\"UTC\",\"title\":\"Changed <&> \\/é\"}"
+    ]
+  },
+  {
+    "source": "calendar",
+    "name": "revalidated-window-eviction",
+    "snapshot": {
+      "generation": "g1",
+      "scope": [
+        "calendar.calendar",
+        "calendar.event"
+      ],
+      "complete": true,
+      "records": [
+        {
+          "kind": "upsert",
+          "collection": "calendar.calendar",
+          "native_key": "c",
+          "data": {
+            "title": "Synthetic",
+            "writable": true
+          },
+          "scoped_alias": "",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        },
+        {
+          "kind": "upsert",
+          "collection": "calendar.event",
+          "native_key": "e-moved",
+          "data": {
+            "title": "Changed <&> /é",
+            "start": "2026-11-04T10:00:00.000Z",
+            "end": "2026-11-04T11:00:00.000Z",
+            "all_day": false,
+            "time_zone": "UTC"
+          },
+          "scoped_alias": "source/c/new-external",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        }
+      ],
+      "revalidated": {
+        "calendar.event/f": "evict"
+      },
+      "force": false
+    },
+    "context": {
+      "observed_at": "2026-11-03T00:00:00.000Z",
+      "checkpoint": "checkpoint-15",
+      "scan_id": "scan-15"
+    },
+    "drop": false,
+    "token_nil": false,
+    "lookup": {
+      "f": {
+        "title": "Second",
+        "start": "2035-01-01T00:00:00.000Z",
+        "end": "2035-01-01T01:00:00.000Z",
+        "all_day": false,
+        "time_zone": "UTC"
+      }
+    },
+    "expected": [
+      {
+        "collection": "calendar.event",
+        "data": {
+          "all_day": false,
+          "end": "2026-11-04T11:00:00.000Z",
+          "start": "2026-11-04T10:00:00.000Z",
+          "time_zone": "UTC",
+          "title": "Second"
+        },
+        "kind": "evict",
+        "native_key": "f",
+        "observed_at": "2026-11-03T00:00:00.000Z",
+        "revalidated": true,
+        "scoped_alias": "source/c/second"
+      }
+    ],
+    "expected_data": [
+      "{\"all_day\":false,\"end\":\"2026-11-04T11:00:00.000Z\",\"start\":\"2026-11-04T10:00:00.000Z\",\"time_zone\":\"UTC\",\"title\":\"Second\"}"
+    ]
+  },
+  {
+    "source": "calendar",
+    "name": "revalidated-absent",
+    "snapshot": {
+      "generation": "g1",
+      "scope": [
+        "calendar.calendar",
+        "calendar.event"
+      ],
+      "complete": true,
+      "records": [
+        {
+          "kind": "upsert",
+          "collection": "calendar.calendar",
+          "native_key": "c",
+          "data": {
+            "title": "Synthetic",
+            "writable": true
+          },
+          "scoped_alias": "",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        }
+      ],
+      "revalidated": {
+        "calendar.event/e-moved": "absent"
+      },
+      "force": false
+    },
+    "context": {
+      "observed_at": "2026-11-03T00:00:00.000Z",
+      "checkpoint": "checkpoint-16",
+      "scan_id": "scan-16"
+    },
+    "drop": false,
+    "token_nil": false,
+    "lookup": {},
+    "expected": [
+      {
+        "collection": "calendar.event",
+        "data": {
+          "all_day": false,
+          "end": "2026-11-04T11:00:00.000Z",
+          "start": "2026-11-04T10:00:00.000Z",
+          "time_zone": "UTC",
+          "title": "Changed <&> /é"
+        },
+        "kind": "absent",
+        "native_key": "e-moved",
+        "observed_at": "2026-11-03T00:00:00.000Z",
+        "revalidated": true,
+        "scoped_alias": "source/c/new-external"
+      }
+    ],
+    "expected_data": [
+      "{\"all_day\":false,\"end\":\"2026-11-04T11:00:00.000Z\",\"start\":\"2026-11-04T10:00:00.000Z\",\"time_zone\":\"UTC\",\"title\":\"Changed <&> \\/é\"}"
+    ]
+  },
+  {
+    "source": "calendar",
+    "name": "force-replay",
+    "snapshot": {
+      "generation": "g1",
+      "scope": [
+        "calendar.calendar",
+        "calendar.event"
+      ],
+      "complete": true,
+      "records": [
+        {
+          "kind": "upsert",
+          "collection": "calendar.calendar",
+          "native_key": "c",
+          "data": {
+            "title": "Synthetic",
+            "writable": true
+          },
+          "scoped_alias": "",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        }
+      ],
+      "revalidated": {},
+      "force": true
+    },
+    "context": {
+      "observed_at": "2026-11-03T00:00:00.000Z",
+      "checkpoint": "checkpoint-17",
+      "scan_id": "scan-17"
+    },
+    "drop": false,
+    "token_nil": false,
+    "lookup": {},
+    "expected": [
+      {
+        "collection": "calendar.calendar",
+        "data": {
+          "title": "Synthetic",
+          "writable": true
+        },
+        "kind": "upsert",
+        "native_key": "c",
+        "observed_at": "2026-11-03T00:00:00.000Z",
+        "scoped_alias": ""
+      }
+    ],
+    "expected_data": [
+      "{\"title\":\"Synthetic\",\"writable\":true}"
+    ]
+  },
+  {
+    "source": "calendar",
+    "name": "complete-empty",
+    "snapshot": {
+      "generation": "g1",
+      "scope": [
+        "calendar.calendar",
+        "calendar.event"
+      ],
+      "complete": true,
+      "records": [],
+      "revalidated": {
+        "calendar.calendar/c": "absent"
+      },
+      "force": false
+    },
+    "context": {
+      "observed_at": "2026-11-03T00:00:00.000Z",
+      "checkpoint": "checkpoint-18",
+      "scan_id": "scan-18"
+    },
+    "drop": false,
+    "token_nil": false,
+    "lookup": {},
+    "expected": [
+      {
+        "collection": "calendar.calendar",
+        "data": {
+          "title": "Synthetic",
+          "writable": true
+        },
+        "kind": "absent",
+        "native_key": "c",
+        "observed_at": "2026-11-03T00:00:00.000Z",
+        "revalidated": true,
+        "scoped_alias": ""
+      }
+    ],
+    "expected_data": [
+      "{\"title\":\"Synthetic\",\"writable\":true}"
+    ]
+  }
+]
