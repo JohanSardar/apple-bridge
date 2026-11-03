@@ -60,32 +60,44 @@ impl World {
             .gateway_cli(&["token", "create", "--scope", &world.config.scope])?
             .trim()
             .clone_into(&mut world.token);
-        let socket = world.runtime["socket"]
+        world.launch_peer()?;
+        Ok(world)
+    }
+    fn launch_peer(&mut self) -> Result<()> {
+        let socket = self.runtime["socket"]
             .as_str()
-            .ok_or_else(|| Error::Invalid("runtime socket".into()))?;
-        let log = fs::File::create(world.directory.join("simapple.log"))?;
-        world.peer = Some(
-            Command::new(&world.config.simapple)
-                .args(["simapple", "--socket", socket, "--secret-file"])
-                .arg(world.gateway_home.join("apple-secret"))
+            .ok_or_else(|| Error::Invalid("runtime socket".into()))?
+            .to_owned();
+        let log = fs::File::options()
+            .create(true)
+            .append(true)
+            .open(self.directory.join("simapple.log"))?;
+        self.peer = Some(
+            Command::new(&self.config.simapple)
+                .args(["simapple", "--socket", &socket, "--secret-file"])
+                .arg(self.gateway_home.join("apple-secret"))
                 .arg("--control")
-                .arg(world.directory.join("sim.sock"))
+                .arg(self.directory.join("sim.sock"))
                 .stdout(log.try_clone()?)
                 .stderr(log)
                 .spawn()?,
         );
         let deadline = Instant::now() + Duration::from_secs(20);
         loop {
-            if world.control("/inspect", &Value::Null).is_ok() {
-                break;
+            if self.control("/inspect", &Value::Null).is_ok() {
+                return Ok(());
             }
-            world.check_children()?;
+            self.check_children()?;
             if Instant::now() >= deadline {
                 return Err(Error::Invalid("peer readiness timeout".into()));
             }
             thread::sleep(Duration::from_millis(25));
         }
-        Ok(world)
+    }
+    pub fn restart_peer(&mut self) -> Result<()> {
+        stop(&mut self.peer);
+        let _ = fs::remove_file(self.directory.join("sim.sock"));
+        self.launch_peer()
     }
     fn launch_gateway(&mut self) -> Result<()> {
         let log = fs::File::options()
