@@ -110,7 +110,7 @@ mod tests {
         assert!(!run()?);
         std::fs::write(&path, "{")?;
         assert!(!run()?);
-        std::fs::remove_file(path)?;
+        std::fs::remove_file(&path)?;
         assert!(!run()?);
         Ok(())
     }
