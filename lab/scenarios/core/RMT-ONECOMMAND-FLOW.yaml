@@ -5,3 +5,5 @@ given: []
 when: []
 then: []
 cleanup: []
+impl: go-only
+impl_reason: FINAL-PLAN §1 drops embedded tsnet; this scenario asserts its login and Funnel approval flow.

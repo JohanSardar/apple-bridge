@@ -23,15 +23,17 @@ import (
 )
 
 type Scenario struct {
-	Level   string                      `yaml:"level,omitempty"`
-	Web     *WebOptions                 `yaml:"web,omitempty"`
-	ID      string                      `yaml:"id"`
-	Feature string                      `yaml:"feature"`
-	Levels  []string                    `yaml:"levels"`
-	Given   []map[string]map[string]any `yaml:"given"`
-	When    []map[string]map[string]any `yaml:"when"`
-	Then    []map[string]map[string]any `yaml:"then"`
-	Cleanup []map[string]map[string]any `yaml:"cleanup"`
+	Impl       string                      `yaml:"impl,omitempty"`
+	ImplReason string                      `yaml:"impl_reason,omitempty"`
+	Level      string                      `yaml:"level,omitempty"`
+	Web        *WebOptions                 `yaml:"web,omitempty"`
+	ID         string                      `yaml:"id"`
+	Feature    string                      `yaml:"feature"`
+	Levels     []string                    `yaml:"levels"`
+	Given      []map[string]map[string]any `yaml:"given"`
+	When       []map[string]map[string]any `yaml:"when"`
+	Then       []map[string]map[string]any `yaml:"then"`
+	Cleanup    []map[string]map[string]any `yaml:"cleanup"`
 }
 type Assertion struct {
 	Name   string `json:"name"`
@@ -926,7 +928,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		} else {
 			fmt.Printf("%s %s passed=%t quiet=%t latency=%s\n", s.ID, level, e.Passed, e.HostConditions.Quiet, latencyJSON(e.Latency))
 		}
-		if !e.Passed {
+		if !e.Passed && e.Status != "excluded" {
 			failed = true
 			for _, a := range e.Assertions {
 				if !a.Passed && a.Status != "unverified" {

@@ -72,9 +72,14 @@ pub fn command(home: &Path, action: &str, via: &str) -> Result<serde_json::Value
     fs2::FileExt::lock_exclusive(&lock)?;
     let backend = match via {
         "relay" => "relay",
+        "private" => "private",
         "tailscale-app" | "system" => "system",
         "both" => "both",
-        _ => return Err(Error::Contract("via must be relay, tailscale-app or both")),
+        _ => {
+            return Err(Error::Contract(
+                "via must be relay, tailscale-app, private or both",
+            ));
+        }
     };
     let mut selections: BTreeMap<String, bool> = match read(home, "ingresses") {
         Ok(value) => value,
@@ -92,6 +97,9 @@ pub fn command(home: &Path, action: &str, via: &str) -> Result<serde_json::Value
         Err(e) => return Err(e),
     };
     if action == "status" {
+        if selections.get("private") == Some(&true) {
+            return read(home, "status");
+        }
         return Ok(serde_json::to_value(selections)?);
     }
     if action != "on" && action != "off" {
@@ -107,6 +115,8 @@ pub fn command(home: &Path, action: &str, via: &str) -> Result<serde_json::Value
     write(home, "ingresses", &selections)?;
     let selected = if selections.get("relay") == Some(&true) {
         "relay"
+    } else if selections.get("private") == Some(&true) {
+        "private"
     } else {
         "system"
     };

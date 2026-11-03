@@ -113,6 +113,12 @@ pub fn problem(error: Error) -> Response {
     let raw = serde_json::to_vec(&ab_operations::Problem {error:&error}).unwrap_or_else(|_| b"{\"error\":{\"code\":\"unavailable\",\"message\":\"peer unavailable\",\"retryable\":true}}".to_vec());
     let mut response = raw_response(raw);
     *response.status_mut() = status;
+    if status == StatusCode::UNAUTHORIZED {
+        response.headers_mut().insert(
+            header::WWW_AUTHENTICATE,
+            header::HeaderValue::from_static("Bearer"),
+        );
+    }
     response
 }
 fn authentication_problem(error: Error, public: bool, host: Option<&str>) -> Response {

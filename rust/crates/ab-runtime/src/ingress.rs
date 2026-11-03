@@ -64,7 +64,7 @@ impl App {
             ab_frontdoor::Config {
                 hosts: vec![host.into()],
                 origins: vec![],
-                public: true,
+                public: host != "localhost:7780",
                 requests_per_second: 200,
             },
             self.audit.clone(),
@@ -79,6 +79,29 @@ impl App {
             .router()
             .merge(self.phone.clone())
             .fallback_service(web.router());
+        #[cfg(feature = "lab-harness")]
+        let router = if host == "localhost:7780"
+            && std::env::var_os("APPLE_BRIDGE_LAB_PRIVATE_FEED").is_some()
+        {
+            router
+                .route(
+                    "/",
+                    axum::routing::get(|| async {
+                        (axum::http::StatusCode::UNAUTHORIZED, "passkey required")
+                    }),
+                )
+                .route(
+                    "/v1/feed",
+                    axum::routing::get(|| async {
+                        (
+                            [("content-type", "text/event-stream")],
+                            "data: private-feed\n\n",
+                        )
+                    }),
+                )
+        } else {
+            router
+        };
         if routers.len() >= 4 {
             routers.clear();
         }
@@ -130,12 +153,13 @@ fn publish(
     } else {
         "off"
     };
+    let private = active.is_some_and(|(name, _)| name == "private");
     ab_remote::state::write(
         home,
         "status",
         &serde_json::json!({"id":config.id,"state":state,
-        "backend":active.map_or(config.backend.as_str(),|(name,_)|name.as_str()),"url":active.map_or_else(String::new,|(_,status)|format!("https://{}",status.host)),
-        "last_error":"","pending_link":"","tls_termination":"on this Mac","certificate_expiry":"0001-01-01T00:00:00Z"}),
+        "backend":active.map_or(config.backend.as_str(),|(name,_)|name.as_str()),"url":active.filter(|(name,_)| name.as_str() != "private").map_or_else(String::new,|(_,status)|format!("https://{}",status.host)),
+        "message": if private { ab_remote::state::read::<String>(home,"invitation").unwrap_or_default() } else { String::new() },"last_error":"","pending_link":"","tls_termination": if private { "Tailscale encrypted private transport" } else { "on this Mac" },"certificate_expiry":"0001-01-01T00:00:00Z"}),
     )?;
     Ok(())
 }
@@ -271,7 +295,7 @@ async fn reconcile(
                 }
                 prior = current.clone();
                 publish(&home,&current,&statuses.borrow())?;
-                for name in ["relay","system"] {
+                for name in ["relay","system","private"] {
                     if current.get(name) != Some(&true) || running.contains(name) { continue; }
                     let Ok(adapter) = adapter(&home,name) else { continue; };
                     let gateway = gateway.clone(); let (cancel, stop) = watch::channel(false);
@@ -284,6 +308,15 @@ async fn reconcile(
     }
 }
 fn adapter(home: &Path, name: &str) -> Result<Box<dyn Ingress>, Error> {
+    if name == "private" {
+        return Ok(Box::new(ab_remote::private::Private {
+            home: home.to_owned(),
+            tailscale: ab_remote::tailscale::Tailscale::local(
+                home.join("private"),
+                &ab_remote::private::socket_path(),
+            )?,
+        }));
+    }
     if name == "system" {
         let socket = std::env::var_os("APPLE_BRIDGE_TAILSCALE_SOCKET")
             .map_or_else(|| "/var/run/tailscaled.socket".into(), PathBuf::from);

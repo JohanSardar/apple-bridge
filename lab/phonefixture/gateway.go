@@ -26,24 +26,37 @@ import (
 )
 
 type Gateway struct {
-	Home   string
-	URL    string
-	Client *http.Client
-	binary string
-	env    []string
-	ctx    context.Context
-	cmd    *exec.Cmd
-	done   chan error
-	log    *os.File
-	local  *http.Server
-	public *http.Server
-	mu     sync.Mutex
-	config json.RawMessage
-	etag   int
+	Home    string
+	URL     string
+	Client  *http.Client
+	binary  string
+	env     []string
+	ctx     context.Context
+	cmd     *exec.Cmd
+	done    chan error
+	log     *os.File
+	local   *http.Server
+	public  *http.Server
+	mu      sync.Mutex
+	private bool
+	config  json.RawMessage
+	etag    int
 }
 
 func Start(ctx context.Context, binary, home string) (*Gateway, error) {
-	g := &Gateway{Home: home, URL: "https://node.fixture.test", binary: binary, ctx: ctx, config: json.RawMessage(`{"unrelated":"preserved"}`), etag: 1}
+	return start(ctx, binary, home, false, false)
+}
+
+func StartPrivate(ctx context.Context, binary, home string) (*Gateway, error) {
+	return start(ctx, binary, home, true, false)
+}
+
+func StartPrivateExpired(ctx context.Context, binary, home string) (*Gateway, error) {
+	return start(ctx, binary, home, true, true)
+}
+
+func start(ctx context.Context, binary, home string, private, expired bool) (*Gateway, error) {
+	g := &Gateway{Home: home, URL: "https://node.fixture.test", binary: binary, ctx: ctx, private: private, config: json.RawMessage(`{"unrelated":"preserved"}`), etag: 1}
 	if err := os.MkdirAll(home, 0700); err != nil {
 		return nil, err
 	}
@@ -99,10 +112,16 @@ func Start(ctx context.Context, binary, home string) (*Gateway, error) {
 	}}
 	g.Client = &http.Client{Transport: transport, Timeout: 15 * time.Second}
 	g.env = append(os.Environ(), "APPLE_BRIDGE_SECRET_STORE=file", "APPLE_BRIDGE_TAILSCALE_SOCKET="+socket, "APPLE_BRIDGE_REMOTE_PROBE_ADDRESS="+public.Addr().String(), "APPLE_BRIDGE_RELAY_URL=https://127.0.0.1:1", "SSL_CERT_FILE="+certPath, "APPLE_BRIDGE_LAB_TLS_ROOT="+certPath, "APPLE_BRIDGE_LAB_PROBE_DURATION=1s", "APPLE_BRIDGE_LAB_REMOTE_DIAGNOSTICS="+filepath.Join(home, "remote-errors.log"))
+	if private {
+		g.env = append(g.env, "APPLE_BRIDGE_LAB_PRIVATE_FEED=1")
+	}
+	if expired {
+		g.env = append(g.env, "APPLE_BRIDGE_LAB_PRIVATE_TTL=0")
+	}
 	if err = g.Restart(); err != nil {
 		return nil, err
 	}
-	if _, err = g.Command("remote", "on", "--via", "tailscale-app"); err != nil {
+	if _, err = g.Command("remote", "on", "--via", map[bool]string{false: "tailscale-app", true: "private"}[private]); err != nil {
 		detail, _ := os.ReadFile(filepath.Join(home, "remote-errors.log"))
 		return nil, fmt.Errorf("%w; isolated remote diagnostic: %s", err, detail)
 	}
@@ -149,11 +168,43 @@ func fixtureCertificate() ([]byte, []byte, error) {
 }
 
 func (g *Gateway) localAPI(w http.ResponseWriter, request *http.Request) {
+	if request.URL.Path == "/localapi/v0/dial" && g.private {
+		if request.Header.Get("Dial-Host") != "node.fixture.ts.net" || request.Header.Get("Dial-Port") != "7780" || request.Header.Get("Dial-Network") != "tcp" {
+			http.Error(w, "invalid dial", 403)
+			return
+		}
+		var lease struct {
+			Target string `json:"target"`
+		}
+		raw, _ := os.ReadFile(filepath.Join(g.Home, "private", "remote", "lease.json"))
+		json.Unmarshal(raw, &lease)
+		upstream, err := net.Dial("tcp", lease.Target)
+		if err != nil {
+			http.Error(w, "unavailable", 503)
+			return
+		}
+		conn, _, err := w.(http.Hijacker).Hijack()
+		if err != nil {
+			upstream.Close()
+			return
+		}
+		defer conn.Close()
+		defer upstream.Close()
+		io.WriteString(conn, "HTTP/1.1 101 Switching Protocols\r\nConnection: upgrade\r\nUpgrade: ts-dial\r\n\r\n")
+		go func() { io.Copy(upstream, conn); upstream.Close() }()
+		io.Copy(conn, upstream)
+		return
+	}
+
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("ETag", strconv.Itoa(g.etag))
 	if request.Method == "GET" && strings.HasPrefix(request.URL.Path, "/localapi/v0/status") {
+		if g.private {
+			io.WriteString(w, `{"BackendState":"Running","Self":{"DNSName":"node.fixture.ts.net."}}`)
+			return
+		}
 		io.WriteString(w, `{"BackendState":"Running","Self":{"DNSName":"node.fixture.test.","CapMap":{"https":null,"funnel":null,"https://tailscale.com/cap/funnel-ports?ports=443,8443,10000":null}}}`)
 		return
 	}
