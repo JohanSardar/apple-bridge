@@ -13,7 +13,7 @@ pub struct CaptureJob {
 pub struct Backend {
     pub state: GatewayStore,
     pub blobs: Arc<Mutex<ab_blobs::Store>>,
-    pub jobs: mpsc::Sender<CaptureJob>,
+    pub jobs: mpsc::UnboundedSender<CaptureJob>,
     #[cfg(feature = "lab-harness")]
     pub home: std::path::PathBuf,
 }
@@ -94,7 +94,6 @@ impl Backend {
                     capture,
                     session: session.ok_or(Code::Unavailable)?,
                 })
-                .await
                 .map_err(|_| Code::Unavailable)?;
         }
         #[cfg(feature = "lab-harness")]
@@ -108,7 +107,7 @@ impl Backend {
 pub async fn hydrate(
     blobs: Arc<Mutex<ab_blobs::Store>>,
     commands: ab_applepeer::Commands,
-    mut jobs: mpsc::Receiver<CaptureJob>,
+    mut jobs: mpsc::UnboundedReceiver<CaptureJob>,
     mut stop: watch::Receiver<bool>,
 ) -> Result<(), crate::Error> {
     loop {

@@ -93,7 +93,7 @@ pub async fn start(mut config: Config, authority: Arc<ab_trust::Authority>) -> R
         }
         Err(error) => return Err(error.into()),
     };
-    let (jobs, hydration) = tokio::sync::mpsc::channel(64);
+    let (jobs, hydration) = tokio::sync::mpsc::unbounded_channel();
     let blob_source = commands.clone();
     let backend = Arc::new(crate::capture::Backend {
         state: (*store).clone(),
