@@ -1,7 +1,7 @@
 import subprocess,json,tempfile,hashlib,pathlib,time,statistics,sqlite3,os
 ROOT=pathlib.Path(__file__).resolve().parents[4]
 RUST=os.environ.get('AB_STATE_RUST',str(ROOT/'rust/target/release/examples/state_probe'))
-GO='/tmp/ab-state-go'
+GO=os.environ.get('AB_STATE_GO','/tmp/ab-state-go')
 vis={s:True for s in ['messages','contacts','reminders','calendar','system','notes','health','commands:all']}
 def ident(prefix,n):return prefix+'_'+str(n).zfill(26)
 def record(c,n,d,version=1):

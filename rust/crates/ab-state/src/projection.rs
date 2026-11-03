@@ -111,7 +111,7 @@ pub(crate) fn valid_digest(fields: &str) -> bool {
             .bytes()
             .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
 }
-fn visit_blobs(
+pub(crate) fn visit_blobs(
     db: &Connection,
     owner: &str,
     fields: &Value,

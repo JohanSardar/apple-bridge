@@ -1,4 +1,11 @@
 #![forbid(unsafe_code)]
+mod completion;
+mod protection;
+pub use protection::{BlobProtection, ReferenceSet};
+mod gateway;
+mod ledger;
+pub use gateway::{CommitResult, FrozenSnapshot, restore};
+pub use ledger::{BlobReference, Command, CommandError, CommandEvent, CommandPart, CommandRecord};
 mod models;
 mod notes;
 mod projection;
@@ -22,6 +29,10 @@ pub type Visibility = HashMap<String, bool>;
 pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("command ledger missing; run bridge restore --accept-ledger-loss")]
+    LedgerMissing,
+    #[error("id_reused: command ID already identifies another request")]
+    IdReused,
     #[error("{0}")]
     Contract(#[from] ErrorCode),
     #[error("{0}")]
@@ -90,6 +101,11 @@ pub enum Gateway {}
 #[derive(Debug)]
 pub struct State<Role> {
     db: Connection,
+    ledger: Option<Connection>,
+    blob_protection: Option<std::sync::Arc<dyn BlobProtection>>,
+    capacity: HashMap<String, bool>,
+    snapshot_refs: HashMap<String, Vec<serde_json::Value>>,
+    leases: HashMap<String, (u64, jiff::Timestamp)>,
     pending: Option<(u64, u64)>,
     generation: u64,
     role: PhantomData<Role>,
@@ -282,6 +298,9 @@ impl State<Replica> {
                 set_meta(&tx, k, visibility)?;
             }
         }
+        let cursor = head(&tx)?;
+        tx.execute("DELETE FROM journal_commits WHERE epoch<>? OR through_seq>? OR through_seq<=CAST((SELECT value FROM meta WHERE key='retention_floor') AS INTEGER)",params![cursor.epoch,number(cursor.sequence)?])?;
+        tx.execute("INSERT OR IGNORE INTO journal_commits SELECT ?,? WHERE ?>CAST((SELECT value FROM meta WHERE key='retention_floor') AS INTEGER) AND EXISTS(SELECT 1 FROM journal)",params![cursor.epoch,number(cursor.sequence)?,number(cursor.sequence)?])?;
         projection::initialize(&tx)?;
         tx.execute_batch(
             "DELETE FROM blob_refs WHERE owner LIKE 'capture-stage:%' OR owner LIKE 'staging:%';",
@@ -289,12 +308,19 @@ impl State<Replica> {
         commit(tx)?;
         Ok(Self {
             db,
+            ledger: None,
+            blob_protection: None,
+            capacity: HashMap::new(),
+            snapshot_refs: HashMap::new(),
+            leases: HashMap::new(),
             pending: None,
             generation: 0,
             role: PhantomData,
             replica_status: None,
         })
     }
+}
+impl<Role> State<Role> {
     pub fn head(&self) -> Result<Cursor> {
         head(&self.db)
     }
@@ -313,6 +339,8 @@ impl State<Replica> {
         self.pending = None;
         Ok(())
     }
+}
+impl State<Replica> {
     pub fn begin_install(
         &mut self,
         begin: &FeedFrame,
@@ -476,6 +504,8 @@ impl State<Replica> {
         self.pending = None;
         Ok(c)
     }
+}
+impl<Role> State<Role> {
     pub fn read(&self, visibility: &Visibility, query: &ReadQuery) -> Result<ReadResult> {
         if query.limit > 10000
             || (!query.collection.is_empty()
@@ -725,4 +755,12 @@ pub(crate) fn commit(tx: Transaction<'_>) -> Result<()> {
     tx.execute("DELETE FROM blob_ref_changes", [])?;
     tx.commit()?;
     Ok(())
+}
+
+pub fn is_capacity(error: &Error) -> bool {
+    match error {
+        Error::Sqlite(rusqlite::Error::SqliteFailure(code, _)) => code.extended_code & 255 == 13,
+        Error::Io(error) => error.raw_os_error() == Some(28),
+        _ => false,
+    }
 }

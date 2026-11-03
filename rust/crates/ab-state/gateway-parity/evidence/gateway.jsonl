@@ -1,0 +1,3 @@
+{"impl": "rust", "comparisons": 53, "capture_payload_bytes_equal": true, "journal_clock_excluded": true, "command_event_clocks_normalized": true, "bidirectional_reopen": true, "restore_preserves_ledger": true, "restore_rotates_epoch_and_era": true}
+{"sqlite_full_rollback": true, "capacity_status": true, "recovery": true}
+{"rust_created_gateway_reopens_in_go": true, "missing_ledger_refused": true}
