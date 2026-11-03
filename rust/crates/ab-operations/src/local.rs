@@ -192,7 +192,11 @@ pub struct LocalGateway {
     stopping: std::sync::atomic::AtomicBool,
 }
 fn raw<T: Serialize>(value: &T) -> Result<Box<RawValue>, Error> {
-    let mut value = serde_json::to_value(value).map_err(|_| Code::Corrupt)?;
+    let direct = serde_json::value::to_raw_value(value).map_err(|_| Code::Corrupt)?;
+    if !direct.get().contains("mac.clipboard_write") {
+        return Ok(direct);
+    }
+    let mut value: Value = serde_json::from_str(direct.get()).map_err(|_| Code::Corrupt)?;
     redact_clipboard(&mut value);
     serde_json::value::to_raw_value(&value).map_err(|_| Code::Corrupt.into())
 }
@@ -1480,3 +1484,6 @@ fn resolvable(r: &CommandRecord) -> bool {
 #[cfg(test)]
 #[path = "local_races.rs"]
 mod races;
+#[cfg(test)]
+#[path = "local_evidence.rs"]
+mod evidence;
