@@ -11,7 +11,7 @@ binary=${RUST_BRIDGE:-}
 if [[ -z "$binary" ]]; then
   artifacts=$(mktemp)
   trap 'rm -f "$artifacts"' EXIT
-  if ! cargo build --manifest-path rust/Cargo.toml -p ab-runtime --features lab-harness --bin bridge --message-format=json > "$artifacts"; then
+  if ! cargo build --manifest-path rust/Cargo.toml -p ab-runtime --features lab-queries --bin bridge --message-format=json > "$artifacts"; then
     echo "BLOCKED ab-runtime: Rust gateway build unavailable; reporting every default scenario" >&2
   fi
   binary=$(python3 -c 'import json,sys; paths=[m["executable"] for line in sys.stdin if (m:=json.loads(line)).get("reason")=="compiler-artifact" and m.get("target",{}).get("name")=="bridge" and m.get("executable")]; print(paths[-1] if paths else "")' < "$artifacts")

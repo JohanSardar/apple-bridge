@@ -398,3 +398,10 @@ The existing CORE-CAPTURE-ALIASES oracle moved from the performance fixture into
 Messages SIM command/read bodies are separate functions/files from their native dispatch guards, with their existing assertion bodies retained. Shared upload/command wire helpers moved byte-for-byte out of files importing native Authority setup. SIM inventory follows these explicit entries while still checking wrapper imports, direct semantic calls and transitive helper calls; seeded wrapper import and transitive product-call probes both block qualification. Native/real paths retain their original blockers and are not qualified by this mapping.
 
 The capability descriptor check now obtains the selected lab binary's actual operation scope and input schema over `lab-operation-catalog`; its scope equality/nonempty-schema predicate is preserved. The Go proof passes before Rust execution. Consent and snapshot-pool callback roots now identify their actual binary fixtures rather than unrelated web dispatcher branches. The private legacy WebSocket bodies fail the unchanged Go implementation as well and remain unqualified; no assertions were removed to make them pass.
+
+
+## G-E portable gateway entry continuation
+
+Generic binary and media SIM bodies are explicit entries with unchanged assertion bodies. Their portable runtime gate consumes the audited inventory and rechecks current imports and semantic calls; missing metadata fails closed. Existing native owner allowances remain separate. Source-type casts such as Grant/HealthSample do not invoke product semantics. Relay certificate fixtures, connector consent, CIMD and relay-auth roots now name their actual callbacks: real product couplings remain blocked, while unrelated native dispatcher branches no longer classify a portable journey.
+
+Go default proof is 201/201. Runtime negative probes reject stale-map product imports/semantic calls and missing classification/map data; a blocked CLI result stays blocked in the matrix. The ordinary matrix build enables the same lab query surface as the Go lab build. No real/native body or assertion was weakened or removed.

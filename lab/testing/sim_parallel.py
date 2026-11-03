@@ -60,9 +60,23 @@ def execute(entry, binary, timeout, logs, implementation, rust_binary, startup_b
                 os.killpg(process.pid, signal.SIGKILL)
             except ProcessLookupError:
                 pass
+    scenario_blockers = []
+    if status == 'fail':
+        for line in target.read_text(errors='replace').splitlines():
+            if not line.startswith('{'):
+                continue
+            try:
+                evidence = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if evidence.get('status') == 'blocked':
+                status = 'blocked'
+                scenario_blockers = [a.get('detail', 'harness: binary fixture adapter required') for a in evidence.get('assertions', []) if a.get('name') == 'binary_harness_required']
+                if not scenario_blockers:
+                    scenario_blockers = ['harness: scenario reported blocked']
     row = {'id': entry['id'], 'seconds': round(time.monotonic() - started, 3), 'status': status, 'implementation': implementation}
     if 'gateway=rust' in implementation:
-        blockers = gateway_blockers(entry)
+        blockers = gateway_blockers(entry) + scenario_blockers
         if startup_blocker:
             blockers.append(startup_blocker)
         if not rust_binary or not Path(rust_binary).is_file():
