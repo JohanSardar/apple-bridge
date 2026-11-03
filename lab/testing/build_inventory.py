@@ -30,7 +30,7 @@ def generate(manifest):
         swift_dependencies[name] = set(re.findall(r'"([^"]+)"', dependencies_text))
     selection = defaultdict(list)
     entries = []
-    callback_roots = {'CONSENT-CONNECTOR': {'runAgentAccess','runConsent'}, 'CORE-SNAPSHOT-POOL': {'runSnapshotPool'}, 'CORE-FORGED-DELEGATION': {'runCommands'}, 'CORE-REPLICA-CAPTURE-OBSERVERS': {'runAgentAccess', 'runCaptureObservers'}, 'WEB-AGENT-LEVELS': {'runAgentAccess', 'runAgentLevels'}, 'WEB-AGENT-ACTIVITY': {'runAgentActivity'}, 'WEB-AGENT-CREDENTIALS': {'runAgentCredentials'}, 'WEB-AGENT-OAUTH': {'runAgentAccess', 'runAgentOAuth'}}
+    callback_roots = {'RELAY-CAA-ACCOUNT': {'runRelayCertificates'}, 'RELAY-CT-INDEPENDENT': {'runRelayCertificates'}, 'CONN-CHATGPT': {'runConnectorApproval'}, 'CONN-CLAUDE-AI': {'runConnectorApproval'}, 'WEB-AGENT-OAUTH-CIMD': {'runAgentAccess','runAgentOAuthCIMD'}, 'WEB-RELAY-AUTH': {'runRelayAuth'}, 'CONSENT-CONNECTOR': {'runAgentAccess','runConsent'}, 'CORE-SNAPSHOT-POOL': {'runSnapshotPool'}, 'CORE-FORGED-DELEGATION': {'runCommands'}, 'CORE-REPLICA-CAPTURE-OBSERVERS': {'runAgentAccess', 'runCaptureObservers'}, 'WEB-AGENT-LEVELS': {'runAgentAccess', 'runAgentLevels'}, 'WEB-AGENT-ACTIVITY': {'runAgentActivity'}, 'WEB-AGENT-CREDENTIALS': {'runAgentCredentials'}, 'WEB-AGENT-OAUTH': {'runAgentAccess', 'runAgentOAuth'}}
     callback_helpers = {'lab/scenarios/web_server.go', 'lab/scenarios/web_authenticator.go', 'lab/scenarios/consent_activity.go'}
     for scenario in data['scenarios']:
         identity, feature = scenario['ID'], scenario['Feature']
@@ -53,7 +53,9 @@ def generate(manifest):
             roots = callback_roots[identity]
         if not roots:
             roots.add('runScenario')
-        sim_entries = {"runMessages": "runMessagesSim", "runMessagesCommands": "runMessagesCommandsSim"} if "sim" in scenario["Levels"] else {}
+        if roots == {'runScenario'} and (identity.startswith('CORE-') or identity in {'AUTH-SCOPES-METADATA','LAB-MALFORMED-SCENARIO','LAB-SSE','LAB-TRUTH-MULTIPLICITY'}):
+            roots = {'runBinaryScenario'}
+        sim_entries = {"runMessages": "runMessagesSim", "runMessagesCommands": "runMessagesCommandsSim", "runMediaVariants": "runMediaVariantsSim"} if "sim" in scenario["Levels"] else {}
         original_roots = set(roots)
         roots = {sim_entries.get(name,name) for name in roots}
         reached = set()
@@ -63,7 +65,7 @@ def generate(manifest):
             name = pending.pop()
             if name in sim_entries and name not in wrappers:
                 wrappers.add(name)
-                native_calls = {"runMessages": {"runRealMessages"}, "runMessagesCommands": {"runNativeMessagesCommands", "runNativeMessagesSelfTest"}}[name]
+                native_calls = {"runMessages": {"runRealMessages"}, "runMessagesCommands": {"runNativeMessagesCommands", "runNativeMessagesSelfTest"}, "runMediaVariants": {"runNativeMessagesCommands"}}[name]
                 pending.extend(n for n in re.findall(r"\b(\w+)\(", functions[name][1]) if n in functions and n not in native_calls and n not in reached and n != name)
             name = sim_entries.get(name,name)
             if name in reached or name not in functions or name == 'runScenario':
@@ -102,7 +104,7 @@ def generate(manifest):
                 swift.add(dependency)
                 pending_swift.append(dependency)
         text = path.read_text()
-        semantic_calls = sorted({call for name in reached | wrappers for call in re.findall(r'contracts\.(CommandHash|Descriptor|Grant|GrantsForSource|HealthSample|IPhoneCompletionEvidence|MacCompletionEvidence|MacDescriptors|NormalizeContactHandle|OperationSchema|ValidateCommand|ValidateIPhoneCommand|BlobReferences)\(', functions[name][1])})
+        semantic_calls = sorted({call for name in reached | wrappers for call in re.findall(r'contracts\.(CommandHash|Descriptor|GrantsForSource|IPhoneCompletionEvidence|MacCompletionEvidence|MacDescriptors|NormalizeContactHandle|OperationSchema|ValidateCommand|ValidateIPhoneCommand|BlobReferences)\(', functions[name][1])})
         native_fixture = native and identity != 'CORE-SHORTCUT-SIGN'
         whitebox = bool(set(imports) - {'internal/contracts'}) or native_fixture or bool(semantic_calls)
         recommendation, reason = 'keep', 'Distinct journey; retain its behavioral assertions.'
