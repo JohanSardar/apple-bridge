@@ -1,0 +1,15 @@
+id: LIVE-CHECKPOINT-REOPEN
+feature: lab.live-fault
+levels: [sim]
+given:
+  - world: {replicas: 0}
+when:
+  - control:
+      route: /external-change
+      input: {key: live-checkpoint-record, collection: reminders.reminder, data: {title: '[ab-test] checkpoint survives reopen', completed: false}}
+  - control: {route: /flush, input: {}}
+  - restart_gateway: {}
+then:
+  - protocol_gate: {check: reopen-offers-committed}
+cleanup:
+  - world: {}

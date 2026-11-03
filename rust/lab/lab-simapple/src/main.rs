@@ -152,6 +152,7 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
             "permitted":s.denied.get("messages") != Some(&true)
         })),
         "/inspect" => Ok(json!(s.records())),
+        "/protocol" => Ok(s.data["protocol"].clone()),
         "/effects" => Ok(s.data["effects"].clone()),
         "/command-origins" => Ok(s.data["origins"].clone()),
         "/stats" => Ok(
@@ -436,6 +437,17 @@ impl Session {
                         || reply["credit"].as_u64() != Some(n as u64)
                     {
                         return Err(invalid("commit identity or credit"));
+                    }
+                    {
+                        let mut s = lock(state)?;
+                        s.data["protocol"]["acked"][&src] = json!(checkpoint);
+                        let log = &mut s.data["protocol"]["commits"];
+                        if !log.is_array() {
+                            *log = json!([]);
+                        }
+                        if let Some(entries) = log.as_array_mut() {
+                            entries.push(json!({"source": src, "checkpoint": checkpoint}));
+                        }
                     }
                     self.checkpoints.insert(src, checkpoint);
                     self.credit += n;
@@ -753,6 +765,22 @@ fn session(
         credit: usize::try_from(credit).map_err(|_| invalid("credit"))?,
         tickets: BTreeMap::new(),
     };
+    {
+        let mut offered = serde_json::Map::new();
+        if let Some(checkpoints) = open["checkpoints"].as_object() {
+            for (src, checkpoint) in checkpoints {
+                offered.insert(src.clone(), json!(string(checkpoint, "checkpoint")));
+            }
+        }
+        let mut s = lock(state)?;
+        let log = &mut s.data["protocol"]["opens"];
+        if !log.is_array() {
+            *log = json!([]);
+        }
+        if let Some(entries) = log.as_array_mut() {
+            entries.push(json!({"fence": fence, "offered": offered}));
+        }
+    }
     if let Some(checkpoints) = open["checkpoints"].as_object() {
         for (src, checkpoint) in checkpoints {
             let generation = if src == "messages" {

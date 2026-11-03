@@ -2,6 +2,7 @@ pub mod safety;
 use lab_world::{Error, Result, World};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+use std::{thread, time::{Duration, Instant}};
 use std::collections::BTreeMap;
 
 #[derive(Debug, Deserialize)]
@@ -136,6 +137,7 @@ impl Registry {
         registry.register("restart_gateway", |world, _, _| world.restart_gateway());
         registry.register("capture_truth", capture_truth);
         registry.register("fault_trace", safety::gate);
+        registry.register("protocol_gate", protocol_gate);
         registry
     }
 }
@@ -161,4 +163,69 @@ fn capture_truth(world: &mut World, _: &Value, evidence: &mut Evidence) -> Resul
         "every synthetic native observation appears through public records.query",
     );
     Ok(())
+}
+
+fn protocol_snapshot(world: &World, ready: impl Fn(&Value) -> bool) -> Result<Value> {
+    let deadline = Instant::now() + Duration::from_secs(20);
+    loop {
+        let protocol = world.control("/protocol", &Value::Null)?;
+        if ready(&protocol) || Instant::now() >= deadline {
+            return Ok(protocol);
+        }
+        thread::sleep(Duration::from_millis(100));
+    }
+}
+fn protocol_gate(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result<()> {
+    match input["check"].as_str() {
+        Some("reopen-offers-committed") => {
+            let protocol = protocol_snapshot(world, |p| {
+                p["opens"].as_array().is_some_and(|o| o.len() >= 2)
+            })?;
+            let commits = protocol["commits"].as_array().cloned().unwrap_or_default();
+            let opens = protocol["opens"].as_array().cloned().unwrap_or_default();
+            let offered = opens.last().map_or(Value::Null, |open| open["offered"].clone());
+            let ok = opens.len() >= 2
+                && !commits.is_empty()
+                && commits.iter().all(|commit| {
+                    let source = commit["source"].as_str().unwrap_or_default();
+                    offered[source].as_str().is_some_and(|checkpoint| {
+                        !checkpoint.is_empty()
+                            && commits.iter().any(|c| {
+                                c["source"] == commit["source"] && c["checkpoint"] == *checkpoint
+                            })
+                    })
+                });
+            evidence.check(
+                "reopen_offers_committed_checkpoint",
+                ok,
+                &format!("opens={} commits={} offered={offered}", opens.len(), commits.len()),
+            );
+            Ok(())
+        }
+        Some("acked-data-visible") => {
+            let protocol = protocol_snapshot(world, |p| {
+                p["commits"].as_array().is_some_and(|c| !c.is_empty())
+            })?;
+            let acked = protocol["commits"].as_array().is_some_and(|c| !c.is_empty());
+            let truth = world.control("/inspect", &Value::Null)?;
+            let expected = truth.as_array().cloned().unwrap_or_default();
+            let response = world.query("records.query", &json!({"collection":"","limit":1000}))?;
+            let records = response["records"].as_array().cloned().unwrap_or_default();
+            let visible = !expected.is_empty()
+                && expected.iter().all(|native| {
+                    records.iter().any(|record| {
+                        record["collection"] == native["collection"]
+                            && record["data"] == native["data"]
+                            && record["deleted"] != true
+                    })
+                });
+            evidence.check(
+                "acked_data_visible",
+                acked && visible,
+                &format!("peer_acked={acked} visible_through_public_query={visible}"),
+            );
+            Ok(())
+        }
+        _ => Err(Error::Invalid("protocol_gate check".into())),
+    }
 }

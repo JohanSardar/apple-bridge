@@ -23,6 +23,10 @@ impl ab_applepeer::Backend for Backend {
     }
     fn checkpoints(&self) -> Task<'_, BTreeMap<String, Box<serde_json::value::RawValue>>> {
         Box::pin(async {
+            #[cfg(feature = "seeded-faults")]
+            if seeded_fault("skip-checkpoint-commit") {
+                return Ok(BTreeMap::new());
+            }
             let mut checkpoints = self.state.checkpoints()?;
             if self
                 .blobs
@@ -58,6 +62,11 @@ impl ab_applepeer::Backend for Backend {
     }
 }
 
+#[cfg(feature = "seeded-faults")]
+fn seeded_fault(name: &str) -> bool {
+    std::env::var("AB_LAB_SEEDED_FAULT").is_ok_and(|value| value == name)
+}
+
 impl Backend {
     async fn commit_bound(
         &self,
@@ -66,6 +75,17 @@ impl Backend {
     ) -> Result<(Cursor, bool), ab_operations::Error> {
         if !capture.blob_handles.is_empty() && session.is_none() {
             return Err(Code::Unavailable.into());
+        }
+        #[cfg(feature = "seeded-faults")]
+        if seeded_fault("ack-uncommitted-data") {
+            return Ok((
+                Cursor {
+                    epoch: String::new(),
+                    subscription_revision: 0,
+                    sequence: 0,
+                },
+                false,
+            ));
         }
         let result = self.state.commit(&capture)?;
         if !capture.blob_handles.is_empty() {
