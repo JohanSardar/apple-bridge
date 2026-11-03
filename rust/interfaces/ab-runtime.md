@@ -76,3 +76,11 @@ The runtime Approvals adapter renders the same redacted argument metadata as Go:
 ## G-F lab catalog CLI
 
 lab-harness builds expose lab-operation-catalog before opening Authority or the requested home, returning catalog scope/schema entries and the three provided test-query descriptors. MSG-CAPABILITY-MATRIX passes against the selected Rust binary. A direct Go oracle without lab registration matches all 147 ordinary product descriptors exactly. Full lab metadata is not equal: Go alone registers labdummy.item in the three read collection enums, and the provided test query descriptors clone helper.version input rather than their operation-specific argument schemas. Those remaining owner seams are retained as failed full-lab comparison evidence, not hidden by modifying exported schemas in runtime.
+
+## G-F current ownership: Mac command adapter
+
+G-F is wiring non-capture mac.* commands through the existing ab-commands validator/NativeAction codec and the existing LocalGateway completion evidence checks. This is runtime-only source work; G-E retains the portable SIM eligibility audit. Capture/document staging and missing source validators remain separate product seams. No real Mac action or permission request is authorized.
+
+MAC-COMMANDS is already an isolated World.New SIM journey with selected REST/MCP/Helper binaries and no Go implementation calls. G-F temporarily adds its narrow SIM eligibility for the Go/control and runtime resolver regression; G-E can replace that entry with the broader audited portable SIM policy. Real-level and replica eligibility do not change.
+
+Non-capture Mac commands now use ab-commands::native_action with authenticated origin and the same fallback serialization key as Go. Existing LocalGateway validation, approval policy and hash/readback evidence checks remain authoritative. Go passes the five isolated Mac/iWork SIM controls; Rust passes MAC-ACTIONS, MAC-CAPTURE, MAC-EXTRAS-SIM and IWORK-REAL at sim level. MAC-COMMANDS now passes execution/readback and fails only the retained clipboard redaction/durable-file assertions requested from the lifecycle owner. The full Linux run is 149 pass / 32 fail / 20 blocked; CAL-WINDOW-SLIDE failed after passing in the preceding run. No real action or permission request ran.

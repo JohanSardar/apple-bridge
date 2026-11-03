@@ -22,3 +22,7 @@ With session-bound hydration, owner CLI and LabClock installed, CORE-CMD-CLOCK-J
 ## G-F lab-query descriptor finding
 
 The runtime lab-operation-catalog now exports the public descriptor_for values for test.echo/test.sleep/test.blob. Their input currently retains op.enum=[helper.version] from the cloned base; test.sleep needs args.ms and test.blob needs args.size bounds, while test.echo accepts arbitrary args. Go lab metadata differs for these three operations even though functional query matrix tests pass. Please correct these operation-specific schemas in the owning ab-operations lab descriptor builder; runtime must expose actual descriptors rather than synthesize a second schema definition.
+
+## G-F Mac clipboard admission finding
+
+The runtime now routes non-capture mac.* through the provided serializer. MAC-COMMANDS readback assertions then pass, but clipboard_command_redacted and clipboard_absent_from_durable_files fail. LocalGateway persists the original mac.clipboard_write text in CommandRecord.command.args. Go retains {} in that command record and keeps text only in transient execution input. This needs the lifecycle owner's transient-input/redaction policy before admission/queueing, with original request hashing and no replay of lost transient text after restart. Runtime must not scrub persisted files after admission or weaken the durable-file privacy oracle.
