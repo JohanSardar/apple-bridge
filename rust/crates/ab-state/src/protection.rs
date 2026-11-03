@@ -86,7 +86,7 @@ impl crate::State<crate::Gateway> {
         source: ab_domain::Source,
         status: &str,
         coverage: ab_domain::Coverage,
-        capabilities: &[String],
+        capabilities: Option<&[String]>,
         reason: &str,
     ) -> Result<()> {
         let tx = self.db.transaction()?;
@@ -112,8 +112,22 @@ impl crate::State<crate::Gateway> {
             &[&id],
         )?
         .pop();
-        let data = crate::gateway::data(
-            &serde_json::json!({"source":source,"state":status,"coverage":coverage,"capabilities":capabilities,"reason":reason}),
+        let fields = std::collections::BTreeMap::from([
+            ("source", serde_json::value::to_raw_value(&source)?),
+            ("state", serde_json::value::to_raw_value(status)?),
+            ("coverage", serde_json::value::to_raw_value(&coverage)?),
+            (
+                "capabilities",
+                serde_json::value::to_raw_value(&capabilities)?,
+            ),
+            ("reason", serde_json::value::to_raw_value(reason)?),
+        ]);
+        let data = serde_json::value::RawValue::from_string(
+            String::from_utf8_lossy(&crate::gojson::legacy_json(
+                &fields,
+                crate::EscapeMode::Html,
+            )?)
+            .into_owned(),
         )?;
         if old.as_ref().is_some_and(|r| r.data.get() == data.get()) {
             return Ok(());
@@ -142,5 +156,84 @@ impl crate::State<crate::Gateway> {
         )?;
         crate::set_cursor(&tx, &cursor)?;
         commit(tx, self.blob_protection.as_ref())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn source_state_preserves_go_coverage_bytes_and_is_idempotent()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let home =
+            std::env::temp_dir().join(format!("source-bytes-{}", crate::gateway::new_id("")?));
+        let mut state = crate::State::<crate::Gateway>::open(&home)?;
+        let coverage = ab_domain::Coverage {
+            pack_version: String::new(),
+            operations: Vec::new(),
+            fields: "full".into(),
+            missing: None,
+        };
+        state.source_state(
+            ab_domain::Source::Contacts,
+            "ready",
+            coverage.clone(),
+            Some(&[]),
+            "<ready>",
+        )?;
+        let payload: Vec<u8> = state.db.query_row(
+            "SELECT payload FROM records WHERE collection='system.source'",
+            [],
+            |row| row.get(0),
+        )?;
+        let record: ab_domain::Record = serde_json::from_slice(&payload)?;
+        assert_eq!(
+            record.data.get(),
+            r#"{"capabilities":[],"coverage":{"fields":"full","missing":null},"reason":"\u003cready\u003e","source":"contacts","state":"ready"}"#
+        );
+        let head = state.head()?;
+        drop(state);
+        let mut state = crate::State::<crate::Gateway>::open(&home)?;
+        state.source_state(
+            ab_domain::Source::Contacts,
+            "ready",
+            coverage,
+            Some(&[]),
+            "<ready>",
+        )?;
+        assert_eq!(state.head()?.sequence, head.sequence);
+        let version: i64 = state.db.query_row(
+            "SELECT version FROM records WHERE collection='system.source'",
+            [],
+            |row| row.get(0),
+        )?;
+        assert_eq!(version, 1);
+        state.source_state(
+            ab_domain::Source::Contacts,
+            "ready",
+            ab_domain::Coverage {
+                pack_version: String::new(),
+                operations: Vec::new(),
+                fields: "full".into(),
+                missing: None,
+            },
+            None,
+            "<ready>",
+        )?;
+        let payload: Vec<u8> = state.db.query_row(
+            "SELECT payload FROM records WHERE collection='system.source'",
+            [],
+            |row| row.get(0),
+        )?;
+        let record: ab_domain::Record = serde_json::from_slice(&payload)?;
+        assert_eq!(record.version, 2);
+        assert!(
+            record
+                .data
+                .get()
+                .starts_with(r#"{"capabilities":null,"coverage":{"fields":"full","missing":null}"#)
+        );
+        drop(state);
+        std::fs::remove_dir_all(home)?;
+        Ok(())
     }
 }

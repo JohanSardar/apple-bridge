@@ -84,16 +84,23 @@ impl GatewayStore {
                 serde_json::from_value(serde_json::json!({"fields":"","missing":null}))
                     .map_err(|_| Code::Corrupt)?,
             );
-        let capabilities: Vec<String> = frame
+        let capabilities: Option<Vec<String>> = frame
             .capabilities
             .get(&key)
             .map(|v| {
                 serde_json::from_str::<Option<Vec<String>>>(v.get()).map_err(|_| Code::Corrupt)
             })
             .transpose()?
-            .flatten()
-            .unwrap_or_default();
-        self.with(|s| s.source_state(source, &frame.state, coverage, &capabilities, &frame.reason))
+            .flatten();
+        self.with(|s| {
+            s.source_state(
+                source,
+                &frame.state,
+                coverage,
+                capabilities.as_deref(),
+                &frame.reason,
+            )
+        })
     }
 }
 impl GatewayState for GatewayStore {
