@@ -160,6 +160,8 @@ fn web_enroll_prints_the_url_then_a_terminal_qr() -> Check {
     assert!(url.starts_with("http://localhost:7780/enroll#"));
     let code: Vec<&str> = lines.collect();
     assert!(code.len() > 10);
-    assert!(code.iter().any(|line| line.contains('\u{2588}') || line.contains('\u{2580}') || line.contains('\u{2584}')));
+    assert!(code.iter().any(|line| line.contains('\u{2588}')
+        || line.contains('\u{2580}')
+        || line.contains('\u{2584}')));
     Ok(())
 }

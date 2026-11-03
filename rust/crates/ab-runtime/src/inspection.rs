@@ -199,16 +199,18 @@ fn encryption_warning(result: &mut Value) -> Result<(), Error> {
 }
 fn encryption(home: &Path, result: &mut Value) {
     if cfg!(target_os = "macos")
-        && let Ok(output) = std::process::Command::new("fdesetup").arg("status").output()
+        && let Ok(output) = std::process::Command::new("fdesetup")
+            .arg("status")
+            .output()
         && output.status.success()
     {
-        result["disk_encryption"] = json!(
-            if String::from_utf8_lossy(&output.stdout).contains("FileVault is On") {
-                "enabled"
-            } else {
-                "warning_not_enabled"
-            }
-        );
+        result["disk_encryption"] = json!(if String::from_utf8_lossy(&output.stdout)
+            .contains("FileVault is On")
+        {
+            "enabled"
+        } else {
+            "warning_not_enabled"
+        });
     }
     if cfg!(target_os = "linux")
         && let Ok(output) = std::process::Command::new("findmnt")
