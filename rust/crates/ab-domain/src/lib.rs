@@ -4,6 +4,9 @@ use std::{fmt, str::FromStr};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Source {
+    #[cfg(feature = "lab")]
+    #[serde(rename = "labdummy")]
+    LabDummy,
     #[serde(rename = "location")]
     Location,
     #[serde(rename = "audio")]
@@ -59,6 +62,9 @@ pub enum Source {
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Collection {
+    #[cfg(feature = "lab")]
+    #[serde(rename = "labdummy.item")]
+    LabDummyItem,
     #[serde(rename = "calendar.calendar")]
     CalendarCalendar,
     #[serde(rename = "calendar.event")]
@@ -154,6 +160,8 @@ pub enum Collection {
 }
 impl Collection {
     pub const ALL: &'static [Self] = &[
+        #[cfg(feature = "lab")]
+        Self::LabDummyItem,
         Self::CalendarCalendar,
         Self::CalendarEvent,
         Self::ContactsContact,
@@ -249,6 +257,8 @@ impl Collection {
             Self::VoiceMemosFolder => "folder",
             Self::VoiceMemosRecording => "recording",
             Self::VoicemailMessage => "message",
+            #[cfg(feature = "lab")]
+            Self::LabDummyItem => "ldm",
         }
     }
     pub const fn source(self) -> Source {
@@ -291,6 +301,8 @@ impl Collection {
             Self::UsageAppDay | Self::UsageDevice => Source::Usage,
             Self::VoiceMemosFolder | Self::VoiceMemosRecording => Source::VoiceMemos,
             Self::VoicemailMessage => Source::Voicemail,
+            #[cfg(feature = "lab")]
+            Self::LabDummyItem => Source::LabDummy,
         }
     }
 }

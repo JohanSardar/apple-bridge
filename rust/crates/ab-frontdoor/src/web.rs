@@ -855,6 +855,8 @@ fn groups() -> Vec<Value> {
         "Speech",
         "Usage",
         "Vision",
+        #[cfg(feature = "lab-harness")]
+        "Lab dummy",
     ];
     all_scopes().chunks(2).zip(titles).map(|(grants,title)|json!({"source":grants[0].trim_end_matches(":read"),"title":title,"grants":grants,"agent":true})).collect()
 }

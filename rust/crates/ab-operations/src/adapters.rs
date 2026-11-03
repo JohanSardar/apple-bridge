@@ -22,6 +22,8 @@ pub fn visibility(input: &Visibility) -> ab_state::Visibility {
     let mut result: ab_state::Visibility = input.iter().map(|(s, v)| (s.clone(), *v)).collect();
     if input.get("admin") == Some(&true) {
         for source in [
+            #[cfg(feature = "lab-harness")]
+            "labdummy",
             "location",
             "audio",
             "calendar",

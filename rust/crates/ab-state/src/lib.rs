@@ -781,6 +781,8 @@ pub(crate) fn collection(c: Collection) -> &'static str {
         Collection::VoiceMemosFolder => "voice_memos.folder",
         Collection::VoiceMemosRecording => "voice_memos.recording",
         Collection::VoicemailMessage => "voicemail.message",
+        #[cfg(feature = "lab")]
+        Collection::LabDummyItem => "labdummy.item",
     }
 }
 
