@@ -1,0 +1,76 @@
+{
+  "id": "LAB-TRACE-LEAK-SCOPE",
+  "feature": "lab.safety-trace",
+  "levels": [
+    "sim"
+  ],
+  "when": [
+    {
+      "fault_trace": {
+        "fault": "leak-scope",
+        "healthy": [
+          {
+            "event": "owner",
+            "fence": 1
+          },
+          {
+            "event": "accepted",
+            "fence": 1
+          },
+          {
+            "event": "commit",
+            "checkpoint": "cp1"
+          },
+          {
+            "event": "ack",
+            "checkpoint": "cp1"
+          },
+          {
+            "event": "reopen",
+            "checkpoint": "cp1"
+          },
+          {
+            "event": "read",
+            "allowed": [
+              "reminders"
+            ],
+            "sources": [
+              "reminders"
+            ]
+          }
+        ],
+        "mutant": [
+          {
+            "event": "owner",
+            "fence": 1
+          },
+          {
+            "event": "accepted",
+            "fence": 1
+          },
+          {
+            "event": "commit",
+            "checkpoint": "cp1"
+          },
+          {
+            "event": "ack",
+            "checkpoint": "cp1"
+          },
+          {
+            "event": "reopen",
+            "checkpoint": "cp1"
+          },
+          {
+            "event": "read",
+            "allowed": [
+              "reminders"
+            ],
+            "sources": [
+              "messages"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

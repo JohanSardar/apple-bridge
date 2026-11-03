@@ -1,3 +1,4 @@
+pub mod safety;
 use lab_world::{Error, Result, World};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -134,6 +135,7 @@ impl Registry {
         });
         registry.register("restart_gateway", |world, _, _| world.restart_gateway());
         registry.register("capture_truth", capture_truth);
+        registry.register("fault_trace", safety::gate);
         registry
     }
 }
@@ -142,7 +144,7 @@ fn capture_truth(world: &mut World, _: &Value, evidence: &mut Evidence) -> Resul
     let expected = truth
         .as_array()
         .ok_or_else(|| Error::Invalid("inspect array".into()))?;
-    let response = world.query("records.query", &json!({"collections":[],"limit":1000}))?;
+    let response = world.query("records.query", &json!({"collection":"","limit":1000}))?;
     let records = response["records"]
         .as_array()
         .ok_or_else(|| Error::Invalid(format!("records array missing: {response}")))?;
