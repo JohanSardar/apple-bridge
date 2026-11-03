@@ -20,6 +20,8 @@ pub struct Lease {
     pub port: u16,
     pub target: String,
     pub absent: BTreeMap<String, bool>,
+    #[serde(default)]
+    pub private: bool,
 }
 fn section<'a>(value: &'a Value, key: &str) -> Result<Option<&'a serde_json::Map<String, Value>>> {
     match value.get(key) {
@@ -97,6 +99,9 @@ impl Tailscale {
         Ok(true)
     }
     pub async fn add(&self, target: &str) -> Result<Lease> {
+        self.add_mode(target, false).await
+    }
+    pub async fn add_mode(&self, target: &str, private: bool) -> Result<Lease> {
         let status: Value = self
             .client
             .get(format!("{}/status?peers=false", self.endpoint))
@@ -115,25 +120,29 @@ impl Tailscale {
             .trim_end_matches('.');
         let caps = &status["Self"]["CapMap"];
         let has = |name: &str| caps.get(name).is_some();
-        if !has("https") || !has("funnel") {
+        if !private && (!has("https") || !has("funnel")) {
             return Err(Error::Contract(
                 "Tailscale HTTPS/Funnel capability unavailable",
             ));
         }
         let allowed = caps
             .as_object()
-            .ok_or(Error::Contract("missing Tailscale capabilities"))?
-            .keys()
+            .into_iter()
+            .flat_map(|map| map.keys())
             .filter_map(|k| k.strip_prefix("https://tailscale.com/cap/funnel-ports?ports="))
             .collect::<Vec<_>>();
         for _ in 0..5 {
             let (mut config, etag) = self.get().await?;
             let mut selected = None;
-            for port in [443_u16, 8443, 10000] {
+            for port in if private {
+                vec![7780_u16]
+            } else {
+                vec![443_u16, 8443, 10000]
+            } {
                 let permitted = allowed.iter().any(|list| list.split(',').any(|range| {
                     if let Some((a,b)) = range.split_once('-') { matches!((a.parse::<u16>(), b.parse::<u16>()), (Ok(a),Ok(b)) if (a..=b).contains(&port)) } else { range.parse::<u16>() == Ok(port) }
                 }));
-                if permitted && !port_used(&config, port)? {
+                if (private || permitted) && !port_used(&config, port)? {
                     selected = Some(port);
                     break;
                 }
@@ -145,16 +154,22 @@ impl Tailscale {
                 port,
                 target: target.into(),
                 absent: BTreeMap::new(),
+                private,
             };
-            for (section_name, index, value) in [
-                ("TCP", port.to_string(), json!({"HTTPS":true})),
-                (
-                    "Web",
-                    hp.clone(),
-                    json!({"Handlers":{"/":{"Proxy":target}}}),
-                ),
-                ("AllowFunnel", hp, json!(true)),
-            ] {
+            let mappings = if private {
+                vec![("TCP", port.to_string(), json!({"TCPForward":target}))]
+            } else {
+                vec![
+                    ("TCP", port.to_string(), json!({"HTTPS":true})),
+                    (
+                        "Web",
+                        hp.clone(),
+                        json!({"Handlers":{"/":{"Proxy":target}}}),
+                    ),
+                    ("AllowFunnel", hp, json!(true)),
+                ]
+            };
+            for (section_name, index, value) in mappings {
                 lease
                     .absent
                     .insert(section_name.into(), config.get(section_name).is_none());
@@ -179,6 +194,42 @@ impl Tailscale {
             Err(e) => return Err(e),
         };
         let hp = format!("{}:{}", lease.host, lease.port);
+        if lease.private {
+            for _ in 0..5 {
+                let (mut config, etag) = self.get().await?;
+                let key = lease.port.to_string();
+                if config["TCP"].get(&key).is_none() {
+                    break;
+                }
+                if config["TCP"][&key] != json!({"TCPForward":lease.target}) {
+                    return Err(Error::Contract("owned private mapping changed"));
+                }
+                config["TCP"]
+                    .as_object_mut()
+                    .ok_or(Error::Contract("invalid TCP section"))?
+                    .remove(&key);
+                if config["TCP"]
+                    .as_object()
+                    .is_some_and(serde_json::Map::is_empty)
+                    && lease.absent.get("TCP") == Some(&true)
+                {
+                    config
+                        .as_object_mut()
+                        .ok_or(Error::Contract("invalid config"))?
+                        .remove("TCP");
+                }
+                if self.set(&config, &etag).await? {
+                    break;
+                }
+            }
+            let (config, _) = self.get().await?;
+            if config["TCP"].get(lease.port.to_string()).is_some() {
+                return Err(Error::Contract("Serve removal contention"));
+            }
+            std::fs::remove_file(self.home.join("remote/lease.json"))?;
+            return Ok(());
+        }
+
         for _ in 0..5 {
             let (mut config, etag) = self.get().await?;
             if config["Web"].get(&hp).is_none() {

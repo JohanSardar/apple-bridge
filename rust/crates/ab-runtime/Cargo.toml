@@ -40,7 +40,7 @@ rusqlite.workspace = true
 [features]
 r2-certificates = ["ab-remote/r2-certificates"]
 lab-queries = ["lab-harness", "ab-frontdoor/lab-queries"]
-lab-harness = ["ab-replication?/lab-harness", "ab-state/lab", "ab-frontdoor/lab-harness", "ab-frontdoor/lab-queries", "ab-operations/lab-harness"]
+lab-harness = ["ab-remote/lab-harness", "ab-replication?/lab-harness", "ab-state/lab", "ab-frontdoor/lab-harness", "ab-frontdoor/lab-queries", "ab-operations/lab-harness"]
 default = ["replica-feed"]
 replica-feed = ["dep:ab-replication"]
 

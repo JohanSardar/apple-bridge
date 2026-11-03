@@ -15,6 +15,8 @@ import time
 def execute(entry, binary, timeout, logs, implementation, rust_binary, startup_blocker):
     started = time.monotonic()
     target = logs / (entry['id'] + '.log')
+    if 'gateway=rust' in implementation and re.search(r'^impl: go-only$', Path(entry['path']).read_text(), re.M):
+        return {'id': entry['id'], 'seconds': 0, 'status': 'excluded', 'implementation': implementation, 'reason': 'FINAL-PLAN §1 drops embedded tsnet login/Funnel flow'}
     if 'gateway=rust' in implementation:
         blockers = gateway_blockers(entry)
         if startup_blocker:
@@ -172,7 +174,7 @@ def main():
             temporary.write_text(json.dumps(report, indent=2) + '\n')
             temporary.replace(destination / 'summary.json')
     print(f"Wall: {report['wall_seconds']:.3f}s; {len(rows)} scenarios", flush=True)
-    return int(any(r['status'] != 'pass' for r in rows))
+    return int(any(r['status'] not in ('pass', 'excluded') for r in rows))
 
 
 if __name__ == '__main__':

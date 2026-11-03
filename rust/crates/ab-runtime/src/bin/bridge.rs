@@ -186,6 +186,10 @@ async fn run() -> Result<(), Error> {
         .flags
         .get("home")
         .map_or_else(default_home, |v| Ok(PathBuf::from(v)))?;
+    if args.verb == "connect" {
+        ab_remote::private::connect(&args.value, &args.flag("listen", "127.0.0.1:7780")).await?;
+        return Ok(());
+    }
     if args.verb == "connector" {
         let result = ab_runtime::connector::command(
             &home,

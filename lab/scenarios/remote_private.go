@@ -17,6 +17,7 @@ import (
 	"github.com/JohanSardar/apple-bridge/internal/frontdoor"
 	"github.com/JohanSardar/apple-bridge/internal/remote"
 	"github.com/JohanSardar/apple-bridge/internal/trust"
+	"github.com/JohanSardar/apple-bridge/lab/world"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"tailscale.com/ipn"
 	"tailscale.com/ipn/ipnstate"
@@ -55,6 +56,9 @@ func (n privateConnectNode) Dial(ctx context.Context, _, _ string) (net.Conn, er
 }
 
 func runPrivateConnect(ctx context.Context, s Scenario, level string) Evidence {
+	if world.ImplementationSelection(ctx).Gateway == "rust" {
+		return runRustPrivateConnect(ctx, s, level)
+	}
 	e := Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), RunID: "private-protocol", NetworkPath: "production private handler and connect proxy through isolated node transport"}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	home, err := os.MkdirTemp("", "ab-private-")

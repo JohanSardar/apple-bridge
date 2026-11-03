@@ -2,6 +2,7 @@
 
 pub mod certificate;
 pub mod ct;
+pub mod private;
 pub mod relay;
 mod smux;
 pub mod state;
