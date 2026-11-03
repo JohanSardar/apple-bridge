@@ -59,6 +59,9 @@ pub mod threads;
 pub mod usage;
 pub mod vision;
 pub mod watch;
+pub mod web_agent_activity;
+pub mod web_agent_levels;
+pub mod web_agents;
 pub mod webauthn;
 use lab_runner::Registry;
 use lab_world::Error;
@@ -134,6 +137,8 @@ pub fn registry() -> Registry {
             replicas::start_with(world, 1, calendar::STORE_SCOPE, 0)?;
         } else if replicas != 0 && calendar::SCENARIOS.contains(&id) {
             replicas::start_with(world, 1, calendar::SCOPE, 0)?;
+        } else if replicas != 0 && web_agents::SCENARIOS.contains(&id) {
+            web_agents::start(world, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && !PORTED.contains(&id) && !self_started {
             return Err(Error::Invalid(format!("replica world not ported for {id}")));
         }
@@ -206,6 +211,7 @@ pub fn registry() -> Registry {
     registry.register("helper_ipc", helper_ipc::cases);
     helper_real::register(&mut registry);
     registry.register("SIRI-INTENTS", siri::intents);
+    registry.register("web", web_agents::web);
     registry
 }
 

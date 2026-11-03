@@ -216,7 +216,7 @@ pub(super) fn control_messages(
         )?;
         return Ok(json!({"effect_done":true}));
     }
-    let wait = !s.bulk.paused;
+    let wait = !s.bulk.paused && input["wait"] != json!(false);
     let capture = s.scan("messages")?;
     drop(s);
     enqueue(tx, capture, wait)?;
