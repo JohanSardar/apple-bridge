@@ -168,3 +168,50 @@ republish unchanged records while retaining previous identities as absence
 candidates; a NULL attachment filename currently becomes the process working
 directory's last path component in Swift. Rust retains that filename behavior;
 the fixture processes use a common synthetic working-directory name.
+
+Screen Time source fixture boundary: `UsageSource` accepts an explicit
+`blockedHistory` provider and exposes its existing one-shot `scan` method.
+The oracle calls that method against an isolated directory; it never starts
+capture watchers or calls the default-path `UsageHistory.blocked`. The default production
+provider remains unchanged. UUID capture metadata and observation timestamps
+are supplied as deterministic fixture context at the sink boundary; record
+keys/data, ordering, coverage, scope, completeness and live flags compare
+without normalization. The lab CLI has no home-directory defaults.
+
+## Screen Time reader
+
+`usage::Reader::scan(root, context, live)` reads only the supplied Biome tree
+and `sync/sync.db`. `Context` carries capture metadata, timezone, local-host
+name and live power facts. Its optional `HistoryContext` selects an explicit
+knowledgeC fixture/store path, hardware identifier and clock; the SQL reader
+matches Swift's local-device and interval filtering. No default user path or
+framework probe exists in Rust.
+
+A successful `Scan` includes the unchanged estimated coverage, ordered device
+then app-day observations, canonical Go JSON data, source generation,
+checkpoint, scan identity, scope and complete-scan evidence. Removed app-day
+keys are represented by scope completeness, as in Swift. Call `commit(scan)`
+only after the sink acknowledges that checkpoint. Failed reads leave the
+committed state intact. Two scans prepared from the same checkpoint cannot
+both commit.
+
+The lab-only Cargo example `fixture-reader usage DIRECTORY` emits one
+observation per JSONL line followed by a checkpoint line. `--frames` emits a
+whole checkpoint frame per line; `--interactive` accepts `scan` lines on stdin.
+Every invocation requires an explicit fixture root and `context.json`.
+
+Verification inputs live in `parity/usage`: thirteen Swift rollup vectors
+cover timezone/DST boundaries, the fall-back daily cap, fractional timestamps,
+deduplication, unclosed sessions, power/lock barriers and system UI exclusions.
+`compare.py` runs the actual Swift scan and Rust example through five synthetic
+checkpoint transitions, and compares each observation Data hash through Go's
+actual encoding/json path. Missing local input and unsupported schema must
+produce no capture. All databases are generated under temporary fixture roots.
+
+Reproduce Swift tools with `bash parity/usage/build-swift.sh /tmp/ab-usage-tools`
+from this crate (or use the script's repository-relative path). Build the Rust
+example and `parity/usage/data-bytes.go` on the build host, then run
+`python3 parity/usage/compare.py /tmp/ab-usage-tools/usage-oracle
+/home/johan/targets/phase6-native/debug/examples/fixture-reader` on the Air.
+The Go helper path expected by that script is
+`~/targets/phase6-native/fixture-data-bytes` on `ssh build`.

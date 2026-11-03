@@ -9,12 +9,13 @@ import SourceSupport
 public final class UsageSource: Source {
     public nonisolated let name = "usage"
     public static let coverage: JSON = .object(["fields": .string("estimated"), "missing": .array([.string("settings_parity: unproven"), .string("historical lock/sleep gaps outside local knowledgeC evidence"), .string("remote names unavailable where absent from DevicePeer; distinct platform/id fallback"), .string("remote batches may lag")])])
+    private let blockedHistory: () -> [DateInterval]
     private let root: URL
     private var committed: [String: JSON] = [:]
     private var generation = UUID().uuidString
     private var power: [InFocusEvent] = []
     private var scanned: UsageInputs?
-    public init(root: URL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Biome")) { self.root = root }
+    public init(root: URL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Biome"), blockedHistory: @escaping () -> [DateInterval] = UsageHistory.blocked) { self.root = root; self.blockedHistory = blockedHistory }
     public func open() async -> SourceReadiness {
         let ready = FileManager.default.isReadableFile(atPath: root.appendingPathComponent("streams/restricted/App.InFocus/local").path)
         return SourceReadiness(state: ready ? "ready" : "permission_missing", coverage: Self.coverage, reason: ready ? "" : "full_disk_access_required")
@@ -53,13 +54,13 @@ public final class UsageSource: Source {
         guard !failure else { throw SourceFailure.unavailable }
         return events
     }
-    private func scan(_ sink: any ObservationSink, live: Bool) async throws {
+    public func scan(_ sink: any ObservationSink, live: Bool) async throws {
         let started = timestamp()
         let inputs = UsageInputs(root, power: power.count, previous: scanned)
         let base = root.appendingPathComponent("streams/restricted/App.InFocus")
         var current: [String: JSON] = [:]
         let peers = try peers()
-        let blocked = UsageHistory.blocked()
+        let blocked = blockedHistory()
         guard peers.contains(where: { $0.3 }) else { throw SourceFailure.unavailable }
         for (identifier, deviceName, platform, local) in peers {
             let directory = local ? base.appendingPathComponent("local") : base.appendingPathComponent("remote/" + identifier)

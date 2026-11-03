@@ -1,0 +1,520 @@
+[
+  {
+    "name": "duplicates",
+    "events": [
+      {
+        "time": 1800100800.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1800100860.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1800100800.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1800100860.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      }
+    ],
+    "mac": true,
+    "zone": "America/New_York",
+    "blocked": []
+  },
+  {
+    "name": "locked",
+    "events": [
+      {
+        "time": 1800100800.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1800101400.0,
+        "starting": true,
+        "bundle": "loginwindow"
+      },
+      {
+        "time": 1800104400.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      }
+    ],
+    "mac": true,
+    "zone": "America/New_York",
+    "blocked": []
+  },
+  {
+    "name": "four-hour-cap",
+    "events": [
+      {
+        "time": 1800100800.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1800120800.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      }
+    ],
+    "mac": true,
+    "zone": "America/New_York",
+    "blocked": []
+  },
+  {
+    "name": "unclosed",
+    "events": [
+      {
+        "time": 1800100800.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      }
+    ],
+    "mac": true,
+    "zone": "America/New_York",
+    "blocked": []
+  },
+  {
+    "name": "switch",
+    "events": [
+      {
+        "time": 1800100800.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1800100920.0,
+        "starting": true,
+        "bundle": "test.synthetic.beta"
+      },
+      {
+        "time": 1800100980.0,
+        "starting": false,
+        "bundle": "test.synthetic.beta"
+      }
+    ],
+    "mac": true,
+    "zone": "America/New_York",
+    "blocked": []
+  },
+  {
+    "name": "screensaver",
+    "events": [
+      {
+        "time": 1800100800.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1800100860.0,
+        "starting": true,
+        "bundle": "com.apple.ScreenSaver.Engine"
+      },
+      {
+        "time": 1800101400.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      }
+    ],
+    "mac": true,
+    "zone": "America/New_York",
+    "blocked": []
+  },
+  {
+    "name": "power",
+    "events": [
+      {
+        "time": 1800100800.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1800100890.0,
+        "starting": true,
+        "bundle": "bridge.power.sleep"
+      },
+      {
+        "time": 1800101400.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      }
+    ],
+    "mac": true,
+    "zone": "America/New_York",
+    "blocked": []
+  },
+  {
+    "name": "system-ui",
+    "events": [
+      {
+        "time": 1800100800.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1800100860.0,
+        "starting": true,
+        "bundle": "com.apple.universalcontrol"
+      },
+      {
+        "time": 1800100920.0,
+        "starting": true,
+        "bundle": "test.synthetic.beta"
+      },
+      {
+        "time": 1800100980.0,
+        "starting": false,
+        "bundle": "test.synthetic.beta"
+      }
+    ],
+    "mac": true,
+    "zone": "America/New_York",
+    "blocked": []
+  },
+  {
+    "name": "blocked-overlap",
+    "events": [
+      {
+        "time": 1800100800.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1800100900.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      }
+    ],
+    "mac": true,
+    "zone": "America/New_York",
+    "blocked": [
+      {
+        "start": 1800100810.0,
+        "end": 1800100850.0
+      },
+      {
+        "start": 1800100830.0,
+        "end": 1800100870.0
+      }
+    ]
+  },
+  {
+    "name": "spring",
+    "events": [
+      {
+        "time": 1772944200.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1772958600.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      }
+    ],
+    "mac": true,
+    "zone": "America/New_York",
+    "blocked": []
+  },
+  {
+    "name": "fall",
+    "events": [
+      {
+        "time": 1793503800.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793518200.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      }
+    ],
+    "mac": true,
+    "zone": "America/New_York",
+    "blocked": []
+  },
+  {
+    "name": "fall-daily-cap",
+    "events": [
+      {
+        "time": 1793505600.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793509200.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793509200.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793512800.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793512800.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793516400.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793516400.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793520000.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793520000.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793523600.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793523600.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793527200.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793527200.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793530800.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793530800.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793534400.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793534400.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793538000.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793538000.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793541600.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793541600.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793545200.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793545200.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793548800.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793548800.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793552400.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793552400.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793556000.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793556000.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793559600.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793559600.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793563200.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793563200.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793566800.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793566800.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793570400.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793570400.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793574000.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793574000.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793577600.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793577600.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793581200.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793581200.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793584800.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793584800.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793588400.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793588400.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793592000.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793592000.0,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1793595600.0,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      }
+    ],
+    "mac": true,
+    "zone": "America/New_York",
+    "blocked": []
+  },
+  {
+    "name": "fractional",
+    "events": [
+      {
+        "time": 1800100800.0785217,
+        "starting": true,
+        "bundle": "test.synthetic.alpha"
+      },
+      {
+        "time": 1800100860.0785217,
+        "starting": false,
+        "bundle": "test.synthetic.alpha"
+      }
+    ],
+    "mac": true,
+    "zone": "America/New_York",
+    "blocked": []
+  }
+]
