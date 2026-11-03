@@ -54,7 +54,7 @@ pub(super) fn control_source(
         let key = string(record, "native_key");
         if key.is_empty()
             || (route == "/safari" && !collection.starts_with("safari."))
-            || !record["data"].is_object()
+            || (route != "/safari" && !record["data"].is_object())
         {
             return Err(invalid("source observation"));
         }
@@ -75,7 +75,8 @@ pub(super) fn control_source(
             string(record, "collection"),
             string(record, "native_key")
         );
-        s.data["records"][key] = record.clone();
+        let storage_key = if route == "/phone" { string(record, "native_key") } else { key };
+        s.data["records"][storage_key] = record.clone();
     }
     s.save()?;
     drop(s);
@@ -119,8 +120,11 @@ fn validate_recording(collection: &str, data: &Value) -> Result<()> {
 
 #[derive(Clone, Debug, PartialEq, serde::Deserialize, serde::Serialize)]
 struct Event {
+    #[serde(default)]
     at: f64,
+    #[serde(default)]
     starting: bool,
+    #[serde(default)]
     bundle: String,
 }
 fn timestamp(at: f64) -> Result<String> {
