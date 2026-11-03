@@ -459,7 +459,7 @@ func newEnvironment(ctx context.Context, level string, replicas, seed int, nativ
 		if legacy, _ := ctx.Value(legacyHelperKey{}).(bool); legacy {
 			simArgs = append(simArgs, "--legacy-sources")
 		}
-		if _, err = w.start("simapple", false, w.Dir, w.lab, simArgs...); err != nil {
+		if _, err = w.start("simapple", false, w.Dir, w.simAppleBinary(), simArgs...); err != nil {
 			return nil, err
 		}
 		transport := &http.Transport{DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {

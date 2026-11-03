@@ -107,7 +107,7 @@ func (w *World) CutNetwork(bytes int)             { w.proxy.CutAfter(bytes) }
 
 func (w *World) StopHelper() {
 	for _, p := range w.processes {
-		if p != nil && p.command.Path == w.lab && !p.stopped {
+		if p != nil && p.command.Path == w.simAppleBinary() && !p.stopped {
 			p.command.Process.Signal(syscall.SIGKILL)
 			p.Stop()
 		}
@@ -119,7 +119,7 @@ func (w *World) RestartHelper() error {
 	}
 	previousPID := 0
 	for _, p := range w.processes {
-		if p != nil && p.command.Path == w.lab && !p.stopped {
+		if p != nil && p.command.Path == w.simAppleBinary() && !p.stopped {
 			previousPID = p.command.Process.Pid
 		}
 	}
@@ -133,7 +133,7 @@ func (w *World) RestartHelper() error {
 	if err = json.Unmarshal(data, &cfg); err != nil {
 		return err
 	}
-	restarted, err := w.start("simapple", false, w.Dir, w.lab, "simapple", "--socket", cfg.Socket, "--secret-file", filepath.Join(w.Gateway.Home, "apple-secret"), "--control", filepath.Join(w.Dir, "sim.sock"))
+	restarted, err := w.start("simapple", false, w.Dir, w.simAppleBinary(), "simapple", "--socket", cfg.Socket, "--secret-file", filepath.Join(w.Gateway.Home, "apple-secret"), "--control", filepath.Join(w.Dir, "sim.sock"))
 	if err != nil {
 		return err
 	}
@@ -173,4 +173,11 @@ func (w *World) HelperBlobsIntact() bool {
 		}
 	}
 	return true
+}
+
+func (w *World) simAppleBinary() string {
+	if binary := os.Getenv("AB_LAB_SIMAPPLE"); binary != "" {
+		return binary
+	}
+	return w.lab
 }

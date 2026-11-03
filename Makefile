@@ -62,7 +62,7 @@ rust-lint:
 rust-test:
 	rust/check.sh test --workspace --locked
 
-rust-ci: lint rust-test rust-lint
+rust-ci: lint rust-test rust-lint rust-lab-independence
 	python3 rust/check-native-graph.py
 	go test ./contracts/golden ./internal/frontdoor ./internal/iphone ./internal/web ./lab/scenarios -run Golden -count=1
 
@@ -91,3 +91,6 @@ sim-run-at-end:
 .PHONY: gateway-matrix
 gateway-matrix:
 	RUST_BRIDGE="$(RUST_BRIDGE)" SIM_JOBS="$(SIM_JOBS)" SIM_TIMEOUT="$(SIM_TIMEOUT)" SIM_OUTPUT="$(SIM_OUTPUT)" SIM_SELECT="$(SIM_SELECT)" packaging/dev/gateway-matrix.sh
+.PHONY: rust-lab-independence
+rust-lab-independence:
+	rust/lab/check-independence.sh

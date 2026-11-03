@@ -1385,6 +1385,16 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		bounded, cancel := context.WithTimeout(ctx, duration)
 		secretBefore, secretWasSet := os.LookupEnv("APPLE_BRIDGE_SECRET_STORE")
 		e := Run(bounded, s, level)
+		if level == "sim" {
+			if e.Conditions == nil {
+				e.Conditions = map[string]string{}
+			}
+			e.Conditions["simapple_impl"] = "go"
+			if binary := os.Getenv("AB_LAB_SIMAPPLE"); binary != "" {
+				e.Conditions["simapple_impl"] = "rust"
+				e.Conditions["simapple_binary"] = binary
+			}
+		}
 		cancel()
 		secretAfter, secretIsSet := os.LookupEnv("APPLE_BRIDGE_SECRET_STORE")
 		restored := secretBefore == secretAfter && secretWasSet == secretIsSet
