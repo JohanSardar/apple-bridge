@@ -170,7 +170,13 @@ impl<Role: std::fmt::Debug + Send + Sync> ReadStore for StateReads<Role> {
                             ..ab_state::ReadQuery::default()
                         },
                     )
-                    .map_err(|e| state_error(&e))?;
+                    .map_err(|e| match state_error(&e) {
+                        Error {
+                            code: Code::NotFound,
+                            ..
+                        } => Code::Unauthorized.into(),
+                        error => error,
+                    })?;
                 let record = result
                     .records
                     .iter()
@@ -195,7 +201,10 @@ impl<Role: std::fmt::Debug + Send + Sync> ReadStore for StateReads<Role> {
                 .lock()
                 .await
                 .open_authorized(&grant, &digest)
-                .map_err(|_| Code::NotFound)?;
+                .map_err(|error| match error {
+                    ab_blobs::Error::Unauthorized => Code::Unauthorized,
+                    _ => Code::NotFound,
+                })?;
             tokio::task::spawn_blocking(move || {
                 use std::io::Read;
                 let mut bytes = Vec::new();
