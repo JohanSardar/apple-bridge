@@ -1,0 +1,1 @@
+{"host":"build","level":"sim","scenario":"CORE-FORGED-DELEGATION","go":"pass","rust_before":"fail: forged_delegation_rejected","rust_after":"pass","root_cause":"submit rejected omitted query before delegation verification","native_effects_for_forged_command":0}
