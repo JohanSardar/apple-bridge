@@ -773,9 +773,11 @@ impl Session {
                 send(&mut self.stream, &reply)?;
             }
             Some("BlobRead") => {
-                let reply = match query::blob(&self.blobs, &frame) {
-                    Some(reply) => reply,
-                    None => contacts::blob(state, &frame)?,
+                let stored = contacts::blob(state, &frame)?;
+                let reply = if stored["t"] == "BlobUnavailable" {
+                    query::blob(&self.blobs, &frame).unwrap_or(stored)
+                } else {
+                    stored
                 };
                 send(&mut self.stream, &reply)?;
             }
