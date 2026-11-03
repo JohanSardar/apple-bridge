@@ -18,6 +18,12 @@ fn message(s: &mut State, key: &str, text: &str, chat: &str) {
         json!({"title":text,"text":text,"chat_id":reference("chat",chat),"sender_handle_id":reference("handle","message-self"),"is_from_me":true,"sent_at":now(),"parts":[{"index":0,"kind":"text","text":text}],"decode_status":"decoded","edit_history":[],"retracted_parts":[],"error_code":0,"kind":"message"}),
     );
 }
+fn incoming(s: &mut State, key: &str, from_me: bool) {
+    let text = "[ab-test] Unicode 🧪 שלום e\u{0301}";
+    message(s, key, text, "message-chat");
+    s.data["records"][key]["data"]["title"] = json!(format!("[ab-test] {key}"));
+    s.data["records"][key]["data"]["is_from_me"] = json!(from_me);
+}
 pub(super) fn control_messages(
     state: &Shared,
     tx: &mpsc::Sender<Request>,
@@ -25,6 +31,10 @@ pub(super) fn control_messages(
 ) -> Result<Value> {
     let mut s = lock(state)?;
     let action = string(input, "action");
+    let key = string(input, "key");
+    if !input["count"].is_null() && input["count"].as_u64().is_none_or(|n| n > 20000) {
+        return Err(invalid("message count"));
+    }
     match action.as_str() {
         "seed" => {
             put(
@@ -40,13 +50,59 @@ pub(super) fn control_messages(
                 json!({"title":"[ab-test] chat","service":"iMessage","style":"direct","display_name":"Bridge Test","participants":[reference("handle","message-self")],"capabilities":[]}),
             );
             for i in 0..input["count"].as_u64().unwrap_or_default() {
-                message(
-                    &mut s,
-                    &format!("message-{i:06}"),
-                    "[ab-test] synthetic message",
-                    "message-chat",
-                );
+                incoming(&mut s, &format!("message-{i:06}"), true);
             }
+        }
+        "incoming" => {
+            if key.is_empty() {
+                return Err(invalid("message key"));
+            }
+            incoming(&mut s, &format!("{key}-outgoing"), true);
+            incoming(&mut s, &key, false);
+        }
+        "receipts" | "malformed" | "delete" => {
+            let mut record = s.data["records"][&key].clone();
+            if record.is_null() {
+                return Err(invalid("message not found"));
+            }
+            record["observed_at"] = json!(now());
+            match action.as_str() {
+                "delete" => {
+                    record["kind"] = json!("absent");
+                    record["revalidated"] = json!(true);
+                }
+                "receipts" => {
+                    record["data"]["delivered_at"] = json!(now());
+                    record["data"]["read_at"] = json!(now());
+                }
+                _ => {
+                    record["data"]
+                        .as_object_mut()
+                        .ok_or_else(|| invalid("message data"))?
+                        .remove("text");
+                    record["data"]["parts"] = json!([]);
+                    record["data"]["decode_status"] = json!("undecoded");
+                    record["data"]["raw_body_digest"] =
+                        json!("a50c70b58b846b7ac9a6f6bbf92c4b58b6a5346202994187ad0d83346607636c");
+                }
+            }
+            s.put(record);
+        }
+        "watcher-rearm" => {
+            s.data["message_watcher_armed"] = json!(false);
+            s.data["message_poll_pending"] = json!(true);
+            if !key.is_empty() {
+                incoming(&mut s, &key, false);
+            }
+            s.save()?;
+            return Ok(json!({"effect_done":true}));
+        }
+        "watcher-poll" => {
+            if s.data["message_poll_pending"] != true {
+                return Ok(json!({"effect_done":true}));
+            }
+            s.data["message_watcher_armed"] = json!(true);
+            s.data["message_poll_pending"] = json!(false);
         }
         "permission-loss" | "permission-restore" => {
             let missing = action == "permission-loss";
@@ -57,14 +113,21 @@ pub(super) fn control_messages(
                 json!({"t":"SourceState","source":"messages","state":if missing{"permission_missing"}else{"ready"},"coverage":{"messages":{"fields":if missing{"partial"}else{"complete"},"missing":if missing{vec!["permission_missing"]}else{vec![]}}}}),
                 false,
             )?;
+            if !missing {
+                let capture = lock(state)?.scan("messages")?;
+                enqueue(tx, capture, true)?;
+            }
             return Ok(json!({"effect_done":true}));
         }
         "db-replacement" | "schema-change" => {
-            s.data["generation"] = json!(id("sim")?);
+            s.data["message_generation"] = json!(id("messages")?);
         }
         _ => return Err(invalid("unsupported message control")),
     }
     s.save()?;
+    if s.denied.get("messages") == Some(&true) {
+        return Ok(json!({"effect_done":true}));
+    }
     let capture = s.scan("messages")?;
     drop(s);
     enqueue(tx, capture, true)?;
@@ -186,4 +249,30 @@ impl Session {
         }
         Ok(false)
     }
+}
+
+pub(super) fn aliases(frame: &mut Value) {
+    fn collect(value: &Value, found: &mut std::collections::BTreeMap<String, Value>) {
+        if let Some(reference) = value.get("$ref") {
+            let collection = string(reference, "collection");
+            let key = string(reference, "native_key");
+            let alias = format!("{collection}/{key}");
+            found.insert(alias.clone(), json!({"kind":"alias","collection":collection,"native_key":key,"scoped_alias":alias,"observed_at":now()}));
+        } else if let Some(object) = value.as_object() {
+            for child in object.values() {
+                collect(child, found);
+            }
+        } else if let Some(array) = value.as_array() {
+            for child in array {
+                collect(child, found);
+            }
+        }
+    }
+    let mut found = std::collections::BTreeMap::new();
+    collect(&frame["observations"], &mut found);
+    let mut records: Vec<_> = found.into_values().collect();
+    if let Some(observations) = frame["observations"].as_array() {
+        records.extend_from_slice(observations);
+    }
+    frame["observations"] = json!(records);
 }

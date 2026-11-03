@@ -19,3 +19,19 @@ python3 rust/lab/parity.py --go-lab /tmp/bridge-lab --rust-peer "$CARGO_TARGET_D
 The gate runs six unchanged binary-driven scenarios against the Go gateway and Go replicas, using each peer three times. It requires success and identical per-assertion verdicts. Scenarios cover idempotency, command crash and ambiguity, eight gateway kills after capture commit before acknowledgment, identical manual send, UI interference, and permission loss with another source remaining available. This is peer-foundation evidence, not Phase 8 completion or full Rust-harness mutant coverage.
 
 Foundation verification: all 36 executions passed with identical assertion verdicts across both peers and all three repetitions. Raw JSONL, binary hashes and assertion digests are in `lab/evidence/phase8-foundation/`. `make rust-ci` and seven independent codec tests passed on build.
+
+## Messages read extension
+
+The Rust peer additionally supports incoming messages, receipts, malformed-body digests, native deletion, watcher rearm/poll controls and message status. Seeded messages retain the Go fixture titles and Unicode content. Permission restoration captures the current native snapshot. Message database/schema replacements change only the Messages generation and reset its checkpoint predecessor. Capture chunks declare reference aliases first and order absences last with completion evidence, matching the Go peer.
+
+On Linux, one run of the unchanged MSG-RECEIPTS, MSG-DB-REPLACED and MSG-PERMISSION-LOSS YAML scenarios passed for both peers with identical assertion verdicts (six executions). The same three scenarios also pass with `--impl gateway=rust` and the Rust peer. Evidence is in `lab/evidence/phase8-messages-read/`. Reproduce with:
+
+```sh
+python3 rust/lab/parity.py --go-lab /tmp/bridge-lab --rust-peer "$CARGO_TARGET_DIR/debug/lab-simapple" --output /tmp/messages-read-parity --scenario messages/MSG-RECEIPTS.yaml --scenario messages/MSG-DB-REPLACED.yaml --scenario messages/MSG-PERMISSION-LOSS.yaml
+```
+
+The parity runner defaults to one repetition; `--repetitions 3` reproduces the foundation repetition count. It collects both peers' assertion failures before rejecting the gate and validates the exact scenario identities.
+
+This is a bounded peer extension, not a complete Messages family or Rust scenario-runner port. MSG-INCOMING failed its one-second latency assertion in the Go baseline on the loaded build host. History-import still needs bulk pause/release and capture statistics. Decoder and watcher scenario gates invoke native macOS checks and cannot complete on Linux. Messages command operations beyond the foundation, other source adapters, query/blob/media simulation and the broader fault catalog remain. The four Phase 8 seeded gateway faults have not been gated against independent Go and Rust harnesses; those gates remain required before declaring a family complete or deleting Go.
+
+The host-quiet wait is already opt-in: `bridge-lab run` defaults to sim without requiring quiet, and `--require-quiet` sets the context request used by `lab/scenarios/telemetry.go`. Without that explicit flag the 60-second wait is bypassed, including for latency scenarios.
