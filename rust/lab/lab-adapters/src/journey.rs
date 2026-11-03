@@ -13,7 +13,9 @@ use lab_world::{Error, Result, World};
 use serde_json::{Value, json};
 use std::time::{Duration, Instant};
 
-pub const COMMAND_SCENARIOS: [&str; 14] = [
+pub const COMMAND_SCENARIOS: [&str; 16] = [
+    "CORE-REST-MCP-PARITY",
+    "CORE-LOCALHOST-DEFENSE",
     "CORE-CMD-IDEMPOTENT",
     "CORE-CMD-ERA",
     "CORE-CMD-LOST-RESPONSE",
@@ -232,6 +234,8 @@ fn run_scenario(
         other if crate::reminders::SCENARIOS.contains(&other) => {
             crate::reminders::run(world, gateway, list_id, reminder, evidence)
         }
+        "CORE-REST-MCP-PARITY" => crate::frontdoor::parity(world, gateway, list_id, evidence),
+        "CORE-LOCALHOST-DEFENSE" => crate::frontdoor::localhost(world, gateway, list_id, evidence),
         other => restart::run(other, world, gateway, list_id, evidence),
     }
 }

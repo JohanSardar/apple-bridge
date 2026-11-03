@@ -233,7 +233,7 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
         "/effects" => Ok(s.data["effects"].clone()),
         "/command-origins" => Ok(s.data["origins"].clone()),
         "/stats" => Ok(
-            json!({"blob_digests":{},"scans":s.data["scans"],"source_scans":s.data["source_scans"],"revision":{},"committed":{}}),
+            json!({"blob_digests":blobs::digests(&s.blob),"scans":s.data["scans"],"source_scans":s.data["source_scans"],"revision":{},"committed":{}}),
         ),
         "/fault" => {
             let name = string(&input, "name");
