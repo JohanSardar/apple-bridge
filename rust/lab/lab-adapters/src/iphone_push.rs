@@ -333,15 +333,15 @@ fn approve(evidence: &mut Evidence) {
         evidence.check("phone_admission_returned", false, "");
         return;
     };
-    let approved = gateway.record("cmd_phone_approve");
-    let admissions = approved.as_ref().map_or(0, |a| {
+    let admitted_row = gateway.record("cmd_phone_approve");
+    let admissions = admitted_row.as_ref().map_or(0, |a| {
         a["history"]
             .as_array()
             .map_or(0, |h| h.iter().filter(|e| e["state"] == "admitted").count())
     });
     evidence.check(
         "ledger_admitted_by_phone",
-        approved
+        admitted_row
             .as_ref()
             .is_ok_and(|a| a["request_hash"] == second["request_hash"])
             && returned["state"] == "admitted"
