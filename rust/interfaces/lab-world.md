@@ -1,5 +1,34 @@
 # G-E binary fixture contracts
 
+## Latest verified status: 2026-11-03
+
+The default Go control passes 201/201 (204.479s), with `make rust-ci` and the pairing codec vectors green. The fixed Rust artifact built from `69e150c7` with `lab-queries` yields 165 passed, 18 executed failures and 18 blocked entries across the same 201 scenarios (293.980s). Normal owner enrollment, the operation catalog, Mac actions/iWork and vision SIM paths now execute successfully. Clipboard redaction remains an executed failure. Earlier assembly reports below are historical, not current missing-feature claims. The small [machine-readable report](../../lab/testing/gateway-status-2026-11-03.json) records artifact SHA-256, failed assertion names and exact blocked harness paths; it contains no recordings or product payloads.
+
+The fresh synthetic Go-Go command replay passes through Outcome, including all 14 seeded differences. The tap forwards and records 524340 identical bytes in each direction with fragmented frames, half-close and duration/lock proofs. Host-loopback isolation and saved-adapter refusal pass. The same current Rust artifact still rejects recorded admission 16 with `not_found` before Prepare. Its matching capture-only prefix has 16 records on each side, but 18/21 journal rows and 17/20 commit boundaries (Go/Rust). Contacts/messages/shortcuts source data has equal parsed values and different raw bytes, producing versions 1/2. Alias mapping and ledger tables agree. These are unexplained product differences; none is excluded by the comparator.
+
+### Exact remaining owner boundaries
+
+| Blocked default entries | Required boundary before G-E can preserve the assertions through binaries |
+| --- | --- |
+| CONN-CHATGPT, CONN-CLAUDE-AI | Selected-runtime connector owner socket/CLI plus a lab-only decision clock for five-minute expiry, without starting a second Go Handler/Authority. Public DCR alone does not replace clock and owner-socket assertions. |
+| WEB-AGENT-OAUTH-CIMD | Selected-runtime DNS answer, TLS dial/CA and decision-clock fixtures for public/private resolution, rebinding, redirect, timeout and cache checks. No actual public/private network dial is allowed to replace the injected resolver. |
+| SEC-REMOTE-ACCESS | Selected-runtime trusted/public owner sessions, source-IP/rate clock, negative authority/approval setup and backend-unavailable fault. The existing source 503 check deliberately closes its State backend; an ordinary healthy HTTP call cannot preserve it. |
+| RMT-ONECOMMAND-FLOW, RMT-PRIVATE-CONNECT | Disposable binary-owned Tailscale/LocalAPI and ingress adapters. Existing real-branch paths change live configuration and remain forbidden. |
+| WEB-RELAY-AGENTS, WEB-RELAY-AUTH, WEB-RELAY-PAIRING | Isolated selected gateway relay ingress and selected CLI pairing/delegation/expiry/revocation setup, retaining raw signed-auth negative probes and scope/socket closure assertions. A Go `replication.Server`/Authority is not a selected gateway. |
+| APP-APPROVE-SIM, APP-CMD-SIM, APP-LIVE-SIM | Selected phone pairing/delivery/ingest, approval decision and controlled clock/race boundaries, with a fake relay and no APNs/real phone access. |
+| RELAY-ENROLL, RELAY-LIMITS, RELAY-PASSTHROUGH, RELAY-ROTATE-GATED, RELAY-TLS-SPLICE | Relay-owner binary fixture selection plus SIM/real branch separation. `lab/relayfixture` uses its Go backend unless `AB_RELAY_FIXTURE` is set; simply removing conservative import blockers would create false Rust evidence. TLS splice also constructs Go feed/authority state. These relay service checks do not prove the gateway merely by running with a gateway selector. |
+| SC-RUN-REAL at SIM level | Selected native/helper runner fixture preserving the fake-runner validation/deadline assertions. Its current direct Go shortcut runner is not gateway execution. No real-level run is authorized. |
+
+Nondefault performance and native/real P/D entries remain unqualified: actual state transaction/maintenance timing needs binary-owned instrumentation, and Mac/native boundaries need the native owners' fixture binaries and orchestrator-scheduled host runs. G-E will not replace measured product work with a lab implementation or drop its assertions.
+
+### Live shadow prerequisites
+
+Runtime/operations owners must expose authenticated observation/replay for MCP, delegated feed/direct commands, approval decisions and phone ingress, preserving principal/command identity and causal order without recorder failure changing admission. Both implementations need a lab-only decision clock for expiry/recovery/retention and deterministic identity allocation when allocated IDs enter opaque record data or arguments. State/ApplePeer owners must align exact source `coverage` data bytes and resulting versions/journal operations; operations must fix cross-home command admission visibility. Runtime/remote owners must disable host adapters, Helper launches, saved pairing/feed dials and phone pushes in offline replay while preserving persisted identities, credentials and state. The existing Linux namespace remains mandatory; it does not isolate host Unix services.
+
+The [shadow workflow](../../lab/shadow/README.md) is implemented for captures plus REST command admission. Recording stays local and private. The owner-boundary blockers above have persisted across repeated assemblies for more than 30 minutes; remaining gateway conversions cannot be honestly qualified through the currently exposed boundaries. No live tap, real smoke run, 24-hour capacity run or Phase 4 exit qualification is claimed.
+
+## Historical progression and fixture contracts
+
 G-E owns the lab adapters, not product authority/operations/runtime. The existing generic `binary_harness_required` verdict must remain until each scenario actually drives its selected binary. CLI returns typed JSON; private fixture data remains in disposable homes.
 
 Available and consumed: `agent create|list|revoke --home <home>`, with create returning `{"agent":...,"token":"..."}`; runtime IPC and API listeners; GET `/v1/openapi.json` for schemas. Mac SIM assertion bodies now inspect the binary's schemas and command responses; the lab owns the readback predicate. Six baseline P/D files have had their semantic-helper/trust dependencies removed, with shared SIM paths proved on Go. Their real branches are not qualified by SIM. AUTH-SCOPES-METADATA also drives the binary token CLI and metadata HTTP routes against the frozen OAuth scope corpus. Concurrent activity agents are created through the selected binary CLI; the enclosing owner-session fixture still requires the device-session seam.
