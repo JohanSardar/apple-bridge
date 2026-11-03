@@ -75,6 +75,12 @@ pub struct Entry {
     #[serde(default)]
     pub corruptions: u64,
     #[serde(default)]
+    pub retry_attempts: u64,
+    #[serde(default = "zero_time")]
+    pub next_attempt_at: String,
+    #[serde(default)]
+    pub reason: String,
+    #[serde(default)]
     pub unreferenced_at: String,
     #[serde(flatten)]
     pub extra: BTreeMap<String, serde_json::Value>,
@@ -87,10 +93,16 @@ impl Default for Entry {
             received: 0,
             resumed_bytes: 0,
             corruptions: 0,
+            retry_attempts: 0,
+            next_attempt_at: zero_time(),
+            reason: String::new(),
             unreferenced_at: "0001-01-01T00:00:00Z".into(),
             extra: BTreeMap::new(),
         }
     }
+}
+fn zero_time() -> String {
+    "0001-01-01T00:00:00Z".into()
 }
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 struct Manifest {
@@ -279,6 +291,28 @@ impl Store {
             &self.root.join("manifest.json"),
             &serde_json::to_vec(&self.manifest)?,
         )?)
+    }
+    pub fn retry(&mut self, d: &Digest, completed: bool) -> Result<bool, Error> {
+        let e = self
+            .manifest
+            .entries
+            .get_mut(d.as_str())
+            .ok_or(Error::Invalid)?;
+        if completed {
+            e.next_attempt_at = zero_time();
+        } else if e.retry_attempts >= 8 {
+            e.state = BlobState::Failed;
+            e.reason = "ipc_retry_exhausted".into();
+            e.next_attempt_at = zero_time();
+        } else {
+            e.retry_attempts += 1;
+            let delay = (250_i64 << (e.retry_attempts - 1).min(4)).min(4000);
+            e.next_attempt_at =
+                (jiff::Timestamp::now() + jiff::SignedDuration::from_millis(delay)).to_string();
+        }
+        let pending = e.state == BlobState::Pending;
+        self.save()?;
+        Ok(pending)
     }
     pub fn entries(&self) -> &BTreeMap<String, Entry> {
         &self.manifest.entries
@@ -619,5 +653,37 @@ impl Store {
                 return self.finish(digest);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn retry_budget_and_deadline_survive_reopen() -> Result<(), Box<dyn std::error::Error>> {
+        let home = tempfile::tempdir()?;
+        let digest = Digest::try_from("a".repeat(64))?;
+        let mut store = Store::open(home.path(), 0)?;
+        store.begin(&digest, 1024)?;
+        for _ in 0..5 {
+            assert!(store.retry(&digest, false)?);
+        }
+        let deadline = store.entries()[digest.as_str()].next_attempt_at.clone();
+        drop(store);
+        let mut store = Store::open(home.path(), 0)?;
+        assert_eq!(store.entries()[digest.as_str()].retry_attempts, 5);
+        assert_eq!(store.entries()[digest.as_str()].next_attempt_at, deadline);
+        for _ in 5..8 {
+            assert!(store.retry(&digest, false)?);
+        }
+        assert!(!store.retry(&digest, false)?);
+        drop(store);
+        let store = Store::open(home.path(), 0)?;
+        let entry = &store.entries()[digest.as_str()];
+        assert_eq!(entry.state, BlobState::Failed);
+        assert_eq!(entry.retry_attempts, 8);
+        assert_eq!(entry.reason, "ipc_retry_exhausted");
+        Ok(())
     }
 }
