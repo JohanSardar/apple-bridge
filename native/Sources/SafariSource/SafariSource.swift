@@ -4,12 +4,13 @@ import CryptoKit
 
 public actor SafariSource: Source {
     public nonisolated let name = "safari"
+    private let clock: @Sendable () -> Date
     private let tabs: SafariTabs
     private let directory: URL
     private let cacheURL: URL?
     private var historyExpiry = Date.distantPast
     private var generation = UUID().uuidString
-    public init(directory: URL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Safari"), cacheURL: URL? = nil, tabs: SafariTabs = SafariTabs()) { self.directory = directory; self.cacheURL = cacheURL; self.tabs = tabs }
+    public init(directory: URL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Safari"), cacheURL: URL? = nil, tabs: SafariTabs = SafariTabs(), clock: @escaping @Sendable () -> Date = { Date() }) { self.directory = directory; self.cacheURL = cacheURL; self.tabs = tabs; self.clock = clock }
     public func open() async -> SourceReadiness {
         guard FileManager.default.fileExists(atPath: directory.path) else {
             return SourceReadiness(state: "unavailable", coverage: .object(["fields": .string("partial")]), reason: "Safari data directory unavailable")
@@ -115,14 +116,14 @@ public actor SafariSource: Source {
             try Task.checkCancellation()
             for kind in ["history", "bookmarks", "cloud"] {
                 let input = safariInputs(directory, kind: kind)
-                if inputs[kind] == input, kind != "history" || Date() < historyExpiry { continue }
+                if inputs[kind] == input, kind != "history" || clock() < historyExpiry { continue }
                 let started = timestamp()
                 do {
                     let generation: String
                     let rows: [JSON]
                     let scope: [String]
                     switch kind {
-                    case "history": (generation, rows) = try history(); scope = ["safari.history"]
+                    case "history": (generation, rows) = try history(now: clock()); scope = ["safari.history"]
                     case "cloud": (generation, rows) = try cloudTabs(); scope = ["safari.cloud_tab"]
                     default: rows = try bookmarks(); generation = "bookmarks-1"; scope = ["safari.bookmark", "safari.reading_list"]
                     }

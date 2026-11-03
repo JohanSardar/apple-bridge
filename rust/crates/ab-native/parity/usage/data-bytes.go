@@ -24,6 +24,10 @@ func main() {
 		}
 		digests := make([]string, 0, len(frame.Observations))
 		for _, row := range frame.Observations {
+			if len(row.Data) == 0 {
+				digests = append(digests, "absent")
+				continue
+			}
 			var value any
 			decoder := json.NewDecoder(bytes.NewReader(row.Data))
 			decoder.UseNumber()
