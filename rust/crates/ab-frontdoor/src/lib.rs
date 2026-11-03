@@ -1,5 +1,8 @@
 #![forbid(unsafe_code)]
 mod mcp;
+pub mod web;
+pub mod web_connector;
+mod web_metadata;
 use ab_operations::{Code, Cursor, Error, Principal, Service};
 use axum::{
     Router,

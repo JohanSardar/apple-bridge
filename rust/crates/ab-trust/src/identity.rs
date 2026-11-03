@@ -170,6 +170,9 @@ impl Authority {
     }
     pub fn authenticate_token(&self, token: &str) -> Result<Principal, Error> {
         use hmac::Mac;
+        if let Ok(principal) = self.authenticate_oauth(token) {
+            return Ok(principal);
+        }
         let d = self.load()?;
         let hash = fingerprint(token.as_bytes());
         let mut p = d

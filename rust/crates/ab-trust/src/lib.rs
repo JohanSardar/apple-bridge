@@ -1,7 +1,10 @@
 #![forbid(unsafe_code)]
+pub mod devices;
 mod identity;
 pub mod iphone;
+pub mod oauth;
 mod pairing;
+pub mod passkeys;
 mod store;
 pub mod tls;
 pub use identity::Authority;
