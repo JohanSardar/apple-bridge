@@ -28,6 +28,8 @@ pub mod maintenance;
 #[cfg(feature = "replica-feed")]
 mod message_actions;
 #[cfg(feature = "replica-feed")]
+mod query_audit;
+#[cfg(feature = "replica-feed")]
 mod replica;
 mod shape;
 #[cfg(feature = "replica-feed")]

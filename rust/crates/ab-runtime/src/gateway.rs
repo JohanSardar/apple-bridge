@@ -46,7 +46,7 @@ pub async fn start(mut config: Config, authority: Arc<ab_trust::Authority>) -> R
             peer: Arc::new(commands.clone()),
         }),
     );
-    local.query_audit = Some(Arc::new(ab_operations::QueryActivity::open(&config.home)?));
+    local.query_audit = Some(Arc::new(crate::query_audit::Audit::open(&config.home)?));
     #[cfg(feature = "lab-harness")]
     {
         local.clock = Arc::new(ab_operations::clock::LabClock(config.home.clone()));
