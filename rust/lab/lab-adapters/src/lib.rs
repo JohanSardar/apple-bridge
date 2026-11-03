@@ -226,15 +226,7 @@ pub fn registry() -> Registry {
     registry.register("messages_commands", messages_b::dispatch);
     registry.register("files_native", files_native::files_native);
     registry.register("robustness", robust::dispatch);
-    registry.register("external_change", core::external_change);
-    registry.register("acked_data_visible", core::acked_data_visible);
-    registry.register("CORE-CAPTURE-ALIASES", core::capture_aliases);
-    registry.register("disconnect", core_journey::disconnect);
-    registry.register("source_ready", core_journey::source_ready);
-    registry.register("capture_safety", core_journey::capture_safety);
-    registry.register("old_sse_cursor", core_journey::old_sse_cursor);
-    registry.register("finish:CORE-BOOT", labcore::finish_hook);
-    registry.register("finish:CORE-DISCONNECT-DETECT", labcore::finish_hook);
+    core::register(&mut registry);
     registry.register("command_journey", journey::command_journey);
     registry.register("files_transform", shortcuts::files_transform);
     registry.register("shortcuts_actions", shortcuts::shortcuts_actions);

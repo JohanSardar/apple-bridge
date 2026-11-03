@@ -303,3 +303,14 @@ pub fn robustness(world: &mut World, input: &Value, evidence: &mut Evidence) -> 
         ))),
     }
 }
+pub fn register(registry: &mut lab_runner::Registry) {
+    registry.register("external_change", external_change);
+    registry.register("acked_data_visible", acked_data_visible);
+    registry.register("CORE-CAPTURE-ALIASES", capture_aliases);
+    registry.register("disconnect", crate::core_journey::disconnect);
+    registry.register("source_ready", crate::core_journey::source_ready);
+    registry.register("capture_safety", crate::core_journey::capture_safety);
+    registry.register("old_sse_cursor", crate::core_journey::old_sse_cursor);
+    registry.register("finish:CORE-BOOT", crate::labcore::finish_hook);
+    registry.register("finish:CORE-DISCONNECT-DETECT", crate::labcore::finish_hook);
+}
