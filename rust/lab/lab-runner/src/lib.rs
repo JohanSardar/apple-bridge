@@ -75,16 +75,32 @@ impl Registry {
             evidence.check("sim_level", false, "unsupported level");
             return evidence;
         }
+        let implicit = [json!({ format!("scenario:{}", scenario.id): {} })];
+        let steps =
+            if scenario.given.is_empty() && scenario.when.is_empty() && scenario.then.is_empty() {
+                implicit.as_slice()
+            } else {
+                &[]
+            };
         for step in scenario
             .given
             .iter()
             .chain(&scenario.when)
             .chain(&scenario.then)
+            .chain(steps)
         {
             if let Err(error) = self.step(step, world, &mut evidence) {
                 evidence.check("action", false, &error.to_string());
                 break;
             }
+        }
+        let finish = json!({ format!("finish:{}", scenario.id): {} });
+        if self
+            .handlers
+            .contains_key(&format!("finish:{}", scenario.id))
+            && let Err(error) = self.step(&finish, world, &mut evidence)
+        {
+            evidence.check("finish", false, &error.to_string());
         }
         for step in &scenario.cleanup {
             if step.get("world").is_some() {
