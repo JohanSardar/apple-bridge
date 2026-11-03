@@ -199,8 +199,8 @@ impl ReadStore for StateReads {
             tokio::task::spawn_blocking(move || {
                 use std::io::Read;
                 let mut bytes = Vec::new();
-                file.take(64 << 20)
-                    .read_to_end(&mut bytes)
+                let mut file = file;
+                file.read_to_end(&mut bytes)
                     .map_err(|_| Code::Unavailable)?;
                 Ok(bytes)
             })

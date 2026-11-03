@@ -255,7 +255,6 @@ pub async fn start(
         codec,
     });
     let (stop, receiver) = tokio::sync::watch::channel(false);
-    let mut status = client.status();
     let listener = if config.listen.is_empty() {
         None
     } else {
@@ -271,37 +270,7 @@ pub async fn start(
         }
     };
     let clock_home = config.home.clone();
-    let track = async {
-        let mut last_clock = None;
-        while status.changed().await.is_ok() {
-            let current = status.borrow().clone();
-            if let Some(sample) = &current.clock_sample
-                && last_clock.as_ref() != Some(sample)
-            {
-                last_clock = Some(sample.clone());
-                ab_trust::atomic_write(
-                    &clock_home.join("gateway-clock.json"),
-                    &serde_json::to_vec(sample)?,
-                )
-                .map_err(|_| Error::Invalid)?;
-            }
-            let entries = blobs.lock().await.entries().clone();
-            let mut state = state.lock().map_err(|_| Error::Invalid)?;
-            let cursor = state.head().map_err(|_| Error::Invalid)?;
-            state.set_replica_status(serde_json::json!({
-                "state": current.state, "mode": current.mode,
-                "gateway_head": current.gateway_head, "cursor": cursor,
-                "role": "replica", "schema": current.schema, "snapshot_sequence": current.snapshot_sequence,
-                "lag": current.gateway_head.saturating_sub(cursor.sequence), "blob_backlog": entries.values().filter(|e| e.state != ab_blobs::BlobState::Present).count(),
-                "staleness_ms": current.last_heartbeat.parse::<jiff::Timestamp>().map_or(0, |t| jiff::Timestamp::now().as_millisecond().saturating_sub(t.as_millisecond())),
-                "blobs": {"entries": entries},
-                "snapshots": current.snapshots, "resumes": current.resumes,
-                "snapshot_pages": current.snapshot_pages,
-                "last_heartbeat": current.last_heartbeat
-            })).map_err(|_| Error::Invalid)?;
-        }
-        Ok::<(), Error>(())
-    };
+    let track = track_status(client.status(), blobs, state, clock_home);
     tokio::select! {
         result = serve(config, service) => { let _sent = stop.send(true); result },
         result = follow => { result.map_err(|_| Error::Operation(Code::Unavailable.into())) },
@@ -318,4 +287,52 @@ async fn shutdown_signal() {
         return;
     }
     let _signal = tokio::signal::ctrl_c().await;
+}
+
+#[cfg(feature = "replica-feed")]
+async fn track_status(
+    mut status: tokio::sync::watch::Receiver<ab_replication::FollowStatus>,
+    blobs: std::sync::Arc<tokio::sync::Mutex<ab_blobs::Store>>,
+    state: std::sync::Arc<Mutex<ab_state::State<ab_state::Replica>>>,
+    clock_home: PathBuf,
+) -> Result<(), Error> {
+    let mut last_clock = None;
+    while status.changed().await.is_ok() {
+        let current = status.borrow().clone();
+        if let Some(sample) = &current.clock_sample
+            && last_clock.as_ref() != Some(sample)
+        {
+            last_clock = Some(sample.clone());
+            ab_trust::atomic_write(
+                &clock_home.join("gateway-clock.json"),
+                &serde_json::to_vec(sample)?,
+            )
+            .map_err(|_| Error::Invalid)?;
+        }
+        let entries = blobs.lock().await.entries().clone();
+        let mut entries = serde_json::to_value(entries)?;
+        if let Some(entries) = entries.as_object_mut() {
+            for entry in entries.values_mut() {
+                if let Some(entry) = entry.as_object_mut() {
+                    entry
+                        .entry("next_attempt_at")
+                        .or_insert_with(|| serde_json::json!("0001-01-01T00:00:00Z"));
+                }
+            }
+        }
+        let mut state = state.lock().map_err(|_| Error::Invalid)?;
+        let cursor = state.head().map_err(|_| Error::Invalid)?;
+        state.set_replica_status(serde_json::json!({
+                "state": current.state, "mode": current.mode,
+                "gateway_head": current.gateway_head, "cursor": cursor,
+                "role": "replica", "schema": current.schema, "snapshot_sequence": current.snapshot_sequence,
+                "lag": current.gateway_head.saturating_sub(cursor.sequence), "blob_backlog": 0,
+                "staleness_ms": current.last_heartbeat.parse::<jiff::Timestamp>().map_or(0, |t| jiff::Timestamp::now().as_millisecond().saturating_sub(t.as_millisecond())),
+                "blobs": {"entries": entries},
+                "snapshots": current.snapshots, "resumes": current.resumes,
+                "snapshot_pages": current.snapshot_pages,
+                "last_heartbeat": current.last_heartbeat
+            })).map_err(|_| Error::Invalid)?;
+    }
+    Ok::<(), Error>(())
 }

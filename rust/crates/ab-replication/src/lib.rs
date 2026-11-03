@@ -90,21 +90,45 @@ pub struct FollowStatus {
     pub snapshot_pages: u64,
     pub last_heartbeat: String,
 }
+#[derive(Debug)]
+pub(crate) struct Live {
+    message: Message,
+    flushed: Option<tokio::sync::oneshot::Sender<()>>,
+}
 #[derive(Clone, Debug)]
 pub struct Writer {
-    live: mpsc::Sender<Message>,
+    live: mpsc::Sender<Live>,
     bulk: mpsc::Sender<Message>,
 }
 impl Writer {
     pub async fn send(&self, frame: FeedFrame) -> Result<(), Error> {
         self.live
-            .send(Message::Text(
-                String::from_utf8(frame.encode()?)
-                    .map_err(|_| Error::Invalid)?
-                    .into(),
-            ))
+            .send(Live {
+                message: Message::Text(
+                    String::from_utf8(frame.encode()?)
+                        .map_err(|_| Error::Invalid)?
+                        .into(),
+                ),
+                flushed: None,
+            })
             .await
             .map_err(|_| Error::Disconnected)
+    }
+    async fn send_flushed(&self, frame: FeedFrame) -> Result<(), Error> {
+        let (flushed, receiver) = tokio::sync::oneshot::channel();
+        let message = Message::Text(
+            String::from_utf8(frame.encode()?)
+                .map_err(|_| Error::Invalid)?
+                .into(),
+        );
+        self.live
+            .send(Live {
+                message,
+                flushed: Some(flushed),
+            })
+            .await
+            .map_err(|_| Error::Disconnected)?;
+        receiver.await.map_err(|_| Error::Disconnected)
     }
     pub async fn bulk(&self, bytes: Vec<u8>) -> Result<(), Error> {
         self.bulk
@@ -264,14 +288,16 @@ impl<S: ReplicaState> Client<S> {
         let writer = Writer { live, bulk };
         let write_loop = async {
             loop {
-                let message =
-                    tokio::select! {biased;msg=live_rx.recv()=>msg,msg=bulk_rx.recv()=>msg};
-                let Some(message) = message else {
+                let message = tokio::select! {biased;msg=live_rx.recv()=>msg.map(|item: Live|(item.message,item.flushed)),msg=bulk_rx.recv()=>msg.map(|message|(message,None))};
+                let Some((message, flushed)) = message else {
                     return Err::<(), Error>(Error::Disconnected);
                 };
                 tokio::time::timeout(Duration::from_secs(10), sink.send(message))
                     .await
                     .map_err(|_| Error::Disconnected)??;
+                if let Some(flushed) = flushed {
+                    let _sent = flushed.send(());
+                }
             }
         };
         let registration = command::Registration::new(self.commands.clone(), writer.clone())?;
@@ -404,10 +430,8 @@ impl<S: ReplicaState> Client<S> {
                             s.mode.clone_from(&f.reason);
                             if f.reason == "resume" {
                                 s.resumes += 1;
-                                s.state = ConnectionState::Connected;
                             }
                         });
-                        registration.session.ready();
                         welcome = Some(f.clone());
                     }
                     "SnapshotBegin" => {
@@ -446,7 +470,6 @@ impl<S: ReplicaState> Client<S> {
                             .install_snapshot(install.take().ok_or(Error::Invalid)?)?;
                         ack.cursor = Some(raw(&cursor)?);
                         self.status.send_modify(|s| {
-                            s.state = ConnectionState::Connected;
                             s.snapshots += 1;
                         });
                     }
@@ -503,7 +526,14 @@ impl<S: ReplicaState> Client<S> {
                 if !["Heartbeat", "BlobAvailable", "BlobDone", "BlobUnavailable"]
                     .contains(&f.t.as_str())
                 {
-                    writer.send(ack).await?;
+                    if f.t == "SnapshotEnd" || f.t == "Welcome" && f.reason == "resume" {
+                        writer.send_flushed(ack).await?;
+                        registration.session.ready();
+                        self.status
+                            .send_modify(|s| s.state = ConnectionState::Connected);
+                    } else {
+                        writer.send(ack).await?;
+                    }
                 }
                 if install.is_none() && self.blobs.is_some() {
                     if blob_queue.is_empty()

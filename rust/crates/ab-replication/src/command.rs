@@ -123,11 +123,10 @@ impl Drop for Pending {
             if let Ok(bytes) = cancel.encode()
                 && let Ok(text) = String::from_utf8(bytes)
             {
-                let _ = self
-                    .session
-                    .writer
-                    .live
-                    .try_send(tokio_tungstenite::tungstenite::Message::Text(text.into()));
+                let _ = self.session.writer.live.try_send(crate::Live {
+                    message: tokio_tungstenite::tungstenite::Message::Text(text.into()),
+                    flushed: None,
+                });
             }
         }
     }
@@ -357,7 +356,7 @@ mod tests {
         tempfile::TempDir,
         GatewayTransport,
         Registration,
-        mpsc::Receiver<tokio_tungstenite::tungstenite::Message>,
+        mpsc::Receiver<crate::Live>,
     );
     fn setup() -> Result<Fixture, Box<dyn std::error::Error>> {
         let home = tempfile::tempdir()?;
@@ -389,11 +388,11 @@ mod tests {
                 .await
         });
         let request = wire.recv().await.ok_or("request")?;
-        let request: FeedFrame = serde_json::from_str(request.to_text()?)?;
+        let request: FeedFrame = serde_json::from_str(request.message.to_text()?)?;
         task.abort();
         let _ = task.await;
         let cancel = wire.recv().await.ok_or("cancel")?;
-        let cancel: FeedFrame = serde_json::from_str(cancel.to_text()?)?;
+        let cancel: FeedFrame = serde_json::from_str(cancel.message.to_text()?)?;
         assert_eq!(cancel.t, "CommandCancel");
         assert_eq!(cancel.id, request.id);
         assert!(

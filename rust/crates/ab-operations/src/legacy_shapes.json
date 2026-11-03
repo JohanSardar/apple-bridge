@@ -944,5 +944,43 @@
       "seconds",
       "float64"
     ]
+  ],
+  "BlobEntry": [
+    [
+      "retry_attempts",
+      "int"
+    ],
+    [
+      "next_attempt_at",
+      "time.Time"
+    ],
+    [
+      "resumed_bytes",
+      "int64"
+    ],
+    [
+      "corruptions",
+      "int"
+    ],
+    [
+      "reason",
+      "string"
+    ],
+    [
+      "state",
+      "string"
+    ],
+    [
+      "size",
+      "int64"
+    ],
+    [
+      "received",
+      "int64"
+    ],
+    [
+      "unreferenced_at",
+      "time.Time"
+    ]
   ]
 }

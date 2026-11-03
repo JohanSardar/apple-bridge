@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -65,6 +66,9 @@ func run() error {
 	if err = w.SeedMessages(20); err != nil {
 		return err
 	}
+	if err = w.ControlAction("/blob-fixture", map[string]any{"size": 262144}); err != nil {
+		return err
+	}
 	if err = w.FlushCaptures(30 * time.Second); err != nil {
 		return err
 	}
@@ -75,6 +79,22 @@ func run() error {
 	})
 	if err != nil {
 		return err
+	}
+	if err = w.Await(15*time.Second, func() bool {
+		for _, endpoint := range w.Replicas {
+			var result contracts.ReadResult
+			if _, err := world.Request(ctx, endpoint, "/v1/op/sources.status", struct{}{}, &result); err != nil || result.Replica == nil || len(result.Replica.Blobs.Entries) == 0 {
+				return false
+			}
+			for _, entry := range result.Replica.Blobs.Entries {
+				if entry.State != "present" {
+					return false
+				}
+			}
+		}
+		return true
+	}); err != nil {
+		return fmt.Errorf("blob parity fixture: %w", err)
 	}
 	cases := []struct{ name, input string }{
 		{"records.query", `{}`}, {"sources.status", `{}`}, {"replica.status", `{}`},
@@ -87,6 +107,12 @@ func run() error {
 		{"reminders.items", `{"time_zone":"UTC"}`},
 		{"calendar.range", `{"start":"2026-01-01T00:00:00Z","end":"2026-01-02T00:00:00Z","time_zone":"UTC"}`},
 	}
+	recordsForGet, _, err := w.RecordsAt(w.Replicas[1])
+	if err != nil || len(recordsForGet) == 0 {
+		return fmt.Errorf("record fixture missing: %v", err)
+	}
+	recordInput, _ := json.Marshal(map[string]string{"collection": recordsForGet[0].Collection, "id": recordsForGet[0].ID})
+	cases = append(cases, struct{ name, input string }{"records.get", string(recordInput)}, struct{ name, input string }{"messages.thread", `{"chat_id":"cht_01ARZ3NDEKTSV4RRFFQ69G5FAV"}`}, struct{ name, input string }{"messages.collection", `{"chat_id":"cht_01ARZ3NDEKTSV4RRFFQ69G5FAV","kind":"photos"}`}, struct{ name, input string }{"commands.list", `{}`}, struct{ name, input string }{"commands.status", `{"command_id":"cmd_absent_parity_probe"}`})
 	failures := 0
 	for _, c := range cases {
 		a, err := request(w.Replicas[0], "/v1/op/"+c.name, []byte(c.input))
@@ -135,7 +161,7 @@ func run() error {
 		}
 		aa, _ := json.Marshal(ga)
 		bb, _ := json.Marshal(gb)
-		same = bytes.Equal(aa, bb)
+		same = bytes.Equal(aa, bb) && rawMCP(c.name, a, b)
 		fmt.Printf("MCP %s equal=%t\n", c.name, same)
 		if !same {
 			failures++
@@ -200,6 +226,9 @@ func run() error {
 		if !cancellation(ctx, w, protocol) {
 			failures++
 		}
+	}
+	if err = offlineBlob(ctx, w); err != nil {
+		return err
 	}
 	if failures > 0 {
 		return fmt.Errorf("%d byte-parity failures", failures)
@@ -296,4 +325,100 @@ func cancellation(ctx context.Context, w *world.World, protocol string) bool {
 	stopped := w.Await(time.Second, func() bool { effects, e := w.Effects(); return e == nil && effects[query.ID] == 0 }) == nil
 	fmt.Printf("CANCELLATION %s started=%t client_cancelled=%t helper_stopped=%t\n", protocol, started, cancelled, stopped)
 	return started && cancelled && stopped
+}
+
+func offlineBlob(ctx context.Context, w *world.World) error {
+	query := contracts.Query{ID: contracts.NewID("qry"), Args: json.RawMessage(`{"size":262144}`), DeadlineMS: 10000}
+	client := scripted.Client{Endpoint: w.Replicas[1], Protocol: "mcp"}
+	var result contracts.QueryResult
+	if err := client.Call(ctx, "test.blob", query, &result); err != nil {
+		return err
+	}
+	if len(result.Blobs) != 1 {
+		return fmt.Errorf("query blob result missing")
+	}
+	blob := result.Blobs[0]
+	read := func(rng string) ([]byte, error) {
+		e := w.Replicas[1]
+		req, err := http.NewRequestWithContext(ctx, "GET", e.URL+"/v1/blobs/"+blob.Digest+"?record="+query.ID, nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Host = e.Host
+		req.Header.Set("Authorization", "Bearer "+e.Token)
+		if rng != "" {
+			req.Header.Set("Range", rng)
+		}
+		response, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		defer response.Body.Close()
+		data, err := io.ReadAll(response.Body)
+		if err != nil {
+			return nil, err
+		}
+		if response.StatusCode != 200 && response.StatusCode != 206 {
+			return nil, fmt.Errorf("query blob HTTP %d", response.StatusCode)
+		}
+		return data, nil
+	}
+	first, err := read("")
+	if err != nil {
+		return err
+	}
+	if fmt.Sprintf("%x", sha256.Sum256(first)) != blob.Digest {
+		return fmt.Errorf("query blob digest mismatch")
+	}
+	for _, test := range []struct {
+		header   string
+		expected []byte
+	}{{"bytes=11-30", first[11:31]}, {"bytes=11-", first[11:]}, {"bytes=-20", first[len(first)-20:]}} {
+		part, err := read(test.header)
+		if err != nil || !bytes.Equal(part, test.expected) {
+			return fmt.Errorf("query blob range %s differs: %v", test.header, err)
+		}
+	}
+	fmt.Println("QUERY_BLOB ranges=3/3")
+	w.StopGateway()
+	cached, err := read("")
+	if err != nil {
+		return err
+	}
+	equal := bytes.Equal(first, cached)
+	fmt.Printf("QUERY_BLOB cached_offline=%t sha256_valid=true\n", equal)
+	if !equal {
+		return fmt.Errorf("offline query blob differs")
+	}
+	return nil
+}
+
+func rawMCP(name string, a, b []byte) bool {
+	type envelope struct {
+		Result struct {
+			Structured json.RawMessage `json:"structuredContent"`
+			Content    []struct {
+				Text string `json:"text"`
+			} `json:"content"`
+			Meta map[string]float64 `json:"_meta"`
+		} `json:"result"`
+	}
+	var left, right envelope
+	if json.Unmarshal(a, &left) != nil || json.Unmarshal(b, &right) != nil {
+		return false
+	}
+	if len(left.Result.Content) != 1 || len(right.Result.Content) != 1 {
+		return false
+	}
+	for _, payload := range []envelope{left, right} {
+		if !bytes.Equal(normalize(name, payload.Result.Structured), normalize(name, []byte(payload.Result.Content[0].Text))) {
+			return false
+		}
+		for key, value := range payload.Result.Meta {
+			if key != "bridge/read_model_ms" || value < 0 {
+				return false
+			}
+		}
+	}
+	return (left.Result.Meta == nil) == (right.Result.Meta == nil) && bytes.Equal(normalize(name, left.Result.Structured), normalize(name, right.Result.Structured))
 }

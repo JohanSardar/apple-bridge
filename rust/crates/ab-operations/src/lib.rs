@@ -380,9 +380,7 @@ impl RemoteGateway {
             tokio::time::timeout(Duration::from_secs(15), async {
                 loop {
                     let local = self.store.head()?;
-                    if local.epoch != cursor.epoch
-                        || local.subscription_revision != cursor.subscription_revision
-                    {
+                    if local.epoch != cursor.epoch {
                         return Err(Error::from(Code::Reset));
                     }
                     if local.sequence >= cursor.sequence {
@@ -425,10 +423,15 @@ impl RemoteGateway {
             )
             .await
         {
-            Err(Error {
-                code: Code::Unavailable,
-                ..
-            }) => self.call(principal, "status", None, &query).await?,
+            Err(
+                error @ Error {
+                    code: Code::Unavailable,
+                    ..
+                },
+            ) => match self.call(principal, "status", None, &query).await {
+                Ok(response) => response,
+                Err(_) => return Err(error),
+            },
             result => result?,
         };
         self.wait(response).await
@@ -602,10 +605,7 @@ impl Service {
         }
         let query: ReadQuery =
             serde_json::from_slice(input).map_err(|_| Error::from(Code::Invalid))?;
-        if query.limit > 10000
-            || (name == "records.get" && (query.collection.is_empty() || query.id.is_empty()))
-            || (name == "search" && query.text.is_empty())
-        {
+        if query.limit > 10000 {
             return Err(Code::Invalid.into());
         }
         if query.collection == "system.replica" {
@@ -614,6 +614,11 @@ impl Service {
                 "replica.status",
                 &Value::Object(serde_json::Map::new()),
             );
+        }
+        if (name == "records.get" && (query.collection.is_empty() || query.id.is_empty()))
+            || (name == "search" && query.text.is_empty())
+        {
+            return Err(Code::Invalid.into());
         }
         self.store.read(&visibility, &query)
     }

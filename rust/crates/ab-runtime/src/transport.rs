@@ -12,6 +12,8 @@ impl GatewayTransport for ReplicaGatewayTransport {
         body: Vec<u8>,
     ) -> Task<'a, ForwardReply> {
         Box::pin(async move {
+            let query = serde_json::from_slice::<serde_json::Value>(&body)
+                .is_ok_and(|request| request["method"] == "query");
             let route = match route {
                 GatewayRoute::Feed => ab_replication::GatewayRoute::Feed,
                 GatewayRoute::Direct {
@@ -28,7 +30,7 @@ impl GatewayTransport for ReplicaGatewayTransport {
                 .await
                 .map_err(|error| match error {
                     ab_replication::Error::Trust(ab_trust::Error::Http(error))
-                        if error.is_timeout() =>
+                        if query && error.is_timeout() =>
                     {
                         Error::from(Code::Deadline)
                     }
