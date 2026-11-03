@@ -3,7 +3,11 @@ use lab_world::{World, WorldConfig};
 use std::{env, fs, path::PathBuf, process::ExitCode};
 fn run() -> Result<bool, Box<dyn std::error::Error>> {
     let mut args = env::args().skip(1);
-    if args.next().as_deref() != Some("run") { return Err("usage: lab-runner run YAML... --gateway BIN --simapple BIN --output DIR".into()); }
+    if args.next().as_deref() != Some("run") {
+        return Err(
+            "usage: lab-runner run YAML... --gateway BIN --simapple BIN --output DIR".into(),
+        );
+    }
     let mut paths = vec![];
     let mut gateway = None;
     let mut simapple = None;
@@ -26,7 +30,14 @@ fn run() -> Result<bool, Box<dyn std::error::Error>> {
     for (index, path) in paths.iter().enumerate() {
         let scenario: Scenario = serde_yaml::from_slice(&fs::read(path)?)?;
         let directory = output.join(format!("world-{index}"));
-        let mut world = World::start(WorldConfig { gateway: gateway.clone(), simapple: simapple.clone(), directory, scope: "messages:read,reminders:read,calendar:read,contacts:read,notes:read,system:read".into() })?;
+        let mut world = World::start(WorldConfig {
+            gateway: gateway.clone(),
+            simapple: simapple.clone(),
+            directory,
+            scope:
+                "messages:read,reminders:read,calendar:read,contacts:read,notes:read,system:read"
+                    .into(),
+        })?;
         let evidence = registry.run(&scenario, &mut world);
         passed &= evidence.passed;
         println!("{}", serde_json::to_string(&evidence)?);
@@ -34,5 +45,12 @@ fn run() -> Result<bool, Box<dyn std::error::Error>> {
     Ok(passed)
 }
 fn main() -> ExitCode {
-    match run() { Ok(true) => ExitCode::SUCCESS, Ok(false) => ExitCode::FAILURE, Err(error) => { eprintln!("{error}"); ExitCode::FAILURE } }
+    match run() {
+        Ok(true) => ExitCode::SUCCESS,
+        Ok(false) => ExitCode::FAILURE,
+        Err(error) => {
+            eprintln!("{error}");
+            ExitCode::FAILURE
+        }
+    }
 }
