@@ -17,6 +17,8 @@ IMPORT_SCENARIOS = ['messages/MSG-HISTORY-IMPORT', 'contacts/CON-IMPORT', 'notes
 MEDIA_SCENARIOS = ['web/WEB-MEDIA-VARIANTS', 'messages/MSG-MEDIA-CLEANUP']
 WEB_RM_SCENARIOS = ['web/WEB-RM-MEDIA-COLLECTION', 'web/WEB-RM-SEARCH']
 NATIVE_SCENARIOS = ['packaging/Q1-SETUP', 'packaging/R1-RELEASE-SIM', 'files/FILE-IDLE', 'files/FILE-CAPTURE']
+MESSAGES_A_SCENARIOS = ['messages/MSG-DB-REPLACED', 'messages/MSG-PERMISSION-LOSS', 'messages/MSG-INCOMING',
+                        'messages/MSG-DECODE']
 SCENARIOS = ['CORE-QUERY-ROUNDTRIP', 'CORE-QUERY-BLOB', 'CORE-QUERY-SCOPE', 'CORE-QUERY-DEADLINE',
              *JOURNEY_SCENARIOS]
 
@@ -44,12 +46,15 @@ def main():
         parser.add_argument('--' + name, required=True)
     parser.add_argument('--scenario', action='append')
     parser.add_argument('--import', dest='imports', action='store_true')
+    parser.add_argument('--messages-a', dest='messages_a', action='store_true')
     parser.add_argument('--media', dest='media', action='store_true')
     parser.add_argument('--web-rm', dest='web_rm', action='store_true')
     parser.add_argument('--native', dest='native', action='store_true')
     args = parser.parse_args()
     if args.imports:
         args.scenario = (args.scenario or []) + IMPORT_SCENARIOS
+    if args.messages_a:
+        args.scenario = (args.scenario or []) + MESSAGES_A_SCENARIOS
     if args.media:
         args.scenario = (args.scenario or []) + MEDIA_SCENARIOS
     if args.web_rm:

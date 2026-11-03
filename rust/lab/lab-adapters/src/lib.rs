@@ -8,6 +8,7 @@ pub mod http;
 pub mod imports;
 pub mod journey;
 pub mod media;
+pub mod messages_a;
 pub mod packaging;
 pub mod poster;
 pub mod queries;
@@ -48,6 +49,8 @@ pub fn registry() -> Registry {
                 history::SCOPE,
                 0,
             )?;
+        } else if replicas != 0 && messages_a::SCENARIOS.contains(&id) {
+            messages_a::start(world, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && !PORTED.contains(&id) && !self_started {
             return Err(Error::Invalid(format!("replica world not ported for {id}")));
         }
@@ -58,7 +61,7 @@ pub fn registry() -> Registry {
     registry.register("readmodels", readmodels::readmodels);
     registry.register("blobs", blobs::blobs);
     registry.register("messages", history::messages);
-    registry.register("messages_read", history::messages_read);
+    registry.register("messages_read", messages_a::messages_read);
     registry.register("messages_truth", history::messages_truth);
     registry.register("contacts", imports::contacts);
     registry.register("notes", imports::notes);
