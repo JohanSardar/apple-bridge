@@ -35,6 +35,11 @@ fn run() -> Result<bool, Box<dyn std::error::Error>> {
         {
             scenario.when.push(serde_json::json!({"readmodels": {}}));
         }
+        if let Some(evidence) = lab_adapters::iphone::run(&scenario) {
+            passed &= evidence.passed;
+            println!("{}", serde_json::to_string(&evidence)?);
+            continue;
+        }
         let mut world = World::start(WorldConfig {
             gateway: gateway.clone(),
             simapple: simapple.clone(),

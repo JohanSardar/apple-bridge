@@ -23,3 +23,10 @@ zune-png = "0.5"
 zune-jpeg = "0.5.16-rc3"
 zune-core = "0.5"
 rusqlite.workspace = true
+aes-gcm = "0.10"
+base64 = "0.22"
+ed25519-dalek.workspace = true
+x25519-dalek = { workspace = true, features = ["static_secrets"] }
+hmac = "0.12"
+rcgen = "0.14"
+rustls.workspace = true
