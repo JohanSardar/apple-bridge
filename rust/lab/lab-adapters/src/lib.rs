@@ -11,6 +11,7 @@ pub mod filecmd;
 pub mod filerep;
 pub mod files_native;
 pub mod frontdoor;
+pub mod helper_ipc;
 pub mod history;
 pub mod http;
 pub mod imports;
@@ -50,7 +51,9 @@ pub mod restart;
 pub mod robust;
 pub mod safari;
 pub mod search;
+pub mod session_proxy;
 pub mod shortcuts;
+pub mod siri;
 pub mod threads;
 pub mod usage;
 pub mod vision;
@@ -77,7 +80,8 @@ pub fn registry() -> Registry {
             || id == "MSG-MEDIA-CLEANUP"
             || readmodels::SCENARIOS.contains(&id)
             || calls::NATIVE_SCENARIOS.contains(&id)
-            || usage::NATIVE_SCENARIOS.contains(&id);
+            || usage::NATIVE_SCENARIOS.contains(&id)
+            || helper_ipc::SCENARIOS.contains(&id);
         if replicas != 0 && blobs::is_blob(id) {
             blobs::configure(world, id, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && calls::REPLICA_SCENARIOS.contains(&id) {
@@ -167,7 +171,6 @@ pub fn registry() -> Registry {
     registry.register("notes", imports::notes);
     registry.register("usage", usage::cases);
     registry.register("phone", calls::phone);
-    registry.register("usage", imports::usage);
     registry.register("native_media_yield", native::media_yield);
     registry.register("native_media_posters", native::media_posters);
     registry.register("native_media_export_safety", native::media_export_safety);
@@ -199,6 +202,8 @@ pub fn registry() -> Registry {
     registry.register("mac", mac::mac);
     registry.register("calendar_journey", calendar::calendar_journey);
     native_runner::register(&mut registry);
+    registry.register("helper_ipc", helper_ipc::cases);
+    registry.register("SIRI-INTENTS", siri::intents);
     registry
 }
 

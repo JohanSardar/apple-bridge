@@ -29,6 +29,7 @@ base64 = "0.22"
 ed25519-dalek.workspace = true
 x25519-dalek = { workspace = true, features = ["static_secrets"] }
 hmac = "0.12"
+socket2 = "0.6"
 rcgen = "0.14"
 rustls.workspace = true
 p256 = { version = "0.14", features = ["ecdsa", "pkcs8"] }

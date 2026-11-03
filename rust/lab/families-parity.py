@@ -27,12 +27,13 @@ MESSAGES_A_SCENARIOS = ['messages/MSG-DB-REPLACED', 'messages/MSG-PERMISSION-LOS
                         'messages/MSG-DECODE']
 USAGE_SCENARIOS = ['usage/USE-LOCK-CLIP', 'usage/USE-READONLY', 'usage/USE-REMOTE-LAG']
 DARWIN_USAGE_SCENARIOS = ['usage/USE-SEGB-DECODE', 'usage/USE-ACTION-PROBE']
-CALLS_SCENARIOS = ['phone/CALL-CAPTURE', 'phone/VM-CAPTURE', 'phone/VMEMO-CAPTURE', 'phone/VMEMO-LATE-ASSETS']
+CALLS_SCENARIOS = ['phone/CALL-CAPTURE', 'phone/VM-CAPTURE', 'phone/VMEMO-CAPTURE', 'phone/VMEMO-LATE-ASSETS', 'phone/CALL-IDLE']
 MESSAGES_A_COMMAND_SCENARIOS = ['messages/MSG-CAPABILITY-MATRIX', 'messages/MSG-COMMAND-OBSERVED-IDS',
                                 'messages/MSG-COMMAND-PARTS', 'messages/MSG-DELETE', 'messages/MSG-EDIT',
                                 'messages/MSG-FAILED-OBSERVED-IDS', 'messages/MSG-MARK-READ',
                                 'messages/MSG-OWNER-TOKEN-SELFCHAT', 'messages/MSG-DELETE-REAL',
                                 'messages/MSG-DECODE-BALLOON', 'messages/MSG-DECODE-FORMATTING']
+HELPER_SCENARIOS = ['helper/HELPER-IPC-RESPONSIVE', 'helper/SESSION-PROXY-BYTES', 'helper/SIRI-INTENTS']
 IPHONE_SCENARIOS = ['iphone/APP-ALARM-SIM', 'iphone/APP-SHELL-SIM', 'iphone/APP-PAIR-SIM', 'iphone/APP-DEVICE-SIM',
                     'iphone/APP-MOTION-SIM', 'iphone/APP-HEALTH-WRITE-SIM', 'iphone/APP-SCREENTIME-SIM',
                     'iphone/APP-HEALTH-SIM', 'iphone/APP-LOC-SIM', 'iphone/APP-LIVE-SIM', 'iphone/APP-APPROVE-SIM',
@@ -114,6 +115,7 @@ def main():
     parser.add_argument('--usage', action='store_true')
     parser.add_argument('--darwin-usage', dest='darwin_usage', action='store_true')
     parser.add_argument('--calls', action='store_true')
+    parser.add_argument('--helper', action='store_true')
     parser.add_argument('--web', dest='web', action='store_true')
     parser.add_argument('--native-media', dest='native_media', action='store_true')
     parser.add_argument('--calendar', dest='calendar', action='store_true')
@@ -121,7 +123,7 @@ def main():
     parser.add_argument('--vision', action='store_true')
     parser.add_argument('--vision-native', dest='vision_native', action='store_true')
     args = parser.parse_args()
-    for flag, group in [(args.usage, USAGE_SCENARIOS), (args.darwin_usage, DARWIN_USAGE_SCENARIOS), (args.calls, CALLS_SCENARIOS)]:
+    for flag, group in [(args.usage, USAGE_SCENARIOS), (args.darwin_usage, DARWIN_USAGE_SCENARIOS), (args.calls, CALLS_SCENARIOS), (args.helper, HELPER_SCENARIOS)]:
         if flag:
             args.scenario = (args.scenario or []) + group
     if args.shortcuts:
