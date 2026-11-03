@@ -33,6 +33,7 @@ mod lab_relay;
 pub mod maintenance;
 #[cfg(feature = "replica-feed")]
 mod message_actions;
+pub mod product_cli;
 #[cfg(feature = "replica-feed")]
 mod query_audit;
 #[cfg(feature = "replica-feed")]

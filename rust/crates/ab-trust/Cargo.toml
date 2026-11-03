@@ -39,6 +39,9 @@ serde_cbor_2 = "0.13"
 
 rusqlite.workspace = true
 
+[dev-dependencies]
+tempfile = "3"
+
 [features]
 lab-harness = ["ab-domain/lab"]
 
