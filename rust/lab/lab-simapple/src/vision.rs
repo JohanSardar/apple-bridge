@@ -1,6 +1,6 @@
 use super::{
-    Duration, Instant, Result, Session, Shared, Ticket, Value, id, json, lock, now,
-    observation, send, string,
+    Duration, Instant, Result, Session, Shared, Ticket, Value, id, json, lock, now, observation,
+    send, string,
 };
 use base64::{Engine, engine::general_purpose::STANDARD};
 use sha2::{Digest, Sha256};
@@ -95,11 +95,7 @@ fn read_file(path: &str) -> std::result::Result<Vec<u8>, &'static str> {
     Ok(data)
 }
 
-fn input(
-    file: &str,
-    data: &str,
-    allow_empty: bool,
-) -> std::result::Result<Vec<u8>, &'static str> {
+fn input(file: &str, data: &str, allow_empty: bool) -> std::result::Result<Vec<u8>, &'static str> {
     let bytes = if file.is_empty() {
         STANDARD.decode(data).map_err(|_| "invalid")?
     } else {
@@ -463,13 +459,7 @@ impl Session<'_> {
         self.finish(state, &outcome)
     }
 
-    fn capture(
-        &mut self,
-        state: &Shared,
-        frame: &Value,
-        ticket: &Ticket,
-        op: &str,
-    ) -> Result<()> {
+    fn capture(&mut self, state: &Shared, frame: &Value, ticket: &Ticket, op: &str) -> Result<()> {
         let data = format!("[ab-test capture artifact] {op}").into_bytes();
         let digest = hex::encode(Sha256::digest(&data));
         let size = data.len();

@@ -222,3 +222,7 @@ Scenarios that end in an owner approval need an owner session, and the gateway h
 - `phone-blob-grant` reports whether a principal holds a query-blob grant for a digest.
 
 Production builds contain none of this.
+
+## Vision, PDF, audio and capture (Phase 8)
+
+The Rust peer answers `vision.ocr`, `pdf.text`, `pdf.search`, `audio.transcribe` and `speech.synthesize` with the Go fixtures (three OCR PNG digests, the fixture PDF digest and any `pdf.artifact` blob reference, the 364-byte WAV), and runs `pdf.annotate`, `speech.say`, `capture.play_sound`, `capture.screenshot`, `capture.camera_photo`, `capture.record_audio`, `mac.screen_record` and `print.document` (the capture operations intercept before the mac family, as in Go). `pdf`, `speech`, `print` and `capture` are advertised in Ready but are not scanned sources. `lab-adapters/src/vision.rs` ports AUD-SIM, PDF-ANNOTATE, PDF-TEXT, VIS-OCR and CAP-SIM, and compiles AUD-TRANSCRIBE, SPEECH-SAY and VIS-IDLE (real-only; the runner rejects them at sim level). Gate: `families-parity.py --vision` on Linux (four scenarios) and `--vision --vision-native` on macOS, where CAP-SIM builds `CaptureChecks`.

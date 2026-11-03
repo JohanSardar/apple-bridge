@@ -34,16 +34,13 @@ fn query_body(args: &Value, deadline: u64) -> Result<Value> {
 fn ask(client: &Client, op: &str, args: &Value, deadline: u64) -> Result<Option<(u16, Value)>> {
     client.call_raw(op, &query_body(args, deadline)?, 60)
 }
-fn good(reply: &Option<(u16, Value)>) -> Option<&Value> {
+fn good(reply: Option<&(u16, Value)>) -> Option<&Value> {
     reply
-        .as_ref()
         .filter(|(status, value)| *status == 200 && value["error"].is_null())
         .map(|(_, value)| value)
 }
-fn rejected_with(reply: &Option<(u16, Value)>, code: &str) -> bool {
-    reply
-        .as_ref()
-        .is_some_and(|(_, value)| value["error"]["code"] == code)
+fn rejected_with(reply: Option<&(u16, Value)>, code: &str) -> bool {
+    reply.is_some_and(|(_, value)| value["error"]["code"] == code)
 }
 fn fixture(name: &str) -> std::io::Result<Vec<u8>> {
     fs::read(Path::new(FIXTURES).join(name))
@@ -66,7 +63,12 @@ fn blob_get(client: &Client, digest: &str, record: &str) -> Option<Vec<u8>> {
     (reply.status == 200).then_some(reply.body)
 }
 
-fn ready(world: &World, scope: &str, scope_name: &str, evidence: &mut Evidence) -> Result<Option<Client>> {
+fn ready(
+    world: &World,
+    scope: &str,
+    scope_name: &str,
+    evidence: &mut Evidence,
+) -> Result<Option<Client>> {
     let client = Client::new(world, scope)?;
     evidence.check(scope_name, true, "scoped token created");
     let up = await_until(15, || {
@@ -111,6 +113,7 @@ fn idle(world: &World, evidence: &mut Evidence) {
     );
 }
 
+#[allow(clippy::too_many_lines)]
 fn annotate(world: &World, evidence: &mut Evidence) -> Result<()> {
     let data = fixture("fixture.pdf");
     evidence.check("fixture_read", data.is_ok(), "fixture pdf read");
@@ -123,17 +126,27 @@ fn annotate(world: &World, evidence: &mut Evidence) -> Result<()> {
     let client = Client::new(world, "pdf:read,pdf:write")?;
     evidence.check("annotation_scopes", true, "scoped token created");
     let empty = json!({"data_base64": encoded, "annotations": []});
-    let bad = client.call_raw("pdf.annotate", &crate::journey::command("pdf.annotate", &empty)?, 40)?;
+    let bad = client.call_raw(
+        "pdf.annotate",
+        &crate::journey::command("pdf.annotate", &empty)?,
+        40,
+    )?;
     evidence.check(
         "empty_annotations_rejected",
-        rejected_with(&bad, "invalid"),
+        rejected_with(bad.as_ref(), "invalid"),
         "empty annotation list is invalid",
     );
     let result = client
-        .call_raw("pdf.annotate", &crate::journey::command("pdf.annotate", &args)?, 40)?
-        .map(|(_, value)| value)
-        .unwrap_or(Value::Null);
-    let ids = result["observed_record_ids"].as_array().cloned().unwrap_or_default();
+        .call_raw(
+            "pdf.annotate",
+            &crate::journey::command("pdf.annotate", &args)?,
+            40,
+        )?
+        .map_or(Value::Null, |(_, value)| value);
+    let ids = result["observed_record_ids"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
     evidence.check(
         "annotation_observed",
         result["error"].is_null() && result["state"] == "observed" && ids.len() == 1,
@@ -164,7 +177,10 @@ fn annotate(world: &World, evidence: &mut Evidence) -> Result<()> {
         metadata["annotation_count"] == 2,
         "two annotations counted",
     );
-    let digest = metadata["blob"]["digest"].as_str().unwrap_or_default().to_owned();
+    let digest = metadata["blob"]["digest"]
+        .as_str()
+        .unwrap_or_default()
+        .to_owned();
     let mut output = None;
     let fetched = await_until(10, || {
         output = blob_get(&client, &digest, &record_id);
@@ -176,13 +192,17 @@ fn annotate(world: &World, evidence: &mut Evidence) -> Result<()> {
         fetched && hex::encode(Sha256::digest(&output)) == digest && output != data,
         "stored blob digest differs from the input",
     );
-    let blob_args = json!({"blob":{"collection":"pdf.artifact","record_id":record_id,"digest":digest}});
+    let blob_args =
+        json!({"blob":{"collection":"pdf.artifact","record_id":record_id,"digest":digest}});
     let extracted = ask(&client, "pdf.text", &blob_args, 10000)?;
-    let pages = good(&extracted).and_then(|value| value["result_json"]["pages"].as_array());
+    let pages = good(extracted.as_ref()).and_then(|value| value["result_json"]["pages"].as_array());
     evidence.check(
         "artifact_blob_input_preserves_document_text",
         pages.is_some_and(|items| {
-            items.len() == 1 && items[0]["text"].as_str().is_some_and(|t| t.trim() == "Bridge fixture")
+            items.len() == 1
+                && items[0]["text"]
+                    .as_str()
+                    .is_some_and(|t| t.trim() == "Bridge fixture")
         }),
         "artifact blob input keeps the page text",
     );
@@ -194,12 +214,15 @@ fn annotate(world: &World, evidence: &mut Evidence) -> Result<()> {
     );
     evidence.check(
         "output_contains_note_and_highlight",
-        has("/Subtype /Text") && has("/Subtype /Highlight") && has("/Contents ([ab-test synthetic])"),
+        has("/Subtype /Text")
+            && has("/Subtype /Highlight")
+            && has("/Contents ([ab-test synthetic])"),
         "output holds both annotations",
     );
     Ok(())
 }
 
+#[allow(clippy::too_many_lines)]
 fn documents(client: &Client, id: &str, evidence: &mut Evidence) -> Result<()> {
     let pdf = id == "PDF-TEXT";
     let op = if pdf { "pdf.text" } else { "vision.ocr" };
@@ -211,7 +234,7 @@ fn documents(client: &Client, id: &str, evidence: &mut Evidence) -> Result<()> {
     )?;
     evidence.check(
         "malformed_document_rejected",
-        rejected_with(&bad, "invalid"),
+        rejected_with(bad.as_ref(), "invalid"),
         "invalid document is rejected",
     );
     let (files, texts): (&[&str], &[&str]) = if pdf {
@@ -226,49 +249,63 @@ fn documents(client: &Client, id: &str, evidence: &mut Evidence) -> Result<()> {
         let data = fixture(file);
         evidence.check("generated_fixture_read", data.is_ok(), "fixture read");
         let Ok(data) = data else { return Ok(()) };
-        let reply = ask(client, op, &json!({"data_base64": STANDARD.encode(&data)}), 30000)?;
-        evidence.check("fixture_query_completed", good(&reply).is_some(), "query completed");
-        let result = good(&reply).map(|value| value["result_json"].clone());
+        let reply = ask(
+            client,
+            op,
+            &json!({"data_base64": STANDARD.encode(&data)}),
+            30000,
+        )?;
+        evidence.check(
+            "fixture_query_completed",
+            good(reply.as_ref()).is_some(),
+            "query completed",
+        );
+        let result = good(reply.as_ref()).map(|value| value["result_json"].clone());
         let matched = result.as_ref().is_some_and(|value| {
             if pdf {
-                value["pages"].as_array().filter(|p| p.len() == 1).map_or_else(
-                    || value["text"] == *text,
-                    |p| p[0]["text"].as_str().is_some_and(|t| t.trim() == *text),
-                )
+                value["pages"]
+                    .as_array()
+                    .filter(|p| p.len() == 1)
+                    .map_or_else(
+                        || value["text"] == *text,
+                        |p| p[0]["text"].as_str().is_some_and(|t| t.trim() == *text),
+                    )
             } else {
                 value["text"] == *text
             }
         });
-        evidence.check("fixture_content_matched", matched, "content matches the fixture text");
+        evidence.check(
+            "fixture_content_matched",
+            matched,
+            "content matches the fixture text",
+        );
         let path = absolute(file);
         let denied = ask(client, op, &json!({"file": path}), 10000)?;
         evidence.check(
             "file_requires_opt_in",
-            rejected_with(&denied, "invalid"),
+            rejected_with(denied.as_ref(), "invalid"),
             "file input without opt-in is invalid",
         );
         let blob = json!({"blob":{"query_id":"qry_missing","digest":"0".repeat(64)}});
         let unowned = ask(client, op, &blob, 10000)?;
         evidence.check(
             "unowned_blob_rejected",
-            rejected_with(&unowned, "forbidden"),
+            rejected_with(unowned.as_ref(), "forbidden"),
             "unowned blob is forbidden",
         );
-        let file_reply = ask(client, op, &json!({"file": path, "allow_file": true}), 30000)?;
-        let file_result = good(&file_reply).map(|value| value["result_json"].clone());
+        let file_reply = ask(
+            client,
+            op,
+            &json!({"file": path, "allow_file": true}),
+            30000,
+        )?;
+        let file_result = good(file_reply.as_ref()).map(|value| value["result_json"].clone());
         evidence.check(
             "file_input_matches_inline",
             path.is_some() && file_result.is_some() && file_result == result,
             "file input equals inline input",
         );
-        if !pdf {
-            let shaped = result.as_ref().is_some_and(|value| {
-                value["lines"].as_array().is_some_and(|lines| {
-                    !lines.is_empty() && lines[0]["box"].as_object().is_some_and(|b| b.len() == 4)
-                }) && value["language"].as_str().is_some_and(|l| !l.is_empty())
-            });
-            evidence.check("ocr_shape", shaped, "lines carry boxes and a language");
-        } else {
+        if pdf {
             for needle in ["fixture", "missing"] {
                 let search = ask(
                     client,
@@ -276,8 +313,9 @@ fn documents(client: &Client, id: &str, evidence: &mut Evidence) -> Result<()> {
                     &json!({"data_base64": STANDARD.encode(&data), "text": needle}),
                     10000,
                 )?;
-                let matches = good(&search).and_then(|v| v["result_json"]["matches"].as_array());
-                let valid = matches.is_some_and(|items| {
+                let found =
+                    good(search.as_ref()).and_then(|v| v["result_json"]["matches"].as_array());
+                let valid = found.is_some_and(|items| {
                     if needle == "fixture" {
                         items.len() == 1 && items[0]["page"] == 1 && items[0]["length"] == 7
                     } else {
@@ -286,6 +324,13 @@ fn documents(client: &Client, id: &str, evidence: &mut Evidence) -> Result<()> {
                 });
                 evidence.check("pdf_search_match_count_and_page", valid, "search matches");
             }
+        } else {
+            let shaped = result.as_ref().is_some_and(|value| {
+                value["lines"].as_array().is_some_and(|lines| {
+                    !lines.is_empty() && lines[0]["box"].as_object().is_some_and(|b| b.len() == 4)
+                }) && value["language"].as_str().is_some_and(|l| !l.is_empty())
+            });
+            evidence.check("ocr_shape", shaped, "lines carry boxes and a language");
         }
     }
     Ok(())
@@ -317,7 +362,7 @@ fn words_match(text: &str) -> f64 {
         .iter()
         .filter(|expected| words.iter().any(|w| w == **expected))
         .count();
-    matched as f64 / 2.0
+    f64::from(u32::try_from(matched).unwrap_or(0)) / 2.0
 }
 
 fn playback(client: &Client, id: &str, evidence: &mut Evidence) -> Result<()> {
@@ -359,12 +404,17 @@ fn audio(world: &World, evidence: &mut Evidence) -> Result<()> {
             return Ok(());
         }
     }
-    let synth = ask(&client, "speech.synthesize", &json!({"text":"Bridge fixture"}), 60000)?;
-    let out = good(&synth).cloned().unwrap_or(Value::Null);
+    let synth = ask(
+        &client,
+        "speech.synthesize",
+        &json!({"text":"Bridge fixture"}),
+        60000,
+    )?;
+    let out = good(synth.as_ref()).cloned().unwrap_or(Value::Null);
     let blobs = out["blobs"].as_array().cloned().unwrap_or_default();
     evidence.check(
         "synthesis_completed",
-        good(&synth).is_some()
+        good(synth.as_ref()).is_some()
             && out["result_json"]["media_type"] == "audio/wav"
             && blobs.len() == 1
             && blobs[0]["size"].as_u64().unwrap_or(0) > 44,
@@ -382,7 +432,11 @@ fn audio(world: &World, evidence: &mut Evidence) -> Result<()> {
             && bytes.starts_with(b"RIFF")
             && hex::encode(Sha256::digest(bytes)) == digest
     });
-    evidence.check("wav_blob_readback_digest", valid, "wav blob matches its digest");
+    evidence.check(
+        "wav_blob_readback_digest",
+        valid,
+        "wav blob matches its digest",
+    );
     if (id == "AUD-TRANSCRIBE" || id == "AUD-SIM") && valid {
         let Some(bytes) = blob_get(&client, &digest, &record) else {
             evidence.check("fixture_read", false, "blob read again");
@@ -394,7 +448,7 @@ fn audio(world: &World, evidence: &mut Evidence) -> Result<()> {
             &json!({"data_base64": STANDARD.encode(&bytes)}),
             60000,
         )?;
-        let result = good(&reply).map(|v| v["result_json"].clone());
+        let result = good(reply.as_ref()).map(|v| v["result_json"].clone());
         let accepted = result.as_ref().is_some_and(|r| {
             if r["status"] == "available" {
                 let segments = r["segments"].as_array().cloned().unwrap_or_default();
@@ -402,12 +456,16 @@ fn audio(world: &World, evidence: &mut Evidence) -> Result<()> {
                     && r["language"].as_str().is_some_and(|l| !l.is_empty())
                     && !segments.is_empty()
                     && segments.iter().all(|s| {
-                        let (start, end) = (s["start"].as_f64().unwrap_or(-1.0), s["end"].as_f64().unwrap_or(-1.0));
+                        let (start, end) = (
+                            s["start"].as_f64().unwrap_or(-1.0),
+                            s["end"].as_f64().unwrap_or(-1.0),
+                        );
                         start >= 0.0 && end >= start
                     })
             } else {
                 r["status"] == "unavailable"
-                    && r["reason"] == "Speech Recognition authorization for the Helper is not_determined"
+                    && r["reason"]
+                        == "Speech Recognition authorization for the Helper is not_determined"
             }
         });
         evidence.check(
@@ -423,7 +481,7 @@ fn empty_text(client: &Client, evidence: &mut Evidence) -> Result<()> {
     let reply = ask(client, "speech.synthesize", &json!({"text":""}), 10000)?;
     evidence.check(
         "empty_text_rejected",
-        rejected_with(&reply, "invalid"),
+        rejected_with(reply.as_ref(), "invalid"),
         "empty text is invalid",
     );
     Ok(())
@@ -439,7 +497,11 @@ fn native_checks(evidence: &mut Evidence) -> Option<PathBuf> {
         return None;
     }
     let directory = fs::read_to_string("native/.build/native-output-1").ok();
-    evidence.check("native_output", directory.is_some(), "native output directory");
+    evidence.check(
+        "native_output",
+        directory.is_some(),
+        "native output directory",
+    );
     directory.map(|text| PathBuf::from(text.trim()))
 }
 
@@ -474,7 +536,11 @@ fn capture(world: &World, evidence: &mut Evidence) -> Result<()> {
                 "capture.record_audio" | "mac.screen_record" => json!({"seconds":2}),
                 "print.document" => {
                     let file = absolute("fixture.pdf");
-                    evidence.check("print_fixture_path", file.is_some(), "fixture path resolved");
+                    evidence.check(
+                        "print_fixture_path",
+                        file.is_some(),
+                        "fixture path resolved",
+                    );
                     json!({"file": file, "printer": "PDF"})
                 }
                 _ => json!({}),
@@ -488,21 +554,34 @@ fn capture(world: &World, evidence: &mut Evidence) -> Result<()> {
             let record = reply
                 .as_ref()
                 .filter(|(_, value)| value["error"].is_null())
-                .map(|(_, value)| value.clone())
-                .unwrap_or(Value::Null);
+                .map_or(Value::Null, |(_, value)| value.clone());
             let observed = record["state"] == "observed";
-            evidence.check(&format!("{protocol}_{op}_observed"), observed, "command observed");
+            evidence.check(
+                &format!("{protocol}_{op}_observed"),
+                observed,
+                "command observed",
+            );
             let digest = record["evidence"]["digest"].as_str().unwrap_or_default();
             let blob = record["evidence"]["blob_id"].as_str().unwrap_or_default();
             let size = record["evidence"]["size"].as_u64().unwrap_or(0);
             let data = client
-                .request("GET", &format!("/v1/blobs/{digest}?record={blob}"), &[], None, 30)
+                .request(
+                    "GET",
+                    &format!("/v1/blobs/{digest}?record={blob}"),
+                    &[],
+                    None,
+                    30,
+                )
                 .ok()
                 .filter(|r| r.status == 200);
             let valid = data.is_some_and(|r| {
                 r.body.len() as u64 == size && hex::encode(Sha256::digest(&r.body)) == digest
             });
-            evidence.check(&format!("{protocol}_{op}_blob_download"), valid, "blob matches evidence");
+            evidence.check(
+                &format!("{protocol}_{op}_blob_download"),
+                valid,
+                "blob matches evidence",
+            );
         }
     }
     Ok(())
@@ -514,6 +593,8 @@ pub fn run(world: &mut World, evidence: &mut Evidence) -> Result<()> {
         "CAP-SIM" => capture(world, evidence),
         "AUD-SIM" | "AUD-TRANSCRIBE" | "SPEECH-SAY" => audio(world, evidence),
         "PDF-ANNOTATE" | "PDF-TEXT" | "VIS-OCR" | "VIS-IDLE" => vision(world, evidence),
-        other => Err(Error::Invalid(format!("vision scenario not ported: {other}"))),
+        other => Err(Error::Invalid(format!(
+            "vision scenario not ported: {other}"
+        ))),
     }
 }
