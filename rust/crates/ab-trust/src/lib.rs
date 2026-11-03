@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 mod identity;
+pub mod iphone;
 mod pairing;
 mod store;
 pub mod tls;
