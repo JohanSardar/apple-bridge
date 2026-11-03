@@ -764,14 +764,14 @@ impl Session<'_> {
                 let requested = string(&frame, "expires_at")
                     .parse::<jiff::Timestamp>()
                     .map_err(|_| invalid("expiry"))?;
-                let seconds =
-                    (requested.as_second() - jiff::Timestamp::now().as_second()).clamp(0, 30);
+                let millis = (requested.as_millisecond() - jiff::Timestamp::now().as_millisecond())
+                    .clamp(0, 30_000);
                 self.tickets.insert(
                     ticket.clone(),
                     Ticket {
                         prepare: frame.clone(),
                         before: before.clone(),
-                        deadline: Instant::now() + Duration::from_secs(seconds.cast_unsigned()),
+                        deadline: Instant::now() + Duration::from_millis(millis.cast_unsigned()),
                     },
                 );
                 let pause = if s.fault == "pause" {

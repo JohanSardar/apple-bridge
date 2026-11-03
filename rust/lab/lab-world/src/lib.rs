@@ -252,6 +252,16 @@ impl World {
         stop(&mut self.gateway);
         let _ = fs::remove_file(self.gateway_home.join("runtime.json"));
     }
+    pub fn stop_helper(&mut self) {
+        stop(&mut self.peer);
+    }
+    pub fn clock_offset(&self, milliseconds: i64) -> Result<()> {
+        fs::write(
+            self.gateway_home.join("clock-offset"),
+            milliseconds.to_string(),
+        )?;
+        Ok(())
+    }
     pub fn start_gateway(&mut self) -> Result<()> {
         self.launch_gateway()
     }
