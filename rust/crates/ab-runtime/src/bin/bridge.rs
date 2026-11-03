@@ -44,39 +44,40 @@ impl Arguments {
                 } else {
                     (flag.to_owned(), args.next().ok_or(Error::Invalid)?)
                 };
-                if ![
-                    "home",
-                    "host",
-                    "public",
-                    "helper-app",
-                    "helper-lab-commands",
-                    "via",
-                    "name",
-                    "level",
-                    "expires-in",
-                    "request",
-                    "code",
-                    "dial-replica",
-                    "iphone",
-                    "via-remote",
-                    "backup",
-                    "accept-ledger-loss",
-                    "role",
-                    "listen",
-                    "api-addr",
-                    "peer-addr",
-                    "socket",
-                    "scope",
-                    "remote",
-                    "blob-cap",
-                    "blob-grace-ms",
-                    "retention-rows",
-                    "retention-age",
-                    "pack",
-                ]
-                .contains(&key.as_str())
-                    && !(cfg!(feature = "lab-harness")
-                        && ["id", "fingerprint"].contains(&key.as_str()))
+                let lab_flag =
+                    cfg!(feature = "lab-harness") && ["id", "fingerprint"].contains(&key.as_str());
+                if !lab_flag
+                    && ![
+                        "home",
+                        "host",
+                        "public",
+                        "helper-app",
+                        "helper-lab-commands",
+                        "via",
+                        "name",
+                        "level",
+                        "expires-in",
+                        "request",
+                        "code",
+                        "dial-replica",
+                        "iphone",
+                        "via-remote",
+                        "backup",
+                        "accept-ledger-loss",
+                        "role",
+                        "listen",
+                        "api-addr",
+                        "peer-addr",
+                        "socket",
+                        "scope",
+                        "remote",
+                        "blob-cap",
+                        "blob-grace-ms",
+                        "retention-rows",
+                        "retention-age",
+                        "pack",
+                    ]
+                    .contains(&key.as_str())
                 {
                     return Err(Error::Invalid);
                 }
