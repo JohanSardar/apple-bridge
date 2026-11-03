@@ -12,6 +12,7 @@ pub fn external_change(world: &mut World, _: &Value, evidence: &mut Evidence) ->
         "/external-change",
         &json!({"key": ACK_RECORD, "collection": "reminders.reminder", "data": ack_data()}),
     )?;
+    world.control("/flush", &json!({}))?;
     let acked = await_until(15, || {
         world
             .control("/protocol", &Value::Null)
