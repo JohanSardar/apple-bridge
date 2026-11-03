@@ -96,13 +96,13 @@ public final class NotesSource: Source {
         }
         var removed = scan.removed
         if scan.bootstrap { removed.formUnion(Set(previous.keys).subtracting(Set(scan.snapshot.observations.map { $0["collection"].string + "/" + $0["native_key"].string }))) }
-        for key in removed { records.removeValue(forKey: key); notePaths.removeValue(forKey: String(key.dropFirst("notes.note/".count))); pendingHydration.removeValue(forKey: String(key.dropFirst("notes.note/".count))) }
+        for key in removed.sorted() { records.removeValue(forKey: key); notePaths.removeValue(forKey: String(key.dropFirst("notes.note/".count))); pendingHydration.removeValue(forKey: String(key.dropFirst("notes.note/".count))) }
         var observations = scan.snapshot.observations.compactMap { item -> JSON? in
             let key = item["collection"].string + "/" + item["native_key"].string
             guard let value = records[key], previous[key]?["data"] != value["data"] else { return nil }
             return value
         }
-        for key in removed {
+        for key in removed.sorted() {
             if let item = previous[key] { observations.append(.object(["kind": .string("absent"), "collection": item["collection"], "native_key": item["native_key"], "observed_at": .string(timestamp()), "revalidated": .bool(true)])) }
         }
         trace.record("notes_metadata_projected", fields: metadata)
@@ -113,13 +113,13 @@ public final class NotesSource: Source {
         previous = records
         changes.accept(scan)
         for job in jobs { enqueue(job, priority: !scan.bootstrap, into: sink) }
-        for record in records.values where record["collection"].string == "notes.note" && !record["data"]["locked"].bool {
+        for record in records.keys.sorted().compactMap({ records[$0] }) where record["collection"].string == "notes.note" && !record["data"]["locked"].bool {
             let data = record["data"]
             if data["body_status"].string == "pending" || data["body_status"].string == "unavailable" || data["attachments"].array.contains(where: { $0["state"].string == "unavailable" && $0["reason"].string != "attachment_metadata_unavailable" }) {
                 enqueue(Hydration(key: record["native_key"].string, fingerprint: data["native_fingerprint"], scanID: scanID), priority: false, into: sink)
             }
         }
-        for (key, paths) in notePaths where paths.contains(where: { path in assetPaths.contains(where: { path == $0 || path.hasPrefix($0 + "/") }) }) {
+        for (key, paths) in notePaths.sorted(by: { $0.key < $1.key }) where paths.contains(where: { path in assetPaths.contains(where: { path == $0 || path.hasPrefix($0 + "/") }) }) {
             if let record = records["notes.note/" + key], !record["data"]["locked"].bool {
                 enqueue(Hydration(key: key, fingerprint: record["data"]["native_fingerprint"], scanID: scanID), priority: false, force: true, into: sink)
             }

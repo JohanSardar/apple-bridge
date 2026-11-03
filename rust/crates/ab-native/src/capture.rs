@@ -25,6 +25,8 @@ pub enum Error {
     Conflict,
     #[error("unsupported source schema or value")]
     Unsupported,
+    #[error("native Helper fact required: {0}")]
+    FactsRequired(String),
     #[error("corrupt source data")]
     Corrupt,
 }
@@ -94,6 +96,7 @@ impl Drop for DeadlineReset<'_> {
 pub struct Snapshot {
     connection: Connection,
     origin: Instant,
+    busy_timeout: Duration,
     deadline: std::sync::Arc<std::sync::atomic::AtomicU64>,
     path: PathBuf,
     identity: Identity,
@@ -101,12 +104,19 @@ pub struct Snapshot {
 }
 impl Snapshot {
     pub fn open(path: &Path, generation_sql: &str) -> Result<Self> {
+        Self::open_with_busy_timeout(path, generation_sql, Duration::from_millis(250))
+    }
+    pub(crate) fn open_with_busy_timeout(
+        path: &Path,
+        generation_sql: &str,
+        busy_timeout: Duration,
+    ) -> Result<Self> {
         let initial = identity(path)?;
         let mut connection = Connection::open_with_flags(
             path,
             OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_FULL_MUTEX,
         )?;
-        connection.busy_timeout(Duration::from_millis(250))?;
+        connection.busy_timeout(busy_timeout)?;
         connection.execute_batch("BEGIN")?;
         let origin = Instant::now();
         let deadline = std::sync::Arc::new(std::sync::atomic::AtomicU64::new(u64::MAX));
@@ -121,6 +131,7 @@ impl Snapshot {
         let mut snapshot = Self {
             connection,
             origin,
+            busy_timeout,
             deadline,
             path: path.into(),
             identity: initial,
@@ -174,6 +185,29 @@ impl Snapshot {
         params: &[String],
         max_rows: usize,
         timeout: Duration,
+    ) -> Result<Query> {
+        self.query_kind(sql, params, max_rows, timeout, false)
+    }
+    pub(crate) fn query_notes(
+        &self,
+        sql: &str,
+        params: &[String],
+        max_rows: usize,
+        timeout: Duration,
+    ) -> Result<Vec<Row>> {
+        let result = self.query_kind(sql, params, max_rows, timeout, true)?;
+        if !result.complete {
+            return Err(Error::Incomplete);
+        }
+        Ok(result.rows)
+    }
+    fn query_kind(
+        &self,
+        sql: &str,
+        params: &[String],
+        max_rows: usize,
+        timeout: Duration,
+        notes: bool,
     ) -> Result<Query> {
         use std::sync::atomic::Ordering;
         let start = Instant::now();
@@ -232,11 +266,14 @@ impl Snapshot {
                     ValueRef::Null => Cell::Null,
                     ValueRef::Integer(v) => Cell::Integer(v),
                     ValueRef::Real(v) => Cell::Real(v),
-                    ValueRef::Text(v) => Cell::Text(
+                    ValueRef::Text(v) => Cell::Text(if notes {
+                        String::from_utf8_lossy(v.split(|b| *b == 0).next().unwrap_or_default())
+                            .into_owned()
+                    } else {
                         std::str::from_utf8(v)
                             .map_err(|_| Error::Corrupt)?
-                            .to_owned(),
-                    ),
+                            .to_owned()
+                    }),
                     ValueRef::Blob(v) => Cell::Blob(v.to_vec()),
                 };
                 value.insert(name.clone(), cell);
@@ -266,7 +303,10 @@ impl Snapshot {
         if self.identity != identity(&self.path)? {
             return Ok(false);
         }
-        Ok(Self::open(&self.path, generation_sql)?.generation == self.generation)
+        Ok(
+            Self::open_with_busy_timeout(&self.path, generation_sql, self.busy_timeout)?.generation
+                == self.generation,
+        )
     }
     pub fn finish(&self, generation_sql: &str) -> Result<()> {
         if !self.is_current(generation_sql)? {

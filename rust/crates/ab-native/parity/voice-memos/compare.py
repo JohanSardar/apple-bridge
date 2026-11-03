@@ -9,6 +9,8 @@ import tempfile
 oracle,binary=sys.argv[1:]
 script=pathlib.Path(__file__).with_name('generate.py').resolve()
 remote=subprocess.check_output(['ssh','build','mktemp -d ~/w/voice-memo-fixture-XXXXXX'],text=True).strip()
+remote_parent=remote
+remote += '/fixture'
 processes=[];keepers=[]
 try:
     with tempfile.TemporaryDirectory(prefix='ab-voice-memo-fixture-') as tmp:
@@ -64,4 +66,4 @@ finally:
     for p in processes:assert p.wait(timeout=10)==0
     for p in keepers:p.stdin.close()
     for p in keepers:assert p.wait(timeout=10)==0
-    subprocess.run(['ssh','build','rm -rf -- '+shlex.quote(remote)],check=True)
+    subprocess.run(['ssh','build','rm -rf -- '+shlex.quote(remote_parent)],check=True)

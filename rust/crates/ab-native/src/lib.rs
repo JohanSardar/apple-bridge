@@ -35,3 +35,9 @@ pub mod voice_memo;
 pub mod mail;
 pub mod mail_body;
 pub mod mail_url;
+
+mod notes_store;
+
+mod notes_changes;
+mod notes_projection;
+pub mod notes_reader;

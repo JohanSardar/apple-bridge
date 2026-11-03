@@ -568,6 +568,16 @@ fn decode_note(
         lossless,
     })
 }
+pub fn plain_text(data: &[u8]) -> Result<String> {
+    let root = Message::new(&unpack(data)?)?;
+    root.validate(&[(2, 2)], &[])?;
+    let document = root.required(2)?;
+    document.validate(&[(2, 0), (3, 2)], &[])?;
+    let note = document.required(3)?;
+    note.validate(&[(2, 2), (3, 2), (4, 2), (5, 2)], &[3, 5])?;
+    note.string(2)?.ok_or(DecodeError::Malformed)
+}
+
 pub fn decode(data: &[u8], tables: &BTreeMap<String, Vec<u8>>) -> Result<NotesBody> {
     let root = Message::new(&unpack(data)?)?;
     root.validate(&[(2, 2)], &[])?;

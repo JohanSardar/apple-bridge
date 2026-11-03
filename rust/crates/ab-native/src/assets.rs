@@ -3,7 +3,7 @@ use base64::{Engine as _, engine::general_purpose::STANDARD};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     fs::{File, OpenOptions},
     io::{Read, Seek, SeekFrom, Write},
     os::unix::fs::{MetadataExt, OpenOptionsExt, PermissionsExt},
@@ -189,6 +189,24 @@ impl Store {
         self.files
             .contains_key(digest)
             .then(|| format!("{}{digest}", self.prefix))
+    }
+    pub fn prune(&mut self, active: &BTreeSet<String>, now: SystemTime) -> Result<()> {
+        let Some(cutoff) = now.checked_sub(std::time::Duration::from_secs(3600)) else {
+            return Ok(());
+        };
+        for entry in std::fs::read_dir(&self.root)? {
+            let entry = entry?;
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if active.contains(&name) {
+                continue;
+            }
+            let info = std::fs::symlink_metadata(entry.path())?;
+            if info.is_file() && info.modified().is_ok_and(|time| time < cutoff) {
+                std::fs::remove_file(entry.path())?;
+                self.files.remove(&name);
+            }
+        }
+        Ok(())
     }
     pub fn read(&self, handle: &str, offset: u64, length: usize) -> Result<Value> {
         if length == 0 || length > 131_072 {
