@@ -60,7 +60,7 @@ func samplesQuiet(samples map[string]world.HostSample) bool {
 
 func Run(ctx context.Context, s Scenario, level string) (e Evidence) {
 	selection := world.ImplementationSelection(ctx)
-	if (selection.Gateway == "rust" || selection.Replica == "rust") && !(level == "sim" && selection.Gateway == "rust" && selection.Replica == "go" && strings.HasPrefix(s.ID, "MSG-")) && !(level == "sim" && selection.Gateway == "rust" && selection.Replica == "go" && (calendarGatewaySimScenario(s) || nativeGatewaySimScenario(s) || sourceGatewaySimScenario(s) || ownerGatewaySimScenario(s))) && !(level == "sim" && selection.Gateway == "go" && nativeReplicaSimScenario(s)) && !(level == "real" && selection.LocalReplicas && selection.Gateway == "go" && nativeReplicaRealScenario(s)) {
+	if (selection.Gateway == "rust" || selection.Replica == "rust") && !(level == "sim" && selection.Gateway == "rust" && selection.Replica == "go" && strings.HasPrefix(s.ID, "MSG-")) && !(level == "sim" && selection.Gateway == "rust" && selection.Replica == "go" && (calendarGatewaySimScenario(s) || nativeGatewaySimScenario(s) || sourceGatewaySimScenario(s) || phoneGatewaySimScenario(s) || ownerGatewaySimScenario(s))) && !(level == "sim" && selection.Gateway == "go" && nativeReplicaSimScenario(s)) && !(level == "real" && selection.LocalReplicas && selection.Gateway == "go" && nativeReplicaRealScenario(s)) {
 		if reason := replicaQualificationBlocker(s); reason != "" {
 			return Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), Status: "blocked", Impl: "mixed", Implementations: selection, HostConditions: &HostConditions{}, Assertions: []Assertion{{Name: "binary_harness_required", Detail: reason}}}
 		}
