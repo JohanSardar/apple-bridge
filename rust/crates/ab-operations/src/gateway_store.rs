@@ -27,6 +27,9 @@ fn state_error(error: &ab_state::Error) -> Error {
     {
         return Error::from(code);
     }
+    if ab_state::is_capacity(error) {
+        return Code::Capacity.into();
+    }
     Code::Unavailable.into()
 }
 impl GatewayStore {

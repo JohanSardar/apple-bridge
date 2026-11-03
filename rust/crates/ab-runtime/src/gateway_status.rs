@@ -21,14 +21,17 @@ pub async fn run(
             _ = stop.changed() => return Ok(()),
             _ = tick.tick() => {
                 let entries = blobs.lock().await.entries().clone();
-                state.with(|state| {
+                let published = state.with(|state| {
                     let cursor = state.head()?;
                     state.set_replica_status(serde_json::json!({"role":"gateway","state":"ready","cursor":cursor,"gateway_head":cursor.sequence,"schema":2,"lag":0,"staleness_ms":0,"blobs":{"entries":entries}}))
-                })?;
+                });
+                crate::tolerate_capacity(published)?;
             },
             _ = gc.tick() => {
                 let mut blobs = blobs.clone().lock_owned().await;
-                tokio::task::spawn_blocking(move || blobs.gc(jiff::Timestamp::now(), grace)).await.map_err(|_| Error::Invalid)?.map_err(|_| Error::Invalid)?;
+                if let Err(error) = tokio::task::spawn_blocking(move || blobs.gc(jiff::Timestamp::now(), grace)).await.map_err(|_| Error::Invalid)? {
+                    eprintln!("{}", serde_json::json!({"stage":"blob_gc_deferred","error":error.to_string()}));
+                }
             }
         }
     }

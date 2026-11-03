@@ -238,7 +238,7 @@ pub async fn start(mut config: Config, authority: Arc<ab_trust::Authority>) -> R
         loop {
             tokio::select! {
                 _ = prune_stop.changed() => return Ok(()),
-                _ = tick.tick() => store.with(|state| state.prune(retention_rows, retention_age))?,
+                _ = tick.tick() => crate::tolerate_capacity(store.with(|state| state.prune(retention_rows, retention_age)))?,
             }
         }
     });

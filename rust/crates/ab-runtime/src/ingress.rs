@@ -154,14 +154,17 @@ fn publish(
         "off"
     };
     let private = active.is_some_and(|(name, _)| name == "private");
-    ab_remote::state::write(
+    let written = ab_remote::state::write(
         home,
         "status",
         &serde_json::json!({"id":config.id,"state":state,
         "backend":active.map_or(config.backend.as_str(),|(name,_)|name.as_str()),"url":active.filter(|(name,_)| name.as_str() != "private").map_or_else(String::new,|(_,status)|format!("https://{}",status.host)),
         "message": if private { ab_remote::state::read::<String>(home,"invitation").unwrap_or_default() } else { String::new() },"last_error":"","pending_link":"","tls_termination": if private { "Tailscale encrypted private transport" } else { "on this Mac" },"certificate_expiry":"0001-01-01T00:00:00Z"}),
-    )?;
-    Ok(())
+    );
+    match written {
+        Err(ab_remote::Error::Io(error)) if error.raw_os_error() == Some(28) => Ok(()),
+        other => other.map_err(Into::into),
+    }
 }
 pub async fn run(app: Arc<App>, mut stop: watch::Receiver<bool>) -> Result<(), Error> {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await?;
