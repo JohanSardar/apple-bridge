@@ -52,6 +52,7 @@ struct Flight {
     checkpoint: String,
     bytes: u64,
     rust: bool,
+    keys: Vec<String>,
 }
 
 #[derive(Debug, Default)]
@@ -64,6 +65,9 @@ struct Shared {
     committed: BTreeMap<String, (String, String)>,
     flights: BTreeMap<String, Flight>,
     saved: BTreeMap<String, String>,
+    sequence: u64,
+    observed: BTreeMap<String, (String, u64)>,
+    dispatched: BTreeMap<String, u64>,
 }
 
 #[derive(Debug)]
@@ -248,6 +252,14 @@ fn produce(
                 .unwrap_or_default();
             capture["predecessor"] = Value::String(predecessor);
             capture["t"] = json!("Capture");
+            let keys = capture["observations"]
+                .as_array()
+                .map(|rows| {
+                    rows.iter()
+                        .filter_map(|row| row["native_key"].as_str().map(str::to_owned))
+                        .collect()
+                })
+                .unwrap_or_default();
             let bytes = frame_bytes(&capture)?;
             let size = u64::try_from(bytes.len()).map_err(|_| Error::Invalid)?;
             let mut shared = gate.lock()?;
@@ -272,6 +284,7 @@ fn produce(
                     checkpoint,
                     bytes: size,
                     rust: true,
+                    keys,
                 },
             );
             drop(shared);
@@ -396,6 +409,16 @@ fn gateway_frame(
                 (flight.generation.clone(), flight.checkpoint.clone()),
             );
             drop(shared);
+            if flight.rust {
+                let mut shared = gate.lock()?;
+                shared.sequence += 1;
+                let sequence = shared.sequence;
+                for key in &flight.keys {
+                    shared
+                        .observed
+                        .insert(key.clone(), (flight.checkpoint.clone(), sequence));
+                }
+            }
             gate.changed.notify_all();
             if flight.rust {
                 readers
@@ -409,8 +432,96 @@ fn gateway_frame(
             }
             Ok(true)
         }
+        Some("Dispatch") => {
+            let mut shared = gate.lock()?;
+            let sequence = shared.sequence;
+            if let Some(id) = value["command_id"].as_str() {
+                shared.dispatched.insert(id.to_owned(), sequence);
+            }
+            Ok(true)
+        }
         _ => Ok(true),
     }
+}
+
+fn bind_outcome(gate: &Gate, value: &mut Value) -> Result<bool, Error> {
+    let key = match value["evidence"]["native_key"].as_str() {
+        Some(key) if value["evidence"]["capture_checkpoint"].is_string() => key.to_owned(),
+        _ => return Ok(false),
+    };
+    let mut shared = gate.lock()?;
+    let after = value["command_id"]
+        .as_str()
+        .and_then(|id| shared.dispatched.remove(id))
+        .unwrap_or(shared.sequence);
+    let deadline = std::time::Instant::now() + Duration::from_secs(15);
+    loop {
+        if let Some((checkpoint, sequence)) = shared.observed.get(&key)
+            && *sequence > after
+        {
+            value["evidence"]["capture_checkpoint"] = Value::String(checkpoint.clone());
+            return Ok(true);
+        }
+        if shared.closed || std::time::Instant::now() >= deadline {
+            return Ok(false);
+        }
+        shared = gate
+            .changed
+            .wait_timeout(shared, Duration::from_millis(50))
+            .map_err(|_| Error::WorkerPanicked)?
+            .0;
+    }
+}
+
+fn helper_capture(
+    gate: &Gate,
+    to_helper: &Mutex<UnixStream>,
+    rust: &BTreeSet<String>,
+    value: &Value,
+    length: usize,
+) -> Result<bool, Error> {
+    let source = text(value, "source")?;
+    let checkpoint = value["checkpoint"].as_str().unwrap_or_default().to_owned();
+    let generation = value["generation"].as_str().unwrap_or_default().to_owned();
+    let size = u64::try_from(length).map_err(|_| Error::Invalid)?;
+    if rust.contains(source) {
+        send(
+            &mut *to_helper.lock().map_err(|_| Error::WorkerPanicked)?,
+            &json!({"t":"Committed","source":source,"checkpoint":checkpoint,"credit":size}),
+        )?;
+        return Ok(true);
+    }
+    let mut shared = gate.lock()?;
+    shared.credit = shared.credit.saturating_sub(size);
+    let previous = shared.flights.insert(
+        source.to_owned(),
+        Flight {
+            generation,
+            checkpoint,
+            bytes: size,
+            rust: false,
+            keys: Vec::new(),
+        },
+    );
+    if previous.is_some() {
+        return Err(Error::Conflict);
+    }
+    Ok(false)
+}
+
+fn forward_outcome(
+    gate: &Gate,
+    to_gateway: &Mutex<UnixStream>,
+    mut value: Value,
+) -> Result<bool, Error> {
+    if !bind_outcome(gate, &mut value)? {
+        return Ok(false);
+    }
+    send(
+        &mut *to_gateway.lock().map_err(|_| Error::WorkerPanicked)?,
+        &value,
+    )?;
+    Ok(true)
 }
 
 pub fn relay(
@@ -502,35 +613,13 @@ pub fn relay_layered(
                 let (bytes, value) = read_frame(&mut helper_read)?;
                 match value["t"].as_str() {
                     Some("Capture") => {
-                        let source = text(&value, "source")?;
-                        let checkpoint =
-                            value["checkpoint"].as_str().unwrap_or_default().to_owned();
-                        let generation =
-                            value["generation"].as_str().unwrap_or_default().to_owned();
-                        let size = u64::try_from(bytes.len()).map_err(|_| Error::Invalid)?;
-                        if rust.contains(source) {
-                            send(
-                                &mut *to_helper.lock().map_err(|_| Error::WorkerPanicked)?,
-                                &json!({"t":"Committed","source":source,"checkpoint":checkpoint,"credit":size}),
-                            )?;
+                        if helper_capture(&gate, &to_helper, &rust, &value, bytes.len())? {
                             continue;
                         }
-                        let mut shared = gate.lock()?;
-                        shared.credit = shared.credit.saturating_sub(size);
-                        if shared
-                            .flights
-                            .insert(
-                                source.to_owned(),
-                                Flight {
-                                    generation,
-                                    checkpoint,
-                                    bytes: size,
-                                    rust: false,
-                                },
-                            )
-                            .is_some()
-                        {
-                            return Err(Error::Conflict);
+                    }
+                    Some("Outcome") if !rust.is_empty() => {
+                        if forward_outcome(&gate, &to_gateway, value)? {
+                            continue;
                         }
                     }
                     Some("Ready") => {

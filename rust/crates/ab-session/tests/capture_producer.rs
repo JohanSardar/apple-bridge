@@ -605,3 +605,59 @@ fn production_config_flips_a_source_to_rust_and_back() -> Fallible<()> {
     std::fs::remove_dir_all(directory)?;
     Ok(())
 }
+
+#[test]
+fn outcome_waits_for_rust_capture_of_its_key_and_rebinds_checkpoint() -> Fallible<()> {
+    let directory = std::env::temp_dir().join(format!(
+        "ab-capture-outcome-{}-{}",
+        std::process::id(),
+        SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos()
+    ));
+    std::fs::create_dir_all(&directory)?;
+    history(&directory, 2)?;
+    let sources = readers::from_config(&json!({"safari":{"root":directory}}).to_string())?;
+    let (mut gateway, session_gateway) = UnixStream::pair()?;
+    let (mut helper, session_helper) = UnixStream::pair()?;
+    for socket in [&gateway, &helper] {
+        socket.set_read_timeout(Some(Duration::from_secs(10)))?;
+    }
+    let worker = std::thread::spawn(move || {
+        routed::relay(
+            session_gateway,
+            session_helper,
+            sources,
+            Duration::from_millis(20),
+        )
+    });
+    send(
+        &mut gateway,
+        &json!({"t":"Open","protocol":"ipc/1","owner_fence":1,"byte_credit":4_194_304,"checkpoints":{}}),
+    )?;
+    assert_eq!(receive(&mut helper)?.1["t"], "Open");
+    send(&mut helper, &json!({"t":"Ready","protocol":"ipc/1"}))?;
+    assert_eq!(receive(&mut gateway)?.1["t"], "Ready");
+    let (size, capture) = receive(&mut gateway)?;
+    let key = capture["observations"][0]["native_key"].clone();
+    let checkpoint = capture["checkpoint"].clone();
+
+    send(
+        &mut gateway,
+        &json!({"t":"Dispatch","command_id":"c1","ticket":"t1"}),
+    )?;
+    assert_eq!(receive(&mut helper)?.1["t"], "Dispatch");
+    send(
+        &mut helper,
+        &json!({"t":"Outcome","command_id":"c1","disposition":"locally_observed","evidence":{"native_key":key,"observed":true,"capture_checkpoint":"stale"}}),
+    )?;
+    expect_silence(&mut gateway)?;
+    send(
+        &mut gateway,
+        &json!({"t":"Committed","source":"safari","checkpoint":checkpoint,"credit":size}),
+    )?;
+    let outcome = receive(&mut gateway)?.1;
+    assert_eq!(outcome["t"], "Outcome");
+    assert_eq!(outcome["evidence"]["capture_checkpoint"], checkpoint);
+    drop((gateway, helper));
+    let _ = worker.join();
+    Ok(())
+}

@@ -187,11 +187,24 @@ Notes: `readers::NotesReader` wraps `ab_native::notes_reader::Reader` over `<roo
 (staging beside the root as `<root>-staging`). `next` drains the hydration queue first (each
 hydration is its own flight with an empty scope), then reconciles when the file-tree signature
 changed. Generation is `notes-<Z_UUID>` from the store, so a stable store never rescans. The lab
-world mirrors `/external-change` for `notes.folder` and `notes.note` into a rebuilt
-`NoteStore.sqlite` (`lab/world/session_notes.go`, gzip protobuf bodies, stable Z_PK per note,
-revision as Z_OPT). Negative control: `AB_SESSION_RUST_POLL_MS=3600000` makes NOTE-IMPORT fail on
-`external_note_imported`. Not mirrored yet: notes effects (`notes.update` and friends),
-created/modified dates, pinning dates, deleted or smart folders, html bodies and attachments.
+world polls simapple's `/inspect` every 25 ms (and after each `/external-change`) and rebuilds
+`NoteStore.sqlite` from its `notes.folder` and `notes.note` records (`lab/world/session_notes.go`):
+stable Z_PK per key, Z_OPT bumped when a row changes, created and modified dates, pinning, locked
+notes without bodies, offloaded notes without bodies, recently-deleted and smart folders, parent
+folders, accounts by identifier, deleted records as `ZMARKEDFORDELETION`, gzip protobuf bodies from
+plain text or html (bold, italic, underline, strike, checklist paragraphs, hashtag attachments).
+So effects (`notes.create`, `update`, `delete`, `move`, folder create and rename) reach the store
+through simapple. simapple skips its expected-state equality check when the session owns Notes (the
+gateway's record is Rust-shaped). The session binds a Helper `Outcome` that carries a `native_key`
+and `capture_checkpoint` to the next committed Rust capture containing that key (after the
+`Dispatch`), rewriting `capture_checkpoint`, so the gateway can observe the effect. The reader
+context carries the mime fact for the hashtag attachment type. Negative control:
+`AB_SESSION_RUST_POLL_MS=3600000` makes NOTE-IMPORT fail on `external_note_imported`.
+Open: scenarios that read a note straight after its first visible version (NOTE-EXTRAS,
+NOTE-RICH-REJECT) see the pending metadata-only record before hydration; NOTE-CRUD injects pending
+status metadata the store cannot represent; the Rust reader drops notes inside recently-deleted
+folders (NOTE-LIST); NOTE-LIST asserts a fixed thumbnail digest that real derivative bytes cannot
+produce.
 
 
 ## Production readiness (all switches off by default)
