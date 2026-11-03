@@ -1,5 +1,5 @@
 use crate::Error;
-use ab_native::{capture, safari, usage};
+use ab_native::{capture, safari, telephony, usage, voice_memo};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{
@@ -193,6 +193,170 @@ impl CaptureReader for UsageReader {
     }
 }
 
+const MAX_ROWS: usize = 1_000_000;
+
+fn file_signature(path: &Path) -> Signature {
+    let mut wal = path.as_os_str().to_owned();
+    wal.push("-wal");
+    let mut out = Signature::new();
+    for file in [path.to_path_buf(), PathBuf::from(wal)] {
+        if let Ok(metadata) = fs::metadata(&file) {
+            out.insert(file, (metadata.len(), metadata.modified().ok()));
+        }
+    }
+    out
+}
+
+fn context_for(context: &ScanContext) -> Result<capture::Context, Error> {
+    Ok(capture::Context {
+        observed_at: context.observed_at()?,
+        checkpoint: context.checkpoint.clone(),
+        scan_id: context.scan_id.clone(),
+    })
+}
+
+type TelephonyScan =
+    fn(&Path, &capture::State, &capture::Context, bool, usize) -> capture::Result<capture::Pending>;
+
+#[derive(Debug)]
+pub struct TelephonyReader {
+    name: &'static str,
+    path: PathBuf,
+    scan: TelephonyScan,
+    state: capture::State,
+    pending: Option<(capture::Pending, Signature)>,
+    committed: Option<Signature>,
+}
+
+impl TelephonyReader {
+    #[must_use]
+    pub fn calls(root: &Path) -> Self {
+        Self::new(
+            "phone",
+            root.join("CallHistory.storedata"),
+            telephony::calls,
+        )
+    }
+
+    #[must_use]
+    pub fn voicemail(root: &Path) -> Self {
+        Self::new("voicemail", root.join("voicemail.db"), telephony::voicemail)
+    }
+
+    fn new(name: &'static str, path: PathBuf, scan: TelephonyScan) -> Self {
+        Self {
+            name,
+            path,
+            scan,
+            state: capture::State::default(),
+            pending: None,
+            committed: None,
+        }
+    }
+}
+
+impl CaptureReader for TelephonyReader {
+    fn source(&self) -> &'static str {
+        self.name
+    }
+
+    fn next(&mut self, context: &ScanContext) -> Result<Option<Value>, Error> {
+        if self.pending.is_some() {
+            return Err(Error::Conflict);
+        }
+        let current = file_signature(&self.path);
+        if current.is_empty() || self.committed.as_ref() == Some(&current) {
+            return Ok(None);
+        }
+        let read = context_for(context)?;
+        let Ok(pending) = (self.scan)(
+            &self.path,
+            &self.state,
+            &read,
+            self.committed.is_some(),
+            MAX_ROWS,
+        ) else {
+            return Ok(None);
+        };
+        let value = capture_value(&pending)?;
+        self.pending = Some((pending, current));
+        Ok(Some(value))
+    }
+
+    fn commit(&mut self) -> Result<(), Error> {
+        let (pending, current) = self.pending.take().ok_or(Error::Conflict)?;
+        self.state.commit(pending).map_err(reader_error)?;
+        self.committed = Some(current);
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub struct VoiceMemosReader {
+    path: PathBuf,
+    staging: PathBuf,
+    reader: Option<voice_memo::Reader>,
+    pending: Option<(capture::Pending, Signature)>,
+    committed: Option<Signature>,
+}
+
+impl VoiceMemosReader {
+    #[must_use]
+    pub fn new(root: &Path) -> Self {
+        Self {
+            path: root.join("CloudRecordings.db"),
+            staging: root.join(".ab-session-assets"),
+            reader: None,
+            pending: None,
+            committed: None,
+        }
+    }
+}
+
+impl CaptureReader for VoiceMemosReader {
+    fn source(&self) -> &'static str {
+        "voice_memos"
+    }
+
+    fn next(&mut self, context: &ScanContext) -> Result<Option<Value>, Error> {
+        if self.pending.is_some() {
+            return Err(Error::Conflict);
+        }
+        let current = file_signature(&self.path);
+        if current.is_empty() || self.committed.as_ref() == Some(&current) {
+            return Ok(None);
+        }
+        if self.reader.is_none() {
+            self.reader = Some(voice_memo::Reader::open(&self.staging).map_err(reader_error)?);
+        }
+        let read = context_for(context)?;
+        let live = self.committed.is_some();
+        let Some(reader) = self.reader.as_mut() else {
+            return Ok(None);
+        };
+        let Ok(pending) = reader.scan(&self.path, &read, live, MAX_ROWS) else {
+            return Ok(None);
+        };
+        if !pending.batch.blob_handles.is_empty() {
+            return Ok(None);
+        }
+        let value = capture_value(&pending)?;
+        self.pending = Some((pending, current));
+        Ok(Some(value))
+    }
+
+    fn commit(&mut self) -> Result<(), Error> {
+        let (pending, current) = self.pending.take().ok_or(Error::Conflict)?;
+        self.reader
+            .as_mut()
+            .ok_or(Error::Conflict)?
+            .commit(pending)
+            .map_err(reader_error)?;
+        self.committed = Some(current);
+        Ok(())
+    }
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct SourceConfig {
@@ -229,6 +393,9 @@ pub fn from_config(config: &str) -> Result<BTreeMap<String, Box<dyn CaptureReade
                 config.zone,
                 config.local_name,
             )),
+            "phone" => Box::new(TelephonyReader::calls(&config.root)),
+            "voicemail" => Box::new(TelephonyReader::voicemail(&config.root)),
+            "voice_memos" => Box::new(VoiceMemosReader::new(&config.root)),
             _ => return Err(Error::Invalid),
         };
         readers.insert(source, reader);

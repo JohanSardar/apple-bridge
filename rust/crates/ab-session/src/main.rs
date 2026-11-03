@@ -27,7 +27,7 @@ fn lab_listen(listen: &str, gateway: &str) -> Result<(), Error> {
             serde_json::to_value(source).map(|v| v.as_str().unwrap_or_default().to_owned())
         })
         .collect::<Result<_, _>>()?;
-    selection.validate_routed(&["safari", "usage"])?;
+    selection.validate_routed(&["safari", "usage", "phone", "voicemail", "voice_memos"])?;
     let config = std::env::var("AB_SESSION_RUST_SOURCES").map_err(|_| Error::Invalid)?;
     let poll = std::time::Duration::from_millis(
         std::env::var("AB_SESSION_RUST_POLL_MS")
