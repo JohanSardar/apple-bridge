@@ -97,6 +97,48 @@ impl GatewayStore {
     }
 }
 impl GatewayState for GatewayStore {
+    fn serialization_key(
+        &self,
+        p: &crate::Principal,
+        c: &crate::Command,
+        key: String,
+    ) -> Result<String, Error> {
+        if !c.op.starts_with("calendar.") {
+            return Ok(key);
+        }
+        let target = crate::command_contract::validate(c)?;
+        if target.id.is_empty() {
+            return Ok(key);
+        }
+        let visibility = crate::adapters::visibility(&p.visibility());
+        let Ok(result) = self.with(|s| {
+            s.read(
+                &visibility,
+                &ab_state::ReadQuery {
+                    collection: "calendar.event".into(),
+                    id: target.id,
+                    ..Default::default()
+                },
+            )
+        }) else {
+            return Ok(key);
+        };
+        let Some(record) = result.records.first() else {
+            return Ok(key);
+        };
+        let Ok(data) = serde_json::from_str::<serde_json::Value>(record.data.get()) else {
+            return Ok(key);
+        };
+        let series = data["series_id"].as_str().unwrap_or_default();
+        if series.is_empty() {
+            return Ok(key);
+        }
+        Ok(format!(
+            "calendar-series:{}:{series}",
+            data["calendar_id"].as_str().unwrap_or_default()
+        ))
+    }
+
     fn admission_era(&self) -> Result<String, Error> {
         self.with(|s| s.admission_era())
     }

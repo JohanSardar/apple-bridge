@@ -1,0 +1,1533 @@
+{
+  "build_host": "ssh build",
+  "rustc_wrapper": "$HOME/.cargo/bin/sccache",
+  "source_sha256": {
+    "rust/crates/ab-applepeer/examples/ipc_probe.rs": "495145ad460ebc964d632210996a548ef13fcdb2f96d874ebb2a4736e789570c",
+    "rust/crates/ab-applepeer/examples/lifecycle.inc": "6c72403801355364ac9235f88ed8da16c8d60e2e81eab2220b708f3b9bd2f1ac",
+    "rust/crates/ab-applepeer/probe/main.go": "d76ee2b173fd0b9d0940f7e5a4d1a93c6bfa0b1c5a7de634ab031f0738e553a5",
+    "rust/crates/ab-applepeer/probe/matrix.py": "14756f419ea7e9b9b231fa8da678b28f741cb0b957690193956b22d5c9eb15ea",
+    "rust/crates/ab-applepeer/probe/query_matrix.py": "8188937680e7ee570477bbb50ac01060913b71d237084884b1115f9c2adc8dc0",
+    "rust/crates/ab-applepeer/src/lib.rs": "7264abc71f629880a222d03c2104aedfc306c1c1806b9302f045c870b4083789",
+    "rust/crates/ab-applepeer/src/server.rs": "f2eee78d7b1b3987d35036602dcb7924fdd9a2060c26a04c360ba2e41547b522",
+    "rust/crates/ab-applepeer/src/state.rs": "2275564b197e32c1712f1fe48277f066200c19b67e12e49472d0946d29db214f",
+    "rust/crates/ab-applepeer/src/supervisor.rs": "ec246df1ba4dbee96c95537f9de01da796b5010f6d86b4cd3deeb177efe4e635",
+    "rust/crates/ab-operations/src/adapters.rs": "d7631301f440ccd05bc46102f9168648960298ed78b4d1b821f76be823f5cfc2",
+    "rust/crates/ab-operations/src/clock.rs": "bbc6a664db2be2283fcc6a17d83094cbc860f4f4765ef7262866cd15ce515d04",
+    "rust/crates/ab-operations/src/command_contract.rs": "366a281588e310e264f35d6357e7eb8d63ec1fb68fffe2e165433eeab45db306",
+    "rust/crates/ab-operations/src/gateway_store.rs": "aaf9c249a10d083c898f136e74c3eba586fdf74cf288d66cada8ebf474850aec",
+    "rust/crates/ab-operations/src/legacy.rs": "3fbeeff73d0a97ab66f5917303ad1d5b866c167f1ac7fec6584811b8f62166ed",
+    "rust/crates/ab-operations/src/legacy_shapes.json": "dfb95d6ee2e2bd093949449a3b38001e8a26e1f013f821f50824039f4d57d838",
+    "rust/crates/ab-operations/src/lib.rs": "639c8812c696cbbe655b1c02a9da793a3ee0471e4540f9221fc818e5ba9e98dc",
+    "rust/crates/ab-operations/src/local.rs": "500f6a2dfda55f39bb5792467c4f8030d91efd726b8b2b27a799ee91d0f93590",
+    "rust/crates/ab-operations/src/local_query.rs": "2c9c3e7472ba2afab8837c4a6503a50dc13edcf54d4bdba3a5c3703413ccc41e",
+    "rust/crates/ab-operations/src/local_races.rs": "0001e59c665b3465786c875360f72cafbeadb42a448f8c7cca3d6df78bc06005",
+    "rust/crates/ab-operations/src/message_uploads.rs": "6050bc1572f5b2d47a306f1c5bf0329f76e986663efad210d0b260a3eb0341d1",
+    "rust/crates/ab-operations/src/native_commands.rs": "274b769d5bfc24c48df45783ec610bf8626f8140aa104c66364b64d8ca1cdda8",
+    "rust/crates/ab-operations/src/outcome.rs": "096854f2538cd1d56886c6353e984cd33445e9c1c18f43a2b17dd535f91d5e7d",
+    "rust/crates/ab-operations/src/peer.rs": "b515b9e238204f3485d392c0f8b2aa392a96c97b0aa345407801dc032940d257",
+    "rust/crates/ab-operations/src/query_audit.rs": "e2d7a0ea363b07788b6789d47ed07907afc68130e64989339c5222c4e2dc0dc3",
+    "rust/crates/ab-operations/src/query_document.rs": "ae2112497129203876b1b726071f9f5936caccdaa83965f01199e80e2f85414e",
+    "rust/crates/ab-operations/tests/command_codec.rs": "5b53ad3c24076300cb195268a11de4a6f62f9ba3fb36b27075851addabfe1c98"
+  },
+  "binary_sha256": {
+    "gb-ipc-probe-verified": "ae5284540ac5b2d88545570c2c5f1b4c3b8acf90dee076f8693f445ede2cb93c",
+    "gb-go-peer": "140694fdc37bcbe2e693c93ce9539f688b4e7d5a9300c22bd232224cd084c6de",
+    "gb-lab": "1290262758fb3cf184eb2b272f65dd3c98c57172b9921100700c61ee70a365b0",
+    "gb-runtime-verified": "7c26ef9b0cc2168e1b46bbaba070b4aa9b19a3275764655b6f4da6112053e0ca"
+  },
+  "gates": {
+    "make rust-ci": "pass (includes lint, workspace tests, format, strict Clippy, dependency/graph policy and golden corpora)",
+    "lab_feature_clippy": "pass: ab-applepeer lab-harness and ab-runtime lab-queries",
+    "command_action_and_prepare_codec_vectors": 540,
+    "paired_matrix_cases": 38,
+    "paired_matrix": "pass",
+    "query_cases": 31,
+    "paired_queries": "pass",
+    "rate_burst": {
+      "invalid": 100,
+      "capacity": 2
+    },
+    "core.commands": {
+      "status": "pass",
+      "scenarios": 9,
+      "parallel": 1,
+      "results": [
+        {
+          "id": "CORE-CMD-CLOCK-JUMP",
+          "status": "pass",
+          "seconds": 2.919
+        },
+        {
+          "id": "CORE-CMD-CONFLICT",
+          "status": "pass",
+          "seconds": 2.418
+        },
+        {
+          "id": "CORE-CMD-CRASH-AMBIGUOUS",
+          "status": "pass",
+          "seconds": 2.669
+        },
+        {
+          "id": "CORE-CMD-ERA",
+          "status": "pass",
+          "seconds": 14.787
+        },
+        {
+          "id": "CORE-CMD-EXPIRY",
+          "status": "pass",
+          "seconds": 8.977
+        },
+        {
+          "id": "CORE-CMD-IDEMPOTENT",
+          "status": "pass",
+          "seconds": 2.769
+        },
+        {
+          "id": "CORE-CMD-LOST-RESPONSE",
+          "status": "pass",
+          "seconds": 3.469
+        },
+        {
+          "id": "CORE-CMD-OFFLINE",
+          "status": "pass",
+          "seconds": 8.577
+        },
+        {
+          "id": "CORE-CMD-READ-YOUR-WRITE",
+          "status": "pass",
+          "seconds": 2.518
+        }
+      ]
+    },
+    "MAP-SIM": {
+      "status": "pass",
+      "scenarios": 1
+    },
+    "gateway_clock_injection": "not yet wired in runtime; paired clock probes use LabClock directly"
+  },
+  "gateway_full_attempt": {
+    "base": "6181e334",
+    "complete": true,
+    "expected": 201,
+    "wall_seconds": 219.576,
+    "counts": {
+      "blocked": 62,
+      "pass": 106,
+      "fail": 33
+    },
+    "results": [
+      {
+        "id": "APP-APPROVE-SIM",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper IPhoneCompletionEvidence",
+          "harness: semantic product helper ValidateIPhoneCommand",
+          "harness: lab/scenarios/iphone_command.go still imports product implementations: iphone, operations, relay, state, trust"
+        ]
+      },
+      {
+        "id": "APP-CMD-SIM",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper IPhoneCompletionEvidence",
+          "harness: semantic product helper ValidateIPhoneCommand",
+          "harness: lab/scenarios/iphone_command.go still imports product implementations: iphone, operations, relay, state, trust"
+        ]
+      },
+      {
+        "id": "APP-LIVE-SIM",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/iphone_live.go still imports product implementations: iphone, operations, relay, state, trust"
+        ]
+      },
+      {
+        "id": "APP-PAIR-SIM",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "AUD-SIM",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "AUTH-SCOPES-METADATA",
+        "status": "fail",
+        "blocked_on": []
+      },
+      {
+        "id": "CAL-ALLDAY",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CAL-ALLDAY-FUTURE",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CAL-CREATE-EXTERNAL",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CAL-CRUD",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CAL-DST",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CAL-FUTURE-RULE-MISMATCH",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CAL-ID-CHURN",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CAL-LARGE-CAPTURE",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CAL-MOVED-OCCURRENCE",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CAL-MOVED-OUTSIDE-WINDOW",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CAL-PERIODIC-VERIFICATION",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CAL-PERMISSION-LOSS",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CAL-READONLY",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CAL-RECUR-ALL-REJECT",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CAL-RECUR-FUTURE",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CAL-RECUR-THIS",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CAL-SPLIT-ATOMIC-ALLDAY",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CAL-SPLIT-ATOMIC-TIMED",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CAL-SPLIT-FRAME-CAP",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CAL-STAMP-FIELDS",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CAL-WINDOW-SLIDE",
+        "status": "fail",
+        "blocked_on": []
+      },
+      {
+        "id": "CON-CONFLICT",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CON-CRUD",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CON-DROP-EVERYTHING",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CON-EXTERNAL",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CON-GROUPS",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CON-HANDLE-LINK",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CON-IMAGE",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CON-IMPORT",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CON-PERMISSION-LOSS",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CON-READONLY-CONTAINER",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CON-RECIPIENT-LOOKUP",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CON-RESOLVE-RESTART",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CON-SEARCH",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CON-TOKEN-CRASH",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CONN-CHATGPT",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/connector_approval.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/connector_real.go still imports product implementations: remote, trust, web",
+          "harness: lab/scenarios/remote.go still imports product implementations: remote",
+          "harness: lab/scenarios/remote_checks.go still imports product implementations: remote",
+          "harness: lab/scenarios/remote_flow.go still imports product implementations: remote",
+          "harness: lab/scenarios/remote_private_real.go still imports product implementations: remote"
+        ]
+      },
+      {
+        "id": "CONN-CLAUDE-AI",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/connector_approval.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/connector_real.go still imports product implementations: remote, trust, web",
+          "harness: lab/scenarios/remote.go still imports product implementations: remote",
+          "harness: lab/scenarios/remote_checks.go still imports product implementations: remote",
+          "harness: lab/scenarios/remote_flow.go still imports product implementations: remote",
+          "harness: lab/scenarios/remote_private_real.go still imports product implementations: remote"
+        ]
+      },
+      {
+        "id": "CONSENT-CONNECTOR",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper BlobReferences",
+          "harness: lab/scenarios/agent_credentials.go still imports product implementations: trust",
+          "harness: lab/scenarios/agent_oauth_credentials.go still imports product implementations: trust",
+          "harness: lab/scenarios/agent_oauth_grants.go still imports product implementations: trust",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_auth_isolation.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_command_resolve.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_hosts.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_rate_limits_fixture.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_sources.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_sources_errors.go still imports product implementations: operations, state, trust, web"
+        ]
+      },
+      {
+        "id": "CORE-BLOB-CAP",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-BLOB-CORRUPT",
+        "status": "fail",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-BLOB-DUPLICATE-REFERENCE",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-BLOB-GATEWAY-RETRY",
+        "status": "fail",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-BLOB-GC",
+        "status": "fail",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-BLOB-INTERRUPT",
+        "status": "fail",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-BLOB-NATIVE-STAGE",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-BLOB-NO-DIGEST-AUTH",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-BLOB-OFFLOADED",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-BLOB-REFERENCE-INDEX",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-BLOB-SLOW-READ",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-BLOB-STAGE-DURING-TRANSFER",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-BLOB-STAGE-SAME-DIGEST",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-BOOT",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-CAPTURE-ALIASES",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/readmodel_perf.go still imports product implementations: state, trust"
+        ]
+      },
+      {
+        "id": "CORE-CLOCK-DELAY",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-CLOCK-DELAY-GATEWAY-DIALS",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-CMD-CLOCK-JUMP",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-CMD-CONFLICT",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-CMD-CRASH-AMBIGUOUS",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-CMD-ERA",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-CMD-EXPIRY",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-CMD-IDEMPOTENT",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-CMD-LOST-RESPONSE",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-CMD-OFFLINE",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-CMD-READ-YOUR-WRITE",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-CREDENTIAL-STORE",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-DISCONNECT-DETECT",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-DOCTOR",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-FEED-PIPELINED-ACKS",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-FORGED-DELEGATION",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-GAP-REJECT",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-GATEWAY-DIALS",
+        "status": "fail",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-HELPER-RESTART",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-KILL-DURING-APPLY",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-KILL-GATEWAY-CAPTURE",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-LOCALHOST-DEFENSE",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-MESSAGES-SHAPE",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper Descriptor",
+          "harness: semantic product helper NormalizeContactHandle",
+          "harness: semantic product helper OperationSchema",
+          "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "CORE-PAIR",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-QUERY-BLOB",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/queries.go still imports product implementations: trust"
+        ]
+      },
+      {
+        "id": "CORE-QUERY-DEADLINE",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/queries.go still imports product implementations: trust"
+        ]
+      },
+      {
+        "id": "CORE-QUERY-ROUNDTRIP",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/queries.go still imports product implementations: trust"
+        ]
+      },
+      {
+        "id": "CORE-QUERY-SCOPE",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/queries.go still imports product implementations: trust"
+        ]
+      },
+      {
+        "id": "CORE-REPLICA-CAPTURE-ATOMIC",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-REPLICA-CAPTURE-LEGACY",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/replica_capture_staging.go still imports product implementations: state"
+        ]
+      },
+      {
+        "id": "CORE-REPLICA-CAPTURE-OBSERVERS",
+        "status": "fail",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-REPLICA-CAPTURE-STAGING",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/replica_capture_staging.go still imports product implementations: state"
+        ]
+      },
+      {
+        "id": "CORE-REST-MCP-PARITY",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-RESTORE-EPOCH",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-RESTORE-OLD-SCHEMA",
+        "status": "fail",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-RESUME",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-RETENTION-RACE",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-SCOPE-CHANGE",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-SCOPE-LEAK",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-SIM-PROGRESS-RECOVERY",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-SLOW-CONSUMER",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-SNAPSHOT-INTERRUPT",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-SNAPSHOT-POOL",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper BlobReferences",
+          "harness: lab/scenarios/agent_credentials.go still imports product implementations: trust",
+          "harness: lab/scenarios/agent_oauth_credentials.go still imports product implementations: trust",
+          "harness: lab/scenarios/agent_oauth_grants.go still imports product implementations: trust",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_auth_isolation.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_command_resolve.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_hosts.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_rate_limits_fixture.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_sources.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_sources_errors.go still imports product implementations: operations, state, trust, web"
+        ]
+      },
+      {
+        "id": "CORE-SNAPSHOT-UNDER-LOAD",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-SOURCE-GRANTS",
+        "status": "fail",
+        "blocked_on": []
+      },
+      {
+        "id": "CORE-UPGRADE",
+        "status": "fail",
+        "blocked_on": []
+      },
+      {
+        "id": "FILE-COMMANDS",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "FILE-CRUD-REAL",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "FILE-OFFLOAD-REAL",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "HELPER-IPC-RESPONSIVE",
+        "status": "fail",
+        "blocked_on": []
+      },
+      {
+        "id": "IWORK-REAL",
+        "status": "fail",
+        "blocked_on": []
+      },
+      {
+        "id": "LAB-MALFORMED-SCENARIO",
+        "status": "fail",
+        "blocked_on": []
+      },
+      {
+        "id": "LAB-SSE",
+        "status": "fail",
+        "blocked_on": []
+      },
+      {
+        "id": "LAB-TRUTH-MULTIPLICITY",
+        "status": "fail",
+        "blocked_on": []
+      },
+      {
+        "id": "LOC-SIM",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "MAC-ACTIONS",
+        "status": "fail",
+        "blocked_on": []
+      },
+      {
+        "id": "MAC-CAPTURE",
+        "status": "fail",
+        "blocked_on": []
+      },
+      {
+        "id": "MAC-COMMANDS",
+        "status": "fail",
+        "blocked_on": []
+      },
+      {
+        "id": "MAC-EXTRAS-SIM",
+        "status": "fail",
+        "blocked_on": []
+      },
+      {
+        "id": "MAP-SIM",
+        "status": "fail",
+        "blocked_on": []
+      },
+      {
+        "id": "MSG-CAPABILITY-MATRIX",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper NormalizeContactHandle",
+          "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "MSG-COMMAND-OBSERVED-IDS",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper Descriptor",
+          "harness: semantic product helper NormalizeContactHandle",
+          "harness: semantic product helper OperationSchema",
+          "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "MSG-COMMAND-PARTS",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper Descriptor",
+          "harness: semantic product helper NormalizeContactHandle",
+          "harness: semantic product helper OperationSchema",
+          "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "MSG-DB-REPLACED",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper Descriptor",
+          "harness: semantic product helper NormalizeContactHandle",
+          "harness: semantic product helper OperationSchema",
+          "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "MSG-DELETE",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper NormalizeContactHandle",
+          "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "MSG-DELETE-REAL",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper Descriptor",
+          "harness: semantic product helper NormalizeContactHandle",
+          "harness: semantic product helper OperationSchema",
+          "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "MSG-EDIT",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper NormalizeContactHandle",
+          "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "MSG-FAILED-OBSERVED-IDS",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper Descriptor",
+          "harness: semantic product helper NormalizeContactHandle",
+          "harness: semantic product helper OperationSchema",
+          "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "MSG-HISTORY-IMPORT",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper Descriptor",
+          "harness: semantic product helper NormalizeContactHandle",
+          "harness: semantic product helper OperationSchema",
+          "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "MSG-INCOMING",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper Descriptor",
+          "harness: semantic product helper NormalizeContactHandle",
+          "harness: semantic product helper OperationSchema",
+          "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "MSG-MARK-READ",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper NormalizeContactHandle",
+          "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "MSG-OWNER-TOKEN-SELFCHAT",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper Descriptor",
+          "harness: semantic product helper NormalizeContactHandle",
+          "harness: semantic product helper OperationSchema",
+          "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "MSG-PERMISSION-LOSS",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper Descriptor",
+          "harness: semantic product helper NormalizeContactHandle",
+          "harness: semantic product helper OperationSchema",
+          "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "MSG-REACT",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper NormalizeContactHandle",
+          "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "MSG-READSTATE-REAL",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper Descriptor",
+          "harness: semantic product helper NormalizeContactHandle",
+          "harness: semantic product helper OperationSchema",
+          "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "MSG-RECEIPTS",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper Descriptor",
+          "harness: semantic product helper NormalizeContactHandle",
+          "harness: semantic product helper OperationSchema",
+          "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "MSG-REPLY",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper NormalizeContactHandle",
+          "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "MSG-RESEND",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper Descriptor",
+          "harness: semantic product helper NormalizeContactHandle",
+          "harness: semantic product helper OperationSchema",
+          "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "MSG-SELFTEST",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper Descriptor",
+          "harness: semantic product helper NormalizeContactHandle",
+          "harness: semantic product helper OperationSchema",
+          "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "MSG-SEND-FILES",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper NormalizeContactHandle",
+          "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "MSG-SEND-GHOST",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper NormalizeContactHandle",
+          "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "MSG-SEND-IDENTICAL-MANUAL",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper NormalizeContactHandle",
+          "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "MSG-SEND-NEW-HANDLE",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper NormalizeContactHandle",
+          "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "MSG-SEND-SELF-EMAIL",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper NormalizeContactHandle",
+          "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "MSG-SEND-SELF-TEXT",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper NormalizeContactHandle",
+          "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "MSG-UI-INTERFERENCE",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper NormalizeContactHandle",
+          "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "MSG-UNSEND",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper NormalizeContactHandle",
+          "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "NOTE-CRUD",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "NOTE-EDIT-PARITY",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "NOTE-EXTERNAL",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "NOTE-EXTRAS",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "NOTE-IMPORT",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "NOTE-LIST",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "NOTE-RICH-REJECT",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "PDF-ANNOTATE",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/vision_queries.go still imports product implementations: runtime"
+        ]
+      },
+      {
+        "id": "PDF-TEXT",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/vision_queries.go still imports product implementations: runtime"
+        ]
+      },
+      {
+        "id": "QUERY-AGENT",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "RELAY-CAA-ACCOUNT",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: remote",
+          "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
+          "harness: lab/scenarios/remote_checks.go still imports product implementations: remote"
+        ]
+      },
+      {
+        "id": "RELAY-CT-INDEPENDENT",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: remote",
+          "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
+          "harness: lab/scenarios/remote_checks.go still imports product implementations: remote"
+        ]
+      },
+      {
+        "id": "RELAY-ENROLL",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: remote",
+          "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
+          "harness: lab/scenarios/remote_checks.go still imports product implementations: remote"
+        ]
+      },
+      {
+        "id": "RELAY-LIMITS",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: remote",
+          "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
+          "harness: lab/scenarios/remote_checks.go still imports product implementations: remote"
+        ]
+      },
+      {
+        "id": "RELAY-PASSTHROUGH",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: remote",
+          "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
+          "harness: lab/scenarios/remote_checks.go still imports product implementations: remote"
+        ]
+      },
+      {
+        "id": "RELAY-ROTATE-GATED",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: remote",
+          "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
+          "harness: lab/scenarios/relay_tls_splice.go still imports product implementations: replication, state, trust",
+          "harness: lab/scenarios/remote_checks.go still imports product implementations: remote"
+        ]
+      },
+      {
+        "id": "RELAY-TLS-SPLICE",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: remote",
+          "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
+          "harness: lab/scenarios/relay_tls_splice.go still imports product implementations: replication, state, trust",
+          "harness: lab/scenarios/remote_checks.go still imports product implementations: remote"
+        ]
+      },
+      {
+        "id": "REM-CONFLICT",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "REM-CREATE-EXTERNAL",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "REM-CRUD",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "REM-EXTERNAL-RACE",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "REM-LIST-CREATE",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "REM-LIST-MANAGE",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "REM-NATIVE-LIST-RACE",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "REM-OPERATION-SHAPES",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "REM-PERMISSION-LOSS",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "REM-READONLY-LIST",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "REM-RECURRING",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "RMT-ONECOMMAND-FLOW",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/remote.go still imports product implementations: remote",
+          "harness: lab/scenarios/remote_checks.go still imports product implementations: remote",
+          "harness: lab/scenarios/remote_flow.go still imports product implementations: remote",
+          "harness: lab/scenarios/remote_private_real.go still imports product implementations: remote"
+        ]
+      },
+      {
+        "id": "RMT-PRIVATE-CONNECT",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/remote_flow.go still imports product implementations: remote",
+          "harness: lab/scenarios/remote_private.go still imports product implementations: frontdoor, remote, trust",
+          "harness: lab/scenarios/remote_private_real.go still imports product implementations: remote"
+        ]
+      },
+      {
+        "id": "SC-RUN-REAL",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper Descriptor",
+          "harness: semantic product helper ValidateCommand",
+          "harness: lab/scenarios/shortcuts_runner.go still imports product implementations: shortcut",
+          "harness: lab/scenarios/siri_intents.go still imports product implementations: shortcut"
+        ]
+      },
+      {
+        "id": "SEC-REMOTE-ACCESS",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper BlobReferences",
+          "harness: lab/scenarios/agent_credentials.go still imports product implementations: trust",
+          "harness: lab/scenarios/agent_oauth_credentials.go still imports product implementations: trust",
+          "harness: lab/scenarios/agent_oauth_grants.go still imports product implementations: trust",
+          "harness: lab/scenarios/agent_oauth_http.go still imports product implementations: trust",
+          "harness: lab/scenarios/connector_approval.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/security_failures.go still imports product implementations: frontdoor, remote",
+          "harness: lab/scenarios/security_oauth.go still imports product implementations: trust",
+          "harness: lab/scenarios/security_owner.go still imports product implementations: trust",
+          "harness: lab/scenarios/security_relay.go still imports product implementations: relay",
+          "harness: lab/scenarios/security_remote.go still imports product implementations: remote, trust, web",
+          "harness: lab/scenarios/web_auth_isolation.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_command_resolve.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_hosts.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_rate_limits_fixture.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_sources.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_sources_errors.go still imports product implementations: operations, state, trust, web"
+        ]
+      },
+      {
+        "id": "SESSION-PROXY-BYTES",
+        "status": "fail",
+        "blocked_on": []
+      },
+      {
+        "id": "USE-IMPORT",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "USE-LOCK-CLIP",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "USE-READONLY",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "USE-REMOTE-LAG",
+        "status": "pass",
+        "blocked_on": []
+      },
+      {
+        "id": "VIS-OCR",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/vision_queries.go still imports product implementations: runtime"
+        ]
+      },
+      {
+        "id": "WEB-AGENT-ACTIVITY",
+        "status": "fail",
+        "blocked_on": []
+      },
+      {
+        "id": "WEB-AGENT-CREDENTIALS",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper BlobReferences",
+          "harness: lab/scenarios/agent_credentials.go still imports product implementations: trust",
+          "harness: lab/scenarios/agent_oauth_credentials.go still imports product implementations: trust",
+          "harness: lab/scenarios/agent_oauth_grants.go still imports product implementations: trust",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_auth_isolation.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_command_resolve.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_hosts.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_rate_limits_fixture.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_sources.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_sources_errors.go still imports product implementations: operations, state, trust, web"
+        ]
+      },
+      {
+        "id": "WEB-AGENT-LEVELS",
+        "status": "fail",
+        "blocked_on": []
+      },
+      {
+        "id": "WEB-AGENT-OAUTH",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper BlobReferences",
+          "harness: lab/scenarios/agent_credentials.go still imports product implementations: trust",
+          "harness: lab/scenarios/agent_oauth_credentials.go still imports product implementations: trust",
+          "harness: lab/scenarios/agent_oauth_grants.go still imports product implementations: trust",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_auth_isolation.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_command_resolve.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_hosts.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_rate_limits_fixture.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_sources.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_sources_errors.go still imports product implementations: operations, state, trust, web"
+        ]
+      },
+      {
+        "id": "WEB-AGENT-OAUTH-CIMD",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper BlobReferences",
+          "harness: lab/scenarios/agent_credentials.go still imports product implementations: trust",
+          "harness: lab/scenarios/agent_oauth_credentials.go still imports product implementations: trust",
+          "harness: lab/scenarios/agent_oauth_grants.go still imports product implementations: trust",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_auth_isolation.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_command_resolve.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_hosts.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_rate_limits_fixture.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_sources.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_sources_errors.go still imports product implementations: operations, state, trust, web"
+        ]
+      },
+      {
+        "id": "WEB-CAL-WRITE",
+        "status": "fail",
+        "blocked_on": []
+      },
+      {
+        "id": "WEB-CON-LIST",
+        "status": "fail",
+        "blocked_on": []
+      },
+      {
+        "id": "WEB-MEDIA-CAP",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper NormalizeContactHandle",
+          "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "WEB-RELAY-AGENTS",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper CommandHash",
+          "harness: lab/scenarios/relay_agent_approvals.go still imports product implementations: trust",
+          "harness: lab/scenarios/relay_agent_delegation.go still imports product implementations: trust",
+          "harness: lab/scenarios/relay_agent_parent.go still imports product implementations: trust",
+          "harness: lab/scenarios/relay_agents.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "WEB-RELAY-AUTH",
+        "status": "fail",
+        "blocked_on": []
+      },
+      {
+        "id": "WEB-RELAY-PAIRING",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/relay_auth_capture.go still imports product implementations: trust",
+          "harness: lab/scenarios/relay_pairing.go still imports product implementations: replication, trust"
+        ]
+      },
+      {
+        "id": "WEB-RM-MEDIA-COLLECTION",
+        "status": "fail",
+        "blocked_on": []
+      },
+      {
+        "id": "WEB-RM-REMINDERS-DEMO",
+        "status": "fail",
+        "blocked_on": []
+      },
+      {
+        "id": "WEB-RM-REMINDERS-HARDENING",
+        "status": "fail",
+        "blocked_on": []
+      },
+      {
+        "id": "WEB-RM-REMINDERS-LISTS",
+        "status": "fail",
+        "blocked_on": []
+      },
+      {
+        "id": "WEB-RM-SEARCH",
+        "status": "fail",
+        "blocked_on": []
+      },
+      {
+        "id": "WEB-RM-THREAD-ORIGINATOR",
+        "status": "fail",
+        "blocked_on": []
+      }
+    ],
+    "verdict_differences_from_main_record": [
+      {
+        "id": "MAP-SIM",
+        "main": "pass",
+        "attempt": "fail"
+      }
+    ],
+    "followup": "Maps compatibility restored; focused MAP-SIM passed. This full attempt preceded that fix and the disconnect/clock fixes; it is not a passing final full-suite claim."
+  },
+  "baseline_blob_comparison": {
+    "base": "6181e334",
+    "checkout": "separate archived main source",
+    "selector": "core.blobs",
+    "result": "same four blob failures: CORRUPT, GATEWAY-RETRY, GC, INTERRUPT; nine other cases passed"
+  },
+  "limitations": [
+    "G-E binary harness conversions still block query/messages/native journeys; no existing scenario was weakened.",
+    "G-B3 must cover missing Maps/mail/PDF validators/encoders. Existing Maps path preserved.",
+    "G-F must install query audit, retain capture job PeerSession, and install lab-only LabClock.",
+    "G-A save_query_blobs must commit through BlobProtection for expired owner cleanup.",
+    "Real smoke, full default green and 24-hour shadow replay are orchestrator exit gates, not qualified here."
+  ],
+  "fixture_notes": [
+    "Generated native keys/checkpoints/tickets/expiry/blob IDs and record-ID presence normalized; other evidence, per-part dispositions and request hashes compared.",
+    "Explicit Resolve may receive an unsolicited recovered indeterminate notification on reconnect; probe waits boundedly for read-only stored evidence without dispatching.",
+    "Query deadline message race normalized to its code; generated staged-file argument byte count bounded and normalized.",
+    "Clock offsets are applied after ledger admission and before native effect in both processes.",
+    "Stored terminal expiry and admission era are mutated only in isolated fixture ledgers.",
+    "No live gateway/home, personal data, real scenario, or permission prompt accessed."
+  ]
+}

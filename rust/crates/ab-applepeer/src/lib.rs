@@ -2,7 +2,10 @@
 mod server;
 mod state;
 mod supervisor;
-use ab_operations::{Code, Cursor, Error, Task, peer::ApplePeer};
+use ab_operations::{
+    Code, Cursor, Error, Task,
+    peer::{ApplePeer, PeerSession},
+};
 use ab_wire::messages::{Capture, IpcFrame};
 use base64::Engine;
 pub use server::{Backend, Server};
@@ -37,6 +40,7 @@ pub struct Commands {
     revision: watch::Sender<u64>,
     requests: Arc<std::sync::atomic::AtomicU64>,
     connected: Arc<std::sync::atomic::AtomicBool>,
+    fence: Arc<std::sync::atomic::AtomicU64>,
 }
 impl Default for Commands {
     fn default() -> Self {
@@ -46,6 +50,7 @@ impl Default for Commands {
             revision: watch::channel(0).0,
             requests: Arc::default(),
             connected: Arc::default(),
+            fence: Arc::default(),
         }
     }
 }
@@ -65,6 +70,7 @@ async fn send(writer: &Mutex<OwnedWriteHalf>, frame: &IpcFrame) -> Result<(), Er
 impl Commands {
     async fn attach(&self, fence: u64, writer: Arc<Mutex<OwnedWriteHalf>>) {
         let mut s = self.session.lock().await;
+        self.fence.store(fence, std::sync::atomic::Ordering::SeqCst);
         self.connected
             .store(true, std::sync::atomic::Ordering::SeqCst);
         if let Ok(mut receipts) = self.receipts.lock() {
@@ -79,12 +85,13 @@ impl Commands {
     async fn detach(&self, fence: u64) {
         let mut s = self.session.lock().await;
         if s.fence == fence {
+            self.fence.store(0, std::sync::atomic::Ordering::SeqCst);
             self.connected
                 .store(false, std::sync::atomic::Ordering::SeqCst);
             *s = Session::default();
         }
     }
-    async fn receive(&self, fence: u64, frame: IpcFrame) {
+    async fn receive(&self, fence: u64, mut frame: IpcFrame) {
         let mut s = self.session.lock().await;
         if s.fence != fence {
             return;
@@ -94,6 +101,9 @@ impl Commands {
                 let _ = tx.send(frame);
             }
             return;
+        }
+        if matches!(frame.t.as_str(), "QueryResult" | "Outcome") {
+            frame.owner_fence = fence;
         }
         let id = if frame.id.is_empty() {
             &frame.command_id
@@ -197,6 +207,19 @@ impl ApplePeer for Commands {
     fn available(&self) -> bool {
         self.connected.load(std::sync::atomic::Ordering::SeqCst)
     }
+    fn session(&self) -> Option<PeerSession> {
+        let fence = self.fence.load(std::sync::atomic::Ordering::SeqCst);
+        (fence != 0).then_some(PeerSession(fence))
+    }
+    fn read_blob_from<'a>(
+        &'a self,
+        session: PeerSession,
+        handle: &'a str,
+        offset: i64,
+        length: i64,
+    ) -> Task<'a, (Vec<u8>, bool)> {
+        Box::pin(self.read_blob_inner(Some(session), handle, offset, length))
+    }
     fn exchange(&self, frame: IpcFrame) -> Task<'_, IpcFrame> {
         Box::pin(self.exchange_inner(frame, false))
     }
@@ -234,7 +257,19 @@ impl Commands {
         offset: i64,
         length: i64,
     ) -> Result<(Vec<u8>, bool), Error> {
+        self.read_blob_inner(None, handle, offset, length).await
+    }
+    async fn read_blob_inner(
+        &self,
+        expected: Option<PeerSession>,
+        handle: &str,
+        offset: i64,
+        length: i64,
+    ) -> Result<(Vec<u8>, bool), Error> {
         let mut s = self.session.lock().await;
+        if expected.is_some_and(|token| token.0 != s.fence) {
+            return Err(Code::Unavailable.into());
+        }
         let writer = s.writer.clone().ok_or(Code::Unavailable)?;
         if s.blobs.contains_key(handle) {
             return Err(Code::Conflict.into());

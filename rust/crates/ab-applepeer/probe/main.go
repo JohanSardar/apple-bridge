@@ -11,6 +11,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
+	"sync"
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/applepeer"
@@ -49,11 +51,20 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	blobStore, err := blobs.Open(filepath.Join(filepath.Dir(os.Args[1]), "gateway-blobs"), blobs.Config{})
+	var cap int64
+	if value := os.Getenv("AB_PROBE_BLOB_CAP"); value != "" {
+		cap, err = strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			panic(err)
+		}
+	}
+	blobStore, err := blobs.Open(filepath.Join(filepath.Dir(os.Args[1]), "gateway-blobs"), blobs.Config{Cap: cap})
 	if err != nil {
 		panic(err)
 	}
-	gateway := &operations.LocalGateway{Uploads: blobStore, State: store, Authority: authority, Peer: commands, Context: ctx}
+	var auditMu sync.Mutex
+	var audits []operations.QueryAudit
+	gateway := &operations.LocalGateway{Uploads: blobStore, QueryAudit: func(a operations.QueryAudit) { auditMu.Lock(); defer auditMu.Unlock(); audits = append(audits, a) }, State: store, Authority: authority, Peer: commands, Context: ctx}
 	go applepeer.Serve(ctx, applepeer.Config{Socket: os.Args[1], Secret: []byte{7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7}, Commands: commands,
 		NextFence:   store.NextFence,
 		Checkpoints: store.Checkpoints,
@@ -68,12 +79,42 @@ func main() {
 			return nil
 		},
 	})
+	var savedBlob io.Reader
 	scanner := bufio.NewScanner(os.Stdin)
+	scanner.Buffer(make([]byte, 4096), 16<<20)
 	encoder := json.NewEncoder(os.Stdout)
 	for scanner.Scan() {
 		var frame contracts.IPCFrame
 		if json.Unmarshal(scanner.Bytes(), &frame) != nil {
 			os.Exit(2)
+		}
+		if frame.T == "QueryAudits" {
+			auditMu.Lock()
+			encoder.Encode(audits)
+			auditMu.Unlock()
+			continue
+		}
+		if frame.T == "StartBlob" {
+			savedBlob, err = commands.QueryBlob(ctx, contracts.QueryBlob{Handle: frame.Handle, Size: frame.Length})
+			if err != nil {
+				panic(err)
+			}
+			encoder.Encode(map[string]bool{"started": true})
+			continue
+		}
+		if frame.T == "FinishBlob" {
+			_, err := io.ReadAll(savedBlob)
+			if err != nil {
+				encoder.Encode(map[string]any{"error": map[string]string{"code": "unavailable"}})
+			} else {
+				encoder.Encode(map[string]bool{"read": true})
+			}
+			continue
+		}
+		if frame.T == "DisableUploads" {
+			gateway.Uploads = nil
+			encoder.Encode(map[string]bool{"disabled": true})
+			continue
 		}
 		if frame.T == "Available" {
 			encoder.Encode(map[string]bool{"available": commands.Available()})

@@ -17,4 +17,4 @@ hex = "0.4"
 subtle = "2"
 nix = { version = "0.30", features = ["user"] }
 [features]
-lab-harness = []
+lab-harness = ["ab-operations/lab-harness"]

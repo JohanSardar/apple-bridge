@@ -1,12 +1,19 @@
 #![forbid(unsafe_code)]
 mod adapters;
+pub mod clock;
+pub mod command_contract;
 mod gateway_store;
 mod local_query;
 mod message_uploads;
-
 mod native_commands;
+mod outcome;
+mod query_audit;
+mod query_document;
+
 pub use gateway_store::GatewayStore;
-pub use local_query::LocalQueryStore;
+pub use local_query::{LocalQueryStore, QueryBlobContext};
+pub use query_audit::{QueryActivity, QueryAudit, QueryAuditSink};
+pub use query_document::DocumentInput;
 pub mod local;
 pub mod peer;
 pub use ab_trust::domain;
@@ -18,17 +25,16 @@ use serde_json::{Value, value::RawValue};
 use std::{collections::BTreeMap, fmt::Debug, future::Future, pin::Pin, sync::Arc, time::Duration};
 pub type Task<'a, T> = Pin<Box<dyn Future<Output = Result<T, Error>> + Send + 'a>>;
 pub type Visibility = BTreeMap<String, bool>;
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Code {
     Invalid,
+    TooLarge,
     IdReused,
     Unauthorized,
     Forbidden,
     Unavailable,
     Unsupported,
     CapabilityUnproven,
-    TooLarge,
     NotFound,
     Conflict,
     Reset,
@@ -37,6 +43,54 @@ pub enum Code {
     Deadline,
     Expired,
     Indeterminate,
+    Other(String),
+}
+impl Serialize for Code {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(match self {
+            Self::Invalid => "invalid",
+            Self::TooLarge => "too_large",
+            Self::IdReused => "id_reused",
+            Self::Unauthorized => "unauthorized",
+            Self::Forbidden => "forbidden",
+            Self::Unavailable => "unavailable",
+            Self::Unsupported => "unsupported",
+            Self::CapabilityUnproven => "capability_unproven",
+            Self::NotFound => "not_found",
+            Self::Conflict => "conflict",
+            Self::Reset => "reset",
+            Self::Capacity => "capacity",
+            Self::Corrupt => "corrupt",
+            Self::Deadline => "deadline",
+            Self::Expired => "expired",
+            Self::Indeterminate => "indeterminate",
+            Self::Other(code) => code,
+        })
+    }
+}
+impl<'de> Deserialize<'de> for Code {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let code = String::deserialize(deserializer)?;
+        Ok(match code.as_str() {
+            "invalid" => Self::Invalid,
+            "too_large" => Self::TooLarge,
+            "id_reused" => Self::IdReused,
+            "unauthorized" => Self::Unauthorized,
+            "forbidden" => Self::Forbidden,
+            "unavailable" => Self::Unavailable,
+            "unsupported" => Self::Unsupported,
+            "capability_unproven" => Self::CapabilityUnproven,
+            "not_found" => Self::NotFound,
+            "conflict" => Self::Conflict,
+            "reset" => Self::Reset,
+            "capacity" => Self::Capacity,
+            "corrupt" => Self::Corrupt,
+            "deadline" => Self::Deadline,
+            "expired" => Self::Expired,
+            "indeterminate" => Self::Indeterminate,
+            _ => Self::Other(code),
+        })
+    }
 }
 impl std::fmt::Display for Code {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -62,11 +116,11 @@ impl From<Code> for Error {
         let message = match code {
             Code::IdReused => "command ID already identifies another request",
             Code::Invalid => "invalid input",
+            Code::TooLarge => "file exceeds upload limit",
             Code::Unauthorized => "credential or scope rejected",
             Code::Forbidden => "query grant rejected",
             Code::Unavailable => "peer unavailable",
             Code::CapabilityUnproven => "native capability has not been proven",
-            Code::TooLarge => "file exceeds upload limit",
             Code::Unsupported => "operation unsupported",
             Code::NotFound => "record not found",
             Code::Conflict => "state conflict",
@@ -76,11 +130,13 @@ impl From<Code> for Error {
             Code::Deadline => "query deadline exceeded",
             Code::Expired => "credential expired",
             Code::Indeterminate => "effect cannot be established",
+            Code::Other(_) => "operation failed",
         };
+        let retryable = matches!(code, Code::Capacity | Code::Unavailable);
         Self {
             code,
             message: message.into(),
-            retryable: matches!(code, Code::Capacity | Code::Unavailable),
+            retryable,
             current: None,
         }
     }
@@ -96,13 +152,20 @@ pub struct Principal {
 }
 impl Principal {
     pub fn is_agent(&self) -> bool {
-        self.kind == "agent"
-            || self.kind == "delegated"
-                && self
-                    .id
-                    .split_once('/')
-                    .is_some_and(|(_, local)| local.starts_with("agent:"))
+        if !matches!(self.kind.as_str(), "agent" | "delegated") {
+            return false;
+        }
+        let local = if let Some((parent, local)) = self.id.split_once('/') {
+            if !parent.starts_with("replica:") {
+                return false;
+            }
+            local
+        } else {
+            &self.id
+        };
+        local.starts_with("agent:") && local.len() > 6 && !local.contains(['/', '\r', '\n'])
     }
+
     pub fn visibility(&self) -> Visibility {
         let mut result = Visibility::from([(format!("principal:{}", self.id), true)]);
         if self.kind == "replica" {
@@ -595,45 +658,10 @@ impl Service {
                 return Err(Code::Invalid.into());
             }
             command.op = name.into();
-            let args: Value =
-                serde_json::from_str(command.args.get()).map_err(|_| Code::Invalid)?;
-            if command.op.starts_with("calendar.") && args["span"] == "all" {
-                return Err(Code::Unsupported.into());
-            }
-            let transient = matches!(name, "maps.open" | "speech.say" | "capture.play_sound");
-            native_commands::validate(&command, &args)?;
-            let source_validated = ["contacts.", "notes.", "reminders.", "iphone."]
-                .iter()
-                .any(|prefix| name.starts_with(prefix));
-            if !source_validated && !transient {
-                validate_shape(&descriptor.input["properties"]["args"], &args)?;
-            }
-            if !args.is_object() {
-                return Err(Code::Invalid.into());
-            }
-            if !source_validated
-                && !transient
-                && descriptor.input["required"]
-                    .as_array()
-                    .is_some_and(|fields| fields.iter().any(|field| field == "expected_version"))
-                && command.expected_version == 0
-            {
-                return Err(Code::Invalid.into());
-            }
-            if !name.starts_with("iphone.")
-                && args
-                    .get("title")
-                    .and_then(Value::as_str)
-                    .is_some_and(|title| title.trim().is_empty())
-            {
-                return Err(Code::Invalid.into());
-            }
             if command.id.is_empty() {
                 command.id = format!("cmd_{}", ulid::Ulid::new());
             }
-            if source_validated {
-                validate_source_command(&command)?;
-            }
+            command_contract::validate(&command)?;
             return match &self.target {
                 CommandTarget::Remote(target) => target.submit(&principal, command).await,
                 CommandTarget::Local(target) => target.submit(&principal, command).await,
@@ -715,112 +743,38 @@ impl Service {
     }
 }
 
-fn validate_shape(schema: &Value, value: &Value) -> Result<(), Error> {
-    if schema.is_null() {
-        return Ok(());
-    }
-    let valid = match schema["type"].as_str() {
-        Some("object") => value.is_object(),
-        Some("array") => value.is_array(),
-        Some("string") => value.is_string(),
-        Some("integer") => value.is_i64() || value.is_u64(),
-        Some("number") => value.is_number(),
-        Some("boolean") => value.is_boolean(),
-        _ => true,
-    };
-    if !valid {
-        return Err(Code::Invalid.into());
-    }
-    if let Some(values) = schema["enum"].as_array()
-        && !values.contains(value)
-    {
-        return Err(Code::Invalid.into());
-    }
-    if let Some(choices) = schema["anyOf"].as_array()
-        && !choices.iter().any(|s| validate_shape(s, value).is_ok())
-    {
-        return Err(Code::Invalid.into());
-    }
-    if let Some(choices) = schema["oneOf"].as_array()
-        && choices
-            .iter()
-            .filter(|s| validate_shape(s, value).is_ok())
-            .count()
-            != 1
-    {
-        return Err(Code::Invalid.into());
-    }
-    if let Some(number) = value.as_f64()
-        && (schema["minimum"].as_f64().is_some_and(|min| number < min)
-            || schema["maximum"].as_f64().is_some_and(|max| number > max))
-    {
-        return Err(Code::Invalid.into());
-    }
-    if let Some(object) = value.as_object() {
-        if let Some(required) = schema["required"].as_array() {
-            for key in required {
-                if !object.contains_key(key.as_str().ok_or(Code::Corrupt)?) {
-                    return Err(Code::Invalid.into());
-                }
-            }
-        }
-        for (key, value) in object {
-            let child = &schema["properties"][key];
-            if child.is_null() && schema["additionalProperties"] == false {
-                return Err(Code::Invalid.into());
-            }
-            validate_shape(child, value)?;
-        }
-    }
-    if let Some(items) = value.as_array() {
-        for item in items {
-            validate_shape(&schema["items"], item)?;
-        }
-    }
-    Ok(())
-}
-
 pub fn descriptor_for(name: &str) -> Result<ab_catalog::OperationDescriptor, Error> {
-    let descriptors = operations().map_err(|_| Error::from(Code::Corrupt))?;
-    #[cfg(feature = "lab-harness")]
-    let descriptors = {
-        let mut ds = descriptors;
-        if matches!(name, "test.echo" | "test.sleep" | "test.blob") {
-            let mut d = ds
-                .iter()
-                .find(|d| d.name == "helper.version")
-                .ok_or(Code::Corrupt)?
-                .clone();
-            d.name = name.into();
-            d.scope = "reminders:read".into();
-            ds.push(d);
-        }
-        ds
-    };
-    descriptors
-        .into_iter()
-        .find(|d| d.name == name)
-        .ok_or_else(|| Code::Unsupported.into())
-}
-
-fn validate_source_command(command: &Command) -> Result<(), Error> {
-    ab_commands::validate(
-        &ab_commands::Command {
-            id: command.id.clone(),
-            op: command.op.clone(),
-            args: command.args.clone(),
-            expected_version: command.expected_version,
-            wait_ms: i64::try_from(command.wait_ms).map_err(|_| Code::Invalid)?,
-        },
-        jiff::Timestamp::now(),
-    )
-    .map(|_| ())
-    .map_err(|error| {
-        Error::from(match error {
-            ab_commands::Error::Invalid => Code::Invalid,
-            ab_commands::Error::Unsupported => Code::Unsupported,
-            ab_commands::Error::TooLarge => Code::TooLarge,
-            ab_commands::Error::Expired => Code::Expired,
+    static DESCRIPTORS: std::sync::OnceLock<
+        Result<BTreeMap<String, ab_catalog::OperationDescriptor>, Code>,
+    > = std::sync::OnceLock::new();
+    let descriptors = DESCRIPTORS
+        .get_or_init(|| {
+            let descriptors = operations().map_err(|_| Code::Corrupt)?;
+            #[cfg(feature = "lab-harness")]
+            let descriptors = {
+                let mut descriptors = descriptors;
+                let base = descriptors
+                    .iter()
+                    .find(|d| d.name == "helper.version")
+                    .ok_or(Code::Corrupt)?
+                    .clone();
+                for name in ["test.echo", "test.sleep", "test.blob"] {
+                    let mut descriptor = base.clone();
+                    descriptor.name = name.into();
+                    descriptor.scope = "reminders:read".into();
+                    descriptors.push(descriptor);
+                }
+                descriptors
+            };
+            Ok(descriptors
+                .into_iter()
+                .map(|d| (d.name.clone(), d))
+                .collect())
         })
-    })
+        .as_ref()
+        .map_err(|code| Error::from(code.clone()))?;
+    descriptors
+        .get(name)
+        .cloned()
+        .ok_or_else(|| Code::Unsupported.into())
 }

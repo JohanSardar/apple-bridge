@@ -4,39 +4,30 @@ The server accepts the unchanged Go SimApplePeer over ipc/1. It binds an owner-o
 
 The local engine in ab-operations owns admission, deduplication, approval, preparation, durable dispatch transition, outcome correlation, bounded delayed-capture Resolve, per-part strengthening, explicit resolution and recovery without redispatch. Helper supervision preserves the Go open launch chain. No real Helper was launched for these tests.
 
-## Reproduce on Ubuntu
+## Reproduce on the build host
 
-From the repository root, with Cargo and Go on PATH:
+Use an isolated checkout, TMPDIR/GOTMPDIR and CARGO_TARGET_DIR on `ssh build`, with Cargo and `~/go-sdk/bin` on PATH and `RUSTC_WRAPPER=$HOME/.cargo/bin/sccache`.
 
 ```sh
 cargo build --manifest-path rust/Cargo.toml -p ab-applepeer --example ipc_probe --features lab-harness
-go build -o /tmp/gb-go-peer ./rust/crates/ab-applepeer/probe
-go build -o /tmp/gb-bridge-lab ./cmd/bridge-lab
-python3 rust/crates/ab-applepeer/probe/matrix.py /tmp/gb-go-peer rust/target/debug/examples/ipc_probe /tmp/gb-bridge-lab
+cp "$CARGO_TARGET_DIR/debug/examples/ipc_probe" "$TMPDIR/gb-ipc-probe"
+go build -tags lab -o "$TMPDIR/gb-go-peer" ./rust/crates/ab-applepeer/probe
+go build -tags lab -o "$TMPDIR/gb-lab" ./cmd/bridge-lab
+python3 rust/crates/ab-applepeer/probe/matrix.py "$TMPDIR/gb-go-peer" "$TMPDIR/gb-ipc-probe" "$TMPDIR/gb-lab"
+python3 rust/crates/ab-applepeer/probe/query_matrix.py "$TMPDIR/gb-go-peer" "$TMPDIR/gb-ipc-probe" "$TMPDIR/gb-lab"
 make rust-ci
 ```
 
-Use an owned TMPDIR/GOTMPDIR on hosts whose shared /tmp quota is exhausted.
+Copy lab-feature executables outside Cargo target before running probes. Workspace tests can rebuild the example without lab features.
 
-The paired probe runs nine wire cases and nine local lifecycle cases plus a stale-fence rejection. Both processes use the real Go SimApplePeer. Go local commands use the Go SQLite ledger and authority. Rust local commands now use G-A's concrete State<Gateway> capture store and SQLite ledger through GatewayStore. The synthetic action resolver and Rust identity adapter remain test fixtures. Each lifecycle case repeats submission, runs recovery and performs read-only Resolve, requiring unchanged effect counts. Approval checks require zero effects until approval; rejection and expiry require zero effects. The wire cases cover native conflict and UI interference before preparation as well as interference after dispatch. The stale-fence case deliberately preserves a zero fence using an API that exists only under lab-harness; the real Helper counterparty rejects it with zero effects.
+The paired processes use the real Go SimApplePeer, SQLite ledgers and capture state. The Rust identity/action adapters are synthetic fixtures. The 38-case matrix compares wire, lifecycle and multipart dispositions, normalized evidence, effect counts and observed-ID presence. Generated native keys, checkpoints, tickets, expiry and query blob IDs are normalized; other evidence fields must match. It checks stale-fence rejection, lost outcomes, ambiguity, UI interference, delayed captures, approval/rejection/expiry, capture artifacts, missing upload support, per-file progress/failure/receipt strengthening and unbound/stale Resolve evidence. One-hour forward/backward wall-clock jumps occur after admission and before the effect; both retain the admission-time monotonic deadline.
 
-Comparisons cover dispositions, states, evidence, resolution, effect counts and presence of observed IDs. Evidence comparisons normalize only generated native_key, capture_checkpoint, ticket and expires_at strings; the remaining JSON fields must match. Bridge record IDs, timestamps, cursors, history and database bytes are not compared. Full multipart attachments and all source-specific validators are not qualified by this probe.
+Retries after a stored terminal expiry and after isolated admission-era rotation return stored status. New IDs with stale eras are rejected; changed valid requests reuse no ID. Recovery and explicit Resolve leave both effect counts and dispatch-guard start counts unchanged. The actual gateway CORE-CMD-ERA scenario independently exercises restore. These probes do not compare database/history bytes; shadow replay owns that gate.
 
-## Integration remaining
+The 31-case query probe compares result shapes, explicit null, input validation, mail rewriting, document file authorization, large inline staging/cleanup, scoped query grants, expiry, capacity, digest checks, hydration, audit counters and deadlines. A saved blob reader from an old Helper session fails unavailable after reconnect, while the new session remains readable. Deadline messages are normalized to the deadline code because Go races its transport deadline against the Helper deadline reply. Only the generated staged-file path's audit byte count is normalized, after checking its bounded nonzero size. A separate Rust burst verifies 100 admissions followed by two capacity rejections within one second.
 
-This is a foundation PR, not Phase 4 gateway qualification. It does not enable the Rust gateway binary. See rust/INTERFACES.md for the exact seams.
+The lifecycle canonicalizes supported resolved actions using G-B3's ab-commands encoder; main's existing Maps path remains until that crate covers it. A codec test compares 540 NativeAction and complete Prepare payloads against the Go-generated corpus. Production runtime adapters and upload staging on main remain in use. Query/session/audit contracts and cross-owner integration requirements are in rust/interfaces/ab-operations.md and rust/interfaces/ab-applepeer.md.
 
-- GatewayStore integrates G-A capture commits, source state, fences, aliases, durable ledger CAS and parts updates. Full database/history byte parity remains the shadow replay gate.
-- Runtime must connect Server, LocalGateway, the state/action adapters and Helper supervision. Frontdoor currently destructures the sole Remote variant, so adding Local requires its owner to update query-blob routing too.
-- Production ActionResolver adapters must port Go native argument conversion, visible object/container/series resolution, expected-version checks, native conflict capture binding, Notes content restrictions and upload staging. Only the synthetic resolver is supplied here.
-- Query transport is available; full local query input rewriting, rate accounting, query-blob hydration/grants and audit still need integration. BlobChunk/BlobUnavailable routing, bounded reads, mail body ID rewriting and query result hydration/grants now exist. Document input rewriting/staging and query audit remain pending. Query protection expiry needs the G-A hook described in rust/interfaces/ab-applepeer.md.
-- Source-specific completion evidence validators and capture-blob persistence require their native/blob adapters. The generic correlation engine cannot qualify those operations alone.
-- The full --impl gateway=rust scenario matrix remains blocked on the executable wiring. Real smoke and shadow replay remain orchestrator-owned.
+A deterministic race test verifies that queued expected versions are checked after the preceding object's lock is released. No live home, real Helper, real-level scenario or permission prompt is used.
 
-No live home, live gateway, real-level scenario or permission prompt was accessed.
-
-## Continuation verification
-
-The matrix additionally reads a 262145-byte SimApplePeer query blob in bounded chunks, verifies its SHA-256 and exact size, checks missing/unavailable/offloaded error mappings, and hydrates a speech synthesis result into SQLite-backed query grants with no returned Helper handle. Receipt lookup uses a separate synchronous mutex so session traffic cannot make committed evidence disappear. A deterministic contention regression test covers this race. These checks still use the synthetic action resolver and do not establish production action conversion, all source validators or admission-era restore behavior.
-
-On quota-constrained Ubuntu hosts, set TMPDIR and GOTMPDIR to an owned directory under the build home for both compilation and scenarios. Use RUSTC_WRAPPER=$HOME/.cargo/bin/sccache when installed.
+Disconnect clears command availability before source-state bookkeeping. Runtime lab startup must install LabClock to consume the clock-offset fixture; the paired process probe installs it directly. The integration contracts identify all remaining cross-owner hooks and unqualified source families.
