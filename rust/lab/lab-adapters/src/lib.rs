@@ -12,6 +12,7 @@ pub mod filerep;
 pub mod files_native;
 pub mod frontdoor;
 pub mod helper_ipc;
+pub mod helper_real;
 pub mod history;
 pub mod http;
 pub mod imports;
@@ -203,6 +204,7 @@ pub fn registry() -> Registry {
     registry.register("calendar_journey", calendar::calendar_journey);
     native_runner::register(&mut registry);
     registry.register("helper_ipc", helper_ipc::cases);
+    helper_real::register(&mut registry);
     registry.register("SIRI-INTENTS", siri::intents);
     registry
 }
