@@ -1,5 +1,5 @@
 {
-  "wall_seconds": 202.308,
+  "wall_seconds": 515.457,
   "parallel": 1,
   "host": "darwin",
   "complete": true,
@@ -7,7 +7,7 @@
   "results": [
     {
       "id": "APP-ALARM-SIM",
-      "seconds": 3.413,
+      "seconds": 4.023,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -38,7 +38,7 @@
     },
     {
       "id": "APP-DEVICE-SIM",
-      "seconds": 3.501,
+      "seconds": 3.841,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -48,27 +48,22 @@
     },
     {
       "id": "APP-HEALTH-SIM",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 4.967,
+      "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
         "internal/blobs",
         "internal/contracts",
         "internal/iphone",
-        "internal/operations",
         "internal/state",
         "internal/trust"
       ],
-      "blocked_on": [
-        "harness: semantic product helper HealthSample",
-        "harness: lab/scenarios/iphone_health.go still imports product implementations: iphone, operations, state, trust"
-      ]
+      "blocked_on": []
     },
     {
       "id": "APP-HEALTH-WRITE-SIM",
-      "seconds": 3.465,
+      "seconds": 3.463,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -78,7 +73,7 @@
     },
     {
       "id": "APP-LOC-SIM",
-      "seconds": 4.654,
+      "seconds": 5.09,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -93,7 +88,7 @@
     },
     {
       "id": "APP-MOTION-SIM",
-      "seconds": 3.752,
+      "seconds": 3.551,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -126,7 +121,7 @@
     },
     {
       "id": "APP-SCREENTIME-SIM",
-      "seconds": 3.336,
+      "seconds": 3.237,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -136,7 +131,7 @@
     },
     {
       "id": "APP-SHELL-SIM",
-      "seconds": 3.135,
+      "seconds": 2.916,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -146,7 +141,7 @@
     },
     {
       "id": "CAL-FUTURE-COUNT-MATH",
-      "seconds": 0.076,
+      "seconds": 0.212,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -156,7 +151,7 @@
     },
     {
       "id": "CAL-HINT-COVERAGE",
-      "seconds": 0.075,
+      "seconds": 0.087,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -166,7 +161,7 @@
     },
     {
       "id": "CAL-INVALIDATED-EVENT",
-      "seconds": 0.076,
+      "seconds": 0.088,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -176,7 +171,7 @@
     },
     {
       "id": "CALL-CAPTURE",
-      "seconds": 0.088,
+      "seconds": 0.08,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -187,7 +182,7 @@
     },
     {
       "id": "CAP-SIM",
-      "seconds": 0.076,
+      "seconds": 0.075,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -257,7 +252,7 @@
     },
     {
       "id": "CORE-DISK-FULL",
-      "seconds": 22.202,
+      "seconds": 22.363,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -306,7 +301,7 @@
     },
     {
       "id": "CORE-SHORTCUT-SIGN",
-      "seconds": 3.461,
+      "seconds": 4.345,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -317,7 +312,7 @@
     },
     {
       "id": "CORE-SOURCE-SUPPORT",
-      "seconds": 1.483,
+      "seconds": 1.598,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -327,7 +322,7 @@
     },
     {
       "id": "FILE-CAPTURE",
-      "seconds": 0.075,
+      "seconds": 0.086,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -337,7 +332,7 @@
     },
     {
       "id": "FILES-TRANSFORM",
-      "seconds": 0.849,
+      "seconds": 0.847,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -383,7 +378,7 @@
     },
     {
       "id": "MAIL-BODY",
-      "seconds": 0.083,
+      "seconds": 0.088,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -393,7 +388,7 @@
     },
     {
       "id": "MAIL-CAPTURE",
-      "seconds": 0.086,
+      "seconds": 0.087,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -403,7 +398,7 @@
     },
     {
       "id": "MAIL-COMMANDS",
-      "seconds": 0.085,
+      "seconds": 0.088,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -419,7 +414,7 @@
     },
     {
       "id": "MAIL-LIVE",
-      "seconds": 0.08,
+      "seconds": 0.087,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -429,7 +424,7 @@
     },
     {
       "id": "MAIL-NO-FALSE-DELETE",
-      "seconds": 0.083,
+      "seconds": 0.088,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -439,165 +434,67 @@
     },
     {
       "id": "MSG-DECODE",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 25.911,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/publichttp",
-        "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: semantic product helper Descriptor",
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: semantic product helper OperationSchema",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "MSG-DECODE-BALLOON",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 27.473,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/publichttp",
-        "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: semantic product helper Descriptor",
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: semantic product helper OperationSchema",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "MSG-DECODE-FORMATTING",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 26.49,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/publichttp",
-        "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: semantic product helper Descriptor",
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: semantic product helper OperationSchema",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "MSG-DELETE-VISIBILITY",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 50.006,
+      "status": "timeout",
       "implementation": "gateway=rust",
       "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/publichttp",
-        "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "MSG-MEDIA-CLEANUP",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 50.004,
+      "status": "timeout",
       "implementation": "gateway=rust",
       "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/publichttp",
-        "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "MSG-READ-RICH-FIELDS",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 50.006,
+      "status": "timeout",
       "implementation": "gateway=rust",
       "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/publichttp",
-        "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: semantic product helper Descriptor",
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: semantic product helper OperationSchema",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "NATIVE-MEDIA-EXPORT-SAFETY",
-      "seconds": 0.086,
+      "seconds": 0.077,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -612,7 +509,7 @@
     },
     {
       "id": "NATIVE-MEDIA-POSTERS",
-      "seconds": 0.089,
+      "seconds": 0.077,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -627,7 +524,7 @@
     },
     {
       "id": "NATIVE-MEDIA-YIELD",
-      "seconds": 0.087,
+      "seconds": 0.085,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -642,7 +539,7 @@
     },
     {
       "id": "NOTE-DECODE",
-      "seconds": 13.851,
+      "seconds": 13.499,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -652,8 +549,8 @@
     },
     {
       "id": "NOTE-DECODE-FULL",
-      "seconds": 50.006,
-      "status": "timeout",
+      "seconds": 34.627,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/contracts"
@@ -662,7 +559,7 @@
     },
     {
       "id": "Q1-SETUP",
-      "seconds": 0.086,
+      "seconds": 0.075,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -672,7 +569,7 @@
     },
     {
       "id": "R1-RELEASE-SIM",
-      "seconds": 0.084,
+      "seconds": 0.074,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -726,7 +623,7 @@
     },
     {
       "id": "REM-DST",
-      "seconds": 3.344,
+      "seconds": 3.3,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -752,7 +649,7 @@
     },
     {
       "id": "REM-STORE-DECODE",
-      "seconds": 24.431,
+      "seconds": 20.576,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -762,7 +659,7 @@
     },
     {
       "id": "REM-STORE-READ",
-      "seconds": 3.601,
+      "seconds": 4.066,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -849,7 +746,7 @@
     },
     {
       "id": "USE-ACTION-PROBE",
-      "seconds": 0.079,
+      "seconds": 0.076,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -860,7 +757,7 @@
     },
     {
       "id": "USE-SEGB-DECODE",
-      "seconds": 0.078,
+      "seconds": 0.075,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -870,7 +767,7 @@
     },
     {
       "id": "VM-CAPTURE",
-      "seconds": 0.089,
+      "seconds": 0.085,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -880,7 +777,7 @@
     },
     {
       "id": "VMEMO-CAPTURE",
-      "seconds": 0.086,
+      "seconds": 0.088,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -890,7 +787,7 @@
     },
     {
       "id": "VMEMO-LATE-ASSETS",
-      "seconds": 0.088,
+      "seconds": 0.087,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -919,14 +816,13 @@
       "blocked_on": [
         "harness: semantic product helper NormalizeContactHandle",
         "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
         "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
         "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
       ]
     },
     {
       "id": "WEB-REM-PARITY",
-      "seconds": 0.08,
+      "seconds": 0.079,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -935,6 +831,7 @@
       "blocked_on": []
     }
   ],
-  "artifact_source_head": "05de2f4b30ae4b762493abb3489ea7822865d721",
-  "artifact_sha256": "8f057f84177e9840a97caf1f58e7d1a8f8be1b31b53bc4d14ec8164f709be7fd"
+  "artifact_source_head": "3a5e6eb01fe6e03f5b1105a2b6b741134d7dd08f",
+  "artifact_sha256": "54a6616b9942853bf92ec0c68e450b39bd03b4889df9cec6ad513cfd3debf22c",
+  "harness_source_head": "3a5e6eb01fe6e03f5b1105a2b6b741134d7dd08f plus Health binary fixture"
 }

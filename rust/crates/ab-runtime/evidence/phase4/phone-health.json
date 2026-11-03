@@ -1,0 +1,236 @@
+{
+  "artifact": {
+    "head": "3a5e6eb01fe6e03f5b1105a2b6b741134d7dd08f",
+    "sha256": "54a6616b9942853bf92ec0c68e450b39bd03b4889df9cec6ad513cfd3debf22c"
+  },
+  "phone_checkout_head": "159cff434ec7cdda260c68797aa327e805e0ddd4",
+  "qualified": false,
+  "remaining_product_gap": "State-owned atomic HealthBatch stream/capture transaction; runtime ingest_health returns Unavailable until this API exists",
+  "proofs": [
+    {
+      "kind": "go_control",
+      "summary": {
+        "id": "APP-HEALTH-SIM",
+        "seconds": 7.246,
+        "status": "pass",
+        "implementation": "gateway=go"
+      },
+      "assertions": [
+        {
+          "name": "isolated_home",
+          "passed": true
+        },
+        {
+          "name": "swift_capture_build",
+          "passed": true
+        },
+        {
+          "name": "anchored_retry_restart_deletion",
+          "passed": true
+        },
+        {
+          "name": "binary_gateway_fixture",
+          "passed": true
+        },
+        {
+          "name": "health_read_scope",
+          "passed": true
+        },
+        {
+          "name": "signed_capture",
+          "passed": true
+        },
+        {
+          "name": "retry_deduplicated",
+          "passed": true
+        },
+        {
+          "name": "altered_retry_rejected",
+          "passed": true
+        },
+        {
+          "name": "sequence_gap_rejected",
+          "passed": true
+        },
+        {
+          "name": "sample_record",
+          "passed": true
+        },
+        {
+          "name": "summary_scope_denied",
+          "passed": true
+        },
+        {
+          "name": "day_summary",
+          "passed": true
+        },
+        {
+          "name": "week_summary",
+          "passed": true
+        },
+        {
+          "name": "sleep_stage_capture",
+          "passed": true
+        },
+        {
+          "name": "sleep_stage_clipped_to_day",
+          "passed": true
+        },
+        {
+          "name": "sleep_deletion",
+          "passed": true
+        },
+        {
+          "name": "signed_deletion",
+          "passed": true
+        },
+        {
+          "name": "deletion_record",
+          "passed": true
+        },
+        {
+          "name": "deleted_excluded",
+          "passed": true
+        },
+        {
+          "name": "workouts_capture",
+          "passed": true
+        },
+        {
+          "name": "day_unitless_workouts_accumulate",
+          "passed": true
+        },
+        {
+          "name": "week_unitless_workouts_accumulate",
+          "passed": true
+        },
+        {
+          "name": "digest",
+          "passed": true,
+          "detail": "8604107d250c45fcf6cbdde3d705659c316a92c2dc740e124560af526a6d82e8"
+        },
+        {
+          "name": "credential_backend_override_restored",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "kind": "rust_product_failure",
+      "summary": {
+        "id": "APP-HEALTH-SIM",
+        "seconds": 5.926,
+        "status": "fail",
+        "implementation": "gateway=rust",
+        "required_features": [
+          "internal/applepeer",
+          "internal/blobs",
+          "internal/contracts",
+          "internal/iphone",
+          "internal/state",
+          "internal/trust"
+        ],
+        "blocked_on": []
+      },
+      "assertions": [
+        {
+          "name": "isolated_home",
+          "passed": true
+        },
+        {
+          "name": "swift_capture_build",
+          "passed": true
+        },
+        {
+          "name": "anchored_retry_restart_deletion",
+          "passed": true
+        },
+        {
+          "name": "binary_gateway_fixture",
+          "passed": true
+        },
+        {
+          "name": "health_read_scope",
+          "passed": true
+        },
+        {
+          "name": "signed_capture",
+          "passed": false
+        },
+        {
+          "name": "retry_deduplicated",
+          "passed": false
+        },
+        {
+          "name": "altered_retry_rejected",
+          "passed": true
+        },
+        {
+          "name": "sequence_gap_rejected",
+          "passed": true
+        },
+        {
+          "name": "sample_record",
+          "passed": false
+        },
+        {
+          "name": "summary_scope_denied",
+          "passed": true
+        },
+        {
+          "name": "day_summary",
+          "passed": false
+        },
+        {
+          "name": "week_summary",
+          "passed": false
+        },
+        {
+          "name": "sleep_stage_capture",
+          "passed": false
+        },
+        {
+          "name": "sleep_stage_clipped_to_day",
+          "passed": false
+        },
+        {
+          "name": "sleep_deletion",
+          "passed": false
+        },
+        {
+          "name": "signed_deletion",
+          "passed": false
+        },
+        {
+          "name": "deletion_record",
+          "passed": false
+        },
+        {
+          "name": "deleted_excluded",
+          "passed": true
+        },
+        {
+          "name": "workouts_capture",
+          "passed": false
+        },
+        {
+          "name": "day_unitless_workouts_accumulate",
+          "passed": false
+        },
+        {
+          "name": "week_unitless_workouts_accumulate",
+          "passed": false
+        },
+        {
+          "name": "digest",
+          "passed": true,
+          "detail": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "name": "credential_backend_override_restored",
+          "passed": true
+        }
+      ]
+    }
+  ]
+}

@@ -98,7 +98,7 @@ func ownerGatewaySimScenario(s Scenario) bool {
 
 func phoneGatewaySimScenario(s Scenario) bool {
 	switch s.ID {
-	case "APP-LOC-SIM", "APP-PAIR-SIM", "APP-DEVICE-SIM", "APP-MOTION-SIM", "APP-HEALTH-WRITE-SIM", "APP-ALARM-SIM", "APP-SHELL-SIM", "APP-SCREENTIME-SIM":
+	case "APP-HEALTH-SIM", "APP-LOC-SIM", "APP-PAIR-SIM", "APP-DEVICE-SIM", "APP-MOTION-SIM", "APP-HEALTH-WRITE-SIM", "APP-ALARM-SIM", "APP-SHELL-SIM", "APP-SCREENTIME-SIM":
 		return true
 	default:
 		return false

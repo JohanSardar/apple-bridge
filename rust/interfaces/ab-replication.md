@@ -22,3 +22,9 @@ Steady-state Batch frames reserve their encoded byte size from the negotiated cr
 ## G-F feed fault instrumentation request
 
 CORE-BLOB-CORRUPT and CORE-BLOB-INTERRUPT now execute the Rust gateway and converge blob bytes, but fail corruption_detected_and_refetched and interrupted_halfway_through_binary_chunk. The unchanged world supplies APPLE_BRIDGE_LAB_BLOB_CORRUPT=<owned one-shot marker>, APPLE_BRIDGE_LAB_BLOB_SLOW=1 and APPLE_BRIDGE_LAB_BLOB_CUT_WINDOW=<owned marker>. The Rust feed server lacks the Go lab-only wire fault hooks. Please implement these behind a lab feature and expose runtime wiring without changing production frames. Do not weaken the counters or interrupt boundary assertions.
+
+## G-F reverse-dial command and status findings
+
+CORE-GATEWAY-DIALS successfully replicates records, but commands over that feed fail. Server::upstream only routes UploadControl to the provided UploadHandler; CommandRequest falls through to the normal feed frame switch and closes the connection. Runtime Forward already recognizes command requests by method and verifies delegation before calling LocalGateway. Route authenticated CommandRequest through that existing handler as well, retaining its bounded response behavior. This also matches the Rust client's exchange_feed_command, which sends CommandRequest.
+
+The gateway's public replica.status lacks dial_replicas. Runtime status assembly needs a Server-owned snapshot of actual per-replica dial state/attempt counters (including revoked rows) to publish; it must not synthesize zero attempt counts or infer transport health from credentials. Expose a read-only snapshot API so G-F can wire this into the shared State status.
