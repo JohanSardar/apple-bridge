@@ -46,7 +46,8 @@ pub(super) fn in_window(s: &State, record: &Value) -> bool {
     a < right.timestamp() && b > left.timestamp()
 }
 
-pub(super) fn view(s: &State, records: Vec<Value>) -> Vec<Value> {
+pub(super) fn view(s: &State, mut records: Vec<Value>) -> Vec<Value> {
+    records.sort_by_key(|record| record["collection"] != "calendar.calendar");
     records
         .into_iter()
         .map(|mut record| {

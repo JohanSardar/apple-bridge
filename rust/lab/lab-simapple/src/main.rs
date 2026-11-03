@@ -438,7 +438,10 @@ fn http(mut stream: UnixStream, state: &Shared, tx: &mpsc::Sender<Request>) -> R
     };
     let (status, result) = match control(state, tx, &route, input) {
         Ok(value) => (200, value),
-        Err(err) => (400, json!({"error":err.to_string()})),
+        Err(err) => {
+            eprintln!("control {route}: {err}");
+            (400, json!({"error":err.to_string()}))
+        }
     };
     let body = serde_json::to_vec(&result)?;
     write!(
