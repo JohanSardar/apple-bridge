@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/JohanSardar/apple-bridge/internal/trust"
+	"github.com/JohanSardar/apple-bridge/lab/wire"
 )
 
 func (w *World) AddRelayReplica(scope, publicIP, probe string) error {
@@ -31,7 +31,7 @@ func (w *World) AddRelayReplica(scope, publicIP, probe string) error {
 	if err != nil {
 		return err
 	}
-	pair, err := trust.DecodePairCode(encoded)
+	pair, err := wire.DecodePairCode(encoded, time.Now())
 	code := pair.Address
 	if err != nil {
 		return err
