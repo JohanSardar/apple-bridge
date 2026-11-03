@@ -77,7 +77,11 @@ fn native_binary(
         return None;
     }
     let directory = native_directory();
-    evidence.check("native_output", directory.is_some(), "native output directory");
+    evidence.check(
+        "native_output",
+        directory.is_some(),
+        "native output directory",
+    );
     directory.map(|d| d.join(target))
 }
 
@@ -125,7 +129,11 @@ fn put(world: &World, kind: &str, version: u64) -> Result<()> {
 
 fn records(client: &Client) -> Option<Vec<Value>> {
     let out = client
-        .call("records.query", &json!({"collection":"files.item","limit":10}), 10)
+        .call(
+            "records.query",
+            &json!({"collection":"files.item","limit":10}),
+            10,
+        )
         .ok()??;
     out["records"].as_array().cloned()
 }
@@ -139,7 +147,11 @@ fn gateway_flow(world: &World, evidence: &mut Evidence) -> Result<()> {
         evidence.check(
             &format!("selected_gateway_capture_{version}"),
             sent.is_ok(),
-            &sent.as_ref().err().map(ToString::to_string).unwrap_or_default(),
+            &sent
+                .as_ref()
+                .err()
+                .map(ToString::to_string)
+                .unwrap_or_default(),
         );
         if sent.is_err() {
             return Ok(());
@@ -212,7 +224,9 @@ pub fn shortcuts_actions(world: &mut World, _: &Value, evidence: &mut Evidence) 
     let gated = denied
         .call_raw("shortcuts.actions", &json!({"args":{}}), 10)?
         .is_some_and(|(status, _)| status == 403);
-    let readable = client.call("shortcuts.actions", &json!({"args":{}}), 10).is_ok();
+    let readable = client
+        .call("shortcuts.actions", &json!({"args":{}}), 10)
+        .is_ok();
     evidence.check(
         "query_registered",
         gated && readable,
@@ -236,12 +250,17 @@ pub fn shortcuts_actions(world: &mut World, _: &Value, evidence: &mut Evidence) 
         .and_then(|o| o["result_json"]["items"].as_array());
     evidence.check(
         "public_actions",
-        out.as_ref().is_some_and(|o| o["result_json"]["complete"] == true)
+        out.as_ref()
+            .is_some_and(|o| o["result_json"]["complete"] == true)
             && items.is_some_and(|i| i.len() == 1 && i[0]["identifier"] == "Export"),
         "one complete Export action",
     );
     let rejected = client
-        .call("shortcuts.actions", &json!({"args":{"path":"/etc/passwd"}}), 10)?
+        .call(
+            "shortcuts.actions",
+            &json!({"args":{"path":"/etc/passwd"}}),
+            10,
+        )?
         .is_none();
     evidence.check("caller_paths_rejected", rejected, "path argument rejected");
     let Some(binary) = native_binary(
@@ -258,6 +277,10 @@ pub fn shortcuts_actions(world: &mut World, _: &Value, evidence: &mut Evidence) 
         return Ok(());
     };
     let (ok, _) = run_native(&binary, &["sim"]);
-    evidence.check("bounded_metadata_discovery", ok, "native metadata discovery");
+    evidence.check(
+        "bounded_metadata_discovery",
+        ok,
+        "native metadata discovery",
+    );
     Ok(())
 }
