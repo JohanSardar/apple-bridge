@@ -53,11 +53,30 @@ pub enum Error {
     Invalid,
     #[error("credential store unavailable")]
     Unavailable,
+    #[error(transparent)]
+    CredentialStore(#[from] CredentialStoreError),
     #[error("invalid identity: {0}")]
     Identity(String),
     #[error(transparent)]
     Http(#[from] reqwest::Error),
 }
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CredentialStoreError {
+    pub code: String,
+    pub store: String,
+    pub remedy: String,
+    pub retryable: bool,
+}
+impl std::fmt::Display for CredentialStoreError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}: {} credential store unavailable; {}",
+            self.code, self.store, self.remedy
+        )
+    }
+}
+impl std::error::Error for CredentialStoreError {}
 pub fn fingerprint(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
 }

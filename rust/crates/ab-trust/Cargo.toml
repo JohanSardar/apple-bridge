@@ -14,6 +14,7 @@ serde_json.workspace = true
 thiserror.workspace = true
 sha2.workspace = true
 ab-wire = { path = "../ab-wire" }
+ab-sys = { path = "../ab-sys" }
 rustls.workspace = true
 ed25519-dalek = { workspace = true, features = ["pkcs8", "pem"] }
 jiff.workspace = true
