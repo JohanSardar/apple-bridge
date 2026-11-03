@@ -14,10 +14,7 @@ fn submit(client: &Client, command: &Value, mcp: bool) -> Value {
     } else {
         client.call_raw(op, command, 40)
     };
-    reply
-        .ok()
-        .flatten()
-        .map_or(Value::Null, |(_, value)| value)
+    reply.ok().flatten().map_or(Value::Null, |(_, value)| value)
 }
 
 fn count(world: &World, command: &Value, expected: u64) -> bool {
@@ -38,7 +35,10 @@ fn truth_matches(world: &World, title: &str, op: &str) -> bool {
     };
     let mut matched = false;
     for observation in truth.as_array().into_iter().flatten() {
-        if observation["native_key"].as_str().unwrap_or_default().is_empty()
+        if observation["native_key"]
+            .as_str()
+            .unwrap_or_default()
+            .is_empty()
             || observation["collection"] != "reminders.reminder"
             || observation["data"]["title"] != title
         {
@@ -55,7 +55,12 @@ fn truth_matches(world: &World, title: &str, op: &str) -> bool {
     matched
 }
 
-pub fn parity(world: &World, gateway: &Client, list_id: &str, evidence: &mut Evidence) -> Result<()> {
+pub fn parity(
+    world: &World,
+    gateway: &Client,
+    list_id: &str,
+    evidence: &mut Evidence,
+) -> Result<()> {
     let mut results: Vec<String> = vec![];
     for protocol in ["rest", "mcp"] {
         let mcp = protocol == "mcp";
@@ -148,7 +153,12 @@ pub fn parity(world: &World, gateway: &Client, list_id: &str, evidence: &mut Evi
     Ok(())
 }
 
-pub fn localhost(world: &World, gateway: &Client, list_id: &str, evidence: &mut Evidence) -> Result<()> {
+pub fn localhost(
+    world: &World,
+    gateway: &Client,
+    list_id: &str,
+    evidence: &mut Evidence,
+) -> Result<()> {
     for protocol in ["rest", "mcp"] {
         for attack in ["no-token", "bad-host", "foreign-origin"] {
             let c = command(
@@ -167,7 +177,14 @@ pub fn localhost(world: &World, gateway: &Client, list_id: &str, evidence: &mut 
                 _ => vec![],
             };
             let status = gateway
-                .request_with(attack != "no-token", "POST", &path, &headers, Some(&body), 20)
+                .request_with(
+                    attack != "no-token",
+                    "POST",
+                    &path,
+                    &headers,
+                    Some(&body),
+                    20,
+                )
                 .map(|reply| reply.status);
             let rejected = status.is_ok_and(|code| code == 401 || code == 403);
             evidence.check(

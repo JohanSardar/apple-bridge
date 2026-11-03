@@ -30,6 +30,7 @@ pub mod relay_tls;
 pub mod reminders;
 pub mod replicas;
 pub mod restart;
+pub mod robust;
 pub mod search;
 pub mod shortcuts;
 pub mod watch;
@@ -69,6 +70,8 @@ pub fn registry() -> Registry {
             messages_a::start(world, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && labcore::SCENARIOS.contains(&id) {
             labcore::start_world(world, id, usize::try_from(replicas).unwrap_or(0))?;
+        } else if replicas != 0 && robust::SCENARIOS.contains(&id) {
+            replicas::start(world, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && !PORTED.contains(&id) && !self_started {
             return Err(Error::Invalid(format!("replica world not ported for {id}")));
         }
@@ -102,7 +105,7 @@ pub fn registry() -> Registry {
     registry.register("media_variants", media::media_variants);
     registry.register("messages_commands", cleanup::messages_commands);
     registry.register("files_native", files_native::files_native);
-    registry.register("robustness", packaging::robustness);
+    registry.register("robustness", robust::dispatch);
     registry.register("command_journey", journey::command_journey);
     registry.register("files_transform", shortcuts::files_transform);
     registry.register("shortcuts_actions", shortcuts::shortcuts_actions);

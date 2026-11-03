@@ -48,6 +48,16 @@ fn base64(bytes: &[u8]) -> String {
     out
 }
 
+pub fn digests(fixture: &Fixture) -> Value {
+    Value::Object(
+        fixture
+            .bytes
+            .iter()
+            .map(|(digest, bytes)| (digest.clone(), json!(hex::encode(Sha256::digest(bytes)))))
+            .collect(),
+    )
+}
+
 pub fn handles(fixture: &Fixture) -> Value {
     Value::Object(
         fixture
