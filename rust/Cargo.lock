@@ -2331,6 +2331,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "lab-adapters"
+version = "0.0.0"
+dependencies = [
+ "hex",
+ "lab-runner",
+ "lab-wire",
+ "lab-world",
+ "serde_json",
+ "serde_yaml",
+ "sha2 0.10.9",
+]
+
+[[package]]
 name = "lab-runner"
 version = "0.0.0"
 dependencies = [
@@ -2349,6 +2362,7 @@ dependencies = [
  "lab-wire",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "thiserror 2.0.21",
 ]
 

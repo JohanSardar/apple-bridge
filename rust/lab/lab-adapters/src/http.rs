@@ -43,7 +43,12 @@ impl Client {
     ) -> Result<Reply> {
         let mut command = Command::new("curl");
         command
-            .args(["--silent", "--show-error", "--max-time", &seconds.to_string()])
+            .args([
+                "--silent",
+                "--show-error",
+                "--max-time",
+                &seconds.to_string(),
+            ])
             .args(["-X", method, "-H"])
             .arg(format!("Authorization: Bearer {}", self.token));
         for (name, value) in headers {
@@ -58,10 +63,8 @@ impl Client {
             .stdin(Stdio::piped())
             .stdout(Stdio::piped());
         let mut child = command.spawn()?;
-        if let Some(mut stdin) = child.stdin.take() {
-            if let Some(body) = body {
-                stdin.write_all(body)?;
-            }
+        if let (Some(mut stdin), Some(body)) = (child.stdin.take(), body) {
+            stdin.write_all(body)?;
         }
         let output = child.wait_with_output()?;
         if !output.status.success() || output.stdout.len() < 3 {
@@ -93,7 +96,7 @@ impl Client {
                 String::from_utf8_lossy(&reply.body[..reply.body.len().min(80)])
             ))
         })?;
-        accepted(&reply, value)
+        Ok(accepted(&reply, value))
     }
     pub fn call_mcp(&self, operation: &str, input: &Value, seconds: u64) -> Result<Option<Value>> {
         let body = serde_json::to_vec(&json!({
@@ -115,28 +118,24 @@ impl Client {
         )?;
         let text = String::from_utf8(reply.body.clone())
             .map_err(|_| Error::Invalid("non UTF-8 MCP body".into()))?;
-        let envelope = match serde_json::from_str::<Value>(&text) {
-            Ok(value) => value,
-            Err(_) => {
-                let messages = lab_wire::sse_messages(&text)
-                    .map_err(|e| Error::Invalid(format!("MCP stream: {e}")))?;
-                let message = messages
-                    .iter()
-                    .find(|m| m.result.is_some() || m.error.is_some())
-                    .ok_or_else(|| Error::Invalid("MCP stream without response".into()))?;
-                serde_json::to_value(message)?
-            }
+        let envelope = if let Ok(value) = serde_json::from_str::<Value>(&text) {
+            value
+        } else {
+            let messages = lab_wire::sse_messages(&text)
+                .map_err(|e| Error::Invalid(format!("MCP stream: {e}")))?;
+            let message = messages
+                .iter()
+                .find(|m| m.result.is_some() || m.error.is_some())
+                .ok_or_else(|| Error::Invalid("MCP stream without response".into()))?;
+            serde_json::to_value(message)?
         };
         let content = envelope["result"]["structuredContent"].clone();
         if content.is_null() {
             return Ok(None);
         }
-        accepted(&reply, content)
+        Ok(accepted(&reply, content))
     }
 }
-fn accepted(reply: &Reply, value: Value) -> Result<Option<Value>> {
-    if !value["error"].is_null() || reply.status != 200 {
-        return Ok(None);
-    }
-    Ok(Some(value))
+fn accepted(reply: &Reply, value: Value) -> Option<Value> {
+    (value["error"].is_null() && reply.status == 200).then_some(value)
 }

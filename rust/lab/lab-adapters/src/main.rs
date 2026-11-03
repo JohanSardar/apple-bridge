@@ -33,8 +33,9 @@ fn run() -> Result<bool, Box<dyn std::error::Error>> {
             gateway: gateway.clone(),
             simapple: simapple.clone(),
             directory: output.join(format!("world-{index}")),
-            scope: "messages:read,reminders:read,calendar:read,contacts:read,notes:read,system:read"
-                .into(),
+            scope:
+                "messages:read,reminders:read,calendar:read,contacts:read,notes:read,system:read"
+                    .into(),
         })?;
         let evidence = registry.run(&scenario, &mut world);
         passed &= evidence.passed;

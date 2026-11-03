@@ -5,7 +5,8 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::{fs, time::Instant};
 
-const SCOPE: &str = "messages:read,reminders:read,calendar:read,contacts:read,notes:read,system:read";
+const SCOPE: &str =
+    "messages:read,reminders:read,calendar:read,contacts:read,notes:read,system:read";
 const BUDGET_MS: f64 = 200.0;
 
 fn query(args: &Value, deadline: i64) -> Result<Value> {
@@ -30,15 +31,25 @@ fn roundtrip(world: &World, evidence: &mut Evidence) -> Result<()> {
         results_ok && samples.len() == 10,
         "ten REST results echo their query ids",
     );
-    evidence.check("echo_equal", values_ok, "result_json equals the query arguments");
+    evidence.check(
+        "echo_equal",
+        values_ok,
+        "result_json equals the query arguments",
+    );
     let max = samples.iter().copied().fold(0.0, f64::max);
-    evidence.check("latency_budget", max < BUDGET_MS, &format!("max {max:.1} ms"));
+    evidence.check(
+        "latency_budget",
+        max < BUDGET_MS,
+        &format!("max {max:.1} ms"),
+    );
     let q = query(&args, 1000)?;
     let rest = client.call("test.echo", &q, 20)?;
     let mcp = client.call_mcp("test.echo", &q, 20)?;
     evidence.check(
         "mcp_parity",
-        rest.as_ref().zip(mcp.as_ref()).is_some_and(|(a, b)| a["result_json"] == b["result_json"]),
+        rest.as_ref()
+            .zip(mcp.as_ref())
+            .is_some_and(|(a, b)| a["result_json"] == b["result_json"]),
         "REST and MCP result_json agree",
     );
     let audit = fs::read_to_string(world.gateway_home.join("commands-audit.jsonl")).ok();
@@ -56,21 +67,34 @@ fn roundtrip(world: &World, evidence: &mut Evidence) -> Result<()> {
                 && !row["blob_bytes"].is_null();
         }
     }
-    evidence.check("audit_names_and_sizes_only", audit_ok && found, "audit rows carry names and sizes only");
+    evidence.check(
+        "audit_names_and_sizes_only",
+        audit_ok && found,
+        "audit rows carry names and sizes only",
+    );
     let invalid = client.call("test.echo", &query(&args, -1)?, 20)?;
-    evidence.check("invalid_rejected", invalid.is_none(), "negative deadline is rejected");
+    evidence.check(
+        "invalid_rejected",
+        invalid.is_none(),
+        "negative deadline is rejected",
+    );
     Ok(())
 }
 fn blob(world: &World, evidence: &mut Evidence) -> Result<()> {
     let client = Client::new(world, SCOPE)?;
     let q = query(&json!({"size":5_242_880}), 10_000)?;
     let out = client.call("test.blob", &q, 20)?;
-    let blobs = out.as_ref().and_then(|o| o["blobs"].as_array()).filter(|b| b.len() == 1);
+    let blobs = out
+        .as_ref()
+        .and_then(|o| o["blobs"].as_array())
+        .filter(|b| b.len() == 1);
     evidence.check("blob_result", blobs.is_some(), "query returned one blob");
     let Some(digest) = blobs.and_then(|b| b[0]["digest"].as_str()) else {
         return Ok(());
     };
-    let id = q["id"].as_str().ok_or_else(|| Error::Invalid("query id".into()))?;
+    let id = q["id"]
+        .as_str()
+        .ok_or_else(|| Error::Invalid("query id".into()))?;
     let path = format!("/v1/blobs/{digest}?record={id}");
     let full = client.request("GET", &path, &[], None, 30)?;
     evidence.check(
@@ -88,13 +112,19 @@ fn blob(world: &World, evidence: &mut Evidence) -> Result<()> {
     );
     let scoped = Client::new(world, "calendar:read")?;
     let denied = scoped.request("GET", &path, &[], None, 30)?;
-    evidence.check("blob_scope", denied.status == 403, "missing grant is forbidden");
+    evidence.check(
+        "blob_scope",
+        denied.status == 403,
+        "missing grant is forbidden",
+    );
     Ok(())
 }
 pub fn queries(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> {
     match evidence.scenario.as_str() {
         "CORE-QUERY-ROUNDTRIP" => roundtrip(world, evidence),
         "CORE-QUERY-BLOB" => blob(world, evidence),
-        other => Err(Error::Invalid(format!("queries variant not ported: {other}"))),
+        other => Err(Error::Invalid(format!(
+            "queries variant not ported: {other}"
+        ))),
     }
 }
