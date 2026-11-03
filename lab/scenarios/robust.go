@@ -309,6 +309,21 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 			add("replica_killed_during_snapshot", true)
 		}
 		overlap := false
+		if name == "snapshot-under-load" {
+			status, statusErr := w.Status(w.Replicas[0])
+			if statusErr != nil || w.PauseReplica(0) != nil {
+				return fail("snapshot_replica_paused")
+			}
+			if !change("during-frozen-snapshot", 1) || w.FlushCaptures(5*time.Second) != nil {
+				w.ResumeReplica(0)
+				return fail("frozen_snapshot_change_committed")
+			}
+			head, headErr := w.Cursor(w.Gateway)
+			overlap = headErr == nil && status.State == "snapshot" && head.Sequence > status.SnapshotSequence
+			if w.ResumeReplica(0) != nil {
+				return fail("snapshot_replica_resumed")
+			}
+		}
 		for i := 0; i < 1000; i++ {
 			if !change(fmt.Sprintf("during-snapshot-%d", i), 1) {
 				return fail("concurrent_changes")

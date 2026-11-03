@@ -23,6 +23,8 @@ import (
 
 type Store struct {
 	calendarCache  calendarRangeCache
+	reminderCache  readModelPageCache[contracts.ReminderItemsResult]
+	threadCache    readModelPageCache[contracts.ThreadResult]
 	pendingCapture *contracts.Batch
 	BlobProtection func(context.Context, contracts.ReferenceSet) error
 	BlobDelta      func(context.Context, contracts.ReferenceSet, bool) error

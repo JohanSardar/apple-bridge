@@ -970,3 +970,17 @@ func designatedRequirement(output []byte) string {
 	}
 	return ""
 }
+
+func nativeCheck(ctx context.Context, target string) (string, error) {
+	build := exec.CommandContext(ctx, "packaging/dev/build-native.sh")
+	build.Env = append(os.Environ(), "APPLE_BRIDGE_NATIVE_TARGET="+target, "APPLE_BRIDGE_NATIVE_LAB=1")
+	if output, err := build.CombinedOutput(); err != nil {
+		os.Stderr.Write(output)
+		return "", err
+	}
+	output, err := os.ReadFile("native/.build/native-output-1")
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(strings.TrimSpace(string(output)), target), nil
+}

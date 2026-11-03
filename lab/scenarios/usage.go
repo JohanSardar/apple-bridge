@@ -12,7 +12,6 @@ import (
 	"math"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"reflect"
 	"strings"
 	"time"
@@ -78,12 +77,15 @@ func runUsageData(ctx context.Context, s Scenario, level string) Evidence {
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	fail := func(name string) Evidence { add(name, false); return e }
 	if s.ID == "USE-SEGB-DECODE" {
-		output, err := os.ReadFile("native/.build/native-output-1")
+		binary, err := nativeCheck(ctx, "UsageChecks")
 		if err != nil {
 			return fail("native_decoder_built")
 		}
-		cmd := exec.CommandContext(ctx, filepath.Join(strings.TrimSpace(string(output)), "UsageChecks"), "lab/fixtures/usage")
-		err = cmd.Run()
+		cmd := exec.CommandContext(ctx, binary, "lab/fixtures/usage")
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			os.Stderr.Write(output)
+		}
 		add("scrubbed_segb_and_day_math", err == nil)
 		e.Passed = err == nil
 		return e

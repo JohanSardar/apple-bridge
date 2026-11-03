@@ -16,10 +16,10 @@ func BuildLegacy(ctx context.Context) error {
 	if prebuilt(ctx) {
 		return requireExecutable("bin/bridge-feed1")
 	}
-	if err := os.MkdirAll("/tmp/ablab", 0700); err != nil {
+	if err := os.MkdirAll(labDirectory(), 0700); err != nil {
 		return err
 	}
-	directory, err := os.MkdirTemp("/tmp/ablab", "legacy-build-*")
+	directory, err := os.MkdirTemp(labDirectory(), "legacy-build-*")
 	if err != nil {
 		return err
 	}

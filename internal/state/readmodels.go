@@ -347,6 +347,15 @@ func (s *Store) Thread(ctx context.Context, v trust.Visibility, q contracts.Thre
 	if err != nil || !v[contracts.Messages] {
 		return out, err
 	}
+	key, _ := json.Marshal(struct {
+		Query      contracts.ThreadQuery
+		Visibility trust.Visibility
+	}{q, v})
+	cacheKey := string(key)
+	revision := fmt.Sprintf("%s/%d/%d", out.Cursor.Epoch, out.Cursor.SubscriptionRevision, out.Cursor.Sequence)
+	if cached, ok := s.threadCache.get(revision, cacheKey, copyThreadResult); ok {
+		return cached, nil
+	}
 	if _, err = modelRecord(ctx, tx, "messages.chat", q.ChatID); err != nil {
 		return out, err
 	}
@@ -480,6 +489,7 @@ func (s *Store) Thread(ctx context.Context, v trust.Visibility, q contracts.Thre
 			out.After = encodeView("thread", scope, at, last.ID)
 		}
 	}
+	s.threadCache.put(revision, cacheKey, out, copyThreadResult, threadResultBytes)
 	return out, nil
 }
 func foldReactions(records []contracts.Record) []contracts.Record {

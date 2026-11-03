@@ -278,7 +278,7 @@ func newEnvironment(ctx context.Context, level string, replicas, seed int, nativ
 	}
 	id := strings.ToLower(contracts.NewID(""))
 	id = id[len(id)-10:]
-	w := &World{Dir: filepath.Join("/tmp/ablab", id), Level: level, Native: native, bridge: filepath.Join(root, "bin", "bridge"), ctx: ctx, goBridge: filepath.Join(root, "bin", "bridge")}
+	w := &World{Dir: filepath.Join(labDirectory(), id), Level: level, Native: native, bridge: filepath.Join(root, "bin", "bridge"), ctx: ctx, goBridge: filepath.Join(root, "bin", "bridge")}
 	if len(blobOptions) > 0 {
 		w.blobOptions = blobOptions[0]
 	}
@@ -751,6 +751,9 @@ func (w *World) Status(e Endpoint) (ReplicaStatus, error) {
 
 func (w *World) ScopedToken(e Endpoint, scope string) (string, error) {
 	binary := w.endpointBinary(e)
+	if filepath.Base(binary) == "bridge-feed1" {
+		binary = w.goBridge
+	}
 	return w.execute(e.Remote, binary, "token", "create", "--home", e.Home, "--scope", scope)
 }
 
@@ -945,4 +948,11 @@ func (w *World) RecordsAt(e Endpoint) ([]contracts.Record, contracts.Cursor, err
 		}
 		after = page.Next
 	}
+}
+
+func labDirectory() string {
+	if root := os.Getenv("APPLE_BRIDGE_LAB_ROOT"); root != "" {
+		return root
+	}
+	return "/tmp/ablab"
 }

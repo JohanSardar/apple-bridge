@@ -38,6 +38,7 @@ func automaticHealthyChecks(ctx context.Context, w *world.World, evidence *Evide
 		evidence.Metrics["automatic_probe_stage"] = fmt.Sprintf("token_%d", i)
 		token, err := w.ScopedToken(endpoint, "system:read")
 		if err != nil {
+			evidence.Assertions = append(evidence.Assertions, Assertion{Name: "automatic_scoped_token", Detail: err.Error()})
 			return false
 		}
 		endpoint.Token = token

@@ -1,0 +1,99 @@
+{
+  "implementations": {
+    "gateway": "go",
+    "replica": "go"
+  },
+  "impl": "go",
+  "host_conditions": {
+    "quiet": true,
+    "summary": "ubuntu: load=[10.65 7.81 5.89] cpu_idle=42% cpus=8 other_heavy=0"
+  },
+  "run_id": "relay-r0-relay-rotate-gated",
+  "network_path": "synthetic loopback only",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "RELAY-ROTATE-GATED",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-11-02T23:38:49.468499729Z",
+  "assertions": [
+    {
+      "name": "unknown_refused/enroll",
+      "passed": true
+    },
+    {
+      "name": "unknown_refused/rotate",
+      "passed": true
+    },
+    {
+      "name": "owner_enroll",
+      "passed": true
+    },
+    {
+      "name": "owner_rotate",
+      "passed": true
+    },
+    {
+      "name": "disabled_preserved",
+      "passed": true
+    },
+    {
+      "name": "restart_gate",
+      "passed": true
+    },
+    {
+      "name": "restart_disabled",
+      "passed": true
+    },
+    {
+      "name": "disabled_attach_refused",
+      "passed": true
+    },
+    {
+      "name": "missing_config_closed/enroll",
+      "passed": true
+    },
+    {
+      "name": "missing_config_closed/rotate",
+      "passed": true
+    },
+    {
+      "name": "invalid_config_closed",
+      "passed": true
+    },
+    {
+      "name": "denial_preserves_state",
+      "passed": true
+    },
+    {
+      "name": "permanent_revocation",
+      "passed": true
+    },
+    {
+      "name": "legacy_state_readable",
+      "passed": true
+    },
+    {
+      "name": "rollback_revoked",
+      "passed": true
+    },
+    {
+      "name": "challenge_throttle",
+      "passed": true
+    },
+    {
+      "name": "shared_enrollment_throttle",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": [
+    "ubuntu"
+  ]
+}

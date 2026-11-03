@@ -58,8 +58,11 @@ func blobJourney(ctx context.Context, w *world.World, id string, rows int, evide
 			return false
 		}
 		for _, endpoint := range append([]world.Endpoint{w.Gateway}, w.Replicas...) {
-			progress, err := blobProgress(ctx, endpoint)
-			check("one_protected_digest_for_duplicate_fields", err == nil && len(progress.Entries) == 1 && progress.Entries[digest].State == "offloaded")
+			err := w.Await(5*time.Second, func() bool {
+				progress, err := blobProgress(ctx, endpoint)
+				return err == nil && len(progress.Entries) == 1 && progress.Entries[digest].State == "offloaded"
+			})
+			check("one_protected_digest_for_duplicate_fields", err == nil)
 		}
 		return true
 	}

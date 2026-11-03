@@ -296,6 +296,9 @@ func runMessages(ctx context.Context, s Scenario, level string) Evidence {
 		add("wal_rotation_followed_by_insert", action("watcher-rearm", "after-rearm", 0))
 		add("poll_fallback_catches_disarmed_events", action("watcher-poll", "", 0) && await())
 		output, nativeErr := exec.CommandContext(ctx, "bash", "packaging/dev/check-messages-capture.sh").CombinedOutput()
+		if nativeErr != nil {
+			os.Stderr.Write(output)
+		}
 		add("production_native_watcher_fault_checks", nativeErr == nil && strings.TrimSpace(string(output)) == "all Messages capture checks passed")
 	case "MSG-PERMISSION-LOSS":
 		before, _ := w.Records(w.Gateway)

@@ -21,7 +21,7 @@ func runThreadOriginator(ctx context.Context, scenario Scenario, level string) E
 		baseMessages = 100000
 		datasetDescription = "canonical huge demo plus synthetic distant thread replies"
 	}
-	e := Evidence{RunID: contracts.NewID("run"), Scenario: scenario.ID, Level: level, GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Assertions: []Assertion{}, Latency: map[string]Latency{}, Hosts: []string{"air"}, Conditions: map[string]string{"dataset": datasetDescription, "transport": "REST, MCP and authenticated web.1"}, Metrics: map[string]any{"archive_base_messages": baseMessages, "archive_messages": baseMessages + 206, "filtered_items": 206, "page_limit": 200}}
+	e := Evidence{RunID: contracts.NewID("run"), Scenario: scenario.ID, Level: level, GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Assertions: []Assertion{}, Latency: map[string]Latency{}, Hosts: []string{"air"}, Conditions: map[string]string{"dataset": datasetDescription, "transport": "REST, MCP and authenticated changes SSE"}, Metrics: map[string]any{"archive_base_messages": baseMessages, "archive_messages": baseMessages + 206, "filtered_items": 206, "page_limit": 200}}
 	add := func(name string, passed bool) {
 		e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: passed})
 	}

@@ -32,7 +32,7 @@ def generate(manifest):
     entries = []
     for scenario in data['scenarios']:
         identity, feature = scenario['ID'], scenario['Feature']
-        candidates = sorted(Path('lab/scenarios').rglob(identity + '.yaml'))
+        candidates = sorted(p for p in Path('lab/scenarios').rglob('*.yaml') if re.search(r'^id:\s*' + re.escape(identity) + r'\s*$', p.read_text(), re.M))
         path = next((p for p in candidates if ('levels: [sim]' in p.read_text()) == ('sim' in scenario['Levels'])), candidates[0])
         declaration = features.get(feature, {})
         modules = declaration.get('modules', [])
@@ -75,7 +75,7 @@ def generate(manifest):
                 packages.add(dependency)
                 pending_packages.append(dependency)
         native_features = {'phone.read', 'recordings.read', 'safari.capture', 'usage.capture', 'usage.action_probe', 'core.permissions', 'core.shortcuts', 'helper.siri_intents', 'packaging.app', 'packaging.release', 'packaging.setup', 'iphone.alarms', 'iphone.screentime', 'iphone.health', 'iphone.health_write', 'iphone.location', 'iphone.live', 'iphone.device', 'iphone.motion', 'clock.pack'}
-        native = feature in native_features or identity in {'APP-NOTIFY-SIM', 'FOC-PHONE-SYNC', 'FOC-SIM', 'MSG-DECODE', 'MSG-DECODE-BALLOON', 'MSG-DECODE-FORMATTING', 'MSG-DELETE-VISIBILITY', 'MSG-READ-RICH-FIELDS', 'MSG-WATCHER-REARM', 'RELAY-ACME', 'RELAY-OWN-DOMAIN', 'CORE-SOURCE-SUPPORT', 'WEB-MEDIA-VARIANTS', 'CAP-SIM', 'FILES-TRANSFORM', 'MAIL-BODY', 'MAIL-CAPTURE', 'MAIL-COMMANDS', 'MAIL-IDLE', 'MAIL-LIVE', 'MAIL-NO-FALSE-DELETE', 'MSG-MEDIA-CLEANUP', 'REM-SECTIONS', 'SC-ACTIONS', 'SC-CAPTURE', 'SC-RUN', 'CAL-FUTURE-COUNT-MATH', 'CAL-HINT-COVERAGE', 'CAL-INVALIDATED-EVENT', 'CORE-DISK-FULL', 'FILE-CAPTURE', 'FILE-IDLE', 'USE-SEGB-DECODE', 'NOTE-DECODE', 'NOTE-DECODE-FULL', 'NOTE-DECODER', 'APP-SHELL-SIM', 'APP-CAPTURE-SIM', 'APP-DEVICE-SIM', 'APP-MOTION-SIM', 'APP-HEALTH-WRITE-SIM', 'REM-DST', 'NATIVE-MEDIA-YIELD', 'NATIVE-MEDIA-POSTERS', 'NATIVE-MEDIA-EXPORT-SAFETY', 'HELPER-SIGNED-APP-CACHE', 'REM-STORE-PERF', 'REM-STORE-READ', 'REM-STORE-DECODE'}
+        native = feature in native_features or identity in {'APP-NOTIFY-SIM', 'FOC-PHONE-SYNC', 'FOC-SIM', 'MSG-DECODE', 'MSG-DECODE-BALLOON', 'MSG-DECODE-FORMATTING', 'MSG-DELETE-VISIBILITY', 'MSG-READ-RICH-FIELDS', 'MSG-WATCHER-REARM', 'RELAY-ACME', 'RELAY-OWN-DOMAIN', 'CORE-SOURCE-SUPPORT', 'WEB-MEDIA-VARIANTS', 'CAP-SIM', 'FILES-TRANSFORM', 'MAIL-BODY', 'MAIL-CAPTURE', 'MAIL-COMMANDS', 'MAIL-IDLE', 'MAIL-LIVE', 'MAIL-NO-FALSE-DELETE', 'MSG-MEDIA-CLEANUP', 'REM-SECTIONS', 'SC-ACTIONS', 'SC-CAPTURE', 'SC-RUN', 'CAL-FUTURE-COUNT-MATH', 'CAL-HINT-COVERAGE', 'CAL-INVALIDATED-EVENT', 'CORE-DISK-FULL', 'FILE-CAPTURE', 'FILE-IDLE', 'USE-SEGB-DECODE', 'NOTE-DECODE', 'NOTE-DECODE-FULL', 'NOTE-DECODER', 'APP-SHELL-SIM', 'APP-CAPTURE-SIM', 'APP-DEVICE-SIM', 'APP-MOTION-SIM', 'APP-HEALTH-WRITE-SIM', 'REM-DST', 'NATIVE-MEDIA-YIELD', 'NATIVE-MEDIA-POSTERS', 'NATIVE-MEDIA-EXPORT-SAFETY', 'HELPER-SIGNED-APP-CACHE', 'REM-STORE-PERF', 'REM-STORE-READ', 'REM-STORE-DECODE', 'CAL-STORE-READ', 'WEB-REM-PARITY'}
         pending_swift = list(swift)
         while pending_swift:
             module = pending_swift.pop()
@@ -91,6 +91,12 @@ def generate(manifest):
             recommendation, reason = 'remove', 'Feature is explicitly dropped in features.yaml; owner must confirm retained compatibility need.'
         elif identity == 'RELAY-STREAMS':
             recommendation, reason = 'run-at-end', 'Its measured ten-minute stream observation is an integration soak; a 600-second outer limit was too short.'
+        elif identity == 'WEB-RM-THREAD':
+            recommendation, reason = 'run-at-end', 'The functional journey includes a 170000-message archive and a 10 ms p95 budget; preserve it as a serial end gate.'
+        elif identity in {'WEB-RM-CHATS', 'WEB-RM-REMINDERS-ITEMS', 'CAL-STORE-READ'}:
+            recommendation, reason = 'run-at-end', 'The functional journey embeds a 10-15 ms p95 benchmark; preserve all assertions in a serial end gate.'
+        elif identity == 'MSG-WATCHER-REARM':
+            recommendation, reason = 'run-at-end', 'Native watcher fault checks use short deadlines and failed in the default run while passing in isolation; retain as a serial end gate.'
         elif identity in timed_out:
             recommendation, reason = 'run-at-end', 'Observed a hard timeout; retain for isolated final diagnosis before Rust qualification.'
         elif re.search(r'IDLE|PERF|BENCH|SOAK|LATENCY', identity):
@@ -100,11 +106,9 @@ def generate(manifest):
         elif identity.startswith('WEB-') and feature.startswith('web.'):
             recommendation, reason = 'merge', 'Candidate overlap with API journey in this feature; compare assertions before consolidation.'
         overrides = {
-            'CORE-ITERATOR-POOL': ('remove', 'Targets retired /web/v1/live subscriptions; internal/web no longer registers that endpoint, while CORE-SNAPSHOT-POOL retains the backend pool journey.'),
-            'CORE-REPLICA-CAPTURE-OBSERVERS': ('convert', 'Preserve capture-observer assertions through feed/1; the current client opens the retired /web/v1/live endpoint.'),
-            'WEB-RM-THREAD-ORIGINATOR': ('convert', 'Preserve REST originator checks and replace the retired web.1 live-session branch with a binary feed observer.'),
+            'CORE-REPLICA-CAPTURE-OBSERVERS': ('convert', 'Capture-observer assertions use REST SSE, consent pages and replicated command records; convert remaining implementation imports before Rust qualification.'),
+            'WEB-RM-THREAD-ORIGINATOR': ('convert', 'REST/MCP originator checks and REST SSE observers preserve filtered windows; retain binary execution for Rust qualification.'),
             'WEB-AGENT-ACTIVITY': ('convert', 'Replace product state.Open activity inspection with a supported binary API or read-only SQLite oracle.'),
-            'CAL-STORE-READ': ('convert', 'Stale browser-level metadata blocks SIM loading; preserve the source-read journey with a binary driver.'),
             'WEB-CAL-WRITE': ('convert', 'Stale browser-level metadata blocks SIM loading; preserve Calendar write assertions in the binary journey.'),
             'WEB-REM-PARITY': ('convert', 'Stale browser-level metadata blocks SIM loading; preserve Reminders parity assertions in the binary journey.'),
         }

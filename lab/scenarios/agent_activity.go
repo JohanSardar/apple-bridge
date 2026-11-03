@@ -81,7 +81,7 @@ func runAgentActivity(ctx context.Context, w *world.World, add func(string, bool
 	add("activity_restart", w.RestartGateway() == nil)
 	resp, restarted, err := owner.activity("activity?principal=" + url.QueryEscape(agent.ID))
 	add("activity_survives_restart", err == nil && resp.StatusCode == 200 && bytes.Contains(restarted, []byte(ids[0])))
-	_, err = exec.CommandContext(ctx, "sqlite3", filepath.Join(w.Gateway.Home, "state.db"), "UPDATE agent_activity SET at=unixepoch()-91*86400 WHERE principal='"+agent.ID+"'").Output()
+	_, err = exec.CommandContext(ctx, "sqlite3", "-cmd", ".timeout 5000", filepath.Join(w.Gateway.Home, "state.db"), "UPDATE agent_activity SET at=unixepoch()-91*86400 WHERE principal='"+agent.ID+"'").Output()
 	resp, pruned, pruneErr := owner.activity("activity?principal=" + url.QueryEscape(agent.ID))
 	add("activity_retains_90_days", err == nil && pruneErr == nil && resp.StatusCode == 200 && bytes.Contains(pruned, []byte(`"activity":[]`)))
 	code, _ := world.Request(ctx, principal, "/web/v1/activity", nil, &out)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"slices"
 	"time"
 
@@ -38,6 +39,13 @@ func (s *Store) ReminderItems(ctx context.Context, visibility trust.Visibility, 
 	if err != nil || !visibility[contracts.Reminders] {
 		return result, err
 	}
+	today := time.Now().In(zone).Format(time.DateOnly)
+	key, _ := json.Marshal(query)
+	cacheKey := today + "/" + string(key)
+	revision := fmt.Sprintf("%s/%d/%d", result.Cursor.Epoch, result.Cursor.SubscriptionRevision, result.Cursor.Sequence)
+	if cached, ok := s.reminderCache.get(revision, cacheKey, copyReminderItems); ok {
+		return cached, nil
+	}
 	sections := map[string]contracts.ReminderSection{}
 	if query.List != "" {
 		list, err := modelRecord(ctx, tx, "reminders.list", query.List)
@@ -66,7 +74,6 @@ func (s *Store) ReminderItems(ctx context.Context, visibility trust.Visibility, 
 		return result, err
 	}
 	identityVerified := false
-	today := time.Now().In(zone).Format(time.DateOnly)
 	nodes := map[string]reminderNode{}
 	for _, record := range records {
 		var fields reminderFields
@@ -107,6 +114,7 @@ func (s *Store) ReminderItems(ctx context.Context, visibility trust.Visibility, 
 		result.Sections = append(result.Sections, contracts.ReminderSectionItems{Section: section, Items: reminderTree(nodes, groups[section.ID], attachments, query.Sort, zone)})
 	}
 	slices.SortFunc(result.Sections, func(a, b contracts.ReminderSectionItems) int { return reminderSectionOrder(a.Section, b.Section) })
+	s.reminderCache.put(revision, cacheKey, result, copyReminderItems, reminderItemsBytes)
 	return result, nil
 }
 

@@ -235,6 +235,15 @@ func runIPhoneCommand(ctx context.Context, s Scenario, level string) Evidence {
 	pending, err := gateway.Submit(ctx, approver, command)
 	add("iphone_requires_owner_approval", err == nil && pending.State == contracts.CommandAwaitingApproval)
 	if s.ID == "APP-APPROVE-SIM" {
+		admission := make(chan contracts.CommandRecord, 1)
+		decidePhone := delivery.Decide
+		delivery.Decide = func(ctx context.Context, id, hash string, approve bool) (contracts.CommandRecord, error) {
+			record, err := decidePhone(ctx, id, hash, approve)
+			if id == "cmd_phone_approve" && err == nil {
+				admission <- record
+			}
+			return record, err
+		}
 		response, err = phone.Request(server.Client(), server.URL, "/v1/iphone/pending", nil)
 		var packets []iphone.Packet
 		if err == nil {
@@ -271,8 +280,21 @@ func runIPhoneCommand(ctx context.Context, s Scenario, level string) Evidence {
 		pending, err = gateway.Submit(ctx, approver, command)
 		add("second_approval_pending", err == nil && pending.State == contracts.CommandAwaitingApproval)
 		add("signed_phone_approval", decide(pending.RequestHash, true) == 200)
-		approved, _ := store.Command(ctx, command.ID)
-		add("ledger_admitted_by_phone", approved.State == contracts.CommandAdmitted)
+		var returned contracts.CommandRecord
+		select {
+		case returned = <-admission:
+		case <-time.After(5 * time.Second):
+			add("phone_admission_returned", false)
+			return e
+		}
+		approved, readErr := store.Command(ctx, command.ID)
+		admissions := 0
+		for _, event := range approved.History {
+			if event.State == contracts.CommandAdmitted {
+				admissions++
+			}
+		}
+		add("ledger_admitted_by_phone", readErr == nil && returned.State == contracts.CommandAdmitted && approved.RequestHash == pending.RequestHash && admissions == 1)
 		return e
 	}
 	ownerToken, _, err := a.CreateDeviceSession("trusted")

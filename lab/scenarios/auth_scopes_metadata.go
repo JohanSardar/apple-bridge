@@ -15,7 +15,9 @@ func runAuthScopesMetadata(ctx context.Context, w *world.World, add func(string,
 		group, ok := contracts.GrantsForSource(source)
 		add("registered_grants_"+string(source), ok && len(group.Grants) > 0)
 		for _, grant := range group.Grants {
-			expected[string(grant)] = true
+			if group.Agent && (grant == contracts.Grant(string(source)+":read") || grant == contracts.Grant(string(source)+":write")) {
+				expected[string(grant)] = true
+			}
 		}
 	}
 	add("new_source_registered", expected["labdummy:read"] && expected["labdummy:write"])
