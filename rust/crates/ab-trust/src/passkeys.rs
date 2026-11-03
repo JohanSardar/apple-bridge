@@ -48,7 +48,10 @@ pub fn import(v: &Value) -> Result<Credential, Error> {
     let mut c: Credential = CredentialV3 {
         cred_id: bytes(&v["id"])?,
         cred: COSEKey::try_from(&cose).map_err(invalid)?,
-        counter: serde_json::from_value(v["authenticator"]["signCount"].clone())?,
+        counter: match &v["authenticator"]["signCount"] {
+            Value::Null => 0,
+            count => serde_json::from_value(count.clone())?,
+        },
         verified: v["flags"]["userVerified"] == true,
         registration_policy: UserVerificationPolicy::Required,
     }
@@ -276,5 +279,44 @@ impl Authority {
             key.credential["flags"]["backupState"] = result.backup_state().into();
             write(d, "passkeys", &keys)
         })
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_cbor_2::Value::{Bytes, Integer, Map};
+
+    fn credential(authenticator: &Value) -> Result<Value, Error> {
+        let x: [u8; 32] = [
+            0x6b, 0x17, 0xd1, 0xf2, 0xe1, 0x2c, 0x42, 0x47, 0xf8, 0xbc, 0xe6, 0xe5, 0x63, 0xa4,
+            0x40, 0xf2, 0x77, 0x03, 0x7d, 0x81, 0x2d, 0xeb, 0x33, 0xa0, 0xf4, 0xa1, 0x39, 0x45,
+            0xd8, 0x98, 0xc2, 0x96,
+        ];
+        let y: [u8; 32] = [
+            0x4f, 0xe3, 0x42, 0xe2, 0xfe, 0x1a, 0x7f, 0x9b, 0x8e, 0xe7, 0xeb, 0x4a, 0x7c, 0x0f,
+            0x9e, 0x16, 0x2b, 0xce, 0x33, 0x57, 0x6b, 0x31, 0x5e, 0xce, 0xcb, 0xb6, 0x40, 0x68,
+            0x37, 0xbf, 0x51, 0xf5,
+        ];
+        let cose = Map(std::collections::BTreeMap::from([
+            (Integer(1), Integer(2)),
+            (Integer(3), Integer(-7)),
+            (Integer(-1), Integer(1)),
+            (Integer(-2), Bytes(x.to_vec())),
+            (Integer(-3), Bytes(y.to_vec())),
+        ]));
+        Ok(json!({
+            "id": STANDARD.encode([1u8; 16]),
+            "publicKey": STANDARD.encode(serde_cbor_2::to_vec(&cose).map_err(invalid)?),
+            "flags": {"userVerified": true, "backupEligible": true, "backupState": true},
+            "authenticator": authenticator,
+        }))
+    }
+
+    #[test]
+    fn go_written_credentials_without_sign_count_import_as_zero() -> Result<(), Error> {
+        let omitted = credential(&json!({"AAGUID": "AAAA", "attachment": "platform"}))?;
+        assert_eq!(import(&omitted)?.counter, 0);
+        assert_eq!(import(&credential(&json!({"signCount": 7}))?)?.counter, 7);
+        Ok(())
     }
 }
