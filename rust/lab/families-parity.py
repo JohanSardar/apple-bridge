@@ -4,6 +4,7 @@ from pathlib import Path
 import subprocess
 
 HARNESS_ONLY = {'credential_backend_override_restored'}
+GO_TARGET_SCENARIOS = {'RELAY-LEGACY-COMPAT'}
 BLOB_SCENARIOS = ['CORE-BLOB-CAP', 'CORE-BLOB-CORRUPT', 'CORE-BLOB-DUPLICATE-REFERENCE',
                   'CORE-BLOB-GATEWAY-RETRY', 'CORE-BLOB-GC', 'CORE-BLOB-INTERRUPT',
                   'CORE-BLOB-NO-DIGEST-AUTH', 'CORE-BLOB-OFFLOADED', 'CORE-BLOB-REFERENCE-INDEX',
@@ -52,7 +53,9 @@ IPHONE_SCENARIOS = ['iphone/APP-ALARM-SIM', 'iphone/APP-SHELL-SIM', 'iphone/APP-
                     'iphone/APP-HEALTH-SIM', 'iphone/APP-LOC-SIM', 'iphone/APP-LIVE-SIM', 'iphone/APP-APPROVE-SIM',
                     'iphone/APP-CMD-SIM', 'iphone/APP-NOTIFY-SIM', 'iphone/APP-CAPTURE-SIM']
 RELAY_SCENARIOS = ['RELAY-ENROLL', 'RELAY-PASSTHROUGH', 'RELAY-LIMITS', 'RELAY-ROTATE-GATED',
-                   'RELAY-CT-INDEPENDENT', 'RELAY-CAA-ACCOUNT']
+                   'RELAY-CT-INDEPENDENT', 'RELAY-CAA-ACCOUNT', 'RELAY-TLS-SPLICE', 'RELAY-DOWNGRADE',
+                   'RELAY-LEGACY-COMPAT', 'RELAY-ACME', 'RELAY-OWN-DOMAIN']
+RELAY_STREAM_SCENARIOS = ['RELAY-STREAMS']
 CONNECTOR_SCENARIOS = ['AUTH-SCOPES-METADATA', 'CONN-CHATGPT', 'CONN-CLAUDE-AI', 'RMT-PRIVATE-CONNECT']
 REMINDER_SCENARIOS = ['REM-CONFLICT', 'REM-EXTERNAL-RACE', 'REM-NATIVE-LIST-RACE', 'REM-OPERATION-SHAPES',
                       'REM-READONLY-LIST']
@@ -97,6 +100,8 @@ SCENARIOS += ROBUST_SCENARIOS
 def ignored(scenario, name):
     if name in HARNESS_ONLY or name == 'world_started':
         return True
+    if scenario in GO_TARGET_SCENARIOS and name.startswith('go_'):
+        return True
     return scenario in JOURNEY_SCENARIOS + FRONTDOOR_SCENARIOS and name in JOURNEY_RUST_ONLY
 
 
@@ -132,6 +137,7 @@ def main():
     parser.add_argument('--maps', dest='maps', action='store_true')
     parser.add_argument('--shortcuts', dest='shortcuts', action='store_true')
     parser.add_argument('--relay', dest='relay', action='store_true')
+    parser.add_argument('--relay-streams', dest='relay_streams', action='store_true')
     parser.add_argument('--go-rust-gateway', dest='go_rust_gateway', action='store_true')
     parser.add_argument('--connectors', dest='connectors', action='store_true')
     parser.add_argument('--reminders', dest='reminders', action='store_true')
@@ -176,6 +182,8 @@ def main():
         args.scenario = (args.scenario or []) + IPHONE_SCENARIOS
     if args.relay:
         args.scenario = (args.scenario or []) + RELAY_SCENARIOS
+    if args.relay_streams:
+        args.scenario = (args.scenario or []) + RELAY_STREAM_SCENARIOS
     if args.connectors:
         args.scenario = (args.scenario or []) + CONNECTOR_SCENARIOS
     if args.reminders:
