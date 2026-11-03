@@ -1,0 +1,467 @@
+{
+  "go_before": [
+    {
+      "scenario": "CORE-CLOCK-DELAY",
+      "passed": true,
+      "implementations": {
+        "gateway": "go",
+        "replica": "go"
+      },
+      "metrics": {
+        "automatic_scoped_search_0_ms": 7.811927,
+        "automatic_scoped_search_1_ms": 0.75158,
+        "baseline_offset_ms": -4,
+        "baseline_rtt_ms": 9,
+        "baseline_uncertainty_ms": 5,
+        "capture_observer_resets": 0,
+        "clock_method": "authenticated_feed_ntp_four_timestamps",
+        "delayed_offset_ms": 1,
+        "delayed_rtt_ms": 4004,
+        "delayed_uncertainty_ms": 2003,
+        "injected_delay_each_direction_ms": 2000,
+        "recovery_final_drain_ms": 867.016724
+      },
+      "assertions": [
+        {
+          "name": "feed_network_loopback",
+          "passed": true
+        },
+        {
+          "name": "authenticated_four_timestamp_clock_sample",
+          "passed": true
+        },
+        {
+          "name": "authenticated_probe_crossed_delayed_feed",
+          "passed": true
+        },
+        {
+          "name": "offset_stays_near_zero_as_transit_grows",
+          "passed": true
+        },
+        {
+          "name": "uncertainty_tracks_round_trip_delay",
+          "passed": true
+        },
+        {
+          "name": "transit_not_misreported_as_clock_skew",
+          "passed": true
+        },
+        {
+          "name": "clock_round_trip_recovers_after_delay_removed",
+          "passed": true
+        },
+        {
+          "name": "recovery_capture_drained_before_convergence",
+          "passed": true
+        },
+        {
+          "name": "truth_gateway_replica_convergence",
+          "passed": true
+        },
+        {
+          "name": "automatic_recovery_capture_drained",
+          "passed": true
+        },
+        {
+          "name": "automatic_scope_query_search_records_0",
+          "passed": true
+        },
+        {
+          "name": "automatic_scope_query_search_records_1",
+          "passed": true
+        },
+        {
+          "name": "automatic_metadata_latency_and_no_false_deletion_0",
+          "passed": true
+        },
+        {
+          "name": "automatic_metadata_latency_and_no_false_deletion_1",
+          "passed": true
+        },
+        {
+          "name": "automatic_scope_sse_watermark_0",
+          "passed": true
+        },
+        {
+          "name": "automatic_scope_sse_watermark_1",
+          "passed": true
+        },
+        {
+          "name": "sqlite_integrity_gateway",
+          "passed": true
+        },
+        {
+          "name": "sqlite_integrity_replica",
+          "passed": true
+        },
+        {
+          "name": "no_false_deletion_in_observed_journal_changes",
+          "passed": true
+        },
+        {
+          "name": "no_false_deletion_in_observed_journal_changes",
+          "passed": true
+        },
+        {
+          "name": "credential_backend_override_restored",
+          "passed": true
+        }
+      ]
+    }
+  ],
+  "rust_before": [
+    {
+      "scenario": "CORE-CLOCK-DELAY",
+      "passed": false,
+      "implementations": {
+        "gateway": "rust",
+        "replica": "go"
+      },
+      "metrics": {
+        "capture_observer_resets": 0
+      },
+      "assertions": [
+        {
+          "name": "feed_network_loopback",
+          "passed": true
+        },
+        {
+          "name": "authenticated_four_timestamp_clock_sample",
+          "passed": false
+        },
+        {
+          "name": "credential_backend_override_restored",
+          "passed": true
+        }
+      ]
+    }
+  ],
+  "rust_after": [
+    {
+      "scenario": "CORE-CLOCK-DELAY",
+      "passed": true,
+      "implementations": {
+        "gateway": "rust",
+        "replica": "go"
+      },
+      "metrics": {
+        "automatic_scoped_search_0_ms": 38.387652,
+        "automatic_scoped_search_1_ms": 1.015085,
+        "baseline_offset_ms": -6,
+        "baseline_rtt_ms": 16,
+        "baseline_uncertainty_ms": 9,
+        "capture_observer_resets": 0,
+        "clock_method": "authenticated_feed_ntp_four_timestamps",
+        "delayed_offset_ms": 6,
+        "delayed_rtt_ms": 4015,
+        "delayed_uncertainty_ms": 2008,
+        "injected_delay_each_direction_ms": 2000,
+        "recovery_final_drain_ms": 31.687294
+      },
+      "assertions": [
+        {
+          "name": "feed_network_loopback",
+          "passed": true
+        },
+        {
+          "name": "authenticated_four_timestamp_clock_sample",
+          "passed": true
+        },
+        {
+          "name": "authenticated_probe_crossed_delayed_feed",
+          "passed": true
+        },
+        {
+          "name": "offset_stays_near_zero_as_transit_grows",
+          "passed": true
+        },
+        {
+          "name": "uncertainty_tracks_round_trip_delay",
+          "passed": true
+        },
+        {
+          "name": "transit_not_misreported_as_clock_skew",
+          "passed": true
+        },
+        {
+          "name": "clock_round_trip_recovers_after_delay_removed",
+          "passed": true
+        },
+        {
+          "name": "recovery_capture_drained_before_convergence",
+          "passed": true
+        },
+        {
+          "name": "truth_gateway_replica_convergence",
+          "passed": true
+        },
+        {
+          "name": "automatic_recovery_capture_drained",
+          "passed": true
+        },
+        {
+          "name": "automatic_scope_query_search_records_0",
+          "passed": true
+        },
+        {
+          "name": "automatic_scope_query_search_records_1",
+          "passed": true
+        },
+        {
+          "name": "automatic_metadata_latency_and_no_false_deletion_0",
+          "passed": true
+        },
+        {
+          "name": "automatic_metadata_latency_and_no_false_deletion_1",
+          "passed": true
+        },
+        {
+          "name": "automatic_scope_sse_watermark_0",
+          "passed": true
+        },
+        {
+          "name": "automatic_scope_sse_watermark_1",
+          "passed": true
+        },
+        {
+          "name": "sqlite_integrity_gateway",
+          "passed": true
+        },
+        {
+          "name": "sqlite_integrity_replica",
+          "passed": true
+        },
+        {
+          "name": "no_false_deletion_in_observed_journal_changes",
+          "passed": true
+        },
+        {
+          "name": "no_false_deletion_in_observed_journal_changes",
+          "passed": true
+        },
+        {
+          "name": "credential_backend_override_restored",
+          "passed": true
+        }
+      ]
+    }
+  ],
+  "rust_dial_after": [
+    {
+      "scenario": "CORE-CLOCK-DELAY-GATEWAY-DIALS",
+      "passed": true,
+      "implementations": {
+        "gateway": "rust",
+        "replica": "go"
+      },
+      "metrics": {
+        "automatic_scoped_search_0_ms": 37.206228,
+        "automatic_scoped_search_1_ms": 0.729388,
+        "baseline_offset_ms": -4,
+        "baseline_rtt_ms": 11,
+        "baseline_uncertainty_ms": 6,
+        "capture_observer_resets": 0,
+        "clock_method": "authenticated_feed_ntp_four_timestamps",
+        "delayed_offset_ms": 0,
+        "delayed_rtt_ms": 4003,
+        "delayed_uncertainty_ms": 2002,
+        "injected_delay_each_direction_ms": 2000,
+        "recovery_final_drain_ms": 42.715519
+      },
+      "assertions": [
+        {
+          "name": "feed_network_gateway_dials_loopback_fault_proxy",
+          "passed": true
+        },
+        {
+          "name": "authenticated_four_timestamp_clock_sample",
+          "passed": true
+        },
+        {
+          "name": "authenticated_probe_crossed_delayed_feed",
+          "passed": true
+        },
+        {
+          "name": "offset_stays_near_zero_as_transit_grows",
+          "passed": true
+        },
+        {
+          "name": "uncertainty_tracks_round_trip_delay",
+          "passed": true
+        },
+        {
+          "name": "transit_not_misreported_as_clock_skew",
+          "passed": true
+        },
+        {
+          "name": "clock_round_trip_recovers_after_delay_removed",
+          "passed": true
+        },
+        {
+          "name": "recovery_capture_drained_before_convergence",
+          "passed": true
+        },
+        {
+          "name": "truth_gateway_replica_convergence",
+          "passed": true
+        },
+        {
+          "name": "automatic_recovery_capture_drained",
+          "passed": true
+        },
+        {
+          "name": "automatic_scope_query_search_records_0",
+          "passed": true
+        },
+        {
+          "name": "automatic_scope_query_search_records_1",
+          "passed": true
+        },
+        {
+          "name": "automatic_metadata_latency_and_no_false_deletion_0",
+          "passed": true
+        },
+        {
+          "name": "automatic_metadata_latency_and_no_false_deletion_1",
+          "passed": true
+        },
+        {
+          "name": "automatic_scope_sse_watermark_0",
+          "passed": true
+        },
+        {
+          "name": "automatic_scope_sse_watermark_1",
+          "passed": true
+        },
+        {
+          "name": "sqlite_integrity_gateway",
+          "passed": true
+        },
+        {
+          "name": "sqlite_integrity_replica",
+          "passed": true
+        },
+        {
+          "name": "no_false_deletion_in_observed_journal_changes",
+          "passed": true
+        },
+        {
+          "name": "no_false_deletion_in_observed_journal_changes",
+          "passed": true
+        },
+        {
+          "name": "credential_backend_override_restored",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "scenario": "CORE-CLOCK-DELAY",
+      "passed": true,
+      "implementations": {
+        "gateway": "rust",
+        "replica": "go"
+      },
+      "metrics": {
+        "automatic_scoped_search_0_ms": 41.756922,
+        "automatic_scoped_search_1_ms": 0.836143,
+        "baseline_offset_ms": -10,
+        "baseline_rtt_ms": 23,
+        "baseline_uncertainty_ms": 12,
+        "capture_observer_resets": 0,
+        "clock_method": "authenticated_feed_ntp_four_timestamps",
+        "delayed_offset_ms": 0,
+        "delayed_rtt_ms": 4002,
+        "delayed_uncertainty_ms": 2002,
+        "injected_delay_each_direction_ms": 2000,
+        "recovery_final_drain_ms": 28.649872
+      },
+      "assertions": [
+        {
+          "name": "feed_network_loopback",
+          "passed": true
+        },
+        {
+          "name": "authenticated_four_timestamp_clock_sample",
+          "passed": true
+        },
+        {
+          "name": "authenticated_probe_crossed_delayed_feed",
+          "passed": true
+        },
+        {
+          "name": "offset_stays_near_zero_as_transit_grows",
+          "passed": true
+        },
+        {
+          "name": "uncertainty_tracks_round_trip_delay",
+          "passed": true
+        },
+        {
+          "name": "transit_not_misreported_as_clock_skew",
+          "passed": true
+        },
+        {
+          "name": "clock_round_trip_recovers_after_delay_removed",
+          "passed": true
+        },
+        {
+          "name": "recovery_capture_drained_before_convergence",
+          "passed": true
+        },
+        {
+          "name": "truth_gateway_replica_convergence",
+          "passed": true
+        },
+        {
+          "name": "automatic_recovery_capture_drained",
+          "passed": true
+        },
+        {
+          "name": "automatic_scope_query_search_records_0",
+          "passed": true
+        },
+        {
+          "name": "automatic_scope_query_search_records_1",
+          "passed": true
+        },
+        {
+          "name": "automatic_metadata_latency_and_no_false_deletion_0",
+          "passed": true
+        },
+        {
+          "name": "automatic_metadata_latency_and_no_false_deletion_1",
+          "passed": true
+        },
+        {
+          "name": "automatic_scope_sse_watermark_0",
+          "passed": true
+        },
+        {
+          "name": "automatic_scope_sse_watermark_1",
+          "passed": true
+        },
+        {
+          "name": "sqlite_integrity_gateway",
+          "passed": true
+        },
+        {
+          "name": "sqlite_integrity_replica",
+          "passed": true
+        },
+        {
+          "name": "no_false_deletion_in_observed_journal_changes",
+          "passed": true
+        },
+        {
+          "name": "no_false_deletion_in_observed_journal_changes",
+          "passed": true
+        },
+        {
+          "name": "credential_backend_override_restored",
+          "passed": true
+        }
+      ]
+    }
+  ]
+}
