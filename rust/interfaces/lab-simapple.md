@@ -160,3 +160,17 @@ The real level mirrors Go's `world.NewReal` protections and is compile-only in C
 - Real-only scenarios are reachable by adding one `register_real` line in `lab-adapters/src/lib.rs`. Handlers mint scoped tokens with `Client::new(world, scope)`; the world token scope is `location:read,maps:read,maps:write,files:read,files:write,safari:read,system:read`.
 
 Unit tests cover the refusals (no Helper, unsigned Helper, live home) and an unrelated directory.
+
+## Lab relay/2 listener (Phase 8, web relay prerequisites)
+
+Both the Rust gateway (`lab-harness`, which `lab-queries` and `seeded-faults` imply) and the Go gateway built with `-tags lab` can expose their relay/1 and relay/2 feed over TLS 1.3 to the lab. Product builds contain neither the Rust module nor the Go file's body; the Go product build links a no-op `serveRelayLab`.
+
+The listener is configured only by `<home>/lab-relay.json`, read at gateway start. If the file is absent nothing is listened on:
+
+```json
+{"listen": "127.0.0.1:0", "cert": "/abs/path/leaf-chain.pem", "key": "/abs/path/leaf-key.pem"}
+```
+
+`cert` is the server chain (leaf first) signed by a lab-owned test CA; `key` is the PKCS#8 private key. The lab owns the CA (`lab-relay` generates it with rcgen) and its clients trust only that CA, never webpki roots. After binding, the gateway writes the resolved `host:port` to `<home>/run/lab-relay-addr`. A gateway restart rereads the file and rebinds, so read the address again.
+
+Only `GET /v1/feed` is served; any other path returns 401. The handler is the production relay handler (`feed.RelayHandler()` in Go, `Server::relay_http` in Rust): no client certificate is requested, requests carrying an `Origin` header are rejected with 401, relay/1 hellos (no `version`) are accepted as legacy, relay/2 hellos are bound to the TLS 1.3 exporter `EXPORTER-Channel-Binding` with an empty context. The feed started after authentication is the same one the gateway peer and ingress paths use.
