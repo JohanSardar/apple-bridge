@@ -278,6 +278,9 @@ impl CaptureReader for TelephonyReader {
         ) else {
             return Ok(None);
         };
+        if file_signature(&self.path) != current {
+            return Ok(None);
+        }
         let value = capture_value(&pending)?;
         self.pending = Some((pending, current));
         Ok(Some(value))
@@ -338,6 +341,9 @@ impl CaptureReader for VoiceMemosReader {
             return Ok(None);
         };
         if !pending.batch.blob_handles.is_empty() {
+            return Ok(None);
+        }
+        if file_signature(&self.path) != current {
             return Ok(None);
         }
         let value = capture_value(&pending)?;
