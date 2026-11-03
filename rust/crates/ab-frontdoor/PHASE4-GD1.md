@@ -1,7 +1,7 @@
 # G-D1 OAuth, consent and passkeys
 
 Continues PR #539 at 425973a5, preserving the original commits and attribution.
-Main is merged. No live home, service, credential or device was accessed.
+Main through G-F PR #542 is merged. No live home, service, credential or device was accessed.
 
 Implemented: Go-shaped OAuth clients, PKCE, agent grants, hashed credentials,
 refresh rotation and persisted reuse revocation; device sessions and enrollment;
@@ -35,6 +35,8 @@ go build -o /tmp/ab-gd1-oauth-go ./rust/crates/ab-trust/interop
 python3 rust/crates/ab-trust/interop/run.py "${CARGO_TARGET_DIR:-rust/target}/debug/examples/oauth_interop" /tmp/ab-gd1-oauth-go
 python3 rust/crates/ab-frontdoor/interop/golden.py "${CARGO_TARGET_DIR:-rust/target}/debug/examples/consent_fixture"
 "${CARGO_TARGET_DIR:-rust/target}/debug/examples/passkey_algorithms" "$(mktemp -d)"
+cargo build --manifest-path rust/Cargo.toml -p ab-runtime --bin bridge
+python3 rust/crates/ab-trust/interop/startup.py "${CARGO_TARGET_DIR:-rust/target}/debug/bridge"
 go build -tags lab -o bin/bridge ./cmd/bridge
 go build -o bin/bridge-lab ./cmd/bridge-lab
 python3 rust/crates/ab-trust/interop/consent.py "${CARGO_TARGET_DIR:-rust/target}/debug/examples/consent_fixture" /tmp/ab-gd1-consent.json
@@ -48,3 +50,5 @@ signature tampering rejection, and unsupported stored key refusal without writes
 The additional Go test logs the golden algorithm exception explicitly. No
 existing behavioral scenarios were weakened; the consent fixture uses a Go
 overlay and does not count Go backend/MCP execution as Rust evidence.
+
+The actual Rust start/doctor probe uses an unsupported key under another RP ID and verifies the diagnostic, nonzero exit, unchanged credential bytes and unchanged home entries. The CLI preserves Trust errors so the hint reaches the operator.

@@ -46,7 +46,7 @@ pub(crate) fn decision(
     if approve {
         let (agent, _) = web
             .authority
-            .create_agent(&client.client_name, level, grants)?;
+            .create_oauth_agent(&client.client_name, level, grants)?;
         code.principal.clone_from(&agent.id);
         match web.authority.issue_oauth_code(code) {
             Ok(raw) => {

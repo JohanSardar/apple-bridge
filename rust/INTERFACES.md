@@ -136,6 +136,13 @@ python3 rust/crates/ab-iphone/interop/run.py "${CARGO_TARGET_DIR:-rust/target}/d
 This is not APP-PAIR-SIM/APP-CMD-SIM qualification: the runtime on the initial Phase 4 baseline rejects non-replica roles. OAuth/consent, product WebAuthn/advisory resolution, relay/smux ingress, LocalAPI, command delivery and record ingestion remain G-D work. No live gateway, home, passkey or device was accessed.
 
 Direct execution of APP-PAIR-SIM and APP-CMD-SIM with `--impl gateway=rust --rust-binary <Rust bridge>` returned `status=blocked`, `binary_harness_required`: `harness: native iphone.pairing journey requires AppleTruth/Helper; requires isolated binary-driven fixture adapter` (and the equivalent `iphone.delivery` detail). G-E owns replacing these verdict paths; neither was counted as a gateway product pass. The suite performed no device operation.
+## Phase 4 G-C: gateway feed integration
+
+G-A's gateway interfaces are not present at base `ffa94fe2`. G-C exposes `ab_replication::server::GatewayState` as the temporary adapter contract: `head`, `retention_floor`, `freeze_snapshot(visibility, revision)`, `changes(visibility, cursor, capture_atomic)`, and `next_changes(&mut iterator)`. Freeze returns `FrozenSnapshot` (lease `renew`, immutable ID/cursor/count/digest/expiry/records). The iterator must be retained from replay through live; `None` means caught up, `Error::Contract(Reset)` means retention reset. Implement the adapter when G-A lands. Synchronous methods must be bounded and run in a blocking execution context. Trust session validation runs every 100 ms and terminates feeds when revision changes or credentials disappear.
+
+G-B → G-C BlobRead seam needed: a cancellation-aware async read taking Helper handle, offset and bounded length and returning `(bytes, done)`; ownership stays with the active authenticated Helper connection. No ApplePeer dependency is added to Blobs (that would create the frozen graph's operations/applepeer cycle).
+
+G-C → G-A activity persistence request: provide the existing Go `agent_activity` schema through `record_agent_activity`, `agent_activity(principal, operation)`, and 90-day pruning. Preserve read-count increments, sequence-monotone command updates, argument length/hash only, and newest-first limit 1000. G-C cannot write State's SQLite connection through Trust without violating the crate graph.
 # Phase 4 interfaces
 
 ## G-A: gateway state and ledger
@@ -158,7 +165,7 @@ G-A integration detail: `source_state(&mut self, Source, status: &str, Coverage,
 
 ## Phase 4 G-D1: OAuth and consent integration
 
-`ab_trust::oauth` exposes `Client`, `Code`, `Exchange`, `Tokens`, `agent_grants` and Authority methods `register_oauth`, `oauth_client`, `create_agent`, `issue_oauth_code`, `exchange_oauth`, `authenticate_oauth`. `authenticate_token` now recognizes agent and OAuth tokens as well as ordinary tokens. OAuth storage retains Go's credential envelopes, and every rotation happens under the existing credential file lock. Access principals retain level, grants, resource and access expiry; existing authorization adapters must enforce resource audience. Refresh reuse persists family revocation before returning unauthorized.
+`ab_trust::oauth` exposes `Client`, `Code`, `Exchange`, `Tokens`, `agent_grants` and Authority methods `register_oauth`, `oauth_client`, `create_oauth_agent`, `issue_oauth_code`, `exchange_oauth`, `authenticate_oauth`. `authenticate_token` now recognizes agent and OAuth tokens as well as ordinary tokens. OAuth storage retains Go's credential envelopes, and every rotation happens under the existing credential file lock. Access principals retain level, grants, resource and access expiry; existing authorization adapters must enforce resource audience. Refresh reuse persists family revocation before returning unauthorized.
 
 `ab_trust::devices` exposes Go-shaped `Session` and Authority methods `create_device_session`, `authenticate_device`, `create_web_enroll`, `check_web_enroll`. `ab_trust::passkeys` exposes Go-shaped `Passkey`, core ceremony start/registration and Authority passkey persistence/login verification. The fixed handle is `apple-bridge-owner`.
 
@@ -196,3 +203,28 @@ Binary-driven consent setup now uses `bridge agent list` and `bridge agent creat
 Remaining P/D conversions require product-owned CLI or HTTP seams for trusted device session creation and lifecycle, OAuth setup/revocation and metadata validation, delegated identity fault injection, iPhone pairing/ingestion, and blob staging/GC fixtures. Existing assertions must remain intact; reporting these paths blocked does not count as conversion. G-E has not completed those conversions.
 
 Shadow replay currently reproduces captures with fresh IPC authentication and diffs exact persisted cells. It cannot reconstruct command admission from Prepare/Dispatch alone. G-B/G-A integration needs an explicit contract for replaying authenticated command admissions and deterministic bridge ID assignment/time, or a separately approved identity-aware comparison that still verifies original gojson bytes. No production randomness, persisted format, or live runtime should be changed merely to make this tool pass. Current Go-Go raw diffs intentionally expose independently assigned IDs and journal times; they are not Rust parity evidence.
+
+## Phase 4 G-F: runtime assembly integration requirements
+
+Runtime's first slice adds Helper configuration persistence, the Go `open -n -W -g -a` launch argument sequence, cancellable supervision, offline restore under the shared home singleton lock, and remote selection commands through `ab_remote::state::command`. Configuration writes use private atomic replacement. These entry points do not qualify gateway startup or APP scenarios.
+
+Assembly requires G-B's published `LocalGateway` to be reachable through `ab_operations::CommandTarget::Local`, including Service dispatch and frontdoor query-blob routing. The current Service has only an irrefutable Remote variant. These changes belong to the operations/frontdoor owners; runtime cannot build a local Service without them. Please also expose a Gateway read adapter with the same query/blob behavior as `StateReads`, or a generic StateReads implementation supporting Gateway. Runtime must retain one shared `Arc<Mutex<State<Gateway>>>` across ApplePeer, local commands, feed, and phone delivery.
+
+The iPhone health adapter additionally requires a State-owned transaction API combining `HealthBatch::advance` sequence/digest acceptance, `health_streams` persistence and capture record/journal writes. Runtime must not check the sequence separately from CommitCapture or open a second writable SQLite connection. G-A should expose the transaction seam without depending on ab-iphone; validated sequence/digest and record data can cross it as wire/domain types. Missing this seam blocks APP-HEALTH-SIM qualification even after HTTP delivery routes are mounted.
+
+At main `b0117b8c`, G-C (#535) and iPhone delivery (#537) are merged; G-B (#541) and G-D1 (#539) remain unmerged. The CLI now uses G-C Trust for direct pairing, agent create/list/revoke and principal revocation, and G-D Trust for HTTPS iPhone pairing codes. Remote replica pairing still requires a Trust PairRemote entry point. `make gateway-matrix` on Ubuntu reaches its startup probe and reports all 198 default Linux scenarios blocked before execution because the Rust gateway does not create its ipc/1 socket. The other 62 default scenarios require Darwin and were not run. No blocked scenario is counted as a pass, and no APP qualification is claimed.
+## G-C continuation: concrete gateway adapters and upstream uploads
+
+`ab_replication::gateway::StateAdapter(Arc<std::sync::Mutex<State<Gateway>>>)` implements the feed State contract using G-A's landed methods. It preserves State's retained iterator, maps Reset at the typed boundary, and closes leases when snapshot transfer completes or is cancelled. State operations move into Tokio's blocking context on a multithread runtime; single-thread callers must invoke synchronous adapters from their blocking executor.
+
+Install `State::set_blob_protection(Arc::new(ab_replication::gateway::ProtectionAdapter(blobs.clone())))` before capture/serving. The adapter accepts `Arc<tokio::sync::Mutex<ab_blobs::Store>>`, maps State reference owner deltas to `update_protection`, and releases staging pins only for committed deltas. Install it from a blocking context.
+
+`Server` now has `uploads: Option<Arc<dyn ab_replication::upstream::UploadHandler>>`. `Uploads::new(authority, blobs)` supplies certificate/delegation authorization, expiring session-bound binary prepare grants, bounded bindings and close cleanup. The callback trait allows G-B's operations adapter to retain lifecycle ownership without adding a replication-to-operations dependency. `GatewayTransport::{upload_control,upload_chunk}` use the existing authenticated feed session and pending-response registry; reconnect never replays them.
+
+`ab_blobs::uploads::{UploadRequest,UploadStatus}` preserve Go field names. `Store::{upload,append_upload}` persist the existing upload lease and part-file layout, validate offsets/digests, pin committed bytes and create the message-upload alias. These synchronous methods require a blocking execution context in production.
+
+`Server::dial(stop)` runs gateway-initiated pairing and pinned feed reconnection. `Authority::{dial_pairings_once,dial_replicas,confirm_dial}` expose the corresponding durable Trust steps. G-D's phone-purpose pairings and fields remain preserved.
+
+`ab_trust::activity::{ActivityLog,AgentActivity}` provides synchronous activity persistence against the already initialized State schema through a separate connection. It does not initialize or migrate State and does not replace G-A's transactional command publication. Runtime should open it after State, record redacted read activity and expose the scoped list API. List prunes after 90 days and returns at most 1000 newest rows.
+
+G-D1/G-F reconciliation: OAuth uses `create_oauth_agent(name, level, scopes)`, which validates OAuth scopes and delegates to the shared typed `create_agent(name, AgentLevel, Vec<Grant>)`. CLI and OAuth share one admission/persistence implementation. G-F lifecycle modules and interfaces from PR #542 are retained.

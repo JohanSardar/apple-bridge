@@ -1,6 +1,4 @@
-use crate::{
-    Authority, Credentials, Error, Grant, Principal, effective_grants, fingerprint, subset,
-};
+use crate::{Authority, Credentials, Error, Grant, Principal, effective_grants, fingerprint};
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
@@ -191,43 +189,22 @@ impl Authority {
             .find(|c| c.client_id == id && c.redirect_uris.iter().any(|u| u == redirect))
             .ok_or(Error::Invalid)
     }
-    pub fn create_agent(
+    pub fn create_oauth_agent(
         &self,
         name: &str,
         level: &str,
         scopes: &[Grant],
     ) -> Result<(Principal, String), Error> {
-        let name = name.trim();
-        if name.is_empty() || name.len() > 120 {
-            return Err(Error::Invalid);
-        }
-        let grants = agent_grants(level, scopes)?;
-        let raw = format!("aba-{}", token(32));
-        let mut p = Principal {
-            id: format!("agent:{}", ulid::Ulid::new()),
-            kind: "agent".into(),
-            grants,
-            level: level.into(),
-            token_hash: fingerprint(raw.as_bytes()),
-            revision: 1,
-            ..Principal::default()
-        };
-        p.extra.insert("name".into(), name.into());
-        p.extra.insert(
-            "created_at".into(),
-            jiff::Timestamp::now().to_string().into(),
-        );
-        self.update(|d| {
-            if d.enrollment
-                .as_ref()
-                .is_some_and(|e| !subset(&p.grants, &e.grants))
-            {
-                return Err(Error::Unauthorized);
-            }
-            d.principals.push(p.clone());
-            Ok(())
-        })?;
-        Ok((p, raw))
+        self.create_agent(
+            name,
+            match level {
+                "read" => crate::AgentLevel::Read,
+                "approve" => crate::AgentLevel::Approve,
+                "full" => crate::AgentLevel::Full,
+                _ => return Err(Error::Invalid),
+            },
+            agent_grants(level, scopes)?,
+        )
     }
     pub fn issue_oauth_code(&self, mut c: Code) -> Result<String, Error> {
         let raw = token(32);

@@ -1,4 +1,5 @@
 #![forbid(unsafe_code)]
+pub mod uploads;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest as _, Sha256};
 use std::{
@@ -409,36 +410,100 @@ impl Store {
         Ok(File::open(self.path(d))?)
     }
     pub fn protect(&mut self, digests: BTreeSet<String>) -> Result<(), Error> {
+        let updates = [(
+            "replica:current".into(),
+            digests
+                .into_iter()
+                .map(|digest| Reference {
+                    digest,
+                    ..Reference::default()
+                })
+                .collect(),
+        )]
+        .into_iter()
+        .collect();
+        self.update_protection(&updates, false)
+    }
+    pub fn update_protection(
+        &mut self,
+        updates: &BTreeMap<String, Vec<Reference>>,
+        release_pins: bool,
+    ) -> Result<(), Error> {
+        if updates.is_empty() {
+            return Ok(());
+        }
+        for refs in updates.values() {
+            for r in refs {
+                Digest::try_from(r.digest.clone())?;
+            }
+        }
         let now = jiff::Timestamp::now().to_string();
-        let payload: Vec<_> = digests
-            .iter()
-            .map(|d| serde_json::json!({"digest":d,"size":0,"state":""}))
-            .collect();
         let tx = self.protection.transaction()?;
-        tx.execute("INSERT INTO protection_owners(owner,payload) VALUES('replica:current',?) ON CONFLICT(owner) DO UPDATE SET payload=excluded.payload",[serde_json::to_vec(&payload)?])?;
+        for (owner, refs) in updates {
+            if refs.is_empty() {
+                tx.execute("DELETE FROM protection_owners WHERE owner=?", [owner])?;
+            } else {
+                tx.execute("INSERT INTO protection_owners(owner,payload) VALUES(?,?) ON CONFLICT(owner) DO UPDATE SET payload=excluded.payload", rusqlite::params![owner, serde_json::to_vec(refs)?])?;
+            }
+        }
+        let mut protected = BTreeSet::new();
+        {
+            let mut statement = tx.prepare("SELECT payload FROM protection_owners")?;
+            for row in statement.query_map([], |r| r.get::<_, Vec<u8>>(0))? {
+                for r in serde_json::from_slice::<Vec<Reference>>(&row?)? {
+                    protected.insert(r.digest);
+                }
+            }
+        }
         tx.execute(
             "INSERT OR IGNORE INTO protection_meta(key,value) VALUES('initialized','1')",
             [],
         )?;
-        for d in self.manifest.entries.keys() {
-            if digests.contains(d) {
+        let mut entries = self.manifest.entries.clone();
+        for r in updates.values().flatten() {
+            entries.entry(r.digest.clone()).or_insert_with(|| Entry {
+                size: r.size,
+                state: match r.state.as_str() {
+                    "missing" => BlobState::Missing,
+                    "offloaded" => BlobState::Offloaded,
+                    _ => BlobState::Pending,
+                },
+                ..Entry::default()
+            });
+        }
+        for (d, e) in &mut entries {
+            if protected.contains(d) {
                 tx.execute("DELETE FROM protection_unreferenced WHERE digest=?", [d])?;
+                e.unreferenced_at = "0001-01-01T00:00:00Z".into();
             } else {
+                if e.unreferenced_at.is_empty() || e.unreferenced_at == "0001-01-01T00:00:00Z" {
+                    e.unreferenced_at.clone_from(&now);
+                }
                 tx.execute(
                     "INSERT OR IGNORE INTO protection_unreferenced(digest,at) VALUES(?,?)",
-                    rusqlite::params![d, now],
+                    rusqlite::params![d, e.unreferenced_at],
                 )?;
             }
         }
-        tx.commit()?;
-        for (d, e) in &mut self.manifest.entries {
-            if digests.contains(d) {
-                e.unreferenced_at = "0001-01-01T00:00:00Z".into();
-            } else if e.unreferenced_at.is_empty() || e.unreferenced_at == "0001-01-01T00:00:00Z" {
-                e.unreferenced_at.clone_from(&now);
-            }
+        let released: Vec<_> = self
+            .manifest
+            .pins
+            .iter()
+            .filter(|(_, d)| release_pins && protected.contains(*d))
+            .map(|(pin, _)| pin.clone())
+            .collect();
+        for pin in &released {
+            tx.execute(
+                "INSERT OR IGNORE INTO protection_released_pins(pin) VALUES(?)",
+                [pin],
+            )?;
         }
-        self.references = digests;
+        tx.commit()?;
+        self.manifest.entries = entries;
+        self.references = protected;
+        for pin in released {
+            self.manifest.pins.remove(&pin);
+        }
         self.save()
     }
     pub fn stage(&mut self, bytes: &[u8]) -> Result<(Digest, String), Error> {
@@ -508,5 +573,44 @@ fn part_size(path: &Path) -> Result<u64, Error> {
         Ok(_) => Err(Error::Invalid),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(0),
         Err(e) => Err(e.into()),
+    }
+}
+
+pub trait BlobRead {
+    fn read(
+        &self,
+        handle: &str,
+        offset: u64,
+        length: usize,
+    ) -> impl std::future::Future<Output = Result<(Vec<u8>, bool), Error>> + Send;
+}
+impl Store {
+    pub async fn transfer(
+        &mut self,
+        source: &impl BlobRead,
+        handle: &str,
+        digest: &Digest,
+        size: u64,
+    ) -> Result<(), Error> {
+        let Some(mut offset) = self.begin(digest, size)? else {
+            return Ok(());
+        };
+        loop {
+            let (bytes, done) = source.read(handle, offset, 256 << 10).await?;
+            if bytes.len() > 256 << 10 || bytes.is_empty() && !done {
+                return Err(Error::Invalid);
+            }
+            if size > 0 && offset.saturating_add(bytes.len() as u64) > size {
+                return Err(Error::Corrupt);
+            }
+            self.chunk(digest, offset, &bytes)?;
+            offset += bytes.len() as u64;
+            if done {
+                if size > 0 && offset != size {
+                    return Err(Error::Corrupt);
+                }
+                return self.finish(digest);
+            }
+        }
     }
 }

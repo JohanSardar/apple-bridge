@@ -1,0 +1,22 @@
+{
+  "verdict": "incomplete",
+  "implemented_journey": "pass",
+  "host": "ubuntu",
+  "cargo_target": "isolated",
+  "checks": {
+    "make rust-ci": "pass",
+    "make lint": "pass, included in rust-ci",
+    "golden corpora": "pass, included in rust-ci",
+    "mixed gateway fixture": "pass",
+    "blob protection restart and GC": "pass"
+  },
+  "not_proven": [
+    "production Rust gateway binary scenarios",
+    "Go gateway digest oracle",
+    "uploads",
+    "reverse dialing",
+    "activity log",
+    "full trust and blob parity"
+  ],
+  "stale_artifact_incident": "Shared target compiled replication against trust metadata lacking methods present in source. Isolated target compiled and passed all gates without product changes."
+}

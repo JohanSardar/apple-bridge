@@ -36,3 +36,5 @@ ulid = "1"
 url = "2"
 webauthn-rs-core = "=0.6.2"
 serde_cbor_2 = "0.13"
+
+rusqlite.workspace = true

@@ -9,7 +9,7 @@ fn run(v: &Value) -> Result<Value, Box<dyn std::error::Error>> {
         )?),
         "issue" => {
             let (p, _) =
-                a.create_agent("synthetic", "approve", &[Grant::parse("messages:write")?])?;
+                a.create_oauth_agent("synthetic", "approve", &[Grant::parse("messages:write")?])?;
             let mut c: oauth::Code = serde_json::from_value(v["code"].clone())?;
             c.principal.clone_from(&p.id);
             Ok(json!({"code":a.issue_oauth_code(c)?,"principal":p.id}))
