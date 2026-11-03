@@ -151,6 +151,7 @@ dependencies = [
  "ab-domain",
  "ab-wire",
  "base64 0.22.1",
+ "ed25519-dalek",
  "icu_collator",
  "jiff",
  "libsqlite3-sys",

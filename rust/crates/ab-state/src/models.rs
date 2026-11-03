@@ -15,7 +15,7 @@ struct Identity<'a> {
 }
 
 use crate::projection::{b, kind, normalize, s, time};
-use crate::{ErrorCode, Record, Replica, Result, State, Visibility, head, records};
+use crate::{ErrorCode, Record, Result, State, Visibility, head, records};
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use rusqlite::{Connection, params, types::Value as Sql};
 use serde_json::{Value, json};
@@ -241,7 +241,7 @@ fn thread_items(db: &Connection, rs: Vec<Record>, search: bool) -> Result<Vec<Va
     }
     Ok(out)
 }
-impl State<Replica> {
+impl<Role> State<Role> {
     pub fn read_model(
         &self,
         visibility: &Visibility,
@@ -283,6 +283,15 @@ impl State<Replica> {
             "contacts.list" => super::specialized::contacts(&tx, visibility, query)?,
             "sources.status" => {
                 let mut result = super::specialized::sources(&tx, visibility)?;
+                for record in result["records"].as_array_mut().into_iter().flatten() {
+                    if record["data"]["source"]
+                        .as_str()
+                        .is_some_and(|s| self.capacity.get(s) == Some(&true))
+                    {
+                        record["data"]["state"] = "degraded".into();
+                        record["data"]["reason"] = "capacity".into();
+                    }
+                }
                 if let Some(status) = self.project_replica_status(visibility)? {
                     result["replica"] = status;
                 }

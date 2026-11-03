@@ -1,7 +1,7 @@
-use crate::{ErrorCode, Replica, Result, State};
+use crate::{ErrorCode, Result, State};
 use rusqlite::params;
 use serde_json::Value;
-impl State<Replica> {
+impl<Role> State<Role> {
     pub fn save_query_blobs(
         &mut self,
         principal: &str,
