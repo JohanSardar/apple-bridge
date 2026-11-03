@@ -9,13 +9,12 @@ pub mod commands;
 pub mod connectors;
 pub mod contacts;
 pub mod contacts_list;
-pub mod demo;
-pub mod filecmd;
-pub mod filerep;
-
 pub mod core;
 pub mod core_journey;
 pub mod core_robust;
+pub mod demo;
+pub mod filecmd;
+pub mod filerep;
 pub mod files_native;
 pub mod frontdoor;
 pub mod helper_ipc;
@@ -108,8 +107,7 @@ pub fn registry() -> Registry {
             || readmodels::SCENARIOS.contains(&id)
             || calls::NATIVE_SCENARIOS.contains(&id)
             || usage::NATIVE_SCENARIOS.contains(&id)
-            || helper_ipc::SCENARIOS.contains(&id);
-
+            || helper_ipc::SCENARIOS.contains(&id)
             || core::IGNORE_REPLICAS.contains(&id);
         if replicas != 0 && blobs::is_blob(id) {
             blobs::configure(world, id, usize::try_from(replicas).unwrap_or(0))?;
