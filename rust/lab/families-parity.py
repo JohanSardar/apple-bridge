@@ -4,7 +4,7 @@ from pathlib import Path
 import subprocess
 
 HARNESS_ONLY = {'credential_backend_override_restored'}
-SCENARIOS = ['CORE-QUERY-ROUNDTRIP', 'CORE-QUERY-BLOB']
+SCENARIOS = ['CORE-QUERY-ROUNDTRIP', 'CORE-QUERY-BLOB', 'CORE-QUERY-SCOPE', 'CORE-QUERY-DEADLINE']
 
 
 def verdicts(path):

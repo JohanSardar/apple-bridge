@@ -3,7 +3,12 @@ pub mod queries;
 use lab_runner::Registry;
 use lab_world::Error;
 
-const PORTED: [&str; 2] = ["CORE-QUERY-ROUNDTRIP", "CORE-QUERY-BLOB"];
+const PORTED: [&str; 4] = [
+    "CORE-QUERY-ROUNDTRIP",
+    "CORE-QUERY-BLOB",
+    "CORE-QUERY-SCOPE",
+    "CORE-QUERY-DEADLINE",
+];
 
 #[must_use]
 pub fn registry() -> Registry {

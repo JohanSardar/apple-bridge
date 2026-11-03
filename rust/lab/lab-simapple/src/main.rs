@@ -447,6 +447,9 @@ struct Session {
     credit: usize,
     tickets: BTreeMap<String, Ticket>,
     blobs: BTreeMap<String, Vec<u8>>,
+    sleeping: BTreeMap<String, query::Cancel>,
+    finished: mpsc::Sender<(String, Value)>,
+    finished_rx: mpsc::Receiver<(String, Value)>,
 }
 impl Session {
     fn emit(&mut self, state: &Shared, mut frame: Value) -> Result<()> {
@@ -767,8 +770,29 @@ impl Session {
             Some("Ping") => {
                 send(&mut self.stream, &json!({"t":"Pong"}))?;
             }
-            Some("Pong" | "QueryCancel") => {}
+            Some("Pong") => {}
+            Some("QueryCancel") => {
+                if let Some(cancel) = frame["id"].as_str().and_then(|id| self.sleeping.get(id)) {
+                    query::cancel(cancel);
+                }
+            }
             Some("Query") => {
+                if let Some(ms) = query::sleep_request(&frame) {
+                    let id = string(&frame, "id");
+                    if !self.sleeping.contains_key(&id) {
+                        let cancel = query::Cancel::default();
+                        self.sleeping.insert(id.clone(), cancel.clone());
+                        lock(state)?.data["effects"][&id] = json!(1);
+                        query::sleep(
+                            frame["id"].clone(),
+                            ms,
+                            frame["deadline_ms"].as_u64().unwrap_or(0),
+                            cancel,
+                            self.finished.clone(),
+                        );
+                    }
+                    return Ok(());
+                }
                 let reply = query::query(&mut self.blobs, &frame);
                 send(&mut self.stream, &reply)?;
             }
@@ -901,6 +925,7 @@ fn session(
             }
         }
     });
+    let (finished_tx, finished_rx) = mpsc::channel();
     let mut session = Session {
         stream,
         incoming: rx,
@@ -912,6 +937,9 @@ fn session(
         credit: usize::try_from(credit).map_err(|_| invalid("credit"))?,
         tickets: BTreeMap::new(),
         blobs: BTreeMap::new(),
+        sleeping: BTreeMap::new(),
+        finished: finished_tx,
+        finished_rx,
     };
     for src in sources {
         let generation = generation_of(&lock(state)?.data, src, &session.generation);
@@ -968,6 +996,12 @@ fn session(
         session.emit(state, capture)?;
     }
     loop {
+        if let Ok((id, reply)) = session.finished_rx.try_recv() {
+            session.sleeping.remove(&id);
+            lock(state)?.data["effects"][&id] = json!(0);
+            send(&mut session.stream, &reply)?;
+            continue;
+        }
         if let Some(frame) = session.pending.pop_front() {
             session.command(state, frame)?;
             continue;
