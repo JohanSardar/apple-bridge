@@ -544,6 +544,7 @@ impl<S: GatewayState + 'static> Server<S> {
 }
 
 impl<S: GatewayState> Server<S> {
+    #[allow(clippy::too_many_lines)]
     async fn blob<T: AsyncRead + AsyncWrite + Unpin>(
         &self,
         socket: &mut WebSocketStream<T>,
