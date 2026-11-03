@@ -303,7 +303,10 @@ fn finish(world: &World, evidence: &mut Evidence) -> Result<()> {
         Ok(())
     })?;
     *lock(&RUN) = None;
-    if matches!(evidence.scenario.as_str(), "CORE-RESUME" | "CORE-DISCONNECT-DETECT") {
+    if matches!(
+        evidence.scenario.as_str(),
+        "CORE-RESUME" | "CORE-DISCONNECT-DETECT"
+    ) {
         oversized_resets(world, evidence);
     }
     Ok(())

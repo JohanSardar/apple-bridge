@@ -1,8 +1,8 @@
+use crate::replicas::Endpoint;
 use crate::{assertions::await_until, replicas};
 use jiff::{SignedDuration, Timestamp};
 use lab_runner::Evidence;
 use lab_world::{Result, World};
-use crate::replicas::Endpoint;
 use serde_json::{Value, json};
 use std::{fs, process::Command, time::Duration};
 
