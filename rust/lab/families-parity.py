@@ -16,6 +16,7 @@ JOURNEY_RUST_ONLY = {'world_started'}
 IMPORT_SCENARIOS = ['messages/MSG-HISTORY-IMPORT', 'contacts/CON-IMPORT', 'notes/NOTE-IMPORT', 'usage/USE-IMPORT']
 MEDIA_SCENARIOS = ['web/WEB-MEDIA-VARIANTS', 'messages/MSG-MEDIA-CLEANUP']
 WEB_RM_SCENARIOS = ['web/WEB-RM-MEDIA-COLLECTION', 'web/WEB-RM-SEARCH']
+NATIVE_SCENARIOS = ['packaging/Q1-SETUP', 'packaging/R1-RELEASE-SIM', 'files/FILE-IDLE', 'files/FILE-CAPTURE']
 SCENARIOS = ['CORE-QUERY-ROUNDTRIP', 'CORE-QUERY-BLOB', 'CORE-QUERY-SCOPE', 'CORE-QUERY-DEADLINE',
              *JOURNEY_SCENARIOS]
 
@@ -45,6 +46,7 @@ def main():
     parser.add_argument('--import', dest='imports', action='store_true')
     parser.add_argument('--media', dest='media', action='store_true')
     parser.add_argument('--web-rm', dest='web_rm', action='store_true')
+    parser.add_argument('--native', dest='native', action='store_true')
     args = parser.parse_args()
     if args.imports:
         args.scenario = (args.scenario or []) + IMPORT_SCENARIOS
@@ -52,6 +54,8 @@ def main():
         args.scenario = (args.scenario or []) + MEDIA_SCENARIOS
     if args.web_rm:
         args.scenario = (args.scenario or []) + WEB_RM_SCENARIOS
+    if args.native:
+        args.scenario = (args.scenario or []) + NATIVE_SCENARIOS
     out = Path(args.output).resolve()
     out.mkdir(mode=0o700, parents=True, exist_ok=False)
     root = Path(__file__).resolve().parents[2] / 'lab' / 'scenarios'

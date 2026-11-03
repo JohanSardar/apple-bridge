@@ -2,11 +2,13 @@ pub mod assertions;
 pub mod blobs;
 pub mod cleanup;
 pub mod commands;
+pub mod files_native;
 pub mod history;
 pub mod http;
 pub mod imports;
 pub mod journey;
 pub mod media;
+pub mod packaging;
 pub mod poster;
 pub mod queries;
 pub mod readmodels;
@@ -65,6 +67,8 @@ pub fn registry() -> Registry {
     registry.register("converge", journey::converge);
     registry.register("media_variants", media::media_variants);
     registry.register("messages_commands", cleanup::messages_commands);
+    registry.register("files_native", files_native::files_native);
+    registry.register("robustness", packaging::robustness);
     registry.register("command_journey", journey::command_journey);
     registry
 }

@@ -1,3 +1,5 @@
 id: FILE-CAPTURE
 feature: files.capture
 levels: [sim]
+when:
+  - files_native: {}
