@@ -24,7 +24,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/JohanSardar/apple-bridge/internal/relay"
+	relay "github.com/JohanSardar/apple-bridge/lab/relayfixture"
 )
 
 type relayWire struct {
@@ -191,7 +191,15 @@ func relayDrained(w *relayWire) bool {
 func runRelayService(ctx context.Context, s Scenario, level string) Evidence {
 	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
 	e := Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), GitSHA: strings.TrimSpace(string(sha)), RunID: "relay-" + strings.ToLower(strings.TrimPrefix(s.ID, "RELAY-")), Hosts: []string{"air"}, NetworkPath: "loopback TLS origins through raw relay tunnel interface"}
+	e.Impl = "go"
+	if os.Getenv("AB_RELAY_FIXTURE") != "" {
+		e.Impl = "rust"
+	}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
+	if level == "real" && os.Getenv("AB_RELAY_FIXTURE") != "" {
+		add("rust_relay_fixture_sim_only", false)
+		return e
+	}
 	if level == "real" {
 		e = runRelayReal(ctx, s, e)
 		e.Passed = len(e.Assertions) > 0
@@ -206,6 +214,7 @@ func runRelayService(ctx context.Context, s Scenario, level string) Evidence {
 		return e
 	}
 	defer os.RemoveAll(dir)
+	defer relay.Cleanup(dir)
 	path := filepath.Join(dir, "relay.json")
 	limits := relay.Limits{Connections: 2, BytesPerSecond: 1048576, MonthlyBytes: 10485760}
 	store, err := relay.Open(path, "relay.test", limits)

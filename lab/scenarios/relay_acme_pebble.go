@@ -21,8 +21,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/JohanSardar/apple-bridge/internal/relay"
 	"github.com/JohanSardar/apple-bridge/internal/remote"
+	relay "github.com/JohanSardar/apple-bridge/lab/relayfixture"
 	"golang.org/x/net/dns/dnsmessage"
 )
 
@@ -105,9 +105,24 @@ func relayPebble(ctx context.Context, lab *relayLab, key ed25519.PrivateKey, cre
 	if err != nil {
 		return err
 	}
-	rawKey, _ := x509.MarshalECPrivateKey(private)
+	rootPath := filepath.Join(dir, "root.pem")
+	os.WriteFile(rootPath, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}), 0600)
+	serverKey, e := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if e != nil {
+		return e
+	}
+	serverTemplate := *template
+	serverTemplate.SerialNumber = big.NewInt(2)
+	serverTemplate.Subject = pkix.Name{CommonName: "Pebble server"}
+	serverTemplate.IsCA = false
+	serverTemplate.KeyUsage = x509.KeyUsageDigitalSignature
+	serverDer, e := x509.CreateCertificate(rand.Reader, &serverTemplate, template, &serverKey.PublicKey, private)
+	if e != nil {
+		return e
+	}
+	rawKey, _ := x509.MarshalECPrivateKey(serverKey)
 	certPath, keyPath := filepath.Join(dir, "server.pem"), filepath.Join(dir, "server-key.pem")
-	os.WriteFile(certPath, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}), 0600)
+	os.WriteFile(certPath, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: serverDer}), 0600)
 	os.WriteFile(keyPath, pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: rawKey}), 0600)
 	config := map[string]any{"pebble": map[string]any{"listenAddress": address, "managementListenAddress": "127.0.0.1:0", "certificate": certPath, "privateKey": keyPath, "httpPort": 5002, "tlsPort": 5001, "profiles": map[string]any{"default": map[string]any{"description": "lab renewal", "validityPeriod": 86400}}, "retryAfter": map[string]int{"authz": 1, "order": 1}}}
 	raw, _ := json.Marshal(config)
@@ -187,7 +202,7 @@ func relayPebble(ctx context.Context, lab *relayLab, key ed25519.PrivateKey, cre
 	dns.mu.Unlock()
 	add("dns_challenge_cleaned_up", value == "")
 	if !custom {
-		control, e := remote.ControlTLSConfig(bounded, filepath.Join(dir, "control"), host, dns, options)
+		control, e := lab.server.ControlTLSConfig(bounded, filepath.Join(dir, "control"), host, dns, options, rootPath)
 		add("control_dns01_certificate_issued", e == nil)
 		if e != nil {
 			return e

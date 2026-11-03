@@ -17,7 +17,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/JohanSardar/apple-bridge/internal/relay"
+	relay "github.com/JohanSardar/apple-bridge/lab/relayfixture"
 	"github.com/coder/websocket"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
