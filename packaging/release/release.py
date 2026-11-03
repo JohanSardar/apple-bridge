@@ -140,7 +140,7 @@ def build(args):
     run(ROOT / "packaging/dev/build-native.sh", ROOT / "native", env=dict(os.environ, APPLE_BRIDGE_NATIVE_LAB="0", APPLE_BRIDGE_NATIVE_TARGET="AppleBridgeHelper"))
     native_output = Path((ROOT / "native/.build/native-output-0").read_text().strip())
     shutil.copy2(native_output / "AppleBridgeHelper", app / "Contents/MacOS/AppleBridgeHelper")
-    run("go", "build", "-p", "2", "-o", app / "Contents/MacOS/bridge", "./cmd/bridge", cwd=ROOT)
+    run(ROOT / "packaging/dev/build-bridge.sh", app / "Contents/MacOS/bridge", "aarch64-apple-darwin")
     run("ditto", tools / "Sparkle.framework", app / "Contents/Frameworks/Sparkle.framework")
     run("swiftc", "-sdk", SDK, "-swift-version", "6", "-warnings-as-errors", "-parse-as-library", "-F", tools, "-framework", "Sparkle", "-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks", ROOT / "packaging/release/ReleaseCore.swift", ROOT / "packaging/release/Launcher.swift", "-o", app / "Contents/MacOS/AppleBridgeLauncher")
     info = plistlib.loads((ROOT / "packaging/dev/Info.plist").read_bytes())

@@ -114,3 +114,52 @@ fn remote_flags_validate_like_go() -> Check {
     }
     Ok(())
 }
+
+#[test]
+fn doctor_reports_credential_store_last_error_without_a_database() -> Check {
+    let home = tempfile::tempdir()?;
+    let failure = serde_json::json!({
+        "code": "credential_store_locked",
+        "store": "file_0600",
+        "remedy": "Unlock the login Keychain in an interactive macOS session, then retry bridge start.",
+        "retryable": true,
+    });
+    std::fs::write(
+        home.path().join("credential-store-error.json"),
+        serde_json::to_vec(&failure)?,
+    )?;
+    let output = bridge_with_file_store(home.path(), &["doctor"])?;
+    assert!(output.status.success());
+    let report: serde_json::Value = serde_json::from_slice(&output.stdout)?;
+    assert_eq!(report["credentials"]["store"], "file_0600");
+    assert_eq!(report["credentials"]["last_error"], failure);
+    assert_eq!(report["ok"], false);
+    Ok(())
+}
+
+#[test]
+fn doctor_ignores_a_last_error_from_another_store() -> Check {
+    let home = tempfile::tempdir()?;
+    std::fs::write(
+        home.path().join("credential-store-error.json"),
+        br#"{"code":"credential_store_locked","store":"keychain","remedy":"x","retryable":true}"#,
+    )?;
+    let output = bridge_with_file_store(home.path(), &["doctor"])?;
+    assert_eq!(output.status.code(), Some(1));
+    Ok(())
+}
+
+#[test]
+fn web_enroll_prints_the_url_then_a_terminal_qr() -> Check {
+    let home = tempfile::tempdir()?;
+    let output = bridge_with_file_store(home.path(), &["web", "enroll"])?;
+    assert!(output.status.success());
+    let text = String::from_utf8(output.stdout)?;
+    let mut lines = text.lines();
+    let url = lines.next().ok_or("url")?;
+    assert!(url.starts_with("http://localhost:7780/enroll#"));
+    let code: Vec<&str> = lines.collect();
+    assert!(code.len() > 10);
+    assert!(code.iter().any(|line| line.contains('\u{2588}') || line.contains('\u{2580}') || line.contains('\u{2584}')));
+    Ok(())
+}

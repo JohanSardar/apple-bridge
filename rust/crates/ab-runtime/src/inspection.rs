@@ -30,6 +30,28 @@ fn private(path: &Path) -> Result<bool, Error> {
     Ok(valid)
 }
 pub fn doctor(home: &Path) -> Result<Value, Error> {
+    let store = ab_trust::backend_name(&ab_trust::StoreEnvironment::current());
+    let last_error = fs::read(home.join("credential-store-error.json"))
+        .ok()
+        .and_then(|data| serde_json::from_slice::<ab_trust::CredentialStoreError>(&data).ok())
+        .filter(|failure| failure.store == store);
+    let credentials = match &last_error {
+        Some(failure) => json!({"store":store,"last_error":failure}),
+        None => json!({"store":store}),
+    };
+    match doctor_report(home) {
+        Ok(mut report) => {
+            report["credentials"] = credentials;
+            if last_error.is_some() {
+                report["ok"] = json!(false);
+            }
+            Ok(report)
+        }
+        Err(_) if last_error.is_some() => Ok(json!({"credentials":credentials,"ok":false})),
+        Err(error) => Err(error),
+    }
+}
+fn doctor_report(home: &Path) -> Result<Value, Error> {
     ab_trust::passkeys::validate_home(home)?;
     let db = database(home)?;
     db.execute_batch("BEGIN").map_err(|_| Error::Invalid)?;
@@ -115,12 +137,7 @@ pub fn doctor(home: &Path) -> Result<Value, Error> {
     result["ok"] = json!(integrity == "ok" && modes && inconsistent == 0 && exactly_once);
     result["shape"] = crate::shape::violations(&db)?;
     encryption(home, &mut result);
-    if result["disk_encryption"] != "enabled" {
-        result["warnings"]
-            .as_array_mut()
-            .ok_or(Error::Invalid)?
-            .push(json!("Verify disk encryption for the data directory."));
-    }
+    encryption_warning(&mut result)?;
     for warning in ab_remote::ct::doctor(home, ab_remote::ct::now()) {
         result["warnings"]
             .as_array_mut()
@@ -165,7 +182,34 @@ pub fn credential_lifecycle(home: &Path) -> Result<(), Error> {
     result
 }
 
+fn encryption_warning(result: &mut Value) -> Result<(), Error> {
+    if result["disk_encryption"] == "enabled" {
+        return Ok(());
+    }
+    let warning = if result["disk_encryption"] == "warning_not_enabled" {
+        "The data directory is not on detected encrypted storage; enable FileVault or move the directory onto LUKS/dm-crypt storage."
+    } else {
+        "Disk encryption could not be checked; install findmnt/lsblk on Linux or check FileVault status on macOS, and verify encryption for the data directory."
+    };
+    result["warnings"]
+        .as_array_mut()
+        .ok_or(Error::Invalid)?
+        .push(json!(warning));
+    Ok(())
+}
 fn encryption(home: &Path, result: &mut Value) {
+    if cfg!(target_os = "macos")
+        && let Ok(output) = std::process::Command::new("fdesetup").arg("status").output()
+        && output.status.success()
+    {
+        result["disk_encryption"] = json!(
+            if String::from_utf8_lossy(&output.stdout).contains("FileVault is On") {
+                "enabled"
+            } else {
+                "warning_not_enabled"
+            }
+        );
+    }
     if cfg!(target_os = "linux")
         && let Ok(output) = std::process::Command::new("findmnt")
             .args(["-n", "-o", "SOURCE", "-T"])

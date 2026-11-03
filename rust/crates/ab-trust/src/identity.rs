@@ -34,6 +34,23 @@ struct Delegation<'a> {
 impl Authority {
     pub fn open(home: impl AsRef<Path>) -> Result<Self, Error> {
         let home = home.as_ref().to_path_buf();
+        let result = Self::open_inner(&home);
+        let report = home.join("credential-store-error.json");
+        match &result {
+            Err(Error::CredentialStore(failure)) => {
+                if let Ok(bytes) = serde_json::to_vec(failure) {
+                    let _ = atomic_write(&report, &bytes);
+                }
+            }
+            Ok(_) => {
+                let _ = fs::remove_file(&report);
+            }
+            Err(_) => {}
+        }
+        result
+    }
+    fn open_inner(home: &Path) -> Result<Self, Error> {
+        let home = home.to_path_buf();
         crate::passkeys::validate_home(&home)?;
         fs::create_dir_all(&home)?;
         fs::set_permissions(&home, fs::Permissions::from_mode(0o700))?;
