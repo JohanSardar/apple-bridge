@@ -671,7 +671,7 @@ impl Service {
                     command
                         .as_ref()
                         .filter(|c| !c.id.is_empty())
-                        .map_or_else(|| format!("cmd_{}", ulid::Ulid::new()), |c| c.id.clone())
+                        .map_or_else(new_command_id, |c| c.id.clone())
                 } else {
                     format!("{name}:{}", now.as_second() / 60)
                 };
@@ -721,7 +721,7 @@ impl Service {
             }
             command.op = name.into();
             if command.id.is_empty() {
-                command.id = format!("cmd_{}", ulid::Ulid::new());
+                command.id = new_command_id();
             }
             command_contract::validate(&command)?;
             return match &self.target {
@@ -851,4 +851,8 @@ pub fn descriptor_for(name: &str) -> Result<ab_catalog::OperationDescriptor, Err
         .get(name)
         .cloned()
         .ok_or_else(|| Code::Unsupported.into())
+}
+
+fn new_command_id() -> String {
+    ab_state::replay::command_id().unwrap_or_else(|| format!("cmd_{}", ulid::Ulid::new()))
 }
