@@ -603,7 +603,9 @@ impl Store {
             }
             self.manifest.entries.remove(d);
         }
-        self.save()?;
+        if !remove.is_empty() {
+            self.save()?;
+        }
         Ok(remove.len())
     }
 }

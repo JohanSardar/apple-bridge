@@ -36,7 +36,10 @@ final class SetupModel: ObservableObject {
     }
     func save() {
         try? FileManager.default.createDirectory(at: home, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-        if let data = try? JSONEncoder().encode(state) { try? data.write(to: home.appendingPathComponent("setup.json"), options: [.atomic, .completeFileProtectionUnlessOpen]) }
+        guard let data = try? JSONEncoder().encode(state) else { return }
+        let file = home.appendingPathComponent("setup.json")
+        try? data.write(to: file, options: [.atomic, .completeFileProtectionUnlessOpen])
+        if (try? Data(contentsOf: file)) != data { try? data.write(to: file, options: .atomic) }
     }
     func move(_ forward: Bool) {
         if forward { state.advance() } else { state.back() }
