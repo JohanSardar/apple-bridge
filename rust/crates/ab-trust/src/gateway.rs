@@ -210,7 +210,7 @@ impl Authority {
                 .iter()
                 .position(|p| p.id == id)
                 .ok_or(Error::Unauthorized)?;
-            if d.principals[index].kind == "agent" {
+            if matches!(d.principals[index].kind.as_str(), "agent" | "replica") {
                 let p = &mut d.principals[index];
                 p.extra.insert(
                     "revoked_at".into(),

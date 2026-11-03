@@ -190,6 +190,9 @@ impl Principal {
     }
 }
 pub trait Identity: Debug + Send + Sync {
+    fn dial_replicas(&self) -> Result<Option<Value>, Error> {
+        Ok(None)
+    }
     fn approval_principal(
         &self,
         _id: &str,
@@ -779,7 +782,19 @@ impl Service {
         {
             let query: Value =
                 serde_json::from_slice(input).map_err(|_| Error::from(Code::Invalid))?;
-            return self.store.read_model(&visibility, name, &query);
+            let result = self.store.read_model(&visibility, name, &query)?;
+            if name == "replica.status" {
+                let mut result: Value =
+                    serde_json::from_str(result.get()).map_err(|_| Code::Corrupt)?;
+                if result["replica"]["role"] == "gateway"
+                    && let Some(dials) = self.identity.dial_replicas()?
+                {
+                    result["replica"]["dial_replicas"] = dials;
+                    result["records"][0]["data"] = result["replica"].clone();
+                }
+                return crate::legacy::read_model(name, &result);
+            }
+            return Ok(result);
         }
         let query: ReadQuery =
             serde_json::from_slice(input).map_err(|_| Error::from(Code::Invalid))?;
