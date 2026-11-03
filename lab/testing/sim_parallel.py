@@ -90,6 +90,8 @@ def execute(entry, binary, timeout, logs, implementation, rust_binary, startup_b
         if blockers:
             row['execution_status'] = status
             row['status'] = 'blocked'
+    elif 'replica=rust' in implementation:
+        row['harness_audit'] = gateway_blockers(entry)
     return row
 
 
