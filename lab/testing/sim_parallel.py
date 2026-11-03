@@ -15,10 +15,15 @@ import time
 def execute(entry, binary, timeout, logs, implementation, rust_binary, startup_blocker):
     started = time.monotonic()
     target = logs / (entry['id'] + '.log')
-    if 'gateway=rust' in implementation and (startup_blocker or not rust_binary or not Path(rust_binary).is_file()):
-        blockers = gateway_blockers(entry) + [startup_blocker or 'ab-runtime: Rust bridge executable unavailable']
-        target.write_text('\n'.join(blockers) + '\n')
-        return {'id': entry['id'], 'seconds': 0, 'status': 'blocked', 'execution_status': 'not-started', 'implementation': implementation, 'required_features': entry['packages'], 'blocked_on': blockers}
+    if 'gateway=rust' in implementation:
+        blockers = gateway_blockers(entry)
+        if startup_blocker:
+            blockers.append(startup_blocker)
+        if not rust_binary or not Path(rust_binary).is_file():
+            blockers.append('ab-runtime: Rust bridge executable unavailable')
+        if blockers:
+            target.write_text('\n'.join(blockers) + '\n')
+            return {'id': entry['id'], 'seconds': 0, 'status': 'blocked', 'execution_status': 'not-started', 'implementation': implementation, 'required_features': entry['packages'], 'blocked_on': blockers}
     with target.open('wb') as output:
         command = [binary, 'run', entry['path'], '--level', 'sim', '--prebuilt', '--json']
         command += ['--impl', implementation]
