@@ -60,3 +60,7 @@ Unchanged CORE-BLOB-NATIVE-STAGE, CORE-BLOB-STAGE-DURING-TRANSFER, CORE-BLOB-STA
 Capture hydration carries the authenticated PeerSession from Backend::commit_from through each queued blob request and calls Commands::read_blob_from. Replaced owners cannot satisfy old handles; sessionless captures containing handles fail before State commit. Runtime installs the provided QueryActivity sink and lab-only LabClock on the single LocalGateway.
 
 The CLI supports web enroll --host / --public using Authority::create_web_enroll, and agent create/list render the public Go-shaped summary (scopes, timestamps, no credential hashes). An explicitly empty agent level selects approve, matching Go. Enrollment terminal QR rendering remains outside this slice.
+
+## G-F query audit assembly
+
+Runtime's QueryAuditSink appends the Go-shaped operation/argument_bytes/result_bytes/blob_bytes row to owner-only commands-audit.jsonl and forwards completed agent queries to the provided QueryActivity sink. It never logs query arguments or results. The lab-harness feature includes the existing frontdoor test-query descriptors so the default matrix reaches the same test.echo/test.sleep/test.blob paths over REST and MCP; ordinary builds retain the frozen catalog. CORE-QUERY-ROUNDTRIP, CORE-QUERY-DEADLINE, CORE-QUERY-BLOB and CORE-QUERY-SCOPE pass unchanged against the selected Rust gateway. Full Linux matrix: 116 pass / 35 fail / 50 blocked (201), with CAL-WINDOW-SLIDE passing in this run after previous intermittence.
