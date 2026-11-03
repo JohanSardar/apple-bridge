@@ -13,6 +13,7 @@ mod query;
 mod reminders;
 mod sources;
 mod stale;
+mod vision;
 use lab_wire::{receive, send};
 use serde_json::{Value, json};
 use std::{
@@ -731,7 +732,7 @@ impl Session<'_> {
                 s.data["origins"][&command]["action"] = frame["action"]["origin"].clone();
             }
         }
-        if self.message_command(state, &frame)? {
+        if self.message_command(state, &frame)? || self.vision_command(state, &frame)? {
             return Ok(());
         }
         let family = self.family(state, &frame)?;
@@ -813,6 +814,8 @@ impl Session<'_> {
                 } else if let Some(reply) = files::query(state, &frame)? {
                     reply
                 } else if let Some(reply) = maps::query(&mut self.blobs, &frame) {
+                    reply
+                } else if let Some(reply) = vision::query(state, &mut self.blobs, &frame)? {
                     reply
                 } else {
                     query::query(&mut self.blobs, &frame)
@@ -929,6 +932,12 @@ fn session(
     capabilities["mac"] = json!(mac::CAPABILITIES);
     capabilities["messages"] = messages::operations();
     coverage["messages"] = messages::coverage(true, true);
+    for (src, operations) in vision::capabilities() {
+        capabilities[src] = json!(operations);
+    }
+    for src in ["speech", "capture"] {
+        coverage[src] = json!({"fields":"complete"});
+    }
     capabilities["calendar"] = json!([
         "calendar.create_event",
         "calendar.update_event",
