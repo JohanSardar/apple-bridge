@@ -1,0 +1,646 @@
+[
+  {
+    "accepted": false,
+    "kind": "expiry",
+    "now": "2026-11-02T12:00:00Z",
+    "op": "messages.send",
+    "requested": "2026-11-02T11:59:59.999999999Z"
+  },
+  {
+    "accepted": false,
+    "kind": "expiry",
+    "now": "2026-11-02T12:00:00Z",
+    "op": "messages.send",
+    "requested": "2026-11-02T12:00:00Z"
+  },
+  {
+    "accepted": true,
+    "kind": "expiry",
+    "now": "2026-11-02T12:00:00Z",
+    "op": "messages.send",
+    "requested": "2026-11-02T12:00:00.000000001Z"
+  },
+  {
+    "accepted": true,
+    "kind": "expiry",
+    "now": "2026-11-02T12:00:00Z",
+    "op": "messages.send",
+    "requested": "2026-11-02T12:01:00Z"
+  },
+  {
+    "accepted": true,
+    "kind": "expiry",
+    "now": "2026-11-02T12:00:00Z",
+    "op": "messages.send",
+    "requested": "2026-11-02T12:05:00Z"
+  },
+  {
+    "accepted": false,
+    "kind": "expiry",
+    "now": "2026-11-02T12:00:00Z",
+    "op": "messages.send",
+    "requested": "2026-11-02T12:05:00.000000001Z"
+  },
+  {
+    "accepted": true,
+    "expires": "2026-11-02T12:01:00Z",
+    "kind": "expiry",
+    "now": "2026-11-02T12:00:00Z",
+    "op": "messages.send",
+    "requested": null
+  },
+  {
+    "accepted": false,
+    "kind": "expiry",
+    "now": "2026-11-02T12:00:00Z",
+    "op": "messages.edit",
+    "requested": "2026-11-02T11:59:59.999999999Z"
+  },
+  {
+    "accepted": false,
+    "kind": "expiry",
+    "now": "2026-11-02T12:00:00Z",
+    "op": "messages.edit",
+    "requested": "2026-11-02T12:00:00Z"
+  },
+  {
+    "accepted": true,
+    "kind": "expiry",
+    "now": "2026-11-02T12:00:00Z",
+    "op": "messages.edit",
+    "requested": "2026-11-02T12:00:00.000000001Z"
+  },
+  {
+    "accepted": true,
+    "kind": "expiry",
+    "now": "2026-11-02T12:00:00Z",
+    "op": "messages.edit",
+    "requested": "2026-11-02T12:01:00Z"
+  },
+  {
+    "accepted": true,
+    "kind": "expiry",
+    "now": "2026-11-02T12:00:00Z",
+    "op": "messages.edit",
+    "requested": "2026-11-02T12:05:00Z"
+  },
+  {
+    "accepted": false,
+    "kind": "expiry",
+    "now": "2026-11-02T12:00:00Z",
+    "op": "messages.edit",
+    "requested": "2026-11-02T12:05:00.000000001Z"
+  },
+  {
+    "accepted": true,
+    "expires": "2026-11-02T12:01:00Z",
+    "kind": "expiry",
+    "now": "2026-11-02T12:00:00Z",
+    "op": "messages.edit",
+    "requested": null
+  },
+  {
+    "accepted": false,
+    "kind": "expiry",
+    "now": "2026-11-02T12:00:00Z",
+    "op": "reminders.create",
+    "requested": "2026-11-02T11:59:59.999999999Z"
+  },
+  {
+    "accepted": false,
+    "kind": "expiry",
+    "now": "2026-11-02T12:00:00Z",
+    "op": "reminders.create",
+    "requested": "2026-11-02T12:00:00Z"
+  },
+  {
+    "accepted": true,
+    "kind": "expiry",
+    "now": "2026-11-02T12:00:00Z",
+    "op": "reminders.create",
+    "requested": "2026-11-02T12:00:00.000000001Z"
+  },
+  {
+    "accepted": true,
+    "kind": "expiry",
+    "now": "2026-11-02T12:00:00Z",
+    "op": "reminders.create",
+    "requested": "2026-11-02T12:05:00Z"
+  },
+  {
+    "accepted": true,
+    "kind": "expiry",
+    "now": "2026-11-02T12:00:00Z",
+    "op": "reminders.create",
+    "requested": "2026-11-02T13:00:00Z"
+  },
+  {
+    "accepted": false,
+    "kind": "expiry",
+    "now": "2026-11-02T12:00:00Z",
+    "op": "reminders.create",
+    "requested": "2026-11-02T13:00:00.000000001Z"
+  },
+  {
+    "accepted": true,
+    "expires": "2026-11-02T12:05:00Z",
+    "kind": "expiry",
+    "now": "2026-11-02T12:00:00Z",
+    "op": "reminders.create",
+    "requested": null
+  },
+  {
+    "accepted": false,
+    "kind": "expiry",
+    "now": "2026-11-02T12:00:00Z",
+    "op": "iphone.ping",
+    "requested": "2026-11-02T11:59:59.999999999Z"
+  },
+  {
+    "accepted": false,
+    "kind": "expiry",
+    "now": "2026-11-02T12:00:00Z",
+    "op": "iphone.ping",
+    "requested": "2026-11-02T12:00:00Z"
+  },
+  {
+    "accepted": true,
+    "kind": "expiry",
+    "now": "2026-11-02T12:00:00Z",
+    "op": "iphone.ping",
+    "requested": "2026-11-02T12:00:00.000000001Z"
+  },
+  {
+    "accepted": true,
+    "kind": "expiry",
+    "now": "2026-11-02T12:00:00Z",
+    "op": "iphone.ping",
+    "requested": "2026-11-02T12:05:00Z"
+  },
+  {
+    "accepted": true,
+    "kind": "expiry",
+    "now": "2026-11-02T12:00:00Z",
+    "op": "iphone.ping",
+    "requested": "2026-11-02T13:00:00Z"
+  },
+  {
+    "accepted": false,
+    "kind": "expiry",
+    "now": "2026-11-02T12:00:00Z",
+    "op": "iphone.ping",
+    "requested": "2026-11-02T13:00:00.000000001Z"
+  },
+  {
+    "accepted": true,
+    "expires": "2026-11-02T12:05:00Z",
+    "kind": "expiry",
+    "now": "2026-11-02T12:00:00Z",
+    "op": "iphone.ping",
+    "requested": null
+  },
+  {
+    "accepted": true,
+    "kind": "clock",
+    "offset": 0,
+    "times": [
+      "2026-11-02T12:00:00Z",
+      "2026-11-02T12:00:00.000000001Z",
+      "2026-11-02T12:00:00.000000002Z",
+      "2026-11-02T12:00:00.000000004Z"
+    ],
+    "uncertainty": 1
+  },
+  {
+    "accepted": true,
+    "kind": "clock",
+    "offset": -3,
+    "times": [
+      "2026-11-02T12:00:00Z",
+      "2026-11-02T11:59:59.999999998Z",
+      "2026-11-02T11:59:59.999999999Z",
+      "2026-11-02T12:00:00.000000004Z"
+    ],
+    "uncertainty": 1
+  },
+  {
+    "accepted": true,
+    "kind": "clock",
+    "offset": 0,
+    "times": [
+      "2026-11-02T12:00:00Z",
+      "2026-11-02T12:00:00Z",
+      "2026-11-02T12:00:00Z",
+      "2026-11-02T12:00:00Z"
+    ],
+    "uncertainty": 0
+  },
+  {
+    "accepted": false,
+    "kind": "clock",
+    "offset": 0,
+    "times": [
+      "2026-11-02T12:00:00Z",
+      "2026-11-02T12:00:00.000000001Z",
+      "2026-11-02T12:00:00Z",
+      "2026-11-02T12:00:00.000000003Z"
+    ],
+    "uncertainty": 0
+  },
+  {
+    "accepted": false,
+    "kind": "clock",
+    "offset": 0,
+    "times": [
+      "2026-11-02T12:00:00.000000003Z",
+      "2026-11-02T12:00:00.000000001Z",
+      "2026-11-02T12:00:00.000000002Z",
+      "2026-11-02T12:00:00Z"
+    ],
+    "uncertainty": 0
+  },
+  {
+    "accepted": false,
+    "kind": "clock",
+    "offset": 0,
+    "times": [
+      "2026-11-02T12:00:00Z",
+      "2026-11-02T12:00:00Z",
+      "2026-11-02T12:00:00.000000009Z",
+      "2026-11-02T12:00:00.000000001Z"
+    ],
+    "uncertainty": 0
+  },
+  {
+    "accepted": true,
+    "kind": "clock",
+    "offset": -3,
+    "times": [
+      "2026-11-02T12:00:00Z",
+      "2026-11-02T11:59:59.999999997Z",
+      "2026-11-02T11:59:59.999999997Z",
+      "2026-11-02T12:00:00.000000001Z"
+    ],
+    "uncertainty": 0
+  },
+  {
+    "accepted": true,
+    "data": {
+      "attachments": [],
+      "block_status": "complete",
+      "content_status": "complete",
+      "html": "\u003cp\u003ea\u003c/p\u003e",
+      "round_trip_status": "unproven"
+    },
+    "html": "\u003cp\u003eb\u003c/p\u003e",
+    "kind": "html"
+  },
+  {
+    "accepted": false,
+    "data": {
+      "attachments": [],
+      "block_status": "complete",
+      "content_status": "complete",
+      "html": "\u003cp\u003ea\u003c/p\u003e",
+      "round_trip_status": "unproven"
+    },
+    "html": "\u003cp\u003ex\u003cb\u003ey\u003c/b\u003e\u003c/p\u003e",
+    "kind": "html"
+  },
+  {
+    "accepted": false,
+    "data": {
+      "attachments": [],
+      "block_status": "complete",
+      "content_status": "complete",
+      "html": "\u003cp\u003ea\u003c/p\u003e",
+      "round_trip_status": "unproven"
+    },
+    "html": "\u003cdiv\u003ex\u003c/div\u003e",
+    "kind": "html"
+  },
+  {
+    "accepted": false,
+    "data": {
+      "attachments": [],
+      "block_status": "complete",
+      "content_status": "complete",
+      "html": "\u003cp\u003ea\u003c/p\u003e",
+      "round_trip_status": "unproven"
+    },
+    "html": "\u003cp\u003e\u003c/p\u003e",
+    "kind": "html"
+  },
+  {
+    "accepted": false,
+    "data": {
+      "attachments": [],
+      "block_status": "complete",
+      "content_status": "complete",
+      "html": "\u003cp\u003ea\u003c/p\u003e",
+      "round_trip_status": "unproven"
+    },
+    "html": "\u003cp\u003ex\u003c",
+    "kind": "html"
+  },
+  {
+    "accepted": false,
+    "data": {
+      "attachments": [],
+      "block_status": "complete",
+      "content_status": "complete",
+      "html": "\u003cp\u003ea\u003c/p\u003e",
+      "round_trip_status": "unproven"
+    },
+    "html": "\u003cp\u003e\u0000\u003c/p\u003e",
+    "kind": "html"
+  },
+  {
+    "accepted": false,
+    "data": {
+      "attachments": [],
+      "block_status": "complete",
+      "content_status": "complete",
+      "html": "\u003cp\u003ea\u003cb\u003eb\u003c/b\u003e\u003c/p\u003e",
+      "round_trip_status": "unproven"
+    },
+    "html": "\u003cp\u003eb\u003c/p\u003e",
+    "kind": "html"
+  },
+  {
+    "accepted": true,
+    "data": {
+      "attachments": [],
+      "block_status": "complete",
+      "content_status": "complete",
+      "html": "\u003cp\u003ea\u003cb\u003eb\u003c/b\u003e\u003c/p\u003e",
+      "round_trip_status": "unproven"
+    },
+    "html": "\u003cp\u003ex\u003cb\u003ey\u003c/b\u003e\u003c/p\u003e",
+    "kind": "html"
+  },
+  {
+    "accepted": false,
+    "data": {
+      "attachments": [],
+      "block_status": "complete",
+      "content_status": "complete",
+      "html": "\u003cp\u003ea\u003cb\u003eb\u003c/b\u003e\u003c/p\u003e",
+      "round_trip_status": "unproven"
+    },
+    "html": "\u003cdiv\u003ex\u003c/div\u003e",
+    "kind": "html"
+  },
+  {
+    "accepted": false,
+    "data": {
+      "attachments": [],
+      "block_status": "complete",
+      "content_status": "complete",
+      "html": "\u003cp\u003ea\u003cb\u003eb\u003c/b\u003e\u003c/p\u003e",
+      "round_trip_status": "unproven"
+    },
+    "html": "\u003cp\u003e\u003c/p\u003e",
+    "kind": "html"
+  },
+  {
+    "accepted": false,
+    "data": {
+      "attachments": [],
+      "block_status": "complete",
+      "content_status": "complete",
+      "html": "\u003cp\u003ea\u003cb\u003eb\u003c/b\u003e\u003c/p\u003e",
+      "round_trip_status": "unproven"
+    },
+    "html": "\u003cp\u003ex\u003c",
+    "kind": "html"
+  },
+  {
+    "accepted": false,
+    "data": {
+      "attachments": [],
+      "block_status": "complete",
+      "content_status": "complete",
+      "html": "\u003cp\u003ea\u003cb\u003eb\u003c/b\u003e\u003c/p\u003e",
+      "round_trip_status": "unproven"
+    },
+    "html": "\u003cp\u003e\u0000\u003c/p\u003e",
+    "kind": "html"
+  },
+  {
+    "accepted": false,
+    "data": {
+      "attachments": [],
+      "block_status": "complete",
+      "content_status": "complete",
+      "html": "\u003ctable\u003ex\u003c/table\u003e",
+      "round_trip_status": "unproven"
+    },
+    "html": "\u003cp\u003eb\u003c/p\u003e",
+    "kind": "html"
+  },
+  {
+    "accepted": false,
+    "data": {
+      "attachments": [],
+      "block_status": "complete",
+      "content_status": "complete",
+      "html": "\u003ctable\u003ex\u003c/table\u003e",
+      "round_trip_status": "unproven"
+    },
+    "html": "\u003cp\u003ex\u003cb\u003ey\u003c/b\u003e\u003c/p\u003e",
+    "kind": "html"
+  },
+  {
+    "accepted": false,
+    "data": {
+      "attachments": [],
+      "block_status": "complete",
+      "content_status": "complete",
+      "html": "\u003ctable\u003ex\u003c/table\u003e",
+      "round_trip_status": "unproven"
+    },
+    "html": "\u003cdiv\u003ex\u003c/div\u003e",
+    "kind": "html"
+  },
+  {
+    "accepted": false,
+    "data": {
+      "attachments": [],
+      "block_status": "complete",
+      "content_status": "complete",
+      "html": "\u003ctable\u003ex\u003c/table\u003e",
+      "round_trip_status": "unproven"
+    },
+    "html": "\u003cp\u003e\u003c/p\u003e",
+    "kind": "html"
+  },
+  {
+    "accepted": false,
+    "data": {
+      "attachments": [],
+      "block_status": "complete",
+      "content_status": "complete",
+      "html": "\u003ctable\u003ex\u003c/table\u003e",
+      "round_trip_status": "unproven"
+    },
+    "html": "\u003cp\u003ex\u003c",
+    "kind": "html"
+  },
+  {
+    "accepted": false,
+    "data": {
+      "attachments": [],
+      "block_status": "complete",
+      "content_status": "complete",
+      "html": "\u003ctable\u003ex\u003c/table\u003e",
+      "round_trip_status": "unproven"
+    },
+    "html": "\u003cp\u003e\u0000\u003c/p\u003e",
+    "kind": "html"
+  },
+  {
+    "accepted": false,
+    "data": {
+      "attachments": [],
+      "block_status": "complete",
+      "content_status": "complete",
+      "html": "\u003cp data-notes-read-only\u003ex\u003c/p\u003e",
+      "round_trip_status": "unproven"
+    },
+    "html": "\u003cp\u003eb\u003c/p\u003e",
+    "kind": "html"
+  },
+  {
+    "accepted": false,
+    "data": {
+      "attachments": [],
+      "block_status": "complete",
+      "content_status": "complete",
+      "html": "\u003cp data-notes-read-only\u003ex\u003c/p\u003e",
+      "round_trip_status": "unproven"
+    },
+    "html": "\u003cp\u003ex\u003cb\u003ey\u003c/b\u003e\u003c/p\u003e",
+    "kind": "html"
+  },
+  {
+    "accepted": false,
+    "data": {
+      "attachments": [],
+      "block_status": "complete",
+      "content_status": "complete",
+      "html": "\u003cp data-notes-read-only\u003ex\u003c/p\u003e",
+      "round_trip_status": "unproven"
+    },
+    "html": "\u003cdiv\u003ex\u003c/div\u003e",
+    "kind": "html"
+  },
+  {
+    "accepted": false,
+    "data": {
+      "attachments": [],
+      "block_status": "complete",
+      "content_status": "complete",
+      "html": "\u003cp data-notes-read-only\u003ex\u003c/p\u003e",
+      "round_trip_status": "unproven"
+    },
+    "html": "\u003cp\u003e\u003c/p\u003e",
+    "kind": "html"
+  },
+  {
+    "accepted": false,
+    "data": {
+      "attachments": [],
+      "block_status": "complete",
+      "content_status": "complete",
+      "html": "\u003cp data-notes-read-only\u003ex\u003c/p\u003e",
+      "round_trip_status": "unproven"
+    },
+    "html": "\u003cp\u003ex\u003c",
+    "kind": "html"
+  },
+  {
+    "accepted": false,
+    "data": {
+      "attachments": [],
+      "block_status": "complete",
+      "content_status": "complete",
+      "html": "\u003cp data-notes-read-only\u003ex\u003c/p\u003e",
+      "round_trip_status": "unproven"
+    },
+    "html": "\u003cp\u003e\u0000\u003c/p\u003e",
+    "kind": "html"
+  },
+  {
+    "accepted": false,
+    "data": {
+      "attachments": [],
+      "block_status": "complete",
+      "content_status": "complete",
+      "html": "\u003cp\u003ex\u003c",
+      "round_trip_status": "unproven"
+    },
+    "html": "\u003cp\u003eb\u003c/p\u003e",
+    "kind": "html"
+  },
+  {
+    "accepted": false,
+    "data": {
+      "attachments": [],
+      "block_status": "complete",
+      "content_status": "complete",
+      "html": "\u003cp\u003ex\u003c",
+      "round_trip_status": "unproven"
+    },
+    "html": "\u003cp\u003ex\u003cb\u003ey\u003c/b\u003e\u003c/p\u003e",
+    "kind": "html"
+  },
+  {
+    "accepted": false,
+    "data": {
+      "attachments": [],
+      "block_status": "complete",
+      "content_status": "complete",
+      "html": "\u003cp\u003ex\u003c",
+      "round_trip_status": "unproven"
+    },
+    "html": "\u003cdiv\u003ex\u003c/div\u003e",
+    "kind": "html"
+  },
+  {
+    "accepted": false,
+    "data": {
+      "attachments": [],
+      "block_status": "complete",
+      "content_status": "complete",
+      "html": "\u003cp\u003ex\u003c",
+      "round_trip_status": "unproven"
+    },
+    "html": "\u003cp\u003e\u003c/p\u003e",
+    "kind": "html"
+  },
+  {
+    "accepted": false,
+    "data": {
+      "attachments": [],
+      "block_status": "complete",
+      "content_status": "complete",
+      "html": "\u003cp\u003ex\u003c",
+      "round_trip_status": "unproven"
+    },
+    "html": "\u003cp\u003ex\u003c",
+    "kind": "html"
+  },
+  {
+    "accepted": false,
+    "data": {
+      "attachments": [],
+      "block_status": "complete",
+      "content_status": "complete",
+      "html": "\u003cp\u003ex\u003c",
+      "round_trip_status": "unproven"
+    },
+    "html": "\u003cp\u003e\u0000\u003c/p\u003e",
+    "kind": "html"
+  }
+]
