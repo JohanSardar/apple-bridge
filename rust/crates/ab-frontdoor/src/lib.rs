@@ -107,6 +107,23 @@ pub fn problem(error: Error) -> Response {
     *response.status_mut() = status;
     response
 }
+fn authentication_problem(error: Error, public: bool, host: Option<&str>) -> Response {
+    let mut response = problem(error);
+    if response.status() == StatusCode::UNAUTHORIZED {
+        let scheme = if public { "https" } else { "http" };
+        if let Ok(value) = format!(
+            "Bearer resource_metadata=\"{scheme}://{}/.well-known/oauth-protected-resource\"",
+            host.unwrap_or_default()
+        )
+        .parse()
+        {
+            response
+                .headers_mut()
+                .insert(header::WWW_AUTHENTICATE, value);
+        }
+    }
+    response
+}
 async fn guard(
     State(frontdoor): State<Arc<Frontdoor>>,
     mut request: Request,
@@ -126,26 +143,6 @@ async fn guard(
     {
         return problem(Code::Unauthorized.into());
     }
-    let scheme = if frontdoor.config.public {
-        "https"
-    } else {
-        "http"
-    };
-    let authentication_problem = |error| {
-        let mut response = problem(error);
-        if response.status() == StatusCode::UNAUTHORIZED {
-            let challenge = format!(
-                "Bearer resource_metadata=\"{scheme}://{}/.well-known/oauth-protected-resource\"",
-                host.unwrap_or_default()
-            );
-            if let Ok(value) = challenge.parse() {
-                response
-                    .headers_mut()
-                    .insert(header::WWW_AUTHENTICATE, value);
-            }
-        }
-        response
-    };
     let principal = request
         .headers()
         .get(header::AUTHORIZATION)
@@ -155,13 +152,18 @@ async fn guard(
         .and_then(|token| frontdoor.service.identity.authenticate(token));
     let principal = match principal {
         Ok(p) => p,
-        Err(error) => return authentication_problem(error),
+        Err(error) => return authentication_problem(error, frontdoor.config.public, host),
+    };
+    let scheme = if frontdoor.config.public {
+        "https"
+    } else {
+        "http"
     };
     if (frontdoor.config.public && !principal.remote)
         || (!principal.resource.is_empty()
             && principal.resource != format!("{scheme}://{}/mcp", host.unwrap_or_default()))
     {
-        return authentication_problem(Code::Unauthorized.into());
+        return authentication_problem(Code::Unauthorized.into(), frontdoor.config.public, host);
     }
     let allowed = match frontdoor.rates.lock() {
         Ok(mut rates) => {
@@ -448,4 +450,34 @@ fn byte_range(raw: &str, total: usize) -> Option<(usize, usize)> {
         end.parse::<usize>().ok()?.min(total - 1)
     };
     (start <= end && start < total).then_some((start, end))
+}
+
+#[cfg(test)]
+mod oauth_discovery_tests {
+    use super::*;
+
+    #[test]
+    fn challenges_use_the_validated_transport_and_host() {
+        for (public, host, scheme) in [
+            (false, "127.0.0.1:7780", "http"),
+            (true, "bridge.example", "https"),
+        ] {
+            let response = authentication_problem(Code::Unauthorized.into(), public, Some(host));
+            assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+            assert_eq!(
+                response.headers()[header::WWW_AUTHENTICATE],
+                format!(
+                    "Bearer resource_metadata=\"{scheme}://{host}/.well-known/oauth-protected-resource\""
+                )
+            );
+        }
+    }
+
+    #[test]
+    fn other_errors_do_not_offer_an_authentication_challenge() {
+        let response =
+            authentication_problem(Code::Unavailable.into(), false, Some("localhost:7780"));
+        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+        assert!(!response.headers().contains_key(header::WWW_AUTHENTICATE));
+    }
 }
