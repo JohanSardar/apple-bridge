@@ -25,5 +25,5 @@ base64 = "0.22"
 futures-util = "0.3"
 
 [features]
-lab-harness = []
+lab-harness = ["ab-trust/lab-harness"]
 lab-queries = ["ab-operations/lab-harness"]
