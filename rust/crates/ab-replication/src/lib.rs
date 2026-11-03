@@ -340,6 +340,7 @@ impl<S: ReplicaState> Client<S> {
             let mut install = None;
             let mut active_blob: Option<Digest> = None;
             let mut ignored_blob = false;
+            let mut active_variant = false;
             let mut snapshot_id = String::new();
 
             let mut blob_queue = std::collections::VecDeque::new();
@@ -543,7 +544,14 @@ impl<S: ReplicaState> Client<S> {
                         {
                             blobs.lock().await.finish(&d)?;
                         }
+                        if f.t == "BlobUnavailable"
+                            && active_variant
+                            && matches!(f.reason.as_str(), "pending" | "unavailable")
+                        {
+                            blob_queue.retain(|r: &ab_blobs::Reference| r.variant);
+                        }
                         active_blob = None;
+                        active_variant = false;
                         ignored_blob = false;
                     }
                     _ => return Err(Error::Invalid),
@@ -590,13 +598,17 @@ impl<S: ReplicaState> Client<S> {
                         refs.sort_by(|a, b| {
                             b.variant.cmp(&a.variant).then(a.digest.cmp(&b.digest))
                         });
-                        blob_queue.extend(refs.into_iter().filter(|r| !r.awaiting_variants));
+                        let mut seen = std::collections::HashSet::new();
+                        blob_queue.extend(
+                            refs.into_iter()
+                                .filter(|r| !r.awaiting_variants && seen.insert(r.digest.clone())),
+                        );
                     }
                     if active_blob.is_none()
                         && let Some(blobs) = &self.blobs
                     {
                         while let Some(r) = blob_queue.pop_front() {
-                            let d = Digest::try_from(r.digest)?;
+                            let d = Digest::try_from(r.digest.clone())?;
                             match blobs.lock().await.begin(&d, r.size) {
                                 Ok(Some(offset)) => {
                                     let mut want = frame("BlobWant");
@@ -605,6 +617,7 @@ impl<S: ReplicaState> Client<S> {
                                         i64::try_from(offset).map_err(|_| Error::Invalid)?;
                                     writer.send(want).await?;
                                     active_blob = Some(d);
+                                    active_variant = r.variant;
                                     break;
                                 }
                                 Ok(None) | Err(ab_blobs::Error::Capacity) => {}

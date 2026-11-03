@@ -2,6 +2,7 @@
 use crate::{
     http::{Client, random_id},
     replicas::{self, Endpoint},
+    watch::Watcher,
 };
 use lab_runner::Evidence;
 use lab_world::{Error, Result, World};
@@ -114,13 +115,25 @@ fn stage(client: &Client, data: &[u8]) -> Result<String> {
     }
 }
 fn send(client: &Client, chat: &str, text: &str, files: &[(String, Vec<u8>)]) -> Result<bool> {
+    send_timed(client, chat, text, files).map(|(observed, _)| observed)
+}
+fn send_timed(
+    client: &Client,
+    chat: &str,
+    text: &str,
+    files: &[(String, Vec<u8>)],
+) -> Result<(bool, Instant)> {
     let mut uploads = vec![];
     for (name, data) in files {
         uploads.push(json!({"name": name, "upload_id": stage(client, data)?}));
     }
+    let started = Instant::now();
     let command = json!({"command_id": random_id("cmd")?, "op": "messages.send", "args": {"chat_id": chat, "text": text, "files": uploads}, "wait_ms": 15000});
     let outcome = client.call("messages.send", &command, 40)?;
-    Ok(outcome.is_some_and(|v| v["disposition"] == "locally_observed"))
+    Ok((
+        outcome.is_some_and(|v| v["disposition"] == "locally_observed"),
+        started,
+    ))
 }
 fn attachments(client: &Client) -> Vec<Value> {
     client
@@ -165,6 +178,15 @@ fn wanted(name: &str) -> &'static [&'static str] {
         &["thumb", "display"]
     }
 }
+fn variants_at(observer: &Watcher, name: &str) -> Option<Instant> {
+    observer.first_seen_record(|record| {
+        record["collection"] == "messages.attachment"
+            && record["data"]["filename"] == name
+            && wanted(name)
+                .iter()
+                .all(|v| valid_digest(&record["data"]["derivatives"][v]["digest"]))
+    })
+}
 fn kind(name: &str) -> &'static str {
     if has_extension(name, "mov") {
         "video"
@@ -201,6 +223,7 @@ fn endpoints(world: &World) -> Result<Vec<Client>> {
 fn verify(
     evidence: &mut Evidence,
     clients: &[Client],
+    observers: &[Watcher],
     prefix: &str,
     started: Instant,
 ) -> Result<()> {
@@ -220,7 +243,12 @@ fn verify(
                     .iter()
                     .all(|v| valid_digest(&record["data"]["derivatives"][v]["digest"]));
                 if complete {
-                    seen.entry(name.clone()).or_insert_with(Instant::now);
+                    seen.entry(name.clone()).or_insert_with(|| {
+                        observers
+                            .get(index)
+                            .and_then(|observer| variants_at(observer, &name))
+                            .unwrap_or_else(Instant::now)
+                    });
                     found.insert(name, record);
                 }
             }
@@ -455,8 +483,12 @@ pub fn media_variants(world: &mut World, _: &Value, evidence: &mut Evidence) -> 
         (format!("{prefix}.mov"), VIDEO_LANDSCAPE.to_vec()),
         (format!("{prefix}.caf"), AUDIO.to_vec()),
     ];
-    let started = Instant::now();
-    let observed = send(
+    let clients = endpoints(world)?;
+    let observers = clients
+        .iter()
+        .map(|client| Watcher::start(client, false))
+        .collect::<Result<Vec<_>>>()?;
+    let (observed, started) = send_timed(
         &gateway,
         &chat,
         &format!("[ab-test {run}] synthetic media"),
@@ -464,8 +496,7 @@ pub fn media_variants(world: &mut World, _: &Value, evidence: &mut Evidence) -> 
     )
     .inspect_err(|_| evidence.check("synthetic_upload", false, "stage or send failed"))?;
     evidence.check("self_send_observed", observed, "send");
-    let clients = endpoints(world)?;
-    verify(evidence, &clients, &prefix, started)?;
+    verify(evidence, &clients, &observers, &prefix, started)?;
     if cap {
         let replica = replicas::endpoints()
             .first()

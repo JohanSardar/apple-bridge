@@ -317,6 +317,14 @@ impl Watcher {
             })
             .map(|(_, at)| *at)
     }
+    #[must_use]
+    pub fn first_seen_record(&self, matches: impl Fn(&Value) -> bool) -> Option<Instant> {
+        lock(&self.state)
+            .changes
+            .iter()
+            .find(|(change, _)| change["op"] != "delete" && matches(&change["record"]))
+            .map(|(_, at)| *at)
+    }
     pub fn close(&mut self) {
         self.stop.store(true, Ordering::SeqCst);
         if let Some(mut child) = lock(&self.child).take() {
