@@ -126,6 +126,26 @@ async fn guard(
     {
         return problem(Code::Unauthorized.into());
     }
+    let scheme = if frontdoor.config.public {
+        "https"
+    } else {
+        "http"
+    };
+    let authentication_problem = |error| {
+        let mut response = problem(error);
+        if response.status() == StatusCode::UNAUTHORIZED {
+            let challenge = format!(
+                "Bearer resource_metadata=\"{scheme}://{}/.well-known/oauth-protected-resource\"",
+                host.unwrap_or_default()
+            );
+            if let Ok(value) = challenge.parse() {
+                response
+                    .headers_mut()
+                    .insert(header::WWW_AUTHENTICATE, value);
+            }
+        }
+        response
+    };
     let principal = request
         .headers()
         .get(header::AUTHORIZATION)
@@ -135,18 +155,13 @@ async fn guard(
         .and_then(|token| frontdoor.service.identity.authenticate(token));
     let principal = match principal {
         Ok(p) => p,
-        Err(error) => return problem(error),
-    };
-    let scheme = if frontdoor.config.public {
-        "https"
-    } else {
-        "http"
+        Err(error) => return authentication_problem(error),
     };
     if (frontdoor.config.public && !principal.remote)
         || (!principal.resource.is_empty()
             && principal.resource != format!("{scheme}://{}/mcp", host.unwrap_or_default()))
     {
-        return problem(Code::Unauthorized.into());
+        return authentication_problem(Code::Unauthorized.into());
     }
     let allowed = match frontdoor.rates.lock() {
         Ok(mut rates) => {
