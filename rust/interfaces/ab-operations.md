@@ -1,3 +1,6 @@
 # Gateway blob grant parity
 
 Blob reads return Unauthorized when the supplied record is absent, invisible, deleted, or does not reference the requested digest. Authorized records whose bytes are unavailable still return NotFound. This preserves the Go frontdoor's HTTP 401 behavior for invalid record grants without changing record reads or the wire format.
+# Messages gateway command integration
+
+LocalGateway persists owner-checked upload references on admission and materializes native file paths only for dispatch, with cleanup on completion or rejection. Service::upload_message backs authenticated POST /v1/blobs for local gateways with messages:write. Native capability_unproven errors retain their typed code. SourceState accepts Go null capability lists as empty without disconnecting the Apple peer. Messages action resolution is supplied by runtime; status resolution selects chat/reaction/message collections to match completion evidence.

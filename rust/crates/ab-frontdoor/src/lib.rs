@@ -71,6 +71,10 @@ impl Frontdoor {
             .route("/v1/op/{name}", post(invoke))
             .route("/v1/records/{collection}/{id}", get(record))
             .route("/v1/blobs/{digest}", get(blob))
+            .route(
+                "/v1/blobs",
+                post(upload_message).layer(axum::extract::DefaultBodyLimit::max(100 << 20)),
+            )
             .route("/v1/changes", get(changes))
             .route("/mcp", any(mcp::handle))
             .fallback(|| async { problem(Code::NotFound.into()) })
@@ -165,7 +169,12 @@ async fn guard(
     let principal_id = principal.id.clone();
     request.extensions_mut().insert(principal);
     let (parts, body) = request.into_parts();
-    let Ok(bytes) = to_bytes(body, 1024 * 1024).await else {
+    let limit = if route == "/v1/blobs" && method == "POST" {
+        100 << 20
+    } else {
+        1 << 20
+    };
+    let Ok(bytes) = to_bytes(body, limit).await else {
         return problem(Code::Invalid.into());
     };
     let response = next
@@ -212,6 +221,18 @@ async fn invoke(
         response.headers_mut().insert("server-timing", value);
     }
     response
+}
+async fn upload_message(
+    State(frontdoor): State<Arc<Frontdoor>>,
+    axum::Extension(principal): axum::Extension<Principal>,
+    body: axum::body::Bytes,
+) -> Response {
+    frontdoor
+        .service
+        .upload_message(&principal, &body)
+        .await
+        .and_then(|value| frontdoor.encode(value.get().as_bytes()))
+        .map_or_else(problem, raw_response)
 }
 async fn record(
     State(frontdoor): State<Arc<Frontdoor>>,

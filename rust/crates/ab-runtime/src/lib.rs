@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 #[cfg(feature = "replica-feed")]
 mod actions;
+mod message_actions;
 #[cfg(feature = "replica-feed")]
 mod approvals;
 #[cfg(feature = "replica-feed")]

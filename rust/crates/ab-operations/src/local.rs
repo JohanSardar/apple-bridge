@@ -266,9 +266,14 @@ impl LocalGateway {
         }
         let wait = command.wait_ms;
         let id = command.id.clone();
+        let upload_references = if let Some(store) = &self.query_store {
+            store.message_uploads(&p.id, &command).await?
+        } else {
+            BTreeMap::new()
+        };
         let r = CommandRecord {
             parts: Vec::new(),
-            upload_references: BTreeMap::new(),
+            upload_references,
             command,
             principal: p.id.clone(),
             source: descriptor
@@ -354,6 +359,23 @@ impl LocalGateway {
                     Some(error),
                 );
             }
+        };
+        let mut plan = plan;
+        let _files = if let Some(store) = &self.query_store {
+            match store.message_files(&r, &mut plan).await {
+                Ok(files) => files,
+                Err(error) => {
+                    return self.transition(
+                        r,
+                        State::Rejected,
+                        Some(Disposition::RejectedBeforeDispatch),
+                        None,
+                        Some(error),
+                    );
+                }
+            }
+        } else {
+            None
         };
         let prepared = tokio::time::timeout_at(
             deadline,
@@ -896,6 +918,8 @@ fn target_collection(op: &str) -> String {
         op if op.starts_with("contacts.") && op.contains("group") => "contacts.group",
         op if op.starts_with("contacts.") => "contacts.contact",
         op if op.starts_with("notes.") => "notes.note",
+        "messages.mark_read" | "messages.mark_unread" | "messages.delete_chat" => "messages.chat",
+        "messages.react" => "messages.reaction",
         op if op.starts_with("messages.") => "messages.message",
         op if op.starts_with("mail.") => "mail.message",
         op if op.starts_with("files.") => "files.item",
