@@ -1,7 +1,7 @@
-use crate::{Replica, Result, State, Visibility, allows, records};
+use crate::{Result, State, Visibility, allows, records};
 use rusqlite::params;
 use serde_json::Value;
-impl State<Replica> {
+impl<Role> State<Role> {
     pub fn restrict(&mut self, visibility: &Visibility) -> Result<()> {
         let tx = self.db.transaction()?;
         let stored = records(
@@ -51,11 +51,14 @@ DELETE FROM chat_participant WHERE chat_id NOT IN (SELECT id FROM records WHERE 
             let refs: Vec<Value> = serde_json::from_slice(&raw)?;
             out.extend(refs);
         }
+        for refs in self.snapshot_refs.values() {
+            out.extend(refs.clone());
+        }
         Ok(out)
     }
 }
 
-impl State<Replica> {
+impl<Role> State<Role> {
     pub fn set_replica_status(&mut self, status: Value) -> Result<()> {
         if !status.is_object() {
             return Err(crate::ErrorCode::Invalid.into());
