@@ -34,3 +34,13 @@ Direct submit requests may omit the query field, as in Go. Forward defaults the 
 ## CORE gateway clock diagnostics
 
 Doctor reports clock_skew=n/a for gateway homes, matching Go. Four-timestamp gateway clock samples and their actionable warnings apply to replica homes only.
+
+## FIX-MISC sim actions
+
+The portable FILE-COMMANDS / FILE-CRUD-REAL / FILE-OFFLOAD-REAL, USE-*, AUD-SIM, LOC-SIM and MAP-SIM journeys use world.New/newEnvironment and the selected gateway process. The generic replica qualification guard rejected these gateway runs before startup; only these audited sim IDs are eligible for gateway qualification. All scenario assertions are retained.
+
+Files actions serialize on `files`, keep raw FileArgs, and require both operation-specific readback and capture-bound record evidence. Maps open and playback are transient actions: completion requires the prepared request hash plus Maps frontmost / playback finished callback evidence, rather than a nonexistent captured record. Native actions stay behind the same LocalGateway ledger, Prepare/Dispatch guard and authenticated ApplePeer.
+
+MAC-*, PDF-*, VIS-OCR, IWORK-REAL, SC-RUN-REAL and RELAY-* still have semantic Go helper or direct product imports in their harness paths. They are blocked before a Rust product failure can be measured; enabling those guards alone cannot qualify Rust. The relay server port is outside FIX-MISC ownership.
+
+The current catalog's maps.open/speech.say/capture.play_sound input schemas contain ReminderArgs and require expected_version. Keep the frozen exported catalog intact; Service::invoke and LocalGateway::submit use the operations' dedicated argument validators for these three operations instead. Files and playback validation call the newly merged ab-commands parity implementation; Maps validation remains local because ab-commands currently reports Maps operations unsupported.

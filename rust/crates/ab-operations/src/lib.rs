@@ -3,6 +3,8 @@ mod adapters;
 mod gateway_store;
 mod local_query;
 mod message_uploads;
+
+mod native_commands;
 pub use gateway_store::GatewayStore;
 pub use local_query::LocalQueryStore;
 pub mod local;
@@ -598,13 +600,18 @@ impl Service {
             if command.op.starts_with("calendar.") && args["span"] == "all" {
                 return Err(Code::Unsupported.into());
             }
-            validate_shape(&descriptor.input["properties"]["args"], &args)?;
+            let transient = matches!(name, "maps.open" | "speech.say" | "capture.play_sound");
+            if !transient {
+                validate_shape(&descriptor.input["properties"]["args"], &args)?;
+            }
+            native_commands::validate(&command, &args)?;
             if !args.is_object() {
                 return Err(Code::Invalid.into());
             }
-            if descriptor.input["required"]
-                .as_array()
-                .is_some_and(|fields| fields.iter().any(|field| field == "expected_version"))
+            if !transient
+                && descriptor.input["required"]
+                    .as_array()
+                    .is_some_and(|fields| fields.iter().any(|field| field == "expected_version"))
                 && command.expected_version == 0
             {
                 return Err(Code::Invalid.into());
