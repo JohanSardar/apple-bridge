@@ -1,0 +1,24 @@
+{
+  "worker": "G-D3",
+  "host": "ubuntu",
+  "rust_ci": "passed",
+  "lint": "passed",
+  "golden_corpora": "passed",
+  "foundation_interop": {
+    "checks": 76,
+    "failures": 0
+  },
+  "delivery_interop": {
+    "checks": 49,
+    "failures": 0,
+    "qualification": "crate_fixture_only"
+  },
+  "app_gateway_qualification": "blocked: binary_harness_required",
+  "remaining": [
+    "G-A/G-B Gateway adapter for ledger admission/CAS and capture transactions",
+    "Rust gateway runtime mounts and startup",
+    "G-E binary-driven APP scenario drivers; prove Go first",
+    "APNs relay HTTPS integration fixture"
+  ],
+  "physical_devices_used": false
+}

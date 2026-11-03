@@ -1,0 +1,32 @@
+{
+  "worker": "G-D2",
+  "impl": "rust",
+  "host": "ubuntu",
+  "live_changes": false,
+  "commands": [
+    "make rust-ci",
+    "AB_REMOTE_BINARY=$PWD/rust/target/debug/examples/bridge go test ./rust/crates/ab-remote/fixture -v -count=1 -timeout 60s"
+  ],
+  "passed": [
+    "owner-gated enrollment accepts the existing Ed25519 key",
+    "owner gate rejects an unlisted fresh key",
+    "Go relay smux v2 carries an 800 KB public TLS response from the gateway fixture",
+    "DNS-01 publishes and clears signed relay control requests",
+    "certificate renewal replaces the leaf and preserves the existing SEC1 TLS key",
+    "renewal reuses a fresh certificate without replacing its key",
+    "identity, account key, TLS key and certificate files have mode 0600",
+    "mock LocalAPI retries a conflicting ETag and chooses free allowed port 8443",
+    "capability-path loopback listener reaches the gateway while relay is active",
+    "unrelated handlers and a concurrent config edit survive add and remove",
+    "graceful stop removes only the owned mapping",
+    "concurrent CLI selections preserve both adapters",
+    "turning off relay preserves the Tailscale selection",
+    "frozen relay corpus",
+    "workspace tests, formatting, strict Clippy, dependency audit, lint and Go golden tests"
+  ],
+  "integration_pending": [
+    "Runtime owner must wire the product bridge remote CLI and reconcile enabled adapter lifecycles, per rust/INTERFACES.md",
+    "Gateway matrix awaits the runtime gateway role; evidence here uses the isolated Rust driver and synthetic gateway"
+  ],
+  "fixture_limit": "The ACME fixture checks CSR signatures and DNS publication; it is not a full ACME conformance service."
+}
