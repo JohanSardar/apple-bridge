@@ -4,6 +4,7 @@ pub mod command_contract;
 mod gateway_store;
 mod local_query;
 mod message_uploads;
+mod native_commands;
 mod outcome;
 mod query_audit;
 mod query_document;

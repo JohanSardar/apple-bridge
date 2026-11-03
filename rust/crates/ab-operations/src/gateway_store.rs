@@ -111,7 +111,7 @@ impl GatewayState for GatewayStore {
             return Ok(key);
         }
         let visibility = crate::adapters::visibility(&p.visibility());
-        let result = self.with(|s| {
+        let Ok(result) = self.with(|s| {
             s.read(
                 &visibility,
                 &ab_state::ReadQuery {
@@ -120,12 +120,11 @@ impl GatewayState for GatewayStore {
                     ..Default::default()
                 },
             )
-        })?;
+        }) else { return Ok(key); };
         let Some(record) = result.records.first() else {
             return Ok(key);
         };
-        let data: serde_json::Value =
-            serde_json::from_str(record.data.get()).map_err(|_| Code::Corrupt)?;
+        let Ok(data) = serde_json::from_str::<serde_json::Value>(record.data.get()) else { return Ok(key); };
         let series = data["series_id"].as_str().unwrap_or_default();
         if series.is_empty() {
             return Ok(key);

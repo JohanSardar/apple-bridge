@@ -50,7 +50,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     while let Some(line) = lines.next_line().await? {
         let frame: IpcFrame = serde_json::from_str(&line)?;
         let result = if frame.t == "DisableUploads" {
-            Arc::get_mut(&mut gateway).ok_or("active gateway")?.query_store = None;
+            Arc::get_mut(&mut gateway)
+                .ok_or("active gateway")?
+                .query_store = None;
             serde_json::json!({"disabled":true})
         } else if frame.t == "StartBlob" {
             saved_blob = Some((

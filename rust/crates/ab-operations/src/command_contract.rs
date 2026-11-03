@@ -19,6 +19,18 @@ fn error(e: ab_commands::Error) -> Error {
     .into()
 }
 pub fn validate(c: &Command) -> Result<Validated, Error> {
+    if c.op == "maps.open" {
+        let command = command(c)?;
+        if !ab_commands::valid_command_id(&command.id) || !(0..=15000).contains(&command.wait_ms) {
+            return Err(Code::Invalid.into());
+        }
+        let args = serde_json::from_str(c.args.get()).map_err(|_| Code::Invalid)?;
+        crate::native_commands::maps(&args)?;
+        return Ok(Validated {
+            id: String::new(),
+            list_id: String::new(),
+        });
+    }
     ab_commands::validate(&command(c)?, jiff::Timestamp::now()).map_err(error)
 }
 pub fn action(
@@ -40,6 +52,9 @@ pub fn prepared(
     c: &Command,
     raw: &serde_json::value::RawValue,
 ) -> Result<Box<serde_json::value::RawValue>, Error> {
+    if c.op == "maps.open" {
+        return Ok(raw.to_owned());
+    }
     let mut context: ActionContext = serde_json::from_str(raw.get()).map_err(|_| Code::Corrupt)?;
     context.origin.clone_from(&c.origin);
     let fields: std::collections::BTreeMap<String, Box<serde_json::value::RawValue>> =

@@ -35,7 +35,7 @@ def normalized_evidence(value):
     generated={'native_key','capture_checkpoint','ticket','expires_at','blob_id'}
     return {key: ('<generated>' if item else item) if key in generated else normalized_evidence(item) for key,item in value.items()}
 
-def run(peer, lab, fault, lifecycle=False, artifact=None, missing_uploads=False):
+def run(peer, lab, fault, lifecycle=False, artifact=None, missing_uploads=False, multipart=False, resolve_fault=None):
     with tempfile.TemporaryDirectory(prefix='gb-ipc-') as directory:
         home = Path(directory)
         secret = home / 'secret'
@@ -58,8 +58,12 @@ def run(peer, lab, fault, lifecycle=False, artifact=None, missing_uploads=False)
             else:
                 raise AssertionError(('not ready', apple.poll()))
             assert (home/'peer.sock').stat().st_mode & 0o777 == 0o600
-            query=exchange({'t':'LocalQuery','args':{'id':'qry_probe','op':'helper.version','args':{},'deadline_ms':1000}})
-            assert query.get('id')=='qry_probe' and query.get('result_json'),query
+            ready_deadline=time.monotonic()+10
+            for attempt in range(10):
+                ident=f'qry_ready_{attempt}'
+                query=exchange({'t':'LocalQuery','args':{'id':ident,'op':'helper.version','args':{},'deadline_ms':1000}})
+                if query.get('error',{}).get('code')!='deadline' or time.monotonic()>=ready_deadline:break
+            assert query.get('id')==ident and query.get('result_json'),query
             blob=exchange({'t':'Query','id':'qry_blob','op':'test.blob','args':{'size':262145},'deadline_ms':1000})
             assert blob.get('t')=='QueryResult',blob
             ref=blob['blobs'][0]
@@ -88,6 +92,8 @@ def run(peer, lab, fault, lifecycle=False, artifact=None, missing_uploads=False)
                 command={'command_id':'cmd_local','op':'reminders.create_list','args':{'title':'Synthetic lifecycle'},'wait_ms':15000}
                 if fault in ['identical-manual-send','ui-interference','outcome-before-capture','delivery-failed','ghost-send','outcome-without-capture','receipt-before-outcome']:
                     command.update(op='messages.send',args={'handles':['self@example.com'],'service':'iMessage','text':'[ab-test probe] Synthetic lifecycle'})
+                if multipart:
+                    command.update(op='messages.send',args={'handles':['self@example.com'],'service':'iMessage','text':'[ab-test probe] Synthetic multipart','files':[{'name':'one.txt','data':'b25l'},{'name':'two.txt','data':'dHdv'}]})
                 if artifact:
                     command.update(op='capture.screenshot',args={})
                     if artifact=='offloaded':control(str(home/'control.sock'),'POST','/blob-fixture',{'size':1,'state':'offloaded'})
@@ -136,6 +142,7 @@ def run(peer, lab, fault, lifecycle=False, artifact=None, missing_uploads=False)
                 assert repeated.get('state')==row.get('state'),(row,repeated)
                 exchange({'t':'Recover'})
                 assert control(str(home/'control.sock'),'GET','/effects')==before
+                if resolve_fault:control(str(home/'control.sock'),'POST','/fault',{'name':resolve_fault})
                 resolved=exchange(dict(status_request,code='resolve'))
                 assert control(str(home/'control.sock'),'GET','/effects')==before
                 with sqlite3.connect(home/'gateway-state'/'ledger.db') as db:
@@ -158,7 +165,7 @@ def run(peer, lab, fault, lifecycle=False, artifact=None, missing_uploads=False)
                 assert era_resolved.get('state')==after_era.get('state'),(after_era,era_resolved)
                 assert control(str(home/'control.sock'),'GET','/effects')==before
                 assert dispatches()==dispatch_count
-                return {'dispatch_count':dispatch_count,'old_expiry_retry':'stored','old_era_retry':'stored','stale_era_admission':'expired','state':row['state'],'disposition':row.get('disposition'),'resolved_state':resolved.get('state'),'effect_count':before.get('cmd_local',0),'observed_ids':bool(row.get('observed_record_ids')),'evidence':normalized_evidence(row.get('evidence'))}
+                return {'dispatch_count':dispatch_count,'old_expiry_retry':'stored','old_era_retry':'stored','stale_era_admission':'expired','state':row['state'],'disposition':row.get('disposition'),'resolved_state':resolved.get('state'),'parts':[{'index':p['index'],'disposition':p['disposition'],'record_id':bool(p.get('record_id'))} for p in row.get('parts',[])],'resolved_parts':[{'index':p['index'],'disposition':p['disposition'],'record_id':bool(p.get('record_id'))} for p in resolved.get('parts',[])],'resolved_evidence':normalized_evidence(resolved.get('evidence')),'effect_count':before.get('cmd_local',0),'observed_ids':bool(row.get('observed_record_ids')),'evidence':normalized_evidence(row.get('evidence'))}
             messages = fault in ['identical-manual-send', 'ui-interference', 'ui-interference-before', 'outcome-before-capture']
             action = {'op':'reminders.create_list','args':{'title':'Synthetic list'}}
             if messages:
@@ -243,3 +250,9 @@ if __name__=='__main__':
     actual=run(rust,lab,'',lifecycle=True,missing_uploads=True)
     assert actual==expected,(expected,actual)
     print(json.dumps({'missing_uploads':True,'go':expected,'rust':actual,'match':True}),flush=True)
+
+    for fault,resolve_fault in [(f,None) for f in ['', 'part-no-effect','part-progress','part-progress-failure','part-delivery-failed']] + [('part-progress','part-progress-stale')] + [('',f) for f in ['part-receipt-failed','part-receipt-failed-first','part-unbound-failure']]:
+        expected=run(go,lab,fault,lifecycle=True,multipart=True,resolve_fault=resolve_fault)
+        actual=run(rust,lab,fault,lifecycle=True,multipart=True,resolve_fault=resolve_fault)
+        assert actual==expected,(fault,resolve_fault,expected,actual)
+        print(json.dumps({'multipart':fault or 'ordinary','resolve_fault':resolve_fault,'go':expected,'rust':actual,'match':True}),flush=True)

@@ -46,3 +46,5 @@ FIX-CON-NOTE-REM: Source admission preserves the frozen `too_large` wire error f
 Contacts, Notes and Reminders admission now uses ab-commands validation rather than generic catalog argument-shape validation. The latter rejects valid contact fields because the shared catalog input has an empty property map and a required ID/version even for create. Source validation preserves each operation's field/version rules before admission. Group membership resolve uses contacts.group, including add_member and remove_member.
 
 Native dispatch rejections now use the same capture-bound conflict resolver as Prepare rejections. An external edit between Prepare and Dispatch returns the captured current record without redispatching the effect.
+
+B3 coverage gap: ab-commands currently has no maps.open, mail command or pdf.annotate shapes/validators. The lifecycle preserves main's existing Maps validator and resolved raw action to avoid removing an already working operation. G-B3 must extend its codec corpus and API to cover these families before claiming every Prepare shape is byte-qualified; G-B2 does not author competing source contracts.

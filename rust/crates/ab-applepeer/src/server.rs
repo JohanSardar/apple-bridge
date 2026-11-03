@@ -193,6 +193,7 @@ impl Server {
         *lock = Some((fence, task.abort_handle()));
         drop(lock);
         let result = task.await.map_err(|_| Error::from(Code::Unavailable));
+        self.commands.detach(fence).await;
         let mut current = active.lock().await;
         if current
             .as_ref()
@@ -212,7 +213,6 @@ impl Server {
             *current = None;
         }
         drop(current);
-        self.commands.detach(fence).await;
         result?
     }
     #[allow(clippy::too_many_lines)]
