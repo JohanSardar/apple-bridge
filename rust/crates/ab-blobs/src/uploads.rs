@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     fs,
     io::{Read, Seek, SeekFrom, Write},
-    os::unix::fs::OpenOptionsExt,
+    os::unix::fs::{OpenOptionsExt, PermissionsExt},
     path::PathBuf,
 };
 
@@ -45,6 +45,93 @@ struct Lease {
     expected_digest: String,
 }
 impl Store {
+    pub fn stage_message(&mut self, owner: &str, bytes: &[u8]) -> Result<UploadStatus, Error> {
+        if bytes.len() > 100 << 20 || owner.is_empty() {
+            return Err(Error::Invalid);
+        }
+        let (digest, pin) = self.stage(bytes)?;
+        let status = UploadStatus {
+            upload_id: pin.clone(),
+            offset: i64::try_from(bytes.len()).map_err(|_| Error::Invalid)?,
+            size: i64::try_from(bytes.len()).map_err(|_| Error::Invalid)?,
+            state: "ready".into(),
+            expires_at: expiry()?,
+            digest: digest.as_str().into(),
+        };
+        if let Err(error) = self.save_upload(&Lease {
+            status: status.clone(),
+            pin: pin.clone(),
+            owner: owner.into(),
+            expected_digest: digest.as_str().into(),
+        }) {
+            self.release_pin(&pin)?;
+            return Err(error);
+        }
+        Ok(status)
+    }
+
+    pub fn message_upload(&mut self, owner: &str, id: &str) -> Result<(String, u64), Error> {
+        let lease = self.load_upload(owner, id)?;
+        if lease.status.state != "ready" {
+            return Err(Error::Invalid);
+        }
+        Ok((
+            lease.status.digest,
+            u64::try_from(lease.status.size).map_err(|_| Error::Invalid)?,
+        ))
+    }
+
+    pub fn message_file(
+        &self,
+        command: &str,
+        index: usize,
+        name: &str,
+        bytes: &[u8],
+    ) -> Result<PathBuf, Error> {
+        if name.is_empty()
+            || name == "."
+            || name == ".."
+            || std::path::Path::new(name)
+                .file_name()
+                .and_then(|s| s.to_str())
+                != Some(name)
+        {
+            return Err(Error::Invalid);
+        }
+        let parent = self
+            .root
+            .join("command-uploads")
+            .join(ab_trust::fingerprint(command.as_bytes()))
+            .join(index.to_string())
+            .join("message-uploads");
+        fs::create_dir_all(&parent)?;
+        fs::set_permissions(&parent, fs::Permissions::from_mode(0o700))?;
+        let path = parent.join(name);
+        ab_trust::atomic_write(&path, bytes)?;
+        Ok(path)
+    }
+
+    pub fn message_bytes(&self, digest: &str, size: u64) -> Result<Vec<u8>, Error> {
+        let digest = Digest::try_from(digest.to_owned())?;
+        let bytes = fs::read(self.path(&digest))?;
+        if bytes.len() as u64 != size || ab_trust::fingerprint(&bytes) != digest.as_str() {
+            return Err(Error::Corrupt);
+        }
+        Ok(bytes)
+    }
+
+    pub fn clear_message_files(&self, command: &str) -> Result<(), Error> {
+        let path = self
+            .root
+            .join("command-uploads")
+            .join(ab_trust::fingerprint(command.as_bytes()));
+        match fs::remove_dir_all(path) {
+            Ok(()) => Ok(()),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(error) => Err(error.into()),
+        }
+    }
+
     fn upload_path(&self, owner: &str, id: &str) -> PathBuf {
         self.root
             .join("upload-leases")

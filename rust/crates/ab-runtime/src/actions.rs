@@ -14,6 +14,9 @@ impl ActionResolver for Actions {
         if command.op.starts_with("calendar.") {
             return self.calendar(principal, command);
         }
+        if command.op.starts_with("messages.") {
+            return self.messages(principal, command);
+        }
         if !command.op.starts_with("reminders.") {
             return Err(Code::Unsupported.into());
         }
@@ -121,6 +124,9 @@ impl ActionResolver for Actions {
             .as_ref()
             .is_none_or(|problem| problem.code != Code::Conflict)
         {
+            return Ok(problem);
+        }
+        if command.op.starts_with("messages.") {
             return Ok(problem);
         }
         let args: Value = serde_json::from_str(command.args.get()).map_err(|_| Code::Invalid)?;

@@ -2,6 +2,7 @@
 mod adapters;
 mod gateway_store;
 mod local_query;
+mod message_uploads;
 pub use gateway_store::GatewayStore;
 pub use local_query::LocalQueryStore;
 pub mod local;
@@ -24,6 +25,8 @@ pub enum Code {
     Forbidden,
     Unavailable,
     Unsupported,
+    CapabilityUnproven,
+    TooLarge,
     NotFound,
     Conflict,
     Reset,
@@ -60,6 +63,8 @@ impl From<Code> for Error {
             Code::Unauthorized => "credential or scope rejected",
             Code::Forbidden => "query grant rejected",
             Code::Unavailable => "peer unavailable",
+            Code::CapabilityUnproven => "native capability has not been proven",
+            Code::TooLarge => "file exceeds upload limit",
             Code::Unsupported => "operation unsupported",
             Code::NotFound => "record not found",
             Code::Conflict => "state conflict",
@@ -490,6 +495,26 @@ pub struct Service {
     pub codec: Arc<dyn Codec>,
 }
 impl Service {
+    pub async fn upload_message(
+        &self,
+        principal: &Principal,
+        bytes: &[u8],
+    ) -> Result<Box<RawValue>, Error> {
+        let principal = self.identity.current(principal)?;
+        principal.authorize("messages:write")?;
+        let CommandTarget::Local(local) = &self.target else {
+            return Err(Code::Unavailable.into());
+        };
+        let store = local.query_store.as_ref().ok_or(Code::Unavailable)?;
+        let status = store
+            .blobs
+            .lock()
+            .await
+            .stage_message(&principal.id, bytes)
+            .map_err(|_| Code::Unavailable)?;
+        serde_json::value::to_raw_value(&status).map_err(|_| Code::Corrupt.into())
+    }
+
     async fn native_query(
         &self,
         principal: &Principal,

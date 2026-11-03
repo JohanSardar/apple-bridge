@@ -20,6 +20,8 @@ pub mod helper_blobs;
 pub mod inspection;
 pub mod maintenance;
 #[cfg(feature = "replica-feed")]
+mod message_actions;
+#[cfg(feature = "replica-feed")]
 mod replica;
 mod shape;
 #[cfg(feature = "replica-feed")]

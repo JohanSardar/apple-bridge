@@ -1,5 +1,7 @@
 # G-F gateway assembly
 
+MSG gateway parity: runtime Actions maps Messages visible IDs to native keys, carries native Messages args and expected state, validates resend targets, and chooses chat/reaction completion collections. SIM Messages journeys use the existing isolated process-backed world for the Rust gateway and Go replica; real-level qualification remains gated.
+
 The runtime constructs one shared Gateway State for ApplePeer, LocalGateway, StateReads<Gateway>, feed and owner control. It installs blob protection before capture or listeners. Service and Frontdoor accept the Local target, LocalQueryStore shares the same State and Blobs, and Web is outside bearer middleware with its own authenticated owner approval adapter. The gateway owns shutdown, Helper supervision, feed dialing, pruning, blob hydration and status/GC workers.
 
 G-B3: runtime currently installs a Reminder-only ActionResolver in ab-runtime/src/actions.rs to exercise lifecycle assembly. Replace this adapter with the production resolver from ab-commands when available; do not duplicate the shared ledger, peer or dispatcher. The current adapter supplies visible IDs, native list keys, expected state/version, serialization keys and capture-bound native conflict errors. Other source actions return Unsupported. This limited adapter does not qualify source-specific admission or completion validation.
