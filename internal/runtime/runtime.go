@@ -219,7 +219,7 @@ func Start(ctx context.Context, cfg Config) error {
 		iphoneDelivery = iphone.NewDelivery(store, authority)
 		iphoneDelivery.Blobs = blobStore
 		iphoneDelivery.Authorize = gateway.ReauthorizeIPhone
-		iphoneDelivery.Decide = gateway.DecidePhoneApproval
+		iphoneDelivery.Decide = phoneApprovalObserver(cfg.Home, gateway.DecidePhoneApproval)
 		iphoneDelivery.Push = remote.IPhonePush(cfg.Home)
 		gateway.IPhone = iphoneDelivery
 		relayFeed = feed.RelayHandler()

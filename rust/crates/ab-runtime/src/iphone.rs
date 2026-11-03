@@ -22,6 +22,8 @@ use std::sync::{Arc, Weak};
 
 #[derive(Debug)]
 pub struct PhoneGateway {
+    #[cfg(feature = "lab-harness")]
+    pub home: std::path::PathBuf,
     pub state: GatewayStore,
     pub local: Weak<LocalGateway>,
     pub authority: Arc<Authority>,
@@ -113,9 +115,14 @@ impl Gateway for PhoneGateway {
     }
     fn decide(&mut self, command_id: &str, hash: &str, approve: bool) -> Result<(), Error> {
         let local = self.local.upgrade().ok_or(Error::Unavailable)?;
-        tokio::runtime::Handle::current()
+        let row = tokio::runtime::Handle::current()
             .block_on(local.decide_phone(command_id, hash, approve))
             .map_err(|error_value| error(&error_value))?;
+        #[cfg(feature = "lab-harness")]
+        let _ =
+            ab_trust::atomic_write(&self.home.join("phone-decision.json"), row.get().as_bytes());
+        #[cfg(not(feature = "lab-harness"))]
+        let _ = row;
         Ok(())
     }
     fn capture(
@@ -337,6 +344,7 @@ pub async fn run(
             },
             _ = push.tick() => push_once(&phone, &home).await,
             () = wake.notified() => push_once(&phone, &home).await,
+            () = phone.notified() => push_once(&phone, &home).await,
         }
     }
 }
@@ -347,10 +355,30 @@ async fn push_once(
     let Ok(identity) = ab_remote::state::read::<ab_remote::relay::Identity>(home, "relay") else {
         return;
     };
-    let Ok(client) = ab_iphone::PushClient::new(
+    let builder = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .redirect(reqwest::redirect::Policy::none());
+    #[cfg(feature = "lab-harness")]
+    let builder = match std::env::var("APPLE_BRIDGE_LAB_TLS_ROOT")
+        .ok()
+        .and_then(|path| std::fs::read(path).ok())
+    {
+        Some(bytes) => match reqwest::Certificate::from_pem_bundle(&bytes) {
+            Ok(certs) => certs
+                .into_iter()
+                .fold(builder, |builder, cert| builder.add_root_certificate(cert)),
+            Err(_) => return,
+        },
+        None => builder,
+    };
+    let Ok(http) = builder.build() else {
+        return;
+    };
+    let Ok(client) = ab_iphone::PushClient::with_client(
         &identity.endpoint,
         identity.credential.hostname,
         identity.credential.credential,
+        http,
     ) else {
         return;
     };

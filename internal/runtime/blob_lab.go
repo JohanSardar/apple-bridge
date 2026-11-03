@@ -52,6 +52,19 @@ func serveBlobLab(ctx context.Context, home string, s *state.Store, b *blobs.Sto
 		var result any = map[string]bool{"ok": true}
 		var err error
 		switch a.Action {
+		case "phone-command":
+			result, err = s.Command(r.Context(), a.Owner)
+		case "phone-expired":
+			var row contracts.CommandRecord
+			row, err = s.Command(r.Context(), a.Owner)
+			if err == nil {
+				row.Command.ID = a.Pin
+				row.State = contracts.CommandAdmitted
+				row.ExpiresAt = time.Now().Add(-time.Second)
+				row.History = nil
+				row.Cursor = contracts.Cursor{}
+				_, err = s.TransitionCommand(r.Context(), state.CommandTransition{Record: row})
+			}
 		case "relay-fixture":
 			payload := bytes.Repeat([]byte("[ab-test] relay blob\n"), 8192)
 			var digest, pin string
@@ -105,4 +118,17 @@ func serveBlobLab(ctx context.Context, home string, s *state.Store, b *blobs.Sto
 	go server.Serve(listener)
 	go func() { <-ctx.Done(); server.Close(); os.Remove(path) }()
 	return nil
+}
+
+func phoneApprovalObserver(home string, decide func(context.Context, string, string, bool) (contracts.CommandRecord, error)) func(context.Context, string, string, bool) (contracts.CommandRecord, error) {
+	return func(ctx context.Context, id, hash string, approve bool) (contracts.CommandRecord, error) {
+		row, err := decide(ctx, id, hash, approve)
+		if err == nil {
+			raw, encodeErr := json.Marshal(row)
+			if encodeErr == nil {
+				_ = os.WriteFile(filepath.Join(home, "phone-decision.json"), raw, 0600)
+			}
+		}
+		return row, err
+	}
 }

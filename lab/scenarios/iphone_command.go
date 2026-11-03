@@ -24,7 +24,7 @@ import (
 	"github.com/JohanSardar/apple-bridge/lab/simapple"
 )
 
-func runIPhoneCommand(ctx context.Context, s Scenario, level string) Evidence {
+func runIPhoneNotification(ctx context.Context, s Scenario, level string) Evidence {
 	e := Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), Passed: true}
 	add := func(name string, ok bool) {
 		e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok})

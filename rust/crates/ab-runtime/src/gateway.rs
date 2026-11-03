@@ -62,6 +62,8 @@ pub async fn start(mut config: Config, authority: Arc<ab_trust::Authority>) -> R
     let phone = Arc::new(ab_iphone::delivery::Delivery::new(
         authority.clone(),
         crate::iphone::PhoneGateway {
+            #[cfg(feature = "lab-harness")]
+            home: config.home.clone(),
             state: (*store).clone(),
             local: Arc::downgrade(&local),
             authority: authority.clone(),
