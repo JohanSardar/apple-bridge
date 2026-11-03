@@ -9,10 +9,13 @@ workspace = true
 
 [features]
 default = []
-rust-effects = []
+rust-effects = ["dep:sha2", "dep:jiff"]
 
 [dependencies]
 ab-sys = { path = "../ab-sys" }
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
+
+sha2 = { workspace = true, optional = true }
+jiff = { workspace = true, optional = true }

@@ -12,7 +12,7 @@ import MediaDerivatives
 import CryptoKit
 
 extension AppleSession: NativeAdapter {
-    public func effectsAllowed() async -> Bool { nativeAuthority && !ipcRunning && wire == nil }
+    public func effectsAllowed() async -> Bool { (nativeAuthority && !ipcRunning && wire == nil) || (effectsRouted && ipcRunning && wire != nil) }
     public func facts(_ operation: String, args: JSON) async throws -> NativeFacts {
         guard args.object.isEmpty || operation == "contacts.history" || operation == "ui.target" else { throw SourceFailure.unsupported }
         let sink = NativeFactSink()
@@ -79,6 +79,15 @@ extension AppleSession: NativeAdapter {
     }
 
     public func effect(_ operation: String, args: JSON, permit: JSON) async throws -> JSON {
+        if effectsRouted {
+            if args["session_query"] == .bool(true) {
+                guard let handler = queryHandlers[operation], case .object = args["args"] else { throw SourceFailure.unsupported }
+                let output = try await handler(args["args"])
+                guard output.blobs.isEmpty, try JSONEncoder().encode(output.result).count < 230000 else { throw SourceFailure.unsupported }
+                return .object(["observed": .bool(true), "native_query_result": output.result])
+            }
+            return try await dispatchNative(operation, args: args, permit: permit)
+        }
         guard nativeAuthority, wire == nil else { throw SourceFailure.conflict }
         var args = args
         if args["file_ref"] != .null {
