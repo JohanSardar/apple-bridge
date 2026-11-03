@@ -16,7 +16,7 @@ impl Actions {
         } else {
             "calendar.event"
         };
-        let visibility = principal.visibility().into_iter().collect();
+        let visibility = ab_operations::state_visibility(&principal.visibility());
         let mut action = json!({"op":command.op,"args":args,"calendar_args":args});
         if !command.origin.is_empty() {
             action["origin"] = json!(command.origin);

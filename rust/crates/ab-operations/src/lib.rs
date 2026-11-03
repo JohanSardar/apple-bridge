@@ -19,7 +19,7 @@ pub mod peer;
 pub use ab_trust::domain;
 mod legacy;
 use ab_catalog::{OperationKind, operations};
-pub use adapters::{StateReads, TrustIdentity};
+pub use adapters::{StateReads, TrustIdentity, visibility as state_visibility};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, value::RawValue};
 use std::{collections::BTreeMap, fmt::Debug, future::Future, pin::Pin, sync::Arc, time::Duration};
