@@ -36,6 +36,12 @@ This is a bounded peer extension, not a complete Messages family or Rust scenari
 
 The host-quiet wait is already opt-in: `bridge-lab run` defaults to sim without requiring quiet, and `--require-quiet` sets the context request used by `lab/scenarios/telemetry.go`. Without that explicit flag the 60-second wait is bypassed, including for latency scenarios.
 
+## Messages commands extension
+
+The Rust peer now ports the Go Messages command behaviour: send, reply, react, edit, unsend, mark_read, mark_unread, delete_message and delete_chat, with tagged-text and own-recipient rules, the 15-minute edit and 2-minute unsend windows (recomputed from `sent_at` by message facts on every message write, including `/external-change`), expected-state conflicts, one outstanding ticket, and the origin and principal checks. The `/messages` control adds `nonself-chat`, `capability-unproven`, `capability-proven` and `capability-proven-empty-reason`; the Ready frame advertises all nine operations with per-operation coverage. Faults added: `delivery-failed`, `ghost-send`, `receipt-before-outcome`, `outcome-before-capture`, `outcome-without-capture`, `part-no-effect`, `part-delivery-failed`, `part-progress`, `part-progress-failure`, `part-progress-stale`, `part-receipt-failed`, `part-receipt-failed-first` and `part-unbound-failure`. Resolve upgrades `locally_observed` to `delivered` and applies part progress.
+
+Peer parity against the Go peer (`rust/lab/parity.py`, Go harness, Go gateway) on Linux: MSG-CAPABILITY-MATRIX, MSG-COMMAND-OBSERVED-IDS, MSG-DELETE, MSG-EDIT, MSG-FAILED-OBSERVED-IDS, MSG-MARK-READ and MSG-OWNER-TOKEN-SELFCHAT identical; MSG-COMMAND-PARTS identical except `delayed_capture_no_prolonged_unknown` (one-second latency), which failed in the Go baseline under host load 30 and passed with the Rust peer.
+
 ## Independent runner and world API (Phase 8)
 
 The stable extension boundary is `lab-world` plus `lab-runner`, with no `ab-*` dependencies. All interaction with products is through selected executables, public HTTP, or SimApple's control socket. The runner never executes `bridge-lab`.
