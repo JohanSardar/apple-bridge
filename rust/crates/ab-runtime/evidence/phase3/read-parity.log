@@ -1,0 +1,51 @@
+HOME /home/johan/ab-phase3-final-timing-homes/p7n62crt0v
+REST records.query equal=true
+MCP records.query equal=true
+TIMING sources.status valid=true
+REST sources.status equal=true
+MCP sources.status equal=true
+TIMING replica.status valid=true
+REST replica.status equal=true
+MCP replica.status equal=true
+REST iphone.devices equal=true
+MCP iphone.devices equal=true
+REST health.summary equal=true
+MCP health.summary equal=true
+REST calendar.agenda equal=true
+MCP calendar.agenda equal=true
+REST search equal=true
+MCP search equal=true
+REST contacts.lookup equal=true
+MCP contacts.lookup equal=true
+REST contacts.list equal=true
+MCP contacts.list equal=true
+REST messages.chats equal=true
+MCP messages.chats equal=true
+REST messages.handles equal=true
+MCP messages.handles equal=true
+REST messages.search equal=true
+MCP messages.search equal=true
+REST notes.list equal=true
+MCP notes.list equal=true
+REST reminders.lists equal=true
+MCP reminders.lists equal=true
+REST reminders.items equal=true
+MCP reminders.items equal=true
+REST calendar.range equal=true
+MCP calendar.range equal=true
+REST records.get equal=true
+MCP records.get equal=true
+REST messages.thread equal=true
+MCP messages.thread equal=true
+REST messages.collection equal=true
+MCP messages.collection equal=true
+REST commands.list equal=true
+MCP commands.list equal=true
+REST commands.status equal=true
+MCP commands.status equal=true
+COMMAND forwarded=true replica_disposition=locally_observed gateway_disposition=locally_observed
+CANCELLATION rest started=true client_cancelled=true helper_stopped=true
+CANCELLATION mcp started=true client_cancelled=true helper_stopped=true
+QUERY_BLOB ranges=3/3
+QUERY_BLOB cached_offline=true sha256_valid=true
+FEED_LOG replica feed: IO error: peer closed connection without sending TLS close_notify: https://docs.rs/rustls/latest/rustls/manual/_03_howto/index.html#unexpected-eof

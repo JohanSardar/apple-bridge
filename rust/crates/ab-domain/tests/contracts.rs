@@ -65,3 +65,20 @@ fn record_data_retains_legacy_number_tokens() -> Result<(), Box<dyn std::error::
     assert!(encoded.contains(record.data.get()));
     Ok(())
 }
+
+#[test]
+fn command_records_accept_caller_chosen_ids_and_command_sources()
+-> Result<(), Box<dyn std::error::Error>> {
+    let record: ab_domain::Record = serde_json::from_str(
+        r#"{"collection":"system.command","id":"cmd_caller-chosen:1","version":1,"source":"reminders","observed_at":"2026-01-02T03:04:05Z","deleted":false,"coverage":{"fields":"complete","missing":[]},"data":{"state":"admitted"}}"#,
+    )?;
+    record.validate()?;
+    assert_eq!(record.id.as_str(), "cmd_caller-chosen:1");
+    assert!(
+        serde_json::from_str::<ab_domain::Record>(
+            &serde_json::to_string(&record)?.replace("system.command", "reminders.reminder")
+        )
+        .is_err()
+    );
+    Ok(())
+}

@@ -1,0 +1,1065 @@
+{
+  "safari.tab": {
+    "window": [
+      "Number",
+      true,
+      false
+    ],
+    "index": [
+      "Number",
+      true,
+      false
+    ],
+    "title": [
+      "String",
+      true,
+      false
+    ],
+    "url": [
+      "String",
+      true,
+      false
+    ],
+    "active": [
+      "Bool",
+      true,
+      false
+    ]
+  },
+  "safari.history": {
+    "url": [
+      "String",
+      true,
+      false
+    ],
+    "title": [
+      "String",
+      true,
+      false
+    ],
+    "last_visit": [
+      "Time",
+      true,
+      false
+    ],
+    "visit_count": [
+      "Number",
+      true,
+      false
+    ]
+  },
+  "safari.bookmark": {
+    "url": [
+      "String",
+      true,
+      false
+    ],
+    "title": [
+      "String",
+      true,
+      false
+    ],
+    "folder_path": [
+      "String",
+      true,
+      false
+    ]
+  },
+  "safari.reading_list": {
+    "url": [
+      "String",
+      true,
+      false
+    ],
+    "title": [
+      "String",
+      true,
+      false
+    ],
+    "added": [
+      "Time",
+      false,
+      true
+    ],
+    "read": [
+      "Bool",
+      true,
+      false
+    ]
+  },
+  "safari.cloud_tab": {
+    "url": [
+      "String",
+      true,
+      false
+    ],
+    "title": [
+      "String",
+      true,
+      false
+    ],
+    "device": [
+      "String",
+      true,
+      false
+    ]
+  },
+  "voice_memos.folder": {
+    "name": [
+      "String",
+      true,
+      false
+    ],
+    "count": [
+      "Number",
+      true,
+      false
+    ]
+  },
+  "voice_memos.recording": {
+    "transcript": [
+      "Array",
+      false,
+      false
+    ],
+    "audio": [
+      "Object",
+      false,
+      false
+    ],
+    "title": [
+      "String",
+      true,
+      false
+    ],
+    "date": [
+      "Time",
+      true,
+      false
+    ],
+    "duration": [
+      "Number",
+      true,
+      false
+    ],
+    "folder": [
+      "String",
+      true,
+      false
+    ],
+    "recently_deleted": [
+      "Bool",
+      true,
+      false
+    ],
+    "transcript_state": [
+      "String",
+      true,
+      false
+    ],
+    "audio_state": [
+      "String",
+      true,
+      false
+    ]
+  },
+  "voicemail.message": {
+    "sender": [
+      "String",
+      true,
+      false
+    ],
+    "date": [
+      "Time",
+      true,
+      false
+    ],
+    "duration": [
+      "Number",
+      true,
+      false
+    ],
+    "read": [
+      "Bool",
+      true,
+      false
+    ],
+    "mailbox": [
+      "String",
+      true,
+      false
+    ],
+    "type": [
+      "String",
+      true,
+      false
+    ],
+    "transcript_state": [
+      "String",
+      true,
+      false
+    ],
+    "audio_state": [
+      "String",
+      true,
+      false
+    ]
+  },
+  "phone.call": {
+    "direction": [
+      "String",
+      true,
+      false
+    ],
+    "handle": [
+      "String",
+      true,
+      false
+    ],
+    "name": [
+      "String",
+      true,
+      false
+    ],
+    "date": [
+      "Time",
+      true,
+      false
+    ],
+    "duration": [
+      "Number",
+      true,
+      false
+    ],
+    "service": [
+      "String",
+      true,
+      false
+    ],
+    "answered": [
+      "Bool",
+      true,
+      false
+    ]
+  },
+  "mail.account": {
+    "name": [
+      "String",
+      true,
+      false
+    ],
+    "kind": [
+      "String",
+      true,
+      false
+    ],
+    "addresses": [
+      "Array",
+      true,
+      false
+    ]
+  },
+  "mail.mailbox": {
+    "account_id": [
+      "String",
+      true,
+      false
+    ],
+    "name": [
+      "String",
+      true,
+      false
+    ],
+    "path": [
+      "String",
+      true,
+      false
+    ],
+    "role": [
+      "String",
+      true,
+      false
+    ],
+    "unread_count": [
+      "Number",
+      true,
+      false
+    ],
+    "message_count": [
+      "Number",
+      true,
+      false
+    ]
+  },
+  "mail.message": {
+    "account_id": [
+      "String",
+      true,
+      false
+    ],
+    "mailbox_ids": [
+      "Array",
+      true,
+      false
+    ],
+    "subject": [
+      "String",
+      true,
+      false
+    ],
+    "from": [
+      "String",
+      true,
+      false
+    ],
+    "to": [
+      "Array",
+      false,
+      true
+    ],
+    "cc": [
+      "Array",
+      false,
+      true
+    ],
+    "sent_at": [
+      "Time",
+      false,
+      true
+    ],
+    "received_at": [
+      "Time",
+      true,
+      false
+    ],
+    "read": [
+      "Bool",
+      true,
+      false
+    ],
+    "flagged": [
+      "Bool",
+      false,
+      true
+    ],
+    "flag_color": [
+      "Number",
+      false,
+      true
+    ],
+    "has_attachments": [
+      "Bool",
+      false,
+      true
+    ],
+    "size": [
+      "Number",
+      false,
+      true
+    ],
+    "snippet": [
+      "String",
+      false,
+      true
+    ],
+    "body_state": [
+      "String",
+      false,
+      true
+    ],
+    "message_id": [
+      "String",
+      true,
+      false
+    ]
+  },
+  "mail.attachment": {
+    "message_id": [
+      "String",
+      true,
+      false
+    ],
+    "filename": [
+      "String",
+      true,
+      false
+    ],
+    "mime_type": [
+      "String",
+      true,
+      false
+    ],
+    "size": [
+      "Number",
+      false,
+      true
+    ],
+    "blob": [
+      "Object",
+      true,
+      false
+    ]
+  },
+  "shortcuts.folder": {
+    "name": [
+      "String",
+      true,
+      false
+    ],
+    "identifier": [
+      "String",
+      true,
+      false
+    ]
+  },
+  "shortcuts.shortcut": {
+    "name": [
+      "String",
+      true,
+      false
+    ],
+    "identifier": [
+      "String",
+      true,
+      false
+    ],
+    "folder_id": [
+      "String",
+      false,
+      true
+    ],
+    "accepts_input": [
+      "Bool",
+      false,
+      true
+    ]
+  },
+  "files.item": {
+    "root": [
+      "String",
+      true,
+      false
+    ],
+    "path": [
+      "String",
+      true,
+      false
+    ],
+    "name": [
+      "String",
+      true,
+      false
+    ],
+    "kind": [
+      "String",
+      true,
+      false
+    ],
+    "size": [
+      "Number",
+      true,
+      false
+    ],
+    "created": [
+      "String",
+      false,
+      true
+    ],
+    "modified": [
+      "String",
+      false,
+      true
+    ],
+    "tags": [
+      "Array",
+      true,
+      false
+    ],
+    "downloaded": [
+      "Bool",
+      true,
+      false
+    ],
+    "icloud_status": [
+      "String",
+      true,
+      false
+    ]
+  },
+  "messages.message": {
+    "chat_id": [
+      "String",
+      false,
+      false
+    ],
+    "sender_handle_id": [
+      "String",
+      false,
+      false
+    ],
+    "is_from_me": [
+      "Bool",
+      true,
+      false
+    ],
+    "service": [
+      "String",
+      true,
+      false
+    ],
+    "sent_at": [
+      "Time",
+      true,
+      false
+    ],
+    "edit_until": [
+      "Time",
+      false,
+      false
+    ],
+    "unsend_until": [
+      "Time",
+      false,
+      false
+    ],
+    "parts": [
+      "Array",
+      true,
+      false
+    ],
+    "text": [
+      "String",
+      false,
+      false
+    ],
+    "decode_status": [
+      "String",
+      true,
+      false
+    ],
+    "raw_body_digest": [
+      "String",
+      false,
+      false
+    ],
+    "summary_decode_status": [
+      "String",
+      false,
+      false
+    ],
+    "summary_raw_digest": [
+      "String",
+      false,
+      false
+    ],
+    "reply_to_id": [
+      "String",
+      false,
+      false
+    ],
+    "thread_originator_id": [
+      "String",
+      false,
+      false
+    ],
+    "edited_at": [
+      "Time",
+      false,
+      false
+    ],
+    "edit_history": [
+      "Array",
+      true,
+      false
+    ],
+    "retracted_parts": [
+      "Array",
+      true,
+      false
+    ],
+    "retracted_at": [
+      "Time",
+      false,
+      false
+    ],
+    "delivered_at": [
+      "Time",
+      false,
+      false
+    ],
+    "read_at": [
+      "Time",
+      false,
+      false
+    ],
+    "error_code": [
+      "Number",
+      true,
+      false
+    ],
+    "effect": [
+      "String",
+      false,
+      false
+    ],
+    "kind": [
+      "String",
+      true,
+      false
+    ],
+    "group_event": [
+      "Object",
+      false,
+      false
+    ],
+    "balloon": [
+      "Object",
+      false,
+      false
+    ],
+    "audio": [
+      "Object",
+      true,
+      false
+    ],
+    "schedule": [
+      "Object",
+      false,
+      false
+    ],
+    "subject": [
+      "String",
+      false,
+      false
+    ],
+    "delivery": [
+      "Object",
+      true,
+      false
+    ],
+    "is_spam": [
+      "Bool",
+      true,
+      false
+    ],
+    "has_unseen_mention": [
+      "Bool",
+      true,
+      false
+    ],
+    "via_satellite": [
+      "Bool",
+      true,
+      false
+    ],
+    "is_sos": [
+      "Bool",
+      true,
+      false
+    ],
+    "formatting": [
+      "Array",
+      true,
+      false
+    ],
+    "deleted_at": [
+      "Time",
+      false,
+      false
+    ],
+    "recoverable_until": [
+      "Time",
+      false,
+      true
+    ]
+  },
+  "messages.chat": {
+    "service": [
+      "String",
+      true,
+      false
+    ],
+    "style": [
+      "String",
+      true,
+      false
+    ],
+    "display_name": [
+      "String",
+      true,
+      false
+    ],
+    "participants": [
+      "Array",
+      true,
+      false
+    ],
+    "is_archived": [
+      "Bool",
+      true,
+      false
+    ],
+    "last_read_at": [
+      "Time",
+      false,
+      false
+    ],
+    "is_unread": [
+      "Bool",
+      false,
+      false
+    ],
+    "capabilities": [
+      "Array",
+      true,
+      false
+    ],
+    "filter": [
+      "String",
+      true,
+      false
+    ],
+    "is_spam": [
+      "Bool",
+      true,
+      false
+    ],
+    "group_photo_attachment_id": [
+      "String",
+      false,
+      false
+    ],
+    "read_receipts": [
+      "String",
+      true,
+      false
+    ],
+    "muted": [
+      "Bool",
+      false,
+      false
+    ],
+    "muted_until": [
+      "Time",
+      false,
+      true
+    ],
+    "pinned_index": [
+      "Number",
+      false,
+      true
+    ],
+    "deleted_at": [
+      "Time",
+      false,
+      false
+    ],
+    "recoverable_until": [
+      "Time",
+      false,
+      true
+    ]
+  },
+  "messages.handle": {
+    "address": [
+      "String",
+      true,
+      false
+    ],
+    "service": [
+      "String",
+      true,
+      false
+    ],
+    "contact_id": [
+      "String",
+      false,
+      false
+    ]
+  },
+  "messages.reaction": {
+    "message_id": [
+      "String",
+      true,
+      false
+    ],
+    "part_index": [
+      "Number",
+      true,
+      false
+    ],
+    "sender_handle_id": [
+      "String",
+      false,
+      false
+    ],
+    "is_from_me": [
+      "Bool",
+      true,
+      false
+    ],
+    "kind": [
+      "String",
+      true,
+      false
+    ],
+    "emoji": [
+      "String",
+      false,
+      false
+    ],
+    "removed": [
+      "Bool",
+      true,
+      false
+    ],
+    "sent_at": [
+      "Time",
+      true,
+      false
+    ]
+  },
+  "messages.attachment": {
+    "message_id": [
+      "String",
+      false,
+      false
+    ],
+    "filename": [
+      "String",
+      true,
+      false
+    ],
+    "mime_type": [
+      "String",
+      true,
+      false
+    ],
+    "uti": [
+      "String",
+      true,
+      false
+    ],
+    "size": [
+      "Number",
+      true,
+      false
+    ],
+    "blob": [
+      "Object",
+      true,
+      false
+    ],
+    "derivatives": [
+      "Object",
+      false,
+      false
+    ],
+    "media": [
+      "Object",
+      false,
+      false
+    ],
+    "is_sticker": [
+      "Bool",
+      true,
+      false
+    ],
+    "sticker": [
+      "Object",
+      false,
+      false
+    ],
+    "hidden": [
+      "Bool",
+      true,
+      false
+    ],
+    "genmoji": [
+      "Bool",
+      true,
+      false
+    ],
+    "description": [
+      "String",
+      false,
+      false
+    ]
+  },
+  "mac.bluetooth_device": {
+    "name": [
+      "String",
+      true,
+      false
+    ],
+    "connected": [
+      "Bool",
+      true,
+      false
+    ],
+    "battery_percent": [
+      "Number",
+      false,
+      false
+    ]
+  },
+  "mac.audio_device": {
+    "name": [
+      "String",
+      true,
+      false
+    ],
+    "input": [
+      "Bool",
+      true,
+      false
+    ],
+    "output": [
+      "Bool",
+      true,
+      false
+    ],
+    "default": [
+      "Bool",
+      true,
+      false
+    ],
+    "volume": [
+      "Number",
+      false,
+      false
+    ],
+    "muted": [
+      "Bool",
+      false,
+      false
+    ]
+  },
+  "mac.display": {
+    "appearance": [
+      "String",
+      true,
+      false
+    ],
+    "displays": [
+      "Array",
+      true,
+      false
+    ]
+  },
+  "mac.power": {
+    "battery_percent": [
+      "Number",
+      false,
+      false
+    ],
+    "charging": [
+      "Bool",
+      true,
+      false
+    ],
+    "source": [
+      "String",
+      true,
+      false
+    ],
+    "low_power_mode": [
+      "Bool",
+      true,
+      false
+    ],
+    "time_remaining": [
+      "Number",
+      false,
+      false
+    ],
+    "keep_awake_held": [
+      "Bool",
+      true,
+      false
+    ]
+  },
+  "mac.network": {
+    "ssid": [
+      "String",
+      false,
+      false
+    ],
+    "wifi_power": [
+      "Bool",
+      false,
+      false
+    ],
+    "connected": [
+      "Bool",
+      true,
+      false
+    ],
+    "interface": [
+      "String",
+      false,
+      false
+    ],
+    "vpn": [
+      "Bool",
+      true,
+      false
+    ]
+  },
+  "mac.app": {
+    "bundle_id": [
+      "String",
+      true,
+      false
+    ],
+    "name": [
+      "String",
+      true,
+      false
+    ],
+    "running": [
+      "Bool",
+      true,
+      false
+    ],
+    "frontmost": [
+      "Bool",
+      true,
+      false
+    ],
+    "hidden": [
+      "Bool",
+      true,
+      false
+    ]
+  },
+  "pdf.artifact": {
+    "blob": [
+      "Object",
+      true,
+      false
+    ],
+    "annotation_count": [
+      "Number",
+      true,
+      false
+    ]
+  },
+  "focus.status": {
+    "focused": [
+      "Bool",
+      false,
+      true
+    ],
+    "name": [
+      "String",
+      false,
+      true
+    ],
+    "authorization": [
+      "String",
+      true,
+      false
+    ]
+  }
+}

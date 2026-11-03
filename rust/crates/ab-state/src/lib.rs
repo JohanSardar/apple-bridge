@@ -2,6 +2,7 @@
 mod models;
 mod notes;
 mod projection;
+mod query;
 mod reminders;
 mod scope;
 mod specialized;

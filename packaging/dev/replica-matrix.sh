@@ -14,6 +14,6 @@ if ! python3 -c 'import json,sys; data=json.load(sys.stdin); sys.exit(0 if any(t
 fi
 artifacts=$(mktemp)
 trap 'rm -f "$artifacts"' EXIT
-cargo build --manifest-path rust/Cargo.toml --bin bridge --message-format=json > "$artifacts"
+cargo build --manifest-path rust/Cargo.toml --bin bridge --features ab-runtime/lab-queries --message-format=json > "$artifacts"
 binary=$(python3 -c 'import json,sys; paths=[m["executable"] for line in sys.stdin if (m:=json.loads(line)).get("reason")=="compiler-artifact" and m.get("target",{}).get("name")=="bridge" and m.get("executable")]; sys.exit("cargo emitted no bridge executable") if len(paths)!=1 else print(paths[0])' < "$artifacts")
 go run ./cmd/bridge-lab replica-matrix "${SCENARIOS:-lab/scenarios}" --impl "$implementation" --rust-binary "$binary" "${matrix_flags[@]}"

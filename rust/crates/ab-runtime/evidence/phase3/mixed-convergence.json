@@ -1,0 +1,75 @@
+{
+  "implementations": {
+    "gateway": "go",
+    "replica": "rust",
+    "replicas": [
+      "go",
+      "rust"
+    ]
+  },
+  "impl": "mixed",
+  "host_conditions": null,
+  "run_id": "matrix_01M6FHF4TNHW1E465BEPZBD8PW",
+  "metrics": {
+    "snapshot_0": {
+      "count": 103,
+      "cursor": {
+        "epoch": "01M6FHF4Z1YZGFEBSV7ND2Y2VW",
+        "subscription_revision": 1,
+        "sequence": 114
+      },
+      "digest": "da6b5754814c01477abab631e8ffe2e40a1f8379663094b15b5041df7a498d0a",
+      "impl": "go"
+    },
+    "snapshot_1": {
+      "count": 103,
+      "cursor": {
+        "epoch": "01M6FHF4Z1YZGFEBSV7ND2Y2VW",
+        "subscription_revision": 1,
+        "sequence": 114
+      },
+      "digest": "da6b5754814c01477abab631e8ffe2e40a1f8379663094b15b5041df7a498d0a",
+      "impl": "go"
+    },
+    "snapshot_2": {
+      "count": 103,
+      "cursor": {
+        "epoch": "01M6FHF4Z1YZGFEBSV7ND2Y2VW",
+        "subscription_revision": 1,
+        "sequence": 114
+      },
+      "digest": "da6b5754814c01477abab631e8ffe2e40a1f8379663094b15b5041df7a498d0a",
+      "impl": "rust"
+    }
+  },
+  "scenario": "REPLICA-MIXED-CONVERGENCE",
+  "level": "replica",
+  "passed": true,
+  "git_sha": "4ce8f25efc7ce2002cc7d8a770e5aa43ed375090",
+  "at": "2026-11-03T01:48:04.82144539Z",
+  "assertions": [
+    {
+      "name": "selected_binaries_started",
+      "passed": true,
+      "detail": "<nil>"
+    },
+    {
+      "name": "mixed_convergence",
+      "passed": true
+    },
+    {
+      "name": "snapshot_0_identical",
+      "passed": true
+    },
+    {
+      "name": "snapshot_1_identical",
+      "passed": true
+    },
+    {
+      "name": "snapshot_2_identical",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

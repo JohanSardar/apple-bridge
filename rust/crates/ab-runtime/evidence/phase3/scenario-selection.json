@@ -1,0 +1,127 @@
+[
+  {
+    "id": "CALLS-REPLICA",
+    "source": "lab/scenarios/phone/CALLS-REPLICA.yaml",
+    "sha256": "da85bf0c62f91a2968a974a42e6d37ce7daaf1a0c75bffb69f3b5c16e0161a0a"
+  },
+  {
+    "id": "CORE-BENCH",
+    "source": "lab/scenarios/core/CORE-BENCH.yaml",
+    "sha256": "0dd5dbda71567eb6ff34ce63824da9d930e0ef376b18bc57db6b803b6346bf06"
+  },
+  {
+    "id": "CORE-BLOB-INTERRUPT",
+    "source": "lab/scenarios/core/CORE-BLOB-INTERRUPT.yaml",
+    "sha256": "1f4a7993ba5b1b6c900d26493c1bd34621b3fdf98381dcbe733073b54d839430"
+  },
+  {
+    "id": "CORE-BOOT",
+    "source": "lab/scenarios/core/CORE-BOOT.yaml",
+    "sha256": "9a68990b09023f4db903ee8f0725f8a9f1badb179e6f0f7006f9021609f4b7cd"
+  },
+  {
+    "id": "CORE-CLOCK-DELAY",
+    "source": "lab/scenarios/core/CORE-CLOCK-DELAY.yaml",
+    "sha256": "41a3738bd3a482b0178eeb7b89a8fafb09bba13b495d4377cd3ff98f49a2432b"
+  },
+  {
+    "id": "CORE-CLOCK-DELAY-GATEWAY-DIALS",
+    "source": "lab/scenarios/core/CORE-CLOCK-DELAY-GATEWAY-DIALS.yaml",
+    "sha256": "06b45d152a3a08cc7f31c39d1462a06e7aea8d188046967f9f8c2dc4f52986e5"
+  },
+  {
+    "id": "CORE-CMD-CONFLICT",
+    "source": "lab/scenarios/core/CORE-CMD-CONFLICT.yaml",
+    "sha256": "2aee0c471b0cff0f5de91c2d4b6bb54b1a104447cb574ea5a27c93fee08b1fa9"
+  },
+  {
+    "id": "CORE-CMD-LOST-RESPONSE",
+    "source": "lab/scenarios/core/CORE-CMD-LOST-RESPONSE.yaml",
+    "sha256": "5b2d03fd22d673dea133aabbdff2ece82dd81a7525614fb04be0067df62f113e"
+  },
+  {
+    "id": "CORE-CMD-OFFLINE",
+    "source": "lab/scenarios/core/CORE-CMD-OFFLINE.yaml",
+    "sha256": "2fa50f26b70cc8fa759ba346df37c13d140ed1d7059ac10e75daf50095439931"
+  },
+  {
+    "id": "CORE-CMD-READ-YOUR-WRITE",
+    "source": "lab/scenarios/core/CORE-CMD-READ-YOUR-WRITE.yaml",
+    "sha256": "e524758de063bc75fd5ffaccdefd1371b570c65f996a45a52df390fbfa5166c1"
+  },
+  {
+    "id": "CORE-CRED-LIFECYCLE",
+    "source": "lab/scenarios/core/CORE-CRED-LIFECYCLE.yaml",
+    "sha256": "0ff8d876c407567e6083e096bbcc841e09ecde6c3252465fe5a9d1259f528db0"
+  },
+  {
+    "id": "CORE-DISCONNECT-DETECT",
+    "source": "lab/scenarios/core/CORE-DISCONNECT-DETECT.yaml",
+    "sha256": "2fd7a976ebd468be816ca50cba57cf858953e3616bbfcd286df984796ae297c7"
+  },
+  {
+    "id": "CORE-DOCTOR",
+    "source": "lab/scenarios/core/CORE-DOCTOR.yaml",
+    "sha256": "12c343b2132c89fed4a2eadb19f92dd16145bad502b091c326a2256960125a83"
+  },
+  {
+    "id": "CORE-FEED-PIPELINED-ACKS",
+    "source": "lab/scenarios/core/CORE-FEED-PIPELINED-ACKS.yaml",
+    "sha256": "9cd4df9ffffddef928df76d3b0fcdaa1c6f5e4d528b5ee9bde9b81735d41fa38"
+  },
+  {
+    "id": "CORE-GAP-REJECT",
+    "source": "lab/scenarios/core/CORE-GAP-REJECT.yaml",
+    "sha256": "112eced9a868b2fb01abbe18d3f4a6513dcb94cd87112fee90f7f7646e10615f"
+  },
+  {
+    "id": "CORE-GATEWAY-DIALS",
+    "source": "lab/scenarios/core/CORE-GATEWAY-DIALS.yaml",
+    "sha256": "333c55fcfc71cdb6a744d59c2f331f396a43c9e706a22c9eab7e2dd86435c2dc"
+  },
+  {
+    "id": "CORE-LIVE-LATENCY",
+    "source": "lab/scenarios/core/CORE-LIVE-LATENCY.yaml",
+    "sha256": "a6320c231252fb0bac38d6daff756309ecd1a87b1a28446bd2e5add5a9d6b6f5"
+  },
+  {
+    "id": "CORE-PAIR",
+    "source": "lab/scenarios/core/CORE-PAIR.yaml",
+    "sha256": "c28ed8694cb878c6c5d30f0fb24284e1112858642ac0b53d38a2ed38a941acc9"
+  },
+  {
+    "id": "CORE-QUERY-BLOB",
+    "source": "lab/scenarios/core/CORE-QUERY-BLOB.yaml",
+    "sha256": "89b0c9ff915f04440f02c1cb53e12fa29120fd6b1caabe72e30e8bc8733c97d3"
+  },
+  {
+    "id": "CORE-QUERY-REPLICA",
+    "source": "lab/scenarios/core/CORE-QUERY-REPLICA.yaml",
+    "sha256": "a8ce55cae8df943b2113219698ef76009d2101910892045d123cfc09b60bf3c2"
+  },
+  {
+    "id": "CORE-RESUME",
+    "source": "lab/scenarios/core/CORE-RESUME.yaml",
+    "sha256": "03a1c62ea01388d5d88753751cd171eb661cf01d1872c63703d2771c28628ee2"
+  },
+  {
+    "id": "CORE-RETENTION-RACE",
+    "source": "lab/scenarios/core/CORE-RETENTION-RACE.yaml",
+    "sha256": "c9e11433e5f0954b65e58d2e6843a3d99ceb3cbb85a94a58d8774eea4ab5c448"
+  },
+  {
+    "id": "CORE-SCOPE-LEAK",
+    "source": "lab/scenarios/core/CORE-SCOPE-LEAK.yaml",
+    "sha256": "7f8f4d18c078752e863375d1fb223844ab7447c4340611a334e1b8c6a6c4b6f1"
+  },
+  {
+    "id": "CORE-SNAPSHOT-UNDER-LOAD",
+    "source": "lab/scenarios/core/CORE-SNAPSHOT-UNDER-LOAD.yaml",
+    "sha256": "6a72517964caf5aecfc8c9dbe67aaf49fa40802101560eeab086df3ad32e5a46"
+  },
+  {
+    "id": "MAIL-REPLICA",
+    "source": "lab/scenarios/mail/MAIL-REPLICA.yaml",
+    "sha256": "5b78359c1cb04f4adc136281750c081ee21c9e8760f32ffa2576df7c2d71a83d"
+  }
+]
