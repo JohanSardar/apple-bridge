@@ -18,3 +18,6 @@ flate2 = { version = "1", default-features = false, features = ["rust_backend"] 
 rusqlite.workspace = true
 jiff.workspace = true
 plist = { version = "=1.10.3", default-features = false, features = ["enable_unstable_features_that_may_break_with_minor_version_bumps"] }
+
+base64 = "=0.22.1"
+libc = "0.2"

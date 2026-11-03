@@ -520,6 +520,7 @@ impl Reader {
             completion_evidence: "complete",
             coverage: json!({"fields":"partial","missing":missing_coverage}),
             observations,
+            blob_handles: BTreeMap::new(),
             live: prior.material.is_some() || prior.revision > 0,
         };
         Ok(Some(Pending {

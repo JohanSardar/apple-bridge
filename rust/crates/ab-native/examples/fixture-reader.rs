@@ -50,9 +50,11 @@ fn write_json(
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = std::env::args().skip(1).collect::<Vec<_>>();
     let [source, directory, options @ ..] = args.as_slice() else {
-        return Err("usage: fixture-reader usage FIXTURE_DIRECTORY [--interactive]".into());
+        return Err(
+            "usage: fixture-reader SOURCE FIXTURE_DIRECTORY [--interactive] [--frames]".into(),
+        );
     };
-    if !["usage", "safari", "calls", "voicemail"].contains(&source.as_str())
+    if !["usage", "safari", "calls", "voicemail", "voice-memos"].contains(&source.as_str())
         || options
             .iter()
             .any(|o| o != "--interactive" && o != "--frames")
@@ -65,6 +67,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     if ["calls", "voicemail"].contains(&source.as_str()) {
         return telephony(root, options, source);
+    }
+    if source == "voice-memos" {
+        return voice_memos(root, options);
     }
     let mut reader = Reader::default();
     let frames = options.iter().any(|o| o == "--frames");
@@ -236,6 +241,54 @@ fn telephony(
         }
     } else {
         scan(100_000, false)?;
+    }
+    Ok(())
+}
+
+fn voice_memos(root: &Path, options: &[String]) -> Result<(), Box<dyn std::error::Error>> {
+    use ab_native::{capture::Context, voice_memo::Reader};
+    let mut reader = Reader::open(&root.join("rust-blobs"))?;
+    let mut index = 0;
+    let frames = options.iter().any(|o| o == "--frames");
+    let mut run = |line: &str| -> Result<(), Box<dyn std::error::Error>> {
+        let parts = line.split_whitespace().collect::<Vec<_>>();
+        if let ["blob", handle, offset, length] = parts.as_slice() {
+            let result = offset
+                .parse()
+                .ok()
+                .zip(length.parse().ok())
+                .and_then(|(offset, length)| reader.read_blob(handle, offset, length).ok());
+            let mut output = std::io::stdout().lock();
+            write_json(
+                &mut output,
+                &result.unwrap_or_else(|| serde_json::json!({"kind":"failed_blob"})),
+            )?;
+            output.flush()?;
+            return Ok(());
+        }
+        let context: Context = serde_json::from_slice(&std::fs::read(root.join("context.json"))?)?;
+        if let Ok(pending) = reader.scan(
+            &root.join("store.db"),
+            &context,
+            index > 0,
+            line.parse().unwrap_or(100_000),
+        ) {
+            emit_capture(&pending.batch, frames)?;
+            reader.commit(pending)?;
+        } else {
+            let mut output = std::io::stdout().lock();
+            write_json(&mut output, &serde_json::json!({"kind":"failed_scan"}))?;
+            output.flush()?;
+        }
+        index += 1;
+        Ok(())
+    };
+    if options.iter().any(|o| o == "--interactive") {
+        for line in std::io::stdin().lock().lines() {
+            run(&line?)?;
+        }
+    } else {
+        run("scan")?;
     }
     Ok(())
 }

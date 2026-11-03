@@ -111,8 +111,10 @@ version = "0.0.0"
 dependencies = [
  "ab-domain",
  "ab-wire",
+ "base64 0.22.1",
  "flate2",
  "jiff",
+ "libc",
  "plist",
  "rusqlite",
  "serde",
