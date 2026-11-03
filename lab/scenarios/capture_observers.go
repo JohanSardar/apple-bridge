@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
-	"github.com/JohanSardar/apple-bridge/internal/trust"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
@@ -137,12 +136,12 @@ func runCaptureObservers(ctx context.Context, w *world.World, owner *webClient, 
 }
 
 func captureApprovalObserver(ctx context.Context, w *world.World, owner *webClient, add func(string, bool)) {
-	authority, err := trust.Open(w.Gateway.Home)
+	_, err := w.GatewayCommand("agent", "list")
 	if err != nil {
 		add("approval_authority", false)
 		return
 	}
-	_, token, err := authority.CreateAgent("Bridge Test capture approval", trust.AgentApprove, []contracts.Grant{"messages:write"})
+	token, err := binaryAgentToken(w, "Bridge Test capture approval", "approve", "messages:write")
 	add("approval_agent_created", err == nil)
 	if err != nil {
 		return

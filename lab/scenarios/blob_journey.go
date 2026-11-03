@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	labwire "github.com/JohanSardar/apple-bridge/lab/wire"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 	"io"
 	_ "modernc.org/sqlite"
@@ -155,7 +156,7 @@ func blobJourney(ctx context.Context, w *world.World, id string, rows int, evide
 		for _, r := range records {
 			if r.Collection == "messages.attachment" {
 				attachment = r
-				refs := contracts.BlobReferences(r.Data)
+				refs := labwire.BlobReferences(r.Data)
 				if len(refs) == 1 {
 					digest = refs[0].Digest
 				}
@@ -382,7 +383,7 @@ func blobJourney(ctx context.Context, w *world.World, id string, rows int, evide
 			records, err := w.Records(w.Gateway)
 			for _, r := range records {
 				if r.ID == attachment.ID {
-					refs := contracts.BlobReferences(r.Data)
+					refs := labwire.BlobReferences(r.Data)
 					if len(refs) == 1 && refs[0].Digest != digest {
 						failedDigest = refs[0].Digest
 					}
@@ -427,7 +428,7 @@ func blobJourney(ctx context.Context, w *world.World, id string, rows int, evide
 				if r.ID != attachment.ID {
 					continue
 				}
-				refs := contracts.BlobReferences(r.Data)
+				refs := labwire.BlobReferences(r.Data)
 				if len(refs) == 1 && refs[0].Digest != digest {
 					failedDigest = refs[0].Digest
 				}

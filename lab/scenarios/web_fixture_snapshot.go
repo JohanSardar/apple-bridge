@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	labwire "github.com/JohanSardar/apple-bridge/lab/wire"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
@@ -53,7 +54,7 @@ func runWebFixtureSnapshot(ctx context.Context, s Scenario, level string) Eviden
 			return nil, err
 		}
 		for _, record := range records {
-			refs := contracts.BlobReferences(record.Data)
+			refs := labwire.BlobReferences(record.Data)
 			if record.Collection != "messages.attachment" || len(refs) == 0 {
 				continue
 			}

@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	labwire "github.com/JohanSardar/apple-bridge/lab/wire"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
@@ -530,7 +531,7 @@ func runWebBlobs(ctx context.Context, w *world.World, c *webClient, e *Evidence,
 		return
 	}
 	record := records.Records[0]
-	refs := contracts.BlobReferences(record.Data)
+	refs := labwire.BlobReferences(record.Data)
 	if len(refs) == 0 {
 		add("attachment_blob_reference", false)
 		return
