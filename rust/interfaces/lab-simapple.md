@@ -35,3 +35,37 @@ The parity runner defaults to one repetition; `--repetitions 3` reproduces the f
 This is a bounded peer extension, not a complete Messages family or Rust scenario-runner port. MSG-INCOMING failed its one-second latency assertion in the Go baseline on the loaded build host. History-import still needs bulk pause/release and capture statistics. Decoder and watcher scenario gates invoke native macOS checks and cannot complete on Linux. Messages command operations beyond the foundation, other source adapters, query/blob/media simulation and the broader fault catalog remain. The four Phase 8 seeded gateway faults have not been gated against independent Go and Rust harnesses; those gates remain required before declaring a family complete or deleting Go.
 
 The host-quiet wait is already opt-in: `bridge-lab run` defaults to sim without requiring quiet, and `--require-quiet` sets the context request used by `lab/scenarios/telemetry.go`. Without that explicit flag the 60-second wait is bypassed, including for latency scenarios.
+
+## Independent runner and world API (Phase 8)
+
+The stable extension boundary is `lab-world` plus `lab-runner`, with no `ab-*` dependencies. All interaction with products is through selected executables, public HTTP, or SimApple's control socket. The runner never executes `bridge-lab`.
+
+`lab-world` exports `WorldConfig { gateway: PathBuf, simapple: PathBuf, directory: PathBuf, scope: String }`, `World::start(WorldConfig) -> Result<World>`, `World::control(&self, route: &str, input: &Value) -> Result<Value>`, `World::query(&self, operation: &str, input: &Value) -> Result<Value>`, `World::gateway_cli(&self, args: &[&str]) -> Result<String>`, `World::restart_gateway(&mut self) -> Result<()>`, and `World::close(&mut self)`. Public fields `directory`, `gateway_home`, `runtime` expose synthetic run paths and runtime JSON. Drop closes child processes; files remain for diagnosis. Each world must use a fresh private directory. HTTP calls and readiness waits have deadlines. Only sim level is supported initially; unsupported actions fail explicitly.
+
+`lab-runner` exports `Scenario` (YAML fields `id`, `feature`, `levels`, `given`, `when`, `then`, `cleanup`), `Assertion { name, passed, detail }`, `Evidence { scenario, passed, assertions }`, and `Registry`. Adapter signature: `fn(&mut World, &serde_json::Value, &mut Evidence) -> lab_world::Result<()>`. Register with `Registry::register(name, handler)`; execute with `Registry::run(&Scenario, &mut World) -> Evidence`. Each YAML step is a single-key map. Handlers must preserve original assertions, reject unsupported variants, and add named assertions using `Evidence::check(name, passed, detail)`. Cleanup always runs, including after action failure. Scenario cleanup `world` closes all processes.
+
+CLI: `lab-runner run SCENARIO.yaml ... --gateway /path/to/bridge --simapple /path/to/lab-simapple --output /private/run/root`. One JSON evidence object per scenario goes to stdout; any failure exits nonzero. Gateway selection is the supplied executable (Go or Rust), never a linked product crate. Adapter modules should register additional action names; extending the peer's control routes does not change this boundary.
+
+The four required mutant names are `skip-checkpoint-commit`, `accept-stale-fence`, `ack-uncommitted-data`, and `leak-scope`. A mutant gate must first prove its healthy control passes, then require the same behavioral observer to reject the seeded violation; infrastructure failure cannot count as detection. Until both independent harnesses have that evidence, Phase 8 remains incomplete.
+
+### Runner implementation and bounded verification
+
+`lab-runner run` implements the published extension API. Built-in steps are `world` (zero replicas only), `control` (`route`, `input`), `query` (`operation`, `input`, optional exact `equals`), `restart_gateway`, `capture_truth`, and `fault_trace`. It requires `curl` for bounded HTTP/Unix control transport. Unknown actions and replica worlds fail. `capture_truth` currently supports a bounded page of simple observations; family adapters must supply their original reference, pagination, tombstone, latency, replica and scope assertions before claiming parity for existing YAML families.
+
+`RUST-CAPTURE-RESTART` and `RUST-CAPTURE-UPDATE` drive a selected gateway and the Rust peer from YAML, checking public capture visibility, update visibility, and persistence across a gateway kill/restart. These new smoke scenarios do not replace existing family scenarios.
+
+Four `LAB-TRACE-*` YAML scenarios run the same healthy and seeded protocol event traces through independently implemented Go and Rust observers. They catch a missing checkpoint on reopen, acceptance with an old owner fence, an ack without a preceding commit, and a returned source outside the allowed scope. Evidence explicitly labels these as protocol trace sensitivity checks. They are not live gateway mutation gates. Connecting real gateway fault injection and authenticated protocol observations to these invariants remains required for Phase 8 acceptance.
+
+Reproduce with `python3 rust/lab/runner-parity.py --runner /path/to/lab-runner --go-lab /path/to/bridge-lab --gateway /path/to/bridge --simapple /path/to/lab-simapple --output /new/private/output`. This runs six Rust-runner scenarios and the four Go trace scenarios, checks verdict parity for the four named faults, and records binary hashes. Run once with each selected gateway binary. It does not invoke the Go harness from the Rust runner.
+
+## Family adapters (Phase 8, query and blob)
+
+`rust/lab/lab-adapters` has no `ab-*` dependency and produces `lab-families`, which wraps `lab_runner::Registry::standard()` with family adapters and the same CLI as `lab-runner`, leaving the runner files untouched. Adapters register through `lab_adapters::registry()`; a later merge may move them into `lab-runner/src/main.rs`.
+
+Ported: the `queries` action for CORE-QUERY-ROUNDTRIP (ten echoes, latency budget, REST/MCP parity, audit sizes only, invalid deadline rejected) and CORE-QUERY-BLOB (digest, range, scope). The `world` action accepts `replicas` only for these two scenarios, whose sim steps use the gateway alone. Any other scenario with replicas fails explicitly. Assertion names and order match the Go harness; the Go-only `credential_backend_override_restored` assertion has no Rust equivalent and is ignored by the parity script.
+
+The Rust SimApple peer now answers `Query` (`test.echo`, `test.sleep`, `test.blob`, `helper.version`) and `BlobRead` with `BlobChunk` frames, and queues them during a capture commit wait. `test.sleep` blocks the session loop, so `QueryCancel` is ignored and CORE-QUERY-DEADLINE (cancellation assertions) stays unported.
+
+Not ported: `command_journey` (CORE-CMD-*, needs replica worlds, `seed`, `converge`), `blobs` journeys (CORE-BLOB-*, need replicas, native staging, fault controls), media transfer, history-import scheduling, CORE-QUERY-SCOPE (agent token creation). Source-family simulators belong to S-P8-PIM and S-P8-MEDIA.
+
+Gate: `python3 rust/lab/families-parity.py --families $T/lab-families --go-lab bridge-lab --gateway BRIDGE --simapple $T/lab-simapple --output /new/dir`, once with a `-tags lab` Go gateway and once with the Rust gateway built with `--features lab-queries`.

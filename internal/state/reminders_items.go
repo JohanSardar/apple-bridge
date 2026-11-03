@@ -39,7 +39,7 @@ func (s *Store) ReminderItems(ctx context.Context, visibility trust.Visibility, 
 	if err != nil || !visibility[contracts.Reminders] {
 		return result, err
 	}
-	today := time.Now().In(zone).Format(time.DateOnly)
+	today := contracts.DecisionNow().In(zone).Format(time.DateOnly)
 	key, _ := json.Marshal(query)
 	cacheKey := today + "/" + string(key)
 	revision := fmt.Sprintf("%s/%d/%d", result.Cursor.Epoch, result.Cursor.SubscriptionRevision, result.Cursor.Sequence)

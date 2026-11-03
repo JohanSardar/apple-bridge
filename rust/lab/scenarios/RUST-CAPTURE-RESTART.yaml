@@ -1,0 +1,16 @@
+id: RUST-CAPTURE-RESTART
+feature: lab.runner
+levels: [sim]
+given:
+  - world: {replicas: 0}
+when:
+  - control:
+      route: /external-change
+      input: {key: rust-runner-record, collection: reminders.reminder, data: {title: '[ab-test] independent Rust runner', completed: false}}
+  - control: {route: /flush, input: {}}
+then:
+  - capture_truth: {}
+  - restart_gateway: {}
+  - capture_truth: {}
+cleanup:
+  - world: {}

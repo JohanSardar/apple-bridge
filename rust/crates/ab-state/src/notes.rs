@@ -165,7 +165,7 @@ pub(crate) fn list(db: &Connection, visibility: &Visibility, query: &Value) -> R
             .then(s(&a.0["note"], "id").cmp(s(&right.0["note"], "id")))
     });
     out["count"] = items.len().into();
-    let today = jiff::Timestamp::now().to_zoned(zone.clone()).date();
+    let today = crate::replay::now().to_zoned(zone.clone()).date();
     let mut sections = Vec::<Value>::new();
     for (item, _, date) in items {
         let mut key = "older";

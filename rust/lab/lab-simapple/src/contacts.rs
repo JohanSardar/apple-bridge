@@ -381,3 +381,29 @@ impl Session {
         Ok(())
     }
 }
+
+pub(super) fn blob(state: &Shared, frame: &Value) -> Result<Value> {
+    let handle = string(frame, "handle");
+    let digest = handle
+        .split_once(':')
+        .map_or(handle.as_str(), |(_, digest)| digest)
+        .to_owned();
+    let encoded = lock(state)?.data["blobs"][&digest]
+        .as_str()
+        .map(str::to_owned);
+    let engine = base64::engine::general_purpose::STANDARD;
+    let Some(bytes) = encoded.and_then(|text| engine.decode(text).ok()) else {
+        return Ok(json!({"t":"BlobUnavailable","handle":handle,"reason":"missing"}));
+    };
+    let offset = usize::try_from(frame["offset"].as_u64().unwrap_or_default())
+        .map_err(|_| invalid("offset"))?;
+    let length = usize::try_from(frame["length"].as_u64().unwrap_or_default())
+        .map_err(|_| invalid("length"))?;
+    if offset > bytes.len() || length == 0 || length > 128 << 10 {
+        return Err(invalid("blob range"));
+    }
+    let end = bytes.len().min(offset + length);
+    Ok(
+        json!({"t":"BlobChunk","handle":handle,"offset":offset,"bytes":engine.encode(&bytes[offset..end]),"digest":digest,"eof":end == bytes.len()}),
+    )
+}

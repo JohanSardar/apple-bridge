@@ -5,7 +5,7 @@ import http.server
 import base64
 from isolation import require_isolation, require_home
 from contextlib import ExitStack
-from datetime import datetime
+from datetime import datetime, timezone
 import hashlib
 import fcntl
 import hmac
@@ -70,6 +70,23 @@ def send(conn, value):
     conn.sendall(struct.pack('!I', len(raw)) + raw)
 
 
+INGRESS_PREFIXES = ('/v1/', '/mcp')
+
+
+def wall_clock():
+    now = time.time_ns()
+    return datetime.fromtimestamp(now // 1000000000, timezone.utc).strftime('%Y-%m-%dT%H:%M:%S') + '.%09dZ' % (now % 1000000000)
+
+
+def ingress_kind(method, path, headers):
+    label = {key.lower(): value for key, value in headers.items()}.get('x-ingress')
+    if label in ('cli', 'feed', 'iphone'):
+        return label
+    if path == '/mcp' or path.startswith('/mcp/'):
+        return 'mcp'
+    return 'rest'
+
+
 def record(args):
     directory = private_directory(args.output)
     path = directory / 'ipc.shadow'
@@ -91,7 +108,7 @@ def record(args):
         nonlocal sequence
         with lock:
             sequence += 1
-            output.write(json.dumps(dict(sequence=sequence, session=number, ns=time.monotonic_ns() - started, direction=direction, raw=base64.b64encode(raw).decode(), **metadata)) + '\n')
+            output.write(json.dumps(dict(sequence=sequence, session=number, ns=time.monotonic_ns() - started, wall=wall_clock(), direction=direction, raw=base64.b64encode(raw).decode(), **metadata)) + '\n')
             output.flush()
             return sequence
     with open(path, 'x', opener=lambda p, f: os.open(p, f, 0o600)) as output, socket.socket(socket.AF_UNIX) as server:
@@ -145,25 +162,26 @@ def record(args):
                     super().setup()
                 def log_message(self, *_):
                     pass
-                def do_POST(self):
-                    if self.headers.get('Transfer-Encoding') or not self.path.startswith('/v1/op/'):
+                def handle_ingress(self):
+                    path = self.path
+                    if self.headers.get('Transfer-Encoding') or not any(path == prefix.rstrip('/') or path.startswith(prefix) for prefix in INGRESS_PREFIXES):
                         self.send_error(400)
                         return
                     size = int(self.headers.get('Content-Length', '0'))
-                    if not 0 < size <= MAX_FRAME:
+                    if not 0 <= size <= MAX_FRAME or self.command == 'POST' and size == 0:
                         self.send_error(400)
                         return
-                    body = self.rfile.read(size)
+                    body = self.rfile.read(size) if size else b''
                     if len(body) != size:
                         self.send_error(400)
                         return
                     headers = {key: value for key, value in self.headers.items() if key.lower() not in ('host', 'connection')}
                     try:
                         number = session
-                        request = append('admission', body, number, path=self.path, headers=headers)
+                        request = append('admission', body, number, method=self.command, path=path, ingress=ingress_kind(self.command, path, headers), headers=headers)
                         conn = http.client.HTTPConnection(args.admission_upstream, timeout=60)
                         try:
-                            conn.request('POST', self.path, body, headers)
+                            conn.request(self.command, path, body or None, headers)
                             result = conn.getresponse()
                             response = result.read()
                             append('response', response, number, request=request, status=result.status)
@@ -179,6 +197,7 @@ def record(args):
                     except (OSError, http.client.HTTPException):
                         errors.append('admission tap failed')
                         stop.set()
+                do_POST = do_GET = do_PUT = do_DELETE = handle_ingress
             admission_server = http.server.ThreadingHTTPServer((host, int(port)), Admissions)
             admission_server.daemon_threads = False
             threading.Thread(target=admission_server.serve_forever, daemon=True).start()
@@ -244,27 +263,65 @@ def connect(path, secret):
 def admit(row, address):
     conn = http.client.HTTPConnection(address, timeout=60)
     try:
-        conn.request('POST', row['path'], base64.b64decode(row['raw'], validate=True), row['headers'])
+        body = base64.b64decode(row['raw'], validate=True)
+        conn.request(row.get('method', 'POST'), row['path'], body or None, row['headers'])
         result = conn.getresponse()
-        response = json.loads(result.read())
+        raw = result.read()
+        try:
+            response = json.loads(raw)
+        except ValueError:
+            response = None
         return result.status, response
     finally:
         conn.close()
 
 
-def replay_session(rows, path, secret, api_address, home):
+def replay_session(rows, path, secret, api_address, home, clock=None):
     with concurrent.futures.ThreadPoolExecutor(max_workers=16) as pool:
         conn = connect(path, secret)
         admissions = {}
+        sent = {}
         source_states = {}
+        def drain():
+            nonlocal source_states
+            deadline = time.monotonic() + 15
+            while source_states:
+                with sqlite3.connect((home / 'state.db').as_uri() + '?mode=ro', uri=True) as db:
+                    actual = {}
+                    for payload, in db.execute("SELECT payload FROM records WHERE collection='system.source'"):
+                        record = json.loads(payload)
+                        actual[record['data']['source']] = record['data']['state']
+                source_states = {key: value for key, value in source_states.items() if actual.get(key) != value}
+                if source_states:
+                    if time.monotonic() >= deadline:
+                        raise ValueError('replay SourceState persistence deadline exceeded')
+                    time.sleep(.01)
+        def settle():
+            names = [home / name for name in ('state.db', 'state.db-wal', 'ledger.db', 'ledger.db-wal')]
+            def marks():
+                return [(entry.stat().st_mtime_ns, entry.stat().st_size) if entry.exists() else None for entry in names]
+            deadline = time.monotonic() + 15
+            quiet = time.monotonic()
+            previous = marks()
+            while time.monotonic() - quiet < .4:
+                time.sleep(.025)
+                current = marks()
+                if current != previous:
+                    previous, quiet = current, time.monotonic()
+                if time.monotonic() > deadline:
+                    raise ValueError('replay gateway did not settle')
         for row in rows:
+            if clock and row.get('wall') and row['direction'] != 'response':
+                settle()
+                clock(row['wall'])
             if row['direction'] == 'admission':
                 admissions[row['sequence']] = pool.submit(admit, row, api_address)
+                sent[row['sequence']] = row
                 continue
             if row['direction'] == 'response':
                 status, response = admissions.pop(row['request']).result(timeout=60)
-                recorded = json.loads(base64.b64decode(row['raw'], validate=True))
-                if status != row['status'] or not isinstance(response, dict) or not isinstance(recorded, dict) or any(response.get(key) != recorded.get(key) for key in ('state', 'disposition', 'error')):
+                recorded = recorded_response(row)
+                if not response_matches(sent.pop(row['request']), row['status'], status, response, recorded):
                     raise ValueError('replay admission response mismatch at sequence ' + str(row['sequence']))
                 continue
             raw = base64.b64decode(row['raw'], validate=True)
@@ -276,6 +333,11 @@ def replay_session(rows, path, secret, api_address, home):
                 conn.sendall(raw)
                 if kind == 'SourceState':
                     source_states[value['source']] = value['state']
+                    drain()
+                if kind == 'Ready':
+                    for source in value.get('coverage') or {}:
+                        source_states[source] = 'ready'
+                    drain()
             else:
                 deadline = time.monotonic() + 15
                 while True:
@@ -321,19 +383,27 @@ def replay_session(rows, path, secret, api_address, home):
             if kind != 'Ping':
                 raise ValueError('replay ended with unexpected gateway traffic')
             send(conn, {'t': 'Pong'})
-        deadline = time.monotonic() + 15
-        while source_states:
-            with sqlite3.connect((home / 'state.db').as_uri() + '?mode=ro', uri=True) as db:
-                actual = {}
-                for payload, in db.execute("SELECT payload FROM records WHERE collection='system.source'"):
-                    record = json.loads(payload)
-                    actual[record['data']['source']] = record['data']['state']
-            source_states = {key: value for key, value in source_states.items() if actual.get(key) != value}
-            if source_states:
-                if time.monotonic() >= deadline:
-                    raise ValueError('replay SourceState persistence deadline exceeded')
-                time.sleep(.01)
+        drain()
         return conn
+
+
+def recorded_response(row):
+    try:
+        return json.loads(base64.b64decode(row['raw'], validate=True))
+    except ValueError:
+        return None
+
+
+def response_matches(row, expected, status, response, recorded):
+    if status != expected:
+        return False
+    if recorded is None or response is None:
+        return recorded is response
+    if row['path'].startswith('/v1/op/') and row['path'] != '/v1/op/records.query':
+        return isinstance(response, dict) and isinstance(recorded, dict) and all(response.get(key) == recorded.get(key) for key in ('state', 'disposition', 'error'))
+    if isinstance(recorded, dict) and 'jsonrpc' in recorded:
+        return isinstance(response, dict) and response.get('id') == recorded.get('id') and bool(response.get('error')) == bool(recorded.get('error')) and bool((response.get('result') or {}).get('isError')) == bool((recorded.get('result') or {}).get('isError'))
+    return type(response) is type(recorded) and (not isinstance(recorded, dict) or sorted(response) == sorted(recorded))
 
 
 def recording_rows(path):
@@ -350,11 +420,11 @@ def recording_rows(path):
             if row['direction'] == 'response':
                 if not isinstance(row['request'], int) or not isinstance(row['status'], int):
                     raise ValueError('invalid response metadata')
-                json.loads(raw)
             elif row['direction'] == 'admission':
-                if not row['path'].startswith('/v1/op/') or not isinstance(row['headers'], dict):
+                if not any(row['path'] == prefix.rstrip('/') or row['path'].startswith(prefix) for prefix in INGRESS_PREFIXES) or not isinstance(row['headers'], dict) or row.get('method', 'POST') not in ('GET', 'POST', 'PUT', 'DELETE'):
                     raise ValueError('invalid admission metadata')
-                json.loads(raw)
+                if row.get('method', 'POST') == 'POST':
+                    json.loads(raw)
             elif len(raw) < 5 or len(raw) > MAX_FRAME + 4 or struct.unpack('!I', raw[:4])[0] != len(raw) - 4:
                 raise ValueError('invalid recording at sequence ' + str(index))
             else:
@@ -414,6 +484,28 @@ def replay(args):
                 source.backup(target)
         path = destination / (name + '.sock')
         env = dict(os.environ, APPLE_BRIDGE_SECRET_STORE='file')
+        if args.decisions:
+            decisions = Path(args.decisions).resolve()
+            manifest = json.loads(decisions.read_bytes())
+            timestamp_ns(manifest['now'])
+            if not isinstance(manifest['aliases'], dict) or any(not isinstance(k, str) or not isinstance(v, str) or not v for k, v in manifest['aliases'].items()):
+                raise ValueError('invalid replay alias decisions')
+            decision_copy = destination / (name + '-decisions.json')
+            decision_copy.write_bytes(decisions.read_bytes())
+            os.chmod(decision_copy, 0o600)
+            env['APPLE_BRIDGE_LAB_REPLAY'] = str(decision_copy)
+            if manifest.get('clock') == 'recorded':
+                def clock(wall, target=decision_copy, template=manifest):
+                    timestamp_ns(wall)
+                    staged = target.with_suffix('.next')
+                    staged.write_text(json.dumps(dict(template, now=wall)))
+                    os.chmod(staged, 0o600)
+                    os.replace(staged, target)
+            else:
+                clock = None
+        else:
+            clock = None
+            env.pop('APPLE_BRIDGE_LAB_REPLAY', None)
         with open(destination / (name + '.log'), 'x', opener=lambda p, f: os.open(p, f, 0o600)) as log:
             process = subprocess.Popen([str(Path(binary).resolve()), 'start', '--role', 'gateway', '--home', str(home), '--socket', str(path), '--peer-addr', '127.0.0.1:0', '--api-addr', '127.0.0.1:0'], stdout=log, stderr=log, env=env)
             active_conn = None
@@ -433,7 +525,7 @@ def replay(args):
                 for session, rows in itertools.groupby(recording_rows(args.recording), key=lambda row: row['session']):
                     if active_conn:
                         active_conn.close()
-                    active_conn = replay_session(rows, path, secret, address, home)
+                    active_conn = replay_session(rows, path, secret, address, home, clock)
             finally:
                 process.terminate()
                 try:
@@ -443,7 +535,26 @@ def replay(args):
                     process.wait()
                 if active_conn:
                     active_conn.close()
-    return diff(argparse.Namespace(left=destination / 'go', right=destination / 'rust'))
+    return diff(argparse.Namespace(left=destination / 'go', right=destination / 'rust', exact=args.exact))
+
+
+def decisions(args):
+    first = None
+    for row in recording_rows(args.recording):
+        first = row.get('wall')
+        break
+    if not first:
+        raise ValueError('recording has no wall clock; record again with this tool version')
+    timestamp_ns(first)
+    path = Path(args.home).resolve() / 'state.db'
+    with sqlite3.connect(path.as_uri() + '?mode=ro', uri=True) as db:
+        aliases = {'\0'.join(row[:4]): row[4] for row in db.execute('SELECT source,generation,collection,native_key,record_id FROM aliases')}
+    output = Path(args.output).resolve()
+    if output.exists() or output.parent.stat().st_mode & 0o077:
+        raise ValueError('decision manifest must be new in an owner-only directory')
+    with open(output, 'x', opener=lambda p, f: os.open(p, f, 0o600)) as manifest:
+        manifest.write(json.dumps({'now': first, 'clock': 'recorded', 'aliases': aliases}))
+    print(json.dumps({'aliases': len(aliases), 'clock': 'recorded'}))
 
 
 def duration(value):
@@ -520,7 +631,7 @@ def timestamp_ns(value):
     return seconds * 1000000000 + int((match[2] or '').ljust(9, '0'))
 
 
-def database_digest(home, database, table, mapping):
+def database_digest(home, database, table, mapping, exact=False):
     path = Path(home).resolve() / database
     with sqlite3.connect(path.as_uri() + '?mode=ro', uri=True) as db:
         columns = db.execute('PRAGMA table_info("' + table + '")').fetchall()
@@ -532,11 +643,11 @@ def database_digest(home, database, table, mapping):
         for row in rows:
             digest = hashlib.sha256()
             for name, value in zip(names, row):
-                if database == 'state.db' and ((table == 'records' and name == 'observed_at') or (table == 'journal' and name == 'committed_at')):
+                if not exact and database == 'state.db' and ((table == 'records' and name == 'observed_at') or (table == 'journal' and name == 'committed_at')):
                     value = '@clock'
-                elif name in ('id', 'record_id') and isinstance(value, str):
+                elif not exact and name in ('id', 'record_id') and isinstance(value, str):
                     value = mapping.get(value, value)
-                elif name == 'payload' and table in ('records', 'journal', 'commands'):
+                elif not exact and name == 'payload' and table in ('records', 'journal', 'commands'):
                     clocks = {('observed_at',)} if table == 'records' else {('record', 'observed_at')} if table == 'journal' else {('created_at',), ('history', '*', 'at')}
                     if table == 'commands':
                         command = json.loads(value)
@@ -572,11 +683,12 @@ def diff(args):
 
 def compare(args):
     results = []
-    left_ids, right_ids = identities(args.left), identities(args.right)
+    exact = getattr(args, 'exact', False)
+    left_ids, right_ids = ({}, {}) if exact else (identities(args.left), identities(args.right))
     for database, tables in (('state.db', ('records', 'journal', 'journal_commits', 'aliases', 'checkpoints', 'meta')), ('ledger.db', ('commands', 'dedupe', 'meta'))):
         for table in tables:
-            left = database_digest(args.left, database, table, left_ids)
-            right = database_digest(args.right, database, table, right_ids)
+            left = database_digest(args.left, database, table, left_ids, exact)
+            right = database_digest(args.right, database, table, right_ids, exact)
             results.append({'table': database + '/' + table, 'left': left, 'right': right, 'equal': left == right})
     print(json.dumps({'equal': all(r['equal'] for r in results), 'digests': results}, indent=2))
     return int(any(not r['equal'] for r in results))
@@ -596,14 +708,20 @@ def main():
     p = sub.add_parser('replay')
     for option in ('recording', 'starting-home', 'output'):
         p.add_argument('--' + option, required=True)
+    p.add_argument('--decisions')
+    p.add_argument('--exact', action='store_true')
     p.add_argument('--go-binary', '--go', dest='go_binary', required=True)
     p.add_argument('--rust-binary', '--rust', dest='rust_binary', required=True)
+    p = sub.add_parser('decisions')
+    for option in ('recording', 'home', 'output'):
+        p.add_argument('--' + option, required=True)
     p = sub.add_parser('diff')
+    p.add_argument('--exact', action='store_true')
     p.add_argument('--left', required=True)
     p.add_argument('--right', required=True)
     args = parser.parse_args()
     try:
-        return {'record': record, 'replay': replay, 'diff': diff}[args.verb](args) or 0
+        return {'record': record, 'replay': replay, 'diff': diff, 'decisions': decisions}[args.verb](args) or 0
     except (ValueError, KeyError, TypeError, OSError, EOFError, sqlite3.Error) as error:
         detail = str(error) if isinstance(error, ValueError) else type(error).__name__
         print('shadow ' + args.verb + ' failed: ' + detail, file=sys.stderr)

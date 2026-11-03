@@ -105,7 +105,7 @@ func (w *recordWriter) appendChange(ctx context.Context, c contracts.Cursor, r c
 	if err != nil {
 		return err
 	}
-	_, err = w.exec(ctx, "INSERT INTO journal(seq,epoch,source,payload,committed_at) VALUES(?,?,?,?,unixepoch())", c.Sequence, c.Epoch, r.Source, b)
+	_, err = w.exec(ctx, "INSERT INTO journal(seq,epoch,source,payload,committed_at) VALUES(?,?,?,?,?)", c.Sequence, c.Epoch, r.Source, b, contracts.DecisionNow().Unix())
 	return err
 }
 
@@ -134,7 +134,11 @@ func (w *recordWriter) resolveID(ctx context.Context, c contracts.Capture, o con
 		if !create {
 			return "", sql.ErrNoRows
 		}
-		id = contracts.NewID(contracts.Collections[o.Collection])
+		var replayed bool
+		id, replayed = contracts.ReplayRecordID(c.Source, c.Generation, o.Collection, o.NativeKey)
+		if !replayed {
+			id = contracts.NewID(contracts.Collections[o.Collection])
+		}
 	}
 	_, err = w.exec(ctx, "INSERT INTO aliases(source,generation,collection,native_key,scoped_alias,record_id) VALUES(?,?,?,?,?,?)", c.Source, c.Generation, o.Collection, o.NativeKey, o.ScopedAlias, id)
 	if err == nil {

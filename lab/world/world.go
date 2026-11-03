@@ -64,6 +64,7 @@ type NativeSetup struct {
 }
 
 type World struct {
+	GatewayEnv        []string
 	fixtureCopyMethod string
 	dialCode          string
 	remoteExtraHomes  []string
@@ -161,7 +162,7 @@ func (w *World) start(name string, remote bool, home string, binary string, args
 	}
 	cmd := exec.Command(binary, args...)
 	if name == "gateway" {
-		cmd.Env = os.Environ()
+		cmd.Env = append(os.Environ(), w.GatewayEnv...)
 		if w.blobOptions.Corrupt {
 			cmd.Env = append(cmd.Env, "APPLE_BRIDGE_LAB_BLOB_CORRUPT="+filepath.Join(w.Dir, "corrupt-once"))
 		}

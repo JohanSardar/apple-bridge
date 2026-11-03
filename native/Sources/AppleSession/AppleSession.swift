@@ -90,6 +90,7 @@ public actor AppleSession: ObservationSink {
     private var remindersStore: RemindersStoreEnrichment { sources.remindersStore }
     var calendar: CalendarSource { sources.calendar }
     private var remindersRefreshHistogram = StoreRefreshHistogram()
+    var effectsRouted: Bool { ProcessInfo.processInfo.environment["AB_SESSION_EFFECTS"] == "1" && ProcessInfo.processInfo.environment["AB_SESSION_PROXY"] == "1" }
     private let guardLog: DispatchGuard
     private let socket: String
     private let secretFile: String
@@ -104,7 +105,8 @@ public actor AppleSession: ObservationSink {
         let trace = CaptureTrace(url: commandsEnabled ? home.appendingPathComponent("capture-trace.jsonl") : nil)
         self.trace = trace
         sources = try SessionSources.Builtins(home: home, labEnabled: commandsEnabled, trace: trace)
-        guardLog = try DispatchGuard(home: home)
+        let routed = ProcessInfo.processInfo.environment["AB_SESSION_EFFECTS"] == "1" && ProcessInfo.processInfo.environment["AB_SESSION_PROXY"] == "1"
+        guardLog = try DispatchGuard(home: routed ? home.appendingPathComponent("inactive-swift-guard") : home)
         let pidFile = home.appendingPathComponent("helper.pid")
         try Data(String(getpid()).utf8).write(to: pidFile, options: .atomic)
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: pidFile.path)
@@ -127,8 +129,8 @@ public actor AppleSession: ObservationSink {
         var backoff = 100
         while !Task.isCancelled && kill(gatewayPID, 0) == 0 {
             do {
-                let socket = self.socket, secretFile = self.secretFile
-                let connected = try await Task.detached { try PeerWire(socket: socket, secretFile: secretFile, nativeAdapter: self) }.value
+                let socket = self.socket, secretFile = self.secretFile, sessionHome = self.home.path
+                let connected = try await Task.detached { try PeerWire(socket: socket, secretFile: secretFile, nativeAdapter: self, sessionHome: sessionHome) }.value
                 wire = connected
                 let opened = try await receive(connected)
                 guard opened["t"].string == "Open", opened["protocol"].string == "ipc/1", opened["owner_fence"].number > 0, opened["byte_credit"].number > 0, opened["byte_credit"].number <= 4194304 else { throw SourceFailure.invalid }
@@ -276,6 +278,10 @@ public actor AppleSession: ObservationSink {
     private func query(_ frame: JSON) async {
         guard !Task.isCancelled else { return }
         let id = frame["id"]
+        if effectsRouted && NativeServer.effectOperations.contains(frame["op"].string) {
+            try? wire?.send(.object(["t": .string("QueryError"), "id": id, "code": .string("conflict")]))
+            return
+        }
         if let handler = queryHandlers[frame["op"].string] {
             do {
                 let output = try await handler(frame["args"])
@@ -718,6 +724,7 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
     }
 
     private func dispatch(_ frame: JSON) async {
+        guard !effectsRouted else { try? reject(frame, code: "conflict"); return }
         let activity = ForegroundActivity.shared.begin()
         defer { ForegroundActivity.shared.end(activity) }
         guard let ticket = tickets.removeValue(forKey: frame["ticket"].string) else { try? reject(frame, code: "conflict"); return }
@@ -758,4 +765,46 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
             } else { await rejectCommand(ticket.command, error: error) }
         }
     }
+    func dispatchNative(_ operation: String, args: JSON, permit: JSON) async throws -> JSON {
+        guard effectsRouted, ipcRunning, wire != nil, !commandActive,
+              let ticket = tickets.removeValue(forKey: permit["ticket"].string),
+              ticket.command["command_id"] == permit["command_id"],
+              ticket.command == args, ticket.fence == permit["owner_fence"].unsigned,
+              ticket.fence == fence, ContinuousClock.now < ticket.expiry,
+              ticket.prepared.action["op"].string == operation else { throw SourceFailure.conflict }
+        commandActive = true
+        defer { commandActive = false }
+        let selected = additionalSources[captureRoute(operation)] ?? source
+        if operation.hasPrefix("contacts.") { try await contacts.validate(ticket.prepared) }
+        else if operation.hasPrefix("calendar.") { try await calendar.validate(ticket.prepared) }
+        else if selected.name == "reminders" { try await source.validate(ticket.prepared) }
+        else if let messages = selected as? Messages { try await messages.validate(ticket.prepared) }
+        else if let notes = selected as? NotesSource { try await notes.validate(ticket.prepared) }
+        guard ticket.fence == fence, wire != nil, ContinuousClock.now < ticket.expiry,
+              permit["expires_at"].unsigned > UInt64(Date().timeIntervalSince1970) else { throw SourceFailure.expired }
+        let result = operation.hasPrefix("contacts.") ? try await contacts.dispatch(ticket.prepared) : operation.hasPrefix("calendar.") ? try await calendar.dispatch(ticket.prepared) : try await selected.dispatch(ticket.prepared)
+        if result["observed"].bool {
+            if operation.hasPrefix("contacts.") {
+                try await contacts.reconcile(into: self)
+                if result["absent"].bool { try await contacts.confirmAbsence(result["native_key"].string, into: self) }
+            } else if operation.hasPrefix("calendar.") {
+                try await calendar.reconcile(into: self)
+                if result["absent"].bool { try await calendar.confirmAbsence(result["native_key"].string, into: self) }
+            } else if operation.hasPrefix("reminders.") {
+                try await source.reconcile(into: self)
+                if result["absent"].bool { try await source.confirmAbsence(result["native_key"].string, list: operation == "reminders.delete_list", into: self) }
+            } else if let messages = selected as? Messages { try await messages.captureCommand(result, into: self) }
+            else if let mail = selected as? MailSource { try await mail.captureCommand(result, into: self) }
+            else if let notes = selected as? NotesSource { try await notes.reconcile(into: self) }
+            else if let files = selected as? FilesSource { try await files.reconcile(into: self) }
+            else if let pdf = selected as? PDFSource, operation == "pdf.annotate" { try await pdf.captureCommand(result, into: self) }
+        }
+        var fields = result.object
+        fields["fingerprint"] = ticket.command["request_hash"]
+        fields["before"] = ticket.prepared.nativeState
+        fields["candidate_ids"] = ticket.prepared.nativeState["candidate_ids"]
+        fields["prepared"] = .object(["action": durableAction(ticket.prepared.action), "native_state": ticket.prepared.nativeState, "request_hash": ticket.command["request_hash"]])
+        return .object(fields)
+    }
+
 }

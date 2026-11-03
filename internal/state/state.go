@@ -561,7 +561,7 @@ func (s *Store) FreezeSnapshot(ctx context.Context, v trust.Visibility, revision
 	if err != nil {
 		return nil, err
 	}
-	f := &FrozenSnapshot{store: s, ID: contracts.NewID("snap"), ExpiresAt: time.Now().Add(10 * time.Minute), Records: []contracts.Record{}}
+	f := &FrozenSnapshot{store: s, ID: contracts.NewID("snap"), ExpiresAt: contracts.DecisionNow().Add(10 * time.Minute), Records: []contracts.Record{}}
 	f.Cursor, err = cursorAt(ctx, tx)
 	if err != nil {
 		tx.Rollback()
@@ -634,7 +634,7 @@ func (s *Store) BeginInstall(ctx context.Context, begin contracts.FeedFrame, epo
 	if err := s.DiscardCapture(ctx); err != nil {
 		return nil, err
 	}
-	if begin.ID == "" || begin.Count < 0 || begin.Digest == "" || time.Now().After(begin.ExpiresAt) {
+	if begin.ID == "" || begin.Count < 0 || begin.Digest == "" || contracts.DecisionNow().After(begin.ExpiresAt) {
 		return nil, contracts.ErrInvalid
 	}
 	s.write.Lock()
@@ -653,7 +653,7 @@ func (s *Store) BeginInstall(ctx context.Context, begin contracts.FeedFrame, epo
 	return &SnapshotInstall{store: s, ID: begin.ID, Cursor: contracts.Cursor{Epoch: epoch, SubscriptionRevision: revision, Sequence: begin.S}, Count: begin.Count, Digest: begin.Digest, ExpiresAt: begin.ExpiresAt}, nil
 }
 func (i *SnapshotInstall) Page(ctx context.Context, page contracts.FeedFrame) error {
-	if page.ID != i.ID || page.Ordinal != i.ordinal || time.Now().After(i.ExpiresAt) {
+	if page.ID != i.ID || page.Ordinal != i.ordinal || contracts.DecisionNow().After(i.ExpiresAt) {
 		return contracts.ErrCorrupt
 	}
 	i.store.write.Lock()
@@ -685,7 +685,7 @@ func (i *SnapshotInstall) Page(ctx context.Context, page contracts.FeedFrame) er
 		return err
 	}
 	i.ordinal++
-	i.ExpiresAt = time.Now().Add(10 * time.Minute)
+	i.ExpiresAt = contracts.DecisionNow().Add(10 * time.Minute)
 	return nil
 }
 func (i *SnapshotInstall) InstallSnapshot(ctx context.Context) (contracts.Cursor, error) {
@@ -722,7 +722,7 @@ func (i *SnapshotInstall) InstallSnapshot(ctx context.Context) (contracts.Cursor
 	if err != nil {
 		return contracts.Cursor{}, err
 	}
-	if time.Now().After(i.ExpiresAt) || len(records) != i.Count || Digest(records) != i.Digest {
+	if contracts.DecisionNow().After(i.ExpiresAt) || len(records) != i.Count || Digest(records) != i.Digest {
 		return contracts.Cursor{}, contracts.ErrCorrupt
 	}
 	if _, err = tx.ExecContext(ctx, "DELETE FROM handle_address; DELETE FROM chat_participant; DELETE FROM msg_by_chat; DELETE FROM reaction_by_message; DELETE FROM attachment_by_message; DELETE FROM activity_by_chat; DELETE FROM chat_summary; DELETE FROM records; DELETE FROM journal; DELETE FROM journal_commits; DELETE FROM applied_batches;"); err != nil {

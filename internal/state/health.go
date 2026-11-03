@@ -83,7 +83,7 @@ func (s *Store) IngestHealth(ctx context.Context, device string, b contracts.Hea
 		if sample == nil && len(data) == 0 {
 			data = json.RawMessage(`{}`)
 		}
-		r := contracts.Record{Collection: "health.sample", ID: rid, Version: old.Version + 1, Source: "health", ObservedAt: time.Now().UTC(), Deleted: sample == nil, Data: data, Coverage: contracts.Coverage{Fields: "complete", Missing: []string{}}}
+		r := contracts.Record{Collection: "health.sample", ID: rid, Version: old.Version + 1, Source: "health", ObservedAt: contracts.DecisionNow().UTC(), Deleted: sample == nil, Data: data, Coverage: contracts.Coverage{Fields: "complete", Missing: []string{}}}
 		c.Sequence++
 		op := "upsert"
 		if r.Deleted {

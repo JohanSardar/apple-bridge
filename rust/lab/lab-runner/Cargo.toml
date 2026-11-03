@@ -1,0 +1,12 @@
+[package]
+name = "lab-runner"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+[lints]
+workspace = true
+[dependencies]
+lab-world = { path = "../lab-world" }
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml = "0.9"

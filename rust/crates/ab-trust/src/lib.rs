@@ -292,3 +292,15 @@ where
 {
     Ok(Option::<T>::deserialize(deserializer)?.unwrap_or_default())
 }
+
+pub type Reauthorization<'a> =
+    std::pin::Pin<Box<dyn std::future::Future<Output = Result<Principal, Error>> + Send + 'a>>;
+
+pub trait ApprovalReauthorizer: std::fmt::Debug + Send + Sync {
+    fn reauthorize<'a>(
+        &'a self,
+        principal: &'a str,
+        command: &'a str,
+        hash: &'a str,
+    ) -> Reauthorization<'a>;
+}

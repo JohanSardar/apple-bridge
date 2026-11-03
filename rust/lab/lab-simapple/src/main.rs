@@ -3,7 +3,8 @@ mod calendar;
 mod contacts;
 mod messages;
 mod notes;
-use base64::Engine;
+mod query;
+mod sources;
 use lab_wire::{receive, send};
 use serde_json::{Value, json};
 use std::{
@@ -167,6 +168,12 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
     }
     if route == "/contacts" {
         return contacts::control_contacts(state, tx, &input);
+    }
+    if route == "/readmodels" {
+        return sources::readmodels(state, tx, &input);
+    }
+    if matches!(route, "/phone" | "/recordings" | "/safari" | "/usage") {
+        return sources::control_source(state, tx, route, &input);
     }
     let mut s = lock(state)?;
     match route {
@@ -352,6 +359,7 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
                 } else {
                     format!("{collection}/{key}")
                 });
+                sources::dataset_alias(&mut record);
                 s.put(record);
             }
             s.save()?;
@@ -438,6 +446,7 @@ struct Session {
     fence: u64,
     credit: usize,
     tickets: BTreeMap<String, Ticket>,
+    blobs: BTreeMap<String, Vec<u8>>,
 }
 impl Session {
     fn emit(&mut self, state: &Shared, mut frame: Value) -> Result<()> {
@@ -507,7 +516,9 @@ impl Session {
                     self.credit += n;
                     return Ok(());
                 }
-                Some("Prepare" | "Dispatch" | "Resolve") => self.pending.push_back(reply),
+                Some("Prepare" | "Dispatch" | "Resolve" | "Query" | "QueryCancel" | "BlobRead") => {
+                    self.pending.push_back(reply);
+                }
                 Some("Ping") => {
                     send(&mut self.stream, &json!({"t":"Pong"}))?;
                 }
@@ -756,31 +767,15 @@ impl Session {
             Some("Ping") => {
                 send(&mut self.stream, &json!({"t":"Pong"}))?;
             }
-            Some("Pong") => {}
+            Some("Pong" | "QueryCancel") => {}
+            Some("Query") => {
+                let reply = query::query(&mut self.blobs, &frame);
+                send(&mut self.stream, &reply)?;
+            }
             Some("BlobRead") => {
-                let handle = string(&frame, "handle");
-                let digest = handle
-                    .split_once(':')
-                    .map_or(handle.as_str(), |(_, digest)| digest)
-                    .to_owned();
-                let encoded = lock(state)?.data["blobs"][&digest]
-                    .as_str()
-                    .map(str::to_owned);
-                let bytes = encoded
-                    .and_then(|text| base64::engine::general_purpose::STANDARD.decode(text).ok());
-                let reply = match bytes {
-                    Some(bytes) => {
-                        let offset = usize::try_from(frame["offset"].as_u64().unwrap_or_default())
-                            .map_err(|_| invalid("offset"))?;
-                        let length = usize::try_from(frame["length"].as_u64().unwrap_or_default())
-                            .map_err(|_| invalid("length"))?;
-                        if offset > bytes.len() || length == 0 || length > 128 << 10 {
-                            return Err(invalid("blob range"));
-                        }
-                        let end = bytes.len().min(offset + length);
-                        json!({"t":"BlobChunk","handle":handle,"offset":offset,"bytes":base64::engine::general_purpose::STANDARD.encode(&bytes[offset..end]),"digest":digest,"eof":end == bytes.len()})
-                    }
-                    None => json!({"t":"BlobUnavailable","handle":handle,"reason":"missing"}),
+                let reply = match query::blob(&self.blobs, &frame) {
+                    Some(reply) => reply,
+                    None => contacts::blob(state, &frame)?,
                 };
                 send(&mut self.stream, &reply)?;
             }
@@ -834,6 +829,9 @@ fn session(
         "mail",
         "phone",
         "files",
+        "safari",
+        "voicemail",
+        "voice_memos",
     ];
     let mut capabilities = json!({});
     let mut coverage = json!({});
@@ -911,6 +909,7 @@ fn session(
         fence,
         credit: usize::try_from(credit).map_err(|_| invalid("credit"))?,
         tickets: BTreeMap::new(),
+        blobs: BTreeMap::new(),
     };
     for src in sources {
         let generation = generation_of(&lock(state)?.data, src, &session.generation);

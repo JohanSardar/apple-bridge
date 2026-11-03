@@ -22,6 +22,13 @@ pub trait UploadHandler: std::fmt::Debug + Send + Sync {
 #[derive(Debug)]
 pub(crate) struct Session<'a> {
     pub clock: bool,
+    pub delegation: Option<crate::delegation::Registration>,
+    pub outgoing: tokio::sync::mpsc::Sender<Result<ab_trust::wire::messages::FeedFrame, Error>>,
+    pub incoming: tokio::sync::Mutex<
+        tokio::sync::mpsc::Receiver<Result<ab_trust::wire::messages::FeedFrame, Error>>,
+    >,
+    pub commands: std::sync::Mutex<std::collections::BTreeMap<String, tokio::task::JoinHandle<()>>>,
+
     pub principal: &'a ab_trust::Principal,
     pub certificate: &'a [u8],
     pub id: String,
@@ -29,6 +36,11 @@ pub(crate) struct Session<'a> {
 }
 impl Drop for Session<'_> {
     fn drop(&mut self) {
+        if let Ok(commands) = self.commands.lock() {
+            for task in commands.values() {
+                task.abort();
+            }
+        }
         if let Some(uploads) = self.uploads {
             uploads.closed(&self.id);
         }

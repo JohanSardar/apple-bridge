@@ -59,6 +59,9 @@ func samplesQuiet(samples map[string]world.HostSample) bool {
 }
 
 func Run(ctx context.Context, s Scenario, level string) (e Evidence) {
+	if s.Feature == "lab.safety-trace" {
+		return runSeededFaults(s, level)
+	}
 	selection := world.ImplementationSelection(ctx)
 	if s.Impl == "go-only" && selection.Gateway == "rust" {
 		return Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), Status: "excluded", HostConditions: &HostConditions{}, Impl: "rust", Implementations: selection, Assertions: []Assertion{{Name: "go_only", Passed: true, Detail: s.ImplReason}}}

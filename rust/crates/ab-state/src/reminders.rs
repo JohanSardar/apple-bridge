@@ -144,10 +144,7 @@ pub(crate) fn lists(db: &Connection, visibility: &Visibility, query: &Value) -> 
     if visibility.get("reminders") != Some(&true) {
         return Ok(out);
     }
-    let today = jiff::Timestamp::now()
-        .to_zoned(z.clone())
-        .date()
-        .to_string();
+    let today = crate::replay::now().to_zoned(z.clone()).date().to_string();
     let mut counts: HashMap<String, usize> = HashMap::new();
     let mut unsupported = HashSet::new();
     let mut tags: BTreeMap<String, usize> = BTreeMap::new();
@@ -302,10 +299,7 @@ pub(crate) fn items(db: &Connection, visibility: &Visibility, query: &Value) -> 
             }
         }
     }
-    let today = jiff::Timestamp::now()
-        .to_zoned(z.clone())
-        .date()
-        .to_string();
+    let today = crate::replay::now().to_zoned(z.clone()).date().to_string();
     let mut identity = false;
     let mut nodes: BTreeMap<String, (Record, Value, String)> = BTreeMap::new();
     let rs = if s(query, "list").is_empty() {

@@ -331,7 +331,7 @@ impl GatewayTransport {
         }
     }
 }
-fn forward_timeout(raw: &str) -> Duration {
+pub(crate) fn forward_timeout(raw: &str) -> Duration {
     let request: serde_json::Value = serde_json::from_str(raw).unwrap_or_default();
     if request["method"] == "query" {
         let ms = request["native_query"]["deadline_ms"]

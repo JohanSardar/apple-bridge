@@ -334,7 +334,7 @@ impl State<Gateway> {
         let mut event = CommandEvent {
             transition: String::new(),
             state: r.state,
-            at: GoTime::parse(&jiff::Timestamp::now().to_string())?,
+            at: GoTime::parse(&crate::replay::now().to_string())?,
             evidence: r.evidence.clone(),
         };
         if parts_updated {
@@ -397,7 +397,7 @@ impl State<Gateway> {
             let hash = format!("{:x}", Sha256::digest(r.command.args.get().as_bytes()));
             tx.execute(
                 "DELETE FROM agent_activity WHERE at<?",
-                [jiff::Timestamp::now().as_second() - 90 * 24 * 3600],
+                [crate::replay::now().as_second() - 90 * 24 * 3600],
             )?;
             tx.execute("INSERT INTO agent_activity VALUES(?,?,?,?,?,?,1,?,?,?) ON CONFLICT(id) DO UPDATE SET state=excluded.state,count=agent_activity.count,argument_bytes=excluded.argument_bytes,argument_hash=excluded.argument_hash,sequence=excluded.sequence WHERE agent_activity.kind='read' OR excluded.sequence>=agent_activity.sequence",params![format!("{}:{}",r.principal,r.command.id.as_str()),r.principal,r.command.op,"command",state,r.created_at.as_str().parse::<jiff::Timestamp>().map_err(|_|ErrorCode::Invalid)?.as_second(),i64::try_from(r.command.args.get().len()).map_err(|_|ErrorCode::Capacity)?,hash,number(r.cursor.sequence)?])?;
         }

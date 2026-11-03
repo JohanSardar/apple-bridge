@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 mod clock;
 mod command;
+pub mod delegation;
 mod dial;
 pub mod gateway;
 mod listener;

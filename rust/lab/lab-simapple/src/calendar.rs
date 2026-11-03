@@ -36,7 +36,8 @@ fn expand(base: &Value, key: &str, prefix: &str) -> Result<Vec<(String, Value)>>
     if interval < 1 {
         return Err(invalid("interval"));
     }
-    let zone = jiff::tz::TimeZone::get(&string(base, "time_zone")).unwrap_or(jiff::tz::TimeZone::UTC);
+    let zone =
+        jiff::tz::TimeZone::get(&string(base, "time_zone")).unwrap_or(jiff::tz::TimeZone::UTC);
     let all_day = base["all_day"] == true;
     let parse = |field: &str| -> Result<jiff::Zoned> {
         let text = string(base, field);
@@ -57,7 +58,9 @@ fn expand(base: &Value, key: &str, prefix: &str) -> Result<Vec<(String, Value)>>
         n if n > 10000 => return Err(invalid("capacity")),
         n => n,
     };
-    let until = rule["until"].as_str().and_then(|u| u.parse::<jiff::Timestamp>().ok());
+    let until = rule["until"]
+        .as_str()
+        .and_then(|u| u.parse::<jiff::Timestamp>().ok());
     let frequency = string(rule, "frequency");
     let mut result = Vec::new();
     for i in 0..count * 12 {
@@ -170,7 +173,9 @@ pub(super) fn control_calendar(
             let moved: Vec<Value> = s
                 .records()
                 .into_iter()
-                .filter(|record| record["collection"] == "calendar.event" && record["kind"] != "absent")
+                .filter(|record| {
+                    record["collection"] == "calendar.event" && record["kind"] != "absent"
+                })
                 .collect();
             for mut record in moved {
                 if let Some(records) = s.data["records"].as_object_mut() {
@@ -327,7 +332,10 @@ impl Session {
         } else {
             ticket.before.clone()
         };
-        let mut patch = action["calendar_args"].as_object().cloned().unwrap_or_default();
+        let mut patch = action["calendar_args"]
+            .as_object()
+            .cloned()
+            .unwrap_or_default();
         for field in ["id", "calendar_id", "span"] {
             patch.remove(field);
         }
@@ -349,7 +357,9 @@ impl Session {
             data["is_exception"] = json!(true);
         }
         let mut writes = vec![(key.clone(), data.clone())];
-        if op == "calendar.create_event" && data["recurrence"].as_array().is_some_and(|r| !r.is_empty()) {
+        if op == "calendar.create_event"
+            && data["recurrence"].as_array().is_some_and(|r| !r.is_empty())
+        {
             writes = expand(&data, &key, &scope(&s, &list))?;
             key = writes[0].0.clone();
             data = writes[0].1.clone();

@@ -1,0 +1,19 @@
+id: RUST-CAPTURE-UPDATE
+feature: lab.runner
+levels: [sim]
+given:
+  - world: {replicas: 0}
+when:
+  - control:
+      route: /external-change
+      input: {key: rust-update-record, collection: reminders.reminder, data: {title: '[ab-test] first', completed: false}}
+  - control: {route: /flush, input: {}}
+  - capture_truth: {}
+  - control:
+      route: /external-change
+      input: {key: rust-update-record, collection: reminders.reminder, data: {title: '[ab-test] updated', completed: true}}
+  - control: {route: /flush, input: {}}
+then:
+  - capture_truth: {}
+cleanup:
+  - world: {}

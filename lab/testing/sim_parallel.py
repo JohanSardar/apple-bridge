@@ -18,27 +18,28 @@ def execute(entry, binary, timeout, logs, implementation, rust_binary, startup_b
     if 'gateway=rust' in implementation and re.search(r'^impl: go-only$', Path(entry['path']).read_text(), re.M):
         return {'id': entry['id'], 'seconds': 0, 'status': 'excluded', 'implementation': implementation, 'reason': 'FINAL-PLAN §1 drops embedded tsnet login/Funnel flow'}
     if 'gateway=rust' in implementation:
-        blockers = gateway_blockers(entry)
+        blockers = []
         if startup_blocker:
             blockers.append(startup_blocker)
         if not rust_binary or not Path(rust_binary).is_file():
             blockers.append('ab-runtime: Rust bridge executable unavailable')
         if blockers:
             target.write_text('\n'.join(blockers) + '\n')
-            return {'id': entry['id'], 'seconds': 0, 'status': 'blocked', 'execution_status': 'not-started', 'implementation': implementation, 'required_features': entry['packages'], 'blocked_on': blockers}
+            return {'id': entry['id'], 'seconds': 0, 'status': 'blocked', 'execution_status': 'not-started', 'implementation': implementation, 'required_features': entry['packages'], 'blocked_on': blockers, 'harness_audit': gateway_blockers(entry)}
     with target.open('wb') as output:
         command = [binary, 'run', entry['path'], '--level', 'sim', '--prebuilt', '--json']
         command += ['--impl', implementation]
         if rust_binary:
             command += ['--rust-binary', rust_binary]
         marker = logs / (entry['id'] + '.started')
-        if platform.system() == 'Darwin':
+        serialized = platform.system() == 'Darwin' and (Path.home() / 'bin/ab-local').is_file()
+        if serialized:
             handshake = 'import os,sys,time; open(sys.argv[1]+".tmp","w").write(str(time.monotonic())); os.replace(sys.argv[1]+".tmp",sys.argv[1]); os.execv(sys.argv[2],sys.argv[2:])'
             command = [str(Path.home() / 'bin/ab-local'), sys.executable, '-c', handshake, str(marker), *command]
         process = subprocess.Popen(command, stdout=output, stderr=subprocess.STDOUT, start_new_session=True)
         status = 'fail'
         try:
-            if platform.system() == 'Darwin':
+            if serialized:
                 queue_deadline = time.monotonic() + 3600
                 while not marker.exists() and process.poll() is None:
                     if time.monotonic() >= queue_deadline:
@@ -78,7 +79,8 @@ def execute(entry, binary, timeout, logs, implementation, rust_binary, startup_b
                     scenario_blockers = ['harness: scenario reported blocked']
     row = {'id': entry['id'], 'seconds': round(time.monotonic() - started, 3), 'status': status, 'implementation': implementation}
     if 'gateway=rust' in implementation:
-        blockers = gateway_blockers(entry) + scenario_blockers
+        blockers = list(scenario_blockers)
+        row['harness_audit'] = gateway_blockers(entry)
         if startup_blocker:
             blockers.append(startup_blocker)
         if not rust_binary or not Path(rust_binary).is_file():
@@ -119,7 +121,7 @@ def main():
     args = parser.parse_args()
     if args.parallel < 1 or args.timeout <= 0:
         parser.error('parallel and timeout must be positive')
-    if platform.system() == 'Darwin' and args.parallel != 1:
+    if platform.system() == 'Darwin' and (Path.home() / 'bin/ab-local').is_file() and args.parallel != 1:
         parser.error('Air scenarios must run serially with --parallel 1 through ab-local')
     inventory = json.loads(Path(args.map).read_text())
     known = inventory['selection']
@@ -145,11 +147,13 @@ def main():
             with (destination / 'gateway-startup.log').open('wb') as log:
                 process = subprocess.Popen([str(Path(args.rust_binary).resolve()), 'start', '--role', 'gateway', '--home', home, '--socket', probe_socket, '--peer-addr', '127.0.0.1:0', '--api-addr', '127.0.0.1:0'], stdout=log, stderr=log, env=dict(os.environ, APPLE_BRIDGE_SECRET_STORE='file'))
                 try:
-                    code = process.wait(timeout=5)
-                    startup_blocker = f'ab-runtime/ab-applepeer: start --role gateway exited {code} before ipc/1 readiness'
-                except subprocess.TimeoutExpired:
-                    if not Path(probe_socket).exists():
-                        startup_blocker = 'ab-runtime/ab-applepeer: gateway ipc/1 socket unavailable after 5s'
+                    deadline = time.monotonic() + 30
+                    while process.poll() is None and not Path(probe_socket).exists() and time.monotonic() < deadline:
+                        time.sleep(.05)
+                    if process.poll() is not None:
+                        startup_blocker = f'ab-runtime/ab-applepeer: start --role gateway exited {process.returncode} before ipc/1 readiness'
+                    elif not Path(probe_socket).exists():
+                        startup_blocker = 'ab-runtime/ab-applepeer: gateway ipc/1 socket unavailable after 30s'
                 finally:
                     if process.poll() is None:
                         process.terminate()

@@ -1,0 +1,59 @@
+{
+  "id": "LAB-TRACE-ACCEPT-STALE-FENCE",
+  "feature": "lab.safety-trace",
+  "levels": [
+    "sim"
+  ],
+  "when": [
+    {
+      "fault_trace": {
+        "fault": "accept-stale-fence",
+        "healthy": [
+          {
+            "event": "owner",
+            "fence": 1
+          },
+          {
+            "event": "accepted",
+            "fence": 1
+          },
+          {
+            "event": "commit",
+            "checkpoint": "cp1"
+          },
+          {
+            "event": "ack",
+            "checkpoint": "cp1"
+          },
+          {
+            "event": "reopen",
+            "checkpoint": "cp1"
+          },
+          {
+            "event": "read",
+            "allowed": [
+              "reminders"
+            ],
+            "sources": [
+              "reminders"
+            ]
+          }
+        ],
+        "mutant": [
+          {
+            "event": "owner",
+            "fence": 1
+          },
+          {
+            "event": "owner",
+            "fence": 2
+          },
+          {
+            "event": "accepted",
+            "fence": 1
+          }
+        ]
+      }
+    }
+  ]
+}
