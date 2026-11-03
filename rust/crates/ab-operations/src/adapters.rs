@@ -56,6 +56,23 @@ pub fn visibility(input: &Visibility) -> ab_state::Visibility {
     result
 }
 impl<Role: std::fmt::Debug + Send + Sync> ReadStore for StateReads<Role> {
+    fn record_activity(&self, activity: &ab_trust::activity::AgentActivity) -> Result<(), Error> {
+        let call = || {
+            self.0
+                .lock()
+                .map_err(|_| Code::Unavailable)?
+                .record_activity(&serde_json::to_value(activity).map_err(|_| Code::Corrupt)?)
+                .map_err(|error| state_error(&error))
+        };
+        if tokio::runtime::Handle::try_current()
+            .is_ok_and(|h| h.runtime_flavor() == tokio::runtime::RuntimeFlavor::MultiThread)
+        {
+            tokio::task::block_in_place(call)
+        } else {
+            call()
+        }
+    }
+
     fn cached_query_blob<'a>(
         &'a self,
         principal: &'a Principal,

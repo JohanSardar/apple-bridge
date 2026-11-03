@@ -824,3 +824,26 @@ fn apply_boundary(db: &Connection) -> Result<()> {
         std::thread::park();
     }
 }
+
+impl<Role> State<Role> {
+    pub fn record_activity(&mut self, activity: &serde_json::Value) -> Result<()> {
+        let string = |name: &str| activity[name].as_str().ok_or(ErrorCode::Invalid);
+        let at = string("at")?
+            .parse::<jiff::Timestamp>()
+            .map_err(|_| ErrorCode::Invalid)?
+            .as_second();
+        let bytes = number(
+            activity["argument_bytes"]
+                .as_u64()
+                .ok_or(ErrorCode::Invalid)?,
+        )?;
+        let transaction = self.db.transaction()?;
+        transaction.execute(
+            "DELETE FROM agent_activity WHERE at < ?",
+            [jiff::Timestamp::now().as_second() - 90 * 86400],
+        )?;
+        transaction.execute("INSERT INTO agent_activity(id,principal,operation,kind,state,at,count,argument_bytes,argument_hash,sequence) VALUES(?,?,?,?,?,?,1,?,?,0) ON CONFLICT(id) DO UPDATE SET state=excluded.state,count=agent_activity.count+?,argument_bytes=excluded.argument_bytes,argument_hash=excluded.argument_hash WHERE agent_activity.kind='read' OR excluded.sequence>=agent_activity.sequence", params![string("id")?, string("principal")?, string("operation")?, string("kind")?, string("state")?, at, bytes, string("argument_hash")?, i64::from(string("kind")? == "read")])?;
+        transaction.commit()?;
+        Ok(())
+    }
+}

@@ -223,6 +223,10 @@ pub struct ReadQuery {
     pub limit: usize,
 }
 pub trait ReadStore: Debug + Send + Sync {
+    fn record_activity(&self, _activity: &ab_trust::activity::AgentActivity) -> Result<(), Error> {
+        Ok(())
+    }
+
     fn cached_query_blob<'a>(
         &'a self,
         _principal: &'a Principal,
@@ -641,8 +645,63 @@ impl Service {
         Ok(result)
     }
 
-    #[allow(clippy::too_many_lines)]
     pub async fn invoke(
+        &self,
+        principal: &Principal,
+        name: &str,
+        input: &[u8],
+    ) -> Result<Box<RawValue>, Error> {
+        let result = self.invoke_inner(principal, name, input).await;
+        if principal.is_agent() {
+            let descriptor = descriptor_for(name)?;
+            let rejected = descriptor.kind == OperationKind::Command
+                && result
+                    .as_ref()
+                    .is_err_and(|error| error.code == Code::Unauthorized);
+            let read = descriptor.kind == OperationKind::Read
+                && result.is_ok()
+                && !matches!(name, "commands.status" | "commands.list");
+            if read || rejected {
+                let now = jiff::Timestamp::now();
+                let command = serde_json::from_slice::<Command>(input).ok();
+                let id = if rejected {
+                    command
+                        .as_ref()
+                        .filter(|c| !c.id.is_empty())
+                        .map_or_else(|| format!("cmd_{}", ulid::Ulid::new()), |c| c.id.clone())
+                } else {
+                    format!("{name}:{}", now.as_second() / 60)
+                };
+                let args = command.as_ref().map_or("{}", |c| c.args.get());
+                let activity = ab_trust::activity::AgentActivity {
+                    sequence: 0,
+                    id: format!("{}:{id}", principal.id),
+                    principal: principal.id.clone(),
+                    operation: name.into(),
+                    kind: if read { "read" } else { "command" }.into(),
+                    state: if read { "read" } else { "rejected" }.into(),
+                    at: ab_trust::wire::gojson::GoTime::parse(&now.to_string())
+                        .map_err(|_| Code::Corrupt)?,
+                    count: 1,
+                    argument_bytes: if read {
+                        0
+                    } else {
+                        u64::try_from(args.len()).map_err(|_| Code::Corrupt)?
+                    },
+                    argument_hash: if read {
+                        String::new()
+                    } else {
+                        self.codec.fingerprint(args.as_bytes())
+                    },
+                };
+                self.store.record_activity(&activity)?;
+            }
+        }
+        result
+    }
+
+    #[allow(clippy::too_many_lines)]
+    async fn invoke_inner(
         &self,
         principal: &Principal,
         name: &str,
