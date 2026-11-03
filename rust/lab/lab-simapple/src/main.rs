@@ -261,6 +261,32 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
             enqueue_mode(tx, frame, true, route == "/capture-atomic")?;
             Ok(json!({"committed":true}))
         }
+        "/complete-recurring" => {
+            let key = string(&input, "key");
+            let mut original = s.data["records"][&key].clone();
+            if original.is_null()
+                || original["data"]["recurrence"].is_null()
+                || s.denied.get("reminders") == Some(&true)
+            {
+                return Err(invalid("unavailable"));
+            }
+            original["data"]["completed"] = json!(true);
+            original["observed_at"] = json!(now());
+            let mut next = original.clone();
+            let next_key = id("recurring")?;
+            next["native_key"] = json!(next_key);
+            next["data"]["completed"] = json!(false);
+            s.put(original.clone());
+            s.put(next.clone());
+            s.save()?;
+            drop(s);
+            enqueue(
+                tx,
+                json!({"t":"Capture","source":"reminders","observations":[original,next],"scan_id":id("scan")?,"scope":["reminders.reminder"],"scan_started_at":now(),"completion_evidence":"complete"}),
+                true,
+            )?;
+            Ok(json!({"effect_done":true}))
+        }
         "/flush" => {
             drop(s);
             for src in ["messages", "reminders"] {
