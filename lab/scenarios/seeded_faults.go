@@ -6,11 +6,17 @@ import (
 )
 
 type safetyEvent struct {
-	Event      string   `json:"event"`
-	Fence      uint64   `json:"fence"`
-	Checkpoint string   `json:"checkpoint"`
-	Allowed    []string `json:"allowed"`
-	Sources    []string `json:"sources"`
+	Event      string   `json:"event" yaml:"event"`
+	Fence      uint64   `json:"fence" yaml:"fence"`
+	Checkpoint string   `json:"checkpoint" yaml:"checkpoint"`
+	Allowed    []string `json:"allowed" yaml:"allowed"`
+	Sources    []string `json:"sources" yaml:"sources"`
+}
+
+type faultTraceOptions struct {
+	Fault   string        `json:"fault" yaml:"fault"`
+	Healthy []safetyEvent `json:"healthy" yaml:"healthy"`
+	Mutant  []safetyEvent `json:"mutant" yaml:"mutant"`
 }
 
 func observeSafety(events []safetyEvent) string {
