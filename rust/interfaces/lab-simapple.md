@@ -98,10 +98,22 @@ Unit tests compare thumbhash, geometry, poster dimensions, MIME sniffing and var
 
 The WEB-MEDIA-VARIANTS cleanup proof and MSG-MEDIA-CLEANUP shell out to the native `MessagesSafetyChecks` binary (located through `AB_LAB_NATIVE_OUTPUT` or `native/.build/native-output-1`). Without it, both fail with `native_cleanup_checks_build`, exactly as the Go harness does on a host without the Swift build, so they only pass on Darwin.
 
-Known blocker: WEB-MEDIA-CAP fails `display_authorized_blob_1` and `variants_fit_cap_original_deferred` on the Rust gateway. The replica fetches the 8.6 MB original before the 1 MB display variant, so the variant ends `over_cap`. `ab-replication` sorts variant references first, so the queue is probably built from a snapshot that lacks the derivative references; not yet isolated. History-import scheduling (bulk pause/release and capture statistics in the Rust peer, the `messages_read` history-import adapter) is not started.
+Known blocker: WEB-MEDIA-CAP fails `display_authorized_blob_1` and `variants_fit_cap_original_deferred` on the Rust gateway. The replica fetches the 8.6 MB original before the 1 MB display variant, so the variant ends `over_cap`. `ab-replication` sorts variant references first, so the queue is probably built from a snapshot that lacks the derivative references; not yet isolated.
 
 ## Calendar completion (Phase 8)
 
 The Rust peer now implements the remaining Calendar behaviour of the Go simulator: `future` span updates and deletes with series splitting, the `move` control, the ±730-day window with `evict` observations (also applied to `/inspect`), the injected stamp match for `server_update`, the 15-minute verification clock, and the `calendar-rule-mismatch` fault. Captures list calendars before events so a chunked capture never references an event calendar the gateway has not seen; the demo dataset load previously stalled on that and CON-RECIPIENT-LOOKUP failed. `effect_at` is taken before the capture is enqueued, as in the Go peer.
 
 On Linux with `--level sim --local-replicas`, all 25 Calendar scenarios give identical per-assertion verdicts for the Go and Rust peers in one run. CAL-STORE-READ, CAL-HINT-COVERAGE, CAL-INVALIDATED-EVENT and CAL-FUTURE-COUNT-MATH fail identically on both because they call macOS tooling (`xcrun`). Contacts 14/14, Notes 9/9 and Reminders 11/11 are identical.
+
+## History import and Darwin media (Phase 8)
+
+The Rust peer implements `bulk-pause` (key = native key of the held row) and `bulk-release` on `/messages`. While paused, a chunked Messages capture stops before the 64-row part that contains the held key, `/messages-status` reports `bulk_blocked`, and live requests (`receipts`, `incoming`) are served between polls as delta captures that wait for their Committed. A bulk `seed` returns without waiting while paused. Every Messages part is revalidated against current state when it is finally sent, so a stale bulk snapshot cannot regress a live value. `/messages-status` also reports `capture_count`, `capture_ack_ms`, `capture_bytes` and `credit_waits`.
+
+`lab-adapters` registers `messages`, `messages_read` (history-import only), `messages_truth`, `contacts` (CON-IMPORT), `notes` (NOTE-IMPORT) and `usage` (USE-IMPORT). Replica worlds for these four use one replica with the read scope of every source, and the gateway observer uses the same scope so replica integrity compares like with like. The feed observers reuse `watch.rs`; `Watcher` gains `upserts_of` and `data_for_title`.
+
+Gate: `python3 rust/lab/families-parity.py --families $T/lab-families --go-lab bridge-lab --gateway BRIDGE --simapple $T/lab-simapple --output /new/dir --import` runs MSG-HISTORY-IMPORT, CON-IMPORT, NOTE-IMPORT and USE-IMPORT in one run against both harnesses. Verdicts are identical with the Rust gateway (`lab-queries`) and with the Go `-tags lab` gateway on Linux.
+
+`--media` runs WEB-MEDIA-VARIANTS and MSG-MEDIA-CLEANUP the same way and needs the native `MessagesSafetyChecks` binary (`AB_LAB_NATIVE_OUTPUT`), so it runs on Darwin. Verdicts are identical on the MacBook Pro: MSG-MEDIA-CLEANUP passes its 19 fixture cases in both harnesses, WEB-MEDIA-VARIANTS passes all 98 shared assertions. Two adapter bugs were fixed to get there: the sent video and audio fixtures lacked the trailing `free` box that Go's `MediaFixture` appends (so the panorama source geometry fell back to the default clip), and the panorama poster was fetched once instead of awaited, with no pixel checks. The adapter now decodes the poster (`zune-png`, `zune-jpeg`) and ports the centre-marker and edge-contrast checks.
+
+WEB-MEDIA-CAP blob ordering is owned by S-BLOB-ORDER and is unchanged.

@@ -8,6 +8,7 @@ use lab_world::{Error, Result, World};
 use serde_json::{Value, json};
 use std::{
     collections::{BTreeMap, BTreeSet},
+    fmt::Write as _,
     fs, thread,
     time::{Duration, Instant},
 };
@@ -500,4 +501,91 @@ pub fn stream_assertions(
             "scoped stream carried only system records and advanced",
         );
     }
+}
+pub fn diagnose(world: &World, observed: &Observed) -> String {
+    let truth = world
+        .control("/inspect", &Value::Null)
+        .unwrap_or(Value::Null);
+    let gateway = read_all(&observed.gateway, false, false).map(|r| r.records);
+    let aliases = gateway_aliases(&observed.gateway);
+    let (Ok(gateway), Ok(aliases)) = (gateway, aliases) else {
+        return "read failed".into();
+    };
+    let visibility = Visibility::from_scope(&observed.gateway_scope);
+    let expected = match truth_records(&truth, &aliases, &visibility) {
+        Ok(expected) => expected,
+        Err(error) => return format!("truth mapping: {error}"),
+    };
+    if let Ok(full) = read_all(&observed.gateway, true, false) {
+        for endpoint in &observed.replicas {
+            if let Ok(replica) = read_all(&endpoint.client(), true, false) {
+                let visibility = replica_scope(endpoint);
+                let visible: Vec<Value> = full
+                    .records
+                    .iter()
+                    .filter(|record| visibility.allows(record))
+                    .cloned()
+                    .collect();
+                let a = record_multiset(&replica.records, true);
+                let b = record_multiset(&visible, true);
+                let only_replica: Vec<_> =
+                    a.keys().filter(|k| !b.contains_key(*k)).take(2).collect();
+                let only_gateway: Vec<_> =
+                    b.keys().filter(|k| !a.contains_key(*k)).take(2).collect();
+                eprintln!(
+                    "replica={} visible={} only_replica={:?} only_gateway={:?} scope={}",
+                    replica.records.len(),
+                    visible.len(),
+                    only_replica,
+                    only_gateway,
+                    endpoint.scope
+                );
+            }
+        }
+    }
+    let by_id: BTreeMap<String, &Value> = gateway
+        .iter()
+        .map(|r| (r["id"].as_str().unwrap_or_default().to_owned(), r))
+        .collect();
+    let mut out = format!(
+        "truth={} gateway={} truth_matches={} replica_integrity={}",
+        expected.len(),
+        gateway.len(),
+        truth_matches(world, observed),
+        replica_integrity(observed)
+    );
+    if let Ok(g) = Client::cursor(&observed.gateway) {
+        for endpoint in &observed.replicas {
+            let _ = write!(
+                out,
+                " gw_cursor={:?} replica_cursor={:?}",
+                g,
+                Client::cursor(&endpoint.client()).ok()
+            );
+        }
+    }
+    let mut shown = 0;
+    for record in &expected {
+        let id = record["id"].as_str().unwrap_or_default();
+        match by_id.get(id) {
+            None => {
+                if shown < 3 {
+                    let _ = write!(out, "\nmissing {}", record["collection"]);
+                    shown += 1;
+                }
+            }
+            Some(actual) if actual["data"] != record["data"] => {
+                if shown < 3 {
+                    let _ = write!(
+                        out,
+                        "\ndiff {} truth={} gateway={}",
+                        record["collection"], record["data"], actual["data"]
+                    );
+                    shown += 1;
+                }
+            }
+            Some(_) => {}
+        }
+    }
+    out
 }

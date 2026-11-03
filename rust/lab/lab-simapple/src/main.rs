@@ -69,8 +69,19 @@ fn source(collection: &str) -> &str {
 fn observation(collection: &str, key: &str, data: Value) -> Value {
     json!({"kind":"upsert", "collection":collection,"native_key":key,"data":data,"observed_at":now()})
 }
+#[derive(Debug, Default)]
+struct Bulk {
+    target: String,
+    paused: bool,
+    blocked: bool,
+    count: u64,
+    ack_ms: f64,
+    bytes: u64,
+    credit_waits: u64,
+}
 #[derive(Debug)]
 struct State {
+    bulk: Bulk,
     data: Value,
     fault: String,
     pause: u64,
@@ -196,7 +207,12 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
             "generation":s.data["message_generation"].as_str().unwrap_or_else(|| s.data["generation"].as_str().unwrap_or_default()),
             "watcher_armed":s.data["message_watcher_armed"] != false,
             "poll_pending":s.data["message_poll_pending"] == true,
-            "permitted":s.denied.get("messages") != Some(&true)
+            "permitted":s.denied.get("messages") != Some(&true),
+            "bulk_blocked":s.bulk.blocked,
+            "capture_count":s.bulk.count,
+            "capture_ack_ms":s.bulk.ack_ms,
+            "capture_bytes":s.bulk.bytes,
+            "credit_waits":s.bulk.credit_waits
         })),
         "/protocol" => Ok(s.data["protocol"].clone()),
         "/inspect" => Ok(json!(
@@ -473,7 +489,8 @@ struct Ticket {
     deadline: Instant,
 }
 #[derive(Debug)]
-struct Session {
+struct Session<'a> {
+    requests: &'a mpsc::Receiver<Request>,
     stream: UnixStream,
     incoming: mpsc::Receiver<Value>,
     pending: VecDeque<Value>,
@@ -488,7 +505,7 @@ struct Session {
     finished: mpsc::Sender<(String, Value)>,
     finished_rx: mpsc::Receiver<(String, Value)>,
 }
-impl Session {
+impl Session<'_> {
     fn emit(&mut self, state: &Shared, mut frame: Value) -> Result<()> {
         if let Some(observations) = frame["observations"].as_array_mut() {
             observations.sort_by_key(|record| record["kind"] == "absent");
@@ -497,6 +514,7 @@ impl Session {
             return self.emit_part(state, frame);
         };
         for (index, chunk) in observations.chunks(64).enumerate() {
+            self.hold_bulk(state, &frame, chunk)?;
             let mut part = frame.clone();
             part["observations"] = json!(chunk);
             if (index + 1) * 64 < observations.len()
@@ -512,6 +530,62 @@ impl Session {
         }
         Ok(())
     }
+    fn hold_bulk(&mut self, state: &Shared, frame: &Value, chunk: &[Value]) -> Result<()> {
+        if frame["source"] != "messages" {
+            return Ok(());
+        }
+        loop {
+            self.serve_live(state)?;
+            let blocked = {
+                let mut s = lock(state)?;
+                let blocked = s.bulk.paused
+                    && chunk
+                        .iter()
+                        .any(|record| string(record, "native_key") == s.bulk.target);
+                s.bulk.blocked = blocked;
+                blocked
+            };
+            if !blocked {
+                return Ok(());
+            }
+            thread::sleep(Duration::from_millis(10));
+        }
+    }
+    fn serve_live(&mut self, state: &Shared) -> Result<()> {
+        loop {
+            match self.incoming.try_recv() {
+                Ok(frame) if frame["t"] == "Ping" => {
+                    send(&mut self.stream, &json!({"t":"Pong"}))?;
+                }
+                Ok(frame) => self.pending.push_back(frame),
+                Err(mpsc::TryRecvError::Empty) => break,
+                Err(mpsc::TryRecvError::Disconnected) => {
+                    return Err(invalid("gateway disconnected"));
+                }
+            }
+        }
+        while let Ok(request) = self.requests.try_recv() {
+            self.serve(state, request)?;
+        }
+        Ok(())
+    }
+    fn serve(&mut self, state: &Shared, request: Request) -> Result<()> {
+        if request.frame["t"] == "Close" {
+            send(&mut self.stream, &request.frame)?;
+            loop {
+                thread::park();
+            }
+        }
+        if request.whole {
+            self.emit_part(state, request.frame)?;
+        } else {
+            self.emit(state, request.frame)?;
+        }
+        if let Some(done) = request.done {
+            let _ = done.send(());
+        }
+        Ok(())
+    }
     fn emit_part(&mut self, state: &Shared, mut frame: Value) -> Result<()> {
         if frame["t"] != "Capture" {
             send(&mut self.stream, &frame)?;
@@ -519,6 +593,9 @@ impl Session {
         }
         let src = string(&frame, "source");
         if src == "messages" {
+            let guard = lock(state)?;
+            messages::revalidate(&guard, &mut frame);
+            drop(guard);
             messages::aliases(&mut frame);
             if !self.blobs.is_empty() {
                 frame["blob_handles"] = json!(
@@ -545,6 +622,7 @@ impl Session {
         if size > self.credit {
             return Err(invalid("capture credit"));
         }
+        let started = Instant::now();
         let n = send(&mut self.stream, &frame)?;
         self.credit -= n;
         loop {
@@ -570,6 +648,12 @@ impl Session {
                         if let Some(entries) = log.as_array_mut() {
                             entries.push(json!({"source": src, "checkpoint": checkpoint}));
                         }
+                    }
+                    if src == "messages" {
+                        let mut s = lock(state)?;
+                        s.bulk.count += 1;
+                        s.bulk.ack_ms += started.elapsed().as_secs_f64() * 1000.0;
+                        s.bulk.bytes += n as u64;
                     }
                     self.checkpoints.insert(src, checkpoint);
                     self.credit += n;
@@ -1010,6 +1094,7 @@ fn session(
     });
     let (finished_tx, finished_rx) = mpsc::channel();
     let mut session = Session {
+        requests,
         stream,
         incoming: rx,
         pending: VecDeque::new(),
@@ -1117,22 +1202,7 @@ fn session(
             Err(mpsc::TryRecvError::Empty) => {}
         }
         match requests.recv_timeout(Duration::from_millis(5)) {
-            Ok(request) => {
-                if request.frame["t"] == "Close" {
-                    send(&mut session.stream, &request.frame)?;
-                    loop {
-                        thread::park();
-                    }
-                }
-                if request.whole {
-                    session.emit_part(state, request.frame)?;
-                } else {
-                    session.emit(state, request.frame)?;
-                }
-                if let Some(done) = request.done {
-                    let _ = done.send(());
-                }
-            }
+            Ok(request) => session.serve(state, request)?,
             Err(mpsc::RecvTimeoutError::Timeout) => {}
             Err(mpsc::RecvTimeoutError::Disconnected) => return Ok(()),
         }
@@ -1163,6 +1233,7 @@ fn run() -> Result<()> {
         json!({"generation":id("sim")?,"records":{},"effects":{},"evidence":{},"origins":{},"scans":0,"source_scans":{}})
     };
     let state = Arc::new(Mutex::new(State {
+        bulk: Bulk::default(),
         data,
         path,
         fault: String::new(),
@@ -1223,7 +1294,7 @@ fn main() {
     }
 }
 
-impl Drop for Session {
+impl Drop for Session<'_> {
     fn drop(&mut self) {
         let _ = self.stream.shutdown(std::net::Shutdown::Both);
     }

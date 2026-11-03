@@ -2,9 +2,12 @@ pub mod assertions;
 pub mod blobs;
 pub mod cleanup;
 pub mod commands;
+pub mod history;
 pub mod http;
+pub mod imports;
 pub mod journey;
 pub mod media;
+pub mod poster;
 pub mod queries;
 pub mod replicas;
 pub mod watch;
@@ -29,6 +32,15 @@ pub fn registry() -> Registry {
             blobs::configure(world, id, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && journey::COMMAND_SCENARIOS.contains(&id) {
             replicas::start(world, usize::try_from(replicas).unwrap_or(0))?;
+        } else if replicas != 0
+            && (history::SCENARIOS.contains(&id) || imports::SCENARIOS.contains(&id))
+        {
+            replicas::start_with(
+                world,
+                usize::try_from(replicas).unwrap_or(0),
+                history::SCOPE,
+                0,
+            )?;
         } else if replicas != 0 && !PORTED.contains(&id) && !self_started {
             return Err(Error::Invalid(format!("replica world not ported for {id}")));
         }
@@ -37,6 +49,12 @@ pub fn registry() -> Registry {
     });
     registry.register("queries", queries::queries);
     registry.register("blobs", blobs::blobs);
+    registry.register("messages", history::messages);
+    registry.register("messages_read", history::messages_read);
+    registry.register("messages_truth", history::messages_truth);
+    registry.register("contacts", imports::contacts);
+    registry.register("notes", imports::notes);
+    registry.register("usage", imports::usage);
     registry.register("seed", journey::seed);
     registry.register("converge", journey::converge);
     registry.register("media_variants", media::media_variants);
