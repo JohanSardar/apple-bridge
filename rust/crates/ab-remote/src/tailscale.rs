@@ -1,4 +1,4 @@
-use crate::{Error, Gateway, Ingress, IngressFuture, Result, state, stopped};
+use crate::{Error, Gateway, Ingress, IngressFuture, Result, localapi::LocalApi, state, stopped};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::{collections::BTreeMap, path::PathBuf};
@@ -11,8 +11,7 @@ use tokio::{
 #[derive(Debug)]
 pub struct Tailscale {
     pub home: PathBuf,
-    pub client: reqwest::Client,
-    pub endpoint: String,
+    pub api: LocalApi,
 }
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Lease {
@@ -54,18 +53,25 @@ impl Tailscale {
     pub fn local(home: PathBuf, socket: &std::path::Path) -> Result<Self> {
         Ok(Self {
             home,
-            client: reqwest::Client::builder()
-                .unix_socket(socket)
-                .timeout(std::time::Duration::from_secs(10))
-                .build()?,
-            endpoint: "http://local-tailscaled.sock/localapi/v0".into(),
+            api: LocalApi::Unix(socket.to_owned()),
         })
+    }
+    pub fn tcp(home: PathBuf, port: u16, token: String) -> Self {
+        Self {
+            home,
+            api: LocalApi::Tcp { port, token },
+        }
+    }
+    pub fn system(home: PathBuf) -> Self {
+        Self {
+            home,
+            api: LocalApi::Discover,
+        }
     }
     async fn get(&self) -> Result<(Value, String)> {
         let response = self
-            .client
-            .get(format!("{}/serve-config", self.endpoint))
-            .send()
+            .api
+            .request(reqwest::Method::GET, "serve-config", None, None)
             .await?
             .error_for_status()?;
         let etag = response
@@ -86,11 +92,13 @@ impl Tailscale {
     }
     async fn set(&self, value: &Value, etag: &str) -> Result<bool> {
         let response = self
-            .client
-            .post(format!("{}/serve-config", self.endpoint))
-            .header("If-Match", etag)
-            .json(value)
-            .send()
+            .api
+            .request(
+                reqwest::Method::POST,
+                "serve-config",
+                Some(etag),
+                Some(serde_json::to_vec(value)?),
+            )
             .await?;
         if response.status() == reqwest::StatusCode::PRECONDITION_FAILED {
             return Ok(false);
@@ -103,9 +111,8 @@ impl Tailscale {
     }
     pub async fn add_mode(&self, target: &str, private: bool) -> Result<Lease> {
         let status: Value = self
-            .client
-            .get(format!("{}/status?peers=false", self.endpoint))
-            .send()
+            .api
+            .request(reqwest::Method::GET, "status?peers=false", None, None)
             .await?
             .error_for_status()?
             .json()
@@ -285,6 +292,25 @@ impl Ingress for Tailscale {
                 format!("{}:{}", lease.host, lease.port)
             };
             let _active = gateway.ready("system", &host);
+            let private = lease.private;
+            let (probe_host, probe_port) = (lease.host.clone(), lease.port);
+            let probe_gateway = gateway.clone();
+            let probe = tokio::spawn(async move {
+                if private {
+                    return;
+                }
+                loop {
+                    let wait =
+                        match crate::localapi::certificate_expiry(&probe_host, probe_port).await {
+                            Ok(expiry) => {
+                                probe_gateway.certificate_expiry("system", &expiry);
+                                std::time::Duration::from_secs(3600)
+                            }
+                            Err(_) => std::time::Duration::from_secs(15),
+                        };
+                    tokio::time::sleep(wait).await;
+                }
+            });
             let mut tasks = JoinSet::new();
             let result = loop {
                 tokio::select! {
@@ -300,6 +326,7 @@ impl Ingress for Tailscale {
                     _ = tasks.join_next(), if !tasks.is_empty() => {}
                 }
             };
+            probe.abort();
             tasks.abort_all();
             let cleanup = self.remove().await;
             result.and(cleanup)

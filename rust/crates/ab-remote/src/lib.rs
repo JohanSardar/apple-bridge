@@ -2,6 +2,7 @@
 
 pub mod certificate;
 pub mod ct;
+pub mod localapi;
 pub mod private;
 pub mod relay;
 mod smux;
@@ -41,6 +42,7 @@ pub type IngressFuture<'a> = Pin<Box<dyn Future<Output = Result<()>> + Send + 'a
 pub struct IngressStatus {
     pub host: String,
     pub active: bool,
+    pub certificate_expiry: Option<String>,
 }
 pub type IngressStatuses = std::collections::BTreeMap<String, IngressStatus>;
 #[derive(Debug)]
@@ -102,6 +104,7 @@ impl Gateway {
                     IngressStatus {
                         host: host.into(),
                         active: true,
+                        certificate_expiry: None,
                     },
                 );
             });
@@ -109,6 +112,17 @@ impl Gateway {
         ActiveIngress {
             statuses: self.statuses.clone(),
             name: name.into(),
+        }
+    }
+    pub(crate) fn certificate_expiry(&self, name: &str, expiry: &str) {
+        if let Some(statuses) = &self.statuses {
+            statuses.send_if_modified(|entries| {
+                entries.get_mut(name).is_some_and(|entry| {
+                    let changed = entry.certificate_expiry.as_deref() != Some(expiry);
+                    entry.certificate_expiry = Some(expiry.into());
+                    changed
+                })
+            });
         }
     }
     pub(crate) async fn connect(&self) -> Result<tokio::net::TcpStream> {

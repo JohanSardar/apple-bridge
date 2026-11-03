@@ -188,7 +188,7 @@ func TestConcurrentIngress(t *testing.T) {
 		mu.Lock()
 		defer mu.Unlock()
 		w.Header().Set("Content-Type", "application/json")
-		if strings.HasPrefix(r.URL.Path, "/status") {
+		if strings.HasPrefix(strings.TrimPrefix(r.URL.Path, "/localapi/v0"), "/status") {
 			json.NewEncoder(w).Encode(map[string]any{"BackendState": "Running", "Self": map[string]any{"DNSName": "node.fixture.test.", "CapMap": map[string]any{"https": nil, "funnel": nil, "https://tailscale.com/cap/funnel-ports?ports=443,8443,10000": nil}}})
 			return
 		}

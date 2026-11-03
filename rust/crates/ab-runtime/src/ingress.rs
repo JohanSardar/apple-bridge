@@ -159,7 +159,7 @@ fn publish(
         "status",
         &serde_json::json!({"id":config.id,"state":state,
         "backend":active.map_or(config.backend.as_str(),|(name,_)|name.as_str()),"url":active.filter(|(name,_)| name.as_str() != "private").map_or_else(String::new,|(_,status)|format!("https://{}",status.host)),
-        "message": if private { ab_remote::state::read::<String>(home,"invitation").unwrap_or_default() } else { String::new() },"last_error":"","pending_link":"","tls_termination": if private { "Tailscale encrypted private transport" } else { "on this Mac" },"certificate_expiry":"0001-01-01T00:00:00Z"}),
+        "message": if private { ab_remote::state::read::<String>(home,"invitation").unwrap_or_default() } else { String::new() },"last_error":"","pending_link":"","tls_termination": if private { "Tailscale encrypted private transport" } else { "on this Mac" },"certificate_expiry":active.and_then(|(_,status)|status.certificate_expiry.clone()).unwrap_or_else(||"0001-01-01T00:00:00Z".into())}),
     );
     match written {
         Err(ab_remote::Error::Io(error)) if error.raw_os_error() == Some(28) => Ok(()),
@@ -319,19 +319,13 @@ fn adapter(home: &Path, name: &str) -> Result<Box<dyn Ingress>, Error> {
     if name == "private" {
         return Ok(Box::new(ab_remote::private::Private {
             home: home.to_owned(),
-            tailscale: ab_remote::tailscale::Tailscale::local(
-                home.join("private"),
-                &ab_remote::private::socket_path(),
-            )?,
+            tailscale: ab_remote::tailscale::Tailscale::system(home.join("private")),
         }));
     }
     if name == "system" {
-        let socket = std::env::var_os("APPLE_BRIDGE_TAILSCALE_SOCKET")
-            .map_or_else(|| "/var/run/tailscaled.socket".into(), PathBuf::from);
-        return Ok(Box::new(ab_remote::tailscale::Tailscale::local(
+        return Ok(Box::new(ab_remote::tailscale::Tailscale::system(
             home.to_owned(),
-            &socket,
-        )?));
+        )));
     }
     let roots = rustls::RootCertStore::from_iter(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
     let tls = rustls::ClientConfig::builder_with_provider(Arc::new(
