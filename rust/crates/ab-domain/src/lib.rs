@@ -499,6 +499,7 @@ pub struct Coverage {
     pub pack_version: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub operations: Vec<OperationCapability>,
+    #[serde(default)]
     pub fields: String,
     pub missing: Option<Vec<String>>,
 }

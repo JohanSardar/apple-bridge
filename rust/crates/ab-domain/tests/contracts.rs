@@ -82,3 +82,14 @@ fn command_records_accept_caller_chosen_ids_and_command_sources()
     );
     Ok(())
 }
+
+#[test]
+fn coverage_without_fields_matches_go_decoding() -> Result<(), Box<dyn std::error::Error>> {
+    let coverage: ab_domain::Coverage =
+        serde_json::from_str(r#"{"max_depth":16,"roots":1,"max_items":10000}"#)?;
+    assert_eq!(
+        serde_json::to_string(&coverage)?,
+        r#"{"fields":"","missing":null}"#
+    );
+    Ok(())
+}
