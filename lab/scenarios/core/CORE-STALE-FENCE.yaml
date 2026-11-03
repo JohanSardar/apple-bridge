@@ -2,6 +2,6 @@ id: CORE-STALE-FENCE
 feature: core.recovery
 levels: [sim]
 given: [{world: {replicas: 0}}]
-when: [{stale_frame: {key: stale-fence-record, collection: reminders.reminder}}]
+when: [{stale_frame: {}}]
 then: [{stale_fence_rejected: {}}]
 cleanup: [{world: {}}]
