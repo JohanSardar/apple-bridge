@@ -1,4 +1,5 @@
 #![allow(clippy::too_many_lines)]
+mod faults;
 use crate::{
     assertions::{
         Observed, Observers, await_until, converged, read_all, record_integrity, replica_integrity,
@@ -34,6 +35,7 @@ pub const SCENARIOS: [&str; 12] = [
 pub const SCOPE: &str = "messages:read,reminders:read,system:read";
 const GRACE_MS: u64 = 500;
 const CAP: u64 = 1 << 20;
+const CHUNK: u64 = 1 << 20;
 
 pub fn is_stage(id: &str) -> bool {
     id == "CORE-BLOB-STAGE-DURING-TRANSFER" || id == "CORE-BLOB-STAGE-SAME-DIGEST"
@@ -64,6 +66,9 @@ pub fn configure(world: &mut World, id: &str, replicas: usize) -> Result<()> {
         ));
     }
     world.configure_gateway(env, vec!["--blob-grace-ms".to_owned(), grace.to_string()])?;
+    if id == "CORE-BLOB-INTERRUPT" {
+        world.install_proxy()?;
+    }
     let extra = vec!["--blob-grace-ms".to_owned(), grace.to_string()];
     let cap = if id == "CORE-BLOB-CAP" { CAP } else { 0 };
     replicas::start_with_args(world, replicas, SCOPE, cap, &extra)
@@ -454,8 +459,11 @@ fn single(context: &mut Context, id: &str) -> Result<bool> {
             context.check_with("cap_keeps_metadata_denies_absent_bytes", denied, &extra);
             return Ok(true);
         }
-        "CORE-BLOB-GC" | "CORE-BLOB-GATEWAY-RETRY" | "CORE-BLOB-INTERRUPT" => {
-            return Err(Error::Invalid(format!("{id} journey not ported")));
+        "CORE-BLOB-INTERRUPT" if !faults::interrupt(context, &digest, size) => {
+            return Ok(false);
+        }
+        "CORE-BLOB-GATEWAY-RETRY" if !faults::retry_before(context, &digest, size) => {
+            return Ok(false);
         }
         _ => {}
     }
@@ -473,6 +481,15 @@ fn single(context: &mut Context, id: &str) -> Result<bool> {
             return Ok(false);
         }
     }
+    if id == "CORE-BLOB-GC" && !faults::gc_migration(context, &record, &digest) {
+        return Ok(false);
+    }
+    if id == "CORE-BLOB-INTERRUPT" && !faults::resumed(context) {
+        return Ok(false);
+    }
+    if id == "CORE-BLOB-GATEWAY-RETRY" && !faults::retry_after(context, &record, &digest) {
+        return Ok(false);
+    }
     if id == "CORE-BLOB-CORRUPT" {
         let corruptions = progress(&replica).map_or(0, |p| p["corruptions"].as_u64().unwrap_or(0));
         if !context.check("corruption_detected_and_refetched", corruptions == 1) {
@@ -480,6 +497,9 @@ fn single(context: &mut Context, id: &str) -> Result<bool> {
         }
     }
     if id == "CORE-BLOB-NO-DIGEST-AUTH" && !no_digest_auth(context, &digest, &record)? {
+        return Ok(false);
+    }
+    if id == "CORE-BLOB-GC" && !faults::gc_lifecycle(context, &digest) {
         return Ok(false);
     }
     let _ = fs::metadata(&context.world.directory);

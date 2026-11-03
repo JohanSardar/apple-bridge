@@ -2427,6 +2427,7 @@ dependencies = [
  "lab-wire",
  "lab-world",
  "miniz_oxide",
+ "rusqlite",
  "serde-saphyr",
  "serde_json",
  "sha2 0.10.9",

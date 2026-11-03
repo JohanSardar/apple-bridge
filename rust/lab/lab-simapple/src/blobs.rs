@@ -104,6 +104,14 @@ pub fn fixture(state: &Shared, tx: &mpsc::Sender<Request>, input: &Value) -> Res
         };
         let digest = hex::encode(Sha256::digest(&bytes));
         let length = bytes.len();
+        let relay = input["relay_fixture"] == true;
+        if !s.data["blob_fixtures"].is_array() {
+            s.data["blob_fixtures"] = json!([]);
+        }
+        let entry = json!({"size":size,"relay":relay,"state":s.blob.state,"slow_ms":s.blob.delay_ms,"refresh":s.blob.refresh});
+        if let Some(all) = s.data["blob_fixtures"].as_array_mut() {
+            all.push(entry);
+        }
         s.blob.bytes.insert(digest.clone(), bytes);
         s.blob.fault_digest.clone_from(&digest);
         let blob_state = if s.blob.state.is_empty() {
@@ -127,6 +135,29 @@ pub fn fixture(state: &Shared, tx: &mpsc::Sender<Request>, input: &Value) -> Res
     drop(s);
     super::enqueue(tx, frame, true)?;
     Ok(json!({"effect_done":true}))
+}
+
+pub fn restore(data: &Value) -> Fixture {
+    let mut fixture = Fixture::default();
+    for entry in data["blob_fixtures"].as_array().into_iter().flatten() {
+        let bytes = if entry["relay"] == true {
+            b"[ab-test] relay blob\n".repeat(8192)
+        } else {
+            fixture_bytes(
+                usize::try_from(entry["size"].as_u64().unwrap_or_default()).unwrap_or_default(),
+            )
+        };
+        let digest = hex::encode(Sha256::digest(&bytes));
+        fixture.bytes.insert(digest.clone(), bytes);
+        fixture.fault_digest = digest;
+        entry["state"]
+            .as_str()
+            .unwrap_or_default()
+            .clone_into(&mut fixture.state);
+        fixture.delay_ms = entry["slow_ms"].as_u64().unwrap_or_default();
+        fixture.refresh = entry["refresh"] == true;
+    }
+    fixture
 }
 
 pub fn faults(state: &Shared) -> Result<Value> {

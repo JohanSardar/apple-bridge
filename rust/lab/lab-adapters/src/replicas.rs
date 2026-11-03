@@ -71,10 +71,7 @@ pub fn start_with_args(
     cap: u64,
     extra: &[String],
 ) -> Result<()> {
-    let peer = world.runtime["peer_address"]
-        .as_str()
-        .ok_or_else(|| Error::Invalid("runtime peer address".into()))?
-        .to_owned();
+    let peer = world.pair_address()?;
     for index in 0..count {
         let home = world.directory.join(format!("replica{index}"));
         let name = format!("replica{index}");

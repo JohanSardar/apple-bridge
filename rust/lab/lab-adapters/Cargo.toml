@@ -22,3 +22,4 @@ crc32fast = "1"
 zune-png = "0.5"
 zune-jpeg = "0.5.16-rc3"
 zune-core = "0.5"
+rusqlite.workspace = true

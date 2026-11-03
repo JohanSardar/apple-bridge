@@ -1,3 +1,5 @@
+mod proxy;
+pub use proxy::FaultProxy;
 use serde_json::Value;
 use std::{
     fs,
@@ -33,6 +35,7 @@ pub struct World {
     config: WorldConfig,
     gateway: Option<Child>,
     peer: Option<Child>,
+    proxy: Option<FaultProxy>,
     token: String,
     gateway_env: Vec<(String, String)>,
     gateway_args: Vec<String>,
@@ -55,6 +58,7 @@ impl World {
             config,
             gateway: None,
             peer: None,
+            proxy: None,
             token: String::new(),
             gateway_env: Vec::new(),
             gateway_args: Vec::new(),
@@ -214,6 +218,38 @@ impl World {
         }
         Ok(value)
     }
+    pub fn install_proxy(&mut self) -> Result<()> {
+        let target = self.runtime["peer_address"]
+            .as_str()
+            .ok_or_else(|| Error::Invalid("runtime peer address".into()))?
+            .to_owned();
+        if let Some(old) = self.proxy.take() {
+            old.close();
+        }
+        self.proxy = Some(FaultProxy::start(&target)?);
+        Ok(())
+    }
+    pub fn pair_address(&self) -> Result<String> {
+        if let Some(proxy) = &self.proxy {
+            return Ok(proxy.address().to_owned());
+        }
+        self.runtime["peer_address"]
+            .as_str()
+            .map(str::to_owned)
+            .ok_or_else(|| Error::Invalid("runtime peer address".into()))
+    }
+    pub fn partition(&self) -> Result<()> {
+        self.proxy
+            .as_ref()
+            .map(FaultProxy::partition)
+            .ok_or_else(|| Error::Invalid("no fault proxy".into()))
+    }
+    pub fn heal(&self) -> Result<()> {
+        self.proxy
+            .as_ref()
+            .map(FaultProxy::heal)
+            .ok_or_else(|| Error::Invalid("no fault proxy".into()))
+    }
     pub fn blob_control(&self, input: &Value) -> Result<Value> {
         let mut command = Command::new("curl");
         command
@@ -270,6 +306,9 @@ impl World {
         self.start_gateway()
     }
     pub fn close(&mut self) {
+        if let Some(proxy) = self.proxy.take() {
+            proxy.close();
+        }
         stop(&mut self.peer);
         stop(&mut self.gateway);
     }
