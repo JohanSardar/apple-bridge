@@ -119,7 +119,9 @@ def build(name):
     elif "executable" in target["type"]:
         if not current(name, key, [output / name]):
             record(name, "")
-            subprocess.run(flags + files + sorted(closure) + ["-o", str(output / name)], check=True)
+            staged = output / (name + ".linking-" + str(os.getpid()))
+            subprocess.run(flags + files + sorted(closure) + ["-o", str(staged)], check=True)
+            os.replace(staged, output / name)
             record(name, key)
     else:
         raise SystemExit("Unsupported target type: " + name)

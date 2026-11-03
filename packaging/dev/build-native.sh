@@ -26,4 +26,5 @@ else
     if [[ $lab == 1 ]]; then output="$package/.build/clt-release"; else output="$package/.build/clt-product-release"; fi
 fi
 rm -f "$package/.build/native-output"
-printf '%s\n' "$output" > "$package/.build/native-output-$lab"
+printf '%s\n' "$output" > "$package/.build/native-output-$lab.$$"
+mv "$package/.build/native-output-$lab.$$" "$package/.build/native-output-$lab"

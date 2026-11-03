@@ -2,8 +2,14 @@
 set -euo pipefail
 root=$(cd "$(dirname "$0")/../.." && pwd)
 cd "$root"
-output=native/.build/decoder-checks
-mkdir -p "$output"
+if [[ -n ${APPLE_BRIDGE_DECODER_OUTPUT:-} ]]; then
+    output=$APPLE_BRIDGE_DECODER_OUTPUT
+    mkdir -p "$output"
+else
+    mkdir -p native/.build
+    output=$(mktemp -d "$root/native/.build/decoder-checks.XXXXXX")
+    trap 'rm -rf "$output"' EXIT
+fi
 sdk=${APPLE_BRIDGE_SDK:-/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk}
 swiftc -sdk "$sdk" -target arm64-apple-macosx26.0 -swift-version 6 -warnings-as-errors -O -parse-as-library -emit-module -emit-object -whole-module-optimization -module-name Decoders native/Sources/Decoders/*.swift -emit-module-path "$output/Decoders.swiftmodule" -o "$output/Decoders.o"
 if [[ ${1:-} == --capture-fixtures ]]; then

@@ -1,4 +1,5 @@
 import json
+import os
 import pathlib
 import subprocess
 import tempfile
@@ -6,7 +7,7 @@ import tempfile
 root = pathlib.Path(__file__).resolve().parents[4]
 local = pathlib.Path.home() / "bin/ab-local"
 module = root / "native/.build/decoder-checks"
-subprocess.run([str(local), "packaging/dev/check-decoders.sh"], cwd=root, check=True)
+subprocess.run([str(local), "packaging/dev/check-decoders.sh"], cwd=root, check=True, env=dict(os.environ, APPLE_BRIDGE_DECODER_OUTPUT=str(module)))
 with tempfile.TemporaryDirectory(prefix="ab-native-oracle-") as temporary:
     binary = pathlib.Path(temporary) / "decoder-oracle"
     subprocess.run([
