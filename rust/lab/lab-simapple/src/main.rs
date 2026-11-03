@@ -1,5 +1,8 @@
 #![allow(clippy::too_many_lines)]
+mod calendar;
+mod contacts;
 mod messages;
+mod notes;
 mod query;
 mod sources;
 use lab_wire::{receive, send};
@@ -43,6 +46,18 @@ fn id(prefix: &str) -> Result<String> {
 }
 fn string(v: &Value, key: &str) -> String {
     v[key].as_str().unwrap_or_default().to_owned()
+}
+fn generation_of(data: &Value, src: &str, default: &str) -> String {
+    let key = if src == "messages" {
+        "message_generation".to_owned()
+    } else {
+        format!("{src}_generation")
+    };
+    data[&key]
+        .as_str()
+        .or_else(|| data["generation"].as_str())
+        .unwrap_or(default)
+        .to_owned()
 }
 fn source(collection: &str) -> &str {
     collection.split('.').next().unwrap_or(collection)
@@ -88,13 +103,16 @@ impl State {
             .into_iter()
             .filter(|v| source(v["collection"].as_str().unwrap_or_default()) == src)
             .collect();
-        let scope: std::collections::BTreeSet<_> = if src == "messages" {
-            ["chat", "handle", "message", "reaction", "attachment"]
-                .into_iter()
-                .map(|name| format!("messages.{name}"))
-                .collect()
-        } else {
+        let fixed: &[&str] = match src {
+            "messages" => &["chat", "handle", "message", "reaction", "attachment"],
+            "contacts" => &["contact", "group"],
+            "calendar" => &["calendar", "event"],
+            _ => &[],
+        };
+        let scope: std::collections::BTreeSet<_> = if fixed.is_empty() {
             records.iter().map(|v| string(v, "collection")).collect()
+        } else {
+            fixed.iter().map(|name| format!("{src}.{name}")).collect()
         };
         Ok(
             json!({"t":"Capture","source":src,"observations":records,"scan_id":id("scan")?,"scope":scope,"scan_started_at":now(),"completion_evidence":"complete"}),
@@ -136,7 +154,7 @@ fn enqueue_mode(tx: &mpsc::Sender<Request>, frame: Value, wait: bool, whole: boo
     })
     .map_err(|_| invalid("session stopped"))?;
     if wait {
-        rx.recv_timeout(Duration::from_secs(20))
+        rx.recv_timeout(Duration::from_secs(110))
             .map_err(|_| invalid("capture not committed"))?;
     }
     Ok(())
@@ -144,6 +162,12 @@ fn enqueue_mode(tx: &mpsc::Sender<Request>, frame: Value, wait: bool, whole: boo
 fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value) -> Result<Value> {
     if route == "/messages" {
         return messages::control_messages(state, tx, &input);
+    }
+    if route == "/calendar" {
+        return calendar::control_calendar(state, tx, &input);
+    }
+    if route == "/contacts" {
+        return contacts::control_contacts(state, tx, &input);
     }
     if route == "/readmodels" {
         return sources::readmodels(state, tx, &input);
@@ -191,6 +215,8 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
                 return Err(invalid("source state"));
             }
             s.denied.insert(src.clone(), true);
+            s.data["denied"][&src] = json!(true);
+            s.save()?;
             drop(s);
             enqueue(
                 tx,
@@ -268,6 +294,32 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
             enqueue_mode(tx, frame, true, route == "/capture-atomic")?;
             Ok(json!({"committed":true}))
         }
+        "/complete-recurring" => {
+            let key = string(&input, "key");
+            let mut original = s.data["records"][&key].clone();
+            if original.is_null()
+                || original["data"]["recurrence"].is_null()
+                || s.denied.get("reminders") == Some(&true)
+            {
+                return Err(invalid("unavailable"));
+            }
+            original["data"]["completed"] = json!(true);
+            original["observed_at"] = json!(now());
+            let mut next = original.clone();
+            let next_key = id("recurring")?;
+            next["native_key"] = json!(next_key);
+            next["data"]["completed"] = json!(false);
+            s.put(original.clone());
+            s.put(next.clone());
+            s.save()?;
+            drop(s);
+            enqueue(
+                tx,
+                json!({"t":"Capture","source":"reminders","observations":[original,next],"scan_id":id("scan")?,"scope":["reminders.reminder"],"scan_started_at":now(),"completion_evidence":"complete"}),
+                true,
+            )?;
+            Ok(json!({"effect_done":true}))
+        }
         "/flush" => {
             drop(s);
             for src in ["messages", "reminders"] {
@@ -288,8 +340,25 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
             let records = input["records"]
                 .as_array()
                 .ok_or_else(|| invalid("records"))?;
+            if let Some(blobs) = input["blobs"].as_object() {
+                for (digest, encoded) in blobs {
+                    s.data["blobs"][digest] = encoded.clone();
+                }
+            }
             for record in records {
                 let mut record = record.clone();
+                let collection = string(&record, "collection");
+                let key = string(&record, "native_key");
+                if record["observed_at"].is_null() || source(&collection) == "reminders" {
+                    record["observed_at"] = json!(now());
+                }
+                record["scoped_alias"] = json!(if source(&collection) == "contacts" {
+                    format!("contacts/{collection}/{key}")
+                } else if source(&collection) == "mail" && !record["scoped_alias"].is_null() {
+                    string(&record, "scoped_alias")
+                } else {
+                    format!("{collection}/{key}")
+                });
                 sources::dataset_alias(&mut record);
                 s.put(record);
             }
@@ -373,7 +442,7 @@ struct Session {
     pending: VecDeque<Value>,
     checkpoints: BTreeMap<String, String>,
     generation: String,
-    message_generation: String,
+    generations: BTreeMap<String, String>,
     fence: u64,
     credit: usize,
     tickets: BTreeMap<String, Ticket>,
@@ -418,17 +487,12 @@ impl Session {
         if lock(state)?.denied.get(&src) == Some(&true) {
             return Ok(());
         }
-        frame["generation"] = if src == "messages" {
-            lock(state)?.data["message_generation"]
-                .as_str()
-                .map_or_else(|| json!(self.generation), |v| json!(v))
-        } else {
-            json!(self.generation)
-        };
-        if src == "messages" && frame["generation"] != self.message_generation {
+        let generation = generation_of(&lock(state)?.data, &src, &self.generation);
+        if self.generations.get(&src).is_some_and(|g| *g != generation) {
             self.checkpoints.remove(&src);
-            self.message_generation = string(&frame, "generation");
         }
+        self.generations.insert(src.clone(), generation.clone());
+        frame["generation"] = json!(generation);
         frame["predecessor"] = json!(self.checkpoints.get(&src).cloned().unwrap_or_default());
         let checkpoint = id("cp")?;
         frame["checkpoint"] = json!(checkpoint);
@@ -466,6 +530,30 @@ impl Session {
             }
         }
     }
+    fn family(&self, state: &Shared, frame: &Value) -> Result<String> {
+        let op = match frame["t"].as_str() {
+            Some("Prepare") => string(&frame["action"], "op"),
+            Some("Dispatch") => self
+                .tickets
+                .get(&string(frame, "ticket"))
+                .map(|ticket| string(&ticket.prepare["action"], "op"))
+                .unwrap_or_default(),
+            Some("Resolve") => {
+                let s = lock(state)?;
+                let source = string(
+                    &s.data["evidence"][string(frame, "command_id")]["evidence"],
+                    "source",
+                );
+                return Ok(if source.is_empty() {
+                    "reminders".into()
+                } else {
+                    source
+                });
+            }
+            _ => String::new(),
+        };
+        Ok(op.split('.').next().unwrap_or_default().to_owned())
+    }
     fn reject(&mut self, frame: &Value, code: &str) -> Result<()> {
         send(
             &mut self.stream,
@@ -475,10 +563,29 @@ impl Session {
     }
     #[allow(clippy::needless_pass_by_value)]
     fn command(&mut self, state: &Shared, frame: Value) -> Result<()> {
+        let command = string(&frame, "command_id");
+        if matches!(frame["t"].as_str(), Some("Prepare" | "Dispatch")) {
+            let mut s = lock(state)?;
+            let kind = string(&frame, "t");
+            s.data["origins"][&command][&kind] = frame["origin"].clone();
+            if !frame["action"].is_null() {
+                s.data["origins"][&command]["action"] = frame["action"]["origin"].clone();
+            }
+        }
         if self.message_command(state, &frame)? {
             return Ok(());
         }
-        let command = string(&frame, "command_id");
+        let family = self.family(state, &frame)?;
+        match (family.as_str(), frame["t"].as_str()) {
+            ("notes", Some("Prepare")) => return self.note_prepare(state, &frame),
+            ("notes", Some("Dispatch")) => return self.note_dispatch(state, &frame),
+            ("calendar", Some("Prepare")) => return self.calendar_prepare(state, &frame),
+            ("calendar", Some("Dispatch")) => return self.calendar_dispatch(state, &frame),
+            ("contacts", Some("Prepare")) => return self.contacts_prepare(state, &frame),
+            ("contacts", Some("Dispatch")) => return self.contacts_dispatch(state, &frame),
+            ("contacts", Some("Resolve")) => return self.contacts_resolve(state, &frame),
+            _ => {}
+        }
         match frame["t"].as_str() {
             Some("Prepare") => {
                 let mut s = lock(state)?;
@@ -644,14 +751,14 @@ impl Session {
                     let key = string(&outcome["evidence"], "native_key");
                     let record = s.data["records"][&key].clone();
                     let capture = if record["kind"] == "absent" {
-                        s.scan("reminders")?
+                        s.scan(&family)?
                     } else {
-                        json!({"t":"Capture","source":"reminders","observations":[record]})
+                        json!({"t":"Capture","source":family,"observations":[record]})
                     };
                     drop(s);
                     self.emit(state, capture)?;
                     outcome["evidence"]["capture_checkpoint"] =
-                        json!(self.checkpoints.get("reminders"));
+                        json!(self.checkpoints.get(&family));
                     outcome["disposition"] = json!("locally_observed");
                     let mut s = lock(state)?;
                     s.data["evidence"][&command] = outcome.clone();
@@ -690,7 +797,12 @@ impl Session {
                 send(&mut self.stream, &reply)?;
             }
             Some("BlobRead") => {
-                let reply = query::blob(&self.blobs, &frame).ok_or_else(|| invalid("blob read"))?;
+                let stored = contacts::blob(state, &frame)?;
+                let reply = if stored["t"] == "BlobUnavailable" {
+                    query::blob(&self.blobs, &frame).unwrap_or(stored)
+                } else {
+                    stored
+                };
                 send(&mut self.stream, &reply)?;
             }
             _ => return Err(invalid("session frame")),
@@ -764,6 +876,41 @@ fn session(
         "reminders.delete_list"
     ]);
     capabilities["messages"] = json!(["messages.send", "messages.reply"]);
+    capabilities["calendar"] = json!([
+        "calendar.create_event",
+        "calendar.update_event",
+        "calendar.delete_event",
+        "calendar.create_calendar"
+    ]);
+    capabilities["contacts"] = json!([
+        "contacts.create",
+        "contacts.update",
+        "contacts.delete",
+        "contacts.create_group",
+        "contacts.rename_group",
+        "contacts.delete_group",
+        "contacts.add_member",
+        "contacts.remove_member"
+    ]);
+    let proven: Vec<Value> = [
+        "contacts.create_group",
+        "contacts.rename_group",
+        "contacts.delete_group",
+        "contacts.add_member",
+        "contacts.remove_member",
+    ]
+    .iter()
+    .map(|op| json!({"operation":op,"proven":true,"reason":"simulated_public_contacts_save_request"}))
+    .collect();
+    coverage["contacts"] = json!({"fields":"partial","missing":["note","contact_poster: unavailable through public Contacts API"],"operations":proven});
+    capabilities["notes"] = json!([
+        "notes.create",
+        "notes.update",
+        "notes.delete",
+        "notes.create_folder",
+        "notes.move",
+        "notes.rename_folder"
+    ]);
     send(
         &mut stream,
         &json!({"t":"Ready","protocol":"ipc/1","capabilities":capabilities,"coverage":coverage,"helper_build":"lab-simapple/rust","os_build":"sim"}),
@@ -778,12 +925,6 @@ fn session(
             }
         }
     });
-    let message_generation = {
-        let s = lock(state)?;
-        s.data["message_generation"]
-            .as_str()
-            .map_or_else(|| string(&s.data, "generation"), str::to_owned)
-    };
     let (finished_tx, finished_rx) = mpsc::channel();
     let mut session = Session {
         stream,
@@ -791,7 +932,7 @@ fn session(
         pending: VecDeque::new(),
         checkpoints: BTreeMap::new(),
         generation: string(&lock(state)?.data, "generation"),
-        message_generation,
+        generations: BTreeMap::new(),
         fence,
         credit: usize::try_from(credit).map_err(|_| invalid("credit"))?,
         tickets: BTreeMap::new(),
@@ -800,14 +941,17 @@ fn session(
         finished: finished_tx,
         finished_rx,
     };
+    for src in sources {
+        let generation = generation_of(&lock(state)?.data, src, &session.generation);
+        session.generations.insert(src.to_owned(), generation);
+    }
     if let Some(checkpoints) = open["checkpoints"].as_object() {
         for (src, checkpoint) in checkpoints {
-            let generation = if src == "messages" {
-                &session.message_generation
-            } else {
-                &session.generation
-            };
-            if checkpoint["generation"] == *generation {
+            if session
+                .generations
+                .get(src)
+                .is_some_and(|g| checkpoint["generation"] == *g)
+            {
                 session
                     .checkpoints
                     .insert(src.clone(), string(checkpoint, "checkpoint"));
@@ -834,6 +978,13 @@ fn session(
         }
     }
     for src in sources {
+        if lock(state)?.denied.get(src) == Some(&true) {
+            send(
+                &mut session.stream,
+                &json!({"t":"SourceState","source":src,"state":"permission_missing","coverage":{src:{"fields":"partial","missing":["permission_missing"]}}}),
+            )?;
+            continue;
+        }
         let capture = {
             let mut s = lock(state)?;
             let scans = s.data["scans"].as_u64().unwrap_or_default() + 1;
@@ -916,6 +1067,16 @@ fn run() -> Result<()> {
         pause: 0,
         denied: BTreeMap::new(),
     }));
+    {
+        let mut s = lock(&state)?;
+        let denied: Vec<String> = s.data["denied"]
+            .as_object()
+            .map(|m| m.keys().cloned().collect())
+            .unwrap_or_default();
+        for src in denied {
+            s.denied.insert(src, true);
+        }
+    }
     lock(&state)?.save()?;
     match fs::remove_file(&control) {
         Ok(()) => {}
