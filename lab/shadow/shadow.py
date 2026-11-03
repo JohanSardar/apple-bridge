@@ -296,10 +296,10 @@ def replay_session(rows, path, secret, api_address, home, clock=None):
                     if time.monotonic() >= deadline:
                         raise ValueError('replay SourceState persistence deadline exceeded')
                     time.sleep(.01)
+        names = [home / name for name in ('state.db', 'state.db-wal', 'ledger.db', 'ledger.db-wal')]
+        def marks():
+            return [(entry.stat().st_mtime_ns, entry.stat().st_size) if entry.exists() else None for entry in names]
         def settle():
-            names = [home / name for name in ('state.db', 'state.db-wal', 'ledger.db', 'ledger.db-wal')]
-            def marks():
-                return [(entry.stat().st_mtime_ns, entry.stat().st_size) if entry.exists() else None for entry in names]
             deadline = time.monotonic() + 15
             quiet = time.monotonic()
             previous = marks()
@@ -310,13 +310,20 @@ def replay_session(rows, path, secret, api_address, home, clock=None):
                     previous, quiet = current, time.monotonic()
                 if time.monotonic() > deadline:
                     raise ValueError('replay gateway did not settle')
+        def persisting(before, admission):
+            deadline = time.monotonic() + 5
+            while marks() == before and not admission.done() and time.monotonic() < deadline:
+                time.sleep(.005)
         for row in rows:
-            if clock and row.get('wall') and row['direction'] != 'response':
+            stepped = bool(clock and row.get('wall') and row['direction'] != 'response')
+            if stepped and row['direction'] != 'gateway':
                 settle()
                 clock(row['wall'])
             if row['direction'] == 'admission':
+                before = marks()
                 admissions[row['sequence']] = pool.submit(admit, row, api_address)
                 sent[row['sequence']] = row
+                persisting(before, admissions[row['sequence']])
                 continue
             if row['direction'] == 'response':
                 status, response = admissions.pop(row['request']).result(timeout=60)
@@ -368,6 +375,9 @@ def replay_session(rows, path, secret, api_address, home, clock=None):
                 clocks = {('expires_at',)} if kind == 'Prepare' else set()
                 if kind not in ('Committed', 'Credit') and normalized_json(actual[4:], {}, clocks) != normalized_json(raw[4:], {}, clocks):
                     raise ValueError('replay requires matching command/query traffic at sequence ' + str(row['sequence']))
+                if stepped:
+                    settle()
+                    clock(row['wall'])
         for admission in admissions.values():
             admission.result(timeout=60)
         send(conn, {'t': 'Ping'})
