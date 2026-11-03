@@ -25,6 +25,7 @@ MESSAGES_A_SCENARIOS = ['messages/MSG-DB-REPLACED', 'messages/MSG-PERMISSION-LOS
 IPHONE_SCENARIOS = ['iphone/APP-ALARM-SIM', 'iphone/APP-SHELL-SIM', 'iphone/APP-PAIR-SIM', 'iphone/APP-DEVICE-SIM',
                     'iphone/APP-MOTION-SIM', 'iphone/APP-HEALTH-WRITE-SIM', 'iphone/APP-SCREENTIME-SIM',
                     'iphone/APP-HEALTH-SIM', 'iphone/APP-LOC-SIM']
+RELAY_SCENARIOS = ['RELAY-ENROLL', 'RELAY-PASSTHROUGH', 'RELAY-LIMITS', 'RELAY-ROTATE-GATED']
 SCENARIOS = ['CORE-QUERY-ROUNDTRIP', 'CORE-QUERY-BLOB', 'CORE-QUERY-SCOPE', 'CORE-QUERY-DEADLINE',
              *JOURNEY_SCENARIOS, *CORE_SCENARIOS]
 
@@ -58,6 +59,7 @@ def main():
     parser.add_argument('--native', dest='native', action='store_true')
     parser.add_argument('--iphone', dest='iphone', action='store_true')
     parser.add_argument('--shortcuts', dest='shortcuts', action='store_true')
+    parser.add_argument('--relay', dest='relay', action='store_true')
     args = parser.parse_args()
     if args.shortcuts:
         args.scenario = (args.scenario or []) + SHORTCUT_SCENARIOS
@@ -73,6 +75,8 @@ def main():
         args.scenario = (args.scenario or []) + NATIVE_SCENARIOS
     if args.iphone:
         args.scenario = (args.scenario or []) + IPHONE_SCENARIOS
+    if args.relay:
+        args.scenario = (args.scenario or []) + RELAY_SCENARIOS
     out = Path(args.output).resolve()
     out.mkdir(mode=0o700, parents=True, exist_ok=False)
     root = Path(__file__).resolve().parents[2] / 'lab' / 'scenarios'
