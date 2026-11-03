@@ -243,6 +243,38 @@ fn parse(raw: &[u8]) -> Result<Reply> {
     }
 }
 
+pub fn fetch(
+    origin: &str,
+    method: &str,
+    path: &str,
+    headers: &[(&str, &str)],
+    body: Option<&[u8]>,
+) -> Result<Reply> {
+    let mut command = Command::new("curl");
+    command
+        .args(["--silent", "--show-error", "--max-time", "15", "-i"])
+        .args(["-X", method]);
+    for (name, value) in headers {
+        command.args(["-H", &format!("{name}: {value}")]);
+    }
+    if body.is_some() {
+        command.args(["--data-binary", "@-"]);
+    }
+    command
+        .arg(format!("{origin}{path}"))
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped());
+    let mut child = command.spawn()?;
+    if let (Some(mut stdin), Some(body)) = (child.stdin.take(), body) {
+        stdin.write_all(body)?;
+    }
+    let output = child.wait_with_output()?;
+    if !output.status.success() {
+        return Err(invalid(format!("request exited {}", output.status)));
+    }
+    parse(&output.stdout)
+}
+
 #[derive(Debug)]
 pub struct Owner {
     pub authenticator: Authenticator,

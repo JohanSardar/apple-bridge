@@ -327,7 +327,7 @@ fn reminders_ready(world: &World) -> bool {
     })
 }
 
-fn truth(world: &World, verb: &str, request: &Value) -> Result<Value> {
+pub(crate) fn truth(world: &World, verb: &str, request: &Value) -> Result<Value> {
     let app = env::var("AB_LAB_TRUTH_APP")
         .map_err(|_| Error::Invalid("AB_LAB_TRUTH_APP is not set".into()))?;
     let id = random_id("truth")?;
