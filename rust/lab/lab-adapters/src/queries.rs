@@ -3,7 +3,10 @@ use lab_runner::Evidence;
 use lab_world::{Error, Result, World};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
-use std::{fs, time::Instant};
+use std::{
+    fs, thread,
+    time::{Duration, Instant},
+};
 
 const SCOPE: &str =
     "messages:read,reminders:read,calendar:read,contacts:read,notes:read,system:read";
@@ -119,10 +122,144 @@ fn blob(world: &World, evidence: &mut Evidence) -> Result<()> {
     );
     Ok(())
 }
+fn error_code(raw: Option<&(u16, Value)>) -> Option<String> {
+    raw?.1["error"]["code"].as_str().map(str::to_owned)
+}
+fn agent_token(world: &World, name: &str, level: &str, scope: &str) -> Result<Option<String>> {
+    let Ok(raw) = world.gateway_cli(&[
+        "agent", "create", "--name", name, "--level", level, "--scope", scope,
+    ]) else {
+        return Ok(None);
+    };
+    let value: Value = serde_json::from_str(raw.trim())?;
+    Ok(value["token"]
+        .as_str()
+        .filter(|t| !t.is_empty() && !value["agent"]["id"].as_str().unwrap_or("").is_empty())
+        .map(str::to_owned))
+}
+fn scope(world: &World, evidence: &mut Evidence) -> Result<()> {
+    let q = query(&json!({"value":"lab"}), 1000)?;
+    let scoped = Client::new(world, "calendar:read")?;
+    evidence.check("scoped_token", true, "scoped token created");
+    let denied = scoped.call_raw("test.echo", &q, 20)?;
+    evidence.check(
+        "missing_grant_rejected",
+        denied.as_ref().is_some_and(|(status, _)| *status == 403)
+            || error_code(denied.as_ref()).as_deref() == Some("forbidden"),
+        "missing grant is forbidden",
+    );
+    let client = Client::new(world, SCOPE)?;
+    evidence.check(
+        "read_allowed",
+        client.call("test.echo", &q, 20)?.is_some(),
+        "granted scope reads",
+    );
+    let listed = world.gateway_cli(&["agent", "list"]).is_ok();
+    evidence.check("agent_authority", listed, "agent list succeeds");
+    if !listed {
+        return Ok(());
+    }
+    let read = agent_token(world, "Bridge Test query read", "read", "reminders:read")?;
+    evidence.check("read_agent_created", read.is_some(), "read agent created");
+    let allowed = match &read {
+        Some(token) => Client::with_token(world, token)?
+            .call("test.echo", &q, 20)?
+            .is_some(),
+        None => false,
+    };
+    evidence.check("read_agent_allowed", allowed, "read agent queries");
+    let approve = agent_token(world, "Bridge Test query approve", "approve", "reminders:write")?;
+    evidence.check(
+        "approve_agent_created",
+        approve.is_some(),
+        "approve agent created",
+    );
+    let pending = match &approve {
+        Some(token) => Client::with_token(world, token)?.call_raw(
+            "reminders.create_list",
+            &json!({"command_id": random_id("cmd")?, "args": {"title": "[ab-test query] approval"}}),
+            20,
+        )?,
+        None => None,
+    };
+    evidence.check(
+        "effect_requires_approval",
+        pending
+            .as_ref()
+            .is_some_and(|(status, v)| *status == 200 && v["state"] == "awaiting_approval"),
+        "write effect waits for approval",
+    );
+    Ok(())
+}
+fn effect(world: &World, id: &str) -> Option<u64> {
+    world.control("/effects", &Value::Null).ok()?[id].as_u64()
+}
+fn await_effect(world: &World, id: &str, want: u64, limit: Duration) -> bool {
+    let end = Instant::now() + limit;
+    loop {
+        if effect(world, id) == Some(want) {
+            return true;
+        }
+        if Instant::now() >= end {
+            return false;
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
+}
+fn cancellation(
+    world: &World,
+    client: &Client,
+    mcp: bool,
+    prefix: &str,
+    evidence: &mut Evidence,
+) -> Result<()> {
+    let q = query(&json!({"ms":5000}), 10_000)?;
+    let id = q["id"]
+        .as_str()
+        .ok_or_else(|| Error::Invalid("query id".into()))?
+        .to_owned();
+    let mut child = client.spawn_call("test.sleep", &q, mcp)?;
+    let name = |n: &str| format!("{prefix}{n}");
+    evidence.check(
+        &name("helper_work_started"),
+        await_effect(world, &id, 1, Duration::from_secs(2)),
+        "helper work started",
+    );
+    let _ = child.kill();
+    let started = Instant::now();
+    let _ = child.wait();
+    evidence.check(
+        &name("client_cancelled"),
+        started.elapsed() < Duration::from_secs(1),
+        "client call cancelled",
+    );
+    evidence.check(
+        &name("helper_work_stopped"),
+        await_effect(world, &id, 0, Duration::from_secs(1)),
+        "helper work stopped",
+    );
+    Ok(())
+}
+fn deadline(world: &World, evidence: &mut Evidence) -> Result<()> {
+    let client = Client::new(world, SCOPE)?;
+    let q = query(&json!({"ms":5000}), 100)?;
+    let start = Instant::now();
+    let out = client.call_raw("test.sleep", &q, 20)?;
+    evidence.check(
+        "deadline_bounded",
+        error_code(out.as_ref()).as_deref() == Some("deadline")
+            && start.elapsed() < Duration::from_millis(200),
+        "deadline error within 200 ms",
+    );
+    cancellation(world, &client, false, "rest_", evidence)?;
+    cancellation(world, &client, true, "mcp_", evidence)
+}
 pub fn queries(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> {
     match evidence.scenario.as_str() {
         "CORE-QUERY-ROUNDTRIP" => roundtrip(world, evidence),
         "CORE-QUERY-BLOB" => blob(world, evidence),
+        "CORE-QUERY-SCOPE" => scope(world, evidence),
+        "CORE-QUERY-DEADLINE" => deadline(world, evidence),
         other => Err(Error::Invalid(format!(
             "queries variant not ported: {other}"
         ))),
