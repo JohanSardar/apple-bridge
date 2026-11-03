@@ -51,6 +51,18 @@ pub(crate) fn commit(tx: Transaction<'_>, hook: Option<&Arc<dyn BlobProtection>>
     hook.delta(&refs, true)
 }
 impl crate::State<crate::Gateway> {
+    #[cfg(feature = "lab")]
+    pub fn lab_command_blobs(&mut self, owner: &str, digest: &str) -> Result<()> {
+        let tx = self.db.transaction()?;
+        let owner = format!("command:{owner}");
+        if digest.is_empty() {
+            tx.execute("DELETE FROM blob_reference_sets WHERE owner=?", [&owner])?;
+        } else {
+            let refs = serde_json::json!([{"digest":digest}]);
+            tx.execute("INSERT INTO blob_reference_sets VALUES(?,?) ON CONFLICT(owner) DO UPDATE SET payload=excluded.payload", rusqlite::params![owner, serde_json::to_vec(&refs)?])?;
+        }
+        commit(tx, self.blob_protection.as_ref())
+    }
     pub fn set_blob_protection(&mut self, hook: Arc<dyn BlobProtection>) -> Result<()> {
         let mut refs = ReferenceSet::new();
         let mut stmt = self
