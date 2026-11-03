@@ -669,6 +669,7 @@ pub fn restore(
         std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600))?;
         let mut staged = Connection::open(&path)?;
         let tx = staged.transaction()?;
+        tx.execute_batch(include_str!("schema.sql"))?;
         set_cursor(
             &tx,
             &Cursor {
