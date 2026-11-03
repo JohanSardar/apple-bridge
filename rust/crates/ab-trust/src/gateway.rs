@@ -343,6 +343,8 @@ impl Authority {
         for scope in scopes {
             let (source, _) = scope.as_str().split_once(':').ok_or(Error::Invalid)?;
             if ![
+                #[cfg(feature = "lab-harness")]
+                "labdummy",
                 "messages",
                 "calendar",
                 "reminders",
