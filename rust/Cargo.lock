@@ -2444,6 +2444,7 @@ dependencies = [
  "hex",
  "hmac 0.12.1",
  "jiff",
+ "lab-demo",
  "lab-runner",
  "lab-wire",
  "lab-world",
@@ -2459,6 +2460,20 @@ dependencies = [
  "zune-core",
  "zune-jpeg",
  "zune-png",
+]
+
+[[package]]
+name = "lab-demo"
+version = "0.0.0"
+dependencies = [
+ "base64 0.22.1",
+ "crc32fast",
+ "gif",
+ "hex",
+ "jiff",
+ "miniz_oxide",
+ "serde_json",
+ "sha2 0.10.9",
 ]
 
 [[package]]
