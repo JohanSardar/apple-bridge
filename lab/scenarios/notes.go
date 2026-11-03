@@ -467,6 +467,7 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 	}
 	if err != nil {
 		add("native_fixture", false)
+		e.Assertions[len(e.Assertions)-1].Detail = strings.Join(w.TruthFailures, ";")
 		return
 	}
 	var note contracts.Record

@@ -1,6 +1,6 @@
 id: REM-CRUD
 feature: reminders.write
-levels: [real, replica]
+levels: [sim, real, replica]
 given: [{world: {replicas: 1}}]
 when: [{reminders_crud: {}}]
 then: [{converge: {}}]
