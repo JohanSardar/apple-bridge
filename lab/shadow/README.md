@@ -61,7 +61,7 @@ python3 lab/shadow/shadow.py replay --recording "$SHADOW/recording/ipc.shadow" -
 
 `prove.py --go "$GO_LAB_BINARY" --rust "$RUST_LAB_BINARY"` records REST, MCP, record-read and `X-Ingress: cli` admissions, then requires the exact decision replay.
 
-Not covered: delegated feed and iPhone traffic reach the gateway over the peer listener, not the HTTP front door, so the recorder does not observe them and replay cannot re-issue them (their handshakes use fresh nonces and delegation certificates). A gateway-side lab observer at `LocalGateway.Submit`/`DecideApproval` plus a peer-protocol replayer is still required.
+Delegated feed commands are covered by the section below. iPhone traffic reaches the gateway over the peer listener, not the HTTP front door, so the recorder does not observe it and replay cannot re-issue it.
 
 ## Explicit lab replay decisions
 
@@ -82,3 +82,13 @@ This is a fixed-clock fixture seam, not a complete recording of clock decisions.
 The decision manifest may carry `command_ids`, an ordered list. In lab replay mode both gateways consume it in order wherever they would otherwise allocate a `cmd_` ID for a command submitted without one (Go `contracts.NewCommandID`, Rust `ab_state::replay::command_id`). An exhausted or malformed queue fails closed. `shadow decisions --starting-home <home>` fills it from the final ledger: commands absent from the starting ledger whose ID never appears in a recorded admission body, ordered by creation time. `prove.py` now submits a REST command without `command_id` and requires 8 of 8 exact Go-vs-Go replays plus zero Go-vs-Rust table differences (`--go-go-runs` sets the count).
 
 Not covered by the queue: IDs allocated for rejected agent commands that never reach the ledger, and `qry_` query IDs. The delegated feed and iPhone observer/replayer blockers above remain open.
+
+## Delegated feed ingress
+
+Replica commands arrive at the gateway as `POST /v1/commands` on the peer listener (mTLS plus an `X-Apple-Bridge-Delegation` Ed25519 header). Go (`LocalGateway.Forward`) and Rust (`Forward::command`) serve the same path, header and JSON body, and both return the delegated `CommandRecord` or an error envelope, so one replayer drives both.
+
+Lab-tagged Go and Rust `lab-harness` gateways append one JSON line per delegated `submit`, `status` or `list` to the file named by `APPLE_BRIDGE_LAB_FEED_LOG`: start and end wall times, the request body, the delegation's principal, grants, level, command id and request hash, and the outcome (`state`/`disposition`, `count` for list, or the error code). Requests that fail delegation verification are not logged. Production builds ignore the variable.
+
+`shadow record --delegated-log <file>` (the file must not exist beforehand) merges those lines into the transcript at stop, by wall time, as `admission`/`response` rows with `ingress: feed`.
+
+`shadow replay --feed-peer-home <home> --lab-binary bin/bridge-lab` re-drives each feed row with `bridge-lab shadow-feed`, which loads the synthetic replica from the peer home, signs a fresh delegation with the recorded principal and request hash, and posts to the clone's peer listener. The starting home must already enroll that replica (`bridge pair` then `bridge join --home <peer-home>`), the peer home is copied per gateway and the response outcome must equal the recorded one. Replay without `--feed-peer-home` fails closed when the recording has feed rows. `prove.py` pairs a synthetic replica before snapshotting the starting home, records a feed submit, status and list, and requires 8 of 8 exact Go-vs-Go replays plus zero Go-vs-Rust table differences (`--lab` sets the `bridge-lab` path).

@@ -61,6 +61,7 @@ def main():
     parser.add_argument('--go', default='bin/bridge')
     parser.add_argument('--rust', default='bin/bridge')
     parser.add_argument('--go-go-runs', type=int, default=8)
+    parser.add_argument('--lab', default='bin/bridge-lab')
     args = parser.parse_args()
     root = private_directory(args.output)
     if list(root.iterdir()):
@@ -71,10 +72,16 @@ def main():
     proxy = root / 'proxy.sock'
     log = (root / 'processes.log').open('x')
     gateway_args = ['bin/bridge', 'start', '--role', 'gateway', '--home', str(home), '--socket', str(socket), '--peer-addr', '127.0.0.1:0', '--api-addr', '127.0.0.1:0']
+    feed_peer = root / 'feed-peer'
+    feed_log = root / 'feed.log'
     gateway = subprocess.Popen(gateway_args, stdout=log, stderr=log)
     primer = None
     try:
         wait(socket, gateway)
+        wait(home / 'runtime.json', gateway)
+        peer_address = json.loads((home / 'runtime.json').read_text())['peer_address']
+        code = subprocess.check_output(['bin/bridge', 'pair', '--home', str(home), '--scope', 'admin', '--peer-addr', peer_address], text=True).splitlines()[0].strip()
+        subprocess.run(['bin/bridge', 'join', '--home', str(feed_peer), code], check=True, stdout=subprocess.DEVNULL, stderr=log)
         token = subprocess.check_output(['bin/bridge', 'token', 'create', '--home', str(home), '--scope', 'admin'], text=True).strip()
         primer = subprocess.Popen(['bin/bridge-lab', 'simapple', '--socket', str(socket), '--secret-file', str(home / 'apple-secret'), '--control', str(root / 'prime.sock')], stdout=log, stderr=log)
         wait(root / 'prime.sock', primer)
@@ -102,7 +109,7 @@ def main():
         stop(gateway)
     shutil.copytree(home, root / 'starting')
     (home / 'runtime.json').unlink(missing_ok=True)
-    gateway = subprocess.Popen(gateway_args, stdout=log, stderr=log)
+    gateway = subprocess.Popen(gateway_args, stdout=log, stderr=log, env=dict(os.environ, APPLE_BRIDGE_LAB_FEED_LOG=str(feed_log)))
     tap = helper = None
     try:
         wait(socket, gateway)
@@ -110,7 +117,7 @@ def main():
         with sockets.socket() as reservation:
             reservation.bind(('127.0.0.1', 0))
             admission_port = reservation.getsockname()[1]
-        tap = subprocess.Popen([sys.executable, 'lab/shadow/shadow.py', 'record', '--listen', str(proxy), '--upstream', str(socket), '--output', str(root / 'recording'), '--admission-listen', '127.0.0.1:' + str(admission_port), '--admission-upstream', json.loads((home / 'runtime.json').read_text())['api_address']], stdout=log, stderr=log)
+        tap = subprocess.Popen([sys.executable, 'lab/shadow/shadow.py', 'record', '--listen', str(proxy), '--upstream', str(socket), '--output', str(root / 'recording'), '--admission-listen', '127.0.0.1:' + str(admission_port), '--admission-upstream', json.loads((home / 'runtime.json').read_text())['api_address'], '--delegated-log', str(feed_log)], stdout=log, stderr=log)
         wait(proxy, tap)
         helper = subprocess.Popen(['bin/bridge-lab', 'simapple', '--socket', str(proxy), '--secret-file', str(home / 'apple-secret'), '--control', str(root / 'sim.sock')], stdout=log, stderr=log)
         wait(root / 'sim.sock', helper)
@@ -167,6 +174,29 @@ def main():
         mcp_command = http_call('POST', '/mcp', {'jsonrpc': '2.0', 'id': 2, 'method': 'tools/call', 'params': {'name': 'reminders_create', 'arguments': {'command_id': 'cmd_shadow_mcp', 'op': 'reminders.create', 'args': {'list_id': records[0]['id'], 'title': '[ab-test shadow] via mcp'}, 'wait_ms': 15000}}})
         if mcp_command.get('result', {}).get('structuredContent', {}).get('state') != 'observed':
             raise RuntimeError('synthetic MCP command was not observed')
+        feed_address = config['peer_address']
+        def feed_call(request):
+            request['delegation'] = {'local_principal': 'token:shadow-feed', 'local_grants': ['reminders:write']}
+            result = subprocess.run([args.lab, 'shadow-feed', '--peer-home', str(feed_peer), '--address', feed_address], input=json.dumps(request), capture_output=True, text=True, timeout=60)
+            if result.returncode:
+                raise RuntimeError('synthetic feed request failed: ' + result.stderr.strip())
+            return json.loads(result.stdout)['outcome']
+        feed_command = feed_call({'method': 'submit', 'command': {'command_id': 'cmd_shadow_feed', 'op': 'reminders.create', 'args': {'list_id': records[0]['id'], 'title': '[ab-test shadow] via feed'}, 'wait_ms': 15000}})
+        if feed_command.get('status') != 200 or not feed_command.get('state'):
+            raise RuntimeError('synthetic feed command was not admitted')
+        deadline = time.monotonic() + 15
+        while time.monotonic() < deadline:
+            with sqlite3.connect((home / 'ledger.db').as_uri() + '?mode=ro', uri=True) as db:
+                row = db.execute("SELECT json_extract(payload,'$.state') FROM commands WHERE id='cmd_shadow_feed'").fetchone()
+            if row and row[0] == 'observed':
+                break
+            time.sleep(.05)
+        else:
+            raise RuntimeError('synthetic feed command was not observed')
+        if feed_call({'method': 'status', 'query': {'command_id': 'cmd_shadow_feed'}}).get('state') != 'observed':
+            raise RuntimeError('synthetic feed status was not observed')
+        if feed_call({'method': 'list', 'query': {'limit': 10}}).get('status') != 200:
+            raise RuntimeError('synthetic feed list failed')
         http_call('GET', '/v1/records/reminders.list/' + records[0]['id'])
         http_call('POST', '/v1/op/records.query', {'collection': 'reminders.list'}, {'X-Ingress': 'cli'})
         control = http.client.HTTPConnection('sim', timeout=5)
@@ -252,17 +282,20 @@ def main():
     manifest = root / 'decisions.json'
     subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'decisions', '--recording', str(recording), '--home', str(home), '--starting-home', str(root / 'starting'), '--output', str(manifest)], check=True, stdout=subprocess.DEVNULL)
     for run in range(args.go_go_runs):
-        result = subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'replay', '--recording', str(recording), '--starting-home', str(root / 'starting'), '--output', str(root / ('replay-go-go-' + str(run))), '--go', args.go, '--rust', args.go, '--decisions', str(manifest), '--exact'], capture_output=True, text=True)
+        result = subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'replay', '--recording', str(recording), '--starting-home', str(root / 'starting'), '--output', str(root / ('replay-go-go-' + str(run))), '--go', args.go, '--rust', args.go, '--decisions', str(manifest), '--exact', '--feed-peer-home', str(feed_peer), '--lab-binary', args.lab], capture_output=True, text=True)
         report = json.loads(result.stdout) if result.stdout else {'digests': []}
         if result.returncode or not report['digests'] or any(not row['equal'] for row in report['digests']):
             raise RuntimeError('synthetic Go-Go exact replay failed in run ' + str(run) + ': ' + result.stderr.strip())
         shutil.rmtree(root / ('replay-go-go-' + str(run)))
-    result = subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'replay', '--recording', str(recording), '--starting-home', str(root / 'starting'), '--output', str(root / 'replay-exact'), '--go', args.go, '--rust', args.rust, '--decisions', str(manifest), '--exact'], capture_output=True, text=True)
+    result = subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'replay', '--recording', str(recording), '--starting-home', str(root / 'starting'), '--output', str(root / 'replay-exact'), '--go', args.go, '--rust', args.rust, '--decisions', str(manifest), '--exact', '--feed-peer-home', str(feed_peer), '--lab-binary', args.lab], capture_output=True, text=True)
     report = json.loads(result.stdout) if result.stdout else {'digests': []}
     if result.returncode or any(not row['equal'] for row in report['digests']):
         raise RuntimeError('synthetic exact decision replay failed: ' + result.stderr.strip())
     ingress = sorted({json.loads(line)['ingress'] for line in recording.read_text().splitlines() if json.loads(line).get('ingress')})
-    print(json.dumps({'exact_decision_replay_equal': True, 'ingress_kinds': ingress, 'alias_clock_equivalence': True, 'go_go_exact_replay_runs_equal': args.go_go_runs, 'rust_diff_tables': len(report['digests']), 'synthetic_capture_recorded': True, 'identical_home_equal': True, 'changed_gojson_bytes_detected': True, 'record_data_key_order_detected': True, 'record_data_clock_detected': True, 'seeded_mismatches_detected': detected, 'frame_types': sorted(kinds)}))
+    feed_rows = sum(1 for line in recording.read_text().splitlines() if json.loads(line).get('ingress') == 'feed')
+    if feed_rows != 3:
+        raise RuntimeError('delegated feed observer recorded ' + str(feed_rows) + ' of 3 commands')
+    print(json.dumps({'delegated_feed_commands_recorded': feed_rows, 'exact_decision_replay_equal': True, 'ingress_kinds': ingress, 'alias_clock_equivalence': True, 'go_go_exact_replay_runs_equal': args.go_go_runs, 'rust_diff_tables': len(report['digests']), 'synthetic_capture_recorded': True, 'identical_home_equal': True, 'changed_gojson_bytes_detected': True, 'record_data_key_order_detected': True, 'record_data_clock_detected': True, 'seeded_mismatches_detected': detected, 'frame_types': sorted(kinds)}))
 
 
 if __name__ == '__main__':

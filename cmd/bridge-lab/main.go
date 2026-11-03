@@ -33,6 +33,8 @@ func run(ctx context.Context, args []string) error {
 		command := exec.CommandContext(ctx, "python3", append([]string{"lab/shadow/shadow.py"}, args[1:]...)...)
 		command.Stdin, command.Stdout, command.Stderr = os.Stdin, os.Stdout, os.Stderr
 		return command.Run()
+	case "shadow-feed":
+		return feedSend(ctx, args[1:])
 	case "inventory":
 		return inventory(args[1:])
 	case "wire-checks":
