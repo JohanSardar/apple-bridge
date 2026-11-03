@@ -1,9 +1,11 @@
 use crate::Error;
-use ab_native::{capture, mail, notes_reader, safari, telephony, usage, voice_memo};
+use ab_native::{
+    agenda, capture, contacts, mail, notes_reader, safari, telephony, usage, voice_memo,
+};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Value, json};
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     fmt::Debug,
     fs,
     path::{Path, PathBuf},
@@ -39,6 +41,9 @@ pub trait CaptureReader: Send + Debug {
     }
     fn blob(&mut self, _handle: &str, _offset: u64, _length: usize) -> Result<Value, Error> {
         Err(Error::Invalid)
+    }
+    fn ingest(&mut self, _capture: &Value) -> Result<bool, Error> {
+        Ok(false)
     }
 }
 
@@ -682,6 +687,226 @@ impl CaptureReader for MailReader {
     }
 }
 
+#[derive(Debug)]
+enum AgendaState {
+    Calendar(agenda::Reader),
+    Contacts(contacts::Reader),
+}
+
+impl AgendaState {
+    fn scope(&self) -> Vec<String> {
+        match self {
+            Self::Calendar(_) => vec!["calendar.calendar".into(), "calendar.event".into()],
+            Self::Contacts(_) => vec![
+                "contacts.contact".into(),
+                "contacts.group".into(),
+                "contacts.container".into(),
+            ],
+        }
+    }
+
+    fn knows(&self, identity: &str) -> bool {
+        match self {
+            Self::Calendar(reader) => reader.knows(identity),
+            Self::Contacts(reader) => reader.knows(identity),
+        }
+    }
+
+    fn generation(&self) -> &str {
+        match self {
+            Self::Calendar(reader) => reader.generation(),
+            Self::Contacts(reader) => reader.generation(),
+        }
+    }
+
+    fn prepare(
+        &self,
+        snapshot: agenda::Snapshot,
+        context: &capture::Context,
+    ) -> capture::Result<agenda::Pending> {
+        match self {
+            Self::Calendar(reader) => reader.prepare(snapshot, context),
+            Self::Contacts(reader) => reader.prepare(snapshot, context),
+        }
+    }
+
+    fn commit(&mut self, pending: agenda::Pending) -> capture::Result<()> {
+        match self {
+            Self::Calendar(reader) => reader.commit(pending),
+            Self::Contacts(reader) => reader.commit(pending),
+        }
+    }
+}
+
+#[derive(Debug)]
+struct Facts {
+    generation: String,
+    rows: Vec<Value>,
+    absences: BTreeMap<String, agenda::Revalidation>,
+    live: bool,
+    blob_handles: Option<Value>,
+}
+
+#[derive(Debug)]
+pub struct AgendaReader {
+    source: &'static str,
+    root: PathBuf,
+    state: AgendaState,
+    facts: Option<Facts>,
+    pending: Option<agenda::Pending>,
+}
+
+impl AgendaReader {
+    #[must_use]
+    pub fn calendar(root: PathBuf) -> Self {
+        Self {
+            source: "calendar",
+            root,
+            state: AgendaState::Calendar(agenda::Reader::default()),
+            facts: None,
+            pending: None,
+        }
+    }
+
+    #[must_use]
+    pub fn contacts(root: PathBuf) -> Self {
+        Self {
+            source: "contacts",
+            root,
+            state: AgendaState::Contacts(contacts::Reader::default()),
+            facts: None,
+            pending: None,
+        }
+    }
+
+    fn parse(&self, capture: &Value) -> Result<Facts, Error> {
+        let generation = capture["generation"]
+            .as_str()
+            .filter(|value| !value.is_empty())
+            .ok_or(Error::Invalid)?
+            .to_owned();
+        let observations = capture["observations"].as_array().ok_or(Error::Invalid)?;
+        let scope = self.state.scope();
+        let mut rows = Vec::new();
+        let mut absences = BTreeMap::new();
+        for observation in observations {
+            let collection = observation["collection"].as_str().ok_or(Error::Invalid)?;
+            let key = observation["native_key"].as_str().ok_or(Error::Invalid)?;
+            if !scope.iter().any(|value| value == collection) {
+                return Err(Error::Invalid);
+            }
+            match observation["kind"].as_str() {
+                Some("upsert") => rows.push(json!({
+                    "kind": "upsert",
+                    "collection": collection,
+                    "native_key": key,
+                    "scoped_alias": observation["scoped_alias"].as_str().unwrap_or_default(),
+                    "data": observation["data"],
+                })),
+                Some(kind @ ("absent" | "evict")) => {
+                    let disposition = if kind == "evict" && self.source == "calendar" {
+                        agenda::Revalidation::Evict
+                    } else {
+                        agenda::Revalidation::Absent
+                    };
+                    absences.insert(format!("{collection}/{key}"), disposition);
+                }
+                _ => return Err(Error::Invalid),
+            }
+        }
+        Ok(Facts {
+            generation,
+            rows,
+            absences,
+            live: capture["live"].as_bool().unwrap_or(false),
+            blob_handles: capture
+                .get("blob_handles")
+                .filter(|value| value.as_object().is_some_and(|map| !map.is_empty()))
+                .cloned(),
+        })
+    }
+}
+
+impl CaptureReader for AgendaReader {
+    fn source(&self) -> &'static str {
+        self.source
+    }
+
+    fn root(&self) -> &Path {
+        &self.root
+    }
+
+    fn token(&self) -> Option<String> {
+        None
+    }
+
+    fn resume(&mut self, _token: &str) -> bool {
+        false
+    }
+
+    fn ingest(&mut self, capture: &Value) -> Result<bool, Error> {
+        self.facts = Some(self.parse(capture)?);
+        Ok(true)
+    }
+
+    fn next(&mut self, context: &ScanContext) -> Result<Option<Value>, Error> {
+        if self.pending.is_some() {
+            return Err(Error::Conflict);
+        }
+        let Some(facts) = self.facts.take() else {
+            return Ok(None);
+        };
+        let present: BTreeSet<String> = facts
+            .rows
+            .iter()
+            .map(|row| {
+                format!(
+                    "{}/{}",
+                    row["collection"].as_str().unwrap_or_default(),
+                    row["native_key"].as_str().unwrap_or_default()
+                )
+            })
+            .collect();
+        let revalidated = facts
+            .absences
+            .into_iter()
+            .filter(|(identity, _)| self.state.knows(identity) && !present.contains(identity))
+            .collect();
+        let read = capture::Context {
+            observed_at: context.observed_at()?,
+            checkpoint: context.checkpoint.clone(),
+            scan_id: context.scan_id.clone(),
+        };
+        let snapshot = agenda::Snapshot {
+            generation: facts.generation.clone(),
+            scope: self.state.scope(),
+            complete: true,
+            records: facts.rows,
+            revalidated,
+            force: false,
+        };
+        let pending = self.state.prepare(snapshot, &read).map_err(reader_error)?;
+        if pending.observations.is_empty() && self.state.generation() == facts.generation {
+            return Ok(None);
+        }
+        let mut value = serde_json::to_value(&pending)?;
+        let object = value.as_object_mut().ok_or(Error::Invalid)?;
+        if facts.live {
+            object.insert("live".into(), Value::Bool(true));
+        }
+        if let Some(handles) = facts.blob_handles {
+            object.insert("blob_handles".into(), handles);
+        }
+        self.pending = Some(pending);
+        Ok(Some(value))
+    }
+
+    fn commit(&mut self) -> Result<(), Error> {
+        let pending = self.pending.take().ok_or(Error::Conflict)?;
+        self.state.commit(pending).map_err(reader_error)
+    }
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct SourceConfig {
@@ -723,6 +948,8 @@ pub fn from_config(config: &str) -> Result<BTreeMap<String, Box<dyn CaptureReade
             "voicemail" => Box::new(TelephonyReader::voicemail(&config.root)),
             "voice_memos" => Box::new(VoiceMemosReader::new(&config.root)),
             "notes" => Box::new(NotesReader::new(config.root)?),
+            "calendar" => Box::new(AgendaReader::calendar(config.root)),
+            "contacts" => Box::new(AgendaReader::contacts(config.root)),
             _ => return Err(Error::Invalid),
         };
         readers.insert(source, reader);

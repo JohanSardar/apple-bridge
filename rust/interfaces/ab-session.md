@@ -222,3 +222,20 @@ produce.
 - **Production switch.** `ab-session --gateway-fd N --helper-fd M [--effects-home H] [--capture-home H]`. With `--capture-home`, `<home>/session/rust-capture.json` (`{"sources":{"safari":{"root":"..."}},"watch":true,"poll_ms":5000}`) selects Rust sources (`safari`, `usage`, `notes`, `voice_memos`); an unsupported source fails startup, an absent file or empty `sources` is the verbatim proxy. Flipping a source is editing the file and restarting the Helper; flipping back is removing the entry. The Swift SessionProxy passes `--capture-home` only when the file exists. A binary built without `rust-capture` rejects the flag. Generation changes on a flip cost one rescan and never a false deletion.
 
 Open items: watcher-driven scheduling and persistence are proven for Screen Time in the sim; blob reads and effects plus capture are proven by socketpair tests only (simapple has no native/1 endpoint and no Voice Memos file fixture world); Mail, Notes, Messages and the other sources still need readers.
+
+### Calendar and Contacts (facts-driven)
+
+`calendar` and `contacts` are routed sources whose Rust reader is `readers::AgendaReader`. Framework
+enumeration stays Swift (EventKit, Contacts). The Helper's `Capture` frame for the source is taken as
+the raw fact set (upserts are the complete current records, `absent` and `evict` are revalidation
+results). `CaptureReader::ingest` stores it, the relay holds the Helper `Committed`, and the session
+poll runs `ab_native::agenda::Reader::prepare` (diff, alias replacement, candidate retention, window
+eviction) to build the gateway `Capture` with the session's predecessor, checkpoint and credit. When
+the gateway commits that capture the reader commits and the held Helper `Committed` frames are released,
+so a Helper `wait` returns only after the gateway has the data. Unchanged facts release immediately and
+send nothing. A revalidation result for an identity the reader does not know is ignored. Records missing
+without a result remain candidates, never deletions. Lab: `AB_LAB_SESSION_SOURCES=calendar` or
+`contacts`; negative control `AB_SESSION_RUST_POLL_MS=3600000`.
+
+Known gaps: command-effect captures (simapple `emit` frames carrying command checkpoints), oversized
+split captures, native/1 fact paging in place of the Helper capture frame, and Contacts container facts.

@@ -12,6 +12,8 @@ mod control;
 pub mod duration;
 #[cfg(feature = "replica-feed")]
 mod forward;
+#[cfg(all(feature = "replica-feed", feature = "lab-harness"))]
+mod forward_observer;
 #[cfg(feature = "replica-feed")]
 mod gateway;
 #[cfg(feature = "replica-feed")]

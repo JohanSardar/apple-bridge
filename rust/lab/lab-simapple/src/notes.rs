@@ -127,7 +127,7 @@ fn folder(key: &str) -> Value {
     json!({"$ref":{"collection":"notes.folder","native_key":key}})
 }
 
-impl Session {
+impl Session<'_> {
     pub(super) fn note_prepare(&mut self, state: &Shared, frame: &Value) -> Result<()> {
         let command = string(frame, "command_id");
         let action = &frame["action"];

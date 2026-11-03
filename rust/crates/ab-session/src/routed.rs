@@ -53,8 +53,12 @@ struct Flight {
     bytes: u64,
     rust: bool,
     last: bool,
+    covers: Covers,
     keys: Vec<String>,
 }
+
+type Covers = Vec<(String, u64)>;
+type Held = Mutex<BTreeMap<String, Covers>>;
 
 #[derive(Debug, Default)]
 struct Shared {
@@ -193,6 +197,70 @@ fn watch(gate: &Gate, roots: &[std::path::PathBuf]) {
     }
 }
 
+fn release(
+    to_helper: &Mutex<UnixStream>,
+    source: &str,
+    covers: &[(String, u64)],
+) -> Result<(), Error> {
+    for (checkpoint, credit) in covers {
+        send(
+            &mut *to_helper.lock().map_err(|_| Error::WorkerPanicked)?,
+            &json!({"t":"Committed","source":source,"checkpoint":checkpoint,"credit":credit}),
+        )?;
+    }
+    Ok(())
+}
+
+fn ingest(
+    readers: &Readers,
+    held: &Held,
+    to_helper: &Mutex<UnixStream>,
+    source: &str,
+    value: &Value,
+    cover: (String, u64),
+) -> Result<(), Error> {
+    let mut readers = readers.lock().map_err(|_| Error::WorkerPanicked)?;
+    let reader = readers.get_mut(source).ok_or(Error::Conflict)?;
+    match reader.ingest(value) {
+        Ok(true) => held
+            .lock()
+            .map_err(|_| Error::WorkerPanicked)?
+            .entry(source.to_owned())
+            .or_default()
+            .push(cover),
+        Ok(false) => release(to_helper, source, &[cover])?,
+        Err(error) => {
+            eprintln!("ab-session: {source} facts: {error}");
+            release(to_helper, source, &[cover])?;
+        }
+    }
+    Ok(())
+}
+
+fn register(
+    gate: &Gate,
+    source: &str,
+    generation: String,
+    checkpoint: String,
+    size: u64,
+) -> Result<(), Error> {
+    let mut shared = gate.lock()?;
+    shared.credit = shared.credit.saturating_sub(size);
+    let flight = Flight {
+        generation,
+        checkpoint,
+        bytes: size,
+        rust: false,
+        last: true,
+        covers: Vec::new(),
+        keys: Vec::new(),
+    };
+    if shared.flights.insert(source.to_owned(), flight).is_some() {
+        return Err(Error::Conflict);
+    }
+    Ok(())
+}
+
 fn capture_keys(capture: &Value) -> Vec<String> {
     capture["observations"]
         .as_array()
@@ -221,12 +289,57 @@ fn note_observed(shared: &mut Shared, flight: &Flight) {
     }
 }
 
+fn bind_outcome(gate: &Gate, value: &mut Value) -> Result<bool, Error> {
+    let key = match value["evidence"]["native_key"].as_str() {
+        Some(key) if value["evidence"]["capture_checkpoint"].is_string() => key.to_owned(),
+        _ => return Ok(false),
+    };
+    let mut shared = gate.lock()?;
+    let after = value["command_id"]
+        .as_str()
+        .and_then(|id| shared.dispatched.remove(id))
+        .unwrap_or(shared.sequence);
+    let deadline = std::time::Instant::now() + Duration::from_secs(15);
+    loop {
+        if let Some((checkpoint, sequence)) = shared.observed.get(&key)
+            && *sequence > after
+        {
+            value["evidence"]["capture_checkpoint"] = Value::String(checkpoint.clone());
+            return Ok(true);
+        }
+        if shared.closed || std::time::Instant::now() >= deadline {
+            return Ok(false);
+        }
+        shared = gate
+            .changed
+            .wait_timeout(shared, Duration::from_millis(50))
+            .map_err(|_| Error::WorkerPanicked)?
+            .0;
+    }
+}
+
+fn forward_outcome(
+    gate: &Gate,
+    to_gateway: &Mutex<UnixStream>,
+    value: &mut Value,
+) -> Result<bool, Error> {
+    if !bind_outcome(gate, value)? {
+        return Ok(false);
+    }
+    send(
+        &mut *to_gateway.lock().map_err(|_| Error::WorkerPanicked)?,
+        value,
+    )?;
+    Ok(true)
+}
+
 fn send_scan(
     gate: &Gate,
     to_gateway: &Mutex<UnixStream>,
     layer: Option<&dyn Overlay>,
     source: &str,
     capture: &Value,
+    mut covers: Covers,
 ) -> Result<bool, Error> {
     let generation = text(capture, "generation")?.to_owned();
     let checkpoint = text(capture, "checkpoint")?.to_owned();
@@ -274,6 +387,11 @@ fn send_scan(
                 bytes: size,
                 rust: true,
                 last,
+                covers: if last {
+                    std::mem::take(&mut covers)
+                } else {
+                    Vec::new()
+                },
                 keys: capture_keys(&chunk),
             },
         );
@@ -346,9 +464,12 @@ fn wait_committed(gate: &Gate, source: &str) -> Result<bool, Error> {
     Ok(true)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn produce(
     gate: &Gate,
     readers: &Readers,
+    held: &Held,
+    to_helper: &Mutex<UnixStream>,
     to_gateway: &Mutex<UnixStream>,
     layer: Option<&dyn Overlay>,
     store: Option<&Store>,
@@ -379,23 +500,31 @@ fn produce(
                 scan_id: format!("rs-scan-{epoch:x}-{ordinal}"),
                 now: now()?,
             };
-            let next = {
+            let (next, covers) = {
                 let mut guard = readers.lock().map_err(|_| Error::WorkerPanicked)?;
                 let reader = guard.get_mut(source).ok_or(Error::Invalid)?;
-                reader.next(&context)
+                let next = reader.next(&context);
+                let covers = held
+                    .lock()
+                    .map_err(|_| Error::WorkerPanicked)?
+                    .remove(source)
+                    .unwrap_or_default();
+                (next, covers)
             };
             let capture = match next {
                 Ok(Some(capture)) => capture,
                 Ok(None) => {
+                    release(to_helper, source, &covers)?;
                     persist(gate, readers, store, source)?;
                     continue;
                 }
                 Err(error) => {
                     eprintln!("ab-session: {source} reader: {error}");
+                    release(to_helper, source, &covers)?;
                     continue;
                 }
             };
-            if !send_scan(gate, to_gateway, layer, source, &capture)? {
+            if !send_scan(gate, to_gateway, layer, source, &capture, covers)? {
                 return Ok(());
             }
         }
@@ -438,6 +567,7 @@ fn gateway_frame(
     readers: &Readers,
     store: Option<&Store>,
     to_gateway: &Mutex<UnixStream>,
+    to_helper: &Mutex<UnixStream>,
     value: &Value,
 ) -> Result<bool, Error> {
     match value["t"].as_str() {
@@ -525,6 +655,7 @@ fn gateway_frame(
                         .ok_or(Error::Conflict)?
                         .commit()?;
                     persist(gate, readers, store, source)?;
+                    release(to_helper, source, &flight.covers)?;
                 }
                 return Ok(false);
             }
@@ -536,87 +667,6 @@ fn gateway_frame(
         }
         _ => Ok(true),
     }
-}
-
-fn helper_capture(
-    gate: &Gate,
-    to_helper: &Mutex<UnixStream>,
-    rust: &BTreeSet<String>,
-    value: &Value,
-    length: usize,
-) -> Result<bool, Error> {
-    let source = text(value, "source")?;
-    let checkpoint = value["checkpoint"].as_str().unwrap_or_default().to_owned();
-    let generation = value["generation"].as_str().unwrap_or_default().to_owned();
-    let size = u64::try_from(length).map_err(|_| Error::Invalid)?;
-    if rust.contains(source) {
-        send(
-            &mut *to_helper.lock().map_err(|_| Error::WorkerPanicked)?,
-            &json!({"t":"Committed","source":source,"checkpoint":checkpoint,"credit":size}),
-        )?;
-        return Ok(true);
-    }
-    let mut shared = gate.lock()?;
-    shared.credit = shared.credit.saturating_sub(size);
-    let previous = shared.flights.insert(
-        source.to_owned(),
-        Flight {
-            generation,
-            checkpoint,
-            bytes: size,
-            rust: false,
-            last: true,
-            keys: Vec::new(),
-        },
-    );
-    if previous.is_some() {
-        return Err(Error::Conflict);
-    }
-    Ok(false)
-}
-
-fn bind_outcome(gate: &Gate, value: &mut Value) -> Result<bool, Error> {
-    let key = match value["evidence"]["native_key"].as_str() {
-        Some(key) if value["evidence"]["capture_checkpoint"].is_string() => key.to_owned(),
-        _ => return Ok(false),
-    };
-    let mut shared = gate.lock()?;
-    let after = value["command_id"]
-        .as_str()
-        .and_then(|id| shared.dispatched.remove(id))
-        .unwrap_or(shared.sequence);
-    let deadline = std::time::Instant::now() + Duration::from_secs(15);
-    loop {
-        if let Some((checkpoint, sequence)) = shared.observed.get(&key)
-            && *sequence > after
-        {
-            value["evidence"]["capture_checkpoint"] = Value::String(checkpoint.clone());
-            return Ok(true);
-        }
-        if shared.closed || std::time::Instant::now() >= deadline {
-            return Ok(false);
-        }
-        shared = gate
-            .changed
-            .wait_timeout(shared, Duration::from_millis(50))
-            .map_err(|_| Error::WorkerPanicked)?
-            .0;
-    }
-}
-
-fn forward_outcome(
-    gate: &Gate,
-    to_gateway: &Mutex<UnixStream>,
-    value: &mut Value,
-) -> Result<bool, Error> {
-    if !bind_outcome(gate, value)? {
-        return Ok(false);
-    }
-    send(
-        &mut *to_gateway.lock().map_err(|_| Error::WorkerPanicked)?,
-        value,
-    )?;
-    Ok(true)
 }
 
 pub fn relay(
@@ -657,6 +707,7 @@ pub fn relay_layered(
         changed: Condvar::new(),
     };
     let readers = Mutex::new(readers);
+    let held: Held = Mutex::new(BTreeMap::new());
     let to_gateway = Arc::new(Mutex::new(gateway.try_clone()?));
     let to_helper = Mutex::new(helper.try_clone()?);
     let mut gateway_read = gateway;
@@ -671,7 +722,7 @@ pub fn relay_layered(
                     Some(layer) => layer.gateway(scope, &value, &to_gateway)?,
                     None => true,
                 };
-                let pass = gateway_frame(&gate, &readers, store, &to_gateway, &value)?;
+                let pass = gateway_frame(&gate, &readers, store, &to_gateway, &to_helper, &value)?;
                 if layered && pass {
                     to_helper
                         .lock()
@@ -689,7 +740,16 @@ pub fn relay_layered(
         });
         let producer = (!rust.is_empty()).then(|| {
             scope.spawn(|| -> Result<(), Error> {
-                let result = produce(&gate, &readers, &to_gateway, layer, store, options.poll);
+                let result = produce(
+                    &gate,
+                    &readers,
+                    &held,
+                    &to_helper,
+                    &to_gateway,
+                    layer,
+                    store,
+                    options.poll,
+                );
                 gate.close();
                 if result.is_err() {
                     let _ = helper_shutdown.shutdown(Shutdown::Both);
@@ -708,9 +768,24 @@ pub fn relay_layered(
                 let (bytes, mut value) = read_frame(&mut helper_read)?;
                 match value["t"].as_str() {
                     Some("Capture") => {
-                        if helper_capture(&gate, &to_helper, &rust, &value, bytes.len())? {
+                        let source = text(&value, "source")?;
+                        let checkpoint =
+                            value["checkpoint"].as_str().unwrap_or_default().to_owned();
+                        let generation =
+                            value["generation"].as_str().unwrap_or_default().to_owned();
+                        let size = u64::try_from(bytes.len()).map_err(|_| Error::Invalid)?;
+                        if rust.contains(source) {
+                            ingest(
+                                &readers,
+                                &held,
+                                &to_helper,
+                                source,
+                                &value,
+                                (checkpoint, size),
+                            )?;
                             continue;
                         }
+                        register(&gate, source, generation, checkpoint, size)?;
                     }
                     Some("Outcome") if !rust.is_empty() => {
                         if forward_outcome(&gate, &to_gateway, &mut value)? {

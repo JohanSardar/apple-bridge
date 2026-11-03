@@ -330,7 +330,7 @@ pub(super) fn control_calendar(
     Ok(json!({"effect_done":true,"effect_at":effect_at,"capture_bytes":bytes}))
 }
 
-impl Session {
+impl Session<'_> {
     pub(super) fn calendar_prepare(&mut self, state: &Shared, frame: &Value) -> Result<()> {
         let command = string(frame, "command_id");
         let action = &frame["action"];

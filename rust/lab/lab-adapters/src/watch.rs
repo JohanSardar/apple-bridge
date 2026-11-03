@@ -337,6 +337,32 @@ impl Watcher {
             .find(|(change, _)| change["op"] != "delete" && matches(&change["record"]))
             .map(|(_, at)| *at)
     }
+    #[must_use]
+    pub fn upserts_of(&self, collection: &str) -> (usize, Option<Instant>) {
+        let state = lock(&self.state);
+        let mut last: Option<Instant> = None;
+        let mut count = 0;
+        for (change, at) in &state.changes {
+            if change["op"] != "delete" && change["record"]["collection"] == collection {
+                count += 1;
+                last = Some(last.map_or(*at, |seen| seen.max(*at)));
+            }
+        }
+        (count, last)
+    }
+    #[must_use]
+    pub fn data_for_title(&self, collection: &str, title: &str) -> Vec<Value> {
+        lock(&self.state)
+            .changes
+            .iter()
+            .filter(|(change, _)| {
+                change["op"] != "delete"
+                    && change["record"]["collection"] == collection
+                    && change["record"]["data"]["title"] == title
+            })
+            .map(|(change, _)| change["record"]["data"].clone())
+            .collect()
+    }
     pub fn close(&mut self) {
         self.stop.store(true, Ordering::SeqCst);
         if let Some(mut child) = lock(&self.child).take() {
