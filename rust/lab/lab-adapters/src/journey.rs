@@ -6,18 +6,23 @@ use crate::{
     commands,
     http::{Client, random_id},
     replicas::{self, Endpoint},
+    restart,
 };
 use lab_runner::Evidence;
 use lab_world::{Error, Result, World};
 use serde_json::{Value, json};
 use std::time::{Duration, Instant};
 
-pub const COMMAND_SCENARIOS: [&str; 5] = [
+pub const COMMAND_SCENARIOS: [&str; 9] = [
     "CORE-CMD-IDEMPOTENT",
     "CORE-CMD-ERA",
     "CORE-CMD-LOST-RESPONSE",
     "CORE-CMD-CONFLICT",
     "CORE-CMD-READ-YOUR-WRITE",
+    "CORE-CMD-CRASH-AMBIGUOUS",
+    "CORE-CMD-EXPIRY",
+    "CORE-CMD-CLOCK-JUMP",
+    "CORE-CMD-OFFLINE",
 ];
 pub(crate) const GATEWAY_SCOPE: &str = "reminders:read,reminders:write,system:read";
 
@@ -87,7 +92,7 @@ fn finish(world: &World, observed: &Observed, evidence: &mut Evidence) -> Result
     );
     Ok(())
 }
-fn is_error(value: &Value, code: &str) -> bool {
+pub fn is_error(value: &Value, code: &str) -> bool {
     value["error"]["code"] == code
 }
 fn all_endpoints(world: &World) -> Result<Vec<(Option<usize>, Client, String)>> {
@@ -168,32 +173,7 @@ pub fn command_journey(world: &mut World, _: &Value, evidence: &mut Evidence) ->
         .and_then(|r| r["id"].as_str())
         .ok_or_else(|| Error::Invalid("fixture list missing".into()))?
         .to_owned();
-    let mut scope_ok = true;
-    for (_, client, token) in &scoped {
-        let scoped_client = Client::at(client.address(), token);
-        let page = scoped_client.call(
-            "records.query",
-            &json!({"collection":"reminders.reminder","include_aliases":true}),
-            20,
-        )?;
-        scope_ok &= page.is_some_and(|p| {
-            p["records"].as_array().is_none_or(Vec::is_empty)
-                && p["aliases"].as_array().is_none_or(Vec::is_empty)
-        });
-        if let Some(record) = reminders.first() {
-            let path = format!(
-                "/v1/records/{}/{}",
-                record["collection"].as_str().unwrap_or_default(),
-                record["id"].as_str().unwrap_or_default()
-            );
-            scope_ok &= scoped_client.request("GET", &path, &[], None, 20)?.status == 404;
-        }
-    }
-    evidence.check(
-        "scope_query_and_get",
-        scope_ok,
-        "system:read cannot query or fetch reminders",
-    );
+    scope_probe(&scoped, &reminders, evidence)?;
     let counts = |clients: Vec<Client>| -> Vec<usize> {
         clients
             .iter()
@@ -220,6 +200,7 @@ pub fn command_journey(world: &mut World, _: &Value, evidence: &mut Evidence) ->
     scope_commands(world, &scoped, &list_id, evidence)?;
     let reminder = reminders.last().cloned().unwrap_or(Value::Null);
     run_scenario(world, &gateway, &list_id, &reminder, &observers, evidence)?;
+    world.clock_offset(0)?;
     finish(world, &observed, evidence)?;
     latency_assertions(&seen_at, evidence);
     stream_assertions(world, &observed, &observers, evidence);
@@ -234,14 +215,16 @@ fn run_scenario(
     observers: &Observers,
     evidence: &mut Evidence,
 ) -> Result<()> {
-    match evidence.scenario.as_str() {
+    let scenario = evidence.scenario.clone();
+    match scenario.as_str() {
         "CORE-CMD-CONFLICT" => commands::conflict(world, reminder, evidence),
         "CORE-CMD-READ-YOUR-WRITE" => {
             commands::read_your_write(world, gateway, list_id, observers, evidence)
         }
         "CORE-CMD-ERA" => commands::era(world, list_id, observers, evidence),
         "CORE-CMD-LOST-RESPONSE" => commands::lost_response(world, list_id, evidence),
-        _ => idempotent(world, gateway, list_id, evidence),
+        "CORE-CMD-IDEMPOTENT" => idempotent(world, gateway, list_id, evidence),
+        other => restart::run(other, world, gateway, list_id, evidence),
     }
 }
 fn latency_assertions(seen_at: &[Option<Duration>], evidence: &mut Evidence) {
@@ -252,6 +235,39 @@ fn latency_assertions(seen_at: &[Option<Duration>], evidence: &mut Evidence) {
             "external change visible through the public API within one second",
         );
     }
+}
+fn scope_probe(
+    scoped: &[(Option<usize>, Client, String)],
+    reminders: &[Value],
+    evidence: &mut Evidence,
+) -> Result<()> {
+    let mut scope_ok = true;
+    for (_, client, token) in scoped {
+        let scoped_client = Client::at(client.address(), token);
+        let page = scoped_client.call(
+            "records.query",
+            &json!({"collection":"reminders.reminder","include_aliases":true}),
+            20,
+        )?;
+        scope_ok &= page.is_some_and(|p| {
+            p["records"].as_array().is_none_or(Vec::is_empty)
+                && p["aliases"].as_array().is_none_or(Vec::is_empty)
+        });
+        if let Some(record) = reminders.first() {
+            let path = format!(
+                "/v1/records/{}/{}",
+                record["collection"].as_str().unwrap_or_default(),
+                record["id"].as_str().unwrap_or_default()
+            );
+            scope_ok &= scoped_client.request("GET", &path, &[], None, 20)?.status == 404;
+        }
+    }
+    evidence.check(
+        "scope_query_and_get",
+        scope_ok,
+        "system:read cannot query or fetch reminders",
+    );
+    Ok(())
 }
 fn scope_commands(
     world: &World,

@@ -10,6 +10,7 @@ pub mod media;
 pub mod poster;
 pub mod queries;
 pub mod replicas;
+pub mod restart;
 pub mod watch;
 use lab_runner::Registry;
 use lab_world::Error;
