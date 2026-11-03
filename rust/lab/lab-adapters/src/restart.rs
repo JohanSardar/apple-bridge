@@ -288,6 +288,8 @@ pub fn run(
         "CORE-CMD-EXPIRY" => expiry(world, gateway, list_id, evidence),
         "CORE-CMD-CLOCK-JUMP" => clock_jump(world, gateway, list_id, evidence),
         "CORE-CMD-OFFLINE" => offline(world, gateway, list_id, evidence),
-        _ => Err(lab_world::Error::Invalid(format!("restart case not ported: {scenario}"))),
+        _ => Err(lab_world::Error::Invalid(format!(
+            "restart case not ported: {scenario}"
+        ))),
     }
 }
