@@ -1,7 +1,9 @@
 pub mod assertions;
+pub mod binary;
 pub mod blobs;
 pub mod cleanup;
 pub mod commands;
+pub mod core;
 pub mod history;
 pub mod http;
 pub mod imports;
@@ -11,6 +13,7 @@ pub mod poster;
 pub mod queries;
 pub mod replicas;
 pub mod restart;
+pub mod robust;
 pub mod watch;
 use lab_runner::Registry;
 use lab_world::Error;
@@ -28,9 +31,15 @@ pub fn registry() -> Registry {
     registry.register("world", |world, input, evidence| {
         let replicas = input["replicas"].as_u64().unwrap_or(0);
         let id = evidence.scenario.as_str();
-        let self_started = media::MEDIA_SCENARIOS.contains(&id) || id == "MSG-MEDIA-CLEANUP";
+        let self_started = media::MEDIA_SCENARIOS.contains(&id)
+            || id == "MSG-MEDIA-CLEANUP"
+            || core::IGNORE_REPLICAS.contains(&id);
         if replicas != 0 && blobs::is_blob(id) {
             blobs::configure(world, id, usize::try_from(replicas).unwrap_or(0))?;
+        } else if replicas != 0 && robust::SCENARIOS.contains(&id) {
+            robust::start(world, id, usize::try_from(replicas).unwrap_or(0))?;
+        } else if replicas != 0 && binary::SCENARIOS.contains(&id) {
+            binary::start(world, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && journey::COMMAND_SCENARIOS.contains(&id) {
             replicas::start(world, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0
@@ -57,9 +66,22 @@ pub fn registry() -> Registry {
     registry.register("notes", imports::notes);
     registry.register("usage", imports::usage);
     registry.register("seed", journey::seed);
-    registry.register("converge", journey::converge);
+    registry.register("converge", binary::converge);
+    registry.register("connect", binary::connect);
+    registry.register("disconnect", binary::disconnect);
+    registry.register("source_ready", binary::source_ready);
+    registry.register("capture_safety", binary::capture_safety);
+    registry.register("old_sse_cursor", binary::old_sse_cursor);
+    registry.register("finish:CORE-BOOT", binary::finish);
+    registry.register("finish:CORE-DISCONNECT-DETECT", binary::finish);
     registry.register("media_variants", media::media_variants);
     registry.register("messages_commands", cleanup::messages_commands);
     registry.register("command_journey", journey::command_journey);
+    registry.register("external_change", core::external_change);
+    registry.register("acked_data_visible", core::acked_data_visible);
+    registry.register("scenario:CORE-CAPTURE-ALIASES", core::capture_aliases);
+    registry.register("robustness", robust::robustness);
+    registry.register("finish:CORE-DOCTOR", robust::finish);
+    registry.register("finish:CORE-CLOCK-DELAY", robust::finish);
     registry
 }

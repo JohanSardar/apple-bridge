@@ -236,6 +236,15 @@ fn latency_assertions(seen_at: &[Option<Duration>], evidence: &mut Evidence) {
         );
     }
 }
+pub(crate) fn scope_probe_for(
+    world: &World,
+    gateway: &Client,
+    evidence: &mut Evidence,
+) -> Result<()> {
+    let scoped = all_endpoints(world)?;
+    let reminders = record_set(gateway, "reminders.reminder")?;
+    scope_probe(&scoped, &reminders, evidence)
+}
 fn scope_probe(
     scoped: &[(Option<usize>, Client, String)],
     reminders: &[Value],

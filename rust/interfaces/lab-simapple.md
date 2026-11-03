@@ -119,3 +119,11 @@ Gate: `python3 rust/lab/families-parity.py --families $T/lab-families --go-lab b
 `--media` runs WEB-MEDIA-VARIANTS and MSG-MEDIA-CLEANUP the same way and needs the native `MessagesSafetyChecks` binary (`AB_LAB_NATIVE_OUTPUT`), so it runs on Darwin. Verdicts are identical on the MacBook Pro: MSG-MEDIA-CLEANUP passes its 19 fixture cases in both harnesses, WEB-MEDIA-VARIANTS passes all 98 shared assertions. Two adapter bugs were fixed to get there: the sent video and audio fixtures lacked the trailing `free` box that Go's `MediaFixture` appends (so the panorama source geometry fell back to the default clip), and the panorama poster was fetched once instead of awaited, with no pixel checks. The adapter now decodes the poster (`zune-png`, `zune-jpeg`) and ports the centre-marker and edge-contrast checks.
 
 WEB-MEDIA-CAP blob ordering is owned by S-BLOB-ORDER and is unchanged.
+
+## Core bulk port A (Phase 8)
+
+`lab-adapters` ports CORE-ACK-DURABLE, CORE-CAPTURE-ALIASES, CORE-CREDENTIAL-STORE, CORE-BOOT, CORE-DISCONNECT-DETECT, CORE-DOCTOR and CORE-CLOCK-DELAY (`core.rs`, `binary.rs`, `robust.rs`). One run of `families-parity.py` over the seven unchanged YAML files gives identical per-assertion verdicts for the Go harness and the Rust gateway.
+
+Stable additions: the peer control route `/capture-exact` sends a Capture frame unchanged (explicit generation, predecessor, checkpoint, aliases) and waits for its Committed; `lab-world` gains `World::blackhole` (silently drops proxied bytes until `heal`) and `World::delay_both` (delays both proxied directions); `lab-runner` runs a registered `scenario:<id>` step for YAML files with no steps and a registered `finish:<id>` step before cleanup. The `robustness` action is dispatched by `robust.rs` (`doctor`, `clock-delay`, `credential-store`, `cred-lifecycle`); `cred-lifecycle` has no sim level and is compile-only.
+
+Not ported in this slice: CORE-BENCH (peer messages seed lacks the `needle` fixture), CORE-DISK-FULL (`hdiutil` capped volume, Darwin only), CORE-GAP-REJECT and CORE-FEED-PIPELINED-ACKS (frame-level TLS/WebSocket proxy), CORE-FORGED-DELEGATION, CORE-GATEWAY-DIALS and CORE-CLOCK-DELAY-GATEWAY-DIALS (mTLS dial worlds).
