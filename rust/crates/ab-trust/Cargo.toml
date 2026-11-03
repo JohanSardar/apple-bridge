@@ -40,4 +40,4 @@ serde_cbor_2 = "0.13"
 rusqlite.workspace = true
 
 [features]
-lab-harness = []
+lab-harness = ["ab-domain/lab"]

@@ -23,4 +23,4 @@ unicode-normalization = "0.1"
 ed25519-dalek.workspace = true
 
 [features]
-lab = []
+lab = ["ab-domain/lab"]
