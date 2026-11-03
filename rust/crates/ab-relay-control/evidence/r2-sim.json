@@ -56,5 +56,28 @@
     "AB_REMOTE_BINARY=<target>/debug/examples/bridge go test ./rust/crates/ab-remote/fixture -count=1",
     "go run ./tools/lint .",
     "python3 rust/check-native-graph.py"
-  ]
+  ],
+  "verified_code_head": "e3a684ea4ccaa116bf13da3af2245eb3458c9f46",
+  "bridge_lab_results": {
+    "RELAY-CT-INDEPENDENT": {
+      "passed": true,
+      "impl": "rust",
+      "assertions_passed": 11
+    },
+    "RELAY-CAA-ACCOUNT": {
+      "passed": true,
+      "impl": "rust",
+      "assertions_passed": 11
+    }
+  },
+  "gate_results": {
+    "all_feature_rust_tests": 14,
+    "default_mode_rust_tests": 2,
+    "all_feature_clippy": "passed",
+    "runtime_check": "passed",
+    "cargo_fmt": "passed",
+    "make_lint_including_go_vet": "passed",
+    "native_dependency_graph": "passed",
+    "featuregraph_and_scenario_validation": "passed"
+  }
 }
