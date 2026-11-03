@@ -239,7 +239,10 @@ fn sections(_: &World, evidence: &mut Evidence) {
         return;
     };
     evidence.check("native_sections_build", true, "RemindersStoreChecks built");
-    let (ok, output) = combined(&directory.join("RemindersStoreChecks"), &["--section-checks"]);
+    let (ok, output) = combined(
+        &directory.join("RemindersStoreChecks"),
+        &["--section-checks"],
+    );
     evidence.check(
         "store_effects_and_invalidation",
         ok && output.contains("section checks passed"),

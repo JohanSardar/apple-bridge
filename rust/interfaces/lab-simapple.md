@@ -263,3 +263,11 @@ SIRI-INTENTS (sim level only) runs the shortcut-probe simulation (one `AB Bridge
 `helper_real` registers HELPER-LIVE-BACKFILL, HELPER-RELEASE-COMMANDS, HELPER-RESTART-REAL, HELPER-SESSION-SOAK, HELPER-SIGNED-APP-CACHE and HELPER-TCC-READY with `Registry::register_real`. Compile-only: nothing runs them. Independent truth fixtures go through `open -a $AB_LAB_TRUTH_APP`. Gaps against Go: live backfill needs a world started with the backfill hold, and the cold/warm world rebuilds of the signed app cache and the post-restart reminder flow of HELPER-RESTART-REAL are not ported.
 
 Gate: `python3 rust/lab/families-parity.py ... --helper` (with `AB_SESSION_BINARY` set) and `--darwin-usage --calls`, identical per-assertion verdicts with the Go harness against the Rust gateway built with `--features lab-queries`.
+
+## Remaining Reminders scenarios (Phase 8)
+
+`reminders_dates.rs` ports REM-DST (`runDateFixtures`): ten DST and month-end fixtures injected through `/external-change`, each read back from the gateway with `due`, `due_all_day` and `alarms` unchanged, then replica convergence. It runs on Linux. It is dispatched from the `reminders_recurring` step by scenario ID and gets the same seeded one-replica world as the native scenarios (`native_runner::starts_world`).
+
+`reminders_store.rs` ports REM-STORE-READ, REM-STORE-DECODE (`readmodels` step), REM-STORE-PERF and REM-SECTIONS. All four shell out to the Swift checks through `packaging/dev/check-reminders-store.sh` and `packaging/dev/build-native.sh`, so they run on Darwin only and must be started from the repository root. REM-STORE-READ and REM-STORE-DECODE inject the three synthetic reader observations into the peer and compare list, flag, parent and unsupported-field behaviour. REM-STORE-PERF reads the timing profile and checks each mode against its budget (100 ms full, 5 ms for 1 and 10 changed, 50 ms otherwise, 200 samples). REM-SECTIONS runs `RemindersStoreChecks --section-checks` and the helper's `reminders-fixture-checks`. The `latency` then-step is a no-op for REM-STORE-PERF only, as Go ignores it.
+
+Gate: `families-parity.py ... --reminders` (now includes `reminders/REM-DST`) on Linux, and `--reminders-mac` for the four Darwin scenarios on the MacBook Pro. Verdicts are identical in both.

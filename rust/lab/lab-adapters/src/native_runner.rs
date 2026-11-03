@@ -611,6 +611,22 @@ pub fn register(registry: &mut lab_runner::Registry) {
     ] {
         registry.register(step, run);
     }
+    registry.register("reminders_store", |world, _, evidence| {
+        crate::reminders_store::run(world, evidence)
+    });
+    registry.register("reminders_store_perf", |world, _, evidence| {
+        crate::reminders_store::run(world, evidence)
+    });
+    registry.register("latency", |_, _, evidence| {
+        if evidence.scenario == "REM-STORE-PERF" {
+            Ok(())
+        } else {
+            Err(Error::Invalid(format!(
+                "latency not ported for {}",
+                evidence.scenario
+            )))
+        }
+    });
     registry.register("fixture", |_, _, _| Ok(()));
 }
 

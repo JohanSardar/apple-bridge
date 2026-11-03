@@ -59,6 +59,7 @@ pub mod remote_real;
 pub mod replicas;
 pub mod reminders_dates;
 pub mod reminders_store;
+pub mod replicas;
 pub mod restart;
 pub mod robust;
 pub mod safari;
