@@ -80,6 +80,7 @@ CALENDAR_NATIVE = ['calendar/CAL-STORE-READ', 'calendar/CAL-FUTURE-COUNT-MATH', 
                    'calendar/CAL-INVALIDATED-EVENT']
 VISION_SCENARIOS = ['vision/AUD-SIM', 'vision/PDF-ANNOTATE', 'vision/PDF-TEXT', 'vision/VIS-OCR']
 VISION_NATIVE_SCENARIOS = ['vision/CAP-SIM']
+WEB_AGENT_SCENARIOS = ['web/WEB-AGENT-CREDENTIALS', 'web/WEB-AGENT-LEVELS', 'web/WEB-AGENT-ACTIVITY']
 SCENARIOS = ['CORE-QUERY-ROUNDTRIP', 'CORE-QUERY-BLOB', 'CORE-QUERY-SCOPE', 'CORE-QUERY-DEADLINE',
              *JOURNEY_SCENARIOS, *CORE_SCENARIOS, *CONTACTS_SCENARIOS, *NOTES_SCENARIOS]
 FRONTDOOR_SCENARIOS = ['CORE-REST-MCP-PARITY', 'CORE-LOCALHOST-DEFENSE']
@@ -141,6 +142,7 @@ def main():
     parser.add_argument('--calendar-native', dest='calendar_native', action='store_true')
     parser.add_argument('--vision', action='store_true')
     parser.add_argument('--vision-native', dest='vision_native', action='store_true')
+    parser.add_argument('--web-agents', dest='web_agents', action='store_true')
     args = parser.parse_args()
     for flag, group in [(args.usage, USAGE_SCENARIOS), (args.darwin_usage, DARWIN_USAGE_SCENARIOS), (args.calls, CALLS_SCENARIOS), (args.helper, HELPER_SCENARIOS)]:
         if flag:
@@ -191,6 +193,8 @@ def main():
         args.scenario = (args.scenario or []) + CALENDAR_SCENARIOS
     if args.calendar_native:
         args.scenario = (args.scenario or []) + CALENDAR_NATIVE
+    if args.web_agents:
+        args.scenario = (args.scenario or []) + WEB_AGENT_SCENARIOS
     out = Path(args.output).resolve()
     out.mkdir(mode=0o700, parents=True, exist_ok=False)
     root = Path(__file__).resolve().parents[2] / 'lab' / 'scenarios'
