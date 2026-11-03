@@ -19,6 +19,10 @@ tokio-tungstenite = { version = "0.28", default-features = false, features = ["c
 futures-util = { version = "0.3", features = ["sink"] }
 hex = "0.4"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+base64 = "0.22"
+hyper.workspace = true
+hyper-util = { version = "0.1", features = ["tokio", "server", "http1"] }
+http-body-util = "0.1"
 [dev-dependencies]
 sha2.workspace = true
 tempfile = "3"
