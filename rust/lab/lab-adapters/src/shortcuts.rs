@@ -10,11 +10,14 @@ use std::{
     time::{Duration, Instant, SystemTime},
 };
 
-pub const SCENARIOS: [(&str, &str); 11] = [
+pub const SCENARIOS: [(&str, &str); 14] = [
     ("FILES-TRANSFORM", "files_transform"),
     ("SC-ACTIONS", "shortcuts_actions"),
     ("SC-CAPTURE", "shortcuts_checks"),
     ("SC-RUN-REAL", "shortcuts_checks"),
+    ("SC-RUN", "shortcuts_run"),
+    ("FOC-SIM", "focus_sim"),
+    ("FOC-PHONE-SYNC", "focus_sim"),
     ("CLK-SIM", "shortcuts_checks"),
     ("CLK-ALARM-REAL", "shortcuts_checks"),
     ("CLK-TIMER-REAL", "shortcuts_checks"),
@@ -33,7 +36,7 @@ pub fn inject(scenario: &mut Scenario) {
     }
 }
 
-fn native_directory() -> Option<PathBuf> {
+pub(crate) fn native_directory() -> Option<PathBuf> {
     env::var("AB_LAB_NATIVE_OUTPUT")
         .ok()
         .or_else(|| {
@@ -94,7 +97,7 @@ fn native_binary(
     directory.map(|d| d.join(target))
 }
 
-fn run_native(binary: &Path, args: &[&str]) -> (bool, String) {
+pub(crate) fn run_native(binary: &Path, args: &[&str]) -> (bool, String) {
     match Command::new(binary).args(args).output() {
         Ok(out) => (
             out.status.success(),
@@ -104,7 +107,7 @@ fn run_native(binary: &Path, args: &[&str]) -> (bool, String) {
     }
 }
 
-fn await_until(seconds: u64, mut ready: impl FnMut() -> bool) -> bool {
+pub(crate) fn await_until(seconds: u64, mut ready: impl FnMut() -> bool) -> bool {
     let deadline = Instant::now() + Duration::from_secs(seconds);
     loop {
         if ready() {
@@ -302,7 +305,7 @@ pub fn shortcuts_real_only(_: &mut World, _: &Value, evidence: &mut Evidence) ->
     Ok(())
 }
 
-fn checks_binary() -> Result<PathBuf> {
+pub(crate) fn checks_binary() -> Result<PathBuf> {
     let gateway = crate::replicas::binary()?;
     let path = env::var("AB_LAB_SHORTCUTS_CHECKS").map_or_else(
         |_| {
@@ -323,7 +326,7 @@ fn checks_binary() -> Result<PathBuf> {
     }
 }
 
-fn native_target(
+pub(crate) fn native_target(
     evidence: &mut Evidence,
     target: &str,
     inputs: &[&str],
@@ -347,21 +350,21 @@ fn native_target(
     directory.map(|d| d.join(target))
 }
 
-const SHORTCUTS_NATIVE_INPUTS: [&str; 4] = [
+pub(crate) const SHORTCUTS_NATIVE_INPUTS: [&str; 4] = [
     "native/Package.swift",
     "native/Sources/ShortcutsChecks",
     "native/Sources/ShortcutsSource",
     "native/Sources/SourceSupport",
 ];
 
-fn scratch_directory(id: &str) -> PathBuf {
+pub(crate) fn scratch_directory(id: &str) -> PathBuf {
     let nanos = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .map_or(0, |d| d.as_nanos());
     env::temp_dir().join(format!("ab-lab-{id}-{}-{nanos}", std::process::id()))
 }
 
-fn run_checks(checks: &Path, args: &[&str], evidence: &mut Evidence) -> Option<Value> {
+pub(crate) fn run_checks(checks: &Path, args: &[&str], evidence: &mut Evidence) -> Option<Value> {
     let output = Command::new(checks).args(args).output();
     let parsed = output
         .as_ref()
