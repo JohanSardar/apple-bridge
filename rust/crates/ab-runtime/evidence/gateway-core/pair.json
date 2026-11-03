@@ -1,0 +1,1 @@
+{"scenario":"CORE-PAIR","go_baseline":"pass","rust_before":"fail: wrong_expired_replayed_code_rejected","rust_after":"pass","checks":["wrong expired replayed and server-extended code rejected","live replica revoked within one second","revoked replica receives no further data"],"host":"build","level":"sim"}

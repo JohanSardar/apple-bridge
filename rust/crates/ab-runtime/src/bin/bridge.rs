@@ -282,11 +282,11 @@ fn manage(
                 }
                 println!(
                     "{}",
-                    authority.pair(
+                    authority.pair_with_ttl(
                         &args.flag("peer-addr", &config.peer_address),
                         &args.flag("dial-replica", ""),
                         grants(args)?,
-                        i64::try_from(ttl.as_secs()).map_err(|_| Error::Invalid)?
+                        ttl
                     )?
                 );
             }

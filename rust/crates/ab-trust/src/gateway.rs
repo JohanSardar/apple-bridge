@@ -64,8 +64,24 @@ impl Authority {
         grants: Vec<Grant>,
         ttl_seconds: i64,
     ) -> Result<String, Error> {
+        self.pair_with_ttl(
+            address,
+            dial,
+            grants,
+            std::time::Duration::from_secs(u64::try_from(ttl_seconds).map_err(|_| Error::Invalid)?),
+        )
+    }
+
+    pub fn pair_with_ttl(
+        &self,
+        address: &str,
+        dial: &str,
+        grants: Vec<Grant>,
+        ttl: std::time::Duration,
+    ) -> Result<String, Error> {
         if address.is_empty()
-            || !(1..=600).contains(&ttl_seconds)
+            || ttl.is_zero()
+            || ttl > std::time::Duration::from_secs(600)
             || !dial.is_empty() && dial.parse::<std::net::SocketAddr>().is_err()
         {
             return Err(Error::Invalid);
@@ -81,7 +97,7 @@ impl Authority {
             fingerprint: self.fingerprint.clone(),
             secret: STANDARD.encode(secret),
             expires_at: (jiff::Timestamp::now()
-                .checked_add(jiff::SignedDuration::from_secs(ttl_seconds))
+                .checked_add(jiff::SignedDuration::try_from(ttl).map_err(|_| Error::Invalid)?)
                 .map_err(|_| Error::Invalid)?)
             .to_string(),
         };
