@@ -86,3 +86,7 @@ sim-parallel:
 .PHONY: sim-run-at-end
 sim-run-at-end:
 	python3 lab/testing/sim_parallel.py --parallel 1 --run-at-end --timeout $(SIM_TIMEOUT) --output $(SIM_OUTPUT) $(if $(SIM_SELECT),--select $(SIM_SELECT),)
+
+.PHONY: gateway-matrix
+gateway-matrix:
+	RUST_BRIDGE="$(RUST_BRIDGE)" SIM_JOBS="$(SIM_JOBS)" SIM_TIMEOUT="$(SIM_TIMEOUT)" SIM_OUTPUT="$(SIM_OUTPUT)" SIM_SELECT="$(SIM_SELECT)" packaging/dev/gateway-matrix.sh

@@ -2,6 +2,8 @@ import argparse
 import concurrent.futures
 import json
 import os
+import re
+import tempfile
 from pathlib import Path
 import platform
 import signal
@@ -10,11 +12,18 @@ import sys
 import time
 
 
-def execute(entry, binary, timeout, logs):
+def execute(entry, binary, timeout, logs, implementation, rust_binary, startup_blocker):
     started = time.monotonic()
     target = logs / (entry['id'] + '.log')
+    if 'gateway=rust' in implementation and (startup_blocker or not rust_binary or not Path(rust_binary).is_file()):
+        blockers = gateway_blockers(entry) + [startup_blocker or 'ab-runtime: Rust bridge executable unavailable']
+        target.write_text('\n'.join(blockers) + '\n')
+        return {'id': entry['id'], 'seconds': 0, 'status': 'blocked', 'execution_status': 'not-started', 'implementation': implementation, 'required_features': entry['packages'], 'blocked_on': blockers}
     with target.open('wb') as output:
         command = [binary, 'run', entry['path'], '--level', 'sim', '--prebuilt', '--json']
+        command += ['--impl', implementation]
+        if rust_binary:
+            command += ['--rust-binary', rust_binary]
         marker = logs / (entry['id'] + '.started')
         if platform.system() == 'Darwin':
             handshake = 'import os,sys,time; open(sys.argv[1]+".tmp","w").write(str(time.monotonic())); os.replace(sys.argv[1]+".tmp",sys.argv[1]); os.execv(sys.argv[2],sys.argv[2:])'
@@ -46,7 +55,32 @@ def execute(entry, binary, timeout, logs):
                 os.killpg(process.pid, signal.SIGKILL)
             except ProcessLookupError:
                 pass
-    return {'id': entry['id'], 'seconds': round(time.monotonic() - started, 3), 'status': status}
+    row = {'id': entry['id'], 'seconds': round(time.monotonic() - started, 3), 'status': status, 'implementation': implementation}
+    if 'gateway=rust' in implementation:
+        blockers = gateway_blockers(entry)
+        if startup_blocker:
+            blockers.append(startup_blocker)
+        if not rust_binary or not Path(rust_binary).is_file():
+            blockers.append('ab-runtime: Rust bridge executable unavailable')
+        row['required_features'] = entry['packages']
+        row['blocked_on'] = blockers
+        if blockers:
+            row['execution_status'] = status
+            row['status'] = 'blocked'
+    return row
+
+
+def gateway_blockers(entry):
+    blockers = ['harness: semantic product helper ' + call for call in entry.get('semantic_contract_calls', [])]
+    for name in entry.get('code_paths', []):
+        path = Path(name)
+        if not path.is_file():
+            continue
+        source = path.read_text()
+        dependencies = sorted(set(re.findall(r'"github.com/JohanSardar/apple-bridge/internal/(?!contracts")([^"/]+)"', source)))
+        if dependencies:
+            blockers.append('harness: ' + name + ' still imports product implementations: ' + ', '.join(dependencies))
+    return blockers
 
 
 def main():
@@ -57,6 +91,8 @@ def main():
     parser.add_argument('--run-at-end', action='store_true')
     parser.add_argument('--host', choices=['linux', 'darwin', 'all'], default=platform.system().lower())
     parser.add_argument('--binary', default='bin/bridge-lab')
+    parser.add_argument('--impl', default='gateway=go,replica=go')
+    parser.add_argument('--rust-binary', default='')
     parser.add_argument('--map', default='lab/test-selection.json')
     parser.add_argument('--output', required=True)
     args = parser.parse_args()
@@ -81,15 +117,37 @@ def main():
     if destination.exists():
         parser.error('output already exists; use a new run directory')
     destination.mkdir(parents=True, mode=0o700)
+    startup_blocker = ''
+    if 'gateway=rust' in args.impl and args.rust_binary and Path(args.rust_binary).is_file():
+        with tempfile.TemporaryDirectory(prefix='ab-gateway-probe-') as home:
+            probe_socket = str(Path(home) / 'ipc.sock')
+            with (destination / 'gateway-startup.log').open('wb') as log:
+                process = subprocess.Popen([str(Path(args.rust_binary).resolve()), 'start', '--role', 'gateway', '--home', home, '--socket', probe_socket, '--peer-addr', '127.0.0.1:0', '--api-addr', '127.0.0.1:0'], stdout=log, stderr=log, env=dict(os.environ, APPLE_BRIDGE_SECRET_STORE='file'))
+                try:
+                    code = process.wait(timeout=5)
+                    startup_blocker = f'ab-runtime/ab-applepeer: start --role gateway exited {code} before ipc/1 readiness'
+                except subprocess.TimeoutExpired:
+                    if not Path(probe_socket).exists():
+                        startup_blocker = 'ab-runtime/ab-applepeer: gateway ipc/1 socket unavailable after 5s'
+                finally:
+                    if process.poll() is None:
+                        process.terminate()
+                        try:
+                            process.wait(timeout=5)
+                        except subprocess.TimeoutExpired:
+                            process.kill()
+                            process.wait()
     binary = str(binary_path)
     started = time.monotonic()
     rows = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.parallel) as pool:
-        futures = [pool.submit(execute, e, binary, args.timeout, destination) for e in entries]
+        futures = [pool.submit(execute, e, binary, args.timeout, destination, args.impl, args.rust_binary, startup_blocker) for e in entries]
         for future in concurrent.futures.as_completed(futures):
             row = future.result()
             rows.append(row)
             print(f"{row['id']:<45} {row['status']:<9} {row['seconds']:>9.3f}s", flush=True)
+            for blocker in row.get("blocked_on", []):
+                print("  blocked-on: " + blocker, flush=True)
             report = {'wall_seconds': round(time.monotonic() - started, 3), 'parallel': args.parallel, 'host': platform.system().lower(), 'complete': len(rows) == len(entries), 'expected': len(entries), 'results': sorted(rows, key=lambda r: r['id'])}
             temporary = destination / 'summary.json.tmp'
             temporary.write_text(json.dumps(report, indent=2) + '\n')

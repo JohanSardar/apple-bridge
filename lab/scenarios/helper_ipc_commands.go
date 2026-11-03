@@ -11,8 +11,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/JohanSardar/apple-bridge/internal/applepeer"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	applepeer "github.com/JohanSardar/apple-bridge/lab/ipc"
 	"github.com/JohanSardar/apple-bridge/lab/scripted"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
