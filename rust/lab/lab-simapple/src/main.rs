@@ -1,6 +1,7 @@
 #![allow(clippy::too_many_lines)]
 mod calendar;
 mod contacts;
+mod media;
 mod messages;
 mod notes;
 mod query;
@@ -484,6 +485,14 @@ impl Session {
         let src = string(&frame, "source");
         if src == "messages" {
             messages::aliases(&mut frame);
+            if !self.blobs.is_empty() {
+                frame["blob_handles"] = json!(
+                    self.blobs
+                        .keys()
+                        .map(|digest| (digest.clone(), json!(digest)))
+                        .collect::<serde_json::Map<_, _>>()
+                );
+            }
         }
         if lock(state)?.denied.get(&src) == Some(&true) {
             return Ok(());
