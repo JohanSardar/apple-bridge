@@ -1,7 +1,9 @@
+pub mod assertions;
 pub mod http;
 pub mod journey;
 pub mod queries;
 pub mod replicas;
+pub mod watch;
 use lab_runner::Registry;
 use lab_world::Error;
 

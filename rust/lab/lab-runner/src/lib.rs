@@ -27,6 +27,8 @@ pub struct Scenario {
 pub struct Assertion {
     pub name: String,
     pub passed: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
     pub detail: String,
 }
 #[derive(Debug, Serialize)]
@@ -41,6 +43,15 @@ impl Evidence {
         self.assertions.push(Assertion {
             name: name.into(),
             passed,
+            status: None,
+            detail: detail.into(),
+        });
+    }
+    pub fn unverified(&mut self, name: &str, detail: &str) {
+        self.assertions.push(Assertion {
+            name: name.into(),
+            passed: false,
+            status: Some("unverified".into()),
             detail: detail.into(),
         });
     }

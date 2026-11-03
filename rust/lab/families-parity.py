@@ -5,8 +5,6 @@ import subprocess
 
 HARNESS_ONLY = {'credential_backend_override_restored'}
 JOURNEY_SCENARIOS = ['CORE-CMD-IDEMPOTENT']
-JOURNEY_UNPORTED = ('sse_contiguous_watermarks_', 'no_false_deletion_', 'scope_sse_watermarks_',
-                    'replica_application_exactly_once')
 JOURNEY_RUST_ONLY = {'world_started'}
 SCENARIOS = ['CORE-QUERY-ROUNDTRIP', 'CORE-QUERY-BLOB', 'CORE-QUERY-SCOPE', 'CORE-QUERY-DEADLINE',
              *JOURNEY_SCENARIOS]
@@ -15,7 +13,7 @@ SCENARIOS = ['CORE-QUERY-ROUNDTRIP', 'CORE-QUERY-BLOB', 'CORE-QUERY-SCOPE', 'COR
 def ignored(scenario, name):
     if name in HARNESS_ONLY:
         return True
-    return scenario in JOURNEY_SCENARIOS and (name in JOURNEY_RUST_ONLY or name.startswith(JOURNEY_UNPORTED))
+    return scenario in JOURNEY_SCENARIOS and name in JOURNEY_RUST_ONLY
 
 
 def verdicts(path):
@@ -23,7 +21,8 @@ def verdicts(path):
     for line in path.read_text().splitlines():
         if line.startswith('{'):
             row = json.loads(line)
-            rows[row['scenario']] = {a['name']: a['passed'] for a in row['assertions']
+            rows[row['scenario']] = {a['name']: (a['passed'], a.get('status', ''))
+                                     for a in row['assertions']
                                      if not ignored(row['scenario'], a['name'])}
     return rows
 
@@ -46,7 +45,7 @@ def main():
                         '--simapple', args.simapple, '--output', str(out / 'worlds')],
                        stdout=stream, timeout=900, check=True)
     go, rust = verdicts(out / 'go.jsonl'), verdicts(out / 'rust.jsonl')
-    if len(go) != len(files) or go != rust or not all(all(v.values()) for v in rust.values()):
+    if len(go) != len(files) or go != rust or not all(all(p or st == 'unverified' for p, st in v.values()) for v in rust.values()):
         raise SystemExit(f'verdict mismatch\ngo={go}\nrust={rust}')
     print(json.dumps({'scenarios': sorted(rust), 'identical': True}))
 

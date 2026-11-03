@@ -20,6 +20,7 @@ pub struct Endpoint {
     pub home: PathBuf,
     pub address: String,
     pub token: String,
+    pub scope: String,
 }
 impl Endpoint {
     #[must_use]
@@ -91,6 +92,7 @@ pub fn start(world: &World, count: usize) -> Result<()> {
             home,
             address,
             token,
+            scope: SCOPE.to_owned(),
         });
     }
     let deadline = Instant::now() + Duration::from_secs(15);
@@ -138,4 +140,40 @@ pub fn stop_all() {
         let _ = child.kill();
         let _ = child.wait();
     }
+}
+
+pub fn crash(index: usize) -> Result<()> {
+    let mut children = lock(&CHILDREN);
+    let child = children
+        .get_mut(index)
+        .ok_or_else(|| Error::Invalid("replica index".into()))?;
+    child.kill()?;
+    child.wait()?;
+    Ok(())
+}
+pub fn restart(index: usize) -> Result<()> {
+    let endpoint = endpoints()
+        .get(index)
+        .cloned()
+        .ok_or_else(|| Error::Invalid("replica index".into()))?;
+    let _ = fs::remove_file(endpoint.home.join("runtime.json"));
+    let log = fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(endpoint.home.with_file_name(format!("replica{index}.log")))?;
+    let child = Command::new(binary()?)
+        .args(["start", "--role", "replica", "--home"])
+        .arg(&endpoint.home)
+        .args(["--api-addr", &endpoint.address])
+        .env("APPLE_BRIDGE_SECRET_STORE", "file")
+        .stdout(log.try_clone()?)
+        .stderr(log)
+        .spawn()?;
+    let mut children = lock(&CHILDREN);
+    if let Some(slot) = children.get_mut(index) {
+        *slot = child;
+    }
+    drop(children);
+    await_runtime(&endpoint.home)?;
+    Ok(())
 }
