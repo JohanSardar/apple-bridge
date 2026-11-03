@@ -965,12 +965,13 @@ fn session(
             }
         }
         let mut s = lock(state)?;
+        let seen = s.data["protocol"]["commits"].as_array().map_or(0, Vec::len);
         let log = &mut s.data["protocol"]["opens"];
         if !log.is_array() {
             *log = json!([]);
         }
         if let Some(entries) = log.as_array_mut() {
-            entries.push(json!({"fence": fence, "offered": offered}));
+            entries.push(json!({"fence": fence, "offered": offered, "commits_seen": seen}));
         }
     }
     if let Some(checkpoints) = open["checkpoints"].as_object() {

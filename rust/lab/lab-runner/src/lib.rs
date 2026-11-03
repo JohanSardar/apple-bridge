@@ -2,8 +2,11 @@ pub mod safety;
 use lab_world::{Error, Result, World};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use std::{thread, time::{Duration, Instant}};
 use std::collections::BTreeMap;
+use std::{
+    thread,
+    time::{Duration, Instant},
+};
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -183,22 +186,31 @@ fn protocol_gate(world: &mut World, input: &Value, evidence: &mut Evidence) -> R
             })?;
             let commits = protocol["commits"].as_array().cloned().unwrap_or_default();
             let opens = protocol["opens"].as_array().cloned().unwrap_or_default();
-            let offered = opens.last().map_or(Value::Null, |open| open["offered"].clone());
+            let last = opens.last().cloned().unwrap_or(Value::Null);
+            let offered = last["offered"].clone();
+            let seen = usize::try_from(last["commits_seen"].as_u64().unwrap_or(0))
+                .unwrap_or(0)
+                .min(commits.len());
+            let mut latest = BTreeMap::new();
+            for commit in &commits[..seen] {
+                latest.insert(
+                    commit["source"].as_str().unwrap_or_default().to_owned(),
+                    commit["checkpoint"].clone(),
+                );
+            }
             let ok = opens.len() >= 2
-                && !commits.is_empty()
-                && commits.iter().all(|commit| {
-                    let source = commit["source"].as_str().unwrap_or_default();
-                    offered[source].as_str().is_some_and(|checkpoint| {
-                        !checkpoint.is_empty()
-                            && commits.iter().any(|c| {
-                                c["source"] == commit["source"] && c["checkpoint"] == *checkpoint
-                            })
-                    })
-                });
+                && !latest.is_empty()
+                && latest
+                    .iter()
+                    .all(|(source, checkpoint)| offered[source.as_str()] == *checkpoint);
             evidence.check(
                 "reopen_offers_committed_checkpoint",
                 ok,
-                &format!("opens={} commits={} offered={offered}", opens.len(), commits.len()),
+                &format!(
+                    "opens={} committed_before_open={seen} sources={}",
+                    opens.len(),
+                    latest.len()
+                ),
             );
             Ok(())
         }
@@ -206,7 +218,9 @@ fn protocol_gate(world: &mut World, input: &Value, evidence: &mut Evidence) -> R
             let protocol = protocol_snapshot(world, |p| {
                 p["commits"].as_array().is_some_and(|c| !c.is_empty())
             })?;
-            let acked = protocol["commits"].as_array().is_some_and(|c| !c.is_empty());
+            let acked = protocol["commits"]
+                .as_array()
+                .is_some_and(|c| !c.is_empty());
             let truth = world.control("/inspect", &Value::Null)?;
             let expected = truth.as_array().cloned().unwrap_or_default();
             let response = world.query("records.query", &json!({"collection":"","limit":1000}))?;
