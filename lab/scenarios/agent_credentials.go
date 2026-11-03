@@ -5,10 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
-	"github.com/JohanSardar/apple-bridge/internal/trust"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"time"
 )
@@ -22,19 +20,19 @@ func runAgentCredentials(ctx context.Context, w *world.World, e *Evidence, add f
 	add("legacy_token_auth_stays_read_only", err == nil && status == 200 && before != nil && after != nil && before.ModTime() == after.ModTime())
 	samples := []float64{}
 	for _, level := range []string{"read", "", "full"} {
-		args := []string{"agent", "create", "--home", w.Gateway.Home, "--name", "Bridge Test agent", "--scope", "messages:write"}
+		args := []string{"agent", "create", "--name", "Bridge Test agent", "--scope", "messages:write"}
 		if level != "" {
 			args = append(args, "--level", level)
 		}
-		raw, err := exec.CommandContext(ctx, "bin/bridge", args...).Output()
+		raw, err := w.GatewayCommand(args...)
 		var result struct {
-			Agent trust.Agent `json:"agent"`
-			Token string      `json:"token"`
+			Agent binaryAgentIdentity `json:"agent"`
+			Token string              `json:"token"`
 		}
 		json.Unmarshal(raw, &result)
-		expected := trust.AgentLevel(level)
+		expected := level
 		if expected == "" {
-			expected = trust.AgentApprove
+			expected = "approve"
 		}
 		add("create_"+string(expected), err == nil && result.Agent.ID != "" && result.Token != "" && result.Agent.Level == expected)
 		if result.Token == "" {
@@ -53,29 +51,29 @@ func runAgentCredentials(ctx context.Context, w *world.World, e *Evidence, add f
 		if level == "read" {
 			add("read_scope_normalized", len(result.Agent.Scopes) == 1 && result.Agent.Scopes[0] == "messages:read")
 		}
-		if expected != trust.AgentFull {
+		if expected != "full" {
 			id := contracts.NewCommandID()
 			status, _ = world.Request(ctx, principal, "/v1/op/messages.send", map[string]any{"command_id": id, "args": map[string]any{"chat_id": "BridgeTest", "text": "[ab-test credentials] approval required"}}, &output)
 			effects, effectsErr := w.Effects()
 			add("no_unapproved_effect", effectsErr == nil && effects[id] == 0 && (status == 401 || status == 200 && output["state"] == "awaiting_approval"))
 		}
-		listed, err := exec.CommandContext(ctx, "bin/bridge", "agent", "list", "--home", w.Gateway.Home).Output()
+		listed, err := w.GatewayCommand("agent", "list")
 		add("list_is_redacted", err == nil && bytes.Contains(listed, []byte(result.Agent.ID)) && !bytes.Contains(listed, []byte(result.Token)) && !bytes.Contains(listed, []byte("token_hash")) && bytes.Contains(listed, []byte("last_used")))
-		_, err = exec.CommandContext(ctx, "bin/bridge", "agent", "revoke", result.Agent.ID, "--home", w.Gateway.Home).Output()
+		_, err = w.GatewayCommand("agent", "revoke", result.Agent.ID)
 		status, _ = world.Request(ctx, principal, "/v1/op/messages.chats", map[string]any{}, &output)
 		add("revoke_stops_access", err == nil && status == 401)
-		listed, err = exec.CommandContext(ctx, "bin/bridge", "agent", "list", "--home", w.Gateway.Home).Output()
+		listed, err = w.GatewayCommand("agent", "list")
 		add("revoke_time_retained", err == nil && bytes.Contains(listed, []byte("revoked_at")))
 	}
 	for _, args := range [][]string{{"--level", "invalid", "--scope", "messages:read"}, {"--scope", "admin"}} {
-		_, err := exec.CommandContext(ctx, "bin/bridge", append([]string{"agent", "create", "--home", w.Gateway.Home, "--name", "Bridge Test invalid"}, args...)...).Output()
+		_, err := w.GatewayCommand(append([]string{"agent", "create", "--name", "Bridge Test invalid"}, args...)...)
 		add("invalid_agent_refused", err != nil)
 	}
-	authority, err := trust.Open(w.Gateway.Home)
+	_, err = w.GatewayCommand("agent", "list")
 	if err != nil {
 		add("owner_authority", false)
 		return
 	}
 	e.Latency["agent_read"] = stats(samples, 0)
-	runOAuthCredentialAccess(ctx, w, authority, add)
+	runOAuthCredentialAccess(ctx, w, add)
 }

@@ -30,7 +30,7 @@ def generate(manifest):
         swift_dependencies[name] = set(re.findall(r'"([^"]+)"', dependencies_text))
     selection = defaultdict(list)
     entries = []
-    callback_roots = {'WEB-AGENT-LEVELS': {'runAgentAccess', 'runAgentLevels'}, 'WEB-AGENT-ACTIVITY': {'runAgentActivity'}}
+    callback_roots = {'WEB-AGENT-LEVELS': {'runAgentAccess', 'runAgentLevels'}, 'WEB-AGENT-ACTIVITY': {'runAgentActivity'}, 'WEB-AGENT-CREDENTIALS': {'runAgentCredentials'}, 'WEB-AGENT-OAUTH': {'runAgentAccess', 'runAgentOAuth'}}
     callback_helpers = {'lab/scenarios/web_server.go', 'lab/scenarios/web_authenticator.go', 'lab/scenarios/consent_activity.go'}
     for scenario in data['scenarios']:
         identity, feature = scenario['ID'], scenario['Feature']
@@ -114,6 +114,8 @@ def generate(manifest):
             'WEB-RM-THREAD-ORIGINATOR': ('convert', 'REST/MCP originator checks and REST SSE observers preserve filtered windows; retain binary execution for Rust qualification.'),
             'WEB-AGENT-ACTIVITY': ('keep', 'Selected-binary CLI agents and software owner enrollment; read-only activity oracle and unchanged capture assertions.'),
             'WEB-AGENT-LEVELS': ('keep', 'Selected gateway and replica CLIs plus software enrollment; unchanged approval, expiry and delegation assertions.'),
+            'WEB-AGENT-CREDENTIALS': ('keep', 'Selected-binary agent CLIs and OAuth HTTP lifecycle; frozen credentials used only as lab fault/inspection data.'),
+            'WEB-AGENT-OAUTH': ('keep', 'Public OAuth HTTP exchanges and selected-binary revocation with a lab-owned wire oracle.'),
             'WEB-CAL-WRITE': ('convert', 'Stale browser-level metadata blocks SIM loading; preserve Calendar write assertions in the binary journey.'),
             'WEB-REM-PARITY': ('convert', 'Stale browser-level metadata blocks SIM loading; preserve Reminders parity assertions in the binary journey.'),
         }

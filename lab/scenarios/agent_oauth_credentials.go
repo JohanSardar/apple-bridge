@@ -3,8 +3,6 @@ package scenarios
 import (
 	"context"
 	"encoding/json"
-	"github.com/JohanSardar/apple-bridge/internal/contracts"
-	"github.com/JohanSardar/apple-bridge/internal/trust"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 	"os"
 	"path/filepath"
@@ -12,8 +10,9 @@ import (
 	"time"
 )
 
-func runOAuthCredentialAccess(ctx context.Context, w *world.World, authority *trust.Authority, add func(string, bool)) {
-	agent, token, err := authority.CreateAgent("Bridge Test OAuth credential", trust.AgentRead, []contracts.Grant{"messages:read"})
+func runOAuthCredentialAccess(ctx context.Context, w *world.World, add func(string, bool)) {
+	created, err := binaryCreateAgent(w, w.Gateway, "Bridge Test OAuth credential", "read", "messages:read")
+	agent, token := created.Agent, created.Token
 	if err != nil {
 		add("oauth_credential_agent", false)
 		return
@@ -25,7 +24,7 @@ func runOAuthCredentialAccess(ctx context.Context, w *world.World, authority *tr
 				principal["token_hash"] = ""
 			}
 		}
-		data["oauth_access"] = []any{map[string]any{"hash": trust.Fingerprint([]byte(token)), "principal": agent.ID, "resource": w.Gateway.URL + "/mcp", "expires_at": time.Now().Add(time.Hour).Format(time.RFC3339Nano)}}
+		data["oauth_access"] = []any{map[string]any{"hash": fixtureTokenHash([]byte(token)), "principal": agent.ID, "resource": w.Gateway.URL + "/mcp", "expires_at": time.Now().Add(time.Hour).Format(time.RFC3339Nano)}}
 	})
 	principal := w.Gateway
 	principal.Token = token
@@ -48,7 +47,7 @@ func runOAuthCredentialAccess(ctx context.Context, w *world.World, authority *tr
 	err = change(w.Gateway.URL+"/mcp", time.Now().Add(-time.Second))
 	code, _ = world.Request(ctx, principal, "/v1/op/messages.chats", map[string]any{}, &result)
 	add("oauth_opaque_access_expires", err == nil && code == 401)
-	runOAuthGrants(ctx, w, authority, add)
+	runOAuthGrants(ctx, w, add)
 }
 
 func editAgentCredentials(home string, edit func(map[string]any)) error {
