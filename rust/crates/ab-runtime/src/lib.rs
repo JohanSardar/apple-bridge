@@ -1,6 +1,8 @@
 #![forbid(unsafe_code)]
 pub mod duration;
+pub mod helper;
 pub mod inspection;
+pub mod maintenance;
 #[cfg(feature = "replica-feed")]
 mod replica;
 mod shape;
@@ -26,7 +28,15 @@ pub enum Error {
     Json(#[from] serde_json::Error),
     #[error(transparent)]
     Operation(#[from] OperationError),
-    #[error("replica home is already locked")]
+    #[error(transparent)]
+    State(#[from] ab_state::Error),
+    #[error(transparent)]
+    Trust(#[from] ab_trust::Error),
+    #[error(transparent)]
+    Remote(#[from] ab_remote::Error),
+    #[error("gateway assembly blocked: ab-applepeer and local command lifecycle are not available")]
+    GatewayIntegrationPending,
+    #[error("home is already locked")]
     Locked,
     #[error(
         "replica feed integration requires the replica-feed feature and pending State scope/blob interfaces"
@@ -66,6 +76,10 @@ pub struct Config {
     pub api_address: String,
     pub socket: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub helper_app: String,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub helper_lab_commands: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub listen: String,
     #[serde(default)]
     pub retention_rows: u64,
@@ -90,16 +104,8 @@ impl Config {
         )?)?)
     }
     pub fn save(&self) -> Result<(), Error> {
-        let path = self.home.join("runtime.json");
-        let mut file = OpenOptions::new()
-            .create(true)
-            .truncate(true)
-            .write(true)
-            .mode(0o600)
-            .open(path)?;
-        file.set_permissions(fs::Permissions::from_mode(0o600))?;
-        file.write_all(&serde_json::to_vec(self)?)?;
-        file.sync_all()?;
+        ab_trust::atomic_write(&self.home.join("runtime.json"), &serde_json::to_vec(self)?)
+            .map_err(|_| Error::Invalid)?;
         Ok(())
     }
 }
@@ -210,6 +216,9 @@ pub async fn start(
     authority: std::sync::Arc<ab_trust::Authority>,
 ) -> Result<(), Error> {
     use std::sync::Arc;
+    if config.role == "gateway" {
+        return Err(Error::GatewayIntegrationPending);
+    }
     config.validate()?;
     let _lock = HomeLock::acquire(&config.home)?;
     let enrollment = authority

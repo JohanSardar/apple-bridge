@@ -46,3 +46,7 @@ debug = false
 
 [profile.spike-budget]
 inherits = "dev"
+
+[patch.crates-io]
+webauthn-rs-core = { path = "vendor/webauthn-rs-core" }
+crypto-glue = { path = "vendor/crypto-glue" }
