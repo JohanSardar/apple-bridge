@@ -274,6 +274,9 @@ func loadLevel(paths []string, level string) ([]Scenario, error) {
 		if s.Level != "" && len(s.Levels) == 0 {
 			s.Levels = []string{s.Level}
 		}
+		if level == "real" && (s.ID == "MAC-REPLICA" || s.ID == "FILE-REPLICA") && slices.Contains(s.Levels, "replica") {
+			s.Levels = append(s.Levels, "real")
+		}
 		if level != "" && !slices.Contains(s.Levels, level) {
 			continue
 		}

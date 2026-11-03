@@ -69,7 +69,7 @@ func runNativeMessagesCommands(ctx context.Context, s Scenario, level string, e 
 		}
 	}
 	replicas := 0
-	if level == "replica" || s.ID == "WEB-MEDIA-VARIANTS" {
+	if level == "replica" || s.ID == "WEB-MEDIA-VARIANTS" || level == "real" && world.ImplementationSelection(ctx).LocalReplicas && nativeReplicaRealScenario(s) {
 		replicas = 1
 	}
 	if level == "replica" {
