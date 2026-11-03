@@ -1232,6 +1232,7 @@ fn run() -> Result<()> {
     } else {
         json!({"generation":id("sim")?,"records":{},"effects":{},"evidence":{},"origins":{},"scans":0,"source_scans":{}})
     };
+    let blob = blobs::restore(&data);
     let state = Arc::new(Mutex::new(State {
         bulk: Bulk::default(),
         data,
@@ -1242,7 +1243,7 @@ fn run() -> Result<()> {
         socket: socket.clone(),
         secret: secret.clone(),
         calendar: calendar::Live::default(),
-        blob: blobs::Fixture::default(),
+        blob,
     }));
     {
         let mut s = lock(&state)?;
