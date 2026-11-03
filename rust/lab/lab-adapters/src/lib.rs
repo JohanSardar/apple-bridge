@@ -20,6 +20,7 @@ pub mod readmodels;
 pub mod replicas;
 pub mod restart;
 pub mod search;
+pub mod shortcuts;
 pub mod watch;
 use lab_runner::Registry;
 use lab_world::Error;
@@ -89,5 +90,7 @@ pub fn registry() -> Registry {
     registry.register("files_native", files_native::files_native);
     registry.register("robustness", packaging::robustness);
     registry.register("command_journey", journey::command_journey);
+    registry.register("files_transform", shortcuts::files_transform);
+    registry.register("shortcuts_actions", shortcuts::shortcuts_actions);
     registry
 }

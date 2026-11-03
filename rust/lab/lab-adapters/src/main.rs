@@ -30,6 +30,7 @@ fn run() -> Result<bool, Box<dyn std::error::Error>> {
     let mut passed = !paths.is_empty();
     for (index, path) in paths.iter().enumerate() {
         let mut scenario: Scenario = serde_saphyr::from_slice(&fs::read(path)?)?;
+        lab_adapters::shortcuts::inject(&mut scenario);
         if scenario.when.is_empty()
             && lab_adapters::readmodels::SCENARIOS.contains(&scenario.id.as_str())
         {

@@ -16,6 +16,7 @@ JOURNEY_RUST_ONLY = {'world_started'}
 CORE_SCENARIOS = ['CORE-RESUME', 'CORE-STALE-FENCE', 'LAB-MALFORMED-SCENARIO', 'LAB-SSE',
                   'LAB-TRUTH-MULTIPLICITY']
 IMPORT_SCENARIOS = ['messages/MSG-HISTORY-IMPORT', 'contacts/CON-IMPORT', 'notes/NOTE-IMPORT', 'usage/USE-IMPORT']
+SHORTCUT_SCENARIOS = ['shortcuts/FILES-TRANSFORM', 'shortcuts/SC-ACTIONS']
 MEDIA_SCENARIOS = ['web/WEB-MEDIA-VARIANTS', 'messages/MSG-MEDIA-CLEANUP']
 WEB_RM_SCENARIOS = ['web/WEB-RM-MEDIA-COLLECTION', 'web/WEB-RM-SEARCH']
 NATIVE_SCENARIOS = ['packaging/Q1-SETUP', 'packaging/R1-RELEASE-SIM', 'files/FILE-IDLE', 'files/FILE-CAPTURE']
@@ -56,7 +57,10 @@ def main():
     parser.add_argument('--web-rm', dest='web_rm', action='store_true')
     parser.add_argument('--native', dest='native', action='store_true')
     parser.add_argument('--iphone', dest='iphone', action='store_true')
+    parser.add_argument('--shortcuts', dest='shortcuts', action='store_true')
     args = parser.parse_args()
+    if args.shortcuts:
+        args.scenario = (args.scenario or []) + SHORTCUT_SCENARIOS
     if args.imports:
         args.scenario = (args.scenario or []) + IMPORT_SCENARIOS
     if args.messages_a:
