@@ -3,6 +3,10 @@ use lab_world::{Error, Result, World};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
+use std::{
+    thread,
+    time::{Duration, Instant},
+};
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -136,6 +140,7 @@ impl Registry {
         registry.register("restart_gateway", |world, _, _| world.restart_gateway());
         registry.register("capture_truth", capture_truth);
         registry.register("fault_trace", safety::gate);
+        registry.register("protocol_gate", protocol_gate);
         registry
     }
 }
@@ -161,4 +166,80 @@ fn capture_truth(world: &mut World, _: &Value, evidence: &mut Evidence) -> Resul
         "every synthetic native observation appears through public records.query",
     );
     Ok(())
+}
+
+fn protocol_snapshot(world: &World, ready: impl Fn(&Value) -> bool) -> Result<Value> {
+    let deadline = Instant::now() + Duration::from_secs(20);
+    loop {
+        let protocol = world.control("/protocol", &Value::Null)?;
+        if ready(&protocol) || Instant::now() >= deadline {
+            return Ok(protocol);
+        }
+        thread::sleep(Duration::from_millis(100));
+    }
+}
+fn protocol_gate(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result<()> {
+    match input["check"].as_str() {
+        Some("reopen-offers-committed") => {
+            let protocol = protocol_snapshot(world, |p| {
+                p["opens"].as_array().is_some_and(|o| o.len() >= 2)
+            })?;
+            let commits = protocol["commits"].as_array().cloned().unwrap_or_default();
+            let opens = protocol["opens"].as_array().cloned().unwrap_or_default();
+            let last = opens.last().cloned().unwrap_or(Value::Null);
+            let offered = last["offered"].clone();
+            let seen = usize::try_from(last["commits_seen"].as_u64().unwrap_or(0))
+                .unwrap_or(0)
+                .min(commits.len());
+            let mut latest = BTreeMap::new();
+            for commit in &commits[..seen] {
+                latest.insert(
+                    commit["source"].as_str().unwrap_or_default().to_owned(),
+                    commit["checkpoint"].clone(),
+                );
+            }
+            let ok = opens.len() >= 2
+                && !latest.is_empty()
+                && latest
+                    .iter()
+                    .all(|(source, checkpoint)| offered[source.as_str()] == *checkpoint);
+            evidence.check(
+                "reopen_offers_committed_checkpoint",
+                ok,
+                &format!(
+                    "opens={} committed_before_open={seen} sources={}",
+                    opens.len(),
+                    latest.len()
+                ),
+            );
+            Ok(())
+        }
+        Some("acked-data-visible") => {
+            let protocol = protocol_snapshot(world, |p| {
+                p["commits"].as_array().is_some_and(|c| !c.is_empty())
+            })?;
+            let acked = protocol["commits"]
+                .as_array()
+                .is_some_and(|c| !c.is_empty());
+            let truth = world.control("/inspect", &Value::Null)?;
+            let expected = truth.as_array().cloned().unwrap_or_default();
+            let response = world.query("records.query", &json!({"collection":"","limit":1000}))?;
+            let records = response["records"].as_array().cloned().unwrap_or_default();
+            let visible = !expected.is_empty()
+                && expected.iter().all(|native| {
+                    records.iter().any(|record| {
+                        record["collection"] == native["collection"]
+                            && record["data"] == native["data"]
+                            && record["deleted"] != true
+                    })
+                });
+            evidence.check(
+                "acked_data_visible",
+                acked && visible,
+                &format!("peer_acked={acked} visible_through_public_query={visible}"),
+            );
+            Ok(())
+        }
+        _ => Err(Error::Invalid("protocol_gate check".into())),
+    }
 }

@@ -69,3 +69,13 @@ The Rust SimApple peer now answers `Query` (`test.echo`, `test.sleep`, `test.blo
 Not ported: `command_journey` (CORE-CMD-*, needs replica worlds, `seed`, `converge`), `blobs` journeys (CORE-BLOB-*, need replicas, native staging, fault controls), media transfer, history-import scheduling. Source-family simulators belong to S-P8-PIM and S-P8-MEDIA.
 
 Gate: `python3 rust/lab/families-parity.py --families $T/lab-families --go-lab bridge-lab --gateway BRIDGE --simapple $T/lab-simapple --output /new/dir`, once with a `-tags lab` Go gateway and once with the Rust gateway built with `--features lab-queries`.
+
+### Live seeded-fault gates (gateway binary, not traces)
+
+Stable API additions, no change to `WorldConfig`, `World` or `Registry`: the peer control route `/protocol` returns `{opens:[{fence, offered:{source:checkpoint}, commits_seen}], commits:[{source, checkpoint}], acked:{source:checkpoint}}`, and the runner step `protocol_gate` takes `check: reopen-offers-committed` or `check: acked-data-visible`. A world's child processes inherit the runner's environment, so a seeded fault is selected by `AB_LAB_SEEDED_FAULT=<name>`; no `WorldConfig` field was added.
+
+The Rust gateway has cargo feature `seeded-faults` on `ab-runtime` (implies `lab-harness`). Only a binary built with it reacts to `AB_LAB_SEEDED_FAULT`; the product and `lab-queries` builds contain no fault code. Implemented faults: `skip-checkpoint-commit` (the gateway offers no checkpoint at reopen, as if the commit never became durable) and `ack-uncommitted-data` (the gateway sends Committed without storing the capture).
+
+Scenarios `LIVE-CHECKPOINT-REOPEN` and `LIVE-ACK-DURABLE` are the behavioral observers. `python3 rust/lab/live-fault-gate.py --runner R --healthy-gateway H --mutant-gateway M --simapple S --output SHORT_DIR` requires each scenario to pass on the healthy gateway and the named assertion, with no infrastructure assertion failing, to fail on the mutant. The output path must be under 48 characters because worlds create Unix sockets inside it.
+
+Verified on Linux (`ssh build`): three consecutive runs, healthy passes and both mutants detected. Not done: `accept-stale-fence` and `leak-scope` still only have the protocol-trace observers (they need a peer control route that sends a frame on a superseded connection, and a scoped-token query observer), and the Go harness has not been run against the seeded-fault gateway, so "caught by both harnesses" is not yet shown for any fault. `make rust-ci` passes fmt, clippy and tests; `cargo deny` fails only on RUSTSEC-2024-0449 (serde_yaml in lab-runner), which S-DENY is replacing.
