@@ -95,7 +95,9 @@ async fn transmit<S: GatewayState, T: AsyncRead + AsyncWrite + Unpin>(
         loop {
             let ack = server.receive(socket, session).await?;
             if ack.t == "BlobWant" {
-                server.blob(socket, session.principal, ack).await?;
+                let _ = server
+                    .blob(socket, session.principal, ack, usize::MAX)
+                    .await?;
                 continue;
             }
             if ack.t == "Heartbeat" {
@@ -346,12 +348,29 @@ impl<S: GatewayState> Server<S> {
             .changes(&visibility, journal, atomic)?;
         let mut window = crate::window::Window::new(limit);
         let mut pending: Option<(String, Option<Cursor>)> = None;
+        let mut blob_pending = None;
+        let mut blob_states = std::collections::BTreeMap::new();
         let mut poll = tokio::time::interval(Duration::from_millis(20));
         let mut heartbeat = tokio::time::interval(Duration::from_secs(5));
         heartbeat.tick().await;
         loop {
             tokio::select! {
                 _ = poll.tick() => {
+                    if let Some(blobs) = &self.blobs {
+                        let entries = blobs.lock().await.entries().clone();
+                        for (digest, entry) in entries {
+                            let changed = blob_states.get(&digest) != Some(&entry.state);
+                            if changed && matches!(entry.state, ab_blobs::BlobState::Present | ab_blobs::BlobState::Failed) {
+                                let parsed = ab_blobs::Digest::try_from(digest.clone())?;
+                                if self.state.lock().await.blob_grant(&visibility, &parsed).is_ok() {
+                                    let mut available = frame("BlobAvailable");
+                                    available.digest = digest.clone();
+                                    socket.send(Message::Text(String::from_utf8(available.encode()?).map_err(|_| Error::Invalid)?.into())).await?;
+                                }
+                            }
+                            blob_states.insert(digest, entry.state);
+                        }
+                    }
                     if pending.is_none() {
                     let next = self.state.lock().await.next_changes(&mut iterator);
                     match next {
@@ -378,13 +397,16 @@ impl<S: GatewayState> Server<S> {
                         let (bytes, _) = pending.take().ok_or(Error::Invalid)?;
                         socket.send(Message::Text(bytes.into())).await?;
                     }
+                    if let Some(want) = blob_pending.take() {
+                        blob_pending = self.blob(socket, p, want, 1).await?;
+                    }
                 },
                 () = tokio::time::sleep_until(window.deadline()), if window.pending() => return Err(Error::Disconnected),
                 _ = heartbeat.tick() => {
                     let mut f = frame("Heartbeat"); f.head = self.state.lock().await.head()?.sequence;
                     socket.send(Message::Text(String::from_utf8(f.encode()?).map_err(|_| Error::Invalid)?.into())).await?;
                 },
-                message = socket.next() => { let message = message.ok_or(Error::Disconnected)??; let Some(f) = self.upstream(socket, context, message).await? else { continue; }; if f.t == "BlobWant" { self.blob(socket, p, f).await?; } else if f.t == "Ack" { window.acknowledge(&f)?; } else if f.t != "Heartbeat" { return Err(Error::Invalid); } },
+                message = socket.next() => { let message = message.ok_or(Error::Disconnected)??; let Some(f) = self.upstream(socket, context, message).await? else { continue; }; if f.t == "BlobWant" { blob_pending = Some(f); } else if f.t == "Ack" { window.acknowledge(&f)?; } else if f.t != "Heartbeat" { return Err(Error::Invalid); } },
             }
         }
     }
@@ -522,12 +544,14 @@ impl<S: GatewayState + 'static> Server<S> {
 }
 
 impl<S: GatewayState> Server<S> {
+    #[allow(clippy::too_many_lines)]
     async fn blob<T: AsyncRead + AsyncWrite + Unpin>(
         &self,
         socket: &mut WebSocketStream<T>,
         p: &Principal,
-        want: FeedFrame,
-    ) -> Result<(), Error> {
+        mut want: FeedFrame,
+        max_chunks: usize,
+    ) -> Result<Option<FeedFrame>, Error> {
         use tokio::io::{AsyncReadExt, AsyncSeekExt};
         let digest = ab_blobs::Digest::try_from(want.digest.clone())?;
         if want.offset < 0 {
@@ -565,7 +589,7 @@ impl<S: GatewayState> Server<S> {
                         .into(),
                 ))
                 .await?;
-            return Ok(());
+            return Ok(None);
         };
         let mut file = tokio::fs::File::from_std(file);
         file.seek(std::io::SeekFrom::Start(
@@ -578,6 +602,7 @@ impl<S: GatewayState> Server<S> {
             .map_err(|_| Error::Invalid)?
             .try_into()
             .map_err(|_| Error::Invalid)?;
+        let mut chunks = 0;
         loop {
             let count = file.read(&mut buffer).await?;
             if count == 0 {
@@ -588,8 +613,68 @@ impl<S: GatewayState> Server<S> {
                 offset,
                 bytes: buffer[..count].to_vec(),
             };
-            socket.send(Message::Binary(chunk.encode()?.into())).await?;
+            let mut encoded = chunk.encode()?;
+            #[cfg(feature = "lab-harness")]
+            {
+                use std::os::unix::fs::OpenOptionsExt;
+                if let Ok(path) = std::env::var("APPLE_BRIDGE_LAB_BLOB_CORRUPT")
+                    && encoded.len() > 64
+                    && std::fs::OpenOptions::new()
+                        .write(true)
+                        .create_new(true)
+                        .mode(0o600)
+                        .open(path)
+                        .is_ok()
+                {
+                    encoded[64] ^= 0xff;
+                }
+                if std::env::var_os("APPLE_BRIDGE_LAB_BLOB_SLOW").is_some() {
+                    tokio::time::sleep(Duration::from_millis(150)).await;
+                }
+                if let Ok(path) = std::env::var("APPLE_BRIDGE_LAB_BLOB_CUT_WINDOW")
+                    && offset == ab_trust::wire::framing::BLOB_CHUNK_SIZE as i64
+                    && std::fs::OpenOptions::new()
+                        .write(true)
+                        .create_new(true)
+                        .mode(0o600)
+                        .open(format!("{path}.once"))
+                        .is_ok()
+                {
+                    use tokio_tungstenite::tungstenite::protocol::frame::{
+                        Frame,
+                        coding::{Data, OpCode},
+                    };
+                    let halfway = encoded.len() / 2;
+                    socket
+                        .send(Message::Frame(Frame::message(
+                            encoded[..halfway].to_vec(),
+                            OpCode::Data(Data::Binary),
+                            false,
+                        )))
+                        .await?;
+                    std::fs::write(path, b"in_flight")?;
+                    tokio::time::sleep(Duration::from_secs(2)).await;
+                    socket
+                        .send(Message::Frame(Frame::message(
+                            encoded[halfway..].to_vec(),
+                            OpCode::Data(Data::Continue),
+                            true,
+                        )))
+                        .await?;
+                } else {
+                    socket.send(Message::Binary(encoded.into())).await?;
+                }
+            }
+            #[cfg(not(feature = "lab-harness"))]
+            socket
+                .send(Message::Binary(std::mem::take(&mut encoded).into()))
+                .await?;
             offset += i64::try_from(count).map_err(|_| Error::Invalid)?;
+            chunks += 1;
+            if chunks >= max_chunks {
+                want.offset = offset;
+                return Ok(Some(want));
+            }
         }
         let mut done = frame("BlobDone");
         done.digest = want.digest;
@@ -600,7 +685,7 @@ impl<S: GatewayState> Server<S> {
                     .into(),
             ))
             .await?;
-        Ok(())
+        Ok(None)
     }
 }
 
