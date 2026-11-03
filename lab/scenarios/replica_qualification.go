@@ -113,3 +113,12 @@ func relayServiceGatewaySimScenario(s Scenario) bool {
 		return false
 	}
 }
+
+func relayGatewaySimScenario(s Scenario) bool {
+	switch s.ID {
+	case "WEB-RELAY-AUTH", "WEB-RELAY-PAIRING":
+		return true
+	default:
+		return false
+	}
+}

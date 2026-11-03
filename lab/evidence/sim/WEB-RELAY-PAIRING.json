@@ -1,15 +1,22 @@
 {
-  "impl": "go",
+  "implementations": {
+    "gateway": "rust",
+    "replica": "go"
+  },
+  "impl": "mixed",
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[6.15 8.05 8.95] cpus=8 other_heavy=1"
+    "summary": "ubuntu: load=[107.54 67.52 31.07] cpu_idle=1% cpus=22 other_heavy=0"
   },
-  "run_id": "relay-pair_01M5EDKMMG5NN95WF9SRCYP1MR",
+  "run_id": "relay-pair_01M6H41QYHM95ZNXQH8JJNXJHB",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
   "scenario": "WEB-RELAY-PAIRING",
   "level": "sim",
   "passed": true,
-  "git_sha": "ffb891720b43f592c99b1d86401365b5fe37535e",
-  "at": "2026-10-21T05:05:41.520414Z",
+  "git_sha": "0bf8ac55de22b5e19d8547a055f7aa23accc24be",
+  "at": "2026-11-03T16:32:03.025851126Z",
   "assertions": [
     {
       "name": "pairing_world",
@@ -116,12 +123,19 @@
       "passed": true
     },
     {
+      "name": "no_oversized_capture_observer_resets",
+      "passed": true
+    },
+    {
       "name": "credential_backend_override_restored",
       "passed": true
     }
   ],
   "latency": {},
   "hosts": [
-    "air"
-  ]
+    "ubuntu"
+  ],
+  "conditions": {
+    "simapple_impl": "go"
+  }
 }
