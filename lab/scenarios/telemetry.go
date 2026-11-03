@@ -115,6 +115,9 @@ func Run(ctx context.Context, s Scenario, level string) (e Evidence) {
 	reports := diagnosticReportsDir()
 	before, reportsErr := helperCrashReports(reports)
 	e = runScenario(ctx, s, level)
+	if level == "sim" && nativeMediaFixtureSimScenario(s) && e.Passed {
+		e = verifyNativeMediaGateway(ctx, s, e)
+	}
 	e.Implementations = world.ImplementationSelection(ctx)
 	if e.Impl == "" {
 		e.Impl = e.Implementations.Replica
