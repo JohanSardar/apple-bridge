@@ -49,7 +49,9 @@ async fn handle<G: Gateway + 'static>(
     #[cfg(feature = "lab-harness")]
     let observed = match observer::begin(uri.path(), &request).await {
         Ok(observed) => observed,
-        Err(()) => return (StatusCode::SERVICE_UNAVAILABLE, "observer unavailable\n").into_response(),
+        Err(()) => {
+            return (StatusCode::SERVICE_UNAVAILABLE, "observer unavailable\n").into_response();
+        }
     };
     let path = uri.path().to_owned();
     let result = tokio::task::spawn_blocking(move || {
@@ -58,7 +60,9 @@ async fn handle<G: Gateway + 'static>(
     .await;
     let (status, json, text) = match result {
         Ok(Ok(value)) => (StatusCode::OK, true, format!("{}\n", value.get())),
-        Ok(Err(Error::Authentication)) => (StatusCode::UNAUTHORIZED, false, "unauthorized\n".into()),
+        Ok(Err(Error::Authentication)) => {
+            (StatusCode::UNAUTHORIZED, false, "unauthorized\n".into())
+        }
         Ok(Err(Error::NotFound)) => (StatusCode::NOT_FOUND, false, String::new()),
         Ok(Err(_)) => (StatusCode::BAD_REQUEST, false, "rejected\n".into()),
         Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, false, String::new()),
@@ -87,8 +91,12 @@ mod observer {
 
     fn send(socket: &str, value: &serde_json::Value) -> Result<i64, ()> {
         let mut stream = UnixStream::connect(socket).map_err(|_| ())?;
-        stream.set_read_timeout(Some(Duration::from_secs(30))).map_err(|_| ())?;
-        stream.set_write_timeout(Some(Duration::from_secs(30))).map_err(|_| ())?;
+        stream
+            .set_read_timeout(Some(Duration::from_secs(30)))
+            .map_err(|_| ())?;
+        stream
+            .set_write_timeout(Some(Duration::from_secs(30)))
+            .map_err(|_| ())?;
         let mut line = serde_json::to_vec(value).map_err(|_| ())?;
         line.push(b'\n');
         stream.write_all(&line).map_err(|_| ())?;
