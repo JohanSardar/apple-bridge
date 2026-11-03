@@ -75,7 +75,7 @@ func runMacExtrasReal(ctx context.Context, s Scenario, level string) (e Evidence
 		e.Metrics = map[string]any{"installed_iwork_app_count": installed}
 		var out contracts.CommandRecord
 		err = client.Call(ctx, "mac.iwork_export", contracts.Command{ID: contracts.NewCommandID(), Args: json.RawMessage(`{"app":"pages","format":"text","document_blob":"W2FiLXRlc3Rd"}`), WaitMS: 15000}, &out)
-		add("iwork_export_observed", err == nil && out.State == contracts.CommandObserved && contracts.MacCompletionEvidence(out.Evidence, out.RequestHash))
+		add("iwork_export_observed", err == nil && out.State == contracts.CommandObserved && macCompletionReadback(out.Evidence, out.RequestHash))
 		var evidence struct {
 			Readback struct {
 				Data string `json:"data_base64"`

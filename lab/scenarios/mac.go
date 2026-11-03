@@ -70,7 +70,7 @@ func runMac(ctx context.Context, s Scenario, level string) (e Evidence) {
 		return
 	}
 	if s.ID == "MAC-COMMANDS" {
-		macCommandSchemas(add)
+		macCommandSchemas(ctx, w, add)
 		for _, test := range []struct {
 			op   string
 			args map[string]any
@@ -87,7 +87,7 @@ func runMac(ctx context.Context, s Scenario, level string) (e Evidence) {
 			raw, _ := json.Marshal(test.args)
 			var result contracts.CommandRecord
 			err = client.Call(ctx, test.op, contracts.Command{ID: contracts.NewID("cmd"), Op: test.op, Args: raw, WaitMS: 15000}, &result)
-			add(test.op+"_readback", err == nil && result.State == contracts.CommandObserved && contracts.MacCompletionEvidence(result.Evidence, result.RequestHash))
+			add(test.op+"_readback", err == nil && result.State == contracts.CommandObserved && macCompletionReadback(result.Evidence, result.RequestHash))
 		}
 		macClipboardCommands(ctx, client, w, false, add)
 		return

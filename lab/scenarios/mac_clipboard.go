@@ -115,7 +115,7 @@ func macClipboardCommands(ctx context.Context, client scripted.Client, w *world.
 	args, _ := json.Marshal(map[string]any{"text": tag})
 	var result contracts.CommandRecord
 	err := client.Call(ctx, "mac.clipboard_write", contracts.Command{ID: contracts.NewCommandID(), Args: args, WaitMS: 15000}, &result)
-	add("clipboard_write_readback", err == nil && result.State == contracts.CommandObserved && contracts.MacCompletionEvidence(result.Evidence, result.RequestHash))
+	add("clipboard_write_readback", err == nil && result.State == contracts.CommandObserved && macCompletionReadback(result.Evidence, result.RequestHash))
 	raw, _ := json.Marshal(result)
 	add("clipboard_command_redacted", result.Command.Op == "mac.clipboard_write" && !bytes.Contains(raw, []byte(tag)) && string(result.Command.Args) == "{}")
 	var query contracts.QueryResult

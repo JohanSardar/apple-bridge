@@ -12,7 +12,7 @@ import subprocess
 import sys
 import time
 
-from shadow import private_directory
+from shadow import private_directory, normalized_json
 
 
 def wait(path, process):
@@ -47,16 +47,45 @@ def main():
     log = (root / 'processes.log').open('x')
     gateway_args = ['bin/bridge', 'start', '--role', 'gateway', '--home', str(home), '--socket', str(socket), '--peer-addr', '127.0.0.1:0', '--api-addr', '127.0.0.1:0']
     gateway = subprocess.Popen(gateway_args, stdout=log, stderr=log)
+    primer = None
     try:
         wait(socket, gateway)
+        token = subprocess.check_output(['bin/bridge', 'token', 'create', '--home', str(home), '--scope', 'admin'], text=True).strip()
+        primer = subprocess.Popen(['bin/bridge-lab', 'simapple', '--socket', str(socket), '--secret-file', str(home / 'apple-secret'), '--control', str(root / 'prime.sock')], stdout=log, stderr=log)
+        wait(root / 'prime.sock', primer)
+        client = http.client.HTTPConnection('sim', timeout=10)
+        client.sock = sockets.socket(sockets.AF_UNIX)
+        client.sock.connect(str(root / 'prime.sock'))
+        client.request('POST', '/seed', body='{"count":1}', headers={'Content-Type': 'application/json'})
+        response = client.getresponse()
+        if response.status != 200:
+            raise RuntimeError('priming capture failed')
+        response.read()
+        client.close()
+        deadline = time.monotonic() + 15
+        import sqlite3
+        while time.monotonic() < deadline:
+            with sqlite3.connect(home / 'state.db') as db:
+                if db.execute("SELECT count(*) FROM records WHERE collection='reminders.list'").fetchone()[0]:
+                    break
+            time.sleep(.05)
+        else:
+            raise RuntimeError('priming capture not committed')
     finally:
+        if primer:
+            stop(primer)
         stop(gateway)
     shutil.copytree(home, root / 'starting')
+    (home / 'runtime.json').unlink(missing_ok=True)
     gateway = subprocess.Popen(gateway_args, stdout=log, stderr=log)
     tap = helper = None
     try:
         wait(socket, gateway)
-        tap = subprocess.Popen([sys.executable, 'lab/shadow/shadow.py', 'record', '--listen', str(proxy), '--upstream', str(socket), '--output', str(root / 'recording')], stdout=log, stderr=log)
+        wait(home / 'runtime.json', gateway)
+        with sockets.socket() as reservation:
+            reservation.bind(('127.0.0.1', 0))
+            admission_port = reservation.getsockname()[1]
+        tap = subprocess.Popen([sys.executable, 'lab/shadow/shadow.py', 'record', '--listen', str(proxy), '--upstream', str(socket), '--output', str(root / 'recording'), '--admission-listen', '127.0.0.1:' + str(admission_port), '--admission-upstream', json.loads((home / 'runtime.json').read_text())['api_address']], stdout=log, stderr=log)
         wait(proxy, tap)
         helper = subprocess.Popen(['bin/bridge-lab', 'simapple', '--socket', str(proxy), '--secret-file', str(home / 'apple-secret'), '--control', str(root / 'sim.sock')], stdout=log, stderr=log)
         wait(root / 'sim.sock', helper)
@@ -71,21 +100,21 @@ def main():
             response.read()
             control.close()
         control_action('/seed', {'count': 1})
+        control_action('/flush', {})
         deadline = time.monotonic() + 20
         kinds = set()
         while time.monotonic() < deadline:
             recording = root / 'recording/ipc.shadow'
             if recording.exists():
                 lines = recording.read_text().splitlines()
-                kinds = {json.loads(base64.b64decode(json.loads(line)['raw'])[4:])['t'] for line in lines}
+                kinds = {json.loads(base64.b64decode(json.loads(line)['raw'])[4:])['t'] for line in lines if json.loads(line)['direction'] not in ('admission', 'response')}
                 if 'Capture' in kinds and 'Committed' in kinds:
                     break
             time.sleep(.1)
         if not {'Capture', 'Committed', 'Ready'} <= kinds:
             raise RuntimeError('SimApplePeer capture was not committed')
-        token = subprocess.check_output(['bin/bridge', 'token', 'create', '--home', str(home), '--scope', 'admin'], text=True).strip()
         config = json.loads((home / 'runtime.json').read_text())
-        origin = 'http://' + config['api_address']
+        origin = 'http://127.0.0.1:' + str(admission_port)
         def operation(name, data):
             request = urllib.request.Request(origin + '/v1/op/' + name, data=json.dumps(data).encode(), headers={'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'})
             with urllib.request.urlopen(request, timeout=20) as response:
@@ -109,7 +138,7 @@ def main():
         control.close()
         deadline = time.monotonic() + 5
         while time.monotonic() < deadline:
-            kinds = {json.loads(base64.b64decode(json.loads(line)['raw'])[4:])['t'] for line in recording.read_text().splitlines()}
+            kinds = {json.loads(base64.b64decode(json.loads(line)['raw'])[4:])['t'] for line in recording.read_text().splitlines() if json.loads(line)['direction'] not in ('admission', 'response')}
             if 'SourceState' in kinds and 'Prepare' in kinds and 'Dispatch' in kinds:
                 break
             time.sleep(.05)
@@ -128,6 +157,12 @@ def main():
     mutations = [
         ('state.db', 'records', "payload=CAST(payload||x'20' AS BLOB)"),
         ('state.db', 'journal', "payload=CAST(payload||x'20' AS BLOB)"),
+        ('state.db', 'records', 'version=version+1'),
+        ('state.db', 'records', "payload=CAST(json_set(payload,'$.data.__shadow_fault',1) AS BLOB)"),
+        ('state.db', 'journal', 'seq=seq+1000000'),
+        ('state.db', 'journal', "payload=CAST(json_set(payload,'$.op','delete') AS BLOB)"),
+        ('ledger.db', 'commands', "payload=CAST(json_set(payload,'$.disposition','indeterminate') AS BLOB)"),
+        ('ledger.db', 'commands', "payload=CAST(json_set(payload,'$.expires_at','2099-01-01T00:00:00Z') AS BLOB)"),
         ('state.db', 'aliases', "record_id=record_id||'changed'"),
         ('state.db', 'checkpoints', "checkpoint=checkpoint||'changed'"),
         ('ledger.db', 'commands', "payload=CAST(payload||x'20' AS BLOB)"),
@@ -145,12 +180,31 @@ def main():
             result = subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'diff', '--left', str(home), '--right', str(changed)], capture_output=True, text=True)
             report = json.loads(result.stdout)
             mismatches = [row['table'] for row in report['digests'] if not row['equal']]
-            if result.returncode != 1 or mismatches != [database + '/' + table]:
+            if result.returncode != 1 or mismatches != ([database + '/' + table] if table != 'aliases' else ['state.db/records', 'state.db/journal']):
                 raise RuntimeError('seeded database mismatch was not detected precisely')
             detected.append(database + '/' + table)
         finally:
             shutil.rmtree(changed)
-    print(json.dumps({'synthetic_capture_recorded': True, 'identical_home_equal': True, 'changed_gojson_bytes_detected': True, 'seeded_mismatches_detected': detected, 'frame_types': sorted(kinds)}))
+    aligned = root / 'aligned'
+    shutil.copytree(home, aligned)
+    with sqlite3.connect(aligned / 'state.db') as db:
+        identity = db.execute("SELECT id FROM records WHERE collection='system.source' LIMIT 1").fetchone()[0]
+        replacement = identity + '_synthetic_renamed'
+        db.execute('UPDATE aliases SET record_id=? WHERE record_id=?', (replacement, identity))
+        db.execute('UPDATE records SET id=? WHERE id=?', (replacement, identity))
+        db.execute("UPDATE records SET observed_at='2001-01-01T00:00:00Z'")
+        db.execute('UPDATE journal SET committed_at=1')
+        for table, clocks in [('records', {('observed_at',): '2001-01-01T00:00:00Z'}), ('journal', {('record', 'observed_at'): '2001-01-01T00:00:00Z'})]:
+            rows = db.execute('SELECT rowid,payload FROM ' + table).fetchall()
+            for rowid, payload in rows:
+                db.execute('UPDATE ' + table + ' SET payload=? WHERE rowid=?', (normalized_json(payload, {identity: replacement}, clocks), rowid))
+    result = subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'diff', '--left', str(home), '--right', str(aligned)], capture_output=True, text=True)
+    if result.returncode or not json.loads(result.stdout)['equal']:
+        raise RuntimeError('alias identity and envelope clock equivalence failed')
+    result = subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'replay', '--recording', str(recording), '--starting-home', str(root / 'starting'), '--output', str(root / 'replay'), '--go', 'bin/bridge', '--rust', 'bin/bridge'], capture_output=True, text=True)
+    if result.returncode or not json.loads(result.stdout)['equal']:
+        raise RuntimeError('synthetic Go-Go admission replay parity failed: ' + result.stderr.strip())
+    print(json.dumps({'alias_clock_equivalence': True, 'go_go_admission_replay_equal': True, 'synthetic_capture_recorded': True, 'identical_home_equal': True, 'changed_gojson_bytes_detected': True, 'seeded_mismatches_detected': detected, 'frame_types': sorted(kinds)}))
 
 
 if __name__ == '__main__':

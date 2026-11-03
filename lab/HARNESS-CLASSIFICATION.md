@@ -350,3 +350,13 @@ Total: 333 files. Existing evidence annotations record the implementation that p
 | `lab/world/relay.go` | D-class | Product home/database mutation or fixture setup; audit before Rust qualification | trust |
 | `lab/world/truth.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
 | `lab/world/world.go` | D-class | Product home/database mutation or fixture setup; audit before Rust qualification | contracts, trust |
+
+## G-E continuation after PR #540
+
+The baseline table above remains a historical inventory, not a current pass count. The Mac gateway paths in `mac.go`, `mac_actions.go`, `mac_clipboard.go`, `mac_commands.go`, `mac_extras.go`, and `mac_extras_real.go` now use a lab-owned readback oracle. Agent setup uses the selected gateway CLI, and command schemas come from the selected binary's OpenAPI endpoint instead of `MacDescriptors`/`OperationSchema`. Existing assertion predicates are retained; schema-fetch success is additionally asserted. Go SIM proof covers MAC-ACTIONS, MAC-COMMANDS, MAC-EXTRAS-SIM and the SIM branch of IWORK-REAL. No real-level run or Rust pass is implied.
+
+`AUTH-SCOPES-METADATA` additionally uses the frozen OAuth scope corpus and selected-binary token creation to test registration, followed by the unchanged metadata assertions; its Go SIM proof passes. `agent_activity_capture.go` creates concurrent reader/writer agents through the selected gateway CLI, with WEB-AGENT-ACTIVITY proved on Go; the enclosing owner-session setup remains coupled and blocked for Rust. The frame-aware fault proxy now honors blackholes in both directions, preserving the existing CORE-DISCONNECT-DETECT assertion.
+
+`blob_journey.go` uses the frozen contract progress type and read-only post-migration inspection. CORE-BLOB-GC preserves offline legacy-index fault injection followed by selected-binary restart and migration, proved against Go with its existing assertions.
+
+Remaining P/D conversions are not complete. Concrete missing fixture contracts and their affected families are in `rust/interfaces/lab-world.md`. Product imports in the remaining files continue to block their Rust qualification; changing an inventory label does not convert a journey. Shadow tool semantics, reproducible synthetic proofs and unresolved live-run requirements are in `lab/shadow/README.md`.

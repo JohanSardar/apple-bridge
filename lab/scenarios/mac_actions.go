@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
-	"github.com/JohanSardar/apple-bridge/internal/trust"
 	"github.com/JohanSardar/apple-bridge/lab/scripted"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
@@ -17,7 +16,7 @@ func macActions(ctx context.Context, client scripted.Client, w *world.World, add
 	} {
 		var out contracts.CommandRecord
 		err := client.Call(ctx, t.op, contracts.Command{ID: contracts.NewCommandID(), Args: json.RawMessage(t.args), WaitMS: 15000}, &out)
-		add(t.op, err == nil && out.State == contracts.CommandObserved && contracts.MacCompletionEvidence(out.Evidence, out.RequestHash))
+		add(t.op, err == nil && out.State == contracts.CommandObserved && macCompletionReadback(out.Evidence, out.RequestHash))
 	}
 	for _, permission := range []string{"not_determined", "denied"} {
 		e := w.ControlAction("/mac-notifications", map[string]any{"permission": permission})
@@ -32,11 +31,18 @@ func macActions(ctx context.Context, client scripted.Client, w *world.World, add
 		err := client.Call(ctx, op, contracts.Command{ID: contracts.NewCommandID(), Args: json.RawMessage(`{}`)}, &out)
 		add(op+"_requires_approve", err != nil)
 	}
-	authority, err := trust.Open(w.Gateway.Home)
+	_, err := w.GatewayCommand("agent", "list")
 	add("approval_authority", err == nil)
 	if err == nil {
-		for _, level := range []trust.AgentLevel{trust.AgentFull, trust.AgentApprove} {
-			_, token, e := authority.CreateAgent("Bridge Test Mac power", level, []contracts.Grant{"mac:write"})
+		for _, level := range []string{"full", "approve"} {
+			raw, e := w.GatewayCommand("agent", "create", "--name", "Bridge Test Mac power", "--level", level, "--scope", "mac:write")
+			var credentials struct {
+				Token string `json:"token"`
+			}
+			if e == nil {
+				e = json.Unmarshal(raw, &credentials)
+			}
+			token := credentials.Token
 			add("power_agent_created", e == nil)
 			endpoint := w.Gateway
 			endpoint.Token = token
@@ -44,7 +50,7 @@ func macActions(ctx context.Context, client scripted.Client, w *world.World, add
 			for _, op := range []string{"mac.lock_screen", "mac.sleep_display", "mac.restart", "mac.shutdown"} {
 				var row contracts.CommandRecord
 				e = agent.Call(ctx, op, contracts.Command{ID: contracts.NewCommandID(), Args: json.RawMessage(`{}`)}, &row)
-				if level == trust.AgentApprove {
+				if level == "approve" {
 					add(op+"_awaiting_approval", e == nil && row.State == contracts.CommandAwaitingApproval)
 				} else {
 					add(op+"_full_agent_denied", e != nil)
