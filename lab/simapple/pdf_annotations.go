@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/JohanSardar/apple-bridge/internal/applepeer"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	applepeer "github.com/JohanSardar/apple-bridge/lab/ipc"
 )
 
 func simulatedAnnotatedPDF(annotations []contracts.PDFAnnotation) []byte {

@@ -20,7 +20,19 @@ with tempfile.TemporaryDirectory(prefix='ab-gd1-web-golden-') as home:
             status = response.status
             connection.close()
             return status, raw
-        status, raw = request('POST','/oauth/register',json.dumps(dict(client_name='synthetic',redirect_uris=['https://connector.example/callback'])))
+        passkey = json.loads((root/'contracts/golden/passkey.json').read_text())
+        for flow, field in [('passkeys', 'enroll_options'), ('login', 'login_options')]:
+            status, raw = request('POST', '/auth/'+flow+'/options', '{}')
+            assert status == 200, raw
+            options = json.loads(raw)
+            ceremony_id = options.pop('ceremony_id')
+            challenge = options['publicKey']['challenge']
+            options['publicKey']['challenge'] = passkey[field]['publicKey']['challenge']
+            assert options == passkey[field], (flow, options, passkey[field])
+            expected = dict(passkey[field], ceremony_id=ceremony_id)
+            expected['publicKey'] = dict(expected['publicKey'], challenge=challenge)
+            assert raw == json.dumps(expected, sort_keys=True, separators=(',', ':'))+'\n', (flow, raw, expected)
+        status, raw = request('POST','/oauth/register' ,json.dumps(dict(client_name='synthetic',redirect_uris=['https://connector.example/callback'])))
         assert status == 201, raw
         client = json.loads(raw)['client_id']
         replacements = {client:'client-fixture'}

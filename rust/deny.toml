@@ -1,5 +1,4 @@
 [advisories]
-ignore = [{ id = "RUSTSEC-2023-0071", reason = "Go credential compatibility includes RS256 (contracts/golden/passkey.json advertises -257); webauthn-rs-core uses crypto-glue RSA only for public-key verification. No RSA private keys or signing operations. See crates/ab-trust/PASSKEY-COMPATIBILITY.md." }]
 [licenses]
 allow = ["MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC", "Zlib", "Unicode-3.0", "MPL-2.0", "CDLA-Permissive-2.0"]
 [bans]

@@ -6,8 +6,10 @@ import (
 	"crypto/ed25519"
 	"crypto/hmac"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/internal/iphone"
 	"github.com/JohanSardar/apple-bridge/internal/relay"
 	"github.com/JohanSardar/apple-bridge/internal/trust"
@@ -16,6 +18,10 @@ import (
 )
 
 type input struct {
+	Payload    json.RawMessage         `json:"payload"`
+	Batch      contracts.HealthBatch   `json:"batch"`
+	Command    contracts.Command       `json:"command"`
+	Now        int64                   `json:"now"`
 	At         int64                   `json:"at"`
 	Pair       trust.IPhonePairRequest `json:"pair"`
 	Op         string                  `json:"op"`
@@ -35,12 +41,19 @@ func run(in input) (any, error) {
 		return nil, err
 	}
 	switch in.Op {
+	case "health-digest":
+		raw, err := json.Marshal(in.Batch)
+		digest := sha256.Sum256(raw)
+		return map[string]string{"digest": hex.EncodeToString(digest[:]), "raw": string(raw)}, err
 	case "request":
 		at := in.At
 		if at == 0 {
 			at = time.Now().Unix()
 		}
 		payload := []byte(`{"command_id":"synthetic-command"}`)
+		if len(in.Payload) != 0 {
+			payload = in.Payload
+		}
 		return trust.IPhoneRequest{DeviceID: in.ID, At: at, Payload: payload, Signature: ed25519.Sign(key, trust.IPhoneMessage(in.Path, at, payload))}, nil
 	case "pair-request":
 		code, err := trust.DecodePairCode(in.Code)
@@ -73,6 +86,18 @@ func run(in input) (any, error) {
 	case "verify":
 		p, err := a.VerifyIPhone(in.Path, in.Request)
 		return map[string]string{"id": p.ID}, err
+	case "live":
+		p, err := a.Principal(in.ID)
+		if err != nil {
+			return nil, err
+		}
+		token, raw, err := iphone.LivePayload(p, in.Command, time.Unix(in.Now, 0))
+		return map[string]string{"token": token, "raw": string(raw)}, err
+	case "list":
+		return a.IPhones()
+	case "revoke":
+		err := a.Revoke(in.ID)
+		return map[string]bool{"revoked": err == nil}, err
 	case "principal":
 		return a.Principal(in.ID)
 	default:

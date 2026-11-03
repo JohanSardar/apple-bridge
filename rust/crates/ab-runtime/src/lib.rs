@@ -21,6 +21,8 @@ use std::{
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error(transparent)]
+    Trust(#[from] ab_trust::Error),
+    #[error(transparent)]
     Io(#[from] std::io::Error),
     #[error(transparent)]
     Json(#[from] serde_json::Error),

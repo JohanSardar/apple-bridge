@@ -284,3 +284,17 @@ impl Authority {
         })
     }
 }
+
+impl Authority {
+    pub fn revoke_iphone(&self, id: &str) -> Result<(), Error> {
+        self.update(|d| {
+            let index = d
+                .principals
+                .iter()
+                .position(|p| p.id == id && p.kind == "iphone")
+                .ok_or(Error::Invalid)?;
+            d.principals.remove(index);
+            Ok(())
+        })
+    }
+}

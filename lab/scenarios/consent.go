@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
-	"github.com/JohanSardar/apple-bridge/internal/trust"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 	"io"
 	"net/http"
@@ -16,12 +15,19 @@ import (
 
 func runConsent(ctx context.Context, w *world.World, c *webClient, e *Evidence, add func(string, bool)) {
 	runAgentOAuth(ctx, w, c, e, add)
-	a, err := trust.Open(w.Gateway.Home)
+	_, err := w.GatewayCommand("agent", "list")
 	if err != nil {
 		add("authority", false)
 		return
 	}
-	_, token, err := a.CreateAgent("Bridge Test consent", trust.AgentApprove, []contracts.Grant{"messages:write"})
+	rawAgent, err := w.GatewayCommand("agent", "create", "--name", "Bridge Test consent", "--level", "approve", "--scope", "messages:write")
+	var created struct {
+		Token string `json:"token"`
+	}
+	if err == nil {
+		err = json.Unmarshal(rawAgent, &created)
+	}
+	token := created.Token
 	if err != nil {
 		add("agent", false)
 		return

@@ -1,79 +1,50 @@
-# G-D1 implementation and remaining merge gate
+# G-D1 OAuth, consent and passkeys
 
-This change starts from iPhone foundation `4fcaadc2`. No live home, gateway,
-passkey, browser or device was accessed. The JavaScript asset is copied verbatim
-from `internal/web/assets/webauthn.js`.
+Continues PR #539 at 425973a5, preserving the original commits and attribution.
+Main is merged. No live home, service, credential or device was accessed.
 
-Implemented modules:
+Implemented: Go-shaped OAuth clients, PKCE, agent grants, hashed credentials,
+refresh rotation and persisted reuse revocation; device sessions and enrollment;
+server-rendered consent, passkey, approval and command pages; pending connector
+control; bounded public metadata fetches; frozen JavaScript.
 
-- `ab-trust::oauth`: Go-shaped dynamic clients, authorization codes, PKCE S256,
-  agent principals, one-hour access, absolute 90-day refresh rotation, revocation
-  on reuse, enrollment ceilings, credential-lock transactions and hashed storage.
-- `ab-trust::devices`: Go device session and enrollment token envelopes,
-  trusted/public idle and absolute lifetimes.
-- `ab-trust::passkeys`: the 18-byte owner handle through webauthn-rs-core 0.6.2,
-  Go credential import, registration envelope export, current counter checks and
-  backup flags. Existing credential fields survive login updates.
-- `ab-frontdoor::web`: consent, enrollment, login, approval and command pages,
-  metadata, registration, authorization and token routes, pending connectors,
-  security headers, origin/host checks, strict cookies and request limits.
-- `web_connector`: bounded expiring pending approval state, five matching-code
-  attempts and single-use polling. Runtime can call `pending_connectors` and
-  `decide_connector` from its owner-only control channel.
-- `web_metadata`: public-IP-only HTTPS metadata fetches, pinned DNS results,
-  bounded bodies, redirect validation and HTTP cache lifetime handling.
+The orchestrator approved ES256/P-256 and EdDSA/Ed25519 only after confirming
+the sole live passkey is ES256. ADR 0027 records the single frozen-transcript
+exception: enroll_options.publicKey.pubKeyCredParams. All other golden fields
+and signed ceremony bytes remain identical. HTTP options match the frozen Go
+shape and bytes after replacing random challenge/ceremony IDs. Rust omits the
+core's default explicit attestation=none and empty allowCredentials to match Go.
 
-Measured on Ubuntu:
+Patched pinned core/crypto-glue sources under rust/vendor remove RSA primitives
+and add strict Ed25519 verification. cargo-deny has no advisory exceptions.
+Authority::open and doctor validate every stored credential, across RP IDs,
+and reject unsupported algorithms/curves with a re-enrol hint. No credentials
+are silently discarded. Malformed envelopes fail closed.
 
-- `make rust-ci`: passed, including lint, workspace tests, formatting, Clippy,
-  all cargo-deny checks and existing Go golden checks.
-- OAuth golden HTTP transcript: five exchanges, zero byte mismatches.
-- Credential interoperability: 49 assertions, zero failures, all four
-  Go/Rust issuance/exchange combinations, both readers, refresh expiry,
-  hashed secrets, rotation and persisted family revocation.
-- Existing `runConsent` scenario: 38 assertions, zero failures, using a Rust
-  frontdoor fixture with a Go gateway backend. The virtual authenticator also
-  proves fresh Go registration → Rust login and Rust registration → Go login.
-  The original scenario and its assertions are unchanged; a Go overlay adds
-  the fixture adapter. Backend command execution and MCP are explicitly Go.
+G-F owns the gateway assembly. The complete Web/Approvals/listener/TLS/control
+channel contract is in rust/INTERFACES.md. This PR proves Rust auth/pages with
+a Go backend; it does not qualify an assembled Rust gateway or live cutover.
 
-## Do not merge as an exact drop-in yet
-
-The pinned core does not implement every algorithm advertised by Go. In
-particular, its COSE importer accepts RSA only for RS256 with a 256-byte modulus
-and three-byte exponent, and its public-key verifier does not implement EdDSA.
-Go's frozen registration options also advertise RS384, RS512 and RSA-PSS.
-Consequently full passkey option/transcript and legacy algorithm parity is not
-established. The current evidence proves ES256 compatibility. This needs an
-upstream correction or a separately reviewed compatibility implementation;
-silently narrowing Go's stored-credential contract would violate the brief.
-
-The RUSTSEC-2023-0071 exception is documented in Trust's
-`PASSKEY-COMPATIBILITY.md`; cargo-deny passes with only that advisory waived.
-This does not solve the algorithm coverage gap.
-
-The gateway runtime remains unwired. Construct `Web` with the actual bound
-address, the public host and an `Approvals` adapter, and route these requests
-separately from the API bearer middleware. Set `SecureTransport` only from an
-actual TLS listener; forwarded headers never establish secure transport. The
-`Approvals` adapter supplies redacted/full argument strings and delegates
-current owner authorization and decisions to the command authority.
-
-Reproduce (Ubuntu, isolated checkout):
+Reproduce on Ubuntu in an isolated checkout (Go and Cargo on PATH):
 
 ```sh
 export APPLE_BRIDGE_SECRET_STORE=file
-cargo build --manifest-path rust/Cargo.toml -p ab-trust --example oauth_interop -p ab-frontdoor --example consent_fixture
+make rust-ci
+cargo build --manifest-path rust/Cargo.toml -p ab-trust --example oauth_interop --example passkey_algorithms -p ab-frontdoor --example consent_fixture
 go build -o /tmp/ab-gd1-oauth-go ./rust/crates/ab-trust/interop
 python3 rust/crates/ab-trust/interop/run.py "${CARGO_TARGET_DIR:-rust/target}/debug/examples/oauth_interop" /tmp/ab-gd1-oauth-go
 python3 rust/crates/ab-frontdoor/interop/golden.py "${CARGO_TARGET_DIR:-rust/target}/debug/examples/consent_fixture"
+"${CARGO_TARGET_DIR:-rust/target}/debug/examples/passkey_algorithms" "$(mktemp -d)"
 go build -tags lab -o bin/bridge ./cmd/bridge
 go build -o bin/bridge-lab ./cmd/bridge-lab
 python3 rust/crates/ab-trust/interop/consent.py "${CARGO_TARGET_DIR:-rust/target}/debug/examples/consent_fixture" /tmp/ab-gd1-consent.json
 ```
 
-The golden HTTP fixture binds only Ubuntu loopback port 7780. Startup failure
-never stops another listener. The consent fixture uses a second loopback address
-on the Go gateway's random port, keeping the OAuth resource and RP origin
-identical across the two frontdoors. Only command/backend API routes are proxied;
-Rust owns auth, OAuth, cookies and rendering. No browser automation is involved.
+Proof scope: five OAuth golden exchanges, full registration/login HTTP option
+bytes, 49 OAuth/credential interoperability assertions including Go ES256 golden
+login, unchanged 38-assertion CONSENT-CONNECTOR against Rust auth with Go backend,
+fresh passkey interoperability both ways, synthetic Ed25519 registration/login,
+signature tampering rejection, and unsupported stored key refusal without writes.
+The additional Go test logs the golden algorithm exception explicitly. No
+existing behavioral scenarios were weakened; the consent fixture uses a Go
+overlay and does not count Go backend/MCP execution as Rust evidence.

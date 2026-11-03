@@ -34,6 +34,7 @@ struct Delegation<'a> {
 impl Authority {
     pub fn open(home: impl AsRef<Path>) -> Result<Self, Error> {
         let home = home.as_ref().to_path_buf();
+        crate::passkeys::validate_home(&home)?;
         fs::create_dir_all(&home)?;
         fs::set_permissions(&home, fs::Permissions::from_mode(0o700))?;
         let lock = OpenOptions::new()

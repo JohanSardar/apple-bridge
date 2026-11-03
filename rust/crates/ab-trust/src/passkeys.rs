@@ -11,7 +11,10 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use webauthn_rs_core::{
     WebauthnCore,
-    proto::{COSEKey, Credential, CredentialV3, PublicKeyCredential, UserVerificationPolicy},
+    proto::{
+        COSEAlgorithm, COSEKey, Credential, CredentialV3, PublicKeyCredential,
+        UserVerificationPolicy,
+    },
 };
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Passkey {
@@ -41,6 +44,7 @@ pub fn core(rp: &str, origin: &str) -> Result<WebauthnCore, Error> {
 pub fn import(v: &Value) -> Result<Credential, Error> {
     let cose: serde_cbor_2::Value =
         serde_cbor_2::from_slice(&bytes(&v["publicKey"])?).map_err(invalid)?;
+    validate_cose(&cose)?;
     let mut c: Credential = CredentialV3 {
         cred_id: bytes(&v["id"])?,
         cred: COSEKey::try_from(&cose).map_err(invalid)?,
@@ -73,15 +77,26 @@ pub fn begin(
             .generate_challenge_authenticate(builder)
             .map_err(invalid)?;
         options.public_key.allow_credentials.clear();
-        Ok((serde_json::to_value(options)?, serde_json::to_value(state)?))
+        let mut options = serde_json::to_value(options)?;
+        options["publicKey"]
+            .as_object_mut()
+            .ok_or(Error::Invalid)?
+            .remove("allowCredentials");
+        Ok((options, serde_json::to_value(state)?))
     } else {
         let builder = wa
             .new_challenge_register_builder(b"apple-bridge-owner", "Bridge owner", "Bridge owner")
             .map_err(invalid)?
+            .credential_algorithms(vec![COSEAlgorithm::ES256, COSEAlgorithm::EDDSA])
             .require_resident_key(true)
             .user_verification_policy(UserVerificationPolicy::Required);
         let (options, state) = wa.generate_challenge_register(builder).map_err(invalid)?;
-        Ok((serde_json::to_value(options)?, serde_json::to_value(state)?))
+        let mut options = serde_json::to_value(options)?;
+        options["publicKey"]
+            .as_object_mut()
+            .ok_or(Error::Invalid)?
+            .remove("attestation");
+        Ok((options, serde_json::to_value(state)?))
     }
 }
 pub fn finish_registration(
@@ -142,6 +157,41 @@ pub fn finish_registration(
         created_at: jiff::Timestamp::now().to_string(),
     })
 }
+fn validate_cose(cose: &serde_cbor_2::Value) -> Result<(), Error> {
+    use serde_cbor_2::Value::{Integer, Map};
+    let Map(map) = cose else {
+        return Err(Error::Invalid);
+    };
+    let alg = map
+        .get(&Integer(3))
+        .and_then(|v| if let Integer(n) = v { Some(*n) } else { None })
+        .ok_or(Error::Invalid)?;
+    let supported = match alg {
+        -7 => {
+            map.get(&Integer(1)) == Some(&Integer(2)) && map.get(&Integer(-1)) == Some(&Integer(1))
+        }
+        -8 => {
+            map.get(&Integer(1)) == Some(&Integer(1)) && map.get(&Integer(-1)) == Some(&Integer(6))
+        }
+        _ => false,
+    };
+    if !supported {
+        return Err(Error::UnsupportedPasskey(alg));
+    }
+    Ok(())
+}
+pub fn validate_home(home: &std::path::Path) -> Result<(), Error> {
+    let raw = match std::fs::read(home.join("credentials.json")) {
+        Ok(raw) => raw,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(e) => return Err(e.into()),
+    };
+    let data: crate::Credentials = serde_json::from_slice(&raw)?;
+    for key in read::<Passkey>(&data, "passkeys")? {
+        import(&key.credential)?;
+    }
+    Ok(())
+}
 impl Authority {
     pub fn passkeys(&self, rp: &str) -> Result<Vec<Passkey>, Error> {
         Ok(read::<Passkey>(&self.load()?, "passkeys")?
@@ -155,6 +205,7 @@ impl Authority {
         enroll: &str,
         principal: Option<&Principal>,
     ) -> Result<(), Error> {
+        import(&key.credential)?;
         self.update(|d| {
             if let Some(p) = principal {
                 if !d

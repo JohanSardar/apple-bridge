@@ -67,3 +67,8 @@ func (w *World) CommandLedgerLossBlocked() bool {
 	_, err := commandOutput(ctx, w.bridge, "start", "--home", w.Gateway.Home, "--api-addr", "127.0.0.1:0", "--peer-addr", "127.0.0.1:0")
 	return ctx.Err() == nil && err != nil && strings.Contains(err.Error(), "ledger_missing")
 }
+
+func (w *World) GatewayCommand(args ...string) ([]byte, error) {
+	output, err := w.execute(false, w.bridge, append(args, "--home", w.Gateway.Home)...)
+	return []byte(output), err
+}

@@ -35,6 +35,8 @@ func TestPasskeyGolden(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
+	t.Log("ADR 0027 addendum: only pubKeyCredParams changes; ES256 and Ed25519 remove unsupported RSA without changing the signed ceremony")
+	options.Response.Parameters = []protocol.CredentialParameter{{Type: protocol.PublicKeyCredentialType, Algorithm: -7}, {Type: protocol.PublicKeyCredentialType, Algorithm: -8}}
 	challenge := bytes.Repeat([]byte{23}, 32)
 	options.Response.Challenge = challenge
 	session.Challenge = base64.RawURLEncoding.EncodeToString(challenge)
