@@ -1,0 +1,293 @@
+{
+  "scope": {
+    "CON": 14,
+    "NOTE": 7,
+    "REM": 11
+  },
+  "level": "sim",
+  "host": "ubuntu",
+  "cargo_build_jobs": 4,
+  "sim_parallel": 2,
+  "verified_head": "d2c2c1aa379cdfc653262a95fe2140a5193c3d66",
+  "verified_base": "0ffdc1a2",
+  "rust_ci": "pass",
+  "rust_after_passed": 32,
+  "go_after_passed": 32,
+  "root_causes": [
+    "Source-family sim qualification guard rejected existing isolated binary journeys before execution.",
+    "Runtime action resolution supported only Reminders; generic catalog schemas rejected valid Contacts arguments at both public service and local admission.",
+    "Contacts and Notes needed visible native keys, group member reference conversion, Notes content/folder/HTML policy and safe recovery messages.",
+    "Dispatch-time native conflicts bypassed capture-bound current-record enrichment."
+  ],
+  "prs": [
+    "https://github.com/JohanSardar/apple-bridge/pull/565",
+    "https://github.com/JohanSardar/apple-bridge/pull/570"
+  ],
+  "pre_existing": [
+    "NOTE-EXTERNAL failed external_edits_converge with API 404 on the first Go baseline and a second Go regression; it passed on the latest Go and Rust runs without changing Go or the scenario."
+  ],
+  "scenarios": [
+    {
+      "id": "CON-CONFLICT",
+      "rust_before": "fail",
+      "rust_before_execution": "blocked by native journey qualification guard",
+      "go_before": "pass",
+      "rust_after": "pass",
+      "go_after": "pass"
+    },
+    {
+      "id": "CON-CRUD",
+      "rust_before": "fail",
+      "rust_before_execution": "blocked by native journey qualification guard",
+      "go_before": "pass",
+      "rust_after": "pass",
+      "go_after": "pass"
+    },
+    {
+      "id": "CON-DROP-EVERYTHING",
+      "rust_before": "fail",
+      "rust_before_execution": "blocked by native journey qualification guard",
+      "go_before": "pass",
+      "rust_after": "pass",
+      "go_after": "pass"
+    },
+    {
+      "id": "CON-EXTERNAL",
+      "rust_before": "fail",
+      "rust_before_execution": "blocked by native journey qualification guard",
+      "go_before": "pass",
+      "rust_after": "pass",
+      "go_after": "pass"
+    },
+    {
+      "id": "CON-GROUPS",
+      "rust_before": "fail",
+      "rust_before_execution": "blocked by native journey qualification guard",
+      "go_before": "pass",
+      "rust_after": "pass",
+      "go_after": "pass"
+    },
+    {
+      "id": "CON-HANDLE-LINK",
+      "rust_before": "fail",
+      "rust_before_execution": "blocked by native journey qualification guard",
+      "go_before": "pass",
+      "rust_after": "pass",
+      "go_after": "pass"
+    },
+    {
+      "id": "CON-IMAGE",
+      "rust_before": "fail",
+      "rust_before_execution": "blocked by native journey qualification guard",
+      "go_before": "pass",
+      "rust_after": "pass",
+      "go_after": "pass"
+    },
+    {
+      "id": "CON-IMPORT",
+      "rust_before": "fail",
+      "rust_before_execution": "blocked by native journey qualification guard",
+      "go_before": "pass",
+      "rust_after": "pass",
+      "go_after": "pass"
+    },
+    {
+      "id": "CON-PERMISSION-LOSS",
+      "rust_before": "fail",
+      "rust_before_execution": "blocked by native journey qualification guard",
+      "go_before": "pass",
+      "rust_after": "pass",
+      "go_after": "pass"
+    },
+    {
+      "id": "CON-READONLY-CONTAINER",
+      "rust_before": "fail",
+      "rust_before_execution": "blocked by native journey qualification guard",
+      "go_before": "pass",
+      "rust_after": "pass",
+      "go_after": "pass"
+    },
+    {
+      "id": "CON-RECIPIENT-LOOKUP",
+      "rust_before": "fail",
+      "rust_before_execution": "blocked by native journey qualification guard",
+      "go_before": "pass",
+      "rust_after": "pass",
+      "go_after": "pass"
+    },
+    {
+      "id": "CON-RESOLVE-RESTART",
+      "rust_before": "fail",
+      "rust_before_execution": "blocked by native journey qualification guard",
+      "go_before": "pass",
+      "rust_after": "pass",
+      "go_after": "pass"
+    },
+    {
+      "id": "CON-SEARCH",
+      "rust_before": "fail",
+      "rust_before_execution": "blocked by native journey qualification guard",
+      "go_before": "pass",
+      "rust_after": "pass",
+      "go_after": "pass"
+    },
+    {
+      "id": "CON-TOKEN-CRASH",
+      "rust_before": "fail",
+      "rust_before_execution": "blocked by native journey qualification guard",
+      "go_before": "pass",
+      "rust_after": "pass",
+      "go_after": "pass"
+    },
+    {
+      "id": "NOTE-CRUD",
+      "rust_before": "blocked",
+      "rust_before_execution": "blocked by native journey qualification guard",
+      "go_before": "pass",
+      "rust_after": "pass",
+      "go_after": "pass"
+    },
+    {
+      "id": "NOTE-EDIT-PARITY",
+      "rust_before": "blocked",
+      "rust_before_execution": "blocked by native journey qualification guard",
+      "go_before": "pass",
+      "rust_after": "pass",
+      "go_after": "pass"
+    },
+    {
+      "id": "NOTE-EXTERNAL",
+      "rust_before": "blocked",
+      "rust_before_execution": "blocked by native journey qualification guard",
+      "go_before": "fail",
+      "rust_after": "pass",
+      "go_after": "pass"
+    },
+    {
+      "id": "NOTE-EXTRAS",
+      "rust_before": "blocked",
+      "rust_before_execution": "blocked by native journey qualification guard",
+      "go_before": "pass",
+      "rust_after": "pass",
+      "go_after": "pass"
+    },
+    {
+      "id": "NOTE-IMPORT",
+      "rust_before": "blocked",
+      "rust_before_execution": "blocked by native journey qualification guard",
+      "go_before": "pass",
+      "rust_after": "pass",
+      "go_after": "pass"
+    },
+    {
+      "id": "NOTE-LIST",
+      "rust_before": "blocked",
+      "rust_before_execution": "blocked by native journey qualification guard",
+      "go_before": "pass",
+      "rust_after": "pass",
+      "go_after": "pass"
+    },
+    {
+      "id": "NOTE-RICH-REJECT",
+      "rust_before": "blocked",
+      "rust_before_execution": "blocked by native journey qualification guard",
+      "go_before": "pass",
+      "rust_after": "pass",
+      "go_after": "pass"
+    },
+    {
+      "id": "REM-CONFLICT",
+      "rust_before": "fail",
+      "rust_before_execution": "blocked by native journey qualification guard",
+      "go_before": "pass",
+      "rust_after": "pass",
+      "go_after": "pass"
+    },
+    {
+      "id": "REM-CREATE-EXTERNAL",
+      "rust_before": "fail",
+      "rust_before_execution": "blocked by native journey qualification guard",
+      "go_before": "pass",
+      "rust_after": "pass",
+      "go_after": "pass"
+    },
+    {
+      "id": "REM-CRUD",
+      "rust_before": "fail",
+      "rust_before_execution": "blocked by native journey qualification guard",
+      "go_before": "pass",
+      "rust_after": "pass",
+      "go_after": "pass"
+    },
+    {
+      "id": "REM-EXTERNAL-RACE",
+      "rust_before": "fail",
+      "rust_before_execution": "blocked by native journey qualification guard",
+      "go_before": "pass",
+      "rust_after": "pass",
+      "go_after": "pass"
+    },
+    {
+      "id": "REM-LIST-CREATE",
+      "rust_before": "fail",
+      "rust_before_execution": "blocked by native journey qualification guard",
+      "go_before": "pass",
+      "rust_after": "pass",
+      "go_after": "pass"
+    },
+    {
+      "id": "REM-LIST-MANAGE",
+      "rust_before": "fail",
+      "rust_before_execution": "blocked by native journey qualification guard",
+      "go_before": "pass",
+      "rust_after": "pass",
+      "go_after": "pass"
+    },
+    {
+      "id": "REM-NATIVE-LIST-RACE",
+      "rust_before": "fail",
+      "rust_before_execution": "blocked by native journey qualification guard",
+      "go_before": "pass",
+      "rust_after": "pass",
+      "go_after": "pass"
+    },
+    {
+      "id": "REM-OPERATION-SHAPES",
+      "rust_before": "fail",
+      "rust_before_execution": "blocked by native journey qualification guard",
+      "go_before": "pass",
+      "rust_after": "pass",
+      "go_after": "pass"
+    },
+    {
+      "id": "REM-PERMISSION-LOSS",
+      "rust_before": "fail",
+      "rust_before_execution": "blocked by native journey qualification guard",
+      "go_before": "pass",
+      "rust_after": "pass",
+      "go_after": "pass"
+    },
+    {
+      "id": "REM-READONLY-LIST",
+      "rust_before": "fail",
+      "rust_before_execution": "blocked by native journey qualification guard",
+      "go_before": "pass",
+      "rust_after": "pass",
+      "go_after": "pass"
+    },
+    {
+      "id": "REM-RECURRING",
+      "rust_before": "fail",
+      "rust_before_execution": "blocked by native journey qualification guard",
+      "go_before": "pass",
+      "rust_after": "pass",
+      "go_after": "pass"
+    }
+  ],
+  "integration_smokes": {
+    "CAL-CRUD": "pass",
+    "MSG-SEND-SELF-TEXT": "pass"
+  },
+  "rebase_note": "Rebased immediately before merge; the subsequent main change only handles unknown usage_* MCP tools. Verified Contacts/Notes/Reminders product source is unchanged.",
+  "superseded_pr": "https://github.com/JohanSardar/apple-bridge/pull/567"
+}
