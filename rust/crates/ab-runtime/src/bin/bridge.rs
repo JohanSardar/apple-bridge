@@ -164,13 +164,6 @@ fn offline(args: &Arguments, home: &std::path::Path) -> Result<bool, Error> {
         println!("{report}");
         return Ok(true);
     }
-    if args.verb == "remote" {
-        println!(
-            "{}",
-            ab_remote::state::command(home, &args.action, &args.flag("via", "relay"))?
-        );
-        return Ok(true);
-    }
     if args.verb == "restore" {
         ab_runtime::maintenance::restore(
             home,
@@ -214,6 +207,19 @@ async fn run() -> Result<(), Error> {
         )
         .await?;
         println!("{result}");
+        return Ok(());
+    }
+    if args.verb == "remote" {
+        let mut out = std::io::stdout();
+        ab_remote::onboarding::command(
+            &home,
+            &args.action,
+            &args.flag("via", "relay"),
+            &mut out,
+            Arc::new(ab_remote::onboarding::open_link),
+            std::time::Duration::from_millis(100),
+        )
+        .await?;
         return Ok(());
     }
     if offline(&args, &home)? {

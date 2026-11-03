@@ -26,7 +26,10 @@ fn install_credentials_creates_the_identity_and_is_idempotent() {
     assert!(!home.join("identity-key.pem").exists());
     let second = bridge(&home, &root.path().join("config"), Some("file"));
     assert!(second.status.success(), "{second:?}");
-    assert_eq!(std::fs::read(home.join("identity.pem")).unwrap(), certificate);
+    assert_eq!(
+        std::fs::read(home.join("identity.pem")).unwrap(),
+        certificate
+    );
 }
 
 #[cfg(target_os = "linux")]
@@ -45,6 +48,14 @@ fn linux_default_keeps_the_identity_across_binary_swaps() {
     assert_eq!(stores.len(), 1);
     assert_eq!(std::fs::read_dir(stores[0].path()).unwrap().count(), 1);
     assert!(bridge(&home, &config, None).status.success());
-    assert_eq!(std::fs::read(home.join("identity.pem")).unwrap(), certificate);
-    assert_eq!(std::fs::read_dir(config.join("apple-bridge/secrets")).unwrap().count(), 1);
+    assert_eq!(
+        std::fs::read(home.join("identity.pem")).unwrap(),
+        certificate
+    );
+    assert_eq!(
+        std::fs::read_dir(config.join("apple-bridge/secrets"))
+            .unwrap()
+            .count(),
+        1
+    );
 }

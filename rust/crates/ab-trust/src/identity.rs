@@ -1,6 +1,6 @@
 use crate::{
-    CredentialStore, Credentials, Enrollment, Error, Grant, Principal, atomic_write,
-    effective_grants, fingerprint, subset,
+    Credentials, Enrollment, Error, Grant, Principal, atomic_write, effective_grants, fingerprint,
+    subset,
 };
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use ed25519_dalek::{Signer, pkcs8::DecodePrivateKey};

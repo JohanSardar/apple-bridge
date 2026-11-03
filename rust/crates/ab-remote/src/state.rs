@@ -57,7 +57,63 @@ pub fn token() -> String {
     base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes)
 }
 
-pub fn command(home: &Path, action: &str, via: &str) -> Result<serde_json::Value> {
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Status {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub ct_warning: String,
+    #[serde(default)]
+    pub id: String,
+    #[serde(default)]
+    pub state: String,
+    #[serde(default)]
+    pub backend: String,
+    #[serde(default)]
+    pub url: String,
+    #[serde(default)]
+    pub last_error: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub message: String,
+    #[serde(default)]
+    pub pending_link: String,
+    #[serde(default)]
+    pub tls_termination: String,
+    #[serde(default = "zero_time")]
+    pub certificate_expiry: String,
+}
+pub const ZERO_TIME: &str = "0001-01-01T00:00:00Z";
+fn zero_time() -> String {
+    ZERO_TIME.into()
+}
+impl Default for Status {
+    fn default() -> Self {
+        Self {
+            ct_warning: String::new(),
+            id: String::new(),
+            state: String::new(),
+            backend: String::new(),
+            url: String::new(),
+            last_error: String::new(),
+            message: String::new(),
+            pending_link: String::new(),
+            tls_termination: String::new(),
+            certificate_expiry: zero_time(),
+        }
+    }
+}
+
+pub fn status(home: &Path) -> Result<Status> {
+    match read(home, "status") {
+        Err(Error::Io(e)) if e.kind() == std::io::ErrorKind::NotFound => Ok(Status {
+            state: "off".into(),
+            backend: "embedded".into(),
+            tls_termination: "on this Mac".into(),
+            ..Status::default()
+        }),
+        other => other,
+    }
+}
+
+pub fn select(home: &Path, action: &str, via: &str, id: &str) -> Result<Config> {
     use std::os::unix::fs::OpenOptionsExt;
     let dir = home.join("remote");
     fs::create_dir_all(&dir)?;
@@ -96,12 +152,6 @@ pub fn command(home: &Path, action: &str, via: &str) -> Result<serde_json::Value
         }
         Err(e) => return Err(e),
     };
-    if action == "status" {
-        if selections.get("private") == Some(&true) {
-            return read(home, "status");
-        }
-        return Ok(serde_json::to_value(selections)?);
-    }
     if action != "on" && action != "off" {
         return Err(Error::Contract("action must be on, off or status"));
     }
@@ -125,9 +175,42 @@ pub fn command(home: &Path, action: &str, via: &str) -> Result<serde_json::Value
         Err(Error::Io(e)) if e.kind() == std::io::ErrorKind::NotFound => Config::default(),
         Err(e) => return Err(e),
     };
-    config.id = token();
+    config.id = id.into();
     config.backend = selected.into();
     config.enabled = selections.values().any(|v| *v);
     write(home, "config", &config)?;
-    Ok(serde_json::to_value(selections)?)
+    Ok(config)
+}
+
+pub fn entries(via: &str) -> Vec<&'static str> {
+    match via {
+        "relay" => vec!["relay"],
+        "private" => vec!["private"],
+        "both" => vec!["relay", "system"],
+        _ => vec!["system"],
+    }
+}
+
+pub fn cancel(home: &Path, id: &str, via: &str) -> Result<()> {
+    use std::os::unix::fs::OpenOptionsExt;
+    let dir = home.join("remote");
+    let lock = fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .mode(0o600)
+        .open(dir.join("config.lock"))?;
+    fs2::FileExt::lock_exclusive(&lock)?;
+    let mut config = read::<Config>(home, "config")?;
+    if config.id != id {
+        return Ok(());
+    }
+    let mut selections: BTreeMap<String, bool> = read(home, "ingresses")?;
+    for entry in entries(via) {
+        selections.insert(entry.to_owned(), false);
+    }
+    config.enabled = selections.values().any(|enabled| *enabled);
+    write(home, "config", &config)?;
+    write(home, "ingresses", &selections)
 }

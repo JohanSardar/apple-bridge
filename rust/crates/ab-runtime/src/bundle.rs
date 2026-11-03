@@ -44,7 +44,10 @@ mod tests {
     fn explicit_flag_wins_and_unpackaged_binaries_have_no_helper() {
         let root = tempfile::tempdir().unwrap();
         let executable = packaged(root.path());
-        assert_eq!(helper_app("/custom/Helper.app", Some(&executable)), "/custom/Helper.app");
+        assert_eq!(
+            helper_app("/custom/Helper.app", Some(&executable)),
+            "/custom/Helper.app"
+        );
         assert_eq!(helper_app("", Some(&root.path().join("a/b/bridge"))), "");
         assert_eq!(helper_app("", Some(Path::new("bridge"))), "");
         assert_eq!(helper_app("", None), "");

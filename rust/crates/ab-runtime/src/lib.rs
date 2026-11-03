@@ -380,11 +380,10 @@ async fn track_status(
         if last_collect.elapsed() >= std::time::Duration::from_secs(1) {
             last_collect = std::time::Instant::now();
             let mut owned = blobs.clone().lock_owned().await;
-            if let Err(error) = tokio::task::spawn_blocking(move || {
-                owned.gc(jiff::Timestamp::now(), grace)
-            })
-            .await
-            .map_err(|_| Error::Invalid)?
+            if let Err(error) =
+                tokio::task::spawn_blocking(move || owned.gc(jiff::Timestamp::now(), grace))
+                    .await
+                    .map_err(|_| Error::Invalid)?
             {
                 eprintln!(
                     "{}",

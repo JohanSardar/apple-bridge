@@ -146,8 +146,24 @@ fn publish(
     let active = statuses
         .iter()
         .find(|(name, status)| selected.get(*name) == Some(&true) && status.active);
+    let progress = if active.is_some() {
+        None
+    } else {
+        let pending = statuses
+            .iter()
+            .filter(|(name, _)| selected.get(*name) == Some(&true))
+            .filter_map(|(_, status)| status.progress.as_ref())
+            .collect::<Vec<_>>();
+        pending
+            .iter()
+            .find(|progress| progress.state == "error")
+            .or_else(|| pending.first())
+            .copied()
+    };
     let state = if active.is_some() {
         "on"
+    } else if let Some(progress) = progress {
+        progress.state
     } else if selected.values().any(|enabled| *enabled) {
         "starting"
     } else {
@@ -159,7 +175,7 @@ fn publish(
         "status",
         &serde_json::json!({"id":config.id,"state":state,
         "backend":active.map_or(config.backend.as_str(),|(name,_)|name.as_str()),"url":active.filter(|(name,_)| name.as_str() != "private").map_or_else(String::new,|(_,status)|format!("https://{}",status.host)),
-        "message": if private { ab_remote::state::read::<String>(home,"invitation").unwrap_or_default() } else { String::new() },"last_error":"","pending_link":"","tls_termination": if private { "Tailscale encrypted private transport" } else { "on this Mac" },"certificate_expiry":active.and_then(|(_,status)|status.certificate_expiry.clone()).unwrap_or_else(||"0001-01-01T00:00:00Z".into())}),
+        "message": if private { ab_remote::state::read::<String>(home,"invitation").unwrap_or_default() } else { progress.map_or_else(String::new,|progress|progress.message.clone()) },"last_error":progress.map_or("",|progress|progress.last_error.as_str()),"pending_link":progress.map_or("",|progress|progress.pending_link.as_str()),"tls_termination": if private { "Tailscale encrypted private transport" } else { "on this Mac" },"certificate_expiry":active.and_then(|(_,status)|status.certificate_expiry.clone()).unwrap_or_else(||"0001-01-01T00:00:00Z".into())}),
     );
     match written {
         Err(ab_remote::Error::Io(error)) if error.raw_os_error() == Some(28) => Ok(()),
@@ -283,18 +299,37 @@ async fn reconcile(
     let mut prior = BTreeMap::new();
     let mut cancels = BTreeMap::<&str, watch::Sender<bool>>::new();
     let mut running = BTreeSet::new();
-    let mut tasks = tokio::task::JoinSet::new();
+    let mut tasks: tokio::task::JoinSet<(&'static str, ab_remote::Result<()>)> =
+        tokio::task::JoinSet::new();
     let mut tick = tokio::time::interval(std::time::Duration::from_secs(1));
+    let mut failed = BTreeMap::<&str, String>::new();
+    let mut forwarded = (String::new(), String::new());
     loop {
         tokio::select! {
-            _ = statuses.changed() => { publish(&home,&prior,&statuses.borrow())?; },
+            _ = statuses.changed() => {
+                publish(&home,&prior,&statuses.borrow())?;
+                let id = ab_remote::state::read::<ab_remote::state::Config>(&home,"config").map(|config| config.id).unwrap_or_default();
+                let link = statuses.borrow().iter().filter(|(name,_)| prior.get(*name) == Some(&true)).find_map(|(_,status)| status.progress.as_ref().filter(|progress| !progress.link.is_empty()).map(|progress| progress.link.clone()));
+                if let Some(link) = link && !id.is_empty() && forwarded != (id.clone(), link.clone()) {
+                    forwarded = (id.clone(), link.clone());
+                    let _ = ab_remote::onboarding::send_link(&home,&id,&link).await;
+                }
+            },
             _ = stop.changed() => {
                 for cancel in cancels.values() { let _ = cancel.send(true); }
                 while tasks.join_next().await.is_some() {}
                 return Ok(());
             },
             Some(result) = tasks.join_next(), if !tasks.is_empty() => {
-                if let Ok((name,_)) = result { running.remove(name); cancels.remove(name); }
+                if let Ok((name,outcome)) = result {
+                    running.remove(name);
+                    let cancelled = cancels.remove(name).is_none_or(|cancel| *cancel.borrow());
+                    if outcome.is_err() && !cancelled && !*stop.borrow() {
+                        eprintln!("remote setup failed; turn Remote off and try again");
+                        failed.insert(name, ab_remote::state::read::<ab_remote::state::Config>(&home,"config").map(|config| config.id).unwrap_or_default());
+                        gateway.progress(name, ab_remote::Progress::failed());
+                    }
+                }
             },
             _ = tick.tick() => {
                 let current = selected(&home)?;
@@ -303,9 +338,21 @@ async fn reconcile(
                 }
                 prior = current.clone();
                 publish(&home,&current,&statuses.borrow())?;
+                let id = ab_remote::state::read::<ab_remote::state::Config>(&home,"config").map(|config| config.id).unwrap_or_default();
                 for name in ["relay","system","private"] {
-                    if current.get(name) != Some(&true) || running.contains(name) { continue; }
-                    let Ok(adapter) = adapter(&home,name) else { continue; };
+                    if current.get(name) != Some(&true) {
+                        failed.remove(name);
+                        continue;
+                    }
+                    if running.contains(name) { continue; }
+                    if failed.get(name) == Some(&id) { continue; }
+                    failed.remove(name);
+                    gateway.clear_progress(name);
+                    let Ok(adapter) = adapter(&home,name) else {
+                        failed.insert(name, id.clone());
+                        gateway.progress(name, ab_remote::Progress::failed());
+                        continue;
+                    };
                     let gateway = gateway.clone(); let (cancel, stop) = watch::channel(false);
                     cancels.insert(name,cancel);
                     running.insert(name);

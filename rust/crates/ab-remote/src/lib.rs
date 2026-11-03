@@ -3,6 +3,7 @@
 pub mod certificate;
 pub mod ct;
 pub mod localapi;
+pub mod onboarding;
 pub mod private;
 pub mod relay;
 mod smux;
@@ -33,16 +34,39 @@ pub enum Error {
     Certificate(#[from] rcgen::Error),
     #[error("remote contract: {0}")]
     Contract(&'static str),
+    #[error("{0}")]
+    Remote(String),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
 pub type IngressFuture<'a> = Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>>;
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Progress {
+    pub state: &'static str,
+    pub message: String,
+    pub pending_link: String,
+    pub last_error: String,
+    pub link: String,
+}
+impl Progress {
+    #[must_use]
+    pub fn failed() -> Self {
+        Self {
+            state: "error",
+            message: String::new(),
+            pending_link: String::new(),
+            last_error: "Remote setup failed. Turn Remote off and try again.".into(),
+            link: String::new(),
+        }
+    }
+}
 #[derive(Clone, Debug)]
 pub struct IngressStatus {
     pub host: String,
     pub active: bool,
     pub certificate_expiry: Option<String>,
+    pub progress: Option<Progress>,
 }
 pub type IngressStatuses = std::collections::BTreeMap<String, IngressStatus>;
 #[derive(Debug)]
@@ -105,6 +129,7 @@ impl Gateway {
                         host: host.into(),
                         active: true,
                         certificate_expiry: None,
+                        progress: None,
                     },
                 );
             });
@@ -112,6 +137,32 @@ impl Gateway {
         ActiveIngress {
             statuses: self.statuses.clone(),
             name: name.into(),
+        }
+    }
+    pub fn progress(&self, name: &str, progress: Progress) {
+        if let Some(statuses) = &self.statuses {
+            statuses.send_if_modified(|entries| {
+                let entry = entries.entry(name.into()).or_insert_with(|| IngressStatus {
+                    host: String::new(),
+                    active: false,
+                    certificate_expiry: None,
+                    progress: None,
+                });
+                if entry.active || entry.progress.as_ref() == Some(&progress) {
+                    return false;
+                }
+                entry.progress = Some(progress);
+                true
+            });
+        }
+    }
+    pub fn clear_progress(&self, name: &str) {
+        if let Some(statuses) = &self.statuses {
+            statuses.send_if_modified(|entries| {
+                entries
+                    .get_mut(name)
+                    .is_some_and(|entry| entry.progress.take().is_some())
+            });
         }
     }
     pub(crate) fn certificate_expiry(&self, name: &str, expiry: &str) {

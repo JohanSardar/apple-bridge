@@ -278,7 +278,10 @@ mod tests {
             .unwrap()
             .put("identity-key", b"b")
             .unwrap();
-        assert_eq!(fs::read(home.join("secrets").join(KEY_DIGEST)).unwrap(), b"b");
+        assert_eq!(
+            fs::read(home.join("secrets").join(KEY_DIGEST)).unwrap(),
+            b"b"
+        );
     }
     #[test]
     fn libsecret_uses_the_go_secret_tool_protocol() {
