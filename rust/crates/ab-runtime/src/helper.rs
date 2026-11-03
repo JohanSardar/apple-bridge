@@ -48,7 +48,7 @@ pub async fn supervise(
         if let Ok(child) = child.as_mut() {
             tokio::select! {
                 _ = child.wait() => {},
-                _ = stop.wait_for(|value| *value) => {
+                () = async { let _ = stop.wait_for(|value| *value).await; } => {
                     child.kill().await?;
                     return Ok(());
                 }

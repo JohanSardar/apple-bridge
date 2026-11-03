@@ -94,6 +94,7 @@ pub struct LocalGateway {
     pub query_store: Option<Arc<crate::LocalQueryStore>>,
     query_rates: Mutex<BTreeMap<String, (std::time::Instant, u32)>>,
     locks: Mutex<BTreeMap<String, Arc<AsyncMutex<()>>>>,
+    stopping: std::sync::atomic::AtomicBool,
 }
 fn raw<T: Serialize>(value: &T) -> Result<Box<RawValue>, Error> {
     serde_json::value::to_raw_value(value).map_err(|_| Code::Corrupt.into())
@@ -121,7 +122,15 @@ impl LocalGateway {
             query_store: None,
             query_rates: Mutex::default(),
             locks: Mutex::default(),
+            stopping: std::sync::atomic::AtomicBool::new(false),
         }
+    }
+    pub fn stop(&self) {
+        self.stopping
+            .store(true, std::sync::atomic::Ordering::SeqCst);
+    }
+    fn stopping(&self) -> bool {
+        self.stopping.load(std::sync::atomic::Ordering::SeqCst)
     }
     fn lock(&self, key: String) -> Result<Arc<AsyncMutex<()>>, Error> {
         Ok(self
@@ -168,7 +177,7 @@ impl LocalGateway {
         mut command: Command,
     ) -> Result<Box<RawValue>, Error> {
         let p = self.authorize(principal, &command.op)?;
-        if p.kind == "agent" && p.level == "read" {
+        if p.is_agent() && p.level == "read" {
             return Err(Code::Unauthorized.into());
         }
         if !valid_command_id(&command.id) || command.wait_ms > 15000 {
@@ -177,11 +186,11 @@ impl LocalGateway {
         if matches!(
             command.op.as_str(),
             "mac.lock_screen" | "mac.sleep_display" | "mac.restart" | "mac.shutdown"
-        ) && (p.kind != "agent" || p.level != "approve")
+        ) && (!p.is_agent() || p.level != "approve")
         {
             return Err(Code::Forbidden.into());
         }
-        if command.op == "mac.clipboard_write" && p.kind == "agent" && p.level == "approve" {
+        if command.op == "mac.clipboard_write" && p.is_agent() && p.level == "approve" {
             return Err(Code::Unsupported.into());
         }
         let descriptor = descriptor_for(&command.op)?;
@@ -199,7 +208,7 @@ impl LocalGateway {
             return Err(Code::Invalid.into());
         }
         command.origin = if p.kind == "device"
-            || p.kind == "agent" && matches!(p.level.as_str(), "full" | "approve")
+            || p.is_agent() && matches!(p.level.as_str(), "full" | "approve")
         {
             "interactive".into()
         } else if command.op == "messages.send"
@@ -248,7 +257,7 @@ impl LocalGateway {
         if expiry <= created || expiry.duration_since(created).as_secs() > max {
             return Err(Code::Expired.into());
         }
-        let approval = p.kind == "agent" && (p.level == "approve" || command.op == "focus.set");
+        let approval = p.is_agent() && (p.level == "approve" || command.op == "focus.set");
         if !approval && !self.peer.available() {
             return Err(Code::Unavailable.into());
         }
@@ -359,6 +368,9 @@ impl LocalGateway {
         )
         .await;
         let Ok(Ok(prepared)) = prepared else {
+            if self.stopping() {
+                return Ok(r);
+            }
             if tokio::time::Instant::now() >= deadline {
                 return self.transition(r, State::Expired, Some(Disposition::Expired), None, None);
             }
@@ -370,6 +382,9 @@ impl LocalGateway {
                 Some(Code::Unavailable.into()),
             );
         };
+        if self.stopping() {
+            return Ok(r);
+        }
         if prepared.t == "Rejected" {
             let error = self.actions.conflict(&p, &r.command, &prepared)?;
             return self.transition(
@@ -643,6 +658,19 @@ impl LocalGateway {
             rows.drain(..rows.len() - usize::try_from(limit).map_err(|_| Code::Invalid)?);
         }
         raw(&rows)
+    }
+    pub fn approvals(&self) -> Result<Vec<CommandRecord>, Error> {
+        self.state
+            .commands()?
+            .into_iter()
+            .filter(|record| record.state == State::AwaitingApproval)
+            .map(|record| self.expire(record))
+            .filter(|record| {
+                record
+                    .as_ref()
+                    .map_or(true, |record| record.state == State::AwaitingApproval)
+            })
+            .collect()
     }
     pub fn recover(&self) -> Result<(), Error> {
         for r in self.state.commands()? {

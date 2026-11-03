@@ -11,7 +11,11 @@ pub fn backup(home: &Path, destination: &Path) -> Result<(), Error> {
     if destination.as_os_str().is_empty() || !home.join("state.db").is_file() {
         return Err(Error::Invalid);
     }
-    let _lock = HomeLock::acquire(home)?;
+    let _lock = match HomeLock::acquire(home) {
+        Ok(lock) => lock,
+        Err(Error::Locked) => return crate::control::backup(home, destination),
+        Err(error) => return Err(error),
+    };
     ab_state::State::<ab_state::Gateway>::open(home)?.backup(destination)?;
     Ok(())
 }

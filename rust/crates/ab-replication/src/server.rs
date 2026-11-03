@@ -392,6 +392,7 @@ impl<S: GatewayState + 'static> Server<S> {
         }
     }
 
+    #[allow(clippy::too_many_lines)]
     async fn http(
         self: Arc<Self>,
         mut request: hyper::Request<hyper::body::Incoming>,
@@ -419,6 +420,38 @@ impl<S: GatewayState + 'static> Server<S> {
                 return Ok(hyper::Response::new(http_body_util::Full::new(
                     bytes.into(),
                 )));
+            }
+            if request.method() == hyper::Method::POST && request.uri().path() == "/v1/commands" {
+                let delegation = request.headers().get("X-Apple-Bridge-Delegation").and_then(|value| value.to_str().ok()).ok_or(Error::Invalid)?.to_owned();
+                let bytes = http_body_util::Limited::new(request.into_body(), ab_trust::wire::framing::MAX_QUERY_FRAME)
+                    .collect().await.map_err(|_| Error::Invalid)?.to_bytes();
+                let raw: Box<serde_json::value::RawValue> = serde_json::from_slice(&bytes)?;
+                let value: serde_json::Value = serde_json::from_str(raw.get())?;
+                if !value["method"].is_string() { return Err(Error::Invalid); }
+                let handler = self.uploads.as_ref().ok_or(Error::Invalid)?;
+                let reply = handler.control(&certificate, "direct-command", &delegation, &raw).await?;
+                let mut response = if let Some(error) = reply.error {
+                    let code = serde_json::to_value(error.code)?;
+                    let status = match code.as_str() {
+                        Some("unauthorized") => hyper::StatusCode::UNAUTHORIZED,
+                        Some("forbidden") => hyper::StatusCode::FORBIDDEN,
+                        Some("not_found") => hyper::StatusCode::NOT_FOUND,
+                        Some("conflict" | "reset") => hyper::StatusCode::CONFLICT,
+                        Some("unavailable") => hyper::StatusCode::SERVICE_UNAVAILABLE,
+                        _ => hyper::StatusCode::BAD_REQUEST,
+                    };
+                    let bytes = gojson::legacy_json(&serde_json::json!({"error":error}), gojson::EscapeMode::Html).map_err(|_| Error::Invalid)?;
+                    let mut response = hyper::Response::new(http_body_util::Full::new(bytes.into()));
+                    *response.status_mut() = status;
+                    response
+                } else {
+                    hyper::Response::new(http_body_util::Full::new(reply.result.ok_or(Error::Invalid)?.get().as_bytes().to_vec().into()))
+                };
+                response.headers_mut().insert(hyper::header::CONTENT_TYPE, hyper::header::HeaderValue::from_static("application/json"));
+                if reply.lookup_only {
+                    response.headers_mut().insert("X-Apple-Bridge-Command-Lookup-Only", hyper::header::HeaderValue::from_static("true"));
+                }
+                return Ok(response);
             }
             if request.method() != hyper::Method::GET || request.uri().path() != "/v1/feed" {
                 return Err(Error::Invalid);
