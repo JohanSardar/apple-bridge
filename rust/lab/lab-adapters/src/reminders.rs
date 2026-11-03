@@ -11,7 +11,8 @@ use serde_json::{Map, Value, json};
 use std::{
     io::Write,
     process::{Command, Stdio},
-    time::Instant,
+    thread,
+    time::{Duration, Instant},
 };
 
 pub const SCENARIOS: [&str; 3] = [
@@ -59,6 +60,21 @@ impl Env<'_> {
                 },
             },
         )
+    }
+    fn quiet(&self, seconds: u64) {
+        let deadline = Instant::now() + Duration::from_secs(seconds);
+        let mut last = None;
+        let mut since = Instant::now();
+        while Instant::now() < deadline {
+            let now = self.gateway.cursor().ok().map(|cursor| cursor.sequence);
+            if now.is_none() || now != last {
+                last = now;
+                since = Instant::now();
+            } else if since.elapsed() >= Duration::from_secs(2) {
+                return;
+            }
+            thread::sleep(Duration::from_millis(250));
+        }
     }
     fn settle(&self, seconds: u64) -> bool {
         await_until(seconds, || self.converged())
@@ -556,7 +572,7 @@ fn items(world: &mut World, evidence: &mut Evidence) -> Result<()> {
         );
         zones(&env, evidence);
         item_boundaries(&env, evidence, &list_id)?;
-        attachments(&env, evidence, &list_id)?;
+        attachments(&env, evidence, &list_id);
         nesting(&env, evidence, &list_id)?;
         sorts(&env, evidence)?;
         perf(world, evidence)?;
@@ -869,8 +885,7 @@ fn list_boundaries(env: &Env, evidence: &mut Evidence) {
         let page = page.unwrap_or(Value::Null);
         let tile = |id: &str| {
             entries(&page["smart"])
-                .filter(|tile| tile["id"] == id)
-                .next_back()
+                .rfind(|tile| tile["id"] == id)
                 .is_some_and(no_count)
         };
         check(
@@ -889,8 +904,7 @@ fn list_boundaries(env: &Env, evidence: &mut Evidence) {
             page_ok && count(&page["tags"]) == 0,
         );
         let custom = entries(&page["lists"])
-            .filter(|list| title(&list["list"]) == "Bridge Test Unsupported Smart")
-            .next_back()
+            .rfind(|list| title(&list["list"]) == "Bridge Test Unsupported Smart")
             .is_some_and(no_count);
         check(
             evidence,
@@ -955,8 +969,7 @@ fn item_boundaries(env: &Env, evidence: &mut Evidence, list_id: &str) -> Result<
         let page_ok = page.is_some();
         let page = page.unwrap_or(Value::Null);
         let assigned = entries(&page["smart"])
-            .filter(|tile| tile["id"] == "assigned")
-            .next_back()
+            .rfind(|tile| tile["id"] == "assigned")
             .is_some_and(no_count);
         check(
             evidence,
@@ -964,8 +977,7 @@ fn item_boundaries(env: &Env, evidence: &mut Evidence, list_id: &str) -> Result<
             page_ok && assigned,
         );
         let custom = entries(&page["lists"])
-            .filter(|list| title(&list["list"]) == "Bridge Test Unsupported Smart")
-            .next_back()
+            .rfind(|list| title(&list["list"]) == "Bridge Test Unsupported Smart")
             .is_some_and(no_count);
         check(
             evidence,
@@ -976,7 +988,7 @@ fn item_boundaries(env: &Env, evidence: &mut Evidence, list_id: &str) -> Result<
     Ok(())
 }
 
-fn attachments(env: &Env, evidence: &mut Evidence, list_id: &str) -> Result<()> {
+fn attachments(env: &Env, evidence: &mut Evidence, list_id: &str) {
     for (key, owner) in [("own", "rm-rem-parent"), ("other", "rm-rem-future")] {
         let data = json!({"reminder_id": reference("reminders.reminder", owner), "filename": format!("Bridge Test {key}.png"), "uti": "public.png", "size": 0, "media": null});
         check(
@@ -1014,7 +1026,24 @@ fn attachments(env: &Env, evidence: &mut Evidence, list_id: &str) -> Result<()> 
             page_ok && valid,
         );
     }
-    Ok(())
+}
+
+fn walk(items: &[Value], depth: usize, seen: &mut Vec<String>, flags: &mut (bool, bool)) {
+    for entry in items {
+        let id = entry["reminder"]["id"]
+            .as_str()
+            .unwrap_or_default()
+            .to_owned();
+        flags.0 |= seen.contains(&id);
+        seen.push(id);
+        flags.1 |= depth == 3 && title(&entry["reminder"]) == "Bridge Test grandchild";
+        walk(
+            entry["subtasks"].as_array().map_or(&[], Vec::as_slice),
+            depth + 1,
+            seen,
+            flags,
+        );
+    }
 }
 
 fn nesting(env: &Env, evidence: &mut Evidence, list_id: &str) -> Result<()> {
@@ -1051,23 +1080,6 @@ fn nesting(env: &Env, evidence: &mut Evidence, list_id: &str) -> Result<()> {
         let first = env.ask(protocol, "reminders.items", &query);
         let second = env.ask(protocol, "reminders.items", &query);
         let mut seen: Vec<String> = vec![];
-        fn walk(items: &[Value], depth: usize, seen: &mut Vec<String>, flags: &mut (bool, bool)) {
-            for entry in items {
-                let id = entry["reminder"]["id"]
-                    .as_str()
-                    .unwrap_or_default()
-                    .to_owned();
-                flags.0 |= seen.contains(&id);
-                seen.push(id);
-                flags.1 |= depth == 3 && title(&entry["reminder"]) == "Bridge Test grandchild";
-                walk(
-                    entry["subtasks"].as_array().map_or(&[], Vec::as_slice),
-                    depth + 1,
-                    seen,
-                    flags,
-                );
-            }
-        }
         let mut flags = (false, false);
         let first_page = first.clone().unwrap_or(Value::Null);
         for section in entries(&first_page["sections"]) {
@@ -1460,6 +1472,7 @@ fn large_selection(world: &World, evidence: &mut Evidence) -> Result<()> {
     if !seed(&sibling, COUNT as u64, &env.gateway) {
         return Ok(());
     }
+    env.quiet(60);
     check(evidence, "large_selection_convergence", env.settle(60));
     check(evidence, "large_selection_read_token", true);
     let records = read_all(&env.gateway, false, false);
@@ -1467,7 +1480,10 @@ fn large_selection(world: &World, evidence: &mut Evidence) -> Result<()> {
     let mut ids: Vec<String> = vec![];
     for record in records.iter().flat_map(|read| read.records.iter()) {
         if record["collection"] == "reminders.list" {
-            list_id = record["id"].as_str().unwrap_or_default().to_owned();
+            record["id"]
+                .as_str()
+                .unwrap_or_default()
+                .clone_into(&mut list_id);
         }
         if record["collection"] == "reminders.reminder" {
             ids.push(record["id"].as_str().unwrap_or_default().to_owned());
@@ -1494,11 +1510,10 @@ fn large_selection(world: &World, evidence: &mut Evidence) -> Result<()> {
             ),
         );
     }
-    check(
-        evidence,
-        "large_selection_attachment_convergence",
-        env.settle(60),
-    );
+    check(evidence, "large_selection_attachment_convergence", {
+        env.quiet(60);
+        env.settle(60)
+    });
     let query = Client::new(&sibling, "reminders:read,system:read");
     check(evidence, "large_selection_query_token", query.is_ok());
     let Ok(query) = query else {
