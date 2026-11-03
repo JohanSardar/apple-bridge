@@ -61,6 +61,15 @@ func runPrivateConnect(ctx context.Context, s Scenario, level string) Evidence {
 	}
 	e := Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), RunID: "private-protocol", NetworkPath: "production private handler and connect proxy through isolated node transport"}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
+	previous, set := os.LookupEnv("APPLE_BRIDGE_SECRET_STORE")
+	os.Setenv("APPLE_BRIDGE_SECRET_STORE", "file")
+	defer func() {
+		if set {
+			os.Setenv("APPLE_BRIDGE_SECRET_STORE", previous)
+		} else {
+			os.Unsetenv("APPLE_BRIDGE_SECRET_STORE")
+		}
+	}()
 	home, err := os.MkdirTemp("", "ab-private-")
 	if err != nil {
 		add("home", false)
