@@ -1,0 +1,83 @@
+import json
+import os
+import pathlib
+import shlex
+import sqlite3
+import shutil
+import subprocess
+import sys
+import tempfile
+
+oracle, rust_binary = sys.argv[1:]
+script = pathlib.Path(__file__).with_name("generate.py")
+local = pathlib.Path.home() / "bin/ab-local"
+remote = subprocess.check_output(["ssh", "build", "mktemp -d ~/w/phase6-usage-XXXXXX"], text=True).strip()
+try:
+    with tempfile.TemporaryDirectory(prefix="ab-native-usage-") as temporary:
+        root = pathlib.Path(temporary) / "fixture"
+        subprocess.run([sys.executable, str(script), str(root)], check=True)
+        context_path = root / "context.json"
+        context = json.loads(context_path.read_text())
+        processes = []
+        def sync():
+            subprocess.run(["rsync", "-acz", "--delete", str(root) + "/", "build:" + remote + "/"], check=True)
+        sync()
+        swift_env = dict(os.environ, TZ=context["zone"])
+        processes.append(subprocess.Popen([str(local), oracle, str(root), "--interactive"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, env=swift_env))
+        processes.append(subprocess.Popen(["ssh", "build", shlex.join([rust_binary, "usage", remote, "--interactive", "--frames"])], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True))
+        try:
+            captures = []
+            for stage in range(5):
+                context["checkpoint"] = f"synthetic-checkpoint-{stage}"
+                context["scan_id"] = f"synthetic-scan-{stage}"
+                context_path.write_text(json.dumps(context))
+                if stage == 2:
+                    path = root / "streams/restricted/App.InFocus/local/1"
+                    path.write_bytes(path.read_bytes().replace(b"test.synthetic.beta", b"test.synthetic.zeta"))
+                if stage == 3:
+                    (root / "streams/restricted/App.InFocus/remote/synthetic-remote/1").unlink()
+                if stage == 4:
+                    (root / "streams/restricted/App.InFocus/local/1").write_bytes(b"malformed")
+                sync()
+                frames = []
+                raw_frames = []
+                for process in processes:
+                    process.stdin.write("scan\n")
+                    process.stdin.flush()
+                    line = process.stdout.readline()
+                    if not line:
+                        raise RuntimeError("fixture reader exited before capture")
+                    raw_frames.append(line)
+                    frames.append(json.loads(line))
+                if frames[0] != frames[1]:
+                    raise AssertionError(f"stage {stage}: Swift {frames[0]} != Rust {frames[1]}")
+                digests = subprocess.check_output(["ssh", "build", "~/targets/phase6-native/fixture-data-bytes"], input="".join(raw_frames), text=True).splitlines()
+                assert len(digests) == 2 and digests[0] == digests[1], f"data byte mismatch at stage {stage}"
+                captures.append(frames[0])
+            assert captures[1]["observations"] == []
+            assert captures[-1]["completion_evidence"] == "complete"
+            print(f"Screen Time synthetic streams: {len(captures)} checkpoints, zero differences in observations and Go JSON data hashes")
+        finally:
+            for process in processes:
+                process.stdin.close()
+            for process in processes:
+                if process.wait(timeout=15) != 0:
+                    raise RuntimeError("fixture reader failed")
+        for failure in ["missing-local", "missing-schema"]:
+            if failure == "missing-local":
+                shutil.rmtree(root / "streams/restricted/App.InFocus/local")
+            else:
+                (root / "streams/restricted/App.InFocus/local").mkdir()
+                with sqlite3.connect(root / "sync/sync.db") as database:
+                    database.execute("DROP TABLE DevicePeer")
+            sync()
+            checks = [
+                ([str(local), oracle, str(root)], swift_env),
+                (["ssh", "build", shlex.join([rust_binary, "usage", remote])], None),
+            ]
+            for command, environment in checks:
+                result = subprocess.run(command, env=environment, text=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+                assert result.returncode != 0 and not result.stdout, f"{failure}: incomplete input emitted a capture"
+        print("Screen Time failed-input controls: both readers emitted zero captures")
+finally:
+    subprocess.run(["ssh", "build", "rm -rf -- " + shlex.quote(remote)], check=True)
