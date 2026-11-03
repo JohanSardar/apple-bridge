@@ -72,7 +72,8 @@ pub fn start_with_args(
     extra: &[String],
 ) -> Result<()> {
     let peer = world.pair_address()?;
-    for index in 0..count {
+    let base = lock(&ENDPOINTS).len();
+    for index in base..base + count {
         let home = world.directory.join(format!("replica{index}"));
         let name = format!("replica{index}");
         let code = world.gateway_cli(&[

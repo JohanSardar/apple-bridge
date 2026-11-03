@@ -31,7 +31,8 @@ PIM_NATIVE_SCENARIOS = ['notes/NOTE-DECODE', 'mail/MAIL-CAPTURE', 'mail/MAIL-BOD
 MEDIA_SCENARIOS = ['web/WEB-MEDIA-VARIANTS', 'messages/MSG-MEDIA-CLEANUP']
 WEB_RELAY_SCENARIOS = ['web/WEB-RELAY-AGENTS', 'web/WEB-RELAY-AUTH', 'web/WEB-RELAY-PAIRING']
 WEB_RM_SCENARIOS = ['web/WEB-RM-MEDIA-COLLECTION', 'web/WEB-RM-SEARCH', 'web/WEB-RM-THREAD-ORIGINATOR',
-                    'web/WEB-RM-THREAD-ORIGINATOR-PERF', 'web/WEB-RM-REMINDERS-DEMO']
+                    'web/WEB-RM-THREAD-ORIGINATOR-PERF', 'web/WEB-RM-REMINDERS-DEMO',
+                    'web/WEB-RM-REMINDERS-HARDENING', 'web/WEB-RM-REMINDERS-LISTS']
 NATIVE_SCENARIOS = ['packaging/Q1-SETUP', 'packaging/R1-RELEASE-SIM', 'files/FILE-IDLE', 'files/FILE-CAPTURE',
                     'safari/SAF-CAPTURE', 'safari/SAF-IDLE']
 MESSAGES_A_SCENARIOS = ['messages/MSG-DB-REPLACED', 'messages/MSG-PERMISSION-LOSS', 'messages/MSG-INCOMING',
@@ -56,7 +57,9 @@ REMINDER_SCENARIOS = ['REM-CONFLICT', 'REM-EXTERNAL-RACE', 'REM-NATIVE-LIST-RACE
                       'REM-READONLY-LIST']
 REMINDER_NATIVE_SCENARIOS = ['core/REM-CRUD', 'reminders/REM-CRUD', 'reminders/REM-CREATE-EXTERNAL',
                              'reminders/REM-LIST-MANAGE', 'reminders/REM-LIST-CREATE', 'reminders/REM-RECURRING',
-                             'reminders/REM-PERMISSION-LOSS']
+                             'reminders/REM-PERMISSION-LOSS', 'reminders/REM-DST']
+REMINDER_MAC_SCENARIOS = ['reminders/REM-SECTIONS', 'reminders/REM-STORE-READ', 'reminders/REM-STORE-DECODE',
+                          'reminders/REM-STORE-PERF']
 MAC_SCENARIOS = ['mac/MAC-ACTIONS', 'mac/MAC-COMMANDS', 'mac/MAC-CAPTURE', 'mac/MAC-IDLE',
                  'mac/MAC-EXTRAS-SIM', 'mac/IWORK-REAL']
 WEB_SCENARIOS = ['web/WEB-CON-LIST', 'web/WEB-MEDIA-CAP']
@@ -127,6 +130,7 @@ def main():
     parser.add_argument('--connectors', dest='connectors', action='store_true')
     parser.add_argument('--reminders', dest='reminders', action='store_true')
     parser.add_argument('--mac', dest='mac', action='store_true')
+    parser.add_argument('--reminders-mac', dest='reminders_mac', action='store_true')
     parser.add_argument('--usage', action='store_true')
     parser.add_argument('--darwin-usage', dest='darwin_usage', action='store_true')
     parser.add_argument('--calls', action='store_true')
@@ -169,6 +173,8 @@ def main():
         args.scenario = (args.scenario or []) + CONNECTOR_SCENARIOS
     if args.reminders:
         args.scenario = (args.scenario or []) + REMINDER_SCENARIOS + REMINDER_NATIVE_SCENARIOS
+    if args.reminders_mac:
+        args.scenario = (args.scenario or []) + REMINDER_MAC_SCENARIOS
     if args.mac:
         args.scenario = (args.scenario or []) + MAC_SCENARIOS
     if args.web:

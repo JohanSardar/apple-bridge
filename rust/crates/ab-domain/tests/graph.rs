@@ -42,7 +42,7 @@ fn enforce_workspace_dependency_boundaries() -> Result<(), Box<dyn std::error::E
         ("ab-catalog", &["ab-domain"]),
         ("ab-commands", &["ab-wire"]),
         ("ab-state", &["ab-domain", "ab-wire"]),
-        ("ab-trust", &["ab-domain", "ab-wire"]),
+        ("ab-trust", &["ab-domain", "ab-wire", "ab-sys"]),
         ("ab-blobs", &["ab-domain", "ab-trust"]),
         ("ab-commands", &["ab-wire"]),
         (
