@@ -486,7 +486,12 @@ pub fn media_variants(world: &mut World, _: &Value, evidence: &mut Evidence) -> 
                         == "over_cap"
                 })
         });
-        evidence.check("variants_fit_cap_original_deferred", fits, "cap");
+        let status = replicas::status(&replica).unwrap_or(Value::Null);
+        evidence.check(
+            "variants_fit_cap_original_deferred",
+            fits,
+            &status["replica"]["blobs"].to_string(),
+        );
     }
     let before = snapshot(&gateway, &prefix);
     let restarted = world.restart_peer().is_ok();
