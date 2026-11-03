@@ -101,6 +101,12 @@ pub fn query(blobs: &mut BTreeMap<String, Vec<u8>>, frame: &Value) -> Value {
                 failure(id, "invalid")
             }
         }
+        Some("mail.body") => match args["message_id"].as_str().filter(|text| !text.is_empty()) {
+            Some(_) => {
+                json!({"t":"QueryResult","id":id,"result_json":{"state":"downloaded","plain_text":"Hello fixture","html":""},"blobs":[]})
+            }
+            None => failure(id, "invalid"),
+        },
         Some("test.sleep") => failure(id, "invalid"),
         Some("test.blob") => {
             let Some(size) = number(&args, "size").filter(|size| *size <= MAX_BLOB) else {

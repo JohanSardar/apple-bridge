@@ -719,6 +719,9 @@ pub fn cred(value: &Value, key: &str) -> String {
 
 pub fn relay_service(world: &mut World, _input: &Value, evidence: &mut Evidence) -> Result<()> {
     let id = evidence.scenario.clone();
+    if crate::relay_more::SCENARIOS.contains(&id.as_str()) {
+        return crate::relay_more::run(world, evidence);
+    }
     let certificates = matches!(id.as_str(), "RELAY-CT-INDEPENDENT" | "RELAY-CAA-ACCOUNT");
     let binary = if certificates {
         PathBuf::new()

@@ -18,6 +18,16 @@ CORE_SCENARIOS = ['CORE-RESUME', 'CORE-STALE-FENCE', 'LAB-MALFORMED-SCENARIO', '
 IMPORT_SCENARIOS = ['messages/MSG-HISTORY-IMPORT', 'contacts/CON-IMPORT', 'notes/NOTE-IMPORT', 'usage/USE-IMPORT']
 SHORTCUT_SCENARIOS = ['shortcuts/FILES-TRANSFORM', 'shortcuts/SC-ACTIONS', 'shortcuts/SC-CAPTURE', 'shortcuts/SC-RUN-REAL',
                       'shortcuts/CLK-SIM', 'shortcuts/CLK-ALARM-REAL', 'shortcuts/CLK-TIMER-REAL']
+CONTACTS_SCENARIOS = ['contacts/CON-CRUD', 'contacts/CON-CONFLICT', 'contacts/CON-DROP-EVERYTHING',
+                      'contacts/CON-EXTERNAL', 'contacts/CON-GROUPS', 'contacts/CON-HANDLE-LINK',
+                      'contacts/CON-IMAGE', 'contacts/CON-PERMISSION-LOSS',
+                      'contacts/CON-READONLY-CONTAINER', 'contacts/CON-RESOLVE-RESTART',
+                      'contacts/CON-SEARCH', 'contacts/CON-TOKEN-CRASH',
+                      'contacts/CON-RECIPIENT-LOOKUP']
+NOTES_SCENARIOS = ['notes/NOTE-CRUD', 'notes/NOTE-RICH-REJECT', 'notes/NOTE-EXTERNAL', 'notes/NOTE-EXTRAS',
+                   'notes/NOTE-LIST', 'notes/NOTE-EDIT-PARITY']
+PIM_NATIVE_SCENARIOS = ['notes/NOTE-DECODE', 'mail/MAIL-CAPTURE', 'mail/MAIL-BODY', 'mail/MAIL-COMMANDS',
+                        'mail/MAIL-IDLE', 'mail/MAIL-LIVE', 'mail/MAIL-NO-FALSE-DELETE']
 MEDIA_SCENARIOS = ['web/WEB-MEDIA-VARIANTS', 'messages/MSG-MEDIA-CLEANUP']
 WEB_RELAY_SCENARIOS = ['web/WEB-RELAY-AUTH', 'web/WEB-RELAY-PAIRING']
 WEB_RM_SCENARIOS = ['web/WEB-RM-MEDIA-COLLECTION', 'web/WEB-RM-SEARCH', 'web/WEB-RM-THREAD-ORIGINATOR',
@@ -41,6 +51,7 @@ IPHONE_SCENARIOS = ['iphone/APP-ALARM-SIM', 'iphone/APP-SHELL-SIM', 'iphone/APP-
                     'iphone/APP-CMD-SIM', 'iphone/APP-NOTIFY-SIM', 'iphone/APP-CAPTURE-SIM']
 RELAY_SCENARIOS = ['RELAY-ENROLL', 'RELAY-PASSTHROUGH', 'RELAY-LIMITS', 'RELAY-ROTATE-GATED',
                    'RELAY-CT-INDEPENDENT', 'RELAY-CAA-ACCOUNT']
+CONNECTOR_SCENARIOS = ['AUTH-SCOPES-METADATA', 'CONN-CHATGPT', 'CONN-CLAUDE-AI', 'RMT-PRIVATE-CONNECT']
 REMINDER_SCENARIOS = ['REM-CONFLICT', 'REM-EXTERNAL-RACE', 'REM-NATIVE-LIST-RACE', 'REM-OPERATION-SHAPES',
                       'REM-READONLY-LIST']
 REMINDER_NATIVE_SCENARIOS = ['core/REM-CRUD', 'reminders/REM-CRUD', 'reminders/REM-CREATE-EXTERNAL',
@@ -67,7 +78,7 @@ CALENDAR_NATIVE = ['calendar/CAL-STORE-READ', 'calendar/CAL-FUTURE-COUNT-MATH', 
 VISION_SCENARIOS = ['vision/AUD-SIM', 'vision/PDF-ANNOTATE', 'vision/PDF-TEXT', 'vision/VIS-OCR']
 VISION_NATIVE_SCENARIOS = ['vision/CAP-SIM']
 SCENARIOS = ['CORE-QUERY-ROUNDTRIP', 'CORE-QUERY-BLOB', 'CORE-QUERY-SCOPE', 'CORE-QUERY-DEADLINE',
-             *JOURNEY_SCENARIOS, *CORE_SCENARIOS]
+             *JOURNEY_SCENARIOS, *CORE_SCENARIOS, *CONTACTS_SCENARIOS, *NOTES_SCENARIOS]
 FRONTDOOR_SCENARIOS = ['CORE-REST-MCP-PARITY', 'CORE-LOCALHOST-DEFENSE']
 SCENARIOS += FRONTDOOR_SCENARIOS
 ROBUST_SCENARIOS = ['CORE-KILL-DURING-APPLY', 'CORE-KILL-GATEWAY-CAPTURE']
@@ -112,6 +123,8 @@ def main():
     parser.add_argument('--maps', dest='maps', action='store_true')
     parser.add_argument('--shortcuts', dest='shortcuts', action='store_true')
     parser.add_argument('--relay', dest='relay', action='store_true')
+    parser.add_argument('--go-rust-gateway', dest='go_rust_gateway', action='store_true')
+    parser.add_argument('--connectors', dest='connectors', action='store_true')
     parser.add_argument('--reminders', dest='reminders', action='store_true')
     parser.add_argument('--mac', dest='mac', action='store_true')
     parser.add_argument('--usage', action='store_true')
@@ -152,6 +165,8 @@ def main():
         args.scenario = (args.scenario or []) + IPHONE_SCENARIOS
     if args.relay:
         args.scenario = (args.scenario or []) + RELAY_SCENARIOS
+    if args.connectors:
+        args.scenario = (args.scenario or []) + CONNECTOR_SCENARIOS
     if args.reminders:
         args.scenario = (args.scenario or []) + REMINDER_SCENARIOS + REMINDER_NATIVE_SCENARIOS
     if args.mac:
@@ -176,7 +191,8 @@ def main():
     names = [n if '/' in n else f'core/{n}' for n in args.scenario or SCENARIOS]
     files = [str(root / f'{name}.yaml') for name in names]
     with (out / 'go.jsonl').open('w') as stream:
-        subprocess.run([args.go_lab, 'run', *files, '--level', 'sim', '--json'],
+        impl = ['--impl', 'gateway=rust', '--rust-binary', str(Path(args.gateway).resolve())] if args.go_rust_gateway else []
+        subprocess.run([args.go_lab, 'run', *files, '--level', 'sim', '--json', *impl],
                        stdout=stream, timeout=900, check=True)
     with (out / 'rust.jsonl').open('w') as stream:
         subprocess.run([args.families, 'run', *files, '--gateway', args.gateway,

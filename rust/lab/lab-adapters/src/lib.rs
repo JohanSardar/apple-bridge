@@ -1,10 +1,13 @@
 pub mod assertions;
+pub mod auth_scopes;
 pub mod blobs;
 pub mod calendar;
 pub mod calendar_fixtures;
 pub mod calls;
 pub mod cleanup;
 pub mod commands;
+pub mod connectors;
+pub mod contacts;
 pub mod contacts_list;
 pub mod demo;
 pub mod filecmd;
@@ -28,25 +31,31 @@ pub mod labcore;
 pub mod live;
 pub mod mac;
 pub mod mac_real;
+pub mod mail;
 pub mod maps;
 pub mod media;
 pub mod messages_a;
 pub mod messages_b;
 pub mod native;
 pub mod native_runner;
+pub mod notes;
 pub mod packaging;
 pub mod phone;
 pub mod pkginstall;
 pub mod poster;
+pub mod private;
 pub mod queries;
+pub mod rawhttp;
 pub mod readmodels;
 pub mod relay;
 pub mod relay_certs;
 pub mod relay_gated;
+pub mod relay_more;
 pub mod relay_service;
 pub mod relay_tls;
 pub mod reminders;
 pub mod reminders_demo;
+pub mod remote_real;
 pub mod replicas;
 pub mod restart;
 pub mod robust;
@@ -76,8 +85,12 @@ const PORTED: [&str; 4] = [
 pub fn registry() -> Registry {
     let mut registry = Registry::standard();
     registry.register("world", |world, input, evidence| {
-        let replicas = input["replicas"].as_u64().unwrap_or(0);
         let id = evidence.scenario.as_str();
+        let replicas = if id == "AUTH-SCOPES-METADATA" {
+            1
+        } else {
+            input["replicas"].as_u64().unwrap_or(0)
+        };
         let self_started = media::MEDIA_SCENARIOS.contains(&id)
             || id == "MSG-MEDIA-CLEANUP"
             || readmodels::SCENARIOS.contains(&id)
@@ -135,6 +148,8 @@ pub fn registry() -> Registry {
             replicas::start_with(world, 1, calendar::STORE_SCOPE, 0)?;
         } else if replicas != 0 && calendar::SCENARIOS.contains(&id) {
             replicas::start_with(world, 1, calendar::SCOPE, 0)?;
+        } else if let (true, Some(scope)) = (replicas != 0, pim_scope(id)) {
+            replicas::start_with(world, usize::try_from(replicas).unwrap_or(0), scope, 0)?;
         } else if replicas != 0 && !PORTED.contains(&id) && !self_started {
             return Err(Error::Invalid(format!("replica world not ported for {id}")));
         }
@@ -170,8 +185,7 @@ pub fn registry() -> Registry {
     registry.register("messages", history::messages);
     registry.register("messages_read", messages_a::messages_read);
     registry.register("messages_truth", history::messages_truth);
-    registry.register("contacts", imports::contacts);
-    registry.register("notes", imports::notes);
+    register_pim(&mut registry);
     registry.register("usage", usage::cases);
     registry.register("phone", calls::phone);
     registry.register("native_media_yield", native::media_yield);
@@ -208,7 +222,53 @@ pub fn registry() -> Registry {
     registry.register("helper_ipc", helper_ipc::cases);
     helper_real::register(&mut registry);
     registry.register("SIRI-INTENTS", siri::intents);
+    registry.register("connector_approval", connectors::connector_approval);
+    registry.register_real("RELAY-REAL", remote_real::relay_real);
+    registry.register_real("CONN-CLAUDE-CODE", remote_real::claude_code);
+    registry.register_real("CONN-RELAY-CLAUDE", remote_real::relay_claude);
+    registry.register_real("RMT-STATUS-OFF", remote_real::status_off);
     registry
+}
+
+fn by_id(
+    world: &mut lab_world::World,
+    input: &serde_json::Value,
+    evidence: &mut lab_runner::Evidence,
+) -> lab_world::Result<()> {
+    if evidence.scenario.starts_with("CON-") {
+        contacts::run(world, input, evidence)
+    } else if evidence.scenario.starts_with("MAIL-") {
+        mail::run(world, input, evidence)
+    } else {
+        Err(Error::Invalid(format!(
+            "no adapter for {}",
+            evidence.scenario
+        )))
+    }
+}
+
+fn pim_scope(id: &str) -> Option<&'static str> {
+    if contacts::SCENARIOS.contains(&id) {
+        Some(contacts::scope(id))
+    } else if notes::SCENARIOS.contains(&id) {
+        Some(notes::SCOPE)
+    } else {
+        None
+    }
+}
+fn register_pim(registry: &mut Registry) {
+    registry.register("readmodels", |world, input, evidence| {
+        if evidence.scenario.starts_with("CON-") {
+            contacts::run(world, input, evidence)
+        } else {
+            readmodels::readmodels(world, input, evidence)
+        }
+    });
+    registry.register("contacts", contacts::run);
+    registry.register("notes", notes::run);
+    registry.register("web", notes::run);
+    registry.register("fixture", |_, _, _| Ok(()));
+    registry.register("by_id", by_id);
 }
 
 #[must_use]
@@ -217,6 +277,8 @@ pub fn implied_step(id: &str) -> Option<&'static str> {
         Some("file_commands")
     } else if safari::SIM.contains(&id) {
         Some("safari")
+    } else if id == "CON-RECIPIENT-LOOKUP" || id.starts_with("MAIL-") {
+        Some("by_id")
     } else {
         None
     }
