@@ -61,7 +61,11 @@ for name in ['History.db','CloudTabs.db']:
 	if slices.Contains(world.SessionSources(), "safari") {
 		sessionRoot = dir + "-session"
 		defer os.RemoveAll(sessionRoot)
-		add("session_fixture_copy", copyFixture(dir, sessionRoot) == nil)
+		if os.Getenv("AB_LAB_SESSION_CONTROL") == "empty" {
+			add("session_fixture_copy", os.MkdirAll(sessionRoot, 0700) == nil)
+		} else {
+			add("session_fixture_copy", copyFixture(dir, sessionRoot) == nil)
+		}
 		if !e.Passed {
 			return e
 		}

@@ -169,8 +169,10 @@ Rolling out another source (what to copy, in order):
    SEGB segments and `sync/sync.db` atomically for `/usage`). simapple's own capture for that
    source is dropped, so assertions only see the Rust reader's rows.
 4. Prove: the source's sim scenarios must give the same assertions with the world option off and
-   on (`--impl gateway=rust`), and a control with `AB_SESSION_RUST_POLL_MS=3600000` must fail
-   (proves the data comes from the Rust reader). Add a socketpair test in
+   on (`--impl gateway=rust`), and a negative control must fail (proves the data comes from the
+   Rust reader): Screen Time with `AB_SESSION_RUST_POLL_MS=3600000`, Safari with
+   `AB_LAB_SESSION_CONTROL=empty` (the session reads an empty fixture directory). Safari's
+   scenario runs a corruption check over its fixture, so the session reads a pristine copy. Add a socketpair test in
    `tests/capture_producer.rs` for the frame rules.
 
 Gaps: no restart persistence of Rust-sourced checkpoints beyond what `Open.checkpoints` carries,
