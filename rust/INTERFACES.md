@@ -191,3 +191,17 @@ Binary-driven consent setup now uses `bridge agent list` and `bridge agent creat
 Remaining P/D conversions require product-owned CLI or HTTP seams for trusted device session creation and lifecycle, OAuth setup/revocation and metadata validation, delegated identity fault injection, iPhone pairing/ingestion, and blob staging/GC fixtures. Existing assertions must remain intact; reporting these paths blocked does not count as conversion. G-E has not completed those conversions.
 
 Shadow replay currently reproduces captures with fresh IPC authentication and diffs exact persisted cells. It cannot reconstruct command admission from Prepare/Dispatch alone. G-B/G-A integration needs an explicit contract for replaying authenticated command admissions and deterministic bridge ID assignment/time, or a separately approved identity-aware comparison that still verifies original gojson bytes. No production randomness, persisted format, or live runtime should be changed merely to make this tool pass. Current Go-Go raw diffs intentionally expose independently assigned IDs and journal times; they are not Rust parity evidence.
+
+## G-C continuation: concrete gateway adapters and upstream uploads
+
+`ab_replication::gateway::StateAdapter(Arc<std::sync::Mutex<State<Gateway>>>)` implements the feed State contract using G-A's landed methods. It preserves State's retained iterator, maps Reset at the typed boundary, and closes leases when snapshot transfer completes or is cancelled. State operations move into Tokio's blocking context on a multithread runtime; single-thread callers must invoke synchronous adapters from their blocking executor.
+
+Install `State::set_blob_protection(Arc::new(ab_replication::gateway::ProtectionAdapter(blobs.clone())))` before capture/serving. The adapter accepts `Arc<tokio::sync::Mutex<ab_blobs::Store>>`, maps State reference owner deltas to `update_protection`, and releases staging pins only for committed deltas. Install it from a blocking context.
+
+`Server` now has `uploads: Option<Arc<dyn ab_replication::upstream::UploadHandler>>`. `Uploads::new(authority, blobs)` supplies certificate/delegation authorization, expiring session-bound binary prepare grants, bounded bindings and close cleanup. The callback trait allows G-B's operations adapter to retain lifecycle ownership without adding a replication-to-operations dependency. `GatewayTransport::{upload_control,upload_chunk}` use the existing authenticated feed session and pending-response registry; reconnect never replays them.
+
+`ab_blobs::uploads::{UploadRequest,UploadStatus}` preserve Go field names. `Store::{upload,append_upload}` persist the existing upload lease and part-file layout, validate offsets/digests, pin committed bytes and create the message-upload alias. These synchronous methods require a blocking execution context in production.
+
+`Server::dial(stop)` runs gateway-initiated pairing and pinned feed reconnection. `Authority::{dial_pairings_once,dial_replicas,confirm_dial}` expose the corresponding durable Trust steps. G-D's phone-purpose pairings and fields remain preserved.
+
+`ab_trust::activity::{ActivityLog,AgentActivity}` provides synchronous activity persistence against the already initialized State schema through a separate connection. It does not initialize or migrate State and does not replace G-A's transactional command publication. Runtime should open it after State, record redacted read activity and expose the scoped list API. List prunes after 90 days and returns at most 1000 newest rows.

@@ -1,0 +1,18 @@
+{
+  "code_commit": "346eae4b2fabeadc4f6b6136e0d5069e7cb8045a",
+  "host": "ubuntu",
+  "make_rust_ci": "pass",
+  "make_lint": "pass (included in rust-ci)",
+  "golden_corpora": "pass (included in rust-ci)",
+  "gateway_oracle": "pass: Go/Rust gateways x Go/Rust replicas; equal final digests and committed batches",
+  "reverse_dial": "pass: Rust gateway x Go/Rust replicas",
+  "uploads": "pass: Go/Rust clients, both gateway implementations",
+  "activity": "pass: durable reopen, read count, stale sequence rejection; Go reopen",
+  "gateway_matrix": {
+    "status": "blocked",
+    "selected": 59,
+    "started": 0,
+    "reason": "ab-runtime/ab-applepeer gateway role exits before ipc/1 readiness; conservative harness conversion blockers also reported"
+  },
+  "live_gateway_accessed": false
+}

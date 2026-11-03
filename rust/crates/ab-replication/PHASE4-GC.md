@@ -1,36 +1,38 @@
 # Phase 4 G-C integration status
 
-This is the first gateway feed journey, using an isolated mock state adapter. It is not the Phase 4 exit gate or a production gateway runtime.
+PR #535 continues the original gateway feed work without replacing its commits. The continuation merges G-A's gateway State and preserves G-D's Trust/iPhone modules.
 
-Implemented:
+Implemented and exercised on isolated synthetic homes:
 
-- TLS 1.3 listener with certificate possession and validity checks; enrollment proof endpoint; certificate-authorized feed upgrade.
-- Durable one-use pairings, persisted failed attempts, scope revision changes, revoke, certificate and signed delegation verification, agent creation and credential rotation.
-- Hello/Welcome, leased snapshot paging, exact byte/cursor acknowledgments, retained iterator through replay/live, resume, Reset, revision invalidation and heartbeats.
-- Record-authorized blob download, bounded Helper `BlobRead` adapter transfer, staging, owner-union protection, durable pin release and GC.
+- TLS 1.3 enrollment and feed authentication, durable pairing attempts, scopes, revocation, signed delegation and agent credentials.
+- Snapshot paging from the concrete `State<Gateway>` through `gateway::StateAdapter`, lease renewal and drop cleanup, retained replay/live iterator, resume, scope resnapshot and record-authorized blob download.
+- `gateway::ProtectionAdapter` connects State transaction/snapshot reference deltas to the blob store's owner-union protection.
+- Gateway-dials pairing and feed reconnection with certificate pinning, proof-bound bootstrap, durable completion, cancellation and bounded active connections.
+- Upload control and binary chunks in both Rust client and server. Session-bound prepare grants expire after 30 seconds and are consumed once; at most sixteen bindings per certificate survive. Upload leases, offsets, content digests and pins persist in the Go-compatible blob layout. Commit creates the message-upload alias.
+- `ab_trust::activity::ActivityLog` opens the existing State-owned schema without creating or migrating it. A separate SQLite connection records redacted activity and reads newest-first with the Go limit and 90-day pruning. Reads increment counts; command updates reject older sequences. G-A continues to publish command activity in its ledger transition transaction.
 
-The fixture drives the actual Rust feed server and the existing Go replication client and Phase 3 Rust client. It verifies pairing, a nonempty snapshot, live record update, persisted resume, resnapshot after subscription revision changes, transferred blob bytes and identical Go/Rust replica digests. The scenario removes Reminders from both enrolled scopes and asserts that the resnapshot removes the record from both replicas. The projection still needs qualification with the real State adapter. The Go digest oracle is the Go replica snapshot, not a Go gateway serving equivalent captures.
+The runner seeds State once, closes it, clones its state/ledger databases, then serves equivalent captures through Go and Rust gateways to both Go and Rust replicas. It requires equal nonempty final snapshot digests and inspects each replica's committed `applied_batches` through an independent read-only Python SQLite oracle, requiring exactly `(1,2)`. The third run repeats the Rust gateway journey in reverse-dial mode. All three runs also exercise upload from both replica implementations, blob download, reconnect/resume, scope narrowing and revocation. Go reopens the Rust-written activity rows and verifies read aggregation and rejection of a stale command update.
 
-Run on Ubuntu, from the repository root:
+Reproduce on Ubuntu from the repository root:
 
 ```sh
 export PATH="$HOME/go-sdk/bin:$HOME/.cargo/bin:$PATH"
-export CARGO_TARGET_DIR="$HOME/ab-cargo-target"
+export CARGO_TARGET_DIR="$HOME/ab-phase4-gc-target"
+export TMPDIR="$HOME/ab-phase4-gc-tmp"
+export APPLE_BRIDGE_SECRET_STORE=file
+mkdir -p "$TMPDIR"
 cargo build --manifest-path rust/Cargo.toml -p ab-replication --examples
 go run ./rust/crates/ab-replication/interop/gateway "$CARGO_TARGET_DIR/debug/examples/gateway_fixture" "$CARGO_TARGET_DIR/debug/examples/gateway_client"
+make rust-ci
 ```
 
-Set `APPLE_BRIDGE_SECRET_STORE=file` for the fixture; it uses freshly created temporary homes and no Helper. All output is synthetic. `examples/blob_probe.rs` additionally exercises multiple protection owners, restart, pin release and GC.
+The fixture uses no Helper, live gateway, live home, personal data or permission prompts. Retained JSON evidence is synthetic. It qualifies the concrete State/feed integration, not a production gateway binary.
 
-Remaining G-C work:
+Remaining Phase 4 integration:
 
-- Replace the mock adapter with G-A's concrete gateway API once published; wire the gateway runtime through its owner.
-- Gateway-dials pairing and feed reconnection.
-- Upload binary/control direction, command/delegation request multiplexing, cancellation and bounded slots.
-- Pipelined credit window and live-priority writer integration; this first server uses a conservative one-frame window.
-- Clock protocol and delegation challenge negotiation.
-- Pending blob availability notifications and capture retry scheduling with the real Helper adapter.
-- Activity persistence through the State owner; agent summaries/OAuth integration with G-D.
-- Production gateway binary matrix, concrete State scope projection and independent Go gateway digest oracle.
+- The runtime owner must construct the gateway role, install the State/blob protection adapter and mount feed, pairing, upload and activity entry points. Main's runtime still rejects roles other than replica, so gateway-matrix remains blocked at startup.
+- G-B must supply the authenticated Helper BlobRead adapter and capture retry scheduling. The current blob transfer seam is exercised with synthetic bytes.
+- The server retains a conservative one-frame credit window. Pipelined credits, priority writer integration, clock protocol, fresh delegation challenge negotiation and general command multiplexing/cancellation remain separate work.
+- Agent summaries and OAuth integration remain with G-D.
 
-Do not claim gateway-matrix, upload, reverse-dial, full trust parity or production integration based on this fixture.
+The oracle covers a seeded synthetic capture journey, not the complete production corpus, 24-hour shadow replay or the Phase 4 exit gate.
