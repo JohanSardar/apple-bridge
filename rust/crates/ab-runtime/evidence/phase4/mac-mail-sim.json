@@ -1,0 +1,149 @@
+{
+  "platform": "darwin",
+  "level": "sim",
+  "base_sha": "0bf8ac55de22b5e19d8547a055f7aa23accc24be",
+  "root_cause": "The native Rust gateway SIM admission list omitted the five isolated Mail fixture scenarios; it returned binary_harness_required before running the existing journey.",
+  "scenarios": [
+    {
+      "id": "MAIL-BODY",
+      "go_reference": "pass",
+      "rust_before": "blocked: binary_harness_required",
+      "rust_after": "pass",
+      "assertions": [
+        {
+          "name": "native_mail_build",
+          "passed": true
+        },
+        {
+          "name": "native_mail_fixture",
+          "passed": true
+        },
+        {
+          "name": "mail_gateway_capture_and_subject_fts",
+          "passed": true
+        },
+        {
+          "name": "credential_backend_override_restored",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "MAIL-CAPTURE",
+      "go_reference": "pass",
+      "rust_before": "blocked: binary_harness_required",
+      "rust_after": "pass",
+      "assertions": [
+        {
+          "name": "native_mail_build",
+          "passed": true
+        },
+        {
+          "name": "native_mail_fixture",
+          "passed": true
+        },
+        {
+          "name": "mail_gateway_capture_and_subject_fts",
+          "passed": true
+        },
+        {
+          "name": "credential_backend_override_restored",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "MAIL-COMMANDS",
+      "go_reference": "pass",
+      "rust_before": "blocked: binary_harness_required",
+      "rust_after": "pass",
+      "assertions": [
+        {
+          "name": "native_mail_build",
+          "passed": true
+        },
+        {
+          "name": "native_mail_fixture",
+          "passed": true
+        },
+        {
+          "name": "credential_backend_override_restored",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "MAIL-LIVE",
+      "go_reference": "pass",
+      "rust_before": "blocked: binary_harness_required",
+      "rust_after": "pass",
+      "assertions": [
+        {
+          "name": "native_mail_build",
+          "passed": true
+        },
+        {
+          "name": "native_mail_fixture",
+          "passed": true
+        },
+        {
+          "name": "credential_backend_override_restored",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "MAIL-NO-FALSE-DELETE",
+      "go_reference": "pass",
+      "rust_before": "blocked: binary_harness_required",
+      "rust_after": "pass",
+      "assertions": [
+        {
+          "name": "native_mail_build",
+          "passed": true
+        },
+        {
+          "name": "native_mail_fixture",
+          "passed": true
+        },
+        {
+          "name": "credential_backend_override_restored",
+          "passed": true
+        }
+      ]
+    }
+  ],
+  "coverage": "MAIL-BODY and MAIL-CAPTURE drive the selected gateway for capture and subject FTS; MAIL-BODY also queries mail.body. MAIL-COMMANDS, MAIL-LIVE and MAIL-NO-FALSE-DELETE exercise the existing isolated Swift fixture binary.",
+  "checks": {
+    "bridge_build_lab_harness": "pass",
+    "make_lint": "pass",
+    "cargo_test_workspace_locked": "pass",
+    "cargo_fmt_all_check": "pass",
+    "cargo_clippy_workspace_all_targets_deny_warnings": "pass",
+    "cargo_deny_check": "pass",
+    "lab_independence": "pass",
+    "native_dependency_graph": "pass",
+    "go_golden_targets": "pass",
+    "make_rust_ci": "pass locally with a temporary Makefile that invokes identical Cargo commands directly instead of the unavailable Darwin ab-local wrapper",
+    "ssh_build": "blocked: build and ubuntu host aliases do not resolve",
+    "standard_make_rust_ci_wrapper": "unavailable: ~/bin/ab-local is absent on this Mac"
+  },
+  "assertions_modified": false,
+  "real_level_executed": false,
+  "live_home_accessed": false,
+  "local_ci_override": [
+    "rust-test:",
+    "\tcargo test --manifest-path rust/Cargo.toml --workspace --locked",
+    "rust-lint:",
+    "\tcargo fmt --manifest-path rust/Cargo.toml --all -- --check",
+    "\tcargo clippy --manifest-path rust/Cargo.toml --workspace --all-targets -- -D warnings",
+    "\tcd rust && /tmp/mac-mail-deny/cargo-deny-0.20.2-aarch64-apple-darwin/cargo-deny check",
+    "rust-lab-independence:",
+    "\tcargo metadata --manifest-path rust/Cargo.toml --all-features --format-version 1 --locked > /tmp/mac-mail-metadata.json",
+    "\tpython3 rust/lab/check-independence.py < /tmp/mac-mail-metadata.json",
+    "\tpython3 rust/lab/test-independence.py"
+  ],
+  "cargo_target_removed": true,
+  "minimum_observed_free_disk_gib": 8.3,
+  "validated_base_sha": "d9df3993"
+}
