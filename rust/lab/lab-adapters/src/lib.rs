@@ -71,6 +71,7 @@ pub mod usage;
 pub mod vision;
 pub mod watch;
 pub mod web_relay;
+pub mod web_reminders;
 pub mod webauthn;
 use lab_runner::Registry;
 use lab_world::Error;
@@ -132,6 +133,8 @@ pub fn registry() -> Registry {
             )?;
         } else if replicas != 0 && messages_a::SCENARIOS.contains(&id) {
             messages_a::start(world, usize::try_from(replicas).unwrap_or(0))?;
+        } else if replicas != 0 && web_reminders::SCENARIOS.contains(&id) {
+            web_reminders::start(world, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && labcore::SCENARIOS.contains(&id) {
             labcore::start_world(world, id, usize::try_from(replicas).unwrap_or(0))?;
         } else if native_runner::starts_world(id) {
