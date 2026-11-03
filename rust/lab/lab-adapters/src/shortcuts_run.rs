@@ -44,15 +44,20 @@ fn registered(world: &World) -> bool {
         .ok()
         .and_then(|reply| serde_json::from_slice::<Value>(&reply.body).ok());
     let listed = document.is_some_and(|d| d["paths"]["/v1/op/shortcuts.run"].is_object());
-    let gated = client
-        .call_raw(
-            "shortcuts.run",
-            &json!({"command_id": random_id("cmd").unwrap_or_default(), "args": {"shortcut": "AB Echo"}}),
-            20,
-        )
+    let gated = random_id("cmd")
         .ok()
-        .flatten()
-        .is_some_and(|(status, _)| status == 403);
+        .and_then(|id| {
+            client
+                .call_raw(
+                    "shortcuts.run",
+                    &json!({"command_id": id, "args": {"shortcut": "AB Echo"}}),
+                    20,
+                )
+                .ok()
+                .flatten()
+        })
+        .is_some_and(|(status, value)| status == 403 || value["error"]["code"] == "forbidden");
+    eprintln!("registered listed={listed} gated={gated}");
     listed && gated
 }
 
@@ -169,7 +174,11 @@ pub fn shortcuts_run(world: &mut World, _: &Value, evidence: &mut Evidence) -> R
     let (ok, _) = run_native(&binary, &[&executable, &id]);
     evidence.check("native_source_fixture", ok, "native source fixture");
     gateway_runner(world, evidence)?;
-    let report = run_checks(&checks, &["run", &id, &directory_text, &root_text], evidence);
+    let report = run_checks(
+        &checks,
+        &["run", &id, &directory_text, &root_text],
+        evidence,
+    );
     let _ = fs::remove_dir_all(&directory);
     report_into(evidence, report.as_ref());
     Ok(())
@@ -218,7 +227,11 @@ fn focus_agents(world: &World, evidence: &mut Evidence) -> Result<()> {
             status == 200 && value["error"].is_null() && value["state"] == "awaiting_approval"
         });
         contract |= waiting;
-        evidence.check("agent_requires_approval", waiting, "agent waits for approval");
+        evidence.check(
+            "agent_requires_approval",
+            waiting,
+            "agent waits for approval",
+        );
     }
     evidence.check("set_contract", contract, "valid focus.set accepted");
     Ok(())
@@ -232,7 +245,11 @@ pub fn focus_sim(world: &mut World, _: &Value, evidence: &mut Evidence) -> Resul
     let directory_text = directory.to_string_lossy().into_owned();
     let root_text = env::current_dir()?.to_string_lossy().into_owned();
     focus_agents(world, evidence)?;
-    let report = run_checks(&checks, &["run", &id, &directory_text, &root_text], evidence);
+    let report = run_checks(
+        &checks,
+        &["run", &id, &directory_text, &root_text],
+        evidence,
+    );
     let _ = fs::remove_dir_all(&directory);
     report_into(evidence, report.as_ref());
     let built = Command::new("packaging/dev/build-native.sh")

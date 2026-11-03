@@ -1,4 +1,6 @@
-use super::{Duration, Instant, Result, Session, Shared, Ticket, Value, json, lock, now, send, string};
+use super::{
+    Duration, Instant, Result, Session, Shared, Ticket, Value, json, lock, now, send, string,
+};
 use base64::{Engine, engine::general_purpose::STANDARD};
 use sha2::{Digest, Sha256};
 use std::thread;
@@ -37,7 +39,8 @@ impl Session<'_> {
         {
             return self.reject(frame, "expired");
         }
-        lock(state)?.guard(&json!({"command_id":command,"ticket":frame["ticket"],"started_at":now()}))?;
+        lock(state)?
+            .guard(&json!({"command_id":command,"ticket":frame["ticket"],"started_at":now()}))?;
         let args = &ticket.prepare["action"]["args"];
         if string(args, "shortcut") == SLOW_RUNNER {
             for _ in 0..4 {
@@ -58,7 +61,8 @@ impl Session<'_> {
             "prepared": {"request_hash": ticket.prepare["request_hash"]},
         });
         let outcome = json!({"t":"Outcome","command_id":command,"disposition":"locally_observed","evidence":evidence});
-        lock(state)?.guard(&json!({"command_id":command,"ticket":frame["ticket"],"outcome":outcome}))?;
+        lock(state)?
+            .guard(&json!({"command_id":command,"ticket":frame["ticket"],"outcome":outcome}))?;
         send(&mut self.stream, &outcome)?;
         Ok(())
     }
