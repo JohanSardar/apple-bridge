@@ -66,7 +66,11 @@ Ported: the `queries` action for CORE-QUERY-ROUNDTRIP (ten echoes, latency budge
 
 The Rust SimApple peer now answers `Query` (`test.echo`, `test.sleep`, `test.blob`, `helper.version`) and `BlobRead` with `BlobChunk` frames, and queues them during a capture commit wait. `test.sleep` runs on a worker thread that observes `QueryCancel` and the query deadline; `/effects` reports 1 for its query id while it runs and 0 afterwards, and the session loop keeps serving frames.
 
-Not ported: `command_journey` (CORE-CMD-*, needs replica worlds, `seed`, `converge`), `blobs` journeys (CORE-BLOB-*, need replicas, native staging, fault controls), media transfer, history-import scheduling. Source-family simulators belong to S-P8-PIM and S-P8-MEDIA.
+Replica worlds live in `lab-adapters` (`replicas.rs`): the `world` action pairs, joins, tokens and starts `replicas` replica processes from the selected gateway executable, waits for `connected`, and `lab-families` stops them after each scenario. `seed` and `converge` are registered; `lab-world` and `lab-runner` are untouched.
+
+Ported journey: `command_journey` for CORE-CMD-IDEMPOTENT (scoped REST/MCP queries and commands on gateway and both replicas, idempotent retry, `id_reused`, issuer isolation, command-page pagination, truth/gateway/replica convergence, effect counts, replica cursor and record consistency). The Go SSE watcher assertions (`sse_contiguous_watermarks_*`, `no_false_deletion_*`, `scope_sse_watermarks_*`) and the unverified `replica_application_exactly_once` are not ported; `families-parity.py` ignores exactly those names for journey scenarios. Rust convergence compares per-collection title multisets with SimApple truth rather than the Go alias-resolved record multiset.
+
+Not ported: the other eight CORE-CMD-* cases (need helper/gateway stop and restart, clock offset, command backup/restore, response-drop and feed-delay faults), `blobs` journeys (CORE-BLOB-*, need native staging, blob fault controls and replica blob flags), media transfer, history-import scheduling. These fail explicitly with `not ported`. Source-family simulators belong to S-P8-PIM and S-P8-MEDIA.
 
 Gate: `python3 rust/lab/families-parity.py --families $T/lab-families --go-lab bridge-lab --gateway BRIDGE --simapple $T/lab-simapple --output /new/dir`, once with a `-tags lab` Go gateway and once with the Rust gateway built with `--features lab-queries`.
 

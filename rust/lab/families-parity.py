@@ -4,7 +4,18 @@ from pathlib import Path
 import subprocess
 
 HARNESS_ONLY = {'credential_backend_override_restored'}
-SCENARIOS = ['CORE-QUERY-ROUNDTRIP', 'CORE-QUERY-BLOB', 'CORE-QUERY-SCOPE', 'CORE-QUERY-DEADLINE']
+JOURNEY_SCENARIOS = ['CORE-CMD-IDEMPOTENT']
+JOURNEY_UNPORTED = ('sse_contiguous_watermarks_', 'no_false_deletion_', 'scope_sse_watermarks_',
+                    'replica_application_exactly_once')
+JOURNEY_RUST_ONLY = {'world_started'}
+SCENARIOS = ['CORE-QUERY-ROUNDTRIP', 'CORE-QUERY-BLOB', 'CORE-QUERY-SCOPE', 'CORE-QUERY-DEADLINE',
+             *JOURNEY_SCENARIOS]
+
+
+def ignored(scenario, name):
+    if name in HARNESS_ONLY:
+        return True
+    return scenario in JOURNEY_SCENARIOS and (name in JOURNEY_RUST_ONLY or name.startswith(JOURNEY_UNPORTED))
 
 
 def verdicts(path):
@@ -13,7 +24,7 @@ def verdicts(path):
         if line.startswith('{'):
             row = json.loads(line)
             rows[row['scenario']] = {a['name']: a['passed'] for a in row['assertions']
-                                     if a['name'] not in HARNESS_ONLY}
+                                     if not ignored(row['scenario'], a['name'])}
     return rows
 
 

@@ -11,7 +11,7 @@ pub struct Reply {
     pub status: u16,
     pub body: Vec<u8>,
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Client {
     address: String,
     token: String,
@@ -32,6 +32,17 @@ impl Client {
             .trim()
             .to_owned();
         Ok(Self { address, token })
+    }
+    #[must_use]
+    pub fn address(&self) -> &str {
+        &self.address
+    }
+    #[must_use]
+    pub fn at(address: &str, token: &str) -> Self {
+        Self {
+            address: address.to_owned(),
+            token: token.to_owned(),
+        }
     }
     pub fn with_token(world: &World, token: &str) -> Result<Self> {
         let address = world.runtime["api_address"]

@@ -25,6 +25,7 @@ fn run() -> Result<bool, Box<dyn std::error::Error>> {
     let simapple = simapple.ok_or("--simapple required")?.canonicalize()?;
     let output = output.ok_or("--output required")?;
     fs::create_dir_all(&output)?;
+    lab_adapters::replicas::configure(&gateway);
     let registry = lab_adapters::registry();
     let mut passed = !paths.is_empty();
     for (index, path) in paths.iter().enumerate() {
@@ -38,6 +39,7 @@ fn run() -> Result<bool, Box<dyn std::error::Error>> {
                     .into(),
         })?;
         let evidence = registry.run(&scenario, &mut world);
+        lab_adapters::replicas::stop_all();
         passed &= evidence.passed;
         println!("{}", serde_json::to_string(&evidence)?);
     }
