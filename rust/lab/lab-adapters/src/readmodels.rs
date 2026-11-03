@@ -242,13 +242,17 @@ fn media_collection(world: &World, evidence: &mut Evidence) -> Result<()> {
     Ok(())
 }
 pub fn readmodels(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> {
-    match evidence.scenario.as_str() {
+    let scenario = evidence.scenario.clone();
+    match scenario.as_str() {
         "WEB-RM-MEDIA-COLLECTION" => media_collection(world, evidence),
         "WEB-RM-SEARCH" => crate::search::search(world, evidence),
         "MSG-DECODE-BALLOON" | "MSG-DECODE-FORMATTING" => {
             crate::messages_a::decode::run(world, evidence)
         }
         "WEB-CON-LIST" => crate::contacts_list::readmodels(world, evidence),
+        other if crate::web_reminders::SCENARIOS.contains(&other) => {
+            crate::web_reminders::run(world, other, evidence)
+        }
         other => Err(Error::Invalid(format!("readmodels not ported for {other}"))),
     }
 }
