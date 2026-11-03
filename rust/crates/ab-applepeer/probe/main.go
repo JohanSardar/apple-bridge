@@ -80,6 +80,19 @@ func main() {
 		var record contracts.CommandRecord
 		var localErr error
 		handled := true
+		if frame.T == "LocalQuery" {
+			var query contracts.Query
+			if json.Unmarshal(frame.Args, &query) != nil {
+				panic("query")
+			}
+			result, err := gateway.Query(ctx, p, query)
+			if err != nil {
+				encoder.Encode(map[string]any{"error": err})
+			} else {
+				encoder.Encode(result)
+			}
+			continue
+		}
 		switch frame.T {
 		case "Submit":
 			var command contracts.Command

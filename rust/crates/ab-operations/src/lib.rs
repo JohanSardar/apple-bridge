@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
 mod adapters;
+mod gateway_store;
+pub use gateway_store::GatewayStore;
 pub mod local;
 pub mod peer;
 pub use ab_trust::domain;
@@ -108,6 +110,14 @@ impl Principal {
     }
 }
 pub trait Identity: Debug + Send + Sync {
+    fn approval_principal(
+        &self,
+        _id: &str,
+        _command_id: &str,
+        _hash: &str,
+    ) -> Result<Principal, Error> {
+        Err(Code::Unavailable.into())
+    }
     fn iphones(&self) -> Result<Box<RawValue>, Error> {
         Err(Code::Unavailable.into())
     }

@@ -22,6 +22,8 @@ use tokio::sync::Mutex as AsyncMutex;
 pub struct CommandRecord {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub parts: Vec<CommandPart>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub upload_references: BTreeMap<String, ab_state::BlobReference>,
     pub command: Command,
     pub principal: String,
     pub source: String,
@@ -38,7 +40,7 @@ pub struct CommandRecord {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub observed_record_ids: Vec<String>,
     pub cursor: Cursor,
-    pub history: Vec<Value>,
+    pub history: Vec<ab_state::CommandEvent>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error: Option<Error>,
 }
@@ -168,7 +170,20 @@ impl LocalGateway {
         if !valid_command_id(&command.id) || command.wait_ms > 15000 {
             return Err(Code::Invalid.into());
         }
+        if matches!(
+            command.op.as_str(),
+            "mac.lock_screen" | "mac.sleep_display" | "mac.restart" | "mac.shutdown"
+        ) && (p.kind != "agent" || p.level != "approve")
+        {
+            return Err(Code::Forbidden.into());
+        }
+        if command.op == "mac.clipboard_write" && p.kind == "agent" && p.level == "approve" {
+            return Err(Code::Unsupported.into());
+        }
         let descriptor = descriptor_for(&command.op)?;
+        if descriptor.kind != ab_catalog::OperationKind::Command {
+            return Err(Code::Unsupported.into());
+        }
         let args: Value = serde_json::from_str(command.args.get()).map_err(|_| Code::Invalid)?;
         validate_shape(&descriptor.input["properties"]["args"], &args)?;
         if !args.is_object()
@@ -237,6 +252,7 @@ impl LocalGateway {
         let id = command.id.clone();
         let r = CommandRecord {
             parts: Vec::new(),
+            upload_references: BTreeMap::new(),
             command,
             principal: p.id.clone(),
             source: descriptor
@@ -277,7 +293,13 @@ impl LocalGateway {
         let gateway = self.clone();
         let mut task = tokio::spawn(async move { gateway.execute(r, p).await });
         match tokio::time::timeout(Duration::from_millis(wait), &mut task).await {
-            Ok(result) => raw(&result.map_err(|_| Code::Unavailable)??),
+            Ok(result) => {
+                let record = result.map_err(|_| Code::Unavailable)??;
+                if let Some(error) = record.error {
+                    return Err(error);
+                }
+                raw(&record)
+            }
             Err(_) => raw(&self.state.command(&id)?),
         }
     }
@@ -333,6 +355,9 @@ impl LocalGateway {
         )
         .await;
         let Ok(Ok(prepared)) = prepared else {
+            if tokio::time::Instant::now() >= deadline {
+                return self.transition(r, State::Expired, Some(Disposition::Expired), None, None);
+            }
             return self.transition(
                 r,
                 State::Rejected,
@@ -479,6 +504,7 @@ impl LocalGateway {
         mut frame: IpcFrame,
         collection: &str,
     ) -> Result<CommandRecord, Error> {
+        let prior = r.clone();
         let (mut state, mut disposition) = match frame.disposition.as_str() {
             "locally_observed" => (State::Observed, Disposition::LocallyObserved),
             "absent_confirmed" => (State::Observed, Disposition::AbsentConfirmed),
@@ -495,8 +521,7 @@ impl LocalGateway {
         if matches!(
             state,
             State::Observed | State::Delivered | State::DeliveryFailed
-        ) && disposition != Disposition::AbsentConfirmed
-        {
+        ) {
             if let Some((cursor, key)) = self.bound(&r, &frame, collection) {
                 r.commit_seq = cursor.sequence;
                 match self.state.observed_record_id(collection, &key, &cursor) {
@@ -538,7 +563,11 @@ impl LocalGateway {
             } else {
                 (State::Indeterminate, Disposition::Indeterminate)
             };
+            r.commit_seq = r.commit_seq.max(prior.commit_seq);
             if r.state == state {
+                if prior.parts == r.parts {
+                    return Ok(prior);
+                }
                 r.disposition = Some(disposition);
                 r.evidence = frame.evidence;
                 return self.state.update_parts(r);
@@ -678,16 +707,13 @@ impl LocalGateway {
                 None,
             )?);
         }
-        let p = Principal {
-            id: r.principal.clone(),
-            kind: "agent".into(),
-            grants: Vec::new(),
-            level: String::new(),
-            resource: String::new(),
-            remote: false,
-        };
-        let p = match self.authorize(&p, &r.command.op) {
+        let p = match self
+            .identity
+            .approval_principal(&r.principal, &r.command.id, &r.request_hash)
+            .and_then(|p| self.authorize(&p, &r.command.op))
+        {
             Ok(p) => p,
+            Err(error) if error.code == Code::Unavailable => return Err(error),
             Err(error) => {
                 return raw(&self.transition(
                     r,
@@ -727,8 +753,13 @@ impl LocalGateway {
         }
         let args: Value = serde_json::from_str(q.args.get()).map_err(|_| Code::Invalid)?;
         validate_shape(&descriptor.input["properties"]["args"], &args)?;
-        self.authorize(p, &q.op)
-            .map_err(|_| Error::from(Code::Forbidden))?;
+        self.authorize(p, &q.op).map_err(|error| {
+            if error.code == Code::Unauthorized {
+                Code::Forbidden.into()
+            } else {
+                error
+            }
+        })?;
         if q.id.is_empty() {
             q.id = format!("qry_{}", ulid::Ulid::new());
         }

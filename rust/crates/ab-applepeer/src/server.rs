@@ -17,6 +17,7 @@ use tokio::{
     sync::{Mutex, Semaphore, mpsc, watch},
 };
 const CREDIT: usize = 4 << 20;
+type Active = Arc<Mutex<Option<(u64, tokio::task::AbortHandle)>>>;
 pub trait Backend: Debug + Send + Sync + 'static {
     fn next_fence(&self) -> Task<'_, u64>;
     fn checkpoints(&self) -> Task<'_, BTreeMap<String, Box<serde_json::value::RawValue>>>;
@@ -72,7 +73,7 @@ impl Server {
         std::fs::set_permissions(&self.socket, std::fs::Permissions::from_mode(0o600))
             .map_err(|_| Code::Unavailable)?;
         let mut tasks = tokio::task::JoinSet::new();
-        let active = Arc::new(Mutex::new(None::<tokio::task::AbortHandle>));
+        let active = Arc::new(Mutex::new(None::<(u64, tokio::task::AbortHandle)>));
         loop {
             tokio::select! {
                 _ = stop.changed() => break,
@@ -85,7 +86,7 @@ impl Server {
                 Some(_) = tasks.join_next(), if !tasks.is_empty() => {}
             }
         }
-        if let Some(active) = active.lock().await.take() {
+        if let Some((_, active)) = active.lock().await.take() {
             active.abort();
         }
         self.commands
@@ -98,11 +99,7 @@ impl Server {
         std::fs::remove_file(&self.socket).map_err(|_| Code::Unavailable)?;
         Ok(())
     }
-    async fn session(
-        self: Arc<Self>,
-        stream: UnixStream,
-        active: Arc<Mutex<Option<tokio::task::AbortHandle>>>,
-    ) -> Result<(), Error> {
+    async fn session(self: Arc<Self>, stream: UnixStream, active: Active) -> Result<(), Error> {
         if stream.peer_cred().map_err(|_| Code::Unauthorized)?.uid()
             != nix::unistd::geteuid().as_raw()
         {
@@ -147,7 +144,7 @@ impl Server {
         )
         .await?;
         let mut lock = active.lock().await;
-        if let Some(previous) = lock.take() {
+        if let Some((_, previous)) = lock.take() {
             previous.abort();
         }
         let fence = self.backend.next_fence().await?;
@@ -171,11 +168,20 @@ impl Server {
         self.commands.attach(fence, writer.clone()).await;
         let server = self.clone();
         let disconnected = ready.clone();
-        let task = tokio::spawn(async move { server.consume(reader, writer, fence, ready).await });
-        *lock = Some(task.abort_handle());
+        let session_active = active.clone();
+        let task = tokio::spawn(async move {
+            server
+                .consume(reader, writer, fence, ready, session_active)
+                .await
+        });
+        *lock = Some((fence, task.abort_handle()));
         drop(lock);
         let result = task.await.map_err(|_| Error::from(Code::Unavailable));
-        if self.commands.session.lock().await.fence == fence {
+        let mut current = active.lock().await;
+        if current
+            .as_ref()
+            .is_some_and(|(current, _)| *current == fence)
+        {
             for source in disconnected.coverage.keys() {
                 let mut frame = disconnected.clone();
                 frame.t = "SourceState".into();
@@ -187,7 +193,9 @@ impl Server {
                 );
                 self.backend.source_state(frame).await?;
             }
+            *current = None;
         }
+        drop(current);
         self.commands.detach(fence).await;
         result?
     }
@@ -198,7 +206,15 @@ impl Server {
         writer: Arc<Mutex<tokio::net::unix::OwnedWriteHalf>>,
         fence: u64,
         ready: IpcFrame,
+        active: Active,
     ) -> Result<(), Error> {
+        let initial = active.lock().await;
+        if initial
+            .as_ref()
+            .is_none_or(|(current, _)| *current != fence)
+        {
+            return Err(Code::Unavailable.into());
+        }
         for (source, coverage) in &ready.coverage {
             let mut frame = ready.clone();
             frame.t = "SourceState".into();
@@ -210,6 +226,7 @@ impl Server {
             frame.coverage = BTreeMap::from([(source.clone(), coverage.clone())]);
             self.backend.source_state(frame).await?;
         }
+        drop(initial);
         let (tx, mut rx) = mpsc::unbounded_channel();
         let capture_budget = Arc::new(Semaphore::new(CREDIT));
         let state_budget = Arc::new(Semaphore::new(ab_wire::framing::MAX_FRAME + 4));
@@ -262,6 +279,13 @@ impl Server {
         };
         let mutations = async {
             while let Some((f, size, permit)) = rx.recv().await {
+                let current = active.lock().await;
+                if current
+                    .as_ref()
+                    .is_none_or(|(current, _)| *current != fence)
+                {
+                    return Err(Code::Unavailable.into());
+                }
                 match f.t.as_str() {
                     "Capture" => {
                         let capture = f.capture.ok_or(Code::Corrupt)?;

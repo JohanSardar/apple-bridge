@@ -57,6 +57,8 @@ def run(peer, lab, fault, lifecycle=False):
             else:
                 raise AssertionError(('not ready', apple.poll()))
             assert (home/'peer.sock').stat().st_mode & 0o777 == 0o600
+            query=exchange({'t':'LocalQuery','args':{'id':'qry_probe','op':'helper.version','args':{},'deadline_ms':1000}})
+            assert query.get('id')=='qry_probe' and query.get('result_json'),query
             if fault:
                 control(str(home/'control.sock'), 'POST', '/fault', {'name':fault})
             if lifecycle:

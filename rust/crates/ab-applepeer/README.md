@@ -18,7 +18,7 @@ make rust-ci
 
 Use an owned TMPDIR/GOTMPDIR on hosts whose shared /tmp quota is exhausted.
 
-The paired probe runs nine wire cases and nine local lifecycle cases plus a stale-fence rejection. Both processes use the real Go SimApplePeer. Go local commands use the Go SQLite ledger and authority. Rust local commands use typed memory adapters until G-A's gateway interfaces land. Each lifecycle case repeats submission, runs recovery and performs read-only Resolve, requiring unchanged effect counts. Approval checks require zero effects until approval; rejection and expiry require zero effects. The wire cases cover native conflict and UI interference before preparation as well as interference after dispatch. The stale-fence case deliberately preserves a zero fence using an API that exists only under lab-harness; the real Helper counterparty rejects it with zero effects.
+The paired probe runs nine wire cases and nine local lifecycle cases plus a stale-fence rejection. Both processes use the real Go SimApplePeer. Go local commands use the Go SQLite ledger and authority. Rust local commands now use G-A's concrete State<Gateway> capture store and SQLite ledger through GatewayStore. The synthetic action resolver and Rust identity adapter remain test fixtures. Each lifecycle case repeats submission, runs recovery and performs read-only Resolve, requiring unchanged effect counts. Approval checks require zero effects until approval; rejection and expiry require zero effects. The wire cases cover native conflict and UI interference before preparation as well as interference after dispatch. The stale-fence case deliberately preserves a zero fence using an API that exists only under lab-harness; the real Helper counterparty rejects it with zero effects.
 
 Comparisons cover dispositions, states, evidence, resolution, effect counts and presence of observed IDs. Evidence comparisons normalize only generated native_key, capture_checkpoint, ticket and expires_at strings; the remaining JSON fields must match. Bridge record IDs, timestamps, cursors, history and database bytes are not compared. Full multipart attachments and all source-specific validators are not qualified by this probe.
 
@@ -26,7 +26,7 @@ Comparisons cover dispositions, states, evidence, resolution, effect counts and 
 
 This is a foundation PR, not Phase 4 gateway qualification. It does not enable the Rust gateway binary. See rust/INTERFACES.md for the exact seams.
 
-- G-A must supply durable gateway capture and ledger adapters, alias resolution and atomic parts updates. A state mock is not SQLite parity proof.
+- GatewayStore integrates G-A capture commits, source state, fences, aliases, durable ledger CAS and parts updates. Full database/history byte parity remains the shadow replay gate.
 - Runtime must connect Server, LocalGateway, the state/action adapters and Helper supervision. Frontdoor currently destructures the sole Remote variant, so adding Local requires its owner to update query-blob routing too.
 - Production ActionResolver adapters must port Go native argument conversion, visible object/container/series resolution, expected-version checks, native conflict capture binding, Notes content restrictions and upload staging. Only the synthetic resolver is supplied here.
 - Query transport is available; full local query input rewriting, rate accounting, query-blob hydration/grants and audit still need integration. BlobChunk/BlobUnavailable routing is not yet supplied by this server.

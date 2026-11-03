@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 mod server;
+mod state;
 mod supervisor;
 use ab_operations::{Code, Cursor, Error, Task, peer::ApplePeer};
 use ab_wire::messages::{Capture, IpcFrame};

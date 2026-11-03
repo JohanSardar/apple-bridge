@@ -1,70 +1,3 @@
-#[derive(Debug, Default)]
-struct Ledger(std::sync::Mutex<BTreeMap<String, ab_operations::local::CommandRecord>>);
-impl ab_operations::local::GatewayState for Ledger {
-    fn admission_era(&self) -> Result<String, ab_operations::Error> {
-        Ok("probe-era".into())
-    }
-    fn command(
-        &self,
-        id: &str,
-    ) -> Result<ab_operations::local::CommandRecord, ab_operations::Error> {
-        self.0
-            .lock()
-            .map_err(|_| Code::Unavailable)?
-            .get(id)
-            .cloned()
-            .ok_or_else(|| Code::NotFound.into())
-    }
-    fn commands(&self) -> Result<Vec<ab_operations::local::CommandRecord>, ab_operations::Error> {
-        Ok(self
-            .0
-            .lock()
-            .map_err(|_| Code::Unavailable)?
-            .values()
-            .cloned()
-            .collect())
-    }
-    fn transition(
-        &self,
-        from: Option<ab_operations::domain::CommandState>,
-        mut record: ab_operations::local::CommandRecord,
-    ) -> Result<ab_operations::local::CommandRecord, ab_operations::Error> {
-        let mut rows = self.0.lock().map_err(|_| Code::Unavailable)?;
-        if rows.get(&record.command.id).map(|r| r.state) != from {
-            return Err(Code::Conflict.into());
-        }
-        record
-            .history
-            .push(serde_json::json!({"state":record.state,"disposition":record.disposition}));
-        rows.insert(record.command.id.clone(), record.clone());
-        Ok(record)
-    }
-    fn update_parts(
-        &self,
-        record: ab_operations::local::CommandRecord,
-    ) -> Result<ab_operations::local::CommandRecord, ab_operations::Error> {
-        self.0
-            .lock()
-            .map_err(|_| Code::Unavailable)?
-            .insert(record.command.id.clone(), record.clone());
-        Ok(record)
-    }
-    fn head(&self) -> Result<Cursor, ab_operations::Error> {
-        Ok(Cursor {
-            epoch: "probe".into(),
-            subscription_revision: 1,
-            sequence: 0,
-        })
-    }
-    fn observed_record_id(
-        &self,
-        _: &str,
-        key: &str,
-        _: &Cursor,
-    ) -> Result<String, ab_operations::Error> {
-        Ok(format!("synthetic_{key}"))
-    }
-}
 #[derive(Debug)]
 struct Identity;
 fn principal(id: &str) -> ab_operations::Principal {
@@ -88,6 +21,7 @@ fn principal(id: &str) -> ab_operations::Principal {
     }
 }
 impl ab_operations::Identity for Identity {
+    fn approval_principal(&self, id: &str, _: &str, _: &str) -> Result<ab_operations::Principal, ab_operations::Error> { Ok(principal(id)) }
     fn authenticate(&self, token: &str) -> Result<ab_operations::Principal, ab_operations::Error> {
         Ok(principal(token))
     }
