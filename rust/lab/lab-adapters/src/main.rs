@@ -28,7 +28,7 @@ fn run() -> Result<bool, Box<dyn std::error::Error>> {
     let registry = lab_adapters::registry();
     let mut passed = !paths.is_empty();
     for (index, path) in paths.iter().enumerate() {
-        let scenario: Scenario = serde_yaml::from_slice(&fs::read(path)?)?;
+        let scenario: Scenario = serde_saphyr::from_slice(&fs::read(path)?)?;
         let mut world = World::start(WorldConfig {
             gateway: gateway.clone(),
             simapple: simapple.clone(),
