@@ -192,6 +192,34 @@ fn watch(gate: &Gate, roots: &[std::path::PathBuf]) {
     }
 }
 
+fn capture_keys(capture: &Value) -> Vec<String> {
+    capture["observations"]
+        .as_array()
+        .map(|rows| {
+            rows.iter()
+                .filter_map(|row| row["native_key"].as_str().map(str::to_owned))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn note_dispatch(shared: &mut Shared, value: &Value) {
+    let sequence = shared.sequence;
+    if let Some(id) = value["command_id"].as_str() {
+        shared.dispatched.insert(id.to_owned(), sequence);
+    }
+}
+
+fn note_observed(shared: &mut Shared, flight: &Flight) {
+    shared.sequence += 1;
+    let sequence = shared.sequence;
+    for key in &flight.keys {
+        shared
+            .observed
+            .insert(key.clone(), (flight.checkpoint.clone(), sequence));
+    }
+}
+
 fn produce(
     gate: &Gate,
     readers: &Readers,
@@ -252,14 +280,6 @@ fn produce(
                 .unwrap_or_default();
             capture["predecessor"] = Value::String(predecessor);
             capture["t"] = json!("Capture");
-            let keys = capture["observations"]
-                .as_array()
-                .map(|rows| {
-                    rows.iter()
-                        .filter_map(|row| row["native_key"].as_str().map(str::to_owned))
-                        .collect()
-                })
-                .unwrap_or_default();
             let bytes = frame_bytes(&capture)?;
             let size = u64::try_from(bytes.len()).map_err(|_| Error::Invalid)?;
             let mut shared = gate.lock()?;
@@ -284,7 +304,7 @@ fn produce(
                     checkpoint,
                     bytes: size,
                     rust: true,
-                    keys,
+                    keys: capture_keys(&capture),
                 },
             );
             drop(shared);
@@ -410,14 +430,7 @@ fn gateway_frame(
             );
             drop(shared);
             if flight.rust {
-                let mut shared = gate.lock()?;
-                shared.sequence += 1;
-                let sequence = shared.sequence;
-                for key in &flight.keys {
-                    shared
-                        .observed
-                        .insert(key.clone(), (flight.checkpoint.clone(), sequence));
-                }
+                note_observed(&mut *gate.lock()?, &flight);
             }
             gate.changed.notify_all();
             if flight.rust {
@@ -433,11 +446,7 @@ fn gateway_frame(
             Ok(true)
         }
         Some("Dispatch") => {
-            let mut shared = gate.lock()?;
-            let sequence = shared.sequence;
-            if let Some(id) = value["command_id"].as_str() {
-                shared.dispatched.insert(id.to_owned(), sequence);
-            }
+            note_dispatch(&mut *gate.lock()?, value);
             Ok(true)
         }
         _ => Ok(true),
@@ -512,14 +521,14 @@ fn helper_capture(
 fn forward_outcome(
     gate: &Gate,
     to_gateway: &Mutex<UnixStream>,
-    mut value: Value,
+    value: &mut Value,
 ) -> Result<bool, Error> {
-    if !bind_outcome(gate, &mut value)? {
+    if !bind_outcome(gate, value)? {
         return Ok(false);
     }
     send(
         &mut *to_gateway.lock().map_err(|_| Error::WorkerPanicked)?,
-        &value,
+        value,
     )?;
     Ok(true)
 }
@@ -610,7 +619,7 @@ pub fn relay_layered(
         });
         let result = (|| -> Result<(), Error> {
             loop {
-                let (bytes, value) = read_frame(&mut helper_read)?;
+                let (bytes, mut value) = read_frame(&mut helper_read)?;
                 match value["t"].as_str() {
                     Some("Capture") => {
                         if helper_capture(&gate, &to_helper, &rust, &value, bytes.len())? {
@@ -618,7 +627,10 @@ pub fn relay_layered(
                         }
                     }
                     Some("Outcome") if !rust.is_empty() => {
-                        if forward_outcome(&gate, &to_gateway, value)? {
+                        if forward_outcome(&gate, &to_gateway, &mut value)? {
+                            if let Some(layer) = layer {
+                                layer.helper(&value, bytes.len())?;
+                            }
                             continue;
                         }
                     }
