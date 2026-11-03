@@ -20,3 +20,7 @@ Verification: original product after unblocking the harness passed 10/21 CAL sim
 ## CORE unavailable capture blobs
 
 Capture hydration preserves explicit offloaded/missing reference states instead of calling Store::begin and replacing them with pending. The authenticated feed reports those states to replicas; no blob transfer is scheduled until a later capture supplies an available reference.
+
+## CORE scope control
+
+The gateway CLI exposes `scope <replica-id> --scope <grants>` through Authority::change_scope. Trust persists the new grants and increments the revision; existing feed sessions close on revision mismatch, and replicas reset/backfill against the new revision. No trust or feed contract changes.
