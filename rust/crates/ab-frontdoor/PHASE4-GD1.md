@@ -22,7 +22,7 @@ and reject unsupported algorithms/curves with a re-enrol hint. No credentials
 are silently discarded. Malformed envelopes fail closed.
 
 G-F owns the gateway assembly. The complete Web/Approvals/listener/TLS/control
-channel contract is in rust/INTERFACES.md. This PR proves Rust auth/pages with
+channel contract is in rust/interfaces/ab-frontdoor.md. This PR proves Rust auth/pages with
 a Go backend; it does not qualify an assembled Rust gateway or live cutover.
 
 Reproduce on Ubuntu in an isolated checkout (Go and Cargo on PATH):
