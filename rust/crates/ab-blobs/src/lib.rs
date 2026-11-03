@@ -317,6 +317,17 @@ impl Store {
     pub fn entries(&self) -> &BTreeMap<String, Entry> {
         &self.manifest.entries
     }
+    #[must_use]
+    pub fn progress(&self) -> serde_json::Value {
+        let entries = &self.manifest.entries;
+        serde_json::json!({
+            "entries": entries,
+            "bytes": self.used(),
+            "backlog": entries.values().filter(|e| e.state != BlobState::Present).count(),
+            "resumed_bytes": entries.values().map(|e| e.resumed_bytes).sum::<u64>(),
+            "corruptions": entries.values().map(|e| e.corruptions).sum::<u64>(),
+        })
+    }
     pub fn used(&self) -> u64 {
         self.manifest
             .entries

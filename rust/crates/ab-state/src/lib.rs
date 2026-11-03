@@ -127,6 +127,7 @@ pub struct SnapshotInstall {
 #[derive(Debug)]
 pub struct Changes {
     parts: bool,
+    legacy: bool,
     visibility: Visibility,
     cursor: Cursor,
 }
@@ -638,9 +639,15 @@ impl<Role> State<Role> {
         self.check_cursor(&cursor)?;
         Ok(Changes {
             parts: false,
+            legacy: false,
             visibility,
             cursor,
         })
+    }
+    pub fn legacy_changes(&self, visibility: Visibility, cursor: Cursor) -> Result<Changes> {
+        let mut changes = self.changes(visibility, cursor)?;
+        changes.legacy = true;
+        Ok(changes)
     }
     pub fn feed_changes(&self, visibility: Visibility, cursor: Cursor) -> Result<Changes> {
         let mut changes = self.changes(visibility, cursor)?;
@@ -666,7 +673,11 @@ impl<Role> State<Role> {
             return Ok(None);
         }
         let limit = h.sequence.min(i.cursor.sequence.saturating_add(128));
-        let boundary:Option<i64>=tx.query_row("SELECT MAX(through_seq) FROM journal_commits WHERE epoch=? AND through_seq>? AND through_seq<=?",params![h.epoch,number(i.cursor.sequence)?,number(limit)?],|record|record.get(0))?;
+        let boundary: Option<i64> = if i.legacy {
+            None
+        } else {
+            tx.query_row("SELECT MAX(through_seq) FROM journal_commits WHERE epoch=? AND through_seq>? AND through_seq<=?",params![h.epoch,number(i.cursor.sequence)?,number(limit)?],|record|record.get(0))?
+        };
         let mut b = Batch {
             epoch: h.epoch.clone(),
             subscription_revision: h.subscription_revision,
@@ -676,7 +687,7 @@ impl<Role> State<Role> {
                 .transpose()
                 .map_err(|_| ErrorCode::Corrupt)?
                 .unwrap_or(limit),
-            partial: boundary.is_none(),
+            partial: !i.legacy && boundary.is_none(),
             changes: Some(Vec::new()),
         };
         let mut stmt =
@@ -690,13 +701,17 @@ impl<Role> State<Role> {
                 continue;
             }
             if size + raw.len() > 262_144 - 2048 && size > 0 {
-                let bound:Option<i64>=tx.query_row("SELECT MAX(through_seq) FROM journal_commits WHERE epoch=? AND through_seq>? AND through_seq<?",params![h.epoch,number(b.after)?,number(ch.sequence)?],|record|record.get(0))?;
+                let bound: Option<i64> = if i.legacy {
+                    None
+                } else {
+                    tx.query_row("SELECT MAX(through_seq) FROM journal_commits WHERE epoch=? AND through_seq>? AND through_seq<?",params![h.epoch,number(b.after)?,number(ch.sequence)?],|record|record.get(0))?
+                };
                 b.through = bound
                     .map(u64::try_from)
                     .transpose()
                     .map_err(|_| ErrorCode::Corrupt)?
                     .unwrap_or(ch.sequence - 1);
-                b.partial = bound.is_none();
+                b.partial = !i.legacy && bound.is_none();
                 if let Some(changes) = &mut b.changes {
                     changes.retain(|raw| {
                         serde_json::from_str::<Change>(raw.get())
@@ -714,6 +729,8 @@ impl<Role> State<Role> {
             }
         }
         if b.partial && !i.parts {
+            #[cfg(feature = "lab")]
+            capture_observer_reset(&self.db);
             return Err(ErrorCode::Reset.into());
         }
         i.cursor.sequence = b.through;
@@ -803,6 +820,21 @@ pub fn is_capacity(error: &Error) -> bool {
         Error::Sqlite(rusqlite::Error::SqliteFailure(code, _)) => code.extended_code & 255 == 13,
         Error::Io(error) => error.raw_os_error() == Some(28),
         _ => false,
+    }
+}
+
+#[cfg(feature = "lab")]
+fn capture_observer_reset(db: &Connection) {
+    use std::io::Write;
+    let Some(home) = db.path().and_then(|p| Path::new(p).parent()) else {
+        return;
+    };
+    if let Ok(mut file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(home.join("lab-capture-observer-resets"))
+    {
+        let _written = file.write_all(b"reset\n");
     }
 }
 

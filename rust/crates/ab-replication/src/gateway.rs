@@ -120,7 +120,7 @@ impl GatewayState for StateAdapter {
             if atomic {
                 state.feed_changes(visibility.to_map(), cursor)
             } else {
-                state.changes(visibility.to_map(), cursor)
+                state.legacy_changes(visibility.to_map(), cursor)
             }
             .map_err(storage)
         })

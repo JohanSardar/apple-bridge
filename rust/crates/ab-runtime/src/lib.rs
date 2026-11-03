@@ -346,7 +346,15 @@ async fn track_status(
     clock_home: PathBuf,
 ) -> Result<(), Error> {
     let mut last_clock = None;
-    while status.changed().await.is_ok() {
+    loop {
+        tokio::select! {
+            changed = status.changed() => {
+                if changed.is_err() {
+                    break;
+                }
+            }
+            () = tokio::time::sleep(std::time::Duration::from_secs(1)) => {}
+        }
         let current = status.borrow().clone();
         if let Some(sample) = &current.clock_sample
             && last_clock.as_ref() != Some(sample)
@@ -358,26 +366,29 @@ async fn track_status(
             )
             .map_err(|_| Error::Invalid)?;
         }
-        let entries = blobs.lock().await.entries().clone();
-        let mut entries = serde_json::to_value(entries)?;
-        if let Some(entries) = entries.as_object_mut() {
-            for entry in entries.values_mut() {
-                if let Some(entry) = entry.as_object_mut() {
-                    entry
-                        .entry("next_attempt_at")
-                        .or_insert_with(|| serde_json::json!("0001-01-01T00:00:00Z"));
-                }
-            }
-        }
+        let progress = blobs.lock().await.progress();
+        let staleness_ms = current
+            .last_heartbeat
+            .parse::<jiff::Timestamp>()
+            .map_or(0, |t| {
+                jiff::Timestamp::now()
+                    .as_millisecond()
+                    .saturating_sub(t.as_millisecond())
+            });
+        let connection = if staleness_ms > 15_000 {
+            serde_json::json!("disconnected")
+        } else {
+            serde_json::to_value(&current.state)?
+        };
         let mut state = state.lock().map_err(|_| Error::Invalid)?;
         let cursor = state.head().map_err(|_| Error::Invalid)?;
         state.set_replica_status(serde_json::json!({
-                "state": current.state, "mode": current.mode,
+                "state": connection, "mode": current.mode,
                 "gateway_head": current.gateway_head, "cursor": cursor,
                 "role": "replica", "schema": current.schema, "snapshot_sequence": current.snapshot_sequence,
                 "lag": current.gateway_head.saturating_sub(cursor.sequence), "blob_backlog": 0,
-                "staleness_ms": current.last_heartbeat.parse::<jiff::Timestamp>().map_or(0, |t| jiff::Timestamp::now().as_millisecond().saturating_sub(t.as_millisecond())),
-                "blobs": {"entries": entries},
+                "staleness_ms": staleness_ms,
+                "blobs": progress,
                 "snapshots": current.snapshots, "resumes": current.resumes,
                 "snapshot_pages": current.snapshot_pages,
                 "last_heartbeat": current.last_heartbeat

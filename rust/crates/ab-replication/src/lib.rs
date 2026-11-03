@@ -187,6 +187,39 @@ impl<S: ReplicaState> Client<S> {
         self
     }
     #[cfg(feature = "lab-harness")]
+    fn lab_home(&self) -> Option<&std::path::Path> {
+        self.apply_delay
+            .as_deref()
+            .and_then(std::path::Path::parent)
+    }
+    #[cfg(feature = "lab-harness")]
+    fn lab_legacy_hello(&self) -> bool {
+        self.lab_home()
+            .is_some_and(|home| home.join("lab-capture-legacy").exists())
+    }
+    #[cfg(feature = "lab-harness")]
+    async fn lab_part_boundary(&self) -> Result<(), Error> {
+        let Some(home) = self.lab_home() else {
+            return Ok(());
+        };
+        if std::fs::remove_file(home.join("lab-capture-part-armed")).is_err() {
+            return Ok(());
+        }
+        ab_trust::atomic_write(&home.join("lab-capture-part-reached"), b"partial_staged")
+            .map_err(|_| Error::Invalid)?;
+        while !home.join("lab-capture-part-release").exists() {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        Ok(())
+    }
+    #[cfg(feature = "lab-harness")]
+    fn lab_capture_discarded(&self) {
+        if let Some(home) = self.lab_home() {
+            let _written =
+                ab_trust::atomic_write(&home.join("lab-capture-discarded"), b"discarded");
+        }
+    }
+    #[cfg(feature = "lab-harness")]
     async fn lab_apply_delay(&self) {
         let Some(path) = &self.apply_delay else {
             return;
@@ -355,7 +388,19 @@ impl<S: ReplicaState> Client<S> {
             hello.protocol = "feed/1".into();
             hello.clock_protocol = "ntp/1".into();
             hello.delegation_protocol = "delegation/1".into();
-            hello.features = Some(vec![raw(&"capture_atomic")?]);
+            let legacy_hello = {
+                #[cfg(feature = "lab-harness")]
+                {
+                    self.lab_legacy_hello()
+                }
+                #[cfg(not(feature = "lab-harness"))]
+                {
+                    false
+                }
+            };
+            if !legacy_hello {
+                hello.features = Some(vec![raw(&"capture_atomic")?]);
+            }
             hello.replica_id = enrollment.replica_id.clone();
             hello.cursor = Some(raw(&head)?);
             hello.schema_offer = Some(vec![raw(&1)?]);
@@ -364,9 +409,13 @@ impl<S: ReplicaState> Client<S> {
             let mut welcome: Option<FeedFrame> = None;
             let mut clock = clock::Probe::default();
             let mut ready = false;
+            let mut synced = false;
+            let mut clocked = false;
             let mut install = None;
             let mut active_blob: Option<Digest> = None;
             let mut ignored_blob = false;
+            #[cfg(feature = "lab-harness")]
+            let mut pending_capture = false;
             let mut active_variant = false;
             let mut snapshot_id = String::new();
 
@@ -421,7 +470,8 @@ impl<S: ReplicaState> Client<S> {
                 if f.t == "ClockPong" {
                     let sample = clock.complete(&f, jiff::Timestamp::now())?;
                     self.status.send_modify(|s| s.clock_sample = Some(sample));
-                    if !ready {
+                    clocked = true;
+                    if synced && !ready {
                         ready = true;
                         registration.session.ready();
                         self.status
@@ -485,7 +535,11 @@ impl<S: ReplicaState> Client<S> {
                                 s.resumes += 1;
                             }
                         });
+                        let clocked_gateway = f.clock_protocol == "ntp/1";
                         welcome = Some(f.clone());
+                        if clocked_gateway {
+                            clock.ping(&writer).await?;
+                        }
                     }
                     "SnapshotBegin" => {
                         let w = welcome.as_ref().ok_or(Error::Invalid)?;
@@ -547,6 +601,16 @@ impl<S: ReplicaState> Client<S> {
                         let cursor = self.state.lock().await.apply_batch(batch)?;
                         if batch.partial {
                             self.status.send_modify(|s| s.partial_batches += 1);
+                            #[cfg(feature = "lab-harness")]
+                            {
+                                pending_capture = true;
+                                self.lab_part_boundary().await?;
+                            }
+                        } else {
+                            #[cfg(feature = "lab-harness")]
+                            {
+                                pending_capture = false;
+                            }
                         }
                         if !batch.partial {
                             ack.cursor = Some(raw(&cursor)?);
@@ -557,6 +621,13 @@ impl<S: ReplicaState> Client<S> {
                             return Err(Error::Invalid);
                         }
                         self.state.lock().await.discard_capture()?;
+                        #[cfg(feature = "lab-harness")]
+                        {
+                            if pending_capture {
+                                self.lab_capture_discarded();
+                            }
+                            pending_capture = false;
+                        }
                     }
                     "Heartbeat" => {
                         self.status.send_modify(|s| s.gateway_head = f.head);
@@ -595,12 +666,11 @@ impl<S: ReplicaState> Client<S> {
                 {
                     if f.t == "SnapshotEnd" || f.t == "Welcome" && f.reason == "resume" {
                         writer.send_flushed(ack).await?;
-                        if welcome
-                            .as_ref()
-                            .is_some_and(|w| w.clock_protocol == "ntp/1")
+                        synced = true;
+                        if !ready
+                            && (clocked
+                                || welcome.as_ref().is_none_or(|w| w.clock_protocol != "ntp/1"))
                         {
-                            clock.ping(&writer).await?;
-                        } else {
                             ready = true;
                             registration.session.ready();
                             self.status
@@ -638,10 +708,22 @@ impl<S: ReplicaState> Client<S> {
                         refs.sort_by(|a, b| {
                             b.variant.cmp(&a.variant).then(a.digest.cmp(&b.digest))
                         });
+                        let offloaded: std::collections::HashSet<String> = match &self.blobs {
+                            Some(blobs) => blobs
+                                .lock()
+                                .await
+                                .entries()
+                                .iter()
+                                .filter(|(_, e)| e.state == ab_blobs::BlobState::Offloaded)
+                                .map(|(d, _)| d.clone())
+                                .collect(),
+                            None => std::collections::HashSet::new(),
+                        };
                         let mut seen = std::collections::HashSet::new();
                         blob_queue.extend(refs.into_iter().filter(|r| {
                             !r.awaiting_variants
                                 && !matches!(r.state.as_str(), "offloaded" | "missing")
+                                && !offloaded.contains(&r.digest)
                                 && seen.insert(r.digest.clone())
                         }));
                     }
