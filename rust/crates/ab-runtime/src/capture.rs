@@ -108,28 +108,66 @@ pub async fn hydrate(
                 continue;
             };
             let mut succeeded = false;
-            for attempt in 0..8 {
-                let transfer = transfer(&blobs, &source, &handle, &digest);
-                let result = tokio::select! {
-                    _ = stop.changed() => return Ok(()),
-                    result = transfer => result,
+            loop {
+                let entry = blobs.lock().await.entries().get(digest.as_str()).cloned();
+                let Some(entry) = entry else {
+                    break;
                 };
-                if result.is_ok() {
-                    succeeded = true;
-                    break;
-                }
-                if commands.session() != Some(job.session) {
-                    break;
-                }
                 if matches!(
-                    result,
-                    Err(ab_blobs::Error::Corrupt | ab_blobs::Error::Capacity)
+                    entry.state,
+                    ab_blobs::BlobState::Present
+                        | ab_blobs::BlobState::Failed
+                        | ab_blobs::BlobState::OverCap
                 ) {
                     break;
                 }
-                tokio::select! {
+                if let Ok(deadline) = entry.next_attempt_at.parse::<jiff::Timestamp>() {
+                    let millis = deadline
+                        .as_millisecond()
+                        .saturating_sub(jiff::Timestamp::now().as_millisecond());
+                    if millis > 0 {
+                        tokio::select! {
+                            _ = stop.changed() => return Ok(()),
+                            () = tokio::time::sleep(std::time::Duration::from_millis(u64::try_from(millis).map_err(|_| crate::Error::Invalid)?)) => {},
+                        }
+                    }
+                }
+                if !mutate(&blobs, |store| store.retry(&digest, false))
+                    .await
+                    .map_err(|_| crate::Error::Invalid)?
+                {
+                    break;
+                }
+                let result = tokio::select! {
                     _ = stop.changed() => return Ok(()),
-                    () = tokio::time::sleep(std::time::Duration::from_millis((250_u64 << attempt).min(4000))) => {},
+                    result = transfer(&blobs, &source, &handle, &digest) => result,
+                };
+                if result.is_ok() {
+                    mutate(&blobs, |store| store.retry(&digest, true))
+                        .await
+                        .map_err(|_| crate::Error::Invalid)?;
+                    succeeded = true;
+                    break;
+                }
+                if blobs
+                    .lock()
+                    .await
+                    .entries()
+                    .get(digest.as_str())
+                    .is_some_and(|entry| entry.retry_attempts >= 8)
+                {
+                    mutate(&blobs, |store| store.retry(&digest, false))
+                        .await
+                        .map_err(|_| crate::Error::Invalid)?;
+                    break;
+                }
+                if commands.session() != Some(job.session)
+                    || matches!(
+                        result,
+                        Err(ab_blobs::Error::Corrupt | ab_blobs::Error::Capacity)
+                    )
+                {
+                    break;
                 }
             }
             if !succeeded {
