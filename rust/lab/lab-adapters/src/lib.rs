@@ -1,10 +1,12 @@
 pub mod assertions;
+pub mod auth_scopes;
 pub mod blobs;
 pub mod calendar;
 pub mod calendar_fixtures;
 pub mod calls;
 pub mod cleanup;
 pub mod commands;
+pub mod connectors;
 pub mod contacts_list;
 pub mod demo;
 pub mod filecmd;
@@ -38,15 +40,19 @@ pub mod packaging;
 pub mod phone;
 pub mod pkginstall;
 pub mod poster;
+pub mod private;
 pub mod queries;
+pub mod rawhttp;
 pub mod readmodels;
 pub mod relay;
 pub mod relay_certs;
 pub mod relay_gated;
+pub mod relay_more;
 pub mod relay_service;
 pub mod relay_tls;
 pub mod reminders;
 pub mod reminders_demo;
+pub mod remote_real;
 pub mod replicas;
 pub mod restart;
 pub mod robust;
@@ -75,8 +81,12 @@ const PORTED: [&str; 4] = [
 pub fn registry() -> Registry {
     let mut registry = Registry::standard();
     registry.register("world", |world, input, evidence| {
-        let replicas = input["replicas"].as_u64().unwrap_or(0);
         let id = evidence.scenario.as_str();
+        let replicas = if id == "AUTH-SCOPES-METADATA" {
+            1
+        } else {
+            input["replicas"].as_u64().unwrap_or(0)
+        };
         let self_started = media::MEDIA_SCENARIOS.contains(&id)
             || id == "MSG-MEDIA-CLEANUP"
             || readmodels::SCENARIOS.contains(&id)
@@ -206,6 +216,11 @@ pub fn registry() -> Registry {
     registry.register("helper_ipc", helper_ipc::cases);
     helper_real::register(&mut registry);
     registry.register("SIRI-INTENTS", siri::intents);
+    registry.register("connector_approval", connectors::connector_approval);
+    registry.register_real("RELAY-REAL", remote_real::relay_real);
+    registry.register_real("CONN-CLAUDE-CODE", remote_real::claude_code);
+    registry.register_real("CONN-RELAY-CLAUDE", remote_real::relay_claude);
+    registry.register_real("RMT-STATUS-OFF", remote_real::status_off);
     registry
 }
 

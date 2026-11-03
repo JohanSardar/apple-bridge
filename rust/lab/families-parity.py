@@ -40,6 +40,7 @@ IPHONE_SCENARIOS = ['iphone/APP-ALARM-SIM', 'iphone/APP-SHELL-SIM', 'iphone/APP-
                     'iphone/APP-CMD-SIM', 'iphone/APP-NOTIFY-SIM', 'iphone/APP-CAPTURE-SIM']
 RELAY_SCENARIOS = ['RELAY-ENROLL', 'RELAY-PASSTHROUGH', 'RELAY-LIMITS', 'RELAY-ROTATE-GATED',
                    'RELAY-CT-INDEPENDENT', 'RELAY-CAA-ACCOUNT']
+CONNECTOR_SCENARIOS = ['AUTH-SCOPES-METADATA', 'CONN-CHATGPT', 'CONN-CLAUDE-AI', 'RMT-PRIVATE-CONNECT']
 REMINDER_SCENARIOS = ['REM-CONFLICT', 'REM-EXTERNAL-RACE', 'REM-NATIVE-LIST-RACE', 'REM-OPERATION-SHAPES',
                       'REM-READONLY-LIST']
 REMINDER_NATIVE_SCENARIOS = ['core/REM-CRUD', 'reminders/REM-CRUD', 'reminders/REM-CREATE-EXTERNAL',
@@ -110,6 +111,8 @@ def main():
     parser.add_argument('--maps', dest='maps', action='store_true')
     parser.add_argument('--shortcuts', dest='shortcuts', action='store_true')
     parser.add_argument('--relay', dest='relay', action='store_true')
+    parser.add_argument('--go-rust-gateway', dest='go_rust_gateway', action='store_true')
+    parser.add_argument('--connectors', dest='connectors', action='store_true')
     parser.add_argument('--reminders', dest='reminders', action='store_true')
     parser.add_argument('--mac', dest='mac', action='store_true')
     parser.add_argument('--usage', action='store_true')
@@ -148,6 +151,8 @@ def main():
         args.scenario = (args.scenario or []) + IPHONE_SCENARIOS
     if args.relay:
         args.scenario = (args.scenario or []) + RELAY_SCENARIOS
+    if args.connectors:
+        args.scenario = (args.scenario or []) + CONNECTOR_SCENARIOS
     if args.reminders:
         args.scenario = (args.scenario or []) + REMINDER_SCENARIOS + REMINDER_NATIVE_SCENARIOS
     if args.mac:
@@ -172,7 +177,8 @@ def main():
     names = [n if '/' in n else f'core/{n}' for n in args.scenario or SCENARIOS]
     files = [str(root / f'{name}.yaml') for name in names]
     with (out / 'go.jsonl').open('w') as stream:
-        subprocess.run([args.go_lab, 'run', *files, '--level', 'sim', '--json'],
+        impl = ['--impl', 'gateway=rust', '--rust-binary', str(Path(args.gateway).resolve())] if args.go_rust_gateway else []
+        subprocess.run([args.go_lab, 'run', *files, '--level', 'sim', '--json', *impl],
                        stdout=stream, timeout=900, check=True)
     with (out / 'rust.jsonl').open('w') as stream:
         subprocess.run([args.families, 'run', *files, '--gateway', args.gateway,
