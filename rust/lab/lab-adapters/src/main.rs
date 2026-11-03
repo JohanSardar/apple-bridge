@@ -1,6 +1,7 @@
 use lab_runner::Scenario;
 use lab_world::{RealConfig, World, WorldConfig};
 use std::{env, fs, path::PathBuf, process::ExitCode};
+#[allow(clippy::too_many_lines)]
 fn run() -> Result<bool, Box<dyn std::error::Error>> {
     let mut args = env::args().skip(1);
     if args.next().as_deref() != Some("run") {

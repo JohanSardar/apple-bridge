@@ -13,7 +13,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-const CASES: [(&str, &str); 9] = [
+const CASES: [(&str, &str); 10] = [
     ("CORE-RESTORE-EPOCH", "restore-epoch"),
     ("CORE-RETENTION-RACE", "retention-race"),
     ("CORE-SCOPE-CHANGE", "scope-change"),
@@ -23,6 +23,7 @@ const CASES: [(&str, &str); 9] = [
     ("CORE-SNAPSHOT-UNDER-LOAD", "snapshot-under-load"),
     ("CORE-UPGRADE", "upgrade"),
     ("CORE-RESTORE-OLD-SCHEMA", "restore-old-schema"),
+    ("CORE-SOURCE-GRANTS", "source-grants"),
 ];
 const LEGACY_REVISION: &str = "f0cea78";
 const LEGACY_GENERATION: &str = "sim_01M6HS1RM2FC3W3TDFQE0CJYSB";
@@ -58,7 +59,12 @@ fn title(key: &str) -> String {
 fn with_replica(case: &str) -> bool {
     matches!(
         case,
-        "restore-epoch" | "retention-race" | "slow-consumer" | "upgrade" | "restore-old-schema"
+        "restore-epoch"
+            | "retention-race"
+            | "slow-consumer"
+            | "upgrade"
+            | "restore-old-schema"
+            | "source-grants"
     )
 }
 fn with_proxy(case: &str) -> bool {
@@ -117,6 +123,10 @@ pub fn seed(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result
     } else {
         input["count"].as_u64().unwrap_or(4)
     };
+    prepare(world, count, evidence)
+}
+fn prepare(world: &mut World, count: u64, evidence: &mut Evidence) -> Result<()> {
+    let case = case_of(&evidence.scenario);
     if with_proxy(case) {
         world.install_proxy()?;
     }
@@ -750,12 +760,19 @@ fn snapshot(world: &mut World, case: &str, evidence: &mut Evidence) -> Result<bo
 }
 pub fn run(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result<()> {
     let case = case_of(&evidence.scenario);
+    if lock(&RUN).is_none() {
+        prepare(world, 4, evidence)?;
+    }
     let proceed = match case {
         "restore-epoch" => restore_epoch(world, evidence)?,
         "retention-race" => retention_race(world, evidence)?,
         "scope-leak" => scope_leak(world, input, evidence)?,
         "scope-change" => scope_change(world, evidence)?,
         "slow-consumer" => slow_consumer(world, evidence)?,
+        "source-grants" => {
+            crate::source_grants::run(world, evidence)?;
+            true
+        }
         "upgrade" => upgrade(world, evidence)?,
         "restore-old-schema" => restore_old_schema(world, evidence)?,
         "snapshot-under-load" | "snapshot-interrupt" => snapshot(world, case, evidence)?,
