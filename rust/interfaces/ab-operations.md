@@ -11,3 +11,5 @@ Messages admission uses ab-commands::validate from PR #551 before storing a new 
 FIX-CON-NOTE-REM: Source admission preserves the frozen `too_large` wire error from ab-commands validation and its HTTP 413 mapping.
 
 Contacts, Notes and Reminders admission now uses ab-commands validation rather than generic catalog argument-shape validation. The latter rejects valid contact fields because the shared catalog input has an empty property map and a required ID/version even for create. Source validation preserves each operation's field/version rules before admission. Group membership resolve uses contacts.group, including add_member and remove_member.
+
+Native dispatch rejections now use the same capture-bound conflict resolver as Prepare rejections. An external edit between Prepare and Dispatch returns the captured current record without redispatching the effect.

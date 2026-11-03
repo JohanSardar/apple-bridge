@@ -498,7 +498,14 @@ impl LocalGateway {
                 None,
             );
         };
-        let frame = self.await_capture(&r, frame).await;
+        let mut frame = self.await_capture(&r, frame).await;
+        if frame.t == "Rejected" {
+            frame.error = self
+                .actions
+                .conflict(&p, &r.command, &frame)?
+                .map(|error| raw(&error))
+                .transpose()?;
+        }
         self.outcome(r, frame, &plan.collection)
     }
     fn bound(
