@@ -71,6 +71,10 @@ impl Registry {
             }
         }
         for step in &scenario.cleanup {
+            if step.get("world").is_some() {
+                world.close();
+                continue;
+            }
             if let Err(error) = self.step(step, world, &mut evidence) {
                 evidence.check("cleanup", false, &error.to_string());
             }
@@ -138,7 +142,7 @@ fn capture_truth(world: &mut World, _: &Value, evidence: &mut Evidence) -> Resul
     let expected = truth
         .as_array()
         .ok_or_else(|| Error::Invalid("inspect array".into()))?;
-    let response = world.query("records.query", &json!({"collections":[],"limit":10000}))?;
+    let response = world.query("records.query", &json!({"collections":[],"limit":1000}))?;
     let records = response["records"]
         .as_array()
         .ok_or_else(|| Error::Invalid(format!("records array missing: {response}")))?;
