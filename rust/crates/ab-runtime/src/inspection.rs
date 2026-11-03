@@ -127,11 +127,7 @@ pub fn doctor(home: &Path) -> Result<Value, Error> {
             .ok_or(Error::Invalid)?
             .push(json!(warning));
     }
-    if Config::load(home)?.role == "gateway" {
-        result["clock_skew"] = json!("n/a");
-    } else {
-        clock(home, &mut result)?;
-    }
+    clock(home, &mut result)?;
     Ok(result)
 }
 #[cfg(feature = "lab-harness")]
@@ -197,6 +193,10 @@ fn encryption(home: &Path, result: &mut Value) {
 }
 
 fn clock(home: &Path, result: &mut Value) -> Result<(), Error> {
+    if Config::load(home)?.role == "gateway" {
+        result["clock_skew"] = json!("n/a");
+        return Ok(());
+    }
     let sample = fs::read(home.join("gateway-clock.json"))
         .ok()
         .and_then(|b| serde_json::from_slice::<Value>(&b).ok());
