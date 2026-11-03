@@ -375,6 +375,7 @@ name = "ab-trust"
 version = "0.0.0"
 dependencies = [
  "ab-domain",
+ "ab-sys",
  "ab-wire",
  "base64 0.22.1",
  "data-encoding",

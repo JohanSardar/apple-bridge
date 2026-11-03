@@ -1,10 +1,12 @@
-use crate::{Error, fingerprint};
+use crate::{CredentialStoreError, Error, fingerprint};
 use rand::RngCore;
 use std::{
     fs::{self, File, OpenOptions},
-    io::Write,
+    io::{Read, Write},
     os::unix::fs::{OpenOptionsExt, PermissionsExt},
     path::{Path, PathBuf},
+    process::{Command, Stdio},
+    time::{Duration, Instant},
 };
 pub trait CredentialStore: std::fmt::Debug + Send + Sync {
     fn put(&self, key: &str, bytes: &[u8]) -> Result<(), Error>;
@@ -127,6 +129,7 @@ pub struct StoreEnvironment {
     pub xdg_config_home: Option<String>,
     pub home: Option<String>,
     pub secret_tool: Option<PathBuf>,
+    pub bundle: Option<PathBuf>,
 }
 impl StoreEnvironment {
     #[must_use]
@@ -136,6 +139,13 @@ impl StoreEnvironment {
             secret_store: std::env::var("APPLE_BRIDGE_SECRET_STORE").ok(),
             xdg_config_home: std::env::var("XDG_CONFIG_HOME").ok(),
             home: std::env::var("HOME").ok(),
+            bundle: std::env::current_exe().ok().and_then(|exe| {
+                let bundle = exe.parent()?.parent()?.parent()?.to_owned();
+                bundle
+                    .join("Contents/Library/LaunchAgents/dev.applebridge.gateway.plist")
+                    .exists()
+                    .then_some(bundle)
+            }),
             secret_tool: std::env::split_paths(&path)
                 .map(|dir| dir.join("secret-tool"))
                 .find(|candidate| {
@@ -168,7 +178,19 @@ pub fn select(
     home: &Path,
     environment: &StoreEnvironment,
 ) -> Result<Box<dyn CredentialStore>, Error> {
-    if environment.secret_store.as_deref() == Some("file") || cfg!(target_os = "macos") {
+    if environment.secret_store.as_deref() == Some("file") {
+        return Ok(Box::new(FileStore::at(home.join("secrets"))?));
+    }
+    if cfg!(target_os = "macos") {
+        if environment.bundle.is_some() {
+            return Ok(Box::new(KeychainStore::managed(
+                service_for(home),
+                home.join("Apple Bridge.keychain-db"),
+            )));
+        }
+        if environment.secret_store.as_deref() == Some("keychain") {
+            return Ok(Box::new(KeychainStore::login(service_for(home))));
+        }
         return Ok(Box::new(FileStore::at(home.join("secrets"))?));
     }
     let absolute = absolute(home);
@@ -186,16 +208,222 @@ pub fn select(
     )?))
 }
 #[derive(Debug)]
-pub struct KeychainStore;
+pub struct KeychainStore {
+    service: String,
+    path: PathBuf,
+    managed: bool,
+}
+const LOCKED_REMEDY: &str =
+    "Unlock the login Keychain in an interactive macOS session, then retry bridge start.";
+const UNAVAILABLE_REMEDY: &str =
+    "Check access to the login Keychain in an interactive macOS session, then retry bridge start.";
+fn keychain_error(locked: bool) -> Error {
+    CredentialStoreError {
+        code: if locked {
+            "credential_store_locked"
+        } else {
+            "credential_store_unavailable"
+        }
+        .into(),
+        store: "keychain".into(),
+        remedy: if locked {
+            LOCKED_REMEDY
+        } else {
+            UNAVAILABLE_REMEDY
+        }
+        .into(),
+        retryable: true,
+    }
+    .into()
+}
+pub fn service_for(home: &Path) -> String {
+    format!(
+        "apple-bridge:{}",
+        fingerprint(absolute(home).as_os_str().as_encoded_bytes())
+    )
+}
+fn security(arguments: &[&str]) -> Result<Vec<u8>, Error> {
+    let mut child = Command::new("security")
+        .args(arguments)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|_| keychain_error(false))?;
+    let deadline = Instant::now() + Duration::from_secs(10);
+    loop {
+        match child.try_wait()? {
+            Some(status) if status.success() => {
+                let mut output = Vec::new();
+                if let Some(mut stdout) = child.stdout.take() {
+                    stdout.read_to_end(&mut output)?;
+                }
+                return Ok(output.trim_ascii().to_vec());
+            }
+            Some(status) => return Err(keychain_error(status.code() == Some(36))),
+            None if Instant::now() >= deadline => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err(keychain_error(true));
+            }
+            None => std::thread::sleep(Duration::from_millis(20)),
+        }
+    }
+}
+impl KeychainStore {
+    pub fn login(service: String) -> Self {
+        Self {
+            service,
+            path: PathBuf::from(std::env::var_os("HOME").unwrap_or_default())
+                .join("Library/Keychains/login.keychain-db"),
+            managed: false,
+        }
+    }
+    pub fn managed(service: String, path: PathBuf) -> Self {
+        Self {
+            service,
+            path,
+            managed: true,
+        }
+    }
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+    fn unlock(&self) -> Result<(), Error> {
+        if !self.managed {
+            return Ok(());
+        }
+        let password_path = self
+            .path
+            .parent()
+            .ok_or(Error::Invalid)?
+            .join("keychain-password");
+        let password = match fs::read(&password_path) {
+            Ok(password) => password,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                if self.path.exists() {
+                    return Err(Error::Unauthorized);
+                }
+                let mut random = [0u8; 32];
+                rand::thread_rng().fill_bytes(&mut random);
+                let password = data_encoding::HEXLOWER.encode(&random).into_bytes();
+                let mut file = OpenOptions::new()
+                    .write(true)
+                    .create_new(true)
+                    .mode(0o600)
+                    .open(&password_path)?;
+                file.write_all(&password)?;
+                file.sync_all()?;
+                password
+            }
+            Err(e) => return Err(e.into()),
+        };
+        let meta = fs::symlink_metadata(&password_path)?;
+        if !meta.is_file() || meta.permissions().mode() & 0o777 != 0o600 || password.len() != 64 {
+            return Err(Error::Unauthorized);
+        }
+        let password = String::from_utf8(password).map_err(|_| Error::Unauthorized)?;
+        let keychain = self.path.to_string_lossy().into_owned();
+        if !self.path.exists() {
+            let search = security(&["list-keychains", "-d", "user"])?;
+            let created = security(&["create-keychain", "-p", &password, &keychain]);
+            let mut restore = vec![
+                "list-keychains".to_owned(),
+                "-d".into(),
+                "user".into(),
+                "-s".into(),
+            ];
+            restore.extend(
+                String::from_utf8_lossy(&search)
+                    .lines()
+                    .map(|line| line.trim().trim_matches('"').to_owned())
+                    .filter(|line| !line.is_empty()),
+            );
+            let _ = security(&restore.iter().map(String::as_str).collect::<Vec<_>>());
+            created?;
+        }
+        security(&["unlock-keychain", "-p", &password, &keychain])?;
+        Ok(())
+    }
+    fn legacy(&self, operation: &str, key: &str, value: &[u8]) -> Result<Option<Vec<u8>>, Error> {
+        let request = serde_json::json!({
+            "op": operation,
+            "path": self.path,
+            "service": self.service,
+            "key": key,
+            "value": data_encoding::HEXLOWER.encode(value),
+        });
+        let mut child = Command::new("python3")
+            .args(["-c", include_str!("go_keychain.py")])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()
+            .map_err(|_| keychain_error(false))?;
+        child
+            .stdin
+            .take()
+            .ok_or_else(|| keychain_error(false))?
+            .write_all(request.to_string().as_bytes())?;
+        let output = child.wait_with_output()?;
+        let result: serde_json::Value =
+            serde_json::from_slice(&output.stdout).map_err(|_| keychain_error(false))?;
+        match result["status"].as_i64() {
+            Some(0) if operation == "get" => result["value"]
+                .as_str()
+                .and_then(|text| {
+                    data_encoding::HEXLOWER_PERMISSIVE
+                        .decode(text.as_bytes())
+                        .ok()
+                })
+                .map(Some)
+                .ok_or_else(|| keychain_error(false)),
+            Some(0) => Ok(None),
+            Some(code) => Err(Self::status(i32::try_from(code).unwrap_or(-1))),
+            None => Err(keychain_error(false)),
+        }
+    }
+    fn status(code: i32) -> Error {
+        match code {
+            ab_sys::keychain::NOT_FOUND => {
+                Error::Io(std::io::Error::from(std::io::ErrorKind::NotFound))
+            }
+            ab_sys::keychain::INTERACTION_NOT_ALLOWED => keychain_error(true),
+            _ => keychain_error(false),
+        }
+    }
+}
 impl CredentialStore for KeychainStore {
-    fn put(&self, _: &str, _: &[u8]) -> Result<(), Error> {
-        Err(Error::Unavailable)
+    fn put(&self, key: &str, bytes: &[u8]) -> Result<(), Error> {
+        self.unlock()?;
+        let encoded = data_encoding::HEXLOWER.encode(bytes);
+        match ab_sys::keychain::put(&self.path, &self.service, key, encoded.as_bytes()) {
+            Err(ab_sys::keychain::AUTH_FAILED) => self.legacy("put", key, bytes).map(|_| ()),
+            other => other.map_err(Self::status),
+        }
     }
-    fn get(&self, _: &str) -> Result<Vec<u8>, Error> {
-        Err(Error::Unavailable)
+    fn get(&self, key: &str) -> Result<Vec<u8>, Error> {
+        self.unlock()?;
+        let encoded = match ab_sys::keychain::get(&self.path, &self.service, key) {
+            Err(ab_sys::keychain::AUTH_FAILED) => {
+                return self.legacy("get", key, b"")?.ok_or(Error::Unavailable);
+            }
+            other => other.map_err(Self::status)?,
+        };
+        data_encoding::HEXLOWER_PERMISSIVE
+            .decode(encoded.trim_ascii())
+            .map_err(|_| keychain_error(false))
     }
-    fn delete(&self, _: &str) -> Result<(), Error> {
-        Err(Error::Unavailable)
+    fn delete(&self, key: &str) -> Result<(), Error> {
+        self.unlock()?;
+        match ab_sys::keychain::delete(&self.path, &self.service, key) {
+            Err(ab_sys::keychain::NOT_FOUND) => Ok(()),
+            Err(ab_sys::keychain::AUTH_FAILED) => match self.legacy("delete", key, b"") {
+                Err(Error::Io(e)) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+                other => other.map(|_| ()),
+            },
+            other => other.map_err(Self::status),
+        }
     }
 }
 pub fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), Error> {
@@ -230,6 +458,7 @@ mod tests {
             xdg_config_home: Some(root.to_string_lossy().into_owned()),
             home: Some(root.to_string_lossy().into_owned()),
             secret_tool: None,
+            bundle: None,
         }
     }
     const HOME_DIGEST: &str = "268babf219a745254d0790c2c1983f81c4722a22a017c90c8d5d9bdcd938ba1d";
@@ -256,6 +485,13 @@ mod tests {
         assert_eq!(store.get("identity-key").unwrap(), b"secret");
         store.delete("identity-key").unwrap();
         assert!(!expected.exists());
+    }
+    #[test]
+    fn keychain_service_is_the_go_per_home_fingerprint() {
+        assert_eq!(
+            service_for(Path::new("/tmp/ab-g5-home/./nested/..")),
+            format!("apple-bridge:{HOME_DIGEST}")
+        );
     }
     #[test]
     fn home_fallback_and_file_override_match_go() {
