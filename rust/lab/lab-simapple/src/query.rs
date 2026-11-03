@@ -94,6 +94,13 @@ pub fn query(blobs: &mut BTreeMap<String, Vec<u8>>, frame: &Value) -> Value {
         Some("helper.version") => {
             json!({"t":"QueryResult","id":id,"result_json":{"version":"sim","protocol":"ipc/1"},"blobs":[]})
         }
+        Some("shortcuts.actions") => {
+            if args.as_object().is_some_and(serde_json::Map::is_empty) {
+                json!({"t":"QueryResult","id":id,"result_json":{"items":[{"app":"com.example.synthetic","identifier":"Export","title":"Export"}],"complete":true,"schema_guaranteed":false},"blobs":[]})
+            } else {
+                failure(id, "invalid")
+            }
+        }
         Some("test.sleep") => failure(id, "invalid"),
         Some("test.blob") => {
             let Some(size) = number(&args, "size").filter(|size| *size <= MAX_BLOB) else {
