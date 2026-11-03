@@ -14,7 +14,8 @@ use std::{
     time::{Duration, Instant},
 };
 
-pub const SCENARIOS: [&str; 3] = [
+pub const SCENARIOS: [&str; 4] = [
+    "CORE-PAIR",
     "CORE-HELPER-RESTART",
     "CORE-KILL-DURING-APPLY",
     "CORE-KILL-GATEWAY-CAPTURE",
@@ -102,7 +103,7 @@ fn scope_probe(limited: &Client, fixture_id: &str, index: usize, evidence: &mut 
     true
 }
 
-fn automatic_healthy(world: &World, observed: &Observed, evidence: &mut Evidence) -> bool {
+pub(crate) fn automatic_healthy(world: &World, observed: &Observed, evidence: &mut Evidence) -> bool {
     let drained = world.control("/flush", &json!({})).is_ok();
     evidence.check(
         "automatic_recovery_capture_drained",
@@ -457,6 +458,9 @@ fn kill_gateway_capture(world: &mut World, observed: &Observed, evidence: &mut E
 
 pub fn robustness(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result<()> {
     let case = input["case"].as_str().unwrap_or_default().to_owned();
+    if case == "pair" && evidence.scenario == "CORE-PAIR" {
+        return crate::pair::run(world, evidence);
+    }
     if !matches!(
         (case.as_str(), evidence.scenario.as_str()),
         ("helper-restart", "CORE-HELPER-RESTART")

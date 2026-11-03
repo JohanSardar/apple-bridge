@@ -146,8 +146,8 @@ impl State {
         self.progress["committed"][src].as_u64().unwrap_or_default()
     }
     fn record_commit(&mut self, src: &str, revision: u64, full: bool) {
-        let done = self.completed.entry(src.to_owned()).or_default();
         let mut committed = self.committed(src);
+        let done = self.completed.entry(src.to_owned()).or_default();
         if full {
             committed = committed.max(revision);
         } else if revision > committed {
@@ -329,6 +329,7 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
                     "ui-interference",
                     "ui-interference-before",
                     "calendar-rule-mismatch",
+                    "calendar-part-delay",
                     "external-move-before-prepare",
                     "external-edit-between-prepare-and-dispatch",
                 ]
@@ -637,6 +638,19 @@ impl Session<'_> {
                     .remove("completion_evidence");
             }
             self.emit_part(state, part)?;
+            if frame["source"] == "calendar" && (index + 1) * 64 < observations.len() {
+                let delay = {
+                    let mut s = lock(state)?;
+                    let armed = s.fault == "calendar-part-delay";
+                    if armed {
+                        s.fault.clear();
+                    }
+                    armed
+                };
+                if delay {
+                    thread::sleep(Duration::from_millis(250));
+                }
+            }
         }
         Ok(())
     }

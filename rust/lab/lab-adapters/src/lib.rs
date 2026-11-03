@@ -1,6 +1,7 @@
 pub mod assertions;
 pub mod blobs;
 pub mod calls;
+pub mod capture_atomic;
 pub mod cleanup;
 pub mod commands;
 pub mod contacts_list;
@@ -17,6 +18,7 @@ pub mod iphone_real;
 pub mod journey;
 pub mod labcore;
 pub mod live;
+pub mod live_latency;
 pub mod mac;
 pub mod mac_real;
 pub mod maps;
@@ -25,6 +27,7 @@ pub mod messages_a;
 pub mod messages_b;
 pub mod native;
 pub mod packaging;
+pub mod pair;
 pub mod phone;
 pub mod poster;
 pub mod queries;
@@ -99,6 +102,8 @@ pub fn registry() -> Registry {
             messages_a::start(world, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && labcore::SCENARIOS.contains(&id) {
             labcore::start_world(world, id, usize::try_from(replicas).unwrap_or(0))?;
+        } else if replicas != 0 && capture_atomic::SCENARIOS.contains(&id) {
+            capture_atomic::start_world(world, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && robust::SCENARIOS.contains(&id) {
             replicas::start(world, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && contacts_list::SCENARIOS.contains(&id) {
@@ -137,7 +142,6 @@ pub fn registry() -> Registry {
     registry.register("notes", imports::notes);
     registry.register("usage", usage::cases);
     registry.register("phone", calls::phone);
-    registry.register("usage", imports::usage);
     registry.register("native_media_yield", native::media_yield);
     registry.register("native_media_posters", native::media_posters);
     registry.register("native_media_export_safety", native::media_export_safety);
@@ -155,8 +159,6 @@ pub fn registry() -> Registry {
     registry.register("stale_fence_rejected", labcore::stale_fence_rejected);
     registry.register("load_rejected", labcore::load_rejected);
     registry.register("relay_service", relay::relay_service);
-    registry.register("seed", journey::seed);
-    registry.register("converge", journey::converge);
     registry.register("media_variants", media::media_variants);
     registry.register("messages_commands", messages_b::dispatch);
     registry.register("files_native", files_native::files_native);
@@ -167,6 +169,9 @@ pub fn registry() -> Registry {
     registry.register("shortcuts_checks", shortcuts::shortcuts_checks);
     registry.register("shortcuts_real_only", shortcuts::shortcuts_real_only);
     registry.register("mac", mac::mac);
+    registry.register("capture_atomic", capture_atomic::capture_atomic);
+    registry.register("changes", live_latency::changes);
+    registry.register("latency", live_latency::latency);
     registry
 }
 
