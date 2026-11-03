@@ -191,7 +191,19 @@ pub struct LocalGateway {
     stopping: std::sync::atomic::AtomicBool,
 }
 fn raw<T: Serialize>(value: &T) -> Result<Box<RawValue>, Error> {
-    serde_json::value::to_raw_value(value).map_err(|_| Code::Corrupt.into())
+    let mut value = serde_json::to_value(value).map_err(|_| Code::Corrupt)?;
+    redact_clipboard(&mut value);
+    serde_json::value::to_raw_value(&value).map_err(|_| Code::Corrupt.into())
+}
+fn redact_clipboard(value: &mut serde_json::Value) {
+    if value["command"]["op"] == "mac.clipboard_write" {
+        value["command"]["args"] = serde_json::json!({});
+    }
+    if let Some(values) = value.as_array_mut() {
+        for value in values {
+            redact_clipboard(value);
+        }
+    }
 }
 fn timestamp(value: &str) -> Result<jiff::Timestamp, Error> {
     value.parse().map_err(|_| Code::Invalid.into())
