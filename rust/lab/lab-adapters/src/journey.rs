@@ -1,33 +1,20 @@
 use crate::{
+    assertions::{
+        Observed, await_until, converged, record_integrity, sse_observers, stream_assertions,
+    },
     http::{Client, random_id},
     replicas::{self, Endpoint},
 };
 use lab_runner::Evidence;
 use lab_world::{Error, Result, World};
 use serde_json::{Value, json};
-use std::{
-    collections::BTreeMap,
-    thread,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
 pub const COMMAND_SCENARIOS: [&str; 1] = ["CORE-CMD-IDEMPOTENT"];
-const ACTIVE_COLLECTIONS: [&str; 2] = ["reminders.", "system."];
+const GATEWAY_SCOPE: &str = "reminders:read,reminders:write,system:read";
 
-fn await_until(seconds: u64, mut condition: impl FnMut() -> bool) -> bool {
-    let deadline = Instant::now() + Duration::from_secs(seconds);
-    loop {
-        if condition() {
-            return true;
-        }
-        if Instant::now() >= deadline {
-            return false;
-        }
-        thread::sleep(Duration::from_millis(50));
-    }
-}
 fn gateway_client(world: &World) -> Result<Client> {
-    Client::new(world, "reminders:read,reminders:write,system:read")
+    Client::new(world, GATEWAY_SCOPE)
 }
 fn records(client: &Client) -> Result<(Value, Vec<Value>)> {
     let mut out = vec![];
@@ -51,83 +38,6 @@ fn records(client: &Client) -> Result<(Value, Vec<Value>)> {
         }
     }
 }
-fn comparable(record: &Value) -> String {
-    json!([
-        record["collection"],
-        record["id"],
-        record["version"],
-        record["data"],
-        record["deleted"]
-    ])
-    .to_string()
-}
-fn visible(record: &Value) -> bool {
-    let collection = record["collection"].as_str().unwrap_or_default();
-    collection != "system.command"
-        && ACTIVE_COLLECTIONS
-            .iter()
-            .any(|prefix| collection.starts_with(prefix))
-}
-fn replica_integrity(gateway: &Client, endpoints: &[Endpoint]) -> bool {
-    let Ok((cursor, all)) = records(gateway) else {
-        return false;
-    };
-    let mut expected: Vec<String> = all.iter().filter(|r| visible(r)).map(comparable).collect();
-    expected.sort();
-    endpoints.iter().all(|endpoint| {
-        let Ok((replica_cursor, replica)) = records(&endpoint.client()) else {
-            return false;
-        };
-        let mut actual: Vec<String> = replica
-            .iter()
-            .filter(|r| visible(r))
-            .map(comparable)
-            .collect();
-        actual.sort();
-        replica_cursor["epoch"] == cursor["epoch"]
-            && replica_cursor["sequence"] == cursor["sequence"]
-            && actual == expected
-    })
-}
-fn truth_matches(world: &World, gateway: &Client) -> bool {
-    let Ok(truth) = world.control("/inspect", &Value::Null) else {
-        return false;
-    };
-    let Ok((_, all)) = records(gateway) else {
-        return false;
-    };
-    let mut expected: BTreeMap<String, Vec<String>> = BTreeMap::new();
-    for native in truth.as_array().into_iter().flatten() {
-        if native["kind"] == "absent" {
-            continue;
-        }
-        let title = native["data"]["title"].to_string();
-        expected
-            .entry(native["collection"].as_str().unwrap_or_default().to_owned())
-            .or_default()
-            .push(title);
-    }
-    let mut actual: BTreeMap<String, Vec<String>> = BTreeMap::new();
-    for record in &all {
-        let collection = record["collection"].as_str().unwrap_or_default();
-        if collection.starts_with("system.") || record["deleted"] == true {
-            continue;
-        }
-        if expected.contains_key(collection) {
-            actual
-                .entry(collection.to_owned())
-                .or_default()
-                .push(record["data"]["title"].to_string());
-        }
-    }
-    for titles in expected.values_mut().chain(actual.values_mut()) {
-        titles.sort();
-    }
-    expected == actual
-}
-fn converged(world: &World, gateway: &Client, endpoints: &[Endpoint]) -> bool {
-    truth_matches(world, gateway) && replica_integrity(gateway, endpoints)
-}
 pub fn seed(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result<()> {
     let count = input["count"].as_u64().unwrap_or(4);
     world.control("/seed", &json!({"count": count}))?;
@@ -144,10 +54,8 @@ pub fn seed(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result
 pub fn converge(_: &mut World, _: &Value, _: &mut Evidence) -> Result<()> {
     Ok(())
 }
-fn finish(world: &World, evidence: &mut Evidence) -> Result<()> {
-    let gateway = gateway_client(world)?;
-    let endpoints = replicas::endpoints();
-    let ok = await_until(15, || converged(world, &gateway, &endpoints));
+fn finish(world: &World, observed: &Observed, evidence: &mut Evidence) -> Result<()> {
+    let ok = await_until(15, || converged(world, observed));
     evidence.check(
         "convergence_truth_gateway_replicas",
         ok,
@@ -161,12 +69,6 @@ fn finish(world: &World, evidence: &mut Evidence) -> Result<()> {
         "no_automatic_redispatch_truth_effect_counts",
         single,
         "every command id has at most one native effect",
-    );
-    let barrier = await_until(5, || replica_integrity(&gateway, &endpoints));
-    evidence.check(
-        "replica_records_versions_and_cursor_consistent",
-        barrier && !endpoints.is_empty(),
-        "public records, versions and tombstones matched at one cursor",
     );
     Ok(())
 }
@@ -219,6 +121,7 @@ pub fn command_journey(world: &mut World, _: &Value, evidence: &mut Evidence) ->
     }
     let gateway = gateway_client(world)?;
     let endpoints = replicas::endpoints();
+    let observed = Observed::new(gateway.clone(), GATEWAY_SCOPE);
     evidence.check(
         "feed_network_loopback",
         true,
@@ -229,7 +132,7 @@ pub fn command_journey(world: &mut World, _: &Value, evidence: &mut Evidence) ->
         true,
         "replicas run on the harness host",
     );
-    if !await_until(15, || converged(world, &gateway, &endpoints)) {
+    if !await_until(15, || converged(world, &observed)) {
         evidence.check("initial_convergence", false, "world did not converge");
         return Ok(());
     }
@@ -241,6 +144,7 @@ pub fn command_journey(world: &mut World, _: &Value, evidence: &mut Evidence) ->
         snapshots,
         "each replica bootstrapped by one snapshot",
     );
+    let observers = sse_observers(world, &observed)?;
     let scoped = all_endpoints(world)?;
     let reminders = record_set(&gateway, "reminders.reminder")?;
     let lists = record_set(&gateway, "reminders.list")?;
@@ -300,7 +204,13 @@ pub fn command_journey(world: &mut World, _: &Value, evidence: &mut Evidence) ->
     });
     scope_commands(world, &scoped, &list_id, evidence)?;
     idempotent(world, &gateway, &list_id, evidence)?;
-    finish(world, evidence)?;
+    finish(world, &observed, evidence)?;
+    latency_assertions(&seen_at, evidence);
+    stream_assertions(world, &observed, &observers, evidence);
+    record_integrity(evidence, &observed, None);
+    Ok(())
+}
+fn latency_assertions(seen_at: &[Option<Duration>], evidence: &mut Evidence) {
     for (index, seen) in seen_at.iter().enumerate() {
         evidence.check(
             &format!("metadata_latency_below_1s_{index}"),
@@ -308,7 +218,6 @@ pub fn command_journey(world: &mut World, _: &Value, evidence: &mut Evidence) ->
             "external change visible through the public API within one second",
         );
     }
-    Ok(())
 }
 fn scope_commands(
     world: &World,

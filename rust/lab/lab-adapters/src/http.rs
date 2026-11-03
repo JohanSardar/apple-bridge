@@ -34,6 +34,10 @@ impl Client {
         Ok(Self { address, token })
     }
     #[must_use]
+    pub fn token(&self) -> &str {
+        &self.token
+    }
+    #[must_use]
     pub fn address(&self) -> &str {
         &self.address
     }
