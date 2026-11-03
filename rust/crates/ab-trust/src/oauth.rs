@@ -347,6 +347,17 @@ impl Authority {
         if let Some(e) = d.enrollment {
             p.grants = effective_grants(&p.grants, &e.grants);
         }
+        self.update(|d| {
+            let current = d
+                .principals
+                .iter_mut()
+                .find(|current| current.id == p.id && current.active())
+                .ok_or(Error::Unauthorized)?;
+            let now = serde_json::json!(jiff::Timestamp::now().to_string());
+            current.extra.insert("last_used".into(), now.clone());
+            p.extra.insert("last_used".into(), now);
+            Ok(())
+        })?;
         Ok(p)
     }
 }
