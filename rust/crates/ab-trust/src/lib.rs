@@ -1,4 +1,5 @@
 #![forbid(unsafe_code)]
+pub mod activity;
 mod gateway;
 mod identity;
 pub mod iphone;
@@ -15,6 +16,8 @@ pub use store::{CredentialStore, FileStore, KeychainStore, atomic_write};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error(transparent)]
+    Sqlite(#[from] rusqlite::Error),
     #[error(transparent)]
     Io(#[from] std::io::Error),
     #[error(transparent)]

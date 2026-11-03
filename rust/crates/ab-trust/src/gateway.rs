@@ -22,6 +22,8 @@ struct Pairing {
     grants: Vec<Grant>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     result: Option<Principal>,
+    #[serde(default)]
+    complete: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -92,6 +94,7 @@ impl Authority {
             used: false,
             grants,
             result: None,
+            complete: false,
         };
         self.update(|d| {
             d.pairings
@@ -419,5 +422,105 @@ impl Authority {
             Ok(())
         })?;
         Ok(token)
+    }
+}
+
+impl Authority {
+    pub fn dial_replicas(&self) -> Result<Vec<Principal>, Error> {
+        Ok(self
+            .load()?
+            .principals
+            .into_iter()
+            .filter(|p| p.kind == "replica" && p.active() && !p.dial.is_empty())
+            .collect())
+    }
+    pub fn confirm_dial(&self, id: &str) -> Result<(), Error> {
+        self.update(|d| {
+            for value in d.pairings.values_mut() {
+                let mut pair: Pairing = serde_json::from_value(value.clone())?;
+                if pair.result.as_ref().is_some_and(|p| p.id == id) && !pair.complete {
+                    pair.complete = true;
+                    pair.key = None;
+                    *value = serde_json::to_value(pair)?;
+                }
+            }
+            Ok(())
+        })
+    }
+    pub async fn dial_pairings_once(&self) -> Result<(), Error> {
+        for (id, value) in self.load()?.pairings {
+            let pair: Pairing = serde_json::from_value(value)?;
+            if pair.dial.is_empty()
+                || pair.complete
+                || !pair.purpose.is_empty()
+                || (!pair.used && pair.attempts >= 5)
+                || pair
+                    .expires_at
+                    .parse::<jiff::Timestamp>()
+                    .map_err(|_| Error::Invalid)?
+                    < jiff::Timestamp::now()
+            {
+                continue;
+            }
+            let _ = self.dial_pair(&id, &pair.dial).await;
+        }
+        Ok(())
+    }
+    async fn dial_pair(&self, id: &str, address: &str) -> Result<(), Error> {
+        let mut tls = self.client_tls("")?;
+        tls.dangerous()
+            .set_certificate_verifier(std::sync::Arc::new(crate::tls::Pin {
+                digest: String::new(),
+                accept_unpaired: true,
+            }));
+        let client = reqwest::Client::builder()
+            .use_preconfigured_tls(tls)
+            .tls_info(true)
+            .redirect(reqwest::redirect::Policy::none())
+            .timeout(std::time::Duration::from_secs(5))
+            .build()?;
+        let response = client
+            .post(format!("https://{address}/v1/pair/proof"))
+            .json(&serde_json::json!({"id":id}))
+            .send()
+            .await?
+            .error_for_status()?;
+        let cert = response
+            .extensions()
+            .get::<reqwest::tls::TlsInfo>()
+            .and_then(reqwest::tls::TlsInfo::peer_certificate)
+            .ok_or(Error::Unauthorized)?
+            .to_vec();
+        if response.content_length().is_some_and(|n| n > 4096) {
+            return Err(Error::Invalid);
+        }
+        let mut response = response;
+        let mut bytes = Vec::new();
+        while let Some(chunk) = response.chunk().await? {
+            if bytes.len() + chunk.len() > 4096 {
+                return Err(Error::Invalid);
+            }
+            bytes.extend_from_slice(&chunk);
+        }
+        let proof: serde_json::Value = serde_json::from_slice(&bytes)?;
+        if proof["id"].as_str() != Some(id) {
+            return Err(Error::Unauthorized);
+        }
+        let proof = STANDARD
+            .decode(proof["proof"].as_str().ok_or(Error::Unauthorized)?)
+            .map_err(|_| Error::Unauthorized)?;
+        let principal = self.accept_pair(id, &proof, &cert, true)?;
+        let client = reqwest::Client::builder()
+            .use_preconfigured_tls(self.client_tls(&principal.fingerprint)?)
+            .redirect(reqwest::redirect::Policy::none())
+            .timeout(std::time::Duration::from_secs(5))
+            .build()?;
+        client
+            .post(format!("https://{address}/v1/pair/finish"))
+            .json(&principal)
+            .send()
+            .await?
+            .error_for_status()?;
+        self.confirm_dial(&principal.id)
     }
 }

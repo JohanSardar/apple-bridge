@@ -3,8 +3,11 @@ package main
 import (
 	"bufio"
 	"context"
+
 	"encoding/json"
 	"fmt"
+	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,15 +20,35 @@ import (
 	"github.com/JohanSardar/apple-bridge/internal/trust"
 )
 
+var seedHome, gatewayImpl, oracleDigest string
+var reverse bool
+
 func run() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 40*time.Second)
 	defer cancel()
 	home, err := os.MkdirTemp("", "ab-gc-interop-")
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(home)
+	if err := copySeed(seedHome, filepath.Join(home, "gateway")); err != nil {
+		return err
+	}
 	gateway := exec.CommandContext(ctx, os.Args[1], filepath.Join(home, "gateway"))
+	if gatewayImpl == "go" {
+		gateway = exec.CommandContext(ctx, os.Args[0], "--go-gateway", filepath.Join(home, "gateway"))
+	}
+	if reverse {
+		for _, key := range []string{"GC_GO_DIAL", "GC_RUST_DIAL"} {
+			listener, err := net.Listen("tcp", "127.0.0.1:0")
+			if err != nil {
+				return err
+			}
+			address := listener.Addr().String()
+			listener.Close()
+			gateway.Env = append(gateway.Environ(), key+"="+address)
+		}
+	}
 	gateway.Stderr = os.Stderr
 	output, err := gateway.StdoutPipe()
 	if err != nil {
@@ -68,7 +91,15 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	if err = authority.Join(ctx, code); err != nil {
+	decoded, err := trust.DecodePairCode(code)
+	if err != nil {
+		return err
+	}
+	join := authority.Join
+	if reverse {
+		join = func(ctx context.Context, code string) error { return authority.JoinListen(ctx, code, decoded.Dial) }
+	}
+	if err = join(ctx, code); err != nil {
 		return err
 	}
 	store, err := state.Open(filepath.Join(home, "go"))
@@ -76,6 +107,21 @@ func run() error {
 		return err
 	}
 	defer store.Close()
+	gatewayState, err := state.Open(filepath.Join(home, "gateway"))
+	if err != nil {
+		return err
+	}
+	activities, err := gatewayState.AgentActivity(ctx, "agent:fixture", "")
+	gatewayState.Close()
+	if err != nil || len(activities) != 2 {
+		return fmt.Errorf("activity reopen: %v %v", activities, err)
+	}
+	for _, activity := range activities {
+		if activity.Kind == "read" && activity.Count != 2 || activity.Kind == "command" && activity.State != "resolved" {
+			return fmt.Errorf("activity mismatch: %+v", activity)
+		}
+	}
+
 	blobStore, err := blobs.Open(filepath.Join(home, "go"), blobs.Config{})
 	if err != nil {
 		return err
@@ -85,7 +131,34 @@ func run() error {
 	follow, stop := context.WithCancel(ctx)
 	defer stop()
 	done := make(chan error, 1)
-	go func() { done <- client.Follow(follow) }()
+	go func() {
+		if !reverse {
+			done <- client.Follow(follow)
+			return
+		}
+		enrollment, err := authority.Enrollment()
+		if err != nil {
+			done <- err
+			return
+		}
+		listener, err := authority.PinnedListener(enrollment.Dial, enrollment.Fingerprint)
+		if err != nil {
+			done <- err
+			return
+		}
+		server := &http.Server{Handler: client.Handler(), ReadHeaderTimeout: 5 * time.Second, BaseContext: func(net.Listener) context.Context { return follow }}
+		go func() { <-follow.Done(); server.Close() }()
+		done <- server.Serve(listener)
+	}()
+	for client.Status().Snapshots != 1 {
+		if ctx.Err() != nil {
+			return fmt.Errorf("initial Go snapshot timeout")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if err := os.WriteFile(filepath.Join(home, "gateway", "advance"), []byte("advance"), 0600); err != nil {
+		return err
+	}
 	for client.Status().Snapshots != 1 || store.Head().Sequence != 2 {
 		select {
 		case <-ctx.Done():
@@ -123,11 +196,47 @@ func run() error {
 			time.Sleep(10 * time.Millisecond)
 		}
 	}
+	for {
+		if data, err := os.ReadFile(filepath.Join(rustHome, "upload.json")); err == nil && string(data) == "true" {
+			break
+		}
+		if ctx.Err() != nil {
+			return fmt.Errorf("Rust upload timeout")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if err := proveUpload(ctx, authority, client); err != nil {
+		return err
+	}
+	for _, replicaHome := range []string{rustHome, filepath.Join(home, "go")} {
+		output, err := exec.CommandContext(ctx, "python3", "rust/crates/ab-replication/interop/gateway/batches.py", filepath.Join(replicaHome, "state.db")).CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("%s %s batches: %s: %w", gatewayImpl, filepath.Base(replicaHome), output, err)
+		}
+	}
 	stop()
 	<-done
 	follow, stop = context.WithCancel(ctx)
 	defer stop()
-	go func() { done <- client.Follow(follow) }()
+	go func() {
+		if !reverse {
+			done <- client.Follow(follow)
+			return
+		}
+		enrollment, err := authority.Enrollment()
+		if err != nil {
+			done <- err
+			return
+		}
+		listener, err := authority.PinnedListener(enrollment.Dial, enrollment.Fingerprint)
+		if err != nil {
+			done <- err
+			return
+		}
+		server := &http.Server{Handler: client.Handler(), ReadHeaderTimeout: 5 * time.Second, BaseContext: func(net.Listener) context.Context { return follow }}
+		go func() { <-follow.Done(); server.Close() }()
+		done <- server.Serve(listener)
+	}()
 	for client.Status().Resumes < 1 {
 		if ctx.Err() != nil {
 			return fmt.Errorf("Go resume timeout")
@@ -175,6 +284,10 @@ func run() error {
 		return err
 	}
 	digest := snapshot.Digest
+	if oracleDigest != "" && digest != oracleDigest {
+		return fmt.Errorf("Go/Rust gateway digest mismatch: %s != %s", digest, oracleDigest)
+	}
+	oracleDigest = digest
 	snapshot.Close()
 	if digest != rustState.Digest {
 		return fmt.Errorf("digest mismatch: Go %s Rust %s", digest, rustState.Digest)
@@ -249,12 +362,35 @@ func run() error {
 		}
 		time.Sleep(time.Millisecond)
 	}
-	result := map[string]any{"gateway": "rust-fixture", "replica": "go", "paired": true, "rust_paired_snapshot_live_resume_scope": true, "mixed_digest": digest, "go_resumes": client.Status().Resumes, "snapshots": client.Status().Snapshots, "go_revocation_ms": goRevocation, "rust_revocation_ms": time.Since(start).Milliseconds(), "blobs_both": true, "cursor": store.Head()}
+	result := map[string]any{"gateway": gatewayImpl, "reverse": reverse, "replica": "go", "paired": true, "rust_paired_snapshot_live_resume_scope": true, "mixed_digest": digest, "go_resumes": client.Status().Resumes, "snapshots": client.Status().Snapshots, "go_revocation_ms": goRevocation, "rust_revocation_ms": time.Since(start).Milliseconds(), "blobs_both": true, "upload": true, "batches_both": [][2]uint64{{1, 2}}, "activity_reopened_by_go": true, "cursor": store.Head()}
 	return json.NewEncoder(os.Stdout).Encode(result)
 }
 func main() {
-	if err := run(); err != nil {
+	if len(os.Args) > 1 && os.Args[1] == "--go-gateway" {
+		if err := goGateway(os.Args[2]); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
+	var err error
+	seedHome, err = os.MkdirTemp("", "ab-gc-seed-")
+	if err != nil {
+		panic(err)
+	}
+	defer os.RemoveAll(seedHome)
+	seed := exec.Command(os.Args[1], seedHome, "seed")
+	seed.Stderr = os.Stderr
+	if err = seed.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
+	}
+	for _, impl := range []string{"rust", "go", "rust"} {
+		reverse = impl == "rust" && oracleDigest != ""
+		gatewayImpl = impl
+		if err := run(); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 	}
 }

@@ -177,6 +177,44 @@ impl GatewayTransport {
         delegation: String,
         request: Vec<u8>,
     ) -> Result<CommandResponse, Error> {
+        self.exchange_feed_frame("CommandRequest", None, delegation, request, None)
+            .await
+    }
+    pub async fn upload_control(
+        &self,
+        delegation: String,
+        request: Vec<u8>,
+    ) -> Result<CommandResponse, Error> {
+        self.exchange_feed_frame("UploadControl", None, delegation, request, None)
+            .await
+    }
+    pub async fn upload_chunk(
+        &self,
+        id: String,
+        digest: [u8; 32],
+        offset: i64,
+        bytes: Vec<u8>,
+    ) -> Result<CommandResponse, Error> {
+        if id.is_empty() || id.len() > 128 {
+            return Err(Error::Invalid);
+        }
+        let chunk = ab_trust::wire::framing::BlobChunk {
+            digest,
+            offset,
+            bytes,
+        }
+        .encode()?;
+        self.exchange_feed_frame("", Some(id), String::new(), b"{}".to_vec(), Some(chunk))
+            .await
+    }
+    async fn exchange_feed_frame(
+        &self,
+        kind: &str,
+        id: Option<String>,
+        delegation: String,
+        request: Vec<u8>,
+        bytes: Option<Vec<u8>>,
+    ) -> Result<CommandResponse, Error> {
         if request.len() > 256 << 10 {
             return Err(Error::Invalid);
         }
@@ -190,15 +228,20 @@ impl GatewayTransport {
         if !session.ready.load(Ordering::Acquire) {
             return Err(Error::Disconnected);
         }
-        let id = format!(
-            "request_{}",
-            self.hub.sequence.fetch_add(1, Ordering::Relaxed)
-        );
+        let id = id.unwrap_or_else(|| {
+            format!(
+                "request_{}",
+                self.hub.sequence.fetch_add(1, Ordering::Relaxed)
+            )
+        });
         let (sender, receiver) = oneshot::channel();
         {
             let mut pending = session.pending.lock().map_err(|_| Error::Disconnected)?;
             if !session.ready.load(Ordering::Acquire) || pending.len() >= 16 {
                 return Err(Error::Disconnected);
+            }
+            if pending.contains_key(&id) {
+                return Err(Error::Invalid);
             }
             pending.insert(id.clone(), sender);
         }
@@ -206,7 +249,7 @@ impl GatewayTransport {
             session: session.clone(),
             id: id.clone(),
         };
-        let mut f = frame("CommandRequest");
+        let mut f = frame(kind);
         f.id = id;
         f.delegation = delegation;
         f.request = Some(RawValue::from_string(
@@ -214,7 +257,11 @@ impl GatewayTransport {
         )?);
         let timeout = forward_timeout(f.request.as_ref().ok_or(Error::Invalid)?.get());
         tokio::time::timeout(timeout, async {
-            session.writer.send(f).await?;
+            if let Some(bytes) = bytes {
+                session.writer.bulk(bytes).await?;
+            } else {
+                session.writer.send(f).await?;
+            }
             receiver.await.map_err(|_| Error::Disconnected)
         })
         .await

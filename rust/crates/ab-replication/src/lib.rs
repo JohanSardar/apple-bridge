@@ -1,9 +1,12 @@
 #![forbid(unsafe_code)]
 mod clock;
 mod command;
+mod dial;
+pub mod gateway;
 mod listener;
 pub mod server;
 mod state;
+pub mod upstream;
 use ab_blobs::{Digest, Reference, Store as BlobStore};
 use ab_trust::wire::{
     framing::BlobChunk,

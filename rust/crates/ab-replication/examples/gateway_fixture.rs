@@ -1,131 +1,72 @@
-use ab_replication::{
-    Cursor, Error,
-    server::{FrozenSnapshot, GatewayState, Server},
-};
-use ab_trust::{
-    Authority, Grant, Visibility,
-    wire::{
-        gojson::GoTime,
-        messages::{Batch, FeedFrame},
-    },
-};
-use std::sync::Arc;
+use ab_replication::{gateway::StateAdapter, server::Server};
+use ab_trust::{Authority, Grant};
+use std::sync::{Arc, Mutex as BlockingMutex};
 use tokio::sync::{Mutex, watch};
 
-#[derive(Debug)]
-struct Fixture {
-    started: std::time::Instant,
-}
-#[derive(Debug)]
-struct Snapshot {
-    revision: u64,
-    sequence: u64,
-    records: Vec<Box<serde_json::value::RawValue>>,
-    digest: String,
-}
-impl FrozenSnapshot for Snapshot {
-    fn begin(&self) -> FeedFrame {
-        FeedFrame {
-            t: "SnapshotBegin".into(),
-            id: "fixture".into(),
-            s: self.sequence,
-            count: i64::try_from(self.records.len()).unwrap_or_default(),
-            digest: self.digest.clone(),
-            expires_at: GoTime::parse("2099-01-01T00:00:00Z").unwrap_or_default(),
-            ..FeedFrame::default()
-        }
-    }
-    fn records(&self) -> &[Box<serde_json::value::RawValue>] {
-        &self.records
-    }
-    fn cursor(&self) -> Cursor {
-        Cursor {
-            epoch: "fixture-epoch".into(),
-            subscription_revision: self.revision,
-            sequence: self.sequence,
-        }
-    }
-    fn renew(&mut self) -> Result<(), Error> {
-        Ok(())
-    }
-}
-impl GatewayState for Fixture {
-    fn blob_grant(
-        &self,
-        visibility: &Visibility,
-        _: &ab_blobs::Digest,
-    ) -> Result<ab_blobs::RecordGrant, Error> {
-        Ok(ab_blobs::RecordGrant::from_record(visibility, &record(1)?)?)
-    }
-    type Snapshot = Snapshot;
-    type Changes = u64;
-    fn head(&self) -> Result<Cursor, Error> {
-        Ok(Cursor {
-            epoch: "fixture-epoch".into(),
-            subscription_revision: 1,
-            sequence: if self.started.elapsed().as_secs() >= 2 {
-                2
-            } else {
-                1
-            },
-        })
-    }
-    fn retention_floor(&self) -> Result<u64, Error> {
-        Ok(0)
-    }
-    fn freeze_snapshot(
-        &mut self,
-        visibility: &Visibility,
-        revision: u64,
-    ) -> Result<Snapshot, Error> {
-        let sequence = self.head()?.sequence;
-        let records: Vec<_> = [record(sequence)?]
-            .into_iter()
-            .filter(|r| visibility.allows(r))
-            .collect();
-        Ok(Snapshot {
-            digest: ab_state::digest(&records),
-            revision,
-            sequence,
-            records: records
-                .iter()
-                .map(serde_json::value::to_raw_value)
-                .collect::<Result<_, _>>()?,
-        })
-    }
-    fn changes(&mut self, _: &Visibility, cursor: Cursor, _: bool) -> Result<u64, Error> {
-        Ok(cursor.sequence)
-    }
-    fn next_changes(&mut self, sequence: &mut u64) -> Result<Option<Batch>, Error> {
-        let head = self.head()?.sequence;
-        if *sequence >= head {
-            return Ok(None);
-        }
-        let batch = Batch {
-            epoch: "fixture-epoch".into(),
-            subscription_revision: 1,
-            after: *sequence,
-            through: head,
-            changes: Some(vec![serde_json::value::to_raw_value(
-                &serde_json::json!({"sequence":head,"op":"upsert","record":record(head)?}),
-            )?]),
-            ..Batch::default()
-        };
-        *sequence = head;
-        Ok(Some(batch))
-    }
+fn capture(version: u64) -> Result<ab_trust::wire::messages::Capture, serde_json::Error> {
+    serde_json::from_value(serde_json::json!({
+        "source":"reminders", "generation":"fixture", "checkpoint":version.to_string(), "predecessor":if version == 1 { "" } else { "1" },
+        "observations":[{"kind":"upsert","collection":"reminders.list","native_key":"fixture-list",
+        "observed_at":"2026-01-02T00:00:00Z", "data":{"title":format!("fixture-{version}"),
+        "blob":{"digest":ab_trust::fingerprint(b"fixture"),"size":7}}}]
+    }))
 }
 #[tokio::main]
+#[allow(clippy::too_many_lines)]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let home = std::env::args().nth(1).ok_or("home")?;
+    let mut state = ab_state::State::<ab_state::Gateway>::open(&home)?;
+    if state.head()?.sequence == 0 {
+        state.commit_capture(&capture(1)?)?;
+    }
+    let state = Arc::new(BlockingMutex::new(state));
+    if std::env::args().nth(2).as_deref() == Some("seed") {
+        let mut log = ab_trust::activity::ActivityLog::open(&home)?;
+        let mut activity = ab_trust::activity::AgentActivity {
+            sequence: 0,
+            id: "agent:fixture:read".into(),
+            principal: "agent:fixture".into(),
+            operation: "reminders.lists".into(),
+            kind: "read".into(),
+            state: "ok".into(),
+            at: ab_trust::wire::gojson::GoTime::parse(&jiff::Timestamp::now().to_string())?,
+            count: 0,
+            argument_bytes: 2,
+            argument_hash: ab_trust::fingerprint(b"{}"),
+        };
+        log.record(&activity)?;
+        log.record(&activity)?;
+        activity.id = "agent:fixture:command".into();
+        activity.kind = "command".into();
+        activity.state = "resolved".into();
+        activity.sequence = 5;
+        log.record(&activity)?;
+        activity.state = "dispatched".into();
+        activity.sequence = 4;
+        log.record(&activity)?;
+        drop(log);
+        let log = ab_trust::activity::ActivityLog::open(&home)?;
+        let rows = log.list("agent:fixture", "")?;
+        if rows.len() != 2
+            || !rows.iter().any(|r| r.kind == "read" && r.count == 2)
+            || !rows
+                .iter()
+                .any(|r| r.kind == "command" && r.state == "resolved")
+        {
+            return Err("activity persistence".into());
+        }
+    }
+    if std::env::args().nth(2).as_deref() == Some("seed") {
+        return Ok(());
+    }
     let authority = Arc::new(Authority::open(&home)?);
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await?;
     let code = authority.pair(
         &listener.local_addr()?.to_string(),
-        "",
+        &std::env::var("GC_GO_DIAL").unwrap_or_default(),
         vec![
             Grant::parse("reminders:read")?,
-            Grant::parse("messages:read")?,
+            Grant::parse("messages:write")?,
         ],
         600,
     )?;
@@ -134,10 +75,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "{}",
         authority.pair(
             &listener.local_addr()?.to_string(),
-            "",
+            &std::env::var("GC_RUST_DIAL").unwrap_or_default(),
             vec![
                 Grant::parse("reminders:read")?,
-                Grant::parse("messages:read")?
+                Grant::parse("messages:write")?
             ],
             600
         )?
@@ -151,22 +92,43 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             7,
         )
         .await?;
+    let blobs = Arc::new(Mutex::new(blobs));
+    tokio::task::block_in_place(|| {
+        state
+            .lock()
+            .map_err(|_| "state mutex")?
+            .set_blob_protection(Arc::new(ab_replication::gateway::ProtectionAdapter(
+                blobs.clone(),
+            )))
+            .map_err(|_| "protection")
+    })?;
+    let uploads = Arc::new(ab_replication::upstream::Uploads::new(
+        authority.clone(),
+        blobs.clone(),
+    ));
     let server = Arc::new(Server {
-        blobs: Some(Arc::new(Mutex::new(blobs))),
-        state: Arc::new(Mutex::new(Fixture {
-            started: std::time::Instant::now(),
-        })),
+        uploads: Some(uploads),
+        blobs: Some(blobs),
+        state: Arc::new(Mutex::new(StateAdapter(state.clone()))),
         authority,
     });
     let (_stop, rx) = watch::channel(false);
-    server.listen(listener, rx).await?;
+    let advance = std::path::Path::new(&home).join("advance");
+    tokio::spawn(async move {
+        while !advance.exists() {
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        }
+        tokio::task::spawn_blocking(move || {
+            state
+                .lock()
+                .map_err(|_| "poisoned")?
+                .commit_capture(&capture(2)?)?;
+            Ok::<_, Box<dyn std::error::Error + Send + Sync>>(())
+        })
+        .await
+    });
+    tokio::select! { result = server.clone().listen(listener, rx.clone()) => result?, result = server.dial(rx) => result? };
     Ok(())
-}
-
-fn record(version: u64) -> Result<ab_trust::domain::Record, Error> {
-    Ok(serde_json::from_value(
-        serde_json::json!({"collection":"reminders.list","id":"lst_01ARZ3NDEKTSV4RRFFQ69G5FAV","version":version,"source":"reminders","observed_at":"2026-01-02T00:00:00Z","deleted":false,"coverage":{"fields":"","missing":null},"data":{"title":format!("fixture-{version}"), "blob":{"digest":ab_trust::fingerprint(b"fixture"), "size":7}}}),
-    )?)
 }
 
 struct FixtureBlob;

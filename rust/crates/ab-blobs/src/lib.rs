@@ -1,4 +1,5 @@
 #![forbid(unsafe_code)]
+pub mod uploads;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest as _, Sha256};
 use std::{

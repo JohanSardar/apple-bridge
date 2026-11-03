@@ -1,3 +1,4 @@
+use crate::upstream::Session;
 use crate::{Cursor, Error, frame, raw};
 use ab_trust::wire::gojson;
 use base64::{Engine, engine::general_purpose::STANDARD};
@@ -57,6 +58,7 @@ pub struct Server<S: GatewayState> {
     pub state: Arc<Mutex<S>>,
     pub blobs: Option<Arc<Mutex<ab_blobs::Store>>>,
     pub authority: Arc<Authority>,
+    pub uploads: Option<Arc<dyn crate::upstream::UploadHandler>>,
 }
 
 async fn receive<T: AsyncRead + AsyncWrite + Unpin>(
@@ -73,7 +75,7 @@ async fn receive<T: AsyncRead + AsyncWrite + Unpin>(
 
 async fn transmit<S: GatewayState, T: AsyncRead + AsyncWrite + Unpin>(
     server: &Server<S>,
-    principal: &Principal,
+    session: &Session<'_>,
     socket: &mut WebSocketStream<T>,
     f: FeedFrame,
     cursor: Option<&Cursor>,
@@ -91,9 +93,9 @@ async fn transmit<S: GatewayState, T: AsyncRead + AsyncWrite + Unpin>(
         .await?;
     tokio::time::timeout(Duration::from_secs(30), async {
         loop {
-            let ack = receive(socket).await?;
+            let ack = server.receive(socket, session).await?;
             if ack.t == "BlobWant" {
-                server.blob(socket, principal, ack).await?;
+                server.blob(socket, session.principal, ack).await?;
                 continue;
             }
             if ack.t == "Heartbeat" {
@@ -117,13 +119,93 @@ async fn transmit<S: GatewayState, T: AsyncRead + AsyncWrite + Unpin>(
 }
 
 impl<S: GatewayState> Server<S> {
+    async fn receive<T: AsyncRead + AsyncWrite + Unpin>(
+        &self,
+        socket: &mut WebSocketStream<T>,
+        context: &Session<'_>,
+    ) -> Result<FeedFrame, Error> {
+        loop {
+            let message = socket.next().await.ok_or(Error::Disconnected)??;
+            if let Some(frame) = self.upstream(socket, context, message).await? {
+                return Ok(frame);
+            }
+        }
+    }
+    async fn upstream<T: AsyncRead + AsyncWrite + Unpin>(
+        &self,
+        socket: &mut WebSocketStream<T>,
+        context: &Session<'_>,
+        message: Message,
+    ) -> Result<Option<FeedFrame>, Error> {
+        let response = match message {
+            Message::Text(text) => {
+                let frame: FeedFrame = serde_json::from_str(&text)?;
+                if frame.t != "UploadControl" {
+                    return Ok(Some(frame));
+                }
+                if frame.id.is_empty() {
+                    return Err(Error::Invalid);
+                }
+                let handler = context.uploads.ok_or(Error::Invalid)?;
+                let response = tokio::time::timeout(
+                    Duration::from_secs(20),
+                    handler.control(
+                        context.certificate,
+                        &context.id,
+                        &frame.delegation,
+                        frame.request.as_deref().ok_or(Error::Invalid)?,
+                    ),
+                )
+                .await
+                .map_err(|_| Error::Disconnected)??;
+                (frame.id, response)
+            }
+            Message::Binary(bytes) => {
+                let handler = context.uploads.ok_or(Error::Invalid)?;
+                tokio::time::timeout(
+                    Duration::from_secs(20),
+                    handler.chunk(context.certificate, &context.id, &bytes),
+                )
+                .await
+                .map_err(|_| Error::Disconnected)??
+            }
+            Message::Ping(_) | Message::Pong(_) => return Ok(None),
+            _ => return Err(Error::Invalid),
+        };
+        if response.0.is_empty() {
+            return Err(Error::Invalid);
+        }
+        let mut frame = frame("CommandResponse");
+        frame.id = response.0;
+        frame.response = Some(raw(&response.1)?);
+        socket
+            .send(Message::Text(
+                String::from_utf8(frame.encode()?)
+                    .map_err(|_| Error::Invalid)?
+                    .into(),
+            ))
+            .await?;
+        Ok(None)
+    }
+
     pub async fn serve<T: AsyncRead + AsyncWrite + Unpin>(
         &self,
         mut socket: WebSocketStream<T>,
         certificate: &[u8],
     ) -> Result<(), Error> {
+        static NEXT_SESSION: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
         let principal = self.authority.authenticate_certificate(certificate)?;
-        let session = self.session(&mut socket, &principal);
+        let context = Session {
+            principal: &principal,
+            certificate,
+            id: format!(
+                "feed-{}-{}",
+                std::process::id(),
+                NEXT_SESSION.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+            ),
+            uploads: self.uploads.as_deref(),
+        };
+        let session = self.session(&mut socket, &context);
         let invalidated = async {
             let mut timer = tokio::time::interval(Duration::from_millis(100));
             loop {
@@ -140,8 +222,9 @@ impl<S: GatewayState> Server<S> {
     async fn session<T: AsyncRead + AsyncWrite + Unpin>(
         &self,
         socket: &mut WebSocketStream<T>,
-        p: &Principal,
+        context: &Session<'_>,
     ) -> Result<(), Error> {
+        let p = context.principal;
         let hello = tokio::time::timeout(Duration::from_secs(15), receive(socket))
             .await
             .map_err(|_| Error::Disconnected)??;
@@ -188,7 +271,7 @@ impl<S: GatewayState> Server<S> {
         if atomic {
             welcome.features = Some(vec![raw(&"capture_atomic")?]);
         }
-        transmit(self, p, socket, welcome, None, limit).await?;
+        transmit(self, context, socket, welcome, None, limit).await?;
         let cursor = if resume {
             previous.ok_or(Error::Invalid)?
         } else {
@@ -196,7 +279,7 @@ impl<S: GatewayState> Server<S> {
                 let mut reset = frame("Reset");
                 reset.reason = "history_or_scope_changed".into();
                 reset.retention_floor = floor;
-                transmit(self, p, socket, reset, None, limit).await?;
+                transmit(self, context, socket, reset, None, limit).await?;
             }
             let mut snapshot = self
                 .state
@@ -205,7 +288,7 @@ impl<S: GatewayState> Server<S> {
                 .freeze_snapshot(&visibility, p.revision)?;
             let begin = snapshot.begin();
             let id = begin.id.clone();
-            transmit(self, p, socket, begin, None, limit).await?;
+            transmit(self, context, socket, begin, None, limit).await?;
             let mut offset = 0;
             let mut ordinal = 0;
             while offset < snapshot.records().len() {
@@ -224,14 +307,14 @@ impl<S: GatewayState> Server<S> {
                     }
                 }
                 snapshot.renew()?;
-                transmit(self, p, socket, page, None, limit).await?;
+                transmit(self, context, socket, page, None, limit).await?;
                 offset = end;
                 ordinal += 1;
             }
             let cursor = snapshot.cursor();
             let mut end = frame("SnapshotEnd");
             end.id = id;
-            transmit(self, p, socket, end, Some(&cursor), limit).await?;
+            transmit(self, context, socket, end, Some(&cursor), limit).await?;
             cursor
         };
         let mut journal = cursor.clone();
@@ -254,7 +337,7 @@ impl<S: GatewayState> Server<S> {
                             let expected = Cursor { sequence: batch.through, ..cursor.clone() };
                             let partial = batch.partial;
                             let mut f = frame("Batch"); f.batch = Some(batch);
-                            transmit(self, p, socket, f, if partial { None } else { Some(&expected) }, limit).await?;
+                            transmit(self, context, socket, f, if partial { None } else { Some(&expected) }, limit).await?;
                         },
                         Ok(None) => {},
                         Err(Error::Contract(ab_trust::domain::ErrorCode::Reset)) => {
@@ -269,7 +352,7 @@ impl<S: GatewayState> Server<S> {
                     let mut f = frame("Heartbeat"); f.head = self.state.lock().await.head()?.sequence;
                     socket.send(Message::Text(String::from_utf8(f.encode()?).map_err(|_| Error::Invalid)?.into())).await?;
                 },
-                f = receive(socket) => { let f = f?; if f.t == "BlobWant" { self.blob(socket, p, f).await?; } else if f.t != "Heartbeat" { return Err(Error::Invalid); } },
+                message = socket.next() => { let message = message.ok_or(Error::Disconnected)??; let Some(f) = self.upstream(socket, context, message).await? else { continue; }; if f.t == "BlobWant" { self.blob(socket, p, f).await?; } else if f.t != "Heartbeat" { return Err(Error::Invalid); } },
             }
         }
     }
@@ -353,7 +436,7 @@ impl<S: GatewayState + 'static> Server<S> {
                         tokio_tungstenite::tungstenite::protocol::Role::Server,
                         Some(
                             tokio_tungstenite::tungstenite::protocol::WebSocketConfig::default()
-                                .max_message_size(Some(256 << 10)),
+                                .max_message_size(Some((1 << 20) + 64)),
                         ),
                     )
                     .await;
