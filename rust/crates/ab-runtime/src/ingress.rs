@@ -237,6 +237,7 @@ async fn connection(
                         Code::Unauthorized.into(),
                     ));
                 };
+                #[cfg(not(feature = "lab-harness"))]
                 let lab_private_feed = false;
                 #[cfg(feature = "lab-harness")]
                 let lab_private_feed = host == "localhost:7780" && std::env::var_os("APPLE_BRIDGE_LAB_PRIVATE_FEED").is_some();
