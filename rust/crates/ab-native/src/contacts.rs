@@ -14,6 +14,16 @@ impl Default for Reader {
 }
 
 impl Reader {
+    #[must_use]
+    pub fn knows(&self, identity: &str) -> bool {
+        self.0.knows(identity)
+    }
+
+    #[must_use]
+    pub fn generation(&self) -> &str {
+        self.0.generation()
+    }
+
     pub fn prepare(&self, snapshot: Snapshot, context: &Context) -> Result<Pending> {
         self.0.prepare(snapshot, context)
     }
