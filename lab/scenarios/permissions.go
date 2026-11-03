@@ -27,7 +27,8 @@ func runPermissionStatus(ctx context.Context, s Scenario, level string) (e Evide
 		}
 		defer os.RemoveAll(directory)
 		app = filepath.Join(directory, "AppleBridgeHelper.app")
-		if err := exec.CommandContext(ctx, "packaging/dev/build-helper.sh", app).Run(); err != nil {
+		if output, err := exec.CommandContext(ctx, "packaging/dev/build-helper.sh", app).CombinedOutput(); err != nil {
+			os.Stderr.Write(output)
 			add("signed_helper_build", false)
 			return e
 		}
@@ -77,7 +78,7 @@ func runPermissionStatus(ctx context.Context, s Scenario, level string) (e Evide
 		metrics["window_owner_counts"] = counts
 		delete(states, "_request_api_calls")
 	}
-	add("helper_report", err == nil && (level == "real" && len(states) == 13 || level == "sim" && len(states) == 14))
+	add("helper_report", err == nil && (level == "real" && len(states) == 11 || level == "sim" && len(states) == 12))
 	for key, state := range states {
 		valid := state == "not_determined" || state == "denied" || state == "authorized" || state == "unknown"
 		if level == "sim" {

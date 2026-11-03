@@ -17,6 +17,11 @@ func runMediaYield(ctx context.Context, s Scenario, level string) Evidence {
 	directory := filepath.Join("lab", "evidence", "private", "media-yield")
 	os.MkdirAll(directory, 0o700)
 	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Hosts: []string{"air"}, Latency: map[string]Latency{}, Metrics: map[string]any{"synthetic_only": true}, Passed: true}
+	if _, err := nativeCheck(ctx, "MessagesCaptureChecks"); err != nil {
+		e.Passed = false
+		e.Assertions = append(e.Assertions, Assertion{Name: "native_messages_checks_built"})
+		return e
+	}
 	for _, check := range []struct{ command, name, success string }{
 		{"--media-yield-burst", "foreground_burst_reuses_completed_stages", "cooperative media burst checks passed"},
 		{"--media-yield-metadata", "metadata_only_changes_preserve_retained_stages", "cooperative media burst checks passed"},

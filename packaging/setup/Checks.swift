@@ -8,7 +8,7 @@ struct SetupChecks {
             if !passed { exit(1) }
         }
         let permissions = SetupPermission.all
-        let expected = Set(["full_disk_access", "accessibility", "contacts", "calendar", "reminders", "photos", "camera", "microphone", "screen_recording", "location", "notifications", "focus", "speech_recognition", "bluetooth", "clipboard", "automation_messages", "automation_system_events", "automation_reminders", "automation_mail", "automation_music", "automation_safari", "automation_shortcuts_events", "automation_notes", "automation_calendar"])
+        let expected = Set(["full_disk_access", "accessibility", "contacts", "calendar", "reminders", "camera", "microphone", "screen_recording", "location", "notifications", "focus", "speech_recognition", "bluetooth", "clipboard", "automation_messages", "automation_system_events", "automation_reminders", "automation_mail", "automation_safari", "automation_shortcuts_events", "automation_notes", "automation_calendar"])
         check("Q1-CATALOG", Set(permissions.map(\.id)) == expected && permissions.count == expected.count && permissions.allSatisfy { !$0.why.isEmpty && !$0.fix.isEmpty && $0.settingsURL.scheme == "x-apple.systempreferences" })
         var fresh = SetupState()
         check("Q1-FRESH", fresh.step == 0 && fresh.completed.isEmpty && fresh.skipped.isEmpty)

@@ -54,6 +54,7 @@ def main():
     parser.add_argument('--parallel', type=int, default=1 if platform.system() == 'Darwin' else 4)
     parser.add_argument('--timeout', type=float, default=900)
     parser.add_argument('--select', action='append', default=[])
+    parser.add_argument('--run-at-end', action='store_true')
     parser.add_argument('--host', choices=['linux', 'darwin', 'all'], default=platform.system().lower())
     parser.add_argument('--binary', default='bin/bridge-lab')
     parser.add_argument('--map', default='lab/test-selection.json')
@@ -70,7 +71,7 @@ def main():
         if key not in known:
             parser.error('unknown selection: ' + key)
         ids.update(known[key])
-    entries = [e for e in inventory['scenarios'] if 'sim' in e['levels'] and (not args.select or e['id'] in ids) and (args.host == 'all' or e['host'] == args.host)]
+    entries = [e for e in inventory['scenarios'] if 'sim' in e['levels'] and (not args.select or e['id'] in ids) and (args.host == 'all' or e['host'] == args.host) and (bool(args.select) or (e['recommendation'] == 'run-at-end') == args.run_at_end)]
     if not entries:
         parser.error('selection contains no SIM scenarios for this host')
     binary_path = Path(args.binary).resolve()

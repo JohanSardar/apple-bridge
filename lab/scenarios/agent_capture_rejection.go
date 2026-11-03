@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 	"os"
@@ -15,7 +14,7 @@ import (
 )
 
 func runAgentCaptureRejection(ctx context.Context, w *world.World, add func(string, bool)) {
-	locker := exec.CommandContext(ctx, "sqlite3", filepath.Join(w.Gateway.Home, "state.db"))
+	locker := exec.CommandContext(ctx, "python3", "-c", `import sqlite3,sys; db=sqlite3.connect(sys.argv[1]); db.execute("BEGIN IMMEDIATE"); print(1,flush=True); sys.stdin.read(); db.close()`, filepath.Join(w.Gateway.Home, "state.db"))
 	input, inputErr := locker.StdinPipe()
 	output, outputErr := locker.StdoutPipe()
 	if inputErr != nil || outputErr != nil || locker.Start() != nil {
@@ -23,7 +22,6 @@ func runAgentCaptureRejection(ctx context.Context, w *world.World, add func(stri
 		return
 	}
 	defer func() { input.Close(); locker.Process.Kill(); locker.Wait() }()
-	fmt.Fprintln(input, "BEGIN IMMEDIATE; SELECT 1;")
 	ready := bufio.NewScanner(output)
 	if !ready.Scan() || ready.Text() != "1" {
 		add("capture_rejection_write_lock", false)

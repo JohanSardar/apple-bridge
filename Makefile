@@ -82,3 +82,7 @@ SIM_OUTPUT ?= /tmp/ab-sim-parallel-$(shell date +%s)
 SIM_SELECT ?=
 sim-parallel:
 	python3 lab/testing/sim_parallel.py --parallel $(SIM_JOBS) --timeout $(SIM_TIMEOUT) --output $(SIM_OUTPUT) $(if $(SIM_SELECT),--select $(SIM_SELECT),)
+
+.PHONY: sim-run-at-end
+sim-run-at-end:
+	python3 lab/testing/sim_parallel.py --parallel 1 --run-at-end --timeout $(SIM_TIMEOUT) --output $(SIM_OUTPUT) $(if $(SIM_SELECT),--select $(SIM_SELECT),)

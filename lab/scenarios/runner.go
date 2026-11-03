@@ -616,7 +616,7 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "web.readmodels" {
 		return runReadModels(ctx, s, level)
 	}
-	if s.ID == "CORE-ITERATOR-POOL" || s.ID == "CORE-SNAPSHOT-POOL" {
+	if s.ID == "CORE-SNAPSHOT-POOL" {
 		return runWebServer(ctx, s, level)
 	}
 	if s.ID == "MSG-DELETE-VISIBILITY" {

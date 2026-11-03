@@ -13,7 +13,12 @@ func execute(_ path: String, _ sql: String) throws {
     var db: OpaquePointer?
     guard sqlite3_open(path, &db) == SQLITE_OK else { throw SourceFailure.unavailable }
     defer { sqlite3_close(db) }
-    guard sqlite3_exec(db, sql, nil, nil, nil) == SQLITE_OK else { throw SourceFailure.corrupt }
+    sqlite3_busy_timeout(db, 5000)
+    let code = sqlite3_exec(db, sql, nil, nil, nil)
+    guard code == SQLITE_OK else {
+        FileHandle.standardError.write(Data("Mail fixture SQLite status \(code)\n".utf8))
+        throw SourceFailure.corrupt
+    }
 }
 actor IdleSink: ObservationSink {
     var checkpoints = 0

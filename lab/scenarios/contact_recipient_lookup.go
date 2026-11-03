@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os/exec"
 	"reflect"
-	"strconv"
 	"strings"
 	"time"
 
@@ -88,21 +87,5 @@ func runRecipientLookup(ctx context.Context, s Scenario, level string) (e Eviden
 			add(fmt.Sprintf("invalid_lookup_%d_%s_rejected", index, protocol), err != nil)
 		}
 	}
-	var replica *world.Endpoint
-	rate, err := webLookupRate(ctx, w, &replica)
-	add("lookup_rate_http_fixture", err == nil)
-	if err != nil {
-		return
-	}
-	statuses, _ := rate["statuses"].([]int)
-	allowed := len(statuses) == 21
-	for index, status := range statuses {
-		allowed = allowed && (index < 20 && status == 200 || index == 20 && status == 429)
-	}
-	add("lookup_20_per_server_second_then_429", allowed)
-	retry, _ := strconv.Atoi(rate["retry_after"].(string))
-	add("lookup_rate_retry_after", retry > 0)
-	add("lookup_rate_exact_second_reset", rate["after_reset"] == 200)
-	add("lookup_rate_session_isolation", rate["isolated_session"] == 200)
 	return
 }

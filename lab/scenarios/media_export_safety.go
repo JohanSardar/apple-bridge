@@ -17,6 +17,10 @@ func runMediaExportSafety(ctx context.Context, s Scenario, level string) Evidenc
 	if level == "real" {
 		return runRealMediaExportSafety(ctx, e)
 	}
+	if _, err := nativeCheck(ctx, "MediaChecks"); err != nil {
+		e.Assertions = append(e.Assertions, Assertion{Name: "native_media_checks_built"})
+		return e
+	}
 	directory := filepath.Join("lab", "evidence", "private", "export-safety")
 	os.MkdirAll(directory, 0o700)
 	for _, check := range []struct{ command, success string }{

@@ -41,6 +41,34 @@ class RunnerTests(unittest.TestCase):
                 runner.execute({'id': 'fixture', 'path': 'fixture.yaml'}, str(binary), 5, root)
             self.assertEqual((root / 'fixture.log').read_text().splitlines(), ['run', 'fixture.yaml', '--level', 'sim', '--prebuilt', '--json'])
 
+    def test_default_and_end_sets(self):
+        import json
+        import sys
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            binary = root / 'lab'
+            binary.write_text('#!/bin/sh\nexit 0\n')
+            binary.chmod(0o700)
+            inventory = root / 'map.json'
+            inventory.write_text(json.dumps({'selection': {'slow': ['slow']}, 'scenarios': [
+                {'id': 'fast', 'path': 'fast.yaml', 'levels': ['sim'], 'host': 'linux', 'recommendation': 'keep'},
+                {'id': 'slow', 'path': 'slow.yaml', 'levels': ['sim'], 'host': 'linux', 'recommendation': 'run-at-end'},
+            ]}))
+            for index, (flags, expected) in enumerate([([], 'fast'), (['--run-at-end'], 'slow'), (['--select', 'slow'], 'slow')]):
+                output = root / str(index)
+                argv = ['runner', '--binary', str(binary), '--map', str(inventory), '--output', str(output), *flags]
+                with patch.object(sys, 'argv', argv), patch.object(runner.platform, 'system', return_value='Linux'):
+                    self.assertEqual(runner.main(), 0)
+                report = json.loads((output / 'summary.json').read_text())
+                self.assertEqual([r['id'] for r in report['results']], [expected])
+
+    def test_registered_end_gates(self):
+        import json
+        inventory = json.loads((Path(__file__).parents[1] / 'test-selection.json').read_text())
+        entries = {e['id']: e for e in inventory['scenarios']}
+        for identity in ['MAIL-IDLE', 'SAF-IDLE', 'CALL-IDLE', 'RELAY-STREAMS', 'MSG-WATCHER-REARM', 'CAL-STORE-READ', 'WEB-RM-THREAD', 'WEB-RM-CHATS', 'WEB-RM-REMINDERS-ITEMS']:
+            self.assertEqual(entries[identity]['recommendation'], 'run-at-end', identity)
+
     def test_success(self):
         self.assertEqual(self.check_command('exit 0')['status'], 'pass')
 

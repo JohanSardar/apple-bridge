@@ -1,0 +1,67 @@
+{
+  "implementations": {
+    "gateway": "go",
+    "replica": "go"
+  },
+  "impl": "go",
+  "host_conditions": {
+    "quiet": true,
+    "summary": "ubuntu: load=[10.65 7.81 5.89] cpu_idle=41% cpus=8 other_heavy=0"
+  },
+  "run_id": "relay-r0-relay-tls-splice",
+  "network_path": "synthetic loopback only",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "RELAY-TLS-SPLICE",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-11-02T23:38:49.708882629Z",
+  "assertions": [
+    {
+      "name": "genuine_paired_identities",
+      "passed": true
+    },
+    {
+      "name": "seeded_feed",
+      "passed": true
+    },
+    {
+      "name": "two_trusted_tls_legs",
+      "passed": true
+    },
+    {
+      "name": "vulnerable_baseline_authentication",
+      "passed": true
+    },
+    {
+      "name": "vulnerable_baseline_splicer_reads_feed",
+      "passed": true
+    },
+    {
+      "name": "four_auth_frames_forwarded_verbatim",
+      "passed": true
+    },
+    {
+      "name": "wrong_name_rejects_splice",
+      "passed": true
+    },
+    {
+      "name": "untrusted_certificate_rejects_splice",
+      "passed": true
+    },
+    {
+      "name": "direct_pinned_mtls_rejects_splice",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": [
+    "ubuntu"
+  ]
+}

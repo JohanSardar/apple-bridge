@@ -11,9 +11,7 @@ import (
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/internal/trust"
-	bridgeweb "github.com/JohanSardar/apple-bridge/internal/web"
 	"github.com/JohanSardar/apple-bridge/lab/world"
-	"github.com/coder/websocket/wsjson"
 )
 
 type captureObserverResult struct {
@@ -63,17 +61,6 @@ func captureObserverSSE(ctx context.Context, endpoint world.Endpoint, after cont
 	}()
 	return done, nil
 }
-func captureObserverClient(ctx context.Context, endpoint world.Endpoint) (*webClient, error) {
-	authority, err := trust.Open(endpoint.Home)
-	if err != nil {
-		return nil, err
-	}
-	token, _, err := authority.CreateDeviceSession("trusted")
-	if err != nil {
-		return nil, err
-	}
-	return &webClient{ctx: ctx, origin: strings.Replace(endpoint.URL, "127.0.0.1", "localhost", 1), cookie: &http.Cookie{Name: bridgeweb.LocalSessionCookie, Value: token}}, nil
-}
 func runCaptureObservers(ctx context.Context, w *world.World, owner *webClient, evidence *Evidence, add func(string, bool)) {
 	captureApprovalObserver(ctx, w, owner, add)
 	prefix := "capture-observer"
@@ -100,28 +87,8 @@ func runCaptureObservers(ctx context.Context, w *world.World, owner *webClient, 
 	if target.ID == "" {
 		return
 	}
-	client, err := captureObserverClient(ctx, w.Replicas[0])
-	add("replica_web_session", err == nil)
-	if err != nil {
-		return
-	}
-	socket, err := client.socket()
-	add("replica_web_socket", err == nil)
-	if err != nil {
-		return
-	}
-	defer socket.CloseNow()
 	readCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	err = wsjson.Write(readCtx, socket, map[string]any{"t": "sub", "id": "capture", "view": "record", "args": map[string]any{"collection": target.Collection, "id": target.ID}})
-	var frame map[string]any
-	if err == nil {
-		err = wsjson.Read(readCtx, socket, &frame)
-	}
-	add("record_snapshot_before_capture", err == nil && frame["t"] == "snap")
-	if err != nil {
-		return
-	}
 	observer, err := watch(ctx, w.Replicas[0], false, func(contracts.Record) bool { return true })
 	add("ordinary_sse_client_registered", err == nil)
 	if err != nil {
@@ -160,102 +127,66 @@ func runCaptureObservers(ctx context.Context, w *world.World, owner *webClient, 
 	case <-readCtx.Done():
 		add("rest_reset_before_any_capture_batch", false)
 	}
-	frame = nil
-	err = wsjson.Read(readCtx, socket, &frame)
-	add("web_view_reset_before_any_capture_delta", err == nil && frame["t"] == "error" && frame["code"] == "reset")
+	var snapshot contracts.ReadResult
+	_, err = world.Request(ctx, w.Replicas[0], "/v1/op/records.query", contracts.ReadQuery{Collection: target.Collection}, &snapshot)
+	found := false
+	for _, row := range snapshot.Records {
+		found = found || row.ID == target.ID && recordTitle(row) == "[ab-test capture observer] "+prefix+"-0"
+	}
+	add("rest_resnapshot_has_committed_capture", err == nil && found && snapshot.Cursor.Sequence >= through.Sequence)
+}
+
+func captureApprovalObserver(ctx context.Context, w *world.World, owner *webClient, add func(string, bool)) {
+	authority, err := trust.Open(w.Gateway.Home)
+	if err != nil {
+		add("approval_authority", false)
+		return
+	}
+	_, token, err := authority.CreateAgent("Bridge Test capture approval", trust.AgentApprove, []contracts.Grant{"messages:write"})
+	add("approval_agent_created", err == nil)
 	if err != nil {
 		return
 	}
-	wsjson.Write(readCtx, socket, map[string]any{"t": "unsub", "id": "capture"})
-	wsjson.Write(readCtx, socket, map[string]any{"t": "sub", "id": "capture", "view": "record", "args": map[string]any{"collection": target.Collection, "id": target.ID}})
-	frame = nil
-	err = wsjson.Read(readCtx, socket, &frame)
-	var snap struct {
-		Records []contracts.Record `json:"records"`
-		Cursor  contracts.Cursor   `json:"cursor"`
-	}
-	raw, _ := json.Marshal(frame["data"])
-	json.Unmarshal(raw, &snap)
-	add("web_view_resnapshot_has_committed_capture", err == nil && frame["t"] == "snap" && len(snap.Records) == 1 && recordTitle(snap.Records[0]) == "[ab-test capture observer] "+prefix+"-0" && snap.Cursor.Sequence >= through.Sequence)
-}
-func captureApprovalObserver(ctx context.Context, w *world.World, owner *webClient, add func(string, bool)) {
-	response, raw, err := owner.request("POST", "agents", map[string]any{"name": "Bridge Test capture approval", "level": "approve", "scopes": []string{"messages:write"}})
-	var agent struct {
-		Token string `json:"token"`
-	}
-	json.Unmarshal(raw, &agent)
-	add("approval_agent_created", err == nil && response.StatusCode == 201 && agent.Token != "")
-	if err != nil || agent.Token == "" {
-		return
-	}
 	command := contracts.Command{ID: contracts.NewCommandID(), Op: "messages.send", Args: mustJSON(map[string]any{"handles": []string{"self@example.com"}, "service": "iMessage", "text": "[ab-test capture observer] pending approval"})}
-	code, raw, _ := agentRequest(ctx, owner.origin, agent.Token, "POST", "/v1/op/messages.send", command)
+	code, raw, _ := agentRequest(ctx, owner.origin, token, "POST", "/v1/op/messages.send", command)
 	var pending contracts.CommandRecord
 	json.Unmarshal(raw, &pending)
 	add("approval_pending_before_observation", code == 200 && pending.State == contracts.CommandAwaitingApproval)
 	if code != 200 || pending.State != contracts.CommandAwaitingApproval {
 		return
 	}
-	defer owner.request("POST", "approvals/"+command.ID, map[string]string{"decision": "reject"})
-	socket, err := owner.socket()
-	add("approval_socket_registered_after_pending", err == nil)
-	if err != nil {
-		return
-	}
-	defer socket.CloseNow()
-	err = w.Await(10*time.Second, func() bool { return convergence(w) })
-	add("approval_pending_replicated_before_observation", err == nil)
-	replica, replicaErr := captureObserverClient(ctx, w.Replicas[0])
-	if replicaErr != nil {
-		add("replica_approval_socket_registered_after_pending", false)
-		return
-	}
-	replicaSocket, replicaErr := replica.socket()
-	add("replica_approval_socket_registered_after_pending", replicaErr == nil)
-	if replicaErr != nil {
-		return
-	}
-	defer replicaSocket.CloseNow()
 	_, err = captureObserverChanges(w, contracts.Reminders, "reminders.reminder", "capture-approval", 150)
 	add("approval_oversized_capture_committed", err == nil)
-	if err != nil {
-		return
+	err = w.Await(10*time.Second, func() bool { return convergence(w) })
+	add("approval_pending_replicated_after_capture", err == nil)
+	replicaApproval := func(pending bool) bool {
+		var records contracts.ReadResult
+		_, err := world.Request(ctx, w.Replicas[0], "/v1/op/records.query", contracts.ReadQuery{Collection: "system.command"}, &records)
+		if err != nil {
+			return false
+		}
+		for _, row := range records.Records {
+			if row.ID == command.ID {
+				var data struct {
+					Pending bool `json:"awaiting_approval"`
+				}
+				return json.Unmarshal(row.Data, &data) == nil && data.Pending == pending
+			}
+		}
+		return false
 	}
-	timed, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	var frame struct {
-		T       string `json:"t"`
-		Command struct {
-			ID string `json:"command_id"`
-		} `json:"command"`
-	}
-	err = wsjson.Read(timed, socket, &frame)
-	add("approval_watch_rereads_pending_after_reset", err == nil && frame.T == "approval" && frame.Command.ID == command.ID)
-	replicaTimed, replicaCancel := context.WithTimeout(ctx, 5*time.Second)
-	defer replicaCancel()
-	frame.T, frame.Command.ID = "", ""
-	err = wsjson.Read(replicaTimed, replicaSocket, &frame)
-	add("replica_approval_watch_rereads_pending_after_reset", err == nil && frame.T == "approval" && frame.Command.ID == command.ID)
+	add("replica_pending_approval_survives_capture", replicaApproval(true))
+	response, body, err := owner.request("GET", "approvals", nil)
+	add("consent_page_rereads_pending_after_capture", err == nil && response.StatusCode == 200 && strings.Contains(string(body), command.ID))
 	effects, effectErr := w.Effects()
-	add("approval_reset_never_executes_pending_command", effectErr == nil && effects[command.ID] == 0)
+	add("approval_capture_never_executes_pending_command", effectErr == nil && effects[command.ID] == 0)
 	response, _, err = owner.request("POST", "approvals/"+command.ID, map[string]string{"decision": "approve"})
 	add("approval_resolved_on_gateway", err == nil && response.StatusCode == 200)
-	if err != nil || response.StatusCode != 200 {
-		return
-	}
-	err = w.Await(10*time.Second, func() bool { return convergence(w) })
-	add("approval_resolution_replicated", err == nil)
 	_, err = captureObserverChanges(w, contracts.Reminders, "reminders.reminder", "capture-resolved-approval", 150)
 	add("resolved_approval_oversized_capture_committed", err == nil)
-	if err != nil {
-		return
-	}
 	err = w.Await(10*time.Second, func() bool { return convergence(w) })
 	add("resolved_approval_capture_replicated", err == nil)
-	noPrompt, noPromptCancel := context.WithTimeout(ctx, time.Second)
-	defer noPromptCancel()
-	frame.T, frame.Command.ID = "", ""
-	err = wsjson.Read(noPrompt, replicaSocket, &frame)
-	add("replica_resolved_approval_never_reemitted_after_reset", err != nil && noPrompt.Err() != nil)
-
+	add("replica_resolved_approval_survives_capture", replicaApproval(false))
+	response, body, err = owner.request("GET", "approvals", nil)
+	add("resolved_approval_absent_from_consent_page", err == nil && response.StatusCode == 200 && !strings.Contains(string(body), command.ID))
 }

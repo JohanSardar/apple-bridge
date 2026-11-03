@@ -36,6 +36,10 @@ func runNativeMediaPosters(ctx context.Context, s Scenario, level string) Eviden
 		return e
 	}
 	var diagnostics bytes.Buffer
+	if _, err := nativeCheck(ctx, "MediaChecks"); err != nil {
+		e.Assertions = append(e.Assertions, Assertion{Name: "native_media_checks_built"})
+		return e
+	}
 	command := exec.CommandContext(ctx, mediaTool(), "poster-safety", source)
 	command.Stderr = &diagnostics
 	output, err := command.Output()
