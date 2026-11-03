@@ -17,6 +17,14 @@ use tokio::{
     sync::{Mutex, Semaphore, mpsc, watch},
 };
 const CREDIT: usize = 4 << 20;
+#[cfg(feature = "seeded-faults")]
+fn accepts_stale_fence() -> bool {
+    std::env::var("AB_LAB_SEEDED_FAULT").is_ok_and(|value| value == "accept-stale-fence")
+}
+#[cfg(not(feature = "seeded-faults"))]
+const fn accepts_stale_fence() -> bool {
+    false
+}
 type Active = Arc<Mutex<Option<(u64, tokio::task::AbortHandle)>>>;
 pub trait Backend: Debug + Send + Sync + 'static {
     fn next_fence(&self) -> Task<'_, u64>;
@@ -115,6 +123,7 @@ impl Server {
         std::fs::remove_file(&self.socket).map_err(|_| Code::Unavailable)?;
         Ok(())
     }
+    #[allow(clippy::too_many_lines)]
     async fn session(self: Arc<Self>, stream: UnixStream, active: Active) -> Result<(), Error> {
         if stream.peer_cred().map_err(|_| Code::Unauthorized)?.uid()
             != nix::unistd::geteuid().as_raw()
@@ -160,7 +169,9 @@ impl Server {
         )
         .await?;
         let mut lock = active.lock().await;
-        if let Some((_, previous)) = lock.take() {
+        if let Some((_, previous)) = lock.take()
+            && !accepts_stale_fence()
+        {
             previous.abort();
         }
         let fence = self.backend.next_fence().await?;
@@ -225,9 +236,10 @@ impl Server {
         active: Active,
     ) -> Result<(), Error> {
         let initial = active.lock().await;
-        if initial
-            .as_ref()
-            .is_none_or(|(current, _)| *current != fence)
+        if !accepts_stale_fence()
+            && initial
+                .as_ref()
+                .is_none_or(|(current, _)| *current != fence)
         {
             return Err(Code::Unavailable.into());
         }
@@ -298,9 +310,10 @@ impl Server {
         let mutations = async {
             while let Some((f, size, permit)) = rx.recv().await {
                 let current = active.lock().await;
-                if current
-                    .as_ref()
-                    .is_none_or(|(current, _)| *current != fence)
+                if !accepts_stale_fence()
+                    && current
+                        .as_ref()
+                        .is_none_or(|(current, _)| *current != fence)
                 {
                     return Err(Code::Unavailable.into());
                 }

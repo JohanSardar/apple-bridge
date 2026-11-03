@@ -76,3 +76,9 @@ python3 lab/shadow/prove_decisions.py --fixture "$EXISTING_SYNTHETIC_PROOF" --ou
 ```
 
 This is a fixed-clock fixture seam, not a complete recording of clock decisions. It does not yet capture or replay advancing decision clocks, generated command IDs, trust/OAuth clocks or every ingress. The recorder still observes REST command admissions only; authenticated MCP, delegated feed, CLI and iPhone observation/replay remain required before a read-only live capture can be certified. Do not use this fixture manifest to claim a replay of arbitrary recorded live traffic. No live gateway was accessed to develop or verify this seam.
+
+## Gateway-generated command IDs
+
+The decision manifest may carry `command_ids`, an ordered list. In lab replay mode both gateways consume it in order wherever they would otherwise allocate a `cmd_` ID for a command submitted without one (Go `contracts.NewCommandID`, Rust `ab_state::replay::command_id`). An exhausted or malformed queue fails closed. `shadow decisions --starting-home <home>` fills it from the final ledger: commands absent from the starting ledger whose ID never appears in a recorded admission body, ordered by creation time. `prove.py` now submits a REST command without `command_id` and requires 8 of 8 exact Go-vs-Go replays plus zero Go-vs-Rust table differences (`--go-go-runs` sets the count).
+
+Not covered by the queue: IDs allocated for rejected agent commands that never reach the ledger, and `qry_` query IDs. The delegated feed and iPhone observer/replayer blockers above remain open.

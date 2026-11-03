@@ -152,6 +152,7 @@ impl Registry {
         registry.register("capture_truth", capture_truth);
         registry.register("fault_trace", safety::gate);
         registry.register("protocol_gate", protocol_gate);
+        registry.register("scope_gate", scope_gate);
         registry
     }
 }
@@ -251,6 +252,63 @@ fn protocol_gate(world: &mut World, input: &Value, evidence: &mut Evidence) -> R
             );
             Ok(())
         }
+        Some("stale-fence-rejected") => {
+            let protocol = protocol_snapshot(world, |p| !p["stale"].is_null())?;
+            let stale = protocol["stale"].clone();
+            let key = stale["key"].as_str().unwrap_or_default();
+            let collection = stale["collection"].as_str().unwrap_or_default();
+            let superseded = stale["stale_fence"].as_u64().unwrap_or(0)
+                < stale["current_fence"].as_u64().unwrap_or(0)
+                && stale["stale_fence"].as_u64().unwrap_or(0) > 0;
+            let reply = stale["reply"].as_str().unwrap_or_default();
+            let response = world.query(
+                "records.query",
+                &json!({"collection":collection,"limit":1000}),
+            )?;
+            let visible = response["records"].as_array().is_some_and(|records| {
+                records.iter().any(|record| record["data"] == stale["data"])
+            });
+            evidence.check(
+                "stale_fence_rejected",
+                superseded && !key.is_empty() && !stale["data"].is_null() && reply != "committed" && !visible,
+                &format!("superseded={superseded} stale_reply={reply} visible_through_public_query={visible}"),
+            );
+            Ok(())
+        }
         _ => Err(Error::Invalid("protocol_gate check".into())),
     }
+}
+fn scope_gate(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result<()> {
+    let field = |name: &str| {
+        input[name]
+            .as_str()
+            .map(str::to_owned)
+            .ok_or_else(|| Error::Invalid(format!("scope_gate {name}")))
+    };
+    let (scope, inside, outside) = (field("scope")?, field("inside")?, field("outside")?);
+    let narrow = world
+        .gateway_cli(&["token", "create", "--scope", &scope])?
+        .trim()
+        .to_owned();
+    let count = |token: Option<&str>, collection: &str| -> Result<Option<usize>> {
+        let query = json!({"collection":collection,"limit":1000});
+        let response = match token {
+            Some(token) => world.query_with_token("records.query", &query, token),
+            None => world.query("records.query", &query),
+        };
+        Ok(response
+            .ok()
+            .map(|value| value["records"].as_array().map_or(0, Vec::len)))
+    };
+    let outside_exists = count(None, &outside)?.is_some_and(|n| n > 0);
+    let inside_visible = count(Some(&narrow), &inside)?.is_some_and(|n| n > 0);
+    let leaked = count(Some(&narrow), &outside)?.unwrap_or(0);
+    evidence.check(
+        "scoped_token_hides_out_of_scope",
+        outside_exists && inside_visible && leaked == 0,
+        &format!(
+            "out_of_scope_exists={outside_exists} in_scope_visible={inside_visible} leaked_records={leaked}"
+        ),
+    );
+    Ok(())
 }

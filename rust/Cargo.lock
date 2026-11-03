@@ -2420,10 +2420,12 @@ dependencies = [
 name = "lab-adapters"
 version = "0.0.0"
 dependencies = [
+ "crc32fast",
  "hex",
  "lab-runner",
  "lab-wire",
  "lab-world",
+ "miniz_oxide",
  "serde-saphyr",
  "serde_json",
  "sha2 0.10.9",

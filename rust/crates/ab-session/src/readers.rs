@@ -1,5 +1,5 @@
 use crate::Error;
-use ab_native::{capture, safari, telephony, usage, voice_memo};
+use ab_native::{capture, notes_reader, safari, telephony, usage, voice_memo};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{
@@ -363,6 +363,102 @@ impl CaptureReader for VoiceMemosReader {
     }
 }
 
+#[derive(Debug)]
+enum NotesPending {
+    Scan(Box<notes_reader::Pending>),
+    Hydration(Box<notes_reader::Hydration>),
+}
+
+#[derive(Debug)]
+pub struct NotesReader {
+    root: PathBuf,
+    reader: notes_reader::Reader,
+    pending: Option<(NotesPending, Option<Signature>)>,
+    committed: Option<Signature>,
+}
+
+impl NotesReader {
+    pub fn new(root: PathBuf) -> Result<Self, Error> {
+        let name = root
+            .file_name()
+            .and_then(|name| name.to_str())
+            .ok_or(Error::Invalid)?;
+        let staging = root.with_file_name(format!("{name}-staging"));
+        let reader = notes_reader::Reader::open(&root.join("NoteStore.sqlite"), &staging)
+            .map_err(reader_error)?;
+        Ok(Self {
+            root,
+            reader,
+            pending: None,
+            committed: None,
+        })
+    }
+
+    fn notes_context(context: &ScanContext) -> Result<notes_reader::Context, Error> {
+        Ok(notes_reader::Context {
+            capture: capture::Context {
+                observed_at: context.observed_at()?,
+                checkpoint: context.checkpoint.clone(),
+                scan_id: context.scan_id.clone(),
+            },
+            coverage: serde_json::json!({}),
+            facts: notes_reader::Facts::default(),
+            asset_paths: Vec::new(),
+        })
+    }
+}
+
+impl CaptureReader for NotesReader {
+    fn source(&self) -> &'static str {
+        "notes"
+    }
+
+    fn next(&mut self, context: &ScanContext) -> Result<Option<Value>, Error> {
+        if self.pending.is_some() {
+            return Err(Error::Conflict);
+        }
+        let notes = Self::notes_context(context)?;
+        while self.reader.has_hydration() {
+            match self.reader.hydrate_next(&notes) {
+                Ok(Some(hydration)) => {
+                    let value = capture_value(&hydration.batch)?;
+                    self.pending = Some((NotesPending::Hydration(Box::new(hydration)), None));
+                    return Ok(Some(value));
+                }
+                Ok(None) => {}
+                Err(error) => return Err(reader_error(error)),
+            }
+        }
+        self.reader
+            .finish_hydration(SystemTime::now())
+            .map_err(reader_error)?;
+        let current = signature(&self.root)?;
+        if self.committed.as_ref() == Some(&current) {
+            return Ok(None);
+        }
+        let scan = self.reader.reconcile(&notes).map_err(reader_error)?;
+        let value = capture_value(&scan.batch)?;
+        self.pending = Some((NotesPending::Scan(Box::new(scan)), Some(current)));
+        Ok(Some(value))
+    }
+
+    fn commit(&mut self) -> Result<(), Error> {
+        let (pending, current) = self.pending.take().ok_or(Error::Conflict)?;
+        match pending {
+            NotesPending::Scan(scan) => {
+                self.reader.commit(*scan).map_err(reader_error)?;
+                self.committed = current;
+            }
+            NotesPending::Hydration(hydration) => {
+                self.reader
+                    .commit_hydration(*hydration)
+                    .map_err(reader_error)?;
+            }
+        }
+        Ok(())
+    }
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct SourceConfig {
@@ -402,6 +498,7 @@ pub fn from_config(config: &str) -> Result<BTreeMap<String, Box<dyn CaptureReade
             "phone" => Box::new(TelephonyReader::calls(&config.root)),
             "voicemail" => Box::new(TelephonyReader::voicemail(&config.root)),
             "voice_memos" => Box::new(VoiceMemosReader::new(&config.root)),
+            "notes" => Box::new(NotesReader::new(config.root)?),
             _ => return Err(Error::Invalid),
         };
         readers.insert(source, reader);

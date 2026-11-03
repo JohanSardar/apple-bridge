@@ -1,0 +1,17 @@
+id: LIVE-SCOPE-QUERY
+feature: lab.live-fault
+levels: [sim]
+given:
+  - world: {replicas: 0}
+when:
+  - control:
+      route: /external-change
+      input: {key: live-scope-inside, collection: reminders.reminder, data: {title: '[ab-test] inside scope', completed: false}}
+  - control:
+      route: /external-change
+      input: {key: live-scope-outside, collection: notes.note, data: {title: '[ab-test] outside scope'}}
+  - control: {route: /flush, input: {}}
+then:
+  - scope_gate: {scope: 'reminders:read', inside: reminders.reminder, outside: notes.note}
+cleanup:
+  - world: {}

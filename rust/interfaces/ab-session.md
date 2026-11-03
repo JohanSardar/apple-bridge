@@ -130,7 +130,7 @@ simapple) would dial the gateway, dials the gateway socket for every accepted co
 `AB_SESSION_RUST_SOURCES={"safari":{"root":"DIR"},"usage":{"root":"DIR","zone":"UTC","local_name":"..."}}`
 gives each Rust source its fixture directory (optional `generation`, default `rust-native/1`).
 `AB_SESSION_RUST_POLL_MS` (default 100) is the reader poll interval. Every Rust source must have
-a config entry and be in the supported list (`safari`, `usage`, `phone`, `voicemail`, `voice_memos`); otherwise startup fails.
+a config entry and be in the supported list (`safari`, `usage`, `notes`, `phone`, `voicemail`, `voice_memos`); otherwise startup fails.
 
 Behaviour of `routed::relay(gateway, helper, readers, poll)` (framing and byte-credit accounting
 copy `effects.rs`: whole frame length including the 4-byte header is the credit):
@@ -160,7 +160,7 @@ Rolling out another source (what to copy, in order):
    `coverage` removed; `commit` calls the reader's commit. Skip unchanged input cheaply
    (Safari uses the reader's input signature, Usage a file-tree signature).
 2. Register the source name in `readers::from_config` and the `validate_routed` list in `main.rs`.
-3. Lab world: `AB_LAB_SESSION=<ab-session>` and `AB_LAB_SESSION_SOURCES=safari,usage` make
+3. Lab world: `AB_LAB_SESSION=<ab-session>` and `AB_LAB_SESSION_SOURCES=safari,usage,notes` make
    `lab/world/session.go` start ab-session on `session.sock`, point simapple at it, and keep the
    gateway socket unchanged. Fixture roots default to `<world>/session-<source>`; a scenario that
    already owns a fixture calls `world.WithSessionRoot(ctx, source, dir)` (Safari does). If the
@@ -183,6 +183,15 @@ world writes these databases in place (`World.StageSessionMedia`) from `verifyNa
 source is in `AB_LAB_SESSION_SOURCES`; the version travels in `duration` (100 + version).
 `AB_LAB_SESSION_CONTROL=empty` skips the writes and is the negative control. `AB_SESSION_RUST_POLL_MS` is
 not a reliable control when other sources keep committing, because any gate change wakes the poll loop.
+Notes: `readers::NotesReader` wraps `ab_native::notes_reader::Reader` over `<root>/NoteStore.sqlite`
+(staging beside the root as `<root>-staging`). `next` drains the hydration queue first (each
+hydration is its own flight with an empty scope), then reconciles when the file-tree signature
+changed. Generation is `notes-<Z_UUID>` from the store, so a stable store never rescans. The lab
+world mirrors `/external-change` for `notes.folder` and `notes.note` into a rebuilt
+`NoteStore.sqlite` (`lab/world/session_notes.go`, gzip protobuf bodies, stable Z_PK per note,
+revision as Z_OPT). Negative control: `AB_SESSION_RUST_POLL_MS=3600000` makes NOTE-IMPORT fail on
+`external_note_imported`. Not mirrored yet: notes effects (`notes.update` and friends),
+created/modified dates, pinning dates, deleted or smart folders, html bodies and attachments.
 
 Gaps: no restart persistence of Rust-sourced checkpoints beyond what `Open.checkpoints` carries,
 no blob handles, no live (watcher-driven) scheduling, no combination with `rust-effects`, and the

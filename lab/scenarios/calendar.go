@@ -930,17 +930,29 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			return fail("slide_clock", err)
 		}
 		add("sliding_window_membership", awaitCount(2))
-		eviction, deleted := false, false
-		for _, observer := range observers {
-			observer.mu.Lock()
-			for _, change := range observer.changes {
-				if recordTitle(change.Change.Record) == tag+" boundary-0" {
-					eviction = eviction || (change.Change.Op == "evict" && change.Change.Record.TombstoneReason == "window_evicted")
-					deleted = deleted || change.Change.Op == "delete"
+		inspect := func() (bool, bool, bool) {
+			evicted, removed, settled := false, false, true
+			for _, observer := range observers {
+				observerDone := false
+				observer.mu.Lock()
+				for _, change := range observer.changes {
+					if recordTitle(change.Change.Record) == tag+" boundary-0" {
+						isEviction := change.Change.Op == "evict" && change.Change.Record.TombstoneReason == "window_evicted"
+						evicted = evicted || isEviction
+						removed = removed || change.Change.Op == "delete"
+						observerDone = observerDone || isEviction || change.Change.Op == "delete"
+					}
 				}
+				observer.mu.Unlock()
+				settled = settled && observerDone
 			}
-			observer.mu.Unlock()
+			return evicted, removed, settled
 		}
+		_ = w.Await(5*time.Second, func() bool {
+			_, _, settled := inspect()
+			return settled
+		})
+		eviction, deleted, _ := inspect()
 		add("window_eviction_is_not_deletion", eviction && !deleted)
 	case "CAL-READONLY":
 		var readonly contracts.Record

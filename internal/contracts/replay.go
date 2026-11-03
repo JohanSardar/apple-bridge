@@ -9,3 +9,5 @@ func DecisionNow() time.Time { return time.Now() }
 func ReplayRecordID(source Source, generation, collection, native string) (string, bool) {
 	return "", false
 }
+
+func ReplayCommandID() (string, bool) { return "", false }
