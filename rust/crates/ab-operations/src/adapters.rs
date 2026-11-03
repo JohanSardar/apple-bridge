@@ -332,6 +332,14 @@ fn trust_error(error: &ab_trust::Error) -> Error {
     }
 }
 impl Identity for TrustIdentity {
+    fn dial_replicas(&self) -> Result<Option<serde_json::Value>, Error> {
+        let credentials = self.0.load().map_err(|e| trust_error(&e))?;
+        let rows: Vec<_> = credentials.principals.into_iter()
+            .filter(|p| p.kind == "replica" && !p.dial.is_empty())
+            .map(|p| serde_json::json!({"replica_id":p.id,"state":if p.active() {p.extra.get("dial_state").and_then(serde_json::Value::as_str).unwrap_or("connecting")} else {"revoked"},"attempts":p.extra.get("dial_attempts").and_then(serde_json::Value::as_u64).unwrap_or(0)}))
+            .collect();
+        Ok(Some(serde_json::json!(rows)))
+    }
     fn approval_principal(
         &self,
         id: &str,

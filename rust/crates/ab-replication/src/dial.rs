@@ -34,9 +34,37 @@ impl<S: GatewayState + 'static> Server<S> {
             }
         }
     }
+    fn dial_state(&self, id: &str, state: &str) -> Result<(), Error> {
+        self.authority.update(|credentials| {
+            if let Some(p) = credentials.principals.iter_mut().find(|p| p.id == id) {
+                p.extra
+                    .insert("dial_state".into(), serde_json::json!(state));
+            }
+            Ok(())
+        })?;
+        Ok(())
+    }
     async fn dial_replica(&self, principal: &ab_trust::Principal) -> Result<(), Error> {
         let mut backoff = Duration::from_millis(250);
         while self.authority.session_valid(principal)? {
+            self.authority.update(|credentials| {
+                if let Some(p) = credentials
+                    .principals
+                    .iter_mut()
+                    .find(|p| p.id == principal.id)
+                {
+                    let attempts = p
+                        .extra
+                        .get("dial_attempts")
+                        .and_then(serde_json::Value::as_u64)
+                        .unwrap_or(0);
+                    p.extra
+                        .insert("dial_attempts".into(), serde_json::json!(attempts + 1));
+                    p.extra
+                        .insert("dial_state".into(), serde_json::json!("connecting"));
+                }
+                Ok(())
+            })?;
             let result = tokio::time::timeout(Duration::from_secs(5), async {
                 let stream = tokio::net::TcpStream::connect(&principal.dial).await?;
                 let host = principal
@@ -73,7 +101,9 @@ impl<S: GatewayState + 'static> Server<S> {
             .await;
             if let Ok(Ok((socket, cert))) = result {
                 self.authority.confirm_dial(&principal.id)?;
+                self.dial_state(&principal.id, "connected")?;
                 let _ = self.serve(socket, &cert).await;
+                self.dial_state(&principal.id, "disconnected")?;
                 backoff = Duration::from_millis(250);
             }
             tokio::time::sleep(backoff).await;

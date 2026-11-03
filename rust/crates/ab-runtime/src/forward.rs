@@ -11,6 +11,8 @@ use std::sync::Arc;
 
 #[derive(Debug)]
 pub struct Forward {
+    #[cfg(feature = "lab-harness")]
+    pub home: std::path::PathBuf,
     pub local: Arc<LocalGateway>,
     pub authority: Arc<ab_trust::Authority>,
     pub uploads: ab_replication::upstream::Uploads,
@@ -96,7 +98,12 @@ impl UploadHandler for Forward {
                     .control(certificate, session, delegation, request)
                     .await;
             }
-            match self.command(certificate, delegation, request).await {
+            let result = self.command(certificate, delegation, request).await;
+            #[cfg(feature = "lab-harness")]
+            if std::fs::remove_file(self.home.join("drop-command-response")).is_ok() {
+                return Err(ab_replication::Error::Disconnected);
+            }
+            match result {
                 Ok(result) => {
                     let value: Value = serde_json::from_str(result.get())?;
                     let era = self

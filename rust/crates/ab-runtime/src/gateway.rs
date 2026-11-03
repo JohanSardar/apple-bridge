@@ -129,6 +129,8 @@ pub async fn start(mut config: Config, authority: Arc<ab_trust::Authority>) -> R
         blobs: Some(blobs.clone()),
         authority: authority.clone(),
         uploads: Some(Arc::new(crate::forward::Forward {
+            #[cfg(feature = "lab-harness")]
+            home: config.home.clone(),
             local: local.clone(),
             authority: authority.clone(),
             uploads: ab_replication::upstream::Uploads::new(authority.clone(), blobs.clone()),
@@ -169,7 +171,7 @@ pub async fn start(mut config: Config, authority: Arc<ab_trust::Authority>) -> R
         config.home.clone(),
         api_listener.local_addr()?,
         service,
-        authority,
+        authority.clone(),
         audit,
         approvals,
         phone_router,

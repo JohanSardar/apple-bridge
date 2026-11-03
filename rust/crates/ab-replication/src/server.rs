@@ -157,7 +157,7 @@ impl<S: GatewayState> Server<S> {
                     }
                     return Ok(None);
                 }
-                if frame.t != "UploadControl" {
+                if frame.t != "UploadControl" && frame.t != "CommandRequest" {
                     return Ok(Some(frame));
                 }
                 if frame.id.is_empty() {
