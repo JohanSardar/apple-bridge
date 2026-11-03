@@ -67,6 +67,7 @@ impl Session {
 pub(crate) struct Hub {
     current: Mutex<Option<Arc<Session>>>,
     sequence: AtomicU64,
+    clients: Mutex<BTreeMap<String, reqwest::Client>>,
 }
 #[derive(Debug)]
 pub(crate) struct Registration {
@@ -219,6 +220,20 @@ impl GatewayTransport {
         .await
         .map_err(|_| Error::Disconnected)?
     }
+    fn direct_client(&self, pin: &str) -> Result<reqwest::Client, Error> {
+        let mut clients = self.hub.clients.lock().map_err(|_| Error::Disconnected)?;
+        if let Some(client) = clients.get(pin) {
+            return Ok(client.clone());
+        }
+        let client = reqwest::Client::builder()
+            .use_preconfigured_tls(self.authority.client_tls(pin)?)
+            .connect_timeout(Duration::from_millis(1500))
+            .redirect(reqwest::redirect::Policy::none())
+            .build()
+            .map_err(ab_trust::Error::from)?;
+        clients.insert(pin.into(), client.clone());
+        Ok(client)
+    }
     async fn direct_exchange(
         &self,
         address: &str,
@@ -226,17 +241,11 @@ impl GatewayTransport {
         delegation: String,
         request: Vec<u8>,
     ) -> Result<CommandResponse, Error> {
-        let client = reqwest::Client::builder()
-            .use_preconfigured_tls(self.authority.client_tls(pin)?)
-            .connect_timeout(Duration::from_millis(1500))
-            .timeout(forward_timeout(
-                std::str::from_utf8(&request).map_err(|_| Error::Invalid)?,
-            ))
-            .redirect(reqwest::redirect::Policy::none())
-            .build()
-            .map_err(ab_trust::Error::from)?;
+        let client = self.direct_client(pin)?;
+        let timeout = forward_timeout(std::str::from_utf8(&request).map_err(|_| Error::Invalid)?);
         let mut response = client
             .post(format!("https://{address}/v1/commands"))
+            .timeout(timeout)
             .header("X-Apple-Bridge-Delegation", delegation)
             .header("Content-Type", "application/json")
             .body(request)
