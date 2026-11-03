@@ -60,7 +60,7 @@ func samplesQuiet(samples map[string]world.HostSample) bool {
 
 func Run(ctx context.Context, s Scenario, level string) (e Evidence) {
 	selection := world.ImplementationSelection(ctx)
-	if (selection.Gateway == "rust" || selection.Replica == "rust") && !(level == "sim" && selection.Gateway == "rust" && selection.Replica == "go" && (calendarGatewaySimScenario(s) || nativeGatewaySimScenario(s) || sourceGatewaySimScenario(s) || phoneGatewaySimScenario(s) || ownerGatewaySimScenario(s) || relayServiceGatewaySimScenario(s) || portableGatewaySimScenario(s))) && !(level == "sim" && selection.Gateway == "go" && nativeReplicaSimScenario(s)) && !(level == "real" && selection.LocalReplicas && selection.Gateway == "go" && nativeReplicaRealScenario(s)) {
+	if (selection.Gateway == "rust" || selection.Replica == "rust") && !(level == "sim" && selection.Gateway == "rust" && selection.Replica == "go" && (calendarGatewaySimScenario(s) || nativeGatewaySimScenario(s) || sourceGatewaySimScenario(s) || phoneGatewaySimScenario(s) || ownerGatewaySimScenario(s) || relayServiceGatewaySimScenario(s) || portableGatewaySimScenario(s) || relayGatewaySimScenario(s))) && !(level == "sim" && selection.Gateway == "go" && nativeReplicaSimScenario(s)) && !(level == "real" && selection.LocalReplicas && selection.Gateway == "go" && nativeReplicaRealScenario(s)) {
 		reason := replicaQualificationBlocker(s)
 		if reason == "" && level == "sim" && selection.Gateway == "rust" && selection.Replica == "go" {
 			reason = "harness: portable SIM inventory/import/schema checks require a binary fixture adapter for " + s.ID
