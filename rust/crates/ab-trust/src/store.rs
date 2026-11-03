@@ -174,6 +174,23 @@ fn absolute(path: &Path) -> PathBuf {
     }
     clean
 }
+#[must_use]
+pub fn backend_name(environment: &StoreEnvironment) -> &'static str {
+    if environment.secret_store.as_deref() == Some("file") {
+        "file_0600"
+    } else if cfg!(target_os = "macos") {
+        if environment.bundle.is_some() || environment.secret_store.as_deref() == Some("keychain")
+        {
+            "keychain"
+        } else {
+            "file_0600"
+        }
+    } else if environment.secret_tool.is_some() {
+        "libsecret"
+    } else {
+        "file_0600"
+    }
+}
 pub fn select(
     home: &Path,
     environment: &StoreEnvironment,
@@ -485,6 +502,15 @@ mod tests {
         assert_eq!(store.get("identity-key").unwrap(), b"secret");
         store.delete("identity-key").unwrap();
         assert!(!expected.exists());
+    }
+    #[test]
+    fn backend_names_match_go() {
+        let mut env = environment(Path::new("/tmp"));
+        assert_eq!(backend_name(&env), "file_0600");
+        env.secret_tool = Some(PathBuf::from("/usr/bin/secret-tool"));
+        assert_eq!(backend_name(&env), "libsecret");
+        env.secret_store = Some("file".into());
+        assert_eq!(backend_name(&env), "file_0600");
     }
     #[test]
     fn keychain_service_is_the_go_per_home_fingerprint() {

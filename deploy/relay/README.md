@@ -1,6 +1,6 @@
 # Relay deployment
 
-Build `cmd/relay` for linux/amd64 with `GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -p 4 -o ab-relay ./cmd/relay` on the Mac. Install as `/usr/local/bin/ab-relay`; create system user `ab-relay`, install config under `/etc/ab-relay` (directory 0750), then enable `ab-relay.service`.
+Build the Rust `ab-relay` for linux/amd64 with `packaging/dev/build-bridge.sh ab-relay x86_64-unknown-linux-musl ab-relay ab-relay` (needs the `x86_64-unknown-linux-musl` rust target and `musl-tools`; the binary is static). Install as `/usr/local/bin/ab-relay`; create system user `ab-relay`, install config under `/etc/ab-relay` (directory 0750), then enable `ab-relay.service`.
 
 The public ciphertext listener is 443. The authenticated TLS control API and outbound device tunnel share port 443 using control-host SNI routing. Configure `APPLE_BRIDGE_RELAY_URL=https://ab.lexaai.tech` on the Mac. `--control-acme` issues and renews the control certificate with the existing DNS-01 implementation. Its account and TLS keys remain mode 0600 under `/var/lib/ab-relay/control-tls/remote`; renewal runs every 12 hours when at most 30 days remain, and TLS adopts replacements without restart.
 

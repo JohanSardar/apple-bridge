@@ -63,6 +63,17 @@ fn helper_or_default(app: &str) -> String {
     }
 }
 
+pub fn terminal_qr(text: &str) -> Result<String, Error> {
+    let code = qrcode::QrCode::with_error_correction_level(text.as_bytes(), qrcode::EcLevel::L)
+        .map_err(|_| Error::Invalid)?;
+    let mut rendered = code
+        .render::<qrcode::render::unicode::Dense1x2>()
+        .quiet_zone(true)
+        .build();
+    rendered.push('\n');
+    Ok(rendered)
+}
+
 pub fn permission_arguments(app: &str, name: &str, report: &Path) -> Vec<String> {
     let mut arguments: Vec<String> = ["-n", "-W", "-g", "-a"]
         .into_iter()
@@ -210,6 +221,16 @@ mod tests {
         std::fs::write(&path, format!("#!/bin/sh\n{body}\n"))?;
         std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755))?;
         Ok(path)
+    }
+
+    #[test]
+    fn terminal_qr_encodes_the_text_in_block_characters() -> Check {
+        let url = "https://example.test/enroll#token";
+        let rendered = terminal_qr(url)?;
+        assert!(rendered.ends_with('\n'));
+        assert!(rendered.lines().count() > 10);
+        assert!(rendered.chars().any(|c| c == '\u{2588}' || c == '\u{2580}' || c == '\u{2584}'));
+        Ok(())
     }
 
     #[test]

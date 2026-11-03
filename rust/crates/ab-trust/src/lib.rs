@@ -17,7 +17,7 @@ use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 pub use store::{
     CredentialStore, FileStore, KeychainStore, LibsecretStore, StoreEnvironment, atomic_write,
-    select,
+    backend_name, select,
 };
 
 pub fn decision_now() -> jiff::Timestamp {

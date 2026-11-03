@@ -452,7 +452,9 @@ fn web_enroll(
     {
         return Err(Error::Invalid);
     }
-    println!("{host}/enroll#{}", authority.create_web_enroll()?);
+    let enrollment = format!("{host}/enroll#{}", authority.create_web_enroll()?);
+    println!("{enrollment}");
+    print!("{}", ab_runtime::product_cli::terminal_qr(&enrollment)?);
     Ok(())
 }
 #[derive(serde::Serialize)]
@@ -563,14 +565,13 @@ fn manage(
                 if status["state"] != "on" {
                     return Err(ab_trust::Error::Unavailable.into());
                 }
-                println!(
-                    "{}",
-                    authority.pair_iphone_code(
-                        status["url"].as_str().ok_or(Error::Invalid)?,
-                        true,
-                        ttl
-                    )?
-                );
+                let code = authority.pair_iphone_code(
+                    status["url"].as_str().ok_or(Error::Invalid)?,
+                    true,
+                    ttl,
+                )?;
+                println!("{code}");
+                print!("{}", ab_runtime::product_cli::terminal_qr(&code)?);
             } else {
                 if args.flag("via-remote", "false") == "true" {
                     if args.flags.contains_key("peer-addr")

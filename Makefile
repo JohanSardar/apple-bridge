@@ -41,9 +41,11 @@ agent:
 
 dist:
 	mkdir -p bin
-	GOOS=darwin GOARCH=arm64 go build -o bin/bridge-darwin-arm64 ./cmd/bridge
-	GOOS=linux GOARCH=amd64 go build -o bin/bridge-linux-amd64 ./cmd/bridge
-	GOOS=linux GOARCH=arm64 go build -o bin/bridge-linux-arm64 ./cmd/bridge
+	packaging/dev/build-bridge.sh bin/bridge-darwin-arm64 aarch64-apple-darwin
+	packaging/dev/build-bridge.sh bin/bridge-linux-amd64 x86_64-unknown-linux-musl
+	packaging/dev/build-bridge.sh bin/bridge-linux-arm64 aarch64-unknown-linux-musl
+	packaging/dev/build-bridge.sh bin/ab-relay-linux-amd64 x86_64-unknown-linux-musl ab-relay ab-relay
+	packaging/dev/build-bridge.sh bin/ab-relay-linux-arm64 aarch64-unknown-linux-musl ab-relay ab-relay
 
 .PHONY: decoder-checks
 decoder-checks:
