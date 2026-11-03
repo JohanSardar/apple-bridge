@@ -11,6 +11,9 @@ pub struct Actions {
 }
 impl ActionResolver for Actions {
     fn resolve(&self, principal: &Principal, command: &Command) -> Result<PreparedAction, Error> {
+        if command.op.starts_with("calendar.") {
+            return self.calendar(principal, command);
+        }
         if !command.op.starts_with("reminders.") {
             return Err(Code::Unsupported.into());
         }
@@ -122,7 +125,14 @@ impl ActionResolver for Actions {
         }
         let args: Value = serde_json::from_str(command.args.get()).map_err(|_| Code::Invalid)?;
         let id = args["id"].as_str().ok_or(Code::Corrupt)?;
-        let collection = if command.op.ends_with("_list") {
+        let source = if command.op.starts_with("calendar.") {
+            "calendar"
+        } else {
+            "reminders"
+        };
+        let collection = if source == "calendar" {
+            "calendar.event"
+        } else if command.op.ends_with("_list") {
             "reminders.list"
         } else {
             "reminders.reminder"
@@ -137,7 +147,7 @@ impl ActionResolver for Actions {
         let cursor = self
             .peer
             .captured(
-                "reminders",
+                source,
                 evidence["capture_checkpoint"]
                     .as_str()
                     .ok_or(Code::Corrupt)?,

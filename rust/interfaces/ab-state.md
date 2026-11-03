@@ -36,3 +36,7 @@ Repository verification passed on Ubuntu: `make rust-ci` (source registration/li
 # G-F assembly: iPhone health transaction
 
 APP-HEALTH-SIM requires one State<Gateway> transaction for HealthBatch sequence/digest acceptance, health_streams advancement and CommitCapture records/journal. Runtime must use the existing shared Gateway State, not another writable connection. Please expose a State-owned ingestion seam accepting wire Capture plus device/stream/prior/sequence/digest fields (no dependency on ab-iphone). Exact retries must preserve the cursor; changed replay/gaps must fail Conflict without advancing either ledger. The existing public capture method alone cannot safely implement this adapter.
+
+## G-F CAL gateway sim worker, 2026-11-02
+
+Owns the 21 CAL scenarios in the default gateway matrix. Verification uses isolated `ssh build:~/w/gf-cal` with `~/targets/gf-cal`. No real-level runs. The separate real calendar false-deletion investigation remains with its assigned worker; this worker will not change deletion semantics without a distinct sim reproduction. Initial gateway command-path finding: `ab-runtime/src/actions.rs` accepts reminders only; calendar action resolution needs calendar_args, calendar/calendar-event native keys and series serialization. Calendar-specific resolver code will live in a separate module to avoid unrelated resolver edits.

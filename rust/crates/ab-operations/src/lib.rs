@@ -570,6 +570,9 @@ impl Service {
             command.op = name.into();
             let args: Value =
                 serde_json::from_str(command.args.get()).map_err(|_| Code::Invalid)?;
+            if command.op.starts_with("calendar.") && args["span"] == "all" {
+                return Err(Code::Unsupported.into());
+            }
             validate_shape(&descriptor.input["properties"]["args"], &args)?;
             if !args.is_object() {
                 return Err(Code::Invalid.into());
