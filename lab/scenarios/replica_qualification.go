@@ -2,6 +2,15 @@ package scenarios
 
 import "strings"
 
+func nativeReplicaRealScenario(s Scenario) bool {
+	switch s.ID {
+	case "CAL-CREATE-EXTERNAL", "CAL-CRUD", "CON-CRUD", "CON-EXTERNAL", "MSG-INCOMING", "MSG-SEND-FILES", "MSG-SEND-SELF-TEXT", "NOTE-CRUD", "NOTE-EXTERNAL", "REM-CREATE-EXTERNAL", "REM-CRUD", "MAC-REPLICA", "FILE-REPLICA":
+		return true
+	default:
+		return false
+	}
+}
+
 func replicaQualificationBlocker(s Scenario) string {
 	switch s.ID {
 	case "RMT-PRIVATE-CONNECT":
