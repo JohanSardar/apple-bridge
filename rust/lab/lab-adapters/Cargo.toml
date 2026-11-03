@@ -34,3 +34,5 @@ socket2 = "0.6"
 rcgen = "0.14"
 rustls.workspace = true
 p256 = { version = "0.14", features = ["ecdsa", "pkcs8"] }
+tungstenite = { version = "0.28", default-features = false, features = ["handshake"] }
+x509-parser = "0.18"

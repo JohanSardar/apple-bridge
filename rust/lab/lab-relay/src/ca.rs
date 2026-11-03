@@ -47,8 +47,11 @@ impl Ca {
         })
     }
     pub fn leaf(&self) -> Result<(String, String)> {
+        self.leaf_for(HOST)
+    }
+    pub fn leaf_for(&self, name: &str) -> Result<(String, String)> {
         let key = KeyPair::generate_for(&PKCS_ED25519).map_err(certificate)?;
-        let mut params = CertificateParams::new(vec![HOST.to_owned()]).map_err(certificate)?;
+        let mut params = CertificateParams::new(vec![name.to_owned()]).map_err(certificate)?;
         params.key_usages = vec![KeyUsagePurpose::DigitalSignature];
         params.extended_key_usages = vec![ExtendedKeyUsagePurpose::ServerAuth];
         let now = time_now();
@@ -61,7 +64,10 @@ impl Ca {
         ))
     }
     pub fn issue(&self, directory: &Path) -> Result<Leaf> {
-        let (chain_pem, key_pem) = self.leaf()?;
+        self.issue_for(directory, HOST)
+    }
+    pub fn issue_for(&self, directory: &Path, name: &str) -> Result<Leaf> {
+        let (chain_pem, key_pem) = self.leaf_for(name)?;
         fs::create_dir_all(directory)?;
         let chain = directory.join("leaf-chain.pem");
         let key_path = directory.join("leaf-key.pem");

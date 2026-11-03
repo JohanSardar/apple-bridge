@@ -112,6 +112,16 @@ pub fn http(
     bearer: Option<&str>,
     body: Option<&[u8]>,
 ) -> Result<Reply> {
+    http_with(address, method, path, bearer, body, &[])
+}
+pub fn http_with(
+    address: &str,
+    method: &str,
+    path: &str,
+    bearer: Option<&str>,
+    body: Option<&[u8]>,
+    headers: &[(&str, &str)],
+) -> Result<Reply> {
     let (address, prefix) = address
         .find('/')
         .map_or((address, ""), |at| (&address[..at], &address[at..]));
@@ -130,8 +140,14 @@ pub fn http(
             )
         })
         .unwrap_or_default();
+    let extra = headers
+        .iter()
+        .fold(String::new(), |mut out, (name, value)| {
+            let _ = std::fmt::Write::write_fmt(&mut out, format_args!("{name}: {value}\r\n"));
+            out
+        });
     let request = format!(
-        "{method} {path} HTTP/1.1\r\nHost: {address}\r\nConnection: close\r\n{auth}{length}\r\n"
+        "{method} {path} HTTP/1.1\r\nHost: {address}\r\nConnection: close\r\n{auth}{length}{extra}\r\n"
     );
     stream.write_all(request.as_bytes())?;
     if let Some(data) = body {
@@ -302,9 +318,65 @@ fn read_request(stream: &mut TcpStream) -> Option<(String, Vec<u8>)> {
     }
 }
 
+#[derive(Debug, Default)]
+pub struct Hooks {
+    pub dns: Mutex<HashMap<String, String>>,
+    pub dns_calls: AtomicUsize,
+    pub dns_last: Mutex<(String, String)>,
+    pub cnames: Mutex<HashMap<String, String>>,
+    pub ct_assigned: Mutex<String>,
+    pub ct_seen: Mutex<Vec<String>>,
+}
+impl Hooks {
+    fn answer(&self, path: &str, body: &[u8]) -> (&'static str, Vec<u8>) {
+        let (route, query) = path.split_once('?').unwrap_or((path, ""));
+        let param = |name: &str| {
+            query
+                .split('&')
+                .find_map(|pair| pair.strip_prefix(&format!("{name}=")))
+                .unwrap_or_default()
+                .to_owned()
+        };
+        match route {
+            "/dns" => {
+                let value: Value = serde_json::from_slice(body).unwrap_or(Value::Null);
+                let name = value["name"].as_str().unwrap_or_default().to_owned();
+                let text = value["value"].as_str().unwrap_or_default().to_owned();
+                lock(&self.dns).insert(name.clone(), text.clone());
+                *lock(&self.dns_last) = (name, text);
+                self.dns_calls.fetch_add(1, Ordering::SeqCst);
+                ("204 No Content", vec![])
+            }
+            "/cname" => match lock(&self.cnames).get(&param("name")) {
+                Some(target) => ("200 OK", json!(target).to_string().into_bytes()),
+                None => ("404 Not Found", vec![]),
+            },
+            "/ct" => {
+                let host = param("q");
+                if host.is_empty() {
+                    return ("200 OK", b"unexpected-certificate".to_vec());
+                }
+                lock(&self.ct_seen).push(host.clone());
+                if host == *lock(&self.ct_assigned) {
+                    (
+                        "200 OK",
+                        json!([{"id": 1, "name_value": host}])
+                            .to_string()
+                            .into_bytes(),
+                    )
+                } else {
+                    ("503 Service Unavailable", vec![])
+                }
+            }
+            _ => ("404 Not Found", vec![]),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Callback {
     pub url: String,
+    pub hooks: Arc<Hooks>,
     streams: Streams,
     stop: Arc<AtomicBool>,
     thread: Option<JoinHandle<()>>,
@@ -317,14 +389,18 @@ impl Callback {
         let streams: Streams = Arc::default();
         let stop = Arc::new(AtomicBool::new(false));
         let (shared, flag) = (streams.clone(), stop.clone());
+        let hooks: Arc<Hooks> = Arc::default();
+        let served = hooks.clone();
         let thread = thread::spawn(move || {
             while !flag.load(Ordering::SeqCst) {
                 match listener.accept() {
                     Ok((mut socket, _)) => {
                         let streams = shared.clone();
+                        let hooks = served.clone();
                         thread::spawn(move || {
                             let _ = socket.set_nonblocking(false);
                             if let Some((path, body)) = read_request(&mut socket) {
+                                let mut payload = vec![];
                                 let status = if path == "/cancel" {
                                     let key = serde_json::from_slice::<Value>(&body)
                                         .ok()
@@ -341,12 +417,18 @@ impl Callback {
                                     }
                                     "204 No Content"
                                 } else {
-                                    "404 Not Found"
+                                    let (status, data) = hooks.answer(&path, &body);
+                                    payload = data;
+                                    status
                                 };
                                 let _ = socket.write_all(
-                                    format!("HTTP/1.1 {status}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
-                                        .as_bytes(),
+                                    format!(
+                                        "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                                        payload.len()
+                                    )
+                                    .as_bytes(),
                                 );
+                                let _ = socket.write_all(&payload);
                             }
                         });
                     }
@@ -356,6 +438,7 @@ impl Callback {
         });
         Ok(Self {
             url,
+            hooks,
             streams,
             stop,
             thread: Some(thread),
@@ -458,6 +541,7 @@ pub struct Lab {
     exited: Arc<AtomicBool>,
     serve: Option<JoinHandle<()>>,
     keep: Mutex<Vec<Detach>>,
+    upstream: Arc<Mutex<String>>,
 }
 impl Lab {
     pub fn start(fixture: &Arc<Fixture>) -> Result<Self> {
@@ -484,6 +568,8 @@ impl Lab {
         let closed = Arc::new(AtomicBool::new(false));
         let exited = Arc::new(AtomicBool::new(false));
         let (flag, done) = (closed.clone(), exited.clone());
+        let upstream = Arc::new(Mutex::new(upstream));
+        let target = upstream.clone();
         let serve = thread::spawn(move || {
             let mut sockets: Vec<TcpStream> = vec![];
             let mut workers = vec![];
@@ -491,7 +577,8 @@ impl Lab {
                 match listener.accept() {
                     Ok((socket, _)) => {
                         let _ = socket.set_nonblocking(false);
-                        let Ok(up) = TcpStream::connect(&upstream) else {
+                        let current = lock(&target).clone();
+                        let Ok(up) = TcpStream::connect(&current) else {
                             continue;
                         };
                         let (Ok(a), Ok(b), Ok(c), Ok(d)) = (
@@ -531,7 +618,41 @@ impl Lab {
             exited,
             serve: Some(serve),
             keep: Mutex::new(vec![]),
+            upstream,
         })
+    }
+    #[must_use]
+    pub fn hooks(&self) -> Arc<Hooks> {
+        self.callback.hooks.clone()
+    }
+    pub fn control(&self, directory: &str, root: &Path, path: &Path, host: &str) -> Result<()> {
+        self.fixture.rpc(
+            "control",
+            json!({
+                "id": self.id,
+                "directory": directory,
+                "root": root.to_string_lossy(),
+                "path": path.to_string_lossy(),
+                "host": host
+            }),
+        )?;
+        Ok(())
+    }
+    pub fn monitor(&self) -> Result<()> {
+        self.fixture.rpc("monitor", json!({"id": self.id}))?;
+        Ok(())
+    }
+    pub fn restart(&self) -> Result<()> {
+        self.fixture.rpc("close", json!({"id": self.id}))?;
+        self.fixture.rpc("stop", json!({"id": self.id}))?;
+        let address = self
+            .fixture
+            .rpc("listen", json!({"id": self.id}))?
+            .as_str()
+            .ok_or_else(|| Error::Invalid("listen".into()))?
+            .to_owned();
+        *lock(&self.upstream) = address;
+        Ok(())
     }
     pub fn close_listener(&self) {
         self.closed.store(true, Ordering::SeqCst);
@@ -721,6 +842,15 @@ pub fn relay_service(world: &mut World, _input: &Value, evidence: &mut Evidence)
     let id = evidence.scenario.clone();
     if crate::relay_more::SCENARIOS.contains(&id.as_str()) {
         return crate::relay_more::run(world, evidence);
+    }
+    if crate::relay_splice::SCENARIOS.contains(&id.as_str()) {
+        return crate::relay_splice::run(world, evidence);
+    }
+    if crate::relay_acme::SCENARIOS.contains(&id.as_str()) {
+        return crate::relay_acme::run(world, evidence);
+    }
+    if id == "RELAY-STREAMS" {
+        return crate::relay_streams::run(world, evidence);
     }
     let certificates = matches!(id.as_str(), "RELAY-CT-INDEPENDENT" | "RELAY-CAA-ACCOUNT");
     let binary = if certificates {
