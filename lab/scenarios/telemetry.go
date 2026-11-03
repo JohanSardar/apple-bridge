@@ -186,7 +186,7 @@ func latencyCritical(s Scenario) bool {
 }
 
 func relay2GatewaySimScenario(s Scenario) bool {
-	if s.ID != "RELAY-TLS-SPLICE" && s.ID != "RELAY-DOWNGRADE" {
+	if s.ID != "RELAY-TLS-SPLICE" && s.ID != "RELAY-DOWNGRADE" && s.ID != "RELAY-LEGACY-COMPAT" {
 		return false
 	}
 	return os.Getenv("AB_RELAY_FIXTURE") != ""

@@ -1,0 +1,4 @@
+id: RELAY-LEGACY-COMPAT
+feature: remote.relay
+levels: [sim]
+when: [{relay_service: {}}]

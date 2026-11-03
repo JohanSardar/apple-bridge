@@ -38,6 +38,8 @@ func runRelayContainment(ctx context.Context, s Scenario, level string) Evidence
 	defer relay.Cleanup(dir)
 	if s.ID == "RELAY-TLS-SPLICE" || s.ID == "RELAY-DOWNGRADE" {
 		relayTLSSplice(ctx, dir, add)
+	} else if s.ID == "RELAY-LEGACY-COMPAT" {
+		relayLegacyCompat(ctx, dir, add)
 	} else {
 		relayRotateGated(dir, add)
 	}

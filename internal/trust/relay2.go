@@ -149,6 +149,9 @@ func (a *Authority) Relay2Server(ctx context.Context, conn *websocket.Conn, bind
 	if err := relay2Read(ctx, conn, &hello); err != nil {
 		return Principal{}, nil, err
 	}
+	return a.relay2ServerHello(ctx, conn, hello, binding)
+}
+func (a *Authority) relay2ServerHello(ctx context.Context, conn *websocket.Conn, hello Relay2Frame, binding []byte) (Principal, *x509.Certificate, error) {
 	cert, err := relay2Certificate(hello)
 	if err != nil || hello.T != "AuthHello" {
 		return Principal{}, nil, contracts.ErrUnauthorized
@@ -179,6 +182,9 @@ func (a *Authority) Relay2Server(ctx context.Context, conn *websocket.Conn, bind
 		principal, err = a.acceptPair(JoinRequest{ID: hello.PairingID, Proof: proof.Proof}, cert, false)
 	}
 	if err != nil {
+		return Principal{}, nil, err
+	}
+	if principal, err = a.markRelay2(principal); err != nil {
 		return Principal{}, nil, err
 	}
 	raw, err := json.Marshal(principal)
