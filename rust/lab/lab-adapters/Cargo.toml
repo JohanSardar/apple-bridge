@@ -1,0 +1,18 @@
+[package]
+name = "lab-adapters"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+[lints]
+workspace = true
+[[bin]]
+name = "lab-families"
+path = "src/main.rs"
+[dependencies]
+lab-world = { path = "../lab-world" }
+lab-runner = { path = "../lab-runner" }
+lab-wire = { path = "../lab-wire" }
+serde_json.workspace = true
+sha2.workspace = true
+hex = "0.4"
+serde_yaml = "0.9"
