@@ -24,6 +24,11 @@ func run(ctx context.Context, args []string) error {
 		return fmt.Errorf("expected run or simapple")
 	}
 	switch args[0] {
+	case "build-legacy":
+		if len(args) != 1 {
+			return contracts.ErrInvalid
+		}
+		return world.BuildLegacy(ctx)
 	case "shadow":
 		command := exec.CommandContext(ctx, "python3", append([]string{"lab/shadow/shadow.py"}, args[1:]...)...)
 		command.Stdin, command.Stdout, command.Stderr = os.Stdin, os.Stdout, os.Stderr

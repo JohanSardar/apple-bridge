@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 if [[ $(uname -s) != Linux ]]; then
-  echo 'gateway-matrix requires ubuntu; sync this checkout and run make gateway-matrix there' >&2
+  echo 'gateway-matrix requires Linux; sync this checkout and run make gateway-matrix on ssh build' >&2
   exit 1
 fi
 go build -tags lab -o bin/bridge ./cmd/bridge
 go build -o bin/bridge-lab ./cmd/bridge-lab
+bin/bridge-lab build-legacy
 binary=${RUST_BRIDGE:-}
 if [[ -z "$binary" ]]; then
   artifacts=$(mktemp)

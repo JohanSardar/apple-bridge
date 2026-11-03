@@ -68,14 +68,20 @@ func (w *World) RestartGatewayRetention(rows int, age time.Duration) error {
 	if rows > 0 {
 		args = append(args, "--retention-rows", strconv.Itoa(rows), "--retention-age", age.String())
 	}
-	if _, err = w.start("gateway", false, w.Gateway.Home, w.bridge, args...); err != nil {
+	process, err := w.start("gateway", false, w.Gateway.Home, w.bridge, args...)
+	if err != nil {
 		return err
 	}
+	w.Gateway.Binary = process.command.Path
 	_, err = w.config(w.Gateway.Home, false)
 	return err
 }
 func (w *World) Backup(path string) error {
-	_, err := w.execute(false, w.bridge, "backup", path, "--home", w.Gateway.Home)
+	binary := w.endpointBinary(w.Gateway)
+	if filepath.Base(binary) == "bridge-feed1" {
+		binary = w.goBridge
+	}
+	_, err := w.execute(false, binary, "backup", path, "--home", w.Gateway.Home)
 	return err
 }
 func (w *World) Restore(path string) error {

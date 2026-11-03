@@ -700,8 +700,16 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 			return fail("backup_from_older_gateway_binary")
 		}
 		w.StopGateway()
-		if w.RestartGateway(0) != nil {
+		restartErr := w.RestartGateway(0)
+		goBinary, pathErr := filepath.Abs("bin/bridge")
+		selected, selectionErr := world.ImplementationSelection(ctx).Binary(world.ImplementationSelection(ctx).Gateway, goBinary)
+		selectedGateway := pathErr == nil && selectionErr == nil && w.Gateway.Binary == selected
+		add("upgrade_uses_selected_gateway", selectedGateway)
+		if restartErr != nil {
 			return fail("upgrade_before_command_admission")
+		}
+		if !selectedGateway {
+			return evidence
 		}
 		if w.ControlAction("/flush", struct{}{}) != nil {
 			return fail("upgraded_helper_capture_ready")

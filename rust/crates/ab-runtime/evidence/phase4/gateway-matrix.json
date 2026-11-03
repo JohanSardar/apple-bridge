@@ -1,5 +1,5 @@
 {
-  "wall_seconds": 80.772,
+  "wall_seconds": 94.658,
   "parallel": 12,
   "host": "linux",
   "complete": true,
@@ -72,7 +72,7 @@
     },
     {
       "id": "APP-PAIR-SIM",
-      "seconds": 2.371,
+      "seconds": 2.369,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -99,7 +99,7 @@
     },
     {
       "id": "AUTH-SCOPES-METADATA",
-      "seconds": 0.115,
+      "seconds": 0.114,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -117,7 +117,7 @@
     },
     {
       "id": "CAL-ALLDAY",
-      "seconds": 2.643,
+      "seconds": 2.339,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -127,7 +127,7 @@
     },
     {
       "id": "CAL-ALLDAY-FUTURE",
-      "seconds": 2.889,
+      "seconds": 2.539,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -143,7 +143,7 @@
     },
     {
       "id": "CAL-CREATE-EXTERNAL",
-      "seconds": 3.597,
+      "seconds": 3.095,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -153,7 +153,7 @@
     },
     {
       "id": "CAL-CRUD",
-      "seconds": 4.945,
+      "seconds": 4.594,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -169,7 +169,7 @@
     },
     {
       "id": "CAL-DST",
-      "seconds": 2.638,
+      "seconds": 2.29,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -179,7 +179,7 @@
     },
     {
       "id": "CAL-FUTURE-RULE-MISMATCH",
-      "seconds": 2.741,
+      "seconds": 2.393,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -189,7 +189,7 @@
     },
     {
       "id": "CAL-ID-CHURN",
-      "seconds": 2.69,
+      "seconds": 2.391,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -199,7 +199,7 @@
     },
     {
       "id": "CAL-LARGE-CAPTURE",
-      "seconds": 6.345,
+      "seconds": 6.049,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -209,7 +209,7 @@
     },
     {
       "id": "CAL-MOVED-OCCURRENCE",
-      "seconds": 2.791,
+      "seconds": 2.442,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -219,7 +219,7 @@
     },
     {
       "id": "CAL-MOVED-OUTSIDE-WINDOW",
-      "seconds": 2.79,
+      "seconds": 2.488,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -229,7 +229,7 @@
     },
     {
       "id": "CAL-PERIODIC-VERIFICATION",
-      "seconds": 2.389,
+      "seconds": 2.036,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -239,7 +239,7 @@
     },
     {
       "id": "CAL-PERMISSION-LOSS",
-      "seconds": 3.04,
+      "seconds": 2.69,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -265,7 +265,7 @@
     },
     {
       "id": "CAL-RECUR-ALL-REJECT",
-      "seconds": 2.269,
+      "seconds": 2.319,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -297,7 +297,7 @@
     },
     {
       "id": "CAL-RECUR-THIS",
-      "seconds": 2.52,
+      "seconds": 2.521,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -313,7 +313,7 @@
     },
     {
       "id": "CAL-SPLIT-ATOMIC-ALLDAY",
-      "seconds": 2.47,
+      "seconds": 2.469,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -329,7 +329,7 @@
     },
     {
       "id": "CAL-SPLIT-ATOMIC-TIMED",
-      "seconds": 2.873,
+      "seconds": 2.921,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -339,7 +339,7 @@
     },
     {
       "id": "CAL-SPLIT-FRAME-CAP",
-      "seconds": 43.344,
+      "seconds": 42.387,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -355,7 +355,7 @@
     },
     {
       "id": "CAL-STAMP-FIELDS",
-      "seconds": 10.084,
+      "seconds": 9.032,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -365,8 +365,8 @@
     },
     {
       "id": "CAL-WINDOW-SLIDE",
-      "seconds": 2.32,
-      "status": "pass",
+      "seconds": 2.319,
+      "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/contracts"
@@ -375,7 +375,7 @@
     },
     {
       "id": "CON-CONFLICT",
-      "seconds": 2.319,
+      "seconds": 2.32,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -391,7 +391,7 @@
     },
     {
       "id": "CON-CRUD",
-      "seconds": 3.52,
+      "seconds": 3.121,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -407,7 +407,7 @@
     },
     {
       "id": "CON-DROP-EVERYTHING",
-      "seconds": 2.62,
+      "seconds": 2.169,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -417,7 +417,7 @@
     },
     {
       "id": "CON-EXTERNAL",
-      "seconds": 4.473,
+      "seconds": 4.072,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -427,7 +427,7 @@
     },
     {
       "id": "CON-GROUPS",
-      "seconds": 3.973,
+      "seconds": 3.571,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -437,7 +437,7 @@
     },
     {
       "id": "CON-HANDLE-LINK",
-      "seconds": 3.271,
+      "seconds": 2.819,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -447,7 +447,7 @@
     },
     {
       "id": "CON-IMAGE",
-      "seconds": 2.418,
+      "seconds": 6.977,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -457,16 +457,6 @@
     },
     {
       "id": "CON-IMPORT",
-      "seconds": 2.369,
-      "status": "pass",
-      "implementation": "gateway=rust",
-      "required_features": [
-        "internal/contracts"
-      ],
-      "blocked_on": []
-    },
-    {
-      "id": "CON-PERMISSION-LOSS",
       "seconds": 2.118,
       "status": "pass",
       "implementation": "gateway=rust",
@@ -476,8 +466,18 @@
       "blocked_on": []
     },
     {
+      "id": "CON-PERMISSION-LOSS",
+      "seconds": 2.069,
+      "status": "pass",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": []
+    },
+    {
       "id": "CON-READONLY-CONTAINER",
-      "seconds": 2.218,
+      "seconds": 2.018,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -493,7 +493,7 @@
     },
     {
       "id": "CON-RECIPIENT-LOOKUP",
-      "seconds": 13.187,
+      "seconds": 12.436,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -503,7 +503,7 @@
     },
     {
       "id": "CON-RESOLVE-RESTART",
-      "seconds": 7.932,
+      "seconds": 7.879,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -519,7 +519,7 @@
     },
     {
       "id": "CON-SEARCH",
-      "seconds": 2.019,
+      "seconds": 1.968,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -529,7 +529,7 @@
     },
     {
       "id": "CON-TOKEN-CRASH",
-      "seconds": 2.369,
+      "seconds": 2.269,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -601,9 +601,8 @@
     },
     {
       "id": "CONSENT-CONNECTOR",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 2.168,
+      "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -616,19 +615,11 @@
         "internal/trust",
         "internal/web"
       ],
-      "blocked_on": [
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_auth_isolation.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_command_resolve.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_hosts.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_rate_limits_fixture.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_sources.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_sources_errors.go still imports product implementations: operations, state, trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "CORE-BLOB-CAP",
-      "seconds": 2.368,
+      "seconds": 2.318,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -643,7 +634,7 @@
     },
     {
       "id": "CORE-BLOB-CORRUPT",
-      "seconds": 6.875,
+      "seconds": 6.775,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -658,7 +649,7 @@
     },
     {
       "id": "CORE-BLOB-DUPLICATE-REFERENCE",
-      "seconds": 2.319,
+      "seconds": 2.268,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -673,7 +664,7 @@
     },
     {
       "id": "CORE-BLOB-GATEWAY-RETRY",
-      "seconds": 43.137,
+      "seconds": 42.787,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -688,7 +679,7 @@
     },
     {
       "id": "CORE-BLOB-GC",
-      "seconds": 11.985,
+      "seconds": 11.886,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -703,7 +694,7 @@
     },
     {
       "id": "CORE-BLOB-INTERRUPT",
-      "seconds": 16.693,
+      "seconds": 16.843,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -718,7 +709,7 @@
     },
     {
       "id": "CORE-BLOB-NATIVE-STAGE",
-      "seconds": 1.767,
+      "seconds": 1.768,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -733,7 +724,7 @@
     },
     {
       "id": "CORE-BLOB-NO-DIGEST-AUTH",
-      "seconds": 7.027,
+      "seconds": 7.077,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -748,7 +739,7 @@
     },
     {
       "id": "CORE-BLOB-OFFLOADED",
-      "seconds": 2.719,
+      "seconds": 2.218,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -763,7 +754,7 @@
     },
     {
       "id": "CORE-BLOB-REFERENCE-INDEX",
-      "seconds": 4.422,
+      "seconds": 4.071,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -778,7 +769,7 @@
     },
     {
       "id": "CORE-BLOB-SLOW-READ",
-      "seconds": 7.026,
+      "seconds": 7.077,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -793,7 +784,7 @@
     },
     {
       "id": "CORE-BLOB-STAGE-DURING-TRANSFER",
-      "seconds": 2.919,
+      "seconds": 2.87,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -823,7 +814,7 @@
     },
     {
       "id": "CORE-BOOT",
-      "seconds": 6.476,
+      "seconds": 6.125,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -848,7 +839,7 @@
     },
     {
       "id": "CORE-CLOCK-DELAY",
-      "seconds": 17.095,
+      "seconds": 17.044,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -871,7 +862,7 @@
     },
     {
       "id": "CORE-CLOCK-DELAY-GATEWAY-DIALS",
-      "seconds": 17.443,
+      "seconds": 17.444,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -894,7 +885,7 @@
     },
     {
       "id": "CORE-CMD-CLOCK-JUMP",
-      "seconds": 3.57,
+      "seconds": 3.12,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -910,7 +901,7 @@
     },
     {
       "id": "CORE-CMD-CONFLICT",
-      "seconds": 3.069,
+      "seconds": 2.619,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -926,7 +917,7 @@
     },
     {
       "id": "CORE-CMD-CRASH-AMBIGUOUS",
-      "seconds": 3.019,
+      "seconds": 2.919,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -942,7 +933,7 @@
     },
     {
       "id": "CORE-CMD-ERA",
-      "seconds": 15.091,
+      "seconds": 15.293,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -958,8 +949,8 @@
     },
     {
       "id": "CORE-CMD-EXPIRY",
-      "seconds": 9.332,
-      "status": "pass",
+      "seconds": 8.829,
+      "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -974,7 +965,7 @@
     },
     {
       "id": "CORE-CMD-IDEMPOTENT",
-      "seconds": 3.221,
+      "seconds": 3.571,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -990,7 +981,7 @@
     },
     {
       "id": "CORE-CMD-LOST-RESPONSE",
-      "seconds": 3.922,
+      "seconds": 3.721,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1006,7 +997,7 @@
     },
     {
       "id": "CORE-CMD-OFFLINE",
-      "seconds": 8.679,
+      "seconds": 9.13,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1022,7 +1013,7 @@
     },
     {
       "id": "CORE-CMD-READ-YOUR-WRITE",
-      "seconds": 2.97,
+      "seconds": 2.819,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1056,7 +1047,7 @@
     },
     {
       "id": "CORE-DISCONNECT-DETECT",
-      "seconds": 18.095,
+      "seconds": 18.149,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1071,7 +1062,7 @@
     },
     {
       "id": "CORE-DOCTOR",
-      "seconds": 2.218,
+      "seconds": 2.168,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1094,7 +1085,7 @@
     },
     {
       "id": "CORE-FEED-PIPELINED-ACKS",
-      "seconds": 6.826,
+      "seconds": 7.026,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1127,7 +1118,7 @@
     },
     {
       "id": "CORE-GAP-REJECT",
-      "seconds": 4.672,
+      "seconds": 4.422,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1142,7 +1133,7 @@
     },
     {
       "id": "CORE-GATEWAY-DIALS",
-      "seconds": 53.71,
+      "seconds": 53.858,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1157,7 +1148,7 @@
     },
     {
       "id": "CORE-HELPER-RESTART",
-      "seconds": 3.621,
+      "seconds": 3.671,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1180,7 +1171,7 @@
     },
     {
       "id": "CORE-KILL-DURING-APPLY",
-      "seconds": 6.275,
+      "seconds": 6.326,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1195,7 +1186,7 @@
     },
     {
       "id": "CORE-KILL-GATEWAY-CAPTURE",
-      "seconds": 13.187,
+      "seconds": 13.238,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1210,7 +1201,7 @@
     },
     {
       "id": "CORE-LOCALHOST-DEFENSE",
-      "seconds": 2.569,
+      "seconds": 2.671,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1228,30 +1219,13 @@
     },
     {
       "id": "CORE-MESSAGES-SHAPE",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 13.99,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/publichttp",
-        "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: semantic product helper Descriptor",
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: semantic product helper OperationSchema",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "CORE-PAIR",
@@ -1273,7 +1247,7 @@
     },
     {
       "id": "CORE-QUERY-BLOB",
-      "seconds": 2.373,
+      "seconds": 2.319,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1289,7 +1263,7 @@
     },
     {
       "id": "CORE-QUERY-DEADLINE",
-      "seconds": 1.919,
+      "seconds": 1.968,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1305,7 +1279,7 @@
     },
     {
       "id": "CORE-QUERY-ROUNDTRIP",
-      "seconds": 2.069,
+      "seconds": 1.968,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1321,7 +1295,7 @@
     },
     {
       "id": "CORE-QUERY-SCOPE",
-      "seconds": 1.869,
+      "seconds": 1.818,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1337,7 +1311,7 @@
     },
     {
       "id": "CORE-REPLICA-CAPTURE-ATOMIC",
-      "seconds": 14.542,
+      "seconds": 14.389,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1352,7 +1326,7 @@
     },
     {
       "id": "CORE-REPLICA-CAPTURE-LEGACY",
-      "seconds": 35.477,
+      "seconds": 35.676,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1367,7 +1341,7 @@
     },
     {
       "id": "CORE-REPLICA-CAPTURE-OBSERVERS",
-      "seconds": 4.473,
+      "seconds": 4.573,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1382,7 +1356,7 @@
     },
     {
       "id": "CORE-REPLICA-CAPTURE-STAGING",
-      "seconds": 26.562,
+      "seconds": 26.711,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1397,7 +1371,7 @@
     },
     {
       "id": "CORE-REST-MCP-PARITY",
-      "seconds": 4.022,
+      "seconds": 4.122,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1414,7 +1388,7 @@
     },
     {
       "id": "CORE-RESTORE-EPOCH",
-      "seconds": 8.681,
+      "seconds": 8.729,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1437,7 +1411,7 @@
     },
     {
       "id": "CORE-RESTORE-OLD-SCHEMA",
-      "seconds": 0.115,
+      "seconds": 21.603,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1460,7 +1434,7 @@
     },
     {
       "id": "CORE-RESUME",
-      "seconds": 33.376,
+      "seconds": 33.27,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1475,7 +1449,7 @@
     },
     {
       "id": "CORE-RETENTION-RACE",
-      "seconds": 10.283,
+      "seconds": 10.482,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1490,7 +1464,7 @@
     },
     {
       "id": "CORE-SCOPE-CHANGE",
-      "seconds": 4.473,
+      "seconds": 4.572,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1508,7 +1482,7 @@
     },
     {
       "id": "CORE-SCOPE-LEAK",
-      "seconds": 2.369,
+      "seconds": 2.419,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1526,7 +1500,7 @@
     },
     {
       "id": "CORE-SIM-PROGRESS-RECOVERY",
-      "seconds": 3.22,
+      "seconds": 3.221,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1549,7 +1523,7 @@
     },
     {
       "id": "CORE-SLOW-CONSUMER",
-      "seconds": 34.928,
+      "seconds": 34.874,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1564,7 +1538,7 @@
     },
     {
       "id": "CORE-SNAPSHOT-INTERRUPT",
-      "seconds": 14.642,
+      "seconds": 14.641,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1579,35 +1553,22 @@
     },
     {
       "id": "CORE-SNAPSHOT-POOL",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 1.869,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
         "internal/blobs",
         "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/publichttp",
         "internal/replication",
         "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/trust"
       ],
-      "blocked_on": [
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_auth_isolation.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_command_resolve.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_hosts.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_rate_limits_fixture.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_sources.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_sources_errors.go still imports product implementations: operations, state, trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "CORE-SNAPSHOT-UNDER-LOAD",
-      "seconds": 14.64,
+      "seconds": 14.039,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1622,7 +1583,7 @@
     },
     {
       "id": "CORE-SOURCE-GRANTS",
-      "seconds": 7.328,
+      "seconds": 7.728,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1640,8 +1601,8 @@
     },
     {
       "id": "CORE-UPGRADE",
-      "seconds": 0.115,
-      "status": "fail",
+      "seconds": 2.068,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -1655,7 +1616,7 @@
     },
     {
       "id": "FILE-COMMANDS",
-      "seconds": 4.024,
+      "seconds": 3.921,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1671,7 +1632,7 @@
     },
     {
       "id": "FILE-CRUD-REAL",
-      "seconds": 3.974,
+      "seconds": 3.972,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1697,7 +1658,7 @@
     },
     {
       "id": "HELPER-IPC-RESPONSIVE",
-      "seconds": 0.116,
+      "seconds": 0.115,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1708,7 +1669,7 @@
     },
     {
       "id": "IWORK-REAL",
-      "seconds": 0.115,
+      "seconds": 0.116,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1719,7 +1680,7 @@
     },
     {
       "id": "LAB-MALFORMED-SCENARIO",
-      "seconds": 0.115,
+      "seconds": 0.116,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1729,7 +1690,7 @@
     },
     {
       "id": "LAB-SSE",
-      "seconds": 0.115,
+      "seconds": 0.116,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1739,7 +1700,7 @@
     },
     {
       "id": "LAB-TRUTH-MULTIPLICITY",
-      "seconds": 0.115,
+      "seconds": 0.116,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1749,7 +1710,7 @@
     },
     {
       "id": "LOC-SIM",
-      "seconds": 1.818,
+      "seconds": 1.719,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1759,7 +1720,7 @@
     },
     {
       "id": "MAC-ACTIONS",
-      "seconds": 0.115,
+      "seconds": 0.116,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1800,7 +1761,7 @@
     },
     {
       "id": "MAP-SIM",
-      "seconds": 1.92,
+      "seconds": 1.97,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1810,9 +1771,8 @@
     },
     {
       "id": "MSG-CAPABILITY-MATRIX",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 1.869,
+      "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -1820,500 +1780,195 @@
         "internal/contracts",
         "internal/iphone",
         "internal/operations",
-        "internal/publichttp",
         "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/trust"
       ],
-      "blocked_on": [
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "MSG-COMMAND-OBSERVED-IDS",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 3.373,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/publichttp",
-        "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: semantic product helper Descriptor",
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: semantic product helper OperationSchema",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "MSG-COMMAND-PARTS",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 17.145,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/publichttp",
-        "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: semantic product helper Descriptor",
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: semantic product helper OperationSchema",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "MSG-DB-REPLACED",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 2.821,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/publichttp",
-        "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: semantic product helper Descriptor",
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: semantic product helper OperationSchema",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "MSG-DELETE",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 2.074,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/publichttp",
-        "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "MSG-DELETE-REAL",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 2.119,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/publichttp",
-        "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: semantic product helper Descriptor",
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: semantic product helper OperationSchema",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "MSG-EDIT",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 2.871,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/publichttp",
-        "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "MSG-FAILED-OBSERVED-IDS",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 2.67,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/publichttp",
-        "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: semantic product helper Descriptor",
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: semantic product helper OperationSchema",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "MSG-HISTORY-IMPORT",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 13.591,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/publichttp",
-        "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: semantic product helper Descriptor",
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: semantic product helper OperationSchema",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "MSG-INCOMING",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 5.776,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/publichttp",
-        "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: semantic product helper Descriptor",
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: semantic product helper OperationSchema",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "MSG-MARK-READ",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 2.07,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/publichttp",
-        "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "MSG-OWNER-TOKEN-SELFCHAT",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 2.019,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/publichttp",
-        "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: semantic product helper Descriptor",
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: semantic product helper OperationSchema",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "MSG-PERMISSION-LOSS",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 3.172,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/publichttp",
-        "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: semantic product helper Descriptor",
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: semantic product helper OperationSchema",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "MSG-REACT",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 2.27,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/publichttp",
-        "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "MSG-READSTATE-REAL",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 2.12,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/publichttp",
-        "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: semantic product helper Descriptor",
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: semantic product helper OperationSchema",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "MSG-RECEIPTS",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 2.67,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/publichttp",
-        "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: semantic product helper Descriptor",
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: semantic product helper OperationSchema",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "MSG-REPLY",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 1.97,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/publichttp",
-        "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "MSG-RESEND",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 2.07,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/publichttp",
-        "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: semantic product helper Descriptor",
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: semantic product helper OperationSchema",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "MSG-SELFTEST",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 3.172,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/publichttp",
-        "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: semantic product helper Descriptor",
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: semantic product helper OperationSchema",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "MSG-SEND-FILES",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 3.622,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -2321,24 +1976,15 @@
         "internal/contracts",
         "internal/iphone",
         "internal/operations",
-        "internal/publichttp",
         "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/trust"
       ],
-      "blocked_on": [
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "MSG-SEND-GHOST",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 1.919,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -2346,24 +1992,15 @@
         "internal/contracts",
         "internal/iphone",
         "internal/operations",
-        "internal/publichttp",
         "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/trust"
       ],
-      "blocked_on": [
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "MSG-SEND-IDENTICAL-MANUAL",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 1.919,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -2371,24 +2008,15 @@
         "internal/contracts",
         "internal/iphone",
         "internal/operations",
-        "internal/publichttp",
         "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/trust"
       ],
-      "blocked_on": [
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "MSG-SEND-NEW-HANDLE",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 2.22,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -2396,24 +2024,15 @@
         "internal/contracts",
         "internal/iphone",
         "internal/operations",
-        "internal/publichttp",
         "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/trust"
       ],
-      "blocked_on": [
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "MSG-SEND-SELF-EMAIL",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 2.221,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -2421,24 +2040,15 @@
         "internal/contracts",
         "internal/iphone",
         "internal/operations",
-        "internal/publichttp",
         "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/trust"
       ],
-      "blocked_on": [
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "MSG-SEND-SELF-TEXT",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 2.27,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -2446,68 +2056,30 @@
         "internal/contracts",
         "internal/iphone",
         "internal/operations",
-        "internal/publichttp",
         "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/trust"
       ],
-      "blocked_on": [
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "MSG-UI-INTERFERENCE",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 2.019,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/publichttp",
-        "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "MSG-UNSEND",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 2.37,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/publichttp",
-        "internal/state",
-        "internal/trust",
-        "internal/web"
+        "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: semantic product helper NormalizeContactHandle",
-        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ]
+      "blocked_on": []
     },
     {
       "id": "NOTE-CRUD",
@@ -2527,7 +2099,7 @@
     },
     {
       "id": "NOTE-EDIT-PARITY",
-      "seconds": 3.873,
+      "seconds": 3.974,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2537,7 +2109,7 @@
     },
     {
       "id": "NOTE-EXTERNAL",
-      "seconds": 2.673,
+      "seconds": 2.771,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2547,7 +2119,7 @@
     },
     {
       "id": "NOTE-EXTRAS",
-      "seconds": 2.02,
+      "seconds": 2.07,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2573,7 +2145,7 @@
     },
     {
       "id": "NOTE-LIST",
-      "seconds": 2.571,
+      "seconds": 2.621,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2583,7 +2155,7 @@
     },
     {
       "id": "NOTE-RICH-REJECT",
-      "seconds": 1.92,
+      "seconds": 1.969,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2599,7 +2171,7 @@
     },
     {
       "id": "PDF-ANNOTATE",
-      "seconds": 1.668,
+      "seconds": 1.719,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2609,7 +2181,7 @@
     },
     {
       "id": "PDF-TEXT",
-      "seconds": 1.768,
+      "seconds": 1.769,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2619,7 +2191,7 @@
     },
     {
       "id": "QUERY-AGENT",
-      "seconds": 0.666,
+      "seconds": 0.567,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2787,7 +2359,7 @@
     },
     {
       "id": "REM-CONFLICT",
-      "seconds": 2.669,
+      "seconds": 2.769,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2803,7 +2375,7 @@
     },
     {
       "id": "REM-CREATE-EXTERNAL",
-      "seconds": 1.868,
+      "seconds": 1.919,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2813,7 +2385,7 @@
     },
     {
       "id": "REM-CRUD",
-      "seconds": 3.671,
+      "seconds": 3.721,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2829,7 +2401,7 @@
     },
     {
       "id": "REM-EXTERNAL-RACE",
-      "seconds": 2.77,
+      "seconds": 2.719,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2845,7 +2417,7 @@
     },
     {
       "id": "REM-LIST-CREATE",
-      "seconds": 1.819,
+      "seconds": 1.869,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2861,7 +2433,7 @@
     },
     {
       "id": "REM-LIST-MANAGE",
-      "seconds": 2.07,
+      "seconds": 2.069,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2877,7 +2449,7 @@
     },
     {
       "id": "REM-NATIVE-LIST-RACE",
-      "seconds": 2.419,
+      "seconds": 2.521,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2893,7 +2465,7 @@
     },
     {
       "id": "REM-OPERATION-SHAPES",
-      "seconds": 2.62,
+      "seconds": 2.669,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2909,7 +2481,7 @@
     },
     {
       "id": "REM-PERMISSION-LOSS",
-      "seconds": 1.969,
+      "seconds": 2.019,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2919,7 +2491,7 @@
     },
     {
       "id": "REM-READONLY-LIST",
-      "seconds": 2.77,
+      "seconds": 2.669,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2935,7 +2507,7 @@
     },
     {
       "id": "REM-RECURRING",
-      "seconds": 1.818,
+      "seconds": 1.869,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -3064,7 +2636,7 @@
     },
     {
       "id": "USE-IMPORT",
-      "seconds": 1.871,
+      "seconds": 1.869,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -3094,7 +2666,7 @@
     },
     {
       "id": "USE-REMOTE-LAG",
-      "seconds": 1.919,
+      "seconds": 1.87,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -3104,7 +2676,7 @@
     },
     {
       "id": "VIS-OCR",
-      "seconds": 0.116,
+      "seconds": 0.115,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -3114,7 +2686,7 @@
     },
     {
       "id": "WEB-AGENT-ACTIVITY",
-      "seconds": 18.698,
+      "seconds": 18.747,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -3133,7 +2705,7 @@
     },
     {
       "id": "WEB-AGENT-CREDENTIALS",
-      "seconds": 1.97,
+      "seconds": 2.021,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -3152,7 +2724,7 @@
     },
     {
       "id": "WEB-AGENT-LEVELS",
-      "seconds": 5.425,
+      "seconds": 5.426,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -3171,7 +2743,7 @@
     },
     {
       "id": "WEB-AGENT-OAUTH",
-      "seconds": 1.819,
+      "seconds": 1.871,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -3218,7 +2790,7 @@
     },
     {
       "id": "WEB-CAL-WRITE",
-      "seconds": 0.116,
+      "seconds": 0.118,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -3263,7 +2835,6 @@
       "blocked_on": [
         "harness: semantic product helper NormalizeContactHandle",
         "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
-        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
         "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
         "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
       ]
@@ -3300,7 +2871,7 @@
     },
     {
       "id": "WEB-RELAY-AUTH",
-      "seconds": 0.116,
+      "seconds": 0.117,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -3376,7 +2947,7 @@
     },
     {
       "id": "WEB-RM-REMINDERS-HARDENING",
-      "seconds": 0.117,
+      "seconds": 0.116,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -3386,7 +2957,7 @@
     },
     {
       "id": "WEB-RM-REMINDERS-LISTS",
-      "seconds": 0.117,
+      "seconds": 0.116,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -3427,6 +2998,7 @@
       "blocked_on": []
     }
   ],
-  "artifact_source_head": "fa2239afd24cbe46bd10017f7052aee2153ee143 plus approval metadata patch",
+  "artifact_source_head": "94871645be917b181a600f646c02155000dc42e0",
+  "harness_source_head": "af4c110702e87d01d29e0d19a56c17b807afe5f3 plus legacy prerequisite and selection patch",
   "artifact_sha256": "b53d3cc6d1bf7a48415ceacc54895b7fb36678b49cf5097012946d936d282efa"
 }
