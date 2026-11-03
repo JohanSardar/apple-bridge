@@ -1,7 +1,72 @@
 use super::{
-    Duration, Instant, Request, Result, Session, Shared, State, Ticket, Value, enqueue, id,
-    invalid, json, lock, mpsc, now, observation, send, string,
+    BTreeMap, Duration, Instant, Request, Result, Session, Shared, State, Ticket, Value, enqueue,
+    id, invalid, json, lock, mpsc, now, observation, send, string,
 };
+
+#[derive(Debug, Default)]
+pub(super) struct Live {
+    stamps: BTreeMap<String, (Value, bool)>,
+    verified: Option<jiff::Timestamp>,
+}
+
+fn clock(s: &State) -> jiff::Zoned {
+    let zone = jiff::tz::TimeZone::system();
+    s.data["calendar_clock"]
+        .as_str()
+        .and_then(|text| text.parse::<jiff::Timestamp>().ok())
+        .unwrap_or_else(jiff::Timestamp::now)
+        .to_zoned(zone)
+}
+
+pub(super) fn in_window(s: &State, record: &Value) -> bool {
+    if record["collection"] != "calendar.event" || record["kind"] == "absent" {
+        return true;
+    }
+    let now = clock(s);
+    let Ok(today) = now.date().to_zoned(now.time_zone().clone()) else {
+        return true;
+    };
+    let (Ok(left), Ok(right)) = (
+        today.checked_sub(jiff::Span::new().days(730)),
+        today.checked_add(jiff::Span::new().days(730)),
+    ) else {
+        return true;
+    };
+    let start = string(&record["data"], "start");
+    let end = string(&record["data"], "end");
+    if start.len() == 10 {
+        return start < right.date().to_string() && end > left.date().to_string();
+    }
+    let (Ok(a), Ok(b)) = (
+        start.parse::<jiff::Timestamp>(),
+        end.parse::<jiff::Timestamp>(),
+    ) else {
+        return false;
+    };
+    a < right.timestamp() && b > left.timestamp()
+}
+
+pub(super) fn view(s: &State, records: Vec<Value>) -> Vec<Value> {
+    records
+        .into_iter()
+        .map(|mut record| {
+            let key = string(&record, "native_key");
+            if let Some((cached, forced)) = s.calendar.stamps.get(&key)
+                && (*forced
+                    || (cached["data"]["location"] == record["data"]["location"]
+                        && cached["data"]["alarms"] == record["data"]["alarms"]))
+            {
+                record = cached.clone();
+            }
+            if !in_window(s, &record) {
+                record["kind"] = json!("evict");
+                record["revalidated"] = json!(true);
+                record["observed_at"] = json!(now());
+            }
+            record
+        })
+        .collect()
+}
 
 fn reference(key: &str) -> Value {
     json!({"$ref":{"collection":"calendar.calendar","native_key":key}})
@@ -186,7 +251,68 @@ pub(super) fn control_calendar(
             }
         }
         "clock" => {
-            s.data["calendar_clock"] = input["now"].clone();
+            let at = string(input, "now")
+                .parse::<jiff::Timestamp>()
+                .map_err(|_| invalid("invalid"))?;
+            s.data["calendar_clock"] = json!(at.to_string());
+            let due = s.calendar.verified.is_none_or(|last| {
+                at >= last
+                    .checked_add(jiff::SignedDuration::from_mins(15))
+                    .unwrap_or(last)
+            });
+            if due {
+                s.calendar.stamps.clear();
+                s.calendar.verified = Some(at);
+            }
+        }
+        "server_update" => {
+            let mut record = s.data["records"][&key].clone();
+            if record["collection"] != "calendar.event" {
+                return Err(invalid("not found"));
+            }
+            let forced = input["force_stamp_match"] == true;
+            s.calendar
+                .stamps
+                .insert(key.clone(), (record.clone(), forced));
+            if let Some(changes) = input["data"].as_object() {
+                for (field, value) in changes {
+                    record["data"][field] = value.clone();
+                }
+            }
+            s.data["records"][&key] = record;
+            s.save()?;
+            return Ok(json!({"effect_done":true,"stamp_unchanged":forced}));
+        }
+        "move" => {
+            let mut record = s.data["records"][&key].clone();
+            if record["collection"] != "calendar.event" || record["kind"] == "absent" {
+                return Err(invalid("not found"));
+            }
+            let parse = |text: &str| {
+                text.parse::<jiff::Timestamp>()
+                    .map_err(|_| invalid("invalid"))
+            };
+            let start = parse(&string(&input["data"], "start"))?;
+            let old = parse(&string(&record["data"], "start"))?;
+            let old_end = parse(&string(&record["data"], "end"))?;
+            let mut finish = start
+                .checked_add(old_end.duration_since(old))
+                .map_err(|_| invalid("invalid"))?;
+            if let Some(requested) = input["data"]["end"].as_str() {
+                let parsed = parse(requested)?;
+                if parsed <= start {
+                    return Err(invalid("invalid"));
+                }
+                finish = parsed;
+            }
+            record["data"]["start"] = json!(start.to_string());
+            record["data"]["end"] = json!(finish.to_string());
+            record["data"]["is_exception"] = json!(true);
+            if let Some(title) = input["data"]["new_title"].as_str() {
+                record["data"]["title"] = json!(title);
+            }
+            record["observed_at"] = json!(now());
+            s.data["records"][&key] = record;
         }
         _ => return Err(invalid("unsupported calendar control")),
     }
@@ -196,10 +322,11 @@ pub(super) fn control_calendar(
     frame["live"] = json!(true);
     let bytes = serde_json::to_vec(&frame["observations"])?.len();
     drop(s);
+    let effect_at = now();
     if !denied {
         enqueue(tx, frame, true)?;
     }
-    Ok(json!({"effect_done":true,"effect_at":now(),"capture_bytes":bytes}))
+    Ok(json!({"effect_done":true,"effect_at":effect_at,"capture_bytes":bytes}))
 }
 
 impl Session {
@@ -212,7 +339,7 @@ impl Session {
             drop(s);
             return self.reject(frame, "unavailable");
         }
-        if args.is_null() || args["span"] == "all" || args["span"] == "future" {
+        if args.is_null() || args["span"] == "all" {
             drop(s);
             return self.reject(frame, "unsupported");
         }
@@ -304,13 +431,13 @@ impl Session {
         }
         let action = ticket.prepare["action"].clone();
         let op = string(&action, "op");
-        let mut key = string(&action, "native_key");
         let mut s = lock(state)?;
         if s.denied.get("calendar") == Some(&true) {
             drop(s);
             return self.reject(frame, "unavailable");
         }
-        if !key.is_empty() && s.data["records"][&key]["data"] != ticket.before {
+        let requested = string(&action, "native_key");
+        if !requested.is_empty() && s.data["records"][&requested]["data"] != ticket.before {
             drop(s);
             return self.reject(frame, "conflict");
         }
@@ -322,70 +449,46 @@ impl Session {
             }
         }
         s.guard(&json!({"command_id":command,"ticket":frame["ticket"],"started_at":now()}))?;
-        if key.is_empty() {
-            key = id("event")?;
-        }
-        let list = string(&action, "list_key");
-        let calendar_op = op == "calendar.create_calendar";
-        let mut data = if ticket.before.is_null() {
-            json!({})
-        } else {
-            ticket.before.clone()
-        };
-        let mut patch = action["calendar_args"]
-            .as_object()
-            .cloned()
-            .unwrap_or_default();
-        for field in ["id", "calendar_id", "span"] {
-            patch.remove(field);
-        }
-        for (k, v) in patch {
-            data[k] = v;
-        }
-        if calendar_op {
-            data["writable"] = json!(true);
-            data["account"] = json!("test");
-            data["type"] = json!("local");
-            data["color"] = json!("#00aaff");
-        } else {
-            data["calendar_id"] = reference(&list);
-            defaults(&mut data);
-        }
-        let absent = op.ends_with("delete_event");
-        let series = string(&data, "series_id");
-        if !series.is_empty() && !calendar_op {
-            data["is_exception"] = json!(true);
-        }
-        let mut writes = vec![(key.clone(), data.clone())];
-        if op == "calendar.create_event"
-            && data["recurrence"].as_array().is_some_and(|r| !r.is_empty())
-        {
-            writes = expand(&data, &key, &scope(&s, &list))?;
-            key.clone_from(&writes[0].0);
-            data = writes[0].1.clone();
-        }
-        for (target, value) in writes {
-            let mut record = if calendar_op {
-                observation("calendar.calendar", &target, value)
-            } else {
-                let mut record = observation("calendar.event", &target, value);
-                record["scoped_alias"] = json!(format!("{}{target}", scope(&s, &list)));
-                record
-            };
-            if absent {
-                record["kind"] = json!("absent");
-                record["revalidated"] = json!(true);
-            }
-            s.put(record);
-        }
+        let plan = Plan::new(&action, &op)?;
+        let native = apply(&mut s, plan, &op)?;
         let count = s.data["effects"][&command].as_u64().unwrap_or_default() + 1;
         s.data["effects"][&command] = json!(count);
         s.save()?;
         let capture = s.scan("calendar")?;
+        let primary = s.data["records"][&native].clone();
+        let actual = primary["data"].clone();
         drop(s);
+        let large = capture["observations"]
+            .as_array()
+            .is_some_and(|items| items.len() > 64);
         self.emit(state, capture)?;
-        let result = if absent { Value::Null } else { data };
-        let outcome = json!({"t":"Outcome","command_id":command,"disposition":"locally_observed","evidence":{"source":"calendar","native_key":key,"native_result":result,"fingerprint":ticket.prepare["request_hash"],"observed":true,"absent":absent,"capture_checkpoint":self.checkpoints.get("calendar")}});
+        if large {
+            self.emit(
+                state,
+                json!({"t":"Capture","source":"calendar","observations":[primary],"scan_id":id("scan")?,"scope":["calendar.calendar","calendar.event"],"scan_started_at":now(),"completion_evidence":"complete"}),
+            )?;
+        }
+        let args = &action["calendar_args"];
+        let mut matched = true;
+        if !args["recurrence"].is_null()
+            && matches!(
+                op.as_str(),
+                "calendar.update_event" | "calendar.create_event"
+            )
+        {
+            matched = rules_match(&actual["recurrence"], &args["recurrence"]);
+        }
+        let absent = op.ends_with("delete_event");
+        let result = if absent { Value::Null } else { actual };
+        let mut evidence = json!({"source":"calendar","native_key":native,"native_result":result,"fingerprint":ticket.prepare["request_hash"],"observed":matched,"absent":absent});
+        let disposition = if matched {
+            evidence["capture_checkpoint"] = json!(self.checkpoints.get("calendar"));
+            "locally_observed"
+        } else {
+            evidence["reason"] = json!("native_postcondition_mismatch");
+            "indeterminate"
+        };
+        let outcome = json!({"t":"Outcome","command_id":command,"disposition":disposition,"evidence":evidence});
         let mut s = lock(state)?;
         s.data["evidence"][&command] = outcome.clone();
         s.save()?;
@@ -394,4 +497,301 @@ impl Session {
         send(&mut self.stream, &outcome)?;
         Ok(())
     }
+}
+
+struct Plan {
+    patch: serde_json::Map<String, Value>,
+    span: String,
+    list: String,
+    native: String,
+    calendar_op: bool,
+    recurrence: bool,
+    series_id: String,
+}
+
+impl Plan {
+    fn new(action: &Value, op: &str) -> Result<Self> {
+        let mut native = string(action, "native_key");
+        if native.is_empty() {
+            native = id("event")?;
+        }
+        let args = &action["calendar_args"];
+        let mut patch = args.as_object().cloned().unwrap_or_default();
+        for field in ["id", "calendar_id", "span"] {
+            patch.remove(field);
+        }
+        Ok(Self {
+            patch,
+            span: string(args, "span"),
+            list: string(action, "list_key"),
+            native,
+            calendar_op: op == "calendar.create_calendar",
+            recurrence: args["recurrence"].as_array().is_some_and(|r| !r.is_empty()),
+            series_id: id("series")?,
+        })
+    }
+}
+
+fn bounded(value: &Value, count: usize) -> Value {
+    let Some(rules) = value.as_array() else {
+        return value.clone();
+    };
+    let mut result = Vec::new();
+    for rule in rules {
+        let Some(object) = rule.as_object() else {
+            return value.clone();
+        };
+        let mut copy = object.clone();
+        copy.insert("count".to_owned(), json!(count));
+        copy.remove("end");
+        result.push(Value::Object(copy));
+    }
+    Value::Array(result)
+}
+
+fn normalized(value: &Value) -> Value {
+    match value {
+        Value::Object(map) => Value::Object(
+            map.iter()
+                .map(|(k, v)| (k.clone(), normalized(v)))
+                .filter(|(_, v)| {
+                    !(v.is_null()
+                        || v.as_array().is_some_and(Vec::is_empty)
+                        || v.as_str().is_some_and(str::is_empty)
+                        || v.as_i64() == Some(0))
+                })
+                .collect(),
+        ),
+        Value::Array(items) => Value::Array(items.iter().map(normalized).collect()),
+        other => other.clone(),
+    }
+}
+
+fn rules_match(actual: &Value, requested: &Value) -> bool {
+    let left = actual.as_array().cloned().unwrap_or_default();
+    let right = requested.as_array().cloned().unwrap_or_default();
+    left.len() == right.len()
+        && (left.is_empty() || normalized(&Value::Array(left)) == normalized(&Value::Array(right)))
+}
+
+fn shifted(old: &str, anchor: &str, replacement: &str, all_day: bool) -> Option<String> {
+    if all_day {
+        let current: jiff::civil::Date = old.parse().ok()?;
+        let before: jiff::civil::Date = anchor.parse().ok()?;
+        let after: jiff::civil::Date = replacement.parse().ok()?;
+        let days = i64::from(before.until(after).ok()?.get_days());
+        return current
+            .checked_add(jiff::Span::new().days(days))
+            .ok()
+            .map(|d| d.to_string());
+    }
+    let current: jiff::Timestamp = old.parse().ok()?;
+    let before: jiff::Timestamp = anchor.parse().ok()?;
+    let after: jiff::Timestamp = replacement.parse().ok()?;
+    current
+        .checked_add(after.duration_since(before))
+        .ok()
+        .map(|t| t.to_string())
+}
+
+fn series_members(
+    s: &State,
+    series: &str,
+    calendar: &Value,
+    original: &str,
+) -> (Vec<String>, Vec<String>) {
+    let (mut later, mut earlier) = (Vec::new(), Vec::new());
+    for (key, record) in s.data["records"].as_object().into_iter().flatten() {
+        let data = &record["data"];
+        if record["kind"] == "absent"
+            || data["series_id"] != series
+            || data["calendar_id"] != *calendar
+        {
+            continue;
+        }
+        if string(data, "occurrence_date").as_str() >= original {
+            later.push(key.clone());
+        } else {
+            earlier.push(key.clone());
+        }
+    }
+    (later, earlier)
+}
+
+fn absent(record: &mut Value) {
+    record["kind"] = json!("absent");
+    record["revalidated"] = json!(true);
+    record["observed_at"] = json!(now());
+}
+
+fn apply(s: &mut State, mut plan: Plan, op: &str) -> Result<String> {
+    let collection = if plan.calendar_op {
+        "calendar.calendar"
+    } else {
+        "calendar.event"
+    };
+    let target = s.data["records"][&plan.native].clone();
+    let data = if target["data"].is_object() {
+        target["data"].clone()
+    } else {
+        json!({})
+    };
+    let series = string(&data, "series_id");
+    let original = string(&data, "occurrence_date");
+    let future = plan.span == "future" && !series.is_empty();
+    let mut targets = vec![plan.native.clone()];
+    if future {
+        let (later, earlier) = series_members(s, &series, &data["calendar_id"], &original);
+        targets = later;
+        for key in &earlier {
+            let mut record = s.data["records"][key].clone();
+            record["data"]["recurrence"] = bounded(&record["data"]["recurrence"], earlier.len());
+            record["observed_at"] = json!(now());
+            s.put(record);
+        }
+    }
+    let scope_prefix = scope(s, &plan.list);
+    if future && plan.recurrence && matches!(op, "calendar.update_event" | "calendar.create_event")
+    {
+        let mut base = data.clone();
+        for (field, value) in &plan.patch {
+            base[field] = value.clone();
+        }
+        if s.fault == "calendar-rule-mismatch" {
+            s.fault.clear();
+            if let Some(rule) = base["recurrence"]
+                .as_array()
+                .and_then(|r| r.first())
+                .cloned()
+            {
+                let mut rule = rule;
+                rule["count"] = json!(1);
+                base["recurrence"] = json!([rule]);
+            }
+        }
+        base["is_exception"] = json!(false);
+        let expanded = expand(&base, &plan.series_id, "")?;
+        let mut prior = BTreeMap::new();
+        for key in &targets {
+            let mut record = s.data["records"][key].clone();
+            prior.insert(string(&record["data"], "occurrence_date"), record.clone());
+            absent(&mut record);
+            s.put(record);
+        }
+        let mut used = std::collections::BTreeSet::new();
+        for (index, (key, value)) in expanded.into_iter().enumerate() {
+            let occurrence = string(&value, "occurrence_date");
+            let mut value = value;
+            if let Some(old) = prior.get(&occurrence) {
+                if old["data"]["is_exception"] == true {
+                    value = old["data"].clone();
+                    value["series_id"] = json!(plan.series_id);
+                    value["recurrence"] = base["recurrence"].clone();
+                }
+                used.insert(occurrence);
+            }
+            let mut record = observation(collection, &key, value);
+            record["scoped_alias"] = json!(format!("{scope_prefix}{key}"));
+            s.put(record);
+            if index == 0 {
+                plan.native = key;
+            }
+        }
+        for (occurrence, mut old) in prior {
+            if !used.contains(&occurrence) && old["data"]["is_exception"] == true {
+                if let Some(object) = old["data"].as_object_mut() {
+                    object.remove("series_id");
+                    object.remove("occurrence_date");
+                }
+                old["data"]["recurrence"] = json!([]);
+                old["data"]["is_exception"] = json!(false);
+                let key = id("event")?;
+                old["native_key"] = json!(key);
+                old["scoped_alias"] = json!(format!("{scope_prefix}{key}"));
+                old["revalidated"] = json!(false);
+                old["kind"] = json!("upsert");
+                old["observed_at"] = json!(now());
+                s.put(old);
+            }
+        }
+        targets.clear();
+    }
+    let target_count = targets.len();
+    for mut key in targets {
+        let record = s.data["records"][&key].clone();
+        let mut value = if record["data"].is_object() {
+            record["data"].clone()
+        } else {
+            json!({})
+        };
+        for (field, patch) in &plan.patch {
+            if future && key != plan.native && value["is_exception"] == true {
+                continue;
+            }
+            if matches!(field.as_str(), "start" | "end") && key != plan.native && future {
+                let all_day = value["all_day"] == true;
+                if let Some(next) = shifted(
+                    &string(&value, field),
+                    &string(&data, field),
+                    patch.as_str().unwrap_or_default(),
+                    all_day,
+                ) {
+                    value[field] = json!(next);
+                    continue;
+                }
+            }
+            value[field] = patch.clone();
+        }
+        if plan.calendar_op {
+            value["writable"] = json!(true);
+            value["account"] = json!("test");
+            value["type"] = json!("local");
+            value["color"] = json!("#00aaff");
+        } else {
+            value["calendar_id"] = reference(&plan.list);
+            if !series.is_empty() {
+                if plan.span == "this" {
+                    value["is_exception"] = json!(true);
+                } else {
+                    value["series_id"] = json!(plan.series_id);
+                    value["recurrence"] = bounded(&value["recurrence"], target_count);
+                }
+            }
+            defaults(&mut value);
+        }
+        let mut alias = string(&record, "scoped_alias");
+        if alias.is_empty() && !plan.calendar_op {
+            alias = format!("{scope_prefix}{key}");
+        }
+        if future && op == "calendar.update_event" {
+            let mut old = record.clone();
+            absent(&mut old);
+            s.put(old);
+            let original_key = key.clone();
+            value["occurrence_date"] = value["start"].clone();
+            key = format!("{}|{}", plan.series_id, string(&value, "occurrence_date"));
+            alias = format!("{scope_prefix}{key}");
+            if original_key == plan.native {
+                plan.native.clone_from(&key);
+            }
+        }
+        let mut next = observation(collection, &key, value);
+        next["scoped_alias"] = json!(alias);
+        if op.ends_with("delete_event") {
+            next["kind"] = json!("absent");
+            next["revalidated"] = json!(true);
+        }
+        if op == "calendar.create_event" && plan.recurrence {
+            let expanded = expand(&next["data"], &key, "")?;
+            plan.native.clone_from(&expanded[0].0);
+            for (event, value) in expanded {
+                let mut record = observation(collection, &event, value);
+                record["scoped_alias"] = json!(format!("{scope_prefix}{event}"));
+                s.put(record);
+            }
+        } else {
+            s.put(next);
+        }
+    }
+    Ok(plan.native)
 }

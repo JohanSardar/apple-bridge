@@ -77,6 +77,7 @@ struct State {
     path: PathBuf,
     socket: String,
     secret: Vec<u8>,
+    calendar: calendar::Live,
 }
 impl State {
     fn save(&self) -> Result<()> {
@@ -107,6 +108,11 @@ impl State {
             .into_iter()
             .filter(|v| source(v["collection"].as_str().unwrap_or_default()) == src)
             .collect();
+        let records = if src == "calendar" {
+            calendar::view(self, records)
+        } else {
+            records
+        };
         let fixed: &[&str] = match src {
             "messages" => &["chat", "handle", "message", "reaction", "attachment"],
             "contacts" => &["contact", "group"],
@@ -190,8 +196,13 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
             "poll_pending":s.data["message_poll_pending"] == true,
             "permitted":s.denied.get("messages") != Some(&true)
         })),
-        "/inspect" => Ok(json!(s.records())),
         "/protocol" => Ok(s.data["protocol"].clone()),
+        "/inspect" => Ok(json!(
+            s.records()
+                .into_iter()
+                .filter(|record| calendar::in_window(&s, record))
+                .collect::<Vec<_>>()
+        )),
         "/effects" => Ok(s.data["effects"].clone()),
         "/command-origins" => Ok(s.data["origins"].clone()),
         "/stats" => Ok(
@@ -208,6 +219,7 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
                 "identical-manual-send",
                 "ui-interference",
                 "ui-interference-before",
+                "calendar-rule-mismatch",
             ]
             .contains(&name.as_str())
             {
@@ -1118,6 +1130,7 @@ fn run() -> Result<()> {
         denied: BTreeMap::new(),
         socket: socket.clone(),
         secret: secret.clone(),
+        calendar: calendar::Live::default(),
     }));
     {
         let mut s = lock(&state)?;
