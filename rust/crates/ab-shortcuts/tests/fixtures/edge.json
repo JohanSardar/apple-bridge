@@ -1,0 +1,5 @@
+{"version":1,"name":"Edge <Case> & \"Quotes\"","actions":[
+{"key":"first","identifier":"is.workflow.actions.gettext","parameters":{"WFTextActionText":{"$input":true},"Float":1.5,"Big":1e21,"Small":0.00001,"Exp":1e2,"Neg":-2.25,"Huge":18446744073709551615,"Text":"tab\there\nnew \u0001 'apos' é 😀","Flag":false,"List":[1,{"a":true},"x"],"Empty":{},"Group":{"$group":"g1"}}},
+{"key":"second","identifier":"is.workflow.actions.conditional","parameters":{"Ref":{"$output":"first","$property":"label","$coerce":"WFStringContentItem"},"TextRef":{"$output":"first","$text":true},"Plain":{"$output":"first"},"Nested":{"WFSerializationType":"WFTextTokenString","Value":{"string":"￼","attachmentsByRange":{"{0, 1}":{"WFSerializationType":"WFTextTokenAttachment","Value":{"Type":"ActionOutput"}}}}}}},
+{"key":"third","identifier":"is.workflow.actions.output","parameters":null}
+]}

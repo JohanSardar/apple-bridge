@@ -271,6 +271,7 @@ dependencies = [
  "ab-operations",
  "ab-remote",
  "ab-replication",
+ "ab-shortcuts",
  "ab-state",
  "ab-trust",
  "ab-wire",
@@ -301,6 +302,18 @@ dependencies = [
  "ab-sys",
  "jiff",
  "rusqlite",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "ab-shortcuts"
+version = "0.0.0"
+dependencies = [
+ "ab-sys",
+ "jiff",
  "serde",
  "serde_json",
  "sha2 0.10.9",

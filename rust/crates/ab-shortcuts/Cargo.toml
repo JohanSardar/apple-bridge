@@ -1,0 +1,23 @@
+[package]
+name = "ab-shortcuts"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+[lints]
+workspace = true
+[features]
+lab-harness = []
+[dependencies]
+ab-sys = { path = "../ab-sys" }
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+jiff.workspace = true
+[[bin]]
+name = "ab-shortcuts"
+path = "src/main.rs"
+[[bin]]
+name = "ab-shortcuts-checks"
+path = "src/checks.rs"
+required-features = ["lab-harness"]
