@@ -124,7 +124,7 @@ func run() error {
 			return err
 		}
 		if c.name == "sources.status" || c.name == "replica.status" {
-			if !timing(a) || !timing(b) {
+			if !timing(c.name, a) || !timing(c.name, b) {
 				return fmt.Errorf("live timing invalid for %s", c.name)
 			}
 			fmt.Printf("TIMING %s valid=true\n", c.name)
@@ -292,19 +292,37 @@ func normalizeMCP(name string, result map[string]any) {
 	}
 }
 
-func timing(raw []byte) bool {
+func timing(name string, raw []byte) bool {
+	type liveStatus struct {
+		Heartbeat string `json:"last_heartbeat"`
+		Staleness int64  `json:"staleness_ms"`
+	}
 	var value struct {
-		Replica struct {
-			Heartbeat string `json:"last_heartbeat"`
-			Staleness int64  `json:"staleness_ms"`
-		} `json:"replica"`
+		Replica liveStatus `json:"replica"`
+		Records []struct {
+			Collection string     `json:"collection"`
+			ObservedAt string     `json:"observed_at"`
+			Data       liveStatus `json:"data"`
+		} `json:"records"`
 	}
 	if json.Unmarshal(raw, &value) != nil {
 		return false
 	}
-	heartbeat, err := time.Parse(time.RFC3339Nano, value.Replica.Heartbeat)
-	age := time.Since(heartbeat)
-	return err == nil && age >= 0 && age < 15*time.Second && value.Replica.Staleness >= 0 && value.Replica.Staleness < 15000
+	recent := func(text string) bool {
+		timestamp, err := time.Parse(time.RFC3339Nano, text)
+		age := time.Since(timestamp)
+		return err == nil && age >= 0 && age < 15*time.Second
+	}
+	valid := func(status liveStatus) bool {
+		return recent(status.Heartbeat) && status.Staleness >= 0 && status.Staleness < 15000
+	}
+	if !valid(value.Replica) {
+		return false
+	}
+	if name == "replica.status" {
+		return len(value.Records) == 1 && value.Records[0].Collection == "system.replica" && recent(value.Records[0].ObservedAt) && valid(value.Records[0].Data)
+	}
+	return true
 }
 
 func cancellation(ctx context.Context, w *world.World, protocol string) bool {
@@ -411,6 +429,9 @@ func rawMCP(name string, a, b []byte) bool {
 		return false
 	}
 	for _, payload := range []envelope{left, right} {
+		if (name == "sources.status" || name == "replica.status") && !timing(name, payload.Result.Structured) {
+			return false
+		}
 		if !bytes.Equal(normalize(name, payload.Result.Structured), normalize(name, []byte(payload.Result.Content[0].Text))) {
 			return false
 		}

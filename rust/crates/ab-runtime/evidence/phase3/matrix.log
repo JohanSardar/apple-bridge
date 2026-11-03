@@ -1,0 +1,53 @@
+REPLICA_IMPL="gateway=go,replica=rust" REPLICA_MATRIX_FLAGS="--local-replicas --jobs 1" RUST_BRIDGE="/home/johan/ab-phase3-frozen/bridge-4ce8f25e" SCENARIOS="/home/johan/ab-phase3-ubuntu-scenarios" packaging/dev/replica-matrix.sh
+CALLS-REPLICA replica passed=true quiet=true latency=null
+running CALLS-REPLICA replica
+CORE-BENCH replica passed=true quiet=true latency={"effect_done→gateway_visible":{"samples":1,"p50_ms":7.282048,"p95_ms":7.282048,"max_ms":7.282048,"timeouts":0},"effect_done→replica_visible:replica0":{"samples":1,"p50_ms":87.803531,"p95_ms":87.803531,"max_ms":87.803531,"timeouts":0},"fts5_query_gateway":{"samples":100,"p50_ms":4.77404,"p95_ms":7.934181,"max_ms":12.203372,"timeouts":0}}
+running CORE-BENCH replica
+CORE-BLOB-INTERRUPT replica passed=true quiet=true latency={"bulk_barrier→blob_complete":{"samples":1,"p50_ms":2367.183353,"p95_ms":2367.183353,"max_ms":2367.183353,"timeouts":0},"effect_done→blob_complete":{"samples":1,"p50_ms":5117.308503,"p95_ms":5117.308503,"max_ms":5117.308503,"timeouts":0},"effect_done→gateway_blob_present":{"samples":1,"p50_ms":1005.790846,"p95_ms":1005.790846,"max_ms":1005.790846,"timeouts":0},"effect_done→gateway_visible":{"samples":1,"p50_ms":11.788501,"p95_ms":11.788501,"max_ms":11.788501,"timeouts":0},"effect_done→metadata_during_blob":{"samples":1,"p50_ms":126.460921,"p95_ms":126.460921,"max_ms":126.460921,"timeouts":0},"effect_done→replica_visible:replica0":{"samples":1,"p50_ms":76.987135,"p95_ms":76.987135,"max_ms":76.987135,"timeouts":0},"gateway_present→replica_partial":{"samples":1,"p50_ms":215.682895,"p95_ms":215.682895,"max_ms":215.682895,"timeouts":0},"interrupt→reconnected":{"samples":1,"p50_ms":1248.123731,"p95_ms":1248.123731,"max_ms":1248.123731,"timeouts":0},"reconnected→blob_complete":{"samples":1,"p50_ms":2525.60315,"p95_ms":2525.60315,"max_ms":2525.60315,"timeouts":0}}
+running CORE-BLOB-INTERRUPT replica
+CORE-BOOT replica passed=true quiet=true latency={"effect_done→gateway_visible":{"samples":1,"p50_ms":12.847899,"p95_ms":12.847899,"max_ms":12.847899,"timeouts":0},"effect_done→replica_visible:replica0":{"samples":1,"p50_ms":36.673671,"p95_ms":36.673671,"max_ms":36.673671,"timeouts":0}}
+running CORE-BOOT replica
+CORE-CLOCK-DELAY-GATEWAY-DIALS replica passed=true quiet=true latency={"effect_done→gateway_visible":{"samples":1,"p50_ms":12.981289,"p95_ms":12.981289,"max_ms":12.981289,"timeouts":0},"effect_done→replica_visible:replica0":{"samples":1,"p50_ms":81.789516,"p95_ms":81.789516,"max_ms":81.789516,"timeouts":0}}
+running CORE-CLOCK-DELAY-GATEWAY-DIALS replica
+CORE-CLOCK-DELAY replica passed=true quiet=true latency={"effect_done→gateway_visible":{"samples":1,"p50_ms":10.099904,"p95_ms":10.099904,"max_ms":10.099904,"timeouts":0},"effect_done→replica_visible:replica0":{"samples":1,"p50_ms":104.77901,"p95_ms":104.77901,"max_ms":104.77901,"timeouts":0}}
+running CORE-CLOCK-DELAY replica
+CORE-CMD-CONFLICT replica passed=true quiet=true latency={"effect_done→gateway_visible":{"samples":1,"p50_ms":9.428884,"p95_ms":9.428884,"max_ms":9.428884,"timeouts":0},"effect_done→replica_visible:replica0":{"samples":1,"p50_ms":50.534274,"p95_ms":50.534274,"max_ms":50.534274,"timeouts":0},"effect_done→replica_visible:replica1":{"samples":1,"p50_ms":70.842027,"p95_ms":70.842027,"max_ms":70.842027,"timeouts":0}}
+running CORE-CMD-CONFLICT replica
+CORE-CMD-LOST-RESPONSE replica passed=true quiet=true latency={"effect_done→gateway_visible":{"samples":1,"p50_ms":10.278581,"p95_ms":10.278581,"max_ms":10.278581,"timeouts":0},"effect_done→replica_visible:replica0":{"samples":1,"p50_ms":90.180251,"p95_ms":90.180251,"max_ms":90.180251,"timeouts":0},"effect_done→replica_visible:replica1":{"samples":1,"p50_ms":104.040753,"p95_ms":104.040753,"max_ms":104.040753,"timeouts":0}}
+running CORE-CMD-LOST-RESPONSE replica
+CORE-CMD-OFFLINE replica passed=true quiet=true latency={"effect_done→gateway_visible":{"samples":1,"p50_ms":10.274389,"p95_ms":10.274389,"max_ms":10.274389,"timeouts":0},"effect_done→replica_visible:replica0":{"samples":1,"p50_ms":37.604638,"p95_ms":37.604638,"max_ms":37.604638,"timeouts":0},"effect_done→replica_visible:replica1":{"samples":1,"p50_ms":53.567999,"p95_ms":53.567999,"max_ms":53.567999,"timeouts":0}}
+running CORE-CMD-OFFLINE replica
+CORE-CMD-READ-YOUR-WRITE replica passed=true quiet=true latency={"effect_done→gateway_visible":{"samples":1,"p50_ms":6.984407,"p95_ms":6.984407,"max_ms":6.984407,"timeouts":0},"effect_done→replica_visible:replica0":{"samples":1,"p50_ms":54.835951,"p95_ms":54.835951,"max_ms":54.835951,"timeouts":0},"effect_done→replica_visible:replica1":{"samples":1,"p50_ms":82.40329,"p95_ms":82.40329,"max_ms":82.40329,"timeouts":0}}
+running CORE-CMD-READ-YOUR-WRITE replica
+CORE-CRED-LIFECYCLE replica passed=true quiet=true latency={"effect_done→gateway_visible":{"samples":1,"p50_ms":6.171335,"p95_ms":6.171335,"max_ms":6.171335,"timeouts":0},"effect_done→replica_visible:replica0":{"samples":1,"p50_ms":103.326824,"p95_ms":103.326824,"max_ms":103.326824,"timeouts":0}}
+running CORE-CRED-LIFECYCLE replica
+CORE-DISCONNECT-DETECT replica passed=true quiet=true latency={"effect_done→gateway_visible":{"samples":2,"p50_ms":6.778807,"p95_ms":8.595283,"max_ms":8.595283,"timeouts":0},"effect_done→replica_visible:replica0":{"samples":2,"p50_ms":90.92963,"p95_ms":1105.246198,"max_ms":1105.246198,"timeouts":0}}
+running CORE-DISCONNECT-DETECT replica
+CORE-DOCTOR replica passed=true quiet=true latency={"effect_done→gateway_visible":{"samples":1,"p50_ms":8.68411,"p95_ms":8.68411,"max_ms":8.68411,"timeouts":0},"effect_done→replica_visible:replica0":{"samples":1,"p50_ms":27.845763,"p95_ms":27.845763,"max_ms":27.845763,"timeouts":0}}
+running CORE-DOCTOR replica
+CORE-FEED-PIPELINED-ACKS replica passed=true quiet=true latency={"effect_done→gateway_visible":{"samples":1,"p50_ms":11.195663,"p95_ms":11.195663,"max_ms":11.195663,"timeouts":0},"effect_done→replica_visible:replica0":{"samples":1,"p50_ms":85.008829,"p95_ms":85.008829,"max_ms":85.008829,"timeouts":0}}
+running CORE-FEED-PIPELINED-ACKS replica
+CORE-GAP-REJECT replica passed=true quiet=true latency={"effect_done→gateway_visible":{"samples":1,"p50_ms":10.537853,"p95_ms":10.537853,"max_ms":10.537853,"timeouts":0},"effect_done→replica_visible:replica0":{"samples":1,"p50_ms":38.909481,"p95_ms":38.909481,"max_ms":38.909481,"timeouts":0}}
+running CORE-GAP-REJECT replica
+CORE-GATEWAY-DIALS replica passed=true quiet=true latency={"effect_done→gateway_visible":{"samples":200,"p50_ms":11.415822,"p95_ms":18.774366,"max_ms":88.945553,"timeouts":0},"effect_done→replica_visible:replica0":{"samples":200,"p50_ms":60.964499,"p95_ms":111.751746,"max_ms":130.578222,"timeouts":0},"partition_effect_done→replica_visible:replica0":{"samples":10,"p50_ms":2661.686499,"p95_ms":3840.976299,"max_ms":3840.976299,"timeouts":0}}
+running CORE-GATEWAY-DIALS replica
+CORE-LIVE-LATENCY replica passed=true quiet=true latency={"effect_done→gateway_visible":{"samples":200,"p50_ms":10.009216,"p95_ms":18.25129,"max_ms":108.354689,"timeouts":0},"effect_done→replica_visible:replica0":{"samples":200,"p50_ms":79.117139,"p95_ms":155.521681,"max_ms":383.507473,"timeouts":0}}
+running CORE-LIVE-LATENCY replica
+CORE-PAIR replica passed=true quiet=true latency={"effect_done→gateway_visible":{"samples":1,"p50_ms":14.886549,"p95_ms":14.886549,"max_ms":14.886549,"timeouts":0},"effect_done→replica_visible:replica0":{"samples":1,"p50_ms":50.492799,"p95_ms":50.492799,"max_ms":50.492799,"timeouts":0}}
+running CORE-PAIR replica
+CORE-QUERY-BLOB replica passed=true quiet=true latency={}
+running CORE-QUERY-BLOB replica
+CORE-QUERY-REPLICA replica passed=true quiet=true latency={"feed_long_query":{"samples":1,"p50_ms":25053.268595,"p95_ms":25053.268595,"max_ms":25053.268595,"timeouts":0},"long_query":{"samples":1,"p50_ms":25057.312651,"p95_ms":25057.312651,"max_ms":25057.312651,"timeouts":0},"query":{"samples":10,"p50_ms":47.474789,"p95_ms":59.178957,"max_ms":59.178957,"timeouts":0}}
+running CORE-QUERY-REPLICA replica
+CORE-RESUME replica passed=true quiet=true latency={"effect_done→gateway_visible":{"samples":2,"p50_ms":10.754951,"p95_ms":12.273237,"max_ms":12.273237,"timeouts":0},"effect_done→replica_visible:replica0":{"samples":2,"p50_ms":86.212424,"p95_ms":103.535192,"max_ms":103.535192,"timeouts":0},"partition_effect_done→replica_visible:replica0":{"samples":30,"p50_ms":15928.545333,"p95_ms":30301.594586,"max_ms":31334.087535,"timeouts":0}}
+running CORE-RESUME replica
+CORE-RETENTION-RACE replica passed=true quiet=true latency={"effect_done→gateway_visible":{"samples":1,"p50_ms":7.029686,"p95_ms":7.029686,"max_ms":7.029686,"timeouts":0},"effect_done→replica_visible:replica0":{"samples":1,"p50_ms":109.089693,"p95_ms":109.089693,"max_ms":109.089693,"timeouts":0}}
+running CORE-RETENTION-RACE replica
+CORE-SCOPE-LEAK replica passed=true quiet=true latency={"effect_done→gateway_visible":{"samples":1,"p50_ms":8.645958,"p95_ms":8.645958,"max_ms":8.645958,"timeouts":0},"effect_done→replica_visible:replica0":{"samples":1,"p50_ms":99.301872,"p95_ms":99.301872,"max_ms":99.301872,"timeouts":0}}
+running CORE-SCOPE-LEAK replica
+CORE-SNAPSHOT-UNDER-LOAD replica passed=true quiet=true latency={"effect_done→gateway_visible":{"samples":1,"p50_ms":26.266181,"p95_ms":26.266181,"max_ms":26.266181,"timeouts":0},"effect_done→replica_visible:replica0":{"samples":1,"p50_ms":64.331242,"p95_ms":64.331242,"max_ms":64.331242,"timeouts":0}}
+running CORE-SNAPSHOT-UNDER-LOAD replica
+MAIL-REPLICA replica passed=true quiet=true latency=null
+running MAIL-REPLICA replica
+replica scenarios: runnable=25 failed=0 blocked=0 total=25
+REPLICA-MIXED-CONVERGENCE passed=true

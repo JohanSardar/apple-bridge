@@ -1,0 +1,522 @@
+{
+  "implementation_commit": "4ce8f25efc7ce2002cc7d8a770e5aa43ed375090",
+  "base_commit": "38368b817a0974a4377c668a6faa13449bbc0bee",
+  "host": "ubuntu",
+  "rustc": "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+  "go": "go version go1.27.3 linux/amd64",
+  "build": {
+    "command": "cargo build --manifest-path rust/Cargo.toml --locked --bin bridge --features ab-runtime/lab-queries",
+    "binary_sha256": "6efd507baab2c2fceae6959d9355bd253219e918b9b7cc4089faa88b52f2d17b"
+  },
+  "matrix": {
+    "command": "SCENARIOS=<unchanged Ubuntu selection> RUST_BRIDGE=<frozen binary> REPLICA_MATRIX_FLAGS=\"--local-replicas --jobs 1\" make replica-matrix",
+    "implementation": "gateway=go,replica=rust",
+    "exit_code": 0,
+    "passed": 25,
+    "failed": 0,
+    "scenarios": [
+      {
+        "scenario": "CALLS-REPLICA",
+        "passed": true,
+        "run_id": "run_01M6FGYNPVFBDG2N6GCXH4FFS0",
+        "at": "2026-11-03T01:39:05.051951023Z",
+        "evidence_git_sha": "4ce8f25efc7ce2002cc7d8a770e5aa43ed375090",
+        "artifact_binding": "frozen binary in matrix invocation",
+        "implementations": {
+          "gateway": "go",
+          "replica": "rust"
+        },
+        "assertions_passed": 3,
+        "unverified_assertions": []
+      },
+      {
+        "scenario": "CORE-BENCH",
+        "passed": true,
+        "run_id": "run_01M6FGYQH87B0RKAV221ZBDVVF",
+        "at": "2026-11-03T01:39:06.920170609Z",
+        "evidence_git_sha": "4ce8f25efc7ce2002cc7d8a770e5aa43ed375090",
+        "artifact_binding": "frozen binary in matrix invocation",
+        "implementations": {
+          "gateway": "go",
+          "replica": "rust"
+        },
+        "assertions_passed": 14,
+        "unverified_assertions": []
+      },
+      {
+        "scenario": "CORE-BLOB-INTERRUPT",
+        "passed": true,
+        "run_id": "run_01M6FH4Z9JVWAZ8Y537R42SFS1",
+        "at": "2026-11-03T01:42:31.474789568Z",
+        "evidence_git_sha": "4ce8f25efc7ce2002cc7d8a770e5aa43ed375090",
+        "artifact_binding": "frozen binary in matrix invocation",
+        "implementations": {
+          "gateway": "go",
+          "replica": "rust"
+        },
+        "assertions_passed": 30,
+        "unverified_assertions": [
+          {
+            "name": "replica_application_exactly_once",
+            "passed": false,
+            "status": "unverified",
+            "detail": "kill-during-apply check did not run"
+          }
+        ]
+      },
+      {
+        "scenario": "CORE-BOOT",
+        "passed": true,
+        "run_id": "run_01M6FH56QN14KVCD4F6AD3563X",
+        "at": "2026-11-03T01:42:39.093341848Z",
+        "evidence_git_sha": "4ce8f25efc7ce2002cc7d8a770e5aa43ed375090",
+        "artifact_binding": "frozen binary in matrix invocation",
+        "implementations": {
+          "gateway": "go",
+          "replica": "rust"
+        },
+        "assertions_passed": 17,
+        "unverified_assertions": [
+          {
+            "name": "replica_application_exactly_once",
+            "passed": false,
+            "status": "unverified",
+            "detail": "kill-during-apply check did not run"
+          }
+        ]
+      },
+      {
+        "scenario": "CORE-CLOCK-DELAY",
+        "passed": true,
+        "run_id": "run_01M6FH5RFS9Q8V80W4T5Q6VVAK",
+        "at": "2026-11-03T01:42:57.27391088Z",
+        "evidence_git_sha": "4ce8f25efc7ce2002cc7d8a770e5aa43ed375090",
+        "artifact_binding": "frozen binary in matrix invocation",
+        "implementations": {
+          "gateway": "go",
+          "replica": "rust"
+        },
+        "assertions_passed": 21,
+        "unverified_assertions": []
+      },
+      {
+        "scenario": "CORE-CLOCK-DELAY-GATEWAY-DIALS",
+        "passed": true,
+        "run_id": "run_01M6FH5C5FJB36HXJSC5F6BD6Q",
+        "at": "2026-11-03T01:42:44.65528916Z",
+        "evidence_git_sha": "4ce8f25efc7ce2002cc7d8a770e5aa43ed375090",
+        "artifact_binding": "frozen binary in matrix invocation",
+        "implementations": {
+          "gateway": "go",
+          "replica": "rust"
+        },
+        "assertions_passed": 21,
+        "unverified_assertions": []
+      },
+      {
+        "scenario": "CORE-CMD-CONFLICT",
+        "passed": true,
+        "run_id": "run_01M6FH64DDDRKGPTZ7791C84AN",
+        "at": "2026-11-03T01:43:09.485486235Z",
+        "evidence_git_sha": "4ce8f25efc7ce2002cc7d8a770e5aa43ed375090",
+        "artifact_binding": "frozen binary in matrix invocation",
+        "implementations": {
+          "gateway": "go",
+          "replica": "rust"
+        },
+        "assertions_passed": 34,
+        "unverified_assertions": [
+          {
+            "name": "replica_application_exactly_once",
+            "passed": false,
+            "status": "unverified",
+            "detail": "kill-during-apply check did not run"
+          }
+        ]
+      },
+      {
+        "scenario": "CORE-CMD-LOST-RESPONSE",
+        "passed": true,
+        "run_id": "run_01M6FH67XZNNZEDCWTBBDACNXG",
+        "at": "2026-11-03T01:43:13.087371138Z",
+        "evidence_git_sha": "4ce8f25efc7ce2002cc7d8a770e5aa43ed375090",
+        "artifact_binding": "frozen binary in matrix invocation",
+        "implementations": {
+          "gateway": "go",
+          "replica": "rust"
+        },
+        "assertions_passed": 40,
+        "unverified_assertions": [
+          {
+            "name": "replica_application_exactly_once",
+            "passed": false,
+            "status": "unverified",
+            "detail": "kill-during-apply check did not run"
+          }
+        ]
+      },
+      {
+        "scenario": "CORE-CMD-OFFLINE",
+        "passed": true,
+        "run_id": "run_01M6FH6BDYD530N8SAMXJPZ10Z",
+        "at": "2026-11-03T01:43:16.67044387Z",
+        "evidence_git_sha": "4ce8f25efc7ce2002cc7d8a770e5aa43ed375090",
+        "artifact_binding": "frozen binary in matrix invocation",
+        "implementations": {
+          "gateway": "go",
+          "replica": "rust"
+        },
+        "assertions_passed": 37,
+        "unverified_assertions": [
+          {
+            "name": "replica_application_exactly_once",
+            "passed": false,
+            "status": "unverified",
+            "detail": "kill-during-apply check did not run"
+          }
+        ]
+      },
+      {
+        "scenario": "CORE-CMD-READ-YOUR-WRITE",
+        "passed": true,
+        "run_id": "run_01M6FH6FXMW41W3NCEG0DJ1S9F",
+        "at": "2026-11-03T01:43:21.268368315Z",
+        "evidence_git_sha": "4ce8f25efc7ce2002cc7d8a770e5aa43ed375090",
+        "artifact_binding": "frozen binary in matrix invocation",
+        "implementations": {
+          "gateway": "go",
+          "replica": "rust"
+        },
+        "assertions_passed": 37,
+        "unverified_assertions": [
+          {
+            "name": "replica_application_exactly_once",
+            "passed": false,
+            "status": "unverified",
+            "detail": "kill-during-apply check did not run"
+          }
+        ]
+      },
+      {
+        "scenario": "CORE-CRED-LIFECYCLE",
+        "passed": true,
+        "run_id": "run_01M6FH6KDB371GRSB86655PQJA",
+        "at": "2026-11-03T01:43:24.843369488Z",
+        "evidence_git_sha": "4ce8f25efc7ce2002cc7d8a770e5aa43ed375090",
+        "artifact_binding": "frozen binary in matrix invocation",
+        "implementations": {
+          "gateway": "go",
+          "replica": "rust"
+        },
+        "assertions_passed": 16,
+        "unverified_assertions": []
+      },
+      {
+        "scenario": "CORE-DISCONNECT-DETECT",
+        "passed": true,
+        "run_id": "run_01M6FH6NTYMCSDV7EXSS948BYQ",
+        "at": "2026-11-03T01:43:27.32633867Z",
+        "evidence_git_sha": "4ce8f25efc7ce2002cc7d8a770e5aa43ed375090",
+        "artifact_binding": "frozen binary in matrix invocation",
+        "implementations": {
+          "gateway": "go",
+          "replica": "rust"
+        },
+        "assertions_passed": 16,
+        "unverified_assertions": [
+          {
+            "name": "replica_application_exactly_once",
+            "passed": false,
+            "status": "unverified",
+            "detail": "kill-during-apply check did not run"
+          }
+        ]
+      },
+      {
+        "scenario": "CORE-DOCTOR",
+        "passed": true,
+        "run_id": "run_01M6FH77WCGDMESZREJN8NXGG6",
+        "at": "2026-11-03T01:43:45.804316581Z",
+        "evidence_git_sha": "4ce8f25efc7ce2002cc7d8a770e5aa43ed375090",
+        "artifact_binding": "frozen binary in matrix invocation",
+        "implementations": {
+          "gateway": "go",
+          "replica": "rust"
+        },
+        "assertions_passed": 20,
+        "unverified_assertions": []
+      },
+      {
+        "scenario": "CORE-FEED-PIPELINED-ACKS",
+        "passed": true,
+        "run_id": "run_01M6FH7AFAM9PA0JM2FX46TG4T",
+        "at": "2026-11-03T01:43:48.458732228Z",
+        "evidence_git_sha": "4ce8f25efc7ce2002cc7d8a770e5aa43ed375090",
+        "artifact_binding": "frozen binary in matrix invocation",
+        "implementations": {
+          "gateway": "go",
+          "replica": "rust"
+        },
+        "assertions_passed": 20,
+        "unverified_assertions": []
+      },
+      {
+        "scenario": "CORE-GAP-REJECT",
+        "passed": true,
+        "run_id": "run_01M6FH7H4SE4YJT3RE1AYXXPKP",
+        "at": "2026-11-03T01:43:55.289600075Z",
+        "evidence_git_sha": "4ce8f25efc7ce2002cc7d8a770e5aa43ed375090",
+        "artifact_binding": "frozen binary in matrix invocation",
+        "implementations": {
+          "gateway": "go",
+          "replica": "rust"
+        },
+        "assertions_passed": 17,
+        "unverified_assertions": []
+      },
+      {
+        "scenario": "CORE-GATEWAY-DIALS",
+        "passed": true,
+        "run_id": "run_01M6FH7P88D4KCC4XWQ9AG6SHR",
+        "at": "2026-11-03T01:44:00.520605424Z",
+        "evidence_git_sha": "4ce8f25efc7ce2002cc7d8a770e5aa43ed375090",
+        "artifact_binding": "frozen binary in matrix invocation",
+        "implementations": {
+          "gateway": "go",
+          "replica": "rust"
+        },
+        "assertions_passed": 44,
+        "unverified_assertions": [
+          {
+            "name": "replica_application_exactly_once",
+            "passed": false,
+            "status": "unverified",
+            "detail": "kill-during-apply check did not run"
+          }
+        ]
+      },
+      {
+        "scenario": "CORE-LIVE-LATENCY",
+        "passed": true,
+        "run_id": "run_01M6FH9YY5RA5S7Q22ZNZSV0V6",
+        "at": "2026-11-03T01:45:14.94920109Z",
+        "evidence_git_sha": "4ce8f25efc7ce2002cc7d8a770e5aa43ed375090",
+        "artifact_binding": "frozen binary in matrix invocation",
+        "implementations": {
+          "gateway": "go",
+          "replica": "rust"
+        },
+        "assertions_passed": 18,
+        "unverified_assertions": [
+          {
+            "name": "replica_application_exactly_once",
+            "passed": false,
+            "status": "unverified",
+            "detail": "kill-during-apply check did not run"
+          }
+        ]
+      },
+      {
+        "scenario": "CORE-PAIR",
+        "passed": true,
+        "run_id": "run_01M6FHB93SB0HPR8098KZRQE69",
+        "at": "2026-11-03T01:45:58.137983497Z",
+        "evidence_git_sha": "4ce8f25efc7ce2002cc7d8a770e5aa43ed375090",
+        "artifact_binding": "frozen binary in matrix invocation",
+        "implementations": {
+          "gateway": "go",
+          "replica": "rust"
+        },
+        "assertions_passed": 12,
+        "unverified_assertions": []
+      },
+      {
+        "scenario": "CORE-QUERY-BLOB",
+        "passed": true,
+        "run_id": "run_01M6FHBEJN3EYSKN33FFS7KWMB",
+        "at": "2026-11-03T01:46:03.733471964Z",
+        "evidence_git_sha": "4ce8f25efc7ce2002cc7d8a770e5aa43ed375090",
+        "artifact_binding": "frozen binary in matrix invocation",
+        "implementations": {
+          "gateway": "go",
+          "replica": "rust"
+        },
+        "assertions_passed": 6,
+        "unverified_assertions": []
+      },
+      {
+        "scenario": "CORE-QUERY-REPLICA",
+        "passed": true,
+        "run_id": "run_01M6FHBH6068BWK8HE92APCTWH",
+        "at": "2026-11-03T01:46:06.40032613Z",
+        "evidence_git_sha": "4ce8f25efc7ce2002cc7d8a770e5aa43ed375090",
+        "artifact_binding": "frozen binary in matrix invocation",
+        "implementations": {
+          "gateway": "go",
+          "replica": "rust"
+        },
+        "assertions_passed": 13,
+        "unverified_assertions": []
+      },
+      {
+        "scenario": "CORE-RESUME",
+        "passed": true,
+        "run_id": "run_01M6FHD5MJH96JXQSF5KZF2B3S",
+        "at": "2026-11-03T01:47:00.11494646Z",
+        "evidence_git_sha": "4ce8f25efc7ce2002cc7d8a770e5aa43ed375090",
+        "artifact_binding": "frozen binary in matrix invocation",
+        "implementations": {
+          "gateway": "go",
+          "replica": "rust"
+        },
+        "assertions_passed": 17,
+        "unverified_assertions": [
+          {
+            "name": "replica_application_exactly_once",
+            "passed": false,
+            "status": "unverified",
+            "detail": "kill-during-apply check did not run"
+          }
+        ]
+      },
+      {
+        "scenario": "CORE-RETENTION-RACE",
+        "passed": true,
+        "run_id": "run_01M6FHE6NWDXR9X85FFG5KCJWP",
+        "at": "2026-11-03T01:47:33.948742957Z",
+        "evidence_git_sha": "4ce8f25efc7ce2002cc7d8a770e5aa43ed375090",
+        "artifact_binding": "frozen binary in matrix invocation",
+        "implementations": {
+          "gateway": "go",
+          "replica": "rust"
+        },
+        "assertions_passed": 17,
+        "unverified_assertions": []
+      },
+      {
+        "scenario": "CORE-SCOPE-LEAK",
+        "passed": true,
+        "run_id": "run_01M6FHEBFSY9BEFTXJ748K2K22",
+        "at": "2026-11-03T01:47:38.873373193Z",
+        "evidence_git_sha": "4ce8f25efc7ce2002cc7d8a770e5aa43ed375090",
+        "artifact_binding": "frozen binary in matrix invocation",
+        "implementations": {
+          "gateway": "go",
+          "replica": "rust"
+        },
+        "assertions_passed": 24,
+        "unverified_assertions": []
+      },
+      {
+        "scenario": "CORE-SNAPSHOT-UNDER-LOAD",
+        "passed": true,
+        "run_id": "run_01M6FHEDZJCFYKYJ4RAMWHEKEN",
+        "at": "2026-11-03T01:47:41.426985067Z",
+        "evidence_git_sha": "4ce8f25efc7ce2002cc7d8a770e5aa43ed375090",
+        "artifact_binding": "frozen binary in matrix invocation",
+        "implementations": {
+          "gateway": "go",
+          "replica": "rust"
+        },
+        "assertions_passed": 17,
+        "unverified_assertions": []
+      },
+      {
+        "scenario": "MAIL-REPLICA",
+        "passed": true,
+        "run_id": "run_01M6FHF3CB1Z7MDQD9FGC36PQN",
+        "at": "2026-11-03T01:48:03.3400006Z",
+        "evidence_git_sha": "",
+        "artifact_binding": "frozen binary in matrix invocation",
+        "implementations": {
+          "gateway": "go",
+          "replica": "rust"
+        },
+        "assertions_passed": 4,
+        "unverified_assertions": []
+      }
+    ]
+  },
+  "convergence": {
+    "passed": true,
+    "digest": "da6b5754814c01477abab631e8ffe2e40a1f8379663094b15b5041df7a498d0a",
+    "record_count": 103,
+    "implementations": [
+      "go",
+      "go",
+      "rust"
+    ]
+  },
+  "parity": {
+    "command": "go run ./lab/replica-parity <frozen Rust binary>",
+    "exit_code": 0,
+    "rest_passed": 21,
+    "mcp_passed": 21,
+    "deterministic_bytes": "equal, including raw read-model and MCP structuredContent/text field order",
+    "live_timing": "checked separately as authorized; heartbeat, staleness, local replica observation time and MCP read-model timing excluded from byte equality",
+    "command_disposition": "locally_observed on Rust replica and Go gateway",
+    "cancellation": "REST and MCP helper work stopped",
+    "query_blobs": "three range forms and digest-verified offline cached read passed",
+    "probe_sha256": "a8372a87e9ab1ddd9523073b3b4d78f805b77e8d769cecebdcd1d0c00c67b70e"
+  },
+  "mcp": {
+    "impl": "rust",
+    "checks": 30,
+    "modes": [
+      "json",
+      "sse"
+    ],
+    "golden_exchanges_per_mode": 4,
+    "adapter": "product trust/state/transport; unauthenticated internal golden handler matches Go seam"
+  },
+  "quality": [
+    {
+      "command": "make rust-ci",
+      "exit_code": 0,
+      "log_sha256": "aa900587746c693d01cd1a56bf1e6cbb1f850e3cd67986b6e7fbc00ccad52fec"
+    },
+    {
+      "command": "cargo clippy --manifest-path rust/Cargo.toml --workspace --all-targets --features ab-runtime/lab-queries -- -D warnings",
+      "exit_code": 0,
+      "log_sha256": "31e8eb347fb5b393ba4181223fa789ddffb889bfed26543cb5bf4472625104b4"
+    },
+    {
+      "command": "go vet ./lab/replica-parity",
+      "exit_code": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "pending_Air_real_run": {
+    "executed": false,
+    "count": 13,
+    "scenarios": [
+      "CAL-CREATE-EXTERNAL",
+      "CAL-CRUD",
+      "CON-CRUD",
+      "CON-EXTERNAL",
+      "FILE-REPLICA",
+      "MAC-REPLICA",
+      "MSG-INCOMING",
+      "MSG-SEND-FILES",
+      "MSG-SEND-SELF-TEXT",
+      "NOTE-CRUD",
+      "NOTE-EXTERNAL",
+      "REM-CREATE-EXTERNAL",
+      "REM-CRUD"
+    ]
+  },
+  "additional_unrun_harness_blockers": {
+    "count": 9,
+    "scenarios": [
+      "CON-RELAY",
+      "RMT-PRIVATE-CONNECT",
+      "WEB-MEDIA-VARIANTS",
+      "WEB-RELAY-COMMAND",
+      "WEB-RELAY-CONNECT",
+      "WEB-RELAY-NATIVE-AGENTS",
+      "WEB-RELAY-PUBLIC-AGENTS",
+      "WEB-RELAY-REPLICA-BLOBS",
+      "WEB-RELAY-REPLICA"
+    ]
+  }
+}
