@@ -1,4 +1,5 @@
 use crate::{
+    core_robust,
     assertions::{Observed, await_until, converged, false_deletion_free, scoped_clients},
     http::{Client, random_id},
     journey::{GATEWAY_SCOPE, gateway_client, records},
@@ -19,7 +20,28 @@ pub const SCENARIOS: [&str; 4] = [
     "CORE-KILL-DURING-APPLY",
     "CORE-KILL-GATEWAY-CAPTURE",
     "AUTH-SCOPES-METADATA",
+
+pub const SCENARIOS: [&str; 6] = [
+    "CORE-HELPER-RESTART",
+    "CORE-KILL-DURING-APPLY",
+    "CORE-KILL-GATEWAY-CAPTURE",
+    "CORE-DOCTOR",
+    "CORE-CLOCK-DELAY",
+    "CORE-CRED-LIFECYCLE",
 ];
+const NO_RESET_CHECK: [&str; 4] = [
+    "CORE-HELPER-RESTART",
+    "CORE-DOCTOR",
+    "CORE-CLOCK-DELAY",
+    "CORE-CRED-LIFECYCLE",
+];
+
+pub fn start(world: &mut World, id: &str, count: usize) -> Result<()> {
+    if id == "CORE-CLOCK-DELAY" {
+        world.install_proxy()?;
+    }
+    replicas::start(world, count)
+}
 
 fn change(world: &World, prefix: &str, count: usize) -> bool {
     (0..count).all(|i| {
@@ -464,6 +486,10 @@ pub fn robustness(world: &mut World, input: &Value, evidence: &mut Evidence) -> 
             | ("kill-during-apply", "CORE-KILL-DURING-APPLY")
             | ("kill-gateway-capture", "CORE-KILL-GATEWAY-CAPTURE")
             | ("auth-scopes-metadata", "AUTH-SCOPES-METADATA")
+
+            | ("doctor", "CORE-DOCTOR")
+            | ("clock-delay", "CORE-CLOCK-DELAY")
+            | ("cred-lifecycle", "CORE-CRED-LIFECYCLE")
     ) {
         return Err(Error::Invalid(format!(
             "robustness case not ported: {case}"
@@ -494,6 +520,10 @@ pub fn robustness(world: &mut World, input: &Value, evidence: &mut Evidence) -> 
             crate::auth_scopes::run(world, evidence)?;
             true
         }
+
+        "doctor" => core_robust::doctor_case(world, evidence),
+        "clock-delay" => core_robust::clock_delay_case(world, evidence),
+        "cred-lifecycle" => core_robust::cred_lifecycle_case(world, evidence),
         _ => kill_gateway_capture(world, &observed, evidence),
     };
     if !proceed {
@@ -547,6 +577,8 @@ pub fn robustness(world: &mut World, input: &Value, evidence: &mut Evidence) -> 
         evidence.scenario.as_str(),
         "CORE-HELPER-RESTART" | "AUTH-SCOPES-METADATA"
     ) {
+
+    if !NO_RESET_CHECK.contains(&evidence.scenario.as_str()) {
         let resets: usize = observers.iter().map(Watcher::resets).sum();
         evidence.check(
             "no_oversized_capture_observer_resets",
@@ -558,7 +590,9 @@ pub fn robustness(world: &mut World, input: &Value, evidence: &mut Evidence) -> 
 }
 
 pub fn dispatch(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result<()> {
-    if SCENARIOS.contains(&evidence.scenario.as_str()) {
+    if input["case"] == "credential-store" {
+        crate::core::robustness(world, input, evidence)
+    } else if SCENARIOS.contains(&evidence.scenario.as_str()) {
         robustness(world, input, evidence)
     } else {
         crate::packaging::robustness(world, input, evidence)

@@ -189,3 +189,18 @@ pub fn restart(index: usize) -> Result<()> {
     await_runtime(&endpoint.home)?;
     Ok(())
 }
+pub fn signal(index: usize, name: &str) -> Result<()> {
+    let id = lock(&CHILDREN)
+        .get(index)
+        .map(Child::id)
+        .ok_or_else(|| Error::Invalid("replica index".into()))?;
+    let status = Command::new("kill")
+        .arg(format!("-{name}"))
+        .arg(id.to_string())
+        .status()?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(Error::Invalid(format!("signal {name} failed")))
+    }
+}
