@@ -364,7 +364,7 @@ impl Identity for TrustIdentity {
                 .collect::<Result<Vec<_>, _>>()
                 .map_err(|error| trust_error(&error))?;
             let mut current = original.clone();
-            current.grants = ab_trust::effective_grants(&parent.grants, &ceiling)
+            current.grants = ab_trust::effective_grants(&ceiling, &parent.grants)
                 .iter()
                 .map(|grant| grant.as_str().to_owned())
                 .collect();
