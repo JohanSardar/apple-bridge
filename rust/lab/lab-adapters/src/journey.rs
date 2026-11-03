@@ -205,6 +205,12 @@ pub fn command_journey(world: &mut World, _: &Value, evidence: &mut Evidence) ->
     scope_commands(world, &scoped, &list_id, evidence)?;
     idempotent(world, &gateway, &list_id, evidence)?;
     finish(world, &observed, evidence)?;
+    latency_assertions(&seen_at, evidence);
+    stream_assertions(world, &observed, &observers, evidence);
+    record_integrity(evidence, &observed, None);
+    Ok(())
+}
+fn latency_assertions(seen_at: &[Option<Duration>], evidence: &mut Evidence) {
     for (index, seen) in seen_at.iter().enumerate() {
         evidence.check(
             &format!("metadata_latency_below_1s_{index}"),
@@ -212,9 +218,6 @@ pub fn command_journey(world: &mut World, _: &Value, evidence: &mut Evidence) ->
             "external change visible through the public API within one second",
         );
     }
-    stream_assertions(world, &observed, &observers, evidence);
-    record_integrity(evidence, &observed, None);
-    Ok(())
 }
 fn scope_commands(
     world: &World,

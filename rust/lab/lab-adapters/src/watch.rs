@@ -222,12 +222,11 @@ fn stream(
             reset_snapshot(client, state);
             break;
         }
-        match serde_json::from_str::<Value>(data) {
-            Ok(batch) => apply_batch(state, &batch),
-            Err(_) => {
-                lock(state).invalid = true;
-                break;
-            }
+        if let Ok(batch) = serde_json::from_str::<Value>(data) {
+            apply_batch(state, &batch);
+        } else {
+            lock(state).invalid = true;
+            break;
         }
     }
     if let Some(mut child) = lock(child_slot).take() {
