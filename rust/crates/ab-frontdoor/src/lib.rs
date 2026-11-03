@@ -77,6 +77,14 @@ impl Frontdoor {
             )
             .route("/v1/changes", get(changes))
             .route("/mcp", any(mcp::handle))
+            .route(
+                "/mcp/{*path}",
+                any(|| async { problem(Code::NotFound.into()) }),
+            )
+            .route(
+                "/v1/{*path}",
+                any(|| async { problem(Code::NotFound.into()) }),
+            )
             .fallback(|| async { problem(Code::NotFound.into()) })
             .layer(middleware::from_fn_with_state(self.clone(), guard))
             .with_state(self)
