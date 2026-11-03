@@ -148,6 +148,61 @@ impl Client {
         })?;
         Ok(Some((reply.status, value)))
     }
+    #[must_use]
+    pub fn read_model_ms(&self, operation: &str, input: &Value, mcp: bool) -> Option<f64> {
+        let (path, headers, body) = if mcp {
+            (
+                "/mcp".to_owned(),
+                MCP_HEADERS.to_vec(),
+                mcp_body(operation, input).ok()?,
+            )
+        } else {
+            (
+                format!("/v1/op/{operation}"),
+                vec![("Content-Type", "application/json")],
+                serde_json::to_vec(input).ok()?,
+            )
+        };
+        let mut command = Command::new("curl");
+        command
+            .args([
+                "--silent",
+                "--max-time",
+                "30",
+                "-D",
+                "-",
+                "-X",
+                "POST",
+                "-H",
+            ])
+            .arg(format!("Authorization: Bearer {}", self.token));
+        for (name, value) in headers {
+            command.args(["-H", &format!("{name}: {value}")]);
+        }
+        command
+            .args(["--data-binary", "@-"])
+            .arg(format!("http://{}{path}", self.address))
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null());
+        let mut child = command.spawn().ok()?;
+        child.stdin.take()?.write_all(&body).ok()?;
+        let output = child.wait_with_output().ok()?;
+        let text = String::from_utf8_lossy(&output.stdout).into_owned();
+        let (head, payload) = text.split_once("\r\n\r\n")?;
+        if mcp {
+            let value: Value = serde_json::from_str(payload).ok()?;
+            return value["result"]["_meta"]["bridge/read_model_ms"].as_f64();
+        }
+        head.lines()
+            .find_map(|line| {
+                let (name, value) = line.split_once(':')?;
+                name.eq_ignore_ascii_case("server-timing")
+                    .then(|| value.trim().trim_start_matches("readmodel;dur=").to_owned())
+            })?
+            .parse()
+            .ok()
+    }
     pub fn spawn_call(&self, operation: &str, input: &Value, mcp: bool) -> Result<Child> {
         let (path, headers, body) = if mcp {
             (

@@ -163,7 +163,7 @@ impl Session<'_> {
         self.emit(state, capture)?;
         send(
             &mut self.stream,
-            &json!({"t":"Rejected","command_id":frame["command_id"],"disposition":"rejected_before_dispatch","error":{"code":"conflict","message":"conflict"},"evidence":{"native_key":key,"capture_checkpoint":self.checkpoints.get("contacts").cloned().unwrap_or_default()}}),
+            &json!({"t":"Rejected","command_id":frame["command_id"],"disposition":"rejected_before_dispatch","error":{"code":"conflict","message":"conflict","retryable":false},"evidence":{"native_key":key,"capture_checkpoint":self.checkpoints.get("contacts").cloned().unwrap_or_default()}}),
         )?;
         Ok(())
     }

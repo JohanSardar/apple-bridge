@@ -1,5 +1,7 @@
 pub mod assertions;
 pub mod blobs;
+pub mod calendar;
+pub mod calendar_fixtures;
 pub mod calls;
 pub mod cleanup;
 pub mod commands;
@@ -108,6 +110,11 @@ pub fn registry() -> Registry {
                 contacts_list::SCOPE,
                 0,
             )?;
+        } else if replicas != 0 && calendar::NATIVE_ONLY.contains(&id) {
+        } else if replicas != 0 && id == "CAL-STORE-READ" {
+            replicas::start_with(world, 1, calendar::STORE_SCOPE, 0)?;
+        } else if replicas != 0 && calendar::SCENARIOS.contains(&id) {
+            replicas::start_with(world, 1, calendar::SCOPE, 0)?;
         } else if replicas != 0 && !PORTED.contains(&id) && !self_started {
             return Err(Error::Invalid(format!("replica world not ported for {id}")));
         }
@@ -167,6 +174,7 @@ pub fn registry() -> Registry {
     registry.register("shortcuts_checks", shortcuts::shortcuts_checks);
     registry.register("shortcuts_real_only", shortcuts::shortcuts_real_only);
     registry.register("mac", mac::mac);
+    registry.register("calendar_journey", calendar::calendar_journey);
     registry
 }
 

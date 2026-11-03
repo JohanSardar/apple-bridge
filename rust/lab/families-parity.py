@@ -48,6 +48,14 @@ MESSAGES_B_SCENARIOS = [f'messages/MSG-{name}' for name in [
 MESSAGES_B_NATIVE = ['messages/MSG-WATCHER-REARM']
 MAPS_SCENARIOS = ['maps/MAP-SIM', 'maps/LOC-SIM', 'files/FILE-COMMANDS', 'files/FILE-CRUD-REAL',
                   'files/FILE-OFFLOAD-REAL']
+CALENDAR_SCENARIOS = ['calendar/' + n for n in [
+    'CAL-ALLDAY', 'CAL-ALLDAY-FUTURE', 'CAL-CREATE-EXTERNAL', 'CAL-CRUD', 'CAL-DST', 'CAL-FUTURE-RULE-MISMATCH',
+    'CAL-ID-CHURN', 'CAL-LARGE-CAPTURE', 'CAL-MOVED-OCCURRENCE', 'CAL-MOVED-OUTSIDE-WINDOW',
+    'CAL-PERIODIC-VERIFICATION', 'CAL-PERMISSION-LOSS', 'CAL-READONLY', 'CAL-RECUR-ALL-REJECT',
+    'CAL-RECUR-FUTURE', 'CAL-RECUR-THIS', 'CAL-SPLIT-ATOMIC-ALLDAY', 'CAL-SPLIT-ATOMIC-TIMED',
+    'CAL-SPLIT-FRAME-CAP', 'CAL-STAMP-FIELDS', 'CAL-WINDOW-SLIDE']]
+CALENDAR_NATIVE = ['calendar/CAL-STORE-READ', 'calendar/CAL-FUTURE-COUNT-MATH', 'calendar/CAL-HINT-COVERAGE',
+                   'calendar/CAL-INVALIDATED-EVENT']
 SCENARIOS = ['CORE-QUERY-ROUNDTRIP', 'CORE-QUERY-BLOB', 'CORE-QUERY-SCOPE', 'CORE-QUERY-DEADLINE',
              *JOURNEY_SCENARIOS, *CORE_SCENARIOS]
 FRONTDOOR_SCENARIOS = ['CORE-REST-MCP-PARITY', 'CORE-LOCALHOST-DEFENSE']
@@ -97,6 +105,8 @@ def main():
     parser.add_argument('--calls', action='store_true')
     parser.add_argument('--web', dest='web', action='store_true')
     parser.add_argument('--native-media', dest='native_media', action='store_true')
+    parser.add_argument('--calendar', dest='calendar', action='store_true')
+    parser.add_argument('--calendar-native', dest='calendar_native', action='store_true')
     args = parser.parse_args()
     for flag, group in [(args.usage, USAGE_SCENARIOS), (args.darwin_usage, DARWIN_USAGE_SCENARIOS), (args.calls, CALLS_SCENARIOS)]:
         if flag:
@@ -133,6 +143,10 @@ def main():
         args.scenario = (args.scenario or []) + NATIVE_MEDIA_SCENARIOS
     if args.maps:
         args.scenario = (args.scenario or []) + MAPS_SCENARIOS
+    if args.calendar:
+        args.scenario = (args.scenario or []) + CALENDAR_SCENARIOS
+    if args.calendar_native:
+        args.scenario = (args.scenario or []) + CALENDAR_NATIVE
     out = Path(args.output).resolve()
     out.mkdir(mode=0o700, parents=True, exist_ok=False)
     root = Path(__file__).resolve().parents[2] / 'lab' / 'scenarios'
