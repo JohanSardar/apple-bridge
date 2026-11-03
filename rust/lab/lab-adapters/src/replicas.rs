@@ -59,6 +59,9 @@ fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
         .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 pub fn start(world: &World, count: usize) -> Result<()> {
+    start_with(world, count, SCOPE, 0)
+}
+pub fn start_with(world: &World, count: usize, scope: &str, cap: u64) -> Result<()> {
     let peer = world.runtime["peer_address"]
         .as_str()
         .ok_or_else(|| Error::Invalid("runtime peer address".into()))?
@@ -73,15 +76,16 @@ pub fn start(world: &World, count: usize) -> Result<()> {
             "--name",
             &name,
             "--scope",
-            SCOPE,
+            scope,
         ])?;
         cli(&home, &["join", code.trim()])?;
-        let token = cli(&home, &["token", "create", "--scope", SCOPE])?;
+        let token = cli(&home, &["token", "create", "--scope", scope])?;
         let log = fs::File::create(world.directory.join(format!("{name}.log")))?;
         let child = Command::new(binary()?)
             .args(["start", "--role", "replica", "--home"])
             .arg(&home)
             .args(["--api-addr", "127.0.0.1:0"])
+            .args(["--blob-cap", &cap.to_string()])
             .env("APPLE_BRIDGE_SECRET_STORE", "file")
             .stdout(log.try_clone()?)
             .stderr(log)
