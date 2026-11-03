@@ -15,7 +15,7 @@ impl Arguments {
         if verb == "token" && args.next().as_deref() != Some("create") {
             return Err(Error::Invalid);
         }
-        let action = if ["agent", "remote"].contains(&verb.as_str()) {
+        let action = if ["agent", "remote", "web"].contains(&verb.as_str()) {
             args.next().ok_or(Error::Invalid)?
         } else {
             String::new()
@@ -31,6 +31,7 @@ impl Arguments {
                     (key.to_owned(), content.to_owned())
                 } else if [
                     "remote",
+                    "public",
                     "iphone",
                     "via-remote",
                     "helper-lab-commands",
@@ -44,6 +45,8 @@ impl Arguments {
                 };
                 if ![
                     "home",
+                    "host",
+                    "public",
                     "helper-app",
                     "helper-lab-commands",
                     "via",
@@ -221,26 +224,80 @@ fn grants(args: &Arguments) -> Result<Vec<ab_trust::Grant>, Error> {
         .collect::<Result<_, _>>()
         .map_err(Error::from)
 }
+fn web_enroll(
+    args: &Arguments,
+    home: &std::path::Path,
+    authority: &ab_trust::Authority,
+) -> Result<(), Error> {
+    let host = if args.flag("public", "false") == "true" {
+        let status: serde_json::Value = ab_remote::state::read(home, "status")?;
+        if status["state"] != "on" {
+            return Err(Error::Invalid);
+        }
+        let url = status["url"].as_str().ok_or(Error::Invalid)?;
+        if !url.starts_with("https://") {
+            return Err(Error::Invalid);
+        }
+        url.to_owned()
+    } else {
+        args.flag("host", "http://localhost:7780")
+    };
+    let url = reqwest::Url::parse(&host).map_err(|_| Error::Invalid)?;
+    let (_, rest) = host.split_once("://").ok_or(Error::Invalid)?;
+    if url.host_str().is_none()
+        || rest.chars().any(|c| matches!(c, '/' | '?' | '#' | '@'))
+        || !(url.scheme() == "https"
+            || url.scheme() == "http"
+                && url.host_str() == Some("localhost")
+                && rest.split(':').next() == Some("localhost"))
+    {
+        return Err(Error::Invalid);
+    }
+    println!("{host}/enroll#{}", authority.create_web_enroll()?);
+    Ok(())
+}
+fn agent_summary(agent: &ab_trust::Principal) -> serde_json::Value {
+    let mut summary = serde_json::json!({"id":agent.id,"name":agent.extra.get("name"),"level":agent.level,"scopes":agent.grants,"created_at":agent.extra.get("created_at")});
+    for key in ["revoked_at", "last_used"] {
+        if let Some(value) = agent.extra.get(key).filter(|value| !value.is_null()) {
+            summary[key] = value.clone();
+        }
+    }
+    summary
+}
 fn manage(
     args: &Arguments,
     home: &std::path::Path,
     authority: &ab_trust::Authority,
 ) -> Result<bool, Error> {
     match args.verb.as_str() {
+        "web" if args.action == "enroll" => web_enroll(args, home, authority)?,
         "revoke" => authority.revoke(&args.value)?,
         "scope" => authority.change_scope(&args.value, grants(args)?)?,
         "agent" => match args.action.as_str() {
-            "list" => println!("{}", serde_json::to_string(&authority.agents()?)?),
+            "list" => println!(
+                "{}",
+                serde_json::to_string(
+                    &authority
+                        .agents()?
+                        .iter()
+                        .map(agent_summary)
+                        .collect::<Vec<_>>()
+                )?
+            ),
             "create" => {
                 let level = match args.flag("level", "approve").as_str() {
                     "read" => ab_trust::AgentLevel::Read,
-                    "approve" => ab_trust::AgentLevel::Approve,
+                    "" | "approve" => ab_trust::AgentLevel::Approve,
                     "full" => ab_trust::AgentLevel::Full,
                     _ => return Err(Error::Invalid),
                 };
                 let (agent, token) =
                     authority.create_agent(&args.flag("name", ""), level, grants(args)?)?;
-                println!("{}", serde_json::json!({"agent":agent,"token":token}));
+                println!(
+                    "{}",
+                    serde_json::json!({"agent":agent_summary(&agent),"token":token})
+                );
             }
             "revoke" => {
                 if !args.value.starts_with("agent:") {

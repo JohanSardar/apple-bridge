@@ -1,0 +1,14 @@
+[
+  {
+    "implementation": "go",
+    "empty_level_approve": true,
+    "read_scope_normalized": true,
+    "public_summary": true
+  },
+  {
+    "implementation": "rust",
+    "empty_level_approve": true,
+    "read_scope_normalized": true,
+    "public_summary": true
+  }
+]

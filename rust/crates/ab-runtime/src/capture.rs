@@ -1,13 +1,19 @@
-use ab_operations::{Code, Cursor, GatewayStore, Task};
+use ab_operations::{Code, Cursor, GatewayStore, Task, peer::ApplePeer};
 use ab_wire::messages::{Capture, IpcFrame};
 use std::{collections::BTreeMap, sync::Arc};
 use tokio::sync::{Mutex, mpsc, watch};
 
 #[derive(Debug)]
+pub struct CaptureJob {
+    pub capture: Capture,
+    pub session: ab_operations::peer::PeerSession,
+}
+
+#[derive(Debug)]
 pub struct Backend {
     pub state: GatewayStore,
     pub blobs: Arc<Mutex<ab_blobs::Store>>,
-    pub jobs: mpsc::Sender<Capture>,
+    pub jobs: mpsc::Sender<CaptureJob>,
     #[cfg(feature = "lab-harness")]
     pub home: std::path::PathBuf,
 }
@@ -38,38 +44,63 @@ impl ab_applepeer::Backend for Backend {
         })
     }
     fn commit(&self, capture: Capture) -> Task<'_, (Cursor, bool)> {
-        Box::pin(async move {
-            let result = self.state.commit(&capture)?;
-            if !capture.blob_handles.is_empty() {
-                self.jobs
-                    .send(capture)
-                    .await
-                    .map_err(|_| Code::Unavailable)?;
-            }
-            #[cfg(feature = "lab-harness")]
-            crate::lab_gateway::capture_boundary(&self.home)
-                .await
-                .map_err(|_| Code::Unavailable)?;
-            Ok(result)
-        })
+        Box::pin(self.commit_bound(None, capture))
+    }
+    fn commit_from(
+        &self,
+        session: ab_operations::peer::PeerSession,
+        capture: Capture,
+    ) -> Task<'_, (Cursor, bool)> {
+        Box::pin(self.commit_bound(Some(session), capture))
     }
     fn source_state(&self, frame: IpcFrame) -> Task<'_, ()> {
         Box::pin(async move { self.state.source_state(&frame) })
     }
 }
 
+impl Backend {
+    async fn commit_bound(
+        &self,
+        session: Option<ab_operations::peer::PeerSession>,
+        capture: Capture,
+    ) -> Result<(Cursor, bool), ab_operations::Error> {
+        if !capture.blob_handles.is_empty() && session.is_none() {
+            return Err(Code::Unavailable.into());
+        }
+        let result = self.state.commit(&capture)?;
+        if !capture.blob_handles.is_empty() {
+            self.jobs
+                .send(CaptureJob {
+                    capture,
+                    session: session.ok_or(Code::Unavailable)?,
+                })
+                .await
+                .map_err(|_| Code::Unavailable)?;
+        }
+        #[cfg(feature = "lab-harness")]
+        crate::lab_gateway::capture_boundary(&self.home)
+            .await
+            .map_err(|_| Code::Unavailable)?;
+        Ok(result)
+    }
+}
+
 pub async fn hydrate(
     blobs: Arc<Mutex<ab_blobs::Store>>,
-    source: crate::helper_blobs::HelperBlobs,
-    mut jobs: mpsc::Receiver<Capture>,
+    commands: ab_applepeer::Commands,
+    mut jobs: mpsc::Receiver<CaptureJob>,
     mut stop: watch::Receiver<bool>,
 ) -> Result<(), crate::Error> {
     loop {
-        let capture = tokio::select! {
+        let job = tokio::select! {
             _ = stop.changed() => return Ok(()),
             capture = jobs.recv() => match capture { Some(capture) => capture, None => return Ok(()) },
         };
-        for (digest, handle) in capture.blob_handles {
+        if commands.session() != Some(job.session) {
+            continue;
+        }
+        let source = crate::helper_blobs::HelperBlobs(commands.clone(), job.session);
+        for (digest, handle) in job.capture.blob_handles {
             let Ok(digest) = ab_blobs::Digest::try_from(digest) else {
                 continue;
             };
@@ -85,6 +116,9 @@ pub async fn hydrate(
                 };
                 if result.is_ok() {
                     succeeded = true;
+                    break;
+                }
+                if commands.session() != Some(job.session) {
                     break;
                 }
                 if matches!(
