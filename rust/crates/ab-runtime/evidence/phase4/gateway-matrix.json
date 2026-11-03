@@ -1,0 +1,4101 @@
+{
+  "wall_seconds": 0.209,
+  "parallel": 4,
+  "host": "linux",
+  "complete": true,
+  "expected": 198,
+  "results": [
+    {
+      "id": "APP-APPROVE-SIM",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/relay",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper IPhoneCompletionEvidence",
+        "harness: semantic product helper ValidateIPhoneCommand",
+        "harness: lab/scenarios/iphone_command.go still imports product implementations: iphone, operations, relay, state, trust",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "APP-CMD-SIM",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/relay",
+        "internal/state",
+        "internal/trust",
+        "lab/simapple"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper IPhoneCompletionEvidence",
+        "harness: semantic product helper ValidateIPhoneCommand",
+        "harness: lab/scenarios/iphone_command.go still imports product implementations: iphone, operations, relay, state, trust",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "APP-LIVE-SIM",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/relay",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/iphone_live.go still imports product implementations: iphone, operations, relay, state, trust",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "APP-PAIR-SIM",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust",
+        "lab/simapple"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/iphone_pair.go still imports product implementations: trust",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "AUD-SIM",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "AUTH-SCOPES-METADATA",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/frontdoor",
+        "internal/iphone",
+        "internal/operations",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CAL-ALLDAY",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CAL-ALLDAY-FUTURE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CAL-CREATE-EXTERNAL",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CAL-CRUD",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CAL-DST",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CAL-FUTURE-RULE-MISMATCH",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CAL-ID-CHURN",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CAL-LARGE-CAPTURE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CAL-MOVED-OCCURRENCE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CAL-MOVED-OUTSIDE-WINDOW",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CAL-PERIODIC-VERIFICATION",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CAL-PERMISSION-LOSS",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CAL-READONLY",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CAL-RECUR-ALL-REJECT",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CAL-RECUR-FUTURE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CAL-RECUR-THIS",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CAL-SPLIT-ATOMIC-ALLDAY",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CAL-SPLIT-ATOMIC-TIMED",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CAL-SPLIT-FRAME-CAP",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CAL-STAMP-FIELDS",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CAL-WINDOW-SLIDE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CON-CONFLICT",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CON-CRUD",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CON-DROP-EVERYTHING",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CON-EXTERNAL",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CON-GROUPS",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CON-HANDLE-LINK",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CON-IMAGE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CON-IMPORT",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CON-PERMISSION-LOSS",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CON-READONLY-CONTAINER",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CON-RECIPIENT-LOOKUP",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CON-RESOLVE-RESTART",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CON-SEARCH",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CON-TOKEN-CRASH",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CONN-CHATGPT",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/frontdoor",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/relay",
+        "internal/remote",
+        "internal/replication",
+        "internal/runtime",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/agent_access.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/connector_approval.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/connector_real.go still imports product implementations: remote, trust, web",
+        "harness: lab/scenarios/remote.go still imports product implementations: remote",
+        "harness: lab/scenarios/remote_checks.go still imports product implementations: remote",
+        "harness: lab/scenarios/remote_flow.go still imports product implementations: remote",
+        "harness: lab/scenarios/remote_private_real.go still imports product implementations: remote",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CONN-CLAUDE-AI",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/frontdoor",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/relay",
+        "internal/remote",
+        "internal/replication",
+        "internal/runtime",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/agent_access.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/connector_approval.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/connector_real.go still imports product implementations: remote, trust, web",
+        "harness: lab/scenarios/remote.go still imports product implementations: remote",
+        "harness: lab/scenarios/remote_checks.go still imports product implementations: remote",
+        "harness: lab/scenarios/remote_flow.go still imports product implementations: remote",
+        "harness: lab/scenarios/remote_private_real.go still imports product implementations: remote",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CONSENT-CONNECTOR",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper BlobReferences",
+        "harness: lab/scenarios/agent_access.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/agent_activity.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/agent_activity_capture.go still imports product implementations: trust",
+        "harness: lab/scenarios/agent_credentials.go still imports product implementations: trust",
+        "harness: lab/scenarios/agent_oauth_credentials.go still imports product implementations: trust",
+        "harness: lab/scenarios/agent_oauth_grants.go still imports product implementations: trust",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_auth_isolation.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_command_resolve.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_hosts.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_server.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_sources.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_sources_errors.go still imports product implementations: operations, state, trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-BLOB-CAP",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-BLOB-CORRUPT",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-BLOB-DUPLICATE-REFERENCE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-BLOB-GATEWAY-RETRY",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-BLOB-GC",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-BLOB-INTERRUPT",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-BLOB-NATIVE-STAGE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-BLOB-NO-DIGEST-AUTH",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-BLOB-OFFLOADED",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-BLOB-REFERENCE-INDEX",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-BLOB-SLOW-READ",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-BLOB-STAGE-DURING-TRANSFER",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-BLOB-STAGE-SAME-DIGEST",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-BOOT",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-CAPTURE-ALIASES",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/readmodel_perf.go still imports product implementations: state, trust",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-CLOCK-DELAY",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/frontdoor",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/relay",
+        "internal/remote",
+        "internal/replication",
+        "internal/runtime",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-CLOCK-DELAY-GATEWAY-DIALS",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/frontdoor",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/relay",
+        "internal/remote",
+        "internal/replication",
+        "internal/runtime",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-CMD-CLOCK-JUMP",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-CMD-CONFLICT",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-CMD-CRASH-AMBIGUOUS",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-CMD-ERA",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-CMD-EXPIRY",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-CMD-IDEMPOTENT",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-CMD-LOST-RESPONSE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-CMD-OFFLINE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-CMD-READ-YOUR-WRITE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-CREDENTIAL-STORE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/frontdoor",
+        "internal/iphone",
+        "internal/operations",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-DISCONNECT-DETECT",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-DOCTOR",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/frontdoor",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/relay",
+        "internal/remote",
+        "internal/replication",
+        "internal/runtime",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-FEED-PIPELINED-ACKS",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-FORGED-DELEGATION",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/frontdoor",
+        "internal/iphone",
+        "internal/operations",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-GAP-REJECT",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-GATEWAY-DIALS",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-HELPER-RESTART",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/frontdoor",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/relay",
+        "internal/remote",
+        "internal/replication",
+        "internal/runtime",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-KILL-DURING-APPLY",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-KILL-GATEWAY-CAPTURE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-LOCALHOST-DEFENSE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/frontdoor",
+        "internal/iphone",
+        "internal/operations",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-MESSAGES-SHAPE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper Descriptor",
+        "harness: semantic product helper NormalizeContactHandle",
+        "harness: semantic product helper OperationSchema",
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-PAIR",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/frontdoor",
+        "internal/iphone",
+        "internal/operations",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-QUERY-BLOB",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/queries.go still imports product implementations: trust",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-QUERY-DEADLINE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/queries.go still imports product implementations: trust",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-QUERY-ROUNDTRIP",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/queries.go still imports product implementations: trust",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-QUERY-SCOPE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/queries.go still imports product implementations: trust",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-REPLICA-CAPTURE-ATOMIC",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-REPLICA-CAPTURE-LEGACY",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/replica_capture_staging.go still imports product implementations: state",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-REPLICA-CAPTURE-OBSERVERS",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/replication",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/agent_access.go still imports product implementations: trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-REPLICA-CAPTURE-STAGING",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/replica_capture_staging.go still imports product implementations: state",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-REST-MCP-PARITY",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/frontdoor",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-RESTORE-EPOCH",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/frontdoor",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/relay",
+        "internal/remote",
+        "internal/replication",
+        "internal/runtime",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-RESTORE-OLD-SCHEMA",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/frontdoor",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/relay",
+        "internal/remote",
+        "internal/replication",
+        "internal/runtime",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-RESUME",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-RETENTION-RACE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-SCOPE-CHANGE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/frontdoor",
+        "internal/iphone",
+        "internal/operations",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-SCOPE-LEAK",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/frontdoor",
+        "internal/iphone",
+        "internal/operations",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-SIM-PROGRESS-RECOVERY",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/frontdoor",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/relay",
+        "internal/remote",
+        "internal/replication",
+        "internal/runtime",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-SLOW-CONSUMER",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-SNAPSHOT-INTERRUPT",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-SNAPSHOT-POOL",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/replication",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper BlobReferences",
+        "harness: lab/scenarios/agent_activity.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/agent_activity_capture.go still imports product implementations: trust",
+        "harness: lab/scenarios/agent_credentials.go still imports product implementations: trust",
+        "harness: lab/scenarios/agent_oauth_credentials.go still imports product implementations: trust",
+        "harness: lab/scenarios/agent_oauth_grants.go still imports product implementations: trust",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_auth_isolation.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_command_resolve.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_hosts.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_server.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_sources.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_sources_errors.go still imports product implementations: operations, state, trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-SNAPSHOT-UNDER-LOAD",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-SOURCE-GRANTS",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/frontdoor",
+        "internal/iphone",
+        "internal/operations",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "CORE-UPGRADE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "FILE-COMMANDS",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "FILE-CRUD-REAL",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "FILE-OFFLOAD-REAL",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "HELPER-IPC-RESPONSIVE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "IWORK-REAL",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts",
+        "lab/simapple"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper MacCompletionEvidence",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "LAB-MALFORMED-SCENARIO",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "LAB-SSE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "LAB-TRUTH-MULTIPLICITY",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "LOC-SIM",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "MAC-ACTIONS",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper MacCompletionEvidence",
+        "harness: semantic product helper MacDescriptors",
+        "harness: semantic product helper OperationSchema",
+        "harness: lab/scenarios/mac_actions.go still imports product implementations: trust",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "MAC-CAPTURE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper MacCompletionEvidence",
+        "harness: semantic product helper MacDescriptors",
+        "harness: semantic product helper OperationSchema",
+        "harness: lab/scenarios/mac_actions.go still imports product implementations: trust",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "MAC-COMMANDS",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper MacCompletionEvidence",
+        "harness: semantic product helper MacDescriptors",
+        "harness: semantic product helper OperationSchema",
+        "harness: lab/scenarios/mac_actions.go still imports product implementations: trust",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "MAC-EXTRAS-SIM",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts",
+        "internal/trust",
+        "lab/simapple"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper MacCompletionEvidence",
+        "harness: semantic product helper MacDescriptors",
+        "harness: semantic product helper OperationSchema",
+        "harness: lab/scenarios/mac_actions.go still imports product implementations: trust",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "MAP-SIM",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "MSG-CAPABILITY-MATRIX",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper NormalizeContactHandle",
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "MSG-COMMAND-OBSERVED-IDS",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper Descriptor",
+        "harness: semantic product helper NormalizeContactHandle",
+        "harness: semantic product helper OperationSchema",
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "MSG-COMMAND-PARTS",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper Descriptor",
+        "harness: semantic product helper NormalizeContactHandle",
+        "harness: semantic product helper OperationSchema",
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "MSG-DB-REPLACED",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper Descriptor",
+        "harness: semantic product helper NormalizeContactHandle",
+        "harness: semantic product helper OperationSchema",
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "MSG-DELETE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper NormalizeContactHandle",
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "MSG-DELETE-REAL",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper Descriptor",
+        "harness: semantic product helper NormalizeContactHandle",
+        "harness: semantic product helper OperationSchema",
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "MSG-EDIT",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper NormalizeContactHandle",
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "MSG-FAILED-OBSERVED-IDS",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper Descriptor",
+        "harness: semantic product helper NormalizeContactHandle",
+        "harness: semantic product helper OperationSchema",
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "MSG-HISTORY-IMPORT",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper Descriptor",
+        "harness: semantic product helper NormalizeContactHandle",
+        "harness: semantic product helper OperationSchema",
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "MSG-INCOMING",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper Descriptor",
+        "harness: semantic product helper NormalizeContactHandle",
+        "harness: semantic product helper OperationSchema",
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "MSG-MARK-READ",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper NormalizeContactHandle",
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "MSG-OWNER-TOKEN-SELFCHAT",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper Descriptor",
+        "harness: semantic product helper NormalizeContactHandle",
+        "harness: semantic product helper OperationSchema",
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "MSG-PERMISSION-LOSS",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper Descriptor",
+        "harness: semantic product helper NormalizeContactHandle",
+        "harness: semantic product helper OperationSchema",
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "MSG-REACT",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper NormalizeContactHandle",
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "MSG-READSTATE-REAL",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper Descriptor",
+        "harness: semantic product helper NormalizeContactHandle",
+        "harness: semantic product helper OperationSchema",
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "MSG-RECEIPTS",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper Descriptor",
+        "harness: semantic product helper NormalizeContactHandle",
+        "harness: semantic product helper OperationSchema",
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "MSG-REPLY",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper NormalizeContactHandle",
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "MSG-RESEND",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper Descriptor",
+        "harness: semantic product helper NormalizeContactHandle",
+        "harness: semantic product helper OperationSchema",
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "MSG-SELFTEST",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper Descriptor",
+        "harness: semantic product helper NormalizeContactHandle",
+        "harness: semantic product helper OperationSchema",
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "MSG-SEND-FILES",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper NormalizeContactHandle",
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "MSG-SEND-GHOST",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper NormalizeContactHandle",
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "MSG-SEND-IDENTICAL-MANUAL",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper NormalizeContactHandle",
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "MSG-SEND-NEW-HANDLE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper NormalizeContactHandle",
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "MSG-SEND-SELF-EMAIL",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper NormalizeContactHandle",
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "MSG-SEND-SELF-TEXT",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper NormalizeContactHandle",
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "MSG-UI-INTERFERENCE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper NormalizeContactHandle",
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "MSG-UNSEND",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper NormalizeContactHandle",
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "NOTE-CRUD",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "NOTE-EDIT-PARITY",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "NOTE-EXTERNAL",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "NOTE-EXTRAS",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "NOTE-IMPORT",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "NOTE-LIST",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "NOTE-RICH-REJECT",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "PDF-ANNOTATE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/frontdoor",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/relay",
+        "internal/remote",
+        "internal/replication",
+        "internal/runtime",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/vision_queries.go still imports product implementations: runtime",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "PDF-TEXT",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/frontdoor",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/relay",
+        "internal/remote",
+        "internal/replication",
+        "internal/runtime",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/vision_queries.go still imports product implementations: runtime",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "QUERY-AGENT",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "RELAY-ENROLL",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/relay",
+        "internal/remote",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: relay, remote",
+        "harness: lab/scenarios/relay_dns.go still imports product implementations: relay",
+        "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
+        "harness: lab/scenarios/relay_service.go still imports product implementations: relay",
+        "harness: lab/scenarios/relay_streams.go still imports product implementations: relay",
+        "harness: lab/scenarios/remote_checks.go still imports product implementations: remote",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "RELAY-LIMITS",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/relay",
+        "internal/remote",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: relay, remote",
+        "harness: lab/scenarios/relay_dns.go still imports product implementations: relay",
+        "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
+        "harness: lab/scenarios/relay_service.go still imports product implementations: relay",
+        "harness: lab/scenarios/relay_streams.go still imports product implementations: relay",
+        "harness: lab/scenarios/remote_checks.go still imports product implementations: remote",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "RELAY-PASSTHROUGH",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/relay",
+        "internal/remote",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: relay, remote",
+        "harness: lab/scenarios/relay_dns.go still imports product implementations: relay",
+        "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
+        "harness: lab/scenarios/relay_service.go still imports product implementations: relay",
+        "harness: lab/scenarios/relay_streams.go still imports product implementations: relay",
+        "harness: lab/scenarios/remote_checks.go still imports product implementations: remote",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "RELAY-ROTATE-GATED",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/relay",
+        "internal/remote",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: relay, remote",
+        "harness: lab/scenarios/relay_containment.go still imports product implementations: relay",
+        "harness: lab/scenarios/relay_dns.go still imports product implementations: relay",
+        "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
+        "harness: lab/scenarios/relay_service.go still imports product implementations: relay",
+        "harness: lab/scenarios/relay_streams.go still imports product implementations: relay",
+        "harness: lab/scenarios/relay_tls_splice.go still imports product implementations: replication, state, trust",
+        "harness: lab/scenarios/remote_checks.go still imports product implementations: remote",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "RELAY-TLS-SPLICE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/relay",
+        "internal/remote",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: relay, remote",
+        "harness: lab/scenarios/relay_containment.go still imports product implementations: relay",
+        "harness: lab/scenarios/relay_dns.go still imports product implementations: relay",
+        "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
+        "harness: lab/scenarios/relay_service.go still imports product implementations: relay",
+        "harness: lab/scenarios/relay_streams.go still imports product implementations: relay",
+        "harness: lab/scenarios/relay_tls_splice.go still imports product implementations: replication, state, trust",
+        "harness: lab/scenarios/remote_checks.go still imports product implementations: remote",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "REM-CONFLICT",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "REM-CREATE-EXTERNAL",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "REM-CRUD",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "REM-EXTERNAL-RACE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "REM-LIST-CREATE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "REM-LIST-MANAGE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "REM-NATIVE-LIST-RACE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "REM-OPERATION-SHAPES",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "REM-PERMISSION-LOSS",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "REM-READONLY-LIST",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "REM-RECURRING",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "RMT-ONECOMMAND-FLOW",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/frontdoor",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/relay",
+        "internal/remote",
+        "internal/replication",
+        "internal/runtime",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/remote.go still imports product implementations: remote",
+        "harness: lab/scenarios/remote_checks.go still imports product implementations: remote",
+        "harness: lab/scenarios/remote_flow.go still imports product implementations: remote",
+        "harness: lab/scenarios/remote_private_real.go still imports product implementations: remote",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "RMT-PRIVATE-CONNECT",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/frontdoor",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/relay",
+        "internal/remote",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/remote_flow.go still imports product implementations: remote",
+        "harness: lab/scenarios/remote_private.go still imports product implementations: frontdoor, remote, trust",
+        "harness: lab/scenarios/remote_private_real.go still imports product implementations: remote",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "SC-RUN-REAL",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts",
+        "internal/shortcut"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper Descriptor",
+        "harness: semantic product helper ValidateCommand",
+        "harness: lab/scenarios/shortcuts_runner.go still imports product implementations: shortcut",
+        "harness: lab/scenarios/siri_intents.go still imports product implementations: shortcut",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "SEC-REMOTE-ACCESS",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/frontdoor",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/relay",
+        "internal/remote",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper BlobReferences",
+        "harness: lab/scenarios/agent_access.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/agent_activity.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/agent_activity_capture.go still imports product implementations: trust",
+        "harness: lab/scenarios/agent_credentials.go still imports product implementations: trust",
+        "harness: lab/scenarios/agent_oauth_credentials.go still imports product implementations: trust",
+        "harness: lab/scenarios/agent_oauth_grants.go still imports product implementations: trust",
+        "harness: lab/scenarios/agent_oauth_http.go still imports product implementations: trust",
+        "harness: lab/scenarios/connector_approval.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/security_failures.go still imports product implementations: frontdoor, remote",
+        "harness: lab/scenarios/security_oauth.go still imports product implementations: trust",
+        "harness: lab/scenarios/security_owner.go still imports product implementations: trust",
+        "harness: lab/scenarios/security_relay.go still imports product implementations: relay",
+        "harness: lab/scenarios/security_remote.go still imports product implementations: remote, trust, web",
+        "harness: lab/scenarios/web_auth_isolation.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_command_resolve.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_hosts.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_server.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_sources.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_sources_errors.go still imports product implementations: operations, state, trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "USE-IMPORT",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "USE-LOCK-CLIP",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "USE-READONLY",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "USE-REMOTE-LAG",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "VIS-OCR",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/frontdoor",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/relay",
+        "internal/remote",
+        "internal/replication",
+        "internal/runtime",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/vision_queries.go still imports product implementations: runtime",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "WEB-AGENT-ACTIVITY",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/frontdoor",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper BlobReferences",
+        "harness: lab/scenarios/agent_activity.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/agent_activity_capture.go still imports product implementations: trust",
+        "harness: lab/scenarios/agent_credentials.go still imports product implementations: trust",
+        "harness: lab/scenarios/agent_oauth_credentials.go still imports product implementations: trust",
+        "harness: lab/scenarios/agent_oauth_grants.go still imports product implementations: trust",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_auth_isolation.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_command_resolve.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_hosts.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_server.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_sources.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_sources_errors.go still imports product implementations: operations, state, trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "WEB-AGENT-CREDENTIALS",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/frontdoor",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper BlobReferences",
+        "harness: lab/scenarios/agent_activity.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/agent_activity_capture.go still imports product implementations: trust",
+        "harness: lab/scenarios/agent_credentials.go still imports product implementations: trust",
+        "harness: lab/scenarios/agent_oauth_credentials.go still imports product implementations: trust",
+        "harness: lab/scenarios/agent_oauth_grants.go still imports product implementations: trust",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_auth_isolation.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_command_resolve.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_hosts.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_server.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_sources.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_sources_errors.go still imports product implementations: operations, state, trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "WEB-AGENT-LEVELS",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/frontdoor",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper BlobReferences",
+        "harness: lab/scenarios/agent_access.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/agent_activity.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/agent_activity_capture.go still imports product implementations: trust",
+        "harness: lab/scenarios/agent_credentials.go still imports product implementations: trust",
+        "harness: lab/scenarios/agent_oauth_credentials.go still imports product implementations: trust",
+        "harness: lab/scenarios/agent_oauth_grants.go still imports product implementations: trust",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_auth_isolation.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_command_resolve.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_hosts.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_server.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_sources.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_sources_errors.go still imports product implementations: operations, state, trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "WEB-AGENT-OAUTH",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/frontdoor",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper BlobReferences",
+        "harness: lab/scenarios/agent_access.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/agent_activity.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/agent_activity_capture.go still imports product implementations: trust",
+        "harness: lab/scenarios/agent_credentials.go still imports product implementations: trust",
+        "harness: lab/scenarios/agent_oauth_credentials.go still imports product implementations: trust",
+        "harness: lab/scenarios/agent_oauth_grants.go still imports product implementations: trust",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_auth_isolation.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_command_resolve.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_hosts.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_server.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_sources.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_sources_errors.go still imports product implementations: operations, state, trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "WEB-AGENT-OAUTH-CIMD",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/frontdoor",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper BlobReferences",
+        "harness: lab/scenarios/agent_access.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/agent_activity.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/agent_activity_capture.go still imports product implementations: trust",
+        "harness: lab/scenarios/agent_credentials.go still imports product implementations: trust",
+        "harness: lab/scenarios/agent_oauth_credentials.go still imports product implementations: trust",
+        "harness: lab/scenarios/agent_oauth_grants.go still imports product implementations: trust",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_auth_isolation.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_command_resolve.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_hosts.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_server.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_sources.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_sources_errors.go still imports product implementations: operations, state, trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "WEB-CAL-WRITE",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "WEB-CON-LIST",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "WEB-MEDIA-CAP",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/replication",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper NormalizeContactHandle",
+        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
+        "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+        "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
+        "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "WEB-RELAY-AGENTS",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/frontdoor",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/relay",
+        "internal/remote",
+        "internal/replication",
+        "internal/runtime",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: semantic product helper CommandHash",
+        "harness: lab/scenarios/relay_agent_approvals.go still imports product implementations: trust",
+        "harness: lab/scenarios/relay_agent_delegation.go still imports product implementations: trust",
+        "harness: lab/scenarios/relay_agent_parent.go still imports product implementations: trust",
+        "harness: lab/scenarios/relay_agents.go still imports product implementations: trust, web",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "WEB-RELAY-AUTH",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/frontdoor",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/relay",
+        "internal/remote",
+        "internal/replication",
+        "internal/runtime",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "WEB-RELAY-PAIRING",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/frontdoor",
+        "internal/iphone",
+        "internal/operations",
+        "internal/publichttp",
+        "internal/relay",
+        "internal/remote",
+        "internal/replication",
+        "internal/runtime",
+        "internal/state",
+        "internal/trust",
+        "internal/web"
+      ],
+      "blocked_on": [
+        "harness: lab/scenarios/relay_auth_capture.go still imports product implementations: trust",
+        "harness: lab/scenarios/relay_pairing.go still imports product implementations: replication, trust",
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "WEB-RM-MEDIA-COLLECTION",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "WEB-RM-REMINDERS-DEMO",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "WEB-RM-REMINDERS-HARDENING",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "WEB-RM-REMINDERS-LISTS",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "WEB-RM-SEARCH",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    },
+    {
+      "id": "WEB-RM-THREAD-ORIGINATOR",
+      "seconds": 0,
+      "status": "blocked",
+      "execution_status": "not-started",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": [
+        "ab-runtime/ab-applepeer: start --role gateway exited 1 before ipc/1 readiness"
+      ]
+    }
+  ]
+}

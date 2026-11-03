@@ -5,6 +5,7 @@ use std::{collections::HashMap, path::PathBuf, sync::Arc};
 struct Arguments {
     verb: String,
     value: String,
+    action: String,
     flags: HashMap<String, String>,
 }
 impl Arguments {
@@ -14,6 +15,11 @@ impl Arguments {
         if verb == "token" && args.next().as_deref() != Some("create") {
             return Err(Error::Invalid);
         }
+        let action = if verb == "remote" {
+            args.next().ok_or(Error::Invalid)?
+        } else {
+            String::new()
+        };
         let mut flags = HashMap::new();
         let mut value = String::new();
         while let Some(argument) = args.next() {
@@ -23,13 +29,24 @@ impl Arguments {
             {
                 let (key, content) = if let Some((key, content)) = flag.split_once('=') {
                     (key.to_owned(), content.to_owned())
-                } else if flag == "remote" {
+                } else if [
+                    "remote",
+                    "helper-lab-commands",
+                    "accept-ledger-loss",
+                ]
+                .contains(&flag)
+                {
                     (flag.to_owned(), "true".into())
                 } else {
                     (flag.to_owned(), args.next().ok_or(Error::Invalid)?)
                 };
                 if ![
                     "home",
+                    "helper-app",
+                    "helper-lab-commands",
+                    "via",
+                    "backup",
+                    "accept-ledger-loss",
                     "role",
                     "listen",
                     "api-addr",
@@ -53,7 +70,12 @@ impl Arguments {
                 return Err(Error::Invalid);
             }
         }
-        Ok(Self { verb, value, flags })
+        Ok(Self {
+            verb,
+            value,
+            action,
+            flags,
+        })
     }
     fn config(&self, home: PathBuf) -> Result<Config, Error> {
         Ok(Config {
@@ -63,6 +85,8 @@ impl Arguments {
             peer_address: self.flag("peer-addr", ""),
             listen: self.flag("listen", ""),
             socket: self.flag("socket", ""),
+            helper_app: self.flag("helper-app", ""),
+            helper_lab_commands: self.flag("helper-lab-commands", "false") == "true",
             retention_rows: self
                 .flag("retention-rows", "0")
                 .parse()
@@ -91,19 +115,44 @@ async fn main() {
         std::process::exit(1);
     }
 }
+fn offline(args: &Arguments, home: &std::path::Path) -> Result<bool, Error> {
+    if args.verb == "status" || args.verb == "doctor" {
+        let report = if args.verb == "status" {
+            ab_runtime::inspection::status(home)?
+        } else {
+            ab_runtime::inspection::doctor(home)?
+        };
+        println!("{report}");
+        return Ok(true);
+    }
+    if args.verb == "remote" {
+        println!(
+            "{}",
+            ab_remote::state::command(home, &args.action, &args.flag("via", "relay"))?
+        );
+        return Ok(true);
+    }
+    if args.verb == "restore" {
+        ab_runtime::maintenance::restore(
+            home,
+            &PathBuf::from(args.flag("backup", &args.value)),
+            args.flag("accept-ledger-loss", "false") == "true",
+        )?;
+        return Ok(true);
+    }
+    if args.verb == "backup" {
+        ab_runtime::maintenance::backup(home, &PathBuf::from(&args.value))?;
+        return Ok(true);
+    }
+    Ok(false)
+}
 async fn run() -> Result<(), Error> {
     let args = Arguments::parse()?;
     let home = args
         .flags
         .get("home")
         .map_or_else(default_home, |v| Ok(PathBuf::from(v)))?;
-    if args.verb == "status" || args.verb == "doctor" {
-        let report = if args.verb == "status" {
-            ab_runtime::inspection::status(&home)?
-        } else {
-            ab_runtime::inspection::doctor(&home)?
-        };
-        println!("{report}");
+    if offline(&args, &home)? {
         return Ok(());
     }
     let authority = Arc::new(
@@ -167,7 +216,6 @@ async fn run() -> Result<(), Error> {
         }
         "start" => {
             let config = args.config(home)?;
-            config.validate()?;
             ab_runtime::start(config, authority).await?;
         }
         _ => return Err(Error::Invalid),

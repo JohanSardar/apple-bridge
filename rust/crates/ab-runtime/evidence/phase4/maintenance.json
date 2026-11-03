@@ -1,0 +1,11 @@
+{
+  "checks": [
+    "Go singleton lock rejects Rust backup and restore",
+    "backup/restore rotates epoch and preserves live ledger file and command rows",
+    "home and backup retain private modes",
+    "remote both/on/off/status and invalid backend",
+    "remote selection keeps Go-readable legacy backend",
+    "token create accepts explicit false boolean"
+  ],
+  "passed": 6
+}

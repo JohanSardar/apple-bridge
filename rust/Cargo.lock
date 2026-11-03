@@ -143,6 +143,7 @@ dependencies = [
  "ab-blobs",
  "ab-frontdoor",
  "ab-operations",
+ "ab-remote",
  "ab-replication",
  "ab-state",
  "ab-trust",

@@ -6,6 +6,7 @@ license.workspace = true
 [lints]
 workspace = true
 [dependencies]
+ab-remote = { path = "../ab-remote" }
 ab-operations = { path = "../ab-operations" }
 ab-frontdoor = { path = "../ab-frontdoor" }
 ab-wire = { path = "../ab-wire" }
