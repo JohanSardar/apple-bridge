@@ -29,7 +29,9 @@ pub mod usage;
 
 pub mod telephony;
 
+pub mod agenda;
 pub mod assets;
+pub mod contacts;
 pub mod voice_memo;
 
 pub mod mail;

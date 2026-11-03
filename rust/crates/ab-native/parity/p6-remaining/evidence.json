@@ -1,0 +1,109 @@
+{
+  "recorded_at": "2026-11-03T16:34:37.458687+00:00",
+  "platform": "aarch64-apple-darwin",
+  "synthetic_only": true,
+  "live_databases_read": false,
+  "permission_requests": false,
+  "live_helper_switched": false,
+  "differences": 0,
+  "sources": [
+    {
+      "source": "calls",
+      "stages": 14,
+      "responses": 14,
+      "differences": 0,
+      "result": "equal",
+      "reader_shadow_gate": "ready",
+      "capture_integration_required": true,
+      "comparison": "unchanged Swift scan oracle and complete ordered capture frames; Go encoding/json Data SHA-256",
+      "generation_comparison": "bijective generation epochs; scoped aliases use the same mapping",
+      "command": "python3 rust/crates/ab-native/parity/p6-remaining/local.py telephony /tmp/ab-p6-remaining-tools/telephony-oracle \"$CARGO_TARGET_DIR/debug/examples/fixture-reader\" /tmp/ab-p6-data-bytes"
+    },
+    {
+      "source": "voicemail",
+      "stages": 14,
+      "responses": 14,
+      "differences": 0,
+      "result": "equal",
+      "reader_shadow_gate": "ready",
+      "capture_integration_required": true,
+      "comparison": "unchanged Swift scan oracle and complete ordered capture frames; Go encoding/json Data SHA-256",
+      "generation_comparison": "bijective generation epochs; scoped aliases use the same mapping",
+      "command": "python3 rust/crates/ab-native/parity/p6-remaining/local.py telephony /tmp/ab-p6-remaining-tools/telephony-oracle \"$CARGO_TARGET_DIR/debug/examples/fixture-reader\" /tmp/ab-p6-data-bytes"
+    },
+    {
+      "source": "voice-memos",
+      "stages": 18,
+      "responses": 26,
+      "differences": 0,
+      "result": "equal",
+      "reader_shadow_gate": "ready",
+      "capture_integration_required": true,
+      "comparison": "unchanged Swift scan oracle and complete ordered capture frames; Go encoding/json Data SHA-256",
+      "generation_comparison": "bijective generation epochs; scoped aliases use the same mapping",
+      "command": "python3 rust/crates/ab-native/parity/p6-remaining/local.py voice-memos /tmp/ab-p6-remaining-tools/voice-memos-oracle \"$CARGO_TARGET_DIR/debug/examples/fixture-reader\" /tmp/ab-p6-data-bytes"
+    },
+    {
+      "source": "mail",
+      "stages": 19,
+      "responses": 19,
+      "differences": 0,
+      "result": "equal",
+      "reader_shadow_gate": "ready",
+      "capture_integration_required": true,
+      "comparison": "unchanged Swift scan oracle and complete ordered capture frames; Go encoding/json Data SHA-256",
+      "generation_comparison": "bijective generation epochs; scoped aliases use the same mapping",
+      "command": "python3 rust/crates/ab-native/parity/p6-remaining/local.py mail /tmp/ab-p6-remaining-tools/mail-oracle \"$CARGO_TARGET_DIR/debug/examples/fixture-reader\" /tmp/ab-p6-data-bytes"
+    },
+    {
+      "source": "notes",
+      "stages": 43,
+      "responses": 182,
+      "differences": 0,
+      "result": "equal",
+      "reader_shadow_gate": "ready",
+      "capture_integration_required": true,
+      "comparison": "unchanged Swift scan oracle and complete ordered capture frames; Go encoding/json Data SHA-256",
+      "generation_comparison": "exact",
+      "command": "python3 rust/crates/ab-native/parity/p6-remaining/local.py notes /tmp/ab-p6-remaining-tools/notes-oracle \"$CARGO_TARGET_DIR/debug/examples/fixture-reader\" /tmp/ab-p6-data-bytes"
+    }
+  ],
+  "notes_regression": {
+    "before": "remove-media: Swift emitted attachment hydration, Rust emitted done without hydration",
+    "root_cause": "Rust canonicalized tracked paths through the Darwin /var -> /private/var alias; incoming watcher paths retained the lexical alias used by Swift",
+    "after": "43 complete replay stages and 182 responses match Swift with zero differences",
+    "fix": "Retain the already confined attachment path for watcher invalidation; canonical confinement checks in notes_store and assets remain unchanged"
+  },
+  "build": {
+    "target": "~/ab-targets/p6",
+    "swift_output": "/tmp/ab-p6-remaining-tools",
+    "support_output": "/tmp/ab-p6-usage-tools",
+    "command": "python3 rust/crates/ab-native/parity/p6-remaining/build.py /tmp/ab-p6-remaining-tools /tmp/ab-p6-usage-tools /tmp/ab-p6-usage-tools",
+    "data_bytes": "go build -o /tmp/ab-p6-data-bytes rust/crates/ab-native/parity/usage/data-bytes.go",
+    "rust": "CARGO_TARGET_DIR=~/ab-targets/p6 cargo build --manifest-path rust/Cargo.toml -p ab-native --example fixture-reader"
+  },
+  "file_sha256": {
+    "rust/crates/ab-native/src/notes_reader.rs": "9e50f1948598c3bbd4214cb4db1fc1c0c471514312c6838e005227571b3feafa",
+    "rust/crates/ab-native/src/telephony.rs": "d5a6bded893825aa76810d7b1d417adf5dd445cc7ad3ce7e24c00aff51549764",
+    "rust/crates/ab-native/src/voice_memo.rs": "ccacce17008c89739d01ed1cce372d5958c7e8c73198d2d811bf802e6e0f3e91",
+    "rust/crates/ab-native/src/mail.rs": "06bca0fe3318dab2b1a755d185becdc26604dcc9ef64f0ee1b858e654733f3f9",
+    "rust/crates/ab-native/src/assets.rs": "d2bd4c7d186fea761ada99ee5fa9b90430a49a5e03a2b28dc1203ec847fb1d48",
+    "rust/crates/ab-native/parity/telephony/compare.py": "fde506bdcb4c3b246f20930ef9ff0f11e69e9a236614c07704ac6c7d4b9abf5f",
+    "rust/crates/ab-native/parity/telephony/generate.py": "43efe00b34af3ca9eed08bdda7c26181d58950c911c6c2b2d0b284675f16e955",
+    "rust/crates/ab-native/parity/telephony/oracle.swift": "79959070936de234c938de410d05a73003ce2baaf1da6384717dae14ec6c26f2",
+    "rust/crates/ab-native/parity/voice-memos/compare.py": "ee41e85757a7f7f40a3683480bffb28b28e72743dbcf8ee582b6037a5af7ece8",
+    "rust/crates/ab-native/parity/voice-memos/generate.py": "a3aac97a602fdbff8b919d7fff99379745e5ac5306374204671591daff9e76ab",
+    "rust/crates/ab-native/parity/voice-memos/oracle.swift": "cf9baba3736a6ea6aa391f219b08757370b57c7fb66b60e39c9a42c2e2191935",
+    "rust/crates/ab-native/parity/mail/compare.py": "61ce9286e982929c83f40ad21fc180e2b9bc953d734b6f954eabd196cbc7c713",
+    "rust/crates/ab-native/parity/mail/generate.py": "8365f556e846f7271e554f0b8448beab4424e997b579658f6c26b3515a486f09",
+    "rust/crates/ab-native/parity/mail/oracle.swift": "210b2c13929829c88a1dc4ed095af3ed59bbfbaa09576a539a243306e20384aa",
+    "rust/crates/ab-native/parity/notes/compare.py": "38f43a288459f28ae2615b930870aa074d423c5834015f60b6a8e0a17bb98014",
+    "rust/crates/ab-native/parity/notes/generate.py": "47b2bdb61dd64d291dab4c6cd47bcdbd0bdb668b17e4fcb9f4d7e21450568cac",
+    "rust/crates/ab-native/parity/notes/oracle.swift": "12f3c48b40ac697914e39446cdbfbc58a93df315d54907e0e0cd5b8ae6eeb186"
+  },
+  "tests": {
+    "command": "CARGO_TARGET_DIR=~/ab-targets/p6 cargo test --manifest-path rust/Cargo.toml -p ab-native --test notes_reader",
+    "passed": 3,
+    "failed": 0
+  }
+}

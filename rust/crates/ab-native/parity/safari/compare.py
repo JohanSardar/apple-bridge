@@ -9,9 +9,28 @@ import sys
 import tempfile
 import threading
 
-oracle, binary = sys.argv[1:]
+local_mode = "--local" in sys.argv
+arguments = [argument for argument in sys.argv[1:] if argument != "--local"]
+oracle, binary = arguments
+data_bytes = os.environ.get("AB_PARITY_DATA_BYTES")
+if local_mode and not data_bytes:
+    raise SystemExit("--local requires AB_PARITY_DATA_BYTES")
 script = pathlib.Path(__file__).with_name('generate.py').resolve()
-remote = subprocess.check_output(['ssh','build','mktemp -d ~/w/safari-fixture-XXXXXX'],text=True).strip()
+remote = None if local_mode else subprocess.check_output(['ssh','build','mktemp -d ~/w/safari-fixture-XXXXXX'],text=True).strip()
+def generate_rust(operation=None):
+    arguments = [] if operation is None else [operation]
+    if local_mode:
+        subprocess.run([sys.executable,str(script),remote,*arguments],check=True)
+    else:
+        subprocess.run(['ssh','build',shlex.join(['python3','-',remote,*arguments])],input=script.read_text(),text=True,check=True)
+
+def swift_command(root):
+    return [oracle,str(root)] if local_mode else [str(pathlib.Path.home()/'bin/ab-local'),oracle,str(root)]
+
+def rust_command():
+    command = [binary,'safari',remote,'--interactive','--frames']
+    return command if local_mode else ['ssh','build',shlex.join(command)]
+
 processes=[]
 swift_pid=None
 paused=False
@@ -32,10 +51,11 @@ def take(output):
 try:
     with tempfile.TemporaryDirectory(prefix='ab-safari-fixture-') as tmp:
         root=pathlib.Path(tmp)/'fixture'
+        if local_mode: remote=str(pathlib.Path(tmp)/'rust-fixture')
         subprocess.run([sys.executable,str(script),str(root)],check=True)
-        subprocess.run(['ssh','build',shlex.join(['python3','-',remote])],input=script.read_text(),text=True,check=True)
-        swift=subprocess.Popen([str(pathlib.Path.home()/'bin/ab-local'),oracle,str(root)],stdin=subprocess.PIPE,stdout=subprocess.PIPE,text=True)
-        rust=subprocess.Popen(['ssh','build',shlex.join([binary,'safari',remote,'--interactive','--frames'])],stdin=subprocess.PIPE,stdout=subprocess.PIPE,text=True)
+        generate_rust()
+        swift=subprocess.Popen(swift_command(root),stdin=subprocess.PIPE,stdout=subprocess.PIPE,text=True)
+        rust=subprocess.Popen(rust_command(),stdin=subprocess.PIPE,stdout=subprocess.PIPE,text=True)
         processes=[swift,rust]; outputs=[lines(p) for p in processes]
         _,ready=take(outputs[0]);swift_pid=ready['pid']
         raw=[];captures=[];last_diagnostic=[None]
@@ -58,7 +78,7 @@ try:
         for operation,kind,count in stages:
             os.kill(swift_pid,signal.SIGSTOP);paused=True
             subprocess.run([sys.executable,str(script),str(root),operation],check=True)
-            subprocess.run(['ssh','build',shlex.join(['python3','-',remote,operation])],input=script.read_text(),text=True,check=True)
+            generate_rust(operation)
             os.kill(swift_pid,signal.SIGCONT);paused=False
             command(kind)
             if count: equal(count)
@@ -69,14 +89,14 @@ try:
         for p in processes: assert p.wait(timeout=10) == 0
         processes.clear()
         subprocess.run([sys.executable,str(script),str(root),'bookmarks-empty'],check=True)
-        subprocess.run(['ssh','build',shlex.join(['python3','-',remote,'bookmarks-empty'])],input=script.read_text(),text=True,check=True)
-        swift=subprocess.Popen([str(pathlib.Path.home()/'bin/ab-local'),oracle,str(root)],stdin=subprocess.PIPE,stdout=subprocess.PIPE,text=True)
-        rust=subprocess.Popen(['ssh','build',shlex.join([binary,'safari',remote,'--interactive','--frames'])],stdin=subprocess.PIPE,stdout=subprocess.PIPE,text=True)
+        generate_rust('bookmarks-empty')
+        swift=subprocess.Popen(swift_command(root),stdin=subprocess.PIPE,stdout=subprocess.PIPE,text=True)
+        rust=subprocess.Popen(rust_command(),stdin=subprocess.PIPE,stdout=subprocess.PIPE,text=True)
         processes.extend([swift,rust]); outputs=[lines(p) for p in processes]
         _,ready=take(outputs[0]);swift_pid=ready['pid'];last_diagnostic[0]=None
         command('scan');equal(3)
         print('identity-cache restart: identical',flush=True)
-        digests=subprocess.check_output(['ssh','build','~/targets/phase6-native/fixture-data-bytes'],input=''.join(raw),text=True).splitlines()
+        digests=subprocess.check_output(([data_bytes] if local_mode else ['ssh','build','~/targets/phase6-native/fixture-data-bytes']),input=''.join(raw),text=True).splitlines()
         assert all(digests[i]==digests[i+1] for i in range(0,len(digests),2))
         assert any(row.get('kind')=='absent' for frame in captures for row in frame.get('observations',[]))
         print(f'Safari: {len(captures)} identical frames, Go Data byte hashes identical; unchanged input suppressed; malformed input produced no absence')
@@ -87,4 +107,5 @@ finally:
     for p in processes:
         try: p.wait(timeout=10)
         except subprocess.TimeoutExpired:p.terminate();p.wait(timeout=5)
-    subprocess.run(['ssh','build','rm -rf -- '+shlex.quote(remote)],check=True)
+    if not local_mode:
+        subprocess.run(['ssh','build','rm -rf -- '+shlex.quote(remote)],check=True)

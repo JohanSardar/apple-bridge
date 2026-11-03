@@ -486,7 +486,7 @@ impl Reader {
             .iter()
             .filter(|(key, _)| key.starts_with(&format!("{}:", row.native_key)))
             .filter_map(|(_, asset)| asset.file.as_ref())
-            .map(|path| path.canonicalize().unwrap_or_else(|_| path.clone()))
+            .cloned()
             .collect();
         Ok(Some((row, paths)))
     }
