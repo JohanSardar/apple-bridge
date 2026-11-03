@@ -1,5 +1,5 @@
 {
-  "wall_seconds": 84.271,
+  "wall_seconds": 80.772,
   "parallel": 12,
   "host": "linux",
   "complete": true,
@@ -72,7 +72,7 @@
     },
     {
       "id": "APP-PAIR-SIM",
-      "seconds": 2.419,
+      "seconds": 2.371,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -89,7 +89,7 @@
     },
     {
       "id": "AUD-SIM",
-      "seconds": 2.119,
+      "seconds": 1.969,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -99,7 +99,7 @@
     },
     {
       "id": "AUTH-SCOPES-METADATA",
-      "seconds": 0.114,
+      "seconds": 0.115,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -117,7 +117,7 @@
     },
     {
       "id": "CAL-ALLDAY",
-      "seconds": 2.29,
+      "seconds": 2.643,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -127,7 +127,7 @@
     },
     {
       "id": "CAL-ALLDAY-FUTURE",
-      "seconds": 2.593,
+      "seconds": 2.889,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -143,7 +143,7 @@
     },
     {
       "id": "CAL-CREATE-EXTERNAL",
-      "seconds": 3.142,
+      "seconds": 3.597,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -153,7 +153,7 @@
     },
     {
       "id": "CAL-CRUD",
-      "seconds": 4.598,
+      "seconds": 4.945,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -169,7 +169,7 @@
     },
     {
       "id": "CAL-DST",
-      "seconds": 2.287,
+      "seconds": 2.638,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -179,7 +179,7 @@
     },
     {
       "id": "CAL-FUTURE-RULE-MISMATCH",
-      "seconds": 2.394,
+      "seconds": 2.741,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -189,56 +189,6 @@
     },
     {
       "id": "CAL-ID-CHURN",
-      "seconds": 2.343,
-      "status": "pass",
-      "implementation": "gateway=rust",
-      "required_features": [
-        "internal/contracts"
-      ],
-      "blocked_on": []
-    },
-    {
-      "id": "CAL-LARGE-CAPTURE",
-      "seconds": 6.449,
-      "status": "pass",
-      "implementation": "gateway=rust",
-      "required_features": [
-        "internal/contracts"
-      ],
-      "blocked_on": []
-    },
-    {
-      "id": "CAL-MOVED-OCCURRENCE",
-      "seconds": 2.392,
-      "status": "pass",
-      "implementation": "gateway=rust",
-      "required_features": [
-        "internal/contracts"
-      ],
-      "blocked_on": []
-    },
-    {
-      "id": "CAL-MOVED-OUTSIDE-WINDOW",
-      "seconds": 2.488,
-      "status": "pass",
-      "implementation": "gateway=rust",
-      "required_features": [
-        "internal/contracts"
-      ],
-      "blocked_on": []
-    },
-    {
-      "id": "CAL-PERIODIC-VERIFICATION",
-      "seconds": 1.99,
-      "status": "pass",
-      "implementation": "gateway=rust",
-      "required_features": [
-        "internal/contracts"
-      ],
-      "blocked_on": []
-    },
-    {
-      "id": "CAL-PERMISSION-LOSS",
       "seconds": 2.69,
       "status": "pass",
       "implementation": "gateway=rust",
@@ -248,8 +198,58 @@
       "blocked_on": []
     },
     {
+      "id": "CAL-LARGE-CAPTURE",
+      "seconds": 6.345,
+      "status": "pass",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": []
+    },
+    {
+      "id": "CAL-MOVED-OCCURRENCE",
+      "seconds": 2.791,
+      "status": "pass",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": []
+    },
+    {
+      "id": "CAL-MOVED-OUTSIDE-WINDOW",
+      "seconds": 2.79,
+      "status": "pass",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": []
+    },
+    {
+      "id": "CAL-PERIODIC-VERIFICATION",
+      "seconds": 2.389,
+      "status": "pass",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": []
+    },
+    {
+      "id": "CAL-PERMISSION-LOSS",
+      "seconds": 3.04,
+      "status": "pass",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": []
+    },
+    {
       "id": "CAL-READONLY",
-      "seconds": 2.169,
+      "seconds": 2.269,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -265,7 +265,7 @@
     },
     {
       "id": "CAL-RECUR-ALL-REJECT",
-      "seconds": 2.272,
+      "seconds": 2.269,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -281,7 +281,7 @@
     },
     {
       "id": "CAL-RECUR-FUTURE",
-      "seconds": 3.321,
+      "seconds": 2.92,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -297,7 +297,7 @@
     },
     {
       "id": "CAL-RECUR-THIS",
-      "seconds": 2.87,
+      "seconds": 2.52,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -313,7 +313,7 @@
     },
     {
       "id": "CAL-SPLIT-ATOMIC-ALLDAY",
-      "seconds": 2.872,
+      "seconds": 2.47,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -329,7 +329,7 @@
     },
     {
       "id": "CAL-SPLIT-ATOMIC-TIMED",
-      "seconds": 3.221,
+      "seconds": 2.873,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -339,7 +339,7 @@
     },
     {
       "id": "CAL-SPLIT-FRAME-CAP",
-      "seconds": 35.553,
+      "seconds": 43.344,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -355,7 +355,7 @@
     },
     {
       "id": "CAL-STAMP-FIELDS",
-      "seconds": 10.284,
+      "seconds": 10.084,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -365,7 +365,7 @@
     },
     {
       "id": "CAL-WINDOW-SLIDE",
-      "seconds": 2.72,
+      "seconds": 2.32,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -375,7 +375,7 @@
     },
     {
       "id": "CON-CONFLICT",
-      "seconds": 2.82,
+      "seconds": 2.319,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -391,7 +391,7 @@
     },
     {
       "id": "CON-CRUD",
-      "seconds": 3.02,
+      "seconds": 3.52,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -407,7 +407,7 @@
     },
     {
       "id": "CON-DROP-EVERYTHING",
-      "seconds": 2.069,
+      "seconds": 2.62,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -417,7 +417,7 @@
     },
     {
       "id": "CON-EXTERNAL",
-      "seconds": 4.322,
+      "seconds": 4.473,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -427,7 +427,7 @@
     },
     {
       "id": "CON-GROUPS",
-      "seconds": 3.771,
+      "seconds": 3.973,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -437,7 +437,7 @@
     },
     {
       "id": "CON-HANDLE-LINK",
-      "seconds": 3.02,
+      "seconds": 3.271,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -447,7 +447,7 @@
     },
     {
       "id": "CON-IMAGE",
-      "seconds": 6.977,
+      "seconds": 2.418,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -457,7 +457,7 @@
     },
     {
       "id": "CON-IMPORT",
-      "seconds": 2.419,
+      "seconds": 2.369,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -467,7 +467,7 @@
     },
     {
       "id": "CON-PERMISSION-LOSS",
-      "seconds": 2.068,
+      "seconds": 2.118,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -477,7 +477,7 @@
     },
     {
       "id": "CON-READONLY-CONTAINER",
-      "seconds": 2.319,
+      "seconds": 2.218,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -493,7 +493,7 @@
     },
     {
       "id": "CON-RECIPIENT-LOOKUP",
-      "seconds": 13.339,
+      "seconds": 13.187,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -503,7 +503,7 @@
     },
     {
       "id": "CON-RESOLVE-RESTART",
-      "seconds": 8.129,
+      "seconds": 7.932,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -519,7 +519,7 @@
     },
     {
       "id": "CON-SEARCH",
-      "seconds": 1.968,
+      "seconds": 2.019,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -529,7 +529,7 @@
     },
     {
       "id": "CON-TOKEN-CRASH",
-      "seconds": 2.319,
+      "seconds": 2.369,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -628,126 +628,6 @@
     },
     {
       "id": "CORE-BLOB-CAP",
-      "seconds": 2.719,
-      "status": "pass",
-      "implementation": "gateway=rust",
-      "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/replication",
-        "internal/state",
-        "internal/trust"
-      ],
-      "blocked_on": []
-    },
-    {
-      "id": "CORE-BLOB-CORRUPT",
-      "seconds": 6.876,
-      "status": "fail",
-      "implementation": "gateway=rust",
-      "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/replication",
-        "internal/state",
-        "internal/trust"
-      ],
-      "blocked_on": []
-    },
-    {
-      "id": "CORE-BLOB-DUPLICATE-REFERENCE",
-      "seconds": 2.669,
-      "status": "pass",
-      "implementation": "gateway=rust",
-      "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/replication",
-        "internal/state",
-        "internal/trust"
-      ],
-      "blocked_on": []
-    },
-    {
-      "id": "CORE-BLOB-GATEWAY-RETRY",
-      "seconds": 43.469,
-      "status": "fail",
-      "implementation": "gateway=rust",
-      "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/replication",
-        "internal/state",
-        "internal/trust"
-      ],
-      "blocked_on": []
-    },
-    {
-      "id": "CORE-BLOB-GC",
-      "seconds": 12.335,
-      "status": "fail",
-      "implementation": "gateway=rust",
-      "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/replication",
-        "internal/state",
-        "internal/trust"
-      ],
-      "blocked_on": []
-    },
-    {
-      "id": "CORE-BLOB-INTERRUPT",
-      "seconds": 17.099,
-      "status": "fail",
-      "implementation": "gateway=rust",
-      "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/replication",
-        "internal/state",
-        "internal/trust"
-      ],
-      "blocked_on": []
-    },
-    {
-      "id": "CORE-BLOB-NATIVE-STAGE",
-      "seconds": 1.818,
-      "status": "pass",
-      "implementation": "gateway=rust",
-      "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/replication",
-        "internal/state",
-        "internal/trust"
-      ],
-      "blocked_on": []
-    },
-    {
-      "id": "CORE-BLOB-NO-DIGEST-AUTH",
-      "seconds": 7.127,
-      "status": "pass",
-      "implementation": "gateway=rust",
-      "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/replication",
-        "internal/state",
-        "internal/trust"
-      ],
-      "blocked_on": []
-    },
-    {
-      "id": "CORE-BLOB-OFFLOADED",
       "seconds": 2.368,
       "status": "pass",
       "implementation": "gateway=rust",
@@ -762,8 +642,128 @@
       "blocked_on": []
     },
     {
+      "id": "CORE-BLOB-CORRUPT",
+      "seconds": 6.875,
+      "status": "fail",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": []
+    },
+    {
+      "id": "CORE-BLOB-DUPLICATE-REFERENCE",
+      "seconds": 2.319,
+      "status": "pass",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": []
+    },
+    {
+      "id": "CORE-BLOB-GATEWAY-RETRY",
+      "seconds": 43.137,
+      "status": "fail",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": []
+    },
+    {
+      "id": "CORE-BLOB-GC",
+      "seconds": 11.985,
+      "status": "fail",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": []
+    },
+    {
+      "id": "CORE-BLOB-INTERRUPT",
+      "seconds": 16.693,
+      "status": "fail",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": []
+    },
+    {
+      "id": "CORE-BLOB-NATIVE-STAGE",
+      "seconds": 1.767,
+      "status": "pass",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": []
+    },
+    {
+      "id": "CORE-BLOB-NO-DIGEST-AUTH",
+      "seconds": 7.027,
+      "status": "pass",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": []
+    },
+    {
+      "id": "CORE-BLOB-OFFLOADED",
+      "seconds": 2.719,
+      "status": "pass",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": []
+    },
+    {
       "id": "CORE-BLOB-REFERENCE-INDEX",
-      "seconds": 4.572,
+      "seconds": 4.422,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -778,7 +778,7 @@
     },
     {
       "id": "CORE-BLOB-SLOW-READ",
-      "seconds": 7.277,
+      "seconds": 7.026,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -793,7 +793,7 @@
     },
     {
       "id": "CORE-BLOB-STAGE-DURING-TRANSFER",
-      "seconds": 2.92,
+      "seconds": 2.919,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -808,7 +808,7 @@
     },
     {
       "id": "CORE-BLOB-STAGE-SAME-DIGEST",
-      "seconds": 3.021,
+      "seconds": 2.97,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -823,7 +823,7 @@
     },
     {
       "id": "CORE-BOOT",
-      "seconds": 6.026,
+      "seconds": 6.476,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -833,7 +833,7 @@
     },
     {
       "id": "CORE-CAPTURE-ALIASES",
-      "seconds": 1.617,
+      "seconds": 1.618,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -848,7 +848,7 @@
     },
     {
       "id": "CORE-CLOCK-DELAY",
-      "seconds": 17.105,
+      "seconds": 17.095,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -871,7 +871,7 @@
     },
     {
       "id": "CORE-CLOCK-DELAY-GATEWAY-DIALS",
-      "seconds": 17.512,
+      "seconds": 17.443,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -894,7 +894,7 @@
     },
     {
       "id": "CORE-CMD-CLOCK-JUMP",
-      "seconds": 3.119,
+      "seconds": 3.57,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -910,7 +910,7 @@
     },
     {
       "id": "CORE-CMD-CONFLICT",
-      "seconds": 2.569,
+      "seconds": 3.069,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -926,7 +926,7 @@
     },
     {
       "id": "CORE-CMD-CRASH-AMBIGUOUS",
-      "seconds": 2.969,
+      "seconds": 3.019,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -942,7 +942,7 @@
     },
     {
       "id": "CORE-CMD-ERA",
-      "seconds": 15.367,
+      "seconds": 15.091,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -958,7 +958,7 @@
     },
     {
       "id": "CORE-CMD-EXPIRY",
-      "seconds": 9.445,
+      "seconds": 9.332,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -974,7 +974,7 @@
     },
     {
       "id": "CORE-CMD-IDEMPOTENT",
-      "seconds": 3.574,
+      "seconds": 3.221,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -990,7 +990,7 @@
     },
     {
       "id": "CORE-CMD-LOST-RESPONSE",
-      "seconds": 4.136,
+      "seconds": 3.922,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1006,7 +1006,7 @@
     },
     {
       "id": "CORE-CMD-OFFLINE",
-      "seconds": 9.259,
+      "seconds": 8.679,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1022,7 +1022,7 @@
     },
     {
       "id": "CORE-CMD-READ-YOUR-WRITE",
-      "seconds": 3.272,
+      "seconds": 2.97,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1038,7 +1038,7 @@
     },
     {
       "id": "CORE-CREDENTIAL-STORE",
-      "seconds": 1.524,
+      "seconds": 1.467,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1056,7 +1056,7 @@
     },
     {
       "id": "CORE-DISCONNECT-DETECT",
-      "seconds": 18.217,
+      "seconds": 18.095,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1071,7 +1071,7 @@
     },
     {
       "id": "CORE-DOCTOR",
-      "seconds": 2.37,
+      "seconds": 2.218,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1094,7 +1094,7 @@
     },
     {
       "id": "CORE-FEED-PIPELINED-ACKS",
-      "seconds": 7.639,
+      "seconds": 6.826,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1109,7 +1109,7 @@
     },
     {
       "id": "CORE-FORGED-DELEGATION",
-      "seconds": 2.72,
+      "seconds": 2.519,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1127,7 +1127,7 @@
     },
     {
       "id": "CORE-GAP-REJECT",
-      "seconds": 4.578,
+      "seconds": 4.672,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1142,7 +1142,7 @@
     },
     {
       "id": "CORE-GATEWAY-DIALS",
-      "seconds": 54.236,
+      "seconds": 53.71,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1157,7 +1157,7 @@
     },
     {
       "id": "CORE-HELPER-RESTART",
-      "seconds": 4.079,
+      "seconds": 3.621,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1180,7 +1180,7 @@
     },
     {
       "id": "CORE-KILL-DURING-APPLY",
-      "seconds": 7.385,
+      "seconds": 6.275,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1195,7 +1195,7 @@
     },
     {
       "id": "CORE-KILL-GATEWAY-CAPTURE",
-      "seconds": 14.099,
+      "seconds": 13.187,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1210,7 +1210,7 @@
     },
     {
       "id": "CORE-LOCALHOST-DEFENSE",
-      "seconds": 2.769,
+      "seconds": 2.569,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1255,7 +1255,7 @@
     },
     {
       "id": "CORE-PAIR",
-      "seconds": 4.176,
+      "seconds": 3.821,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1273,7 +1273,7 @@
     },
     {
       "id": "CORE-QUERY-BLOB",
-      "seconds": 2.471,
+      "seconds": 2.373,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1289,7 +1289,7 @@
     },
     {
       "id": "CORE-QUERY-DEADLINE",
-      "seconds": 2.07,
+      "seconds": 1.919,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1305,7 +1305,7 @@
     },
     {
       "id": "CORE-QUERY-ROUNDTRIP",
-      "seconds": 2.221,
+      "seconds": 2.069,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1321,7 +1321,7 @@
     },
     {
       "id": "CORE-QUERY-SCOPE",
-      "seconds": 2.02,
+      "seconds": 1.869,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1337,7 +1337,7 @@
     },
     {
       "id": "CORE-REPLICA-CAPTURE-ATOMIC",
-      "seconds": 17.758,
+      "seconds": 14.542,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1352,7 +1352,7 @@
     },
     {
       "id": "CORE-REPLICA-CAPTURE-LEGACY",
-      "seconds": 36.64,
+      "seconds": 35.477,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1367,7 +1367,7 @@
     },
     {
       "id": "CORE-REPLICA-CAPTURE-OBSERVERS",
-      "seconds": 5.381,
+      "seconds": 4.473,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1382,7 +1382,7 @@
     },
     {
       "id": "CORE-REPLICA-CAPTURE-STAGING",
-      "seconds": 29.982,
+      "seconds": 26.562,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1397,7 +1397,7 @@
     },
     {
       "id": "CORE-REST-MCP-PARITY",
-      "seconds": 4.93,
+      "seconds": 4.022,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1414,7 +1414,7 @@
     },
     {
       "id": "CORE-RESTORE-EPOCH",
-      "seconds": 9.1,
+      "seconds": 8.681,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1437,7 +1437,7 @@
     },
     {
       "id": "CORE-RESTORE-OLD-SCHEMA",
-      "seconds": 0.118,
+      "seconds": 0.115,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1460,7 +1460,7 @@
     },
     {
       "id": "CORE-RESUME",
-      "seconds": 33.533,
+      "seconds": 33.376,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1475,7 +1475,7 @@
     },
     {
       "id": "CORE-RETENTION-RACE",
-      "seconds": 10.793,
+      "seconds": 10.283,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1490,7 +1490,7 @@
     },
     {
       "id": "CORE-SCOPE-CHANGE",
-      "seconds": 4.775,
+      "seconds": 4.473,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1508,7 +1508,7 @@
     },
     {
       "id": "CORE-SCOPE-LEAK",
-      "seconds": 2.569,
+      "seconds": 2.369,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1526,7 +1526,7 @@
     },
     {
       "id": "CORE-SIM-PROGRESS-RECOVERY",
-      "seconds": 3.637,
+      "seconds": 3.22,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1549,7 +1549,7 @@
     },
     {
       "id": "CORE-SLOW-CONSUMER",
-      "seconds": 35.179,
+      "seconds": 34.928,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1564,7 +1564,7 @@
     },
     {
       "id": "CORE-SNAPSHOT-INTERRUPT",
-      "seconds": 18.401,
+      "seconds": 14.642,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1607,7 +1607,7 @@
     },
     {
       "id": "CORE-SNAPSHOT-UNDER-LOAD",
-      "seconds": 18.101,
+      "seconds": 14.64,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1622,7 +1622,7 @@
     },
     {
       "id": "CORE-SOURCE-GRANTS",
-      "seconds": 7.53,
+      "seconds": 7.328,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1640,7 +1640,7 @@
     },
     {
       "id": "CORE-UPGRADE",
-      "seconds": 0.117,
+      "seconds": 0.115,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1655,7 +1655,7 @@
     },
     {
       "id": "FILE-COMMANDS",
-      "seconds": 4.224,
+      "seconds": 4.024,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1671,7 +1671,7 @@
     },
     {
       "id": "FILE-CRUD-REAL",
-      "seconds": 4.224,
+      "seconds": 3.974,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1687,7 +1687,7 @@
     },
     {
       "id": "FILE-OFFLOAD-REAL",
-      "seconds": 4.223,
+      "seconds": 3.923,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1708,7 +1708,7 @@
     },
     {
       "id": "IWORK-REAL",
-      "seconds": 0.116,
+      "seconds": 0.115,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1739,7 +1739,7 @@
     },
     {
       "id": "LAB-TRUTH-MULTIPLICITY",
-      "seconds": 0.116,
+      "seconds": 0.115,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1749,7 +1749,7 @@
     },
     {
       "id": "LOC-SIM",
-      "seconds": 1.92,
+      "seconds": 1.818,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1759,7 +1759,7 @@
     },
     {
       "id": "MAC-ACTIONS",
-      "seconds": 0.166,
+      "seconds": 0.115,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1769,7 +1769,7 @@
     },
     {
       "id": "MAC-CAPTURE",
-      "seconds": 0.15,
+      "seconds": 0.116,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1779,7 +1779,7 @@
     },
     {
       "id": "MAC-COMMANDS",
-      "seconds": 0.115,
+      "seconds": 0.116,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -1800,7 +1800,7 @@
     },
     {
       "id": "MAP-SIM",
-      "seconds": 2.121,
+      "seconds": 1.92,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2511,7 +2511,7 @@
     },
     {
       "id": "NOTE-CRUD",
-      "seconds": 4.373,
+      "seconds": 3.121,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2527,7 +2527,7 @@
     },
     {
       "id": "NOTE-EDIT-PARITY",
-      "seconds": 5.026,
+      "seconds": 3.873,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2537,7 +2537,7 @@
     },
     {
       "id": "NOTE-EXTERNAL",
-      "seconds": 3.773,
+      "seconds": 2.673,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2547,7 +2547,7 @@
     },
     {
       "id": "NOTE-EXTRAS",
-      "seconds": 3.172,
+      "seconds": 2.02,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2563,7 +2563,7 @@
     },
     {
       "id": "NOTE-IMPORT",
-      "seconds": 2.722,
+      "seconds": 1.769,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2573,7 +2573,7 @@
     },
     {
       "id": "NOTE-LIST",
-      "seconds": 2.622,
+      "seconds": 2.571,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2583,7 +2583,7 @@
     },
     {
       "id": "NOTE-RICH-REJECT",
-      "seconds": 1.971,
+      "seconds": 1.92,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2599,7 +2599,7 @@
     },
     {
       "id": "PDF-ANNOTATE",
-      "seconds": 1.769,
+      "seconds": 1.668,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2609,7 +2609,7 @@
     },
     {
       "id": "PDF-TEXT",
-      "seconds": 1.87,
+      "seconds": 1.768,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2619,7 +2619,7 @@
     },
     {
       "id": "QUERY-AGENT",
-      "seconds": 0.72,
+      "seconds": 0.666,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2787,7 +2787,7 @@
     },
     {
       "id": "REM-CONFLICT",
-      "seconds": 2.87,
+      "seconds": 2.669,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2803,7 +2803,7 @@
     },
     {
       "id": "REM-CREATE-EXTERNAL",
-      "seconds": 1.969,
+      "seconds": 1.868,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2813,7 +2813,7 @@
     },
     {
       "id": "REM-CRUD",
-      "seconds": 4.273,
+      "seconds": 3.671,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2829,7 +2829,7 @@
     },
     {
       "id": "REM-EXTERNAL-RACE",
-      "seconds": 3.221,
+      "seconds": 2.77,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2845,7 +2845,7 @@
     },
     {
       "id": "REM-LIST-CREATE",
-      "seconds": 1.918,
+      "seconds": 1.819,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2861,7 +2861,7 @@
     },
     {
       "id": "REM-LIST-MANAGE",
-      "seconds": 2.169,
+      "seconds": 2.07,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2877,7 +2877,7 @@
     },
     {
       "id": "REM-NATIVE-LIST-RACE",
-      "seconds": 2.67,
+      "seconds": 2.419,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2893,7 +2893,7 @@
     },
     {
       "id": "REM-OPERATION-SHAPES",
-      "seconds": 2.72,
+      "seconds": 2.62,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2909,7 +2909,7 @@
     },
     {
       "id": "REM-PERMISSION-LOSS",
-      "seconds": 2.069,
+      "seconds": 1.969,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2919,7 +2919,7 @@
     },
     {
       "id": "REM-READONLY-LIST",
-      "seconds": 2.92,
+      "seconds": 2.77,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -2935,7 +2935,7 @@
     },
     {
       "id": "REM-RECURRING",
-      "seconds": 1.969,
+      "seconds": 1.818,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -3053,7 +3053,7 @@
     },
     {
       "id": "SESSION-PROXY-BYTES",
-      "seconds": 0.115,
+      "seconds": 0.116,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -3064,7 +3064,7 @@
     },
     {
       "id": "USE-IMPORT",
-      "seconds": 1.919,
+      "seconds": 1.871,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -3074,7 +3074,7 @@
     },
     {
       "id": "USE-LOCK-CLIP",
-      "seconds": 2.019,
+      "seconds": 1.919,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -3084,7 +3084,7 @@
     },
     {
       "id": "USE-READONLY",
-      "seconds": 2.222,
+      "seconds": 2.069,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -3094,7 +3094,7 @@
     },
     {
       "id": "USE-REMOTE-LAG",
-      "seconds": 2.022,
+      "seconds": 1.919,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -3104,7 +3104,7 @@
     },
     {
       "id": "VIS-OCR",
-      "seconds": 0.118,
+      "seconds": 0.116,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -3114,7 +3114,7 @@
     },
     {
       "id": "WEB-AGENT-ACTIVITY",
-      "seconds": 18.95,
+      "seconds": 18.698,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -3133,7 +3133,7 @@
     },
     {
       "id": "WEB-AGENT-CREDENTIALS",
-      "seconds": 2.071,
+      "seconds": 1.97,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -3171,7 +3171,7 @@
     },
     {
       "id": "WEB-AGENT-OAUTH",
-      "seconds": 1.972,
+      "seconds": 1.819,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -3218,7 +3218,7 @@
     },
     {
       "id": "WEB-CAL-WRITE",
-      "seconds": 0.117,
+      "seconds": 0.116,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -3350,7 +3350,7 @@
     },
     {
       "id": "WEB-RM-MEDIA-COLLECTION",
-      "seconds": 0.119,
+      "seconds": 0.116,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -3366,7 +3366,7 @@
     },
     {
       "id": "WEB-RM-REMINDERS-DEMO",
-      "seconds": 0.117,
+      "seconds": 0.116,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -3376,7 +3376,7 @@
     },
     {
       "id": "WEB-RM-REMINDERS-HARDENING",
-      "seconds": 0.116,
+      "seconds": 0.117,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -3396,7 +3396,7 @@
     },
     {
       "id": "WEB-RM-SEARCH",
-      "seconds": 0.117,
+      "seconds": 0.116,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -3427,6 +3427,6 @@
       "blocked_on": []
     }
   ],
-  "artifact_source_head": "32ceafd2a1cd2af67cea87094d6ffad68ebf8f11 plus query audit patch",
-  "artifact_sha256": "3cef8aa1830f35219ea907d267d1166b9ea65d1c87caf2fb5aa50debd9c9f7a8"
+  "artifact_source_head": "fa2239afd24cbe46bd10017f7052aee2153ee143 plus approval metadata patch",
+  "artifact_sha256": "b53d3cc6d1bf7a48415ceacc54895b7fb36678b49cf5097012946d936d282efa"
 }

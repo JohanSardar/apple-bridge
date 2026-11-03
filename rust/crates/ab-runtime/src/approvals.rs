@@ -21,7 +21,8 @@ impl ab_frontdoor::web::Approvals for Approvals {
             .map(|record| {
                 Ok(
                     json!({"command_id":record.command.id, "operation":record.command.op,
-                "principal":record.principal, "arguments":"[redacted]",
+                "principal":record.principal,
+                "arguments":serde_json::to_string_pretty(&json!({"argument_bytes":record.command.args.get().len(),"argument_hash":ab_trust::fingerprint(record.command.args.get().as_bytes())}))?,
                 "owner_arguments":serde_json::to_string_pretty(&record.command.args)?}),
                 )
             })
