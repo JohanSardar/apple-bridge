@@ -435,7 +435,7 @@ impl Authority {
         rand::thread_rng().fill_bytes(&mut token_bytes);
         let token = format!("aba-{}", URL_SAFE_NO_PAD.encode(token_bytes));
         let mut p = Principal {
-            id: random_id("agent:"),
+            id: format!("agent:{}", ulid::Ulid::new()),
             kind: "agent".into(),
             grants,
             level: level.as_str().into(),

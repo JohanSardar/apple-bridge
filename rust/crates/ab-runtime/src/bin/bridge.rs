@@ -1,6 +1,53 @@
 #![forbid(unsafe_code)]
 use ab_runtime::{Config, Error, default_home};
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
+const BOOLEAN_FLAGS: &[&str] = &[
+    "remote",
+    "public",
+    "iphone",
+    "via-remote",
+    "helper-lab-commands",
+    "accept-ledger-loss",
+    "no-ui",
+    "force",
+    "snippets",
+    "private",
+];
+const KNOWN_FLAGS: &[&str] = &[
+    "home",
+    "host",
+    "public",
+    "helper-app",
+    "helper-lab-commands",
+    "via",
+    "name",
+    "level",
+    "expires-in",
+    "request",
+    "code",
+    "dial-replica",
+    "iphone",
+    "via-remote",
+    "backup",
+    "accept-ledger-loss",
+    "role",
+    "listen",
+    "api-addr",
+    "peer-addr",
+    "socket",
+    "scope",
+    "remote",
+    "blob-cap",
+    "blob-grace-ms",
+    "retention-rows",
+    "retention-age",
+    "pack",
+    "no-ui",
+    "force",
+    "snippets",
+    "private",
+    "domain",
+];
 #[derive(Debug)]
 struct Arguments {
     verb: String,
@@ -39,59 +86,14 @@ impl Arguments {
             {
                 let (key, content) = if let Some((key, content)) = flag.split_once('=') {
                     (key.to_owned(), content.to_owned())
-                } else if [
-                    "remote",
-                    "public",
-                    "iphone",
-                    "via-remote",
-                    "helper-lab-commands",
-                    "accept-ledger-loss",
-                    "no-ui",
-                    "force",
-                ]
-                .contains(&flag)
-                {
+                } else if BOOLEAN_FLAGS.contains(&flag) {
                     (flag.to_owned(), "true".into())
                 } else {
                     (flag.to_owned(), args.next().ok_or(Error::Invalid)?)
                 };
                 let lab_flag =
                     cfg!(feature = "lab-harness") && ["id", "fingerprint"].contains(&key.as_str());
-                if !lab_flag
-                    && ![
-                        "home",
-                        "host",
-                        "public",
-                        "helper-app",
-                        "helper-lab-commands",
-                        "via",
-                        "name",
-                        "level",
-                        "expires-in",
-                        "request",
-                        "code",
-                        "dial-replica",
-                        "iphone",
-                        "via-remote",
-                        "backup",
-                        "accept-ledger-loss",
-                        "role",
-                        "listen",
-                        "api-addr",
-                        "peer-addr",
-                        "socket",
-                        "scope",
-                        "remote",
-                        "blob-cap",
-                        "blob-grace-ms",
-                        "retention-rows",
-                        "retention-age",
-                        "pack",
-                        "no-ui",
-                        "force",
-                    ]
-                    .contains(&key.as_str())
-                {
+                if !lab_flag && !KNOWN_FLAGS.contains(&key.as_str()) {
                     return Err(Error::Invalid);
                 }
                 flags.insert(key, content);
@@ -241,11 +243,37 @@ fn offline(args: &Arguments, home: &std::path::Path) -> Result<bool, Error> {
     Ok(false)
 }
 async fn remote(args: &Arguments, home: &std::path::Path) -> Result<(), Error> {
+    let private = args.flag("private", "false") == "true";
+    let mut via = args.flag("via", "relay");
+    if private {
+        if args.flags.contains_key("via") || args.flags.contains_key("domain") {
+            return Err(Error::Invalid);
+        }
+        via = "private".into();
+    }
+    if args.flag("snippets", "false") == "true" {
+        if args.action != "status" {
+            return Err(Error::Invalid);
+        }
+        print!("{}", ab_remote::state::snippets(home)?);
+        return Ok(());
+    }
+    if args.flags.contains_key("domain") {
+        if via != "relay" || args.flag("domain", "").is_empty() {
+            return Err(Error::Invalid);
+        }
+        return Err(Error::Io(std::io::Error::other(
+            "custom relay domains are not supported by the Rust relay yet",
+        )));
+    }
+    if args.action != "status" && args.flags.contains_key("name") {
+        ab_remote::state::annotate(home, &args.flag("name", ""))?;
+    }
     let mut out = std::io::stdout();
     ab_remote::onboarding::command(
         home,
         &args.action,
-        &args.flag("via", "relay"),
+        &via,
         &mut out,
         Arc::new(ab_remote::onboarding::open_link),
         std::time::Duration::from_millis(100),
@@ -427,14 +455,80 @@ fn web_enroll(
     println!("{host}/enroll#{}", authority.create_web_enroll()?);
     Ok(())
 }
-fn agent_summary(agent: &ab_trust::Principal) -> serde_json::Value {
-    let mut summary = serde_json::json!({"id":agent.id,"name":agent.extra.get("name"),"level":agent.level,"scopes":agent.grants,"created_at":agent.extra.get("created_at")});
-    for key in ["revoked_at", "last_used"] {
-        if let Some(value) = agent.extra.get(key).filter(|value| !value.is_null()) {
-            summary[key] = value.clone();
-        }
+#[derive(serde::Serialize)]
+struct AgentSummary<'a> {
+    id: &'a str,
+    name: &'a str,
+    level: &'a str,
+    scopes: &'a [ab_trust::Grant],
+    created_at: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    revoked_at: Option<&'a serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    last_used: Option<&'a serde_json::Value>,
+}
+#[derive(serde::Serialize)]
+struct Created<'a> {
+    agent: AgentSummary<'a>,
+    token: &'a str,
+}
+fn agent_summary(agent: &ab_trust::Principal) -> AgentSummary<'_> {
+    let text = |key: &str| {
+        agent
+            .extra
+            .get(key)
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_default()
+    };
+    let present = |key: &str| agent.extra.get(key).filter(|value| !value.is_null());
+    AgentSummary {
+        id: &agent.id,
+        name: text("name"),
+        level: &agent.level,
+        scopes: &agent.grants,
+        created_at: text("created_at"),
+        revoked_at: present("revoked_at"),
+        last_used: present("last_used"),
     }
-    summary
+}
+fn agent_command(args: &Arguments, authority: &ab_trust::Authority) -> Result<(), Error> {
+    match args.action.as_str() {
+        "list" => println!(
+            "{}",
+            serde_json::to_string(
+                &authority
+                    .agents()?
+                    .iter()
+                    .map(agent_summary)
+                    .collect::<Vec<_>>()
+            )?
+        ),
+        "create" => {
+            let level = match args.flag("level", "approve").as_str() {
+                "read" => ab_trust::AgentLevel::Read,
+                "" | "approve" => ab_trust::AgentLevel::Approve,
+                "full" => ab_trust::AgentLevel::Full,
+                _ => return Err(Error::Invalid),
+            };
+            let (agent, token) =
+                authority.create_agent(&args.flag("name", ""), level, grants(args)?)?;
+            println!(
+                "{}",
+                serde_json::to_string(&Created {
+                    agent: agent_summary(&agent),
+                    token: &token,
+                })?
+            );
+        }
+        "revoke" => {
+            if !args.value.starts_with("agent:") {
+                return Err(Error::Invalid);
+            }
+            authority.revoke(&args.value)?;
+        }
+        _ => return Err(Error::Invalid),
+    }
+    Ok(())
 }
 fn manage(
     args: &Arguments,
@@ -449,39 +543,7 @@ fn manage(
         }
         "revoke" => authority.revoke(&args.value)?,
         "scope" => authority.change_scope(&args.value, grants(args)?)?,
-        "agent" => match args.action.as_str() {
-            "list" => println!(
-                "{}",
-                serde_json::to_string(
-                    &authority
-                        .agents()?
-                        .iter()
-                        .map(agent_summary)
-                        .collect::<Vec<_>>()
-                )?
-            ),
-            "create" => {
-                let level = match args.flag("level", "approve").as_str() {
-                    "read" => ab_trust::AgentLevel::Read,
-                    "" | "approve" => ab_trust::AgentLevel::Approve,
-                    "full" => ab_trust::AgentLevel::Full,
-                    _ => return Err(Error::Invalid),
-                };
-                let (agent, token) =
-                    authority.create_agent(&args.flag("name", ""), level, grants(args)?)?;
-                println!(
-                    "{}",
-                    serde_json::json!({"agent":agent_summary(&agent),"token":token})
-                );
-            }
-            "revoke" => {
-                if !args.value.starts_with("agent:") {
-                    return Err(Error::Invalid);
-                }
-                authority.revoke(&args.value)?;
-            }
-            _ => return Err(Error::Invalid),
-        },
+        "agent" => agent_command(args, authority)?,
         "pair" => {
             let config = Config::load(home)?;
             if config.role != "gateway" {

@@ -109,12 +109,22 @@ impl App {
         Ok(router)
     }
 }
+fn legacy_backends(mut selected: BTreeMap<String, bool>) -> BTreeMap<String, bool> {
+    if let Some(enabled) = selected.remove("embedded") {
+        let relay = selected.entry("relay".into()).or_insert(false);
+        *relay = *relay || enabled;
+    }
+    selected
+}
 fn selected(home: &Path) -> Result<BTreeMap<String, bool>, Error> {
     match ab_remote::state::read(home, "ingresses") {
-        Ok(selected) => Ok(selected),
+        Ok(selected) => Ok(legacy_backends(selected)),
         Err(ab_remote::Error::Io(error)) if error.kind() == std::io::ErrorKind::NotFound => {
             match ab_remote::state::read::<ab_remote::state::Config>(home, "config") {
-                Ok(config) => Ok(BTreeMap::from([(config.backend, config.enabled)])),
+                Ok(config) => Ok(legacy_backends(BTreeMap::from([(
+                    config.backend,
+                    config.enabled,
+                )]))),
                 Err(ab_remote::Error::Io(error))
                     if error.kind() == std::io::ErrorKind::NotFound =>
                 {
@@ -400,4 +410,36 @@ fn adapter(home: &Path, name: &str) -> Result<Box<dyn Ingress>, Error> {
         )),
         tls: Arc::new(tls),
     }))
+}
+#[cfg(test)]
+mod legacy_tests {
+    use super::*;
+
+    #[test]
+    fn embedded_selection_maps_to_relay() {
+        let selected = legacy_backends(BTreeMap::from([("embedded".into(), true)]));
+        assert_eq!(selected, BTreeMap::from([("relay".into(), true)]));
+        let both = legacy_backends(BTreeMap::from([
+            ("embedded".into(), true),
+            ("relay".into(), false),
+            ("system".into(), true),
+        ]));
+        assert_eq!(both.get("relay"), Some(&true));
+        assert!(!both.contains_key("embedded"));
+    }
+
+    #[test]
+    fn saved_embedded_config_migrates_to_relay() -> Result<(), Box<dyn std::error::Error>> {
+        let home = tempfile::tempdir()?;
+        ab_remote::state::write(
+            home.path(),
+            "config",
+            &serde_json::json!({"id":"r","enabled":true,"backend":"embedded"}),
+        )?;
+        assert_eq!(
+            selected(home.path())?,
+            BTreeMap::from([("relay".into(), true)])
+        );
+        Ok(())
+    }
 }
