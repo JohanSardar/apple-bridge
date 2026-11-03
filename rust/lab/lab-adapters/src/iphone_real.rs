@@ -41,12 +41,22 @@ pub fn summarize(evidence: &mut Evidence, raw: &[u8], succeeded: bool) {
 }
 
 #[must_use]
+pub fn handles(id: &str) -> bool {
+    SENSOR_REAL.contains(&id)
+        || id == "APP-BUILD-REAL"
+        || crate::iphone_phone_real::SCENARIOS.contains(&id)
+}
+
+#[must_use]
 pub fn run_real(scenario: &Scenario) -> Option<Evidence> {
     let mut evidence = Evidence {
         scenario: scenario.id.clone(),
         passed: true,
         assertions: vec![],
     };
+    if let Some(phone) = crate::iphone_phone_real::run(scenario) {
+        return Some(phone);
+    }
     if SENSOR_REAL.contains(&scenario.id.as_str()) {
         let output = project("python3", &["lab/iphone-real/run.py", &scenario.id]);
         let (raw, succeeded) = output

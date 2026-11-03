@@ -17,6 +17,7 @@ pub mod iphone;
 pub mod iphone_capture;
 pub mod iphone_command;
 pub mod iphone_gateway;
+pub mod iphone_phone_real;
 pub mod iphone_push;
 pub mod iphone_real;
 pub mod journey;
