@@ -66,17 +66,19 @@ public actor MailSource: Source {
         let watcher = DatabaseWatcher(path: path)
         defer { watcher.close() }
         var previous: [JSON] = []
-        func publish() async throws {
-            let started = timestamp()
-            let (generation, observations, complete) = try snapshot()
-            let unstamped = observations.map { value -> JSON in var object = value.object; object.removeValue(forKey: "observed_at"); return .object(object) }
-            if unstamped != previous {
-                try await sink.emitCheckpoint(source: name, generation: generation, checkpoint: UUID().uuidString, observations: observations, scanID: UUID().uuidString, scanStartedAt: started, scope: ["mail.account", "mail.mailbox", "mail.message"], completionEvidence: complete ? "complete" : "partial", blobHandles: [:], live: !previous.isEmpty)
-                previous = unstamped
-            }
+        previous = try await publish(previous: previous, into: sink)
+        for await _ in watcher.changes {
+            try Task.checkCancellation()
+            previous = try await publish(previous: previous, into: sink)
         }
-        try await publish()
-        for await _ in watcher.changes { try Task.checkCancellation(); try await publish() }
+    }
+    private func publish(previous: [JSON], into sink: any ObservationSink) async throws -> [JSON] {
+        let started = timestamp()
+        let (generation, observations, complete) = try snapshot()
+        let unstamped = observations.map { value -> JSON in var object = value.object; object.removeValue(forKey: "observed_at"); return .object(object) }
+        guard unstamped != previous else { return previous }
+        try await sink.emitCheckpoint(source: name, generation: generation, checkpoint: UUID().uuidString, observations: observations, scanID: UUID().uuidString, scanStartedAt: started, scope: ["mail.account", "mail.mailbox", "mail.message"], completionEvidence: complete ? "complete" : "partial", blobHandles: [:], live: !previous.isEmpty)
+        return unstamped
     }
     public func captureCommand(_ evidence: JSON, into sink: any ObservationSink) async throws {
         let key = evidence["native_key"].string
