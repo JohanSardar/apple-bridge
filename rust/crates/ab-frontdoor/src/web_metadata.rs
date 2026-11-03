@@ -59,7 +59,7 @@ fn public(ip: IpAddr) -> bool {
 }
 #[derive(Debug, Default)]
 pub(crate) struct Fetcher {
-    cache: std::sync::Mutex<std::collections::HashMap<String, (Client, Instant)>>,
+    cache: std::sync::Mutex<std::collections::HashMap<String, (Client, Duration)>>,
 }
 impl Fetcher {
     pub(crate) fn fetch(&self, id: &str, redirect: &str) -> Result<Client, Error> {
@@ -69,7 +69,7 @@ impl Fetcher {
             .lock()
             .map_err(|_| Error::Unavailable)?
             .get(id)
-            .filter(|(_, expires)| *expires > Instant::now())
+            .filter(|(_, expires)| *expires > clock())
         {
             return if client.redirect_uris.iter().any(|u| u == redirect) {
                 Ok(client.clone())
@@ -82,11 +82,19 @@ impl Fetcher {
         for hop in 0..5 {
             let host = url.host_str().ok_or(Error::Invalid)?;
             let port = url.port_or_known_default().ok_or(Error::Invalid)?;
-            let addresses: Vec<_> = (host, port).to_socket_addrs()?.collect();
-            if addresses.is_empty() || addresses.iter().any(|a| !public(a.ip())) {
+            let resolved = addresses(host, port)?;
+            if resolved.is_empty() || resolved.iter().any(|a| !public(a.ip())) {
                 return Err(Error::Invalid);
             }
-            let client = reqwest::blocking::Client::builder()
+            let checked = addresses(host, port)?;
+            if checked.is_empty() || checked.iter().any(|a| !public(a.ip())) {
+                return Err(Error::Invalid);
+            }
+            let builder = reqwest::blocking::Client::builder();
+            let targets = checked;
+            #[cfg(feature = "lab-harness")]
+            let (builder, targets) = fixture_transport(builder, targets, host, port)?;
+            let client = builder
                 .no_proxy()
                 .redirect(reqwest::redirect::Policy::none())
                 .timeout(
@@ -94,7 +102,7 @@ impl Fetcher {
                         .checked_duration_since(Instant::now())
                         .ok_or(Error::Invalid)?,
                 )
-                .resolve_to_addrs(host, &addresses)
+                .resolve_to_addrs(host, &targets)
                 .build()?;
             let response = client.get(url.clone()).send()?;
             if response.status().is_redirection() {
@@ -137,10 +145,7 @@ impl Fetcher {
                 if cache.len() >= 1000 {
                     cache.clear();
                 }
-                cache.insert(
-                    id.into(),
-                    (c.clone(), Instant::now() + Duration::from_secs(ttl)),
-                );
+                cache.insert(id.into(), (c.clone(), clock() + Duration::from_secs(ttl)));
             }
             return Ok(c);
         }
@@ -173,4 +178,59 @@ fn cache_ttl(headers: &reqwest::header::HeaderMap) -> u64 {
     ttl = ttl.saturating_sub(age);
 
     ttl
+}
+
+#[cfg(feature = "lab-harness")]
+fn fixture<T: serde::de::DeserializeOwned>(path: &str, host: &str) -> Result<T, Error> {
+    let base = std::env::var("APPLE_BRIDGE_LAB_CIMD").map_err(|_| Error::Invalid)?;
+    Ok(reqwest::blocking::Client::builder()
+        .no_proxy()
+        .timeout(Duration::from_secs(1))
+        .build()?
+        .get(format!("{base}{path}"))
+        .query(&[("host", host)])
+        .send()?
+        .json()?)
+}
+fn addresses(host: &str, port: u16) -> Result<Vec<std::net::SocketAddr>, Error> {
+    #[cfg(feature = "lab-harness")]
+    if std::env::var("APPLE_BRIDGE_LAB_CIMD").is_ok() {
+        let ips: Vec<String> = fixture("/resolve", host)?;
+        return ips
+            .iter()
+            .map(|ip| {
+                ip.parse::<IpAddr>()
+                    .map(|ip| std::net::SocketAddr::new(ip, port))
+                    .map_err(|_| Error::Invalid)
+            })
+            .collect();
+    }
+    Ok((host, port).to_socket_addrs()?.collect())
+}
+fn clock() -> Duration {
+    #[cfg(feature = "lab-harness")]
+    if std::env::var("APPLE_BRIDGE_LAB_CIMD").is_ok()
+        && let Ok(seconds) = fixture::<u64>("/clock", "")
+    {
+        return Duration::from_secs(seconds);
+    }
+    static START: std::sync::OnceLock<Instant> = std::sync::OnceLock::new();
+    START.get_or_init(Instant::now).elapsed()
+}
+
+#[cfg(feature = "lab-harness")]
+fn fixture_transport(
+    mut builder: reqwest::blocking::ClientBuilder,
+    mut targets: Vec<std::net::SocketAddr>,
+    host: &str,
+    port: u16,
+) -> Result<(reqwest::blocking::ClientBuilder, Vec<std::net::SocketAddr>), Error> {
+    if std::env::var("APPLE_BRIDGE_LAB_CIMD").is_ok() {
+        let target: String = fixture("/dial", &format!("{host}:{port}"))?;
+        targets = vec![target.parse().map_err(|_| Error::Invalid)?];
+        let pem =
+            std::fs::read(std::env::var("APPLE_BRIDGE_LAB_CIMD_CA").map_err(|_| Error::Invalid)?)?;
+        builder = builder.add_root_certificate(reqwest::Certificate::from_pem(&pem)?);
+    }
+    Ok((builder, targets))
 }

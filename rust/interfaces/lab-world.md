@@ -1,5 +1,14 @@
 # G-E binary fixture contracts
 
+## CIMD selected-runtime fixture
+
+`WEB-AGENT-OAUTH-CIMD` drives the selected gateway's HTTP authorization and token endpoints. It starts an isolated TLS metadata server with a generated CA and leaf certificate, then restarts that gateway with `World.GatewayEnv`. Go requires the `lab` build tag; Rust requires `ab-runtime/lab-harness`. Production builds ignore these fixture variables.
+
+- `APPLE_BRIDGE_LAB_CIMD`: loopback fixture control URL. `GET /resolve?host=...` returns a JSON array of IP strings; `GET /dial?host=...` returns the local TLS socket address; `GET /clock` returns Unix seconds for metadata cache expiry.
+- `APPLE_BRIDGE_LAB_CIMD_CA`: PEM CA file trusted for metadata HTTPS requests. Certificate and hostname verification remain enabled.
+
+The resolver controls only DNS answers. Both initial and connection-time public-IP validation run before the dial mapping. Rebinding to a private IP and private redirect targets must never reach the fixture dial endpoint. The scenario counts TLS requests and connection attempts, checks cache reuse, advances the cache clock past max-age, and verifies refetch. Requests are paced to respect the gateway's authorization rate limit. No product handler or metadata fetcher runs inside the scenario process.
+
 ## Latest verified status: 2026-11-03
 
 The default Go control passes 201/201 (204.479s), with `make rust-ci` and the pairing codec vectors green. The fixed Rust artifact built from `69e150c7` with `lab-queries` yields 165 passed, 18 executed failures and 18 blocked entries across the same 201 scenarios (293.980s). Normal owner enrollment, the operation catalog, Mac actions/iWork and vision SIM paths now execute successfully. Clipboard redaction remains an executed failure. Earlier assembly reports below are historical, not current missing-feature claims. The small [machine-readable report](../../lab/testing/gateway-status-2026-11-03.json) records artifact SHA-256, failed assertion names and exact blocked harness paths; it contains no recordings or product payloads.
