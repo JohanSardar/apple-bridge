@@ -41,7 +41,7 @@ async fn real_app_status_and_serve_config_are_readable() {
         .and_then(|v| v.to_str().ok())
         .unwrap_or_default()
         .to_owned();
-    assert!(!etag.is_empty());
+    assert_ne!(etag, "");
     let config: Value = response.json().await.unwrap();
     println!(
         "serve-config sections: {:?}",
