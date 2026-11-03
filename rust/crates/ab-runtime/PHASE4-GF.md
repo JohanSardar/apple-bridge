@@ -19,3 +19,11 @@ Reproduce isolated checks with the Rust binary and a lab-tagged Go bridge:
 ```sh
 python3 rust/crates/ab-runtime/scenarios/maintenance.py /path/to/rust/bridge /path/to/go/bridge
 ```
+
+## Gateway startup and command assembly continuation
+
+The Rust gateway now starts IPC, API and pinned TLS feed listeners against one shared State<Gateway>. It wires local reads/commands, query-blob hydration, Helper BlobRead and background capture hydration, feed/direct forwarding, Web/owner approvals, retention/status/GC and online backup through a private control socket. Shutdown preserves in-flight preparation for expiry recovery. Native action conversion is currently limited to Reminders pending G-B3.
+
+Fresh Ubuntu make rust-ci passes, including lint and golden corpora. The isolated binary startup scenario passes capture/read/restart/deduplication/fence/shutdown checks. All nine core.commands scenarios pass with gateway=rust, including version conflicts, idempotency, expiry, crash ambiguity and restore/admission era.
+
+The first startup-enabled clean Linux matrix completed with 14 pass, 105 fail and 79 blocked; that run preceded the command/forwarding fixes. A fresh full matrix for this continuation is running on the build host; its final evidence and counts will replace the earlier startup-blocked evidence before merging. No Darwin or APP qualification is claimed. The Air has less than 3 GiB free, below the Phase 4 build budget. No live gateway/home, real scenario or permission prompt was touched. Build artifacts are excluded from the commit.

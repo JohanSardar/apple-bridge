@@ -88,6 +88,14 @@ pub struct Principal {
     pub remote: bool,
 }
 impl Principal {
+    pub fn is_agent(&self) -> bool {
+        self.kind == "agent"
+            || self.kind == "delegated"
+                && self
+                    .id
+                    .split_once('/')
+                    .is_some_and(|(_, local)| local.starts_with("agent:"))
+    }
     pub fn visibility(&self) -> Visibility {
         let mut result = Visibility::from([(format!("principal:{}", self.id), true)]);
         if self.kind == "replica" {
@@ -472,6 +480,7 @@ pub fn valid_command_id(id: &str) -> bool {
 #[derive(Debug)]
 pub enum CommandTarget {
     Remote(Arc<RemoteGateway>),
+    Local(Arc<local::LocalGateway>),
 }
 #[derive(Debug)]
 pub struct Service {
@@ -542,6 +551,7 @@ impl Service {
         Ok(result)
     }
 
+    #[allow(clippy::too_many_lines)]
     pub async fn invoke(
         &self,
         principal: &Principal,
@@ -550,7 +560,6 @@ impl Service {
     ) -> Result<Box<RawValue>, Error> {
         let principal = self.identity.current(principal)?;
         let descriptor = descriptor_for(name)?;
-        let CommandTarget::Remote(target) = &self.target;
         if descriptor.kind == OperationKind::Command {
             principal.authorize(&descriptor.scope)?;
             let mut command: Command =
@@ -582,7 +591,10 @@ impl Service {
             if command.id.is_empty() {
                 command.id = format!("cmd_{}", ulid::Ulid::new());
             }
-            return target.submit(&principal, command).await;
+            return match &self.target {
+                CommandTarget::Remote(target) => target.submit(&principal, command).await,
+                CommandTarget::Local(target) => target.submit(&principal, command).await,
+            };
         }
         if name == "commands.status" || name == "commands.list" {
             let query: CommandQuery =
@@ -590,16 +602,35 @@ impl Service {
             if query.limit > 1000 || (name == "commands.status" && !valid_command_id(&query.id)) {
                 return Err(Code::Invalid.into());
             }
-            return if name == "commands.status" {
-                target.status(&principal, &query).await
-            } else {
-                Ok(target.call(&principal, "list", None, &query).await?.result)
+            return match &self.target {
+                CommandTarget::Remote(target) if name == "commands.status" => {
+                    target.status(&principal, &query).await
+                }
+                CommandTarget::Remote(target) => {
+                    Ok(target.call(&principal, "list", None, &query).await?.result)
+                }
+                CommandTarget::Local(target) if name == "commands.status" => {
+                    target.status(&principal, &query).await
+                }
+                CommandTarget::Local(target) => target.list(&principal, query.limit),
             };
         }
         if descriptor.kind == OperationKind::Query {
-            return self
-                .native_query(&principal, name, input, &descriptor.scope, target)
-                .await;
+            return match &self.target {
+                CommandTarget::Remote(target) => {
+                    self.native_query(&principal, name, input, &descriptor.scope, target)
+                        .await
+                }
+                CommandTarget::Local(target) => {
+                    let mut query: NativeQuery =
+                        serde_json::from_slice(input).map_err(|_| Code::Invalid)?;
+                    if !query.op.is_empty() && query.op != name {
+                        return Err(Code::Invalid.into());
+                    }
+                    query.op = name.into();
+                    target.query(&principal, query).await
+                }
+            };
         }
         if name == "iphone.devices" {
             principal.authorize("iphone:read")?;

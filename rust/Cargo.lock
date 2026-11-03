@@ -175,6 +175,7 @@ dependencies = [
 name = "ab-runtime"
 version = "0.0.0"
 dependencies = [
+ "ab-applepeer",
  "ab-blobs",
  "ab-frontdoor",
  "ab-operations",
@@ -185,6 +186,7 @@ dependencies = [
  "ab-wire",
  "axum",
  "jiff",
+ "rand 0.8.8",
  "reqwest",
  "rusqlite",
  "serde",

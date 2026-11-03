@@ -329,15 +329,25 @@ async fn blob(
     headers: axum::http::HeaderMap,
 ) -> Response {
     let Some(record) = query.get("record") else {
-        return problem(Code::Invalid.into());
+        return problem(Code::Unauthorized.into());
     };
     let current = match frontdoor.service.identity.current(&principal) {
         Ok(p) => p,
         Err(e) => return problem(e),
     };
     let result = if record.starts_with("qry_") {
-        let ab_operations::CommandTarget::Remote(target) = &frontdoor.service.target;
-        target.query_blob(&current, record, &digest).await
+        match &frontdoor.service.target {
+            ab_operations::CommandTarget::Remote(target) => {
+                target.query_blob(&current, record, &digest).await
+            }
+            ab_operations::CommandTarget::Local(_) => {
+                frontdoor
+                    .service
+                    .store
+                    .cached_query_blob(&current, record, &digest)
+                    .await
+            }
+        }
     } else {
         frontdoor
             .service

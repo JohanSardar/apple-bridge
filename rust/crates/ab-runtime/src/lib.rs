@@ -1,6 +1,20 @@
 #![forbid(unsafe_code)]
+#[cfg(feature = "replica-feed")]
+mod actions;
+#[cfg(feature = "replica-feed")]
+mod approvals;
+#[cfg(feature = "replica-feed")]
+mod capture;
+mod control;
 pub mod duration;
+#[cfg(feature = "replica-feed")]
+mod forward;
+#[cfg(feature = "replica-feed")]
+mod gateway;
+#[cfg(feature = "replica-feed")]
+mod gateway_status;
 pub mod helper;
+pub mod helper_blobs;
 pub mod inspection;
 pub mod maintenance;
 #[cfg(feature = "replica-feed")]
@@ -34,8 +48,8 @@ pub enum Error {
     Trust(#[from] ab_trust::Error),
     #[error(transparent)]
     Remote(#[from] ab_remote::Error),
-    #[error("gateway assembly blocked: ab-applepeer and local command lifecycle are not available")]
-    GatewayIntegrationPending,
+    #[error("ledger_missing: command ledger missing; run bridge restore --accept-ledger-loss")]
+    LedgerMissing,
     #[error("home is already locked")]
     Locked,
     #[error(
@@ -93,7 +107,7 @@ pub struct Config {
 impl Config {
     pub fn validate(&self) -> Result<SocketAddr, Error> {
         let address: SocketAddr = self.api_address.parse().map_err(|_| Error::Invalid)?;
-        if self.role != "replica" || !address.ip().is_loopback() {
+        if !matches!(self.role.as_str(), "replica" | "gateway") || !address.ip().is_loopback() {
             return Err(Error::Invalid);
         }
         Ok(address)
@@ -217,7 +231,7 @@ pub async fn start(
 ) -> Result<(), Error> {
     use std::sync::Arc;
     if config.role == "gateway" {
-        return Err(Error::GatewayIntegrationPending);
+        return gateway::start(config, authority).await;
     }
     config.validate()?;
     let _lock = HomeLock::acquire(&config.home)?;

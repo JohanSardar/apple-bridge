@@ -3,8 +3,8 @@ use serde::Serialize;
 use serde_json::value::RawValue;
 use std::sync::{Arc, Mutex};
 #[derive(Debug)]
-pub struct StateReads(
-    pub Arc<Mutex<ab_state::State<ab_state::Replica>>>,
+pub struct StateReads<Role = ab_state::Replica>(
+    pub Arc<Mutex<ab_state::State<Role>>>,
     pub Arc<tokio::sync::Mutex<ab_blobs::Store>>,
 );
 fn state_error(error: &ab_state::Error) -> Error {
@@ -55,7 +55,7 @@ pub(crate) fn visibility(input: &Visibility) -> ab_state::Visibility {
     }
     result
 }
-impl ReadStore for StateReads {
+impl<Role: std::fmt::Debug + Send + Sync> ReadStore for StateReads<Role> {
     fn cached_query_blob<'a>(
         &'a self,
         principal: &'a Principal,
@@ -175,7 +175,7 @@ impl ReadStore for StateReads {
                     .records
                     .iter()
                     .find(|r| r.id.as_str() == record_id)
-                    .ok_or(Code::NotFound)?;
+                    .ok_or(Code::Unauthorized)?;
                 let visibility = ab_trust::Visibility {
                     all: visible.get("admin") == Some(&true),
                     sources: visibility
@@ -339,6 +339,28 @@ impl Identity for TrustIdentity {
     }
     fn current(&self, original: &Principal) -> Result<Principal, Error> {
         let credentials = self.0.load().map_err(|error| trust_error(&error))?;
+        if original.kind == "delegated" {
+            let (parent, _) = original.id.split_once('/').ok_or(Code::Unauthorized)?;
+            let parent = credentials
+                .principals
+                .iter()
+                .find(|principal| {
+                    principal.id == parent && principal.kind == "replica" && principal.active()
+                })
+                .ok_or(Code::Unauthorized)?;
+            let ceiling = original
+                .grants
+                .iter()
+                .map(|grant| ab_trust::Grant::parse(grant))
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(|error| trust_error(&error))?;
+            let mut current = original.clone();
+            current.grants = ab_trust::effective_grants(&parent.grants, &ceiling)
+                .iter()
+                .map(|grant| grant.as_str().to_owned())
+                .collect();
+            return Ok(current);
+        }
         let mut current = credentials
             .principals
             .into_iter()
