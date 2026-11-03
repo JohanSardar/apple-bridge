@@ -72,7 +72,7 @@ impl ActionResolver for Actions {
                 &native_key,
             )
             .map_err(|_| Code::Corrupt)?;
-        let visibility = principal.visibility().into_iter().collect();
+        let visibility = ab_operations::state_visibility(&principal.visibility());
         let result = self.state.with(|state| {
             state.read(
                 &visibility,
@@ -127,7 +127,7 @@ impl Actions {
     ) -> Result<String, Error> {
         self.state.with(|state| {
             let result = state.read(
-                &principal.visibility().into_iter().collect(),
+                &ab_operations::state_visibility(&principal.visibility()),
                 &ab_state::ReadQuery {
                     collection: collection.into(),
                     id: id.into(),
@@ -151,7 +151,7 @@ impl Actions {
             }
             let result = self.state.with(|state| {
                 state.read(
-                    &principal.visibility().into_iter().collect(),
+                    &ab_operations::state_visibility(&principal.visibility()),
                     &ab_state::ReadQuery {
                         collection: "notes.folder".into(),
                         id: id.clone(),
@@ -213,7 +213,7 @@ impl Actions {
         }
         let mut expected_state = None;
         if !id.is_empty() {
-            let visibility = principal.visibility().into_iter().collect();
+            let visibility = ab_operations::state_visibility(&principal.visibility());
             let record =
                 self.state.with(|state| {
                     let result = state.read(
@@ -304,7 +304,7 @@ impl Actions {
                 Some(serde_json::value::to_raw_value(&expected).map_err(|_| Code::Corrupt)?);
         }
         if !list_id.is_empty() {
-            let visibility = principal.visibility().into_iter().collect();
+            let visibility = ab_operations::state_visibility(&principal.visibility());
             self.state.with(|state| {
                 let visible = state.read(
                     &visibility,
@@ -411,4 +411,72 @@ fn native_action(command: &Command) -> Result<PreparedAction, Error> {
 
 fn native_command(op: &str) -> bool {
     op.starts_with("files.") || matches!(op, "maps.open" | "speech.say" | "capture.play_sound")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn admission_resolves_admin_and_scoped_targets_without_exposing_hidden_targets()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let home =
+            std::env::temp_dir().join(format!("admission-visibility-{}", std::process::id()));
+        let store = GatewayStore::open(&home)?;
+        let capture = serde_json::from_value(json!({
+            "source":"reminders", "generation":"synthetic", "checkpoint":"one",
+            "observations":[{"collection":"reminders.list", "native_key":"native-list",
+                "kind":"upsert", "observed_at":"2026-01-01T00:00:00Z",
+                "coverage":{"fields":"full","missing":null}, "data":{"title":"Synthetic"}}]
+        }))?;
+        store.with(|state| state.commit_capture(&capture))?;
+        let id = store
+            .with(|state| {
+                state.read(
+                    &ab_state::Visibility::from([("reminders".into(), true)]),
+                    &ab_state::ReadQuery {
+                        collection: "reminders.list".into(),
+                        ..Default::default()
+                    },
+                )
+            })?
+            .records[0]
+            .id
+            .as_str()
+            .to_owned();
+        let actions = Actions {
+            state: store,
+            peer: std::sync::Arc::new(ab_applepeer::Commands::default()),
+        };
+        let command: Command = serde_json::from_value(json!({
+            "command_id":"cmd_visibility_regression", "op":"reminders.create",
+            "args":{"list_id":id,"title":"Synthetic"}
+        }))?;
+        let mut principal = Principal {
+            id: "agent:synthetic".into(),
+            kind: "agent".into(),
+            grants: vec!["admin".into()],
+            level: "act".into(),
+            resource: String::new(),
+            remote: false,
+        };
+        for grant in ["admin", "reminders:write"] {
+            principal.grants = vec![grant.into()];
+            let prepared = actions.resolve(&principal, &command)?;
+            let action: Value = serde_json::from_str(prepared.action.get())?;
+            assert_eq!(action["list_key"], "native-list");
+        }
+        principal.grants = vec!["contacts:write".into()];
+        assert_eq!(
+            actions
+                .resolve(&principal, &command)
+                .err()
+                .ok_or("hidden target exposed")?
+                .code,
+            Code::NotFound
+        );
+        drop(actions);
+        std::fs::remove_dir_all(home)?;
+        Ok(())
+    }
 }
