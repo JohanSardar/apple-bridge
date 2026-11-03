@@ -71,7 +71,7 @@ pub fn blob(blobs: &BTreeMap<String, Vec<u8>>, frame: &Value) -> Option<Value> {
     let Some(data) = blobs.get(handle) else {
         return Some(json!({"t":"BlobUnavailable","handle":handle,"reason":"missing"}));
     };
-    let offset = frame["offset"].as_u64().filter(|o| *o <= data.len() as u64)?;
+    let offset = frame.get("offset").map_or(Some(0), Value::as_u64).filter(|o| *o <= data.len() as u64)?;
     let length = frame["length"].as_u64().filter(|l| (1..=MAX_CHUNK).contains(l))?;
     let end = (offset + length).min(data.len() as u64);
     let slice = &data[usize::try_from(offset).ok()?..usize::try_from(end).ok()?];
