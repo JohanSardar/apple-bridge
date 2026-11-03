@@ -45,6 +45,9 @@ func (w *World) RestartGateway(retentionRows ...int) error {
 	if len(retentionRows) > 0 {
 		rows = retentionRows[0]
 	}
+	return w.RestartGatewayRetention(rows, time.Millisecond)
+}
+func (w *World) RestartGatewayRetention(rows int, age time.Duration) error {
 	var cfg Config
 	data, err := os.ReadFile(filepath.Join(w.Gateway.Home, "runtime.json"))
 	if err != nil {
@@ -63,7 +66,7 @@ func (w *World) RestartGateway(retentionRows ...int) error {
 		args = append(args, "--helper-lab-commands")
 	}
 	if rows > 0 {
-		args = append(args, "--retention-rows", strconv.Itoa(rows), "--retention-age", "1ms")
+		args = append(args, "--retention-rows", strconv.Itoa(rows), "--retention-age", age.String())
 	}
 	if _, err = w.start("gateway", false, w.Gateway.Home, w.bridge, args...); err != nil {
 		return err

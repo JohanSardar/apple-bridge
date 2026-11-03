@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
-	"github.com/JohanSardar/apple-bridge/internal/trust"
 	"github.com/JohanSardar/apple-bridge/lab/scripted"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 	"io"
@@ -188,17 +187,17 @@ func runQueries(ctx context.Context, s Scenario, level string) (e Evidence) {
 		client.Endpoint = w.Gateway
 		_, err = call("test.echo", q)
 		add("read_allowed", err == nil)
-		authority, err := trust.Open(w.Gateway.Home)
+		_, err = w.GatewayCommand("agent", "list")
 		add("agent_authority", err == nil)
 		if err != nil {
 			return
 		}
-		_, token, err = authority.CreateAgent("Bridge Test query read", trust.AgentRead, []contracts.Grant{"reminders:read"})
+		token, err = binaryAgentToken(w, "Bridge Test query read", "read", "reminders:read")
 		add("read_agent_created", err == nil)
 		client.Endpoint.Token = token
 		_, err = call("test.echo", q)
 		add("read_agent_allowed", err == nil)
-		_, token, err = authority.CreateAgent("Bridge Test query approve", trust.AgentApprove, []contracts.Grant{"reminders:write"})
+		token, err = binaryAgentToken(w, "Bridge Test query approve", "approve", "reminders:write")
 		add("approve_agent_created", err == nil)
 		client.Endpoint.Token = token
 		var pending contracts.CommandRecord

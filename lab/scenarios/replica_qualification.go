@@ -13,7 +13,7 @@ func calendarGatewaySimScenario(s Scenario) bool {
 
 func nativeGatewaySimScenario(s Scenario) bool {
 	switch s.ID {
-	case "FILE-COMMANDS", "FILE-CRUD-REAL", "FILE-OFFLOAD-REAL", "USE-IMPORT", "USE-LOCK-CLIP", "USE-READONLY", "USE-REMOTE-LAG", "AUD-SIM", "LOC-SIM", "MAP-SIM":
+	case "FILE-COMMANDS", "FILE-CRUD-REAL", "FILE-OFFLOAD-REAL", "USE-IMPORT", "USE-LOCK-CLIP", "USE-READONLY", "USE-REMOTE-LAG", "AUD-SIM", "LOC-SIM", "MAP-SIM", "PDF-TEXT", "PDF-ANNOTATE":
 		return true
 	default:
 		return false

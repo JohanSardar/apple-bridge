@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
-	"github.com/JohanSardar/apple-bridge/internal/state"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
@@ -176,14 +175,15 @@ func capturePruneHistory(ctx context.Context, w *world.World, through uint64) er
 	if err != nil {
 		return err
 	}
-	store, err := state.Open(w.Gateway.Home)
+	if err = w.RestartGatewayRetention(1, time.Second); err != nil {
+		return err
+	}
+	defer w.StopGateway()
+	err = w.ControlAction("/capture", contracts.Capture{Source: contracts.Reminders, Generation: "retention-fixture", Checkpoint: "1", Observations: []contracts.Observation{{Kind: "upsert", Collection: "reminders.reminder", NativeKey: "retention-marker", ObservedAt: time.Now().UTC(), Data: []byte(`{"title":"[ab-test capture] retention marker"}`)}}})
 	if err != nil {
 		return err
 	}
-	defer store.Close()
-	_, err = store.CommitCapture(ctx, contracts.Capture{Source: contracts.Reminders, Generation: "retention-fixture", Checkpoint: "1", Observations: []contracts.Observation{{Kind: "upsert", Collection: "reminders.reminder", NativeKey: "retention-marker", ObservedAt: time.Now().UTC(), Data: []byte(`{"title":"[ab-test capture] retention marker"}`)}}})
-	if err != nil {
-		return err
-	}
-	return store.Prune(ctx, state.Retention{Rows: 1, Age: time.Second})
+	return w.Await(5*time.Second, func() bool {
+		return captureSQL(w.Gateway, "SELECT CAST(value AS INTEGER) FROM meta WHERE key='retention_floor'") == int64(through)
+	})
 }

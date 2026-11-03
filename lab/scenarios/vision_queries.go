@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
-	"github.com/JohanSardar/apple-bridge/internal/runtime"
 	"github.com/JohanSardar/apple-bridge/lab/scripted"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 	"io"
@@ -66,8 +65,9 @@ func runVisionQueries(ctx context.Context, s Scenario, level string) (e Evidence
 	}
 	if level == "real" {
 		readinessErr := w.Await(15*time.Second, func() bool {
-			report, problem := runtime.Doctor(ctx, w.Gateway.Home)
-			return problem == nil && report.DocumentChecks["vision"] == "ready" && report.DocumentChecks["pdf"] == "ready"
+			report, problem := w.Doctor(w.Gateway)
+			checks, _ := report["document_checks"].(map[string]any)
+			return problem == nil && checks["vision"] == "ready" && checks["pdf"] == "ready"
 		})
 		add("doctor_document_sources_ready", readinessErr == nil)
 		if readinessErr != nil {
