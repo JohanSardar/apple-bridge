@@ -292,6 +292,16 @@ fn plist_value(buffer: &mut String, value: &Value) -> Result<(), Error> {
 }
 
 pub fn compile(path: &Path) -> Result<Vec<u8>, Error> {
+    let plist = compile_plist(path)?;
+    let mut buffer = String::from(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n",
+    );
+    plist_value(&mut buffer, &plist)?;
+    buffer.push_str("</plist>\n");
+    Ok(buffer.into_bytes())
+}
+
+pub fn compile_plist(path: &Path) -> Result<Value, Error> {
     let raw = fs::read(path)?;
     let mut stream = serde_json::Deserializer::from_slice(&raw);
     let source = Workflow::deserialize(&mut stream)?;
@@ -345,12 +355,7 @@ pub fn compile(path: &Path) -> Result<Vec<u8>, Error> {
     if actions_source.iter().any(|a| a.identifier == OUTPUT_ACTION) {
         plist["WFWorkflowHasOutputAction"] = Value::Bool(true);
     }
-    let mut buffer = String::from(
-        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n",
-    );
-    plist_value(&mut buffer, &plist)?;
-    buffer.push_str("</plist>\n");
-    Ok(buffer.into_bytes())
+    Ok(plist)
 }
 
 fn run_with_deadline(command: &mut Command, deadline: Instant) -> Result<bool, Error> {

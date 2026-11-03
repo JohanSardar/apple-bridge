@@ -10,9 +10,18 @@ use std::{
     time::{Duration, Instant, SystemTime},
 };
 
-pub const SCENARIOS: [(&str, &str); 2] = [
+pub const SCENARIOS: [(&str, &str); 11] = [
     ("FILES-TRANSFORM", "files_transform"),
     ("SC-ACTIONS", "shortcuts_actions"),
+    ("SC-CAPTURE", "shortcuts_checks"),
+    ("SC-RUN-REAL", "shortcuts_checks"),
+    ("CLK-SIM", "shortcuts_checks"),
+    ("CLK-ALARM-REAL", "shortcuts_checks"),
+    ("CLK-TIMER-REAL", "shortcuts_checks"),
+    ("FOC-IDLE", "shortcuts_real_only"),
+    ("FOC-SET-REAL", "shortcuts_real_only"),
+    ("FOC-STATUS-REAL", "shortcuts_real_only"),
+    ("SC-IDLE", "shortcuts_real_only"),
 ];
 
 pub fn inject(scenario: &mut Scenario) {
@@ -282,5 +291,176 @@ pub fn shortcuts_actions(world: &mut World, _: &Value, evidence: &mut Evidence) 
         ok,
         "native metadata discovery",
     );
+    Ok(())
+}
+
+pub fn shortcuts_real_only(_: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> {
+    evidence.unverified(
+        "real_level_only",
+        "this scenario only runs at the real level, which the Rust lab never executes",
+    );
+    Ok(())
+}
+
+fn checks_binary() -> Result<PathBuf> {
+    let gateway = crate::replicas::binary()?;
+    let path = env::var("AB_LAB_SHORTCUTS_CHECKS").map_or_else(
+        |_| {
+            gateway
+                .parent()
+                .unwrap_or_else(|| Path::new("."))
+                .join("ab-shortcuts-checks")
+        },
+        PathBuf::from,
+    );
+    if path.is_file() {
+        Ok(path)
+    } else {
+        Err(lab_world::Error::Invalid(format!(
+            "ab-shortcuts-checks not found at {}",
+            path.display()
+        )))
+    }
+}
+
+fn native_target(
+    evidence: &mut Evidence,
+    target: &str,
+    inputs: &[&str],
+    names: (&str, &str),
+) -> Option<PathBuf> {
+    let existing = native_directory().map(|d| d.join(target));
+    if let Some(binary) = existing.filter(|b| fresh(b, inputs)) {
+        evidence.check(names.1, true, "native output directory");
+        return Some(binary);
+    }
+    let built = Command::new("packaging/dev/build-native.sh")
+        .env("APPLE_BRIDGE_NATIVE_TARGET", target)
+        .output();
+    let ok = built.as_ref().is_ok_and(|o| o.status.success());
+    evidence.check(names.0, ok, "native checks build");
+    if !ok {
+        return None;
+    }
+    let directory = native_directory();
+    evidence.check(names.1, directory.is_some(), "native output directory");
+    directory.map(|d| d.join(target))
+}
+
+const SHORTCUTS_NATIVE_INPUTS: [&str; 4] = [
+    "native/Package.swift",
+    "native/Sources/ShortcutsChecks",
+    "native/Sources/ShortcutsSource",
+    "native/Sources/SourceSupport",
+];
+
+fn scratch_directory(id: &str) -> PathBuf {
+    let nanos = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .map_or(0, |d| d.as_nanos());
+    env::temp_dir().join(format!("ab-lab-{id}-{}-{nanos}", std::process::id()))
+}
+
+fn run_checks(checks: &Path, args: &[&str], evidence: &mut Evidence) -> Option<Value> {
+    let output = Command::new(checks).args(args).output();
+    let parsed = output
+        .as_ref()
+        .ok()
+        .filter(|o| o.status.success())
+        .and_then(|o| serde_json::from_slice::<Value>(&o.stdout).ok());
+    evidence.check("checks_binary", parsed.is_some(), "ab-shortcuts-checks ran");
+    parsed
+}
+
+pub fn shortcuts_checks(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> {
+    let id = evidence.scenario.clone();
+    let checks = checks_binary()?;
+    let directory = scratch_directory(&id);
+    let directory_text = directory.to_string_lossy().into_owned();
+    let root = env::current_dir()?;
+    let root_text = root.to_string_lossy().into_owned();
+    let fixture_scenario = matches!(id.as_str(), "SC-CAPTURE" | "SC-RUN-REAL");
+    if fixture_scenario {
+        let prepared = Command::new(&checks)
+            .args(["prepare", &directory_text])
+            .output()
+            .is_ok_and(|o| o.status.success());
+        evidence.check("fixture_directory", prepared, "temporary directory");
+        evidence.check("fake_cli", prepared, "fake shortcuts executable");
+        if !prepared {
+            return Ok(());
+        }
+    } else {
+        fs::create_dir_all(&directory)?;
+    }
+    if id == "SC-CAPTURE" {
+        let binary = native_target(
+            evidence,
+            "ShortcutsChecks",
+            &SHORTCUTS_NATIVE_INPUTS,
+            ("native_shortcuts_build", "native_shortcuts_output"),
+        );
+        let Some(binary) = binary else { return Ok(()) };
+        let executable = directory.join("shortcuts").to_string_lossy().into_owned();
+        let (ok, _) = run_native(&binary, &[&executable, "SC-CAPTURE"]);
+        evidence.check("native_source_fixture", ok, "native source fixture");
+    }
+    if id == "CLK-TIMER-REAL" {
+        let binary = native_target(
+            evidence,
+            "ShortcutsChecks",
+            &SHORTCUTS_NATIVE_INPUTS,
+            (
+                "native_timer_snapshot_build",
+                "native_timer_snapshot_output",
+            ),
+        );
+        let Some(binary) = binary else { return Ok(()) };
+        let (ok, _) = run_native(&binary, &["synthetic", "CLK-TIMER-REAL"]);
+        for name in [
+            "native_timer_snapshot_states_and_readonly",
+            "native_timer_duration_adjustment_verified",
+            "native_timer_localized_component_values",
+            "native_timer_recent_snapshot_readonly",
+        ] {
+            evidence.check(name, ok, "native timer snapshot checks");
+        }
+    }
+    let report = run_checks(
+        &checks,
+        &["run", &id, &directory_text, &root_text],
+        evidence,
+    );
+    let _ = fs::remove_dir_all(&directory);
+    let Some(report) = report else { return Ok(()) };
+    for item in report["assertions"].as_array().into_iter().flatten() {
+        evidence.check(
+            item["name"].as_str().unwrap_or("unnamed"),
+            item["passed"] == true,
+            "",
+        );
+    }
+    if let Some(reason) = report["limited"].as_str() {
+        evidence.check("not_limited", false, reason);
+    }
+    if id == "CLK-SIM" {
+        let client = Client::new(world, "calendar:read,reminders:read,system:read")?;
+        for op in [
+            "clock.create_alarm",
+            "clock.toggle_alarm",
+            "clock.delete_alarm",
+            "clock.start_timer",
+            "clock.world_time",
+        ] {
+            let advertised = client
+                .call_raw(op, &json!({"args":{}}), 10)?
+                .is_some_and(|(status, _)| (200..300).contains(&status));
+            evidence.check(
+                "unqualified_operation_not_advertised",
+                !advertised,
+                "operation is not registered",
+            );
+        }
+    }
     Ok(())
 }
