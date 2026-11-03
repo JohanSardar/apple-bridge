@@ -24,3 +24,5 @@ design/features.html
 **/tailscaled.state
 
 native/Sources/AppleSession/GeneratedSourceRegistrations.swift
+
+*.shadow
