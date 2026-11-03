@@ -17,3 +17,5 @@ python3 rust/lab/parity.py --go-lab /tmp/bridge-lab --rust-peer "$CARGO_TARGET_D
 ```
 
 The gate runs six unchanged binary-driven scenarios against the Go gateway and Go replicas, using each peer three times. It requires success and identical per-assertion verdicts. Scenarios cover idempotency, command crash and ambiguity, eight gateway kills after capture commit before acknowledgment, identical manual send, UI interference, and permission loss with another source remaining available. This is peer-foundation evidence, not Phase 8 completion or full Rust-harness mutant coverage.
+
+Foundation verification: all 36 executions passed with identical assertion verdicts across both peers and all three repetitions. Raw JSONL, binary hashes and assertion digests are in `lab/evidence/phase8-foundation/`. `make rust-ci` and seven independent codec tests passed on build.

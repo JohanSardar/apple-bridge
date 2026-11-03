@@ -1,0 +1,303 @@
+{
+  "validated_code_commit": "ddae77443265a1e174be680cf9e5013cd1b7a693",
+  "artifact_sha256": {
+    "lab-simapple": "6c02fc9d29f2f0df2a37760b2b3024d07346fc2fb005e596b5c0906f5106c74c",
+    "phase8-current-lab": "fae3a1d2e5f3e8bb14c0b37377b2b1dc9088886e53e65d5fe5918ad4068fed77"
+  },
+  "checks": {
+    "make rust-ci": "passed on build",
+    "golden_codec_tests": 7,
+    "independence": "all-feature transitive metadata check and negative shim/cycle probes passed"
+  },
+  "scope": "Early peer foundation; complete source adapters and fault catalog remain outstanding. Remote rsync checkout has no git metadata, so raw git_sha is empty; code commit and artifact hashes are recorded here.",
+  "runs": [
+    {
+      "file": "go-1.jsonl",
+      "scenario": "CORE-CMD-CRASH-AMBIGUOUS",
+      "peer": "go",
+      "assertions": 42,
+      "verdict_sha256": "6066b508f66fcd47a1a250b0397e95ee87d2e0b9fa051c14634484ed60a6087e",
+      "passed": true
+    },
+    {
+      "file": "go-1.jsonl",
+      "scenario": "CORE-CMD-IDEMPOTENT",
+      "peer": "go",
+      "assertions": 44,
+      "verdict_sha256": "385aafeb533b84d8dd623bcae6c706b4b9634fde13acf7084433e10bf9eb1fc8",
+      "passed": true
+    },
+    {
+      "file": "go-1.jsonl",
+      "scenario": "CORE-KILL-GATEWAY-CAPTURE",
+      "peer": "go",
+      "assertions": 34,
+      "verdict_sha256": "f53e67efb9deee5d1ba7eed022cf9d128cd2e6f7fab9ada8a852e91e1e87f4e2",
+      "passed": true
+    },
+    {
+      "file": "go-1.jsonl",
+      "scenario": "MSG-SEND-IDENTICAL-MANUAL",
+      "peer": "go",
+      "assertions": 8,
+      "verdict_sha256": "0dbe29391cecd35b6ba674ca630e5e436e6b87437ed6fd6e19de803a1e0f3657",
+      "passed": true
+    },
+    {
+      "file": "go-1.jsonl",
+      "scenario": "MSG-UI-INTERFERENCE",
+      "peer": "go",
+      "assertions": 9,
+      "verdict_sha256": "4effe859c83614ee327fec006e177cb0d568202b26513c244b7830b3ce27e4cc",
+      "passed": true
+    },
+    {
+      "file": "go-1.jsonl",
+      "scenario": "REM-PERMISSION-LOSS",
+      "peer": "go",
+      "assertions": 8,
+      "verdict_sha256": "92bb99ba27d27239da2379f2f868e66be5574f5869d4c7cd40f9f6ee1d9d4faa",
+      "passed": true
+    },
+    {
+      "file": "go-2.jsonl",
+      "scenario": "CORE-CMD-CRASH-AMBIGUOUS",
+      "peer": "go",
+      "assertions": 42,
+      "verdict_sha256": "6066b508f66fcd47a1a250b0397e95ee87d2e0b9fa051c14634484ed60a6087e",
+      "passed": true
+    },
+    {
+      "file": "go-2.jsonl",
+      "scenario": "CORE-CMD-IDEMPOTENT",
+      "peer": "go",
+      "assertions": 44,
+      "verdict_sha256": "385aafeb533b84d8dd623bcae6c706b4b9634fde13acf7084433e10bf9eb1fc8",
+      "passed": true
+    },
+    {
+      "file": "go-2.jsonl",
+      "scenario": "CORE-KILL-GATEWAY-CAPTURE",
+      "peer": "go",
+      "assertions": 34,
+      "verdict_sha256": "f53e67efb9deee5d1ba7eed022cf9d128cd2e6f7fab9ada8a852e91e1e87f4e2",
+      "passed": true
+    },
+    {
+      "file": "go-2.jsonl",
+      "scenario": "MSG-SEND-IDENTICAL-MANUAL",
+      "peer": "go",
+      "assertions": 8,
+      "verdict_sha256": "0dbe29391cecd35b6ba674ca630e5e436e6b87437ed6fd6e19de803a1e0f3657",
+      "passed": true
+    },
+    {
+      "file": "go-2.jsonl",
+      "scenario": "MSG-UI-INTERFERENCE",
+      "peer": "go",
+      "assertions": 9,
+      "verdict_sha256": "4effe859c83614ee327fec006e177cb0d568202b26513c244b7830b3ce27e4cc",
+      "passed": true
+    },
+    {
+      "file": "go-2.jsonl",
+      "scenario": "REM-PERMISSION-LOSS",
+      "peer": "go",
+      "assertions": 8,
+      "verdict_sha256": "92bb99ba27d27239da2379f2f868e66be5574f5869d4c7cd40f9f6ee1d9d4faa",
+      "passed": true
+    },
+    {
+      "file": "go-3.jsonl",
+      "scenario": "CORE-CMD-CRASH-AMBIGUOUS",
+      "peer": "go",
+      "assertions": 42,
+      "verdict_sha256": "6066b508f66fcd47a1a250b0397e95ee87d2e0b9fa051c14634484ed60a6087e",
+      "passed": true
+    },
+    {
+      "file": "go-3.jsonl",
+      "scenario": "CORE-CMD-IDEMPOTENT",
+      "peer": "go",
+      "assertions": 44,
+      "verdict_sha256": "385aafeb533b84d8dd623bcae6c706b4b9634fde13acf7084433e10bf9eb1fc8",
+      "passed": true
+    },
+    {
+      "file": "go-3.jsonl",
+      "scenario": "CORE-KILL-GATEWAY-CAPTURE",
+      "peer": "go",
+      "assertions": 34,
+      "verdict_sha256": "f53e67efb9deee5d1ba7eed022cf9d128cd2e6f7fab9ada8a852e91e1e87f4e2",
+      "passed": true
+    },
+    {
+      "file": "go-3.jsonl",
+      "scenario": "MSG-SEND-IDENTICAL-MANUAL",
+      "peer": "go",
+      "assertions": 8,
+      "verdict_sha256": "0dbe29391cecd35b6ba674ca630e5e436e6b87437ed6fd6e19de803a1e0f3657",
+      "passed": true
+    },
+    {
+      "file": "go-3.jsonl",
+      "scenario": "MSG-UI-INTERFERENCE",
+      "peer": "go",
+      "assertions": 9,
+      "verdict_sha256": "4effe859c83614ee327fec006e177cb0d568202b26513c244b7830b3ce27e4cc",
+      "passed": true
+    },
+    {
+      "file": "go-3.jsonl",
+      "scenario": "REM-PERMISSION-LOSS",
+      "peer": "go",
+      "assertions": 8,
+      "verdict_sha256": "92bb99ba27d27239da2379f2f868e66be5574f5869d4c7cd40f9f6ee1d9d4faa",
+      "passed": true
+    },
+    {
+      "file": "rust-1.jsonl",
+      "scenario": "CORE-CMD-CRASH-AMBIGUOUS",
+      "peer": "rust",
+      "assertions": 42,
+      "verdict_sha256": "6066b508f66fcd47a1a250b0397e95ee87d2e0b9fa051c14634484ed60a6087e",
+      "passed": true
+    },
+    {
+      "file": "rust-1.jsonl",
+      "scenario": "CORE-CMD-IDEMPOTENT",
+      "peer": "rust",
+      "assertions": 44,
+      "verdict_sha256": "385aafeb533b84d8dd623bcae6c706b4b9634fde13acf7084433e10bf9eb1fc8",
+      "passed": true
+    },
+    {
+      "file": "rust-1.jsonl",
+      "scenario": "CORE-KILL-GATEWAY-CAPTURE",
+      "peer": "rust",
+      "assertions": 34,
+      "verdict_sha256": "f53e67efb9deee5d1ba7eed022cf9d128cd2e6f7fab9ada8a852e91e1e87f4e2",
+      "passed": true
+    },
+    {
+      "file": "rust-1.jsonl",
+      "scenario": "MSG-SEND-IDENTICAL-MANUAL",
+      "peer": "rust",
+      "assertions": 8,
+      "verdict_sha256": "0dbe29391cecd35b6ba674ca630e5e436e6b87437ed6fd6e19de803a1e0f3657",
+      "passed": true
+    },
+    {
+      "file": "rust-1.jsonl",
+      "scenario": "MSG-UI-INTERFERENCE",
+      "peer": "rust",
+      "assertions": 9,
+      "verdict_sha256": "4effe859c83614ee327fec006e177cb0d568202b26513c244b7830b3ce27e4cc",
+      "passed": true
+    },
+    {
+      "file": "rust-1.jsonl",
+      "scenario": "REM-PERMISSION-LOSS",
+      "peer": "rust",
+      "assertions": 8,
+      "verdict_sha256": "92bb99ba27d27239da2379f2f868e66be5574f5869d4c7cd40f9f6ee1d9d4faa",
+      "passed": true
+    },
+    {
+      "file": "rust-2.jsonl",
+      "scenario": "CORE-CMD-CRASH-AMBIGUOUS",
+      "peer": "rust",
+      "assertions": 42,
+      "verdict_sha256": "6066b508f66fcd47a1a250b0397e95ee87d2e0b9fa051c14634484ed60a6087e",
+      "passed": true
+    },
+    {
+      "file": "rust-2.jsonl",
+      "scenario": "CORE-CMD-IDEMPOTENT",
+      "peer": "rust",
+      "assertions": 44,
+      "verdict_sha256": "385aafeb533b84d8dd623bcae6c706b4b9634fde13acf7084433e10bf9eb1fc8",
+      "passed": true
+    },
+    {
+      "file": "rust-2.jsonl",
+      "scenario": "CORE-KILL-GATEWAY-CAPTURE",
+      "peer": "rust",
+      "assertions": 34,
+      "verdict_sha256": "f53e67efb9deee5d1ba7eed022cf9d128cd2e6f7fab9ada8a852e91e1e87f4e2",
+      "passed": true
+    },
+    {
+      "file": "rust-2.jsonl",
+      "scenario": "MSG-SEND-IDENTICAL-MANUAL",
+      "peer": "rust",
+      "assertions": 8,
+      "verdict_sha256": "0dbe29391cecd35b6ba674ca630e5e436e6b87437ed6fd6e19de803a1e0f3657",
+      "passed": true
+    },
+    {
+      "file": "rust-2.jsonl",
+      "scenario": "MSG-UI-INTERFERENCE",
+      "peer": "rust",
+      "assertions": 9,
+      "verdict_sha256": "4effe859c83614ee327fec006e177cb0d568202b26513c244b7830b3ce27e4cc",
+      "passed": true
+    },
+    {
+      "file": "rust-2.jsonl",
+      "scenario": "REM-PERMISSION-LOSS",
+      "peer": "rust",
+      "assertions": 8,
+      "verdict_sha256": "92bb99ba27d27239da2379f2f868e66be5574f5869d4c7cd40f9f6ee1d9d4faa",
+      "passed": true
+    },
+    {
+      "file": "rust-3.jsonl",
+      "scenario": "CORE-CMD-CRASH-AMBIGUOUS",
+      "peer": "rust",
+      "assertions": 42,
+      "verdict_sha256": "6066b508f66fcd47a1a250b0397e95ee87d2e0b9fa051c14634484ed60a6087e",
+      "passed": true
+    },
+    {
+      "file": "rust-3.jsonl",
+      "scenario": "CORE-CMD-IDEMPOTENT",
+      "peer": "rust",
+      "assertions": 44,
+      "verdict_sha256": "385aafeb533b84d8dd623bcae6c706b4b9634fde13acf7084433e10bf9eb1fc8",
+      "passed": true
+    },
+    {
+      "file": "rust-3.jsonl",
+      "scenario": "CORE-KILL-GATEWAY-CAPTURE",
+      "peer": "rust",
+      "assertions": 34,
+      "verdict_sha256": "f53e67efb9deee5d1ba7eed022cf9d128cd2e6f7fab9ada8a852e91e1e87f4e2",
+      "passed": true
+    },
+    {
+      "file": "rust-3.jsonl",
+      "scenario": "MSG-SEND-IDENTICAL-MANUAL",
+      "peer": "rust",
+      "assertions": 8,
+      "verdict_sha256": "0dbe29391cecd35b6ba674ca630e5e436e6b87437ed6fd6e19de803a1e0f3657",
+      "passed": true
+    },
+    {
+      "file": "rust-3.jsonl",
+      "scenario": "MSG-UI-INTERFERENCE",
+      "peer": "rust",
+      "assertions": 9,
+      "verdict_sha256": "4effe859c83614ee327fec006e177cb0d568202b26513c244b7830b3ce27e4cc",
+      "passed": true
+    },
+    {
+      "file": "rust-3.jsonl",
+      "scenario": "REM-PERMISSION-LOSS",
+      "peer": "rust",
+      "assertions": 8,
+      "verdict_sha256": "92bb99ba27d27239da2379f2f868e66be5574f5869d4c7cd40f9f6ee1d9d4faa",
+      "passed": true
+    }
+  ]
+}

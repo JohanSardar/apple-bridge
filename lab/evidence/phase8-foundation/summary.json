@@ -1,0 +1,218 @@
+[
+  {
+    "scenario": "CORE-CMD-CRASH-AMBIGUOUS",
+    "simapple": "go",
+    "run": 1,
+    "passed": true
+  },
+  {
+    "scenario": "CORE-CMD-IDEMPOTENT",
+    "simapple": "go",
+    "run": 1,
+    "passed": true
+  },
+  {
+    "scenario": "CORE-KILL-GATEWAY-CAPTURE",
+    "simapple": "go",
+    "run": 1,
+    "passed": true
+  },
+  {
+    "scenario": "MSG-SEND-IDENTICAL-MANUAL",
+    "simapple": "go",
+    "run": 1,
+    "passed": true
+  },
+  {
+    "scenario": "MSG-UI-INTERFERENCE",
+    "simapple": "go",
+    "run": 1,
+    "passed": true
+  },
+  {
+    "scenario": "REM-PERMISSION-LOSS",
+    "simapple": "go",
+    "run": 1,
+    "passed": true
+  },
+  {
+    "scenario": "CORE-CMD-CRASH-AMBIGUOUS",
+    "simapple": "rust",
+    "run": 1,
+    "passed": true
+  },
+  {
+    "scenario": "CORE-CMD-IDEMPOTENT",
+    "simapple": "rust",
+    "run": 1,
+    "passed": true
+  },
+  {
+    "scenario": "CORE-KILL-GATEWAY-CAPTURE",
+    "simapple": "rust",
+    "run": 1,
+    "passed": true
+  },
+  {
+    "scenario": "MSG-SEND-IDENTICAL-MANUAL",
+    "simapple": "rust",
+    "run": 1,
+    "passed": true
+  },
+  {
+    "scenario": "MSG-UI-INTERFERENCE",
+    "simapple": "rust",
+    "run": 1,
+    "passed": true
+  },
+  {
+    "scenario": "REM-PERMISSION-LOSS",
+    "simapple": "rust",
+    "run": 1,
+    "passed": true
+  },
+  {
+    "scenario": "CORE-CMD-CRASH-AMBIGUOUS",
+    "simapple": "go",
+    "run": 2,
+    "passed": true
+  },
+  {
+    "scenario": "CORE-CMD-IDEMPOTENT",
+    "simapple": "go",
+    "run": 2,
+    "passed": true
+  },
+  {
+    "scenario": "CORE-KILL-GATEWAY-CAPTURE",
+    "simapple": "go",
+    "run": 2,
+    "passed": true
+  },
+  {
+    "scenario": "MSG-SEND-IDENTICAL-MANUAL",
+    "simapple": "go",
+    "run": 2,
+    "passed": true
+  },
+  {
+    "scenario": "MSG-UI-INTERFERENCE",
+    "simapple": "go",
+    "run": 2,
+    "passed": true
+  },
+  {
+    "scenario": "REM-PERMISSION-LOSS",
+    "simapple": "go",
+    "run": 2,
+    "passed": true
+  },
+  {
+    "scenario": "CORE-CMD-CRASH-AMBIGUOUS",
+    "simapple": "rust",
+    "run": 2,
+    "passed": true
+  },
+  {
+    "scenario": "CORE-CMD-IDEMPOTENT",
+    "simapple": "rust",
+    "run": 2,
+    "passed": true
+  },
+  {
+    "scenario": "CORE-KILL-GATEWAY-CAPTURE",
+    "simapple": "rust",
+    "run": 2,
+    "passed": true
+  },
+  {
+    "scenario": "MSG-SEND-IDENTICAL-MANUAL",
+    "simapple": "rust",
+    "run": 2,
+    "passed": true
+  },
+  {
+    "scenario": "MSG-UI-INTERFERENCE",
+    "simapple": "rust",
+    "run": 2,
+    "passed": true
+  },
+  {
+    "scenario": "REM-PERMISSION-LOSS",
+    "simapple": "rust",
+    "run": 2,
+    "passed": true
+  },
+  {
+    "scenario": "CORE-CMD-CRASH-AMBIGUOUS",
+    "simapple": "go",
+    "run": 3,
+    "passed": true
+  },
+  {
+    "scenario": "CORE-CMD-IDEMPOTENT",
+    "simapple": "go",
+    "run": 3,
+    "passed": true
+  },
+  {
+    "scenario": "CORE-KILL-GATEWAY-CAPTURE",
+    "simapple": "go",
+    "run": 3,
+    "passed": true
+  },
+  {
+    "scenario": "MSG-SEND-IDENTICAL-MANUAL",
+    "simapple": "go",
+    "run": 3,
+    "passed": true
+  },
+  {
+    "scenario": "MSG-UI-INTERFERENCE",
+    "simapple": "go",
+    "run": 3,
+    "passed": true
+  },
+  {
+    "scenario": "REM-PERMISSION-LOSS",
+    "simapple": "go",
+    "run": 3,
+    "passed": true
+  },
+  {
+    "scenario": "CORE-CMD-CRASH-AMBIGUOUS",
+    "simapple": "rust",
+    "run": 3,
+    "passed": true
+  },
+  {
+    "scenario": "CORE-CMD-IDEMPOTENT",
+    "simapple": "rust",
+    "run": 3,
+    "passed": true
+  },
+  {
+    "scenario": "CORE-KILL-GATEWAY-CAPTURE",
+    "simapple": "rust",
+    "run": 3,
+    "passed": true
+  },
+  {
+    "scenario": "MSG-SEND-IDENTICAL-MANUAL",
+    "simapple": "rust",
+    "run": 3,
+    "passed": true
+  },
+  {
+    "scenario": "MSG-UI-INTERFERENCE",
+    "simapple": "rust",
+    "run": 3,
+    "passed": true
+  },
+  {
+    "scenario": "REM-PERMISSION-LOSS",
+    "simapple": "rust",
+    "run": 3,
+    "passed": true
+  }
+]
