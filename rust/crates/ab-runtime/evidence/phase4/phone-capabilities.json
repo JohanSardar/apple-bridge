@@ -1,0 +1,127 @@
+{
+  "phone_checkout_head": "159cff434ec7cdda260c68797aa327e805e0ddd4",
+  "go_controls": [
+    {
+      "id": "APP-DEVICE-SIM",
+      "seconds": 7.614,
+      "status": "pass",
+      "implementation": "gateway=go"
+    },
+    {
+      "id": "APP-HEALTH-WRITE-SIM",
+      "seconds": 3.755,
+      "status": "pass",
+      "implementation": "gateway=go"
+    },
+    {
+      "id": "APP-MOTION-SIM",
+      "seconds": 3.867,
+      "status": "pass",
+      "implementation": "gateway=go"
+    },
+    {
+      "id": "APP-PAIR-SIM",
+      "seconds": 2.547,
+      "status": "pass",
+      "implementation": "gateway=go"
+    },
+    {
+      "id": "APP-ALARM-SIM",
+      "seconds": 2.628,
+      "status": "pass",
+      "implementation": "gateway=go"
+    },
+    {
+      "id": "APP-SHELL-SIM",
+      "seconds": 3.662,
+      "status": "pass",
+      "implementation": "gateway=go"
+    },
+    {
+      "id": "APP-SCREENTIME-SIM",
+      "seconds": 6.515,
+      "status": "pass",
+      "implementation": "gateway=go"
+    }
+  ],
+  "rust_checks": [
+    {
+      "id": "APP-ALARM-SIM",
+      "seconds": 3.889,
+      "status": "pass",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": []
+    },
+    {
+      "id": "APP-DEVICE-SIM",
+      "seconds": 3.482,
+      "status": "pass",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": []
+    },
+    {
+      "id": "APP-HEALTH-WRITE-SIM",
+      "seconds": 3.549,
+      "status": "pass",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": []
+    },
+    {
+      "id": "APP-MOTION-SIM",
+      "seconds": 3.728,
+      "status": "pass",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": []
+    },
+    {
+      "id": "APP-SCREENTIME-SIM",
+      "seconds": 3.318,
+      "status": "pass",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": []
+    },
+    {
+      "id": "APP-SHELL-SIM",
+      "seconds": 3.258,
+      "status": "pass",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/contracts"
+      ],
+      "blocked_on": []
+    },
+    {
+      "id": "APP-PAIR-SIM",
+      "seconds": 2.368,
+      "status": "pass",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/iphone",
+        "internal/operations",
+        "internal/state",
+        "internal/trust",
+        "lab/simapple"
+      ],
+      "blocked_on": []
+    }
+  ],
+  "note": "Alarm and Shell execute unchanged Swift-only fake adapters and do not exercise a gateway. Other checks run the selected gateway binary. Go controls preceded Rust qualification; original assertions are retained."
+}

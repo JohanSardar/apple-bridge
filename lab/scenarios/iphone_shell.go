@@ -11,6 +11,8 @@ import (
 
 func runIPhoneShell(ctx context.Context, s Scenario, level string) Evidence {
 	e := Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), Passed: true}
+	e.Impl = "swift"
+	e.Conditions = map[string]string{"phone_adapter": "Swift fake", "gateway_exercised": "false"}
 	add := func(name string, ok bool) {
 		e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok})
 		e.Passed = e.Passed && ok

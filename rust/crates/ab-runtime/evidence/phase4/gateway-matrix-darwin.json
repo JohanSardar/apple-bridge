@@ -1,5 +1,5 @@
 {
-  "wall_seconds": 166.665,
+  "wall_seconds": 212.414,
   "parallel": 1,
   "host": "darwin",
   "complete": true,
@@ -7,8 +7,8 @@
   "results": [
     {
       "id": "APP-ALARM-SIM",
-      "seconds": 0.193,
-      "status": "fail",
+      "seconds": 3.889,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/contracts"
@@ -17,8 +17,9 @@
     },
     {
       "id": "APP-CAPTURE-SIM",
-      "seconds": 0.204,
+      "seconds": 0,
       "status": "blocked",
+      "execution_status": "not-started",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -33,32 +34,23 @@
         "harness: semantic product helper CommandHash",
         "harness: semantic product helper ValidateIPhoneCommand",
         "harness: lab/scenarios/iphone_capture.go still imports product implementations: blobs, iphone, operations, state, trust"
-      ],
-      "execution_status": "fail"
+      ]
     },
     {
       "id": "APP-DEVICE-SIM",
-      "seconds": 0.216,
-      "status": "blocked",
+      "seconds": 3.482,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/state",
-        "internal/trust"
+        "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: lab/scenarios/iphone_capability.go still imports product implementations: iphone, operations, state, trust"
-      ],
-      "execution_status": "fail"
+      "blocked_on": []
     },
     {
       "id": "APP-HEALTH-SIM",
-      "seconds": 0.229,
+      "seconds": 0,
       "status": "blocked",
+      "execution_status": "not-started",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -72,33 +64,23 @@
       "blocked_on": [
         "harness: semantic product helper HealthSample",
         "harness: lab/scenarios/iphone_health.go still imports product implementations: iphone, operations, state, trust"
-      ],
-      "execution_status": "fail"
+      ]
     },
     {
       "id": "APP-HEALTH-WRITE-SIM",
-      "seconds": 0.2,
-      "status": "blocked",
+      "seconds": 3.549,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/state",
-        "internal/trust"
+        "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: semantic product helper ValidateIPhoneCommand",
-        "harness: lab/scenarios/iphone_capability.go still imports product implementations: iphone, operations, state, trust"
-      ],
-      "execution_status": "fail"
+      "blocked_on": []
     },
     {
       "id": "APP-LOC-SIM",
-      "seconds": 0.176,
+      "seconds": 0,
       "status": "blocked",
+      "execution_status": "not-started",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -112,32 +94,23 @@
       "blocked_on": [
         "harness: semantic product helper ValidateIPhoneCommand",
         "harness: lab/scenarios/iphone_location.go still imports product implementations: iphone, operations, state, trust"
-      ],
-      "execution_status": "fail"
+      ]
     },
     {
       "id": "APP-MOTION-SIM",
-      "seconds": 0.177,
-      "status": "blocked",
+      "seconds": 3.728,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/iphone",
-        "internal/operations",
-        "internal/state",
-        "internal/trust"
+        "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: lab/scenarios/iphone_capability.go still imports product implementations: iphone, operations, state, trust"
-      ],
-      "execution_status": "fail"
+      "blocked_on": []
     },
     {
       "id": "APP-NOTIFY-SIM",
-      "seconds": 0.177,
+      "seconds": 0,
       "status": "blocked",
+      "execution_status": "not-started",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -154,26 +127,22 @@
         "harness: semantic product helper IPhoneCompletionEvidence",
         "harness: semantic product helper ValidateIPhoneCommand",
         "harness: lab/scenarios/iphone_command.go still imports product implementations: iphone, operations, relay, state, trust"
-      ],
-      "execution_status": "fail"
+      ]
     },
     {
       "id": "APP-SCREENTIME-SIM",
-      "seconds": 0.184,
-      "status": "blocked",
+      "seconds": 3.318,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: semantic product helper ValidateIPhoneCommand"
-      ],
-      "execution_status": "fail"
+      "blocked_on": []
     },
     {
       "id": "APP-SHELL-SIM",
-      "seconds": 0.173,
-      "status": "fail",
+      "seconds": 3.258,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/contracts"
@@ -182,7 +151,7 @@
     },
     {
       "id": "CAL-FUTURE-COUNT-MATH",
-      "seconds": 2.778,
+      "seconds": 1.968,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -192,7 +161,7 @@
     },
     {
       "id": "CAL-HINT-COVERAGE",
-      "seconds": 0.106,
+      "seconds": 0.084,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -202,7 +171,7 @@
     },
     {
       "id": "CAL-INVALIDATED-EVENT",
-      "seconds": 0.125,
+      "seconds": 0.082,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -212,7 +181,7 @@
     },
     {
       "id": "CALL-CAPTURE",
-      "seconds": 0.223,
+      "seconds": 0.091,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -223,7 +192,7 @@
     },
     {
       "id": "CAP-SIM",
-      "seconds": 0.25,
+      "seconds": 0.081,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -233,8 +202,9 @@
     },
     {
       "id": "CLK-ALARM-REAL",
-      "seconds": 0.18,
+      "seconds": 0,
       "status": "blocked",
+      "execution_status": "not-started",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/clockpack",
@@ -248,13 +218,13 @@
         "harness: lab/scenarios/clock_simulation.go still imports product implementations: clockpack, shortcut",
         "harness: lab/scenarios/clock_timer.go still imports product implementations: clockpack",
         "harness: lab/scenarios/siri_intents.go still imports product implementations: shortcut"
-      ],
-      "execution_status": "fail"
+      ]
     },
     {
       "id": "CLK-SIM",
-      "seconds": 0.187,
+      "seconds": 0,
       "status": "blocked",
+      "execution_status": "not-started",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/clockpack",
@@ -268,13 +238,13 @@
         "harness: lab/scenarios/clock_simulation.go still imports product implementations: clockpack, shortcut",
         "harness: lab/scenarios/clock_timer.go still imports product implementations: clockpack",
         "harness: lab/scenarios/siri_intents.go still imports product implementations: shortcut"
-      ],
-      "execution_status": "fail"
+      ]
     },
     {
       "id": "CLK-TIMER-REAL",
-      "seconds": 0.175,
+      "seconds": 0,
       "status": "blocked",
+      "execution_status": "not-started",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/clockpack",
@@ -288,13 +258,12 @@
         "harness: lab/scenarios/clock_simulation.go still imports product implementations: clockpack, shortcut",
         "harness: lab/scenarios/clock_timer.go still imports product implementations: clockpack",
         "harness: lab/scenarios/siri_intents.go still imports product implementations: shortcut"
-      ],
-      "execution_status": "fail"
+      ]
     },
     {
       "id": "CORE-DISK-FULL",
-      "seconds": 40.942,
-      "status": "fail",
+      "seconds": 11.56,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -316,8 +285,9 @@
     },
     {
       "id": "CORE-PERMISSION-STATUS",
-      "seconds": 13.33,
+      "seconds": 0,
       "status": "blocked",
+      "execution_status": "not-started",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -337,12 +307,11 @@
       ],
       "blocked_on": [
         "harness: lab/scenarios/permissions.go still imports product implementations: runtime"
-      ],
-      "execution_status": "pass"
+      ]
     },
     {
       "id": "CORE-SHORTCUT-SIGN",
-      "seconds": 4.133,
+      "seconds": 4.113,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -353,7 +322,7 @@
     },
     {
       "id": "CORE-SOURCE-SUPPORT",
-      "seconds": 18.121,
+      "seconds": 1.421,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -363,7 +332,7 @@
     },
     {
       "id": "FILE-CAPTURE",
-      "seconds": 0.174,
+      "seconds": 0.075,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -373,7 +342,7 @@
     },
     {
       "id": "FILES-TRANSFORM",
-      "seconds": 0.196,
+      "seconds": 0.927,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -383,8 +352,9 @@
     },
     {
       "id": "FOC-PHONE-SYNC",
-      "seconds": 0.213,
+      "seconds": 0,
       "status": "blocked",
+      "execution_status": "not-started",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/contracts",
@@ -396,13 +366,13 @@
         "harness: semantic product helper ValidateCommand",
         "harness: lab/scenarios/focus_pack.go still imports product implementations: focuspack, shortcut, trust",
         "harness: lab/scenarios/focus_real.go still imports product implementations: shortcut"
-      ],
-      "execution_status": "fail"
+      ]
     },
     {
       "id": "FOC-SIM",
-      "seconds": 0.2,
+      "seconds": 0,
       "status": "blocked",
+      "execution_status": "not-started",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/contracts",
@@ -414,12 +384,11 @@
         "harness: semantic product helper ValidateCommand",
         "harness: lab/scenarios/focus_pack.go still imports product implementations: focuspack, shortcut, trust",
         "harness: lab/scenarios/focus_real.go still imports product implementations: shortcut"
-      ],
-      "execution_status": "fail"
+      ]
     },
     {
       "id": "MAIL-BODY",
-      "seconds": 0.194,
+      "seconds": 0.086,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -429,7 +398,7 @@
     },
     {
       "id": "MAIL-CAPTURE",
-      "seconds": 0.221,
+      "seconds": 0.087,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -439,7 +408,7 @@
     },
     {
       "id": "MAIL-COMMANDS",
-      "seconds": 0.216,
+      "seconds": 0.085,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -455,7 +424,7 @@
     },
     {
       "id": "MAIL-LIVE",
-      "seconds": 0.225,
+      "seconds": 0.087,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -465,7 +434,7 @@
     },
     {
       "id": "MAIL-NO-FALSE-DELETE",
-      "seconds": 0.237,
+      "seconds": 0.085,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -475,8 +444,9 @@
     },
     {
       "id": "MSG-DECODE",
-      "seconds": 0.178,
+      "seconds": 0,
       "status": "blocked",
+      "execution_status": "not-started",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -493,18 +463,17 @@
         "harness: semantic product helper Descriptor",
         "harness: semantic product helper NormalizeContactHandle",
         "harness: semantic product helper OperationSchema",
-        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
         "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
         "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
         "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
         "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ],
-      "execution_status": "fail"
+      ]
     },
     {
       "id": "MSG-DECODE-BALLOON",
-      "seconds": 0.2,
+      "seconds": 0,
       "status": "blocked",
+      "execution_status": "not-started",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -521,18 +490,17 @@
         "harness: semantic product helper Descriptor",
         "harness: semantic product helper NormalizeContactHandle",
         "harness: semantic product helper OperationSchema",
-        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
         "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
         "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
         "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
         "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ],
-      "execution_status": "fail"
+      ]
     },
     {
       "id": "MSG-DECODE-FORMATTING",
-      "seconds": 0.174,
+      "seconds": 0,
       "status": "blocked",
+      "execution_status": "not-started",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -549,18 +517,17 @@
         "harness: semantic product helper Descriptor",
         "harness: semantic product helper NormalizeContactHandle",
         "harness: semantic product helper OperationSchema",
-        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
         "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
         "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
         "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
         "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ],
-      "execution_status": "fail"
+      ]
     },
     {
       "id": "MSG-DELETE-VISIBILITY",
-      "seconds": 0.188,
+      "seconds": 0,
       "status": "blocked",
+      "execution_status": "not-started",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -575,18 +542,17 @@
       ],
       "blocked_on": [
         "harness: semantic product helper NormalizeContactHandle",
-        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
         "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
         "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
         "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
         "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ],
-      "execution_status": "fail"
+      ]
     },
     {
       "id": "MSG-MEDIA-CLEANUP",
-      "seconds": 0.149,
+      "seconds": 0,
       "status": "blocked",
+      "execution_status": "not-started",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -601,18 +567,17 @@
       ],
       "blocked_on": [
         "harness: semantic product helper NormalizeContactHandle",
-        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
         "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
         "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
         "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
         "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ],
-      "execution_status": "fail"
+      ]
     },
     {
       "id": "MSG-READ-RICH-FIELDS",
-      "seconds": 0.159,
+      "seconds": 0,
       "status": "blocked",
+      "execution_status": "not-started",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -629,17 +594,15 @@
         "harness: semantic product helper Descriptor",
         "harness: semantic product helper NormalizeContactHandle",
         "harness: semantic product helper OperationSchema",
-        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
         "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
         "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
         "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
         "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ],
-      "execution_status": "fail"
+      ]
     },
     {
       "id": "NATIVE-MEDIA-EXPORT-SAFETY",
-      "seconds": 0.2,
+      "seconds": 0.08,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -654,7 +617,7 @@
     },
     {
       "id": "NATIVE-MEDIA-POSTERS",
-      "seconds": 0.178,
+      "seconds": 0.081,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -669,7 +632,7 @@
     },
     {
       "id": "NATIVE-MEDIA-YIELD",
-      "seconds": 0.191,
+      "seconds": 0.079,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -684,39 +647,27 @@
     },
     {
       "id": "NOTE-DECODE",
-      "seconds": 0.205,
-      "status": "blocked",
+      "seconds": 50.004,
+      "status": "timeout",
       "implementation": "gateway=rust",
       "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/trust"
+        "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs"
-      ],
-      "execution_status": "fail"
+      "blocked_on": []
     },
     {
       "id": "NOTE-DECODE-FULL",
-      "seconds": 0.209,
-      "status": "blocked",
+      "seconds": 50.003,
+      "status": "timeout",
       "implementation": "gateway=rust",
       "required_features": [
-        "internal/applepeer",
-        "internal/blobs",
-        "internal/contracts",
-        "internal/trust"
+        "internal/contracts"
       ],
-      "blocked_on": [
-        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs"
-      ],
-      "execution_status": "fail"
+      "blocked_on": []
     },
     {
       "id": "Q1-SETUP",
-      "seconds": 0.211,
+      "seconds": 0.096,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -726,7 +677,7 @@
     },
     {
       "id": "R1-RELEASE-SIM",
-      "seconds": 0.184,
+      "seconds": 0.092,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -736,8 +687,9 @@
     },
     {
       "id": "RELAY-ACME",
-      "seconds": 0.196,
+      "seconds": 0,
       "status": "blocked",
+      "execution_status": "not-started",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -750,19 +702,16 @@
         "internal/trust"
       ],
       "blocked_on": [
-        "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: relay, remote",
-        "harness: lab/scenarios/relay_dns.go still imports product implementations: relay",
+        "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: remote",
         "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
-        "harness: lab/scenarios/relay_service.go still imports product implementations: relay",
-        "harness: lab/scenarios/relay_streams.go still imports product implementations: relay",
         "harness: lab/scenarios/remote_checks.go still imports product implementations: remote"
-      ],
-      "execution_status": "fail"
+      ]
     },
     {
       "id": "RELAY-OWN-DOMAIN",
-      "seconds": 0.158,
+      "seconds": 0,
       "status": "blocked",
+      "execution_status": "not-started",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -775,19 +724,15 @@
         "internal/trust"
       ],
       "blocked_on": [
-        "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: relay, remote",
-        "harness: lab/scenarios/relay_dns.go still imports product implementations: relay",
+        "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: remote",
         "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
-        "harness: lab/scenarios/relay_service.go still imports product implementations: relay",
-        "harness: lab/scenarios/relay_streams.go still imports product implementations: relay",
         "harness: lab/scenarios/remote_checks.go still imports product implementations: remote"
-      ],
-      "execution_status": "fail"
+      ]
     },
     {
       "id": "REM-DST",
-      "seconds": 0.179,
-      "status": "fail",
+      "seconds": 3.421,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/contracts"
@@ -796,8 +741,8 @@
     },
     {
       "id": "REM-SECTIONS",
-      "seconds": 0.225,
-      "status": "fail",
+      "seconds": 50.004,
+      "status": "timeout",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -812,8 +757,8 @@
     },
     {
       "id": "REM-STORE-DECODE",
-      "seconds": 0.21,
-      "status": "fail",
+      "seconds": 3.536,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/contracts"
@@ -822,8 +767,8 @@
     },
     {
       "id": "REM-STORE-READ",
-      "seconds": 0.173,
-      "status": "fail",
+      "seconds": 3.565,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/contracts"
@@ -832,8 +777,9 @@
     },
     {
       "id": "SAF-CAPTURE",
-      "seconds": 0.176,
+      "seconds": 0,
       "status": "blocked",
+      "execution_status": "not-started",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/contracts",
@@ -841,13 +787,13 @@
       ],
       "blocked_on": [
         "harness: semantic product helper GrantsForSource"
-      ],
-      "execution_status": "fail"
+      ]
     },
     {
       "id": "SC-ACTIONS",
-      "seconds": 0.2,
+      "seconds": 0,
       "status": "blocked",
+      "execution_status": "not-started",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/contracts",
@@ -855,13 +801,13 @@
       ],
       "blocked_on": [
         "harness: semantic product helper Descriptor"
-      ],
-      "execution_status": "fail"
+      ]
     },
     {
       "id": "SC-CAPTURE",
-      "seconds": 0.183,
+      "seconds": 0,
       "status": "blocked",
+      "execution_status": "not-started",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/contracts",
@@ -872,13 +818,13 @@
         "harness: semantic product helper ValidateCommand",
         "harness: lab/scenarios/shortcuts_runner.go still imports product implementations: shortcut",
         "harness: lab/scenarios/siri_intents.go still imports product implementations: shortcut"
-      ],
-      "execution_status": "fail"
+      ]
     },
     {
       "id": "SC-RUN",
-      "seconds": 0.179,
+      "seconds": 0,
       "status": "blocked",
+      "execution_status": "not-started",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/contracts",
@@ -889,13 +835,13 @@
         "harness: semantic product helper ValidateCommand",
         "harness: lab/scenarios/shortcuts_runner.go still imports product implementations: shortcut",
         "harness: lab/scenarios/siri_intents.go still imports product implementations: shortcut"
-      ],
-      "execution_status": "fail"
+      ]
     },
     {
       "id": "SIRI-INTENTS",
-      "seconds": 0.169,
+      "seconds": 0,
       "status": "blocked",
+      "execution_status": "not-started",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/contracts",
@@ -904,12 +850,11 @@
       "blocked_on": [
         "harness: lab/scenarios/shortcut_probe.go still imports product implementations: shortcut",
         "harness: lab/scenarios/siri_intents.go still imports product implementations: shortcut"
-      ],
-      "execution_status": "fail"
+      ]
     },
     {
       "id": "USE-ACTION-PROBE",
-      "seconds": 0.222,
+      "seconds": 0.089,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -920,7 +865,7 @@
     },
     {
       "id": "USE-SEGB-DECODE",
-      "seconds": 0.192,
+      "seconds": 0.085,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -930,7 +875,7 @@
     },
     {
       "id": "VM-CAPTURE",
-      "seconds": 0.2,
+      "seconds": 0.093,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -940,7 +885,7 @@
     },
     {
       "id": "VMEMO-CAPTURE",
-      "seconds": 0.234,
+      "seconds": 0.085,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -950,7 +895,7 @@
     },
     {
       "id": "VMEMO-LATE-ASSETS",
-      "seconds": 0.243,
+      "seconds": 0.086,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -960,8 +905,9 @@
     },
     {
       "id": "WEB-MEDIA-VARIANTS",
-      "seconds": 0.195,
+      "seconds": 0,
       "status": "blocked",
+      "execution_status": "not-started",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
@@ -977,17 +923,15 @@
       ],
       "blocked_on": [
         "harness: semantic product helper NormalizeContactHandle",
-        "harness: lab/scenarios/blob_journey.go still imports product implementations: blobs",
         "harness: lab/scenarios/messages_commands_real.go still imports product implementations: trust, web",
         "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
         "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
         "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-      ],
-      "execution_status": "fail"
+      ]
     },
     {
       "id": "WEB-REM-PARITY",
-      "seconds": 0.187,
+      "seconds": 0.081,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -996,7 +940,8 @@
       "blocked_on": []
     }
   ],
-  "artifact_source_head": "05c8d792c67d50e879e5c686db8304986be6789a",
-  "artifact_sha256": "7ff428e4e46391fd95e93d52edaa877d37bbaa599cf99c9e2799d5f75c55f616",
-  "artifact_note": "Frozen merged gateway startup slice; later source and phone changes are not included."
+  "artifact_source_head": "1c882afd1d3b1c5aac2b7c22ad72287821f8d411",
+  "artifact_sha256": "cce56c4ce0c83a377a1d5f303ade5899916555e43c3d98c42d84f3060f6df79b",
+  "command_timeout_seconds": 50,
+  "note": "All 62 default Darwin cases attempted serially through ab-local. Three native decoder cases timed out at the short lock-hold limit; their status remains timeout, included in the reported failure count. Static harness blockers are not executed."
 }

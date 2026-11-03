@@ -15,3 +15,13 @@ Delivery now handles signed /v1/iphone/capture under its gateway mutex. Its Gate
 APP-PAIR-SIM now starts the selected gateway process through lab/phonefixture. Its nine original pairing assertions pass against Go first and then Rust. The fixture owns an isolated LocalAPI socket and TLS proxy; all pairing, one-use, signed status and revoke behavior runs through the binary. simapple.IPhone constructs the frozen wire messages using standard cryptography and base32 instead of importing Go trust implementation helpers. Other APP journeys remain unqualified.
 
 Capture assembly proof passes photo and audio against Go and Rust, including a 100 ms GC grace configuration, exact/changed retries, signed completion, authorized bytes after GC and denial to another caller. This does not qualify APP-CAPTURE-SIM, whose Swift and delegated-capture assertions still require a binary-driven harness and delegated reauthorization.
+
+## G-F capability SIM conversion
+
+APP-DEVICE-SIM, APP-MOTION-SIM and APP-HEALTH-WRITE-SIM retain their Swift fake-adapter builds and functional assertions, then drive the selected gateway binary over pairing, command admission, encrypted pending packets, signed receipts and public command status. Go passes first on Darwin; Rust passes the same assertions. The phone fixture decodes packets with independent standard-library X25519/HKDF-SHA256/AES-GCM/Ed25519 code checked against the frozen Go vector. Health Write admission is measured through the binary rather than contracts.ValidateIPhoneCommand.
+
+APP-ALARM-SIM and APP-SHELL-SIM are unchanged Swift-only fake-adapter proofs, with explicit impl=swift and gateway_exercised=false evidence. Their SIM guards permit the independent phone checks in either gateway selection; no gateway parity claim is made for these two cases.
+
+Fixture transport forces the isolated Unix LocalAPI socket on macOS, supplies an explicit TLS root pool, and uses a one-second SSE readiness sample. The separate binary ingress proof retains the production sixty-second probe. Optional diagnostic errors remain in the lab-owned home; ordinary builds retain their existing redacted setup errors and transport defaults. Darwin runs require an explicit APPLE_BRIDGE_IPHONE_ROOT for the separate phone checkout and use TMPDIR=/tmp for Unix socket path bounds.
+
+APP-SCREENTIME-SIM preserves its Swift shield-policy checks and measures all four gateway admission assertions through REST against the selected binary. The invalid one-minute schedule is rejected by the gateway. Both Go and Rust pass the original assertions plus the binary-fixture prerequisite.

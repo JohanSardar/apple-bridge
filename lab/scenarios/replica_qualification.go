@@ -96,4 +96,11 @@ func ownerGatewaySimScenario(s Scenario) bool {
 	return s.ID == "CORE-REPLICA-CAPTURE-OBSERVERS" || s.ID == "CORE-SOURCE-GRANTS" || s.ID == "WEB-AGENT-LEVELS" || s.ID == "WEB-AGENT-ACTIVITY" || s.ID == "WEB-AGENT-CREDENTIALS" || s.ID == "WEB-AGENT-OAUTH"
 }
 
-func phoneGatewaySimScenario(s Scenario) bool { return s.ID == "APP-PAIR-SIM" }
+func phoneGatewaySimScenario(s Scenario) bool {
+	switch s.ID {
+	case "APP-PAIR-SIM", "APP-DEVICE-SIM", "APP-MOTION-SIM", "APP-HEALTH-WRITE-SIM", "APP-ALARM-SIM", "APP-SHELL-SIM", "APP-SCREENTIME-SIM":
+		return true
+	default:
+		return false
+	}
+}

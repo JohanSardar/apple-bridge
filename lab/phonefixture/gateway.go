@@ -98,12 +98,13 @@ func Start(ctx context.Context, binary, home string) (*Gateway, error) {
 		return (&net.Dialer{}).DialContext(ctx, "tcp", public.Addr().String())
 	}}
 	g.Client = &http.Client{Transport: transport, Timeout: 15 * time.Second}
-	g.env = append(os.Environ(), "APPLE_BRIDGE_SECRET_STORE=file", "APPLE_BRIDGE_TAILSCALE_SOCKET="+socket, "APPLE_BRIDGE_REMOTE_PROBE_ADDRESS="+public.Addr().String(), "APPLE_BRIDGE_RELAY_URL=https://127.0.0.1:1", "SSL_CERT_FILE="+certPath)
+	g.env = append(os.Environ(), "APPLE_BRIDGE_SECRET_STORE=file", "APPLE_BRIDGE_TAILSCALE_SOCKET="+socket, "APPLE_BRIDGE_REMOTE_PROBE_ADDRESS="+public.Addr().String(), "APPLE_BRIDGE_RELAY_URL=https://127.0.0.1:1", "SSL_CERT_FILE="+certPath, "APPLE_BRIDGE_LAB_TLS_ROOT="+certPath, "APPLE_BRIDGE_LAB_PROBE_DURATION=1s", "APPLE_BRIDGE_LAB_REMOTE_DIAGNOSTICS="+filepath.Join(home, "remote-errors.log"))
 	if err = g.Restart(); err != nil {
 		return nil, err
 	}
 	if _, err = g.Command("remote", "on", "--via", "tailscale-app"); err != nil {
-		return nil, err
+		detail, _ := os.ReadFile(filepath.Join(home, "remote-errors.log"))
+		return nil, fmt.Errorf("%w; isolated remote diagnostic: %s", err, detail)
 	}
 	deadline := time.NewTimer(30 * time.Second)
 	defer deadline.Stop()

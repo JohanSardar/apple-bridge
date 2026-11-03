@@ -7,8 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/JohanSardar/apple-bridge/internal/contracts"
 )
 
 func runIPhoneHealthWrite(ctx context.Context, s Scenario, level string) Evidence {
@@ -33,10 +31,10 @@ func runIPhoneHealthWrite(ctx context.Context, s Scenario, level string) Evidenc
 	output, err = exec.CommandContext(ctx, binary).Output()
 	e.Passed = err == nil && strings.TrimSpace(string(output)) == "PASS"
 	e.Assertions = append(e.Assertions, Assertion{Name: "four_tagged_samples_written_read_deleted", Passed: e.Passed})
-	valid := contracts.ValidateIPhoneCommand(contracts.Command{ID: "cmd_health_write", Op: "iphone.health.log", Args: []byte(`{"device_id":"iphone:ab-test","kind":"water","value":250,"start":"2026-10-29T12:00:00Z","tag":"[ab-test]"}`)}) == nil
+	valid := false
+	delivered := proveIPhoneCapabilityDelivery(ctx, dir, []byte(`{"id":"ab-test"}`), []string{"iphone.health.log"}, func(ok bool) { valid = ok })
 	e.Assertions = append(e.Assertions, Assertion{Name: "gateway_admission", Passed: valid})
 	e.Passed = e.Passed && valid
-	delivered := proveIPhoneCapabilityDelivery(ctx, dir, []byte(`{"id":"ab-test"}`), []string{"iphone.health.log"})
 	e.Assertions = append(e.Assertions, Assertion{Name: "signed_health_command_roundtrip", Passed: delivered})
 	e.Passed = e.Passed && delivered
 	return e
