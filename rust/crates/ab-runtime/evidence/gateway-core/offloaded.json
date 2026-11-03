@@ -1,0 +1,1 @@
+{"host":"build","level":"sim","results":[{"scenario":"CORE-BLOB-OFFLOADED","go":"pass","rust_before":"fail: offloaded_bytes_unavailable_metadata_complete","rust_after":"pass"},{"scenario":"CORE-BLOB-DUPLICATE-REFERENCE","go":"pass","rust_before":"fail: one_protected_digest_for_duplicate_fields","rust_after":"pass"}]}

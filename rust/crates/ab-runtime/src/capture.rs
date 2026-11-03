@@ -104,12 +104,20 @@ async fn transfer(
     handle: &str,
     digest: &ab_blobs::Digest,
 ) -> Result<(), ab_blobs::Error> {
-    let size = blobs
-        .lock()
-        .await
-        .entries()
-        .get(digest.as_str())
-        .map_or(0, |entry| entry.size);
+    let size = {
+        let store = blobs.lock().await;
+        if let Some(entry) = store.entries().get(digest.as_str()) {
+            if matches!(
+                entry.state,
+                ab_blobs::BlobState::Offloaded | ab_blobs::BlobState::Missing
+            ) {
+                return Ok(());
+            }
+            entry.size
+        } else {
+            0
+        }
+    };
     let Some(mut offset) = mutate(blobs, |store| store.begin(digest, size)).await? else {
         return Ok(());
     };

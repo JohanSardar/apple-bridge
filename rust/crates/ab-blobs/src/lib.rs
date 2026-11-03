@@ -461,7 +461,7 @@ impl Store {
         )?;
         let mut entries = self.manifest.entries.clone();
         for r in updates.values().flatten() {
-            entries.entry(r.digest.clone()).or_insert_with(|| Entry {
+            let entry = entries.entry(r.digest.clone()).or_insert_with(|| Entry {
                 size: r.size,
                 state: match r.state.as_str() {
                     "missing" => BlobState::Missing,
@@ -470,6 +470,13 @@ impl Store {
                 },
                 ..Entry::default()
             });
+            if matches!(entry.state, BlobState::Offloaded | BlobState::Missing) {
+                entry.state = match r.state.as_str() {
+                    "offloaded" => BlobState::Offloaded,
+                    "missing" => BlobState::Missing,
+                    _ => BlobState::Pending,
+                };
+            }
         }
         for (d, e) in &mut entries {
             if protected.contains(d) {

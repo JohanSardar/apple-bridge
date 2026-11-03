@@ -17,3 +17,6 @@ Calendar commands resolve through the shared runtime Actions adapter into a cale
 The default CAL sim journeys use the selected gateway binary and Go replica over public REST/MCP, ipc/1 and feed/1. Their explicit Rust-gateway qualification is limited to the 21 default matrix IDs; scenario definitions and assertions remain unchanged. This does not enable real-level journeys or qualify Rust replica combinations.
 
 Verification: original product after unblocking the harness passed 10/21 CAL sims and failed 11 on command-dependent paths. Final Go and Rust gateway matrices each pass 21/21. CAL-SPLIT-FRAME-CAP had latency failures in the initial Go run and two intermediate Rust runs; all its functional assertions passed after the resolver fix, and the final runs passed latency too. Per-scenario results, intermediate failures, binary digest and the unchanged exactly-once evidence limitations are retained in `crates/ab-runtime/evidence/phase4/gateway-calendar.json`. `make rust-ci` passes on the rebased patch. No native calendar investigation was run.
+## CORE unavailable capture blobs
+
+Capture hydration preserves explicit offloaded/missing reference states instead of calling Store::begin and replacing them with pending. The authenticated feed reports those states to replicas; no blob transfer is scheduled until a later capture supplies an available reference.
