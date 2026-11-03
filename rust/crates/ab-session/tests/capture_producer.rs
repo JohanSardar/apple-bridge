@@ -605,3 +605,181 @@ fn production_config_flips_a_source_to_rust_and_back() -> Fallible<()> {
     std::fs::remove_dir_all(directory)?;
     Ok(())
 }
+
+fn envelope(directory: &Path, rows: &[u32]) -> Fallible<()> {
+    let target = directory.join("Envelope Index");
+    let staged = directory.join(".staged-envelope");
+    let _ = std::fs::remove_file(&staged);
+    let connection = rusqlite::Connection::open(&staged)?;
+    connection.execute_batch(
+        "CREATE TABLE mailboxes(url TEXT);
+         CREATE TABLE subjects(subject TEXT);
+         CREATE TABLE addresses(address TEXT);
+         CREATE TABLE messages(mailbox INTEGER,subject INTEGER,sender INTEGER,date_received REAL,read INTEGER,message_id TEXT);
+         INSERT INTO mailboxes(ROWID,url) VALUES(1,'imap://one@example.com/INBOX');
+         INSERT INTO subjects(ROWID,subject) VALUES(1,'synthetic subject');
+         INSERT INTO addresses(ROWID,address) VALUES(1,'sender@example.com');",
+    )?;
+    for row in rows {
+        connection.execute(
+            "INSERT INTO messages(ROWID,mailbox,subject,sender,date_received,read,message_id) VALUES(?1,1,1,1,1700000000,0,?2)",
+            rusqlite::params![row, format!("<synthetic-{row}@example.com>")],
+        )?;
+    }
+    drop(connection);
+    std::fs::rename(staged, target)?;
+    Ok(())
+}
+
+fn messages(capture: &Value, kind: &str) -> Vec<String> {
+    capture["observations"]
+        .as_array()
+        .map(|rows| {
+            rows.iter()
+                .filter(|row| row["collection"] == "mail.message" && row["kind"] == kind)
+                .filter_map(|row| row["native_key"].as_str().map(str::to_owned))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+#[test]
+fn rust_mail_scans_fixture_and_never_invents_deletions() -> Fallible<()> {
+    let directory = std::env::temp_dir().join(format!(
+        "ab-capture-mail-{}-{}",
+        std::process::id(),
+        SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos()
+    ));
+    std::fs::create_dir_all(&directory)?;
+    envelope(&directory, &[1, 2, 3])?;
+    let sources = readers::from_config(&json!({"mail":{"root":directory}}).to_string())?;
+    let (mut gateway, session_gateway) = UnixStream::pair()?;
+    let (mut helper, session_helper) = UnixStream::pair()?;
+    for socket in [&gateway, &helper] {
+        socket.set_read_timeout(Some(Duration::from_secs(10)))?;
+    }
+    let worker = std::thread::spawn(move || {
+        routed::relay(
+            session_gateway,
+            session_helper,
+            sources,
+            Duration::from_millis(20),
+        )
+    });
+    send(
+        &mut gateway,
+        &json!({"t":"Open","protocol":"ipc/1","owner_fence":1,"byte_credit":4_194_304,"checkpoints":{}}),
+    )?;
+    assert_eq!(receive(&mut helper)?.1["t"], "Open");
+    send(&mut helper, &json!({"t":"Ready","protocol":"ipc/1"}))?;
+    assert_eq!(receive(&mut gateway)?.1["t"], "Ready");
+
+    let (size, first) = receive(&mut gateway)?;
+    assert_eq!(first["source"], "mail");
+    assert_eq!(first["completion_evidence"], "complete");
+    assert_eq!(first["live"], false);
+    assert!(first.get("coverage").is_none());
+    assert_eq!(messages(&first, "upsert"), ["1", "2", "3"]);
+    assert_eq!(messages(&first, "absent"), Vec::<String>::new());
+    let generation = first["generation"].clone();
+    send(
+        &mut gateway,
+        &json!({"t":"Committed","source":"mail","checkpoint":first["checkpoint"],"credit":size}),
+    )?;
+    expect_silence(&mut gateway)?;
+
+    envelope(&directory, &[1, 3])?;
+    let (size, rebuilt) = receive(&mut gateway)?;
+    assert_ne!(rebuilt["generation"], generation);
+    assert_eq!(messages(&rebuilt, "absent"), Vec::<String>::new());
+    assert_eq!(messages(&rebuilt, "upsert"), ["1", "3"]);
+    send(
+        &mut gateway,
+        &json!({"t":"Committed","source":"mail","checkpoint":rebuilt["checkpoint"],"credit":size}),
+    )?;
+
+    std::fs::write(directory.join("Envelope Index"), b"not a database")?;
+    expect_silence(&mut gateway)?;
+
+    drop(gateway);
+    drop(helper);
+    let _ = worker.join();
+    std::fs::remove_dir_all(directory)?;
+    Ok(())
+}
+
+#[test]
+fn rust_mail_splits_large_scan_into_committed_chunks() -> Fallible<()> {
+    let directory = std::env::temp_dir().join(format!(
+        "ab-capture-mail-chunks-{}-{}",
+        std::process::id(),
+        SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos()
+    ));
+    std::fs::create_dir_all(&directory)?;
+    let rows: Vec<u32> = (1..=1000).collect();
+    envelope(&directory, &rows)?;
+    let sources = readers::from_config(&json!({"mail":{"root":directory}}).to_string())?;
+    let (mut gateway, session_gateway) = UnixStream::pair()?;
+    let (mut helper, session_helper) = UnixStream::pair()?;
+    for socket in [&gateway, &helper] {
+        socket.set_read_timeout(Some(Duration::from_secs(10)))?;
+    }
+    let worker = std::thread::spawn(move || {
+        routed::relay(
+            session_gateway,
+            session_helper,
+            sources,
+            Duration::from_millis(20),
+        )
+    });
+    send(
+        &mut gateway,
+        &json!({"t":"Open","protocol":"ipc/1","owner_fence":1,"byte_credit":4_194_304,"checkpoints":{}}),
+    )?;
+    assert_eq!(receive(&mut helper)?.1["t"], "Open");
+    send(&mut helper, &json!({"t":"Ready","protocol":"ipc/1"}))?;
+    assert_eq!(receive(&mut gateway)?.1["t"], "Ready");
+
+    let mut keys = Vec::new();
+    let mut checkpoints = Vec::new();
+    let mut scans = std::collections::BTreeSet::new();
+    let mut predecessor = String::new();
+    loop {
+        let (size, frame) = receive(&mut gateway)?;
+        assert_eq!(frame["t"], "Capture");
+        assert!(size <= 262_144);
+        assert_eq!(frame["predecessor"], predecessor);
+        scans.insert(frame["scan_id"].as_str().unwrap_or_default().to_owned());
+        keys.extend(messages(&frame, "upsert"));
+        let checkpoint = frame["checkpoint"].as_str().unwrap_or_default().to_owned();
+        assert_ne!(checkpoint, "");
+        send(
+            &mut gateway,
+            &json!({"t":"Committed","source":"mail","checkpoint":checkpoint,"credit":size}),
+        )?;
+        predecessor.clone_from(&checkpoint);
+        checkpoints.push(checkpoint);
+        if keys.len() == 1000 {
+            break;
+        }
+    }
+    assert!(checkpoints.len() > 1);
+    assert_eq!(scans.len(), 1);
+    assert_eq!(
+        checkpoints
+            .iter()
+            .collect::<std::collections::BTreeSet<_>>()
+            .len(),
+        checkpoints.len()
+    );
+    keys.sort();
+    keys.dedup();
+    assert_eq!(keys.len(), 1000);
+    expect_silence(&mut gateway)?;
+
+    drop(gateway);
+    drop(helper);
+    let _ = worker.join();
+    std::fs::remove_dir_all(directory)?;
+    Ok(())
+}
