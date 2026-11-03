@@ -907,7 +907,13 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		}
 		bounded, cancel := context.WithTimeout(ctx, duration)
 		secretBefore, secretWasSet := os.LookupEnv("APPLE_BRIDGE_SECRET_STORE")
+		if level == "sim" && !secretWasSet {
+			os.Setenv("APPLE_BRIDGE_SECRET_STORE", "file")
+		}
 		e := Run(bounded, s, level)
+		if level == "sim" && !secretWasSet {
+			os.Unsetenv("APPLE_BRIDGE_SECRET_STORE")
+		}
 		if level == "sim" {
 			if e.Conditions == nil {
 				e.Conditions = map[string]string{}
