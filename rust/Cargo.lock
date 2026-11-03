@@ -197,6 +197,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "ab-session"
+version = "0.0.0"
+dependencies = [
+ "ab-sys",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "ab-spikes"
 version = "0.0.0"
 dependencies = [
@@ -239,6 +249,9 @@ dependencies = [
 [[package]]
 name = "ab-sys"
 version = "0.0.0"
+dependencies = [
+ "libc",
+]
 
 [[package]]
 name = "ab-trust"
