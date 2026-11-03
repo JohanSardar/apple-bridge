@@ -91,3 +91,7 @@ func replicaRequirements(s Scenario) string {
 func sourceGatewaySimScenario(s Scenario) bool {
 	return strings.HasPrefix(s.ID, "CON-") || strings.HasPrefix(s.ID, "NOTE-") || strings.HasPrefix(s.ID, "REM-")
 }
+
+func ownerGatewaySimScenario(s Scenario) bool {
+	return s.ID == "WEB-AGENT-LEVELS" || s.ID == "WEB-AGENT-ACTIVITY"
+}
