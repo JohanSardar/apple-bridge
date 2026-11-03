@@ -5,6 +5,7 @@ use std::{
     io::Write,
     os::unix::fs::{OpenOptionsExt, PermissionsExt},
     path::{Path, PathBuf},
+    sync::Mutex,
 };
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -17,6 +18,7 @@ pub struct Record {
 #[derive(Debug)]
 pub struct Store {
     directory: PathBuf,
+    writing: Mutex<()>,
 }
 
 fn valid(source: &str) -> bool {
@@ -32,6 +34,7 @@ impl Store {
         fs::set_permissions(directory, fs::Permissions::from_mode(0o700))?;
         Ok(Self {
             directory: directory.to_path_buf(),
+            writing: Mutex::new(()),
         })
     }
 
@@ -55,6 +58,7 @@ impl Store {
         if !valid(source) {
             return Err(Error::Invalid);
         }
+        let _writing = self.writing.lock().map_err(|_| Error::WorkerPanicked)?;
         let temporary = self.directory.join(format!(".{source}.json.tmp"));
         let mut file = OpenOptions::new()
             .write(true)

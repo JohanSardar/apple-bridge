@@ -996,3 +996,36 @@ fn calendar_parts_merge_and_command_evidence_rebinds_to_the_rust_checkpoint() ->
     let _ = wire.worker.join();
     Ok(())
 }
+
+#[test]
+fn concurrent_checkpoint_saves_never_race_on_the_temporary_file() -> Fallible<()> {
+    let directory = std::env::temp_dir().join(format!(
+        "ab-session-store-{}",
+        SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos()
+    ));
+    let store = ab_session::store::Store::open(&directory)?;
+    let record = |round: usize| ab_session::store::Record {
+        generation: "g".into(),
+        checkpoint: format!("c{round}"),
+        token: "t".into(),
+    };
+    std::thread::scope(|scope| {
+        let workers: Vec<_> = (0..4)
+            .map(|_| {
+                scope.spawn(|| -> Result<(), ab_session::Error> {
+                    for round in 0..200 {
+                        store.save("notes", &record(round))?;
+                    }
+                    Ok(())
+                })
+            })
+            .collect();
+        for worker in workers {
+            worker.join().map_err(|_| "worker panicked")??;
+        }
+        Ok::<(), Box<dyn std::error::Error>>(())
+    })?;
+    assert!(store.load("notes").is_some());
+    std::fs::remove_dir_all(&directory)?;
+    Ok(())
+}
