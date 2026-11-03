@@ -32,6 +32,28 @@ def stop(process):
         process.wait()
 
 
+def reordered_record_data(raw):
+    source = raw.decode() if isinstance(raw, bytes) else raw
+    decoder = json.JSONDecoder()
+    index = 1
+    while True:
+        while source[index].isspace() or source[index] == ',':
+            index += 1
+        key, index = decoder.raw_decode(source, index)
+        while source[index].isspace() or source[index] == ':':
+            index += 1
+        start = index
+        value, index = decoder.raw_decode(source, index)
+        if key == 'data':
+            if not isinstance(value, dict) or len(value) < 2:
+                raise RuntimeError('data ordering fixture needs an object')
+            changed = json.dumps(dict(reversed(list(value.items()))), separators=(',', ':'))
+            result = source[:start] + changed + source[index:]
+            if result == source or json.loads(result) != json.loads(source):
+                raise RuntimeError('data ordering fault changed semantic values')
+            return result.encode() if isinstance(raw, bytes) else result
+
+
 def main():
     os.umask(0o077)
     parser = argparse.ArgumentParser()
@@ -158,6 +180,8 @@ def main():
         ('state.db', 'records', "payload=CAST(payload||x'20' AS BLOB)"),
         ('state.db', 'journal', "payload=CAST(payload||x'20' AS BLOB)"),
         ('state.db', 'records', 'version=version+1'),
+        ('state.db', 'records', None),
+        ('state.db', 'records', "payload=CAST(json_set(payload,'$.data.observed_at','2099-01-01T00:00:00Z') AS BLOB)"),
         ('state.db', 'records', "payload=CAST(json_set(payload,'$.data.__shadow_fault',1) AS BLOB)"),
         ('state.db', 'journal', 'seq=seq+1000000'),
         ('state.db', 'journal', "payload=CAST(json_set(payload,'$.op','delete') AS BLOB)"),
@@ -174,7 +198,11 @@ def main():
         shutil.copytree(home, changed)
         try:
             with sqlite3.connect(changed / database) as db:
-                result = db.execute('UPDATE "' + table + '" SET ' + update + ' WHERE rowid=(SELECT min(rowid) FROM "' + table + '")')
+                if update is None:
+                    rowid, payload = db.execute("SELECT rowid,payload FROM records WHERE collection='reminders.list' LIMIT 1").fetchone()
+                    result = db.execute('UPDATE records SET payload=? WHERE rowid=?', (reordered_record_data(payload), rowid))
+                else:
+                    result = db.execute('UPDATE "' + table + '" SET ' + update + ' WHERE rowid=(SELECT min(rowid) FROM "' + table + '")')
                 if result.rowcount != 1:
                     raise RuntimeError('synthetic mutation fixture missing')
             result = subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'diff', '--left', str(home), '--right', str(changed)], capture_output=True, text=True)
@@ -204,7 +232,7 @@ def main():
     result = subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'replay', '--recording', str(recording), '--starting-home', str(root / 'starting'), '--output', str(root / 'replay'), '--go', 'bin/bridge', '--rust', 'bin/bridge'], capture_output=True, text=True)
     if result.returncode or not json.loads(result.stdout)['equal']:
         raise RuntimeError('synthetic Go-Go admission replay parity failed: ' + result.stderr.strip())
-    print(json.dumps({'alias_clock_equivalence': True, 'go_go_admission_replay_equal': True, 'synthetic_capture_recorded': True, 'identical_home_equal': True, 'changed_gojson_bytes_detected': True, 'seeded_mismatches_detected': detected, 'frame_types': sorted(kinds)}))
+    print(json.dumps({'alias_clock_equivalence': True, 'go_go_admission_replay_equal': True, 'synthetic_capture_recorded': True, 'identical_home_equal': True, 'changed_gojson_bytes_detected': True, 'record_data_key_order_detected': True, 'record_data_clock_detected': True, 'seeded_mismatches_detected': detected, 'frame_types': sorted(kinds)}))
 
 
 if __name__ == '__main__':
