@@ -119,3 +119,9 @@ Gate: `python3 rust/lab/families-parity.py --families $T/lab-families --go-lab b
 `--media` runs WEB-MEDIA-VARIANTS and MSG-MEDIA-CLEANUP the same way and needs the native `MessagesSafetyChecks` binary (`AB_LAB_NATIVE_OUTPUT`), so it runs on Darwin. Verdicts are identical on the MacBook Pro: MSG-MEDIA-CLEANUP passes its 19 fixture cases in both harnesses, WEB-MEDIA-VARIANTS passes all 98 shared assertions. Two adapter bugs were fixed to get there: the sent video and audio fixtures lacked the trailing `free` box that Go's `MediaFixture` appends (so the panorama source geometry fell back to the default clip), and the panorama poster was fetched once instead of awaited, with no pixel checks. The adapter now decodes the poster (`zune-png`, `zune-jpeg`) and ports the centre-marker and edge-contrast checks.
 
 WEB-MEDIA-CAP blob ordering is owned by S-BLOB-ORDER and is unchanged.
+
+## Web read-model adapters (Phase 8)
+
+`lab-adapters` registers `readmodels` (`readmodels.rs`, `search.rs`) for WEB-RM-MEDIA-COLLECTION and WEB-RM-SEARCH. Scenarios with no `when` step in YAML (WEB-RM-SEARCH) get a `readmodels` step injected by `lab-families`. The adapters seed through the SimApple `/readmodels` put route, resolve gateway aliases, call REST and MCP, mint scoped tokens, and for the search migration stop the gateway, rewrite `records_fts` and `fts_version` in `state.db` with rusqlite, and restart it. Assertion names match the Go harness (WEB-RM-SEARCH emits no `world_start` on success, as in Go).
+
+Gate: `python3 rust/lab/families-parity.py ... --web-rm` runs both scenarios against both harnesses; verdicts are identical (23 and 47 assertions).

@@ -9,8 +9,10 @@ pub mod journey;
 pub mod media;
 pub mod poster;
 pub mod queries;
+pub mod readmodels;
 pub mod replicas;
 pub mod restart;
+pub mod search;
 pub mod watch;
 use lab_runner::Registry;
 use lab_world::Error;
@@ -28,7 +30,9 @@ pub fn registry() -> Registry {
     registry.register("world", |world, input, evidence| {
         let replicas = input["replicas"].as_u64().unwrap_or(0);
         let id = evidence.scenario.as_str();
-        let self_started = media::MEDIA_SCENARIOS.contains(&id) || id == "MSG-MEDIA-CLEANUP";
+        let self_started = media::MEDIA_SCENARIOS.contains(&id)
+            || id == "MSG-MEDIA-CLEANUP"
+            || readmodels::SCENARIOS.contains(&id);
         if replicas != 0 && blobs::is_blob(id) {
             blobs::configure(world, id, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && journey::COMMAND_SCENARIOS.contains(&id) {
@@ -49,6 +53,7 @@ pub fn registry() -> Registry {
         Ok(())
     });
     registry.register("queries", queries::queries);
+    registry.register("readmodels", readmodels::readmodels);
     registry.register("blobs", blobs::blobs);
     registry.register("messages", history::messages);
     registry.register("messages_read", history::messages_read);
