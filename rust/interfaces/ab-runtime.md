@@ -10,7 +10,9 @@ The peer listener delegates authenticated direct /v1/commands and feed CommandRe
 
 Online backup uses the private run/control.sock listener and the existing shared State under the gateway's singleton lock. Offline backup and restore retain the shared lock. No second writable State is opened by online backup.
 
-Phone delivery and atomic health capture, remote ingress/public transport assembly, source production validation and remaining harness conversions are not qualified by this slice. See ab-state.md for the phone transaction request. APP-*-SIM remains unqualified. Air builds are currently blocked by free disk below the Phase 4 budget.
+Phone delivery now shares the gateway State and LocalGateway, with source validation delegated to ab-commands. The runtime mounts signed pairing/status/delivery, persists signed result evidence, routes phone approvals through the command lock with hash verification, and commits location captures under the shared State lock. Pending phone commands survive startup without Helper recovery. Atomic health ingestion remains unavailable pending the State transaction seam recorded in ab-state.md; delegated phone command reauthorization remains fail closed. APP-*-SIM remains unqualified until its in-process Go fixtures are converted.
+
+Public HTTP transport context comes from a private authenticated loopback connection used only after ab-remote verifies TLS or the Tailscale capability path and headers. Caller headers cannot mark local API HTTP secure. Runtime reconciles relay and system selections independently, retains healthy adapters when another selection changes, and derives accepted public hosts from active adapter readiness. Frontdoor, Web and phone routes share the Service/Authority/Approvals adapters. The Gateway::new and Gateway::authenticated constructors replace external struct literals; examples use the appropriate constructor.
 
 ## G-F CAL gateway sim integration
 

@@ -233,14 +233,15 @@ impl Ingress for Tailscale {
             } else {
                 format!("{}:{}", lease.host, lease.port)
             };
+            let _active = gateway.ready("system", &host);
             let mut tasks = JoinSet::new();
             let result = loop {
                 tokio::select! {
                     () = stopped(&mut stop) => break Ok(()),
                     result = listener.accept() => match result {
                         Ok((socket, addr)) if addr.ip().is_loopback() => {
-                            let path = path.clone(); let host = host.clone(); let address = gateway.address;
-                            tasks.spawn(async move { proxy(socket, address, &host, &path).await });
+                            let path = path.clone(); let host = host.clone(); let gateway = gateway.clone();
+                            tasks.spawn(async move { proxy(socket, gateway, &host, &path).await });
                         }
                         Ok(_) => {}
                         Err(e) => break Err(e.into()),
@@ -256,7 +257,7 @@ impl Ingress for Tailscale {
 }
 async fn proxy(
     mut socket: tokio::net::TcpStream,
-    address: std::net::SocketAddr,
+    gateway: Gateway,
     host: &str,
     path: &str,
 ) -> Result<()> {
@@ -330,7 +331,7 @@ async fn proxy(
         output.push_str("connection: close\r\n");
     }
     output.push_str("\r\n");
-    let mut upstream = tokio::net::TcpStream::connect(address).await?;
+    let mut upstream = gateway.connect().await?;
     upstream.write_all(output.as_bytes()).await?;
     tokio::io::copy_bidirectional(&mut socket, &mut upstream).await?;
     Ok(())

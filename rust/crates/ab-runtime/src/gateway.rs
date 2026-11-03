@@ -46,12 +46,22 @@ pub async fn start(mut config: Config, authority: Arc<ab_trust::Authority>) -> R
             peer: Arc::new(commands.clone()),
         }),
     );
+    let phone_notify = Arc::new(tokio::sync::Notify::new());
+    local.phone_notify = Some(phone_notify.clone());
     local.query_store = Some(Arc::new(ab_operations::LocalQueryStore {
         state: (*store).clone(),
         blobs: blobs.clone(),
     }));
     let local = Arc::new(local);
     local.recover()?;
+    let phone = Arc::new(ab_iphone::delivery::Delivery::new(
+        authority.clone(),
+        crate::iphone::PhoneGateway {
+            state: (*store).clone(),
+            local: Arc::downgrade(&local),
+            authority: authority.clone(),
+        },
+    ));
     let service = Arc::new(ab_operations::Service {
         store: Arc::new(ab_operations::StateReads(state.clone(), blobs.clone())),
         identity,
@@ -88,8 +98,9 @@ pub async fn start(mut config: Config, authority: Arc<ab_trust::Authority>) -> R
     config.peer_address = feed_listener.local_addr()?.to_string();
     let api_listener = tokio::net::TcpListener::bind(config.validate()?).await?;
     config.api_address = api_listener.local_addr()?.to_string();
+    let audit = Arc::new(AuditLog::open(&config.home)?);
     let frontdoor = ab_frontdoor::Frontdoor::new(
-        service,
+        service.clone(),
         ab_frontdoor::Config {
             hosts: vec![
                 config.api_address.clone(),
@@ -99,7 +110,7 @@ pub async fn start(mut config: Config, authority: Arc<ab_trust::Authority>) -> R
             public: false,
             requests_per_second: 200,
         },
-        Arc::new(AuditLog::open(&config.home)?),
+        audit.clone(),
     );
     let feed = Arc::new(ab_replication::server::Server {
         state: Arc::new(tokio::sync::Mutex::new(
@@ -115,15 +126,37 @@ pub async fn start(mut config: Config, authority: Arc<ab_trust::Authority>) -> R
     });
     let approvals = Arc::new(crate::approvals::Approvals(local.clone()));
     let web = ab_frontdoor::web::Web::new(
-        authority,
+        authority.clone(),
         api_listener.local_addr()?,
         String::new(),
-        Some(approvals),
+        Some(approvals.clone()),
     );
-    let router = frontdoor.router().fallback_service(web.router());
+    let phone_router = crate::iphone::router(&phone);
+    let router = frontdoor
+        .router()
+        .merge(phone_router.clone())
+        .fallback_service(web.router());
     config.save()?;
     let (stop, receiver) = tokio::sync::watch::channel(false);
     let mut tasks = tokio::task::JoinSet::new();
+    let ingress_stop = receiver.clone();
+    let ingress = Arc::new(crate::ingress::App::new(
+        config.home.clone(),
+        api_listener.local_addr()?,
+        service,
+        authority,
+        audit,
+        approvals,
+        phone_router,
+    ));
+    tasks.spawn(crate::ingress::run(ingress, ingress_stop));
+    let phone_stop = receiver.clone();
+    tasks.spawn(crate::iphone::run(
+        phone,
+        phone_notify,
+        config.home.clone(),
+        phone_stop,
+    ));
     let hydrate_stop = receiver.clone();
     let status_stop = receiver.clone();
     tasks.spawn(crate::gateway_status::run(

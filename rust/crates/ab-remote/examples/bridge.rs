@@ -44,9 +44,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
         return Ok(());
     }
-    let gateway = Gateway {
-        address: option("--gateway").ok_or("--gateway required")?.parse()?,
-    };
+    let gateway = Gateway::new(option("--gateway").ok_or("--gateway required")?.parse()?);
     let mut adapters: Vec<Box<dyn Ingress>> = Vec::new();
     if via == "relay" || via == "both" {
         let mut roots = rustls::RootCertStore::empty();

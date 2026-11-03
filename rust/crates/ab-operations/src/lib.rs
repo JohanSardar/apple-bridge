@@ -602,7 +602,7 @@ impl Service {
             }
             let transient = matches!(name, "maps.open" | "speech.say" | "capture.play_sound");
             native_commands::validate(&command, &args)?;
-            let source_validated = ["contacts.", "notes.", "reminders."]
+            let source_validated = ["contacts.", "notes.", "reminders.", "iphone."]
                 .iter()
                 .any(|prefix| name.starts_with(prefix));
             if !source_validated && !transient {
@@ -620,10 +620,11 @@ impl Service {
             {
                 return Err(Code::Invalid.into());
             }
-            if args
-                .get("title")
-                .and_then(Value::as_str)
-                .is_some_and(|title| title.trim().is_empty())
+            if !name.starts_with("iphone.")
+                && args
+                    .get("title")
+                    .and_then(Value::as_str)
+                    .is_some_and(|title| title.trim().is_empty())
             {
                 return Err(Code::Invalid.into());
             }

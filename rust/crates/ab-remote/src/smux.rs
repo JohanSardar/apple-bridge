@@ -94,10 +94,7 @@ where
                             let secure = tokio_rustls::TlsAcceptor::from(certs.config()?)
                                 .accept(local)
                                 .await?;
-                            let (mut secure, mut upstream) = (
-                                secure,
-                                tokio::net::TcpStream::connect(gateway.address).await?,
-                            );
+                            let (mut secure, mut upstream) = (secure, gateway.connect().await?);
                             tokio::io::copy_bidirectional(&mut secure, &mut upstream).await?;
                             Ok::<(), Error>(())
                         };

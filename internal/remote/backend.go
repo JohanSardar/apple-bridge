@@ -8,7 +8,6 @@ import (
 	"net"
 	"os"
 	"strings"
-	"tailscale.com/client/local"
 )
 
 func (r *Remote) serve(ctx context.Context, cfg Config) {
@@ -29,7 +28,7 @@ func (r *Remote) serve(ctx context.Context, cfg Config) {
 		r.serveRelay(ctx, cfg, &status, fail)
 		return
 	}
-	client := &local.Client{}
+	client := installedLocalClient()
 	if cfg.Backend == "" {
 		cfg.Backend = "embedded"
 	}

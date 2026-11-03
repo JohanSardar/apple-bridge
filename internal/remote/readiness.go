@@ -24,7 +24,7 @@ func (r *Remote) ready(ctx context.Context, status *Status, listener net.Listene
 	defer func() { cancel(); <-done }()
 	probe := r.options.Probe
 	if probe == nil {
-		probe = publicProbe
+		probe = installedProbe
 	}
 	bounded, stop := context.WithTimeout(serving, 2*time.Minute)
 	expiry, err := probe(bounded, status.URL)

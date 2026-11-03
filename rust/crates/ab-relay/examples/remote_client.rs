@@ -39,13 +39,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let _ = tokio::signal::ctrl_c().await;
         let _ = stop.send(true);
     });
-    relay
-        .run(
-            Gateway {
-                address: args[3].parse()?,
-            },
-            rx,
-        )
-        .await?;
+    relay.run(Gateway::new(args[3].parse()?), rx).await?;
     Ok(())
 }

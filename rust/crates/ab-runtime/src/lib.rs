@@ -17,7 +17,11 @@ mod gateway;
 mod gateway_status;
 pub mod helper;
 pub mod helper_blobs;
+#[cfg(feature = "replica-feed")]
+mod ingress;
 pub mod inspection;
+#[cfg(feature = "replica-feed")]
+mod iphone;
 pub mod maintenance;
 #[cfg(feature = "replica-feed")]
 mod message_actions;
