@@ -20,7 +20,8 @@ SHORTCUT_SCENARIOS = ['shortcuts/FILES-TRANSFORM', 'shortcuts/SC-ACTIONS', 'shor
                       'shortcuts/CLK-SIM', 'shortcuts/CLK-ALARM-REAL', 'shortcuts/CLK-TIMER-REAL']
 MEDIA_SCENARIOS = ['web/WEB-MEDIA-VARIANTS', 'messages/MSG-MEDIA-CLEANUP']
 WEB_RM_SCENARIOS = ['web/WEB-RM-MEDIA-COLLECTION', 'web/WEB-RM-SEARCH']
-NATIVE_SCENARIOS = ['packaging/Q1-SETUP', 'packaging/R1-RELEASE-SIM', 'files/FILE-IDLE', 'files/FILE-CAPTURE']
+NATIVE_SCENARIOS = ['packaging/Q1-SETUP', 'packaging/R1-RELEASE-SIM', 'files/FILE-IDLE', 'files/FILE-CAPTURE',
+                    'safari/SAF-CAPTURE', 'safari/SAF-IDLE']
 MESSAGES_A_SCENARIOS = ['messages/MSG-DB-REPLACED', 'messages/MSG-PERMISSION-LOSS', 'messages/MSG-INCOMING',
                         'messages/MSG-DECODE']
 USAGE_SCENARIOS = ['usage/USE-LOCK-CLIP', 'usage/USE-READONLY', 'usage/USE-REMOTE-LAG']

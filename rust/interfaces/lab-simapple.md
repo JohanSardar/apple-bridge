@@ -184,3 +184,11 @@ The Rust peer answers the Maps and Location queries of the Go simulator (`maps.r
 Real-level runner additions: `Registry::register_standalone(id, handler)` registers a real-level scenario that needs no world (native checks, packaging); `World::helper_app` carries the signed Helper path of a real world; `World::sibling(suffix)` starts a second sim world next to the first (FILE-COMMANDS runs its REST and MCP passes in separate worlds, as the Go harness does).
 
 Gate: `python3 rust/lab/families-parity.py ... --maps` runs MAP-SIM, LOC-SIM, FILE-COMMANDS, FILE-CRUD-REAL and FILE-OFFLOAD-REAL (sim level) in one run against both harnesses; verdicts are identical with the Rust gateway (`lab-queries`).
+
+## Safari, FILE-REPLICA and packaging adapters (Phase 8)
+
+`safari.rs` ports SAF-CAPTURE and SAF-IDLE (sim): the adapter writes the synthetic Safari databases with the same Python fixture as the Go harness, builds and runs the native `SafariChecks`, checks the six observations against the registered collection shapes, posts them to the peer `/safari` route, and compares gateway and replica records. Both are in the `--native` parity set and need macOS.
+
+Compile-only real adapters: SAF-IDLE (`idle_real`), SAF-BOOKMARKS-REAL and SAF-HISTORY-REAL (standalone; native checks against an independent Python truth), FILE-REPLICA (`filerep.rs`, local replica instead of the Ubuntu replica) and PKG-INSTALL/PKG-BACKGROUND (`pkginstall.rs`, standalone). None of these has been run.
+
+QUERY-AGENT and AGENT-SUITE are not ported: they drive a Codex agent over MCP (`lab/agent/codex.py`) and need an LLM, its credentials and the agent task suite.
