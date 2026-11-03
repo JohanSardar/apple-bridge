@@ -1,3 +1,4 @@
+#![allow(clippy::too_many_lines, clippy::unnecessary_wraps)]
 use crate::{
     http::{Client, random_id},
     replicas::{self, Endpoint},
@@ -33,7 +34,7 @@ fn await_until(seconds: u64, mut condition: impl FnMut() -> bool) -> bool {
         thread::sleep(Duration::from_millis(50));
     }
 }
-fn chunk(kind: &[u8; 4], data: &[u8], out: &mut Vec<u8>) {
+fn chunk(kind: [u8; 4], data: &[u8], out: &mut Vec<u8>) {
     out.extend_from_slice(&u32::try_from(data.len()).unwrap_or(0).to_be_bytes());
     let mut body = kind.to_vec();
     body.extend_from_slice(data);
@@ -65,13 +66,13 @@ fn png(width: u32, height: u32, noise: bool) -> Vec<u8> {
     header.extend_from_slice(&height.to_be_bytes());
     header.extend_from_slice(&[8, 2, 0, 0, 0]);
     let mut out = vec![0x89, b'P', b'N', b'G', 13, 10, 26, 10];
-    chunk(b"IHDR", &header, &mut out);
+    chunk(*b"IHDR", &header, &mut out);
     chunk(
-        b"IDAT",
+        *b"IDAT",
         &miniz_oxide::deflate::compress_to_vec_zlib(&raw, 1),
         &mut out,
     );
-    chunk(b"IEND", &[], &mut out);
+    chunk(*b"IEND", &[], &mut out);
     out
 }
 fn image_size(data: &[u8]) -> Option<(u64, u64, &'static str)> {
@@ -150,19 +151,24 @@ fn valid_digest(value: &Value) -> bool {
         .as_str()
         .is_some_and(|d| d.len() == 64 && d.bytes().all(|b| b.is_ascii_hexdigit()))
 }
+fn has_extension(name: &str, extension: &str) -> bool {
+    std::path::Path::new(name)
+        .extension()
+        .is_some_and(|e| e.eq_ignore_ascii_case(extension))
+}
 fn wanted(name: &str) -> &'static [&'static str] {
-    if name.ends_with(".mov") {
+    if has_extension(name, "mov") {
         &["video", "poster"]
-    } else if name.ends_with(".caf") {
+    } else if has_extension(name, "caf") {
         &["audio"]
     } else {
         &["thumb", "display"]
     }
 }
 fn kind(name: &str) -> &'static str {
-    if name.ends_with(".mov") {
+    if has_extension(name, "mov") {
         "video"
-    } else if name.ends_with(".caf") {
+    } else if has_extension(name, "caf") {
         "audio"
     } else {
         "image"
@@ -178,7 +184,10 @@ fn snapshot(client: &Client, prefix: &str) -> BTreeMap<String, String> {
         })
         .map(|r| {
             (
-                r["data"]["filename"].as_str().unwrap_or_default().to_owned(),
+                r["data"]["filename"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .to_owned(),
                 r["data"].to_string(),
             )
         })
@@ -297,7 +306,11 @@ fn verify(
                     hex::encode(Sha256::digest(&content)) == digest,
                     digest,
                 );
-                if info["mime"].as_str().unwrap_or_default().starts_with("image/") {
+                if info["mime"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .starts_with("image/")
+                {
                     let size = image_size(&content);
                     let (w, h) = (
                         info["width"].as_u64().unwrap_or(0),
@@ -320,12 +333,7 @@ fn verify(
     }
     Ok(())
 }
-fn geometry(
-    evidence: &mut Evidence,
-    client: &Client,
-    chat: &str,
-    prefix: &str,
-) -> Result<()> {
+fn geometry(evidence: &mut Evidence, client: &Client, chat: &str, prefix: &str) -> Result<()> {
     let names = ["portrait", "panorama", "fallback"];
     let files: Vec<(String, Vec<u8>)> = names
         .iter()
@@ -380,7 +388,11 @@ fn geometry(
             );
             let size = content.as_deref().and_then(image_size);
             let valid = size.is_some_and(|(w, h, _)| w * 200 == h * 1920);
-            evidence.check("source_geometry_center_marker_poster", valid, &format!("{size:?}"));
+            evidence.check(
+                "source_geometry_center_marker_poster",
+                valid,
+                &format!("{size:?}"),
+            );
             let (w, h) = size.map_or((0, 0), |(w, h, _)| (w, h));
             evidence.check(
                 "panorama_poster_retina_cover_resolution",
@@ -400,7 +412,9 @@ fn geometry(
 pub fn media_variants(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> {
     let id = evidence.scenario.clone();
     if !MEDIA_SCENARIOS.contains(&id.as_str()) {
-        return Err(Error::Invalid(format!("media_variants not ported for {id}")));
+        return Err(Error::Invalid(format!(
+            "media_variants not ported for {id}"
+        )));
     }
     let cap = id == "WEB-MEDIA-CAP";
     if id == "WEB-MEDIA-VARIANTS" && !crate::cleanup::prove(evidence, "cleanup_") {
@@ -442,11 +456,13 @@ pub fn media_variants(world: &mut World, _: &Value, evidence: &mut Evidence) -> 
         (format!("{prefix}.caf"), AUDIO.to_vec()),
     ];
     let started = Instant::now();
-    let observed = send(&gateway, &chat, &format!("[ab-test {run}] synthetic media"), &files)
-        .map_err(|e| {
-            evidence.check("synthetic_upload", false, "stage or send failed");
-            e
-        })?;
+    let observed = send(
+        &gateway,
+        &chat,
+        &format!("[ab-test {run}] synthetic media"),
+        &files,
+    )
+    .inspect_err(|_| evidence.check("synthetic_upload", false, "stage or send failed"))?;
     evidence.check("self_send_observed", observed, "send");
     let clients = endpoints(world)?;
     verify(evidence, &clients, &prefix, started)?;
@@ -463,7 +479,7 @@ pub fn media_variants(world: &mut World, _: &Value, evidence: &mut Evidence) -> 
             }
             attachments(&gateway)
                 .iter()
-                .find(|r| r["data"]["filename"].as_str().is_some_and(|n| n.ends_with(".png")))
+                .find(|r| r["data"]["filename"].as_str().is_some_and(|n| has_extension(n, "png")))
                 .is_some_and(|r| {
                     blobs["entries"][r["data"]["blob"]["digest"].as_str().unwrap_or_default()]
                         ["state"]

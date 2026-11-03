@@ -1,3 +1,4 @@
+#![allow(clippy::too_many_lines)]
 use lab_runner::Evidence;
 use lab_world::{Result, World};
 use serde_json::{Value, json};
@@ -32,7 +33,9 @@ fn cases() -> Vec<(&'static str, Patch, bool, bool)> {
             |v| {
                 v["registration"]["media_attachment_names"] = json!(["ab-run_media.mov"]);
                 v["row"]["attachments"] = json!(["ab-run_media.mov"]);
-                v["candidates"] = json!([description("Your iMessage, 0-ab-run_media.mov, Media, 3:45 PM")]);
+                v["candidates"] = json!([description(
+                    "Your iMessage, 0-ab-run_media.mov, Media, 3:45 PM"
+                )]);
             },
             true,
             true,
@@ -42,7 +45,9 @@ fn cases() -> Vec<(&'static str, Patch, bool, bool)> {
             |v| {
                 v["registration"]["media_attachment_names"] = json!(["ab-run_media.caf"]);
                 v["row"]["attachments"] = json!(["ab-run_media.caf"]);
-                v["candidates"] = json!([description("Your iMessage, 0-ab-run_media.caf, Media, 3:45 PM")]);
+                v["candidates"] = json!([description(
+                    "Your iMessage, 0-ab-run_media.caf, Media, 3:45 PM"
+                )]);
             },
             true,
             true,
@@ -64,7 +69,11 @@ fn cases() -> Vec<(&'static str, Patch, bool, bool)> {
         ),
         (
             "native_file_description_outgoing",
-            |v| v["candidates"] = json!([description(&format!("Your iMessage, 0-{FILE}, Text Document · 66 bytes, 3:45 PM"))]),
+            |v| {
+                v["candidates"] = json!([description(&format!(
+                    "Your iMessage, 0-{FILE}, Text Document · 66 bytes, 3:45 PM"
+                ))])
+            },
             true,
             true,
         ),
@@ -72,21 +81,29 @@ fn cases() -> Vec<(&'static str, Patch, bool, bool)> {
             "native_file_description_incoming",
             |v| {
                 v["row"]["is_from_me"] = json!(false);
-                v["candidates"] = json!([description(&format!("Self Test, 0-{FILE}, Text Document · 66 bytes, 3:45 PM"))]);
+                v["candidates"] = json!([description(&format!(
+                    "Self Test, 0-{FILE}, Text Document · 66 bytes, 3:45 PM"
+                ))]);
             },
             true,
             true,
         ),
         (
             "native_file_description_substring_denied",
-            |v| v["candidates"] = json!([description(&format!("Your iMessage, prefix-{FILE}, Text Document · 66 bytes, 3:45 PM"))]),
+            |v| {
+                v["candidates"] = json!([description(&format!(
+                    "Your iMessage, prefix-{FILE}, Text Document · 66 bytes, 3:45 PM"
+                ))])
+            },
             true,
             false,
         ),
         (
             "native_file_description_ambiguous_denied",
             |v| {
-                let one = description(&format!("Your iMessage, 0-{FILE}, Text Document · 66 bytes, 3:45 PM"));
+                let one = description(&format!(
+                    "Your iMessage, 0-{FILE}, Text Document · 66 bytes, 3:45 PM"
+                ));
                 v["candidates"] = json!([one.clone(), one]);
             },
             true,
@@ -94,7 +111,10 @@ fn cases() -> Vec<(&'static str, Patch, bool, bool)> {
         ),
         (
             "photo_preview_filename_with_generic_description",
-            |v| v["candidates"] = json!([{"description": "Your iMessage, Photo, 3:45 PM", "values": [FILE]}]),
+            |v| {
+                v["candidates"] =
+                    json!([{"description": "Your iMessage, Photo, 3:45 PM", "values": [FILE]}])
+            },
             true,
             true,
         ),
@@ -175,7 +195,11 @@ pub fn prove(evidence: &mut Evidence, prefix: &str) -> bool {
         return false;
     };
     let Ok(directory) = tempdir() else {
-        evidence.check(&format!("{prefix}private_world"), false, "temporary directory");
+        evidence.check(
+            &format!("{prefix}private_world"),
+            false,
+            "temporary directory",
+        );
         return false;
     };
     let mut passed = true;
