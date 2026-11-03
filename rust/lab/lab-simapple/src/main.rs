@@ -144,6 +144,9 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
     if route == "/messages" {
         return messages::control_messages(state, tx, &input);
     }
+    if route == "/readmodels" {
+        return sources::readmodels(state, tx, &input);
+    }
     if matches!(route, "/phone" | "/recordings" | "/safari" | "/usage") {
         return sources::control_source(state, tx, route, &input);
     }

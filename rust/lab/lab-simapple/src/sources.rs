@@ -316,3 +316,77 @@ fn usage(state: &Shared, tx: &mpsc::Sender<Request>, input: &Value) -> Result<Va
     )?;
     Ok(json!({"effect_done":true}))
 }
+
+fn model_ref(collection: &str, key: &str) -> Value {
+    json!({"$ref":{"collection":collection,"native_key":key}})
+}
+pub(super) fn readmodels(
+    state: &Shared,
+    tx: &mpsc::Sender<Request>,
+    input: &Value,
+) -> Result<Value> {
+    let count = input["count"].as_u64().unwrap_or_default();
+    if count > 170_000 {
+        return Err(invalid("readmodel count"));
+    }
+    let mut records = vec![];
+    let mut frame = json!({"t":"Capture","source":"messages"});
+    match string(input, "action").as_str() {
+        "seed" => {
+            for i in 0..500 {
+                records.push(observation(
+                    "messages.chat",
+                    &format!("rm-chat-{i:03}"),
+                    json!({"display_name":format!("Bridge Test {i:03}"),"participants":[],"style":"direct","service":"iMessage"}),
+                ));
+            }
+            for i in 0..count {
+                let chat = if i < 499 {
+                    format!("rm-chat-{:03}", i + 1)
+                } else {
+                    "rm-chat-000".to_owned()
+                };
+                let sent = jiff::Timestamp::from_second(1_767_225_600 + i64::try_from(i / 2)?)
+                    .map_err(|_| invalid("readmodel time"))?;
+                records.push(observation(
+                    "messages.message",
+                    &format!("rm-message-{i:06}"),
+                    json!({"chat_id":model_ref("messages.chat",&chat),"sent_at":sent.to_string(),"is_from_me":true,"kind":"message","text":format!("[ab-test] synthetic {i:06}"),"parts":[]}),
+                ));
+            }
+            frame["scan_id"] = json!(super::id("scan")?);
+            frame["scope"] = json!(["messages.chat", "messages.message"]);
+            frame["scan_started_at"] = json!(now());
+            frame["completion_evidence"] = json!("complete");
+        }
+        "put" => {
+            for record in input["records"]
+                .as_array()
+                .ok_or_else(|| invalid("readmodel records"))?
+            {
+                let collection = string(record, "collection");
+                let key = string(record, "native_key");
+                if source(&collection) != "messages"
+                    || key.is_empty()
+                    || record["kind"] != "upsert"
+                {
+                    return Err(invalid("readmodel fixture"));
+                }
+                let mut record = record.clone();
+                record["observed_at"] = json!(now());
+                record["scoped_alias"] = json!(format!("{collection}/{key}"));
+                records.push(record);
+            }
+        }
+        _ => return Err(invalid("readmodel action")),
+    }
+    let mut s = lock(state)?;
+    for record in &records {
+        s.put(record.clone());
+    }
+    s.save()?;
+    drop(s);
+    frame["observations"] = json!(records);
+    enqueue(tx, frame, true)?;
+    Ok(json!({"committed":true}))
+}
