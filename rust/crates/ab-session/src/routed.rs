@@ -52,6 +52,7 @@ struct Flight {
     checkpoint: String,
     bytes: u64,
     rust: bool,
+    last: bool,
     keys: Vec<String>,
 }
 
@@ -220,6 +221,131 @@ fn note_observed(shared: &mut Shared, flight: &Flight) {
     }
 }
 
+fn send_scan(
+    gate: &Gate,
+    to_gateway: &Mutex<UnixStream>,
+    layer: Option<&dyn Overlay>,
+    source: &str,
+    capture: &Value,
+) -> Result<bool, Error> {
+    let generation = text(capture, "generation")?.to_owned();
+    let checkpoint = text(capture, "checkpoint")?.to_owned();
+    let chunks = split(capture)?;
+    let final_index = chunks.len() - 1;
+    for (index, mut chunk) in chunks.into_iter().enumerate() {
+        let last = index == final_index;
+        let chunk_checkpoint = if last {
+            checkpoint.clone()
+        } else {
+            format!("{checkpoint}-{index}")
+        };
+        chunk["checkpoint"] = Value::String(chunk_checkpoint.clone());
+        let predecessor = gate
+            .lock()?
+            .committed
+            .get(source)
+            .filter(|(committed_generation, _)| *committed_generation == generation)
+            .map(|(_, checkpoint)| checkpoint.clone())
+            .unwrap_or_default();
+        chunk["predecessor"] = Value::String(predecessor);
+        chunk["t"] = json!("Capture");
+        let bytes = frame_bytes(&chunk)?;
+        let size = u64::try_from(bytes.len()).map_err(|_| Error::Invalid)?;
+        let mut shared = gate.lock()?;
+        if size > shared.total {
+            return Err(Error::Invalid);
+        }
+        while shared.credit < size {
+            if shared.closed {
+                return Ok(false);
+            }
+            shared = gate
+                .changed
+                .wait_timeout(shared, Duration::from_millis(100))
+                .map_err(|_| Error::WorkerPanicked)?
+                .0;
+        }
+        shared.credit -= size;
+        shared.flights.insert(
+            source.to_owned(),
+            Flight {
+                generation: generation.clone(),
+                checkpoint: chunk_checkpoint,
+                bytes: size,
+                rust: true,
+                last,
+                keys: capture_keys(&chunk),
+            },
+        );
+        drop(shared);
+        if let Some(layer) = layer {
+            layer.helper(&chunk, usize::try_from(size).map_err(|_| Error::Invalid)?)?;
+        }
+        to_gateway
+            .lock()
+            .map_err(|_| Error::WorkerPanicked)?
+            .write_all(&bytes)?;
+        if !last && !wait_committed(gate, source)? {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
+const BULK_CHUNK_BYTES: usize = 16_000;
+const LIVE_CHUNK_BYTES: usize = 64_000;
+
+fn split(capture: &Value) -> Result<Vec<Value>, Error> {
+    let limit = if capture["live"].as_bool().unwrap_or(false) {
+        LIVE_CHUNK_BYTES
+    } else {
+        BULK_CHUNK_BYTES
+    };
+    let observations = capture["observations"].as_array().ok_or(Error::Invalid)?;
+    let absent = |row: &&Value| row["kind"] == "absent";
+    let ordered: Vec<&Value> = observations
+        .iter()
+        .filter(|row| !absent(row))
+        .chain(observations.iter().filter(absent))
+        .collect();
+    let mut groups: Vec<Vec<Value>> = vec![Vec::new()];
+    let mut bytes = 0;
+    for row in ordered {
+        let size = serde_json::to_vec(row)?.len() + 1;
+        if bytes + size > limit && groups.last().is_some_and(|group| !group.is_empty()) {
+            groups.push(Vec::new());
+            bytes = 0;
+        }
+        if let Some(group) = groups.last_mut() {
+            group.push(row.clone());
+        }
+        bytes += size;
+    }
+    Ok(groups
+        .into_iter()
+        .map(|group| {
+            let mut chunk = capture.clone();
+            chunk["observations"] = Value::Array(group);
+            chunk
+        })
+        .collect())
+}
+
+fn wait_committed(gate: &Gate, source: &str) -> Result<bool, Error> {
+    let mut shared = gate.lock()?;
+    while shared.flights.contains_key(source) {
+        if shared.closed {
+            return Ok(false);
+        }
+        shared = gate
+            .changed
+            .wait_timeout(shared, Duration::from_millis(100))
+            .map_err(|_| Error::WorkerPanicked)?
+            .0;
+    }
+    Ok(true)
+}
+
 fn produce(
     gate: &Gate,
     readers: &Readers,
@@ -258,7 +384,7 @@ fn produce(
                 let reader = guard.get_mut(source).ok_or(Error::Invalid)?;
                 reader.next(&context)
             };
-            let mut capture = match next {
+            let capture = match next {
                 Ok(Some(capture)) => capture,
                 Ok(None) => {
                     persist(gate, readers, store, source)?;
@@ -269,52 +395,9 @@ fn produce(
                     continue;
                 }
             };
-            let generation = text(&capture, "generation")?.to_owned();
-            let checkpoint = text(&capture, "checkpoint")?.to_owned();
-            let predecessor = gate
-                .lock()?
-                .committed
-                .get(source)
-                .filter(|(committed_generation, _)| *committed_generation == generation)
-                .map(|(_, checkpoint)| checkpoint.clone())
-                .unwrap_or_default();
-            capture["predecessor"] = Value::String(predecessor);
-            capture["t"] = json!("Capture");
-            let bytes = frame_bytes(&capture)?;
-            let size = u64::try_from(bytes.len()).map_err(|_| Error::Invalid)?;
-            let mut shared = gate.lock()?;
-            if size > shared.total {
-                return Err(Error::Invalid);
+            if !send_scan(gate, to_gateway, layer, source, &capture)? {
+                return Ok(());
             }
-            while shared.credit < size {
-                if shared.closed {
-                    return Ok(());
-                }
-                shared = gate
-                    .changed
-                    .wait_timeout(shared, Duration::from_millis(100))
-                    .map_err(|_| Error::WorkerPanicked)?
-                    .0;
-            }
-            shared.credit -= size;
-            shared.flights.insert(
-                source.clone(),
-                Flight {
-                    generation,
-                    checkpoint,
-                    bytes: size,
-                    rust: true,
-                    keys: capture_keys(&capture),
-                },
-            );
-            drop(shared);
-            if let Some(layer) = layer {
-                layer.helper(&capture, usize::try_from(size).map_err(|_| Error::Invalid)?)?;
-            }
-            to_gateway
-                .lock()
-                .map_err(|_| Error::WorkerPanicked)?
-                .write_all(&bytes)?;
         }
         let shared = gate.lock()?;
         if shared.closed {
@@ -434,13 +517,15 @@ fn gateway_frame(
             }
             gate.changed.notify_all();
             if flight.rust {
-                readers
-                    .lock()
-                    .map_err(|_| Error::WorkerPanicked)?
-                    .get_mut(source)
-                    .ok_or(Error::Conflict)?
-                    .commit()?;
-                persist(gate, readers, store, source)?;
+                if flight.last {
+                    readers
+                        .lock()
+                        .map_err(|_| Error::WorkerPanicked)?
+                        .get_mut(source)
+                        .ok_or(Error::Conflict)?
+                        .commit()?;
+                    persist(gate, readers, store, source)?;
+                }
                 return Ok(false);
             }
             Ok(true)
@@ -450,35 +535,6 @@ fn gateway_frame(
             Ok(true)
         }
         _ => Ok(true),
-    }
-}
-
-fn bind_outcome(gate: &Gate, value: &mut Value) -> Result<bool, Error> {
-    let key = match value["evidence"]["native_key"].as_str() {
-        Some(key) if value["evidence"]["capture_checkpoint"].is_string() => key.to_owned(),
-        _ => return Ok(false),
-    };
-    let mut shared = gate.lock()?;
-    let after = value["command_id"]
-        .as_str()
-        .and_then(|id| shared.dispatched.remove(id))
-        .unwrap_or(shared.sequence);
-    let deadline = std::time::Instant::now() + Duration::from_secs(15);
-    loop {
-        if let Some((checkpoint, sequence)) = shared.observed.get(&key)
-            && *sequence > after
-        {
-            value["evidence"]["capture_checkpoint"] = Value::String(checkpoint.clone());
-            return Ok(true);
-        }
-        if shared.closed || std::time::Instant::now() >= deadline {
-            return Ok(false);
-        }
-        shared = gate
-            .changed
-            .wait_timeout(shared, Duration::from_millis(50))
-            .map_err(|_| Error::WorkerPanicked)?
-            .0;
     }
 }
 
@@ -509,6 +565,7 @@ fn helper_capture(
             checkpoint,
             bytes: size,
             rust: false,
+            last: true,
             keys: Vec::new(),
         },
     );
@@ -516,6 +573,35 @@ fn helper_capture(
         return Err(Error::Conflict);
     }
     Ok(false)
+}
+
+fn bind_outcome(gate: &Gate, value: &mut Value) -> Result<bool, Error> {
+    let key = match value["evidence"]["native_key"].as_str() {
+        Some(key) if value["evidence"]["capture_checkpoint"].is_string() => key.to_owned(),
+        _ => return Ok(false),
+    };
+    let mut shared = gate.lock()?;
+    let after = value["command_id"]
+        .as_str()
+        .and_then(|id| shared.dispatched.remove(id))
+        .unwrap_or(shared.sequence);
+    let deadline = std::time::Instant::now() + Duration::from_secs(15);
+    loop {
+        if let Some((checkpoint, sequence)) = shared.observed.get(&key)
+            && *sequence > after
+        {
+            value["evidence"]["capture_checkpoint"] = Value::String(checkpoint.clone());
+            return Ok(true);
+        }
+        if shared.closed || std::time::Instant::now() >= deadline {
+            return Ok(false);
+        }
+        shared = gate
+            .changed
+            .wait_timeout(shared, Duration::from_millis(50))
+            .map_err(|_| Error::WorkerPanicked)?
+            .0;
+    }
 }
 
 fn forward_outcome(

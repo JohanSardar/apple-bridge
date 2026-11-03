@@ -34,6 +34,8 @@ pub struct World {
     gateway: Option<Child>,
     peer: Option<Child>,
     token: String,
+    gateway_env: Vec<(String, String)>,
+    gateway_args: Vec<String>,
 }
 fn output(mut command: Command) -> Result<String> {
     let output = command.output()?;
@@ -54,6 +56,8 @@ impl World {
             gateway: None,
             peer: None,
             token: String::new(),
+            gateway_env: Vec::new(),
+            gateway_args: Vec::new(),
         };
         world.launch_gateway()?;
         world
@@ -117,6 +121,8 @@ impl World {
                 .args(["start", "--role", "gateway", "--home"])
                 .arg(&self.gateway_home)
                 .args(["--peer-addr", &peer, "--api-addr", &api])
+                .args(&self.gateway_args)
+                .envs(self.gateway_env.iter().map(|(k, v)| (k, v)))
                 .env("APPLE_BRIDGE_SECRET_STORE", "file")
                 .stdout(log.try_clone()?)
                 .stderr(log)
@@ -207,6 +213,40 @@ impl World {
             return Err(Error::Invalid("public operation rejected".into()));
         }
         Ok(value)
+    }
+    pub fn blob_control(&self, input: &Value) -> Result<Value> {
+        let mut command = Command::new("curl");
+        command
+            .args([
+                "--silent",
+                "--show-error",
+                "--fail",
+                "--max-time",
+                "5",
+                "--unix-socket",
+            ])
+            .arg(self.gateway_home.join("run/blobs-lab.sock"))
+            .args(["--data-binary", &serde_json::to_string(input)?])
+            .arg("http://lab/");
+        Ok(serde_json::from_str(&output(command).map_err(|e| {
+            Error::Invalid(format!("blob control: {e}"))
+        })?)?)
+    }
+    pub fn configure_gateway(
+        &mut self,
+        env: Vec<(String, String)>,
+        args: Vec<String>,
+    ) -> Result<()> {
+        self.gateway_env = env;
+        self.gateway_args = args;
+        self.restart_gateway()
+    }
+    pub fn kill_gateway(&mut self) -> Result<()> {
+        let Some(child) = self.gateway.as_mut() else {
+            return Err(Error::Invalid("gateway not running".into()));
+        };
+        child.kill()?;
+        Ok(())
     }
     pub fn stop_gateway(&mut self) {
         stop(&mut self.gateway);

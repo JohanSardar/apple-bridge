@@ -318,6 +318,18 @@ impl Watcher {
             .map(|(_, at)| *at)
     }
     #[must_use]
+    pub fn first_seen_sequence(&self, collection: &str, title: &str) -> Option<u64> {
+        lock(&self.state)
+            .changes
+            .iter()
+            .find(|(change, _)| {
+                change["op"] != "delete"
+                    && change["record"]["collection"] == collection
+                    && change["record"]["data"]["title"] == title
+            })
+            .and_then(|(change, _)| change["sequence"].as_u64())
+    }
+    #[must_use]
     pub fn first_seen_record(&self, matches: impl Fn(&Value) -> bool) -> Option<Instant> {
         lock(&self.state)
             .changes

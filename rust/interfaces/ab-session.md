@@ -130,7 +130,7 @@ simapple) would dial the gateway, dials the gateway socket for every accepted co
 `AB_SESSION_RUST_SOURCES={"safari":{"root":"DIR"},"usage":{"root":"DIR","zone":"UTC","local_name":"..."}}`
 gives each Rust source its fixture directory (optional `generation`, default `rust-native/1`).
 `AB_SESSION_RUST_POLL_MS` (default 100) is the reader poll interval. Every Rust source must have
-a config entry and be in the supported list (`safari`, `usage`, `notes`, `phone`, `voicemail`, `voice_memos`); otherwise startup fails.
+a config entry and be in the supported list (`mail`, `notes`, `phone`, `safari`, `usage`, `voice_memos`, `voicemail`); otherwise startup fails.
 
 Behaviour of `routed::relay(gateway, helper, readers, poll)` (framing and byte-credit accounting
 copy `effects.rs`: whole frame length including the 4-byte header is the credit):
@@ -149,6 +149,10 @@ copy `effects.rs`: whole frame length including the 4-byte header is the credit)
 - Gateway `Committed` for a Rust flight must match checkpoint and credit; it is consumed, returns
   credit, advances the committed checkpoint and calls `CaptureReader::commit`. It is never sent
   to the Helper. `Committed` for other sources passes through and also updates bookkeeping.
+- A scan is split into frames like the Swift sink: 16000 bytes of observations per frame (64000 when
+  `live`), absences last, one scan id throughout. Every frame but the last carries a derived checkpoint,
+  waits for its own `Committed`, and uses the previous frame's checkpoint as `predecessor`. Only the
+  final frame's `Committed` calls `CaptureReader::commit`.
 - A reader error or unchanged input yields no frame; absence is never invented. A new connection
   builds fresh readers, so the first scan is full (`live` false) and replays under the gateway's
   committed predecessor; a generation change is one rescan.
@@ -166,12 +170,14 @@ Rolling out another source (what to copy, in order):
    already owns a fixture calls `world.WithSessionRoot(ctx, source, dir)` (Safari does). If the
    scenario feeds the source through a simapple control route, add a hook in
    `World.ControlAction` that materialises the same data as files (`stageSessionUsage` writes
-   SEGB segments and `sync/sync.db` atomically for `/usage`). simapple's own capture for that
+   SEGB segments and `sync/sync.db` atomically for `/usage`; `stageSessionMail` rewrites an
+   `Envelope Index` SQLite file from the accumulated `mail.*` records of every `/dataset`). simapple's own capture for that
    source is dropped, so assertions only see the Rust reader's rows.
 4. Prove: the source's sim scenarios must give the same assertions with the world option off and
    on (`--impl gateway=rust`), and a negative control must fail (proves the data comes from the
    Rust reader): Screen Time with `AB_SESSION_RUST_POLL_MS=3600000`, Safari with
-   `AB_LAB_SESSION_CONTROL=empty` (the session reads an empty fixture directory). Safari's
+   `AB_LAB_SESSION_CONTROL=empty` (the session reads an empty fixture directory), Mail with
+   `AB_SESSION_RUST_POLL_MS=3600000`. Safari's
    scenario runs a corruption check over its fixture, so the session reads a pristine copy. Add a socketpair test in
    `tests/capture_producer.rs` for the frame rules.
 

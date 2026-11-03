@@ -1,4 +1,5 @@
 pub mod assertions;
+pub mod blobs;
 pub mod cleanup;
 pub mod commands;
 pub mod http;
@@ -24,7 +25,9 @@ pub fn registry() -> Registry {
         let replicas = input["replicas"].as_u64().unwrap_or(0);
         let id = evidence.scenario.as_str();
         let self_started = media::MEDIA_SCENARIOS.contains(&id) || id == "MSG-MEDIA-CLEANUP";
-        if replicas != 0 && journey::COMMAND_SCENARIOS.contains(&id) {
+        if replicas != 0 && blobs::is_blob(id) {
+            blobs::configure(world, id, usize::try_from(replicas).unwrap_or(0))?;
+        } else if replicas != 0 && journey::COMMAND_SCENARIOS.contains(&id) {
             replicas::start(world, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && !PORTED.contains(&id) && !self_started {
             return Err(Error::Invalid(format!("replica world not ported for {id}")));
@@ -33,6 +36,7 @@ pub fn registry() -> Registry {
         Ok(())
     });
     registry.register("queries", queries::queries);
+    registry.register("blobs", blobs::blobs);
     registry.register("seed", journey::seed);
     registry.register("converge", journey::converge);
     registry.register("media_variants", media::media_variants);

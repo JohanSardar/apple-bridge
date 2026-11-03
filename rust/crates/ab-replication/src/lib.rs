@@ -572,6 +572,11 @@ impl<S: ReplicaState> Client<S> {
                             && let Some(blobs) = &self.blobs
                         {
                             blobs.lock().await.finish(&d)?;
+                        } else if f.t == "BlobUnavailable"
+                            && !ignored_blob
+                            && let Some(blobs) = &self.blobs
+                        {
+                            blobs.lock().await.unavailable(&d, &f.reason)?;
                         }
                         if f.t == "BlobUnavailable"
                             && active_variant
@@ -619,19 +624,26 @@ impl<S: ReplicaState> Client<S> {
                     {
                         let mut refs = self.state.lock().await.blob_references()?;
                         if let Some(blobs) = &self.blobs {
-                            blobs
-                                .lock()
-                                .await
-                                .protect(refs.iter().map(|r| r.digest.clone()).collect())?;
+                            blobs.lock().await.protect_references(
+                                refs.iter()
+                                    .map(|r| ab_blobs::Reference {
+                                        digest: r.digest.clone(),
+                                        size: r.size,
+                                        state: r.state.clone(),
+                                        ..ab_blobs::Reference::default()
+                                    })
+                                    .collect(),
+                            )?;
                         }
                         refs.sort_by(|a, b| {
                             b.variant.cmp(&a.variant).then(a.digest.cmp(&b.digest))
                         });
                         let mut seen = std::collections::HashSet::new();
-                        blob_queue.extend(
-                            refs.into_iter()
-                                .filter(|r| !r.awaiting_variants && seen.insert(r.digest.clone())),
-                        );
+                        blob_queue.extend(refs.into_iter().filter(|r| {
+                            !r.awaiting_variants
+                                && !matches!(r.state.as_str(), "offloaded" | "missing")
+                                && seen.insert(r.digest.clone())
+                        }));
                     }
                     if active_blob.is_none()
                         && let Some(blobs) = &self.blobs
