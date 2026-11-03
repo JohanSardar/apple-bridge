@@ -89,6 +89,8 @@ def ingress_kind(method, path, headers):
 
 def record(args):
     directory = private_directory(args.output)
+    if args.delegated_log and Path(args.delegated_log).exists():
+        raise ValueError('delegated feed log must not exist before recording')
     path = directory / 'ipc.shadow'
     listen = Path(args.listen).resolve()
     private_directory(listen.parent)
@@ -237,7 +239,59 @@ def record(args):
             listen.unlink(missing_ok=True)
     if errors:
         raise ValueError(errors[0])
+    if args.delegated_log:
+        sequence = merge_delegated(path, Path(args.delegated_log))
     print(json.dumps({'recorded_frames': sequence, 'sessions': session}))
+
+
+def merge_delegated(path, log):
+    if not log.exists():
+        return sum(1 for _ in open(path))
+    rows = [json.loads(line) for line in open(path)]
+    additions = []
+    for index, line in enumerate(open(log)):
+        entry = json.loads(line)
+        if entry['method'] not in ('submit', 'status', 'list') or not isinstance(entry['delegation'], dict):
+            raise ValueError('invalid delegated feed observation')
+        body = base64.b64decode(entry['body'], validate=True)
+        json.loads(body)
+        outcome = dict(entry['outcome'])
+        status = outcome.pop('status')
+        additions.append((timestamp_ns(entry['start']), 0, index, dict(direction='admission', raw=entry['body'], wall=entry['start'], method='POST', path='/v1/commands', ingress='feed', headers={}, delegation=entry['delegation'], feed_index=index)))
+        additions.append((timestamp_ns(entry['end']), 1, index, dict(direction='response', raw=base64.b64encode(json.dumps(outcome, sort_keys=True).encode()).decode(), wall=entry['end'], status=status, feed_index=index)))
+    merged = list(rows)
+    for _, _, _, row in sorted(additions, key=lambda item: item[:3]):
+        wall = timestamp_ns(row['wall'])
+        position = len(merged)
+        for offset, existing in enumerate(merged):
+            if timestamp_ns(existing['wall']) > wall:
+                position = offset
+                break
+        merged.insert(position, row)
+    requests = {}
+    session = 1
+    for number, row in enumerate(merged, 1):
+        if 'feed_index' in row:
+            row['session'] = session
+            row['ns'] = merged[number - 2]['ns'] if number > 1 else 0
+            if row['direction'] == 'admission':
+                requests[('feed', row['feed_index'])] = number
+            else:
+                row['request'] = requests.pop(('feed', row['feed_index']))
+            del row['feed_index']
+        else:
+            session = row['session']
+            if row['direction'] == 'admission':
+                requests[row['sequence']] = number
+            elif row['direction'] == 'response':
+                row['request'] = requests.pop(row['request'])
+        row['sequence'] = number
+    staged = path.with_suffix('.merged')
+    with open(staged, 'x', opener=lambda p, f: os.open(p, f, 0o600)) as output:
+        for row in merged:
+            output.write(json.dumps(row) + '\n')
+    os.replace(staged, path)
+    return len(merged)
 
 
 def connect(path, secret):
@@ -276,7 +330,17 @@ def admit(row, address):
         conn.close()
 
 
-def replay_session(rows, path, secret, api_address, home, clock=None):
+def feed_admit(row, address, peer_home, binary, env):
+    body = base64.b64decode(row['raw'], validate=True)
+    request = {'body': row['raw'], 'method': json.loads(body)['method'], 'delegation': row['delegation']}
+    result = subprocess.run([binary, 'shadow-feed', '--peer-home', str(peer_home), '--address', address], input=json.dumps(request), capture_output=True, text=True, env=env, timeout=90)
+    if result.returncode:
+        raise ValueError('replay delegated feed request failed: ' + result.stderr.strip())
+    outcome = json.loads(result.stdout)['outcome']
+    return outcome['status'], outcome
+
+
+def replay_session(rows, path, secret, api_address, home, clock=None, feed=None):
     with concurrent.futures.ThreadPoolExecutor(max_workers=16) as pool:
         conn = connect(path, secret)
         admissions = {}
@@ -321,7 +385,12 @@ def replay_session(rows, path, secret, api_address, home, clock=None):
                 clock(row['wall'])
             if row['direction'] == 'admission':
                 before = marks()
-                admissions[row['sequence']] = pool.submit(admit, row, api_address)
+                if row.get('ingress') == 'feed':
+                    if feed is None:
+                        raise ValueError('recording has delegated feed ingress; replay needs --feed-peer-home')
+                    admissions[row['sequence']] = pool.submit(feed, row)
+                else:
+                    admissions[row['sequence']] = pool.submit(admit, row, api_address)
                 sent[row['sequence']] = row
                 persisting(before, admissions[row['sequence']])
                 continue
@@ -409,6 +478,8 @@ def response_matches(row, expected, status, response, recorded):
         return False
     if recorded is None or response is None:
         return recorded is response
+    if row['path'] == '/v1/commands':
+        return isinstance(response, dict) and isinstance(recorded, dict) and {key: value for key, value in response.items() if key != 'status'} == recorded
     if row['path'].startswith('/v1/op/') and row['path'] != '/v1/op/records.query':
         return isinstance(response, dict) and isinstance(recorded, dict) and all(response.get(key) == recorded.get(key) for key in ('state', 'disposition', 'error'))
     if isinstance(recorded, dict) and 'jsonrpc' in recorded:
@@ -435,6 +506,10 @@ def recording_rows(path):
                     raise ValueError('invalid admission metadata')
                 if row.get('method', 'POST') == 'POST':
                     json.loads(raw)
+                if row.get('ingress') == 'feed':
+                    delegation = row.get('delegation')
+                    if row['path'] != '/v1/commands' or json.loads(raw).get('method') not in ('submit', 'status', 'list') or not isinstance(delegation, dict) or not isinstance(delegation.get('local_principal'), str) or not isinstance(delegation.get('local_grants'), list):
+                        raise ValueError('invalid delegated feed admission')
             elif len(raw) < 5 or len(raw) > MAX_FRAME + 4 or struct.unpack('!I', raw[:4])[0] != len(raw) - 4:
                 raise ValueError('invalid recording at sequence ' + str(index))
             else:
@@ -477,6 +552,14 @@ def replay(args):
             pending.add((row['session'], capture['source'], capture['checkpoint']))
         if row['direction'] == 'gateway' and value.get('t') == 'Committed':
             pending.discard((row['session'], value['source'], value['checkpoint']))
+    feeds = any(row.get('ingress') == 'feed' for row in recording_rows(args.recording) if row['direction'] == 'admission')
+    if feeds and not args.feed_peer_home:
+        raise ValueError('recording has delegated feed ingress; replay needs --feed-peer-home')
+    if feeds:
+        require_home(args.feed_peer_home)
+        for entry in Path(args.feed_peer_home).resolve().rglob('*'):
+            if entry.is_symlink():
+                raise ValueError('feed peer home contains symlinks')
     if pending or requests or commands:
         raise ValueError('recording ends with unacknowledged captures, admissions or commands')
     if not captures:
@@ -533,11 +616,18 @@ def replay(args):
                     if process.poll() is not None or time.monotonic() >= deadline:
                         raise ValueError('replay API readiness unavailable')
                     time.sleep(.05)
-                address = json.loads(runtime.read_text())['api_address']
+                configuration = json.loads(runtime.read_text())
+                address = configuration['api_address']
+                feed = None
+                if feeds:
+                    peer = destination / (name + '-peer')
+                    shutil.copytree(Path(args.feed_peer_home).resolve(), peer, ignore=shutil.ignore_patterns('*.sock', 'lock', 'pid'))
+                    feed_env = {key: value for key, value in env.items() if key != 'APPLE_BRIDGE_LAB_REPLAY'}
+                    feed = lambda row, peer=peer, peer_address=configuration['peer_address']: feed_admit(row, peer_address, peer, str(Path(args.lab_binary).resolve()), feed_env)
                 for session, rows in itertools.groupby(recording_rows(args.recording), key=lambda row: row['session']):
                     if active_conn:
                         active_conn.close()
-                    active_conn = replay_session(rows, path, secret, address, home, clock)
+                    active_conn = replay_session(rows, path, secret, address, home, clock, feed)
             finally:
                 process.terminate()
                 try:
@@ -729,6 +819,7 @@ def main():
     p.add_argument('--admission-upstream')
     p.add_argument('--upstream', required=True)
     p.add_argument('--output', required=True)
+    p.add_argument('--delegated-log')
     p = sub.add_parser('replay')
     for option in ('recording', 'starting-home', 'output'):
         p.add_argument('--' + option, required=True)
@@ -736,6 +827,8 @@ def main():
     p.add_argument('--exact', action='store_true')
     p.add_argument('--go-binary', '--go', dest='go_binary', required=True)
     p.add_argument('--rust-binary', '--rust', dest='rust_binary', required=True)
+    p.add_argument('--feed-peer-home')
+    p.add_argument('--lab-binary', default='bin/bridge-lab')
     p = sub.add_parser('decisions')
     for option in ('recording', 'home', 'output'):
         p.add_argument('--' + option, required=True)

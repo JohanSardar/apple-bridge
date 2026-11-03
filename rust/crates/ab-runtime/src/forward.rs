@@ -38,6 +38,21 @@ impl Forward {
         delegation: &str,
         raw: &RawValue,
     ) -> Result<Box<RawValue>, Error> {
+        #[cfg(feature = "lab-harness")]
+        let observation = crate::forward_observer::begin(delegation, raw);
+        let result = self.dispatch(certificate, delegation, raw).await;
+        #[cfg(feature = "lab-harness")]
+        if let Some(observation) = observation {
+            observation.finish(&result);
+        }
+        result
+    }
+    async fn dispatch(
+        &self,
+        certificate: &[u8],
+        delegation: &str,
+        raw: &RawValue,
+    ) -> Result<Box<RawValue>, Error> {
         let request: Request = serde_json::from_str(raw.get()).map_err(|_| Code::Invalid)?;
         if !request.blob_digest.is_empty() || request.blob_offset != 0 {
             return Err(Code::Unsupported.into());
