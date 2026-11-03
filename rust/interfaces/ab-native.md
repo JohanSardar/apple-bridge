@@ -279,3 +279,30 @@ metadata, cloud device fallback, complete deletions, schema/malformed failures,
 two-scan database replacement and identity-cache restart. An unchanged poll
 emits no capture. Separate race tests reject file replacement during a snapshot
 and stale Safari acknowledgements. Real-data comparison remains orchestrator work.
+
+## Calls and Voicemail
+
+`telephony::calls` / `voicemail` accept an explicit database path, acknowledged
+`capture::State`, scan context, live flag and row bound. Their pending batches
+include scoped aliases, coverage and complete-scan evidence. They preserve the
+Swift ordering and numeric mappings. `State::commit` rejects stale/duplicate
+acknowledgements; source or collection changes require a fresh State. Scan
+failure leaves the committed state untouched. A new database/schema/metadata
+UUID generation emits a full scan without absence from the prior generation.
+
+The lab CLI accepts `calls` and `voicemail` with store.db + context.json under
+its explicit fixture directory. Interactive input is a row limit (or scan for
+the default 100000). Failed scans produce a failed_scan diagnostic without a
+checkpoint. `--frames` includes the full capture metadata. Production callers
+own watchers, coalescing, credits and checkpoint persistence.
+
+`parity/telephony/build-swift.sh OUTPUT SOURCE_SUPPORT` compiles the unchanged
+Swift sources and scan oracle per command under ab-local. Run compare.py with
+that oracle and the remote fixture-reader binary. Both hosts independently
+generate synthetic SQLite databases and retain a WAL writer. The replay checks
+14 stages per source: fields/provider variants, unchanged scan, row-limit and
+corrupt-input failures, updates/deletions, metadata UUID and schema changes,
+empty reconciliation and physical database replacement. Data bytes pass through
+Go's JSON encoder. Opaque machine-specific generations and their scoped aliases
+are renamed bijectively per process; their equality/transition sequence must
+match (four epochs). No other metadata or observation data is normalized.

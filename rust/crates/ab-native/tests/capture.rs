@@ -108,3 +108,62 @@ fn xml_plist_limits_apply_before_constructing_nested_values() {
         ])
     );
 }
+
+#[test]
+fn pending_source_state_rejects_stale_acknowledgements_and_scope_changes() {
+    use ab_native::capture::{ScanInput, State, upsert};
+    let mut state = State::default();
+    let mut context = Context {
+        observed_at: "2026-01-01T00:00:00.000Z".into(),
+        checkpoint: "a".into(),
+        scan_id: "a".into(),
+    };
+    let row = || {
+        upsert(
+            "phone.call",
+            "1",
+            None,
+            serde_json::json!({"duration":1.25}),
+            &context,
+        )
+        .unwrap()
+    };
+    let prepare = |checkpoint: &Context, source: &str, scope: &str| {
+        state.prepare(ScanInput {
+            source,
+            generation: "synthetic-1",
+            records: vec![row()],
+            scope: vec![scope.into()],
+            coverage: serde_json::json!({}),
+            context: checkpoint,
+            live: true,
+        })
+    };
+    let first = prepare(&context, "phone", "phone.call").unwrap();
+    let mut second_context = context.clone();
+    second_context.checkpoint = "b".into();
+    let second = prepare(&second_context, "phone", "phone.call").unwrap();
+    state.commit(second).unwrap();
+    assert!(state.commit(first).is_err());
+    context.checkpoint = "c".into();
+    let wrong = state.prepare(ScanInput {
+        source: "voicemail",
+        generation: "synthetic-1",
+        records: Vec::new(),
+        scope: vec!["phone.call".into()],
+        coverage: serde_json::json!({}),
+        context: &context,
+        live: true,
+    });
+    assert!(wrong.is_err());
+    let wrong = state.prepare(ScanInput {
+        source: "phone",
+        generation: "synthetic-1",
+        records: Vec::new(),
+        scope: vec!["voicemail.message".into()],
+        coverage: serde_json::json!({}),
+        context: &context,
+        live: true,
+    });
+    assert!(wrong.is_err());
+}

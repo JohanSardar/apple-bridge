@@ -26,3 +26,5 @@ pub mod rich;
 pub mod safari;
 pub mod summary;
 pub mod usage;
+
+pub mod telephony;

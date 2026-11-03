@@ -52,7 +52,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let [source, directory, options @ ..] = args.as_slice() else {
         return Err("usage: fixture-reader usage FIXTURE_DIRECTORY [--interactive]".into());
     };
-    if !["usage", "safari"].contains(&source.as_str())
+    if !["usage", "safari", "calls", "voicemail"].contains(&source.as_str())
         || options
             .iter()
             .any(|o| o != "--interactive" && o != "--frames")
@@ -62,6 +62,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let root = Path::new(directory);
     if source == "safari" {
         return safari(root, options);
+    }
+    if ["calls", "voicemail"].contains(&source.as_str()) {
+        return telephony(root, options, source);
     }
     let mut reader = Reader::default();
     let frames = options.iter().any(|o| o == "--frames");
@@ -169,6 +172,70 @@ fn safari(root: &Path, options: &[String]) -> Result<(), Box<dyn std::error::Err
         }
     } else {
         poll(&[Kind::History, Kind::Bookmarks, Kind::Cloud])?;
+    }
+    Ok(())
+}
+
+fn emit_capture(
+    batch: &ab_native::capture::Batch,
+    frames: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut output = std::io::stdout().lock();
+    if frames {
+        write_json(&mut output, &serde_json::to_value(batch)?)?;
+    } else {
+        for row in &batch.observations {
+            let mut value = serde_json::to_value(row)?;
+            value["source"] = serde_json::json!(batch.source);
+            value["generation"] = serde_json::json!(batch.generation);
+            value["checkpoint"] = serde_json::json!(batch.checkpoint);
+            write_json(&mut output, &value)?;
+        }
+        let mut checkpoint = serde_json::to_value(batch)?;
+        checkpoint
+            .as_object_mut()
+            .ok_or("invalid checkpoint")?
+            .remove("observations");
+        checkpoint["kind"] = serde_json::json!("checkpoint");
+        write_json(&mut output, &checkpoint)?;
+    }
+    output.flush()?;
+    Ok(())
+}
+fn telephony(
+    root: &Path,
+    options: &[String],
+    kind: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use ab_native::{
+        capture::{Context, State},
+        telephony,
+    };
+    let mut state = State::default();
+    let frames = options.iter().any(|o| o == "--frames");
+    let mut scan = |limit: usize, live: bool| -> Result<(), Box<dyn std::error::Error>> {
+        let context: Context = serde_json::from_slice(&std::fs::read(root.join("context.json"))?)?;
+        let scan = if kind == "calls" {
+            telephony::calls
+        } else {
+            telephony::voicemail
+        };
+        if let Ok(pending) = scan(&root.join("store.db"), &state, &context, live, limit) {
+            emit_capture(&pending.batch, frames)?;
+            state.commit(pending)?;
+        } else {
+            let mut output = std::io::stdout().lock();
+            write_json(&mut output, &serde_json::json!({"kind":"failed_scan"}))?;
+            output.flush()?;
+        }
+        Ok(())
+    };
+    if options.iter().any(|o| o == "--interactive") {
+        for (index, line) in std::io::stdin().lock().lines().enumerate() {
+            scan(line?.parse().unwrap_or(100_000), index > 0)?;
+        }
+    } else {
+        scan(100_000, false)?;
     }
     Ok(())
 }
