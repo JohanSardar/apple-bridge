@@ -14,10 +14,11 @@ use std::{
     time::{Duration, Instant},
 };
 
-pub const SCENARIOS: [&str; 3] = [
+pub const SCENARIOS: [&str; 4] = [
     "CORE-HELPER-RESTART",
     "CORE-KILL-DURING-APPLY",
     "CORE-KILL-GATEWAY-CAPTURE",
+    "AUTH-SCOPES-METADATA",
 ];
 
 fn change(world: &World, prefix: &str, count: usize) -> bool {
@@ -462,10 +463,14 @@ pub fn robustness(world: &mut World, input: &Value, evidence: &mut Evidence) -> 
         ("helper-restart", "CORE-HELPER-RESTART")
             | ("kill-during-apply", "CORE-KILL-DURING-APPLY")
             | ("kill-gateway-capture", "CORE-KILL-GATEWAY-CAPTURE")
+            | ("auth-scopes-metadata", "AUTH-SCOPES-METADATA")
     ) {
         return Err(Error::Invalid(format!(
             "robustness case not ported: {case}"
         )));
+    }
+    if case == "auth-scopes-metadata" {
+        crate::journey::seed(world, &json!({"count": 4}), evidence)?;
     }
     let gateway = gateway_client(world)?;
     let observed = Observed::new(gateway.clone(), GATEWAY_SCOPE);
@@ -485,6 +490,10 @@ pub fn robustness(world: &mut World, input: &Value, evidence: &mut Evidence) -> 
     let proceed = match case.as_str() {
         "helper-restart" => helper_restart(world, &gateway, evidence)?,
         "kill-during-apply" => kill_during_apply(world, &observed, evidence),
+        "auth-scopes-metadata" => {
+            crate::auth_scopes::run(world, evidence)?;
+            true
+        }
         _ => kill_gateway_capture(world, &observed, evidence),
     };
     if !proceed {
@@ -534,7 +543,10 @@ pub fn robustness(world: &mut World, input: &Value, evidence: &mut Evidence) -> 
             "every observed delete is absent in SimApple truth",
         );
     }
-    if evidence.scenario != "CORE-HELPER-RESTART" {
+    if !matches!(
+        evidence.scenario.as_str(),
+        "CORE-HELPER-RESTART" | "AUTH-SCOPES-METADATA"
+    ) {
         let resets: usize = observers.iter().map(Watcher::resets).sum();
         evidence.check(
             "no_oversized_capture_observer_resets",
