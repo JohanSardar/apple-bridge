@@ -13,7 +13,7 @@ use lab_world::{Error, Result, World};
 use serde_json::{Value, json};
 use std::time::{Duration, Instant};
 
-pub const COMMAND_SCENARIOS: [&str; 9] = [
+pub const COMMAND_SCENARIOS: [&str; 14] = [
     "CORE-CMD-IDEMPOTENT",
     "CORE-CMD-ERA",
     "CORE-CMD-LOST-RESPONSE",
@@ -23,6 +23,11 @@ pub const COMMAND_SCENARIOS: [&str; 9] = [
     "CORE-CMD-EXPIRY",
     "CORE-CMD-CLOCK-JUMP",
     "CORE-CMD-OFFLINE",
+    "REM-CONFLICT",
+    "REM-EXTERNAL-RACE",
+    "REM-NATIVE-LIST-RACE",
+    "REM-OPERATION-SHAPES",
+    "REM-READONLY-LIST",
 ];
 pub(crate) const GATEWAY_SCOPE: &str = "reminders:read,reminders:write,system:read";
 
@@ -224,6 +229,9 @@ fn run_scenario(
         "CORE-CMD-ERA" => commands::era(world, list_id, observers, evidence),
         "CORE-CMD-LOST-RESPONSE" => commands::lost_response(world, list_id, evidence),
         "CORE-CMD-IDEMPOTENT" => idempotent(world, gateway, list_id, evidence),
+        other if crate::reminders::SCENARIOS.contains(&other) => {
+            crate::reminders::run(world, gateway, list_id, reminder, evidence)
+        }
         other => restart::run(other, world, gateway, list_id, evidence),
     }
 }

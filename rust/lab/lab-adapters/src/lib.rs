@@ -21,6 +21,7 @@ pub mod relay;
 pub mod relay_gated;
 pub mod relay_service;
 pub mod relay_tls;
+pub mod reminders;
 pub mod replicas;
 pub mod restart;
 pub mod search;
