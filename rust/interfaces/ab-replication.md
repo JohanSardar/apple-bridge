@@ -18,3 +18,7 @@ Authenticated BlobWant requests receive the manifest state (`offloaded`, `failed
 ## CORE pipelined feed credits
 
 Steady-state Batch frames reserve their encoded byte size from the negotiated credit limit (at most 4 MiB). Each ordered Ack restores exactly the oldest frame's credits and validates its final cursor; partial frames do not require a final cursor. One prepared batch waits when credits are exhausted, while the session continues receiving control frames. Unacknowledged data closes the session after 30 seconds without an accepted acknowledgment. Snapshot handshake transmission remains sequential. No wire changes.
+
+## G-F feed fault instrumentation request
+
+CORE-BLOB-CORRUPT and CORE-BLOB-INTERRUPT now execute the Rust gateway and converge blob bytes, but fail corruption_detected_and_refetched and interrupted_halfway_through_binary_chunk. The unchanged world supplies APPLE_BRIDGE_LAB_BLOB_CORRUPT=<owned one-shot marker>, APPLE_BRIDGE_LAB_BLOB_SLOW=1 and APPLE_BRIDGE_LAB_BLOB_CUT_WINDOW=<owned marker>. The Rust feed server lacks the Go lab-only wire fault hooks. Please implement these behind a lab feature and expose runtime wiring without changing production frames. Do not weaken the counters or interrupt boundary assertions.

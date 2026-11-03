@@ -68,3 +68,7 @@ Runtime's QueryAuditSink appends the Go-shaped operation/argument_bytes/result_b
 ## G-F APP-LOC-SIM binary qualification
 
 The location scenario retains the Swift fake adapter proof and sends its five location records twice through the selected gateway's signed HTTP ingress. Readback uses records.query; each of the five location/geofence commands is admitted through REST, decrypted with the independent phone wire decoder, completed through signed HTTP and read back through commands.status. Invalid geofence validation uses HTTP, and coordinate-bearing receipts remain rejected. All behavioral assertions pass against Go first and then Rust on the Air, serially through ab-local; no real location adapter or device permission request runs.
+
+## G-F owner approval metadata
+
+The runtime Approvals adapter renders the same redacted argument metadata as Go: argument_bytes counts the original raw JSON bytes and argument_hash is their SHA-256 fingerprint. The authenticated owner_arguments field retains the full pretty JSON. WEB-AGENT-LEVELS owner_receives_full_text now passes; its pending hash conflict, delegated authorization and activity failures remain explicit. Linux remains 116 pass / 35 fail / 50 blocked. The latest separate full Darwin matrix is 14 pass / 25 fail / 23 blocked, including two 50-second timeouts counted as failures; all 62 default cases ran serially. Its binary source is 05de2f4b and does not include this metadata-only change.

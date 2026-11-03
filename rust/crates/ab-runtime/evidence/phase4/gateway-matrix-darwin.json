@@ -1,5 +1,5 @@
 {
-  "wall_seconds": 212.414,
+  "wall_seconds": 202.308,
   "parallel": 1,
   "host": "darwin",
   "complete": true,
@@ -7,7 +7,7 @@
   "results": [
     {
       "id": "APP-ALARM-SIM",
-      "seconds": 3.889,
+      "seconds": 3.413,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -38,7 +38,7 @@
     },
     {
       "id": "APP-DEVICE-SIM",
-      "seconds": 3.482,
+      "seconds": 3.501,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -68,7 +68,7 @@
     },
     {
       "id": "APP-HEALTH-WRITE-SIM",
-      "seconds": 3.549,
+      "seconds": 3.465,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -78,27 +78,22 @@
     },
     {
       "id": "APP-LOC-SIM",
-      "seconds": 0,
-      "status": "blocked",
-      "execution_status": "not-started",
+      "seconds": 4.654,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/applepeer",
         "internal/blobs",
         "internal/contracts",
         "internal/iphone",
-        "internal/operations",
         "internal/state",
         "internal/trust"
       ],
-      "blocked_on": [
-        "harness: semantic product helper ValidateIPhoneCommand",
-        "harness: lab/scenarios/iphone_location.go still imports product implementations: iphone, operations, state, trust"
-      ]
+      "blocked_on": []
     },
     {
       "id": "APP-MOTION-SIM",
-      "seconds": 3.728,
+      "seconds": 3.752,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -131,7 +126,7 @@
     },
     {
       "id": "APP-SCREENTIME-SIM",
-      "seconds": 3.318,
+      "seconds": 3.336,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -141,7 +136,7 @@
     },
     {
       "id": "APP-SHELL-SIM",
-      "seconds": 3.258,
+      "seconds": 3.135,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -151,7 +146,7 @@
     },
     {
       "id": "CAL-FUTURE-COUNT-MATH",
-      "seconds": 1.968,
+      "seconds": 0.076,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -161,7 +156,7 @@
     },
     {
       "id": "CAL-HINT-COVERAGE",
-      "seconds": 0.084,
+      "seconds": 0.075,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -171,7 +166,7 @@
     },
     {
       "id": "CAL-INVALIDATED-EVENT",
-      "seconds": 0.082,
+      "seconds": 0.076,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -181,7 +176,7 @@
     },
     {
       "id": "CALL-CAPTURE",
-      "seconds": 0.091,
+      "seconds": 0.088,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -192,7 +187,7 @@
     },
     {
       "id": "CAP-SIM",
-      "seconds": 0.081,
+      "seconds": 0.076,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -262,7 +257,7 @@
     },
     {
       "id": "CORE-DISK-FULL",
-      "seconds": 11.56,
+      "seconds": 22.202,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -311,7 +306,7 @@
     },
     {
       "id": "CORE-SHORTCUT-SIGN",
-      "seconds": 4.113,
+      "seconds": 3.461,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -322,7 +317,7 @@
     },
     {
       "id": "CORE-SOURCE-SUPPORT",
-      "seconds": 1.421,
+      "seconds": 1.483,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -342,7 +337,7 @@
     },
     {
       "id": "FILES-TRANSFORM",
-      "seconds": 0.927,
+      "seconds": 0.849,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -388,7 +383,7 @@
     },
     {
       "id": "MAIL-BODY",
-      "seconds": 0.086,
+      "seconds": 0.083,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -398,7 +393,7 @@
     },
     {
       "id": "MAIL-CAPTURE",
-      "seconds": 0.087,
+      "seconds": 0.086,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -424,7 +419,7 @@
     },
     {
       "id": "MAIL-LIVE",
-      "seconds": 0.087,
+      "seconds": 0.08,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -434,7 +429,7 @@
     },
     {
       "id": "MAIL-NO-FALSE-DELETE",
-      "seconds": 0.085,
+      "seconds": 0.083,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -602,7 +597,7 @@
     },
     {
       "id": "NATIVE-MEDIA-EXPORT-SAFETY",
-      "seconds": 0.08,
+      "seconds": 0.086,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -617,7 +612,7 @@
     },
     {
       "id": "NATIVE-MEDIA-POSTERS",
-      "seconds": 0.081,
+      "seconds": 0.089,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -632,7 +627,7 @@
     },
     {
       "id": "NATIVE-MEDIA-YIELD",
-      "seconds": 0.079,
+      "seconds": 0.087,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -647,8 +642,8 @@
     },
     {
       "id": "NOTE-DECODE",
-      "seconds": 50.004,
-      "status": "timeout",
+      "seconds": 13.851,
+      "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
         "internal/contracts"
@@ -657,7 +652,7 @@
     },
     {
       "id": "NOTE-DECODE-FULL",
-      "seconds": 50.003,
+      "seconds": 50.006,
       "status": "timeout",
       "implementation": "gateway=rust",
       "required_features": [
@@ -667,7 +662,7 @@
     },
     {
       "id": "Q1-SETUP",
-      "seconds": 0.096,
+      "seconds": 0.086,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -677,7 +672,7 @@
     },
     {
       "id": "R1-RELEASE-SIM",
-      "seconds": 0.092,
+      "seconds": 0.084,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -731,7 +726,7 @@
     },
     {
       "id": "REM-DST",
-      "seconds": 3.421,
+      "seconds": 3.344,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -741,7 +736,7 @@
     },
     {
       "id": "REM-SECTIONS",
-      "seconds": 50.004,
+      "seconds": 50.003,
       "status": "timeout",
       "implementation": "gateway=rust",
       "required_features": [
@@ -757,7 +752,7 @@
     },
     {
       "id": "REM-STORE-DECODE",
-      "seconds": 3.536,
+      "seconds": 24.431,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -767,7 +762,7 @@
     },
     {
       "id": "REM-STORE-READ",
-      "seconds": 3.565,
+      "seconds": 3.601,
       "status": "pass",
       "implementation": "gateway=rust",
       "required_features": [
@@ -854,7 +849,7 @@
     },
     {
       "id": "USE-ACTION-PROBE",
-      "seconds": 0.089,
+      "seconds": 0.079,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -865,7 +860,7 @@
     },
     {
       "id": "USE-SEGB-DECODE",
-      "seconds": 0.085,
+      "seconds": 0.078,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -875,7 +870,7 @@
     },
     {
       "id": "VM-CAPTURE",
-      "seconds": 0.093,
+      "seconds": 0.089,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -885,7 +880,7 @@
     },
     {
       "id": "VMEMO-CAPTURE",
-      "seconds": 0.085,
+      "seconds": 0.086,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -895,7 +890,7 @@
     },
     {
       "id": "VMEMO-LATE-ASSETS",
-      "seconds": 0.086,
+      "seconds": 0.088,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -931,7 +926,7 @@
     },
     {
       "id": "WEB-REM-PARITY",
-      "seconds": 0.081,
+      "seconds": 0.08,
       "status": "fail",
       "implementation": "gateway=rust",
       "required_features": [
@@ -940,8 +935,6 @@
       "blocked_on": []
     }
   ],
-  "artifact_source_head": "1c882afd1d3b1c5aac2b7c22ad72287821f8d411",
-  "artifact_sha256": "cce56c4ce0c83a377a1d5f303ade5899916555e43c3d98c42d84f3060f6df79b",
-  "command_timeout_seconds": 50,
-  "note": "All 62 default Darwin cases attempted serially through ab-local. Three native decoder cases timed out at the short lock-hold limit; their status remains timeout, included in the reported failure count. Static harness blockers are not executed."
+  "artifact_source_head": "05de2f4b30ae4b762493abb3489ea7822865d721",
+  "artifact_sha256": "8f057f84177e9840a97caf1f58e7d1a8f8be1b31b53bc4d14ec8164f709be7fd"
 }
