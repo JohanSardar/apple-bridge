@@ -13,6 +13,7 @@ pub mod packaging;
 pub mod poster;
 pub mod queries;
 pub mod readmodels;
+pub mod reminders;
 pub mod replicas;
 pub mod restart;
 pub mod search;
@@ -51,6 +52,8 @@ pub fn registry() -> Registry {
             )?;
         } else if replicas != 0 && messages_a::SCENARIOS.contains(&id) {
             messages_a::start(world, usize::try_from(replicas).unwrap_or(0))?;
+        } else if replicas != 0 && reminders::SCENARIOS.contains(&id) {
+            reminders::start(world, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && !PORTED.contains(&id) && !self_started {
             return Err(Error::Invalid(format!("replica world not ported for {id}")));
         }

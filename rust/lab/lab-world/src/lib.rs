@@ -102,6 +102,11 @@ impl World {
             thread::sleep(Duration::from_millis(25));
         }
     }
+    pub fn sibling(&self, name: &str) -> Result<Self> {
+        let mut config = self.config.clone();
+        config.directory = self.directory.join(name);
+        Self::start(config)
+    }
     pub fn restart_peer(&mut self) -> Result<()> {
         stop(&mut self.peer);
         let _ = fs::remove_file(self.directory.join("sim.sock"));
