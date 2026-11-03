@@ -39,7 +39,15 @@ fn encode(a: &Args, shape: &str) -> Result<String, Error> {
     for f in shapes::fields(shape) {
         let val = a.get(f.name);
         let pointer = f.kind.starts_with('*');
-        if f.omit && val.is_none_or(|v| if pointer { v.is_null() } else { zero(v) }) {
+        if f.omit
+            && val.is_none_or(|v| {
+                if pointer {
+                    v.is_null()
+                } else {
+                    zero(v) || f.kind == "float64" && v.as_f64() == Some(0.0)
+                }
+            })
+        {
             continue;
         }
         let default = if f.kind == "string" {
@@ -63,6 +71,8 @@ fn encode(a: &Args, shape: &str) -> Result<String, Error> {
             } else {
                 "null".into()
             }
+        } else if kind == "float64" {
+            go_float(v.as_f64().ok_or(Error::Invalid)?)
         } else {
             json(v)?
         };
@@ -211,4 +221,22 @@ pub fn prepare(c: &Command, ctx: &PrepareContext<'_>) -> Result<Vec<u8>, Error> 
         field(&mut fields, "owner_fence", &ctx.owner_fence.to_string());
     }
     Ok(format!("{{{}}}", fields.join(",")).into_bytes())
+}
+
+fn go_float(value: f64) -> String {
+    let abs = value.abs();
+    if abs != 0.0 && !(1e-6..1e21).contains(&abs) {
+        let text = format!("{value:e}");
+        if let Some((mantissa, exponent)) = text.split_once('e') {
+            if exponent.starts_with('-') {
+                text.clone()
+            } else {
+                format!("{mantissa}e+{exponent}")
+            }
+        } else {
+            text
+        }
+    } else {
+        value.to_string()
+    }
 }

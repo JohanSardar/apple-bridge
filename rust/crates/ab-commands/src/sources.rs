@@ -160,6 +160,9 @@ fn reminders(c: &Command, a: &Args) -> Result<(), Error> {
         _ => vec![],
     };
     allowed(c, &fields, true)?;
+    if fields.is_empty() {
+        return Err(Error::Unsupported);
+    }
     check(!p(a, "title") || !s(a, "title").trim().is_empty())?;
     let patch = [
         "title",
@@ -384,7 +387,7 @@ fn calendar(c: &Command, a: &Args) -> Result<(), Error> {
         check(ordered)?;
     }
     if !s(a, "time_zone").is_empty() {
-        check(jiff::tz::TimeZone::get(s(a, "time_zone")).is_ok())?;
+        check(s(a, "time_zone") == "Local" || jiff::tz::TimeZone::get(s(a, "time_zone")).is_ok())?;
     }
     for rule in arr(a, "recurrence") {
         let r = rule.as_object().ok_or(Error::Invalid)?;
@@ -504,7 +507,14 @@ fn capture(op: &str, a: &Args) -> Result<(), Error> {
                 && s(a, "file").is_empty()
                 && s(a, "printer").is_empty()
         }
-        "capture.camera_photo" => a.iter().all(|(_, v)| v == "" || v == 0),
+        "capture.camera_photo" => {
+            !p(a, "display")
+                && !p(a, "window")
+                && n(a, "seconds") == 0.0
+                && ["blob", "blob_id", "file", "printer"]
+                    .iter()
+                    .all(|k| s(a, k).is_empty())
+        }
         "capture.record_audio" | "mac.screen_record" => {
             (1.0..=if op == "mac.screen_record" {
                 30.0

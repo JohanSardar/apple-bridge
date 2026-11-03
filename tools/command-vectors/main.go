@@ -19,7 +19,7 @@ type context struct {
 	ExpectedListKey string                        `json:"expected_list_key"`
 	FolderKey       string                        `json:"folder_key"`
 	ResendKey       string                        `json:"resend_key"`
-	Files           []contracts.NativeMessageFile `json:"files"`
+	Files           []contracts.NativeMessageFile `json:"files,omitempty"`
 }
 
 func main() {
@@ -94,9 +94,16 @@ func main() {
 		}
 		out = append(out, row)
 	}
-	b, err := json.MarshalIndent(out, "", "  ")
-	if err != nil {
-		panic(err)
+	fmt.Println("[")
+	for i, row := range out {
+		b, err := json.Marshal(row)
+		if err != nil {
+			panic(err)
+		}
+		if i > 0 {
+			fmt.Println(",")
+		}
+		fmt.Print(string(b))
 	}
-	fmt.Println(string(b))
+	fmt.Println("\n]")
 }
