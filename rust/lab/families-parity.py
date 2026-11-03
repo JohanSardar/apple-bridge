@@ -15,6 +15,7 @@ JOURNEY_SCENARIOS = ['CORE-CMD-IDEMPOTENT', 'CORE-CMD-ERA', 'CORE-CMD-LOST-RESPO
 JOURNEY_RUST_ONLY = {'world_started'}
 IMPORT_SCENARIOS = ['messages/MSG-HISTORY-IMPORT', 'contacts/CON-IMPORT', 'notes/NOTE-IMPORT', 'usage/USE-IMPORT']
 MEDIA_SCENARIOS = ['web/WEB-MEDIA-VARIANTS', 'messages/MSG-MEDIA-CLEANUP']
+WEB_RM_SCENARIOS = ['web/WEB-RM-MEDIA-COLLECTION', 'web/WEB-RM-SEARCH']
 SCENARIOS = ['CORE-QUERY-ROUNDTRIP', 'CORE-QUERY-BLOB', 'CORE-QUERY-SCOPE', 'CORE-QUERY-DEADLINE',
              *JOURNEY_SCENARIOS]
 
@@ -43,11 +44,14 @@ def main():
     parser.add_argument('--scenario', action='append')
     parser.add_argument('--import', dest='imports', action='store_true')
     parser.add_argument('--media', dest='media', action='store_true')
+    parser.add_argument('--web-rm', dest='web_rm', action='store_true')
     args = parser.parse_args()
     if args.imports:
         args.scenario = (args.scenario or []) + IMPORT_SCENARIOS
     if args.media:
         args.scenario = (args.scenario or []) + MEDIA_SCENARIOS
+    if args.web_rm:
+        args.scenario = (args.scenario or []) + WEB_RM_SCENARIOS
     out = Path(args.output).resolve()
     out.mkdir(mode=0o700, parents=True, exist_ok=False)
     root = Path(__file__).resolve().parents[2] / 'lab' / 'scenarios'
