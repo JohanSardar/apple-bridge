@@ -12,6 +12,7 @@ actor FakeNative: NativeAdapter {
     }
     func effect(_ operation: String, args: JSON, permit: JSON) async throws -> JSON {
         effects += 1
+        if args["interference"] == .bool(true) { throw SourceFailure.conflict }
         return .object(["observed": .bool(true)])
     }
 }
@@ -72,6 +73,16 @@ struct NativeChecks {
         try check(await server.handle(.object(effect))["t"] == .string("EffectResult"), "valid permit")
         try check(await server.handle(.object(effect))["code"] == .string("conflict"), "one shot")
         try check(await fake.effects == 1, "exactly once")
+        let interruptedArgs: JSON = .object(["interference": .bool(true)])
+        var interruptedPermit = permit
+        interruptedPermit["command_id"] = .string("command-2")
+        interruptedPermit["nonce"] = .string(String(repeating: "b", count: 64))
+        interruptedPermit["request_hash"] = .string(try NativeServer.requestHash(operation: "messages.reply", args: interruptedArgs))
+        effect["args"] = interruptedArgs; effect["permit"] = .object(interruptedPermit)
+        let interrupted = await server.handle(.object(effect))
+        try check(interrupted["t"] == .string("EffectResult") && interrupted["evidence"]["disposition"] == .string("indeterminate"), "interference evidence")
+        try check(await server.handle(.object(effect))["code"] == .string("conflict"), "interference cannot replay")
+        try check(await fake.effects == 2, "failed effect invoked once")
         var pair: [Int32] = [-1, -1]
         guard socketpair(AF_UNIX, SOCK_STREAM, 0, &pair) == 0 else { throw CheckFailure.failed("socketpair") }
         defer { Darwin.close(pair[0]); Darwin.close(pair[1]) }
