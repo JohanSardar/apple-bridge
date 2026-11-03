@@ -120,27 +120,3 @@ func runMessagesInteractive(ctx context.Context, w *world.World, conn *websocket
 		add("interactive_capability_proof_still_required", problem != nil && effects[command.ID] == 0)
 	}
 }
-
-func submitInteractiveMessage(ctx context.Context, conn *websocket.Conn, command contracts.Command) (contracts.CommandRecord, error) {
-	bounded, cancel := context.WithTimeout(ctx, 25*time.Second)
-	defer cancel()
-	if err := wsjson.Write(bounded, conn, map[string]any{"t": "cmd", "id": command.ID, "op": command.Op, "args": command.Args}); err != nil {
-		return contracts.CommandRecord{}, err
-	}
-	for {
-		var response struct {
-			T       string                  `json:"t"`
-			Command contracts.CommandRecord `json:"command"`
-			Error   *contracts.Error        `json:"error"`
-		}
-		if err := wsjson.Read(bounded, conn, &response); err != nil {
-			return contracts.CommandRecord{}, err
-		}
-		if response.T == "cmd_status" && response.Command.Command.ID == command.ID && response.Command.Disposition != "" {
-			if response.Error != nil {
-				return response.Command, response.Error
-			}
-			return response.Command, nil
-		}
-	}
-}

@@ -30,7 +30,7 @@ def generate(manifest):
         swift_dependencies[name] = set(re.findall(r'"([^"]+)"', dependencies_text))
     selection = defaultdict(list)
     entries = []
-    callback_roots = {'CORE-FORGED-DELEGATION': {'runCommands'}, 'CORE-REPLICA-CAPTURE-OBSERVERS': {'runAgentAccess', 'runCaptureObservers'}, 'WEB-AGENT-LEVELS': {'runAgentAccess', 'runAgentLevels'}, 'WEB-AGENT-ACTIVITY': {'runAgentActivity'}, 'WEB-AGENT-CREDENTIALS': {'runAgentCredentials'}, 'WEB-AGENT-OAUTH': {'runAgentAccess', 'runAgentOAuth'}}
+    callback_roots = {'CONSENT-CONNECTOR': {'runAgentAccess','runConsent'}, 'CORE-SNAPSHOT-POOL': {'runSnapshotPool'}, 'CORE-FORGED-DELEGATION': {'runCommands'}, 'CORE-REPLICA-CAPTURE-OBSERVERS': {'runAgentAccess', 'runCaptureObservers'}, 'WEB-AGENT-LEVELS': {'runAgentAccess', 'runAgentLevels'}, 'WEB-AGENT-ACTIVITY': {'runAgentActivity'}, 'WEB-AGENT-CREDENTIALS': {'runAgentCredentials'}, 'WEB-AGENT-OAUTH': {'runAgentAccess', 'runAgentOAuth'}}
     callback_helpers = {'lab/scenarios/web_server.go', 'lab/scenarios/web_authenticator.go', 'lab/scenarios/consent_activity.go'}
     for scenario in data['scenarios']:
         identity, feature = scenario['ID'], scenario['Feature']
@@ -43,20 +43,35 @@ def generate(manifest):
             condition, root = match.groups()
             if '"' + identity + '"' in condition or '"' + feature + '"' in condition or any(identity.startswith(p) for p in re.findall(r'HasPrefix\(s.ID, "([^"]+)"', condition)):
                 roots.add(root)
+        if 'sim' in scenario['Levels'] and identity.startswith('MSG-') and identity not in {'MSG-DECODE-BALLOON','MSG-DECODE-FORMATTING','MSG-READ-RICH-FIELDS','MSG-DELETE-VISIBILITY','MSG-MEDIA-CLEANUP','MSG-INTERACTIVE-GATE'}:
+            commands = {'MSG-OWNER-TOKEN-SELFCHAT','MSG-SELFTEST','MSG-RESEND','MSG-READSTATE-REAL','MSG-DELETE-REAL','MSG-COMMAND-OBSERVED-IDS','MSG-FAILED-OBSERVED-IDS','MSG-COMMAND-PARTS'}
+            if identity in commands or feature.startswith('messages.') and feature != 'messages.read':
+                roots = {'runMessagesCommands'}
+            elif feature == 'messages.read':
+                roots = {'runMessages'}
         if identity in callback_roots:
             roots = callback_roots[identity]
         if not roots:
             roots.add('runScenario')
+        sim_entries = {"runMessages": "runMessagesSim", "runMessagesCommands": "runMessagesCommandsSim"} if "sim" in scenario["Levels"] else {}
+        original_roots = set(roots)
+        roots = {sim_entries.get(name,name) for name in roots}
         reached = set()
-        pending = list(roots)
+        wrappers = set()
+        pending = list(original_roots)
         while pending:
             name = pending.pop()
+            if name in sim_entries and name not in wrappers:
+                wrappers.add(name)
+                native_calls = {"runMessages": {"runRealMessages"}, "runMessagesCommands": {"runNativeMessagesCommands", "runNativeMessagesSelfTest"}}[name]
+                pending.extend(n for n in re.findall(r"\b(\w+)\(", functions[name][1]) if n in functions and n not in native_calls and n not in reached and n != name)
+            name = sim_entries.get(name,name)
             if name in reached or name not in functions or name == 'runScenario':
                 continue
             reached.add(name)
             body = functions[name][1]
             pending.extend(n for n in re.findall(r'\b(\w+)\(', body) if n in functions and n not in reached)
-        paths = sorted({functions[n][0] for n in reached} | (callback_helpers if identity in callback_roots else set()))
+        paths = sorted({functions[n][0] for n in reached | wrappers} | (callback_helpers if identity in callback_roots else set()))
         imports = sorted({p for source in paths for p in re.findall(r'"github.com/JohanSardar/apple-bridge/(internal/[^\"]+)"', sources[source])})
         packages = set(imports)
         swift = set()
@@ -87,7 +102,7 @@ def generate(manifest):
                 swift.add(dependency)
                 pending_swift.append(dependency)
         text = path.read_text()
-        semantic_calls = sorted({call for name in reached for call in re.findall(r'contracts\.(CommandHash|Descriptor|Grant|GrantsForSource|HealthSample|IPhoneCompletionEvidence|MacCompletionEvidence|MacDescriptors|NormalizeContactHandle|OperationSchema|ValidateCommand|ValidateIPhoneCommand|BlobReferences)\(', functions[name][1])})
+        semantic_calls = sorted({call for name in reached | wrappers for call in re.findall(r'contracts\.(CommandHash|Descriptor|Grant|GrantsForSource|HealthSample|IPhoneCompletionEvidence|MacCompletionEvidence|MacDescriptors|NormalizeContactHandle|OperationSchema|ValidateCommand|ValidateIPhoneCommand|BlobReferences)\(', functions[name][1])})
         native_fixture = native and identity != 'CORE-SHORTCUT-SIGN'
         whitebox = bool(set(imports) - {'internal/contracts'}) or native_fixture or bool(semantic_calls)
         recommendation, reason = 'keep', 'Distinct journey; retain its behavioral assertions.'
@@ -138,7 +153,7 @@ def generate(manifest):
         selection[crate] = sorted({e['id'] for e in entries if any('internal/' + p in e['packages'] for p in packages) or (crate in {'ab-native', 'ab-session', 'ab-sys'} and e['swift'])})
     for shared in ['internal/runtime', 'cmd/bridge', 'cmd/bridge-lab', 'lab/world', 'lab/scenarios', 'lab/simapple', 'ab-runtime', 'lab-world', 'lab-scenarios', 'lab-simapple', 'lab-wire', 'lab-truth-client']:
         selection[shared] = sorted(e['id'] for e in entries)
-    result = {'mapping': 'Conservative static candidates: features.yaml modules plus imports in same-package helper closure; imports do not prove executed product calls. Unknown dynamic paths require full suite.', 'scenarios': entries, 'selection': dict(sorted(selection.items()))}
+    result = {'mapping': 'Conservative static candidates: features.yaml modules plus imports in same-package helper closure; imports do not prove executed product calls. For scenarios declaring SIM, code_paths describe their SIM entry; native/real qualification remains separate. Unknown dynamic paths require full suite.', 'scenarios': entries, 'selection': dict(sorted(selection.items()))}
     Path('lab/test-selection.json').write_text(json.dumps(result, separators=(',', ':')) + '\n')
     print(dict(Counter(e['recommendation'] for e in entries)))
     print(dict(Counter(e['host'] for e in entries if 'sim' in e['levels'])))

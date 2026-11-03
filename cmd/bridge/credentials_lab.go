@@ -15,7 +15,10 @@ import (
 	"github.com/JohanSardar/apple-bridge/internal/trust"
 )
 
-func init() { credentialProbe = runCredentialProbe }
+func init() {
+	credentialProbe = runCredentialProbe
+	operationCatalogProbe = runOperationCatalogProbe
+}
 
 func runCredentialProbe(ctx context.Context, args []string) error {
 	set := flag.NewFlagSet("lab-credential-lifecycle", flag.ContinueOnError)
@@ -64,5 +67,25 @@ func runCredentialProbe(ctx context.Context, args []string) error {
 	}
 	_, err = store.Get(ctx, "lifecycle")
 	result.Revoked = errors.Is(err, contracts.ErrNotFound)
+	return json.NewEncoder(os.Stdout).Encode(result)
+}
+
+func runOperationCatalogProbe(_ context.Context, args []string) error {
+	set := flag.NewFlagSet("lab-operation-catalog", flag.ContinueOnError)
+	set.String("home", "", "isolated fixture home")
+	if err := set.Parse(args); err != nil {
+		return err
+	}
+	if set.NArg() != 0 {
+		return contracts.ErrInvalid
+	}
+	type operation struct {
+		Scope  contracts.Grant `json:"scope"`
+		Schema map[string]any  `json:"schema"`
+	}
+	result := map[string]operation{}
+	for _, descriptor := range contracts.Operations {
+		result[descriptor.Name] = operation{Scope: descriptor.Scope, Schema: contracts.OperationSchema(descriptor)}
+	}
 	return json.NewEncoder(os.Stdout).Encode(result)
 }
