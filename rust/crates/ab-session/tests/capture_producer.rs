@@ -938,3 +938,61 @@ fn outcome_waits_for_rust_capture_of_its_key_and_rebinds_checkpoint() -> Fallibl
     let _ = worker.join();
     Ok(())
 }
+
+#[test]
+fn calendar_parts_merge_and_command_evidence_rebinds_to_the_rust_checkpoint() -> Fallible<()> {
+    let sources = readers::from_config(&json!({"calendar":{"root":"/nonexistent"}}).to_string())?;
+    let mut wire = wire(sources, polling(None), json!({}))?;
+
+    send(
+        &mut wire.helper,
+        &json!({"t":"Capture","source":"calendar","generation":"swift-g","checkpoint":"h1","scan_id":"s1","observations":[event("a","A")]}),
+    )?;
+    assert_eq!(receive(&mut wire.helper)?.1["checkpoint"], "h1");
+    expect_silence(&mut wire.gateway)?;
+    send(
+        &mut wire.helper,
+        &json!({"t":"Capture","source":"calendar","generation":"swift-g","checkpoint":"h2","scan_id":"s1","completion_evidence":"complete","observations":[event("b","B")]}),
+    )?;
+    expect_silence(&mut wire.helper)?;
+    let (size, first) = receive(&mut wire.gateway)?;
+    assert_eq!(names(&first, "upsert"), ["a", "b"]);
+    commit(&mut wire, "calendar", &first, size)?;
+    assert_eq!(receive(&mut wire.helper)?.1["checkpoint"], "h2");
+
+    send(
+        &mut wire.gateway,
+        &json!({"t":"Dispatch","command_id":"c1","ticket":"t1"}),
+    )?;
+    assert_eq!(receive(&mut wire.helper)?.1["t"], "Dispatch");
+    send(
+        &mut wire.helper,
+        &json!({"t":"Capture","source":"calendar","generation":"swift-g","checkpoint":"h3","scan_id":"s2","completion_evidence":"complete","observations":[event("a","A")]}),
+    )?;
+    assert_eq!(receive(&mut wire.helper)?.1["checkpoint"], "h3");
+    expect_silence(&mut wire.gateway)?;
+    send(
+        &mut wire.helper,
+        &json!({"t":"Outcome","command_id":"c1","disposition":"locally_observed","evidence":{"native_key":"a","observed":true,"capture_checkpoint":"h3"}}),
+    )?;
+    let outcome = receive(&mut wire.gateway)?.1;
+    assert_eq!(
+        outcome["evidence"]["capture_checkpoint"],
+        first["checkpoint"]
+    );
+
+    send(
+        &mut wire.helper,
+        &json!({"t":"Rejected","command_id":"c2","disposition":"rejected_before_dispatch","evidence":{"native_key":"b","capture_checkpoint":"h3"}}),
+    )?;
+    let rejected = receive(&mut wire.gateway)?.1;
+    assert_eq!(rejected["t"], "Rejected");
+    assert_eq!(
+        rejected["evidence"]["capture_checkpoint"],
+        first["checkpoint"]
+    );
+
+    drop((wire.gateway, wire.helper));
+    let _ = wire.worker.join();
+    Ok(())
+}

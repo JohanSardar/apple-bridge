@@ -54,7 +54,9 @@ fn lab_listen(listen: &str, gateway: &str) -> Result<(), Error> {
     let listener = std::os::unix::net::UnixListener::bind(listen)?;
     for helper in listener.incoming() {
         let helper = helper?;
-        let gateway = std::os::unix::net::UnixStream::connect(gateway)?;
+        let Ok(gateway) = std::os::unix::net::UnixStream::connect(gateway) else {
+            continue;
+        };
         let readers = build()?;
         let state = state.clone();
         std::thread::spawn(move || {
