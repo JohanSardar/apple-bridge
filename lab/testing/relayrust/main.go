@@ -65,14 +65,25 @@ func post(client *http.Client, endpoint string, input, output any, token string)
 	return response.StatusCode
 }
 func run() error {
-	if len(os.Args) != 3 {
-		return fmt.Errorf("usage: relayrust /path/to/ab-relay /path/to/remote_client")
+	if len(os.Args) != 3 && len(os.Args) != 5 {
+		return fmt.Errorf("usage: relayrust /path/to/ab-relay /path/to/remote_client [--test-deploy new-directory]")
 	}
 	dir, e := os.MkdirTemp("", "ab-relay-rust-parity-")
 	if e != nil {
 		return e
 	}
-	defer os.RemoveAll(dir)
+	if len(os.Args) == 5 {
+		if os.Args[3] != "--test-deploy" {
+			return fmt.Errorf("expected --test-deploy")
+		}
+		os.Remove(dir)
+		dir = os.Args[4]
+		if e := os.Mkdir(dir, 0700); e != nil {
+			return e
+		}
+	} else {
+		defer os.RemoveAll(dir)
+	}
 	public, key, e := ed25519.GenerateKey(rand.Reader)
 	if e != nil {
 		return e
@@ -109,11 +120,16 @@ func run() error {
 	defer client.CloseIdleConnections()
 	_, owner, _ := ed25519.GenerateKey(rand.Reader)
 	_, stranger, _ := ed25519.GenerateKey(rand.Reader)
+	_, legacyKey, _ := ed25519.GenerateKey(rand.Reader)
+	ownerKeys := base64.RawURLEncoding.EncodeToString(owner.Public().(ed25519.PublicKey)) + "\n" + base64.RawURLEncoding.EncodeToString(legacyKey.Public().(ed25519.PublicKey))
 	config := filepath.Join(dir, "owners")
-	os.WriteFile(config, []byte(base64.RawURLEncoding.EncodeToString(owner.Public().(ed25519.PublicKey))), 0600)
+	os.WriteFile(config, []byte(ownerKeys), 0600)
 	path := filepath.Join(dir, "state.json")
 	apiAddr, _ := address()
 	publicAddr, _ := address()
+	if len(os.Args) == 5 {
+		apiAddr, publicAddr = "127.0.0.1:18443", "127.0.0.1:19443"
+	}
 	endpoint := "https://" + apiAddr
 	var cmd *exec.Cmd
 	stop := func() {
@@ -124,9 +140,13 @@ func run() error {
 		}
 	}
 	defer stop()
+	idle := "2s"
+	if len(os.Args) == 5 {
+		idle = "2m"
+	}
 	start := func() error {
-		cmd = exec.Command(os.Args[1], "--zone", "relay.test", "--state", path, "--addr", publicAddr, "--control-addr", apiAddr, "--control-cert", certPath, "--control-key", keyPath, "--owner-keys-file", config, "--idle-timeout", "2s")
-		cmd.Env = append(os.Environ(), "APPLE_BRIDGE_RELAY_ADMIN=synthetic-admin")
+		cmd = exec.Command(os.Args[1], "--zone", "relay.test", "--state", path, "--addr", publicAddr, "--control-addr", apiAddr, "--control-cert", certPath, "--control-key", keyPath, "--owner-keys-file", config, "--idle-timeout", idle)
+		cmd.Env = append(os.Environ(), "APPLE_BRIDGE_RELAY_ADMIN=synthetic-admin", "HOME="+dir)
 		cmd.Stderr = os.Stderr
 		if e := cmd.Start(); e != nil {
 			return e
@@ -167,8 +187,16 @@ func run() error {
 			return e
 		}
 	}
+	goHome := filepath.Join(dir, "go-client")
+	if e := os.Mkdir(goHome, 0700); e != nil {
+		return e
+	}
 	a, status := enroll(owner, "/enroll")
 	if e := check(status == 200, "Go enrollment client against Rust"); e != nil {
+		return e
+	}
+	goIdentity, _ := json.Marshal(map[string]any{"key": base64.StdEncoding.EncodeToString(owner), "credential": a, "endpoint": endpoint})
+	if e := os.WriteFile(filepath.Join(goHome, "relay.json"), goIdentity, 0600); e != nil {
 		return e
 	}
 	limits := relay.Limits{Connections: 32, BytesPerSecond: 1048576, MonthlyBytes: 10737418240}
@@ -229,13 +257,20 @@ func run() error {
 		return e
 	}
 	payload := bytes.Repeat([]byte("ciphertext-marker"), 65536)
-	stream.SetDeadline(time.Now().Add(15 * time.Second))
+	transferTimeout := 15 * time.Second
+	if len(os.Args) == 5 {
+		transferTimeout = 90 * time.Second
+	}
+	stream.SetDeadline(time.Now().Add(transferTimeout))
 	done := make(chan error, 1)
 	go func() { _, e := stream.Write(payload); done <- e }()
 	back := make([]byte, len(payload))
-	_, e = io.ReadFull(stream, back)
+	received, e := io.ReadFull(stream, back)
 	writeErr := <-done
 	stream.Close()
+	if e != nil || writeErr != nil {
+		fmt.Fprintf(os.Stderr, "flow control: received=%d expected=%d read=%v write=%v\n", received, len(payload), e, writeErr)
+	}
 	if e := check(e == nil && writeErr == nil && bytes.Equal(payload, back), "smux v2 flow control beyond initial window"); e != nil {
 		return e
 	}
@@ -253,10 +288,28 @@ func run() error {
 	os.WriteFile(filepath.Join(remoteHome, "remote", "relay-key.pem"), pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: originPrivate}), 0600)
 	identity, _ := json.Marshal(map[string]any{"key": base64.StdEncoding.EncodeToString(owner), "credential": relay.Credential{}, "endpoint": endpoint})
 	os.WriteFile(filepath.Join(remoteHome, "remote", "relay.json"), identity, 0600)
-	origin := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { io.Copy(w, r.Body) }))
+	origin := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/events" {
+			w.Header().Set("Content-Type", "text/event-stream")
+			for i := 0; i < 62; i++ {
+				if _, err := fmt.Fprintf(w, "data: %d\n\n", i); err != nil {
+					return
+				}
+				w.(http.Flusher).Flush()
+				select {
+				case <-r.Context().Done():
+					return
+				case <-time.After(time.Second):
+				}
+			}
+			return
+		}
+		io.Copy(w, r.Body)
+	}))
 	defer origin.Close()
 	rustClient := exec.Command(os.Args[2], remoteHome, endpoint, rootPath, origin.Listener.Addr().String())
 	rustClient.Stderr = os.Stderr
+	rustClient.Env = append(os.Environ(), "HOME="+remoteHome)
 	if err := rustClient.Start(); err != nil {
 		return err
 	}
@@ -265,7 +318,7 @@ func run() error {
 		return (&net.Dialer{}).DialContext(ctx, "tcp", publicAddr)
 	}}
 	defer rustTransport.CloseIdleConnections()
-	rustRequest := &http.Client{Transport: rustTransport, Timeout: 10 * time.Second}
+	rustRequest := &http.Client{Transport: rustTransport, Timeout: 75 * time.Second}
 	deadline = time.Now().Add(10 * time.Second)
 	var rustErr error
 	for time.Now().Before(deadline) {
@@ -285,6 +338,66 @@ func run() error {
 	if err := check(rustErr == nil, "Rust ab-remote enrollment TLS WebSocket smux client against Rust relay"); err != nil {
 		return err
 	}
+	legacyHome := filepath.Join(dir, "old-relay1-client")
+	if err := os.Mkdir(legacyHome, 0700); err != nil {
+		return err
+	}
+	legacy, status := enroll(legacyKey, "/enroll")
+	if err := check(status == 200, "old relay/1 signed enrollment against deployed Rust"); err != nil {
+		return err
+	}
+	legacyIdentity, _ := json.Marshal(map[string]any{"key": base64.StdEncoding.EncodeToString(legacyKey), "credential": legacy, "endpoint": endpoint})
+	if err := os.WriteFile(filepath.Join(legacyHome, "relay.json"), legacyIdentity, 0600); err != nil {
+		return err
+	}
+	oldListener := relay.ListenTunnel(ctx, endpoint, client, legacyKey, legacy)
+	defer oldListener.Close()
+	go func() {
+		for {
+			c, err := oldListener.Accept()
+			if err != nil {
+				return
+			}
+			go func() { defer c.Close(); io.Copy(c, c) }()
+		}
+	}()
+	deadline = time.Now().Add(10 * time.Second)
+	legacyOK := false
+	for time.Now().Before(deadline) {
+		c, err := net.DialTimeout("tcp", publicAddr, time.Second)
+		if err != nil {
+			return err
+		}
+		c.SetDeadline(time.Now().Add(time.Second))
+		raw := hello(legacy.Hostname)
+		_, err = c.Write(raw)
+		back := make([]byte, len(raw))
+		if err == nil {
+			_, err = io.ReadFull(c, back)
+		}
+		c.Close()
+		if err == nil && bytes.Equal(raw, back) {
+			legacyOK = true
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	if err := check(legacyOK, "legacy relay/1 and Rust clients coexist on distinct SNI routes"); err != nil {
+		return err
+	}
+	if len(os.Args) == 5 {
+		started := time.Now()
+		response, err := rustRequest.Get("https://" + a.Hostname + "/events")
+		if err != nil {
+			return err
+		}
+		body, readErr := io.ReadAll(response.Body)
+		response.Body.Close()
+		if err := check(readErr == nil && bytes.Count(body, []byte("data:")) == 62 && time.Since(started) >= 60*time.Second, "Rust client trusted origin TLS and 60s SSE"); err != nil {
+			return err
+		}
+	}
+	oldListener.Close()
 	rustClient.Process.Signal(os.Interrupt)
 	rustClient.Wait()
 	b, status := enroll(owner, "/rotate")
@@ -323,7 +436,7 @@ func run() error {
 	if e := check(status == 403 && bytes.Equal(before, after), "missing owner file fails closed without state mutation"); e != nil {
 		return e
 	}
-	os.WriteFile(config, []byte(base64.RawURLEncoding.EncodeToString(owner.Public().(ed25519.PublicKey))), 0600)
+	os.WriteFile(config, []byte(ownerKeys), 0600)
 	status = post(client, endpoint+"/revoke", map[string]string{"hostname": a.Hostname}, nil, b.Credential)
 	if e := check(status == 204, "device revoke"); e != nil {
 		return e
