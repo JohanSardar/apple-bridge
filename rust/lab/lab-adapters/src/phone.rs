@@ -171,7 +171,7 @@ fn lease_target(home: &Path) -> Option<(String, String)> {
     Some((address.to_owned(), path))
 }
 
-fn proxy(mut downstream: StreamOwned<ServerConnection, TcpStream>, home: &Path) {
+pub(crate) fn proxy(mut downstream: StreamOwned<ServerConnection, TcpStream>, home: &Path) {
     let Some((method, path, headers, body)) = read_request(&mut downstream) else {
         return;
     };

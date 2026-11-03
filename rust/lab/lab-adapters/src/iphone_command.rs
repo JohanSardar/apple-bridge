@@ -112,6 +112,10 @@ pub(crate) fn completion_evidence(evidence: &Value, device: &str, hash: &Value) 
     Some(result)
 }
 
+pub(crate) fn evidence_result(evidence: &Value) -> Option<Value> {
+    serde_json::from_slice(&decode(&evidence["payload"])?).ok()
+}
+
 pub(crate) fn button_result(evidence: &Value, device: &str, hash: &Value) -> bool {
     completion_evidence(evidence, device, hash)
         .is_some_and(|result| result["data"] == json!({"action_id": "approve"}))
