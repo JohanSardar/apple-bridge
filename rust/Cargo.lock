@@ -290,6 +290,7 @@ dependencies = [
  "subtle",
  "thiserror 2.0.21",
  "tokio",
+ "tokio-rustls",
  "tower",
  "webpki-roots 1.0.11",
 ]

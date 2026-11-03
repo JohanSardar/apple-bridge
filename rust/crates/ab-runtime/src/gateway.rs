@@ -169,6 +169,10 @@ pub async fn start(mut config: Config, authority: Arc<ab_trust::Authority>) -> R
         let blobs = blobs.clone();
         let stop = receiver.clone();
         tasks.spawn(async move { crate::lab_gateway::serve(&home, state, blobs, stop).await });
+        let home = config.home.clone();
+        let stop = receiver.clone();
+        let relay_feed = feed.clone();
+        tasks.spawn(async move { crate::lab_relay::serve(&home, relay_feed, stop).await });
     }
 
     let ingress_stop = receiver.clone();

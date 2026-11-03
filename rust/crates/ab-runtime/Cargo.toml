@@ -33,6 +33,7 @@ ab-state = { path = "../ab-state" }
 ab-trust = { path = "../ab-trust" }
 ab-replication = { path = "../ab-replication", optional = true }
 ab-blobs = { path = "../ab-blobs" }
+tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "tls12"], optional = true }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
 
 jiff.workspace = true
@@ -42,7 +43,7 @@ rusqlite.workspace = true
 r2-certificates = ["ab-remote/r2-certificates"]
 lab-queries = ["lab-harness", "ab-frontdoor/lab-queries"]
 seeded-faults = ["lab-harness", "ab-operations/seeded-faults", "ab-applepeer/seeded-faults"]
-lab-harness = ["ab-remote/lab-harness", "ab-replication?/lab-harness", "ab-state/lab", "ab-frontdoor/lab-harness", "ab-frontdoor/lab-queries", "ab-operations/lab-harness", "ab-iphone/lab-harness"]
+lab-harness = ["dep:tokio-rustls", "ab-remote/lab-harness", "ab-replication?/lab-harness", "ab-state/lab", "ab-frontdoor/lab-harness", "ab-frontdoor/lab-queries", "ab-operations/lab-harness", "ab-iphone/lab-harness"]
 default = ["replica-feed"]
 replica-feed = ["dep:ab-replication"]
 

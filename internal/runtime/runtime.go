@@ -223,6 +223,9 @@ func Start(ctx context.Context, cfg Config) error {
 		iphoneDelivery.Push = remote.IPhonePush(cfg.Home)
 		gateway.IPhone = iphoneDelivery
 		relayFeed = feed.RelayHandler()
+		if err = serveRelayLab(ctx, cfg.Home, relayFeed); err != nil {
+			return err
+		}
 		service.LocalStatus = func() contracts.ReplicaStatus {
 			return contracts.ReplicaStatus{Role: "gateway", State: "ready", Cursor: store.Head(), GatewayHead: store.Head().Sequence, Blobs: blobStore.Progress(), DialReplicas: feed.DialStatus()}
 		}
