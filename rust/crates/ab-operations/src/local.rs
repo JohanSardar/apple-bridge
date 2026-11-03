@@ -452,7 +452,28 @@ impl LocalGateway {
         let Ok(_guard) = tokio::time::timeout_at(deadline, lock.lock()).await else {
             return self.transition(r, State::Expired, Some(Disposition::Expired), None, None);
         };
-        let (mut plan, _lease) = match self.actions.prepare(&p, &r.command) {
+        let document = if r.command.op == "pdf.annotate" {
+            let store = self.query_store.as_ref().ok_or(Code::Unavailable)?;
+            match store.document_input(&p, &r.command.args).await {
+                Ok(document) => Some(document),
+                Err(error) => {
+                    return self.transition(
+                        r,
+                        State::Rejected,
+                        Some(Disposition::RejectedBeforeDispatch),
+                        None,
+                        Some(error),
+                    );
+                }
+            }
+        } else {
+            None
+        };
+        let mut execution = r.command.clone();
+        if let Some(document) = &document {
+            execution.args = document.args.clone();
+        }
+        let (mut plan, _lease) = match self.actions.prepare(&p, &execution) {
             Ok(plan) => plan,
             Err(error) => {
                 return self.transition(
@@ -1221,6 +1242,7 @@ fn target_collection(op: &str) -> String {
         "reminders.create_list" | "reminders.rename_list" | "reminders.delete_list" => {
             "reminders.list"
         }
+        "pdf.annotate" => "pdf.artifact",
         "calendar.create_calendar" => "calendar.calendar",
         "notes.create_folder" | "notes.rename_folder" => "notes.folder",
         op if op.starts_with("reminders.") => "reminders.reminder",

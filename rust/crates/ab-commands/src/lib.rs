@@ -130,7 +130,9 @@ fn normalize(v: &Value, shape: &str) -> Result<Args, Error> {
             continue;
         }
         let kind = f.kind.trim_start_matches('*');
-        let val = if kind == "string" {
+        let val = if kind == "raw" {
+            value.clone()
+        } else if kind == "string" {
             check(value.is_string())?;
             value.clone()
         } else if kind == "bool" {
