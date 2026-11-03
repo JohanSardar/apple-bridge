@@ -88,7 +88,19 @@ pub(crate) fn initialize(db: &Connection) -> Result<()> {
         db.execute("UPDATE records SET payload=payload WHERE deleted=0", [])?;
         set_meta(db, "fts_version", "5")?;
     }
-    set_meta(db, "blob_refs_version", "1")?;
+    let refs_version = db
+        .query_row(
+            "SELECT value FROM meta WHERE key='blob_refs_version'",
+            [],
+            |row| row.get::<_, String>(0),
+        )
+        .ok();
+    if refs_version.as_deref() != Some("1") {
+        for record in records(db, "SELECT payload FROM records", &[])? {
+            blob_refs(db, &format!("record:{}", record.id.as_str()), &record)?;
+        }
+        set_meta(db, "blob_refs_version", "1")?;
+    }
     Ok(())
 }
 pub(crate) fn write(db: &Connection, record: &Record, seq: u64) -> Result<()> {
