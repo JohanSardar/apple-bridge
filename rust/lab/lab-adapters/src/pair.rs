@@ -26,7 +26,10 @@ fn decode(code: &str) -> Result<Value> {
     Ok(serde_json::from_slice(&raw)?)
 }
 fn encode(value: &Value) -> Result<String> {
-    Ok(format!("ab1-{}", ENCODING.encode(&serde_json::to_vec(value)?)))
+    Ok(format!(
+        "ab1-{}",
+        ENCODING.encode(&serde_json::to_vec(value)?)
+    ))
 }
 fn rejected(home: &Path, code: &str) -> bool {
     replicas::cli(home, &["join", code]).is_err()
@@ -74,7 +77,8 @@ fn identity(index: usize) -> Result<String> {
         .get(index)
         .cloned()
         .ok_or_else(|| Error::Invalid("replica index".into()))?;
-    let document: Value = serde_json::from_slice(&fs::read(endpoint.home.join("credentials.json"))?)?;
+    let document: Value =
+        serde_json::from_slice(&fs::read(endpoint.home.join("credentials.json"))?)?;
     document["enrollment"]["replica_id"]
         .as_str()
         .map(str::to_owned)

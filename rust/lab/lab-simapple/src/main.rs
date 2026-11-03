@@ -1259,8 +1259,7 @@ fn session(
             )?;
             continue;
         }
-        let refresh = src == "messages"
-            && open["checkpoints"][src]["refresh_blobs"] == true;
+        let refresh = src == "messages" && open["checkpoints"][src]["refresh_blobs"] == true;
         let (capture, revision) = {
             let mut s = lock(state)?;
             let revision = s.revision(src);

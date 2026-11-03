@@ -122,7 +122,11 @@ fn scope_probe(limited: &Client, fixture_id: &str, index: usize, evidence: &mut 
     true
 }
 
-pub(crate) fn automatic_healthy(world: &World, observed: &Observed, evidence: &mut Evidence) -> bool {
+pub(crate) fn automatic_healthy(
+    world: &World,
+    observed: &Observed,
+    evidence: &mut Evidence,
+) -> bool {
     let drained = world.control("/flush", &json!({})).is_ok();
     evidence.check(
         "automatic_recovery_capture_drained",
