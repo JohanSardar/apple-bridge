@@ -263,95 +263,97 @@ impl Watcher {
 #[cfg(test)]
 mod tests {
     use super::Watcher;
-    use std::{fs, io::Write, path::Path, time::Duration};
+    use std::{fs, io, io::Write, path::Path, time::Duration};
 
-    fn settle(watcher: &mut Watcher) {
-        while watcher.wait(Duration::from_millis(50)).unwrap() {}
+    fn settle(watcher: &mut Watcher) -> io::Result<()> {
+        while watcher.wait(Duration::from_millis(50))? {}
+        Ok(())
     }
 
-    fn woke(watcher: &mut Watcher) -> bool {
-        watcher.wait(Duration::from_secs(3)).unwrap()
+    fn woke(watcher: &mut Watcher) -> io::Result<bool> {
+        watcher.wait(Duration::from_secs(3))
     }
 
-    fn scratch(name: &str) -> std::path::PathBuf {
+    fn scratch(name: &str) -> io::Result<std::path::PathBuf> {
         let dir = std::env::temp_dir().join(format!("ab-sys-watch-{name}-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
-        fs::create_dir_all(&dir).unwrap();
-        dir
+        fs::create_dir_all(&dir)?;
+        Ok(dir)
     }
 
-    fn replace(dir: &Path, name: &str, body: &str) {
+    fn replace(dir: &Path, name: &str, body: &str) -> io::Result<()> {
         let staging = dir.join(format!("{name}.tmp"));
-        fs::write(&staging, body).unwrap();
-        fs::rename(&staging, dir.join(name)).unwrap();
+        fs::write(&staging, body)?;
+        fs::rename(&staging, dir.join(name))?;
+        Ok(())
     }
 
     #[test]
-    fn wakes_on_new_file_and_in_place_write() {
-        let dir = scratch("create");
-        fs::write(dir.join("a.db"), "one").unwrap();
-        let mut watcher = Watcher::new().unwrap();
-        watcher.watch_tree(&dir).unwrap();
-        settle(&mut watcher);
-        fs::write(dir.join("b.db"), "two").unwrap();
-        assert!(woke(&mut watcher));
-        watcher.watch_tree(&dir).unwrap();
-        settle(&mut watcher);
+    fn wakes_on_new_file_and_in_place_write() -> io::Result<()> {
+        let dir = scratch("create")?;
+        fs::write(dir.join("a.db"), "one")?;
+        let mut watcher = Watcher::new()?;
+        watcher.watch_tree(&dir)?;
+        settle(&mut watcher)?;
+        fs::write(dir.join("b.db"), "two")?;
+        assert!(woke(&mut watcher)?);
+        watcher.watch_tree(&dir)?;
+        settle(&mut watcher)?;
+        let mut file = fs::OpenOptions::new().append(true).open(dir.join("a.db"))?;
+        file.write_all(b"more")?;
+        file.sync_all()?;
+        assert!(woke(&mut watcher)?);
+        fs::remove_dir_all(&dir)?;
+        Ok(())
+    }
+
+    #[test]
+    fn follows_atomic_rename_replacement() -> io::Result<()> {
+        let dir = scratch("rename")?;
+        replace(&dir, "sync.db", "one")?;
+        let mut watcher = Watcher::new()?;
+        watcher.watch_tree(&dir)?;
+        settle(&mut watcher)?;
+        replace(&dir, "sync.db", "two")?;
+        assert!(woke(&mut watcher)?);
+        watcher.watch_tree(&dir)?;
+        settle(&mut watcher)?;
         let mut file = fs::OpenOptions::new()
             .append(true)
-            .open(dir.join("a.db"))
-            .unwrap();
-        file.write_all(b"more").unwrap();
-        file.sync_all().unwrap();
-        assert!(woke(&mut watcher));
-        fs::remove_dir_all(&dir).unwrap();
+            .open(dir.join("sync.db"))?;
+        file.write_all(b"three")?;
+        file.sync_all()?;
+        assert!(woke(&mut watcher)?);
+        fs::remove_dir_all(&dir)?;
+        Ok(())
     }
 
     #[test]
-    fn follows_atomic_rename_replacement() {
-        let dir = scratch("rename");
-        replace(&dir, "sync.db", "one");
-        let mut watcher = Watcher::new().unwrap();
-        watcher.watch_tree(&dir).unwrap();
-        settle(&mut watcher);
-        replace(&dir, "sync.db", "two");
-        assert!(woke(&mut watcher));
-        watcher.watch_tree(&dir).unwrap();
-        settle(&mut watcher);
-        let mut file = fs::OpenOptions::new()
-            .append(true)
-            .open(dir.join("sync.db"))
-            .unwrap();
-        file.write_all(b"three").unwrap();
-        file.sync_all().unwrap();
-        assert!(woke(&mut watcher));
-        fs::remove_dir_all(&dir).unwrap();
+    fn wakes_on_nested_directory_change() -> io::Result<()> {
+        let dir = scratch("nested")?;
+        fs::create_dir_all(dir.join("sub/deep"))?;
+        let mut watcher = Watcher::new()?;
+        watcher.watch_tree(&dir)?;
+        settle(&mut watcher)?;
+        fs::write(dir.join("sub/deep/segment"), "x")?;
+        assert!(woke(&mut watcher)?);
+        fs::remove_dir_all(&dir)?;
+        Ok(())
     }
 
     #[test]
-    fn wakes_on_nested_directory_change() {
-        let dir = scratch("nested");
-        fs::create_dir_all(dir.join("sub/deep")).unwrap();
-        let mut watcher = Watcher::new().unwrap();
-        watcher.watch_tree(&dir).unwrap();
-        settle(&mut watcher);
-        fs::write(dir.join("sub/deep/segment"), "x").unwrap();
-        assert!(woke(&mut watcher));
-        fs::remove_dir_all(&dir).unwrap();
-    }
-
-    #[test]
-    fn watches_a_single_file_root() {
-        let dir = scratch("single");
+    fn watches_a_single_file_root() -> io::Result<()> {
+        let dir = scratch("single")?;
         let path = dir.join("one.db");
-        fs::write(&path, "one").unwrap();
-        let mut watcher = Watcher::new().unwrap();
-        watcher.watch_tree(&path).unwrap();
-        settle(&mut watcher);
-        let mut file = fs::OpenOptions::new().append(true).open(&path).unwrap();
-        file.write_all(b"two").unwrap();
-        file.sync_all().unwrap();
-        assert!(woke(&mut watcher));
-        fs::remove_dir_all(&dir).unwrap();
+        fs::write(&path, "one")?;
+        let mut watcher = Watcher::new()?;
+        watcher.watch_tree(&path)?;
+        settle(&mut watcher)?;
+        let mut file = fs::OpenOptions::new().append(true).open(&path)?;
+        file.write_all(b"two")?;
+        file.sync_all()?;
+        assert!(woke(&mut watcher)?);
+        fs::remove_dir_all(&dir)?;
+        Ok(())
     }
 }
