@@ -55,10 +55,6 @@ func (n privateConnectNode) Dial(ctx context.Context, _, _ string) (net.Conn, er
 }
 
 func runPrivateConnect(ctx context.Context, s Scenario, level string) Evidence {
-	if level == "replica" || level == "real" {
-		return runRemotePrivateReal(ctx, s, level)
-	}
-
 	e := Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), RunID: "private-protocol", NetworkPath: "production private handler and connect proxy through isolated node transport"}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	home, err := os.MkdirTemp("", "ab-private-")
@@ -69,7 +65,7 @@ func runPrivateConnect(ctx context.Context, s Scenario, level string) Evidence {
 	defer os.RemoveAll(home)
 	for _, expired := range []bool{false, true} {
 		func() {
-			home := filepath.Join(home, "live")
+			home := filepath.Join(home, "gateway")
 			if expired {
 				home += "-expired"
 			}
@@ -113,13 +109,20 @@ func runPrivateConnect(ctx context.Context, s Scenario, level string) Evidence {
 			json.Unmarshal(status.Bytes(), &st)
 			code := strings.TrimPrefix(st.Message, "bridge connect ")
 			raw, _ := base64.RawURLEncoding.DecodeString(code)
-			var invite struct{ Secret string }
-			json.Unmarshal(raw, &invite)
+			var invite struct{ Host, Secret string }
+			decodeErr := json.Unmarshal(raw, &invite)
+			add("status_on_private", st.State == "on" && st.Backend == "private")
+			add("private_invitation_valid", decodeErr == nil && strings.HasSuffix(invite.Host, ".ts.net") && !strings.ContainsAny(invite.Host, "/:@?# ") && len(invite.Secret) == 43)
 			transport := &http.Transport{DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
 				return (&net.Dialer{}).DialContext(ctx, "tcp", listener.Addr().String())
 			}}
 			defer transport.CloseIdleConnections()
 			client := &http.Client{Transport: transport}
+			unauthenticated, requestErr := client.Get("http://localhost:7780/")
+			add("session_required", requestErr == nil && unauthenticated.StatusCode == 403)
+			if unauthenticated != nil {
+				unauthenticated.Body.Close()
+			}
 			if expired {
 				clock.Add(301)
 			}
@@ -151,6 +154,13 @@ func runPrivateConnect(ctx context.Context, s Scenario, level string) Evidence {
 			}
 			for deadline := time.Now().Add(3 * time.Second); !strings.Contains(connectOut.String(), "http://localhost:7780") && time.Now().Before(deadline); {
 				time.Sleep(10 * time.Millisecond)
+			}
+			add("invitation_redeemed", strings.Contains(connectOut.String(), "http://localhost:7780"))
+			challengeClient := &http.Client{Transport: localTransport, Timeout: 3 * time.Second}
+			challenge, challengeErr := challengeClient.Get("http://localhost:7780/mcp")
+			add("session_reaches_bridge_challenge", challengeErr == nil && challenge.StatusCode == 401 && strings.Contains(challenge.Header.Get("WWW-Authenticate"), "Bearer"))
+			if challenge != nil {
+				challenge.Body.Close()
 			}
 			req, _ := http.NewRequestWithContext(ctx, "POST", "http://localhost:7780/_bridge/private/invite", nil)
 			req.Header.Set("Authorization", "Bearer "+invite.Secret)

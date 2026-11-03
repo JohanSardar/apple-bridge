@@ -41,7 +41,7 @@ func nativeReplicaRealScenario(s Scenario) bool {
 func replicaQualificationBlocker(s Scenario) string {
 	switch s.ID {
 	case "RMT-PRIVATE-CONNECT":
-		return "harness: lab/scenarios/remote_private_real.go changes AppleBridgeLive; requires isolated private transport adapter"
+		return "harness: private connect fixture calls Go remote implementation; requires isolated binary-driven private transport adapter"
 	case "MAIL-REPLICA", "CALLS-REPLICA":
 		return ""
 	case "FILE-REPLICA":
