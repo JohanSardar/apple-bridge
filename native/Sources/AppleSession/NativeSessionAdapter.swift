@@ -36,7 +36,10 @@ extension AppleSession: NativeAdapter {
             return await sink.result(collection: operation == "agenda.reminders" ? "reminders.reminder" : "reminders.list")
         case "contacts.history":
             guard Set(args.object.keys) == ["history_token"] else { throw SourceFailure.invalid }
-            return NativeFacts(items: [try await contacts.nativeHistory(args["history_token"].string)], scope: .string("contacts.history"), generation: "native/1", complete: true)
+            let history = try await contacts.nativeHistory(args["history_token"].string)
+            let changes = history["changed_contact_ids"].array.map { JSON.object(["collection": .string("contacts.contact"), "native_key": $0]) }
+                + history["changed_group_ids"].array.map { JSON.object(["collection": .string("contacts.group"), "native_key": $0]) }
+            return NativeFacts(items: changes, scope: .object(["collections": .array([.string("contacts.contact"), .string("contacts.group")]), "history_token": history["history_token"]]), generation: "native/1", complete: true)
         case "contacts.containers", "contacts.groups", "contacts.contacts":
             try await contacts.nativeFacts(into: sink)
             let collection = ["contacts.containers": "contacts.container", "contacts.groups": "contacts.group", "contacts.contacts": "contacts.contact"][operation]
