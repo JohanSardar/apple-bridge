@@ -32,13 +32,14 @@ def execute(entry, binary, timeout, logs, implementation, rust_binary, startup_b
         if rust_binary:
             command += ['--rust-binary', rust_binary]
         marker = logs / (entry['id'] + '.started')
-        if platform.system() == 'Darwin':
+        serialized = platform.system() == 'Darwin' and (Path.home() / 'bin/ab-local').is_file()
+        if serialized:
             handshake = 'import os,sys,time; open(sys.argv[1]+".tmp","w").write(str(time.monotonic())); os.replace(sys.argv[1]+".tmp",sys.argv[1]); os.execv(sys.argv[2],sys.argv[2:])'
             command = [str(Path.home() / 'bin/ab-local'), sys.executable, '-c', handshake, str(marker), *command]
         process = subprocess.Popen(command, stdout=output, stderr=subprocess.STDOUT, start_new_session=True)
         status = 'fail'
         try:
-            if platform.system() == 'Darwin':
+            if serialized:
                 queue_deadline = time.monotonic() + 3600
                 while not marker.exists() and process.poll() is None:
                     if time.monotonic() >= queue_deadline:
@@ -120,7 +121,7 @@ def main():
     args = parser.parse_args()
     if args.parallel < 1 or args.timeout <= 0:
         parser.error('parallel and timeout must be positive')
-    if platform.system() == 'Darwin' and args.parallel != 1:
+    if platform.system() == 'Darwin' and (Path.home() / 'bin/ab-local').is_file() and args.parallel != 1:
         parser.error('Air scenarios must run serially with --parallel 1 through ab-local')
     inventory = json.loads(Path(args.map).read_text())
     known = inventory['selection']
