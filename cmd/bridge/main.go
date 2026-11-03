@@ -27,6 +27,7 @@ import (
 
 var credentialProbe func(context.Context, []string) error
 var operationCatalogProbe func(context.Context, []string) error
+var labCommands = map[string]func(context.Context, []string) error{}
 
 func run(ctx context.Context, args []string) error {
 	if len(args) == 0 {
@@ -34,6 +35,9 @@ func run(ctx context.Context, args []string) error {
 	}
 	if args[0] == "lab-operation-catalog" && operationCatalogProbe != nil {
 		return operationCatalogProbe(ctx, args[1:])
+	}
+	if command, ok := labCommands[args[0]]; ok {
+		return command(ctx, args[1:])
 	}
 	if args[0] == "lab-credential-lifecycle" && credentialProbe != nil {
 		return credentialProbe(ctx, args[1:])

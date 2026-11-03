@@ -15,6 +15,9 @@ func remotePairCode(ctx context.Context, authority *trust.Authority, home, peer,
 	if peer != "" || dial != "" {
 		return "", contracts.ErrInvalid
 	}
+	if address := labPairURL(); address != "" && !iphone {
+		return authority.PairRemote(address, grants, ttl)
+	}
 	var output bytes.Buffer
 	if err := remote.Command(ctx, home, "status", "", "", &output); err != nil {
 		return "", err

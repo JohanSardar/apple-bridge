@@ -178,3 +178,11 @@ Only `GET /v1/feed` is served; any other path returns 401. The handler is the pr
 ### lab-relay client (Phase 8)
 
 `rust/lab/lab-relay` is a standalone relay client with no `ab-*` dependency (rustls, tungstenite, rcgen, x509-parser, ed25519-dalek only). It provides `Ca` (a lab-owned Ed25519 test CA that issues the leaf chain written for `lab-relay.json`), `configure_gateway` and `gateway_address` (write the listener config, read back the bound address), `Link::dial` (TLS 1.3 trusting only the lab CA, SNI `localhost`, optional `Origin`, exporter `EXPORTER-Channel-Binding` with an empty context captured as `Link::binding`), `Identity::load` (a replica home's `identity.pem` and file-store key) and `Identity::generate` (an unpaired device), `authenticate`/`relay1_client`/`relay2_client`/`join` (the relay/1 and relay/2 handshakes including pairing proofs), transcript helpers `input1`/`input2` for oracle checks on captured frames, and `replay_gateway` (a one-shot TLS websocket server that replays a captured challenge and reports whether a proof arrived). The same code drives the Go and Rust gateways.
+
+### Lab gateway commands (Phase 8)
+
+Both gateways, built with `lab-harness`/`-tags lab` only:
+
+- `bridge lab-session --home H` creates an owner device session and prints `{"name":"ab_session_local","value":"..."}`; send it as that cookie to the owner web routes (approvals, devices).
+- `bridge lab-principal --home H (--id ID | --fingerprint FP)` prints `{"id","kind","fingerprint","grants","revision","relay2"}` for an active principal and exits nonzero otherwise. Revision is the subscription revision relay/2 reports after a scope change.
+- `bridge pair --via-remote` honours `APPLE_BRIDGE_LAB_PAIR_URL` and pairs against that URL instead of the Remote status URL. The URL is validated exactly as the product validates its Remote URL (`https`, no userinfo, path, query, fragment, port 1..65535); an invalid URL exits nonzero with `invalid`. The Rust product path now validates through the same `pair_remote` helper.
