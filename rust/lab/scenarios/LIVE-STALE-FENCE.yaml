@@ -1,0 +1,17 @@
+id: LIVE-STALE-FENCE
+feature: lab.live-fault
+levels: [sim]
+given:
+  - world: {replicas: 0}
+when:
+  - control:
+      route: /external-change
+      input: {key: live-fence-baseline, collection: reminders.reminder, data: {title: '[ab-test] fence baseline', completed: false}}
+  - control: {route: /flush, input: {}}
+  - control:
+      route: /stale-frame
+      input: {key: live-stale-record, collection: reminders.reminder, data: {title: '[ab-test] frame on superseded connection', completed: false}}
+then:
+  - protocol_gate: {check: stale-fence-rejected}
+cleanup:
+  - world: {}

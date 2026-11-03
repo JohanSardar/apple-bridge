@@ -6,6 +6,7 @@ mod messages;
 mod notes;
 mod query;
 mod sources;
+mod stale;
 use lab_wire::{receive, send};
 use serde_json::{Value, json};
 use std::{
@@ -74,6 +75,8 @@ struct State {
     pause: u64,
     denied: BTreeMap<String, bool>,
     path: PathBuf,
+    socket: String,
+    secret: Vec<u8>,
 }
 impl State {
     fn save(&self) -> Result<()> {
@@ -161,6 +164,9 @@ fn enqueue_mode(tx: &mpsc::Sender<Request>, frame: Value, wait: bool, whole: boo
     Ok(())
 }
 fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value) -> Result<Value> {
+    if route == "/stale-frame" {
+        return stale::control_stale(state, &input);
+    }
     if route == "/messages" {
         return messages::control_messages(state, tx, &input);
     }
@@ -831,6 +837,32 @@ impl Session {
         Ok(())
     }
 }
+fn handshake(stream: &mut UnixStream, secret: &[u8]) -> Result<Value> {
+    let (challenge, _) = receive(stream)?;
+    let a = string(&challenge, "nonce");
+    if challenge["t"] != "Challenge" || a.len() != 64 || secret.len() != 32 {
+        return Err(invalid("challenge"));
+    }
+    let b = id("")?;
+    send(
+        stream,
+        &json!({"t":"Authenticate","nonce":b,"proof":lab_wire::ipc_proof(secret,"helper",&a,&b)?}),
+    )?;
+    let (answer, _) = receive(stream)?;
+    if answer["t"] != "Authenticated" {
+        return Err(invalid("authentication"));
+    }
+    lab_wire::verify_ipc_proof(secret, "gateway", &a, &b, &string(&answer, "proof"))?;
+    let (open, _) = receive(stream)?;
+    if open["t"] != "Open"
+        || open["protocol"] != "ipc/1"
+        || open["owner_fence"].as_u64().is_none_or(|v| v == 0)
+        || open["byte_credit"].as_u64().is_none_or(|v| v == 0)
+    {
+        return Err(invalid("open"));
+    }
+    Ok(open)
+}
 fn session(
     stream: UnixStream,
     secret: &[u8],
@@ -839,33 +871,13 @@ fn session(
 ) -> Result<()> {
     let mut stream = stream;
     stream.set_read_timeout(Some(Duration::from_secs(5)))?;
-    let (challenge, _) = receive(&mut stream)?;
-    let a = string(&challenge, "nonce");
-    if challenge["t"] != "Challenge" || a.len() != 64 || secret.len() != 32 {
-        return Err(invalid("challenge"));
-    }
-    let b = id("")?;
-    send(
-        &mut stream,
-        &json!({"t":"Authenticate","nonce":b,"proof":lab_wire::ipc_proof(secret,"helper",&a,&b)?}),
-    )?;
-    let (answer, _) = receive(&mut stream)?;
-    if answer["t"] != "Authenticated" {
-        return Err(invalid("authentication"));
-    }
-    lab_wire::verify_ipc_proof(secret, "gateway", &a, &b, &string(&answer, "proof"))?;
-    let (open, _) = receive(&mut stream)?;
+    let open = handshake(&mut stream, secret)?;
     let fence = open["owner_fence"]
         .as_u64()
-        .filter(|v| *v > 0)
         .ok_or_else(|| invalid("fence"))?;
     let credit = open["byte_credit"]
         .as_u64()
-        .filter(|v| *v > 0)
         .ok_or_else(|| invalid("credit"))?;
-    if open["t"] != "Open" || open["protocol"] != "ipc/1" {
-        return Err(invalid("open"));
-    }
     let sources = [
         "reminders",
         "messages",
@@ -1104,6 +1116,8 @@ fn run() -> Result<()> {
         fault: String::new(),
         pause: 0,
         denied: BTreeMap::new(),
+        socket: socket.clone(),
+        secret: secret.clone(),
     }));
     {
         let mut s = lock(&state)?;

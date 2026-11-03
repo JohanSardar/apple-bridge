@@ -18,9 +18,17 @@ fn state_error(error: &ab_state::Error) -> Error {
 fn raw<T: Serialize>(value: &T) -> Result<Box<RawValue>, Error> {
     serde_json::value::to_raw_value(value).map_err(|_| Code::Corrupt.into())
 }
+#[cfg(feature = "seeded-faults")]
+fn seeded_leak_scope() -> bool {
+    std::env::var("AB_LAB_SEEDED_FAULT").is_ok_and(|value| value == "leak-scope")
+}
+#[cfg(not(feature = "seeded-faults"))]
+const fn seeded_leak_scope() -> bool {
+    false
+}
 pub fn visibility(input: &Visibility) -> ab_state::Visibility {
     let mut result: ab_state::Visibility = input.iter().map(|(s, v)| (s.clone(), *v)).collect();
-    if input.get("admin") == Some(&true) {
+    if input.get("admin") == Some(&true) || seeded_leak_scope() {
         for source in [
             #[cfg(feature = "lab-harness")]
             "labdummy",
