@@ -95,7 +95,7 @@ pub fn problem(error: Error) -> Response {
         Code::Unauthorized => StatusCode::UNAUTHORIZED,
         Code::Forbidden => StatusCode::FORBIDDEN,
         Code::NotFound => StatusCode::NOT_FOUND,
-        Code::Conflict | Code::Reset => StatusCode::CONFLICT,
+        Code::Conflict | Code::Reset | Code::IdReused => StatusCode::CONFLICT,
         Code::Unavailable => StatusCode::SERVICE_UNAVAILABLE,
         Code::Capacity => StatusCode::INSUFFICIENT_STORAGE,
         Code::TooLarge => StatusCode::PAYLOAD_TOO_LARGE,
