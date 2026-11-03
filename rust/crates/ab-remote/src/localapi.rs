@@ -222,7 +222,6 @@ pub async fn certificate_expiry(host: &str, port: u16) -> Result<String> {
     let mut target = format!("{host}:{port}");
     #[cfg(feature = "lab-harness")]
     {
-        use rustls::pki_types::pem::PemObject;
         if let Some(address) = std::env::var_os("APPLE_BRIDGE_REMOTE_PROBE_ADDRESS") {
             let address = address.to_string_lossy().into_owned();
             let loopback = address
@@ -234,7 +233,6 @@ pub async fn certificate_expiry(host: &str, port: u16) -> Result<String> {
             target = address;
         }
         if let Some(path) = std::env::var_os("APPLE_BRIDGE_LAB_TLS_ROOT") {
-            use rustls::pki_types::pem::PemObject;
             let pem = std::fs::read(path)?;
             for certificate in <rustls::pki_types::CertificateDer as rustls::pki_types::pem::PemObject>::pem_slice_iter(&pem)
                 .filter_map(std::result::Result::ok)
