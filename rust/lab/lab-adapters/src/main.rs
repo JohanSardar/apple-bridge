@@ -51,6 +51,11 @@ fn run() -> Result<bool, Box<dyn std::error::Error>> {
         {
             scenario.when.push(serde_json::json!({"readmodels": {}}));
         }
+        if scenario.when.is_empty()
+            && let Some(step) = lab_adapters::implied_step(&scenario.id)
+        {
+            scenario.when.push(serde_json::json!({ step: {} }));
+        }
         if real {
             let evidence = registry.run_real(
                 &scenario,
