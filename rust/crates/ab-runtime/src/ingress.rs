@@ -22,10 +22,12 @@ pub struct App {
     pub audit: Arc<AuditLog>,
     pub approvals: Arc<Approvals>,
     pub phone: Router,
+    pub feed: Arc<ab_replication::server::Server<ab_replication::gateway::StateAdapter>>,
     routers: Mutex<BTreeMap<String, Router>>,
     statuses: watch::Sender<ab_remote::IngressStatuses>,
 }
 impl App {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         home: PathBuf,
         address: SocketAddr,
@@ -34,6 +36,7 @@ impl App {
         audit: Arc<AuditLog>,
         approvals: Arc<Approvals>,
         phone: Router,
+        feed: Arc<ab_replication::server::Server<ab_replication::gateway::StateAdapter>>,
     ) -> Self {
         Self {
             home,
@@ -43,6 +46,7 @@ impl App {
             audit,
             approvals,
             phone,
+            feed,
             routers: Mutex::default(),
             statuses: watch::channel(BTreeMap::new()).0,
         }
@@ -172,7 +176,7 @@ async fn connection(
     app: Arc<App>,
     mut stop: watch::Receiver<bool>,
 ) -> Result<(), Error> {
-    tokio::time::timeout(std::time::Duration::from_secs(5), async {
+    let binding = tokio::time::timeout(std::time::Duration::from_secs(5), async {
         let mut magic = vec![0; ab_remote::INGRESS_MAGIC.len()];
         socket.read_exact(&mut magic).await?;
         let mut received = [0; 32];
@@ -180,7 +184,17 @@ async fn connection(
         if magic != ab_remote::INGRESS_MAGIC || !bool::from(proof.ct_eq(&received)) {
             return Err(Error::Invalid);
         }
-        Ok(())
+        let flag = socket.read_u8().await?;
+        let binding = match flag {
+            0 => None,
+            1 => {
+                let mut b = [0; 32];
+                socket.read_exact(&mut b).await?;
+                Some(b)
+            }
+            _ => return Err(Error::Invalid),
+        };
+        Ok(binding)
     })
     .await
     .map_err(|_| Error::Invalid)??;
@@ -199,6 +213,17 @@ async fn connection(
                         Code::Unauthorized.into(),
                     ));
                 };
+                if request.uri().path() == "/v1/feed" {
+                    if !hosts(
+                        &selected(&app.home).unwrap_or_default(),
+                        &app.statuses.borrow(),
+                    )
+                    .contains(&host)
+                    {
+                        return Ok(ab_frontdoor::problem(Code::Unauthorized.into()));
+                    }
+                    return Ok(app.feed.clone().relay_http(request, binding).map(Body::new));
+                }
                 let router = tokio::task::spawn_blocking(move || app.router(&host)).await;
                 let Ok(Ok(router)) = router else {
                     return Ok(ab_frontdoor::problem(Code::Unauthorized.into()));

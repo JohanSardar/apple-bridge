@@ -237,7 +237,7 @@ impl Store {
         }
         if host.is_empty() {
             loop {
-                host = format!("{}.{}", &digest(&random_token()?)[..24], self.zone);
+                host = format!("{}.{}", &digest(&random_token()?)[..32], self.zone);
                 if !self.devices.contains_key(&host) {
                     break;
                 }

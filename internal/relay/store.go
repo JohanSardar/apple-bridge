@@ -162,7 +162,7 @@ func (s *Store) Enroll(in Enrollment) (Credential, error) {
 	}
 	if host == "" {
 		for {
-			host = digest(randomToken())[:24] + "." + s.zone
+			host = digest(randomToken())[:32] + "." + s.zone
 			if _, exists := s.devices[host]; !exists {
 				break
 			}

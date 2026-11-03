@@ -94,7 +94,13 @@ where
                             let secure = tokio_rustls::TlsAcceptor::from(certs.config()?)
                                 .accept(local)
                                 .await?;
-                            let (mut secure, mut upstream) = (secure, gateway.connect().await?);
+                            let binding = secure.get_ref().1.export_keying_material(
+                                [0; 32],
+                                b"EXPORTER-Channel-Binding",
+                                Some(&[]),
+                            )?;
+                            let (mut secure, mut upstream) =
+                                (secure, gateway.connect_bound(Some(binding)).await?);
                             tokio::io::copy_bidirectional(&mut secure, &mut upstream).await?;
                             Ok::<(), Error>(())
                         };

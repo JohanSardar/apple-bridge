@@ -11,6 +11,7 @@ ab-iphone = { path = "../ab-iphone" }
 ab-catalog = { path = "../ab-catalog" }
 ab-applepeer = { path = "../ab-applepeer" }
 rand = "0.8"
+data-encoding = "2"
 rustls.workspace = true
 hyper.workspace = true
 hyper-util = { version = "0.1", features = ["tokio", "service"] }

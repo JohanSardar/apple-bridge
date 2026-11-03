@@ -111,11 +111,21 @@ impl Gateway {
         }
     }
     pub(crate) async fn connect(&self) -> Result<tokio::net::TcpStream> {
+        self.connect_bound(None).await
+    }
+    pub(crate) async fn connect_bound(
+        &self,
+        binding: Option<[u8; 32]>,
+    ) -> Result<tokio::net::TcpStream> {
         use tokio::io::AsyncWriteExt;
         let mut socket = tokio::net::TcpStream::connect(self.address).await?;
         if let Some(proof) = &self.proof {
             socket.write_all(INGRESS_MAGIC).await?;
             socket.write_all(proof.as_ref()).await?;
+            socket.write_all(&[u8::from(binding.is_some())]).await?;
+            if let Some(binding) = binding {
+                socket.write_all(&binding).await?;
+            }
         }
         Ok(socket)
     }

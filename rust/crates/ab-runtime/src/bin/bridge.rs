@@ -222,7 +222,11 @@ async fn run() -> Result<(), Error> {
                 return Err(Error::Invalid);
             }
             let listen = args.flag("listen", "");
-            let result = if listen.is_empty() {
+            let result = if ab_trust::PairCode::decode(&args.value)?.remote {
+                ab_replication::relay::join(&authority, &args.value)
+                    .await
+                    .map_err(|_| ab_trust::Error::Unauthorized)
+            } else if listen.is_empty() {
                 authority.join(&args.value).await
             } else {
                 authority.join_listen(&args.value, &listen).await
@@ -370,7 +374,17 @@ fn manage(
                 );
             } else {
                 if args.flag("via-remote", "false") == "true" {
-                    return Err(ab_trust::Error::Unavailable.into());
+                    let status: serde_json::Value = ab_remote::state::read(home, "status")?;
+                    if status["state"] != "on" {
+                        return Err(ab_trust::Error::Unavailable.into());
+                    }
+                    let address = status["url"].as_str().ok_or(Error::Invalid)?;
+                    let raw = authority.pair_with_ttl(address, "", grants(args)?, ttl)?;
+                    let mut code = ab_trust::PairCode::decode(&raw)?;
+                    code.remote = true;
+                    let bytes = serde_json::to_vec(&code)?;
+                    println!("ab1-{}", data_encoding::BASE32_NOPAD.encode(&bytes));
+                    return Ok(true);
                 }
                 println!(
                     "{}",
