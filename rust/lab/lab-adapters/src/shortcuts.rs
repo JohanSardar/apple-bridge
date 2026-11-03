@@ -368,7 +368,9 @@ fn run_checks(checks: &Path, args: &[&str], evidence: &mut Evidence) -> Option<V
         .ok()
         .filter(|o| o.status.success())
         .and_then(|o| serde_json::from_slice::<Value>(&o.stdout).ok());
-    evidence.check("checks_binary", parsed.is_some(), "ab-shortcuts-checks ran");
+    if parsed.is_none() {
+        evidence.check("checks_binary", false, "ab-shortcuts-checks failed");
+    }
     parsed
 }
 
