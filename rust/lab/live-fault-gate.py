@@ -58,15 +58,17 @@ def main():
     args = parser.parse_args()
     destination = Path(args.output).resolve()
     destination.mkdir(mode=0o700, parents=True, exist_ok=False)
+    if len(str(destination)) > 48:
+        raise SystemExit('output path too long for unix sockets: ' + str(destination))
     root = Path(__file__).resolve().parent / 'scenarios'
     verdicts = {}
-    for fault, (scenario, assertion) in GATES.items():
+    for number, (fault, (scenario, assertion)) in enumerate(GATES.items()):
         path = root / (scenario + '.yaml')
         code, records = run_rust(args.runner, path, args.healthy_gateway, args.simapple,
-                                 destination / ('healthy-' + fault), '')
+                                 destination / ('h' + str(number)), '')
         healthy = healthy_ok(code, records, assertion)
         code, records = run_rust(args.runner, path, args.mutant_gateway, args.simapple,
-                                 destination / ('mutant-' + fault), fault)
+                                 destination / ('m' + str(number)), fault)
         verdicts[fault] = {'scenario': scenario, 'assertion': assertion, 'rust_healthy_passes': healthy,
                            'rust_mutant_detected': detected(code, records, assertion)}
     go = {}
