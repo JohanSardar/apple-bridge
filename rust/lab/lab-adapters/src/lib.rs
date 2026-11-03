@@ -75,10 +75,13 @@ pub mod usage;
 pub mod vision;
 pub mod watch;
 pub mod web_agent_activity;
+pub mod web_agent_cimd;
 pub mod web_agent_levels;
+pub mod web_agent_oauth;
 pub mod web_agents;
 pub mod web_relay;
 pub mod web_relay_agents;
+pub mod web_rem_write;
 pub mod web_reminders;
 pub mod webauthn;
 use lab_runner::Registry;
@@ -237,6 +240,7 @@ pub fn registry() -> Registry {
     native_runner::register(&mut registry);
     registry.register("helper_ipc", helper_ipc::cases);
     helper_real::register(&mut registry);
+    web_rem_write::register(&mut registry);
     registry.register("SIRI-INTENTS", siri::intents);
     registry.register("connector_approval", connectors::connector_approval);
     registry.register_real("RELAY-REAL", remote_real::relay_real);
@@ -293,6 +297,12 @@ fn register_pim(registry: &mut Registry) {
     });
     registry.register("fixture", |_, _, _| Ok(()));
     registry.register("by_id", by_id);
+}
+
+pub fn prepare(scenario: &mut lab_runner::Scenario) {
+    shortcuts::inject(scenario);
+    connectors::inject(scenario);
+    calendar::inject(scenario);
 }
 
 #[must_use]
