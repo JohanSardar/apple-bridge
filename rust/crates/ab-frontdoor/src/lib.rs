@@ -291,7 +291,12 @@ async fn changes(
         .get("after")
         .filter(|s| !s.is_empty())
         .map(String::as_str)
-        .or_else(|| headers.get("last-event-id").and_then(|h| h.to_str().ok()));
+        .or_else(|| {
+            headers
+                .get("last-event-id")
+                .and_then(|h| h.to_str().ok())
+                .filter(|id| !id.is_empty())
+        });
     let cursor = match after.map_or_else(|| frontdoor.service.store.head(), parse_event_id) {
         Ok(c) => c,
         Err(e) => return problem(e),
@@ -350,6 +355,10 @@ async fn changes(
                 }
             }
         },
+    );
+    let stream = futures_util::StreamExt::chain(
+        futures_util::stream::once(async { Ok(Event::default().comment("connected")) }),
+        stream,
     );
     Sse::new(stream)
         .keep_alive(
