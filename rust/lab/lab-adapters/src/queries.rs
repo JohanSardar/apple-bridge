@@ -1,4 +1,7 @@
-use crate::http::{Client, random_id};
+use crate::{
+    http::{Client, random_id},
+    vision,
+};
 use lab_runner::Evidence;
 use lab_world::{Error, Result, World};
 use serde_json::{Value, json};
@@ -265,6 +268,7 @@ pub fn queries(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<
         "CORE-QUERY-BLOB" => blob(world, evidence),
         "CORE-QUERY-SCOPE" => scope(world, evidence),
         "CORE-QUERY-DEADLINE" => deadline(world, evidence),
+        other if vision::owns(other) => vision::run(world, evidence),
         other => Err(Error::Invalid(format!(
             "queries variant not ported: {other}"
         ))),

@@ -41,9 +41,19 @@ with tempfile.TemporaryDirectory(prefix='ab-gf-cli-') as root:
     assert home.stat().st_mode & 0o777==0o700
     assert backup.stat().st_mode & 0o777==0o600
     checks.append('home and backup retain private modes')
-    assert json.loads(run('remote','on','--via','both','--home',str(home)))=={'relay':True,'system':True}
-    run('remote','off','--via','relay','--home',str(home))
-    assert json.loads(run('remote','status','--home',str(home)))=={'relay':False,'system':True}
+    def request(*args):
+        try:
+            subprocess.run([binary,'remote',*args,'--home',str(home)],env=env,capture_output=True,text=True,timeout=2)
+        except subprocess.TimeoutExpired:
+            pass
+    def selections():
+        return json.loads((home/'remote/ingresses.json').read_text())
+    request('on','--via','both')
+    assert selections()=={'relay':True,'system':True}
+    request('off','--via','relay')
+    assert selections()=={'relay':False,'system':True}
+    document=json.loads(run('remote','status','--home',str(home)))
+    assert [key for key in document if key!='message']==['id','state','backend','url','last_error','pending_link','tls_termination','certificate_expiry']
     run('remote','on','--via','invalid','--home',str(home),ok=False)
     checks.append('remote both/on/off/status and invalid backend')
     assert not json.loads((home/'remote/config.json').read_text())['backend']=='both'

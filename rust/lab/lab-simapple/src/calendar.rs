@@ -405,7 +405,7 @@ impl Session<'_> {
 
     fn calendar_conflict(&mut self, state: &Shared, frame: &Value, key: &str) -> Result<()> {
         let record = lock(state)?.data["records"][key].clone();
-        let mut rejected = json!({"t":"Rejected","command_id":frame["command_id"],"disposition":"rejected_before_dispatch","error":{"code":"conflict","message":"conflict"}});
+        let mut rejected = json!({"t":"Rejected","command_id":frame["command_id"],"disposition":"rejected_before_dispatch","error":{"code":"conflict","message":"conflict","retryable":false}});
         if !record.is_null() {
             let mut record = record;
             record["observed_at"] = json!(now());

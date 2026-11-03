@@ -288,6 +288,7 @@ dependencies = [
  "serde_json",
  "sha2 0.10.9",
  "subtle",
+ "tempfile",
  "thiserror 2.0.21",
  "tokio",
  "tokio-rustls",
@@ -318,6 +319,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.10.9",
+ "tempfile",
  "thiserror 2.0.21",
 ]
 
@@ -393,6 +395,7 @@ dependencies = [
  "serde_cbor_2",
  "serde_json",
  "sha2 0.10.9",
+ "tempfile",
  "thiserror 2.0.21",
  "time",
  "tokio",
@@ -2442,21 +2445,38 @@ dependencies = [
  "hex",
  "hmac 0.12.1",
  "jiff",
+ "lab-demo",
  "lab-relay",
  "lab-runner",
  "lab-wire",
  "lab-world",
  "miniz_oxide",
+ "p256",
  "rcgen",
  "rusqlite",
  "rustls",
  "serde-saphyr",
  "serde_json",
  "sha2 0.10.9",
+ "socket2",
  "x25519-dalek",
  "zune-core",
  "zune-jpeg",
  "zune-png",
+]
+
+[[package]]
+name = "lab-demo"
+version = "0.0.0"
+dependencies = [
+ "base64 0.22.1",
+ "crc32fast",
+ "gif",
+ "hex",
+ "jiff",
+ "miniz_oxide",
+ "serde_json",
+ "sha2 0.10.9",
 ]
 
 [[package]]

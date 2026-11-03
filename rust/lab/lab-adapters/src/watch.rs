@@ -306,6 +306,14 @@ impl Watcher {
             .collect()
     }
     #[must_use]
+    pub fn changes(&self) -> Vec<Value> {
+        lock(&self.state)
+            .changes
+            .iter()
+            .map(|(change, _)| change.clone())
+            .collect()
+    }
+    #[must_use]
     pub fn first_seen_title(&self, collection: &str, title: &str) -> Option<Instant> {
         lock(&self.state)
             .changes

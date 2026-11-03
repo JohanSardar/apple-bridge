@@ -60,10 +60,12 @@ impl Evidence {
 }
 pub type Handler = fn(&mut World, &Value, &mut Evidence) -> Result<()>;
 pub type RealHandler = fn(&mut World, &mut Evidence) -> Result<()>;
+pub type StandaloneHandler = fn(&mut Evidence) -> Result<()>;
 #[derive(Debug, Default)]
 pub struct Registry {
     handlers: BTreeMap<String, Handler>,
     real: BTreeMap<String, RealHandler>,
+    standalone: BTreeMap<String, StandaloneHandler>,
 }
 #[must_use]
 pub fn supports_level(scenario: &Scenario, level: &str) -> bool {
@@ -79,9 +81,12 @@ impl Registry {
     pub fn register_real(&mut self, id: &str, handler: RealHandler) {
         self.real.insert(id.into(), handler);
     }
+    pub fn register_standalone(&mut self, id: &str, handler: StandaloneHandler) {
+        self.standalone.insert(id.into(), handler);
+    }
     #[must_use]
     pub fn has_real(&self, id: &str) -> bool {
-        self.real.contains_key(id)
+        self.real.contains_key(id) || self.standalone.contains_key(id)
     }
     fn real_blocked(&self, scenario: &Scenario) -> Option<Evidence> {
         let mut evidence = Evidence {
@@ -102,12 +107,21 @@ impl Registry {
         if let Some(blocked) = self.real_blocked(scenario) {
             return Ok(blocked);
         }
-        let mut world = World::start_real(config)?;
         let mut evidence = Evidence {
             scenario: scenario.id.clone(),
             passed: true,
             assertions: vec![],
         };
+        if let Some(handler) = self.standalone.get(&scenario.id) {
+            if let Err(error) = handler(&mut evidence) {
+                evidence.check("action", false, &error.to_string());
+            }
+            if evidence.assertions.is_empty() {
+                evidence.check("assertions_present", false, "scenario made no assertions");
+            }
+            return Ok(evidence);
+        }
+        let mut world = World::start_real(config)?;
         if let Some(handler) = self.real.get(&scenario.id)
             && let Err(error) = handler(&mut world, &mut evidence)
         {

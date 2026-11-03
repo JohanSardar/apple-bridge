@@ -5,7 +5,13 @@ use lab_world::{Error, Result, World};
 use serde_json::{Map, Value, json};
 use std::time::Instant;
 
-pub const SCENARIOS: [&str; 2] = ["WEB-RM-MEDIA-COLLECTION", "WEB-RM-SEARCH"];
+pub const SCENARIOS: [&str; 5] = [
+    "WEB-RM-MEDIA-COLLECTION",
+    "WEB-RM-SEARCH",
+    "WEB-RM-THREAD-ORIGINATOR",
+    "WEB-RM-THREAD-ORIGINATOR-PERF",
+    "WEB-RM-REMINDERS-DEMO",
+];
 pub const PROTOCOLS: [&str; 2] = ["rest", "mcp"];
 
 #[must_use]
@@ -245,7 +251,14 @@ pub fn readmodels(world: &mut World, _: &Value, evidence: &mut Evidence) -> Resu
     match evidence.scenario.as_str() {
         "WEB-RM-MEDIA-COLLECTION" => media_collection(world, evidence),
         "WEB-RM-SEARCH" => crate::search::search(world, evidence),
+        "MSG-DECODE-BALLOON" | "MSG-DECODE-FORMATTING" => {
+            crate::messages_a::decode::run(world, evidence)
+        }
         "WEB-CON-LIST" => crate::contacts_list::readmodels(world, evidence),
+        "WEB-RM-THREAD-ORIGINATOR" | "WEB-RM-THREAD-ORIGINATOR-PERF" => {
+            crate::threads::originator(world, evidence)
+        }
+        "WEB-RM-REMINDERS-DEMO" => crate::reminders_demo::reminders_demo(world, evidence),
         other => Err(Error::Invalid(format!("readmodels not ported for {other}"))),
     }
 }

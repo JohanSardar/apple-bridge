@@ -1,4 +1,6 @@
-use crate::{Error, Gateway, Ingress, IngressFuture, Result, localapi::LocalApi, state, stopped};
+use crate::{
+    Error, Gateway, Ingress, IngressFuture, Progress, Result, localapi::LocalApi, state, stopped,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::{collections::BTreeMap, path::PathBuf};
@@ -105,6 +107,71 @@ impl Tailscale {
         }
         response.error_for_status()?;
         Ok(true)
+    }
+    async fn await_ready(
+        &self,
+        gateway: &Gateway,
+        stop: &mut watch::Receiver<bool>,
+    ) -> Result<bool> {
+        let interval = std::time::Duration::from_millis(
+            std::env::var("APPLE_BRIDGE_REMOTE_RECHECK_MS")
+                .ok()
+                .and_then(|value| value.parse().ok())
+                .filter(|millis| *millis > 0)
+                .unwrap_or(5000),
+        );
+        loop {
+            let status: Value = self
+                .api
+                .request(reqwest::Method::GET, "status?peers=false", None, None)
+                .await
+                .map_err(|_| Error::Contract("Tailscale approval check failed"))?
+                .error_for_status()?
+                .json()
+                .await?;
+            let capabilities = &status["Self"]["CapMap"];
+            let progress = if status["BackendState"] != "Running" {
+                Some(Progress {
+                    state: "login_pending",
+                    message: "Waiting for Tailscale login".into(),
+                    pending_link: "login pending".into(),
+                    last_error: String::new(),
+                    link: status["AuthURL"].as_str().unwrap_or_default().into(),
+                })
+            } else if capabilities.get("https").is_none() || capabilities.get("funnel").is_none() {
+                let feature: Value = match self
+                    .api
+                    .request(
+                        reqwest::Method::GET,
+                        "query-feature?feature=funnel",
+                        None,
+                        None,
+                    )
+                    .await
+                {
+                    Ok(response) => response.json().await.unwrap_or(Value::Null),
+                    Err(_) => Value::Null,
+                };
+                Some(Progress {
+                    state: "funnel_pending",
+                    message: "Waiting for Funnel approval".into(),
+                    pending_link: "Funnel approval pending".into(),
+                    last_error: String::new(),
+                    link: feature["URL"].as_str().unwrap_or_default().into(),
+                })
+            } else {
+                None
+            };
+            let Some(progress) = progress else {
+                gateway.clear_progress("system");
+                return Ok(true);
+            };
+            gateway.progress("system", progress);
+            tokio::select! {
+                () = stopped(stop) => return Ok(false),
+                () = tokio::time::sleep(interval) => {}
+            }
+        }
     }
     pub async fn add(&self, target: &str) -> Result<Lease> {
         self.add_mode(target, false).await
@@ -280,6 +347,9 @@ impl Tailscale {
 impl Ingress for Tailscale {
     fn run(&self, gateway: Gateway, mut stop: watch::Receiver<bool>) -> IngressFuture<'_> {
         Box::pin(async move {
+            if !self.await_ready(&gateway, &mut stop).await? {
+                return Ok(());
+            }
             self.remove().await?;
             let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await?;
             let path = format!("/ab-proxy/{}", state::token());

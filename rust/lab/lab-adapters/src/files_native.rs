@@ -20,7 +20,7 @@ fn newest(path: &Path) -> Option<SystemTime> {
     Some(latest)
 }
 
-fn native_output() -> Option<PathBuf> {
+pub(crate) fn native_output() -> Option<PathBuf> {
     env::var("AB_LAB_NATIVE_OUTPUT")
         .ok()
         .or_else(|| {
@@ -31,7 +31,7 @@ fn native_output() -> Option<PathBuf> {
         .map(PathBuf::from)
 }
 
-fn checks(evidence: &mut Evidence, args: &[&str]) -> bool {
+pub(crate) fn checks(evidence: &mut Evidence, args: &[&str]) -> bool {
     let binary = native_output().map(|d| d.join("FilesChecks"));
     let fresh = binary.as_ref().is_some_and(|binary| {
         fs::metadata(binary)
