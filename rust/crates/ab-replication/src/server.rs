@@ -344,12 +344,15 @@ impl<S: GatewayState> Server<S> {
             .lock()
             .await
             .changes(&visibility, journal, atomic)?;
+        let mut window = crate::window::Window::new(limit);
+        let mut pending: Option<(String, Option<Cursor>)> = None;
         let mut poll = tokio::time::interval(Duration::from_millis(20));
         let mut heartbeat = tokio::time::interval(Duration::from_secs(5));
         heartbeat.tick().await;
         loop {
             tokio::select! {
                 _ = poll.tick() => {
+                    if pending.is_none() {
                     let next = self.state.lock().await.next_changes(&mut iterator);
                     match next {
                         Ok(Some(mut batch)) => {
@@ -357,7 +360,9 @@ impl<S: GatewayState> Server<S> {
                             let expected = Cursor { sequence: batch.through, ..cursor.clone() };
                             let partial = batch.partial;
                             let mut f = frame("Batch"); f.batch = Some(batch);
-                            transmit(self, context, socket, f, if partial { None } else { Some(&expected) }, limit).await?;
+                            let bytes = f.encode()?;
+                            if bytes.len() > limit { return Err(Error::Contract(ab_trust::domain::ErrorCode::Capacity)); }
+                            pending = Some((String::from_utf8(bytes).map_err(|_| Error::Invalid)?, if partial { None } else { Some(expected) }));
                         },
                         Ok(None) => {},
                         Err(Error::Contract(ab_trust::domain::ErrorCode::Reset)) => {
@@ -367,12 +372,19 @@ impl<S: GatewayState> Server<S> {
                         },
                         Err(e) => return Err(e),
                     }
+                    }
+                    if let Some((bytes, expected)) = &pending
+                        && window.reserve(bytes.len(), expected.clone()) {
+                        let (bytes, _) = pending.take().ok_or(Error::Invalid)?;
+                        socket.send(Message::Text(bytes.into())).await?;
+                    }
                 },
+                () = tokio::time::sleep_until(window.deadline()), if window.pending() => return Err(Error::Disconnected),
                 _ = heartbeat.tick() => {
                     let mut f = frame("Heartbeat"); f.head = self.state.lock().await.head()?.sequence;
                     socket.send(Message::Text(String::from_utf8(f.encode()?).map_err(|_| Error::Invalid)?.into())).await?;
                 },
-                message = socket.next() => { let message = message.ok_or(Error::Disconnected)??; let Some(f) = self.upstream(socket, context, message).await? else { continue; }; if f.t == "BlobWant" { self.blob(socket, p, f).await?; } else if f.t != "Heartbeat" { return Err(Error::Invalid); } },
+                message = socket.next() => { let message = message.ok_or(Error::Disconnected)??; let Some(f) = self.upstream(socket, context, message).await? else { continue; }; if f.t == "BlobWant" { self.blob(socket, p, f).await?; } else if f.t == "Ack" { window.acknowledge(&f)?; } else if f.t != "Heartbeat" { return Err(Error::Invalid); } },
             }
         }
     }

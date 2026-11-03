@@ -7,6 +7,7 @@ mod listener;
 pub mod server;
 mod state;
 pub mod upstream;
+mod window;
 use ab_blobs::{Digest, Reference, Store as BlobStore};
 use ab_trust::wire::{
     framing::BlobChunk,
