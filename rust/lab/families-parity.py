@@ -87,6 +87,7 @@ VISION_SCENARIOS = ['vision/AUD-SIM', 'vision/PDF-ANNOTATE', 'vision/PDF-TEXT', 
 VISION_NATIVE_SCENARIOS = ['vision/CAP-SIM']
 WEB_AGENT_SCENARIOS = ['web/WEB-AGENT-CREDENTIALS', 'web/WEB-AGENT-LEVELS', 'web/WEB-AGENT-ACTIVITY',
                       'web/WEB-AGENT-OAUTH', 'web/WEB-AGENT-OAUTH-CIMD']
+WEB_RM_LATENCY_SCENARIOS = ['web/WEB-RM-CHATS', 'web/WEB-RM-THREAD']
 SCENARIOS = ['CORE-QUERY-ROUNDTRIP', 'CORE-QUERY-BLOB', 'CORE-QUERY-SCOPE', 'CORE-QUERY-DEADLINE',
              *JOURNEY_SCENARIOS, *CORE_SCENARIOS, *CONTACTS_SCENARIOS, *NOTES_SCENARIOS]
 FRONTDOOR_SCENARIOS = ['CORE-REST-MCP-PARITY', 'CORE-LOCALHOST-DEFENSE']
@@ -133,6 +134,7 @@ def main():
     parser.add_argument('--messages-b-native', dest='messages_b_native', action='store_true')
     parser.add_argument('--web-rm', dest='web_rm', action='store_true')
     parser.add_argument('--web-relay', dest='web_relay', action='store_true')
+    parser.add_argument('--web-rm-latency', dest='web_rm_latency', action='store_true')
     parser.add_argument('--native', dest='native', action='store_true')
     parser.add_argument('--iphone', dest='iphone', action='store_true')
     parser.add_argument('--maps', dest='maps', action='store_true')
@@ -178,6 +180,8 @@ def main():
         args.scenario = (args.scenario or []) + WEB_RELAY_SCENARIOS
     if args.web_rm:
         args.scenario = (args.scenario or []) + WEB_RM_SCENARIOS
+    if args.web_rm_latency:
+        args.scenario = (args.scenario or []) + WEB_RM_LATENCY_SCENARIOS
     if args.native:
         args.scenario = (args.scenario or []) + NATIVE_SCENARIOS
     if args.iphone:

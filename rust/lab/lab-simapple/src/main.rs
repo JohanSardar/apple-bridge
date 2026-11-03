@@ -188,6 +188,8 @@ fn enqueue_request(
     exact: bool,
 ) -> Result<()> {
     let (done, rx) = mpsc::channel();
+    let observations = frame["observations"].as_array().map_or(0, Vec::len);
+    let seconds = 110 + u64::try_from(observations / 200).unwrap_or_default();
     tx.send(Request {
         frame,
         done: if wait { Some(done) } else { None },
@@ -196,7 +198,7 @@ fn enqueue_request(
     })
     .map_err(|_| invalid("session stopped"))?;
     if wait {
-        rx.recv_timeout(Duration::from_secs(110))
+        rx.recv_timeout(Duration::from_secs(seconds))
             .map_err(|_| invalid("capture not committed"))?;
     }
     Ok(())

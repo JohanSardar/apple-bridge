@@ -257,25 +257,28 @@ impl Client {
     ) -> Result<Option<(u16, Value)>> {
         let body = mcp_body(operation, input)?;
         let reply = self.request("POST", "/mcp", &MCP_HEADERS, Some(&body), seconds)?;
-        let text = String::from_utf8(reply.body.clone())
-            .map_err(|_| Error::Invalid("non UTF-8 MCP body".into()))?;
-        let envelope = if let Ok(value) = serde_json::from_str::<Value>(&text) {
-            value
-        } else {
-            let messages = lab_wire::sse_messages(&text)
-                .map_err(|e| Error::Invalid(format!("MCP stream: {e}")))?;
-            let message = messages
-                .iter()
-                .find(|m| m.result.is_some() || m.error.is_some())
-                .ok_or_else(|| Error::Invalid("MCP stream without response".into()))?;
-            serde_json::to_value(message)?
-        };
-        let content = envelope["result"]["structuredContent"].clone();
-        if content.is_null() {
-            return Ok(None);
-        }
-        Ok(Some((reply.status, content)))
+        mcp_structured(reply.status, &reply.body)
     }
+}
+pub(crate) fn mcp_structured(status: u16, body: &[u8]) -> Result<Option<(u16, Value)>> {
+    let text = String::from_utf8(body.to_vec())
+        .map_err(|_| Error::Invalid("non UTF-8 MCP body".into()))?;
+    let envelope = if let Ok(value) = serde_json::from_str::<Value>(&text) {
+        value
+    } else {
+        let messages = lab_wire::sse_messages(&text)
+            .map_err(|e| Error::Invalid(format!("MCP stream: {e}")))?;
+        let message = messages
+            .iter()
+            .find(|m| m.result.is_some() || m.error.is_some())
+            .ok_or_else(|| Error::Invalid("MCP stream without response".into()))?;
+        serde_json::to_value(message)?
+    };
+    let content = envelope["result"]["structuredContent"].clone();
+    if content.is_null() {
+        return Ok(None);
+    }
+    Ok(Some((status, content)))
 }
 pub(crate) const MCP_HEADERS: [(&str, &str); 3] = [
     ("Content-Type", "application/json"),
@@ -290,6 +293,6 @@ pub(crate) fn mcp_body(operation: &str, input: &Value) -> Result<Vec<u8>> {
         "params": {"name": operation.replace('.', "_"), "arguments": input}
     }))?)
 }
-fn accepted(status: u16, value: Value) -> Option<Value> {
+pub(crate) fn accepted(status: u16, value: Value) -> Option<Value> {
     (value["error"].is_null() && status == 200).then_some(value)
 }

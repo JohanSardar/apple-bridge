@@ -76,6 +76,16 @@ pub(crate) fn initialize(db: &Connection) -> Result<()> {
         set_meta(db, "readmodels_version", "3")?;
         set_meta(db, "chat_participants_version", "1")?;
     }
+    let participants = db
+        .query_row(
+            "SELECT value FROM meta WHERE key='chat_participants_version'",
+            [],
+            |record| record.get::<_, String>(0),
+        )
+        .ok();
+    if participants.as_deref() != Some("1") {
+        rebuild_participants(db)?;
+    }
     let fts = db
         .query_row(
             "SELECT value FROM meta WHERE key='fts_version'",
@@ -176,37 +186,61 @@ pub(crate) fn visit_blobs(
     }
     Ok(())
 }
+fn handle_address(db: &Connection, record: &Record, fields: &Value) -> Result<()> {
+    let id = record.id.as_str();
+    db.execute("DELETE FROM handle_address WHERE id=?", [id])?;
+    let address = normalize(s(fields, "address"));
+    if !record.deleted && !address.is_empty() {
+        db.execute(
+            "INSERT INTO handle_address VALUES(?,?)",
+            params![id, address],
+        )?;
+    }
+    Ok(())
+}
+fn chat_participants(db: &Connection, record: &Record, fields: &Value) -> Result<()> {
+    let id = record.id.as_str();
+    db.execute("DELETE FROM chat_participant WHERE chat_id=?", [id])?;
+    if !record.deleted
+        && let Some(ps) = fields["participants"].as_array()
+    {
+        for p in ps {
+            if let Some(p) = p.as_str()
+                && !p.is_empty()
+            {
+                db.execute(
+                    "INSERT OR IGNORE INTO chat_participant VALUES(?,?)",
+                    params![id, p],
+                )?;
+            }
+        }
+    }
+    Ok(())
+}
+fn rebuild_participants(db: &Connection) -> Result<()> {
+    db.execute_batch("DELETE FROM handle_address; DELETE FROM chat_participant;")?;
+    for record in records(
+        db,
+        "SELECT payload FROM records WHERE collection IN ('messages.handle','messages.chat') ORDER BY collection,id",
+        &[],
+    )? {
+        let fields: Value = serde_json::from_str(record.data.get())?;
+        if collection(record.collection) == "messages.handle" {
+            handle_address(db, &record, &fields)?;
+        } else {
+            chat_participants(db, &record, &fields)?;
+        }
+    }
+    set_meta(db, "chat_participants_version", "1")
+}
 fn model(db: &Connection, record: &Record, seq: u64) -> Result<()> {
     let fields: Value = serde_json::from_str(record.data.get())?;
     let id = record.id.as_str();
     let payload = encoded(record)?;
     match collection(record.collection) {
-        "messages.handle" => {
-            db.execute("DELETE FROM handle_address WHERE id=?", [id])?;
-            let address = normalize(s(&fields, "address"));
-            if !record.deleted && !address.is_empty() {
-                db.execute(
-                    "INSERT INTO handle_address VALUES(?,?)",
-                    params![id, address],
-                )?;
-            }
-        }
+        "messages.handle" => handle_address(db, record, &fields)?,
         "messages.chat" => {
-            db.execute("DELETE FROM chat_participant WHERE chat_id=?", [id])?;
-            if !record.deleted
-                && let Some(ps) = fields["participants"].as_array()
-            {
-                for p in ps {
-                    if let Some(p) = p.as_str()
-                        && !p.is_empty()
-                    {
-                        db.execute(
-                            "INSERT OR IGNORE INTO chat_participant VALUES(?,?)",
-                            params![id, p],
-                        )?;
-                    }
-                }
-            }
+            chat_participants(db, record, &fields)?;
             db.execute("INSERT OR IGNORE INTO chat_summary(id) VALUES(?)", [id])?;
         }
         "messages.message" => {

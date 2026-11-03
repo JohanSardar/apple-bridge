@@ -326,3 +326,14 @@ The Rust SimApple peer handles `shortcuts.run` (`lab-simapple/src/shortcuts.rs`)
 Stable additions: the peer control route `/capture-exact` sends a Capture frame unchanged (explicit generation, predecessor, checkpoint, aliases) and waits for its Committed; `lab-world` gains `World::blackhole` (silently drops proxied bytes until `heal`) and `World::delay_both` (delays both proxied directions); `lab-runner` runs a registered `scenario:<id>` step for YAML files with no steps and a registered `finish:<id>` step before cleanup. The `robustness` cases `doctor`, `clock-delay` and `cred-lifecycle` join the shared robustness tail; `cred-lifecycle` has no sim level, so it is compiled only.
 
 Not ported in this slice: CORE-BENCH (the peer messages seed lacks the `needle` fixture), CORE-DISK-FULL (`hdiutil` capped volume, Darwin only), CORE-GAP-REJECT and CORE-FEED-PIPELINED-ACKS (frame-level TLS/WebSocket proxy), CORE-FORGED-DELEGATION, CORE-GATEWAY-DIALS and CORE-CLOCK-DELAY-GATEWAY-DIALS (mTLS dial worlds).
+## Web read-model latency adapters (Phase 8)
+
+`rm_core.rs`, `rm_chats.rs` and `rm_thread.rs` port WEB-RM-CHATS and WEB-RM-THREAD to the same `readmodels` step: 1000-message seed, alias-resolved truth, REST and MCP summaries and ordering, restricted-token visibility, live reaction, read, edit and sticker capture, previews, rich filters, pin preview, contact names and handles, exact participant lookup, a replica added after the data for snapshot comparison, and two store migrations (read models and participant index) that stop the gateway, drop the tables and triggers in `state.db` with rusqlite, and restart it. WEB-RM-THREAD adds concurrent paging with a writer thread and the 170000-message seed. Assertion names match the Go harness.
+
+Latency is measured with `fastclient.rs`, a keep-alive HTTP/1.1 client that parses the REST and MCP replies in-process. The per-request `curl` of `http.rs` would add process-spawn time to a 10 ms and 15 ms p95 budget. `Evidence` detail carries p50, p95, max and time on the wire.
+
+Product fix found by the port: `ab-state` rebuilt the participant index (`handle_address`, `chat_participant`) only together with the read models, so a store whose `chat_participants_version` was missing came back with an empty index. `initialize` now rebuilds it on its own, as the Go store does.
+
+SimApple's capture wait now scales with the frame size (110 s plus one second per 200 observations) so the 170000-message seed is not cut off.
+
+Gate: `python3 rust/lab/families-parity.py ... --web-rm-latency`. Run it with release builds of the gateway, `lab-simapple` and `lab-families` on a quiet host; the p95 budgets assume it.
