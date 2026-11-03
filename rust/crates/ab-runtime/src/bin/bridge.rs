@@ -258,13 +258,12 @@ async fn remote(args: &Arguments, home: &std::path::Path) -> Result<(), Error> {
         print!("{}", ab_remote::state::snippets(home)?);
         return Ok(());
     }
-    if args.flags.contains_key("domain") {
-        if via != "relay" || args.flag("domain", "").is_empty() {
-            return Err(Error::Invalid);
-        }
-        return Err(Error::Io(std::io::Error::other(
-            "custom relay domains are not supported by the Rust relay yet",
-        )));
+    let domain = args.flag("domain", "");
+    if args.flags.contains_key("domain") && (via != "relay" || domain.is_empty()) {
+        return Err(Error::Invalid);
+    }
+    if args.action == "on" && via == "relay" {
+        ab_remote::state::set_domain(home, &domain)?;
     }
     if args.action != "status" && args.flags.contains_key("name") {
         ab_remote::state::annotate(home, &args.flag("name", ""))?;
