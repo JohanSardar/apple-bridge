@@ -39,6 +39,9 @@ RELAY_SCENARIOS = ['RELAY-ENROLL', 'RELAY-PASSTHROUGH', 'RELAY-LIMITS', 'RELAY-R
                    'RELAY-CT-INDEPENDENT', 'RELAY-CAA-ACCOUNT']
 REMINDER_SCENARIOS = ['REM-CONFLICT', 'REM-EXTERNAL-RACE', 'REM-NATIVE-LIST-RACE', 'REM-OPERATION-SHAPES',
                       'REM-READONLY-LIST']
+REMINDER_NATIVE_SCENARIOS = ['core/REM-CRUD', 'reminders/REM-CRUD', 'reminders/REM-CREATE-EXTERNAL',
+                             'reminders/REM-LIST-MANAGE', 'reminders/REM-LIST-CREATE', 'reminders/REM-RECURRING',
+                             'reminders/REM-PERMISSION-LOSS']
 MAC_SCENARIOS = ['mac/MAC-ACTIONS', 'mac/MAC-COMMANDS', 'mac/MAC-CAPTURE', 'mac/MAC-IDLE',
                  'mac/MAC-EXTRAS-SIM', 'mac/IWORK-REAL']
 WEB_SCENARIOS = ['web/WEB-CON-LIST', 'web/WEB-MEDIA-CAP']
@@ -76,7 +79,10 @@ def verdicts(path):
     for line in path.read_text().splitlines():
         if line.startswith('{'):
             row = json.loads(line)
-            rows[row['scenario']] = {a['name']: (a['passed'], a.get('status', ''))
+            key = row['scenario']
+            while key in rows:
+                key += '#'
+            rows[key] = {a['name']: (a['passed'], a.get('status', ''))
                                      for a in row['assertions']
                                      if not ignored(row['scenario'], a['name'])}
     return rows
@@ -135,7 +141,7 @@ def main():
     if args.relay:
         args.scenario = (args.scenario or []) + RELAY_SCENARIOS
     if args.reminders:
-        args.scenario = (args.scenario or []) + REMINDER_SCENARIOS
+        args.scenario = (args.scenario or []) + REMINDER_SCENARIOS + REMINDER_NATIVE_SCENARIOS
     if args.mac:
         args.scenario = (args.scenario or []) + MAC_SCENARIOS
     if args.web:
