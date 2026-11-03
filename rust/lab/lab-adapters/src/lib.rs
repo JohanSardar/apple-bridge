@@ -3,6 +3,7 @@ pub mod blobs;
 pub mod cleanup;
 pub mod commands;
 pub mod files_native;
+pub mod frontdoor;
 pub mod history;
 pub mod http;
 pub mod imports;

@@ -66,6 +66,17 @@ impl Client {
         body: Option<&[u8]>,
         seconds: u64,
     ) -> Result<Reply> {
+        self.request_with(true, method, path, headers, body, seconds)
+    }
+    pub fn request_with(
+        &self,
+        authorized: bool,
+        method: &str,
+        path: &str,
+        headers: &[(&str, &str)],
+        body: Option<&[u8]>,
+        seconds: u64,
+    ) -> Result<Reply> {
         let mut command = Command::new("curl");
         command
             .args([
@@ -74,8 +85,12 @@ impl Client {
                 "--max-time",
                 &seconds.to_string(),
             ])
-            .args(["-X", method, "-H"])
-            .arg(format!("Authorization: Bearer {}", self.token));
+            .args(["-X", method]);
+        if authorized {
+            command
+                .arg("-H")
+                .arg(format!("Authorization: Bearer {}", self.token));
+        }
         for (name, value) in headers {
             command.args(["-H", &format!("{name}: {value}")]);
         }
@@ -207,12 +222,12 @@ impl Client {
         Ok(Some((reply.status, content)))
     }
 }
-const MCP_HEADERS: [(&str, &str); 3] = [
+pub(crate) const MCP_HEADERS: [(&str, &str); 3] = [
     ("Content-Type", "application/json"),
     ("Accept", "application/json, text/event-stream"),
     ("MCP-Protocol-Version", "2025-06-18"),
 ];
-fn mcp_body(operation: &str, input: &Value) -> Result<Vec<u8>> {
+pub(crate) fn mcp_body(operation: &str, input: &Value) -> Result<Vec<u8>> {
     Ok(serde_json::to_vec(&json!({
         "jsonrpc": "2.0",
         "id": 1,

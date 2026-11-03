@@ -32,12 +32,14 @@ MAC_SCENARIOS = ['mac/MAC-ACTIONS', 'mac/MAC-COMMANDS', 'mac/MAC-CAPTURE', 'mac/
                  'mac/MAC-EXTRAS-SIM', 'mac/IWORK-REAL']
 SCENARIOS = ['CORE-QUERY-ROUNDTRIP', 'CORE-QUERY-BLOB', 'CORE-QUERY-SCOPE', 'CORE-QUERY-DEADLINE',
              *JOURNEY_SCENARIOS, *CORE_SCENARIOS]
+FRONTDOOR_SCENARIOS = ['CORE-REST-MCP-PARITY', 'CORE-LOCALHOST-DEFENSE']
+SCENARIOS += FRONTDOOR_SCENARIOS
 
 
 def ignored(scenario, name):
     if name in HARNESS_ONLY or name == 'world_started':
         return True
-    return scenario in JOURNEY_SCENARIOS and name in JOURNEY_RUST_ONLY
+    return scenario in JOURNEY_SCENARIOS + FRONTDOOR_SCENARIOS and name in JOURNEY_RUST_ONLY
 
 
 def verdicts(path):
