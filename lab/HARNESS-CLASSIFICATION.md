@@ -392,3 +392,9 @@ A lab-owned JSON digest-reference decoder replaces `contracts.BlobReferences` in
 ## G-E capture identity continuation
 
 The existing CORE-CAPTURE-ALIASES oracle moved from the performance fixture into `capture_aliases.go`. Its capture payloads now cross the selected gateway's Helper IPC and its reads use REST; no Go State/Visibility constructor implements the journey. The lab-only `/capture-exact` simulator route preserves explicit generation, predecessor, checkpoint, alias and forward-reference inputs without its normal simulator augmentation. Credit and Committed acknowledgments still gate completion. The existing identity/generation/version/reference predicate is unchanged and passes against both Go and Rust gateways. In-process search/readmodel performance fixtures remain separate, unqualified paths.
+
+## G-E Messages SIM boundary continuation
+
+Messages SIM command/read bodies are separate functions/files from their native dispatch guards, with their existing assertion bodies retained. Shared upload/command wire helpers moved byte-for-byte out of files importing native Authority setup. SIM inventory follows these explicit entries while still checking wrapper imports, direct semantic calls and transitive helper calls; seeded wrapper import and transitive product-call probes both block qualification. Native/real paths retain their original blockers and are not qualified by this mapping.
+
+The capability descriptor check now obtains the selected lab binary's actual operation scope and input schema over `lab-operation-catalog`; its scope equality/nonempty-schema predicate is preserved. The Go proof passes before Rust execution. Consent and snapshot-pool callback roots now identify their actual binary fixtures rather than unrelated web dispatcher branches. The private legacy WebSocket bodies fail the unchanged Go implementation as well and remain unqualified; no assertions were removed to make them pass.

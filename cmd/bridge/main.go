@@ -26,10 +26,14 @@ import (
 )
 
 var credentialProbe func(context.Context, []string) error
+var operationCatalogProbe func(context.Context, []string) error
 
 func run(ctx context.Context, args []string) error {
 	if len(args) == 0 {
 		return contracts.ErrInvalid
+	}
+	if args[0] == "lab-operation-catalog" && operationCatalogProbe != nil {
+		return operationCatalogProbe(ctx, args[1:])
 	}
 	if args[0] == "lab-credential-lifecycle" && credentialProbe != nil {
 		return credentialProbe(ctx, args[1:])
