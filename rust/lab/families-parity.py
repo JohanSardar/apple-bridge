@@ -19,7 +19,8 @@ IMPORT_SCENARIOS = ['messages/MSG-HISTORY-IMPORT', 'contacts/CON-IMPORT', 'notes
 SHORTCUT_SCENARIOS = ['shortcuts/FILES-TRANSFORM', 'shortcuts/SC-ACTIONS', 'shortcuts/SC-CAPTURE', 'shortcuts/SC-RUN-REAL',
                       'shortcuts/CLK-SIM', 'shortcuts/CLK-ALARM-REAL', 'shortcuts/CLK-TIMER-REAL']
 MEDIA_SCENARIOS = ['web/WEB-MEDIA-VARIANTS', 'messages/MSG-MEDIA-CLEANUP']
-WEB_RM_SCENARIOS = ['web/WEB-RM-MEDIA-COLLECTION', 'web/WEB-RM-SEARCH']
+WEB_RM_SCENARIOS = ['web/WEB-RM-MEDIA-COLLECTION', 'web/WEB-RM-SEARCH', 'web/WEB-RM-THREAD-ORIGINATOR',
+                    'web/WEB-RM-THREAD-ORIGINATOR-PERF', 'web/WEB-RM-REMINDERS-DEMO']
 NATIVE_SCENARIOS = ['packaging/Q1-SETUP', 'packaging/R1-RELEASE-SIM', 'files/FILE-IDLE', 'files/FILE-CAPTURE',
                     'safari/SAF-CAPTURE', 'safari/SAF-IDLE']
 MESSAGES_A_SCENARIOS = ['messages/MSG-DB-REPLACED', 'messages/MSG-PERMISSION-LOSS', 'messages/MSG-INCOMING',
