@@ -3,9 +3,10 @@ pub use proxy::FaultProxy;
 use serde_json::Value;
 use std::{
     fs,
+    io::Write,
     os::unix::fs::PermissionsExt,
     path::{Path, PathBuf},
-    process::{Child, Command},
+    process::{Child, Command, Stdio},
     thread,
     time::{Duration, Instant},
 };
@@ -299,29 +300,37 @@ impl World {
         output(command)
     }
     pub fn control(&self, route: &str, input: &Value) -> Result<Value> {
+        self.control_for(route, input, 25)
+    }
+    pub fn control_for(&self, route: &str, input: &Value, seconds: u64) -> Result<Value> {
         let mut command = Command::new("curl");
         command
-            .args([
-                "--silent",
-                "--show-error",
-                "--fail",
-                "--max-time",
-                "25",
-                "--unix-socket",
-            ])
+            .args(["--silent", "--show-error", "--fail", "--max-time"])
+            .arg(seconds.to_string())
+            .arg("--unix-socket")
             .arg(self.directory.join("sim.sock"));
         if !input.is_null() {
             command.args([
                 "-H",
                 "Content-Type: application/json",
                 "--data-binary",
-                &serde_json::to_string(input)?,
+                "@-",
             ]);
         }
         command.arg(format!("http://sim{route}"));
-        Ok(serde_json::from_str(&output(command).map_err(|e| {
-            Error::Invalid(format!("control {route}: {e}"))
-        })?)?)
+        let fail = |e: String| Error::Invalid(format!("control {route}: {e}"));
+        command.stdin(Stdio::piped()).stdout(Stdio::piped());
+        let mut child = command.spawn()?;
+        if let Some(mut stdin) = child.stdin.take()
+            && !input.is_null()
+        {
+            stdin.write_all(&serde_json::to_vec(input)?)?;
+        }
+        let result = child.wait_with_output()?;
+        if !result.status.success() {
+            return Err(fail(format!("command exited {}", result.status)));
+        }
+        Ok(serde_json::from_slice(&result.stdout)?)
     }
     pub fn query(&self, operation: &str, input: &Value) -> Result<Value> {
         self.query_with_token(operation, input, &self.token)
