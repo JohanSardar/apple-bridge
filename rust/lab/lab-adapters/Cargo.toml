@@ -27,6 +27,7 @@ zune-core = "0.5"
 rusqlite.workspace = true
 aes-gcm = "0.10"
 base64 = "0.22"
+data-encoding = "2"
 ed25519-dalek.workspace = true
 x25519-dalek = { workspace = true, features = ["static_secrets"] }
 hmac = "0.12"

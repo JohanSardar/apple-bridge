@@ -148,8 +148,8 @@ impl State {
         self.progress["committed"][src].as_u64().unwrap_or_default()
     }
     fn record_commit(&mut self, src: &str, revision: u64, full: bool) {
-        let done = self.completed.entry(src.to_owned()).or_default();
         let mut committed = self.committed(src);
+        let done = self.completed.entry(src.to_owned()).or_default();
         if full {
             committed = committed.max(revision);
         } else if revision > committed {
