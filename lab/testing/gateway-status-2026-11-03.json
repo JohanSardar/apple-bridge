@@ -1,0 +1,400 @@
+{
+  "date": "2026-11-03",
+  "qualification": "incomplete",
+  "host": "build",
+  "harness_commit": "281d04e61d0342c1efc21cbc4483557c2916cac2",
+  "rust_source_commit": "69e150c7eb695804256d7b1bb3eff68721bef3ef",
+  "rust_features": [
+    "lab-queries"
+  ],
+  "rust_binary_sha256": "8ba702d35d1bd70baacb9f7c12ddad2378dde4ab081649ae82cd8a35c4c2ec3f",
+  "go_control": {
+    "count": 201,
+    "passed": 201,
+    "wall_seconds": 204.479
+  },
+  "rust_matrix": {
+    "count": 201,
+    "complete": true,
+    "wall_seconds": 293.98,
+    "counts": {
+      "blocked": 18,
+      "pass": 165,
+      "fail": 18
+    },
+    "nonpassing": [
+      {
+        "id": "APP-APPROVE-SIM",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper IPhoneCompletionEvidence",
+          "harness: semantic product helper ValidateIPhoneCommand",
+          "harness: lab/scenarios/iphone_command.go still imports product implementations: iphone, operations, relay, state, trust"
+        ]
+      },
+      {
+        "id": "APP-CMD-SIM",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper IPhoneCompletionEvidence",
+          "harness: semantic product helper ValidateIPhoneCommand",
+          "harness: lab/scenarios/iphone_command.go still imports product implementations: iphone, operations, relay, state, trust"
+        ]
+      },
+      {
+        "id": "APP-LIVE-SIM",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/iphone_live.go still imports product implementations: iphone, operations, relay, state, trust"
+        ]
+      },
+      {
+        "id": "AUTH-SCOPES-METADATA",
+        "status": "fail",
+        "failed_assertions": [
+          "registered_grants_labdummy",
+          "all_registered_grants_/.well-known/oauth-protected-resource",
+          "all_registered_grants_/.well-known/oauth-protected-resource/mcp",
+          "all_registered_grants_/.well-known/oauth-authorization-server"
+        ]
+      },
+      {
+        "id": "CAL-WINDOW-SLIDE",
+        "status": "fail",
+        "failed_assertions": [
+          "window_eviction_is_not_deletion",
+          "replica_application_exactly_once"
+        ]
+      },
+      {
+        "id": "CONN-CHATGPT",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/connector_approval.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "CONN-CLAUDE-AI",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/connector_approval.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "CONSENT-CONNECTOR",
+        "status": "fail",
+        "failed_assertions": [
+          "oauth_discovery_challenge_/mcp",
+          "oauth_discovery_challenge_/v1/op/messages.chats"
+        ]
+      },
+      {
+        "id": "CORE-BLOB-CORRUPT",
+        "status": "fail",
+        "failed_assertions": [
+          "corruption_detected_and_refetched"
+        ]
+      },
+      {
+        "id": "CORE-BLOB-GATEWAY-RETRY",
+        "status": "fail",
+        "failed_assertions": [
+          "retry_budget_and_deadline_survive_gateway_restart",
+          "bounded_retries_surface_terminal_reason"
+        ]
+      },
+      {
+        "id": "CORE-BLOB-GC",
+        "status": "fail",
+        "failed_assertions": [
+          "legacy_reference_index_backfilled"
+        ]
+      },
+      {
+        "id": "CORE-BLOB-INTERRUPT",
+        "status": "fail",
+        "failed_assertions": [
+          "interrupted_halfway_through_binary_chunk"
+        ]
+      },
+      {
+        "id": "CORE-GATEWAY-DIALS",
+        "status": "fail",
+        "failed_assertions": [
+          "feed_command_rest",
+          "original_id_retry_one_effect_rest",
+          "feed_status_rest",
+          "feed_command_mcp",
+          "original_id_retry_one_effect_mcp",
+          "feed_status_mcp",
+          "replica_application_exactly_once",
+          "gateway_reports_revoked",
+          "revoked_gateway_stops_redial"
+        ]
+      },
+      {
+        "id": "CORE-REPLICA-CAPTURE-LEGACY",
+        "status": "fail",
+        "failed_assertions": [
+          "legacy/backlog_converges"
+        ]
+      },
+      {
+        "id": "CORE-RESTORE-OLD-SCHEMA",
+        "status": "fail",
+        "failed_assertions": [
+          "upgrade_before_command_admission"
+        ]
+      },
+      {
+        "id": "CORE-SOURCE-GRANTS",
+        "status": "fail",
+        "failed_assertions": [
+          "dummy_grants_/.well-known/oauth-protected-resource",
+          "dummy_grants_/.well-known/oauth-protected-resource/mcp",
+          "dummy_grants_/.well-known/oauth-authorization-server",
+          "consent_dummy_group",
+          "dummy_record_captured",
+          "dummy_visibility_messages:read",
+          "dummy_visibility_labdummy:read",
+          "dummy_visibility_labdummy:write",
+          "source_status_dummy_grants",
+          "cli_grant_labdummy:read",
+          "cli_grant_labdummy:write"
+        ]
+      },
+      {
+        "id": "LAB-SSE",
+        "status": "fail",
+        "failed_assertions": [
+          "sse_idle_heartbeats_0",
+          "replica_application_exactly_once"
+        ]
+      },
+      {
+        "id": "MAC-COMMANDS",
+        "status": "fail",
+        "failed_assertions": [
+          "clipboard_command_redacted",
+          "clipboard_absent_from_durable_files"
+        ]
+      },
+      {
+        "id": "PDF-ANNOTATE",
+        "status": "fail",
+        "failed_assertions": [
+          "annotation_observed"
+        ]
+      },
+      {
+        "id": "RELAY-ENROLL",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: remote",
+          "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
+          "harness: lab/scenarios/remote_checks.go still imports product implementations: remote"
+        ]
+      },
+      {
+        "id": "RELAY-LIMITS",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: remote",
+          "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
+          "harness: lab/scenarios/remote_checks.go still imports product implementations: remote"
+        ]
+      },
+      {
+        "id": "RELAY-PASSTHROUGH",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: remote",
+          "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
+          "harness: lab/scenarios/remote_checks.go still imports product implementations: remote"
+        ]
+      },
+      {
+        "id": "RELAY-ROTATE-GATED",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: remote",
+          "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
+          "harness: lab/scenarios/relay_tls_splice.go still imports product implementations: replication, state, trust",
+          "harness: lab/scenarios/remote_checks.go still imports product implementations: remote"
+        ]
+      },
+      {
+        "id": "RELAY-TLS-SPLICE",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: remote",
+          "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
+          "harness: lab/scenarios/relay_tls_splice.go still imports product implementations: replication, state, trust",
+          "harness: lab/scenarios/remote_checks.go still imports product implementations: remote"
+        ]
+      },
+      {
+        "id": "RMT-ONECOMMAND-FLOW",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/remote.go still imports product implementations: remote",
+          "harness: lab/scenarios/remote_checks.go still imports product implementations: remote",
+          "harness: lab/scenarios/remote_flow.go still imports product implementations: remote",
+          "harness: lab/scenarios/remote_private_real.go still imports product implementations: remote"
+        ]
+      },
+      {
+        "id": "RMT-PRIVATE-CONNECT",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/remote_flow.go still imports product implementations: remote",
+          "harness: lab/scenarios/remote_private.go still imports product implementations: frontdoor, remote, trust",
+          "harness: lab/scenarios/remote_private_real.go still imports product implementations: remote"
+        ]
+      },
+      {
+        "id": "SC-RUN-REAL",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper Descriptor",
+          "harness: semantic product helper ValidateCommand",
+          "harness: lab/scenarios/shortcuts_runner.go still imports product implementations: shortcut",
+          "harness: lab/scenarios/siri_intents.go still imports product implementations: shortcut"
+        ]
+      },
+      {
+        "id": "SEC-REMOTE-ACCESS",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/connector_approval.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
+          "harness: lab/scenarios/security_failures.go still imports product implementations: frontdoor, remote",
+          "harness: lab/scenarios/security_oauth.go still imports product implementations: trust",
+          "harness: lab/scenarios/security_owner.go still imports product implementations: trust",
+          "harness: lab/scenarios/security_relay.go still imports product implementations: relay",
+          "harness: lab/scenarios/security_remote.go still imports product implementations: remote, trust, web",
+          "harness: lab/scenarios/web_auth_isolation.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_command_resolve.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_hosts.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_rate_limits_fixture.go still imports product implementations: trust, web",
+          "harness: lab/scenarios/web_sources.go still imports product implementations: trust",
+          "harness: lab/scenarios/web_sources_errors.go still imports product implementations: operations, state, trust, web"
+        ]
+      },
+      {
+        "id": "WEB-AGENT-ACTIVITY",
+        "status": "fail",
+        "failed_assertions": [
+          "activity_reads_aggregate_per_minute",
+          "activity_each_command_individually",
+          "activity_operation_filter",
+          "activity_survives_restart",
+          "capture_rejection_degraded_and_counted",
+          "capture_rejection_logged",
+          "capture_rejection_count_retained_after_reconnect"
+        ]
+      },
+      {
+        "id": "WEB-AGENT-CREDENTIALS",
+        "status": "fail",
+        "failed_assertions": [
+          "list_is_redacted",
+          "list_is_redacted",
+          "list_is_redacted"
+        ]
+      },
+      {
+        "id": "WEB-AGENT-LEVELS",
+        "status": "fail",
+        "failed_assertions": [
+          "pending_changed_id_conflicts",
+          "replica_agent_queues_gateway_approval_without_effect",
+          "replica_delegation_logged_on_gateway",
+          "each_level_command_logged_individually"
+        ]
+      },
+      {
+        "id": "WEB-AGENT-OAUTH",
+        "status": "fail",
+        "failed_assertions": [
+          "oauth_discovery_challenge_/mcp",
+          "oauth_discovery_challenge_/v1/op/messages.chats"
+        ]
+      },
+      {
+        "id": "WEB-AGENT-OAUTH-CIMD",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/agent_oauth_cimd.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "WEB-RELAY-AGENTS",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: semantic product helper CommandHash",
+          "harness: lab/scenarios/relay_agent_approvals.go still imports product implementations: trust",
+          "harness: lab/scenarios/relay_agent_delegation.go still imports product implementations: trust",
+          "harness: lab/scenarios/relay_agent_parent.go still imports product implementations: trust",
+          "harness: lab/scenarios/relay_agents.go still imports product implementations: trust, web"
+        ]
+      },
+      {
+        "id": "WEB-RELAY-AUTH",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/relay_auth.go still imports product implementations: replication, trust",
+          "harness: lab/scenarios/relay_auth_capture.go still imports product implementations: trust"
+        ]
+      },
+      {
+        "id": "WEB-RELAY-PAIRING",
+        "status": "blocked",
+        "blocked_on": [
+          "harness: lab/scenarios/relay_auth_capture.go still imports product implementations: trust",
+          "harness: lab/scenarios/relay_pairing.go still imports product implementations: replication, trust"
+        ]
+      }
+    ]
+  },
+  "shadow": {
+    "go_go_admission_replay_equal": true,
+    "seeded_mismatch_count": 14,
+    "tap_bytes_each_direction": [
+      524340,
+      524340
+    ],
+    "byte_identical": true,
+    "isolation_proof_passed": true,
+    "cross_replay_blocker": "admission 16: not_found before Prepare",
+    "capture_prefix": {
+      "records": [
+        16,
+        16
+      ],
+      "journal_rows": [
+        18,
+        21
+      ],
+      "commit_boundaries": [
+        17,
+        20
+      ],
+      "alias_mapping_equal": true,
+      "ledger_equal": true,
+      "source_data_mismatches": [
+        "contacts",
+        "messages",
+        "shortcuts"
+      ],
+      "source_versions": [
+        1,
+        2
+      ],
+      "parsed_source_data_equal": true,
+      "raw_source_data_equal": false
+    },
+    "live_recording_run": false,
+    "real_level_run": false
+  }
+}
