@@ -1,3 +1,5 @@
 id: FILE-IDLE
 feature: files.capture
 levels: [sim, real]
+when:
+  - files_native: {}
