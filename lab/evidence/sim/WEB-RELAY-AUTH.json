@@ -1,18 +1,22 @@
 {
-  "impl": "go",
-  "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[4.54 4.49 3.91] cpu_idle=76% cpus=8 other_heavy=0"
+  "implementations": {
+    "gateway": "rust",
+    "replica": "go"
   },
-  "run_id": "relay_01M6EYAPHRP8FB6AWSXT8FYAZ8",
+  "impl": "mixed",
+  "host_conditions": {
+    "quiet": false,
+    "summary": "ubuntu: load=[104.46 66.24 30.47] cpu_idle=0% cpus=22 other_heavy=0"
+  },
+  "run_id": "relay_01M6H41J82K4F73YZC91XZATGF",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "WEB-RELAY-AUTH",
   "level": "sim",
   "passed": true,
-  "git_sha": "590faa40f8445f912b0d01f38738001e9a725af9",
-  "at": "2026-11-02T20:13:36.184037Z",
+  "git_sha": "0bf8ac55de22b5e19d8547a055f7aa23accc24be",
+  "at": "2026-11-03T16:31:57.186386437Z",
   "assertions": [
     {
       "name": "paired_world",
@@ -126,13 +130,16 @@
   "latency": {
     "relay_revocation": {
       "samples": 1,
-      "p50_ms": 102.16725,
-      "p95_ms": 102.16725,
-      "max_ms": 102.16725,
+      "p50_ms": 100.717367,
+      "p95_ms": 100.717367,
+      "max_ms": 100.717367,
       "timeouts": 0
     }
   },
   "hosts": [
-    "air"
-  ]
+    "ubuntu"
+  ],
+  "conditions": {
+    "simapple_impl": "go"
+  }
 }
