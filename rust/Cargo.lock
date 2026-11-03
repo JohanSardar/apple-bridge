@@ -111,6 +111,8 @@ dependencies = [
  "ab-domain",
  "ab-wire",
  "flate2",
+ "jiff",
+ "rusqlite",
  "serde",
  "serde_json",
  "sha2 0.10.9",

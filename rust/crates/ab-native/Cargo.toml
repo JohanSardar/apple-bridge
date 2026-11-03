@@ -15,3 +15,5 @@ serde_json = { workspace = true, features = ["float_roundtrip"] }
 sha2.workspace = true
 thiserror.workspace = true
 flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+rusqlite.workspace = true
+jiff.workspace = true

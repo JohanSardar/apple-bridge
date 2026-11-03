@@ -16,7 +16,7 @@ allowed = {
     "proc-macro2", "quote", "syn", "unicode-ident", "itoa", "memchr", "zmij", "ryu",
     "digest", "crypto-common", "block-buffer", "generic-array", "typenum", "version_check",
     "cfg-if", "cpufeatures", "portable-atomic", "portable-atomic-util", "log",
-    "rusqlite", "libsqlite3-sys", "cc", "find-msvc-tools", "shlex", "pkg-config", "vcpkg",
+    "sqlite-wasm-rs", "rsqlite-vfs", "rusqlite", "libsqlite3-sys", "cc", "find-msvc-tools", "shlex", "pkg-config", "vcpkg",
     "bitflags", "fallible-iterator", "fallible-streaming-iterator", "hashlink", "hashbrown",
     "foldhash", "smallvec", "flate2", "miniz_oxide", "adler2", "crc32fast", "simd-adler32",
     "plist", "base64", "indexmap", "equivalent", "quick-xml", "time", "time-core", "time-macros",
