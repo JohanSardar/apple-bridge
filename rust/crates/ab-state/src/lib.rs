@@ -1,8 +1,8 @@
 #![forbid(unsafe_code)]
 mod models;
-mod query;
 mod notes;
 mod projection;
+mod query;
 mod reminders;
 mod scope;
 mod specialized;
