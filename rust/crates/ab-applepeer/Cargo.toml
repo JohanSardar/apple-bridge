@@ -1,0 +1,20 @@
+[package]
+name = "ab-applepeer"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+[lints]
+workspace = true
+[dependencies]
+ab-wire = { path = "../ab-wire" }
+ab-operations = { path = "../ab-operations" }
+serde_json.workspace = true
+base64 = "0.22"
+tokio.workspace = true
+thiserror.workspace = true
+rand = "0.8"
+hex = "0.4"
+subtle = "2"
+nix = { version = "0.30", features = ["user"] }
+[features]
+lab-harness = []

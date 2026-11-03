@@ -1,5 +1,12 @@
 #![forbid(unsafe_code)]
 mod adapters;
+mod gateway_store;
+mod local_query;
+pub use gateway_store::GatewayStore;
+pub use local_query::LocalQueryStore;
+pub mod local;
+pub mod peer;
+pub use ab_trust::domain;
 mod legacy;
 use ab_catalog::{OperationKind, operations};
 pub use adapters::{StateReads, TrustIdentity};
@@ -12,6 +19,7 @@ pub type Visibility = BTreeMap<String, bool>;
 #[serde(rename_all = "snake_case")]
 pub enum Code {
     Invalid,
+    IdReused,
     Unauthorized,
     Forbidden,
     Unavailable,
@@ -47,6 +55,7 @@ pub struct Problem<'a> {
 impl From<Code> for Error {
     fn from(code: Code) -> Self {
         let message = match code {
+            Code::IdReused => "command ID already identifies another request",
             Code::Invalid => "invalid input",
             Code::Unauthorized => "credential or scope rejected",
             Code::Forbidden => "query grant rejected",
@@ -103,6 +112,14 @@ impl Principal {
     }
 }
 pub trait Identity: Debug + Send + Sync {
+    fn approval_principal(
+        &self,
+        _id: &str,
+        _command_id: &str,
+        _hash: &str,
+    ) -> Result<Principal, Error> {
+        Err(Code::Unavailable.into())
+    }
     fn iphones(&self) -> Result<Box<RawValue>, Error> {
         Err(Code::Unavailable.into())
     }

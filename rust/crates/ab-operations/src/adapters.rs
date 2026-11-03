@@ -18,7 +18,7 @@ fn state_error(error: &ab_state::Error) -> Error {
 fn raw<T: Serialize>(value: &T) -> Result<Box<RawValue>, Error> {
     serde_json::value::to_raw_value(value).map_err(|_| Code::Corrupt.into())
 }
-fn visibility(input: &Visibility) -> ab_state::Visibility {
+pub(crate) fn visibility(input: &Visibility) -> ab_state::Visibility {
     let mut result: ab_state::Visibility = input.iter().map(|(s, v)| (s.clone(), *v)).collect();
     if input.get("admin") == Some(&true) {
         for source in [
@@ -306,6 +306,21 @@ fn trust_error(error: &ab_trust::Error) -> Error {
     }
 }
 impl Identity for TrustIdentity {
+    fn approval_principal(
+        &self,
+        id: &str,
+        _command_id: &str,
+        _hash: &str,
+    ) -> Result<Principal, Error> {
+        if id.contains('/') {
+            return Err(Code::Unavailable.into());
+        }
+        let current = self.0.principal(id).map_err(|error| trust_error(&error))?;
+        if current.kind != "agent" {
+            return Err(Code::Unauthorized.into());
+        }
+        Ok(principal(current))
+    }
     fn iphones(&self) -> Result<Box<RawValue>, Error> {
         let credentials = self.0.load().map_err(|e| trust_error(&e))?;
         raw(&credentials
