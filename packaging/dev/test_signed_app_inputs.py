@@ -5,8 +5,9 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from signed_app_inputs import cache_directory
+from signed_app_inputs import cache_directory, source_key
 
 
 class SignedAppCacheDirectoryTests(unittest.TestCase):
@@ -48,6 +49,38 @@ class SignedAppCacheDirectoryTests(unittest.TestCase):
 
     def test_explicit_cache_directory_takes_precedence(self):
         self.assertEqual(cache_directory(Path("/checkout"), {"AB_TICKET": "F7b", "APPLE_BRIDGE_SIGNED_APP_CACHE": "/configured"}), Path("/configured"))
+
+
+class AdHocSigningTests(unittest.TestCase):
+    def test_lab_cache_never_reads_the_signing_keychain(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.dict(os.environ, {"APPLE_BRIDGE_SIGNING_IDENTITY": "-", "APPLE_BRIDGE_NATIVE_LAB": "1"}):
+                with patch("signed_app_inputs.run", return_value="/fixture") as run:
+                    source_key(Path(directory))
+                    self.assertFalse(any(call.args[0] == "security" for call in run.call_args_list))
+
+    def test_ad_hoc_signing_is_lab_only_and_never_launches_a_gui_job(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            log = root / "commands"
+            for name in ["security", "launchctl"]:
+                command = root / name
+                command.write_text("#!/bin/sh\nexit 99\n")
+                command.chmod(0o700)
+            command = root / "codesign"
+            command.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >> "$SIGN_LOG"\n')
+            command.chmod(0o700)
+            environment = dict(os.environ, PATH=str(root) + os.pathsep + os.environ["PATH"], SIGN_LOG=str(log), APPLE_BRIDGE_SIGNING_IDENTITY="-", APPLE_BRIDGE_NATIVE_LAB="1")
+            script = Path(__file__).with_name("sign.sh")
+            result = subprocess.run(["/bin/bash", str(script), str(root / "Fixture.app")], env=environment, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(len(log.read_text().splitlines()), 2)
+            self.assertIn("--sign -", log.read_text())
+            log.unlink()
+            environment["APPLE_BRIDGE_NATIVE_LAB"] = "0"
+            result = subprocess.run(["/bin/bash", str(script), str(root / "Fixture.app")], env=environment, capture_output=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertFalse(log.exists())
 
 
 if __name__ == "__main__":

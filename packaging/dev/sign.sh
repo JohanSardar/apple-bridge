@@ -3,6 +3,12 @@ set -euo pipefail
 keychain="$HOME/Library/Keychains/apple-bridge-dev.keychain-db"
 root=$(cd "$(dirname "$0")/../.." && pwd)
 [[ $# -ge 1 && $# -le 2 ]] || exit 1
+if [[ ${APPLE_BRIDGE_SIGNING_IDENTITY:-} == - ]]; then
+    [[ ${APPLE_BRIDGE_NATIVE_LAB:-1} == 1 ]] || exit 1
+    codesign --force --sign - --options runtime --timestamp=none --entitlements "$root/packaging/dev/Helper.entitlements" "$1"
+    codesign --verify --strict "$1"
+    exit
+fi
 if [[ ${APPLE_BRIDGE_SIGNING_GUI:-} != 1 ]]; then
     exec python3 "$root/packaging/dev/sign-gui.py" "$@"
 fi

@@ -65,7 +65,11 @@ def source_key(root):
     for name in ["APPLE_BRIDGE_SWIFTC", "APPLE_BRIDGE_SDK", "SDKROOT", "DEVELOPER_DIR", "TOOLCHAINS", "APPLE_BRIDGE_SIGNING_GUI", "APPLE_BRIDGE_SIGNING_IDENTITY", "APPLE_BRIDGE_KEEP_SDKROOT", "APPLE_BRIDGE_NATIVE_TARGET", "SWIFT_EXEC", "CC", "CXX", "CFLAGS", "CXXFLAGS", "SWIFTFLAGS"]:
         toolchain[name] = os.environ.get(name, "")
     toolchain["native_lab_condition"] = lab
-    certificate = run("security", "find-certificate", "-c", "Apple Bridge Dev Signing", "-Z", str(Path.home() / "Library/Keychains/apple-bridge-dev.keychain-db"))
+    if os.environ.get("APPLE_BRIDGE_SIGNING_IDENTITY") == "-":
+        require(lab == "1", "ad-hoc signing requires a lab build")
+        certificate = "ad-hoc"
+    else:
+        certificate = run("security", "find-certificate", "-c", "Apple Bridge Dev Signing", "-Z", str(Path.home() / "Library/Keychains/apple-bridge-dev.keychain-db"))
     toolchain["signing_certificate"] = hashlib.sha256(certificate.encode()).hexdigest()
     digest.update(json.dumps(toolchain, sort_keys=True).encode())
     return digest.hexdigest()
