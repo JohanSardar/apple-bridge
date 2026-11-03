@@ -124,7 +124,7 @@ async fn serve(token: &'static str, config: Value, conflict_once: bool) -> (u16,
 async fn adds_and_removes_over_tcp_with_basic_auth() {
     let (port, state) = serve(
         "tok-123",
-        json!({"Web":{"other.ts.net:443":{"Handlers":{}}}}),
+        json!({"Web":{"other.ts.net:9999":{"Handlers":{}}}}),
         true,
     )
     .await;
@@ -147,7 +147,7 @@ async fn adds_and_removes_over_tcp_with_basic_auth() {
             mock.config["AllowFunnel"]["node.example.ts.net:443"],
             json!(true)
         );
-        assert!(mock.config["Web"]["other.ts.net:443"].is_object());
+        assert!(mock.config["Web"]["other.ts.net:9999"].is_object());
     }
     let stored: Value =
         serde_json::from_slice(&std::fs::read(home.path().join("remote/lease.json")).unwrap())
@@ -161,7 +161,7 @@ async fn adds_and_removes_over_tcp_with_basic_auth() {
     let mock = state.lock().unwrap();
     assert_eq!(mock.config.get("TCP"), None);
     assert_eq!(mock.config.get("AllowFunnel"), None);
-    assert!(mock.config["Web"]["other.ts.net:443"].is_object());
+    assert!(mock.config["Web"]["other.ts.net:9999"].is_object());
     assert!(mock.config["Web"].get("node.example.ts.net:443").is_none());
     assert!(!home.path().join("remote/lease.json").exists());
     assert!(
