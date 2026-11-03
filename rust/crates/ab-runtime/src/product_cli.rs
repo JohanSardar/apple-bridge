@@ -229,7 +229,11 @@ mod tests {
         let rendered = terminal_qr(url)?;
         assert!(rendered.ends_with('\n'));
         assert!(rendered.lines().count() > 10);
-        assert!(rendered.chars().any(|c| c == '\u{2588}' || c == '\u{2580}' || c == '\u{2584}'));
+        assert!(
+            rendered
+                .chars()
+                .any(|c| c == '\u{2588}' || c == '\u{2580}' || c == '\u{2584}')
+        );
         Ok(())
     }
 

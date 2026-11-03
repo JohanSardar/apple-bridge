@@ -179,8 +179,7 @@ pub fn backend_name(environment: &StoreEnvironment) -> &'static str {
     if environment.secret_store.as_deref() == Some("file") {
         "file_0600"
     } else if cfg!(target_os = "macos") {
-        if environment.bundle.is_some() || environment.secret_store.as_deref() == Some("keychain")
-        {
+        if environment.bundle.is_some() || environment.secret_store.as_deref() == Some("keychain") {
             "keychain"
         } else {
             "file_0600"
