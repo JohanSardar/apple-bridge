@@ -156,6 +156,12 @@ pub struct Principal {
     pub extra: BTreeMap<String, serde_json::Value>,
 }
 impl Principal {
+    pub fn relay2(&self) -> bool {
+        self.extra
+            .get("relay2")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(false)
+    }
     pub fn active(&self) -> bool {
         if self.extra.get("revoked_at").is_some_and(|v| !v.is_null()) {
             return false;

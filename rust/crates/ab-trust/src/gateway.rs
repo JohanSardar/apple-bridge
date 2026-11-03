@@ -225,6 +225,19 @@ impl Authority {
         })
     }
 
+    pub fn mark_relay2(&self, id: &str) -> Result<Principal, Error> {
+        self.update(|d| {
+            let p = d
+                .principals
+                .iter_mut()
+                .find(|p| p.id == id && p.kind == "replica")
+                .ok_or(Error::Unauthorized)?;
+            p.extra
+                .insert("relay2".into(), serde_json::Value::Bool(true));
+            Ok(p.clone())
+        })
+    }
+
     pub fn change_scope(&self, id: &str, grants: Vec<Grant>) -> Result<(), Error> {
         self.update(|d| {
             let p = d

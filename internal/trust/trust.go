@@ -62,6 +62,7 @@ type Principal struct {
 	IPhoneSigningKey    []byte            `json:"iphone_signing_key,omitempty"`
 	IPhoneEncryptionKey []byte            `json:"iphone_encryption_key,omitempty"`
 	Remote              bool              `json:"remote,omitempty"`
+	Relay2              bool              `json:"relay2,omitempty"`
 	Name                string            `json:"name,omitempty"`
 	Level               AgentLevel        `json:"level,omitempty"`
 	CreatedAt           time.Time         `json:"created_at,omitempty"`

@@ -62,6 +62,22 @@ func (a *Authority) ChangeScope(id string, grants []contracts.Grant) error {
 		return contracts.ErrNotFound
 	})
 }
+func (a *Authority) markRelay2(p Principal) (Principal, error) {
+	if p.Relay2 {
+		return p, nil
+	}
+	err := a.update(func(d *credentials) error {
+		for i, candidate := range d.Principals {
+			if candidate.ID == p.ID && candidate.Kind == "replica" {
+				d.Principals[i].Relay2 = true
+				return nil
+			}
+		}
+		return contracts.ErrNotFound
+	})
+	p.Relay2 = true
+	return p, err
+}
 func (a *Authority) WatchPrincipal(ctx context.Context, p Principal) (context.Context, context.CancelFunc) {
 	ctx, cancel := context.WithCancel(ctx)
 	go func() {

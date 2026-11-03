@@ -141,12 +141,156 @@ async fn write<T: AsyncRead + AsyncWrite + Unpin>(
         .await?;
     Ok(())
 }
+#[derive(Debug, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct LegacyFrame {
+    t: String,
+    #[serde(default)]
+    nonce: String,
+    #[serde(default)]
+    certificate: String,
+    #[serde(default)]
+    signature: String,
+    #[serde(default)]
+    pairing_id: String,
+    #[serde(default)]
+    proof: String,
+    #[serde(default)]
+    principal: Option<Box<serde_json::value::RawValue>>,
+}
+fn legacy_input(
+    role: &str,
+    hello: &LegacyFrame,
+    challenge: &LegacyFrame,
+    principal: Option<&serde_json::value::RawValue>,
+) -> Result<Vec<u8>, Error> {
+    let mut out = format!("apple-bridge-relay/1\0{role}\0").into_bytes();
+    for n in [&hello.nonce, &challenge.nonce] {
+        let n = STANDARD.decode(n).map_err(|_| Error::Invalid)?;
+        if n.len() != 32 {
+            return Err(Error::Invalid);
+        }
+        out.extend_from_slice(&n);
+    }
+    for bytes in [
+        STANDARD
+            .decode(&hello.certificate)
+            .map_err(|_| Error::Invalid)?,
+        STANDARD
+            .decode(&challenge.certificate)
+            .map_err(|_| Error::Invalid)?,
+        hello.pairing_id.as_bytes().to_vec(),
+        principal.map_or_else(Vec::new, |principal| principal.get().as_bytes().to_vec()),
+    ] {
+        out.extend_from_slice(&Sha256::digest(bytes));
+    }
+    Ok(out)
+}
+fn legacy_decode(text: &str, t: &str) -> Result<LegacyFrame, Error> {
+    let f: LegacyFrame = serde_json::from_str(text)?;
+    if f.t != t {
+        return Err(Error::Invalid);
+    }
+    Ok(f)
+}
+async fn next_text<T: AsyncRead + AsyncWrite + Unpin>(
+    ws: &mut WebSocketStream<T>,
+) -> Result<String, Error> {
+    let msg = ws.next().await.ok_or(Error::Disconnected)??;
+    let Message::Text(text) = msg else {
+        return Err(Error::Invalid);
+    };
+    if text.len() > 8192 {
+        return Err(Error::Invalid);
+    }
+    Ok(text.as_str().to_owned())
+}
+async fn legacy_server<T: AsyncRead + AsyncWrite + Unpin>(
+    authority: &Authority,
+    ws: &mut WebSocketStream<T>,
+    hello: LegacyFrame,
+) -> Result<Vec<u8>, Error> {
+    let der = STANDARD
+        .decode(&hello.certificate)
+        .map_err(|_| Error::Invalid)?;
+    let mut challenge = LegacyFrame {
+        t: "AuthChallenge".into(),
+        nonce: nonce(),
+        certificate: STANDARD.encode(&authority.certificate),
+        ..LegacyFrame::default()
+    };
+    challenge.signature = STANDARD.encode(
+        authority.sign_relay_transcript(&legacy_input("gateway", &hello, &challenge, None)?)?,
+    );
+    ws.send(Message::Text(serde_json::to_string(&challenge)?.into()))
+        .await?;
+    let proof = legacy_decode(&next_text(ws).await?, "AuthProof")?;
+    let (_, cert) = x509_parser::parse_x509_certificate(&der).map_err(|_| Error::Invalid)?;
+    if !cert.validity().is_valid() {
+        return Err(Error::Invalid);
+    }
+    let key = ed25519_dalek::VerifyingKey::from_bytes(
+        cert.public_key()
+            .subject_public_key
+            .data
+            .as_ref()
+            .try_into()
+            .map_err(|_| Error::Invalid)?,
+    )
+    .map_err(|_| Error::Invalid)?;
+    let sig = STANDARD
+        .decode(&proof.signature)
+        .map_err(|_| Error::Invalid)?;
+    key.verify(
+        &legacy_input("replica", &hello, &challenge, None)?,
+        &ed25519_dalek::Signature::from_slice(&sig).map_err(|_| Error::Invalid)?,
+    )
+    .map_err(|_| Error::Invalid)?;
+    let principal = if hello.pairing_id.is_empty() {
+        let principal = authority.authenticate_certificate(&der)?;
+        if principal.relay2() {
+            return Err(Error::Invalid);
+        }
+        principal
+    } else {
+        authority.accept_pair(
+            &hello.pairing_id,
+            &STANDARD.decode(proof.proof).map_err(|_| Error::Invalid)?,
+            &der,
+            false,
+        )?
+    };
+    let raw = serde_json::value::to_raw_value(&principal)?;
+    let mut accepted = LegacyFrame {
+        t: "Authenticated".into(),
+        ..LegacyFrame::default()
+    };
+    accepted.signature = STANDARD.encode(authority.sign_relay_transcript(&legacy_input(
+        "accepted",
+        &hello,
+        &challenge,
+        Some(&raw),
+    )?)?);
+    accepted.principal = Some(raw);
+    ws.send(Message::Text(serde_json::to_string(&accepted)?.into()))
+        .await?;
+    Ok(der)
+}
 pub async fn server<T: AsyncRead + AsyncWrite + Unpin>(
     authority: &Authority,
     ws: &mut WebSocketStream<T>,
-    binding: &[u8; 32],
+    binding: Option<&[u8; 32]>,
 ) -> Result<Vec<u8>, Error> {
-    let hello = read(ws, "AuthHello").await?;
+    let first = next_text(ws).await?;
+    let probe: serde_json::Value = serde_json::from_str(&first)?;
+    if probe.get("version").is_none() {
+        return legacy_server(authority, ws, legacy_decode(&first, "AuthHello")?).await;
+    }
+    let binding = binding.ok_or(Error::Invalid)?;
+    let hello: Frame = serde_json::from_str(&first)?;
+    if hello.t != "AuthHello" || hello.version != VERSION || hello.capabilities != CAPS {
+        return Err(Error::Invalid);
+    }
     let mut challenge = frame("AuthChallenge");
     challenge.nonce = nonce();
     challenge.certificate = STANDARD.encode(&authority.certificate);
@@ -175,6 +319,7 @@ pub async fn server<T: AsyncRead + AsyncWrite + Unpin>(
             false,
         )?
     };
+    let principal = authority.mark_relay2(&principal.id)?;
     let mut accepted = frame("Authenticated");
     let raw = serde_json::value::to_raw_value(&principal)?;
     accepted.signature = sign(

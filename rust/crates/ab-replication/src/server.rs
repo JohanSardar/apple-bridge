@@ -801,7 +801,6 @@ impl<S: GatewayState + 'static> Server<S> {
         let upgrade = hyper::upgrade::on(&mut request);
         let request = request.map(|_| ());
         let result = (|| {
-            let binding = binding.ok_or(Error::Invalid)?;
             if request.method() != hyper::Method::GET || request.headers().contains_key("origin") {
                 return Err(Error::Invalid);
             }
@@ -828,7 +827,7 @@ impl<S: GatewayState + 'static> Server<S> {
                 .await;
                 let auth = tokio::time::timeout(
                     Duration::from_secs(5),
-                    crate::relay::server(&self.authority, &mut ws, &binding),
+                    crate::relay::server(&self.authority, &mut ws, binding.as_ref()),
                 )
                 .await;
                 if let Ok(Ok(cert)) = auth {

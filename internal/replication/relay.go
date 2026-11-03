@@ -13,17 +13,13 @@ func (s *Server) RelayHandler() http.Handler {
 			http.Error(w, "unauthorized", 401)
 			return
 		}
-		binding, err := trust.RelayBinding(r.TLS)
-		if err != nil {
-			http.Error(w, "unauthorized", 401)
-			return
-		}
+		binding, _ := trust.RelayBinding(r.TLS)
 		conn, err := websocket.Accept(w, r, nil)
 		if err != nil {
 			return
 		}
 		defer conn.CloseNow()
-		principal, certificate, err := s.Authority.Relay2Server(r.Context(), conn, binding)
+		principal, certificate, err := s.Authority.RelayAccept(r.Context(), conn, binding)
 		if err != nil {
 			return
 		}

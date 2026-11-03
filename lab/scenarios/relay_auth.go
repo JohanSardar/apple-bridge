@@ -20,7 +20,7 @@ func runRelayAuth(ctx context.Context, s Scenario, level string) Evidence {
 	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
 	e := Evidence{GitSHA: strings.TrimSpace(string(sha)), RunID: contracts.NewID("relay"), Scenario: s.ID, Level: level, At: time.Now().UTC(), Latency: map[string]Latency{}, Hosts: []string{"air"}}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
-	w, err := world.New(ctx, "sim", 1, 2)
+	w, err := world.New(ctx, "sim", 2, 2)
 	add("paired_world", err == nil)
 	if err != nil {
 		return e
@@ -98,6 +98,15 @@ func runRelayAuth(ctx context.Context, s Scenario, level string) Evidence {
 		blocked.CloseNow()
 	}
 	add("revoked_device_key_rejected", err != nil)
+	relayStranger, err := trust.Open(filepath.Join(w.Dir, "unpaired-relay2"))
+	add("relay2_unpaired_device_identity", err == nil)
+	if err == nil {
+		bound, err := trust.Open(w.Replicas[1].Home)
+		add("relay2_replica_identity", err == nil)
+		if err == nil {
+			relay2Variant(ctx, fixture, authority, bound, relayStranger, add)
+		}
+	}
 	e.Passed = true
 	for _, assertion := range e.Assertions {
 		e.Passed = e.Passed && assertion.Passed

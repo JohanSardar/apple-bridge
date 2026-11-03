@@ -19,6 +19,9 @@ func (a *Authority) RelayServer(ctx context.Context, conn *websocket.Conn) (Prin
 	if err := relayRead(ctx, conn, &hello); err != nil {
 		return Principal{}, nil, err
 	}
+	return a.relayServerHello(ctx, conn, hello)
+}
+func (a *Authority) relayServerHello(ctx context.Context, conn *websocket.Conn, hello RelayFrame) (Principal, *x509.Certificate, error) {
 	cert, err := relayCertificate(hello)
 	if err != nil || hello.T != "AuthHello" {
 		return Principal{}, nil, contracts.ErrUnauthorized
@@ -45,6 +48,9 @@ func (a *Authority) RelayServer(ctx context.Context, conn *websocket.Conn) (Prin
 	var principal Principal
 	if hello.PairingID == "" {
 		principal, err = a.AuthenticateCertificate(cert)
+		if err == nil && principal.Relay2 {
+			return Principal{}, nil, contracts.ErrUnauthorized
+		}
 	} else {
 		principal, err = a.acceptPair(JoinRequest{ID: hello.PairingID, Proof: proof.Proof}, cert, false)
 	}
