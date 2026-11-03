@@ -1,0 +1,136 @@
+{
+  "date": "2026-11-03",
+  "platform": "Darwin arm64",
+  "level": "sim",
+  "artifact_source_head": "48fb4cb6471863852e899465b90d9af08490d30e",
+  "artifact_sha256": "ffdcefdf48c8b8dc49d896eaacf82b40f0754c587fa22521c3595477917554ce",
+  "implementation": "gateway=rust,replica=go",
+  "scenario_assertions_unchanged": true,
+  "scenarios": [
+    {
+      "scenario": "CAL-FUTURE-COUNT-MATH",
+      "go_before": "pass",
+      "go_after": "pass",
+      "rust_before": "blocked",
+      "rust_after": "pass",
+      "root_cause": "Rust selection rejected this isolated sim journey before executing its assertions",
+      "proof_kind": "isolated shared native fixture; does not exercise gateway implementation",
+      "assertions": [
+        "native_calendar_checks_build",
+        "native_checks_output_available",
+        "native_recurrence_bounds_and_postconditions",
+        "credential_backend_override_restored"
+      ]
+    },
+    {
+      "scenario": "CAL-HINT-COVERAGE",
+      "go_before": "pass",
+      "go_after": "pass",
+      "rust_before": "blocked",
+      "rust_after": "pass",
+      "root_cause": "Rust selection rejected this isolated sim journey before executing its assertions",
+      "proof_kind": "isolated shared native fixture; does not exercise gateway implementation",
+      "assertions": [
+        "native_calendar_checks_build",
+        "native_checks_output_available",
+        "native_hint_fixture_decoded",
+        "late_coalesced_hint_requires_followup",
+        "all_hints_before_scan_are_skipped",
+        "hint_at_scan_start_requires_followup",
+        "credential_backend_override_restored"
+      ]
+    },
+    {
+      "scenario": "CAL-INVALIDATED-EVENT",
+      "go_before": "pass",
+      "go_after": "pass",
+      "rust_before": "blocked",
+      "rust_after": "pass",
+      "root_cause": "Rust selection rejected this isolated sim journey before executing its assertions",
+      "proof_kind": "isolated shared native fixture; does not exercise gateway implementation",
+      "assertions": [
+        "native_calendar_checks_build",
+        "native_checks_output_available",
+        "invalidated_calendar_object_rebuilds_without_trap",
+        "credential_backend_override_restored"
+      ]
+    },
+    {
+      "scenario": "USE-ACTION-PROBE",
+      "go_before": "pass",
+      "go_after": "pass",
+      "rust_before": "blocked",
+      "rust_after": "pass",
+      "root_cause": "Rust selection rejected this isolated sim journey before executing its assertions",
+      "proof_kind": "Rust gateway with Go replica and independent Swift truth fixture",
+      "assertions": [
+        "mac_lock_clipped",
+        "replica_converged",
+        "daily_device_totals_physically_bounded",
+        "provenance_and_device_freshness",
+        "independent_truth_handles_retired_peers",
+        "credential_backend_override_restored"
+      ]
+    },
+    {
+      "scenario": "USE-SEGB-DECODE",
+      "go_before": "pass",
+      "go_after": "pass",
+      "rust_before": "blocked",
+      "rust_after": "pass",
+      "root_cause": "Rust selection rejected this isolated sim journey before executing its assertions",
+      "proof_kind": "isolated shared native fixture; does not exercise gateway implementation",
+      "assertions": [
+        "scrubbed_segb_and_day_math",
+        "credential_backend_override_restored"
+      ]
+    },
+    {
+      "scenario": "WEB-REM-PARITY",
+      "go_before": "pass",
+      "go_after": "pass",
+      "rust_before": "blocked",
+      "rust_after": "pass",
+      "root_cause": "Rust selection rejected this isolated sim journey before executing its assertions",
+      "proof_kind": "isolated shared native fixture; does not exercise gateway implementation",
+      "assertions": [
+        "native_sections_build",
+        "store_effects_and_invalidation",
+        "native_fixture_checks_build",
+        "native_fixture_checks_helper_available",
+        "owned_fixture_accessibility_regressions",
+        "credential_backend_override_restored"
+      ]
+    }
+  ],
+  "checks": {
+    "bridge_build": "pass: CARGO_TARGET_DIR=~/ab-targets/mac-cal cargo build --manifest-path rust/Cargo.toml -p ab-runtime --features lab-harness --bin bridge",
+    "lint": "pass: make lint",
+    "lab_tests": "pass: APPLE_BRIDGE_SECRET_STORE=file GOMAXPROCS=2 go test ./lab/scenarios ./lab/world",
+    "golden": "pass: go test ./contracts/golden ./internal/frontdoor ./internal/iphone ./internal/web ./lab/scenarios -run Golden -count=1",
+    "rust_format": "pass: cargo fmt --manifest-path rust/Cargo.toml --all -- --check",
+    "independence": "pass: cargo metadata --all-features --locked, rust/lab/check-independence.py, rust/lab/test-independence.py",
+    "native_graph": "pass: python3 rust/check-native-graph.py",
+    "rust_ci": "blocked: ssh build: Could not resolve hostname build: nodename nor servname provided, or not known; ssh ubuntu also does not resolve"
+  },
+  "cleanup": {
+    "cargo_target_deleted": true,
+    "temporary_bridge_deleted": true
+  },
+  "harness_base_head": "48fb4cb6471863852e899465b90d9af08490d30e",
+  "harness_source_blobs": {
+    "lab/scenarios/replica_qualification.go": "1086f8560fe69215e9f31bd33b9426fc10bfd593",
+    "lab/scenarios/telemetry.go": "b1b4afe853a5ff2a180ad208c2c2b15ece427371"
+  },
+  "verification_notes": [
+    "First post-change CAL-FUTURE-COUNT-MATH run timed out waiting for the globally shared native build lock. Final full Go and Rust suites passed with APPLE_BRIDGE_NATIVE_LOCK=/tmp/apple-bridge-native-mac-cal.lock.",
+    "After rebasing, a default-backend test run failed TestPrivateConnectReplicaUsesIsolatedHome during authority setup. The file backend resolved it. A subsequent unconstrained suite hit the two-second TestNotesTruthBuildDoesNotWaitForTheSharedHelperLane timeout. Both isolated tests and the final full suite passed with APPLE_BRIDGE_SECRET_STORE=file GOMAXPROCS=2.",
+    "The final Rust bridge was rebuilt from the recorded artifact source after rebasing, and all six scenarios passed again. Assigned Go and native fixture implementation files are unchanged between the recorded Go run and the final rebase.",
+    "The final rebase preserves newly merged Mail and Media admission routes. The same six IDs now enter through the native-sim predicate default and isolatedDarwinSimScenario; selection guards and scenario assertions are unchanged. Full lab tests and lint were rerun after this equivalent admission refactor. Runtime evidence retains the exact earlier harness blobs and Rust artifact source."
+  ],
+  "final_rebase_base_head": "4af9c5457db253645714fdc668c685991bc5ea75",
+  "final_rebase_source_blobs": {
+    "lab/scenarios/replica_qualification.go": "8de5eeb2f9ee8d3494b885d9ed740ba90898f6c6",
+    "lab/scenarios/telemetry.go": "38fa7cdeb029f36c59c108eac659b130720e6707"
+  }
+}

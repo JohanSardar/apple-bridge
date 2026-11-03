@@ -25,6 +25,15 @@ func nativeGatewaySimScenario(s Scenario) bool {
 	case "HELPER-IPC-RESPONSIVE", "VIS-OCR", "MAC-ACTIONS", "MAC-CAPTURE", "MAC-COMMANDS", "MAC-EXTRAS-SIM", "IWORK-REAL", "FILE-COMMANDS", "FILE-CRUD-REAL", "FILE-OFFLOAD-REAL", "USE-IMPORT", "USE-LOCK-CLIP", "USE-READONLY", "USE-REMOTE-LAG", "AUD-SIM", "LOC-SIM", "MAP-SIM", "PDF-TEXT", "PDF-ANNOTATE":
 		return true
 	default:
+		return isolatedDarwinSimScenario(s)
+	}
+}
+
+func isolatedDarwinSimScenario(s Scenario) bool {
+	switch s.ID {
+	case "CAL-FUTURE-COUNT-MATH", "CAL-HINT-COVERAGE", "CAL-INVALIDATED-EVENT", "WEB-REM-PARITY", "USE-ACTION-PROBE", "USE-SEGB-DECODE":
+		return true
+	default:
 		return false
 	}
 }
