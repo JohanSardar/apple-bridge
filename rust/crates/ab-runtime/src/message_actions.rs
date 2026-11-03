@@ -9,7 +9,7 @@ impl Actions {
         collection: &str,
         id: &str,
     ) -> Result<ab_trust::domain::Record, Error> {
-        let visibility = principal.visibility().into_iter().collect();
+        let visibility = ab_operations::state_visibility(&principal.visibility());
         self.state.with(|state| {
             state
                 .read(
