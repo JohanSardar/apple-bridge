@@ -28,3 +28,7 @@ The gateway CLI exposes `scope <replica-id> --scope <grants>` through Authority:
 ## CORE direct command envelope
 
 Direct submit requests may omit the query field, as in Go. Forward defaults the unused CommandQuery and continues through delegation verification before command admission. Forged grants still produce Unauthorized without a native effect.
+
+## CORE gateway clock diagnostics
+
+Doctor reports clock_skew=n/a for gateway homes, matching Go. Four-timestamp gateway clock samples and their actionable warnings apply to replica homes only.
