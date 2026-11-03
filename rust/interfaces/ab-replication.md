@@ -14,3 +14,7 @@ The feed server negotiates `clock_protocol=ntp/1` only when offered in Hello. Bo
 ## CORE blob unavailability parity
 
 Authenticated BlobWant requests receive the manifest state (`offloaded`, `failed`, `missing`, or `pending`) when bytes cannot be opened. Requests without a visible record grant receive `unauthorized` without consulting the manifest state. This lets Go replicas preserve offloaded metadata instead of retrying it as generic unavailable data. Wire formats remain unchanged.
+
+## CORE pipelined feed credits
+
+Steady-state Batch frames reserve their encoded byte size from the negotiated credit limit (at most 4 MiB). Each ordered Ack restores exactly the oldest frame's credits and validates its final cursor; partial frames do not require a final cursor. One prepared batch waits when credits are exhausted, while the session continues receiving control frames. Unacknowledged data closes the session after 30 seconds without an accepted acknowledgment. Snapshot handshake transmission remains sequential. No wire changes.
