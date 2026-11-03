@@ -63,6 +63,7 @@ rust-test:
 	rust/check.sh test --workspace --locked
 
 rust-ci: lint rust-test rust-lint
+	python3 rust/check-native-graph.py
 	go test ./contracts/golden ./internal/frontdoor ./internal/iphone ./internal/web ./lab/scenarios -run Golden -count=1
 
 .PHONY: replica-matrix replica-matrix-go
