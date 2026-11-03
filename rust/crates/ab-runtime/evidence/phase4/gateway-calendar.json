@@ -1,0 +1,941 @@
+{
+  "family": "default CAL gateway matrix",
+  "level": "sim",
+  "gateway": "rust",
+  "replica": "go",
+  "host": "ssh build",
+  "at": "2026-11-03T03:31:12.971437+00:00",
+  "baseline_product_sha": "d096a5c9dd17e024d78c54e6369b8dc4ed473d5e",
+  "initial_rust_all_21": "blocked by binary_harness_required before product execution",
+  "root_causes": [
+    "Qualification guard rejected binary-driven simulated CAL journeys for a Rust gateway.",
+    "Runtime ActionResolver accepted reminders only; calendar Prepare lacked resolved native keys and calendar_args.",
+    "span=all needed unsupported rejection before admission and before generic shape validation."
+  ],
+  "verification": {
+    "make rust-ci": "pass on rebased source",
+    "scenario_definitions_and_assertions": "unchanged",
+    "real_level_runs": 0,
+    "deletion_semantics_changes": false
+  },
+  "known_variability": "CAL-SPLIT-FRAME-CAP failed replica latency in the first Go baseline under load, then passed on Go. Two intermediate Rust runs failed latency limits while their functional assertions passed. The final rebased Rust and Go runs both pass all 21 scenarios; earlier failures are retained here as variability rather than erased. These results are retained without weakening the scenario.",
+  "commands": {
+    "matrix": "python3 lab/testing/sim_parallel.py --parallel 2 --timeout 180 --select cal --map /home/johan/gf-cal-map.json --impl gateway=rust --rust-binary /home/johan/targets/gf-cal/debug/bridge --output /home/johan/w/gf-cal-rust-rebased",
+    "build": "cargo build --manifest-path rust/Cargo.toml -p ab-runtime --features lab-harness --bin bridge",
+    "checks": "make rust-ci"
+  },
+  "rust_binary_sha256": "9b631bb557c0eb65a4729f1f1288b26a6337f09fa05d26fa2550b75490280268",
+  "results": [
+    {
+      "id": "CAL-ALLDAY",
+      "go_before": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_product_before": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_first_fix": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_prior_rebase": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "go_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      }
+    },
+    {
+      "id": "CAL-ALLDAY-FUTURE",
+      "go_before": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_product_before": {
+        "status": "fail",
+        "failures": [
+          "all_day_future_update"
+        ],
+        "unverified": []
+      },
+      "rust_first_fix": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_prior_rebase": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "go_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      }
+    },
+    {
+      "id": "CAL-CREATE-EXTERNAL",
+      "go_before": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_product_before": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_first_fix": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_prior_rebase": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "go_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      }
+    },
+    {
+      "id": "CAL-CRUD",
+      "go_before": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once",
+          "mcp_replica_application_exactly_once"
+        ]
+      },
+      "rust_product_before": {
+        "status": "fail",
+        "failures": [
+          "create_event"
+        ],
+        "unverified": []
+      },
+      "rust_first_fix": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once",
+          "mcp_replica_application_exactly_once"
+        ]
+      },
+      "rust_prior_rebase": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once",
+          "mcp_replica_application_exactly_once"
+        ]
+      },
+      "go_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once",
+          "mcp_replica_application_exactly_once"
+        ]
+      },
+      "rust_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once",
+          "mcp_replica_application_exactly_once"
+        ]
+      }
+    },
+    {
+      "id": "CAL-DST",
+      "go_before": {
+        "status": "pass",
+        "failures": [],
+        "unverified": []
+      },
+      "rust_product_before": {
+        "status": "pass",
+        "failures": [],
+        "unverified": []
+      },
+      "rust_first_fix": {
+        "status": "pass",
+        "failures": [],
+        "unverified": []
+      },
+      "rust_prior_rebase": {
+        "status": "pass",
+        "failures": [],
+        "unverified": []
+      },
+      "go_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": []
+      },
+      "rust_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": []
+      }
+    },
+    {
+      "id": "CAL-FUTURE-RULE-MISMATCH",
+      "go_before": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_product_before": {
+        "status": "fail",
+        "failures": [
+          "mismatch_is_indeterminate_after_effect",
+          "mismatch_reports_actual_native_rule",
+          "mismatch_never_retries_or_writes_twice"
+        ],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_first_fix": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_prior_rebase": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "go_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      }
+    },
+    {
+      "id": "CAL-ID-CHURN",
+      "go_before": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_product_before": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_first_fix": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_prior_rebase": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "go_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      }
+    },
+    {
+      "id": "CAL-LARGE-CAPTURE",
+      "go_before": {
+        "status": "pass",
+        "failures": [],
+        "unverified": []
+      },
+      "rust_product_before": {
+        "status": "fail",
+        "failures": [
+          "source_captures_after_large_change",
+          "following_change_reaches_replica"
+        ],
+        "unverified": []
+      },
+      "rust_first_fix": {
+        "status": "pass",
+        "failures": [],
+        "unverified": []
+      },
+      "rust_prior_rebase": {
+        "status": "pass",
+        "failures": [],
+        "unverified": []
+      },
+      "go_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": []
+      },
+      "rust_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": []
+      }
+    },
+    {
+      "id": "CAL-MOVED-OCCURRENCE",
+      "go_before": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_product_before": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_first_fix": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_prior_rebase": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "go_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      }
+    },
+    {
+      "id": "CAL-MOVED-OUTSIDE-WINDOW",
+      "go_before": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_product_before": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_first_fix": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_prior_rebase": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "go_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      }
+    },
+    {
+      "id": "CAL-PERIODIC-VERIFICATION",
+      "go_before": {
+        "status": "pass",
+        "failures": [],
+        "unverified": []
+      },
+      "rust_product_before": {
+        "status": "pass",
+        "failures": [],
+        "unverified": []
+      },
+      "rust_first_fix": {
+        "status": "pass",
+        "failures": [],
+        "unverified": []
+      },
+      "rust_prior_rebase": {
+        "status": "pass",
+        "failures": [],
+        "unverified": []
+      },
+      "go_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": []
+      },
+      "rust_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": []
+      }
+    },
+    {
+      "id": "CAL-PERMISSION-LOSS",
+      "go_before": {
+        "status": "pass",
+        "failures": [],
+        "unverified": []
+      },
+      "rust_product_before": {
+        "status": "pass",
+        "failures": [],
+        "unverified": []
+      },
+      "rust_first_fix": {
+        "status": "pass",
+        "failures": [],
+        "unverified": []
+      },
+      "rust_prior_rebase": {
+        "status": "pass",
+        "failures": [],
+        "unverified": []
+      },
+      "go_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": []
+      },
+      "rust_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": []
+      }
+    },
+    {
+      "id": "CAL-READONLY",
+      "go_before": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_product_before": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_first_fix": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_prior_rebase": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "go_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      }
+    },
+    {
+      "id": "CAL-RECUR-ALL-REJECT",
+      "go_before": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_product_before": {
+        "status": "fail",
+        "failures": [
+          "span_all_rejected_before_dispatch"
+        ],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_first_fix": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_prior_rebase": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "go_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      }
+    },
+    {
+      "id": "CAL-RECUR-FUTURE",
+      "go_before": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_product_before": {
+        "status": "fail",
+        "failures": [
+          "seed_exception"
+        ],
+        "unverified": []
+      },
+      "rust_first_fix": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_prior_rebase": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "go_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      }
+    },
+    {
+      "id": "CAL-RECUR-THIS",
+      "go_before": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_product_before": {
+        "status": "fail",
+        "failures": [
+          "update_occurrence"
+        ],
+        "unverified": []
+      },
+      "rust_first_fix": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_prior_rebase": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "go_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      }
+    },
+    {
+      "id": "CAL-SPLIT-ATOMIC-ALLDAY",
+      "go_before": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_product_before": {
+        "status": "fail",
+        "failures": [
+          "all_day_future_update"
+        ],
+        "unverified": []
+      },
+      "rust_first_fix": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_prior_rebase": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "go_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      }
+    },
+    {
+      "id": "CAL-SPLIT-ATOMIC-TIMED",
+      "go_before": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_product_before": {
+        "status": "fail",
+        "failures": [
+          "seed_exception"
+        ],
+        "unverified": []
+      },
+      "rust_first_fix": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_prior_rebase": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "go_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      }
+    },
+    {
+      "id": "CAL-SPLIT-FRAME-CAP",
+      "go_before": {
+        "status": "fail",
+        "failures": [
+          "latency_effect_done\u2192replica_visible:replica0"
+        ],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_product_before": {
+        "status": "fail",
+        "failures": [
+          "oversized_split_keeps_capture_progressing"
+        ],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_first_fix": {
+        "status": "fail",
+        "failures": [
+          "latency_effect_done\u2192gateway_visible",
+          "latency_effect_done\u2192replica_visible:replica0"
+        ],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_prior_rebase": {
+        "status": "fail",
+        "failures": [
+          "latency_effect_done\u2192gateway_visible",
+          "latency_effect_done\u2192replica_visible:replica0"
+        ],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "go_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      }
+    },
+    {
+      "id": "CAL-STAMP-FIELDS",
+      "go_before": {
+        "status": "pass",
+        "failures": [],
+        "unverified": []
+      },
+      "rust_product_before": {
+        "status": "pass",
+        "failures": [],
+        "unverified": []
+      },
+      "rust_first_fix": {
+        "status": "pass",
+        "failures": [],
+        "unverified": []
+      },
+      "rust_prior_rebase": {
+        "status": "pass",
+        "failures": [],
+        "unverified": []
+      },
+      "go_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": []
+      },
+      "rust_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": []
+      }
+    },
+    {
+      "id": "CAL-WINDOW-SLIDE",
+      "go_before": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_product_before": {
+        "status": "fail",
+        "failures": [
+          "window_eviction_is_not_deletion"
+        ],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_first_fix": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_prior_rebase": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "go_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      },
+      "rust_after": {
+        "status": "pass",
+        "failures": [],
+        "unverified": [
+          "replica_application_exactly_once"
+        ]
+      }
+    }
+  ]
+}
