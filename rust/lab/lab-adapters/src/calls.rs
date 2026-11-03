@@ -13,8 +13,9 @@ use std::{
 };
 
 pub const SCOPE: &str = "phone:read,system:read";
-pub const NATIVE_SCENARIOS: [&str; 4] = [
+pub const NATIVE_SCENARIOS: [&str; 5] = [
     "CALL-CAPTURE",
+    "CALL-IDLE",
     "VM-CAPTURE",
     "VMEMO-CAPTURE",
     "VMEMO-LATE-ASSETS",
@@ -154,6 +155,119 @@ fn calls_real(world: &World, evidence: &mut Evidence) -> Result<()> {
     );
     Ok(())
 }
+fn fixture(id: &str) -> Option<(&'static str, &'static str, Value)> {
+    match id {
+        "CALL-CAPTURE" => Some((
+            "phone",
+            "phone.call",
+            json!({"direction": "incoming", "handle": "synthetic", "name": "Fixture",
+                "date": "2031-01-01T00:00:00Z", "duration": 42, "service": "cellular", "answered": true}),
+        )),
+        "VM-CAPTURE" => Some((
+            "voicemail",
+            "voicemail.message",
+            json!({"sender": "Synthetic", "date": "2031-01-01T00:00:00Z", "duration": 42,
+                "read": false, "mailbox": "inbox", "type": "carrierVoicemail",
+                "transcript_state": "missing", "audio_state": "missing"}),
+        )),
+        "VMEMO-CAPTURE" | "VMEMO-LATE-ASSETS" => Some((
+            "voice_memos",
+            "voice_memos.recording",
+            json!({"title": "Synthetic", "date": "2031-01-01T00:00:00Z", "duration": 42,
+                "folder": "1", "recently_deleted": false,
+                "transcript_state": "missing", "audio_state": "missing"}),
+        )),
+        _ => None,
+    }
+}
+fn put(
+    world: &World,
+    source: &str,
+    collection: &str,
+    fields: &Value,
+    kind: &str,
+    version: u64,
+) -> bool {
+    let mut data = fields.clone();
+    data["fixture_version"] = json!(version);
+    let at = jiff::Timestamp::now().to_string();
+    let mut capture = json!({"source": source, "generation": "native-media-fixture",
+        "observations": [{"kind": kind, "collection": collection, "native_key": "native-media-fixture",
+            "data": data, "observed_at": at, "revalidated": true}]});
+    if kind == "absent" {
+        capture["scan_id"] = json!("native-media-fixture");
+        capture["scan_started_at"] = json!(at);
+        capture["scope"] = json!([collection]);
+        capture["completion_evidence"] = json!("complete");
+    }
+    world.control("/capture", &capture).is_ok()
+}
+fn gateway_flow(world: &World, evidence: &mut Evidence) -> Result<()> {
+    let Some((source, collection, fields)) = fixture(&evidence.scenario) else {
+        return Ok(());
+    };
+    let client = Client::new(world, "admin")?;
+    let rows = || -> Option<Vec<Value>> {
+        client
+            .call(
+                "records.query",
+                &json!({"collection": collection, "limit": 10}),
+                10,
+            )
+            .ok()
+            .flatten()?["records"]
+            .as_array()
+            .cloned()
+    };
+    evidence.check("selected_gateway_started", true, "gateway ready");
+    let mut id: Option<String> = None;
+    for version in 1..=2_u64 {
+        let sent = put(world, source, collection, &fields, "upsert", version);
+        evidence.check(
+            &format!("selected_gateway_capture_{version}"),
+            sent,
+            "fixture capture",
+        );
+        if !sent {
+            return Ok(());
+        }
+        let seen = await_until(5, || {
+            let Some(rows) = rows().filter(|r| r.len() == 1) else {
+                return false;
+            };
+            let row = &rows[0];
+            if row["data"]["fixture_version"].as_u64() != Some(version)
+                || row["version"].as_u64() != Some(version)
+            {
+                return false;
+            }
+            let current = row["id"].as_str().map(str::to_owned);
+            if id.is_some() && id != current {
+                return false;
+            }
+            id = current;
+            true
+        });
+        evidence.check(
+            &format!("selected_gateway_readback_{version}"),
+            seen,
+            "fixture readback",
+        );
+        if !seen {
+            return Ok(());
+        }
+    }
+    let sent = put(world, source, collection, &fields, "absent", 3);
+    evidence.check("selected_gateway_absent_capture", sent, "absent capture");
+    if sent {
+        evidence.check(
+            "selected_gateway_absent_readback",
+            await_until(5, || rows().is_some_and(|r| r.is_empty())),
+            "absent readback",
+        );
+    }
+    Ok(())
+}
 pub fn phone(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> {
     let id = evidence.scenario.clone();
     match id.as_str() {
@@ -188,6 +302,9 @@ pub fn phone(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()
             );
         }
         _ => return Err(Error::Invalid(format!("phone not ported for {id}"))),
+    }
+    if fixture(&id).is_some() && evidence.passed {
+        gateway_flow(world, evidence)?;
     }
     Ok(())
 }
