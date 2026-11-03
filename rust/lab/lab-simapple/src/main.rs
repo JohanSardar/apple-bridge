@@ -5,6 +5,7 @@ mod contacts;
 mod mac;
 mod media;
 mod messages;
+mod messages_commands;
 mod notes;
 mod query;
 mod reminders;
@@ -237,20 +238,21 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
         ),
         "/fault" => {
             let name = string(&input, "name");
-            if ![
-                "",
-                "pause",
-                "crash-after-effect",
-                "crash-before-outcome",
-                "ambiguous-outcome",
-                "identical-manual-send",
-                "ui-interference",
-                "ui-interference-before",
-                "calendar-rule-mismatch",
-                "external-move-before-prepare",
-                "external-edit-between-prepare-and-dispatch",
-            ]
-            .contains(&name.as_str())
+            if !messages_commands::fault_known(&name)
+                && ![
+                    "",
+                    "pause",
+                    "crash-after-effect",
+                    "crash-before-outcome",
+                    "ambiguous-outcome",
+                    "identical-manual-send",
+                    "ui-interference",
+                    "ui-interference-before",
+                    "calendar-rule-mismatch",
+                    "external-move-before-prepare",
+                    "external-edit-between-prepare-and-dispatch",
+                ]
+                .contains(&name.as_str())
             {
                 return Err(invalid("fault not implemented in Rust foundation"));
             }
@@ -325,6 +327,10 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
                 } else {
                     input["data"].clone()
                 };
+                let mut data = data;
+                if source(collection) == "messages" {
+                    messages_commands::facts(&s.data["records"], collection, &mut data);
+                }
                 observation(collection, &key, data)
             };
             if source(collection) == "contacts" {
@@ -910,7 +916,8 @@ fn session(
         "reminders.delete_list"
     ]);
     capabilities["mac"] = json!(mac::CAPABILITIES);
-    capabilities["messages"] = json!(["messages.send", "messages.reply"]);
+    capabilities["messages"] = messages::operations();
+    coverage["messages"] = messages::coverage(true, true);
     capabilities["calendar"] = json!([
         "calendar.create_event",
         "calendar.update_event",
