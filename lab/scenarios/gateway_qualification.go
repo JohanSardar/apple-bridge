@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"slices"
 	"strings"
 )
@@ -38,7 +39,7 @@ func portableGatewaySimScenario(s Scenario) bool {
 		if entry.ID != s.ID {
 			continue
 		}
-		if entry.Host != "linux" || entry.PClass == nil || *entry.PClass || !slices.Contains(entry.Levels, "sim") || len(entry.Paths) == 0 || len(entry.Semantic) > 0 {
+		if entry.Host != runtime.GOOS || entry.PClass == nil || *entry.PClass && runtime.GOOS != "darwin" || !slices.Contains(entry.Levels, "sim") || len(entry.Paths) == 0 || len(entry.Semantic) > 0 {
 			return false
 		}
 		for _, path := range entry.Paths {
