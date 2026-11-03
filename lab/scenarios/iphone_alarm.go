@@ -10,6 +10,8 @@ import (
 
 func runIPhoneAlarm(ctx context.Context, s Scenario, level string) Evidence {
 	e := Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC()}
+	e.Impl = "swift"
+	e.Conditions = map[string]string{"phone_adapter": "Swift fake", "gateway_exercised": "false"}
 	if level == "real" {
 		e.Status = "limited"
 		e.Assertions = []Assertion{{Name: "alarmkit_permission", Detail: "limited: real-device permission request and observation harness missing; needs Allow tap"}}
