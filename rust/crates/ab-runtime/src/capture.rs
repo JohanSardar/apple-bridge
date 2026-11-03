@@ -68,6 +68,7 @@ fn seeded_fault(name: &str) -> bool {
 }
 
 impl Backend {
+    #[cfg_attr(not(feature = "lab-harness"), allow(clippy::unused_async))]
     async fn commit_bound(
         &self,
         session: Option<ab_operations::peer::PeerSession>,
