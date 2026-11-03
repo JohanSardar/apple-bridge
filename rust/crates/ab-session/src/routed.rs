@@ -10,7 +10,10 @@ use std::{
     io::Write,
     net::Shutdown,
     os::unix::net::UnixStream,
-    sync::{Arc, Condvar, Mutex, MutexGuard},
+    sync::{
+        Arc, Condvar, Mutex, MutexGuard,
+        atomic::{AtomicBool, Ordering},
+    },
     thread,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
@@ -70,7 +73,6 @@ struct Shared {
     committed: BTreeMap<String, (String, String)>,
     flights: BTreeMap<String, Flight>,
     saved: BTreeMap<String, String>,
-    wake: bool,
     sequence: u64,
     observed: BTreeMap<String, (String, u64, bool)>,
     dispatched: BTreeMap<String, u64>,
@@ -78,6 +80,7 @@ struct Shared {
 
 #[derive(Debug)]
 struct Gate {
+    wake: AtomicBool,
     shared: Mutex<Shared>,
     changed: Condvar,
 }
@@ -88,9 +91,8 @@ impl Gate {
     }
 
     fn poke(&self) {
-        if let Ok(mut shared) = self.shared.lock() {
-            shared.wake = true;
-        }
+        self.wake.store(true, Ordering::SeqCst);
+        drop(self.shared.lock());
         self.changed.notify_all();
     }
 
@@ -545,18 +547,17 @@ fn produce(
                 return Ok(());
             }
         }
-        let mut shared = gate.lock()?;
+        let shared = gate.lock()?;
         if shared.closed {
             return Ok(());
         }
-        if std::mem::take(&mut shared.wake) {
+        if gate.wake.swap(false, Ordering::SeqCst) {
             continue;
         }
-        let (mut shared, _) = gate
+        let (shared, _) = gate
             .changed
             .wait_timeout(shared, poll)
             .map_err(|_| Error::WorkerPanicked)?;
-        shared.wake = false;
         if shared.closed {
             return Ok(());
         }
@@ -724,6 +725,7 @@ pub fn relay_layered(
     let store = options.state.as_deref().map(Store::open).transpose()?;
     let store = store.as_ref();
     let gate = Gate {
+        wake: AtomicBool::new(false),
         shared: Mutex::new(Shared::default()),
         changed: Condvar::new(),
     };
