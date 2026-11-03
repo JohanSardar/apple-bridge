@@ -4,7 +4,7 @@ use serde_json::Value;
 use std::{
     fs,
     os::unix::fs::PermissionsExt,
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::{Child, Command},
     thread,
     time::{Duration, Instant},
@@ -26,6 +26,82 @@ pub struct WorldConfig {
     pub simapple: PathBuf,
     pub directory: PathBuf,
     pub scope: String,
+}
+#[derive(Debug, Clone)]
+pub struct RealConfig {
+    pub gateway: PathBuf,
+    pub helper_app: Option<PathBuf>,
+    pub directory: PathBuf,
+    pub scope: String,
+}
+#[must_use]
+pub fn live_homes(home: &str, data_home: Option<&str>) -> Vec<PathBuf> {
+    let mut homes = vec![Path::new(home).join("Library/Application Support/AppleBridge")];
+    let data = data_home
+        .filter(|root| !root.is_empty())
+        .map_or_else(|| Path::new(home).join(".local/share"), PathBuf::from);
+    homes.push(data.join("apple-bridge"));
+    homes
+}
+fn absolute(path: &Path) -> Result<PathBuf> {
+    let joined = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir()?.join(path)
+    };
+    let parent = joined
+        .parent()
+        .ok_or_else(|| Error::Invalid("world directory has no parent".into()))?;
+    let name = joined
+        .file_name()
+        .ok_or_else(|| Error::Invalid("world directory has no name".into()))?;
+    Ok(parent.canonicalize()?.join(name))
+}
+pub fn refuse_live_home(directory: &Path, homes: &[PathBuf]) -> Result<()> {
+    let directory = absolute(directory)?;
+    for home in homes {
+        let resolved = home.canonicalize().unwrap_or_else(|_| home.clone());
+        if [home, &resolved]
+            .iter()
+            .any(|root| directory.starts_with(root) || root.starts_with(&directory))
+        {
+            return Err(Error::Invalid(
+                "real level refuses to run in or above the live home".into(),
+            ));
+        }
+    }
+    Ok(())
+}
+pub fn require_signed_helper(app: Option<&Path>) -> Result<&Path> {
+    let app = app.ok_or_else(|| {
+        Error::Invalid("real level refused: no signed Helper configured (--helper-app)".into())
+    })?;
+    if !app.join("Contents/MacOS/AppleBridgeHelper").is_file() {
+        return Err(Error::Invalid(
+            "real level refused: Helper app has no executable".into(),
+        ));
+    }
+    let verified = Command::new("codesign")
+        .args(["--verify", "--strict"])
+        .arg(app)
+        .output()
+        .is_ok_and(|o| o.status.success());
+    let described = Command::new("codesign")
+        .args(["-dv", "--verbose=2"])
+        .arg(app)
+        .output()
+        .map(|o| String::from_utf8_lossy(&o.stderr).into_owned())
+        .unwrap_or_default();
+    let team = described
+        .lines()
+        .find_map(|line| line.strip_prefix("TeamIdentifier="))
+        .is_some_and(|team| !team.is_empty() && team != "not set");
+    if !verified || !team || described.contains("Signature=adhoc") {
+        return Err(Error::Invalid(
+            "real level refused: Helper app is not signed with a team identity".into(),
+        ));
+    }
+    Ok(app)
 }
 #[derive(Debug)]
 pub struct World {
@@ -69,6 +145,49 @@ impl World {
             .trim()
             .clone_into(&mut world.token);
         world.launch_peer()?;
+        Ok(world)
+    }
+    pub fn start_real(config: RealConfig) -> Result<Self> {
+        let app = require_signed_helper(config.helper_app.as_deref())?.to_path_buf();
+        let home = std::env::var("HOME").unwrap_or_default();
+        let data = std::env::var("XDG_DATA_HOME").ok();
+        refuse_live_home(&config.directory, &live_homes(&home, data.as_deref()))?;
+        fs::create_dir(&config.directory)?;
+        fs::set_permissions(&config.directory, fs::Permissions::from_mode(0o700))?;
+        let mut world = Self {
+            directory: config.directory.clone(),
+            gateway_home: config.directory.join("gateway"),
+            runtime: Value::Null,
+            config: WorldConfig {
+                gateway: config.gateway,
+                simapple: PathBuf::new(),
+                directory: config.directory,
+                scope: config.scope,
+            },
+            gateway: None,
+            peer: None,
+            proxy: None,
+            token: String::new(),
+            gateway_env: Vec::new(),
+            gateway_args: vec![
+                "--helper-app".into(),
+                app.to_string_lossy().into_owned(),
+                "--helper-lab-commands".into(),
+            ],
+        };
+        world.launch_gateway()?;
+        world
+            .gateway_cli(&["token", "create", "--scope", &world.config.scope])?
+            .trim()
+            .clone_into(&mut world.token);
+        let deadline = Instant::now() + Duration::from_secs(15);
+        while !world.gateway_home.join("helper/helper.pid").is_file() {
+            world.check_children()?;
+            if Instant::now() >= deadline {
+                return Err(Error::Invalid("helper readiness timeout".into()));
+            }
+            thread::sleep(Duration::from_millis(25));
+        }
         Ok(world)
     }
     fn launch_peer(&mut self) -> Result<()> {
@@ -322,5 +441,58 @@ fn stop(child: &mut Option<Child>) {
 impl Drop for World {
     fn drop(&mut self) {
         self.close();
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn real_refuses_without_helper() {
+        let refused = require_signed_helper(None)
+            .err()
+            .is_some_and(|e| e.to_string().contains("no signed Helper configured"));
+        assert!(refused);
+    }
+    #[test]
+    fn real_refuses_unsigned_helper() -> Result<()> {
+        let directory =
+            std::env::temp_dir().join(format!("lab-world-unsigned-{}", std::process::id()));
+        let executable = directory.join("Contents/MacOS");
+        fs::create_dir_all(&executable)?;
+        fs::write(executable.join("AppleBridgeHelper"), b"x")?;
+        let result = require_signed_helper(Some(&directory)).is_err();
+        fs::remove_dir_all(&directory)?;
+        assert!(result);
+        Ok(())
+    }
+    #[test]
+    fn real_refuses_live_home() -> Result<()> {
+        let base = std::env::temp_dir().join(format!("lab-world-live-{}", std::process::id()));
+        let home = base.join("home");
+        let live = home.join("Library/Application Support/AppleBridge");
+        fs::create_dir_all(&live)?;
+        let homes = live_homes(&home.to_string_lossy(), None);
+        let refused = [
+            live.join("world"),
+            live.clone(),
+            home.join("Library/Application Support"),
+        ]
+        .iter()
+        .all(|directory| refuse_live_home(directory, &homes).is_err());
+        let allowed = refuse_live_home(&base.join("elsewhere"), &homes).is_ok();
+        fs::remove_dir_all(&base)?;
+        assert!(refused);
+        assert!(allowed);
+        assert_eq!(
+            live_homes("/Users/example", Some("/data"))[1],
+            Path::new("/data/apple-bridge")
+        );
+        Ok(())
+    }
+    #[test]
+    fn real_allows_unrelated_directory() {
+        let homes = live_homes("/Users/example", None);
+        let directory = std::env::temp_dir().join("lab-world-allowed");
+        assert!(refuse_live_home(&directory, &homes).is_ok());
     }
 }

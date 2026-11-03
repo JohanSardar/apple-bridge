@@ -125,3 +125,16 @@ WEB-MEDIA-CAP blob ordering is owned by S-BLOB-ORDER and is unchanged.
 `lab-adapters` registers `readmodels` (`readmodels.rs`, `search.rs`) for WEB-RM-MEDIA-COLLECTION and WEB-RM-SEARCH. Scenarios with no `when` step in YAML (WEB-RM-SEARCH) get a `readmodels` step injected by `lab-families`. The adapters seed through the SimApple `/readmodels` put route, resolve gateway aliases, call REST and MCP, mint scoped tokens, and for the search migration stop the gateway, rewrite `records_fts` and `fts_version` in `state.db` with rusqlite, and restart it. Assertion names match the Go harness (WEB-RM-SEARCH emits no `world_start` on success, as in Go).
 
 Gate: `python3 rust/lab/families-parity.py ... --web-rm` runs both scenarios against both harnesses; verdicts are identical (23 and 47 assertions).
+
+## Real-level runner (Phase 8)
+
+`lab-runner` and `lab-families` accept `--level sim|real` (default `sim`) and `--helper-app APP`. `--simapple` is only required at sim level.
+
+The real level mirrors Go's `world.NewReal` protections and is compile-only in CI: nothing in the Phase 8 work runs it.
+
+- `--level real` refuses to start unless `--helper-app` names a bundle with `Contents/MacOS/AppleBridgeHelper` that passes `codesign --verify --strict` and carries a `TeamIdentifier` (ad-hoc signatures are rejected). The refusal happens before any output directory or gateway exists.
+- `World::start_real(RealConfig)` creates a fresh `0700` directory, refuses to run when it is inside, equal to or above the live home (`~/Library/Application Support/AppleBridge`, `$XDG_DATA_HOME/apple-bridge`, `~/.local/share/apple-bridge`), starts the gateway with `--home <directory>/gateway --helper-app APP --helper-lab-commands`, and waits for `helper/helper.pid`. There is no SimApple peer and no `sim.sock`, so `World::control` is unavailable.
+- `Registry::register_real(id, handler)` registers a handler `fn(&mut World, &mut Evidence) -> Result<()>` for a scenario ID. `Registry::run_real(scenario, RealConfig)` fails the scenario with `real_adapter` (no world started) when the scenario does not list `real` (MAC-REPLICA and FILE-REPLICA list `replica` and count as `real`, as in Go) or has no registered handler.
+- Real-only scenarios are reachable by adding one `register_real` line in `lab-adapters/src/lib.rs`. Handlers mint scoped tokens with `Client::new(world, scope)`; the world token scope is `location:read,maps:read,maps:write,files:read,files:write,safari:read,system:read`.
+
+Unit tests cover the refusals (no Helper, unsigned Helper, live home) and an unrelated directory.
