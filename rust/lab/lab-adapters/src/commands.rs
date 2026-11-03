@@ -9,8 +9,8 @@ use lab_world::{Error, Result, World};
 use serde_json::{Value, json};
 use std::{
     fs,
-    sync::{Arc, Barrier},
     process::{Command, Stdio},
+    sync::{Arc, Barrier},
     thread,
     time::{Duration, Instant},
 };
@@ -457,7 +457,11 @@ pub fn read_your_write(
     let client = replica_writer(0)?;
     let c = create(list_id, "read-your-write")?;
     let reply = submit(&client, &c, false)?;
-    evidence.check("command_observed", observed(&reply), "command observed locally");
+    evidence.check(
+        "command_observed",
+        observed(&reply),
+        "command observed locally",
+    );
     let read = client.call(
         "records.query",
         &json!({"collection":"reminders.reminder"}),
