@@ -42,7 +42,11 @@ pub fn control_path(home: &Path, id: &str) -> Result<PathBuf> {
 }
 
 fn hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+    use std::fmt::Write as _;
+    bytes.iter().fold(String::new(), |mut text, byte| {
+        let _ = write!(text, "{byte:02x}");
+        text
+    })
 }
 
 pub fn valid_link(link: &str) -> bool {
@@ -91,9 +95,9 @@ pub async fn send_link(home: &Path, id: &str, link: &str) -> Result<()> {
     let mut stream = tokio::time::timeout(Duration::from_secs(1), UnixStream::connect(path))
         .await
         .map_err(|_| Error::Contract("approval IPC timeout"))??;
-    let mut line = serde_json::to_vec(link)?;
-    line.push(b'\n');
-    tokio::time::timeout(Duration::from_secs(1), stream.write_all(&line))
+    let mut payload = serde_json::to_vec(link)?;
+    payload.push(b'\n');
+    tokio::time::timeout(Duration::from_secs(1), stream.write_all(&payload))
         .await
         .map_err(|_| Error::Contract("approval IPC timeout"))??;
     Ok(())
@@ -146,8 +150,8 @@ pub async fn command(
         while let Ok((stream, _)) = control.accept().await {
             let links = links.clone();
             tokio::spawn(async move {
-                let mut lines = tokio::io::BufReader::new(stream).lines();
-                while let Ok(Some(line)) = lines.next_line().await {
+                let mut reader = tokio::io::BufReader::new(stream).lines();
+                while let Ok(Some(line)) = reader.next_line().await {
                     if let Ok(link) = serde_json::from_str::<String>(&line)
                         && links.send(link).await.is_err()
                     {
@@ -177,7 +181,7 @@ async fn wait(
     state::select(home, action, via, id)?;
     let mut ticker = tokio::time::interval(recheck);
     let mut notice = String::new();
-    let mut opened = BTreeSet::new();
+    let mut seen = BTreeSet::new();
     loop {
         if let Ok(status) = state::read::<state::Status>(home, "status")
             && status.id == id
@@ -204,7 +208,7 @@ async fn wait(
         }
         tokio::select! {
             Some(link) = links.recv() => {
-                if opened.insert(link.clone()) {
+                if seen.insert(link.clone()) {
                     writeln!(out, "{link}")?;
                     let launch = link.clone();
                     let call = opener.clone();
