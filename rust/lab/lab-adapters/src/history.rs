@@ -6,7 +6,7 @@ use crate::{
     watch::Watcher,
 };
 use lab_runner::Evidence;
-use lab_world::{Error, Result, World};
+use lab_world::{Result, World};
 use serde_json::{Value, json};
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -52,10 +52,7 @@ fn target_live(client: &Client) -> bool {
 }
 pub fn messages_read(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result<()> {
     if input["scenario"] != "history-import" || evidence.scenario != "MSG-HISTORY-IMPORT" {
-        return Err(Error::Invalid(format!(
-            "messages_read not ported for {}",
-            evidence.scenario
-        )));
+        return crate::messages_b::read(world, input, evidence);
     }
     let seed = SEED.load(Ordering::SeqCst);
     let gateway = Client::new(world, SCOPE)?;
@@ -141,7 +138,15 @@ pub fn messages_read(world: &mut World, input: &Value, evidence: &mut Evidence) 
             "the live receipt value was never replaced by the older bulk value",
         );
     }
-    let ok = await_until(15, || converged(world, &observed));
+    tail(world, &observed, &observers, evidence)
+}
+pub fn tail(
+    world: &World,
+    observed: &Observed,
+    observers: &[Watcher],
+    evidence: &mut Evidence,
+) -> Result<()> {
+    let ok = await_until(15, || converged(world, observed));
     evidence.check(
         "automatic_convergence_with_truth",
         ok,
@@ -150,7 +155,7 @@ pub fn messages_read(world: &mut World, input: &Value, evidence: &mut Evidence) 
     for (index, observer) in observers.iter().enumerate() {
         evidence.check(
             &format!("automatic_no_false_deletion_{index}"),
-            false_deletion_free(world, &observed, observer),
+            false_deletion_free(world, observed, observer),
             "every observed delete is absent in SimApple truth",
         );
         evidence.check(
