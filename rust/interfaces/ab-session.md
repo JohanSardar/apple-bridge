@@ -68,3 +68,17 @@ Reader integration: session-owned adapters wrap ab-native readers and implement 
 call shadow_once with Swift fact adapter and ab-native reader. API accepts no writer or
 checkpoint sink and returns Equal/Incomplete/Different. Records are canonical JSON bytes
 keyed by native key; no duplicate keys. ab-native adapters remain worker-owned.
+
+## Swift endpoint delivery
+
+The Swift implementation is in NativeProtocol and AppleSession; native/NATIVE-1.md
+records launch and activation details. NativeChecks uses fake adapters and the
+synthetic Calendar range / Contacts list scenario facts. Scalar scopes are strings;
+collection scopes include collections and the Contacts history_token. Contacts history
+pages individual changed identifiers, without implying deletion. Completed snapshots
+release their retained rows; continuation after terminal completion returns expired.
+Existing registered query operations maps.snapshot, pdf.search, audio.transcribe and
+shortcuts.actions, plus shortcuts.run, are permit-gated native effects. The closed
+Swift catalogue is NativeServer.effectOperations. The proxy leaves effects disabled;
+AppleSession.runNative is exclusive with the IPC run loop and is not selected by the
+current raw Rust proxy. No live framework parity or production cutover was performed.
