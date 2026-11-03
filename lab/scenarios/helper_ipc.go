@@ -16,8 +16,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/JohanSardar/apple-bridge/internal/applepeer"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	applepeer "github.com/JohanSardar/apple-bridge/lab/ipc"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
@@ -66,7 +66,7 @@ func runHelperIPC(ctx context.Context, s Scenario, level string) (e Evidence) {
 	conn := connection.(*net.UnixConn)
 	defer conn.Close()
 	wire := &applepeer.Wire{Conn: conn}
-	err = applepeer.Authenticate(wire, secret, false)
+	err = applepeer.Authenticate(wire, secret)
 	if err != nil {
 		add("helper_authenticated", false)
 		return

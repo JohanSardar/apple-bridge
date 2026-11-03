@@ -8,6 +8,7 @@ import (
 	"github.com/JohanSardar/apple-bridge/lab/agent"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strconv"
@@ -23,6 +24,10 @@ func run(ctx context.Context, args []string) error {
 		return fmt.Errorf("expected run or simapple")
 	}
 	switch args[0] {
+	case "shadow":
+		command := exec.CommandContext(ctx, "python3", append([]string{"lab/shadow/shadow.py"}, args[1:]...)...)
+		command.Stdin, command.Stdout, command.Stderr = os.Stdin, os.Stdout, os.Stderr
+		return command.Run()
 	case "inventory":
 		return inventory(args[1:])
 	case "wire-checks":
