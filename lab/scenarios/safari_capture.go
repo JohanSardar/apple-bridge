@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -55,6 +56,15 @@ for name in ['History.db','CloudTabs.db']:
 	add("fake_databases", err == nil)
 	if err != nil {
 		return e
+	}
+	sessionRoot := ""
+	if slices.Contains(world.SessionSources(), "safari") {
+		sessionRoot = dir + "-session"
+		defer os.RemoveAll(sessionRoot)
+		add("session_fixture_copy", copyFixture(dir, sessionRoot) == nil)
+		if !e.Passed {
+			return e
+		}
 	}
 	build := exec.CommandContext(ctx, "packaging/dev/build-native.sh")
 	build.Env = append(os.Environ(), "APPLE_BRIDGE_NATIVE_TARGET=SafariChecks")
@@ -105,5 +115,28 @@ for name in ['History.db','CloudTabs.db']:
 	if !e.Passed {
 		return e
 	}
-	return safariGateway(world.WithSessionRoot(ctx, "safari", dir), e, observations)
+	return safariGateway(world.WithSessionRoot(ctx, "safari", sessionRoot), e, observations)
+}
+
+func copyFixture(source, target string) error {
+	if err := os.MkdirAll(target, 0700); err != nil {
+		return err
+	}
+	entries, err := os.ReadDir(source)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		if !entry.Type().IsRegular() {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(source, entry.Name()))
+		if err != nil {
+			return err
+		}
+		if err = os.WriteFile(filepath.Join(target, entry.Name()), data, 0600); err != nil {
+			return err
+		}
+	}
+	return nil
 }
