@@ -17,7 +17,7 @@ pub use query_document::DocumentInput;
 pub mod local;
 pub mod peer;
 pub use ab_trust::domain;
-mod legacy;
+pub mod legacy;
 use ab_catalog::{OperationKind, operations};
 pub use adapters::{StateReads, TrustIdentity, visibility as state_visibility};
 use serde::{Deserialize, Serialize};

@@ -55,7 +55,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     db.execute_batch("COMMIT")?;
     let visibility: Visibility = [("calendar".to_owned(), true)].into_iter().collect();
     let query = json!({"start": "2026-05-01T00:00:00Z", "end": "2026-06-01T00:00:00Z", "time_zone": "America/New_York"});
-    let mut run = |label: &str, f: &mut dyn FnMut() -> Result<usize, Box<dyn std::error::Error>>| -> Result<(), Box<dyn std::error::Error>> {
+    let run = |label: &str, f: &mut dyn FnMut() -> Result<usize, Box<dyn std::error::Error>>| -> Result<(), Box<dyn std::error::Error>> {
         let mut values = Vec::new();
         let mut size = 0;
         for _ in 0..120 {
@@ -75,8 +75,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let value = state.read_model(&visibility, "calendar.range", &query)?;
     run("to_vec", &mut || Ok(serde_json::to_vec(&value)?.len()))?;
     let raw = serde_json::to_vec(&value)?;
-    run("gojson", &mut || {
-        Ok(ab_wire::gojson::record_data(&raw, ab_wire::gojson::EscapeMode::Html)?.len())
+    std::fs::write("/tmp/range-value.json", &raw)?;
+    run("legacy_raw", &mut || {
+        Ok(ab_wire::gojson::legacy_raw(&raw, ab_wire::gojson::EscapeMode::Html)?.len())
     })?;
     run("from_slice_value", &mut || {
         Ok(serde_json::from_slice::<Value>(&raw)?.as_object().map_or(0, |o| o.len()))

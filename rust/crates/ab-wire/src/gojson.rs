@@ -193,28 +193,39 @@ pub fn legacy_json<T: serde::Serialize>(value: &T, mode: EscapeMode) -> Result<V
 }
 
 pub fn legacy_raw(bytes: &[u8], mode: EscapeMode) -> Result<Vec<u8>, Error> {
-    let _: Box<RawValue> = serde_json::from_slice(bytes)?;
+    let _: serde::de::IgnoredAny = serde_json::from_slice(bytes)?;
+    let html = matches!(mode, EscapeMode::Html);
     let mut out = Vec::with_capacity(bytes.len());
     let mut i = 0;
     while i < bytes.len() {
         if bytes[i] == b'"' {
             let start = i;
             i += 1;
+            let mut plain = true;
             while i < bytes.len() {
-                if bytes[i] == b'\\' {
-                    i += 2;
-                } else if bytes[i] == b'"' {
-                    i += 1;
-                    break;
-                } else {
-                    i += 1;
+                match bytes[i] {
+                    b'\\' => {
+                        i += 2;
+                    }
+                    b'"' => {
+                        i += 1;
+                        break;
+                    }
+                    byte => {
+                        plain &= !(byte == 0xE2 || html && matches!(byte, b'<' | b'>' | b'&'));
+                        i += 1;
+                    }
                 }
+            }
+            if plain {
+                out.extend_from_slice(&bytes[start..i]);
+                continue;
             }
             let raw = std::str::from_utf8(&bytes[start..i]).map_err(|_| Error::Time)?;
             let raw = raw
                 .replace('\u{2028}', "\\u2028")
                 .replace('\u{2029}', "\\u2029");
-            let raw = if matches!(mode, EscapeMode::Html) {
+            let raw = if html {
                 raw.replace('<', "\\u003c")
                     .replace('>', "\\u003e")
                     .replace('&', "\\u0026")
