@@ -36,6 +36,9 @@ pub async fn start(mut config: Config, authority: Arc<ab_trust::Authority>) -> R
     let identity = Arc::new(ab_operations::TrustIdentity(authority.clone()));
     let codec = Arc::new(GoJson);
     let commands = ab_applepeer::Commands::default();
+    let delegations = Arc::new(ab_replication::delegation::Delegations::new(
+        authority.clone(),
+    ));
     let mut local = ab_operations::local::LocalGateway::new(
         store.clone(),
         identity.clone(),
@@ -46,6 +49,7 @@ pub async fn start(mut config: Config, authority: Arc<ab_trust::Authority>) -> R
             peer: Arc::new(commands.clone()),
         }),
     );
+    local.reauthorize = Some(delegations.clone());
     local.query_audit = Some(Arc::new(crate::query_audit::Audit::open(&config.home)?));
     #[cfg(feature = "lab-harness")]
     {
@@ -123,6 +127,7 @@ pub async fn start(mut config: Config, authority: Arc<ab_trust::Authority>) -> R
         audit.clone(),
     );
     let feed = Arc::new(ab_replication::server::Server {
+        delegations,
         state: Arc::new(tokio::sync::Mutex::new(
             ab_replication::gateway::StateAdapter(state),
         )),

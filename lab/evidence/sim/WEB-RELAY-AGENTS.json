@@ -1,18 +1,22 @@
 {
-  "impl": "go",
-  "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[10.84 6.32 4.72] cpu_idle=83% cpus=8 other_heavy=0"
+  "implementations": {
+    "gateway": "rust",
+    "replica": "go"
   },
-  "run_id": "relay-agents_01M6EYGKBWYFQ3XCK9MT62MGZ6",
+  "impl": "mixed",
+  "host_conditions": {
+    "quiet": false,
+    "summary": "ubuntu: load=[49.69 37.02 37.59] cpu_idle=7% cpus=22 other_heavy=0"
+  },
+  "run_id": "relay-agents_01M6H578HBXPB8V5VB9PDD5HZD",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "WEB-RELAY-AGENTS",
   "level": "sim",
   "passed": true,
-  "git_sha": "590faa40f8445f912b0d01f38738001e9a725af9",
-  "at": "2026-11-02T20:16:49.532732Z",
+  "git_sha": "73c689ad22176ab0595684e2effea6b538244ccb",
+  "at": "2026-11-03T16:52:32.427706116Z",
   "assertions": [
     {
       "name": "paired_replica_world",
@@ -165,6 +169,9 @@
   ],
   "latency": {},
   "hosts": [
-    "air"
-  ]
+    "ubuntu"
+  ],
+  "conditions": {
+    "simapple_impl": "go"
+  }
 }
