@@ -252,8 +252,11 @@ pub struct Owner {
 
 impl Owner {
     pub fn new(gateway: &Gateway) -> Result<Self> {
-        let port = gateway
-            .api_address
+        Self::at(&gateway.api_address)
+    }
+
+    pub fn at(api_address: &str) -> Result<Self> {
+        let port = api_address
             .rsplit(':')
             .next()
             .ok_or_else(|| invalid("API port"))?;
