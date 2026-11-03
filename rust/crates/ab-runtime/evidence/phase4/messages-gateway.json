@@ -12,13 +12,16 @@
     "Go null capability lists disconnected the peer; capability_unproven was missing from typed command errors"
   ],
   "checks": {
-    "make rust-ci": "pass on final_source_head after rebase onto main 60e78a51",
+    "make rust-ci": "pass on final_source_head after final main rebase",
     "lint": "pass as part of rust-ci",
     "scenario_yaml_or_assertion_edits": false,
     "full_integrated_rust_batch": "27/27 execution pass after Calendar resolver integration",
     "final_base_attachment_regression": {
       "MSG-COMMAND-PARTS": "pass",
       "MSG-SEND-FILES": "pass"
+    },
+    "final_delegation_regression": {
+      "MSG-COMMAND-PARTS": "pass with Rust gateway and Go replica"
     }
   },
   "notes": [
@@ -475,6 +478,7 @@
     }
   ],
   "full_family_tested_head": "096fd897725db1b9d3b91b0a3860e1faed54b573",
-  "latest_main_base": "60e78a51922f19bd0d17785e641861f13733858b",
-  "final_source_head": "6a1b838f114c540ee0a6cbdaed80c2705f3cb20e"
+  "latest_main_base": "62e4822e17860b83fcaaf99a1d53774729108adb",
+  "final_source_head": "7545b7c45dcec40fe98a8a80d63009dad44a6b7e",
+  "previous_attachment_rebase_source_head": "6a1b838f114c540ee0a6cbdaed80c2705f3cb20e"
 }
