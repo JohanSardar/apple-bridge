@@ -496,6 +496,7 @@ pub struct NotesReader {
     reader: notes_reader::Reader,
     pending: Option<(NotesPending, Option<Signature>)>,
     committed: Option<Signature>,
+    hold: Option<PathBuf>,
 }
 
 impl NotesReader {
@@ -512,7 +513,18 @@ impl NotesReader {
             reader,
             pending: None,
             committed: None,
+            hold: None,
         })
+    }
+
+    #[must_use]
+    pub fn holding(mut self, hold: Option<PathBuf>) -> Self {
+        self.hold = hold;
+        self
+    }
+
+    fn held(&self) -> bool {
+        self.hold.as_ref().is_some_and(|hold| hold.exists())
     }
 
     fn notes_context(context: &ScanContext) -> Result<notes_reader::Context, Error> {
@@ -568,7 +580,7 @@ impl CaptureReader for NotesReader {
             return Err(Error::Conflict);
         }
         let notes = Self::notes_context(context)?;
-        while self.reader.has_hydration() {
+        while !self.held() && self.reader.has_hydration() {
             match self.reader.hydrate_next(&notes) {
                 Ok(Some(hydration)) => {
                     let value = capture_value(&hydration.batch)?;
@@ -579,9 +591,11 @@ impl CaptureReader for NotesReader {
                 Err(error) => return Err(reader_error(error)),
             }
         }
-        self.reader
-            .finish_hydration(SystemTime::now())
-            .map_err(reader_error)?;
+        if !self.held() {
+            self.reader
+                .finish_hydration(SystemTime::now())
+                .map_err(reader_error)?;
+        }
         let current = signature(&self.root)?;
         if self.committed.as_ref() == Some(&current) {
             return Ok(None);
@@ -954,6 +968,8 @@ struct SourceConfig {
     zone: String,
     #[serde(default = "default_local_name")]
     local_name: String,
+    #[serde(default)]
+    hydration_hold: Option<PathBuf>,
 }
 
 fn default_generation() -> String {
@@ -984,7 +1000,7 @@ pub fn from_config(config: &str) -> Result<BTreeMap<String, Box<dyn CaptureReade
             "phone" => Box::new(TelephonyReader::calls(&config.root)),
             "voicemail" => Box::new(TelephonyReader::voicemail(&config.root)),
             "voice_memos" => Box::new(VoiceMemosReader::new(&config.root)),
-            "notes" => Box::new(NotesReader::new(config.root)?),
+            "notes" => Box::new(NotesReader::new(config.root)?.holding(config.hydration_hold)),
             "calendar" => Box::new(AgendaReader::calendar(config.root)),
             "contacts" => Box::new(AgendaReader::contacts(config.root)),
             _ => return Err(Error::Invalid),

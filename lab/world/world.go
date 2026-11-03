@@ -73,6 +73,7 @@ type World struct {
 	sessionRoots      map[string]string
 	sessionUsage      map[string]*sessionDevice
 	sessionNotes      *sessionNotes
+	sessionNotesHold  string
 	sessionMail       sessionMailStore
 	fixtureCopyMethod string
 	dialCode          string

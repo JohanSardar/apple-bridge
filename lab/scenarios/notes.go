@@ -474,7 +474,7 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 	err = w.Await(30*time.Second, func() bool {
 		var ok bool
 		note, ok = find("notes.note", title)
-		return ok && (level == "sim" || s.ID != "NOTE-RICH-REJECT" || notesContentReady(note, false))
+		return ok && (level == "sim" && !notesBodyPending(note) || level != "sim" && (s.ID != "NOTE-RICH-REJECT" || notesContentReady(note, false)))
 	})
 	add("external_note_imported", err == nil)
 	if err != nil {
@@ -858,6 +858,13 @@ func notesContentReady(record contracts.Record, plain bool) bool {
 		ContentStatus string `json:"content_status"`
 	}
 	return json.Unmarshal(record.Data, &data) == nil && data.BodyStatus != "pending" && data.ContentStatus == "complete" && (!plain || data.Editable == "plain")
+}
+
+func notesBodyPending(record contracts.Record) bool {
+	var data struct {
+		BodyStatus string `json:"body_status"`
+	}
+	return json.Unmarshal(record.Data, &data) == nil && data.BodyStatus == "pending"
 }
 
 func notesCommandDetail(err error, command contracts.CommandRecord) string {

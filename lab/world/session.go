@@ -68,6 +68,10 @@ func (w *World) startSession(ctx context.Context, gatewaySocket string) (string,
 		config[source] = map[string]string{"root": root}
 		w.sessionRoots[source] = root
 	}
+	if _, ok := config["notes"]; ok {
+		w.sessionNotesHold = filepath.Join(w.Dir, "session-notes-hold")
+		config["notes"]["hydration_hold"] = w.sessionNotesHold
+	}
 	if _, ok := config["usage"]; ok {
 		config["usage"]["local_name"] = "Synthetic mac local"
 	}

@@ -56,7 +56,7 @@ func runNotesExtras(ctx context.Context, s Scenario, level string) (e Evidence) 
 				destination = r.ID
 			}
 		}
-		return note.ID != "" && destination != ""
+		return note.ID != "" && destination != "" && !notesBodyPending(note)
 	})
 	add("tagged_fixture_visible", err == nil)
 	if err != nil {

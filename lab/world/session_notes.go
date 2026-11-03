@@ -97,7 +97,7 @@ func notesRunMessage(run notesRun, paragraph *notesParagraph) []byte {
 	return append(message, protoVarint(13, 1)...)
 }
 
-func notesBodyFrom(paragraphs []notesParagraph) []byte {
+func notesBodyFrom(paragraphs []notesParagraph, revision string) []byte {
 	text := strings.Builder{}
 	runs := []byte{}
 	for index := range paragraphs {
@@ -130,6 +130,7 @@ func notesBodyFrom(paragraphs []notesParagraph) []byte {
 	raw := protoField(2, 2, document)
 	var packed bytes.Buffer
 	writer := gzip.NewWriter(&packed)
+	writer.Comment = revision
 	writer.Write(raw)
 	writer.Close()
 	return packed.Bytes()
@@ -321,6 +322,20 @@ func (w *World) writeSessionNotes(root string, source []notesRow) error {
 	}
 	sort.Strings(folderKeys)
 	sort.Strings(noteKeys)
+	hydrating := false
+	for _, key := range noteKeys {
+		status, _ := notes[key].observation["body_status"].(string)
+		hydrating = hydrating || status == "pending"
+	}
+	if w.sessionNotesHold != "" {
+		if hydrating {
+			if err := os.WriteFile(w.sessionNotesHold, nil, 0600); err != nil {
+				return err
+			}
+		} else {
+			defer os.Remove(w.sessionNotesHold)
+		}
+	}
 	accountNames := map[string]string{}
 	accountKeys := []string{}
 	for _, key := range folderKeys {
@@ -422,6 +437,7 @@ func (w *World) writeSessionNotes(root string, source []notesRow) error {
 				}
 			}
 		}
+		fingerprint, _ := data["native_fingerprint"].(string)
 		pk := assign(state.notePK, key)
 		tags := []string{}
 		if values, ok := data["tags"].([]any); ok && paragraphs != nil {
@@ -439,7 +455,7 @@ func (w *World) writeSessionNotes(root string, source []notesRow) error {
 		}
 		var body, bodyPK any
 		if paragraphs != nil {
-			body = base64.StdEncoding.EncodeToString(notesBodyFrom(paragraphs))
+			body = base64.StdEncoding.EncodeToString(notesBodyFrom(paragraphs, fingerprint))
 			bodyPK = pk
 		}
 		created, modified := notesDate(data["created_at"]), notesDate(data["modified_at"])

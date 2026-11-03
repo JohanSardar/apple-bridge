@@ -206,11 +206,8 @@ and `capture_checkpoint` to the next committed Rust capture containing that key 
 `Dispatch`), rewriting `capture_checkpoint`, so the gateway can observe the effect. The reader
 context carries the mime fact for the hashtag attachment type. Negative control:
 `AB_SESSION_RUST_POLL_MS=3600000` makes NOTE-IMPORT fail on `external_note_imported`.
-Open: scenarios that read a note straight after its first visible version (NOTE-EXTRAS,
-NOTE-RICH-REJECT) see the pending metadata-only record before hydration; NOTE-CRUD injects pending
-status metadata the store cannot represent; the Rust reader drops notes inside recently-deleted
-folders (NOTE-LIST); NOTE-LIST asserts a fixed thumbnail digest that real derivative bytes cannot
-produce.
+Pending bodies: the Rust reader publishes a metadata-only record (`body_status: pending`) before hydration. The Notes source config accepts `hydration_hold` (a path); while that file exists the reader skips draining the hydration queue but still reconciles. The lab world creates it while any simapple note record says `body_status: pending` and removes it afterwards, and writes `native_fingerprint` into the gzip header comment of the body so the store row gets a new revision with the same decoded text. NOTE-CRUD's pending-content steps therefore see the reader's real pending record, then the hydrated one with an unchanged `content_version`. Fixtures that read a note after its first visible version wait for `body_status` to leave `pending` (`notesBodyPending`).
+Open: NOTE-LIST asserts a note inside a recently-deleted folder and a fixed thumbnail digest (`bbbb...`). Swift and Rust share the same query, which excludes recently-deleted folders and their notes, and a derivative digest is the SHA-256 of staged bytes, so neither can come from a faithful store.
 
 
 ## Production readiness (all switches off by default)
@@ -246,5 +243,4 @@ capture of the key even when the command changed nothing; Notes waits for a capt
 final part is held, and the diff runs once per scan. The producer is woken by every ingest. The lab listener
 keeps accepting while the gateway is restarting.
 
-Known gaps: native/1 fact paging in place of the Helper capture frame, Contacts container facts, and Notes
-effects (NOTE-CRUD and NOTE-EDIT-PARITY still fail at `rest_create_observed` with the session on).
+Known gaps: native/1 fact paging in place of the Helper capture frame and Contacts container facts.
