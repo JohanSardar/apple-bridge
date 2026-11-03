@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"github.com/JohanSardar/apple-bridge/lab/scripted"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 	"os"
@@ -28,6 +29,13 @@ func runNativeDeleteVisibility(ctx context.Context, s Scenario, level string) Ev
 		if strings.HasPrefix(line, "Messages capture checks failed: ") {
 			e.Assertions[0].Detail = strings.TrimPrefix(line, "Messages capture checks failed: ")
 		}
+	}
+	if !e.Assertions[0].Passed && e.Assertions[0].Detail == "" {
+		tail := strings.TrimSpace(string(output))
+		if len(tail) > 2048 {
+			tail = tail[len(tail)-2048:]
+		}
+		e.Assertions[0].Detail = fmt.Sprintf("%v: %s", err, tail)
 	}
 	e.Passed = e.Assertions[0].Passed
 	return e
