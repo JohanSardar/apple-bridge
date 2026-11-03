@@ -7,6 +7,7 @@ pub mod calls;
 pub mod cleanup;
 pub mod commands;
 pub mod connectors;
+pub mod consent;
 pub mod contacts;
 pub mod contacts_list;
 pub mod core;
@@ -114,7 +115,8 @@ pub fn registry() -> Registry {
             || calls::NATIVE_SCENARIOS.contains(&id)
             || usage::NATIVE_SCENARIOS.contains(&id)
             || helper_ipc::SCENARIOS.contains(&id)
-            || core::IGNORE_REPLICAS.contains(&id);
+            || core::IGNORE_REPLICAS.contains(&id)
+            || consent::SCENARIOS.contains(&id);
         if replicas != 0 && blobs::is_blob(id) {
             blobs::configure(world, id, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && calls::REPLICA_SCENARIOS.contains(&id) {
@@ -246,6 +248,7 @@ pub fn registry() -> Registry {
     web_rem_write::register(&mut registry);
     registry.register("SIRI-INTENTS", siri::intents);
     registry.register("connector_approval", connectors::connector_approval);
+    registry.register("consent_connector", consent::run);
     registry.register_real("RELAY-REAL", remote_real::relay_real);
     registry.register_real("CONN-CLAUDE-CODE", remote_real::claude_code);
     registry.register_real("CONN-RELAY-CLAUDE", remote_real::relay_claude);
@@ -306,6 +309,7 @@ pub fn prepare(scenario: &mut lab_runner::Scenario) {
     shortcuts::inject(scenario);
     connectors::inject(scenario);
     calendar::inject(scenario);
+    consent::inject(scenario);
 }
 
 #[must_use]
