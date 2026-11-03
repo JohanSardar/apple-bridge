@@ -33,6 +33,7 @@ type Action struct {
 	Delete      bool            `json:"delete"`
 }
 type captureRequest struct {
+	Exact       bool
 	Whole       bool
 	SourceState *contracts.IPCFrame
 	Capture     contracts.Capture
@@ -355,7 +356,7 @@ func Run(ctx context.Context, cfg Config) error {
 		}
 		json.NewEncoder(w).Encode(map[string]bool{"effect_done": true})
 	})
-	captureHandler := func(whole bool) http.HandlerFunc {
+	captureHandler := func(whole, exact bool) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
 			var capture contracts.Capture
 			if json.NewDecoder(http.MaxBytesReader(w, r.Body, contracts.MaxFrame)).Decode(&capture) != nil {
@@ -365,14 +366,27 @@ func Run(ctx context.Context, cfg Config) error {
 			if capture.Source == "" {
 				capture.Source = contracts.Reminders
 			}
-			if fake.enqueueCapture(r.Context(), capture, true, whole) != nil {
+			if exact {
+				done := make(chan struct{})
+				select {
+				case fake.changes <- captureRequest{Capture: capture, Whole: true, Exact: true, Done: done}:
+				case <-r.Context().Done():
+					return
+				}
+				select {
+				case <-done:
+				case <-r.Context().Done():
+					return
+				}
+			} else if fake.enqueueCapture(r.Context(), capture, true, whole) != nil {
 				return
 			}
 			json.NewEncoder(w).Encode(map[string]bool{"committed": true})
 		}
 	}
-	mux.HandleFunc("POST /capture", captureHandler(false))
-	mux.HandleFunc("POST /capture-atomic", captureHandler(true))
+	mux.HandleFunc("POST /capture", captureHandler(false, false))
+	mux.HandleFunc("POST /capture-atomic", captureHandler(true, false))
+	mux.HandleFunc("POST /capture-exact", captureHandler(true, true))
 
 	mux.HandleFunc("POST /flush", func(w http.ResponseWriter, r *http.Request) {
 		if fake.enqueue(r.Context(), contracts.Capture{Source: contracts.Messages}, true) != nil {
@@ -516,34 +530,36 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 	var emitRevision uint64
 	var emitFull bool
 	scanActive := map[contracts.Source]bool{}
-	transmit := func(capture contracts.Capture, final bool) error {
-		capture = messageAliases(capture)
-		if capture.Generation == "" {
-			capture.Generation = generation
-		}
-		if capture.Source == contracts.Messages {
-			f.mu.Lock()
-			expected := f.messages.generation
-			f.mu.Unlock()
-			if capture.Generation != expected {
-				capture.Generation = expected
+	transmit := func(capture contracts.Capture, final bool, exact ...bool) error {
+		if len(exact) == 0 || !exact[0] {
+			capture = messageAliases(capture)
+			if capture.Generation == "" {
+				capture.Generation = generation
 			}
-		}
-		if capture.Source == contracts.Contacts && capture.Generation == generation {
-			capture.Generation = f.contactGeneration()
-		}
-		if generations[capture.Source] != capture.Generation {
-			checkpoints[capture.Source] = ""
-		}
-		for d := range capture.BlobHandles {
-			capture.BlobHandles[d] = fmt.Sprintf("%d:%s", open.OwnerFence, d)
-		}
-		capture.Predecessor = checkpoints[capture.Source]
-		if generations[capture.Source] != capture.Generation {
-			capture.Predecessor = ""
-		}
-		if capture.Checkpoint == "" || capture.Source != contracts.Contacts {
-			capture.Checkpoint = contracts.NewID("cp")
+			if capture.Source == contracts.Messages {
+				f.mu.Lock()
+				expected := f.messages.generation
+				f.mu.Unlock()
+				if capture.Generation != expected {
+					capture.Generation = expected
+				}
+			}
+			if capture.Source == contracts.Contacts && capture.Generation == generation {
+				capture.Generation = f.contactGeneration()
+			}
+			if generations[capture.Source] != capture.Generation {
+				checkpoints[capture.Source] = ""
+			}
+			for d := range capture.BlobHandles {
+				capture.BlobHandles[d] = fmt.Sprintf("%d:%s", open.OwnerFence, d)
+			}
+			capture.Predecessor = checkpoints[capture.Source]
+			if generations[capture.Source] != capture.Generation {
+				capture.Predecessor = ""
+			}
+			if capture.Checkpoint == "" || capture.Source != contracts.Contacts {
+				capture.Checkpoint = contracts.NewID("cp")
+			}
 		}
 		encoded, err := contracts.EncodeFrame(contracts.IPCFrame{T: "Capture", Capture: &capture})
 		if err != nil {
@@ -877,7 +893,12 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 			}
 			emitRevision = req.Revision
 			emitFull = req.Capture.Source == contracts.Messages && req.Capture.ScanID != "" && req.Capture.CompletionEvidence == "complete"
-			if err = emit(req.Capture, req.Whole); err != nil {
+			if req.Exact {
+				err = transmit(req.Capture, true, true)
+			} else {
+				err = emit(req.Capture, req.Whole)
+			}
+			if err != nil {
 				return err
 			}
 			if req.Done != nil {
