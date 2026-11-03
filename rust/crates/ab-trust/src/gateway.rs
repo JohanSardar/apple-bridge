@@ -453,6 +453,13 @@ impl Authority {
     pub fn confirm_dial(&self, id: &str) -> Result<(), Error> {
         self.update(|d| {
             for value in d.pairings.values_mut() {
+                if value
+                    .get("purpose")
+                    .and_then(serde_json::Value::as_str)
+                    .is_some_and(|purpose| !purpose.is_empty())
+                {
+                    continue;
+                }
                 let mut pair: Pairing = serde_json::from_value(value.clone())?;
                 if pair.result.as_ref().is_some_and(|p| p.id == id) && !pair.complete {
                     pair.complete = true;
@@ -465,6 +472,13 @@ impl Authority {
     }
     pub async fn dial_pairings_once(&self) -> Result<(), Error> {
         for (id, value) in self.load()?.pairings {
+            if value
+                .get("purpose")
+                .and_then(serde_json::Value::as_str)
+                .is_some_and(|purpose| !purpose.is_empty())
+            {
+                continue;
+            }
             let pair: Pairing = serde_json::from_value(value)?;
             if pair.dial.is_empty()
                 || pair.complete

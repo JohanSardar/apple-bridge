@@ -92,6 +92,7 @@ pub struct LocalGateway {
     pub peer: Arc<dyn ApplePeer>,
     pub actions: Arc<dyn ActionResolver>,
     pub query_store: Option<Arc<crate::LocalQueryStore>>,
+    pub phone_notify: Option<Arc<tokio::sync::Notify>>,
     query_rates: Mutex<BTreeMap<String, (std::time::Instant, u32)>>,
     locks: Mutex<BTreeMap<String, Arc<AsyncMutex<()>>>>,
     stopping: std::sync::atomic::AtomicBool,
@@ -120,6 +121,7 @@ impl LocalGateway {
             peer,
             actions,
             query_store: None,
+            phone_notify: None,
             query_rates: Mutex::default(),
             locks: Mutex::default(),
             stopping: std::sync::atomic::AtomicBool::new(false),
@@ -226,7 +228,7 @@ impl LocalGateway {
             "maps.open" | "speech.say" | "capture.play_sound"
         );
         crate::native_commands::validate(&command, &args)?;
-        if ["contacts.", "notes.", "reminders."]
+        if ["contacts.", "notes.", "reminders.", "iphone."]
             .iter()
             .any(|prefix| command.op.starts_with(prefix))
         {
@@ -296,7 +298,10 @@ impl LocalGateway {
             return Err(Code::Expired.into());
         }
         let approval = p.is_agent() && (p.level == "approve" || command.op == "focus.set");
-        if !approval && !self.peer.available() {
+        if !(approval
+            || self.peer.available()
+            || command.op.starts_with("iphone.") && self.phone_notify.is_some())
+        {
             return Err(Code::Unavailable.into());
         }
         let wait = command.wait_ms;
@@ -361,6 +366,12 @@ impl LocalGateway {
     }
     #[allow(clippy::too_many_lines)]
     async fn execute(&self, mut r: CommandRecord, p: Principal) -> Result<CommandRecord, Error> {
+        if r.source == "iphone"
+            && let Some(notify) = &self.phone_notify
+        {
+            notify.notify_one();
+            return Ok(r);
+        }
         let remaining = timestamp(&r.expires_at)?.duration_since(now());
         if remaining.is_negative() {
             return self.transition(r, State::Expired, Some(Disposition::Expired), None, None);
@@ -759,6 +770,9 @@ impl LocalGateway {
     }
     pub fn recover(&self) -> Result<(), Error> {
         for r in self.state.commands()? {
+            if r.source == "iphone" {
+                continue;
+            }
             match r.state {
                 State::AwaitingApproval => {
                     self.expire(r)?;
@@ -800,9 +814,32 @@ impl LocalGateway {
             return Err(Code::Unauthorized.into());
         }
         self.identity.current(owner)?.authorize("admin")?;
+        self.decide_inner(id, approve, None).await
+    }
+    pub async fn decide_phone(
+        self: &Arc<Self>,
+        id: &str,
+        hash: &str,
+        approve: bool,
+    ) -> Result<Box<RawValue>, Error> {
+        if hash.is_empty() {
+            return Err(Code::Invalid.into());
+        }
+        self.decide_inner(id, approve, Some(hash)).await
+    }
+    async fn decide_inner(
+        self: &Arc<Self>,
+        id: &str,
+        approve: bool,
+        hash: Option<&str>,
+    ) -> Result<Box<RawValue>, Error> {
         let lock = self.lock(format!("command:{id}"))?;
         let _guard = lock.lock().await;
-        let mut r = self.expire(self.state.command(id)?)?;
+        let row = self.state.command(id)?;
+        if hash.is_some_and(|hash| hash != row.request_hash) {
+            return Err(Code::Unauthorized.into());
+        }
+        let mut r = self.expire(row)?;
         if r.state != State::AwaitingApproval {
             return raw(&r);
         }
@@ -841,7 +878,7 @@ impl LocalGateway {
                 )?);
             }
         };
-        if !self.peer.available() {
+        if !(self.peer.available() || r.source == "iphone" && self.phone_notify.is_some()) {
             return Err(Code::Unavailable.into());
         }
         let ttl = if r.command.expires_at == "0001-01-01T00:00:00Z" {

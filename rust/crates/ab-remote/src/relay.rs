@@ -208,6 +208,8 @@ impl Relay {
         )
         .await
         .map_err(|_| Error::Contract("tunnel timeout"))??;
+        self.certificates.ensure(identity, &self.client).await?;
+        let _active = gateway.ready("relay", &identity.credential.hostname);
         let certs = self.certificates.clone();
         let renew = async {
             loop {

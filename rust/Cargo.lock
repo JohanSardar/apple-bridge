@@ -253,8 +253,10 @@ version = "0.0.0"
 dependencies = [
  "ab-applepeer",
  "ab-blobs",
+ "ab-catalog",
  "ab-commands",
  "ab-frontdoor",
+ "ab-iphone",
  "ab-operations",
  "ab-remote",
  "ab-replication",
@@ -262,15 +264,21 @@ dependencies = [
  "ab-trust",
  "ab-wire",
  "axum",
+ "hyper",
+ "hyper-util",
  "jiff",
  "rand 0.8.8",
  "reqwest",
  "rusqlite",
+ "rustls",
  "serde",
  "serde_json",
  "sha2 0.10.9",
+ "subtle",
  "thiserror 2.0.21",
  "tokio",
+ "tower",
+ "webpki-roots 1.0.11",
 ]
 
 [[package]]

@@ -7,8 +7,16 @@ license.workspace = true
 workspace = true
 [dependencies]
 ab-commands = { path = "../ab-commands" }
+ab-iphone = { path = "../ab-iphone" }
+ab-catalog = { path = "../ab-catalog" }
 ab-applepeer = { path = "../ab-applepeer" }
 rand = "0.8"
+rustls.workspace = true
+hyper.workspace = true
+hyper-util = { version = "0.1", features = ["tokio", "service"] }
+tower = { version = "0.5", features = ["util"] }
+webpki-roots = "1"
+subtle = "2"
 ab-remote = { path = "../ab-remote" }
 ab-operations = { path = "../ab-operations" }
 ab-frontdoor = { path = "../ab-frontdoor" }

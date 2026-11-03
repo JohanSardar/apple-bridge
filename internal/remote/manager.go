@@ -5,7 +5,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"tailscale.com/client/local"
 	"time"
 )
 
@@ -32,7 +31,7 @@ func (r *Remote) Run(ctx context.Context, web, api, feed http.Handler) {
 			status := Status{ID: cfg.ID, State: "off", Backend: cfg.Backend, TLSTermination: "on this Mac"}
 			if !cfg.Enabled {
 				if cfg.Backend == "system" {
-					if err := cleanupSystem(r.home, &local.Client{}); err != nil {
+					if err := cleanupSystem(r.home, installedLocalClient()); err != nil {
 						status.State = "error"
 						status.LastError = "Remote cleanup failed"
 					}

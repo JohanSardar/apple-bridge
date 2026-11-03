@@ -6,19 +6,28 @@ use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
+fn byte_string<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<String, D::Error> {
+    Ok(Option::<String>::deserialize(deserializer)?.unwrap_or_default())
+}
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PairRequest {
     pub id: String,
+    #[serde(default, deserialize_with = "byte_string")]
     pub signing_key: String,
+    #[serde(default, deserialize_with = "byte_string")]
     pub encryption_key: String,
+    #[serde(default, deserialize_with = "byte_string")]
     pub proof: String,
+    #[serde(default, deserialize_with = "byte_string")]
     pub signature: String,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Request {
     pub device_id: String,
     pub at: i64,
+    #[serde(default, deserialize_with = "byte_string")]
     pub payload: String,
+    #[serde(default, deserialize_with = "byte_string")]
     pub signature: String,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -141,6 +150,13 @@ impl Authority {
         })
     }
 
+    pub fn iphone_status(&self, request: &Request) -> Result<Device, Error> {
+        let (phone, _) = self.verify_iphone("/v1/iphone/status", request)?;
+        Ok(Device {
+            id: phone.id,
+            gateway_key: STANDARD.encode(self.iphone_signing_key()?.verifying_key().to_bytes()),
+        })
+    }
     pub fn pair_iphone(&self, req: &PairRequest) -> Result<Device, Error> {
         let signing = decode(&req.signing_key)?;
         let encryption = decode(&req.encryption_key)?;
