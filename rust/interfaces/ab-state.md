@@ -40,3 +40,9 @@ APP-HEALTH-SIM requires one State<Gateway> transaction for HealthBatch sequence/
 ## G-F CAL gateway sim worker, 2026-11-02
 
 Owns the 21 CAL scenarios in the default gateway matrix. Verification uses isolated `ssh build:~/w/gf-cal` with `~/targets/gf-cal`. No real-level runs. The separate real calendar false-deletion investigation remains with its assigned worker; this worker will not change deletion semantics without a distinct sim reproduction. Initial gateway command-path finding: `ab-runtime/src/actions.rs` accepts reminders only; calendar action resolution needs calendar_args, calendar/calendar-event native keys and series serialization. Calendar-specific resolver code will live in a separate module to avoid unrelated resolver edits.
+
+## G-F matrix follow-up
+
+The current shared-State gateway assembly runs the matrix. CORE-BLOB-GC additionally needs a State-owned `set_blob_references(owner, refs)` transaction which updates blob_reference_sets and invokes the installed protection hook, matching Go SetBlobReferences. The lab adapter must call this public State seam rather than writing SQL or simulating ownership in a separate Store. The pending atomic health transaction request above remains unchanged.
+
+CAL-WINDOW-SLIDE currently fails only window_eviction_is_not_deletion in a full Linux gateway matrix while public record integrity and convergence pass. No calendar capture semantics were changed by G-F. Reproduce against Go before modifying State eviction handling.

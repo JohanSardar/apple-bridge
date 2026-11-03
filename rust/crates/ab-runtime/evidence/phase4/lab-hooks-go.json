@@ -1,0 +1,33 @@
+{
+  "wall_seconds": 11.389,
+  "parallel": 4,
+  "host": "linux",
+  "complete": true,
+  "expected": 4,
+  "results": [
+    {
+      "id": "CORE-BLOB-NATIVE-STAGE",
+      "seconds": 1.718,
+      "status": "pass",
+      "implementation": "gateway=go"
+    },
+    {
+      "id": "CORE-BLOB-STAGE-DURING-TRANSFER",
+      "seconds": 2.769,
+      "status": "pass",
+      "implementation": "gateway=go"
+    },
+    {
+      "id": "CORE-BLOB-STAGE-SAME-DIGEST",
+      "seconds": 3.721,
+      "status": "pass",
+      "implementation": "gateway=go"
+    },
+    {
+      "id": "CORE-KILL-GATEWAY-CAPTURE",
+      "seconds": 11.387,
+      "status": "pass",
+      "implementation": "gateway=go"
+    }
+  ]
+}

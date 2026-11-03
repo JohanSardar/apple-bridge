@@ -1,0 +1,69 @@
+{
+  "wall_seconds": 13.09,
+  "parallel": 4,
+  "host": "linux",
+  "complete": true,
+  "expected": 4,
+  "results": [
+    {
+      "id": "CORE-BLOB-NATIVE-STAGE",
+      "seconds": 1.818,
+      "status": "pass",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": []
+    },
+    {
+      "id": "CORE-BLOB-STAGE-DURING-TRANSFER",
+      "seconds": 2.87,
+      "status": "pass",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": []
+    },
+    {
+      "id": "CORE-BLOB-STAGE-SAME-DIGEST",
+      "seconds": 2.97,
+      "status": "pass",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": []
+    },
+    {
+      "id": "CORE-KILL-GATEWAY-CAPTURE",
+      "seconds": 13.087,
+      "status": "pass",
+      "implementation": "gateway=rust",
+      "required_features": [
+        "internal/applepeer",
+        "internal/blobs",
+        "internal/contracts",
+        "internal/replication",
+        "internal/state",
+        "internal/trust"
+      ],
+      "blocked_on": []
+    }
+  ]
+}

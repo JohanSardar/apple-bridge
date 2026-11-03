@@ -8,6 +8,8 @@ pub struct Backend {
     pub state: GatewayStore,
     pub blobs: Arc<Mutex<ab_blobs::Store>>,
     pub jobs: mpsc::Sender<Capture>,
+    #[cfg(feature = "lab-harness")]
+    pub home: std::path::PathBuf,
 }
 impl ab_applepeer::Backend for Backend {
     fn next_fence(&self) -> Task<'_, u64> {
@@ -44,6 +46,10 @@ impl ab_applepeer::Backend for Backend {
                     .await
                     .map_err(|_| Code::Unavailable)?;
             }
+            #[cfg(feature = "lab-harness")]
+            crate::lab_gateway::capture_boundary(&self.home)
+                .await
+                .map_err(|_| Code::Unavailable)?;
             Ok(result)
         })
     }
