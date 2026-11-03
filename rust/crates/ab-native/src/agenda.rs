@@ -66,6 +66,16 @@ impl Reader {
         }
     }
 
+    #[must_use]
+    pub fn knows(&self, identity: &str) -> bool {
+        self.records.contains_key(identity)
+    }
+
+    #[must_use]
+    pub fn generation(&self) -> &str {
+        &self.generation
+    }
+
     pub fn prepare(&self, snapshot: Snapshot, context: &Context) -> Result<Pending> {
         self.validate(&snapshot, context)?;
         let same_generation = self.generation == snapshot.generation;

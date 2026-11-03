@@ -783,3 +783,102 @@ fn rust_mail_splits_large_scan_into_committed_chunks() -> Fallible<()> {
     std::fs::remove_dir_all(directory)?;
     Ok(())
 }
+
+fn event(key: &str, title: &str) -> Value {
+    json!({"kind":"upsert","collection":"calendar.event","native_key":key,"scoped_alias":format!("cal/{key}"),"data":{"title":title},"observed_at":"2026-11-03T00:00:00Z"})
+}
+
+fn names(capture: &Value, kind: &str) -> Vec<String> {
+    capture["observations"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|o| o["kind"] == kind)
+        .filter_map(|o| o["native_key"].as_str().map(str::to_owned))
+        .collect()
+}
+
+#[test]
+fn rust_calendar_diffs_helper_facts_without_false_deletion() -> Fallible<()> {
+    let sources = readers::from_config(&json!({"calendar":{"root":"/nonexistent"}}).to_string())?;
+    let (mut gateway, session_gateway) = UnixStream::pair()?;
+    let (mut helper, session_helper) = UnixStream::pair()?;
+    for socket in [&gateway, &helper] {
+        socket.set_read_timeout(Some(Duration::from_secs(10)))?;
+    }
+    let worker = std::thread::spawn(move || {
+        routed::relay(
+            session_gateway,
+            session_helper,
+            sources,
+            Duration::from_millis(20),
+        )
+    });
+    send(
+        &mut gateway,
+        &json!({"t":"Open","protocol":"ipc/1","owner_fence":1,"byte_credit":4_194_304,"checkpoints":{}}),
+    )?;
+    assert_eq!(receive(&mut helper)?.1["t"], "Open");
+    send(&mut helper, &json!({"t":"Ready","protocol":"ipc/1"}))?;
+    assert_eq!(receive(&mut gateway)?.1["t"], "Ready");
+
+    send(
+        &mut helper,
+        &json!({"t":"Capture","source":"calendar","generation":"swift-g","checkpoint":"h1","observations":[event("a","A"),event("b","B")]}),
+    )?;
+    expect_silence(&mut helper)?;
+    let (size, first) = receive(&mut gateway)?;
+    assert_eq!(first["source"], "calendar");
+    assert_eq!(first["predecessor"], "");
+    assert_eq!(first["generation"], "swift-g");
+    assert_eq!(names(&first, "upsert"), ["a", "b"]);
+    send(
+        &mut gateway,
+        &json!({"t":"Committed","source":"calendar","checkpoint":first["checkpoint"],"credit":size}),
+    )?;
+    let (_, committed) = receive(&mut helper)?;
+    assert_eq!(committed["checkpoint"], "h1");
+    expect_silence(&mut gateway)?;
+
+    send(
+        &mut helper,
+        &json!({"t":"Capture","source":"calendar","generation":"swift-g","checkpoint":"h2","observations":[event("a","A2")]}),
+    )?;
+    let (size, second) = receive(&mut gateway)?;
+    assert_eq!(second["predecessor"], first["checkpoint"]);
+    assert_eq!(names(&second, "upsert"), ["a"]);
+    assert_eq!(names(&second, "absent"), Vec::<String>::new());
+    assert_eq!(names(&second, "evict"), Vec::<String>::new());
+    send(
+        &mut gateway,
+        &json!({"t":"Committed","source":"calendar","checkpoint":second["checkpoint"],"credit":size}),
+    )?;
+    assert_eq!(receive(&mut helper)?.1["checkpoint"], "h2");
+
+    let mut gone = event("b", "B");
+    gone["kind"] = json!("evict");
+    send(
+        &mut helper,
+        &json!({"t":"Capture","source":"calendar","generation":"swift-g","checkpoint":"h3","observations":[event("a","A2"),gone]}),
+    )?;
+    let (size, third) = receive(&mut gateway)?;
+    assert_eq!(names(&third, "upsert"), Vec::<String>::new());
+    assert_eq!(names(&third, "evict"), ["b"]);
+    send(
+        &mut gateway,
+        &json!({"t":"Committed","source":"calendar","checkpoint":third["checkpoint"],"credit":size}),
+    )?;
+    assert_eq!(receive(&mut helper)?.1["checkpoint"], "h3");
+
+    send(
+        &mut helper,
+        &json!({"t":"Capture","source":"calendar","generation":"swift-g","checkpoint":"h4","observations":[]}),
+    )?;
+    assert_eq!(receive(&mut helper)?.1["checkpoint"], "h4");
+    expect_silence(&mut gateway)?;
+
+    drop(gateway);
+    drop(helper);
+    let _ = worker.join();
+    Ok(())
+}

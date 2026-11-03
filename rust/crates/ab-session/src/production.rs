@@ -20,6 +20,8 @@ pub const SUPPORTED: &[&str] = &[
     "phone",
     "voicemail",
     "voice_memos",
+    "calendar",
+    "contacts",
 ];
 pub const CONFIG_FILE: &str = "session/rust-capture.json";
 pub const STATE_DIRECTORY: &str = "session/capture-state";
