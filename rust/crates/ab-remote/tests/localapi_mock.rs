@@ -49,51 +49,54 @@ async fn respond(
     }
     let mut first = head.lines().next().unwrap().split(' ');
     let (method, path) = (first.next().unwrap(), first.next().unwrap());
-    let mut mock = state.lock().unwrap();
-    mock.seen.push(format!("{method} {path}"));
-    let expected = format!(
-        "Basic {}",
-        base64::Engine::encode(
-            &base64::engine::general_purpose::STANDARD,
-            format!(":{token}")
-        )
-    );
-    let (status, etag, payload) = if header("authorization").as_deref() != Some(expected.as_str())
-        || header("host").as_deref() != Some("local-tailscaled.sock")
-        || header("tailscale-cap").is_none()
-    {
-        ("401 Unauthorized", None, json!({}))
-    } else if path == "/localapi/v0/status?peers=false" {
-        (
-            "200 OK",
-            None,
-            json!({"BackendState":"Running","Self":{"DNSName":"node.example.ts.net.","CapMap":{"https":null,"funnel":null,"https://tailscale.com/cap/funnel-ports?ports=443,8443,10000":null}}}),
-        )
-    } else if path == "/localapi/v0/serve-config" && method == "GET" {
-        ("200 OK", Some(mock.etag), mock.config.clone())
-    } else if path == "/localapi/v0/serve-config" && method == "POST" {
-        if header("if-match") != Some(mock.etag.to_string()) {
-            ("412 Precondition Failed", None, json!({}))
-        } else if mock.conflict_once {
-            mock.conflict_once = false;
-            mock.etag += 1;
-            mock.config["Unrelated"] = json!(true);
-            ("412 Precondition Failed", None, json!({}))
+    let reply = {
+        let mut mock = state.lock().unwrap();
+        mock.seen.push(format!("{method} {path}"));
+        let expected = format!(
+            "Basic {}",
+            base64::Engine::encode(
+                &base64::engine::general_purpose::STANDARD,
+                format!(":{token}")
+            )
+        );
+        let (status, etag, payload) = if header("authorization").as_deref()
+            != Some(expected.as_str())
+            || header("host").as_deref() != Some("local-tailscaled.sock")
+            || header("tailscale-cap").is_none()
+        {
+            ("401 Unauthorized", None, json!({}))
+        } else if path == "/localapi/v0/status?peers=false" {
+            (
+                "200 OK",
+                None,
+                json!({"BackendState":"Running","Self":{"DNSName":"node.example.ts.net.","CapMap":{"https":null,"funnel":null,"https://tailscale.com/cap/funnel-ports?ports=443,8443,10000":null}}}),
+            )
+        } else if path == "/localapi/v0/serve-config" && method == "GET" {
+            ("200 OK", Some(mock.etag), mock.config.clone())
+        } else if path == "/localapi/v0/serve-config" && method == "POST" {
+            if header("if-match") != Some(mock.etag.to_string()) {
+                ("412 Precondition Failed", None, json!({}))
+            } else if mock.conflict_once {
+                mock.conflict_once = false;
+                mock.etag += 1;
+                mock.config["Unrelated"] = json!(true);
+                ("412 Precondition Failed", None, json!({}))
+            } else {
+                mock.config = serde_json::from_slice(&body).unwrap();
+                mock.etag += 1;
+                ("200 OK", None, json!({}))
+            }
         } else {
-            mock.config = serde_json::from_slice(&body).unwrap();
-            mock.etag += 1;
-            ("200 OK", None, json!({}))
-        }
-    } else {
-        ("404 Not Found", None, json!({}))
+            ("404 Not Found", None, json!({}))
+        };
+        let payload = payload.to_string();
+        let etag = etag.map_or_else(String::new, |etag| format!("ETag: {etag}\r\n"));
+        let reply = format!(
+            "HTTP/1.1 {status}\r\nContent-Type: application/json\r\n{etag}Content-Length: {}\r\nConnection: close\r\n\r\n{payload}",
+            payload.len()
+        );
+        reply
     };
-    let payload = payload.to_string();
-    let etag = etag.map_or_else(String::new, |etag| format!("ETag: {etag}\r\n"));
-    let reply = format!(
-        "HTTP/1.1 {status}\r\nContent-Type: application/json\r\n{etag}Content-Length: {}\r\nConnection: close\r\n\r\n{payload}",
-        payload.len()
-    );
-    drop(mock);
     socket.write_all(reply.as_bytes()).await.unwrap();
 }
 

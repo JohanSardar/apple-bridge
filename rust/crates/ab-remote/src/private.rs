@@ -9,7 +9,7 @@ use std::{
 use subtle::ConstantTimeEq;
 use tokio::{
     io::{AsyncRead, AsyncReadExt, AsyncWriteExt},
-    net::{TcpStream, UnixStream},
+    net::TcpStream,
     sync::{Mutex, watch},
     task::JoinSet,
 };
