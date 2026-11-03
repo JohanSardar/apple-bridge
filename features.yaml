@@ -102,6 +102,8 @@ features:
     status: done
     scenarios:
       - {id: CORE-HELPER-RESTART, levels: [sim]}
+      - {id: CORE-STALE-FENCE, levels: [sim]}
+      - {id: CORE-ACK-DURABLE, levels: [sim]}
       - {id: CORE-SIM-PROGRESS-RECOVERY, levels: [sim]}
       - {id: CORE-DOCTOR, levels: [sim, replica]}
       - {id: CORE-CLOCK-DELAY, levels: [sim, replica]}

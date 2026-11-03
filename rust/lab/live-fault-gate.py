@@ -12,11 +12,14 @@ RUST_GATES = {
     'leak-scope': ('LIVE-SCOPE-QUERY', 'scoped_token_hides_out_of_scope'),
 }
 GO_GATES = {
-    'skip-checkpoint-commit': ['CORE-HELPER-RESTART', 'CORE-KILL-GATEWAY-CAPTURE'],
-    'accept-stale-fence': [],
-    'ack-uncommitted-data': [],
-    'leak-scope': ['CORE-SCOPE-LEAK'],
+    'skip-checkpoint-commit': {'CORE-HELPER-RESTART': 'helper_restart_checkpoint_drained',
+                               'CORE-KILL-GATEWAY-CAPTURE': 'capture_replay_converged_iteration_0'},
+    'accept-stale-fence': {'CORE-STALE-FENCE': 'stale_fence_rejected'},
+    'ack-uncommitted-data': {'CORE-ACK-DURABLE': 'acked_data_visible'},
+    'leak-scope': {'CORE-SCOPE-LEAK': 'all_registered_scope_paths'},
 }
+GO_INFRASTRUCTURE = {'world_start', 'action', 'peer_ack_observed', 'initial_convergence', 'bootstrap_snapshot',
+                     'sse_observe', 'scope_token', 'world'}
 REPOSITORY = Path(__file__).resolve().parents[2]
 
 
@@ -65,8 +68,13 @@ def go_healthy(code, records):
     return code == 0 and len(records) == 1 and records[0]['passed']
 
 
-def go_detected(code, records):
-    return code != 0 and len(records) == 1 and not records[0]['passed'] and bool(records[0]['assertions'])
+def go_detected(code, records, name):
+    if code == 0 or len(records) != 1 or records[0]['passed']:
+        return False
+    assertions = records[0]['assertions']
+    if any(not a['passed'] and a['name'] in GO_INFRASTRUCTURE for a in assertions):
+        return False
+    return any(a['name'] == name and not a['passed'] for a in assertions)
 
 
 def find_go_scenario(name):
@@ -105,14 +113,14 @@ def main():
     healthy_cache = {}
     for fault, scenarios in GO_GATES.items():
         entries = []
-        for name in scenarios:
+        for name, assertion in scenarios.items():
             path = find_go_scenario(name)
             if name not in healthy_cache:
                 code, records = run_go(args.go_lab, path, args.healthy_gateway, '', args.go_repo)
                 healthy_cache[name] = go_healthy(code, records)
             code, records = run_go(args.go_lab, path, args.mutant_gateway, fault, args.go_repo)
-            entries.append({'scenario': name, 'healthy_passes': healthy_cache[name],
-                            'mutant_detected': go_detected(code, records),
+            entries.append({'scenario': name, 'assertion': assertion, 'healthy_passes': healthy_cache[name],
+                            'mutant_detected': go_detected(code, records, assertion),
                             'mutant_failed_assertions': failed_names(records)})
         go[fault] = {'scenarios': entries,
                      'ok': bool(entries) and all(e['healthy_passes'] and e['mutant_detected'] for e in entries)}

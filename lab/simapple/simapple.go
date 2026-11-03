@@ -210,6 +210,7 @@ func Run(ctx context.Context, cfg Config) error {
 	}
 	fake.commandControl(mux)
 	fake.blobRoutes(mux)
+	fake.staleRoute(mux, cfg)
 	fake.datasetRoutes(mux)
 	mux.HandleFunc("GET /stats", func(w http.ResponseWriter, r *http.Request) {
 		fake.mu.Lock()

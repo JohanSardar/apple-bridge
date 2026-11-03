@@ -551,6 +551,12 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "REM-STORE-PERF" {
 		return runRemindersStorePerf(ctx, s, level)
 	}
+	if s.ID == "CORE-STALE-FENCE" {
+		return runStaleFence(ctx, s, level)
+	}
+	if s.ID == "CORE-ACK-DURABLE" {
+		return runAckDurable(ctx, s, level)
+	}
 	if s.ID == "CORE-REPLICA-CAPTURE-STAGING" || s.ID == "CORE-REPLICA-CAPTURE-LEGACY" {
 		return runReplicaCaptureStaging(ctx, s, level)
 	}

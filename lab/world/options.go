@@ -3,10 +3,11 @@ package world
 import "context"
 
 type Options struct {
-	Scope                    string
-	GatewayDials             bool
-	DirectTailscale          bool
-	PersistentReplicaStorage bool
+	Scope                      string
+	GatewayDials               bool
+	DirectTailscale            bool
+	PersistentReplicaStorage   bool
+	WithoutAcknowledgedCapture bool
 }
 type optionsKey struct{}
 
@@ -23,5 +24,11 @@ func WithPersistentReplicaStorage(ctx context.Context) context.Context {
 func WithGatewayDials(ctx context.Context) context.Context {
 	options, _ := ctx.Value(optionsKey{}).(Options)
 	options.GatewayDials = true
+	return WithOptions(ctx, options)
+}
+
+func WithoutAcknowledgedCapture(ctx context.Context) context.Context {
+	options, _ := ctx.Value(optionsKey{}).(Options)
+	options.WithoutAcknowledgedCapture = true
 	return WithOptions(ctx, options)
 }

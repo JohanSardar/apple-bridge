@@ -15,7 +15,7 @@ var gatewaySemanticCall = regexp.MustCompile(`contracts\.(CommandHash|Descriptor
 
 func portableGatewaySimScenario(s Scenario) bool {
 	switch s.ID {
-	case "RELAY-ROTATE-GATED", "SEC-REMOTE-ACCESS", "SC-RUN-REAL":
+	case "RELAY-ROTATE-GATED", "SEC-REMOTE-ACCESS", "SC-RUN-REAL", "CORE-STALE-FENCE", "CORE-ACK-DURABLE":
 		return true
 	}
 	raw, err := os.ReadFile("lab/test-selection.json")
