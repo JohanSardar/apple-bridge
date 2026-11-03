@@ -71,7 +71,8 @@ pub fn run(scenario: &Scenario) -> Option<Evidence> {
     match scenario.id.as_str() {
         "APP-ALARM-SIM" => alarm(&mut evidence),
         "APP-SHELL-SIM" => shell(&mut evidence),
-        id if crate::iphone_gateway::run(id, &mut evidence) => {}
+        id if crate::iphone_gateway::run(id, &mut evidence)
+            || crate::iphone_push::run(id, &mut evidence) => {}
         _ => return None,
     }
     Some(evidence)
