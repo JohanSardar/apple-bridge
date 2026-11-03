@@ -237,5 +237,14 @@ send nothing. A revalidation result for an identity the reader does not know is 
 without a result remain candidates, never deletions. Lab: `AB_LAB_SESSION_SOURCES=calendar` or
 `contacts`; negative control `AB_SESSION_RUST_POLL_MS=3600000`.
 
-Known gaps: command-effect captures (simapple `emit` frames carrying command checkpoints), oversized
-split captures, native/1 fact paging in place of the Helper capture frame, and Contacts container facts.
+Command effects: a Helper `Outcome` or `Rejected` whose evidence carries `native_key` and `capture_checkpoint`
+is rebound to the Rust checkpoint that last committed that key (`routed::bind_outcome`). For Calendar and
+Contacts the Helper `Committed` is held until the Rust commit, so the binding is immediate and uses the latest
+capture of the key even when the command changed nothing; Notes waits for a capture after `Dispatch`. A
+`Resolve` after a gateway restart binds the same way. Multi-part Helper scans (`scan_id` set,
+`completion_evidence` not `complete`) are merged by the reader; their `Committed` is released at once, the
+final part is held, and the diff runs once per scan. The producer is woken by every ingest. The lab listener
+keeps accepting while the gateway is restarting.
+
+Known gaps: native/1 fact paging in place of the Helper capture frame, Contacts container facts, and Notes
+effects (NOTE-CRUD and NOTE-EDIT-PARITY still fail at `rest_create_observed` with the session on).
