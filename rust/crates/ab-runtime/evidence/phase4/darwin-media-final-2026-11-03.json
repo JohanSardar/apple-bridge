@@ -1,0 +1,106 @@
+{
+  "host": "darwin",
+  "level": "sim",
+  "source_head": "63b0833c2f417328c16b23da7eae663fc556ee35",
+  "runtime_base": "b09f7dd4ff558db65fbfb2de032efd98fc0f83ff",
+  "rust_bridge_sha256": "aa68120eef3c78d199778f167c378d7780befa244a296de563785adc658d31d4",
+  "validation": {
+    "go_scenarios": "10/10 passed",
+    "rust_scenarios": "10/10 passed",
+    "rust_ci_components": "passed locally through temporary Makefile recipe overrides",
+    "make_lint": "passed",
+    "build_host_blocker": "build and ubuntu SSH aliases do not resolve; stock Darwin rust/check.sh assumes absent ~/bin/ab-local"
+  },
+  "scenarios": [
+    {
+      "id": "CALL-CAPTURE",
+      "rust_before": "blocked",
+      "before_assertion": "binary_harness_required",
+      "go_after": "passed",
+      "rust_after": "passed",
+      "assertions_passed": 10,
+      "root_cause": "SIM admission guard requires a selected-binary fixture path"
+    },
+    {
+      "id": "FILE-CAPTURE",
+      "rust_before": "blocked",
+      "before_assertion": "binary_harness_required",
+      "go_after": "passed",
+      "rust_after": "passed",
+      "assertions_passed": 11,
+      "root_cause": "SIM admission guard requires a selected-binary fixture path"
+    },
+    {
+      "id": "FILES-TRANSFORM",
+      "rust_before": "blocked",
+      "before_assertion": "binary_harness_required",
+      "go_after": "passed",
+      "rust_after": "passed",
+      "assertions_passed": 11,
+      "root_cause": "SIM admission guard requires a selected-binary fixture path"
+    },
+    {
+      "id": "NATIVE-MEDIA-EXPORT-SAFETY",
+      "rust_before": "blocked",
+      "before_assertion": "binary_harness_required",
+      "go_after": "passed",
+      "rust_after": "passed",
+      "assertions_passed": 10,
+      "root_cause": "SIM admission guard requires a selected-binary fixture path"
+    },
+    {
+      "id": "NATIVE-MEDIA-POSTERS",
+      "rust_before": "blocked",
+      "before_assertion": "binary_harness_required",
+      "go_after": "passed",
+      "rust_after": "passed",
+      "assertions_passed": 9,
+      "root_cause": "SIM admission guard requires a selected-binary fixture path"
+    },
+    {
+      "id": "NATIVE-MEDIA-YIELD",
+      "rust_before": "blocked",
+      "before_assertion": "binary_harness_required",
+      "go_after": "passed",
+      "rust_after": "passed",
+      "assertions_passed": 13,
+      "root_cause": "SIM admission guard requires a selected-binary fixture path; native yield fixture used protected Messages home, fixed in https://github.com/JohanSardar/apple-bridge/pull/643"
+    },
+    {
+      "id": "VM-CAPTURE",
+      "rust_before": "blocked",
+      "before_assertion": "binary_harness_required",
+      "go_after": "passed",
+      "rust_after": "passed",
+      "assertions_passed": 10,
+      "root_cause": "SIM admission guard requires a selected-binary fixture path"
+    },
+    {
+      "id": "VMEMO-CAPTURE",
+      "rust_before": "blocked",
+      "before_assertion": "binary_harness_required",
+      "go_after": "passed",
+      "rust_after": "passed",
+      "assertions_passed": 10,
+      "root_cause": "SIM admission guard requires a selected-binary fixture path"
+    },
+    {
+      "id": "VMEMO-LATE-ASSETS",
+      "rust_before": "blocked",
+      "before_assertion": "binary_harness_required",
+      "go_after": "passed",
+      "rust_after": "passed",
+      "assertions_passed": 10,
+      "root_cause": "SIM admission guard requires a selected-binary fixture path"
+    },
+    {
+      "id": "WEB-MEDIA-VARIANTS",
+      "rust_before": "blocked",
+      "before_assertion": "binary_harness_required",
+      "go_after": "passed",
+      "rust_after": "passed",
+      "assertions_passed": 99,
+      "root_cause": "SIM admission guard requires a selected-binary fixture path"
+    }
+  ]
+}
