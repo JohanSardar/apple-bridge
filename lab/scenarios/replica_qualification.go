@@ -2,6 +2,15 @@ package scenarios
 
 import "strings"
 
+func nativeReplicaSimScenario(s Scenario) bool {
+	switch s.ID {
+	case "CAL-CRUD", "CAL-WINDOW-SLIDE", "CAL-MOVED-OUTSIDE-WINDOW", "CAL-SPLIT-ATOMIC-ALLDAY", "CAL-SPLIT-ATOMIC-TIMED", "CAL-RECUR-THIS", "CAL-RECUR-FUTURE", "REM-CRUD", "NOTE-CRUD":
+		return true
+	default:
+		return false
+	}
+}
+
 func nativeReplicaRealScenario(s Scenario) bool {
 	switch s.ID {
 	case "CAL-CREATE-EXTERNAL", "CAL-CRUD", "CON-CRUD", "CON-EXTERNAL", "MSG-INCOMING", "MSG-SEND-FILES", "MSG-SEND-SELF-TEXT", "NOTE-CRUD", "NOTE-EXTERNAL", "REM-CREATE-EXTERNAL", "REM-CRUD", "MAC-REPLICA", "FILE-REPLICA":

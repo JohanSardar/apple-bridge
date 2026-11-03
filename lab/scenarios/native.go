@@ -23,7 +23,7 @@ func nativeScenario(id, level string) bool {
 	case "HELPER-LIVE-BACKFILL", "HELPER-SESSION-SOAK", "HELPER-RESTART-REAL", "HELPER-TCC-READY", "REM-CREATE-EXTERNAL", "REM-LIST-MANAGE", "REM-SECTIONS", "REM-LIST-CREATE", "REM-LIST-LOST-ACK", "REM-RECURRING", "REM-PERMISSION-LOSS":
 		return true
 	case "REM-CRUD":
-		return level == "real" || level == "replica"
+		return level == "sim" || level == "real" || level == "replica"
 	case "CORE-LIVE-LATENCY":
 		return level == "real"
 	default:
@@ -848,7 +848,10 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 		for _, endpoint := range w.Replicas {
 			records, applied, err := w.RecordsAt(endpoint)
 			equal := reflect.DeepEqual(withoutCommands(gateway), withoutCommands(records))
-			if s.ID == "CORE-LIVE-LATENCY" {
+			if s.ID == "CORE-LIVE-LATENCY" || s.ID == "REM-CRUD" {
+				if e.Metrics == nil {
+					e.Metrics = map[string]any{}
+				}
 				e.Metrics["final_gateway_cursor_sequence"] = head.Sequence
 				e.Metrics["final_replica_cursor_sequence"] = applied.Sequence
 				e.Metrics["final_replica_records_equal"] = equal

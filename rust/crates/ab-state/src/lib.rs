@@ -494,6 +494,14 @@ impl State<Replica> {
             drop(stmt);
             tx.execute_batch("DELETE FROM pending_changes; DELETE FROM blob_refs WHERE owner LIKE 'capture-stage:%';")?;
         }
+        #[cfg(feature = "lab")]
+        if staged
+            || b.changes
+                .as_ref()
+                .is_some_and(|changes| !changes.is_empty())
+        {
+            apply_boundary(&tx)?;
+        }
         tx.execute(
             "INSERT INTO applied_batches VALUES(?,?)",
             params![number(after)?, number(b.through)?],
@@ -762,5 +770,28 @@ pub fn is_capacity(error: &Error) -> bool {
         Error::Sqlite(rusqlite::Error::SqliteFailure(code, _)) => code.extended_code & 255 == 13,
         Error::Io(error) => error.raw_os_error() == Some(28),
         _ => false,
+    }
+}
+
+#[cfg(feature = "lab")]
+fn apply_boundary(db: &Connection) -> Result<()> {
+    use std::os::unix::fs::OpenOptionsExt;
+    let home = Path::new(db.path().ok_or(ErrorCode::Invalid)?)
+        .parent()
+        .ok_or(ErrorCode::Invalid)?;
+    match std::fs::remove_file(home.join("lab-apply-armed")) {
+        Ok(()) => {}
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(error) => return Err(error.into()),
+    }
+    let mut reached = std::fs::OpenOptions::new()
+        .create(true)
+        .truncate(true)
+        .write(true)
+        .mode(0o600)
+        .open(home.join("lab-apply-reached"))?;
+    std::io::Write::write_all(&mut reached, b"write_started_before_commit")?;
+    loop {
+        std::thread::park();
     }
 }
