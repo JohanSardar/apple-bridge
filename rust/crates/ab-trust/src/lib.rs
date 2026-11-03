@@ -50,39 +50,48 @@ pub struct PrincipalId(pub String);
 #[serde(try_from = "String", into = "String")]
 pub struct Grant(String);
 impl Grant {
+    const SOURCES: &'static [&'static str] = &[
+        "location",
+        "audio",
+        "calendar",
+        "capture",
+        "contacts",
+        "files",
+        "focus",
+        "health",
+        "iphone",
+        "mac",
+        "mail",
+        "maps",
+        "messages",
+        "notes",
+        "pdf",
+        "phone",
+        "print",
+        "reminders",
+        "safari",
+        "shortcuts",
+        "speech",
+        "system",
+        "usage",
+        "vision",
+        "voice_memos",
+        "voicemail",
+        #[cfg(feature = "lab-harness")]
+        "labdummy",
+    ];
+    pub fn agent_scopes() -> Vec<String> {
+        Self::SOURCES
+            .iter()
+            .filter(|source| **source != "system")
+            .flat_map(|source| [format!("{source}:read"), format!("{source}:write")])
+            .collect()
+    }
     pub fn parse(value: &str) -> Result<Self, Error> {
-        let sources = [
-            "location",
-            "audio",
-            "calendar",
-            "capture",
-            "contacts",
-            "files",
-            "focus",
-            "health",
-            "iphone",
-            "mac",
-            "mail",
-            "maps",
-            "messages",
-            "notes",
-            "pdf",
-            "phone",
-            "print",
-            "reminders",
-            "safari",
-            "shortcuts",
-            "speech",
-            "system",
-            "usage",
-            "vision",
-            "voice_memos",
-            "voicemail",
-        ];
         if value == "admin"
             || value
                 .split_once(':')
-                .is_some_and(|(s, a)| sources.contains(&s) && ["read", "write"].contains(&a))
+                .is_some_and(|(s, a)| Self::SOURCES.contains(&s) && ["read", "write"].contains(&a))
         {
             Ok(Self(value.into()))
         } else {

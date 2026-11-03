@@ -466,36 +466,7 @@ fn route(
     }
 }
 fn all_scopes() -> Vec<String> {
-    [
-        "audio",
-        "calendar",
-        "contacts",
-        "files",
-        "focus",
-        "health",
-        "iphone",
-        "mac",
-        "mail",
-        "location",
-        "maps",
-        "messages",
-        "notes",
-        "pdf",
-        "phone",
-        "capture",
-        "print",
-        "voice_memos",
-        "voicemail",
-        "reminders",
-        "safari",
-        "shortcuts",
-        "speech",
-        "usage",
-        "vision",
-    ]
-    .iter()
-    .flat_map(|s| [format!("{s}:read"), format!("{s}:write")])
-    .collect()
+    ab_trust::Grant::agent_scopes()
 }
 #[allow(clippy::too_many_lines)]
 fn authorize(
