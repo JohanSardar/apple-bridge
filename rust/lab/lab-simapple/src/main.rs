@@ -172,16 +172,27 @@ struct Request {
     frame: Value,
     done: Option<mpsc::Sender<()>>,
     whole: bool,
+    exact: bool,
 }
 fn enqueue(tx: &mpsc::Sender<Request>, frame: Value, wait: bool) -> Result<()> {
     enqueue_mode(tx, frame, wait, false)
 }
 fn enqueue_mode(tx: &mpsc::Sender<Request>, frame: Value, wait: bool, whole: bool) -> Result<()> {
+    enqueue_request(tx, frame, wait, whole, false)
+}
+fn enqueue_request(
+    tx: &mpsc::Sender<Request>,
+    frame: Value,
+    wait: bool,
+    whole: bool,
+    exact: bool,
+) -> Result<()> {
     let (done, rx) = mpsc::channel();
     tx.send(Request {
         frame,
         done: if wait { Some(done) } else { None },
         whole,
+        exact,
     })
     .map_err(|_| invalid("session stopped"))?;
     if wait {
@@ -355,14 +366,20 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
             }
             Ok(json!({"effect_done":true}))
         }
-        "/capture" | "/capture-atomic" => {
+        "/capture" | "/capture-atomic" | "/capture-exact" => {
             drop(s);
             let mut frame = input;
             frame["t"] = json!("Capture");
             if frame["source"].is_null() {
                 frame["source"] = json!("reminders");
             }
-            enqueue_mode(tx, frame, true, route == "/capture-atomic")?;
+            enqueue_request(
+                tx,
+                frame,
+                true,
+                route != "/capture",
+                route == "/capture-exact",
+            )?;
             Ok(json!({"committed":true}))
         }
         "/complete-recurring" => {
@@ -597,7 +614,9 @@ impl Session<'_> {
                 thread::park();
             }
         }
-        if request.whole {
+        if request.exact {
+            self.emit_exact(state, &request.frame)?;
+        } else if request.whole {
             self.emit_part(state, request.frame)?;
         } else {
             self.emit(state, request.frame)?;
@@ -606,6 +625,49 @@ impl Session<'_> {
             let _ = done.send(());
         }
         Ok(())
+    }
+    fn emit_exact(&mut self, state: &Shared, frame: &Value) -> Result<()> {
+        let src = string(frame, "source");
+        let checkpoint = string(frame, "checkpoint");
+        let size = lab_wire::frame_bytes(&lab_wire::encode_json(frame)?)?.len();
+        if size > self.credit {
+            return Err(invalid("capture credit"));
+        }
+        let n = send(&mut self.stream, frame)?;
+        self.credit -= n;
+        loop {
+            let reply = self
+                .incoming
+                .recv_timeout(Duration::from_secs(30))
+                .map_err(|_| invalid("commit timeout"))?;
+            match reply["t"].as_str() {
+                Some("Committed") => {
+                    if reply["source"] != src
+                        || reply["checkpoint"] != checkpoint
+                        || reply["credit"].as_u64() != Some(n as u64)
+                    {
+                        return Err(invalid("commit identity or credit"));
+                    }
+                    {
+                        let mut s = lock(state)?;
+                        s.data["protocol"]["acked"][&src] = json!(checkpoint);
+                    }
+                    self.generations
+                        .insert(src.clone(), string(frame, "generation"));
+                    self.checkpoints.insert(src, checkpoint);
+                    self.credit += n;
+                    return Ok(());
+                }
+                Some("Prepare" | "Dispatch" | "Resolve" | "Query" | "QueryCancel" | "BlobRead") => {
+                    self.pending.push_back(reply);
+                }
+                Some("Ping") => {
+                    send(&mut self.stream, &json!({"t":"Pong"}))?;
+                }
+                Some("Pong") => {}
+                _ => return Err(invalid("capture reset")),
+            }
+        }
     }
     fn emit_part(&mut self, state: &Shared, mut frame: Value) -> Result<()> {
         if frame["t"] != "Capture" {

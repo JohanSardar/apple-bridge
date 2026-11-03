@@ -164,6 +164,14 @@ impl Registry {
                 break;
             }
         }
+        let finish = json!({ format!("finish:{}", scenario.id): {} });
+        if self
+            .handlers
+            .contains_key(&format!("finish:{}", scenario.id))
+            && let Err(error) = self.step(&finish, world, &mut evidence)
+        {
+            evidence.check("finish", false, &error.to_string());
+        }
         for step in &scenario.cleanup {
             if step.get("world").is_some() {
                 world.close();

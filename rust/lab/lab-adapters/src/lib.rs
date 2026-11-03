@@ -9,6 +9,9 @@ pub mod commands;
 pub mod connectors;
 pub mod contacts;
 pub mod contacts_list;
+pub mod core;
+pub mod core_journey;
+pub mod core_robust;
 pub mod demo;
 pub mod filecmd;
 pub mod filerep;
@@ -104,7 +107,8 @@ pub fn registry() -> Registry {
             || readmodels::SCENARIOS.contains(&id)
             || calls::NATIVE_SCENARIOS.contains(&id)
             || usage::NATIVE_SCENARIOS.contains(&id)
-            || helper_ipc::SCENARIOS.contains(&id);
+            || helper_ipc::SCENARIOS.contains(&id)
+            || core::IGNORE_REPLICAS.contains(&id);
         if replicas != 0 && blobs::is_blob(id) {
             blobs::configure(world, id, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && calls::REPLICA_SCENARIOS.contains(&id) {
@@ -145,7 +149,7 @@ pub fn registry() -> Registry {
         } else if native_runner::starts_world(id) {
             native_runner::start_world(world)?;
         } else if replicas != 0 && robust::SCENARIOS.contains(&id) {
-            replicas::start(world, usize::try_from(replicas).unwrap_or(0))?;
+            robust::start(world, id, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && contacts_list::SCENARIOS.contains(&id) {
             replicas::start_with(
                 world,
@@ -216,12 +220,11 @@ pub fn registry() -> Registry {
     registry.register("stale_fence_rejected", labcore::stale_fence_rejected);
     registry.register("load_rejected", labcore::load_rejected);
     registry.register("relay_service", relay::relay_service);
-    registry.register("seed", journey::seed);
-    registry.register("converge", journey::converge);
     registry.register("media_variants", media::media_variants);
     registry.register("messages_commands", messages_b::dispatch);
     registry.register("files_native", files_native::files_native);
     registry.register("robustness", robust::dispatch);
+    core::register(&mut registry);
     registry.register("command_journey", journey::command_journey);
     registry.register("files_transform", shortcuts::files_transform);
     registry.register("shortcuts_actions", shortcuts::shortcuts_actions);
