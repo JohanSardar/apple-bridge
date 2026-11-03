@@ -28,3 +28,6 @@ pub mod summary;
 pub mod usage;
 
 pub mod telephony;
+
+pub mod assets;
+pub mod voice_memo;

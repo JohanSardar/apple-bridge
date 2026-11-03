@@ -53,8 +53,8 @@ transfer each responsibility after its separate shadow-comparison gate.
 
 ## Pending source work
 
-Calls/Voicemail/Voice Memos, Mail and Notes readers are pending. Screen Time
-and Safari have synthetic stream evidence below. No 24-hour shadow evidence
+Mail and Notes readers are pending. Screen Time, Safari, Calls, Voicemail
+and Voice Memos have synthetic stream evidence below. No 24-hour shadow evidence
 is claimed.
 
 ## Messages worker coordination (t3/rust-messages-reader)
@@ -306,3 +306,40 @@ empty reconciliation and physical database replacement. Data bytes pass through
 Go's JSON encoder. Opaque machine-specific generations and their scoped aliases
 are renamed bijectively per process; their equality/transition sequence must
 match (four epochs). No other metadata or observation data is normalized.
+
+
+## Voice Memos and staged blobs
+
+`voice_memo::Reader::open(staging_directory)` has no default user path.
+`scan(database, context, live, max_rows)` returns pending metadata/audio/folder
+observations and blob handles; `commit` follows acknowledgement. The caller
+owns event scheduling and should watch the database/WAL, top-level m4a files
+and `tracked_audio()` (including missing referenced paths). The source asset
+cache keys include file identity, size, mtime and ctime. Late assets are
+reprojected on their next changed input. No iCloud downloads are requested.
+
+`assets::Store` stages regular local files using no-follow opens, before/after
+identity/size/mtime checks, streaming SHA-256, private files, synchronization
+and atomic digest publication. Dataless files on macOS are refused. Handles
+read only immutable staged copies in bounded 131072-byte chunks. Caller owns
+the staging directory lifecycle. Voice Memos uses voice-memo-blob:DIGEST.
+`Batch::blob_handles` is omitted when empty. Blob reads do not advance capture
+state. References/handles remain valid after the source file changes or is removed.
+
+`voice_memo::transcript`, `embedded_transcript` and `read_transcript` preserve
+Swift JSON integer coercion, ordering, MP4 atom nesting/extended lengths and
+malformed-input behavior. File parsing seeks over media payloads and only
+loads a bounded transcript atom. 29 checked-in vectors include the exact
+RecordingsChecks late-transcript payload, malformed/truncated atoms, depth
+limits and numeric edge cases. Rust compares complete Go-encoded result bytes.
+`parity/voice-memos/regenerate.py DECODER_ORACLE` reruns the unchanged Swift
+transcript decoder over the stored inputs.
+
+The fixture CLI source is voice-memos. Interactive scan/row-limit commands
+emit capture frames; blob HANDLE OFFSET LENGTH emits BlobChunk or failed_blob.
+The actual Swift scan oracle and retained-WAL replay compare 26 responses,
+including late audio/transcript, unchanged scans, immutable old handles after
+source mutation, bounded ranges, deletion/folder counts, path and symlink
+escapes, embedded NUL/invalid UTF-8, malformed/limited scans and three generation epochs. All observation
+Data hashes are compared through Go JSON; opaque generations use the same
+bijective epoch normalization as Calls. No live source has been enabled.

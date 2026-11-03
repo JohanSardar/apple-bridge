@@ -158,8 +158,9 @@ impl Snapshot {
                     ValueRef::Integer(v) => Cell::Integer(v),
                     ValueRef::Real(v) => Cell::Real(v),
                     ValueRef::Text(v) => Cell::Text(
-                        String::from_utf8_lossy(v.split(|b| *b == 0).next().unwrap_or_default())
-                            .into_owned(),
+                        std::str::from_utf8(v)
+                            .map_err(|_| Error::Corrupt)?
+                            .to_owned(),
                     ),
                     ValueRef::Blob(v) => Cell::Blob(v.to_vec()),
                 };
@@ -282,6 +283,8 @@ pub struct Batch {
     pub completion_evidence: &'static str,
     pub coverage: Value,
     pub observations: Vec<Observation>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub blob_handles: BTreeMap<String, String>,
     pub live: bool,
 }
 
@@ -400,6 +403,7 @@ impl State {
                 completion_evidence: "complete",
                 coverage,
                 observations: changes,
+                blob_handles: BTreeMap::new(),
                 live: live && same,
             },
             previous_checkpoint: self.checkpoint.clone(),
