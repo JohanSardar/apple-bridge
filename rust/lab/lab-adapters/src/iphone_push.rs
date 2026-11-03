@@ -9,10 +9,17 @@ use std::fs;
 
 pub const SCENARIOS: [&str; 2] = ["APP-LIVE-SIM", "APP-APPROVE-SIM"];
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Kind {
+    Cmd,
+    Notify,
+    Approve,
+}
+
 pub fn run(id: &str, evidence: &mut Evidence) -> bool {
     match id {
         "APP-LIVE-SIM" => live(evidence),
-        "APP-APPROVE-SIM" => approve(evidence),
+        "APP-APPROVE-SIM" => command_flow(evidence, Kind::Approve),
         _ => return false,
     }
     true
@@ -121,7 +128,7 @@ fn status(reply: &lab_world::Result<(u16, Vec<u8>)>) -> u16 {
     reply.as_ref().map_or(0, |r| r.0)
 }
 
-fn approve(evidence: &mut Evidence) {
+pub(crate) fn command_flow(evidence: &mut Evidence, kind: Kind) {
     let dir = crate::iphone::Scratch::new("iphone-command");
     evidence.check("isolated_home", dir.is_ok(), "");
     let Ok(_dir) = dir else { return };
@@ -148,6 +155,15 @@ fn approve(evidence: &mut Evidence) {
     };
     let args = json!({"device_id": phone.id});
     let mut command = json!({"command_id": "cmd_iphone_roundtrip", "op": "iphone.ping", "args": args, "wait_ms": 1000});
+    if kind == Kind::Notify {
+        crate::iphone_command::notification_setup(
+            evidence,
+            &gateway,
+            &token,
+            &phone.id,
+            &mut command,
+        );
+    }
     let admitted = submit(&gateway, &token, &command);
     evidence.check(
         "offline_admitted_without_helper",
@@ -208,10 +224,20 @@ fn approve(evidence: &mut Evidence) {
             && job["request_hash"] == queued["request_hash"],
         "",
     );
+    if kind == Kind::Notify {
+        evidence.check(
+            "notification_fields_preserved",
+            crate::iphone_command::notification_preserved(&job["command"]["args"]),
+            "",
+        );
+    }
     let mut result = json!({"command_id": "cmd_iphone_roundtrip", "request_hash": "wrong", "state": "observed", "data": {"pong": true}});
     let reply = phone.post(&gateway, "/v1/iphone/result", &result);
     evidence.check("wrong_result_hash_rejected", status(&reply) == 400, "");
     result["request_hash"] = job["request_hash"].clone();
+    if kind == Kind::Notify {
+        result["data"] = json!({"action_id": "approve"});
+    }
     let reply = phone.post(&gateway, "/v1/iphone/result", &result);
     evidence.check("signed_result", status(&reply) == 200, "");
     let observed = gateway.record("cmd_iphone_roundtrip");
@@ -222,6 +248,19 @@ fn approve(evidence: &mut Evidence) {
             .is_ok_and(|o| o["state"] == "observed" && !o["evidence"].is_null()),
         "",
     );
+    if kind == Kind::Notify {
+        evidence.check(
+            "button_result_returned",
+            observed.as_ref().is_ok_and(|o| {
+                crate::iphone_command::button_result(
+                    &o["evidence"],
+                    &phone.id,
+                    &queued["request_hash"],
+                )
+            }),
+            "",
+        );
+    }
     let reply = phone.post(&gateway, "/v1/iphone/result", &result);
     evidence.check("duplicate_result_idempotent", status(&reply) == 200, "");
     let duplicate = submit(&gateway, &token, &command);
@@ -269,6 +308,10 @@ fn approve(evidence: &mut Evidence) {
         "",
     );
     let pending = pending.unwrap_or(Value::Null);
+    if kind != Kind::Approve {
+        crate::iphone_command::owner_approval(evidence, &gateway, "cmd_iphone_approval");
+        return;
+    }
     let packets = phone.pending(&gateway).map(|p| p.1).unwrap_or_default();
     let command_args = command["args"].to_string();
     let found = packets.iter().any(|packet| {
