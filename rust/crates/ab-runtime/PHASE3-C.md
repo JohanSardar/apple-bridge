@@ -1,6 +1,6 @@
 # Phase 3 C integration
 
-The runtime uses the merged State, Trust, Replication and Blobs crates. `replica-feed` is enabled by default. The home singleton lock precedes State/feed startup; actual API and inbound feed listen addresses are persisted. Commands use B's authenticated transport for direct mTLS and gateway-dials sessions, with cancellation and same-ID lookup recovery. Connected readiness is published only after the durable control acknowledgement is flushed to the socket.
+The runtime uses the merged State, Trust, Replication and Blobs crates. `replica-feed` is enabled by default. The home singleton lock precedes State/feed startup; actual API and inbound feed listen addresses are persisted. Commands use B's authenticated transport for direct mTLS and gateway-dials sessions, with cancellation and same-ID lookup recovery. Connected readiness waits for the durable control acknowledgement to be flushed and, when ntp/1 is negotiated, for a matching clock pong sent after that acknowledgement. This proves the gateway has consumed the control receipt before commands or connected status are exposed.
 
 REST and MCP use the same operations service. Specialized reads include contacts lookup, Health, paired iPhones and both status projections. Legacy result serialization follows Go struct field order, including nested read models. Command envelopes, descriptor argument shapes, required versions and wait bounds are checked before forwarding. The Go gateway remains the command/expiry authority; caller expiry and admission-era values are forwarded unchanged so retries retain lookup semantics.
 
@@ -25,4 +25,4 @@ Production binary (on Ubuntu):
 CARGO_TARGET_DIR=$HOME/ab-cargo-target cargo build --manifest-path rust/Cargo.toml --bin bridge
 ```
 
-Harness binary adds `--features ab-runtime/lab-queries`. `make replica-matrix` selects that feature automatically. Set `AB_LAB_ROOT` and `TMPDIR` to directories on the Ubuntu home filesystem when `/tmp` quotas prevent staging executables. This override preserves the default harness root and all assertions. Go 1.27.3 was installed from the official archive under `~/go-sdk`; put `~/go-sdk/bin` and `~/.cargo/bin` on PATH.
+Harness binary adds `--features ab-runtime/lab-queries`. `make replica-matrix` selects that feature automatically. Set `APPLE_BRIDGE_LAB_ROOT` and `TMPDIR` to directories on the Ubuntu home filesystem when `/tmp` quotas prevent staging executables. This override preserves the default harness root and all assertions. Go 1.27.3 was installed from the official archive under `~/go-sdk`; put `~/go-sdk/bin` and `~/.cargo/bin` on PATH.

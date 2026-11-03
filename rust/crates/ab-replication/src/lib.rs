@@ -315,6 +315,7 @@ impl<S: ReplicaState> Client<S> {
             writer.send(hello).await?;
             let mut welcome: Option<FeedFrame> = None;
             let mut clock = clock::Probe::default();
+            let mut ready = false;
             let mut install = None;
             let mut active_blob: Option<Digest> = None;
             let mut ignored_blob = false;
@@ -326,7 +327,7 @@ impl<S: ReplicaState> Client<S> {
             loop {
                 let message = tokio::select! {
                     _=tick.tick()=>{ if last.elapsed()>Duration::from_secs(15) {return Err(Error::Disconnected);}
-                        if welcome.as_ref().is_some_and(|w| w.clock_protocol == "ntp/1") { clock.ping(&writer).await?; }let mut heartbeat=frame("Heartbeat");heartbeat.at=serde_json::from_value(serde_json::json!(jiff::Timestamp::now().to_string()))?;writer.send(heartbeat).await?;continue;},
+                        if ready && welcome.as_ref().is_some_and(|w| w.clock_protocol == "ntp/1") { clock.ping(&writer).await?; }let mut heartbeat=frame("Heartbeat");heartbeat.at=serde_json::from_value(serde_json::json!(jiff::Timestamp::now().to_string()))?;writer.send(heartbeat).await?;continue;},
                     m=source.next()=>m.ok_or(Error::Disconnected)??,
                 };
                 if let Message::Binary(bytes) = message {
@@ -371,6 +372,12 @@ impl<S: ReplicaState> Client<S> {
                 if f.t == "ClockPong" {
                     let sample = clock.complete(&f, jiff::Timestamp::now())?;
                     self.status.send_modify(|s| s.clock_sample = Some(sample));
+                    if !ready {
+                        ready = true;
+                        registration.session.ready();
+                        self.status
+                            .send_modify(|s| s.state = ConnectionState::Connected);
+                    }
                     continue;
                 }
                 if f.t == "CommandResponse" {
@@ -391,9 +398,6 @@ impl<S: ReplicaState> Client<S> {
                 ack.credits = i64::try_from(text.len()).map_err(|_| Error::Invalid)?;
                 match f.t.as_str() {
                     "Welcome" => {
-                        if f.clock_protocol == "ntp/1" {
-                            clock.ping(&writer).await?;
-                        }
                         let scope: Vec<Grant> = f
                             .scope
                             .as_ref()
@@ -528,9 +532,17 @@ impl<S: ReplicaState> Client<S> {
                 {
                     if f.t == "SnapshotEnd" || f.t == "Welcome" && f.reason == "resume" {
                         writer.send_flushed(ack).await?;
-                        registration.session.ready();
-                        self.status
-                            .send_modify(|s| s.state = ConnectionState::Connected);
+                        if welcome
+                            .as_ref()
+                            .is_some_and(|w| w.clock_protocol == "ntp/1")
+                        {
+                            clock.ping(&writer).await?;
+                        } else {
+                            ready = true;
+                            registration.session.ready();
+                            self.status
+                                .send_modify(|s| s.state = ConnectionState::Connected);
+                        }
                     } else {
                         writer.send(ack).await?;
                     }
