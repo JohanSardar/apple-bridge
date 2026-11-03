@@ -178,6 +178,19 @@ fn offline(args: &Arguments, home: &std::path::Path) -> Result<bool, Error> {
     }
     Ok(false)
 }
+async fn remote(args: &Arguments, home: &std::path::Path) -> Result<(), Error> {
+    let mut out = std::io::stdout();
+    ab_remote::onboarding::command(
+        home,
+        &args.action,
+        &args.flag("via", "relay"),
+        &mut out,
+        Arc::new(ab_remote::onboarding::open_link),
+        std::time::Duration::from_millis(100),
+    )
+    .await?;
+    Ok(())
+}
 async fn run() -> Result<(), Error> {
     let args = Arguments::parse()?;
     if args.verb == "shortcuts" {
@@ -210,17 +223,7 @@ async fn run() -> Result<(), Error> {
         return Ok(());
     }
     if args.verb == "remote" {
-        let mut out = std::io::stdout();
-        ab_remote::onboarding::command(
-            &home,
-            &args.action,
-            &args.flag("via", "relay"),
-            &mut out,
-            Arc::new(ab_remote::onboarding::open_link),
-            std::time::Duration::from_millis(100),
-        )
-        .await?;
-        return Ok(());
+        return remote(&args, &home).await;
     }
     if offline(&args, &home)? {
         return Ok(());
