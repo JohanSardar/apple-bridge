@@ -172,7 +172,12 @@ def replay_session(rows, path, secret):
             if row['direction'] == 'helper':
                 conn.sendall(raw)
             else:
+                deadline = time.monotonic() + 15
                 while True:
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        raise ValueError('replay gateway response deadline exceeded')
+                    conn.settimeout(remaining)
                     actual = receive(conn)
                     if frame(actual).get('t') == 'Ping':
                         send(conn, {'t': 'Pong'})
@@ -185,7 +190,12 @@ def replay_session(rows, path, secret):
                 if kind not in ('Committed', 'Credit') and actual != raw:
                     raise ValueError('replay requires matching command/query traffic at sequence ' + str(row['sequence']))
         send(conn, {'t': 'Ping'})
+        deadline = time.monotonic() + 15
         while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise ValueError('replay completion deadline exceeded')
+            conn.settimeout(remaining)
             kind = frame(receive(conn)).get('t')
             if kind == 'Pong':
                 break
