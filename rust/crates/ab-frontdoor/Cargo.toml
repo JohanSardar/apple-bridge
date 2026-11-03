@@ -6,6 +6,12 @@ license.workspace = true
 [lints]
 workspace = true
 [dependencies]
+ab-trust = { path = "../ab-trust" }
+url = "2"
+jiff.workspace = true
+ipnet = "2"
+httpdate = "1"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "blocking", "json"] }
 ab-operations = { path = "../ab-operations" }
 ab-catalog = { path = "../ab-catalog" }
 axum.workspace = true

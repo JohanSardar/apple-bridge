@@ -1,10 +1,13 @@
 #![forbid(unsafe_code)]
 pub mod activity;
+pub mod devices;
 mod gateway;
 mod identity;
 pub mod iphone;
+pub mod oauth;
 pub use gateway::{AgentLevel, VerifiedDelegation};
 mod pairing;
+pub mod passkeys;
 mod store;
 pub mod tls;
 pub use identity::Authority;
@@ -24,6 +27,10 @@ pub enum Error {
     Json(#[from] serde_json::Error),
     #[error("unauthorized")]
     Unauthorized,
+    #[error(
+        "unsupported stored passkey algorithm {0}; re-enrol this passkey using ES256 or Ed25519 before starting the Rust gateway"
+    )]
+    UnsupportedPasskey(i128),
     #[error("invalid input")]
     Invalid,
     #[error("credential store unavailable")]

@@ -163,6 +163,7 @@ G-A integration detail: `source_state(&mut self, Source, status: &str, Coverage,
 
 `CommandRecord.upload_references` uses exported `ab_state::BlobReference`; `error` uses `Option<ab_state::CommandError>` (string code, message, optional current Record, retryable), preserving Go struct field order and supporting codes beyond the shared domain enum. These replace untyped objects at the ledger boundary.
 
+
 ## G-D3 delivery integration (gateway owners G-A/G-B/G-E)
 
 `ab_iphone::delivery::Delivery<G: Gateway>` now owns signed fetch/results, token routes, approval routing, encrypted jobs, Live Activity payloads and expiry/revocation sweep. `Gateway` is the synchronous, serialized adapter for the gateway ledger and capture transactions; no alternative ledger or state database is created. Runtime must call `handle(path, request, now)` on a blocking thread, mount POST routes with Go body limits, and schedule `push_once(client, now)` every thirty seconds and on command/token changes. Do not hold a runtime state mutex across `push_once().await`.

@@ -163,10 +163,7 @@ async fn run() -> Result<(), Error> {
     if offline(&args, &home)? {
         return Ok(());
     }
-    let authority = Arc::new(
-        ab_trust::Authority::open(&home)
-            .map_err(|_| Error::Operation(ab_operations::Code::Unavailable.into()))?,
-    );
+    let authority = Arc::new(ab_trust::Authority::open(&home)?);
     if manage(&args, &home, &authority)? {
         return Ok(());
     }

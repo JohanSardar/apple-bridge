@@ -30,6 +30,7 @@ fn private(path: &Path) -> Result<bool, Error> {
     Ok(valid)
 }
 pub fn doctor(home: &Path) -> Result<Value, Error> {
+    ab_trust::passkeys::validate_home(home)?;
     let db = database(home)?;
     db.execute_batch("BEGIN").map_err(|_| Error::Invalid)?;
     let integrity: String = db
