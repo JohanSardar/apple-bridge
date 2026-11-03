@@ -388,3 +388,7 @@ A lab-owned JSON digest-reference decoder replaces `contracts.BlobReferences` in
 ## G-E query and retention continuation
 
 `queries.go` creates query agents through the selected CLI. `vision_queries.go` uses the selected `doctor` CLI for document readiness; SIM PDF proofs do not certify that real/native branch. `replica_capture_staging.go` retains explicit offline legacy/clock fault injection but no longer opens a writable Go State to commit/prune a selected home. Its marker crosses Helper IPC, then the selected gateway applies its normal retention policy with the original one-row/one-second settings. Assertions remain unchanged. The standard restart helper retains its previous one-millisecond policy for existing callers.
+
+## G-E capture identity continuation
+
+The existing CORE-CAPTURE-ALIASES oracle moved from the performance fixture into `capture_aliases.go`. Its capture payloads now cross the selected gateway's Helper IPC and its reads use REST; no Go State/Visibility constructor implements the journey. The lab-only `/capture-exact` simulator route preserves explicit generation, predecessor, checkpoint, alias and forward-reference inputs without its normal simulator augmentation. Credit and Committed acknowledgments still gate completion. The existing identity/generation/version/reference predicate is unchanged and passes against both Go and Rust gateways. In-process search/readmodel performance fixtures remain separate, unqualified paths.
