@@ -11,10 +11,12 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::{fs, path::Path, time::SystemTime};
 
-pub const SCENARIOS: [&str; 3] = [
+pub const SCENARIOS: [&str; 5] = [
     "WEB-AGENT-CREDENTIALS",
     "WEB-AGENT-LEVELS",
     "WEB-AGENT-ACTIVITY",
+    "WEB-AGENT-OAUTH",
+    "WEB-AGENT-OAUTH-CIMD",
 ];
 const REDIRECT: &str = "https://connector.example/callback";
 
@@ -29,6 +31,8 @@ pub fn web(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> 
         "WEB-AGENT-CREDENTIALS" => credentials(world, evidence),
         "WEB-AGENT-LEVELS" => session_run(world, evidence, crate::web_agent_levels::levels),
         "WEB-AGENT-ACTIVITY" => crate::web_agent_activity::activity(world, evidence),
+        "WEB-AGENT-OAUTH" => session_run(world, evidence, crate::web_agent_oauth::oauth),
+        "WEB-AGENT-OAUTH-CIMD" => crate::web_agent_cimd::cimd(world, evidence),
         id => Err(Error::Invalid(format!(
             "web agent scenario not ported: {id}"
         ))),
@@ -120,7 +124,7 @@ pub(crate) fn create_agent(
     Some((id, token, created))
 }
 
-fn token_hash(token: &str) -> String {
+pub(crate) fn token_hash(token: &str) -> String {
     hex::encode(Sha256::digest(token.as_bytes()))
 }
 
@@ -128,7 +132,7 @@ fn modified(path: &Path) -> Option<SystemTime> {
     fs::metadata(path).ok()?.modified().ok()
 }
 
-fn edit_credentials(world: &World, edit: impl FnOnce(&mut Value)) -> Result<()> {
+pub(crate) fn edit_credentials(world: &World, edit: impl FnOnce(&mut Value)) -> Result<()> {
     let lock = fs::OpenOptions::new()
         .read(true)
         .write(true)
@@ -143,7 +147,7 @@ fn edit_credentials(world: &World, edit: impl FnOnce(&mut Value)) -> Result<()> 
     Ok(())
 }
 
-fn encode(text: &str) -> String {
+pub(crate) fn encode(text: &str) -> String {
     text.bytes()
         .map(|b| {
             if b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.' | b'~') {
@@ -155,7 +159,7 @@ fn encode(text: &str) -> String {
         .collect()
 }
 
-fn form(fields: &[(&str, &str)]) -> String {
+pub(crate) fn form(fields: &[(&str, &str)]) -> String {
     fields
         .iter()
         .map(|(key, value)| format!("{}={}", encode(key), encode(value)))
@@ -294,7 +298,7 @@ pub(crate) fn text<'a>(value: &'a Value, key: &str) -> &'a str {
     value[key].as_str().unwrap_or_default()
 }
 
-fn seconds_until(value: &Value) -> i64 {
+pub(crate) fn seconds_until(value: &Value) -> i64 {
     value["expires_at"]
         .as_str()
         .and_then(|stamp| stamp.parse::<jiff::Timestamp>().ok())

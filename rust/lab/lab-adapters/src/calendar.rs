@@ -24,7 +24,7 @@ use std::{
 
 pub const SCOPE: &str = "calendar:read,calendar:write,system:read";
 pub const STORE_SCOPE: &str = "calendar:read,system:read";
-pub const SCENARIOS: [&str; 24] = [
+pub const SCENARIOS: [&str; 25] = [
     "CAL-ALLDAY",
     "CAL-ALLDAY-FUTURE",
     "CAL-CREATE-EXTERNAL",
@@ -49,6 +49,7 @@ pub const SCENARIOS: [&str; 24] = [
     "CAL-STORE-READ",
     "CAL-HINT-COVERAGE",
     "CAL-INVALIDATED-EVENT",
+    "WEB-CAL-WRITE",
 ];
 pub const NATIVE_ONLY: [&str; 3] = [
     "CAL-FUTURE-COUNT-MATH",
@@ -57,6 +58,20 @@ pub const NATIVE_ONLY: [&str; 3] = [
 ];
 const START: &str = "2026-11-01T05:30:00Z";
 const END: &str = "2026-11-01T07:30:00Z";
+
+pub fn inject(scenario: &mut lab_runner::Scenario) {
+    if scenario.id != "WEB-CAL-WRITE"
+        || !scenario.given.is_empty()
+        || !scenario.when.is_empty()
+        || !scenario.then.is_empty()
+    {
+        return;
+    }
+    scenario.given.push(json!({"world": {"replicas": 1}}));
+    scenario.when.push(json!({"calendar_journey": {}}));
+    scenario.then.push(json!({"converge": {}}));
+    scenario.cleanup.push(json!({"world": {}}));
+}
 
 pub fn calendar_journey(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> {
     let id = evidence.scenario.clone();
@@ -72,6 +87,7 @@ pub fn calendar_journey(world: &mut World, _: &Value, evidence: &mut Evidence) -
         }
         _ if SCENARIOS.contains(&id.as_str()) => {
             let logic = match id.as_str() {
+                "WEB-CAL-WRITE" => "CAL-CRUD",
                 "CAL-SPLIT-ATOMIC-ALLDAY" => "CAL-ALLDAY-FUTURE",
                 "CAL-SPLIT-ATOMIC-TIMED" => "CAL-RECUR-FUTURE",
                 other => other,
