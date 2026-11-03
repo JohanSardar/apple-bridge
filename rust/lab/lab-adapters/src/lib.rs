@@ -7,6 +7,7 @@ pub mod cleanup;
 pub mod commands;
 pub mod contacts_list;
 pub mod filecmd;
+pub mod filerep;
 pub mod files_native;
 pub mod frontdoor;
 pub mod history;
@@ -28,6 +29,7 @@ pub mod messages_b;
 pub mod native;
 pub mod packaging;
 pub mod phone;
+pub mod pkginstall;
 pub mod poster;
 pub mod queries;
 pub mod readmodels;
@@ -40,6 +42,7 @@ pub mod reminders;
 pub mod replicas;
 pub mod restart;
 pub mod robust;
+pub mod safari;
 pub mod search;
 pub mod shortcuts;
 pub mod usage;
@@ -135,6 +138,15 @@ pub fn registry() -> Registry {
     for id in filecmd::REAL {
         registry.register_standalone(id, filecmd::real);
     }
+    registry.register("safari", safari::sim);
+    for id in safari::REAL {
+        registry.register_standalone(id, safari::real_checks);
+    }
+    registry.register_real("SAF-IDLE", safari::idle_real);
+    registry.register_real("FILE-REPLICA", filerep::real);
+    for id in pkginstall::REAL {
+        registry.register_standalone(id, pkginstall::real);
+    }
     registry.register("readmodels", readmodels::readmodels);
     registry.register("blobs", blobs::blobs);
     registry.register("messages", history::messages);
@@ -180,5 +192,11 @@ pub fn registry() -> Registry {
 
 #[must_use]
 pub fn implied_step(id: &str) -> Option<&'static str> {
-    filecmd::SIM.contains(&id).then_some("file_commands")
+    if filecmd::SIM.contains(&id) {
+        Some("file_commands")
+    } else if safari::SIM.contains(&id) {
+        Some("safari")
+    } else {
+        None
+    }
 }
