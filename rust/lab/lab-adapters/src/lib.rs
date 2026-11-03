@@ -27,6 +27,7 @@ pub mod poster;
 pub mod queries;
 pub mod readmodels;
 pub mod relay;
+pub mod relay_certs;
 pub mod relay_gated;
 pub mod relay_service;
 pub mod relay_tls;
