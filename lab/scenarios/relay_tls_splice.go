@@ -24,6 +24,7 @@ import (
 	"github.com/JohanSardar/apple-bridge/internal/replication"
 	"github.com/JohanSardar/apple-bridge/internal/state"
 	"github.com/JohanSardar/apple-bridge/internal/trust"
+	relay "github.com/JohanSardar/apple-bridge/lab/relayfixture"
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
 )
@@ -75,6 +76,24 @@ func relayTLSSplice(ctx context.Context, dir string, add func(string, bool)) {
 	if err != nil {
 		return
 	}
+	relayStore, err := relay.Open(filepath.Join(dir, "relay-state.json"), "relay.test", relay.Limits{Connections: 32, BytesPerSecond: 1048576, MonthlyBytes: 10737418240})
+	if err != nil {
+		add("relay_fixture", false)
+		return
+	}
+	lab, err := startRelayLab(ctx, relayStore)
+	if err != nil {
+		add("relay_listener", false)
+		return
+	}
+	defer lab.close()
+	_, deviceKey, _ := ed25519.GenerateKey(rand.Reader)
+	credential, status := relayEnroll(lab.api.URL, deviceKey, "")
+	add("splice_origin_enrolled", status == 200)
+	if status != 200 {
+		return
+	}
+	victimHost := credential.Hostname
 	public, private, _ := ed25519.GenerateKey(rand.Reader)
 	ca := &x509.Certificate{SerialNumber: big.NewInt(1), IsCA: true, BasicConstraintsValid: true, KeyUsage: x509.KeyUsageCertSign, NotBefore: time.Now().Add(-time.Hour), NotAfter: time.Now().Add(time.Hour)}
 	der, _ := x509.CreateCertificate(rand.Reader, ca, ca, public, private)
@@ -83,7 +102,7 @@ func relayTLSSplice(ctx context.Context, dir string, add func(string, bool)) {
 	roots.AddCert(ca)
 	issue := func(serial int64) tls.Certificate {
 		pub, key, _ := ed25519.GenerateKey(rand.Reader)
-		cert := &x509.Certificate{SerialNumber: big.NewInt(serial), DNSNames: []string{"victim.relay.test"}, KeyUsage: x509.KeyUsageDigitalSignature, ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}, NotBefore: ca.NotBefore, NotAfter: ca.NotAfter}
+		cert := &x509.Certificate{SerialNumber: big.NewInt(serial), DNSNames: []string{victimHost}, KeyUsage: x509.KeyUsageDigitalSignature, ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}, NotBefore: ca.NotBefore, NotAfter: ca.NotAfter}
 		raw, _ := x509.CreateCertificate(rand.Reader, cert, ca, pub, private)
 		return tls.Certificate{Certificate: [][]byte{raw, der}, PrivateKey: key}
 	}
@@ -104,10 +123,16 @@ func relayTLSSplice(ctx context.Context, dir string, add func(string, bool)) {
 	}
 	var observed atomic.Bool
 	var frames atomic.Int32
-	upstreamClient := client(origin.Listener.Addr().String(), &tls.Config{RootCAs: roots, MinVersion: tls.VersionTLS13})
+	detach, err := lab.server.Attach(credential.Hostname, credential.Credential, relayTestTunnel{address: origin.Listener.Addr().String(), wire: &relayWire{}})
+	add("splice_origin_tunnel_attached", err == nil)
+	if err != nil {
+		return
+	}
+	defer detach()
+	upstreamClient := client(lab.address, &tls.Config{RootCAs: roots, MinVersion: tls.VersionTLS13})
 	defer upstreamClient.CloseIdleConnections()
 	splicer := start(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		upstream, _, err := websocket.Dial(r.Context(), "wss://victim.relay.test/v1/feed", &websocket.DialOptions{HTTPClient: upstreamClient})
+		upstream, _, err := websocket.Dial(r.Context(), "wss://"+victimHost+"/v1/feed", &websocket.DialOptions{HTTPClient: upstreamClient})
 		if err != nil {
 			http.Error(w, "upstream", 502)
 			return
@@ -146,7 +171,7 @@ func relayTLSSplice(ctx context.Context, dir string, add func(string, bool)) {
 	defer splicer.Close()
 	goodClient := client(splicer.Listener.Addr().String(), &tls.Config{RootCAs: roots, MinVersion: tls.VersionTLS13})
 	defer goodClient.CloseIdleConnections()
-	conn, _, err := websocket.Dial(ctx, "wss://victim.relay.test/v1/feed", &websocket.DialOptions{HTTPClient: goodClient})
+	conn, _, err := websocket.Dial(ctx, "wss://"+victimHost+"/v1/feed", &websocket.DialOptions{HTTPClient: goodClient})
 	add("two_trusted_tls_legs", err == nil)
 	if err != nil {
 		return
@@ -182,8 +207,8 @@ func relayTLSSplice(ctx context.Context, dir string, add func(string, bool)) {
 		config     *tls.Config
 	}{
 		{"wrong_name", "wrong.relay.test", &tls.Config{RootCAs: roots}},
-		{"untrusted_certificate", "victim.relay.test", &tls.Config{RootCAs: x509.NewCertPool()}},
-		{"direct_pinned_mtls", "victim.relay.test", replica.ClientTLS(gateway.Fingerprint)},
+		{"untrusted_certificate", victimHost, &tls.Config{RootCAs: x509.NewCertPool()}},
+		{"direct_pinned_mtls", victimHost, replica.ClientTLS(gateway.Fingerprint)},
 	} {
 		c := client(splicer.Listener.Addr().String(), control.config)
 		socket, _, err := websocket.Dial(ctx, "wss://"+control.host+"/v1/feed", &websocket.DialOptions{HTTPClient: c})

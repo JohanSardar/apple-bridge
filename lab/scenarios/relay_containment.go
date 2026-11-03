@@ -14,12 +14,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/JohanSardar/apple-bridge/internal/relay"
+	relay "github.com/JohanSardar/apple-bridge/lab/relayfixture"
 )
 
 func runRelayContainment(ctx context.Context, s Scenario, level string) Evidence {
 	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
 	e := Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), GitSHA: strings.TrimSpace(string(sha)), RunID: "relay-r0-" + strings.ToLower(s.ID), Hosts: []string{"air"}, NetworkPath: "synthetic loopback only"}
+	e.Impl = "go"
+	if os.Getenv("AB_RELAY_FIXTURE") != "" {
+		e.Impl = "rust"
+	}
 	add := func(n string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: n, Passed: ok}) }
 	if level != "sim" {
 		add("sim_only", false)
@@ -31,6 +35,7 @@ func runRelayContainment(ctx context.Context, s Scenario, level string) Evidence
 		return e
 	}
 	defer os.RemoveAll(dir)
+	defer relay.Cleanup(dir)
 	if s.ID == "RELAY-TLS-SPLICE" {
 		relayTLSSplice(ctx, dir, add)
 	} else {

@@ -86,3 +86,53 @@ The only emitted records are flags zero, `issue` with `letsencrypt.org; accountu
 ## Offline verification
 
 On build host: `CARGO_TARGET_DIR=~/targets/relay-r2 cargo test -p ab-remote -p ab-relay-control --features r2-certificates --locked` from `rust/`. The `relay_ct_independent` and `relay_caa_account` integration scenarios exercise Rust product entry points with fixture adapters. The registered `bridge-lab` sim scenarios `lab/scenarios/core/RELAY-CT-INDEPENDENT.yaml` and `lab/scenarios/core/RELAY-CAA-ACCOUNT.yaml` invoke these fixture scenarios offline, require named acceptance assertions, and record `impl=rust`. Run both from the repository root with `go run ./cmd/bridge-lab run lab/scenarios/core/RELAY-CT-INDEPENDENT.yaml lab/scenarios/core/RELAY-CAA-ACCOUNT.yaml --level sim --json` on the Linux build host. Cargo dependencies must already be cached; the runner refuses non-Linux and non-sim execution. This is component fixture qualification through bridge-lab, not live gateway qualification. No production DNS, CA, or relay is contacted. Pebble/Docker were absent on the build host, so the CAA scenario uses an RFC 8657 enforcing ACME authorization fixture with CNAME traversal and wildcard precedence. Sources: [RFC 8657](https://www.rfc-editor.org/rfc/rfc8657.html), [RFC 8659](https://www.rfc-editor.org/rfc/rfc8659.html), [crt.sh](https://crt.sh/).
+
+
+---
+
+The following section describes the frozen legacy forwarder port. It does not activate the isolated R1/R2 control policy on existing routes.
+
+# ab-relay R1 parity contract
+
+The `ab-relay` crate and binary implement the frozen Go relay/1 server. No accounts, SQL migration, relay/2 or production activation belong to this port.
+
+## Ownership and persistence
+
+`Store` owns the legacy hostname-keyed JSON map, challenge consumption, Ed25519 verification, admission, policy and durable byte reservation. Device field names and omission rules match `internal/relay/store.go`. New credentials contain 32 random bytes in unpadded base64url; only their SHA-256 hex digest is stored. New hostnames retain 24 hex digits. Writes use a private temporary file, file fsync, atomic rename and parent-directory fsync. Failed saves restore the in-memory record. Rotation retains limits, usage, disabled state, aliases and certificate history. Revocation is sticky.
+
+The owner allowlist is reloaded after every enrollment signature verification. An unreadable, invalid, empty or oversized configured file denies admission without modifying state. Source throttling uses the socket address, ignores forwarded headers, shares the enrollment/rotation allowance, and bounds the source map at 4096 entries.
+
+## Boundaries
+
+`Server` owns public admission, session replacement, cancellation, inactivity and durable bidirectional pacing. `hello` owns the bounded TLS ClientHello parser. `mux` owns smux v2 framing over binary WebSocket messages; it must interoperate with `github.com/xtaci/smux` v1.5.57, including peer receive windows, health frames and stream cancellation.
+
+`http::DnsProvider::txt` is the injectable signed DNS publication boundary. Tests must supply a mock and never use real GCP. Domain registration requires both the origin and ACME challenge CNAMEs before persisting the alias. Certificate status is best-effort CT aggregator monitoring, preserving the Go limitation. Legacy relay/1 remains vulnerable to the recorded TLS splice; the port must not silently change its signed transcript.
+
+## Verification requirements
+
+Only scenarios actually driving the Rust binary may claim `impl=rust`. The lab-only `lab/relayfixture` adapter drives the Rust `lab_fixture` executable when `AB_RELAY_FIXTURE` is set, and keeps the Go backend otherwise. Scenario assertions remain in the existing relay scenarios. Callback adapters supply local DNS publication, CNAME resolution and CT responses; the shipped binary has no fixture RPC endpoints. `RELAY-TLS-SPLICE` now routes its origin leg through the selected forwarder while preserving the vulnerable baseline and all three rejection controls.
+
+`lab/testing/relayrust` drives the shipped binary with the Go relay client and the `remote_client` example using main’s `ab-remote` crate (PR #538). It proves TLS WebSocket/smux interoperation, transfer beyond the initial flow-control window, R0 throttling, rotation, revocation and Go↔Rust reopening of the same state file. Never deploy or touch the live relay VM.
+
+## Coordination with ab-relay-control
+
+The forwarder remains the owner of the frozen JSON store and relay/1 protocol. The new `ab-relay-control` worker owns its separate, flag-gated account/invite/device-grant storage and endpoints. No account state or admission bypass is added here. Future integration needs an explicit authenticated policy/admission interface; it must preserve the R0 gate, sticky revocations and durable budget reservations, and must not activate account enrollment during this parity work.
+
+Build host update: prefer `ssh build` with a private `CARGO_TARGET_DIR=~/targets/ab-relay-phase5` once its toolchain is available. Ubuntu verification uses the isolated `~/ab-relay-phase5` directory and `RUSTC_WRAPPER=$HOME/.cargo/bin/sccache` once installed.
+
+
+## Reproduction
+
+Run on the isolated build host checkout with `PATH=$HOME/go-sdk/bin:$HOME/.cargo/bin:$PATH`, `RUSTC_WRAPPER=$HOME/.cargo/bin/sccache` and a private `CARGO_TARGET_DIR`.
+
+```
+cargo build --manifest-path rust/Cargo.toml -p ab-relay --bins --examples
+go build -o /tmp/relayrust ./lab/testing/relayrust
+/tmp/relayrust "$CARGO_TARGET_DIR/debug/ab-relay" "$CARGO_TARGET_DIR/debug/examples/remote_client"
+AB_RELAY_FIXTURE="$CARGO_TARGET_DIR/debug/examples/lab_fixture" AB_LAB_RELAY_STREAM_SECONDS=4 go run ./cmd/bridge-lab run lab/scenarios/core/RELAY-{ACME,ENROLL,LIMITS,OWN-DOMAIN,PASSTHROUGH,ROTATE-GATED,STREAMS,TLS-SPLICE}.yaml --level sim --json
+make rust-ci
+```
+
+The existing stream-duration override runs the four-second proof across the two-second inactivity budget. The default ten-minute SSE soak was also exercised during development. The adapter scopes child-process cleanup to each scenario's temporary directory. `AB_LAB_GIT_SHA` records the source commit in evidence when an rsynced build directory lacks git metadata.
+
+Control ACME retains Go-compatible SEC1 account and certificate keys, renews within 30 days, accepts newly issued short-lived certificates, and updates the in-memory certificate resolver. The ACME scenario uses Pebble and the injected DNS adapter for both issuance and control-certificate checks. Optional existing iPhone push/APNs support remains separate from tunnel/account authority.

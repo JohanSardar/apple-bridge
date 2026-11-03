@@ -118,6 +118,15 @@ func Run(ctx context.Context, s Scenario, level string) (e Evidence) {
 			e.Impl = "mixed"
 		}
 	}
+	if level == "sim" && os.Getenv("AB_RELAY_FIXTURE") != "" {
+		switch s.ID {
+		case "RELAY-ENROLL", "RELAY-PASSTHROUGH", "RELAY-LIMITS", "RELAY-ACME", "RELAY-OWN-DOMAIN", "RELAY-STREAMS", "RELAY-ROTATE-GATED", "RELAY-TLS-SPLICE":
+			e.Impl = "rust"
+			if e.GitSHA == "" {
+				e.GitSHA = os.Getenv("AB_LAB_GIT_SHA")
+			}
+		}
+	}
 	if reportsErr == nil {
 		if strings.HasPrefix(s.ID, "NOTE-") {
 			e = failOnNotesHelperCrashes(e, reports, before)
