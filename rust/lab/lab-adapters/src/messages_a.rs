@@ -13,6 +13,9 @@ use lab_world::{Result, World};
 use serde_json::{Value, json};
 use std::{collections::BTreeMap, process::Command, time::Instant};
 
+pub mod commands;
+pub mod decode;
+
 pub const READ_SCENARIOS: [&str; 4] = [
     "MSG-DB-REPLACED",
     "MSG-PERMISSION-LOSS",

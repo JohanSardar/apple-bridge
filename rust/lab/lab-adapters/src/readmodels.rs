@@ -245,6 +245,9 @@ pub fn readmodels(world: &mut World, _: &Value, evidence: &mut Evidence) -> Resu
     match evidence.scenario.as_str() {
         "WEB-RM-MEDIA-COLLECTION" => media_collection(world, evidence),
         "WEB-RM-SEARCH" => crate::search::search(world, evidence),
+        "MSG-DECODE-BALLOON" | "MSG-DECODE-FORMATTING" => {
+            crate::messages_a::decode::run(world, evidence)
+        }
         "WEB-CON-LIST" => crate::contacts_list::readmodels(world, evidence),
         other => Err(Error::Invalid(format!("readmodels not ported for {other}"))),
     }

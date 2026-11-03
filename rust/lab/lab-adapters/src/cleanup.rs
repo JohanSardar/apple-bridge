@@ -233,7 +233,10 @@ fn tempdir() -> std::io::Result<PathBuf> {
     fs::create_dir_all(&base)?;
     Ok(base)
 }
-pub fn messages_commands(_: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> {
+pub fn messages_commands(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> {
+    if crate::messages_a::commands::ALL.contains(&evidence.scenario.as_str()) {
+        return crate::messages_a::commands::commands(world, evidence);
+    }
     if evidence.scenario != "MSG-MEDIA-CLEANUP" {
         return Err(lab_world::Error::Invalid(format!(
             "messages_commands not ported for {}",

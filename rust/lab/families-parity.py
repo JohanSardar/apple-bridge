@@ -26,6 +26,11 @@ MESSAGES_A_SCENARIOS = ['messages/MSG-DB-REPLACED', 'messages/MSG-PERMISSION-LOS
 USAGE_SCENARIOS = ['usage/USE-LOCK-CLIP', 'usage/USE-READONLY', 'usage/USE-REMOTE-LAG']
 DARWIN_USAGE_SCENARIOS = ['usage/USE-SEGB-DECODE', 'usage/USE-ACTION-PROBE']
 CALLS_SCENARIOS = ['phone/CALL-CAPTURE', 'phone/VM-CAPTURE', 'phone/VMEMO-CAPTURE', 'phone/VMEMO-LATE-ASSETS']
+MESSAGES_A_COMMAND_SCENARIOS = ['messages/MSG-CAPABILITY-MATRIX', 'messages/MSG-COMMAND-OBSERVED-IDS',
+                                'messages/MSG-COMMAND-PARTS', 'messages/MSG-DELETE', 'messages/MSG-EDIT',
+                                'messages/MSG-FAILED-OBSERVED-IDS', 'messages/MSG-MARK-READ',
+                                'messages/MSG-OWNER-TOKEN-SELFCHAT', 'messages/MSG-DELETE-REAL',
+                                'messages/MSG-DECODE-BALLOON', 'messages/MSG-DECODE-FORMATTING']
 IPHONE_SCENARIOS = ['iphone/APP-ALARM-SIM', 'iphone/APP-SHELL-SIM', 'iphone/APP-PAIR-SIM', 'iphone/APP-DEVICE-SIM',
                     'iphone/APP-MOTION-SIM', 'iphone/APP-HEALTH-WRITE-SIM', 'iphone/APP-SCREENTIME-SIM',
                     'iphone/APP-HEALTH-SIM', 'iphone/APP-LOC-SIM', 'iphone/APP-LIVE-SIM', 'iphone/APP-APPROVE-SIM']
@@ -73,6 +78,7 @@ def main():
     parser.add_argument('--scenario', action='append')
     parser.add_argument('--import', dest='imports', action='store_true')
     parser.add_argument('--messages-a', dest='messages_a', action='store_true')
+    parser.add_argument('--messages-a-commands', dest='messages_a_commands', action='store_true')
     parser.add_argument('--media', dest='media', action='store_true')
     parser.add_argument('--messages-b', dest='messages_b', action='store_true')
     parser.add_argument('--messages-b-native', dest='messages_b_native', action='store_true')
@@ -102,6 +108,8 @@ def main():
         args.scenario = (args.scenario or []) + IMPORT_SCENARIOS
     if args.messages_a:
         args.scenario = (args.scenario or []) + MESSAGES_A_SCENARIOS
+    if args.messages_a_commands:
+        args.scenario = (args.scenario or []) + MESSAGES_A_COMMAND_SCENARIOS
     if args.media:
         args.scenario = (args.scenario or []) + MEDIA_SCENARIOS
     if args.web_rm:
