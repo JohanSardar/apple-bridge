@@ -14,7 +14,7 @@ import (
 )
 
 func (w *World) AddRelayReplica(scope, publicIP, probe string) error {
-	root := filepath.Dir(w.bridge)
+	root := filepath.Dir(w.goBridge)
 	w.remoteBinary = filepath.Join(w.Dir, "bridge-linux-amd64")
 	home := filepath.Join(w.Dir, "relay-replica")
 	routeHome := filepath.Join(w.Dir, "relay-route")

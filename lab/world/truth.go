@@ -32,7 +32,7 @@ func (w *World) RecoverTruth(verb string, request map[string]any) (map[string]an
 func (w *World) truth(ctx context.Context, verb string, request map[string]any) (map[string]any, error) {
 	calendarFixture := verb == "fixture" && request["source"] == "calendar"
 	if calendarFixture && (request["action"] == "consolidate_calendars" || request["action"] == "cleanup_empty_build_calendar") {
-		bytes, err := exec.CommandContext(ctx, "python3", filepath.Join(filepath.Dir(filepath.Dir(w.bridge)), "lab/truth/calendar-cleanup-audit.py"), "--empty-proof").Output()
+		bytes, err := exec.CommandContext(ctx, "python3", filepath.Join(filepath.Dir(filepath.Dir(w.goBridge)), "lab/truth/calendar-cleanup-audit.py"), "--empty-proof").Output()
 		if err != nil {
 			return nil, fmt.Errorf("Calendar all-date emptiness proof unavailable: %w", err)
 		}
@@ -43,7 +43,7 @@ func (w *World) truth(ctx context.Context, verb string, request map[string]any) 
 		request["empty_calendar_proof"] = proof
 	}
 	if calendarFixture && request["action"] == "cleanup_run_calendar" {
-		bytes, err := exec.CommandContext(ctx, "python3", filepath.Join(filepath.Dir(filepath.Dir(w.bridge)), "lab/truth/calendar-cleanup-audit.py"), "--tag", fmt.Sprint(request["tag"])).Output()
+		bytes, err := exec.CommandContext(ctx, "python3", filepath.Join(filepath.Dir(filepath.Dir(w.goBridge)), "lab/truth/calendar-cleanup-audit.py"), "--tag", fmt.Sprint(request["tag"])).Output()
 		if err != nil {
 			return nil, err
 		}
@@ -142,7 +142,7 @@ func (w *World) truth(ctx context.Context, verb string, request map[string]any) 
 	}
 	os.Remove(output)
 	if calendarFixture && request["action"] == "cleanup_run_calendar" {
-		data, err := exec.CommandContext(ctx, "python3", filepath.Join(filepath.Dir(filepath.Dir(w.bridge)), "lab/truth/calendar-cleanup-audit.py"), "--tag", fmt.Sprint(request["tag"])).Output()
+		data, err := exec.CommandContext(ctx, "python3", filepath.Join(filepath.Dir(filepath.Dir(w.goBridge)), "lab/truth/calendar-cleanup-audit.py"), "--tag", fmt.Sprint(request["tag"])).Output()
 		var audit struct {
 			Remaining int `json:"remaining"`
 		}
