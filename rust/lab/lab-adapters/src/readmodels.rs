@@ -5,12 +5,14 @@ use lab_world::{Error, Result, World};
 use serde_json::{Map, Value, json};
 use std::time::Instant;
 
-pub const SCENARIOS: [&str; 5] = [
+pub const SCENARIOS: [&str; 7] = [
     "WEB-RM-MEDIA-COLLECTION",
     "WEB-RM-SEARCH",
     "WEB-RM-THREAD-ORIGINATOR",
     "WEB-RM-THREAD-ORIGINATOR-PERF",
     "WEB-RM-REMINDERS-DEMO",
+    "WEB-RM-CHATS",
+    "WEB-RM-THREAD",
 ];
 pub const PROTOCOLS: [&str; 2] = ["rest", "mcp"];
 
@@ -264,6 +266,7 @@ pub fn readmodels(world: &mut World, _: &Value, evidence: &mut Evidence) -> Resu
         other if crate::web_reminders::SCENARIOS.contains(&other) => {
             crate::web_reminders::run(world, other, evidence)
         }
+        "WEB-RM-CHATS" | "WEB-RM-THREAD" => crate::rm_core::readmodels(world, evidence),
         other => Err(Error::Invalid(format!("readmodels not ported for {other}"))),
     }
 }
