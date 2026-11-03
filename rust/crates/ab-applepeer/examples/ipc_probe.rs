@@ -36,13 +36,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .parent()
             .ok_or("parent")?
             .join("gateway-blobs"),
-        128 << 20,
+        std::env::var("AB_PROBE_BLOB_CAP")
+            .ok()
+            .map(|s| s.parse::<u64>())
+            .transpose()?
+            .unwrap_or(128 << 20),
     )?));
-    let gateway = Arc::new(local);
+    let audit = Arc::new(Audit::default());
+    local.query_audit = Some(audit.clone());
+    let mut gateway = Arc::new(local);
     let mut lines = tokio::io::BufReader::new(tokio::io::stdin()).lines();
+    let mut saved_blob: Option<(ab_operations::peer::PeerSession, String, i64)> = None;
     while let Some(line) = lines.next_line().await? {
         let frame: IpcFrame = serde_json::from_str(&line)?;
-        let result = if matches!(
+        let result = if frame.t == "DisableUploads" {
+            Arc::get_mut(&mut gateway).ok_or("active gateway")?.query_store = None;
+            serde_json::json!({"disabled":true})
+        } else if frame.t == "StartBlob" {
+            saved_blob = Some((
+                commands.session().ok_or("session")?,
+                frame.handle,
+                frame.length,
+            ));
+            serde_json::json!({"started":true})
+        } else if frame.t == "FinishBlob" {
+            let (session, handle, size) = saved_blob.take().ok_or("saved blob")?;
+            match commands.read_blob_from(session, &handle, 0, size).await {
+                Ok(_) => serde_json::json!({"read":true}),
+                Err(error) => serde_json::json!({"error":{"code":error.code}}),
+            }
+        } else if frame.t == "QueryAudits" {
+            serde_json::to_value(&*audit.0.lock().map_err(|_| "audit lock")?)?
+        } else if matches!(
             frame.t.as_str(),
             "Submit" | "Status" | "Decide" | "Recover" | "LocalQuery"
         ) {

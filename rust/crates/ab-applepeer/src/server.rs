@@ -22,6 +22,13 @@ pub trait Backend: Debug + Send + Sync + 'static {
     fn next_fence(&self) -> Task<'_, u64>;
     fn checkpoints(&self) -> Task<'_, BTreeMap<String, Box<serde_json::value::RawValue>>>;
     fn commit(&self, capture: Capture) -> Task<'_, (Cursor, bool)>;
+    fn commit_from(
+        &self,
+        _session: ab_operations::peer::PeerSession,
+        capture: Capture,
+    ) -> Task<'_, (Cursor, bool)> {
+        self.commit(capture)
+    }
     fn source_state(&self, frame: IpcFrame) -> Task<'_, ()>;
 }
 #[derive(Debug)]
@@ -45,6 +52,11 @@ async fn receive(reader: &mut OwnedReadHalf) -> Result<(IpcFrame, usize), Error>
             .map_err(|_| Code::Unavailable)?;
         ab_wire::framing::decode_ipc(&bytes).map_err(|_| Code::Corrupt)?;
         let mut frame: IpcFrame = serde_json::from_slice(&bytes[4..]).map_err(|_| Code::Corrupt)?;
+        if frame.t == "QueryResult" && frame.result_json.is_none() {
+            let mut fields: BTreeMap<String, Box<serde_json::value::RawValue>> =
+                serde_json::from_slice(&bytes[4..]).map_err(|_| Code::Corrupt)?;
+            frame.result_json = fields.remove("result_json");
+        }
         if frame.t == "Capture" {
             frame.capture = Some(serde_json::from_slice(&bytes[4..]).map_err(|_| Code::Corrupt)?);
         }
@@ -89,6 +101,9 @@ impl Server {
         if let Some((_, active)) = active.lock().await.take() {
             active.abort();
         }
+        self.commands
+            .fence
+            .store(0, std::sync::atomic::Ordering::SeqCst);
         self.commands
             .connected
             .store(false, std::sync::atomic::Ordering::SeqCst);
@@ -292,7 +307,11 @@ impl Server {
                 match f.t.as_str() {
                     "Capture" => {
                         let capture = f.capture.ok_or(Code::Corrupt)?;
-                        match self.backend.commit(capture.clone()).await {
+                        match self
+                            .backend
+                            .commit_from(ab_operations::peer::PeerSession(fence), capture.clone())
+                            .await
+                        {
                             Ok((cursor, degraded)) => {
                                 if degraded {
                                     self.degraded(

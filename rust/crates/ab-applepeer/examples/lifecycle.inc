@@ -93,3 +93,11 @@ impl ab_operations::local::ActionResolver for Actions {
         })
     }
 }
+
+#[derive(Debug,Default)]
+struct Audit(std::sync::Mutex<Vec<ab_operations::QueryAudit>>);
+impl ab_operations::QueryAuditSink for Audit {
+    fn record(&self,_: &ab_operations::Principal,_: &str,a: &ab_operations::QueryAudit,_: bool) -> Result<(),ab_operations::Error> {
+        self.0.lock().map_err(|_|Code::Unavailable)?.push(a.clone());Ok(())
+    }
+}

@@ -2,7 +2,7 @@ use crate::{
     Code, Codec, Command, CommandQuery, Cursor, Error, Identity, NativeQuery, Principal,
     descriptor_for,
     peer::{ApplePeer, IpcFrame},
-    valid_command_id, validate_shape,
+    valid_command_id,
 };
 use ab_trust::{
     domain::{CommandState as State, Disposition},
@@ -53,6 +53,14 @@ pub struct PreparedAction {
 }
 pub trait GatewayState: Debug + Send + Sync {
     fn admission_era(&self) -> Result<String, Error>;
+    fn serialization_key(
+        &self,
+        _p: &Principal,
+        _c: &Command,
+        key: String,
+    ) -> Result<String, Error> {
+        Ok(key)
+    }
     fn command(&self, id: &str) -> Result<CommandRecord, Error>;
     fn commands(&self) -> Result<Vec<CommandRecord>, Error>;
     fn transition(
@@ -69,7 +77,90 @@ pub trait GatewayState: Debug + Send + Sync {
         cursor: &Cursor,
     ) -> Result<String, Error>;
 }
+#[derive(Debug, Clone)]
+pub struct HelperBlob {
+    pub digest: String,
+    pub size: u64,
+    pub handle: String,
+}
+#[derive(Debug, Clone)]
+pub enum OutcomeEvidence {
+    CaptureBound,
+    Standalone,
+    Artifact(HelperBlob),
+    Unproven,
+}
+pub type ActionLease = Arc<dyn Debug + Send + Sync>;
+pub type PreparedWithLease = (PreparedAction, Option<ActionLease>);
+#[derive(Debug, Default)]
+pub struct BorrowedUploads {
+    pub references: BTreeMap<String, ab_state::BlobReference>,
+    pub lease: Option<ActionLease>,
+}
 pub trait ActionResolver: Debug + Send + Sync {
+    fn serialization_key(&self, _p: &Principal, c: &Command) -> Result<String, Error> {
+        crate::command_contract::serialization_key(c)
+    }
+
+    fn borrow_uploads(&self, _p: &Principal, c: &Command) -> Result<BorrowedUploads, Error> {
+        if c.op.starts_with("messages.") {
+            let args: Value = serde_json::from_str(c.args.get()).map_err(|_| Code::Invalid)?;
+            if args.as_object().is_some_and(|o| {
+                o.iter().any(|(key, value)| {
+                    key.eq_ignore_ascii_case("files")
+                        && value.as_array().is_some_and(|files| !files.is_empty())
+                })
+            }) {
+                return Err(Code::Unavailable.into());
+            }
+        }
+        Ok(BorrowedUploads::default())
+    }
+
+    fn prepare(&self, p: &Principal, c: &Command) -> Result<PreparedWithLease, Error> {
+        self.resolve(p, c).map(|plan| (plan, None))
+    }
+
+    fn collection(&self, command: &Command) -> Result<String, Error> {
+        Ok(target_collection(&command.op))
+    }
+    fn validate(&self, command: &Command) -> Result<(), Error> {
+        crate::command_contract::validate(command).map(|_| ())
+    }
+    fn evidence(&self, c: &Command, hash: &str, f: &IpcFrame) -> Result<OutcomeEvidence, Error> {
+        let args: Value = serde_json::from_str(c.args.get()).map_err(|_| Code::Invalid)?;
+        let evidence: Value = f
+            .evidence
+            .as_ref()
+            .and_then(|v| serde_json::from_str(v.get()).ok())
+            .unwrap_or(Value::Null);
+        let observed = f.disposition == "locally_observed" || f.disposition == "absent_confirmed";
+        if crate::outcome::playback(&c.op)
+            && matches!(
+                f.disposition.as_str(),
+                "locally_observed" | "delivered" | "delivery_failed"
+            )
+            && (!observed || !crate::outcome::valid(&c.op, &args, &evidence, hash))
+        {
+            return Ok(OutcomeEvidence::Unproven);
+        }
+        if observed && !crate::outcome::valid(&c.op, &args, &evidence, hash) {
+            return Ok(OutcomeEvidence::Unproven);
+        }
+        if observed && crate::outcome::capture(&c.op) {
+            return Ok(OutcomeEvidence::Artifact(HelperBlob {
+                digest: evidence["digest"].as_str().ok_or(Code::Corrupt)?.into(),
+                size: evidence["size"].as_u64().ok_or(Code::Corrupt)?,
+                handle: evidence["handle"].as_str().ok_or(Code::Corrupt)?.into(),
+            }));
+        }
+        Ok(if crate::outcome::requires_capture(&c.op) {
+            OutcomeEvidence::CaptureBound
+        } else {
+            OutcomeEvidence::Standalone
+        })
+    }
+
     fn resolve(&self, principal: &Principal, command: &Command) -> Result<PreparedAction, Error>;
     fn conflict(
         &self,
@@ -92,6 +183,7 @@ pub struct LocalGateway {
     pub peer: Arc<dyn ApplePeer>,
     pub actions: Arc<dyn ActionResolver>,
     pub query_store: Option<Arc<crate::LocalQueryStore>>,
+    pub query_audit: Option<Arc<dyn crate::QueryAuditSink>>,
     pub phone_notify: Option<Arc<tokio::sync::Notify>>,
     query_rates: Mutex<BTreeMap<String, (std::time::Instant, u32)>>,
     locks: Mutex<BTreeMap<String, Arc<AsyncMutex<()>>>>,
@@ -121,6 +213,7 @@ impl LocalGateway {
             peer,
             actions,
             query_store: None,
+            query_audit: None,
             phone_notify: None,
             query_rates: Mutex::default(),
             locks: Mutex::default(),
@@ -199,55 +292,9 @@ impl LocalGateway {
         if descriptor.kind != ab_catalog::OperationKind::Command {
             return Err(Code::Unsupported.into());
         }
-        let args: Value = serde_json::from_str(command.args.get()).map_err(|_| Code::Invalid)?;
-        if command.op.starts_with("calendar.") && args["span"] == "all" {
-            return Err(Code::Unsupported.into());
-        }
-        if command.op.starts_with("messages.") {
-            ab_commands::validate(
-                &ab_commands::Command {
-                    id: command.id.clone(),
-                    op: command.op.clone(),
-                    args: command.args.clone(),
-                    expected_version: command.expected_version,
-                    wait_ms: i64::try_from(command.wait_ms).map_err(|_| Code::Invalid)?,
-                },
-                now(),
-            )
-            .map_err(|error| {
-                Error::from(match error {
-                    ab_commands::Error::Invalid => Code::Invalid,
-                    ab_commands::Error::Unsupported => Code::Unsupported,
-                    ab_commands::Error::TooLarge => Code::TooLarge,
-                    ab_commands::Error::Expired => Code::Expired,
-                })
-            })?;
-        }
-        let transient = matches!(
-            command.op.as_str(),
-            "maps.open" | "speech.say" | "capture.play_sound"
-        );
-        crate::native_commands::validate(&command, &args)?;
-        if ["contacts.", "notes.", "reminders.", "iphone."]
-            .iter()
-            .any(|prefix| command.op.starts_with(prefix))
-        {
-            crate::validate_source_command(&command)?;
-        } else {
-            if !transient {
-                validate_shape(&descriptor.input["properties"]["args"], &args)?;
-            }
-            if !args.is_object()
-                || !transient
-                    && descriptor.input["required"]
-                        .as_array()
-                        .is_some_and(|v| v.iter().any(|k| k == "expected_version"))
-                    && command.expected_version == 0
-            {
-                return Err(Code::Invalid.into());
-            }
-        }
+        self.actions.validate(&command)?;
         command.origin = if p.kind == "device"
+            || p.kind == "delegated" && p.id.contains("/device:")
             || p.is_agent() && matches!(p.level.as_str(), "full" | "approve")
         {
             "interactive".into()
@@ -281,22 +328,13 @@ impl LocalGateway {
         if !command.admission_era.is_empty() && command.admission_era != era {
             return Err(Code::Expired.into());
         }
-        let (ttl, max) = if command.op.starts_with("messages.") {
-            (60, 300)
-        } else {
-            (300, 3600)
-        };
         let created = now();
-        let expiry = if command.expires_at == "0001-01-01T00:00:00Z" {
-            created
-                .checked_add(jiff::SignedDuration::from_secs(ttl))
-                .map_err(|_| Code::Invalid)?
+        let requested = if command.expires_at == "0001-01-01T00:00:00Z" {
+            None
         } else {
-            timestamp(&command.expires_at)?
+            Some(timestamp(&command.expires_at)?)
         };
-        if expiry <= created || expiry.duration_since(created).as_secs() > max {
-            return Err(Code::Expired.into());
-        }
+        let expiry = crate::command_contract::expiry(&command.op, created, requested)?;
         let approval = p.is_agent() && (p.level == "approve" || command.op == "focus.set");
         if !(approval
             || self.peer.available()
@@ -306,14 +344,18 @@ impl LocalGateway {
         }
         let wait = command.wait_ms;
         let id = command.id.clone();
-        let upload_references = if let Some(store) = &self.query_store {
-            store.message_uploads(&p.id, &command).await?
+        let borrowed = if let Some(store) = &self.query_store {
+            BorrowedUploads {
+                references: store.message_uploads(&p.id, &command).await?,
+                lease: None,
+            }
         } else {
-            BTreeMap::new()
+            self.actions.borrow_uploads(&p, &command)?
         };
+        let _upload_lease = borrowed.lease;
         let r = CommandRecord {
             parts: Vec::new(),
-            upload_references,
+            upload_references: borrowed.references,
             command,
             principal: p.id.clone(),
             source: descriptor
@@ -378,7 +420,7 @@ impl LocalGateway {
         }
         let deadline = tokio::time::Instant::now()
             + Duration::try_from(remaining).map_err(|_| Code::Expired)?;
-        let plan = match self.actions.resolve(&p, &r.command) {
+        let key = match self.actions.serialization_key(&p, &r.command) {
             Ok(plan) => plan,
             Err(error) => {
                 return self.transition(
@@ -390,11 +432,12 @@ impl LocalGateway {
                 );
             }
         };
-        let lock = self.lock(format!("object:{}", plan.serialization_key))?;
+        let key = self.state.serialization_key(&p, &r.command, key)?;
+        let lock = self.lock(format!("object:{key}"))?;
         let Ok(_guard) = tokio::time::timeout_at(deadline, lock.lock()).await else {
             return self.transition(r, State::Expired, Some(Disposition::Expired), None, None);
         };
-        let plan = match self.actions.resolve(&p, &r.command) {
+        let (mut plan, _lease) = match self.actions.prepare(&p, &r.command) {
             Ok(plan) => plan,
             Err(error) => {
                 return self.transition(
@@ -406,7 +449,6 @@ impl LocalGateway {
                 );
             }
         };
-        let mut plan = plan;
         let _files = if let Some(store) = &self.query_store {
             match store.message_files(&r, &mut plan).await {
                 Ok(files) => files,
@@ -422,6 +464,18 @@ impl LocalGateway {
             }
         } else {
             None
+        };
+        plan.action = match crate::command_contract::prepared(&r.command, &plan.action) {
+            Ok(action) => action,
+            Err(error) => {
+                return self.transition(
+                    r,
+                    State::Rejected,
+                    Some(Disposition::RejectedBeforeDispatch),
+                    None,
+                    Some(error),
+                );
+            }
         };
         let prepared = tokio::time::timeout_at(
             deadline,
@@ -509,15 +563,68 @@ impl LocalGateway {
                 None,
             );
         };
-        let mut frame = self.await_capture(&r, frame).await;
+        let frame = self.await_capture(&r, frame).await;
+        self.apply_outcome(&p, r, frame, &plan.collection).await
+    }
+    async fn apply_outcome(
+        &self,
+        p: &Principal,
+        r: CommandRecord,
+        mut frame: IpcFrame,
+        collection: &str,
+    ) -> Result<CommandRecord, Error> {
         if frame.t == "Rejected" {
             frame.error = self
                 .actions
-                .conflict(&p, &r.command, &frame)?
+                .conflict(p, &r.command, &frame)?
                 .map(|error| raw(&error))
                 .transpose()?;
         }
-        self.outcome(r, frame, &plan.collection)
+        let mut policy = self
+            .actions
+            .evidence(&r.command, &r.request_hash, &frame)
+            .unwrap_or(OutcomeEvidence::Unproven);
+        if let OutcomeEvidence::Artifact(blob) = &policy {
+            let mut evidence: Value = frame
+                .evidence
+                .as_ref()
+                .and_then(|v| serde_json::from_str(v.get()).ok())
+                .unwrap_or(Value::Null);
+            let id = format!("qry_{}", ulid::Ulid::new());
+            let mut blobs =
+                vec![json!({"digest":blob.digest,"size":blob.size,"handle":blob.handle})];
+            let descriptor = descriptor_for(&r.command.op)?;
+            let result = async {
+                self.query_store
+                    .as_ref()
+                    .ok_or(Code::Unavailable)?
+                    .hydrate(
+                        self.peer.as_ref(),
+                        &crate::QueryBlobContext {
+                            principal: p,
+                            id: &id,
+                            scope: &descriptor.scope,
+                            max_size: 128 << 20,
+                            session: crate::peer::PeerSession(frame.owner_fence),
+                        },
+                        &mut blobs,
+                    )
+                    .await
+            };
+            if matches!(
+                tokio::time::timeout(Duration::from_secs(75), result).await,
+                Ok(Ok(()))
+            ) {
+                let object = evidence.as_object_mut().ok_or(Code::Corrupt)?;
+                object.remove("handle");
+                object.insert("blob_id".into(), Value::String(id));
+                frame.evidence = Some(raw(&evidence)?);
+                policy = OutcomeEvidence::Standalone;
+            } else {
+                policy = OutcomeEvidence::Unproven;
+            }
+        }
+        self.outcome(r, frame, collection, &policy)
     }
     fn bound(
         &self,
@@ -600,6 +707,7 @@ impl LocalGateway {
         mut r: CommandRecord,
         mut frame: IpcFrame,
         collection: &str,
+        policy: &OutcomeEvidence,
     ) -> Result<CommandRecord, Error> {
         let prior = r.clone();
         let (mut state, mut disposition) = match frame.disposition.as_str() {
@@ -615,29 +723,22 @@ impl LocalGateway {
             state = State::Rejected;
             disposition = Disposition::RejectedBeforeDispatch;
         }
-        if matches!(
-            state,
-            State::Observed | State::Delivered | State::DeliveryFailed
-        ) {
-            let proof: Value = frame
-                .evidence
-                .as_ref()
-                .and_then(|raw| serde_json::from_str(raw.get()).ok())
-                .unwrap_or(Value::Null);
-            if let Some(valid) =
-                crate::native_commands::transient_completion(&r.command, &proof, &r.request_hash)
-            {
-                if state != State::Observed || !valid {
-                    state = State::Indeterminate;
-                    disposition = Disposition::Indeterminate;
-                }
-            } else if r.command.op.starts_with("files.")
-                && state == State::Observed
-                && !crate::native_commands::file_completion(&r.command, &proof, &r.request_hash)
-            {
-                state = State::Indeterminate;
-                disposition = Disposition::Indeterminate;
-            } else if let Some((cursor, key)) = self.bound(&r, &frame, collection) {
+        if matches!(policy, OutcomeEvidence::Unproven)
+            && matches!(
+                state,
+                State::Observed | State::Delivered | State::DeliveryFailed
+            )
+        {
+            state = State::Indeterminate;
+            disposition = Disposition::Indeterminate;
+        }
+        if matches!(policy, OutcomeEvidence::CaptureBound)
+            && matches!(
+                state,
+                State::Observed | State::Delivered | State::DeliveryFailed
+            )
+        {
+            if let Some((cursor, key)) = self.bound(&r, &frame, collection) {
                 r.commit_seq = cursor.sequence;
                 match self.state.observed_record_id(collection, &key, &cursor) {
                     Ok(id) => r.observed_record_ids = vec![id],
@@ -714,19 +815,23 @@ impl LocalGateway {
         p: &Principal,
         query: &CommandQuery,
     ) -> Result<Box<RawValue>, Error> {
-        let mut r = self.expire(self.state.command(&query.id)?)?;
+        let r = self.state.command(&query.id)?;
         if r.principal != p.id
             || !p.visibility().get(&r.source).copied().unwrap_or(false)
                 && !p.visibility().contains_key("admin")
         {
             return Err(Code::NotFound.into());
         }
+        let mut r = self.expire(r)?;
+        if r.source == "iphone" {
+            return raw(&r);
+        }
         if query.resolve && r.admission_era == self.state.admission_era()? && resolvable(&r) {
             let lock = self.lock(format!("command:{}", query.id))?;
             let _guard = lock.lock().await;
             r = self.state.command(&query.id)?;
             if resolvable(&r) {
-                let collection = target_collection(&r.command.op);
+                let collection = self.actions.collection(&r.command)?;
                 let frame = self
                     .peer
                     .exchange(IpcFrame {
@@ -735,7 +840,7 @@ impl LocalGateway {
                         ..IpcFrame::default()
                     })
                     .await?;
-                r = self.outcome(r, frame, &collection)?;
+                r = self.apply_outcome(p, r, frame, &collection).await?;
             }
         }
         raw(&r)
@@ -924,7 +1029,37 @@ impl LocalGateway {
             }
         }
         let args: Value = serde_json::from_str(q.args.get()).map_err(|_| Code::Invalid)?;
-        validate_shape(&descriptor.input["properties"]["args"], &args)?;
+        if matches!(
+            q.op.as_str(),
+            "helper.version"
+                | "mac.clipboard_read"
+                | "mac.network_check"
+                | "mac.bluetooth_devices"
+                | "mac.time_machine_status"
+        ) && !args.as_object().is_some_and(serde_json::Map::is_empty)
+        {
+            return Err(Code::Invalid.into());
+        }
+        if q.op == "mac.recognize_song" {
+            use base64::Engine;
+            if !args
+                .as_object()
+                .is_some_and(|a| a.keys().all(|k| k == "audio_blob"))
+            {
+                return Err(Code::Invalid.into());
+            }
+            let data = base64::engine::general_purpose::STANDARD
+                .decode(
+                    args["audio_blob"]
+                        .as_str()
+                        .unwrap_or_default()
+                        .replace(['\r', '\n'], ""),
+                )
+                .map_err(|_| Code::Invalid)?;
+            if data.is_empty() || data.len() > 8 << 20 {
+                return Err(Code::Invalid.into());
+            }
+        }
         if q.id.is_empty() {
             q.id = format!("qry_{}", ulid::Ulid::new());
         }
@@ -938,14 +1073,56 @@ impl LocalGateway {
         if q.deadline_ms == 0 {
             q.deadline_ms = 1000;
         }
+        let deadline = tokio::time::Instant::now() + Duration::from_millis(q.deadline_ms);
+        let mut audit = crate::query_audit::AuditGuard::new(
+            self.query_audit.clone(),
+            p,
+            &q.id,
+            &q.op,
+            q.args.get().len(),
+            deadline,
+        );
+        let result = self
+            .route_query(p, q, &descriptor.scope, deadline, &mut audit.stats)
+            .await;
+        let recorded = audit.finish();
+        match (result, recorded) {
+            (Ok(_), Err(error)) => Err(error),
+            (result, _) => result,
+        }
+    }
+    async fn route_query(
+        &self,
+        p: &Principal,
+        mut q: NativeQuery,
+        scope: &str,
+        deadline: tokio::time::Instant,
+        audit: &mut crate::QueryAudit,
+    ) -> Result<Box<RawValue>, Error> {
+        let args: Value = serde_json::from_str(q.args.get()).map_err(|_| Code::Invalid)?;
+        let document = if matches!(q.op.as_str(), "vision.ocr" | "pdf.text" | "pdf.search") {
+            audit.argument_bytes = 0;
+            let store = self.query_store.as_ref().ok_or(Code::Unavailable)?;
+            Some(
+                tokio::time::timeout_at(deadline, store.document_input(p, &q.args))
+                    .await
+                    .map_err(|_| Code::Deadline)??,
+            )
+        } else {
+            None
+        };
+        if let Some(document) = &document {
+            q.args = document.args.clone();
+            audit.argument_bytes = q.args.get().len();
+        }
         if q.op == "mail.body" {
             q.args = self
                 .query_store
                 .as_ref()
                 .ok_or(Code::Unavailable)?
                 .mail_args(p, &args)?;
+            audit.argument_bytes = q.args.get().len();
         }
-        let deadline = tokio::time::Instant::now() + Duration::from_millis(q.deadline_ms);
         let frame = tokio::time::timeout_at(
             deadline,
             self.peer.exchange(IpcFrame {
@@ -975,6 +1152,15 @@ impl LocalGateway {
         {
             return Err(Code::Corrupt.into());
         }
+        audit.result_bytes = frame.result_json.as_ref().map_or(0, |v| v.get().len());
+        audit.blob_bytes = frame
+            .blobs
+            .as_ref()
+            .into_iter()
+            .flatten()
+            .filter_map(|b| serde_json::from_str::<Value>(b.get()).ok())
+            .filter_map(|b| b["size"].as_i64())
+            .sum();
         let mut blobs: Vec<Value> = frame
             .blobs
             .unwrap_or_default()
@@ -985,7 +1171,17 @@ impl LocalGateway {
             let store = self.query_store.as_ref().ok_or(Code::Corrupt)?;
             tokio::time::timeout_at(
                 deadline,
-                store.hydrate(self.peer.as_ref(), p, &q.id, &descriptor.scope, &mut blobs),
+                store.hydrate(
+                    self.peer.as_ref(),
+                    &crate::QueryBlobContext {
+                        principal: p,
+                        id: &q.id,
+                        scope,
+                        max_size: 64 << 20,
+                        session: crate::peer::PeerSession(frame.owner_fence),
+                    },
+                    &mut blobs,
+                ),
             )
             .await
             .map_err(|_| Code::Deadline)??;
@@ -1196,3 +1392,6 @@ fn resolvable(r: &CommandRecord) -> bool {
                             || p.disposition == "delivery_failed" && p.record_id.is_empty()
                     }))
 }
+#[cfg(test)]
+#[path = "local_races.rs"]
+mod races;
