@@ -41,6 +41,8 @@ MESSAGES_B_SCENARIOS = [f'messages/MSG-{name}' for name in [
     'REACT', 'READSTATE-REAL', 'RECEIPTS', 'REPLY', 'RESEND', 'SELFTEST', 'SEND-FILES', 'SEND-GHOST',
     'SEND-IDENTICAL-MANUAL', 'SEND-NEW-HANDLE', 'SEND-SELF-EMAIL', 'SEND-SELF-TEXT', 'UI-INTERFERENCE', 'UNSEND']]
 MESSAGES_B_NATIVE = ['messages/MSG-WATCHER-REARM']
+MAPS_SCENARIOS = ['maps/MAP-SIM', 'maps/LOC-SIM', 'files/FILE-COMMANDS', 'files/FILE-CRUD-REAL',
+                  'files/FILE-OFFLOAD-REAL']
 SCENARIOS = ['CORE-QUERY-ROUNDTRIP', 'CORE-QUERY-BLOB', 'CORE-QUERY-SCOPE', 'CORE-QUERY-DEADLINE',
              *JOURNEY_SCENARIOS, *CORE_SCENARIOS]
 FRONTDOOR_SCENARIOS = ['CORE-REST-MCP-PARITY', 'CORE-LOCALHOST-DEFENSE']
@@ -79,6 +81,7 @@ def main():
     parser.add_argument('--web-rm', dest='web_rm', action='store_true')
     parser.add_argument('--native', dest='native', action='store_true')
     parser.add_argument('--iphone', dest='iphone', action='store_true')
+    parser.add_argument('--maps', dest='maps', action='store_true')
     parser.add_argument('--shortcuts', dest='shortcuts', action='store_true')
     parser.add_argument('--relay', dest='relay', action='store_true')
     parser.add_argument('--reminders', dest='reminders', action='store_true')
@@ -120,6 +123,8 @@ def main():
         args.scenario = (args.scenario or []) + WEB_SCENARIOS
     if args.native_media:
         args.scenario = (args.scenario or []) + NATIVE_MEDIA_SCENARIOS
+    if args.maps:
+        args.scenario = (args.scenario or []) + MAPS_SCENARIOS
     out = Path(args.output).resolve()
     out.mkdir(mode=0o700, parents=True, exist_ok=False)
     root = Path(__file__).resolve().parents[2] / 'lab' / 'scenarios'

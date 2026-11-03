@@ -107,6 +107,7 @@ pub fn require_signed_helper(app: Option<&Path>) -> Result<&Path> {
 pub struct World {
     pub directory: PathBuf,
     pub gateway_home: PathBuf,
+    pub helper_app: Option<PathBuf>,
     pub runtime: Value,
     config: WorldConfig,
     gateway: Option<Child>,
@@ -130,6 +131,7 @@ impl World {
         let mut world = Self {
             directory: config.directory.clone(),
             gateway_home: config.directory.join("gateway"),
+            helper_app: None,
             runtime: Value::Null,
             config,
             gateway: None,
@@ -157,6 +159,7 @@ impl World {
         let mut world = Self {
             directory: config.directory.clone(),
             gateway_home: config.directory.join("gateway"),
+            helper_app: Some(app.clone()),
             runtime: Value::Null,
             config: WorldConfig {
                 gateway: config.gateway,
@@ -220,6 +223,18 @@ impl World {
             }
             thread::sleep(Duration::from_millis(25));
         }
+    }
+    pub fn sibling(&self, suffix: &str) -> Result<Self> {
+        let name = self
+            .directory
+            .file_name()
+            .ok_or_else(|| Error::Invalid("world directory has no name".into()))?
+            .to_string_lossy()
+            .into_owned();
+        Self::start(WorldConfig {
+            directory: self.directory.with_file_name(format!("{name}-{suffix}")),
+            ..self.config.clone()
+        })
     }
     pub fn restart_peer(&mut self) -> Result<()> {
         stop(&mut self.peer);

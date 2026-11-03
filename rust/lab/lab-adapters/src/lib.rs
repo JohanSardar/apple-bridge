@@ -4,6 +4,7 @@ pub mod calls;
 pub mod cleanup;
 pub mod commands;
 pub mod contacts_list;
+pub mod filecmd;
 pub mod files_native;
 pub mod frontdoor;
 pub mod history;
@@ -18,6 +19,7 @@ pub mod labcore;
 pub mod live;
 pub mod mac;
 pub mod mac_real;
+pub mod maps;
 pub mod media;
 pub mod messages_a;
 pub mod messages_b;
@@ -51,6 +53,7 @@ const PORTED: [&str; 4] = [
 ];
 
 #[must_use]
+#[allow(clippy::too_many_lines)]
 pub fn registry() -> Registry {
     let mut registry = Registry::standard();
     registry.register("world", |world, input, evidence| {
@@ -104,7 +107,20 @@ pub fn registry() -> Registry {
         evidence.check("world_started", true, "gateway and SimApple peer ready");
         Ok(())
     });
-    registry.register("queries", queries::queries);
+    registry.register("queries", |world, input, evidence| {
+        if maps::SIM.contains(&evidence.scenario.as_str()) {
+            maps::sim(world, evidence)
+        } else {
+            queries::queries(world, input, evidence)
+        }
+    });
+    registry.register("file_commands", filecmd::commands);
+    for id in maps::REAL {
+        registry.register_real(id, maps::real);
+    }
+    for id in filecmd::REAL {
+        registry.register_standalone(id, filecmd::real);
+    }
     registry.register("readmodels", readmodels::readmodels);
     registry.register("blobs", blobs::blobs);
     registry.register("messages", history::messages);
@@ -145,4 +161,9 @@ pub fn registry() -> Registry {
     registry.register("shortcuts_real_only", shortcuts::shortcuts_real_only);
     registry.register("mac", mac::mac);
     registry
+}
+
+#[must_use]
+pub fn implied_step(id: &str) -> Option<&'static str> {
+    filecmd::SIM.contains(&id).then_some("file_commands")
 }

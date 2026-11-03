@@ -174,3 +174,13 @@ The listener is configured only by `<home>/lab-relay.json`, read at gateway star
 `cert` is the server chain (leaf first) signed by a lab-owned test CA; `key` is the PKCS#8 private key. The lab owns the CA (`lab-relay` generates it with rcgen) and its clients trust only that CA, never webpki roots. After binding, the gateway writes the resolved `host:port` to `<home>/run/lab-relay-addr`. A gateway restart rereads the file and rebinds, so read the address again.
 
 Only `GET /v1/feed` is served; any other path returns 401. The handler is the production relay handler (`feed.RelayHandler()` in Go, `Server::relay_http` in Rust): no client certificate is requested, requests carrying an `Origin` header are rejected with 401, relay/1 hellos (no `version`) are accepted as legacy, relay/2 hellos are bound to the TLS 1.3 exporter `EXPORTER-Channel-Binding` with an empty context. The feed started after authentication is the same one the gateway peer and ingress paths use.
+
+## Maps, location and Files handlers (Phase 8)
+
+The Rust peer answers the Maps and Location queries of the Go simulator (`maps.rs`): `location.current`, `location.geocode`, `location.reverse_geocode`, `maps.search`, `maps.nearby`, `maps.directions`, `maps.eta` and `maps.snapshot`, with the Go argument rules (strict keys, coordinate and radius ranges, `transit` directions `unsupported`, snapshot size 128..1024, at most 50 markers). Snapshots are blank RGBA PNGs stored in the session blob map. `maps.open` prepares and dispatches with the `com.apple.Maps` frontmost evidence bound to the request hash. The peer advertises `maps.open` and the eight `files.*` commands in `Ready`.
+
+`files.rs` serves `files.search` and `files.read` from `files.item` records and `files.create|write|move|rename|trash|set_tags|download|evict` for root `/Bridge Test`, emitting a complete `files.item` capture before the `Outcome`; content is stored base64 in `data.blobs[digest]`, the same store `/dataset` fills, so `BlobRead` serves it.
+
+Real-level runner additions: `Registry::register_standalone(id, handler)` registers a real-level scenario that needs no world (native checks, packaging); `World::helper_app` carries the signed Helper path of a real world; `World::sibling(suffix)` starts a second sim world next to the first (FILE-COMMANDS runs its REST and MCP passes in separate worlds, as the Go harness does).
+
+Gate: `python3 rust/lab/families-parity.py ... --maps` runs MAP-SIM, LOC-SIM, FILE-COMMANDS, FILE-CRUD-REAL and FILE-OFFLOAD-REAL (sim level) in one run against both harnesses; verdicts are identical with the Rust gateway (`lab-queries`).

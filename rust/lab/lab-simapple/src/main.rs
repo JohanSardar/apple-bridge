@@ -2,7 +2,9 @@
 mod blobs;
 mod calendar;
 mod contacts;
+mod files;
 mod mac;
+mod maps;
 mod media;
 mod messages;
 mod messages_commands;
@@ -741,8 +743,12 @@ impl Session<'_> {
             ("contacts", Some("Prepare")) => return self.contacts_prepare(state, &frame),
             ("contacts", Some("Dispatch")) => return self.contacts_dispatch(state, &frame),
             ("contacts", Some("Resolve")) => return self.contacts_resolve(state, &frame),
+            ("files", Some("Prepare")) => return self.file_prepare(&frame),
+            ("files", Some("Dispatch")) => return self.file_dispatch(state, &frame),
             ("mac", Some("Prepare")) => return self.mac_prepare(state, &frame),
             ("mac", Some("Dispatch")) => return self.mac_dispatch(state, &frame),
+            ("maps", Some("Prepare")) => return self.maps_prepare(state, &frame),
+            ("maps", Some("Dispatch")) => return self.maps_dispatch(state, &frame),
             ("reminders", Some("Prepare")) => return self.reminder_prepare(state, &frame),
             ("reminders", Some("Dispatch")) => return self.reminder_dispatch(state, &frame),
             (_, Some("Prepare")) => return self.reject(&frame, "unsupported"),
@@ -802,9 +808,14 @@ impl Session<'_> {
                     }
                     return Ok(());
                 }
-                let reply = match mac::query(state, &frame)? {
-                    Some(reply) => reply,
-                    None => query::query(&mut self.blobs, &frame),
+                let reply = if let Some(reply) = mac::query(state, &frame)? {
+                    reply
+                } else if let Some(reply) = files::query(state, &frame)? {
+                    reply
+                } else if let Some(reply) = maps::query(&mut self.blobs, &frame) {
+                    reply
+                } else {
+                    query::query(&mut self.blobs, &frame)
                 };
                 send(&mut self.stream, &reply)?;
             }
@@ -945,6 +956,17 @@ fn session(
     .map(|op| json!({"operation":op,"proven":true,"reason":"simulated_public_contacts_save_request"}))
     .collect();
     coverage["contacts"] = json!({"fields":"partial","missing":["note","contact_poster: unavailable through public Contacts API"],"operations":proven});
+    capabilities["files"] = json!([
+        "files.create",
+        "files.write",
+        "files.move",
+        "files.rename",
+        "files.trash",
+        "files.set_tags",
+        "files.download",
+        "files.evict"
+    ]);
+    capabilities["maps"] = json!(["maps.open"]);
     capabilities["notes"] = json!([
         "notes.create",
         "notes.update",
