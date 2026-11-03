@@ -11,11 +11,7 @@ use crate::{
 use lab_runner::Evidence;
 use lab_world::{Result, World};
 use serde_json::{Value, json};
-use std::{
-    collections::BTreeMap,
-    process::Command,
-    time::Instant,
-};
+use std::{collections::BTreeMap, process::Command, time::Instant};
 
 pub const READ_SCENARIOS: [&str; 4] = [
     "MSG-DB-REPLACED",
@@ -27,7 +23,10 @@ pub const SCENARIOS: [&str; 4] = READ_SCENARIOS;
 
 fn action(world: &World, name: &str, key: &str) -> bool {
     world
-        .control("/messages", &json!({"action": name, "key": key, "count": 0}))
+        .control(
+            "/messages",
+            &json!({"action": name, "key": key, "count": 0}),
+        )
         .is_ok()
 }
 fn generation(world: &World) -> String {
@@ -54,7 +53,11 @@ fn message_ids(records: &[Value]) -> BTreeMap<String, String> {
         })
         .map(|record| {
             (
-                format!("{}/{}", record["collection"].as_str().unwrap_or_default(), title(record)),
+                format!(
+                    "{}/{}",
+                    record["collection"].as_str().unwrap_or_default(),
+                    title(record)
+                ),
                 record["id"].as_str().unwrap_or_default().to_owned(),
             )
         })
@@ -104,7 +107,10 @@ pub fn read(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result
     }
     let settle = |world: &World| await_until(15, || converged(world, &observed));
     let seeded = world
-        .control("/messages", &json!({"action": "seed", "key": "", "count": seed}))
+        .control(
+            "/messages",
+            &json!({"action": "seed", "key": "", "count": seed}),
+        )
         .is_ok();
     evidence.check("seed", seeded, "messages seeded in SimApple");
     let settled = await_until(15, || converged(world, &observed));
@@ -133,7 +139,11 @@ pub fn read(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result
                 let visible = await_until(1, || {
                     seen(&observers[0], &name).is_some() && seen(&observers[1], &name).is_some()
                 });
-                match (visible, seen(&observers[0], &name), seen(&observers[1], &name)) {
+                match (
+                    visible,
+                    seen(&observers[0], &name),
+                    seen(&observers[1], &name),
+                ) {
                     (true, Some(g), Some(r)) => {
                         gateway_ms.push(millis(g, at));
                         replica_ms.push(millis(r, at));
@@ -145,7 +155,10 @@ pub fn read(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result
             evidence.check(
                 "all_messages_under_one_second",
                 timeouts == 0 && replica_ms.len() == 32 && worst < 1000.0,
-                &format!("{} samples, worst replica latency {worst:.0} ms", replica_ms.len()),
+                &format!(
+                    "{} samples, worst replica latency {worst:.0} ms",
+                    replica_ms.len()
+                ),
             );
         }
         "MSG-DECODE" => {
@@ -221,7 +234,11 @@ pub fn read(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result
                         && record["data"]["state"] == "permission_missing"
                 })
             });
-            evidence.check("permission_state", missing, "source reports permission_missing");
+            evidence.check(
+                "permission_state",
+                missing,
+                "source reports permission_missing",
+            );
             let after = gateway_records(&observed.gateway);
             evidence.check(
                 "no_false_absence",
@@ -229,7 +246,11 @@ pub fn read(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result
                 "no record vanished while permission was missing",
             );
             let restored = action(world, "permission-restore", "") && settle(world);
-            evidence.check("permission_restore", restored, "permission restored and recaptured");
+            evidence.check(
+                "permission_restore",
+                restored,
+                "permission restored and recaptured",
+            );
         }
         _ => return Ok(false),
     }
@@ -281,7 +302,9 @@ fn tail(
         );
         evidence.check(
             &format!("automatic_no_scope_leak_{index}"),
-            page.is_ok_and(|p| p.is_some_and(|p| p["records"].as_array().is_none_or(Vec::is_empty))),
+            page.is_ok_and(|p| {
+                p.is_some_and(|p| p["records"].as_array().is_none_or(Vec::is_empty))
+            }),
             "system:read cannot read messages",
         );
     }
