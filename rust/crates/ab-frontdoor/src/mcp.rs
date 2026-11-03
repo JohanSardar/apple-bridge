@@ -51,6 +51,19 @@ impl ServerHandler for Handler {
         })?;
         let descriptors =
             tool_descriptors().map_err(|_| ErrorData::internal_error("catalog", None))?;
+        if request.name.starts_with("usage_")
+            && !descriptors
+                .iter()
+                .any(|d| d.name.replace('.', "_") == request.name)
+        {
+            return serde_json::from_value::<rmcp::model::CallToolResult>(json!({
+                "isError": true,
+                "structuredContent": {"error": Error::from(Code::Unsupported)},
+                "content": [{"type": "text", "text": "operation unsupported"}]
+            }))
+            .map(CallToolResponse::Complete)
+            .map_err(|_| ErrorData::internal_error("encoding", None));
+        }
         let descriptor = descriptors
             .iter()
             .find(|d| d.name.replace('.', "_") == request.name)
