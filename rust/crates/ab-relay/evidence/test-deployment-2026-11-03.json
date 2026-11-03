@@ -1,0 +1,147 @@
+{
+  "date": "2026-11-03",
+  "source_commit": "0bf8ac55de22b5e19d8547a055f7aa23accc24be",
+  "harness_sha256": "192b789ef085ef838a430f68a85df790a6468dfab4a1a52fd90c71ac50e97454",
+  "host": "ssh build (ab-build)",
+  "deployment": {
+    "zone": "relay.test",
+    "control": "127.0.0.1:18443",
+    "ingress": "127.0.0.1:19443",
+    "idle_timeout": "2m",
+    "bulk_deadline_seconds": 90,
+    "trust": "private test CA; no DNS changes",
+    "homes": [
+      "go-client",
+      "rust-client",
+      "old-relay1-client"
+    ],
+    "legacy_client": "unchanged Go internal/relay client, apple-bridge-relay/1 signed transcript; not a historical released binary"
+  },
+  "deployed_checks": [
+    "unknown denied /enroll",
+    "unknown denied /rotate",
+    "Go enrollment client against Rust",
+    "Rust state opens in Go",
+    "Go TLS WebSocket smux v2 client and SNI passthrough",
+    "smux v2 flow control beyond initial window",
+    "Rust ab-remote enrollment TLS WebSocket smux client against Rust relay",
+    "old relay/1 signed enrollment against deployed Rust",
+    "legacy relay/1 and Rust clients coexist on distinct SNI routes",
+    "Rust client trusted origin TLS and 60s SSE",
+    "stable assignment credential rotation",
+    "admin policy",
+    "rotation preserves disabled and charged usage",
+    "Go state reopens in Rust",
+    "missing owner file fails closed without state mutation",
+    "device revoke",
+    "Go Rust state roundtrip preserves tombstone and usage",
+    "private state excludes bearer credential",
+    "revocation survives restart",
+    "challenge throttling",
+    "shared enrollment rotation throttling"
+  ],
+  "sim_results": [
+    {
+      "scenario": "RELAY-ACME",
+      "level": "sim",
+      "impl": "rust",
+      "passed": true
+    },
+    {
+      "scenario": "RELAY-ENROLL",
+      "level": "sim",
+      "impl": "rust",
+      "passed": true
+    },
+    {
+      "scenario": "RELAY-LIMITS",
+      "level": "sim",
+      "impl": "rust",
+      "passed": true
+    },
+    {
+      "scenario": "RELAY-OWN-DOMAIN",
+      "level": "sim",
+      "impl": "rust",
+      "passed": true
+    },
+    {
+      "scenario": "RELAY-PASSTHROUGH",
+      "level": "sim",
+      "impl": "rust",
+      "passed": true
+    },
+    {
+      "scenario": "RELAY-ROTATE-GATED",
+      "level": "sim",
+      "impl": "rust",
+      "passed": true
+    },
+    {
+      "scenario": "RELAY-STREAMS",
+      "level": "sim",
+      "impl": "rust",
+      "passed": true
+    },
+    {
+      "scenario": "RELAY-TLS-SPLICE",
+      "level": "sim",
+      "impl": "rust",
+      "passed": true
+    }
+  ],
+  "go_comparison": [
+    {
+      "scenario": "RELAY-ACME",
+      "passed": true
+    },
+    {
+      "scenario": "RELAY-ENROLL",
+      "passed": true
+    },
+    {
+      "scenario": "RELAY-LIMITS",
+      "passed": false
+    },
+    {
+      "scenario": "RELAY-OWN-DOMAIN",
+      "passed": true
+    },
+    {
+      "scenario": "RELAY-PASSTHROUGH",
+      "passed": true
+    },
+    {
+      "scenario": "RELAY-ROTATE-GATED",
+      "passed": true
+    },
+    {
+      "scenario": "RELAY-STREAMS",
+      "passed": true
+    },
+    {
+      "scenario": "RELAY-TLS-SPLICE",
+      "passed": true
+    }
+  ],
+  "go_limits_recheck": true,
+  "initial_failures": [
+    "15s bulk deadline: read timeout after 366592/1114112 bytes, write succeeded",
+    "2s idle / 90s bulk: connection reset after 245760/1114112 bytes under heavy host load; root cause not isolated; production-default 2m idle deployment passes"
+  ],
+  "blocked": [
+    "RELAY-REAL and CONN-RELAY-CLAUDE not executed. Go supports APPLE_BRIDGE_RELAY_URL and APPLE_BRIDGE_RELAY_ZONE overrides, but internal/remote/relay.go publishes https://<host> without an ingress-port override. lab/scenarios/remote_checks.go requires a non-private public DNS answer via Ubuntu and trusted public HTTPS; gateway certificate issuance requires DNS-01. The test deployment uses loopback ingress port 19443 and a private CA without managed DNS. Phase 5 full real exit is not certified."
+  ],
+  "production_touched": false,
+  "ordinary_parity_recheck": {
+    "idle_timeout": "2s",
+    "bulk_deadline_seconds": 15,
+    "passed_checks": 20,
+    "failed_checks": 0
+  },
+  "gates": {
+    "make rust-ci": "passed on ssh build",
+    "make lint": "passed on ssh build",
+    "production_cutover": "not executed"
+  }
+}
