@@ -110,7 +110,7 @@ with tempfile.TemporaryDirectory(prefix='ab-gf-phone-') as temp:
                 while chunk := response.read1(8192):
                     self.wfile.write(chunk)
                     self.wfile.flush()
-            except (BrokenPipeError, ConnectionResetError):
+            except (BrokenPipeError, ConnectionResetError, ssl.SSLEOFError):
                 pass
             finally:
                 upstream.close()
@@ -130,7 +130,7 @@ with tempfile.TemporaryDirectory(prefix='ab-gf-phone-') as temp:
     def command(*args):
         return subprocess.check_output([binary, *args, '--home', str(home)], env=env, text=True, timeout=100).strip()
     with (Path(temp) / 'gateway.log').open('wb') as output:
-        process = subprocess.Popen([binary,'start','--role','gateway','--home',str(home),'--api-addr','127.0.0.1:0','--peer-addr','127.0.0.1:0'], env=env, stdout=output, stderr=output)
+        process = subprocess.Popen([binary,'start','--role','gateway','--home',str(home),'--api-addr','127.0.0.1:0','--peer-addr','127.0.0.1:0','--blob-grace-ms','100'], env=env, stdout=output, stderr=output)
         try:
             wait(lambda: (home / 'runtime.json').exists())
             command('remote','on','--via','tailscale-app')
@@ -229,6 +229,38 @@ with tempfile.TemporaryDirectory(prefix='ab-gf-phone-') as temp:
             assert signed('/v1/iphone/result',receipt)[0] == 200
             assert local('/v1/op/commands.status',{'command_id':operation['command_id']})[1] == observed
             checks.append('duplicate_receipt_does_not_change_stored_status')
+            for kind, content_type in [('photo','image/jpeg'),('audio','audio/wav')]:
+                capture_command = {'command_id':'cmd_phone_capture_' + kind,'args':{'device_id':phone['id']},'wait_ms':0}
+                result, capture = local('/v1/op/iphone.capture.' + kind,capture_command)
+                assert result == 200 and capture['state'] == 'admitted', (result,capture)
+                payload = ('[ab-test] phone capture ' + kind).encode()
+                upload = {'command_id':capture_command['command_id'],'request_hash':capture['request_hash'],'content_type':content_type,'data':b64(payload)}
+                assert signed('/v1/iphone/capture',upload)[0] == 400
+                result, packets = signed('/v1/iphone/pending')
+                assert result == 200 and len(packets) == 1
+                assert open_packet(packets[0])['command']['command_id'] == capture_command['command_id']
+                assert signed('/v1/iphone/capture',dict(upload,request_hash='wrong'))[0] == 400
+                result, receipt = signed('/v1/iphone/capture',upload)
+                assert result == 200 and receipt['digest'] == hashlib.sha256(payload).hexdigest() and receipt['size'] == len(payload) and receipt['content_type'] == content_type, (result,receipt)
+                assert signed('/v1/iphone/capture',upload) == (200,receipt)
+                assert signed('/v1/iphone/capture',dict(upload,data=b64(b'changed')))[0] == 400
+                time.sleep(2.2)
+                connection = http.client.HTTPConnection(config['api_address'],timeout=10)
+                connection.request('GET','/v1/blobs/' + receipt['digest'] + '?record=' + receipt['blob_id'],headers={'Authorization':'Bearer ' + token,'Host':config['api_address']})
+                response = connection.getresponse()
+                assert response.status == 200 and response.read() == payload
+                connection.close()
+                result, _ = signed('/v1/iphone/result',{'command_id':capture_command['command_id'],'request_hash':capture['request_hash'],'state':'observed','data':receipt})
+                assert result == 200
+                other_token = command('token','create','--scope','iphone:write')
+                connection = http.client.HTTPConnection(config['api_address'],timeout=10)
+                connection.request('GET','/v1/blobs/' + receipt['digest'] + '?record=' + receipt['blob_id'],headers={'Authorization':'Bearer ' + other_token,'Host':config['api_address']})
+                response = connection.getresponse()
+                assert response.status in (401,403), response.status
+                response.read()
+                connection.close()
+                assert local('/v1/op/commands.status',{'command_id':capture_command['command_id']})[1]['state'] == 'observed'
+                checks.append('signed_' + kind + '_capture_is_bound_to_dispatch_hash_and_caller_blob_grant')
             agent = json.loads(command('agent','create','--name','synthetic-phone-approval','--level','approve','--scope','iphone:write'))
             pending_command = {'command_id':'cmd_phone_approval','args':{'device_id':phone['id']},'wait_ms':0}
             result, pending = local('/v1/op/iphone.ping',pending_command,agent['token'])

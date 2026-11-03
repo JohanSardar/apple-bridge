@@ -60,6 +60,7 @@ pub async fn start(mut config: Config, authority: Arc<ab_trust::Authority>) -> R
             state: (*store).clone(),
             local: Arc::downgrade(&local),
             authority: authority.clone(),
+            blobs: blobs.clone(),
         },
     ));
     let service = Arc::new(ab_operations::Service {

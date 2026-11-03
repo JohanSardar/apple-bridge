@@ -4,6 +4,7 @@ use ab_trust::{
     domain::{CommandState, Disposition},
     iphone::Request,
 };
+use base64::{Engine, engine::general_purpose::STANDARD};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, value::RawValue};
 use std::sync::{Arc, Mutex};
@@ -48,6 +49,14 @@ pub trait Gateway: std::fmt::Debug + Send {
     ) -> Result<QueuedCommand, Error>;
     fn authorize(&mut self, command: &QueuedCommand) -> Result<(), Error>;
     fn decide(&mut self, id: &str, hash: &str, approve: bool) -> Result<(), Error>;
+    fn capture(
+        &mut self,
+        _row: &QueuedCommand,
+        _upload: &CaptureUpload,
+        _bytes: &[u8],
+    ) -> Result<CaptureReceipt, Error> {
+        Err(Error::Unavailable)
+    }
     fn connector_pending(&mut self) -> Result<Vec<ConnectorApproval>, Error> {
         Ok(vec![])
     }
@@ -63,6 +72,21 @@ pub trait Gateway: std::fmt::Debug + Send {
     fn ingest_locations(&mut self, device: &str, records: &[LocationRecord]) -> Result<(), Error>;
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CaptureUpload {
+    pub command_id: String,
+    pub request_hash: String,
+    pub content_type: String,
+    pub data: String,
+}
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CaptureReceipt {
+    pub blob_id: String,
+    pub digest: String,
+    pub size: u64,
+    pub content_type: String,
+}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConnectorApproval {
     pub id: String,
@@ -108,7 +132,9 @@ impl<G: Gateway> Delivery<G> {
             .authority
             .verify_iphone(path, request)
             .map_err(|_| Error::Authentication)?;
-        let cap = if path == "/v1/iphone/health" {
+        let cap = if path == "/v1/iphone/capture" {
+            24 << 20
+        } else if path == "/v1/iphone/health" {
             16 << 20
         } else {
             32768
@@ -117,6 +143,7 @@ impl<G: Gateway> Delivery<G> {
             return Err(Error::Invalid);
         }
         match path {
+            "/v1/iphone/capture" => raw(&self.capture(&phone, &payload)?),
             "/v1/iphone/pending" => raw(&self.packets(&phone, now, true, false)?.0),
             "/v1/iphone/result" => {
                 self.complete(&phone, request, &payload)?;
@@ -173,6 +200,40 @@ impl<G: Gateway> Delivery<G> {
             }
             _ => Err(Error::NotFound),
         }
+    }
+    fn capture(&self, phone: &Principal, payload: &[u8]) -> Result<CaptureReceipt, Error> {
+        let upload: CaptureUpload = serde_json::from_slice(payload)?;
+        let bytes = STANDARD.decode(&upload.data).map_err(|_| Error::Invalid)?;
+        if bytes.is_empty() || bytes.len() > 12 << 20 {
+            return Err(Error::Invalid);
+        }
+        let mut gateway = self.lock()?;
+        let row = gateway.command(&upload.command_id)?;
+        let fields = row.fields()?;
+        let op = fields["op"].as_str().unwrap_or_default();
+        if !matches!(op, "iphone.capture.photo" | "iphone.capture.audio")
+            || row.source != "iphone"
+            || row.target()? != phone.id
+            || row.request_hash != upload.request_hash
+            || row.state != CommandState::Dispatched
+            || jiff::Timestamp::now()
+                >= row
+                    .expires_at
+                    .parse::<jiff::Timestamp>()
+                    .map_err(|_| Error::Invalid)?
+        {
+            return Err(Error::Unauthorized);
+        }
+        gateway.authorize(&row)?;
+        let expected = if op == "iphone.capture.audio" {
+            "audio/wav"
+        } else {
+            "image/jpeg"
+        };
+        if upload.content_type != expected {
+            return Err(Error::Invalid);
+        }
+        gateway.capture(&row, &upload, &bytes)
     }
     fn complete(&self, phone: &Principal, request: &Request, payload: &[u8]) -> Result<(), Error> {
         let receipt: ResultReceipt = serde_json::from_slice(payload)?;
