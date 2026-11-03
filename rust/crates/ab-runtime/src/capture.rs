@@ -142,6 +142,7 @@ pub async fn hydrate(
                         | ab_blobs::BlobState::Failed
                         | ab_blobs::BlobState::OverCap
                 ) {
+                    succeeded = entry.state == ab_blobs::BlobState::Present;
                     break;
                 }
                 if let Ok(deadline) = entry.next_attempt_at.parse::<jiff::Timestamp>() {
