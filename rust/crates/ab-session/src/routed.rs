@@ -2,6 +2,7 @@ use crate::{
     Error,
     frame::{MAX_FRAME, read_frame, send, text},
     readers::{CaptureReader, ScanContext},
+    store::{Record, Store},
 };
 use serde_json::{Value, json};
 use std::{
@@ -9,10 +10,41 @@ use std::{
     io::Write,
     net::Shutdown,
     os::unix::net::UnixStream,
-    sync::{Condvar, Mutex, MutexGuard},
+    sync::{Arc, Condvar, Mutex, MutexGuard},
     thread,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
+
+type Readers = Mutex<BTreeMap<String, Box<dyn CaptureReader>>>;
+
+pub trait Overlay: Sync {
+    fn gateway<'scope>(
+        &'scope self,
+        scope: &'scope thread::Scope<'scope, '_>,
+        value: &Value,
+        output: &Arc<Mutex<UnixStream>>,
+    ) -> Result<bool, Error>;
+    fn helper(&self, value: &Value, size: usize) -> Result<(), Error>;
+    fn helper_ready(&self, output: &Mutex<UnixStream>) -> Result<(), Error>;
+    fn shutdown(&self);
+}
+
+#[derive(Debug, Clone)]
+pub struct Options {
+    pub poll: Duration,
+    pub watch: bool,
+    pub state: Option<std::path::PathBuf>,
+}
+
+impl Default for Options {
+    fn default() -> Self {
+        Self {
+            poll: Duration::from_millis(100),
+            watch: false,
+            state: None,
+        }
+    }
+}
 
 #[derive(Debug)]
 struct Flight {
@@ -31,6 +63,7 @@ struct Shared {
     total: u64,
     committed: BTreeMap<String, (String, String)>,
     flights: BTreeMap<String, Flight>,
+    saved: BTreeMap<String, String>,
 }
 
 #[derive(Debug)]
@@ -59,10 +92,8 @@ fn now() -> Result<f64, Error> {
         .as_secs_f64())
 }
 
-fn frame_bytes(capture: &Value) -> Result<Vec<u8>, Error> {
-    let mut frame = capture.clone();
-    frame["t"] = json!("Capture");
-    let body = ab_native::native_json::record_data(&frame)
+fn frame_bytes(frame: &Value) -> Result<Vec<u8>, Error> {
+    let body = ab_native::native_json::record_data(frame)
         .map_err(|error| Error::Reader(error.to_string()))?;
     if body.len() > MAX_FRAME {
         return Err(Error::Invalid);
@@ -90,10 +121,79 @@ fn wait_open(gate: &Gate) -> Result<bool, Error> {
     Ok(true)
 }
 
+fn persist(
+    gate: &Gate,
+    readers: &Readers,
+    store: Option<&Store>,
+    source: &str,
+) -> Result<(), Error> {
+    let Some(store) = store else {
+        return Ok(());
+    };
+    let token = readers
+        .lock()
+        .map_err(|_| Error::WorkerPanicked)?
+        .get(source)
+        .and_then(|reader| reader.token());
+    let Some(token) = token else {
+        return Ok(());
+    };
+    let shared = gate.lock()?;
+    if shared.flights.contains_key(source) || shared.saved.get(source) == Some(&token) {
+        return Ok(());
+    }
+    let Some((generation, checkpoint)) = shared.committed.get(source).cloned() else {
+        return Ok(());
+    };
+    drop(shared);
+    if generation.is_empty() || checkpoint.is_empty() {
+        return Ok(());
+    }
+    store.save(
+        source,
+        &Record {
+            generation,
+            checkpoint,
+            token: token.clone(),
+        },
+    )?;
+    gate.lock()?.saved.insert(source.to_owned(), token);
+    Ok(())
+}
+
+fn watch(gate: &Gate, roots: &[std::path::PathBuf]) {
+    let Ok(mut watcher) = ab_sys::watch::Watcher::new() else {
+        return;
+    };
+    loop {
+        let mut failed = false;
+        for root in roots {
+            failed |= watcher.watch_tree(root).is_err();
+        }
+        if failed {
+            thread::sleep(Duration::from_millis(100));
+        }
+        match watcher.wait(Duration::from_millis(250)) {
+            Ok(true) => {
+                thread::sleep(Duration::from_millis(15));
+                while matches!(watcher.wait(Duration::ZERO), Ok(true)) {}
+                gate.changed.notify_all();
+            }
+            Ok(false) => {}
+            Err(_) => return,
+        }
+        if gate.shared.lock().map_or(true, |shared| shared.closed) {
+            return;
+        }
+    }
+}
+
 fn produce(
     gate: &Gate,
-    readers: &Mutex<BTreeMap<String, Box<dyn CaptureReader>>>,
+    readers: &Readers,
     to_gateway: &Mutex<UnixStream>,
+    layer: Option<&dyn Overlay>,
+    store: Option<&Store>,
     poll: Duration,
 ) -> Result<(), Error> {
     let mut ordinal = 0_u64;
@@ -121,16 +221,20 @@ fn produce(
                 scan_id: format!("rs-scan-{epoch:x}-{ordinal}"),
                 now: now()?,
             };
-            let mut capture = {
-                let mut readers = readers.lock().map_err(|_| Error::WorkerPanicked)?;
-                let reader = readers.get_mut(source).ok_or(Error::Invalid)?;
-                match reader.next(&context) {
-                    Ok(Some(capture)) => capture,
-                    Ok(None) => continue,
-                    Err(error) => {
-                        eprintln!("ab-session: {source} reader: {error}");
-                        continue;
-                    }
+            let next = {
+                let mut guard = readers.lock().map_err(|_| Error::WorkerPanicked)?;
+                let reader = guard.get_mut(source).ok_or(Error::Invalid)?;
+                reader.next(&context)
+            };
+            let mut capture = match next {
+                Ok(Some(capture)) => capture,
+                Ok(None) => {
+                    persist(gate, readers, store, source)?;
+                    continue;
+                }
+                Err(error) => {
+                    eprintln!("ab-session: {source} reader: {error}");
+                    continue;
                 }
             };
             let generation = text(&capture, "generation")?.to_owned();
@@ -143,6 +247,7 @@ fn produce(
                 .map(|(_, checkpoint)| checkpoint.clone())
                 .unwrap_or_default();
             capture["predecessor"] = Value::String(predecessor);
+            capture["t"] = json!("Capture");
             let bytes = frame_bytes(&capture)?;
             let size = u64::try_from(bytes.len()).map_err(|_| Error::Invalid)?;
             let mut shared = gate.lock()?;
@@ -170,6 +275,9 @@ fn produce(
                 },
             );
             drop(shared);
+            if let Some(layer) = layer {
+                layer.helper(&capture, usize::try_from(size).map_err(|_| Error::Invalid)?)?;
+            }
             to_gateway
                 .lock()
                 .map_err(|_| Error::WorkerPanicked)?
@@ -189,15 +297,47 @@ fn produce(
     }
 }
 
+fn blob_reply(readers: &Readers, value: &Value) -> Result<Option<Value>, Error> {
+    let handle = text(value, "handle")?;
+    let mut guard = readers.lock().map_err(|_| Error::WorkerPanicked)?;
+    let Some(reader) = guard.values_mut().find(|reader| reader.owns(handle)) else {
+        return Ok(None);
+    };
+    let offset = value["offset"].as_u64();
+    let length = value["length"]
+        .as_u64()
+        .filter(|length| (1..=131_072).contains(length))
+        .and_then(|length| usize::try_from(length).ok());
+    let reply = match (offset, length) {
+        (Some(offset), Some(length)) => reader.blob(handle, offset, length).ok(),
+        _ => None,
+    };
+    Ok(Some(reply.unwrap_or_else(
+        || json!({"t":"BlobUnavailable","handle":handle,"reason":"unavailable"}),
+    )))
+}
+
 fn gateway_frame(
     gate: &Gate,
-    readers: &Mutex<BTreeMap<String, Box<dyn CaptureReader>>>,
+    readers: &Readers,
+    store: Option<&Store>,
+    to_gateway: &Mutex<UnixStream>,
     value: &Value,
 ) -> Result<bool, Error> {
     match value["t"].as_str() {
+        Some("BlobRead") => {
+            let Some(reply) = blob_reply(readers, value)? else {
+                return Ok(true);
+            };
+            send(
+                &mut *to_gateway.lock().map_err(|_| Error::WorkerPanicked)?,
+                &reply,
+            )?;
+            Ok(false)
+        }
         Some("Open") => {
             let mut shared = gate.lock()?;
-            let credit = value["byte_credit"].as_u64().ok_or(Error::Invalid)?;
+            let credit = value["byte_credit"].as_u64().unwrap_or(0);
             shared.credit = credit;
             shared.total = credit;
             if let Some(checkpoints) = value["checkpoints"].as_object() {
@@ -215,6 +355,21 @@ fn gateway_frame(
                                 .to_owned(),
                         ),
                     );
+                }
+            }
+            if let Some(store) = store {
+                let mut guard = readers.lock().map_err(|_| Error::WorkerPanicked)?;
+                for (source, reader) in guard.iter_mut() {
+                    let Some(record) = store.load(source) else {
+                        continue;
+                    };
+                    let matches = shared
+                        .committed
+                        .get(source)
+                        .is_some_and(|(g, c)| *g == record.generation && *c == record.checkpoint);
+                    if matches && reader.resume(&record.token) {
+                        shared.saved.insert(source.clone(), record.token);
+                    }
                 }
             }
             shared.opened = true;
@@ -249,6 +404,7 @@ fn gateway_frame(
                     .get_mut(source)
                     .ok_or(Error::Conflict)?
                     .commit()?;
+                persist(gate, readers, store, source)?;
                 return Ok(false);
             }
             Ok(true)
@@ -263,13 +419,39 @@ pub fn relay(
     readers: BTreeMap<String, Box<dyn CaptureReader>>,
     poll: Duration,
 ) -> Result<(), Error> {
+    relay_layered(
+        gateway,
+        helper,
+        readers,
+        &Options {
+            poll,
+            ..Options::default()
+        },
+        None,
+    )
+}
+
+#[allow(clippy::too_many_lines)]
+pub fn relay_layered(
+    gateway: UnixStream,
+    helper: UnixStream,
+    readers: BTreeMap<String, Box<dyn CaptureReader>>,
+    options: &Options,
+    layer: Option<&dyn Overlay>,
+) -> Result<(), Error> {
     let rust: BTreeSet<String> = readers.keys().cloned().collect();
+    let roots: Vec<std::path::PathBuf> = readers
+        .values()
+        .map(|reader| reader.root().to_path_buf())
+        .collect();
+    let store = options.state.as_deref().map(Store::open).transpose()?;
+    let store = store.as_ref();
     let gate = Gate {
         shared: Mutex::new(Shared::default()),
         changed: Condvar::new(),
     };
     let readers = Mutex::new(readers);
-    let to_gateway = Mutex::new(gateway.try_clone()?);
+    let to_gateway = Arc::new(Mutex::new(gateway.try_clone()?));
     let to_helper = Mutex::new(helper.try_clone()?);
     let mut gateway_read = gateway;
     let mut helper_read = helper;
@@ -279,7 +461,12 @@ pub fn relay(
         let upstream = scope.spawn(|| -> Result<(), Error> {
             let result = (|| loop {
                 let (bytes, value) = read_frame(&mut gateway_read)?;
-                if gateway_frame(&gate, &readers, &value)? {
+                let layered = match layer {
+                    Some(layer) => layer.gateway(scope, &value, &to_gateway)?,
+                    None => true,
+                };
+                let pass = gateway_frame(&gate, &readers, store, &to_gateway, &value)?;
+                if layered && pass {
                     to_helper
                         .lock()
                         .map_err(|_| Error::WorkerPanicked)?
@@ -289,16 +476,26 @@ pub fn relay(
             gate.close();
             let _ = helper_shutdown.shutdown(Shutdown::Both);
             let _ = gateway_shutdown.shutdown(Shutdown::Both);
-            result
-        });
-        let producer = scope.spawn(|| -> Result<(), Error> {
-            let result = produce(&gate, &readers, &to_gateway, poll);
-            gate.close();
-            if result.is_err() {
-                let _ = helper_shutdown.shutdown(Shutdown::Both);
-                let _ = gateway_shutdown.shutdown(Shutdown::Both);
+            if let Some(layer) = layer {
+                layer.shutdown();
             }
             result
+        });
+        let producer = (!rust.is_empty()).then(|| {
+            scope.spawn(|| -> Result<(), Error> {
+                let result = produce(&gate, &readers, &to_gateway, layer, store, options.poll);
+                gate.close();
+                if result.is_err() {
+                    let _ = helper_shutdown.shutdown(Shutdown::Both);
+                    let _ = gateway_shutdown.shutdown(Shutdown::Both);
+                }
+                result
+            })
+        });
+        let watcher = (options.watch && !rust.is_empty()).then(|| {
+            let roots = &roots;
+            let gate = &gate;
+            scope.spawn(move || watch(gate, roots))
         });
         let result = (|| -> Result<(), Error> {
             loop {
@@ -337,15 +534,24 @@ pub fn relay(
                         }
                     }
                     Some("Ready") => {
+                        if let Some(layer) = layer {
+                            layer.helper(&value, bytes.len())?;
+                        }
                         to_gateway
                             .lock()
                             .map_err(|_| Error::WorkerPanicked)?
                             .write_all(&bytes)?;
                         gate.lock()?.ready = true;
                         gate.changed.notify_all();
+                        if let Some(layer) = layer {
+                            layer.helper_ready(&to_gateway)?;
+                        }
                         continue;
                     }
                     _ => {}
+                }
+                if let Some(layer) = layer {
+                    layer.helper(&value, bytes.len())?;
                 }
                 to_gateway
                     .lock()
@@ -356,8 +562,14 @@ pub fn relay(
         gate.close();
         let _ = helper_read.shutdown(Shutdown::Both);
         let _ = gateway_shutdown.shutdown(Shutdown::Both);
+        if let Some(layer) = layer {
+            layer.shutdown();
+        }
         let upstream = upstream.join().map_err(|_| Error::WorkerPanicked)?;
-        let producer = producer.join().map_err(|_| Error::WorkerPanicked)?;
+        let producer = producer.map_or(Ok(()), |p| p.join().map_err(|_| Error::WorkerPanicked)?);
+        if let Some(watcher) = watcher {
+            let _ = watcher.join();
+        }
         result.and(upstream).and(producer)
     })
 }

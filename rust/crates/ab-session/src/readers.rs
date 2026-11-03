@@ -7,7 +7,7 @@ use std::{
     fmt::Debug,
     fs,
     path::{Path, PathBuf},
-    time::SystemTime,
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 fn reader_error(error: impl std::fmt::Display) -> Error {
@@ -29,8 +29,17 @@ impl ScanContext {
 
 pub trait CaptureReader: Send + Debug {
     fn source(&self) -> &'static str;
+    fn root(&self) -> &Path;
     fn next(&mut self, context: &ScanContext) -> Result<Option<Value>, Error>;
     fn commit(&mut self) -> Result<(), Error>;
+    fn token(&self) -> Option<String>;
+    fn resume(&mut self, token: &str) -> bool;
+    fn owns(&self, _handle: &str) -> bool {
+        false
+    }
+    fn blob(&mut self, _handle: &str, _offset: u64, _length: usize) -> Result<Value, Error> {
+        Err(Error::Invalid)
+    }
 }
 
 fn capture_value(batch: &impl Serialize) -> Result<Value, Error> {
@@ -48,6 +57,7 @@ pub struct SafariReader {
     generation: String,
     reader: safari::Reader,
     pending: Option<safari::Pending>,
+    settled: Option<Signature>,
 }
 
 impl SafariReader {
@@ -58,6 +68,7 @@ impl SafariReader {
             generation,
             reader: safari::Reader::default(),
             pending: None,
+            settled: None,
         }
     }
 }
@@ -67,10 +78,28 @@ impl CaptureReader for SafariReader {
         "safari"
     }
 
+    fn root(&self) -> &Path {
+        &self.root
+    }
+
+    fn token(&self) -> Option<String> {
+        self.settled.as_ref().map(encode)
+    }
+
+    fn resume(&mut self, token: &str) -> bool {
+        self.settled = decode(token);
+        self.settled.is_some()
+    }
+
     fn next(&mut self, context: &ScanContext) -> Result<Option<Value>, Error> {
         if self.pending.is_some() {
             return Err(Error::Conflict);
         }
+        let current = signature(&self.root)?;
+        if self.settled.as_ref() == Some(&current) {
+            return Ok(None);
+        }
+        let mut failed = false;
         for kind in [
             safari::Kind::History,
             safari::Kind::Bookmarks,
@@ -88,12 +117,21 @@ impl CaptureReader for SafariReader {
                 max_rows: 1_000_000,
                 automation_permitted: true,
             };
-            let Ok(Some(pending)) = self.reader.poll(&self.root, kind, &read) else {
-                continue;
+            let pending = match self.reader.poll(&self.root, kind, &read) {
+                Ok(Some(pending)) => pending,
+                Ok(None) => continue,
+                Err(_) => {
+                    failed = true;
+                    continue;
+                }
             };
             let value = capture_value(&pending.batch)?;
+            self.settled = None;
             self.pending = Some(pending);
             return Ok(Some(value));
+        }
+        if !failed {
+            self.settled = Some(current);
         }
         Ok(None)
     }
@@ -124,6 +162,36 @@ fn signature(root: &Path) -> Result<Signature, Error> {
     Ok(out)
 }
 
+fn encode(signature: &Signature) -> String {
+    let rows: Vec<(String, u64, u128)> = signature
+        .iter()
+        .map(|(path, (size, modified))| {
+            (
+                path.to_string_lossy().into_owned(),
+                *size,
+                modified
+                    .and_then(|m| m.duration_since(UNIX_EPOCH).ok())
+                    .map_or(0, |d| d.as_nanos()),
+            )
+        })
+        .collect();
+    serde_json::to_string(&rows).unwrap_or_default()
+}
+
+fn decode(token: &str) -> Option<Signature> {
+    let rows: Vec<(String, u64, u128)> = serde_json::from_str(token).ok()?;
+    let mut out = Signature::new();
+    for (path, size, nanos) in rows {
+        let modified = if nanos == 0 {
+            None
+        } else {
+            Some(UNIX_EPOCH + Duration::from_nanos(u64::try_from(nanos).ok()?))
+        };
+        out.insert(PathBuf::from(path), (size, modified));
+    }
+    Some(out)
+}
+
 #[derive(Debug)]
 pub struct UsageReader {
     root: PathBuf,
@@ -133,6 +201,7 @@ pub struct UsageReader {
     reader: usage::Reader,
     pending: Option<(usage::Scan, Signature)>,
     committed: Option<Signature>,
+    warm: bool,
 }
 
 impl UsageReader {
@@ -146,6 +215,7 @@ impl UsageReader {
             reader: usage::Reader::default(),
             pending: None,
             committed: None,
+            warm: false,
         }
     }
 }
@@ -153,6 +223,19 @@ impl UsageReader {
 impl CaptureReader for UsageReader {
     fn source(&self) -> &'static str {
         "usage"
+    }
+
+    fn root(&self) -> &Path {
+        &self.root
+    }
+
+    fn token(&self) -> Option<String> {
+        self.committed.as_ref().map(encode)
+    }
+
+    fn resume(&mut self, token: &str) -> bool {
+        self.committed = decode(token);
+        self.committed.is_some()
     }
 
     fn next(&mut self, context: &ScanContext) -> Result<Option<Value>, Error> {
@@ -174,10 +257,7 @@ impl CaptureReader for UsageReader {
             power: Vec::new(),
             history: None,
         };
-        let Ok(scan) = self
-            .reader
-            .scan(&self.root, &read, self.committed.is_some())
-        else {
+        let Ok(scan) = self.reader.scan(&self.root, &read, self.warm) else {
             return Ok(None);
         };
         let value = capture_value(&scan)?;
@@ -189,6 +269,7 @@ impl CaptureReader for UsageReader {
         let (scan, current) = self.pending.take().ok_or(Error::Conflict)?;
         self.reader.commit(scan).map_err(reader_error)?;
         self.committed = Some(current);
+        self.warm = true;
         Ok(())
     }
 }
@@ -226,6 +307,7 @@ pub struct TelephonyReader {
     state: capture::State,
     pending: Option<(capture::Pending, Signature)>,
     committed: Option<Signature>,
+    warm: bool,
 }
 
 impl TelephonyReader {
@@ -251,6 +333,7 @@ impl TelephonyReader {
             state: capture::State::default(),
             pending: None,
             committed: None,
+            warm: false,
         }
     }
 }
@@ -258,6 +341,19 @@ impl TelephonyReader {
 impl CaptureReader for TelephonyReader {
     fn source(&self) -> &'static str {
         self.name
+    }
+
+    fn root(&self) -> &Path {
+        self.path.parent().unwrap_or(&self.path)
+    }
+
+    fn token(&self) -> Option<String> {
+        self.committed.as_ref().map(encode)
+    }
+
+    fn resume(&mut self, token: &str) -> bool {
+        self.committed = decode(token);
+        self.committed.is_some()
     }
 
     fn next(&mut self, context: &ScanContext) -> Result<Option<Value>, Error> {
@@ -269,13 +365,7 @@ impl CaptureReader for TelephonyReader {
             return Ok(None);
         }
         let read = context_for(context)?;
-        let Ok(pending) = (self.scan)(
-            &self.path,
-            &self.state,
-            &read,
-            self.committed.is_some(),
-            MAX_ROWS,
-        ) else {
+        let Ok(pending) = (self.scan)(&self.path, &self.state, &read, self.warm, MAX_ROWS) else {
             return Ok(None);
         };
         if file_signature(&self.path) != current {
@@ -290,6 +380,7 @@ impl CaptureReader for TelephonyReader {
         let (pending, current) = self.pending.take().ok_or(Error::Conflict)?;
         self.state.commit(pending).map_err(reader_error)?;
         self.committed = Some(current);
+        self.warm = true;
         Ok(())
     }
 }
@@ -301,6 +392,7 @@ pub struct VoiceMemosReader {
     reader: Option<voice_memo::Reader>,
     pending: Option<(capture::Pending, Signature)>,
     committed: Option<Signature>,
+    warm: bool,
 }
 
 impl VoiceMemosReader {
@@ -312,13 +404,44 @@ impl VoiceMemosReader {
             reader: None,
             pending: None,
             committed: None,
+            warm: false,
         }
+    }
+
+    fn assets(&mut self) -> Result<&mut voice_memo::Reader, Error> {
+        if self.reader.is_none() {
+            self.reader = Some(voice_memo::Reader::open(&self.staging).map_err(reader_error)?);
+        }
+        self.reader.as_mut().ok_or(Error::Conflict)
     }
 }
 
 impl CaptureReader for VoiceMemosReader {
     fn source(&self) -> &'static str {
         "voice_memos"
+    }
+
+    fn root(&self) -> &Path {
+        self.path.parent().unwrap_or(&self.path)
+    }
+
+    fn token(&self) -> Option<String> {
+        self.committed.as_ref().map(encode)
+    }
+
+    fn resume(&mut self, token: &str) -> bool {
+        self.committed = decode(token);
+        self.committed.is_some()
+    }
+
+    fn owns(&self, handle: &str) -> bool {
+        handle.starts_with("voice-memo-blob:")
+    }
+
+    fn blob(&mut self, handle: &str, offset: u64, length: usize) -> Result<Value, Error> {
+        self.assets()?
+            .read_blob(handle, offset, length)
+            .map_err(reader_error)
     }
 
     fn next(&mut self, context: &ScanContext) -> Result<Option<Value>, Error> {
@@ -329,20 +452,12 @@ impl CaptureReader for VoiceMemosReader {
         if current.is_empty() || self.committed.as_ref() == Some(&current) {
             return Ok(None);
         }
-        if self.reader.is_none() {
-            self.reader = Some(voice_memo::Reader::open(&self.staging).map_err(reader_error)?);
-        }
         let read = context_for(context)?;
-        let live = self.committed.is_some();
-        let Some(reader) = self.reader.as_mut() else {
+        let live = self.warm;
+        let path = self.path.clone();
+        let Ok(pending) = self.assets()?.scan(&path, &read, live, MAX_ROWS) else {
             return Ok(None);
         };
-        let Ok(pending) = reader.scan(&self.path, &read, live, MAX_ROWS) else {
-            return Ok(None);
-        };
-        if !pending.batch.blob_handles.is_empty() {
-            return Ok(None);
-        }
         if file_signature(&self.path) != current {
             return Ok(None);
         }
@@ -359,6 +474,7 @@ impl CaptureReader for VoiceMemosReader {
             .commit(pending)
             .map_err(reader_error)?;
         self.committed = Some(current);
+        self.warm = true;
         Ok(())
     }
 }
@@ -411,6 +527,29 @@ impl NotesReader {
 impl CaptureReader for NotesReader {
     fn source(&self) -> &'static str {
         "notes"
+    }
+
+    fn root(&self) -> &Path {
+        &self.root
+    }
+
+    fn token(&self) -> Option<String> {
+        self.committed.as_ref().map(encode)
+    }
+
+    fn resume(&mut self, token: &str) -> bool {
+        self.committed = decode(token);
+        self.committed.is_some()
+    }
+
+    fn owns(&self, handle: &str) -> bool {
+        handle.starts_with("notes-blob:")
+    }
+
+    fn blob(&mut self, handle: &str, offset: u64, length: usize) -> Result<Value, Error> {
+        self.reader
+            .read_blob(handle, offset, length)
+            .map_err(reader_error)
     }
 
     fn next(&mut self, context: &ScanContext) -> Result<Option<Value>, Error> {

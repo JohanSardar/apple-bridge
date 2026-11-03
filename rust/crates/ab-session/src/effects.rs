@@ -7,7 +7,6 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::{
     collections::BTreeMap,
-    io::Write,
     net::Shutdown,
     os::unix::net::UnixStream,
     path::Path,
@@ -355,108 +354,180 @@ fn handshake(native: &Mutex<UnixStream>, fence: u64) -> Result<(), Error> {
     Ok(())
 }
 
+#[derive(Debug)]
+pub struct Layer {
+    guard: Mutex<DispatchGuard>,
+    state: Mutex<State>,
+    native: Mutex<UnixStream>,
+    native_shutdown: UnixStream,
+    active: AtomicBool,
+}
+
+impl crate::routed::Overlay for Layer {
+    fn gateway<'scope>(
+        &'scope self,
+        scope: &'scope thread::Scope<'scope, '_>,
+        value: &Value,
+        output: &Arc<Mutex<UnixStream>>,
+    ) -> Result<bool, Error> {
+        Layer::gateway(self, scope, value, output)
+    }
+
+    fn helper(&self, value: &Value, size: usize) -> Result<(), Error> {
+        Layer::helper(self, value, size)
+    }
+
+    fn helper_ready(&self, output: &Mutex<UnixStream>) -> Result<(), Error> {
+        Layer::helper_ready(self, output)
+    }
+
+    fn shutdown(&self) {
+        Layer::shutdown(self);
+    }
+}
+
+impl Layer {
+    pub fn open(native: UnixStream, home: &Path) -> Result<Self, Error> {
+        native.set_read_timeout(Some(Duration::from_secs(30)))?;
+        native.set_write_timeout(Some(Duration::from_secs(30)))?;
+        Ok(Self {
+            guard: Mutex::new(DispatchGuard::open(home)?),
+            state: Mutex::new(State::default()),
+            native_shutdown: native.try_clone()?,
+            native: Mutex::new(native),
+            active: AtomicBool::new(false),
+        })
+    }
+
+    pub fn shutdown(&self) {
+        let _ = self.native_shutdown.shutdown(Shutdown::Both);
+    }
+
+    pub fn helper(&self, value: &Value, size: usize) -> Result<(), Error> {
+        self.state
+            .lock()
+            .map_err(|_| Error::WorkerPanicked)?
+            .helper(value, size)
+    }
+
+    pub fn helper_ready(&self, output: &Mutex<UnixStream>) -> Result<(), Error> {
+        let unresolved = self
+            .guard
+            .lock()
+            .map_err(|_| Error::WorkerPanicked)?
+            .unresolved();
+        for outcome in unresolved {
+            send(
+                &mut *output.lock().map_err(|_| Error::WorkerPanicked)?,
+                &outcome,
+            )?;
+        }
+        Ok(())
+    }
+
+    pub fn gateway<'scope>(
+        &'scope self,
+        scope: &'scope thread::Scope<'scope, '_>,
+        value: &Value,
+        output: &Arc<Mutex<UnixStream>>,
+    ) -> Result<bool, Error> {
+        match value["t"].as_str() {
+            Some("Open") => {
+                let fence = value["owner_fence"]
+                    .as_u64()
+                    .filter(|f| *f > 0)
+                    .ok_or(Error::Invalid)?;
+                let mut state = self.state.lock().map_err(|_| Error::WorkerPanicked)?;
+                if state.fence != 0 {
+                    return Err(Error::Conflict);
+                }
+                state.fence = fence;
+                handshake(&self.native, fence)?;
+            }
+            Some("Prepare") => {
+                let id = text(value, "command_id")?.to_owned();
+                if self
+                    .guard
+                    .lock()
+                    .map_err(|_| Error::WorkerPanicked)?
+                    .outcome(&id)
+                    .is_some()
+                {
+                    return Err(Error::AlreadyStarted);
+                }
+                let mut state = self.state.lock().map_err(|_| Error::WorkerPanicked)?;
+                if state.commands.len() >= 8 || state.tickets.len() >= 8 {
+                    return Err(Error::Conflict);
+                }
+                state.tickets.retain(|_, t| Instant::now() < t.expires);
+                state.commands.insert(id, value.clone());
+            }
+            Some("Committed") => self
+                .state
+                .lock()
+                .map_err(|_| Error::WorkerPanicked)?
+                .committed(value)?,
+            Some(kind @ ("Dispatch" | "Query"))
+                if kind == "Dispatch"
+                    || value["op"]
+                        .as_str()
+                        .is_some_and(|op| EFFECT_QUERIES.contains(&op)) =>
+            {
+                if self.active.swap(true, Ordering::SeqCst) {
+                    return Err(Error::Conflict);
+                }
+                let is_query = kind == "Query";
+                let output = Arc::clone(output);
+                let value = value.clone();
+                scope.spawn(move || {
+                    let result = if is_query {
+                        query(&self.state, &self.guard, &self.native, &value)
+                    } else {
+                        dispatch(&self.state, &self.guard, &self.native, &value)
+                    };
+                    self.active.store(false, Ordering::SeqCst);
+                    if let Ok(mut output) = output.lock() {
+                        if let Ok(result) = result {
+                            let _ = send(&mut output, &result);
+                        } else {
+                            let _ = output.shutdown(Shutdown::Both);
+                        }
+                    }
+                });
+                return Ok(false);
+            }
+            Some("Resolve") => {
+                let saved = self
+                    .guard
+                    .lock()
+                    .map_err(|_| Error::WorkerPanicked)?
+                    .outcome(text(value, "command_id")?)
+                    .cloned();
+                let mut output = output.lock().map_err(|_| Error::WorkerPanicked)?;
+                send(
+                    &mut output,
+                    &saved.unwrap_or_else(|| json!({"t":"Rejected","command_id":value["command_id"],"disposition":"rejected_before_dispatch","error":{"code":"not_found","message":"not_found"}})),
+                )?;
+                return Ok(false);
+            }
+            _ => {}
+        }
+        Ok(true)
+    }
+}
+
 pub fn relay(
     gateway: UnixStream,
     helper: UnixStream,
     native: UnixStream,
     home: &Path,
 ) -> Result<(), Error> {
-    let guard = Mutex::new(DispatchGuard::open(home)?);
-    let state = Mutex::new(State::default());
-    native.set_read_timeout(Some(Duration::from_secs(30)))?;
-    native.set_write_timeout(Some(Duration::from_secs(30)))?;
-    let native_shutdown = native.try_clone()?;
-    let native = Mutex::new(native);
-    let active = AtomicBool::new(false);
-    let output = Arc::new(Mutex::new(gateway.try_clone()?));
-    let mut gateway_read = gateway;
-    let mut helper_write = helper.try_clone()?;
-    let mut helper_read = helper;
-    thread::scope(|scope| {
-        let upstream = scope.spawn(|| -> Result<(), Error> {
-            let result = (|| { loop {
-                let (bytes, value) = read_frame(&mut gateway_read)?;
-                match value["t"].as_str() {
-                    Some("Open") => {
-                        let fence = value["owner_fence"].as_u64().filter(|f| *f > 0).ok_or(Error::Invalid)?;
-                        let mut state = state.lock().map_err(|_| Error::WorkerPanicked)?;
-                        if state.fence != 0 { return Err(Error::Conflict); }
-                        state.fence = fence;
-                        handshake(&native, fence)?;
-                    }
-                    Some("Prepare") => {
-                        let id = text(&value, "command_id")?.to_owned();
-                        if guard.lock().map_err(|_| Error::WorkerPanicked)?.outcome(&id).is_some() { return Err(Error::AlreadyStarted); }
-                        let mut state = state.lock().map_err(|_| Error::WorkerPanicked)?;
-                        if state.commands.len() >= 8 || state.tickets.len() >= 8 { return Err(Error::Conflict); }
-                        state.tickets.retain(|_, t| Instant::now() < t.expires);
-                        state.commands.insert(id, value.clone());
-                    }
-                    Some("Committed") => state.lock().map_err(|_| Error::WorkerPanicked)?.committed(&value)?,
-                    Some(kind @ ("Dispatch" | "Query")) if kind == "Dispatch" || value["op"].as_str().is_some_and(|op| EFFECT_QUERIES.contains(&op)) => {
-                        if active.swap(true, Ordering::SeqCst) { return Err(Error::Conflict); }
-                        let is_query = kind == "Query";
-                        let active = &active;
-                        let output = Arc::clone(&output);
-                        let state = &state;
-                        let guard = &guard;
-                        let native = &native;
-                        scope.spawn(move || {
-                            let result = if is_query { query(state, guard, native, &value) } else { dispatch(state, guard, native, &value) };
-                            active.store(false, Ordering::SeqCst);
-                            if let Ok(mut output) = output.lock() {
-                                if let Ok(result) = result { let _ = send(&mut output, &result); }
-                                else { let _ = output.shutdown(Shutdown::Both); }
-                            }
-                        });
-                        continue;
-                    }
-                    Some("Resolve") => {
-                        let saved = guard.lock().map_err(|_| Error::WorkerPanicked)?.outcome(text(&value, "command_id")?).cloned();
-                        let mut output = output.lock().map_err(|_| Error::WorkerPanicked)?;
-                        send(&mut output, &saved.unwrap_or_else(|| json!({"t":"Rejected","command_id":value["command_id"],"disposition":"rejected_before_dispatch","error":{"code":"not_found","message":"not_found"}})))?;
-                        continue;
-                    }
-                    _ => {}
-                }
-                helper_write.write_all(&bytes)?;
-            }})();
-            let _ = helper_write.shutdown(Shutdown::Both);
-            let _ = gateway_read.shutdown(Shutdown::Both);
-            let _ = native_shutdown.shutdown(Shutdown::Both);
-            result
-        });
-        let result = (|| -> Result<(), Error> {
-            loop {
-                let (bytes, value) = read_frame(&mut helper_read)?;
-                state
-                    .lock()
-                    .map_err(|_| Error::WorkerPanicked)?
-                    .helper(&value, bytes.len())?;
-                output
-                    .lock()
-                    .map_err(|_| Error::WorkerPanicked)?
-                    .write_all(&bytes)?;
-                if value["t"] == "Ready" {
-                    let unresolved = guard
-                        .lock()
-                        .map_err(|_| Error::WorkerPanicked)?
-                        .unresolved();
-                    for outcome in unresolved {
-                        send(
-                            &mut *output.lock().map_err(|_| Error::WorkerPanicked)?,
-                            &outcome,
-                        )?;
-                    }
-                }
-            }
-        })();
-        let _ = helper_read.shutdown(Shutdown::Both);
-        if let Ok(output) = output.lock() {
-            let _ = output.shutdown(Shutdown::Both);
-        }
-        let _ = native_shutdown.shutdown(Shutdown::Both);
-        let upstream = upstream.join().map_err(|_| Error::WorkerPanicked)?;
-        result.and(upstream)
-    })
+    let layer = Layer::open(native, home)?;
+    crate::routed::relay_layered(
+        gateway,
+        helper,
+        std::collections::BTreeMap::new(),
+        &crate::routed::Options::default(),
+        Some(&layer),
+    )
 }
