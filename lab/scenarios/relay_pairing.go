@@ -54,12 +54,12 @@ func runRelayPairing(ctx context.Context, s Scenario, level string) Evidence {
 		return e
 	}
 	join := func(candidate trust.PairCode) error {
-		conn, err := relayAuthDial(ctx, fixture)
+		conn, binding, err := trust.DialBoundRelay(ctx, fixture.Client(), strings.Replace(fixture.URL, "https:", "wss:", 1)+"/v1/feed")
 		if err != nil {
 			return err
 		}
 		defer conn.CloseNow()
-		return replica.JoinRelay(ctx, conn, candidate)
+		return replica.JoinBoundRelay(ctx, conn, candidate, binding)
 	}
 	badPin := code
 	badPin.Fingerprint = strings.Repeat("0", 64)

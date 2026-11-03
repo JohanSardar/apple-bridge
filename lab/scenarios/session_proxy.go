@@ -151,7 +151,7 @@ func runSessionProxy(ctx context.Context, s Scenario, level string) (e Evidence)
 	var copies sync.WaitGroup
 	copyStream := func(dst, src *net.UnixConn, transcript *proxyTranscript) {
 		copies.Add(1)
-		go func() { defer copies.Done(); io.Copy(io.MultiWriter(dst, transcript), src); dst.CloseWrite() }()
+		go func() { defer copies.Done(); io.Copy(dst, io.TeeReader(src, transcript)); dst.CloseWrite() }()
 	}
 	copyStream(left, gateway, &sentGateway)
 	copyStream(helper, right, &receivedHelper)

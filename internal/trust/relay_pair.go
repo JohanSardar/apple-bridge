@@ -82,3 +82,7 @@ func (a *Authority) joinRelay2(ctx context.Context, conn *websocket.Conn, code P
 	}
 	return a.SaveEnrollment(Enrollment{Remote: true, PairingID: code.ID, ReplicaID: principal.ID, Address: code.Address, Fingerprint: code.Fingerprint, Grants: principal.Grants, Ceiling: principal.Grants})
 }
+
+func (a *Authority) JoinBoundRelay(ctx context.Context, conn *websocket.Conn, code PairCode, binding []byte) error {
+	return a.joinRelay2(ctx, conn, code, binding)
+}

@@ -22,6 +22,15 @@ if [[ -z "$session" ]]; then
   session=$(python3 -c 'import json,sys; paths=[m["executable"] for line in sys.stdin if (m:=json.loads(line)).get("reason")=="compiler-artifact" and m.get("target",{}).get("name")=="ab-session" and m.get("executable")]; print(paths[-1] if paths else "")' < "$artifacts")
 fi
 export AB_SESSION_BINARY="$session"
+relay_fixture=${AB_RELAY_FIXTURE:-}
+if [[ -z "$relay_fixture" ]]; then
+  cargo build --manifest-path rust/Cargo.toml -p ab-relay --examples --message-format=json > "$artifacts"
+  relay_fixture=$(python3 -c 'import json,sys; paths=[m["executable"] for line in sys.stdin if (m:=json.loads(line)).get("reason")=="compiler-artifact" and m.get("target",{}).get("name")=="lab_fixture" and m.get("executable")]; print(paths[-1] if paths else "")' < "$artifacts")
+  cargo build --manifest-path rust/Cargo.toml -p ab-replication --example relay2_fixture
+  relay2_fixture=$(dirname "$relay_fixture")/relay2_fixture
+  [[ -x "$relay2_fixture" ]] || { echo "relay2_fixture missing next to $relay_fixture" >&2; exit 1; }
+fi
+export AB_RELAY_FIXTURE="$relay_fixture"
 selection=()
 if [[ -n "${SIM_SELECT:-}" ]]; then
   selection=(--select "$SIM_SELECT")
