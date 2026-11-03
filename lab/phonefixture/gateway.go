@@ -25,8 +25,12 @@ import (
 	"time"
 )
 
+const maxSocketPath = 100
+
 type Gateway struct {
 	Home    string
+	alias   string
+	aliases string
 	URL     string
 	Client  *http.Client
 	binary  string
@@ -59,6 +63,19 @@ func start(ctx context.Context, binary, home string, private, expired bool) (*Ga
 	g := &Gateway{Home: home, URL: "https://node.fixture.test", binary: binary, ctx: ctx, private: private, config: json.RawMessage(`{"unrelated":"preserved"}`), etag: 1}
 	if err := os.MkdirAll(home, 0700); err != nil {
 		return nil, err
+	}
+	g.alias = home
+	if len(home)+len("/run/connectors.sock") > maxSocketPath {
+		root, err := os.MkdirTemp("/tmp", "abh")
+		if err != nil {
+			return nil, err
+		}
+		g.aliases = root
+		g.alias = filepath.Join(root, "h")
+		if err = os.Symlink(home, g.alias); err != nil {
+			os.RemoveAll(root)
+			return nil, err
+		}
 	}
 	failed := true
 	defer func() {
@@ -233,7 +250,7 @@ func (g *Gateway) localAPI(w http.ResponseWriter, request *http.Request) {
 func (g *Gateway) Command(args ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(g.ctx, 100*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, g.binary, append(args, "--home", g.Home)...)
+	cmd := exec.CommandContext(ctx, g.binary, append(args, "--home", g.alias)...)
 	cmd.Env = g.env
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -269,7 +286,7 @@ func (g *Gateway) Restart() error {
 	}
 	reenabled := false
 	started := time.Now()
-	g.cmd = exec.CommandContext(g.ctx, g.binary, "start", "--role", "gateway", "--home", g.Home, "--api-addr", "127.0.0.1:0", "--peer-addr", "127.0.0.1:0")
+	g.cmd = exec.CommandContext(g.ctx, g.binary, "start", "--role", "gateway", "--home", g.alias, "--api-addr", "127.0.0.1:0", "--peer-addr", "127.0.0.1:0")
 	g.cmd.Env, g.cmd.Stdout, g.cmd.Stderr = g.env, g.log, g.log
 	if err = g.cmd.Start(); err != nil {
 		g.cmd = nil
@@ -286,7 +303,11 @@ func (g *Gateway) Restart() error {
 		select {
 		case err := <-g.done:
 			g.cmd = nil
-			return fmt.Errorf("gateway exited: %v", err)
+			detail, _ := os.ReadFile(filepath.Join(filepath.Dir(g.Home), "gateway.log"))
+			if len(detail) > 4096 {
+				detail = detail[len(detail)-4096:]
+			}
+			return fmt.Errorf("gateway exited: %v: %s", err, detail)
 		case <-g.ctx.Done():
 			return g.ctx.Err()
 		case <-until.C:
@@ -309,7 +330,7 @@ func (g *Gateway) Restart() error {
 				continue
 			}
 			api.Close()
-			socket, dialErr := net.DialTimeout("unix", filepath.Join(g.Home, "run", "peer.sock"), 100*time.Millisecond)
+			socket, dialErr := net.DialTimeout("unix", filepath.Join(g.alias, "run", "peer.sock"), 100*time.Millisecond)
 			if dialErr != nil {
 				continue
 			}
@@ -348,5 +369,9 @@ func (g *Gateway) Close() {
 	}
 	if g.local != nil {
 		g.local.Close()
+	}
+	if g.aliases != "" {
+		os.RemoveAll(g.aliases)
+		g.aliases = ""
 	}
 }
