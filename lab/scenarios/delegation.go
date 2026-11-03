@@ -3,42 +3,57 @@ package scenarios
 import (
 	"bytes"
 	"context"
+	"crypto/ed25519"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
-	"github.com/JohanSardar/apple-bridge/internal/trust"
+	labwire "github.com/JohanSardar/apple-bridge/lab/wire"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
 func forgedDelegation(ctx context.Context, w *world.World, list string) bool {
-	a, err := trust.Open(w.Replicas[0].Home)
+	replica := w.Replicas[0]
+	if _, err := w.Records(replica); err != nil {
+		return false
+	}
+	p, err := w.Principal(replica)
 	if err != nil {
 		return false
 	}
-	p, err := a.AuthenticateToken(w.Replicas[0].Token)
-	if err != nil {
-		return false
-	}
+
 	p.Grants = append(p.Grants, "notes:write")
 	args, _ := json.Marshal(map[string]any{"list_id": list, "title": "[ab-test] forged"})
 	c := contracts.Command{ID: contracts.NewID("cmd"), Op: "reminders.create", Args: args}
-	hash, _ := contracts.CommandHash(c)
-	header, err := a.SignDelegation(p, c.ID, hash)
+	hash, err := labwire.CommandHash(c.Op, c.Args, c.ExpectedVersion, c.ExpiresAt, c.AdmissionEra)
 	if err != nil {
 		return false
 	}
-	e, err := a.Enrollment()
+	config, address, replicaID, err := w.FeedClient(replica)
+	if err != nil || len(config.Certificates) == 0 {
+		return false
+	}
+	key, ok := config.Certificates[0].PrivateKey.(ed25519.PrivateKey)
+	if !ok {
+		return false
+	}
+	grants := make([]string, len(p.Grants))
+	for i, grant := range p.Grants {
+		grants[i] = string(grant)
+	}
+	header, err := labwire.SignDelegation(key, labwire.Delegation{ReplicaID: replicaID, LocalPrincipal: p.ID, LocalGrants: grants, CommandID: c.ID, RequestHash: hash, IAT: time.Now().Unix()})
 	if err != nil {
 		return false
 	}
+
 	b, _ := json.Marshal(map[string]any{"method": "submit", "command": c})
-	req, err := http.NewRequestWithContext(ctx, "POST", "https://"+e.Address+"/v1/commands", bytes.NewReader(b))
+	req, err := http.NewRequestWithContext(ctx, "POST", "https://"+address+"/v1/commands", bytes.NewReader(b))
 	if err != nil {
 		return false
 	}
 	req.Header.Set("X-Apple-Bridge-Delegation", header)
-	transport := &http.Transport{TLSClientConfig: a.ClientTLS(e.Fingerprint)}
+	transport := &http.Transport{TLSClientConfig: config}
 	defer transport.CloseIdleConnections()
 	resp, err := (&http.Client{Transport: transport}).Do(req)
 	if err != nil {

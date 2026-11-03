@@ -30,7 +30,7 @@ def generate(manifest):
         swift_dependencies[name] = set(re.findall(r'"([^"]+)"', dependencies_text))
     selection = defaultdict(list)
     entries = []
-    callback_roots = {'CORE-REPLICA-CAPTURE-OBSERVERS': {'runAgentAccess', 'runCaptureObservers'}, 'WEB-AGENT-LEVELS': {'runAgentAccess', 'runAgentLevels'}, 'WEB-AGENT-ACTIVITY': {'runAgentActivity'}, 'WEB-AGENT-CREDENTIALS': {'runAgentCredentials'}, 'WEB-AGENT-OAUTH': {'runAgentAccess', 'runAgentOAuth'}}
+    callback_roots = {'CORE-FORGED-DELEGATION': {'runCommands'}, 'CORE-REPLICA-CAPTURE-OBSERVERS': {'runAgentAccess', 'runCaptureObservers'}, 'WEB-AGENT-LEVELS': {'runAgentAccess', 'runAgentLevels'}, 'WEB-AGENT-ACTIVITY': {'runAgentActivity'}, 'WEB-AGENT-CREDENTIALS': {'runAgentCredentials'}, 'WEB-AGENT-OAUTH': {'runAgentAccess', 'runAgentOAuth'}}
     callback_helpers = {'lab/scenarios/web_server.go', 'lab/scenarios/web_authenticator.go', 'lab/scenarios/consent_activity.go'}
     for scenario in data['scenarios']:
         identity, feature = scenario['ID'], scenario['Feature']
