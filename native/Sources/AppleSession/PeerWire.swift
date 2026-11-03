@@ -13,7 +13,7 @@ final class PeerWire: @unchecked Sendable {
     private var proxy: SessionProxy?
     private var nativeTask: Task<Void, Never>?
 
-    init(socket path: String, secretFile: String, nativeAdapter: (any NativeAdapter)? = nil) throws {
+    init(socket path: String, secretFile: String, nativeAdapter: (any NativeAdapter)? = nil, sessionHome: String? = nil) throws {
         var info = stat()
         guard lstat(secretFile, &info) == 0, info.st_uid == getuid(), info.st_mode & 0o777 == 0o600, info.st_mode & S_IFMT == S_IFREG else { throw SourceFailure.invalid }
         let secret = try Data(contentsOf: URL(fileURLWithPath: secretFile))
@@ -39,7 +39,7 @@ final class PeerWire: @unchecked Sendable {
             guard getpeereid(descriptor, &uid, &gid) == 0, uid == getuid() else { throw SourceFailure.invalid }
             if ProcessInfo.processInfo.environment["AB_SESSION_PROXY"] == "1" {
                 let binary = ProcessInfo.processInfo.environment["AB_SESSION_BINARY"] ?? Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/ab-session").path
-                let child = try SessionProxy(gateway: descriptor, binary: binary)
+                let child = try SessionProxy(gateway: descriptor, binary: binary, home: sessionHome ?? URL(fileURLWithPath: secretFile).deletingLastPathComponent().path)
                 Darwin.close(descriptor)
                 descriptor = child.descriptor
                 proxy = child
