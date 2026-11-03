@@ -1,0 +1,313 @@
+{
+  "level": "sim",
+  "host": "ubuntu",
+  "parallel": 2,
+  "results": [
+    {
+      "scenario": "RELAY-ACME",
+      "go": "not run: platform prerequisite",
+      "rust_before": "not run",
+      "rust_after": "blocked: not in Linux SIM inventory; Pebble prerequisite unavailable"
+    },
+    {
+      "scenario": "RELAY-ENROLL",
+      "go": "pass",
+      "rust_before": "blocked: qualification guard",
+      "rust_after": "blocked"
+    },
+    {
+      "scenario": "RELAY-LIMITS",
+      "go": "fail",
+      "rust_before": "blocked: qualification guard",
+      "rust_after": "blocked"
+    },
+    {
+      "scenario": "RELAY-OWN-DOMAIN",
+      "go": "not run: platform prerequisite",
+      "rust_before": "not run",
+      "rust_after": "blocked: not in Linux SIM inventory; Pebble prerequisite unavailable"
+    },
+    {
+      "scenario": "RELAY-PASSTHROUGH",
+      "go": "pass",
+      "rust_before": "blocked: qualification guard",
+      "rust_after": "blocked"
+    },
+    {
+      "scenario": "RELAY-ROTATE-GATED",
+      "go": "pass",
+      "rust_before": "blocked: qualification guard",
+      "rust_after": "blocked"
+    },
+    {
+      "scenario": "RELAY-STREAMS",
+      "go": "fail",
+      "rust_before": "blocked: qualification guard",
+      "rust_after": "blocked"
+    },
+    {
+      "scenario": "RELAY-TLS-SPLICE",
+      "go": "fail",
+      "rust_before": "blocked: qualification guard",
+      "rust_after": "blocked"
+    },
+    {
+      "scenario": "FILE-CAPTURE",
+      "go": "not run: platform prerequisite",
+      "rust_before": "not run",
+      "rust_after": "blocked: macOS/Swift fixture dependency"
+    },
+    {
+      "scenario": "FILE-COMMANDS",
+      "go": "pass",
+      "rust_before": "blocked: qualification guard; portable probe: files.create unsupported",
+      "rust_after": "pass"
+    },
+    {
+      "scenario": "FILE-CRUD-REAL",
+      "go": "pass",
+      "rust_before": "blocked: qualification guard; portable probe: files.create unsupported",
+      "rust_after": "pass"
+    },
+    {
+      "scenario": "FILE-IDLE",
+      "go": "not run: platform prerequisite",
+      "rust_before": "not run",
+      "rust_after": "blocked: macOS/Swift fixture dependency"
+    },
+    {
+      "scenario": "FILE-OFFLOAD-REAL",
+      "go": "pass",
+      "rust_before": "blocked: qualification guard; portable probe: files.create unsupported",
+      "rust_after": "pass"
+    },
+    {
+      "scenario": "APP-ALARM-SIM",
+      "go": "not run: platform prerequisite",
+      "rust_before": "not run",
+      "rust_after": "blocked: macOS/Swift fixture dependency"
+    },
+    {
+      "scenario": "APP-APPROVE-SIM",
+      "go": "pass",
+      "rust_before": "blocked: qualification guard",
+      "rust_after": "blocked"
+    },
+    {
+      "scenario": "APP-CAPTURE-SIM",
+      "go": "not run: platform prerequisite",
+      "rust_before": "not run",
+      "rust_after": "blocked: macOS/Swift fixture dependency"
+    },
+    {
+      "scenario": "APP-CMD-SIM",
+      "go": "pass",
+      "rust_before": "blocked: qualification guard",
+      "rust_after": "blocked"
+    },
+    {
+      "scenario": "APP-DEVICE-SIM",
+      "go": "not run: platform prerequisite",
+      "rust_before": "not run",
+      "rust_after": "blocked: macOS/Swift fixture dependency"
+    },
+    {
+      "scenario": "APP-HEALTH-SIM",
+      "go": "not run: platform prerequisite",
+      "rust_before": "not run",
+      "rust_after": "blocked: macOS/Swift fixture dependency"
+    },
+    {
+      "scenario": "APP-HEALTH-WRITE-SIM",
+      "go": "not run: platform prerequisite",
+      "rust_before": "not run",
+      "rust_after": "blocked: macOS/Swift fixture dependency"
+    },
+    {
+      "scenario": "APP-LIVE-SIM",
+      "go": "pass",
+      "rust_before": "blocked: qualification guard",
+      "rust_after": "blocked"
+    },
+    {
+      "scenario": "APP-LOC-SIM",
+      "go": "not run: platform prerequisite",
+      "rust_before": "not run",
+      "rust_after": "blocked: macOS/Swift fixture dependency"
+    },
+    {
+      "scenario": "APP-MOTION-SIM",
+      "go": "not run: platform prerequisite",
+      "rust_before": "not run",
+      "rust_after": "blocked: macOS/Swift fixture dependency"
+    },
+    {
+      "scenario": "APP-NOTIFY-SIM",
+      "go": "not run: platform prerequisite",
+      "rust_before": "not run",
+      "rust_after": "blocked: macOS/Swift fixture dependency"
+    },
+    {
+      "scenario": "APP-PAIR-SIM",
+      "go": "pass",
+      "rust_before": "blocked: qualification guard",
+      "rust_after": "blocked"
+    },
+    {
+      "scenario": "APP-SCREENTIME-SIM",
+      "go": "not run: platform prerequisite",
+      "rust_before": "not run",
+      "rust_after": "blocked: macOS/Swift fixture dependency"
+    },
+    {
+      "scenario": "APP-SHELL-SIM",
+      "go": "not run: platform prerequisite",
+      "rust_before": "not run",
+      "rust_after": "blocked: macOS/Swift fixture dependency"
+    },
+    {
+      "scenario": "IWORK-REAL",
+      "go": "pass",
+      "rust_before": "blocked: qualification guard",
+      "rust_after": "blocked"
+    },
+    {
+      "scenario": "MAC-ACTIONS",
+      "go": "pass",
+      "rust_before": "blocked: qualification guard",
+      "rust_after": "blocked"
+    },
+    {
+      "scenario": "MAC-CAPTURE",
+      "go": "pass",
+      "rust_before": "blocked: qualification guard",
+      "rust_after": "blocked"
+    },
+    {
+      "scenario": "MAC-COMMANDS",
+      "go": "pass",
+      "rust_before": "blocked: qualification guard",
+      "rust_after": "blocked"
+    },
+    {
+      "scenario": "MAC-EXTRAS-SIM",
+      "go": "pass",
+      "rust_before": "blocked: qualification guard",
+      "rust_after": "blocked"
+    },
+    {
+      "scenario": "MAC-IDLE",
+      "go": "pass",
+      "rust_before": "blocked: qualification guard",
+      "rust_after": "blocked"
+    },
+    {
+      "scenario": "LOC-SIM",
+      "go": "pass",
+      "rust_before": "blocked: qualification guard",
+      "rust_after": "pass"
+    },
+    {
+      "scenario": "MAP-SIM",
+      "go": "pass",
+      "rust_before": "blocked: qualification guard; portable probe: Maps open rejected",
+      "rust_after": "pass"
+    },
+    {
+      "scenario": "SC-RUN-REAL",
+      "go": "pass",
+      "rust_before": "blocked: qualification guard",
+      "rust_after": "blocked"
+    },
+    {
+      "scenario": "USE-ACTION-PROBE",
+      "go": "not run: platform prerequisite",
+      "rust_before": "not run",
+      "rust_after": "blocked: macOS/Swift fixture dependency"
+    },
+    {
+      "scenario": "USE-IMPORT",
+      "go": "pass",
+      "rust_before": "blocked: qualification guard",
+      "rust_after": "pass"
+    },
+    {
+      "scenario": "USE-LOCK-CLIP",
+      "go": "pass",
+      "rust_before": "blocked: qualification guard",
+      "rust_after": "pass"
+    },
+    {
+      "scenario": "USE-READONLY",
+      "go": "pass",
+      "rust_before": "blocked: qualification guard; portable probe: MCP returned invalid_params",
+      "rust_after": "pass"
+    },
+    {
+      "scenario": "USE-REMOTE-LAG",
+      "go": "pass",
+      "rust_before": "blocked: qualification guard",
+      "rust_after": "pass"
+    },
+    {
+      "scenario": "USE-SEGB-DECODE",
+      "go": "not run: platform prerequisite",
+      "rust_before": "not run",
+      "rust_after": "blocked: macOS/Swift fixture dependency"
+    },
+    {
+      "scenario": "AUD-SIM",
+      "go": "pass",
+      "rust_before": "blocked: qualification guard; portable probe: playback assertions failed",
+      "rust_after": "pass"
+    },
+    {
+      "scenario": "PDF-ANNOTATE",
+      "go": "pass",
+      "rust_before": "blocked: qualification guard",
+      "rust_after": "blocked"
+    },
+    {
+      "scenario": "PDF-TEXT",
+      "go": "pass",
+      "rust_before": "blocked: qualification guard",
+      "rust_after": "blocked"
+    },
+    {
+      "scenario": "VIS-OCR",
+      "go": "pass",
+      "rust_before": "blocked: qualification guard",
+      "rust_after": "blocked"
+    }
+  ],
+  "root_causes": [
+    "Generic replica qualification guard blocked audited binary-driven gateway sims.",
+    "Runtime action resolver lacked files, Maps-open and playback; transient actions incorrectly required record capture evidence.",
+    "Frozen schemas describe ReminderArgs for Maps-open/playback; gateway now uses dedicated native validators.",
+    "Unknown usage_* MCP tools returned invalid_params rather than Go-compatible structured unsupported results."
+  ],
+  "verification": [
+    "make rust-ci",
+    "gateway=rust and gateway=go portable scenarios",
+    "USE-READONLY positive rejection checks over REST and MCP"
+  ],
+  "limits": [
+    "Twenty Linux scenarios retain Go-product harness blockers; see misc-gateway-actions.json for exact blocker lists.",
+    "Sixteen scenarios require platform prerequisites unavailable on the assigned Linux host.",
+    "RELAY-LIMITS, RELAY-STREAMS and RELAY-TLS-SPLICE failed in the Ubuntu Go sweep; earlier build-host runs passed, so their baseline is environment-sensitive. Relay server work is outside this assignment.",
+    "No existing scenario assertion was changed. No real-level scenario, live gateway or permission prompt was used.",
+    "File blob-read queries retain their original one-second deadline; loaded parallel runs intermittently failed, and serial rechecks with TOKIO_WORKER_THREADS=2 passed without changing assertions or deadlines."
+  ],
+  "pull_requests": [
+    "https://github.com/JohanSardar/apple-bridge/pull/562",
+    "https://github.com/JohanSardar/apple-bridge/pull/568"
+  ],
+  "environment": {
+    "CARGO_BUILD_JOBS": 4,
+    "SIM_JOBS": 2,
+    "GOMAXPROCS": 2,
+    "TOKIO_WORKER_THREADS": 2,
+    "TMPDIR": "isolated disk-backed build directory",
+    "APPLE_BRIDGE_LAB_ROOT": "isolated disk-backed lab directory"
+  }
+}
