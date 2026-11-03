@@ -112,7 +112,12 @@ impl Web {
             client_name: client.client_name.clone(),
             redirect_host: dest.authority().into(),
             scopes,
-            expires_at: oauth::expiry(300),
+            expires_at: {
+                let now = jiff::Timestamp::now();
+                jiff::Timestamp::new(now.as_second() + 300, now.subsec_nanosecond())
+                    .map_err(|_| Error::Unavailable)?
+                    .to_string()
+            },
         };
         memory.connectors.insert(
             summary.id.clone(),

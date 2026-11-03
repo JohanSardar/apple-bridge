@@ -7,6 +7,7 @@ mod approvals;
 mod calendar_actions;
 #[cfg(feature = "replica-feed")]
 mod capture;
+pub mod connector;
 mod control;
 pub mod duration;
 #[cfg(feature = "replica-feed")]
