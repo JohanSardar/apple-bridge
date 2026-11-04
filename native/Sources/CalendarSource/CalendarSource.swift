@@ -420,7 +420,6 @@ public final class CalendarSource: Source {
             current["calendar.calendar/" + calendar.calendarIdentifier] = observation("calendar.calendar", calendar.calendarIdentifier, calendarData(calendar))
         }
         for chunk in CalendarTime.chunks(Date()) {
-            await gate.waitForReminderRefetch()
             for event in try events(chunk) {
                 try Task.checkCancellation()
                 guard Self.canMaterialize(event) else { throw SourceFailure.unavailable }
