@@ -147,19 +147,21 @@ async fn issue(path: &Path, host: &str, dns: &dyn DnsProvider, options: &Options
                 continue;
             }
             if auth.status != AuthorizationStatus::Pending {
+                eprintln!("certificate authorization for {host} is {:?}", auth.status);
                 return Err(Error::Denied);
             }
             let mut challenge = auth.challenge(ChallengeType::Dns01).ok_or(Error::Denied)?;
             dns.txt(&name, &challenge.key_authorization().dns_value())
-                .await?;
+                .await
+                .inspect_err(|error| eprintln!("certificate DNS record for {host}: {error}"))?;
             challenge.set_ready().await.map_err(failed)?;
         }
-        if order
+        let status = order
             .poll_ready(&RetryPolicy::default())
             .await
-            .map_err(failed)?
-            != OrderStatus::Ready
-        {
+            .map_err(failed)?;
+        if status != OrderStatus::Ready {
+            eprintln!("certificate order for {host} is {status:?}");
             return Err(Error::Denied);
         }
         let key =
@@ -175,7 +177,10 @@ async fn issue(path: &Path, host: &str, dns: &dyn DnsProvider, options: &Options
     };
     let result = tokio::time::timeout(Duration::from_secs(300), operation)
         .await
-        .map_err(|_| Error::Denied);
+        .map_err(|_| {
+            eprintln!("certificate request for {host} timed out");
+            Error::Denied
+        });
     let _ = tokio::time::timeout(Duration::from_secs(15), dns.txt(&name, "")).await;
     result?
 }
