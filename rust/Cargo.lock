@@ -292,6 +292,7 @@ dependencies = [
  "ab-operations",
  "ab-remote",
  "ab-replication",
+ "ab-session",
  "ab-shortcuts",
  "ab-state",
  "ab-trust",
@@ -323,7 +324,6 @@ name = "ab-session"
 version = "0.0.0"
 dependencies = [
  "ab-native",
- "ab-state",
  "ab-sys",
  "ab-wire",
  "base64 0.22.1",

@@ -1,5 +1,3 @@
-#![cfg(feature = "rust-capture")]
-
 use ab_session::{readers, routed};
 use ab_state::{Gateway, State};
 use ab_wire::messages::Capture;
