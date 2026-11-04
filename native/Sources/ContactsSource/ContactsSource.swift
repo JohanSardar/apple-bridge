@@ -274,6 +274,7 @@ public final class ContactsSource: Source {
         guard authorized else { throw SourceFailure.permissionMissing }
         let activity = ForegroundActivity.shared.begin()
         defer { ForegroundActivity.shared.end(activity) }
+        meIdentifier = try? store.unifiedMeContactWithKeys(toFetch: [CNContactIdentifierKey as NSString]).identifier
         let current = try readEverything([:])
         guard authorized else { throw SourceFailure.permissionMissing }
         return SourceEnumeration(generation: generation, rows: current.keys.sorted().compactMap { current[$0] }, handles: blobHandles())
