@@ -19,7 +19,7 @@ pub(super) struct Driver {
     pub name: &'static str,
     pub prepare: fn(&dyn Probe, &Value, &Value) -> Result<Value, Refusal>,
     pub validate: fn(&dyn Probe, &Value, &Value) -> Result<(), Refusal>,
-    pub write: fn(&dyn Probe, &str, &Value) -> Result<Value, String>,
+    pub write: fn(&dyn Probe, &str, &Value, &Value) -> Result<Value, String>,
     pub settle: fn(&str, &Value) -> Option<Settled>,
     pub resolved: fn(&dyn Probe, &Value) -> Option<Value>,
     pub reconcile_args: fn(&Value, &str) -> Value,
@@ -70,6 +70,7 @@ pub(super) fn driver(source: &str) -> Option<&'static Driver> {
         "reminders" => Some(&super::reminders::DRIVER),
         "calendar" => Some(&super::calendar::DRIVER),
         "contacts" => Some(&super::contacts::DRIVER),
+        "notes" => Some(&super::notes::DRIVER),
         _ => None,
     }
 }

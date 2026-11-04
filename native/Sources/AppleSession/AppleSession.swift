@@ -497,7 +497,7 @@ public actor AppleSession: ObservationSink {
     }
 
     private static func rustOwned(_ operation: String) -> Bool {
-        operation.hasPrefix("reminders.") || operation.hasPrefix("calendar.") || operation.hasPrefix("contacts.")
+        operation.hasPrefix("reminders.") || operation.hasPrefix("calendar.") || operation.hasPrefix("contacts.") || operation.hasPrefix("notes.")
     }
 
     private func nativePrimitive(_ frame: JSON) async {
@@ -511,6 +511,7 @@ public actor AppleSession: ObservationSink {
             if operation.hasPrefix("reminders.") { result = try await source.primitive(operation, args: frame["args"], into: self) }
             else if operation.hasPrefix("calendar.") { result = try await calendar.primitive(operation, args: frame["args"], into: self) }
             else if operation.hasPrefix("contacts.") { result = try await contacts.primitive(operation, args: frame["args"], into: self) }
+            else if operation.hasPrefix("notes."), let notes = additionalSources["notes"] as? NotesSource { result = try await notes.primitive(operation, args: frame["args"], into: self) }
             else { throw SourceFailure.unsupported }
             guard link === connection, !Task.isCancelled else { return }
             try connection.send(NativeSessionFrame.primitiveResult(id: id, result: result))

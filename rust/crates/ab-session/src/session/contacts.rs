@@ -208,7 +208,12 @@ fn group_effect(probe: &dyn Probe, action: &Value, key: &str) -> Result<bool, St
     Ok(listed == (operation == "contacts.add_member"))
 }
 
-pub(super) fn write(probe: &dyn Probe, command_id: &str, action: &Value) -> Result<Value, String> {
+pub(super) fn write(
+    probe: &dyn Probe,
+    command_id: &str,
+    action: &Value,
+    _state: &Value,
+) -> Result<Value, String> {
     let operation = text(action, "op");
     if !is_group(operation) {
         return probe.call(
@@ -524,7 +529,7 @@ mod tests {
         let probe = Fake::new();
         let rename =
             json!({"op": "contacts.rename_group", "native_key": "g1", "args": {"name": "Team"}});
-        let written = write(&probe, "c", &rename).unwrap();
+        let written = write(&probe, "c", &rename, &Value::Null).unwrap();
         assert_eq!(written["observed"], true);
         assert!(
             probe
@@ -535,20 +540,26 @@ mod tests {
         );
         let other = Fake::new();
         let never = json!({"op": "contacts.rename_group", "native_key": "g1", "args": {"name": "Elsewhere"}});
-        assert_eq!(write(&other, "c", &never).unwrap_err(), "unavailable");
+        assert_eq!(
+            write(&other, "c", &never, &Value::Null).unwrap_err(),
+            "unavailable"
+        );
         let settling = Fake::new();
         settling
             .group_after
             .borrow_mut()
             .push(json!({"exists": true, "data": group_data("Old")}));
-        assert!(write(&settling, "c", &json!({"op": "contacts.rename_group", "native_key": "g1", "args": {"name": "Team"}})).is_ok());
+        assert!(write(&settling, "c", &json!({"op": "contacts.rename_group", "native_key": "g1", "args": {"name": "Team"}}), &Value::Null).is_ok());
         let add = json!({"op": "contacts.add_member", "native_key": "g1", "list_key": "m1"});
         let mut member = Fake::new();
         member.group["member_ids"] =
             json!([{"$ref": {"collection": "contacts.contact", "native_key": "m1"}}]);
-        assert!(write(&member, "c", &add).is_ok());
+        assert!(write(&member, "c", &add, &Value::Null).is_ok());
         let remove = json!({"op": "contacts.remove_member", "native_key": "g1", "list_key": "m1"});
-        assert_eq!(write(&member, "c", &remove).unwrap_err(), "unavailable");
+        assert_eq!(
+            write(&member, "c", &remove, &Value::Null).unwrap_err(),
+            "unavailable"
+        );
     }
 
     #[test]

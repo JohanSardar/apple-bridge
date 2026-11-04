@@ -166,7 +166,11 @@ impl Probe for Hub {
     fn call(&self, operation: &str, args: &Value) -> Result<Value, String> {
         let wait = if matches!(
             operation,
-            "reminders.write" | "calendar.write" | "contacts.write" | "contacts.write_group"
+            "reminders.write"
+                | "calendar.write"
+                | "contacts.write"
+                | "contacts.write_group"
+                | "notes.write"
         ) {
             WRITE_WAIT
         } else {
@@ -431,20 +435,21 @@ impl Hub {
                 json!({"observed": false, "reason": "dispatch_evidence_unavailable", "native_error_code": code, "prepared": prepared}),
             )
         };
-        let (disposition, evidence) = match (driver.write)(self, &command.command_id, &action) {
-            Ok(written) => match (driver.settle)(&operation, &written) {
-                Some(settled) => {
-                    let mut fields = settled.evidence;
-                    fields["fingerprint"] = json!(command.request_hash);
-                    fields["before"] = state.clone();
-                    fields["candidate_ids"] = state["candidate_ids"].clone();
-                    fields["prepared"] = prepared.clone();
-                    (settled.disposition, fields)
-                }
-                None => failed("unavailable"),
-            },
-            Err(code) => failed(&code),
-        };
+        let (disposition, evidence) =
+            match (driver.write)(self, &command.command_id, &action, state) {
+                Ok(written) => match (driver.settle)(&operation, &written) {
+                    Some(settled) => {
+                        let mut fields = settled.evidence;
+                        fields["fingerprint"] = json!(command.request_hash);
+                        fields["before"] = state.clone();
+                        fields["candidate_ids"] = state["candidate_ids"].clone();
+                        fields["prepared"] = prepared.clone();
+                        (settled.disposition, fields)
+                    }
+                    None => failed("unavailable"),
+                },
+                Err(code) => failed(&code),
+            };
         let outcome = Outcome {
             command_id: command.command_id.clone(),
             disposition: disposition.into(),
