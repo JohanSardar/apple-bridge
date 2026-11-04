@@ -100,6 +100,8 @@ fieldset { margin: 0; padding: 0; border: 0; }
 .divider::before, .divider::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
 .item { padding: 16px 0; border-top: 1px solid var(--line); }
 .item:first-of-type { margin-top: 16px; }
+#devices { padding-top: 4px; }
+#devices .item:first-child { margin-top: 0; border-top: 0; }
 .item-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .tag { font-size: 13px; font-weight: 550; color: var(--muted); }
 .tag.good { color: var(--good); }
