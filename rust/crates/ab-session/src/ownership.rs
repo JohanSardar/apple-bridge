@@ -25,23 +25,7 @@ impl TryFrom<String> for SourceId {
 pub enum Producer {
     #[default]
     Swift,
-    Shadow,
     Rust,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Authority {
-    Swift,
-    Session,
-}
-
-impl Producer {
-    pub fn authority(self) -> Authority {
-        match self {
-            Self::Swift | Self::Shadow => Authority::Swift,
-            Self::Rust => Authority::Session,
-        }
-    }
 }
 
 #[derive(Debug, Default)]
@@ -150,59 +134,4 @@ impl ConnectionState {
         *self = Self::Disconnected;
         Ok(())
     }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ObservationSet {
-    pub scope: String,
-    pub generation: String,
-    pub complete: bool,
-    pub records: BTreeMap<String, Vec<u8>>,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum ShadowDiff {
-    Incomplete,
-    Equal,
-    Different { keys: Vec<String>, metadata: bool },
-}
-
-pub fn compare_shadow(swift: &ObservationSet, rust: &ObservationSet) -> ShadowDiff {
-    if !swift.complete || !rust.complete {
-        return ShadowDiff::Incomplete;
-    }
-    let metadata = swift.scope != rust.scope || swift.generation != rust.generation;
-    let keys: std::collections::BTreeSet<_> =
-        swift.records.keys().chain(rust.records.keys()).collect();
-    let keys: Vec<_> = keys
-        .into_iter()
-        .filter(|key| swift.records.get(*key) != rust.records.get(*key))
-        .cloned()
-        .collect();
-    if !metadata && keys.is_empty() {
-        ShadowDiff::Equal
-    } else {
-        ShadowDiff::Different { keys, metadata }
-    }
-}
-
-pub trait ShadowReader {
-    fn snapshot(&mut self, source: &SourceId) -> Result<ObservationSet, Error>;
-}
-
-pub fn shadow_once(
-    selection: &Selection,
-    source: &SourceId,
-    swift: &mut impl ShadowReader,
-    rust: &mut (impl ShadowReader + Send),
-) -> Result<ShadowDiff, Error> {
-    if selection.producer(source) != Producer::Shadow {
-        return Err(Error::Conflict);
-    }
-    std::thread::scope(|scope| {
-        let reader = scope.spawn(|| rust.snapshot(source));
-        let authoritative = swift.snapshot(source);
-        let shadow = reader.join().map_err(|_| Error::WorkerPanicked)?;
-        Ok(compare_shadow(&authoritative?, &shadow?))
-    })
 }

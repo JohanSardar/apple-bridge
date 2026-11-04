@@ -22,7 +22,7 @@ if [[ -z "$binary" ]]; then
 fi
 session=${AB_SESSION_BINARY:-}
 if [[ -z "$session" ]]; then
-  cargo build --manifest-path rust/Cargo.toml -p ab-session --bin ab-session --message-format=json > "$artifacts"
+  cargo build --manifest-path rust/Cargo.toml -p ab-session --features lab --bin ab-session --message-format=json > "$artifacts"
   session=$(python3 -c 'import json,sys; paths=[m["executable"] for line in sys.stdin if (m:=json.loads(line)).get("reason")=="compiler-artifact" and m.get("target",{}).get("name")=="ab-session" and m.get("executable")]; print(paths[-1] if paths else "")' < "$artifacts")
 fi
 export AB_SESSION_BINARY="$session"
