@@ -1,7 +1,7 @@
 use crate::{
     Error,
     frame::{MAX_FRAME, read_frame, send, text},
-    readers::{CaptureReader, ScanContext},
+    readers::{BlobServer, CaptureReader, ScanContext},
     store::{Record, Store},
 };
 use serde_json::{Value, json};
@@ -18,7 +18,26 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-type Readers = Mutex<BTreeMap<String, Box<dyn CaptureReader>>>;
+type Slot = Mutex<Box<dyn CaptureReader>>;
+type Readers = BTreeMap<String, Slot>;
+
+struct Blobs {
+    servers: Vec<Arc<dyn BlobServer>>,
+    prefixed: Vec<(&'static str, String)>,
+}
+
+fn slot<'a>(readers: &'a Readers, source: &str) -> Result<&'a Slot, Error> {
+    readers.get(source).ok_or(Error::Conflict)
+}
+
+fn lock<'a>(
+    readers: &'a Readers,
+    source: &str,
+) -> Result<MutexGuard<'a, Box<dyn CaptureReader>>, Error> {
+    slot(readers, source)?
+        .lock()
+        .map_err(|_| Error::WorkerPanicked)
+}
 
 pub trait Overlay: Sync {
     fn gateway<'scope>(
@@ -66,7 +85,6 @@ type Held = Mutex<BTreeMap<String, Covers>>;
 
 #[derive(Debug, Default)]
 struct Shared {
-    fence: u64,
     opened: bool,
     ready: bool,
     closed: bool,
@@ -74,7 +92,7 @@ struct Shared {
     total: u64,
     committed: BTreeMap<String, (String, String)>,
     flights: BTreeMap<String, Flight>,
-    saved: BTreeMap<String, String>,
+    saved: BTreeMap<String, (String, String)>,
     sequence: u64,
     observed: BTreeMap<String, (String, u64, bool)>,
     dispatched: BTreeMap<String, u64>,
@@ -144,28 +162,26 @@ fn wait_open(gate: &Gate) -> Result<bool, Error> {
 
 fn persist(
     gate: &Gate,
-    readers: &Readers,
+    token: Option<String>,
     store: Option<&Store>,
     source: &str,
 ) -> Result<(), Error> {
     let Some(store) = store else {
         return Ok(());
     };
-    let token = readers
-        .lock()
-        .map_err(|_| Error::WorkerPanicked)?
-        .get(source)
-        .and_then(|reader| reader.token());
     let Some(token) = token else {
         return Ok(());
     };
     let shared = gate.lock()?;
-    if shared.flights.contains_key(source) || shared.saved.get(source) == Some(&token) {
+    if shared.flights.contains_key(source) {
         return Ok(());
     }
     let Some((generation, checkpoint)) = shared.committed.get(source).cloned() else {
         return Ok(());
     };
+    if shared.saved.get(source) == Some(&(checkpoint.clone(), token.clone())) {
+        return Ok(());
+    }
     drop(shared);
     if generation.is_empty() || checkpoint.is_empty() {
         return Ok(());
@@ -174,11 +190,13 @@ fn persist(
         source,
         &Record {
             generation,
-            checkpoint,
+            checkpoint: checkpoint.clone(),
             token: token.clone(),
         },
     )?;
-    gate.lock()?.saved.insert(source.to_owned(), token);
+    gate.lock()?
+        .saved
+        .insert(source.to_owned(), (checkpoint, token));
     Ok(())
 }
 
@@ -232,8 +250,7 @@ fn ingest(
     value: &Value,
     cover: (String, u64),
 ) -> Result<(), Error> {
-    let mut readers = readers.lock().map_err(|_| Error::WorkerPanicked)?;
-    let reader = readers.get_mut(source).ok_or(Error::Conflict)?;
+    let mut reader = lock(readers, source)?;
     match reader.ingest(value) {
         Ok(true) => held
             .lock()
@@ -247,7 +264,7 @@ fn ingest(
             release(to_helper, source, &[cover])?;
         }
     }
-    drop(readers);
+    drop(reader);
     gate.poke();
     Ok(())
 }
@@ -501,44 +518,41 @@ fn produce(
         .duration_since(UNIX_EPOCH)
         .map_err(|_| Error::Invalid)?
         .as_nanos();
-    let sources: Vec<String> = readers
-        .lock()
-        .map_err(|_| Error::WorkerPanicked)?
-        .keys()
-        .cloned()
-        .collect();
+    let sources: Vec<String> = readers.keys().cloned().collect();
     if !wait_open(gate)? {
         return Ok(());
     }
     loop {
+        let mut again: Vec<&String> = Vec::new();
         for source in &sources {
             if gate.lock()?.flights.contains_key(source) {
                 continue;
             }
             ordinal += 1;
-            let fence = gate.lock()?.fence;
             let context = ScanContext {
                 checkpoint: format!("rs-{epoch:x}-{ordinal}"),
                 scan_id: format!("rs-scan-{epoch:x}-{ordinal}"),
                 now: now()?,
-                fence,
             };
-            let (next, covers) = {
-                let mut guard = readers.lock().map_err(|_| Error::WorkerPanicked)?;
-                let reader = guard.get_mut(source).ok_or(Error::Invalid)?;
+            let (next, covers, token, more) = {
+                let mut reader = lock(readers, source)?;
                 let next = reader.next(&context);
                 let covers = held
                     .lock()
                     .map_err(|_| Error::WorkerPanicked)?
                     .remove(source)
                     .unwrap_or_default();
-                (next, covers)
+                let more = next.is_ok() && reader.more();
+                (next, covers, reader.token(), more)
             };
+            if more {
+                again.push(source);
+            }
             let capture = match next {
                 Ok(Some(capture)) => capture,
                 Ok(None) => {
                     release(to_helper, source, &covers)?;
-                    persist(gate, readers, store, source)?;
+                    persist(gate, token, store, source)?;
                     continue;
                 }
                 Err(error) => {
@@ -558,6 +572,12 @@ fn produce(
         if gate.wake.swap(false, Ordering::SeqCst) {
             continue;
         }
+        if again
+            .iter()
+            .any(|source| !shared.flights.contains_key(*source))
+        {
+            continue;
+        }
         let (shared, _) = gate
             .changed
             .wait_timeout(shared, poll)
@@ -568,28 +588,117 @@ fn produce(
     }
 }
 
-fn blob_reply(readers: &Readers, value: &Value) -> Result<Option<Value>, Error> {
+const BLOB_LOCK_WAIT: Duration = Duration::from_secs(2);
+
+fn lock_within(
+    slot: &Slot,
+    wait: Duration,
+) -> Result<Option<MutexGuard<'_, Box<dyn CaptureReader>>>, Error> {
+    let deadline = std::time::Instant::now() + wait;
+    loop {
+        match slot.try_lock() {
+            Ok(reader) => return Ok(Some(reader)),
+            Err(std::sync::TryLockError::Poisoned(_)) => return Err(Error::WorkerPanicked),
+            Err(std::sync::TryLockError::WouldBlock) => {
+                if std::time::Instant::now() >= deadline {
+                    return Ok(None);
+                }
+                thread::sleep(Duration::from_millis(2));
+            }
+        }
+    }
+}
+
+fn unavailable(handle: &str) -> Value {
+    json!({"t":"BlobUnavailable","handle":handle,"reason":"unavailable"})
+}
+
+fn blob_reply(blobs: &Blobs, readers: &Readers, value: &Value) -> Result<Option<Value>, Error> {
     let handle = text(value, "handle")?;
-    let mut guard = readers.lock().map_err(|_| Error::WorkerPanicked)?;
-    let Some(reader) = guard.values_mut().find(|reader| reader.owns(handle)) else {
-        return Ok(None);
-    };
     let offset = value["offset"].as_u64();
     let length = value["length"]
         .as_u64()
         .filter(|length| (1..=131_072).contains(length))
         .and_then(|length| usize::try_from(length).ok());
-    let reply = match (offset, length) {
-        (Some(offset), Some(length)) => reader.blob(handle, offset, length).ok(),
-        _ => None,
+    for server in &blobs.servers {
+        if server.owns(handle) {
+            let reply = match (offset, length) {
+                (Some(offset), Some(length)) => server.read(handle, offset, length).ok(),
+                _ => None,
+            };
+            return Ok(Some(reply.unwrap_or_else(|| unavailable(handle))));
+        }
+    }
+    for (prefix, source) in &blobs.prefixed {
+        if !handle.starts_with(prefix) {
+            continue;
+        }
+        let Some(mut reader) = lock_within(slot(readers, source)?, BLOB_LOCK_WAIT)? else {
+            return Ok(Some(unavailable(handle)));
+        };
+        if !reader.owns(handle) {
+            continue;
+        }
+        let reply = match (offset, length) {
+            (Some(offset), Some(length)) => reader.blob(handle, offset, length).ok(),
+            _ => None,
+        };
+        return Ok(Some(reply.unwrap_or_else(|| unavailable(handle))));
+    }
+    Ok(None)
+}
+
+fn committed(
+    gate: &Gate,
+    readers: &Readers,
+    store: Option<&Store>,
+    to_helper: &Mutex<UnixStream>,
+    value: &Value,
+) -> Result<bool, Error> {
+    let source = text(value, "source")?;
+    let shared = gate.lock()?;
+    let Some(flight) = shared.flights.get(source) else {
+        return Ok(true);
     };
-    Ok(Some(reply.unwrap_or_else(
-        || json!({"t":"BlobUnavailable","handle":handle,"reason":"unavailable"}),
-    )))
+    if flight.rust
+        && (value["checkpoint"] != flight.checkpoint
+            || value["credit"].as_u64() != Some(flight.bytes))
+    {
+        return Err(Error::Conflict);
+    }
+    let (rust, last) = (flight.rust, flight.last);
+    drop(shared);
+    let mut token = None;
+    if rust && last {
+        let mut reader = lock(readers, source)?;
+        reader.commit()?;
+        token = reader.token();
+    }
+    let mut shared = gate.lock()?;
+    let flight = shared.flights.remove(source).ok_or(Error::Conflict)?;
+    shared.credit = shared.credit.saturating_add(flight.bytes);
+    shared.committed.insert(
+        source.to_owned(),
+        (flight.generation.clone(), flight.checkpoint.clone()),
+    );
+    if flight.rust {
+        note_observed(&mut shared, source, &flight);
+    }
+    drop(shared);
+    gate.changed.notify_all();
+    if flight.rust {
+        if flight.last {
+            persist(gate, token, store, source)?;
+            release(to_helper, source, &flight.covers)?;
+        }
+        return Ok(false);
+    }
+    Ok(true)
 }
 
 fn gateway_frame(
     gate: &Gate,
+    blobs: &Blobs,
     readers: &Readers,
     store: Option<&Store>,
     to_gateway: &Mutex<UnixStream>,
@@ -598,7 +707,7 @@ fn gateway_frame(
 ) -> Result<bool, Error> {
     match value["t"].as_str() {
         Some("BlobRead") => {
-            let Some(reply) = blob_reply(readers, value)? else {
+            let Some(reply) = blob_reply(blobs, readers, value)? else {
                 return Ok(true);
             };
             send(
@@ -610,7 +719,6 @@ fn gateway_frame(
         Some("Open") => {
             let mut shared = gate.lock()?;
             let credit = value["byte_credit"].as_u64().unwrap_or(0);
-            shared.fence = value["owner_fence"].as_u64().unwrap_or(0);
             shared.credit = credit;
             shared.total = credit;
             if let Some(checkpoints) = value["checkpoints"].as_object() {
@@ -631,8 +739,7 @@ fn gateway_frame(
                 }
             }
             if let Some(store) = store {
-                let mut guard = readers.lock().map_err(|_| Error::WorkerPanicked)?;
-                for (source, reader) in guard.iter_mut() {
+                for source in readers.keys() {
                     let Some(record) = store.load(source) else {
                         continue;
                     };
@@ -640,8 +747,10 @@ fn gateway_frame(
                         .committed
                         .get(source)
                         .is_some_and(|(g, c)| *g == record.generation && *c == record.checkpoint);
-                    if matches && reader.resume(&record.token) {
-                        shared.saved.insert(source.clone(), record.token);
+                    if matches && lock(readers, source)?.resume(&record.token) {
+                        shared
+                            .saved
+                            .insert(source.clone(), (record.checkpoint, record.token));
                     }
                 }
             }
@@ -650,44 +759,7 @@ fn gateway_frame(
             gate.changed.notify_all();
             Ok(true)
         }
-        Some("Committed") => {
-            let source = text(value, "source")?;
-            let mut shared = gate.lock()?;
-            let Some(flight) = shared.flights.get(source) else {
-                return Ok(true);
-            };
-            if flight.rust
-                && (value["checkpoint"] != flight.checkpoint
-                    || value["credit"].as_u64() != Some(flight.bytes))
-            {
-                return Err(Error::Conflict);
-            }
-            let flight = shared.flights.remove(source).ok_or(Error::Conflict)?;
-            shared.credit = shared.credit.saturating_add(flight.bytes);
-            shared.committed.insert(
-                source.to_owned(),
-                (flight.generation.clone(), flight.checkpoint.clone()),
-            );
-            drop(shared);
-            if flight.rust {
-                note_observed(&mut *gate.lock()?, source, &flight);
-            }
-            gate.changed.notify_all();
-            if flight.rust {
-                if flight.last {
-                    readers
-                        .lock()
-                        .map_err(|_| Error::WorkerPanicked)?
-                        .get_mut(source)
-                        .ok_or(Error::Conflict)?
-                        .commit()?;
-                    persist(gate, readers, store, source)?;
-                    release(to_helper, source, &flight.covers)?;
-                }
-                return Ok(false);
-            }
-            Ok(true)
-        }
+        Some("Committed") => committed(gate, readers, store, to_helper, value),
         Some("Dispatch") => {
             note_dispatch(&mut *gate.lock()?, value);
             Ok(true)
@@ -734,7 +806,20 @@ pub fn relay_layered(
         shared: Mutex::new(Shared::default()),
         changed: Condvar::new(),
     };
-    let readers = Mutex::new(readers);
+    let blobs = Blobs {
+        servers: readers
+            .values()
+            .filter_map(|reader| reader.blobs())
+            .collect(),
+        prefixed: readers
+            .iter()
+            .filter_map(|(source, reader)| Some((reader.handle_prefix()?, source.clone())))
+            .collect(),
+    };
+    let readers: Readers = readers
+        .into_iter()
+        .map(|(source, reader)| (source, Mutex::new(reader)))
+        .collect();
     let held: Held = Mutex::new(BTreeMap::new());
     let to_gateway = Arc::new(Mutex::new(gateway.try_clone()?));
     let to_helper = Mutex::new(helper.try_clone()?);
@@ -750,7 +835,15 @@ pub fn relay_layered(
                     Some(layer) => layer.gateway(scope, &value, &to_gateway, &to_helper)?,
                     None => true,
                 };
-                let pass = gateway_frame(&gate, &readers, store, &to_gateway, &to_helper, &value)?;
+                let pass = gateway_frame(
+                    &gate,
+                    &blobs,
+                    &readers,
+                    store,
+                    &to_gateway,
+                    &to_helper,
+                    &value,
+                )?;
                 if layered && pass {
                     to_helper
                         .lock()

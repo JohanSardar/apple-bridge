@@ -1272,11 +1272,12 @@ fn messages_reader_streams_history_then_live_rows_and_serves_attachment_bytes() 
     )?;
 
     expect_silence(&mut session.gateway)?;
-    database.execute(
-        "INSERT INTO message(ROWID,guid,date,text,handle_id,is_from_me) VALUES(3,'msg-3',700000000000000003,'third',1,0)",
-        [],
+    database.execute_batch(
+        "BEGIN;
+         INSERT INTO message(ROWID,guid,date,text,handle_id,is_from_me) VALUES(3,'msg-3',700000000000000003,'third',1,0);
+         INSERT INTO chat_message_join VALUES(1,3);
+         COMMIT;",
     )?;
-    database.execute("INSERT INTO chat_message_join VALUES(1,3)", [])?;
     let (size, live) = receive(&mut session.gateway)?;
     assert_eq!(live["live"], true);
     let keys: Vec<&str> = live["observations"]
@@ -1320,5 +1321,192 @@ fn messages_reader_streams_history_then_live_rows_and_serves_attachment_bytes() 
     let _ = session.worker.join();
     drop(database);
     std::fs::remove_dir_all(home)?;
+    Ok(())
+}
+
+fn grow_messages(connection: &rusqlite::Connection, to: i64) -> Fallible<()> {
+    connection.execute_batch("BEGIN")?;
+    for row in 3..=to {
+        connection.execute(
+            "INSERT INTO message(ROWID,guid,date,text,handle_id,is_from_me) VALUES(?1,?2,?3,?4,1,0)",
+            rusqlite::params![row, format!("msg-{row}"), 700_000_000_000_000_000_i64 + row, format!("text {row}")],
+        )?;
+        connection.execute("INSERT INTO chat_message_join VALUES(1,?1)", [row])?;
+    }
+    connection.execute_batch("COMMIT")?;
+    Ok(())
+}
+
+fn upserted(frame: &Value) -> Vec<i64> {
+    frame["observations"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|row| row["kind"] == "upsert")
+        .filter_map(|row| {
+            row["native_key"]
+                .as_str()?
+                .strip_prefix("msg-")?
+                .parse()
+                .ok()
+        })
+        .collect()
+}
+
+#[test]
+#[allow(clippy::too_many_lines)]
+fn messages_history_commits_in_single_frame_pages_and_resumes_after_a_reset() -> Fallible<()> {
+    let home = temporary("messages-resume-home")?;
+    let state = temporary("messages-resume-state")?;
+    let root = home.join("Library/Messages");
+    std::fs::create_dir_all(&root)?;
+    let database = messages_fixture(&root, &["first", "second"], None)?;
+    grow_messages(&database, 3000)?;
+    let config = json!({"messages":{"root":root}}).to_string();
+
+    let mut first = wire(
+        readers::from_config(&config)?,
+        polling(Some(&state)),
+        json!({}),
+    )?;
+    let mut history_frames = 0;
+    let mut last = Value::Null;
+    let mut committed_history: Vec<i64> = Vec::new();
+    while history_frames < 14 {
+        let (size, frame) = receive(&mut first.gateway)?;
+        assert_eq!(frame["completion_evidence"], "", "scan finished too early");
+        let checkpoint = frame["checkpoint"].as_str().ok_or("checkpoint")?;
+        assert_eq!(
+            checkpoint.matches('-').count(),
+            2,
+            "page split: {checkpoint}"
+        );
+        assert!(size < 70_000, "frame of {size} bytes");
+        if frame["live"] == false {
+            history_frames += 1;
+            committed_history.extend(upserted(&frame));
+        }
+        commit(&mut first, "messages", &frame, size)?;
+        last = frame;
+    }
+    let deadline = std::time::Instant::now() + Duration::from_secs(10);
+    let saved = loop {
+        let saved: Option<Value> = std::fs::read(state.join("messages.json"))
+            .ok()
+            .and_then(|bytes| serde_json::from_slice(&bytes).ok());
+        if let Some(saved) = saved
+            && saved["checkpoint"] == last["checkpoint"]
+        {
+            break saved;
+        }
+        assert!(std::time::Instant::now() < deadline, "progress never saved");
+        std::thread::sleep(Duration::from_millis(20));
+    };
+    let progress: Value = serde_json::from_str(saved["token"].as_str().ok_or("token")?)?;
+    let cursor = progress["cursor"].as_i64().ok_or("cursor")?;
+    assert!(cursor >= 128, "cursor {cursor}");
+    drop(first.gateway);
+    drop(first.helper);
+    let _ = first.worker.join();
+
+    let mut second = wire(
+        readers::from_config(&config)?,
+        polling(Some(&state)),
+        json!({"messages":{"generation":last["generation"],"checkpoint":last["checkpoint"]}}),
+    )?;
+    let mut replayed: Vec<i64> = Vec::new();
+    let mut seen = std::collections::BTreeSet::new();
+    let mut complete = false;
+    for _ in 0..400 {
+        let (size, frame) = receive(&mut second.gateway)?;
+        if frame["live"] == false {
+            replayed.extend(upserted(&frame));
+        }
+        seen.extend(upserted(&frame));
+        complete |= frame["completion_evidence"] == "complete";
+        commit(&mut second, "messages", &frame, size)?;
+        if complete {
+            break;
+        }
+    }
+    assert!(complete, "resumed scan never completed");
+    assert!(
+        replayed.iter().all(|row| *row > cursor),
+        "resume restarted below {cursor}"
+    );
+    for row in 1..=3000 {
+        assert!(
+            seen.contains(&row) || committed_history.contains(&row) || row <= cursor,
+            "msg-{row} lost"
+        );
+    }
+    expect_silence(&mut second.gateway)?;
+    drop(second.gateway);
+    drop(second.helper);
+    let _ = second.worker.join();
+    drop(database);
+    std::fs::remove_dir_all(home)?;
+    std::fs::remove_dir_all(state)?;
+    Ok(())
+}
+
+#[derive(Debug)]
+struct Slow(bool);
+
+impl readers::CaptureReader for Slow {
+    fn source(&self) -> &'static str {
+        "safari"
+    }
+
+    fn root(&self) -> &Path {
+        Path::new("/")
+    }
+
+    fn token(&self) -> Option<String> {
+        None
+    }
+
+    fn resume(&mut self, _token: &str) -> bool {
+        false
+    }
+
+    fn next(
+        &mut self,
+        _context: &readers::ScanContext,
+    ) -> Result<Option<Value>, ab_session::Error> {
+        if !self.0 {
+            self.0 = true;
+            std::thread::sleep(Duration::from_secs(3));
+        }
+        Ok(None)
+    }
+
+    fn commit(&mut self) -> Result<(), ab_session::Error> {
+        Ok(())
+    }
+}
+
+#[test]
+fn a_busy_reader_never_delays_blob_reads_for_other_sources() -> Fallible<()> {
+    let mut sources: std::collections::BTreeMap<String, Box<dyn readers::CaptureReader>> =
+        std::collections::BTreeMap::new();
+    sources.insert("safari".into(), Box::new(Slow(false)));
+    let mut session = wire(sources, polling(None), json!({}))?;
+    std::thread::sleep(Duration::from_millis(200));
+    let started = std::time::Instant::now();
+    send(
+        &mut session.gateway,
+        &json!({"t":"BlobRead","handle":"swift-notes-handle","offset":0,"length":10}),
+    )?;
+    let (_, forwarded) = receive(&mut session.helper)?;
+    assert_eq!(forwarded["t"], "BlobRead");
+    assert!(
+        started.elapsed() < Duration::from_millis(1500),
+        "blob read waited {:?} behind a busy reader",
+        started.elapsed()
+    );
+    drop(session.gateway);
+    drop(session.helper);
+    let _ = session.worker.join();
     Ok(())
 }
