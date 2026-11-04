@@ -150,11 +150,26 @@ struct Run<'a> {
     ledger: Ledger,
     unreachable: BTreeSet<String>,
     native_wait: Duration,
+    quiet: bool,
 }
 
 impl Run<'_> {
     fn sql<T>(result: Result<T, ab_native::messages::Error>) -> Result<T, String> {
         result.map_err(|_| "unavailable".to_owned())
+    }
+
+    fn opening_changes_read_state(&self, rows: &[(String, Value)]) -> Result<bool, String> {
+        for (guid, _) in rows {
+            if let Some(row) = Self::sql(self.reader.cleanup_row(guid))?
+                && Self::sql(
+                    self.reader
+                        .has_unread(&row.chat, Some(self.ledger.baseline)),
+                )?
+            {
+                return Ok(true);
+            }
+        }
+        Ok(false)
     }
 
     fn all_own(&self, peers: &[String]) -> bool {
@@ -379,6 +394,17 @@ fn delete_row(run: &mut Run<'_>, guid: &str, target: &Value, tag: &str) -> Resul
         "action": {"op": "messages.delete_message", "native_key": guid},
     });
     let screen = run.screen;
+    if run.quiet {
+        let chat = Run::sql(run.reader.cleanup_row(guid))?
+            .map(|row| row.chat)
+            .unwrap_or_default();
+        run.remove_native(guid, &chat)?;
+        return Ok(if run.unreachable.contains(guid) {
+            Step::SkipRow("owned_native_item_not_removed".into())
+        } else {
+            Step::Deleted
+        });
+    }
     let mut phase = "open";
     let attempt = (|| {
         screen.open(guid, 1000, tag)?;
@@ -426,7 +452,6 @@ pub(super) fn run(
     let ledger = load_ledger(config, tag)?;
     let reader =
         Reader::open(&config.chat_db, &config.home).map_err(|_| "unavailable".to_owned())?;
-    let drafts = screen.clear_draft(tag).map_err(|f| f.name())?;
     let mut run = Run {
         reader,
         screen,
@@ -435,8 +460,16 @@ pub(super) fn run(
         ledger,
         unreachable: BTreeSet::new(),
         native_wait: NATIVE_WAIT,
+        quiet: false,
     };
-    let initial = run.candidates()?.len();
+    let first = run.candidates()?;
+    let initial = first.len();
+    run.quiet = run.opening_changes_read_state(&first)?;
+    let drafts = if run.quiet {
+        false
+    } else {
+        screen.clear_draft(tag).map_err(|f| f.name())?
+    };
     let mut deleted = 0;
     let mut failure = String::new();
     let mut unavailable: BTreeSet<String> = BTreeSet::new();
@@ -563,7 +596,10 @@ pub(super) fn report(
 mod tests {
     use super::*;
     use rusqlite::{Connection, params};
-    use std::{cell::RefCell, path::Path};
+    use std::{
+        cell::{Cell, RefCell},
+        path::Path,
+    };
 
     const OWN: &str = "me@example.com";
     const BASELINE: i64 = 10;
@@ -662,6 +698,8 @@ mod tests {
         db: &'a Path,
         deleted: RefCell<Vec<String>>,
         validate: RefCell<Option<Failure>>,
+        opened: Cell<u32>,
+        drafts: Cell<u32>,
     }
 
     impl<'a> Recorder<'a> {
@@ -670,6 +708,8 @@ mod tests {
                 db,
                 deleted: RefCell::new(Vec::new()),
                 validate: RefCell::new(None),
+                opened: Cell::new(0),
+                drafts: Cell::new(0),
             }
         }
         fn remove(&self, guid: &str) {
@@ -687,9 +727,11 @@ mod tests {
 
     impl Screen for Recorder<'_> {
         fn clear_draft(&self, _: &str) -> Result<bool, Failure> {
+            self.drafts.set(self.drafts.get() + 1);
             Ok(false)
         }
         fn open(&self, _: &str, _: u64, _: &str) -> Result<(), Failure> {
+            self.opened.set(self.opened.get() + 1);
             Ok(())
         }
         fn acknowledge(&self) -> Result<bool, Failure> {
@@ -864,6 +906,42 @@ mod tests {
         assert_eq!(report["passed"], false);
         assert_eq!(report["failure"], "validate:targetAmbiguous");
         assert_eq!(live(&fixture), ["mine"]);
+    }
+
+    #[test]
+    fn a_chat_with_unread_messages_is_never_opened() {
+        let fixture = Fixture::new("unread");
+        fixture.message(5, "unread-old", "unread and not ours", 1);
+        fixture
+            .db()
+            .execute(
+                "UPDATE message SET is_from_me=0,is_read=0 WHERE guid='unread-old'",
+                [],
+            )
+            .unwrap();
+        fixture.message(11, "mine", "[ab-test r1] mine", 1);
+        fixture.ledger("r1", &["mine"], &json!({}));
+        let screen = Recorder::new(&fixture.config.chat_db);
+        let report = run(&screen, &fixture.config, own(), "[ab-test r1]").unwrap();
+        assert_eq!(report["passed"], true, "{report}");
+        assert_eq!(screen.opened.get(), 0, "opening would mark it read");
+        assert_eq!(
+            screen.drafts.get(),
+            0,
+            "bringing Messages forward would too"
+        );
+        assert_eq!(live(&fixture), ["unread-old"]);
+    }
+
+    #[test]
+    fn a_read_chat_goes_through_the_screen() {
+        let fixture = Fixture::new("read");
+        fixture.message(11, "mine", "[ab-test r1] mine", 1);
+        fixture.ledger("r1", &["mine"], &json!({}));
+        let screen = Recorder::new(&fixture.config.chat_db);
+        run(&screen, &fixture.config, own(), "[ab-test r1]").unwrap();
+        assert_eq!(screen.opened.get(), 1);
+        assert_eq!(screen.drafts.get(), 1);
     }
 
     #[test]
