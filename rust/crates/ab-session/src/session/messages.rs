@@ -632,6 +632,7 @@ mod tests {
         rows: RefCell<Vec<Vec<Value>>>,
         stage: Value,
         policy_used_fails: bool,
+        send_delay: Duration,
     }
 
     impl Fake {
@@ -649,6 +650,7 @@ mod tests {
                 rows: RefCell::new(Vec::new()),
                 stage: json!({"parts": [{"kind": "text", "text": "hello"}]}),
                 policy_used_fails: false,
+                send_delay: Duration::ZERO,
             }
         }
     }
@@ -698,7 +700,10 @@ mod tests {
                     json!({"rows": rows})
                 }
                 "messages.stage" => self.stage.clone(),
-                "messages.send_part" => json!({"error": 0}),
+                "messages.send_part" => {
+                    thread::sleep(self.send_delay);
+                    json!({"error": 0})
+                }
                 "messages.mark_policy_used" => {
                     if self.policy_used_fails {
                         return Err("unavailable".into());
@@ -1598,5 +1603,20 @@ mod tests {
         let found = resolved(&probe, &withheld).unwrap();
         assert_eq!(found["parts"][1]["disposition"], "not_dispatched");
         assert_eq!(found["disposition"], "indeterminate");
+    }
+
+    #[test]
+    fn parts_past_the_dispatch_deadline_are_never_sent() {
+        let mut probe = chat_probe();
+        probe.stage = json!({"parts": [{"kind": "text", "text": "hello"}, {"kind": "text", "text": "again"}]});
+        probe.send_delay = Duration::from_millis(400);
+        probe.rows.borrow_mut().push(vec![row("g1", "chat-1", "hello")]);
+        let cmd = direct("hello");
+        let state = prepared(&probe, &cmd);
+        let written = write(&probe, "c1", &cmd["action"], &state).unwrap();
+        assert_eq!(sent(&probe), 1);
+        assert_eq!(written["parts"][1]["disposition"], "not_dispatched");
+        assert!(written["parts"][1]["reason"].is_null());
+        assert_eq!(written["disposition"], "indeterminate");
     }
 }
