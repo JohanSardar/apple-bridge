@@ -397,8 +397,18 @@ impl Hub {
 
     pub(super) fn capture_reconcile(&self, source: &str, wait: Duration) -> Option<Result<(), ()>> {
         let capture = self.capture.as_ref()?;
-        if !capture.owns(source) || !capture.lock(source).ok()?.refresh() {
+        if !capture.owns(source) {
             return None;
+        }
+        let scanning = {
+            let mut reader = capture.lock(source).ok()?;
+            if !reader.refresh() {
+                return None;
+            }
+            reader.more()
+        };
+        if scanning {
+            return Some(self.poke(source, true).map_err(|_| ()));
         }
         Some(self.await_pass(source, wait).map_err(|_| ()))
     }

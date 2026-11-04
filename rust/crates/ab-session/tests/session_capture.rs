@@ -564,6 +564,92 @@ fn a_rust_command_on_a_rust_captured_source_is_bound_to_the_readers_checkpoint()
     Ok(())
 }
 
+#[derive(Debug)]
+struct ScanningReader {
+    root: std::path::PathBuf,
+    sent: u32,
+}
+
+impl readers::CaptureReader for ScanningReader {
+    fn source(&self) -> &'static str {
+        "reminders"
+    }
+    fn root(&self) -> &Path {
+        &self.root
+    }
+    fn next(&mut self, context: &readers::ScanContext) -> Result<Option<Value>, ab_session::Error> {
+        self.sent += 1;
+        Ok(Some(json!({
+            "source": "reminders",
+            "generation": "g1",
+            "checkpoint": context.checkpoint,
+            "scan_id": context.scan_id,
+            "scan_started_at": "2026-01-01T00:00:00Z",
+            "scope": ["reminders.reminder"],
+            "completion_evidence": "",
+            "observations": [reminder("r1", &format!("seen {}", self.sent))],
+            "blob_handles": [],
+            "live": false,
+        })))
+    }
+    fn commit(&mut self) -> Result<(), ab_session::Error> {
+        Ok(())
+    }
+    fn token(&self) -> Option<String> {
+        None
+    }
+    fn resume(&mut self, _: &str) -> bool {
+        false
+    }
+    fn more(&self) -> bool {
+        true
+    }
+    fn refresh(&mut self) -> bool {
+        true
+    }
+}
+
+#[test]
+fn a_reconcile_during_a_long_scan_never_waits_for_the_scan_to_end() -> Fallible<()> {
+    let reader: Box<dyn readers::CaptureReader> = Box::new(ScanningReader {
+        root: "/nonexistent".into(),
+        sent: 0,
+    });
+    let mut world = support::wire_with(
+        [("reminders".to_owned(), reader)].into_iter().collect(),
+        calendar_options(),
+        json!({}),
+        &session::Options {
+            rust_commands: vec!["reminders".into()],
+        },
+    )?;
+    let (size, first) = receive(&mut world.gateway)?;
+    world.commit("reminders", &first, size)?;
+    prepare(&mut world, "c1", "bread")?;
+    answer_read(
+        &mut world,
+        "reminders.read_reminder",
+        &read_reminder("milk two"),
+    )?;
+    let started = std::time::Instant::now();
+    loop {
+        let (size, frame) = receive(&mut world.gateway)?;
+        if frame["t"] == "Capture" {
+            world.commit("reminders", &frame, size)?;
+            continue;
+        }
+        assert_eq!(frame["t"], "Rejected", "{frame}");
+        assert_eq!(frame["error"]["code"], "conflict");
+        assert!(
+            frame["evidence"]["capture_checkpoint"].is_string(),
+            "{frame}"
+        );
+        break;
+    }
+    assert!(started.elapsed() < Duration::from_secs(10));
+    Ok(())
+}
+
 #[test]
 fn a_conflict_reconciles_through_the_reader_without_asking_the_helper() -> Fallible<()> {
     let facts = Arc::new(Mutex::new(FactState {
