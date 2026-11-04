@@ -1,6 +1,5 @@
 gateway native/Sources/AppleSession/AppleSession.swift ipc1-peer-state-moves-to-ab-session
 gateway native/Sources/AppleSession/HelperLabCommand.swift ipc1-peer-state-moves-to-ab-session
-gateway native/Sources/AppleSession/MessagesSelfTest.swift messages-baseline-moves-to-rust-diff
 gateway native/Sources/CalendarSource/CalendarSource.swift observation-baseline-moves-to-rust-diff
 gateway native/Sources/CallsSource/CallsSource.swift observation-baseline-moves-to-rust-diff
 gateway native/Sources/ContactsSource/ContactsSource.swift observation-baseline-moves-to-rust-diff
