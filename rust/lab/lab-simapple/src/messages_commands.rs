@@ -908,7 +908,9 @@ impl Session<'_> {
         }
         let own = json!(["self@example.com", "second-self@example.com"]);
         match op {
-            "messages.config" => Ok(json!({"lab_commands":true})),
+            "messages.config" => {
+                Ok(json!({"lab_commands":s.data["message_capability_unproven"] != true}))
+            }
             "messages.own_handles" | "messages.approved_handles" => Ok(json!({"handles":own})),
             "messages.route_proofs" => Ok(json!({"routes":[]})),
             "messages.agent_policy" => Ok(json!({"configured":false})),
@@ -977,7 +979,7 @@ impl Session<'_> {
                     let body = string(data, "text");
                     let seen = record["row_reads"].as_u64().unwrap_or_default() + 1;
                     reads.push((key.clone(), seen));
-                    rows.push((row, json!({"guid":key,"capture_chat_guid":chat,"service":data["service"].as_str().unwrap_or("iMessage"),"error":data["error_code"].as_i64().unwrap_or(0),"is_delivered":seen > 1,"text":body,"body":body,"has_body":false,"peers":if chat.is_empty() { vec![] } else { chat_peers(&s, &chat) },"attachment_names":[]})));
+                    rows.push((row, json!({"guid":key,"capture_chat_guid":chat,"service":data["service"].as_str().unwrap_or("iMessage"),"error":data["error_code"].as_i64().unwrap_or(0),"is_delivered":seen > 1,"text":body,"body":body,"has_body":false,"peers":if chat.is_empty() { vec![] } else { chat_peers(&s, &chat) },"attachment_names":record["staged_names"].clone()})));
                 }
                 for (key, seen) in reads {
                     s.data["records"][&key]["row_reads"] = json!(seen);
@@ -987,13 +989,24 @@ impl Session<'_> {
             }
             "messages.stage" => {
                 let m = &args["messages"];
-                if m["files"].as_array().is_some_and(|files| !files.is_empty()) {
-                    return Ok(json!({"failed":{"domain":"sim","code":1}}));
-                }
                 let text = string(m, "text");
-                Ok(
-                    json!({"parts":if text.is_empty() { vec![] } else { vec![json!({"kind":"text","text":text})] }}),
-                )
+                let mut parts = vec![];
+                if !text.is_empty() {
+                    parts.push(json!({"kind":"text","text":text}));
+                }
+                for (index, file) in m["files"].as_array().into_iter().flatten().enumerate() {
+                    let path = string(file, "path");
+                    let name = string(file, "name");
+                    let staged = upload_boundary(&s, &path)
+                        .then(|| std::fs::read(&path).ok())
+                        .flatten()
+                        .filter(|bytes| media::digest(bytes) == string(file, "digest"));
+                    if staged.is_none() || name.is_empty() {
+                        return Ok(json!({"failed":{"domain":"sim","code":1}}));
+                    }
+                    parts.push(json!({"kind":"attachment","name":format!("{index}-{name}"),"original":name,"path":path,"digest":string(file,"digest")}));
+                }
+                Ok(json!({"parts":parts}))
             }
             "messages.mark_policy_used" | "messages.record_proof" => Ok(json!({})),
             "messages.reconcile" => {
@@ -1028,35 +1041,115 @@ impl Session<'_> {
                         false,
                     );
                 }
-                let fault = std::mem::take(&mut s.fault);
                 let command = string(args, "command_id");
-                if !command.is_empty() {
+                let first = args["index"].as_u64().unwrap_or_default() == 0;
+                let last = args["index"].as_u64().unwrap_or_default() + 1
+                    == args["count"].as_u64().unwrap_or(1);
+                let wanted = s.fault.clone();
+                let part_fault = wanted.starts_with("part-");
+                let fault = if part_fault && !(last && string(part, "kind") == "attachment") {
+                    String::new()
+                } else {
+                    std::mem::take(&mut s.fault)
+                };
+                if first && !command.is_empty() {
                     let count = s.data["effects"][&command].as_u64().unwrap_or_default() + 1;
                     s.data["effects"][&command] = json!(count);
                 }
-                let native = id("message").map_err(fail)?;
-                let body = string(part, "text");
-                new_message(&mut s, &mut seen, &native, &body, &chat, true);
-                stamp_row(&mut s, &native);
-                if fault == "delivery-failed" {
-                    set_error(&mut s, &mut seen, &native);
-                } else if fault == "ghost-send" {
-                    let mut d = record_data(&s, &native);
-                    if let Some(object) = d.as_object_mut() {
-                        object.remove("chat_id");
+                if string(part, "kind") == "attachment" {
+                    if fault == "part-no-effect" {
+                        return Ok(json!({"error":0}));
                     }
-                    d["text"] = json!("");
-                    d["parts"] = json!([]);
-                    d["service"] = json!("SMS");
-                    put(&mut s, &mut seen, "message", &native, d, false);
+                    let bytes = std::fs::read(string(part, "path")).map_err(|_| "unavailable")?;
+                    let digest = media::digest(&bytes);
+                    let name = string(part, "original");
+                    self.blobs.insert(digest.clone(), bytes.clone());
+                    let derived = media::derive(&name, &bytes);
+                    for (blob_digest, blob) in &derived.blobs {
+                        self.blobs.insert(blob_digest.clone(), blob.clone());
+                    }
+                    let attachment = id("attachment").map_err(fail)?;
+                    let owner = id("message").map_err(fail)?;
+                    put(
+                        &mut s,
+                        &mut seen,
+                        "message",
+                        &owner,
+                        json!({"chat_id":reference("chat",&chat),"text":"","parts":[{"index":0,"kind":"attachment","attachment_id":reference("attachment",&attachment)}],"is_from_me":true,"sent_at":now(),"decode_status":"decoded","kind":"message","error_code":0}),
+                        false,
+                    );
+                    put(
+                        &mut s,
+                        &mut seen,
+                        "attachment",
+                        &attachment,
+                        json!({"message_id":reference("message",&owner),"filename":name,"size":bytes.len(),"mime_type":media::mime(&name,&bytes),"blob":{"digest":digest,"state":"present"},"derivatives":derived.derivatives,"media":derived.media}),
+                        false,
+                    );
+                    if fault == "part-delivery-failed" {
+                        set_error(&mut s, &mut seen, &owner);
+                    }
+                    s.data["records"][&owner]["staged_names"] = json!([string(part, "name")]);
+                    stamp_row(&mut s, &owner);
                 } else {
-                    let echo = format!("{native}-echo");
-                    new_message(&mut s, &mut seen, &echo, &body, &chat, false);
+                    let native = id("message").map_err(fail)?;
+                    let body = string(part, "text");
+                    new_message(&mut s, &mut seen, &native, &body, &chat, true);
+                    if fault == "delivery-failed" {
+                        set_error(&mut s, &mut seen, &native);
+                    } else if fault == "ghost-send" {
+                        let mut d = record_data(&s, &native);
+                        if let Some(object) = d.as_object_mut() {
+                            object.remove("chat_id");
+                        }
+                        d["text"] = json!("");
+                        d["parts"] = json!([]);
+                        d["service"] = json!("SMS");
+                        put(&mut s, &mut seen, "message", &native, d, false);
+                    } else {
+                        let echo = format!("{native}-echo");
+                        new_message(&mut s, &mut seen, &echo, &body, &chat, false);
+                        if fault == "identical-manual-send" {
+                            let manual = format!("{native}-manual");
+                            new_message(&mut s, &mut seen, &manual, &body, &chat, true);
+                            stamp_row(&mut s, &manual);
+                        }
+                    }
+                    stamp_row(&mut s, &native);
                 }
                 s.save().map_err(fail)?;
                 let capture = s.scan("messages").map_err(fail)?;
+                let receipt = fault == "receipt-before-outcome";
                 drop(s);
                 self.emit(state, capture).map_err(fail)?;
+                if receipt {
+                    let mut s = lock(state).map_err(fail)?;
+                    let key = s.data["records"]
+                        .as_object()
+                        .into_iter()
+                        .flatten()
+                        .filter(|(_, record)| {
+                            record["row_id"].is_u64() && record["data"]["is_from_me"] == true
+                        })
+                        .max_by_key(|(_, record)| record["row_id"].as_u64())
+                        .map(|(key, _)| key.clone())
+                        .unwrap_or_default();
+                    let mut data = record_data(&s, &key);
+                    data["delivered_at"] = json!(now());
+                    let mut seen = vec![];
+                    let kept: Vec<(&str, Value)> = ["row_id", "row_reads", "staged_names"]
+                        .iter()
+                        .map(|field| (*field, s.data["records"][&key][*field].clone()))
+                        .collect();
+                    put(&mut s, &mut seen, "message", &key, data, false);
+                    for (field, value) in kept {
+                        s.data["records"][&key][field] = value;
+                    }
+                    s.save().map_err(fail)?;
+                    let capture = json!({"t":"Capture","source":"messages","observations":seen});
+                    drop(s);
+                    self.emit(state, capture).map_err(fail)?;
+                }
                 Ok(json!({"error":0}))
             }
             _ => Err("unsupported"),
