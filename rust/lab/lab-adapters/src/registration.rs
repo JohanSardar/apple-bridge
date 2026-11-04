@@ -53,7 +53,10 @@ pub fn classify(scenario: &Scenario, registry: &Registry) -> Result<&'static str
         return Ok("compiled");
     }
     if scenario.levels.iter().any(|level| level == "real")
-        && !scenario.levels.iter().any(|level| level == "sim")
+        && !scenario
+            .levels
+            .iter()
+            .any(|level| level == "sim" || level == "replica")
     {
         return Err("no real adapter registered".into());
     }
