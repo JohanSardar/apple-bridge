@@ -344,6 +344,7 @@ public final class ContactsSource: Source {
         try await sink.emitCheckpoint(source: name, generation: generation, checkpoint: next.base64EncodedString(), observations: [absent], scanID: UUID().uuidString, scanStartedAt: timestamp(), scope: ["contacts.contact"], completionEvidence: "complete", blobHandles: [:], live: true)
         token = next
     }
+    public func serves(_ handle: String) -> Bool { variantURLs[handle] != nil }
     public func readBlob(_ handle: String, offset: Int, length: Int) throws -> JSON {
         guard authorized else { throw SourceFailure.permissionMissing }
         if let url = variantURLs[handle] {
