@@ -199,19 +199,21 @@ pub fn self_text(world: &mut World, evidence: &mut Evidence) -> Result<()> {
     if !ready {
         return Ok(());
     }
+    let send = command(
+        "send",
+        &json!({"handles": [handle], "service": "iMessage", "text": format!("{tag} real self text")}),
+        0,
+    )?;
     let mut reply = Value::Null;
-    for _ in 0..6 {
-        let send = command(
-            "send",
-            &json!({"handles": [handle], "service": "iMessage", "text": format!("{tag} real self text")}),
-            0,
-        )?;
+    for _ in 0..12 {
         reply = client
             .call_raw("messages.send", &send, 40)
             .ok()
             .flatten()
             .map_or(Value::Null, |(_, value)| value);
-        if reply["error"]["message"] != "peer unavailable" {
+        let waiting = ["admitted", "prepared", "dispatched"]
+            .contains(&reply["state"].as_str().unwrap_or_default());
+        if !waiting && reply["error"]["message"] != "peer unavailable" {
             break;
         }
         thread::sleep(Duration::from_secs(5));
