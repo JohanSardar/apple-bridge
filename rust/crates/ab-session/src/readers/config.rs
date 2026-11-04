@@ -1,9 +1,9 @@
 use crate::media_facts::MediaFacts;
 
 use super::{
-    AgendaReader, Arc, BTreeMap, CaptureReader, Debug, Deserialize, Duration, Error, MailReader,
-    MessagesReader, NotesReader, Path, PathBuf, SafariReader, TelephonyReader, UsageReader,
-    VoiceMemosReader, native_facts,
+    AgendaReader, Arc, BTreeMap, CaptureReader, Debug, Deserialize, Duration, Error, FilesReader,
+    MacReader, MailReader, MessagesReader, NotesReader, Path, PathBuf, SafariReader,
+    TelephonyReader, UsageReader, VoiceMemosReader, native_facts,
 };
 
 #[derive(Debug, Deserialize)]
@@ -32,6 +32,8 @@ struct SourceConfig {
     media_helper: Option<PathBuf>,
     #[serde(default)]
     media_root: Option<PathBuf>,
+    #[serde(default)]
+    roots: Vec<PathBuf>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -183,6 +185,24 @@ pub fn from_config_linked(
                     return Err(Error::Invalid);
                 }
                 Box::new(MessagesReader::new(config.root, home))
+            }
+            "files" | "mac" => {
+                let client =
+                    linked_client(config.facts.as_ref(), inherited)?.ok_or(Error::Invalid)?;
+                if source == "mac" {
+                    Box::new(MacReader::new(
+                        config.root,
+                        client,
+                        Duration::from_millis(config.facts_poll_ms.max(1)),
+                    ))
+                } else {
+                    Box::new(FilesReader::new(
+                        config.root,
+                        config.roots,
+                        config.home.as_deref(),
+                        client,
+                    )?)
+                }
             }
             "calendar" | "contacts" | "reminders" => {
                 if config.store.is_some()
