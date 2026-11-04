@@ -13,6 +13,10 @@ const GROUP_OPS: [&str; 5] = [
     "contacts.remove_member",
 ];
 
+pub(super) fn digest_text(text: &str) -> String {
+    digest(text.as_bytes())
+}
+
 fn digest(bytes: &[u8]) -> String {
     hex::encode(Sha256::digest(bytes))
 }

@@ -1,8 +1,12 @@
-use super::owned::{Probe, Refusal, native_failure, refuse, text};
+use super::owned::{Driver, Probe, Refusal, Settled, native_failure, refuse, text};
 use crate::messages_policy::{Failure, Origin, Refusal as Policy, check_with, normalize};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
-use std::collections::BTreeSet;
+use std::{
+    collections::BTreeSet,
+    thread,
+    time::{Duration, Instant},
+};
 
 const SEND: &str = "messages.send";
 const SAFETY_MESSAGE: &str = "untagged text requires a local owner token and verified own recipients; other sends require [ab-test <id>]";
@@ -391,6 +395,227 @@ pub(super) fn aggregate(parts: &[Value], fingerprint: &str, baseline: &Value) ->
     })
 }
 
+const DISPATCH_DEADLINE: Duration = if cfg!(test) {
+    Duration::from_millis(300)
+} else {
+    Duration::from_secs(10)
+};
+const POLL_GAP: Duration = if cfg!(test) {
+    Duration::ZERO
+} else {
+    Duration::from_millis(50)
+};
+const ROW_LIMIT: u32 = 512;
+
+fn code_of(refusal: &Refusal) -> String {
+    refusal.code.clone()
+}
+
+fn outgoing_rows(probe: &dyn Probe, maximum: i64) -> Result<Vec<Value>, String> {
+    let answer = probe.call(
+        "messages.rows_after",
+        &json!({"maximum": maximum, "limit": ROW_LIMIT}),
+    )?;
+    Ok(answer["rows"].as_array().cloned().unwrap_or_default())
+}
+
+pub(super) fn write(
+    probe: &dyn Probe,
+    command_id: &str,
+    action: &Value,
+    state: &Value,
+) -> Result<Value, String> {
+    if text(action, "op") != SEND {
+        return Err("unsupported".into());
+    }
+    let interactive = state["interactive"] == true;
+    let route = verify_route(probe, action, interactive).map_err(|r| code_of(&r))?;
+    if route != state["destination"] {
+        return Err("conflict".into());
+    }
+    validate_resend(probe, action, &route).map_err(|r| code_of(&r))?;
+    let agent = call(probe, "messages.agent_policy", &json!({})).map_err(|r| code_of(&r))?;
+    validate_agent_policy(&agent, action, &route).map_err(|r| code_of(&r))?;
+    if agent["configured"] == true {
+        probe.call(
+            "messages.mark_policy_used",
+            &json!({"command_id": command_id}),
+        )?;
+    }
+    let args = &action["messages"];
+    let staged = probe.call(
+        "messages.stage",
+        &json!({"command_id": command_id, "messages": args}),
+    )?;
+    if staged["failed"].is_object() {
+        return Ok(json!({
+            "source": "messages",
+            "disposition": "failed_no_effect",
+            "observed": false,
+            "reason": "staging_failed",
+            "error_domain": staged["failed"]["domain"],
+            "error_code": staged["failed"]["code"],
+            "fingerprint": "",
+        }));
+    }
+    let parts: Vec<Value> = staged["parts"].as_array().cloned().unwrap_or_default();
+    let baseline = state["max_row_id"].as_i64().unwrap_or(0);
+    let started = Instant::now();
+    let mut outcomes: Vec<Value> = Vec::new();
+    for (index, part) in parts.iter().enumerate() {
+        if started.elapsed() >= DISPATCH_DEADLINE {
+            for (remaining, rest) in parts.iter().enumerate().skip(index) {
+                outcomes.push(json!({"index": remaining, "kind": rest["kind"], "disposition": "not_dispatched"}));
+            }
+            break;
+        }
+        let current = probe.call("messages.max_row_id", &json!({}))?["value"]
+            .as_i64()
+            .unwrap_or(0);
+        let maximum = baseline.max(current);
+        let sent = probe.call(
+            "messages.send_part",
+            &json!({"part": part, "route": route, "command_id": command_id}),
+        )?;
+        let mut evidence = json!({"disposition": "indeterminate"});
+        loop {
+            let rows = outgoing_rows(probe, maximum)?;
+            evidence = correlate(part, &route, &rows);
+            if text(&evidence, "disposition") != "indeterminate" || evidence["ambiguous"] == true {
+                break;
+            }
+            if started.elapsed() >= DISPATCH_DEADLINE {
+                break;
+            }
+            thread::sleep(POLL_GAP);
+        }
+        let mut value = evidence.clone();
+        value["index"] = json!(index);
+        value["kind"] = part["kind"].clone();
+        value["apple_event_error"] = sent["error"].clone();
+        value["max_row_id"] = json!(maximum);
+        value["payload_fingerprint"] = probe
+            .call("messages.payload_fingerprint", &json!({"messages": part}))?["digest"]
+            .clone();
+        outcomes.push(value);
+        if text(&evidence, "disposition") == "indeterminate" {
+            for (remaining, rest) in parts.iter().enumerate().skip(index + 1) {
+                outcomes.push(json!({"index": remaining, "kind": rest["kind"], "disposition": "not_dispatched", "reason": "prior_part_indeterminate"}));
+            }
+            break;
+        }
+    }
+    let result = aggregate(&outcomes, "", state);
+    let config = call(probe, "messages.config", &json!({})).map_err(|r| code_of(&r))?;
+    if config["lab_commands"] == true
+        && matches!(
+            text(&result, "disposition"),
+            "locally_observed" | "delivered"
+        )
+    {
+        probe.call(
+            "messages.record_proof",
+            &json!({"route": route, "parts": parts}),
+        )?;
+    }
+    if result["observed"] == true {
+        probe.call("messages.reconcile", &json!({"result": result}))?;
+    }
+    Ok(result)
+}
+
+pub(super) fn settle(operation: &str, written: &Value) -> Option<Settled> {
+    if operation != SEND {
+        return None;
+    }
+    let disposition = match text(written, "disposition") {
+        "locally_observed" => "locally_observed",
+        "delivered" => "delivered",
+        "delivery_failed" => "delivery_failed",
+        "failed_no_effect" => "failed_no_effect",
+        _ => "indeterminate",
+    };
+    Some(Settled {
+        disposition,
+        evidence: written.clone(),
+    })
+}
+
+pub(super) fn resolved(probe: &dyn Probe, evidence: &Value) -> Option<Value> {
+    let saved = &evidence["prepared"];
+    if text(&saved["action"], "op") != SEND {
+        return None;
+    }
+    let state = &saved["native_state"];
+    let route = &state["destination"];
+    let args = &saved["action"]["messages"];
+    let mut requested: Vec<Value> = Vec::new();
+    if !text(args, "text").is_empty() {
+        requested.push(json!({"kind": "text", "text": args["text"]}));
+    }
+    for (index, file) in args["files"].as_array().into_iter().flatten().enumerate() {
+        requested
+            .push(json!({"kind": "attachment", "name": format!("{index}-{}", text(file, "name"))}));
+    }
+    let mut parts: Vec<Value> = Vec::new();
+    for (index, part) in requested.iter().enumerate() {
+        let existing = evidence["parts"].as_array().and_then(|items| {
+            items
+                .iter()
+                .find(|item| item["index"].as_u64() == Some(index as u64))
+        });
+        if let Some(existing) = existing
+            && text(existing, "disposition") == "not_dispatched"
+        {
+            parts.push(existing.clone());
+            continue;
+        }
+        let maximum = existing
+            .and_then(|item| item["max_row_id"].as_i64())
+            .or_else(|| state["max_row_id"].as_i64())
+            .unwrap_or(0);
+        let rows = outgoing_rows(probe, maximum).ok()?;
+        let mut value = correlate(part, route, &rows);
+        value["index"] = json!(index);
+        value["kind"] = part["kind"].clone();
+        value["max_row_id"] = json!(maximum);
+        parts.push(value);
+    }
+    let mut result = aggregate(&parts, text(saved, "request_hash"), state);
+    if result["observed"] != true {
+        return None;
+    }
+    result["prepared"] = saved.clone();
+    Some(result)
+}
+
+fn reconcile_args(found: &Value, _operation: &str) -> Value {
+    json!({"result": found})
+}
+
+fn prepare_unsupported(
+    _probe: &dyn Probe,
+    _action: &Value,
+    _expected: &Value,
+) -> Result<Value, Refusal> {
+    Err(refuse("unsupported"))
+}
+
+fn validate_send(probe: &dyn Probe, action: &Value, state: &Value) -> Result<(), Refusal> {
+    validate(probe, &json!({"action": action}), state)
+}
+
+pub(super) const DRIVER: Driver = Driver {
+    name: "messages",
+    prepare: prepare_unsupported,
+    prepare_command: Some(prepare),
+    validate: validate_send,
+    write,
+    settle,
+    resolved,
+    reconcile_args,
+};
+
 #[cfg(test)]
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
@@ -407,6 +632,10 @@ mod tests {
         messages: BTreeMap<String, Value>,
         agent: Value,
         calls: RefCell<Vec<String>>,
+        rows: RefCell<Vec<Vec<Value>>>,
+        stage: Value,
+        policy_used_fails: bool,
+        send_delay: Duration,
     }
 
     impl Fake {
@@ -421,6 +650,10 @@ mod tests {
                 messages: BTreeMap::new(),
                 agent: json!({"configured": false}),
                 calls: RefCell::new(Vec::new()),
+                rows: RefCell::new(Vec::new()),
+                stage: json!({"parts": [{"kind": "text", "text": "hello"}]}),
+                policy_used_fails: false,
+                send_delay: Duration::ZERO,
             }
         }
     }
@@ -460,6 +693,26 @@ mod tests {
                 "messages.config" => json!({"lab_commands": self.lab}),
                 "messages.max_row_id" => json!({"value": 42}),
                 "messages.payload_fingerprint" => json!({"digest": "fp"}),
+                "messages.rows_after" => {
+                    let mut queue = self.rows.borrow_mut();
+                    let rows = if queue.len() > 1 {
+                        queue.remove(0)
+                    } else {
+                        queue.first().cloned().unwrap_or_default()
+                    };
+                    json!({"rows": rows})
+                }
+                "messages.stage" => self.stage.clone(),
+                "messages.send_part" => {
+                    thread::sleep(self.send_delay);
+                    json!({"error": 0})
+                }
+                "messages.mark_policy_used" => {
+                    if self.policy_used_fails {
+                        return Err("unavailable".into());
+                    }
+                    json!({})
+                }
                 _ => Value::Null,
             })
         }
@@ -1071,5 +1324,305 @@ mod tests {
             (none["fingerprint"].as_str(), none["baseline"].clone()),
             (Some("fp"), state)
         );
+    }
+
+    fn chat_probe() -> Fake {
+        let mut probe = Fake::new();
+        probe.direct = vec![json!({"guid": "chat-1", "id": "+15550100100"})];
+        probe
+    }
+
+    fn prepared(probe: &Fake, cmd: &Value) -> Value {
+        prepare(probe, cmd).unwrap()
+    }
+
+    fn sent(probe: &Fake) -> usize {
+        probe
+            .calls
+            .borrow()
+            .iter()
+            .filter(|call| *call == "messages.send_part")
+            .count()
+    }
+
+    #[test]
+    fn a_send_is_verified_staged_sent_and_observed_in_order() {
+        let probe = chat_probe();
+        probe
+            .rows
+            .borrow_mut()
+            .push(vec![row("g1", "chat-1", "hello")]);
+        let cmd = direct("hello");
+        let state = prepared(&probe, &cmd);
+        let written = write(&probe, "c1", &cmd["action"], &state).unwrap();
+        assert_eq!(
+            (
+                written["disposition"].as_str(),
+                written["native_key"].as_str()
+            ),
+            (Some("locally_observed"), Some("g1"))
+        );
+        assert_eq!(written["parts"][0]["apple_event_error"], 0);
+        assert_eq!(written["parts"][0]["payload_fingerprint"], "fp");
+        let calls = probe.calls.borrow();
+        let at = |name: &str| calls.iter().rposition(|call| call == name).unwrap();
+        assert!(at("messages.stage") < at("messages.send_part"));
+        assert!(at("messages.send_part") < at("messages.rows_after"));
+        assert!(at("messages.rows_after") < at("messages.reconcile"));
+        assert!(calls.iter().any(|call| call == "messages.record_proof"));
+        assert_eq!(
+            settle(SEND, &written).unwrap().disposition,
+            "locally_observed"
+        );
+    }
+
+    #[test]
+    fn a_route_that_changed_since_prepare_sends_nothing() {
+        let mut probe = chat_probe();
+        let cmd = direct("hello");
+        let state = prepared(&probe, &cmd);
+        probe.direct = vec![json!({"guid": "chat-2", "id": "+15550100100"})];
+        assert_eq!(
+            write(&probe, "c1", &cmd["action"], &state).unwrap_err(),
+            "conflict"
+        );
+        assert_eq!(sent(&probe), 0);
+        let mut gated = Fake::new();
+        let tagged = command(
+            "",
+            "device:abc",
+            &json!({"text": "[ab-test x] hi", "handles": ["+15550100100"], "service": "iMessage", "files": []}),
+        );
+        let state = prepared(&gated, &tagged);
+        gated.approved = vec!["+15557770000".into()];
+        assert!(write(&gated, "c1", &tagged["action"], &state).is_err());
+        assert_eq!(sent(&gated), 0);
+    }
+
+    #[test]
+    fn a_resend_and_the_agent_policy_are_checked_again_before_anything_is_sent() {
+        let mut probe = chat_probe();
+        let failed =
+            json!({"exists": true, "is_from_me": true, "error": 22, "capture_chat_guid": "chat-1"});
+        probe.messages.insert("g0".into(), failed.clone());
+        let mut cmd = direct("hello");
+        cmd["action"]["messages"]["resend_of"] = json!("g0");
+        let state = prepared(&probe, &cmd);
+        let mut healed = failed;
+        healed["error"] = json!(0);
+        probe.messages.insert("g0".into(), healed);
+        assert_eq!(
+            write(&probe, "c1", &cmd["action"], &state).unwrap_err(),
+            "conflict"
+        );
+        assert_eq!(sent(&probe), 0);
+        let mut pinned = chat_probe();
+        pinned.agent = json!({"configured": true, "policy": {"chat_guid": "chat-1", "text": "hello"}, "used": false});
+        let cmd = direct("hello");
+        let state = prepared(&pinned, &cmd);
+        pinned.agent["used"] = json!(true);
+        assert_eq!(
+            write(&pinned, "c1", &cmd["action"], &state).unwrap_err(),
+            "invalid"
+        );
+        assert_eq!(sent(&pinned), 0);
+    }
+
+    #[test]
+    fn the_agent_marker_is_written_before_the_send_and_a_failed_marker_stops_it() {
+        let mut probe = chat_probe();
+        probe.agent = json!({"configured": true, "policy": {"chat_guid": "chat-1", "text": "hello"}, "used": false});
+        probe
+            .rows
+            .borrow_mut()
+            .push(vec![row("g1", "chat-1", "hello")]);
+        let cmd = direct("hello");
+        let state = prepared(&probe, &cmd);
+        write(&probe, "c1", &cmd["action"], &state).unwrap();
+        let calls = probe.calls.borrow();
+        let marker = calls
+            .iter()
+            .position(|call| call == "messages.mark_policy_used")
+            .unwrap();
+        let send = calls
+            .iter()
+            .position(|call| call == "messages.send_part")
+            .unwrap();
+        assert!(marker < send);
+        drop(calls);
+        let mut again = chat_probe();
+        again.agent = probe.agent.clone();
+        again.policy_used_fails = true;
+        let state = prepared(&again, &cmd);
+        assert!(write(&again, "c1", &cmd["action"], &state).is_err());
+        assert_eq!(sent(&again), 0);
+    }
+
+    #[test]
+    fn a_staging_failure_is_a_failed_no_effect_and_nothing_is_sent() {
+        let mut probe = chat_probe();
+        probe.stage = json!({"failed": {"domain": "NSCocoaErrorDomain", "code": 4}});
+        let cmd = direct("hello");
+        let state = prepared(&probe, &cmd);
+        let written = write(&probe, "c1", &cmd["action"], &state).unwrap();
+        assert_eq!(
+            (
+                written["disposition"].as_str(),
+                written["reason"].as_str(),
+                written["observed"].as_bool()
+            ),
+            (
+                Some("failed_no_effect"),
+                Some("staging_failed"),
+                Some(false)
+            )
+        );
+        assert_eq!(sent(&probe), 0);
+        assert_eq!(
+            settle(SEND, &written).unwrap().disposition,
+            "failed_no_effect"
+        );
+    }
+
+    #[test]
+    fn a_part_that_never_appears_leaves_the_rest_unsent_and_the_command_indeterminate() {
+        let mut probe = chat_probe();
+        probe.stage = json!({"parts": [{"kind": "text", "text": "hello"}, {"kind": "attachment", "name": "0-a.txt"}]});
+        let cmd = direct("hello");
+        let state = prepared(&probe, &cmd);
+        let written = write(&probe, "c1", &cmd["action"], &state).unwrap();
+        assert_eq!(written["disposition"], "indeterminate");
+        assert_eq!(written["parts"][1]["disposition"], "not_dispatched");
+        assert_eq!(written["parts"][1]["reason"], "prior_part_indeterminate");
+        assert_eq!(sent(&probe), 1);
+        assert_eq!(written["observed"], false);
+        assert!(
+            !probe
+                .calls
+                .borrow()
+                .iter()
+                .any(|call| call == "messages.reconcile")
+        );
+    }
+
+    #[test]
+    fn two_matching_rows_stop_the_command_as_ambiguous() {
+        let probe = chat_probe();
+        probe.rows.borrow_mut().push(vec![
+            row("g1", "chat-1", "hello"),
+            row("g2", "chat-1", "hello"),
+        ]);
+        let cmd = direct("hello");
+        let state = prepared(&probe, &cmd);
+        let written = write(&probe, "c1", &cmd["action"], &state).unwrap();
+        assert_eq!(written["disposition"], "indeterminate");
+        assert_eq!(written["parts"][0]["ambiguous"], true);
+        assert_eq!(settle(SEND, &written).unwrap().disposition, "indeterminate");
+    }
+
+    #[test]
+    fn a_text_and_a_file_are_sent_one_after_the_other_and_aggregated() {
+        let mut probe = chat_probe();
+        probe.stage = json!({"parts": [{"kind": "text", "text": "hello"}, {"kind": "attachment", "name": "0-a.txt"}]});
+        let mut with_file = row("g2", "chat-1", "");
+        with_file["attachment_names"] = json!(["0-a.txt"]);
+        let mut delivered = row("g1", "chat-1", "hello");
+        delivered["is_delivered"] = json!(true);
+        probe.rows.borrow_mut().push(vec![delivered, with_file]);
+        let cmd = direct("hello");
+        let state = prepared(&probe, &cmd);
+        let written = write(&probe, "c1", &cmd["action"], &state).unwrap();
+        assert_eq!(written["disposition"], "locally_observed");
+        assert_eq!(sent(&probe), 2);
+        assert_eq!(written["parts"].as_array().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn outside_the_lab_no_proof_is_recorded_and_other_operations_are_refused() {
+        let mut probe = chat_probe();
+        probe.lab = false;
+        probe.proofs = vec![route_proof(
+            &json!({"kind": "chat_id_raw", "chat": "chat-1"}),
+            "text",
+        )];
+        probe
+            .rows
+            .borrow_mut()
+            .push(vec![row("g1", "chat-1", "hello")]);
+        let cmd = direct("hello");
+        let state = prepared(&probe, &cmd);
+        write(&probe, "c1", &cmd["action"], &state).unwrap();
+        assert!(
+            !probe
+                .calls
+                .borrow()
+                .iter()
+                .any(|call| call == "messages.record_proof")
+        );
+        let mut edit = direct("hi");
+        edit["action"]["op"] = json!("messages.edit");
+        assert_eq!(
+            write(&probe, "c1", &edit["action"], &state).unwrap_err(),
+            "unsupported"
+        );
+        assert!(settle("messages.edit", &json!({"disposition": "delivered"})).is_none());
+    }
+
+    #[test]
+    fn resolve_observes_only_parts_the_store_shows_and_keeps_unsent_parts_unsent() {
+        let probe = chat_probe();
+        let cmd = direct("hello");
+        let state = prepared(&probe, &cmd);
+        let saved = json!({"action": cmd["action"], "native_state": state, "request_hash": "h1"});
+        let evidence = json!({"prepared": saved, "parts": [], "observed": false});
+        assert!(resolved(&probe, &evidence).is_none());
+        probe
+            .rows
+            .borrow_mut()
+            .push(vec![row("g1", "chat-1", "hello")]);
+        let found = resolved(&probe, &evidence).unwrap();
+        assert_eq!(
+            (
+                found["native_key"].as_str(),
+                found["disposition"].as_str(),
+                found["fingerprint"].as_str()
+            ),
+            (Some("g1"), Some("locally_observed"), Some("h1"))
+        );
+        assert_eq!(found["prepared"], saved);
+        let other = Fake::new();
+        other
+            .rows
+            .borrow_mut()
+            .push(vec![row("g9", "chat-9", "hello")]);
+        assert!(resolved(&other, &evidence).is_none());
+        let mut edit = evidence.clone();
+        edit["prepared"]["action"]["op"] = json!("messages.edit");
+        assert!(resolved(&probe, &edit).is_none());
+        let mut two = cmd.clone();
+        two["action"]["messages"]["files"] = json!([{"name": "a.txt", "data": ""}]);
+        let saved = json!({"action": two["action"], "native_state": prepared(&probe, &two), "request_hash": "h2"});
+        let withheld = json!({"prepared": saved, "parts": [{"index": 1, "kind": "attachment", "disposition": "not_dispatched"}]});
+        let found = resolved(&probe, &withheld).unwrap();
+        assert_eq!(found["parts"][1]["disposition"], "not_dispatched");
+        assert_eq!(found["disposition"], "indeterminate");
+    }
+
+    #[test]
+    fn parts_past_the_dispatch_deadline_are_never_sent() {
+        let mut probe = chat_probe();
+        probe.stage = json!({"parts": [{"kind": "text", "text": "hello"}, {"kind": "text", "text": "again"}]});
+        probe.send_delay = Duration::from_millis(400);
+        probe
+            .rows
+            .borrow_mut()
+            .push(vec![row("g1", "chat-1", "hello")]);
+        let cmd = direct("hello");
+        let state = prepared(&probe, &cmd);
+        let written = write(&probe, "c1", &cmd["action"], &state).unwrap();
+        assert_eq!(sent(&probe), 1);
+        assert_eq!(written["parts"][1]["disposition"], "not_dispatched");
+        assert!(written["parts"][1]["reason"].is_null());
+        assert_eq!(written["disposition"], "indeterminate");
     }
 }
