@@ -67,19 +67,22 @@ fn oversized_capture(world: &World, gateway: &Client, prefix: &str) -> Option<Cu
     (span >= WIDTH as u64 && width >= WIDTH as i64).then_some(through)
 }
 
-fn pending_state(replica: &Client, command: &str) -> Option<bool> {
+fn pending_state(replica: &Client, command: &str) -> (Option<bool>, String) {
     let page = replica
         .call(
             "records.query",
             &json!({"collection": "system.command", "limit": 1000}),
             15,
         )
-        .ok()??;
-    page["records"]
-        .as_array()?
-        .iter()
-        .find(|row| row["id"] == command)
-        .map(|row| row["data"]["awaiting_approval"] == true)
+        .ok()
+        .flatten()
+        .unwrap_or(Value::Null);
+    let rows = page["records"].as_array().cloned().unwrap_or_default();
+    let found = rows.iter().find(|row| row["id"] == command);
+    (
+        found.map(|row| row["data"]["awaiting_approval"] == true),
+        format!("{} rows; {}", rows.len(), found.map_or_else(|| rows.first().map_or_else(String::new, ToString::to_string), ToString::to_string)),
+    )
 }
 
 fn approvals_page(owner: &Owner) -> Option<String> {
@@ -136,10 +139,11 @@ fn approval_observer(world: &World, gateway: &Client, owner: &Owner, evidence: &
     }
     let settled = await_until(10, || converged(world, &observed));
     evidence.check("approval_pending_replicated_after_capture", settled, "");
+    let (state, detail) = pending_state(&replica, &id);
     evidence.check(
         "replica_pending_approval_survives_capture",
-        pending_state(&replica, &id) == Some(true),
-        "",
+        state == Some(true),
+        &detail,
     );
     let page = approvals_page(owner);
     evidence.check(
@@ -166,10 +170,11 @@ fn approval_observer(world: &World, gateway: &Client, owner: &Owner, evidence: &
     );
     let settled = await_until(10, || converged(world, &observed));
     evidence.check("resolved_approval_capture_replicated", settled, "");
+    let (state, detail) = pending_state(&replica, &id);
     evidence.check(
         "replica_resolved_approval_survives_capture",
-        pending_state(&replica, &id) == Some(false),
-        "",
+        state == Some(false),
+        &detail,
     );
     let page = approvals_page(owner);
     evidence.check(
