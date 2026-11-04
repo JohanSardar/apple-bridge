@@ -3,7 +3,7 @@ package simapple
 import (
 	"encoding/json"
 	"fmt"
-	"net"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -23,9 +23,10 @@ type nativeSnapshot struct {
 }
 
 type factSession struct {
-	fence     int
-	counter   int
-	snapshots map[string]nativeSnapshot
+	subscribed func()
+	fence      int
+	counter    int
+	snapshots  map[string]nativeSnapshot
 }
 
 func (s *factSession) hello(frame map[string]json.RawMessage) {
@@ -34,14 +35,14 @@ func (s *factSession) hello(frame map[string]json.RawMessage) {
 	s.fence = fence
 }
 
-func (f *fakeApple) nativeFactsPage(conn net.Conn, s *factSession, frame map[string]json.RawMessage) error {
+func (f *fakeApple) nativeFactsPage(conn *nativeLink, s *factSession, frame map[string]json.RawMessage) error {
 	var id, op string
 	var args map[string]json.RawMessage
 	json.Unmarshal(frame["id"], &id)
 	json.Unmarshal(frame["op"], &op)
 	json.Unmarshal(frame["args"], &args)
 	fail := func(code string) error {
-		return writeNative(conn, map[string]any{"t": "Error", "id": id, "code": code})
+		return conn.write(map[string]any{"t": "Error", "id": id, "code": code})
 	}
 	limit := 100
 	if raw, ok := frame["limit"]; ok && string(raw) != "null" {
@@ -106,7 +107,7 @@ func (f *fakeApple) nativeFactsPage(conn net.Conn, s *factSession, frame map[str
 	if end == len(snapshot.items) {
 		delete(s.snapshots, token)
 	}
-	return writeNative(conn, page)
+	return conn.write(page)
 }
 
 func (f *fakeApple) nativeFacts(op string, fence int) (nativeSnapshot, string) {
@@ -157,7 +158,7 @@ func (f *fakeApple) nativeFacts(op string, fence int) (nativeSnapshot, string) {
 	}
 	items := []json.RawMessage{}
 	for _, observation := range capture.Observations {
-		if observation.Collection != collection {
+		if observation.Collection != collection || observation.Kind == "absent" || observation.Kind == "evict" {
 			continue
 		}
 		raw, err := json.Marshal(observation)
@@ -178,4 +179,60 @@ func (f *fakeApple) nativeFacts(op string, fence int) (nativeSnapshot, string) {
 		}
 	}
 	return nativeSnapshot{operation: op, items: items, scope: map[string]any{"collections": []string{collection}, "history_token": ""}, generation: capture.Generation}, ""
+}
+
+const nativeMaxRevalidate = 500
+
+var nativeRevalidationCollections = map[string]string{
+	"agenda.calendars": "calendar.calendar", "agenda.events": "calendar.event",
+	"agenda.reminder_lists": "reminders.list", "agenda.reminders": "reminders.reminder",
+	"contacts.groups": "contacts.group", "contacts.contacts": "contacts.contact",
+}
+
+func (f *fakeApple) nativeRevalidate(link *nativeLink, frame map[string]json.RawMessage) error {
+	var id, op string
+	var args struct {
+		Identities []struct {
+			Collection string `json:"collection"`
+			NativeKey  string `json:"native_key"`
+		} `json:"identities"`
+	}
+	json.Unmarshal(frame["id"], &id)
+	json.Unmarshal(frame["op"], &op)
+	fail := func(code string) error {
+		return link.write(map[string]any{"t": "Error", "id": id, "code": code})
+	}
+	collection, known := nativeRevalidationCollections[op]
+	if !known {
+		return fail("unsupported")
+	}
+	if json.Unmarshal(frame["args"], &args) != nil || id == "" || len(args.Identities) == 0 || len(args.Identities) > nativeMaxRevalidate {
+		return fail("invalid")
+	}
+	for _, identity := range args.Identities {
+		if identity.Collection != collection || identity.NativeKey == "" {
+			return fail("invalid")
+		}
+	}
+	control := os.Getenv("AB_LAB_SESSION_REVALIDATE_CONTROL")
+	if control == "refuse" {
+		return fail("unavailable")
+	}
+	results := make([]map[string]string, 0, len(args.Identities))
+	f.mu.Lock()
+	for _, identity := range args.Identities {
+		state := "missing"
+		if o, ok := f.records[identity.NativeKey]; ok && o.Kind != "absent" && o.Collection == collection {
+			state = "present"
+			if !f.calendarInWindow(o) {
+				state = "outside_scope"
+			}
+		}
+		results = append(results, map[string]string{"collection": identity.Collection, "native_key": identity.NativeKey, "state": state})
+	}
+	f.mu.Unlock()
+	if control == "partial" {
+		results = results[:len(results)-1]
+	}
+	return link.write(map[string]any{"t": "Revalidated", "id": id, "op": op, "results": results})
 }

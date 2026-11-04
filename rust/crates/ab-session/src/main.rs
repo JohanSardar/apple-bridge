@@ -170,6 +170,7 @@ fn native_links(
             taken.push(native.as_raw_fd());
             Some(ab_session::production::EffectsLink {
                 native,
+                #[cfg(feature = "rust-effects")]
                 routing: ab_session::production::effects_routing(std::path::Path::new(&home))?,
                 home: std::path::PathBuf::from(home),
             })

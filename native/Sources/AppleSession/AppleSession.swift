@@ -44,6 +44,7 @@ public actor AppleSession: ObservationSink {
     private var draining = false
     var nativeFiles: NativeFiles?
     var nativeSources: SessionSources.Builtins?
+    var nativeSourcesTask: Task<SessionSources.Builtins, Error>?
     var nativeAuthority = false
     var ipcRunning = false
     var wire: PeerWire?

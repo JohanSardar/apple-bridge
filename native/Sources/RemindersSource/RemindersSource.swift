@@ -34,11 +34,14 @@ public final class RemindersSource: Source {
         savedIdentities = committed
     }
 
-    private func refreshGeneration() throws {
+    private func lineageGeneration() throws -> String {
         let identity = gate.store.eventStoreIdentifier
         guard !identity.isEmpty else { throw SourceFailure.unavailable }
-        let lineage = SHA256.hash(data: Data(identity.utf8)).map { String(format: "%02x", $0) }.joined()
-        let current = "eventkit-" + lineage
+        return "eventkit-" + SHA256.hash(data: Data(identity.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+
+    private func refreshGeneration() throws {
+        let current = try lineageGeneration()
         let previous = try? String(contentsOf: generationURL, encoding: .utf8)
         if generation != current {
             if previous != current { committed = [:]; tracked = [:] }
@@ -222,9 +225,41 @@ public final class RemindersSource: Source {
         try await sink.emit(source: name, generation: generation, observations: [absent], scanID: UUID().uuidString, scanStartedAt: started, scope: [collection], completionEvidence: "complete", blobHandles: [:], live: true)
     }
 
-    public func nativeFacts(into sink: any ObservationSink) async throws {
-        forceFull = true
-        try await scan(into: sink, live: false, fullRead: true)
+    public func enumerate() async throws -> SourceEnumeration {
+        guard gate.authorized(.reminder) else { throw SourceFailure.permissionMissing }
+        let activity = ForegroundActivity.shared.begin()
+        defer { ForegroundActivity.shared.end(activity) }
+        let generation = try lineageGeneration()
+        let calendars = gate.store.calendars(for: .reminder)
+        let reminders = try await gate.reminders()
+        let observedAt = timestamp()
+        var current: [String: JSON] = [:]
+        for calendar in calendars {
+            current["reminders.list/" + calendar.calendarIdentifier] = observation("reminders.list", calendar.calendarIdentifier, listData(calendar), at: observedAt)
+        }
+        for reminder in reminders {
+            let alias = reminder.calendarItemExternalIdentifier.map { reminder.calendar.calendarIdentifier + "/" + $0 } ?? ""
+            current["reminders.reminder/" + reminder.calendarItemIdentifier] = observation("reminders.reminder", reminder.calendarItemIdentifier, data(reminder), alias: alias, at: observedAt)
+        }
+        guard gate.authorized(.reminder) else { throw SourceFailure.permissionMissing }
+        return SourceEnumeration(generation: generation, rows: current.keys.sorted().compactMap { current[$0] })
+    }
+
+    public func revalidate(_ identities: [JSON]) async throws -> [String] {
+        guard gate.authorized(.reminder) else { throw SourceFailure.permissionMissing }
+        var states: [String] = []
+        for identity in identities {
+            let key = identity["native_key"].string
+            switch identity["collection"].string {
+            case "reminders.list":
+                states.append(gate.store.calendar(withIdentifier: key) == nil ? RevalidationState.missing : RevalidationState.present)
+            case "reminders.reminder":
+                states.append(gate.store.calendarItem(withIdentifier: key) is EKReminder ? RevalidationState.present : RevalidationState.missing)
+            default: throw SourceFailure.invalid
+            }
+            guard gate.authorized(.reminder) else { throw SourceFailure.permissionMissing }
+        }
+        return states
     }
 
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {

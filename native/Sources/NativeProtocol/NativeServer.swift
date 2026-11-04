@@ -24,15 +24,21 @@ public struct NativeEffectRejection: Error, Sendable {
 public protocol NativeAdapter: Sendable {
     func effectsAllowed() async -> Bool
     func facts(_ operation: String, args: JSON) async throws -> NativeFacts
+    func revalidate(_ operation: String, identities: [JSON]) async throws -> [String]
+    func forwardChanges(to server: NativeServer) async
     func effect(_ operation: String, args: JSON, permit: JSON) async throws -> JSON
 }
 
 public extension NativeAdapter {
     func effectsAllowed() async -> Bool { true }
+    func revalidate(_ operation: String, identities: [JSON]) async throws -> [String] { throw SourceFailure.unsupported }
+    func forwardChanges(to server: NativeServer) async {}
 }
 
 public actor NativeServer {
-    public static let factOperations: Set<String> = ["agenda.calendars", "agenda.events", "agenda.reminder_lists", "agenda.reminders", "contacts.containers", "contacts.groups", "contacts.contacts", "contacts.history", "ui.target", "ui.actions", "focus.status", "mac.state", "location.status", "permissions.status"]
+    public static let factOperations: Set<String> = ["agenda.calendars", "agenda.events", "agenda.reminder_lists", "agenda.reminders", "contacts.containers", "contacts.groups", "contacts.contacts"]
+    public static let revalidationCollections: [String: String] = ["agenda.calendars": "calendar.calendar", "agenda.events": "calendar.event", "agenda.reminder_lists": "reminders.list", "agenda.reminders": "reminders.reminder", "contacts.groups": "contacts.group", "contacts.contacts": "contacts.contact"]
+    public static let maximumRevalidation = 500
     public static let effectOperations: Set<String> = [
         "calendar.create_event", "calendar.update_event", "calendar.delete_event", "calendar.create_calendar",
         "notes.create", "notes.update", "notes.delete", "notes.create_folder", "notes.move", "notes.rename_folder", "notes.delete_folder",
@@ -57,7 +63,8 @@ public actor NativeServer {
     private let factsOnly: Bool
     private var fence: UInt64 = 0
     private var opened = false
-    private var active = false
+    private var inflight: Set<String> = []
+    private var wire: NativeWire?
     private var usedNonces: Set<String> = []
     private var usedCommands: Set<String> = []
     private var snapshots: [String: Snapshot] = [:]
@@ -80,15 +87,16 @@ public actor NativeServer {
                 return .object(["t": .string("Welcome"), "protocol": .string("native/1"), "version": .integer(1)])
             }
             guard opened, !frame["id"].string.isEmpty, case .object = frame["args"] else { throw SourceFailure.invalid }
-            guard !active else { throw SourceFailure.conflict }
-            active = true
-            defer { active = false }
+            let requestID = frame["id"].string
+            guard inflight.insert(requestID).inserted else { throw SourceFailure.conflict }
+            defer { inflight.remove(requestID) }
             switch frame["t"].string {
             case "Release":
                 guard !factsOnly, let files else { throw SourceFailure.unsupported }
                 try await files.release(frame["args"]["file_ref"])
                 return .object(["t": .string("Released"), "id": frame["id"]])
             case "Facts": return try await page(frame)
+            case "Revalidate": return try await revalidate(frame)
             case "Effect":
                 guard !factsOnly else { throw SourceFailure.unsupported }
                 let op = frame["op"].string
@@ -134,6 +142,23 @@ public actor NativeServer {
         }
     }
 
+    private func revalidate(_ frame: JSON) async throws -> JSON {
+        let op = frame["op"].string
+        guard let collection = Self.revalidationCollections[op] else { throw SourceFailure.unsupported }
+        guard Set(frame["args"].object.keys) == ["identities"] else { throw SourceFailure.invalid }
+        let identities = frame["args"]["identities"].array
+        guard !identities.isEmpty, identities.count <= Self.maximumRevalidation,
+              identities.allSatisfy({ $0["collection"].string == collection && !$0["native_key"].string.isEmpty }) else { throw SourceFailure.invalid }
+        let states = try await adapter.revalidate(op, identities: identities)
+        guard states.count == identities.count, states.allSatisfy({ [RevalidationState.present, RevalidationState.missing, RevalidationState.outsideScope].contains($0) }) else { throw SourceFailure.corrupt }
+        let results = zip(identities, states).map { identity, state in JSON.object(["collection": identity["collection"], "native_key": identity["native_key"], "state": .string(state)]) }
+        return .object(["t": .string("Revalidated"), "id": frame["id"], "op": .string(op), "results": .array(results)])
+    }
+
+    public func changed(source: String, generation: String) {
+        try? wire?.send(.object(["t": .string("Changed"), "source": .string(source), "generation": .string(generation)]))
+    }
+
     private func page(_ frame: JSON) async throws -> JSON {
         let op = frame["op"].string
         guard Self.factOperations.contains(op) else { throw SourceFailure.unsupported }
@@ -177,13 +202,22 @@ public actor NativeServer {
     }
 
     public func run(descriptor: Int32) async throws {
-        let wire = try NativeWire(descriptor: descriptor)
-        while !Task.isCancelled {
-            let frame = try await Task.detached { try wire.receive() }.value
-            guard (frame["t"].string == "Hello") == !opened else { throw SourceFailure.invalid }
-            let response = await handle(frame)
-            try wire.send(response)
-            if !opened { throw SourceFailure.invalid }
+        let link = try NativeWire(descriptor: descriptor)
+        wire = link
+        defer { wire = nil }
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            while !Task.isCancelled {
+                let frame = try await Task.detached { try link.receive() }.value
+                let hello = frame["t"].string == "Hello"
+                guard hello == !opened else { throw SourceFailure.invalid }
+                if hello {
+                    try link.send(await handle(frame))
+                    if !opened { throw SourceFailure.invalid }
+                } else {
+                    group.addTask { try link.send(await self.handle(frame)) }
+                }
+            }
+            group.cancelAll()
         }
     }
 }

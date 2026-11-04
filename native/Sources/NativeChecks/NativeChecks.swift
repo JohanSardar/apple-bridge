@@ -6,8 +6,19 @@ import SourceSupport
 actor FakeNative: NativeAdapter {
     var effects = 0
     var reads = 0
+    func revalidate(_ operation: String, identities: [JSON]) async throws -> [String] {
+        if identities.contains(where: { $0["native_key"] == .string("short") }) { return [] }
+        return identities.map { identity in
+            switch identity["native_key"].string {
+            case "gone": return RevalidationState.missing
+            case "old": return RevalidationState.outsideScope
+            default: return RevalidationState.present
+            }
+        }
+    }
     func facts(_ operation: String, args: JSON) async throws -> NativeFacts {
         reads += 1
+        if args["slow"] == .bool(true) { try await Task.sleep(for: .milliseconds(400)) }
         return NativeFacts(items: (0..<5).map { .object(["native_key": .string("fixture-\($0)"), "data": .object(["title": .string("synthetic-\($0)")])]) }, scope: .string(operation), generation: "fixture-1", complete: args["partial"] != .bool(true))
     }
     func effect(_ operation: String, args: JSON, permit: JSON) async throws -> JSON {
@@ -183,6 +194,49 @@ struct NativeChecks {
         try check(refused["t"] == .string("Error") && refused["code"] == .string("unsupported"), "facts-only server refuses effects")
         let accepted = await effectsServer.handle(shared)
         try check(accepted["t"] == .string("EffectResult"), "effects server keeps its permit after the facts-only refusal")
+        let revalidating = NativeServer(adapter: FakeNative())
+        _ = await revalidating.handle(hello)
+        func ask(_ id: String, op: String = "agenda.events", collection: String = "calendar.event", keys: [String]) -> JSON {
+            .object(["t": .string("Revalidate"), "id": .string(id), "op": .string(op), "args": .object(["identities": .array(keys.map { .object(["collection": .string(collection), "native_key": .string($0)]) })])])
+        }
+        let verdicts = await revalidating.handle(ask("verdicts", keys: ["kept", "gone", "old"]))
+        try check(verdicts["t"] == .string("Revalidated") && verdicts["id"] == .string("verdicts") && verdicts["op"] == .string("agenda.events"), "revalidated frame")
+        try check(verdicts["results"].array.map { $0["state"].string } == ["present", "missing", "outside_scope"] && verdicts["results"].array.map { $0["native_key"].string } == ["kept", "gone", "old"], "revalidate answers in request order")
+        try check(await revalidating.handle(ask("history", op: "contacts.history", keys: ["a"]))["code"] == .string("unsupported"), "revalidate refuses an op outside the catalogue")
+        try check(await revalidating.handle(ask("mismatch", collection: "calendar.calendar", keys: ["a"]))["code"] == .string("invalid"), "revalidate binds the collection to the op")
+        try check(await revalidating.handle(ask("empty", keys: []))["code"] == .string("invalid"), "revalidate refuses an empty list")
+        try check(await revalidating.handle(ask("large", keys: (0..<501).map { "k\($0)" }))["code"] == .string("invalid"), "revalidate refuses more than 500 identities")
+        let partial = await revalidating.handle(ask("partial", keys: ["a", "short"]))
+        try check(partial["t"] == .string("Error") && partial["code"] == .string("corrupt"), "a partial adapter answer is an error, never a short result")
+        let slowFacts: JSON = .object(["t": .string("Facts"), "id": .string("slow"), "op": .string("agenda.events"), "args": .object(["slow": .bool(true)]), "snapshot": .null, "cursor": .null, "limit": .integer(10)])
+        async let slow = revalidating.handle(slowFacts)
+        try await Task.sleep(for: .milliseconds(50))
+        let started = Date()
+        let during = await revalidating.handle(ask("during", keys: ["kept"]))
+        try check(during["t"] == .string("Revalidated") && Date().timeIntervalSince(started) < 0.3, "revalidate is answered while a page is in flight")
+        try check(await slow["t"] == .string("FactPage"), "the slow page still completes")
+        async let first = revalidating.handle(slowFacts)
+        try await Task.sleep(for: .milliseconds(50))
+        let repeated = await revalidating.handle(slowFacts)
+        try check(repeated["code"] == .string("conflict"), "a request id already in flight is refused")
+        _ = await first
+        var pushPair: [Int32] = [-1, -1]
+        guard socketpair(AF_UNIX, SOCK_STREAM, 0, &pushPair) == 0 else { throw CheckFailure.failed("push socketpair") }
+        let pushServer = NativeServer(adapter: FakeNative(), factsOnly: true)
+        let pushing = Task { try? await pushServer.run(descriptor: pushPair[1]) }
+        let pushClient = try NativeWire(descriptor: pushPair[0])
+        try pushClient.send(hello)
+        _ = try await Task.detached { try pushClient.receive() }.value
+        await pushServer.changed(source: "calendar", generation: "native/1")
+        let pushed = try await Task.detached { try pushClient.receive() }.value
+        try check(pushed == .object(["t": .string("Changed"), "source": .string("calendar"), "generation": .string("native/1")]), "Changed is pushed on the same stream")
+        try pushClient.send(ask("over-socket", keys: ["gone"]))
+        let overSocket = try await Task.detached { try pushClient.receive() }.value
+        try check(overSocket["results"].array.first?["state"] == .string("missing"), "revalidate shares the stream with the push")
+        shutdown(pushPair[0], SHUT_RDWR)
+        Darwin.close(pushPair[0])
+        _ = await pushing.value
+        Darwin.close(pushPair[1])
         print("native/1 checks passed")
     }
 }

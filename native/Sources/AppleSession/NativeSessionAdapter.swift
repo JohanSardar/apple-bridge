@@ -10,60 +10,83 @@ import MessagesSource
 import MapsSource
 import MediaDerivatives
 import CryptoKit
+import Contacts
 
 extension AppleSession: NativeAdapter {
     public func effectsAllowed() async -> Bool { (nativeAuthority && !ipcRunning && wire == nil) || (effectsRouted && ipcRunning && wire != nil) }
-    public func facts(_ operation: String, args: JSON) async throws -> NativeFacts {
-        guard args.object.isEmpty || operation == "contacts.history" || operation == "ui.target" else { throw SourceFailure.unsupported }
-        let sink = NativeFactSink()
-        let builtins: SessionSources.Builtins
-        if let nativeSources { builtins = nativeSources }
-        else {
+    private func agendaSources() async throws -> SessionSources.Builtins {
+        if let nativeSources { return nativeSources }
+        if let nativeSourcesTask { return try await nativeSourcesTask.value }
+        let home = self.home
+        let task = Task { @MainActor () throws -> SessionSources.Builtins in
             let root = home.appendingPathComponent("native-facts")
             try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-            builtins = try await SessionSources.Builtins(home: root, labEnabled: false, trace: CaptureTrace())
-            nativeSources = builtins
+            return try SessionSources.Builtins(home: root, labEnabled: false, trace: CaptureTrace())
         }
-        let calendar = builtins.calendar, source = builtins.reminders, contacts = builtins.contacts
+        nativeSourcesTask = task
+        do {
+            let builtins = try await task.value
+            nativeSources = builtins
+            return builtins
+        } catch {
+            nativeSourcesTask = nil
+            throw error
+        }
+    }
+
+    private func page(_ enumeration: SourceEnumeration, collection: String, handles: Bool) -> NativeFacts {
+        var items = enumeration.rows.filter { $0["collection"].string == collection }
+        if handles { items += enumeration.handles.keys.sorted().map { JSON.object(["kind": .string("blob_handle"), "digest": .string($0), "handle": .string(enumeration.handles[$0] ?? "")]) } }
+        return NativeFacts(items: items, scope: .object(["collections": .array([.string(collection)]), "history_token": .string("")]), generation: enumeration.generation, complete: true)
+    }
+
+    public func facts(_ operation: String, args: JSON) async throws -> NativeFacts {
+        guard args.object.isEmpty else { throw SourceFailure.unsupported }
+        let builtins = try await agendaSources()
+        let cache = builtins.enumerations
+        let calendar = builtins.calendar, reminders = builtins.reminders, contacts = builtins.contacts
         switch operation {
         case "agenda.calendars", "agenda.events":
-            guard (await calendar.open()).state == "ready" else { throw SourceFailure.permissionMissing }
-            try await calendar.nativeFacts(into: sink)
-            return await sink.result(collection: operation == "agenda.events" ? "calendar.event" : "calendar.calendar")
+            let enumeration = try await cache.read("calendar") { try await calendar.enumerate() }
+            return page(enumeration, collection: operation == "agenda.events" ? "calendar.event" : "calendar.calendar", handles: operation == "agenda.events")
         case "agenda.reminder_lists", "agenda.reminders":
-            guard (await source.open()).state == "ready" else { throw SourceFailure.permissionMissing }
-            try await source.nativeFacts(into: sink)
             let enrichment = builtins.remindersStore
-            return await sink.result(collection: operation == "agenda.reminders" ? "reminders.reminder" : "reminders.list", enriching: { rows, generation in await enrichment.refresh(rows, generation: generation) })
-        case "contacts.history":
-            guard Set(args.object.keys) == ["history_token"] else { throw SourceFailure.invalid }
-            let history = try await contacts.nativeHistory(args["history_token"].string)
-            let changes = history["changed_contact_ids"].array.map { JSON.object(["collection": .string("contacts.contact"), "native_key": $0]) }
-                + history["changed_group_ids"].array.map { JSON.object(["collection": .string("contacts.group"), "native_key": $0]) }
-            return NativeFacts(items: changes, scope: .object(["collections": .array([.string("contacts.contact"), .string("contacts.group")]), "history_token": history["history_token"]]), generation: "native/1", complete: true)
+            let enumeration = try await cache.read("reminders") {
+                let raw = try await reminders.enumerate()
+                return SourceEnumeration(generation: raw.generation, rows: await enrichment.refresh(raw.rows, generation: raw.generation), handles: raw.handles)
+            }
+            return page(enumeration, collection: operation == "agenda.reminders" ? "reminders.reminder" : "reminders.list", handles: false)
         case "contacts.containers", "contacts.groups", "contacts.contacts":
-            try await contacts.nativeFacts(into: sink)
-            let collection = ["contacts.containers": "contacts.container", "contacts.groups": "contacts.group", "contacts.contacts": "contacts.contact"][operation]
-            return await sink.result(collection: collection)
-        case "location.status":
-            let ready = await LocationStatus().open()
-            return NativeFacts(items: [.object(["state": .string(ready.state), "reason": .string(ready.reason)])], scope: .string("location.status"), generation: "native/1", complete: true)
-        case "focus.status":
-            return NativeFacts(items: [await FocusSource.status()], scope: .string("focus.status"), generation: "native/1", complete: true)
-        case "permissions.status":
-            let states = await nativePermissionStatus()
-            return NativeFacts(items: [states], scope: .string("permissions.status"), generation: "native/1", complete: true)
-        case "mac.state":
-            let mac = await MacSource()
-            try await mac.nativeFacts(into: sink)
-            return await sink.result()
-        case "ui.target":
-            return NativeFacts(items: [try await MessagesAccessibility.nativeTarget(args)], scope: .string("ui.target"), generation: "native/1", complete: true)
-        case "ui.actions":
-            guard let messages = additionalSources["messages"] else { throw SourceFailure.unavailable }
-            let ready = await messages.open()
-            return NativeFacts(items: ready.capabilities.map(JSON.string), scope: .string("ui.actions"), generation: "native/1", complete: true)
+            let enumeration = try await cache.read("contacts") { try await contacts.enumerate() }
+            let collection = ["contacts.containers": "contacts.container", "contacts.groups": "contacts.group", "contacts.contacts": "contacts.contact"][operation] ?? ""
+            return page(enumeration, collection: collection, handles: operation == "contacts.contacts")
         default: throw SourceFailure.unsupported
+        }
+    }
+
+    public func revalidate(_ operation: String, identities: [JSON]) async throws -> [String] {
+        let builtins = try await agendaSources()
+        switch operation {
+        case "agenda.calendars", "agenda.events": return try await builtins.calendar.revalidate(identities)
+        case "agenda.reminder_lists", "agenda.reminders": return try await builtins.reminders.revalidate(identities)
+        case "contacts.groups", "contacts.contacts": return try await builtins.contacts.revalidate(identities)
+        default: throw SourceFailure.unsupported
+        }
+    }
+
+    public func forwardChanges(to server: NativeServer) async {
+        guard let builtins = try? await agendaSources() else { return }
+        let cache = builtins.enumerations, agenda = builtins.agenda
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask {
+                for await _ in await agenda.changes(calendar: true) { await cache.invalidate("calendar"); await server.changed(source: "calendar", generation: "native/1") }
+            }
+            group.addTask {
+                for await _ in await agenda.changes() { await cache.invalidate("reminders"); await server.changed(source: "reminders", generation: "native/1") }
+            }
+            group.addTask {
+                for await _ in NotificationCenter.default.notifications(named: .CNContactStoreDidChange) { await cache.invalidate("contacts"); await server.changed(source: "contacts", generation: "native/1") }
+            }
         }
     }
 
@@ -205,14 +228,5 @@ extension AppleSession: NativeAdapter {
     private func nativeDeadline(_ permit: JSON) throws {
         try Task.checkCancellation()
         guard nativeAuthority, wire == nil, permit["expires_at"].unsigned > UInt64(Date().timeIntervalSince1970) else { throw SourceFailure.expired }
-    }
-
-    @MainActor
-    private func nativePermissionStatus() async -> JSON {
-        let session = PermissionSession()
-        session.refresh()
-        var states = session.report.snapshot()
-        states.merge(await NewPermissions.status()) { _, new in new }
-        return .object(states.mapValues(JSON.string))
     }
 }

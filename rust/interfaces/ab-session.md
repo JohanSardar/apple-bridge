@@ -32,8 +32,9 @@ on successful terminal exhaustive page, no missing rows, stable scope/generation
 Interrupted/truncated/expired scans never imply absence. Error: {t:Error,id,code}.
 Codes: invalid,unsupported,unavailable,permission_missing,expired,conflict,corrupt.
 Closed fact ops: agenda.calendars, agenda.events, agenda.reminder_lists, agenda.reminders,
-contacts.containers, contacts.groups, contacts.contacts, contacts.history, ui.target,
-ui.actions, focus.status, location.status, mac.state, permissions.status. No generic SQL/script selector.
+contacts.containers, contacts.groups, contacts.contacts. No generic SQL/script selector. `Revalidate`
+(`id`,`op`,`args.identities`) answers `Revalidated` with one `state` (`present`/`missing`/`outside_scope`)
+per identity, and Swift pushes `Changed` (`source`,`generation`); both ride the facts stream.
 
 Effect request: {t:Effect,id,op,args,permit:{command_id,owner_fence,ticket,request_hash,
 operation,expires_at,nonce}}. EffectResult: {t:EffectResult,id,evidence:{...}}.
@@ -327,9 +328,22 @@ runs the SQLite store enrichment (`store_*` fields) over the pulled rows with th
 carry the same fields as the IPC capture. `reminders` is also a fact source for outcome binding (`effects::FACT_SOURCES`,
 `routed::holds_facts`): the latest committed capture of the key binds the Outcome.
 
-Known gaps: revalidation results come from the Swift scan's own baseline, so Swift still carries the diff/baseline code until the Rust
-side can ask for revalidation of named candidates (not in the closed native/1 op set). The Reminders SQLite store projection
-(`RemindersStore*`, 1,295 lines) is not ported: it reads the Reminders database, has no oracle in Rust, and still enriches the rows in Swift.
+Rust owns the baseline and the deletion decision for these three sources (`AgendaReader` with `facts`).
+Swift enumerates only what the framework returns now (`CalendarSource.enumerate`, `ContactsSource.enumerate`,
+`RemindersSource.enumerate`) and answers `Revalidate` with a framework fact (`revalidate` on the same sources);
+it keeps no baseline for this path, and the native facts handler has no `ObservationSink`. After a complete
+pull, `AgendaReader` asks `native_facts::Client::revalidate` about the identities the diff cannot account for
+(`agenda::Reader::unaccounted`) and passes only the answers to the diff; a record is deleted or evicted only
+on `missing` / `outside_scope`. An `Error`, a short or reordered answer, a timeout, a closed stream or a new
+generation emits nothing and deletes nothing (`tests/native_revalidation.rs`; simapple control
+`AB_LAB_SESSION_REVALIDATE_CONTROL=refuse|partial`). The reader token carries the diff state, so a restart
+keeps its baseline (`resume`). `native_facts::Client` multiplexes frames by id on one stream with a reader
+thread; `Changed` marks the source due, `facts_poll_ms` is only the fallback.
+
+Known gaps: Swift still runs its ipc/1 capture scans (with their baselines) for these sources until the
+Helper capture path is deleted; effects keep their own stream (fd 200) next to the facts stream (fd 201)
+because `effects.rs` still has its own synchronous native link. The Reminders SQLite store projection and
+the Calendar store enrichment are still read in Swift (`RemindersStore*`, `CalendarStoreEnrichment`).
 
 ### Safari live tabs (facts)
 

@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"sync"
 	"syscall"
 	"time"
 
@@ -27,6 +28,48 @@ type nativeJob struct {
 type nativeReply struct {
 	evidence json.RawMessage
 	err      error
+}
+
+type nativeLink struct {
+	conn net.Conn
+	mu   sync.Mutex
+}
+
+func (l *nativeLink) write(frame any) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return writeNative(l.conn, frame)
+}
+
+func (f *fakeApple) subscribeNative(link *nativeLink) func() {
+	f.nativeMu.Lock()
+	if f.nativeLinks == nil {
+		f.nativeLinks = map[*nativeLink]struct{}{}
+	}
+	f.nativeLinks[link] = struct{}{}
+	f.nativeMu.Unlock()
+	return func() {
+		f.nativeMu.Lock()
+		delete(f.nativeLinks, link)
+		f.nativeMu.Unlock()
+	}
+}
+
+func (f *fakeApple) broadcastChanged(source contracts.Source) {
+	switch source {
+	case contracts.Calendar, contracts.Contacts, contracts.Reminders:
+	default:
+		return
+	}
+	f.nativeMu.Lock()
+	links := make([]*nativeLink, 0, len(f.nativeLinks))
+	for link := range f.nativeLinks {
+		links = append(links, link)
+	}
+	f.nativeMu.Unlock()
+	for _, link := range links {
+		go link.write(map[string]any{"t": "Changed", "source": string(source), "generation": "native/1"})
+	}
 }
 
 func readNative(conn net.Conn) (map[string]json.RawMessage, error) {
@@ -81,6 +124,9 @@ func (f *fakeApple) serveNative(ctx context.Context, path string) (func(), error
 
 func (f *fakeApple) nativeConnection(ctx context.Context, conn net.Conn) {
 	defer conn.Close()
+	link := &nativeLink{conn: conn}
+	unsubscribe := func() {}
+	defer func() { unsubscribe() }()
 	facts := &factSession{}
 	for ctx.Err() == nil {
 		frame, err := readNative(conn)
@@ -93,11 +139,19 @@ func (f *fakeApple) nativeConnection(ctx context.Context, conn net.Conn) {
 		switch kind {
 		case "Hello":
 			facts.hello(frame)
-			if writeNative(conn, map[string]any{"t": "Welcome", "protocol": "native/1", "version": 1}) != nil {
+			if link.write(map[string]any{"t": "Welcome", "protocol": "native/1", "version": 1}) != nil {
 				return
 			}
 		case "Facts":
-			if f.nativeFactsPage(conn, facts, frame) != nil {
+			if facts.subscribed == nil {
+				facts.subscribed = f.subscribeNative(link)
+				unsubscribe = facts.subscribed
+			}
+			if f.nativeFactsPage(link, facts, frame) != nil {
+				return
+			}
+		case "Revalidate":
+			if f.nativeRevalidate(link, frame) != nil {
 				return
 			}
 		case "Effect":
@@ -109,27 +163,32 @@ func (f *fakeApple) nativeConnection(ctx context.Context, conn net.Conn) {
 			json.Unmarshal(frame["op"], &job.op)
 			json.Unmarshal(frame["permit"], &permit)
 			job.commandID, job.ticket = permit.CommandID, permit.Ticket
-			select {
-			case f.nativeJobs <- job:
-			case <-ctx.Done():
-				return
-			}
-			var reply nativeReply
-			select {
-			case reply = <-job.reply:
-			case <-ctx.Done():
-				return
-			}
-			if reply.err != nil {
-				err = writeNative(conn, map[string]any{"t": "Error", "id": id, "code": "unavailable"})
-			} else {
-				err = writeNative(conn, map[string]any{"t": "EffectResult", "id": id, "evidence": reply.evidence})
-			}
-			if err != nil {
-				return
-			}
+			go func() {
+				select {
+				case f.nativeJobs <- job:
+				case <-ctx.Done():
+					conn.Close()
+					return
+				}
+				var reply nativeReply
+				select {
+				case reply = <-job.reply:
+				case <-ctx.Done():
+					conn.Close()
+					return
+				}
+				var err error
+				if reply.err != nil {
+					err = link.write(map[string]any{"t": "Error", "id": id, "code": "unavailable"})
+				} else {
+					err = link.write(map[string]any{"t": "EffectResult", "id": id, "evidence": reply.evidence})
+				}
+				if err != nil {
+					conn.Close()
+				}
+			}()
 		default:
-			if writeNative(conn, map[string]any{"t": "Error", "id": id, "code": "unsupported"}) != nil {
+			if link.write(map[string]any{"t": "Error", "id": id, "code": "unsupported"}) != nil {
 				return
 			}
 		}

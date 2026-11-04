@@ -18,8 +18,10 @@ cursors. Intermediate and incomplete pages never claim completeness. Fact scans
 use separate source instances and storage under `native-facts`, preserving the
 IPC capture source state. Current source adapters accept full native scope with
 empty args; filtered requests fail unsupported. Calendar scope is the existing
-CalendarTime window. Contacts history accepts `history_token` and returns the next
-opaque token and changed identifiers, or expired when a full scan is necessary.
+CalendarTime window. Facts enumerate only what the framework returns now: no baseline, no absent rows, no
+`ObservationSink`. `Revalidate` answers a framework fact (`present`, `missing`, `outside_scope`) per
+identity and `Changed` is pushed on the same stream; frames are handled concurrently by id. Rust owns
+the diff and every deletion decision.
 
 Effects remain disabled on the proxy channel while Swift owns IPC command
 authority. `AppleSession.runNative(descriptor:)` is the exclusive entry point for

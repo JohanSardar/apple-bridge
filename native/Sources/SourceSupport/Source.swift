@@ -106,3 +106,18 @@ public extension ObservationSink {
 public actor UIActor {
  public static let shared = UIActor()
 }
+
+public struct SourceEnumeration: Sendable {
+    public let generation: String
+    public let rows: [JSON]
+    public let handles: [String: String]
+    public init(generation: String, rows: [JSON], handles: [String: String] = [:]) {
+        self.generation = generation; self.rows = rows; self.handles = handles
+    }
+}
+
+public enum RevalidationState {
+    public static let present = "present"
+    public static let missing = "missing"
+    public static let outsideScope = "outside_scope"
+}
