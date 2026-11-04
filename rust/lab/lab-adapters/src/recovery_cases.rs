@@ -1,5 +1,6 @@
 use crate::{
     assertions::{Observed, await_until, converged},
+    frame_proxy::FrameProxy,
     http::{Client, random_id},
     journey::{GATEWAY_SCOPE, is_error},
     replicas::{self, Endpoint},
@@ -538,27 +539,48 @@ fn scope_change(world: &mut World, evidence: &mut Evidence) -> Result<bool> {
     Ok(true)
 }
 fn slow_consumer(world: &mut World, evidence: &mut Evidence) -> Result<bool> {
-    if !await_until(10, || world.feed_connections() >= 1 && connected(0)) {
+    let Some(home) = replicas::endpoints().first().map(|e| e.home.clone()) else {
+        return Ok(fail(evidence, "frame_proxy_start"));
+    };
+    let proxy = match world
+        .peer_address()
+        .and_then(|peer| FrameProxy::start(&world.gateway_home, &home, &peer))
+    {
+        Ok(proxy) => proxy,
+        Err(error) => {
+            evidence.check("frame_proxy_start", false, &error.to_string());
+            return Ok(false);
+        }
+    };
+    world.retarget_proxy(Some(proxy.address()))?;
+    world.partition()?;
+    world.heal()?;
+    if !await_until(10, || proxy.connections() >= 1 && connected(0)) {
+        proxy.close();
+        world.retarget_proxy(None)?;
         return Ok(fail(evidence, "frame_proxy_connect"));
     }
-    let closed = world.feed_closes();
-    replicas::signal(0, "STOP")?;
+    let initial = proxy.connections();
+    proxy.suppress_acks(true);
     if !change(world, "slow-consumer", 10) {
-        let _ = replicas::signal(0, "CONT");
+        proxy.close();
         return Ok(fail(evidence, "suppress_acknowledgements"));
     }
     let start = Instant::now();
-    let dropped = await_until(35, || world.feed_closes() > closed);
+    let dropped = await_until(35, || proxy.connections() > initial);
     let elapsed = start.elapsed();
-    replicas::signal(0, "CONT")?;
+    proxy.suppress_acks(false);
     if !dropped {
+        proxy.close();
         return Ok(fail(evidence, "slow_consumer_disconnected"));
     }
     evidence.check(
         "unacknowledged_consumer_disconnected_within_35_seconds",
-        elapsed <= Duration::from_secs(35),
-        "a consumer that never acknowledges is disconnected by the gateway",
+        elapsed <= Duration::from_secs(35) && proxy.dropped() > 0,
+        &format!("{} acknowledgements dropped", proxy.dropped()),
     );
+    world.retarget_proxy(None)?;
+    proxy.close();
     world.partition()?;
     world.heal()?;
     Ok(true)

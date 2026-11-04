@@ -372,6 +372,23 @@ impl World {
         self.proxy = Some(FaultProxy::start(&target)?);
         Ok(())
     }
+    pub fn retarget_proxy(&self, target: Option<&str>) -> Result<()> {
+        let proxy = self
+            .proxy
+            .as_ref()
+            .ok_or_else(|| Error::Invalid("no fault proxy".into()))?;
+        let default = self.runtime["peer_address"]
+            .as_str()
+            .ok_or_else(|| Error::Invalid("runtime peer address".into()))?;
+        proxy.retarget(target.unwrap_or(default));
+        Ok(())
+    }
+    pub fn peer_address(&self) -> Result<String> {
+        self.runtime["peer_address"]
+            .as_str()
+            .map(str::to_owned)
+            .ok_or_else(|| Error::Invalid("runtime peer address".into()))
+    }
     pub fn pair_address(&self) -> Result<String> {
         if let Some(proxy) = &self.proxy {
             return Ok(proxy.address().to_owned());

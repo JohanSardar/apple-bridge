@@ -64,14 +64,7 @@ pub struct PeerReply {
     pub status: u16,
     pub body: Vec<u8>,
 }
-pub fn peer_post(
-    address: &str,
-    identity: &Identity,
-    pin: &str,
-    path: &str,
-    headers: &[(&str, &str)],
-    body: &[u8],
-) -> Result<PeerReply> {
+pub fn pinned_config(identity: &Identity, pin: &str) -> Result<Arc<ClientConfig>> {
     let provider = Arc::new(rustls::crypto::ring::default_provider());
     let config = ClientConfig::builder_with_provider(provider.clone())
         .with_protocol_versions(&[&rustls::version::TLS13])?
@@ -84,12 +77,23 @@ pub fn peer_post(
             vec![CertificateDer::from(identity.certificate.clone())],
             PrivateKeyDer::Pkcs8(PrivatePkcs8KeyDer::from(identity.pkcs8()?)),
         )?;
+    Ok(Arc::new(config))
+}
+pub fn peer_post(
+    address: &str,
+    identity: &Identity,
+    pin: &str,
+    path: &str,
+    headers: &[(&str, &str)],
+    body: &[u8],
+) -> Result<PeerReply> {
+    let config = pinned_config(identity, pin)?;
     let target = address.to_socket_addrs()?.next().ok_or(Error::Invalid)?;
     let tcp = TcpStream::connect_timeout(&target, Duration::from_secs(5))?;
     tcp.set_read_timeout(Some(Duration::from_secs(10)))?;
     tcp.set_write_timeout(Some(Duration::from_secs(10)))?;
     let connection = ClientConnection::new(
-        Arc::new(config),
+        config,
         ServerName::try_from("localhost").map_err(|_| Error::Invalid)?,
     )?;
     let mut stream = StreamOwned::new(connection, tcp);

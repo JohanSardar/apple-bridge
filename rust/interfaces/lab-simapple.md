@@ -347,3 +347,12 @@ Gate: `python3 rust/lab/families-parity.py ... --web-rm-latency`. Run it with re
 The check found real-level adapters that existed only as sim-step handlers and were unreachable from `--level real`; they are now registered: the `mac_real` set (`MAC-*-REAL`, `MAC-REPLICA`, `TM-STATUS`, `BT-REAL`, `SHAZAM-REAL`), `CALL-READ-REAL`, `REM-LIST-LOST-ACK`, `AUD-TRANSCRIBE`, `SPEECH-SAY`, `VIS-IDLE` and `R1-DMG-REAL`. A scenario that declares only a `replica` level now also runs at the runner's sim level.
 
 `MSG-DELETE-VISIBILITY` (`messages_visibility.rs`) and `MSG-READ-RICH-FIELDS` (`messages_rich.rs`) are in `MESSAGES_B_NATIVE` (`--messages-b-native`) because their native checks need macOS. The retained-delete real proof (`messages_visibility::real`) is compile-only. `WEB-RM-REMINDERS-ITEMS` is run with `--web-rm-items`: the Rust gateway read model p95 for 1000 items is about 40 ms against the 10 ms budget the Go gateway meets.
+## Core tail: progress, snapshot pool, shortcut signing, search update (Phase 8)
+
+CORE-SIM-PROGRESS-RECOVERY reads the durable progress the peer already writes: `rust-sim-progress.json` (`in_progress`, `committed`, `checkpoints`) and the per-source `revision` in `rust-sim-state.json`.
+
+`lab-relay` gains `FeedLink` and `pinned_config`: an mTLS WebSocket client for `/v1/feed` built from a replica home (`identity.pem`, `secrets/`, `credentials.json`), pinned to the gateway fingerprint. `snapshot_pool.rs` uses it for CORE-SNAPSHOT-POOL (twelve paused snapshots, reads and writes progressing, frozen digests on resume). `frame_proxy.rs` terminates TLS with the gateway identity, dials the gateway with the replica identity and relays feed frames, optionally dropping `Ack` frames. `World::retarget_proxy` points the TCP fault proxy at it, so CORE-SLOW-CONSUMER now suppresses acknowledgements like the Go harness instead of pausing the replica.
+
+CORE-SHORTCUT-SIGN runs the `ab-shortcuts` binary found next to the gateway (or `AB_LAB_SHORTCUTS`) and reads plists back with `plutil`, so it runs on macOS only and is in the `--native` group. Its real-level part is compiled, never run.
+
+CORE-SEARCH-UPDATE-PERF is not run by `families-parity.py`. It drives the Go state store in-process, so it moved to `rust/crates/ab-state/tests/search_update_perf.rs` (`make rust-search-perf`, part of `rust-ci`). Speed is recorded (`AB_SEARCH_PERF_OUT` writes JSON), not enforced. ab-state rebuilds the search index inside `open()`, so the Go assertions about search being unavailable or retryable during a background rebuild have no equivalent.

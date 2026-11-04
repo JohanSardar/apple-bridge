@@ -41,7 +41,7 @@ WEB_RM_SCENARIOS = ['web/WEB-RM-MEDIA-COLLECTION', 'web/WEB-RM-SEARCH', 'web/WEB
                     'web/WEB-RM-REMINDERS-HARDENING', 'web/WEB-RM-REMINDERS-LISTS']
 NATIVE_SCENARIOS = ['packaging/Q1-SETUP', 'packaging/R1-RELEASE-SIM', 'files/FILE-IDLE', 'files/FILE-CAPTURE',
                     'safari/SAF-CAPTURE', 'safari/SAF-IDLE',
-                    'core/CORE-SOURCE-SUPPORT']
+                    'core/CORE-SOURCE-SUPPORT', 'core/CORE-SHORTCUT-SIGN']
 MESSAGES_A_SCENARIOS = ['messages/MSG-DB-REPLACED', 'messages/MSG-PERMISSION-LOSS', 'messages/MSG-INCOMING',
                         'messages/MSG-DECODE']
 USAGE_SCENARIOS = ['usage/USE-LOCK-CLIP', 'usage/USE-READONLY', 'usage/USE-REMOTE-LAG']
@@ -117,6 +117,10 @@ REAL_ONLY_COMPILED = ['APP-ALARM-REAL', 'APP-APPROVE-REAL', 'APP-CAPTURE-REAL', 
 REAL_ONLY_STUB = ['APP-BUILD-REAL', 'CON-ME', 'CON-NOTE', 'CON-RELAY', 'FOC-IDLE', 'FOC-SET-REAL',
     'FOC-STATUS-REAL', 'MAIL-AGENT', 'MAIL-BODY-REAL', 'MAIL-DRAFT-REAL', 'MAIL-ORGANIZE-REAL',
     'MAIL-READ-REAL', 'MAIL-SEND-SELF-REAL', 'SC-IDLE']
+SCENARIOS += ['CORE-SIM-PROGRESS-RECOVERY', 'CORE-SNAPSHOT-POOL']
+MOVED_TO_RUST_TESTS = {
+    'core/CORE-SEARCH-UPDATE-PERF': 'drives the Go state store in-process; the Rust runner has no store access. Ported to rust/crates/ab-state/tests/search_update_perf.rs (make rust-search-perf). Speed numbers are recorded, not enforced. The Go assertions search_unavailable_during_rebuild, search_rest_preparing_is_retryable_error_not_empty, search_mcp_preparing_is_retryable_error_not_empty and restart_resumes_pending_rebuild have no Rust equivalent because ab-state rebuilds the search index inside open() instead of in a background migration.',
+}
 
 
 def ignored(scenario, name):
@@ -279,6 +283,10 @@ def main():
         args.scenario = (args.scenario or []) + CALENDAR_NATIVE
     if args.web_agents:
         args.scenario = (args.scenario or []) + WEB_AGENT_SCENARIOS
+    for name in args.scenario or []:
+        key = name if '/' in name else f'core/{name}'
+        if key in MOVED_TO_RUST_TESTS:
+            raise SystemExit(f'{key} is not run by families-parity: {MOVED_TO_RUST_TESTS[key]}')
     out = Path(args.output).resolve()
     out.mkdir(mode=0o700, parents=True, exist_ok=False)
     root = Path(__file__).resolve().parents[2] / 'lab' / 'scenarios'
@@ -295,7 +303,7 @@ def main():
     go, rust = verdicts(out / 'go.jsonl'), verdicts(out / 'rust.jsonl')
     if len(go) != len(files) or go != rust or not all(all(p or st == 'unverified' for p, st in v.values()) for v in rust.values()):
         raise SystemExit(f'verdict mismatch\ngo={go}\nrust={rust}')
-    print(json.dumps({'scenarios': sorted(rust), 'identical': True}))
+    print(json.dumps({'scenarios': sorted(rust), 'identical': True, 'moved': MOVED_TO_RUST_TESTS}))
 
 
 if __name__ == '__main__':
