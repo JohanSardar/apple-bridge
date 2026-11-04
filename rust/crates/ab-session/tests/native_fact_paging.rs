@@ -56,6 +56,15 @@ fn serve(mut stream: UnixStream, facts: Facts, page: usize, requests: Arc<Mutex<
         while let Ok((_, frame)) = receive(&mut stream) {
             if frame["t"] == "Hello" {
                 assert_eq!(frame["owner_fence"], 1);
+                if facts
+                    .lock()
+                    .is_ok_and(|guard| guard.contains_key("early-changed"))
+                {
+                    let _ = send(
+                        &mut stream,
+                        &json!({"t":"Changed","source":"contacts","generation":"native/1"}),
+                    );
+                }
                 let _ = send(
                     &mut stream,
                     &json!({"t":"Welcome","protocol":"native/1","version":1}),
@@ -699,4 +708,80 @@ fn a_facts_link_without_a_native_endpoint_is_refused() {
         )
         .is_err()
     );
+}
+
+fn contacts_over_socket(
+    early_changed: bool,
+) -> Fallible<(Wire, std::path::PathBuf, std::thread::JoinHandle<()>)> {
+    let directory = std::env::temp_dir().join(format!(
+        "ab-native-early-{}-{early_changed}",
+        std::process::id()
+    ));
+    std::fs::create_dir_all(&directory)?;
+    let path = directory.join("native.sock");
+    let _ = std::fs::remove_file(&path);
+    let listener = std::os::unix::net::UnixListener::bind(&path)?;
+    let facts: Facts = Arc::new(Mutex::new(BTreeMap::new()));
+    let contact = |collection: &str, key: &str| json!({"kind":"upsert","collection":collection,"native_key":key,"scoped_alias":format!("c/{key}"),"data":{"name":key},"observed_at":"2026-11-03T00:00:00Z"});
+    for (op, rows) in [
+        ("contacts.containers", vec![]),
+        ("contacts.groups", vec![]),
+        ("contacts.contacts", vec![contact("contacts.contact", "p1")]),
+    ] {
+        set(
+            &facts,
+            op,
+            Operation {
+                generation: "contacts-v1",
+                ..operation(rows)
+            },
+        )?;
+    }
+    if early_changed {
+        set(&facts, "early-changed", operation(vec![]))?;
+    }
+    let requests = Arc::new(Mutex::new(Vec::new()));
+    let server = std::thread::spawn(move || {
+        if let Ok((stream, _)) = listener.accept() {
+            serve(stream, facts, 10, requests);
+        }
+    });
+    let sources = readers::from_config(
+        &json!({"contacts":{"root":"/nonexistent","facts":{"socket":path},"facts_poll_ms":60000}})
+            .to_string(),
+    )?;
+    Ok((wire(sources)?, directory, server))
+}
+
+#[test]
+fn a_changed_push_before_welcome_does_not_kill_the_facts_link() -> Fallible<()> {
+    let (mut wire, directory, _server) = contacts_over_socket(true)?;
+    let (_, first) = receive(&mut wire.gateway)?;
+    assert_eq!(first["source"], "contacts");
+    assert_eq!(names(&first, "upsert"), ["p1"]);
+    drop((wire.gateway, wire.helper));
+    let _ = wire.worker.join();
+    let _ = std::fs::remove_dir_all(&directory);
+    Ok(())
+}
+
+#[test]
+fn a_dead_inherited_facts_link_ends_the_session_instead_of_stalling_every_poll() -> Fallible<()> {
+    let (native, server) = UnixStream::pair()?;
+    drop(server);
+    let client = Arc::new(Client::inherited(native)?);
+    let reader = readers::AgendaReader::contacts("/nonexistent".into())
+        .paged(client, Duration::from_millis(20));
+    let mut sources: BTreeMap<String, Box<dyn readers::CaptureReader>> = BTreeMap::new();
+    sources.insert("contacts".into(), Box::new(reader));
+    let wire = wire(sources)?;
+    let (done, finished) = std::sync::mpsc::channel();
+    let worker = wire.worker;
+    std::thread::spawn(move || {
+        let _ = done.send(worker.join());
+    });
+    let ended = finished.recv_timeout(Duration::from_secs(10))?;
+    assert!(matches!(ended, Ok(Err(_))));
+    drop((wire.gateway, wire.helper));
+    Ok(())
 }

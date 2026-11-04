@@ -287,6 +287,7 @@ fn persist(
 }
 
 const REWALK: Duration = Duration::from_secs(30);
+const LINK_LOST_LIMIT: u32 = 3;
 const WALK_RETRY: Duration = Duration::from_secs(2);
 const WALK_FLOOR: Duration = Duration::from_millis(500);
 const WALK_DUTY: u32 = 20;
@@ -714,6 +715,7 @@ fn produce(
         .as_nanos();
     let sources: Vec<String> = readers.keys().cloned().collect();
     let mut pace: BTreeMap<String, Pace> = BTreeMap::new();
+    let mut lost: BTreeMap<String, u32> = BTreeMap::new();
     if !wait_open(gate)? {
         return Ok(());
     }
@@ -769,6 +771,9 @@ fn produce(
             if more {
                 gate.lock()?.urgent.insert(source.clone());
             }
+            if next.is_ok() {
+                lost.remove(source);
+            }
             let capture = match next {
                 Ok(Some(capture)) => capture,
                 Ok(None) => {
@@ -779,6 +784,16 @@ fn produce(
                 Err(error) => {
                     eprintln!("ab-session: {source} reader: {error}");
                     release(to_helper, source, &covers)?;
+                    if matches!(error, Error::LinkLost) {
+                        let strikes = lost.entry(source.clone()).or_default();
+                        *strikes += 1;
+                        if *strikes >= LINK_LOST_LIMIT {
+                            eprintln!(
+                                "ab-session: native/1 facts link is gone for good; exiting so the Helper session restarts"
+                            );
+                            return Err(error);
+                        }
+                    }
                     continue;
                 }
             };
