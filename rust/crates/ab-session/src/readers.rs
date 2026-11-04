@@ -1029,7 +1029,6 @@ pub fn confine_staging(root: &Path, staging: &Path) -> Result<(), Error> {
     Ok(())
 }
 
-
 fn default_generation() -> String {
     "rust-native/1".into()
 }

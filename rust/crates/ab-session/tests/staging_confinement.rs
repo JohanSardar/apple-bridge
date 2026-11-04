@@ -108,7 +108,11 @@ fn voice_memos_never_write_inside_the_source_container() -> Fallible<()> {
         .first()
         .and_then(|frame| frame["blob_handles"].as_object())
         .ok_or("blob handles")?;
-    let handle = handles.values().next().and_then(Value::as_str).ok_or("handle")?;
+    let handle = handles
+        .values()
+        .next()
+        .and_then(Value::as_str)
+        .ok_or("handle")?;
     let chunk = reader.blob(handle, 0, 1024)?;
     assert_eq!(chunk["t"], "BlobChunk");
     assert_eq!(tree(&root)?, before);
@@ -199,12 +203,18 @@ fn staging_that_overlaps_the_source_root_is_refused() -> Fallible<()> {
     }
     for source in ["voice_memos", "notes"] {
         let config = json!({source:{"root":root}}).to_string();
-        assert!(readers::from_config(&config).is_err(), "{source} without staging");
+        assert!(
+            readers::from_config(&config).is_err(),
+            "{source} without staging"
+        );
     }
     let entries = names(&root)?;
     assert_eq!(
         entries,
-        vec![PathBuf::from("CloudRecordings.db"), PathBuf::from("memo.m4a")]
+        vec![
+            PathBuf::from("CloudRecordings.db"),
+            PathBuf::from("memo.m4a")
+        ]
     );
     std::fs::remove_dir_all(root)?;
     std::fs::remove_dir_all(outside)?;

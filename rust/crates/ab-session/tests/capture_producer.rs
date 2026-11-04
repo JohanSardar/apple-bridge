@@ -202,7 +202,8 @@ fn media_source_is_routed(source: &str) -> Fallible<()> {
     ));
     std::fs::create_dir_all(&directory)?;
     let staging = temporary(&format!("{source}-staging"))?;
-    let sources = readers::from_config(&json!({source:{"root":directory,"staging":staging}}).to_string())?;
+    let sources =
+        readers::from_config(&json!({source:{"root":directory,"staging":staging}}).to_string())?;
     let (mut gateway, session_gateway) = UnixStream::pair()?;
     let (mut helper, session_helper) = UnixStream::pair()?;
     for socket in [&gateway, &helper] {
