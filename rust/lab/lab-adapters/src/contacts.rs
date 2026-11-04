@@ -225,12 +225,13 @@ fn percentile95(samples: &mut [f64]) -> f64 {
     let rank = ((samples.len() as f64) * 0.95).ceil() as usize;
     samples[rank.saturating_sub(1).min(samples.len() - 1)]
 }
+pub const STUB: [&str; 3] = ["CON-ME", "CON-NOTE", "CON-RELAY"];
 pub fn run(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result<()> {
     let id = evidence.scenario.clone();
     match id.as_str() {
         "CON-IMPORT" => crate::imports::contacts(world, input, evidence),
         "CON-RECIPIENT-LOOKUP" => recipient_lookup(world, evidence),
-        "CON-ME" | "CON-NOTE" | "CON-RELAY" => Err(Error::Invalid(format!(
+        _ if STUB.contains(&id.as_str()) => Err(Error::Invalid(format!(
             "{id} needs a real or relay world, not ported to the sim-only Rust runner"
         ))),
         "CON-GROUPS" => groups(world, evidence),

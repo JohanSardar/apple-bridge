@@ -642,6 +642,20 @@ pub fn iwork(client: &Client, evidence: &mut Evidence) -> Result<()> {
     mac::iwork(client, evidence);
     Ok(())
 }
+pub const SCENARIOS: [&str; 11] = [
+    "MAC-AUDIO-REAL",
+    "MAC-REPLICA",
+    "MAC-APPEARANCE-REAL",
+    "MAC-APPS-REAL",
+    "MAC-KEEPAWAKE-REAL",
+    "MAC-CLIPBOARD-REAL",
+    "MAC-NOTIFY-REAL",
+    "MAC-POWER-REAL",
+    "TM-STATUS",
+    "BT-REAL",
+    "SHAZAM-REAL",
+];
+
 pub fn run(world: &mut World, evidence: &mut Evidence) -> Result<()> {
     let Some(client) = mac::setup(world, evidence)? else {
         return Ok(());

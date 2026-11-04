@@ -35,6 +35,7 @@ PIM_NATIVE_SCENARIOS = ['notes/NOTE-DECODE', 'mail/MAIL-CAPTURE', 'mail/MAIL-BOD
                         'mail/MAIL-IDLE', 'mail/MAIL-LIVE', 'mail/MAIL-NO-FALSE-DELETE']
 MEDIA_SCENARIOS = ['web/WEB-MEDIA-VARIANTS', 'messages/MSG-MEDIA-CLEANUP']
 WEB_RELAY_SCENARIOS = ['web/WEB-RELAY-AGENTS', 'web/WEB-RELAY-AUTH', 'web/WEB-RELAY-PAIRING']
+WEB_RM_ITEMS_SCENARIOS = ['web/WEB-RM-REMINDERS-ITEMS']
 WEB_RM_SCENARIOS = ['web/WEB-RM-MEDIA-COLLECTION', 'web/WEB-RM-SEARCH', 'web/WEB-RM-THREAD-ORIGINATOR',
                     'web/WEB-RM-THREAD-ORIGINATOR-PERF', 'web/WEB-RM-REMINDERS-DEMO',
                     'web/WEB-RM-REMINDERS-HARDENING', 'web/WEB-RM-REMINDERS-LISTS']
@@ -76,7 +77,7 @@ NATIVE_MEDIA_SCENARIOS = ['web/NATIVE-MEDIA-EXPORT-SAFETY', 'web/NATIVE-MEDIA-PO
 MESSAGES_B_SCENARIOS = [f'messages/MSG-{name}' for name in [
     'REACT', 'READSTATE-REAL', 'RECEIPTS', 'REPLY', 'RESEND', 'SELFTEST', 'SEND-FILES', 'SEND-GHOST',
     'SEND-IDENTICAL-MANUAL', 'SEND-NEW-HANDLE', 'SEND-SELF-EMAIL', 'SEND-SELF-TEXT', 'UI-INTERFERENCE', 'UNSEND']]
-MESSAGES_B_NATIVE = ['messages/MSG-WATCHER-REARM']
+MESSAGES_B_NATIVE = ['messages/MSG-WATCHER-REARM', 'messages/MSG-DELETE-VISIBILITY', 'messages/MSG-READ-RICH-FIELDS']
 MAPS_SCENARIOS = ['maps/MAP-SIM', 'maps/LOC-SIM', 'files/FILE-COMMANDS', 'files/FILE-CRUD-REAL',
                   'files/FILE-OFFLOAD-REAL']
 CALENDAR_SCENARIOS = ['calendar/' + n for n in [
@@ -101,6 +102,21 @@ CORE_BULK_SCENARIOS = ['CORE-ACK-DURABLE', 'CORE-CAPTURE-ALIASES', 'CORE-CREDENT
                        'CORE-DISCONNECT-DETECT', 'CORE-DOCTOR', 'CORE-CLOCK-DELAY']
 SCENARIOS += CORE_BULK_SCENARIOS
 SCENARIOS += ROBUST_SCENARIOS
+REAL_ONLY_COMPILED = ['APP-ALARM-REAL', 'APP-APPROVE-REAL', 'APP-CAPTURE-REAL', 'APP-CMD-REAL',
+    'APP-DEVICE-REAL', 'APP-HEALTH-REAL', 'APP-HEALTH-WRITE-REAL', 'APP-INTENTS-REAL', 'APP-LIVE-REAL',
+    'APP-LOC-REAL', 'APP-MOTION-REAL', 'APP-NOTIFY-REAL', 'APP-PAIR-REAL', 'APP-SCREENTIME-REAL',
+    'APP-SHELL-REAL', 'AUD-TRANSCRIBE', 'BT-REAL', 'CALL-READ-REAL', 'CALLS-REPLICA', 'CONN-CLAUDE-CODE',
+    'CONN-RELAY-CLAUDE', 'FILE-REPLICA', 'FILE-SEARCH-REAL', 'HELPER-LIVE-BACKFILL',
+    'HELPER-RELEASE-COMMANDS', 'HELPER-RESTART-REAL', 'HELPER-SESSION-SOAK', 'HELPER-SIGNED-APP-CACHE',
+    'HELPER-TCC-READY', 'LOC-CURRENT-REAL', 'LOC-GEOCODE-REAL', 'LOC-IDLE', 'MAC-APPEARANCE-REAL',
+    'MAC-APPS-REAL', 'MAC-AUDIO-REAL', 'MAC-CLIPBOARD-REAL', 'MAC-KEEPAWAKE-REAL', 'MAC-NOTIFY-REAL',
+    'MAC-POWER-REAL', 'MAC-REPLICA', 'MAIL-REPLICA', 'MAP-DIRECTIONS-REAL', 'MAP-IDLE', 'MAP-SEARCH-REAL',
+    'MAP-SNAPSHOT-REAL', 'PKG-BACKGROUND', 'PKG-INSTALL', 'R1-DMG-REAL', 'REM-LIST-LOST-ACK',
+    'RMT-STATUS-OFF', 'SAF-BOOKMARKS-REAL', 'SAF-HISTORY-REAL', 'SHAZAM-REAL', 'SPEECH-SAY', 'TM-STATUS',
+    'VIS-IDLE', 'WEB-REM-WRITE']
+REAL_ONLY_STUB = ['APP-BUILD-REAL', 'CON-ME', 'CON-NOTE', 'CON-RELAY', 'FOC-IDLE', 'FOC-SET-REAL',
+    'FOC-STATUS-REAL', 'MAIL-AGENT', 'MAIL-BODY-REAL', 'MAIL-DRAFT-REAL', 'MAIL-ORGANIZE-REAL',
+    'MAIL-READ-REAL', 'MAIL-SEND-SELF-REAL', 'SC-IDLE']
 
 
 def ignored(scenario, name):
@@ -125,10 +141,44 @@ def verdicts(path):
     return rows
 
 
+def check_real_only(families):
+    if not families:
+        raise SystemExit('--families is required')
+    root = Path(__file__).resolve().parents[2] / 'lab' / 'scenarios'
+    listed = {**{n: 'compiled' for n in REAL_ONLY_COMPILED}, **{n: 'stub' for n in REAL_ONLY_STUB}}
+    if len(listed) != len(REAL_ONLY_COMPILED) + len(REAL_ONLY_STUB):
+        raise SystemExit('a scenario is listed twice across REAL_ONLY_COMPILED and REAL_ONLY_STUB')
+    paths = []
+    for name in listed:
+        found = sorted(root.glob(f'*/{name}.yaml'))
+        if len(found) != 1:
+            raise SystemExit(f'{name}: expected one YAML under lab/scenarios, found {len(found)}')
+        paths.append(str(found[0]))
+    result = subprocess.run([families, 'check', *paths], capture_output=True, text=True, timeout=120)
+    rows = {}
+    for line in result.stdout.splitlines():
+        if line.startswith('{'):
+            row = json.loads(line)
+            rows[row['scenario']] = row
+    problems = []
+    for name, want in listed.items():
+        row = rows.get(name)
+        if row is None:
+            problems.append(f'{name}: not checked')
+        elif not row['ok']:
+            problems.append(f"{name}: {row['kind']}")
+        elif row['kind'] != want:
+            problems.append(f"{name}: listed as {want} but the Rust runner reports {row['kind']}")
+    if problems:
+        raise SystemExit('real-only check failed\n' + '\n'.join(problems))
+    print(json.dumps({'compiled': len(REAL_ONLY_COMPILED), 'stub': len(REAL_ONLY_STUB), 'checked': True}))
+
+
 def main():
     parser = argparse.ArgumentParser()
     for name in ['families', 'go-lab', 'gateway', 'simapple', 'output']:
-        parser.add_argument('--' + name, required=True)
+        parser.add_argument('--' + name)
+    parser.add_argument('--check-real-only', dest='check_real_only', action='store_true')
     parser.add_argument('--scenario', action='append')
     parser.add_argument('--import', dest='imports', action='store_true')
     parser.add_argument('--messages-a', dest='messages_a', action='store_true')
@@ -137,6 +187,7 @@ def main():
     parser.add_argument('--messages-b', dest='messages_b', action='store_true')
     parser.add_argument('--messages-b-native', dest='messages_b_native', action='store_true')
     parser.add_argument('--web-rm', dest='web_rm', action='store_true')
+    parser.add_argument('--web-rm-items', dest='web_rm_items', action='store_true')
     parser.add_argument('--web-relay', dest='web_relay', action='store_true')
     parser.add_argument('--web-rm-latency', dest='web_rm_latency', action='store_true')
     parser.add_argument('--native', dest='native', action='store_true')
@@ -163,6 +214,12 @@ def main():
     parser.add_argument('--vision-native', dest='vision_native', action='store_true')
     parser.add_argument('--web-agents', dest='web_agents', action='store_true')
     args = parser.parse_args()
+    if args.check_real_only:
+        check_real_only(args.families)
+        return
+    for name in ['families', 'go_lab', 'gateway', 'simapple', 'output']:
+        if not getattr(args, name):
+            parser.error('--' + name.replace('_', '-') + ' is required')
     for flag, group in [(args.usage, USAGE_SCENARIOS), (args.darwin_usage, DARWIN_USAGE_SCENARIOS), (args.calls, CALLS_SCENARIOS), (args.helper, HELPER_SCENARIOS)]:
         if flag:
             args.scenario = (args.scenario or []) + group
@@ -182,6 +239,8 @@ def main():
         args.scenario = (args.scenario or []) + MEDIA_SCENARIOS
     if args.web_relay:
         args.scenario = (args.scenario or []) + WEB_RELAY_SCENARIOS
+    if args.web_rm_items:
+        args.scenario = (args.scenario or []) + WEB_RM_ITEMS_SCENARIOS
     if args.web_rm:
         args.scenario = (args.scenario or []) + WEB_RM_SCENARIOS
     if args.web_rm_latency:

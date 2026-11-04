@@ -249,7 +249,7 @@ fn media_collection(world: &World, evidence: &mut Evidence) -> Result<()> {
     }
     Ok(())
 }
-pub fn readmodels(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> {
+pub fn readmodels(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result<()> {
     let scenario = evidence.scenario.clone();
     match scenario.as_str() {
         "WEB-RM-MEDIA-COLLECTION" => media_collection(world, evidence),
@@ -257,6 +257,7 @@ pub fn readmodels(world: &mut World, _: &Value, evidence: &mut Evidence) -> Resu
         "MSG-DECODE-BALLOON" | "MSG-DECODE-FORMATTING" => {
             crate::messages_a::decode::run(world, evidence)
         }
+        "MSG-READ-RICH-FIELDS" => crate::messages_rich::run(world, input, evidence),
         "REM-STORE-DECODE" => crate::reminders_store::run(world, evidence),
         "WEB-CON-LIST" => crate::contacts_list::readmodels(world, evidence),
         "WEB-RM-THREAD-ORIGINATOR" | "WEB-RM-THREAD-ORIGINATOR-PERF" => {

@@ -70,6 +70,7 @@ pub struct Registry {
 #[must_use]
 pub fn supports_level(scenario: &Scenario, level: &str) -> bool {
     scenario.levels.iter().any(|s| s == level)
+        || (level == "sim" && scenario.levels.iter().any(|s| s == "replica"))
         || (level == "real"
             && matches!(scenario.id.as_str(), "MAC-REPLICA" | "FILE-REPLICA")
             && scenario.levels.iter().any(|s| s == "replica"))
@@ -83,6 +84,10 @@ impl Registry {
     }
     pub fn register_standalone(&mut self, id: &str, handler: StandaloneHandler) {
         self.standalone.insert(id.into(), handler);
+    }
+    #[must_use]
+    pub fn has_step(&self, name: &str) -> bool {
+        self.handlers.contains_key(name)
     }
     #[must_use]
     pub fn has_real(&self, id: &str) -> bool {

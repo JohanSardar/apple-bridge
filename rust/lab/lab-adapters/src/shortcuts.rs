@@ -27,6 +27,13 @@ pub const SCENARIOS: [(&str, &str); 14] = [
     ("SC-IDLE", "shortcuts_real_only"),
 ];
 
+#[must_use]
+pub fn real_only_stub(id: &str) -> bool {
+    SCENARIOS
+        .iter()
+        .any(|(scenario, action)| *scenario == id && *action == "shortcuts_real_only")
+}
+
 pub fn inject(scenario: &mut Scenario) {
     if !scenario.given.is_empty() || !scenario.when.is_empty() || !scenario.then.is_empty() {
         return;

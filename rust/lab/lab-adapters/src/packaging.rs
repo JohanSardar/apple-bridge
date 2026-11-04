@@ -57,7 +57,7 @@ fn script(
     Ok(())
 }
 
-fn release_dmg(evidence: &mut Evidence) {
+pub fn release_dmg(evidence: &mut Evidence) {
     let dmg = std::env::var("APPLE_BRIDGE_RELEASE_DMG").unwrap_or_default();
     evidence.check("local_notarized_dmg_available", !dmg.is_empty(), "");
     if dmg.is_empty() {
