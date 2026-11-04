@@ -1065,7 +1065,10 @@ fn safari_live_tabs_arrive_as_helper_facts_and_leave_as_rust_captures() -> Falli
     )?;
     expect_silence(&mut session.gateway)?;
 
-    send(&mut session.helper, &tab_frame("t1", &[(7, 1, "One"), (7, 2, "Two")], false))?;
+    send(
+        &mut session.helper,
+        &tab_frame("t1", &[(7, 1, "One"), (7, 2, "Two")], false),
+    )?;
     let (_, committed) = receive(&mut session.helper)?;
     assert_eq!(committed["t"], "Committed");
     assert_eq!(committed["checkpoint"], "t1");
@@ -1085,7 +1088,10 @@ fn safari_live_tabs_arrive_as_helper_facts_and_leave_as_rust_captures() -> Falli
     assert_eq!(first["observations"][0]["data"]["title"], "One");
     commit(&mut session, "safari", &first, size)?;
 
-    send(&mut session.helper, &tab_frame("t2", &[(7, 1, "One renamed")], false))?;
+    send(
+        &mut session.helper,
+        &tab_frame("t2", &[(7, 1, "One renamed")], false),
+    )?;
     assert_eq!(receive(&mut session.helper)?.1["t"], "Committed");
     let (size, second) = receive(&mut session.gateway)?;
     assert_eq!(second["live"], true);
@@ -1105,7 +1111,10 @@ fn safari_live_tabs_arrive_as_helper_facts_and_leave_as_rust_captures() -> Falli
     assert_eq!(kinds, [("upsert", "7:1"), ("absent", "7:2")]);
     commit(&mut session, "safari", &second, size)?;
 
-    send(&mut session.helper, &tab_frame("t3", &[(7, 1, "One renamed")], false))?;
+    send(
+        &mut session.helper,
+        &tab_frame("t3", &[(7, 1, "One renamed")], false),
+    )?;
     assert_eq!(receive(&mut session.helper)?.1["t"], "Committed");
     expect_silence(&mut session.gateway)?;
 
