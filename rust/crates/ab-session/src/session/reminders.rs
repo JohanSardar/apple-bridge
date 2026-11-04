@@ -1,3 +1,6 @@
+use super::owned::{
+    Driver, Probe, Refusal, Settled, conflict, equal, native_failure, refuse, text,
+};
 use serde_json::{Map, Value, json};
 
 const OPERATIONS: [&str; 8] = [
@@ -46,56 +49,6 @@ const PROJECTION: [&str; 28] = [
     "store_status",
     "store_coverage",
 ];
-
-pub(super) trait Probe {
-    fn call(&self, operation: &str, args: &Value) -> Result<Value, String>;
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub(super) struct Refusal {
-    pub code: String,
-    pub key: Option<String>,
-}
-
-fn refuse(code: &str) -> Refusal {
-    Refusal {
-        code: code.into(),
-        key: None,
-    }
-}
-
-fn conflict(key: &str) -> Refusal {
-    Refusal {
-        code: "conflict".into(),
-        key: (!key.is_empty()).then(|| key.to_owned()),
-    }
-}
-
-fn native_failure(code: &str) -> Refusal {
-    match code {
-        "permission_missing" | "unsupported" | "invalid" | "conflict" => refuse(code),
-        _ => refuse("unavailable"),
-    }
-}
-
-fn equal(left: &Value, right: &Value) -> bool {
-    match (left, right) {
-        (Value::Number(a), Value::Number(b)) => a == b || a.as_f64() == b.as_f64(),
-        (Value::Array(a), Value::Array(b)) => {
-            a.len() == b.len() && a.iter().zip(b).all(|(x, y)| equal(x, y))
-        }
-        (Value::Object(a), Value::Object(b)) => {
-            a.len() == b.len()
-                && a.iter()
-                    .all(|(key, x)| b.get(key).is_some_and(|y| equal(x, y)))
-        }
-        _ => left == right,
-    }
-}
-
-fn text<'a>(value: &'a Value, key: &str) -> &'a str {
-    value[key].as_str().unwrap_or_default()
-}
 
 fn base(data: &Value) -> Map<String, Value> {
     data.as_object()
@@ -334,6 +287,35 @@ fn field_matches(actual: &Value, name: &str, value: &Value) -> bool {
     equal(&actual[name], expected)
 }
 
+fn settle(operation: &str, written: &Value) -> Option<Settled> {
+    verified(operation, written).then(|| Settled {
+        disposition: "locally_observed",
+        evidence: json!({
+            "native_key": written["native_key"],
+            "observed": true,
+            "absent": absent(operation),
+        }),
+    })
+}
+
+fn reconcile_args(found: &Value, operation: &str) -> Value {
+    if found["absent"] == true {
+        json!({"absent_key": found["native_key"], "list": operation == "reminders.delete_list"})
+    } else {
+        json!({})
+    }
+}
+
+pub(super) const DRIVER: Driver = Driver {
+    name: "reminders",
+    prepare,
+    validate,
+    write,
+    settle,
+    resolved,
+    reconcile_args,
+};
+
 #[cfg(test)]
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
@@ -504,7 +486,7 @@ mod tests {
             prepare(&probe, &update(&json!({})), &expected())
                 .unwrap_err()
                 .code,
-            "permission_missing"
+            "unavailable"
         );
         probe.fail = Some(("reminders.read_reminder", "anything_else"));
         assert_eq!(
