@@ -96,7 +96,7 @@ extension AppleSession: NativeAdapter {
         switch operation {
         case "agenda.calendars", "agenda.events": return try await builtins.calendar.revalidate(identities)
         case "agenda.reminder_lists", "agenda.reminders": return try await builtins.reminders.revalidate(identities)
-        case "contacts.groups", "contacts.contacts": return try await builtins.contacts.revalidate(identities)
+        case "contacts.containers", "contacts.groups", "contacts.contacts": return try await builtins.contacts.revalidate(identities)
         default: throw SourceFailure.unsupported
         }
     }

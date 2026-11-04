@@ -65,8 +65,7 @@ returns `conflict`. Revalidation and `Changed` ride the same stream as facts; th
 
 `Revalidate` fields: `id`, `op`, `args:{identities:[{collection,native_key,data?}]}` with 1..500
 identities, every `collection` the one `op` enumerates (`agenda.calendars`/`agenda.events`/
-`agenda.reminder_lists`/`agenda.reminders`/`contacts.groups`/`contacts.contacts`; containers are never
-asked). `Revalidated` fields: `id`, `op`, `results:[{collection,native_key,state}]`, one result per
+`agenda.reminder_lists`/`agenda.reminders`/`contacts.containers`/`contacts.groups`/`contacts.contacts`). `Revalidated` fields: `id`, `op`, `results:[{collection,native_key,state}]`, one result per
 identity in request order. `state` is a framework fact: `present` (the framework still has it),
 `missing` (the framework answered and the record does not exist), `outside_scope` (Calendar only: the
 event exists or aged out of the enumerated window). A result count or order that differs from the request,

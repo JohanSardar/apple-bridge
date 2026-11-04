@@ -16,8 +16,8 @@ snapshot identity and source generation before constructing this aggregate.
 
 Missing Calendar events require an explicit `Absent`, `Evict` or `Present`
 revalidation result. Missing Contacts contacts and groups require explicit
-absence confirmation. A full Contacts container scan establishes container
-absence. Unconfirmed missing records remain candidates. New generations replay
+absence confirmation. A container missing from a complete snapshot is never an
+absence by itself: it needs the same explicit confirmation. Unconfirmed missing records remain candidates. New generations replay
 current records and retain old candidates without emitting false deletions.
 Calendar identities replaced by another identity with the same nonempty scoped
 alias do not produce a deletion. Tombstones retain the Swift observation data.
@@ -32,7 +32,7 @@ scope helpers. It supplies synthetic observations, bounded-window lookup results
 and absence confirmations instead of accessing EventKit or Contacts. It never
 opens a database, requests a permission or starts the Helper.
 
-The replay compares 9 Calendar and 10 Contacts transitions, including unchanged
+The replay compares 9 Calendar and 11 Contacts transitions, including unchanged
 polls, data and alias changes, identity replacement, revalidated deletion/window
 eviction, forced replay, a Contacts generation reset and empty reconciliation.
 It compares complete observations and independently emitted Swift JSONEncoder

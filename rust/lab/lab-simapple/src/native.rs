@@ -18,11 +18,12 @@ const READ_LIMIT: usize = 1 << 20;
 const MAX_REVALIDATE: usize = 500;
 const JOB_WAIT: Duration = Duration::from_secs(60);
 
-const REVALIDATION: [(&str, &str); 6] = [
+const REVALIDATION: [(&str, &str); 7] = [
     ("agenda.calendars", "calendar.calendar"),
     ("agenda.events", "calendar.event"),
     ("agenda.reminder_lists", "reminders.list"),
     ("agenda.reminders", "reminders.reminder"),
+    ("contacts.containers", "contacts.container"),
     ("contacts.groups", "contacts.group"),
     ("contacts.contacts", "contacts.contact"),
 ];
