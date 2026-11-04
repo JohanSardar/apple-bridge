@@ -478,9 +478,7 @@ impl Hub {
             drop(core);
             return self.refuse(&id, "not_found");
         };
-        let open = saved["t"] == "Outcome"
-            && ["indeterminate", "locally_observed"]
-                .contains(&saved["disposition"].as_str().unwrap_or_default());
+        let open = saved["t"] == "Outcome" && saved["disposition"] != "failed_no_effect";
         if open {
             *core.commands.resolving.entry(id.clone()).or_default() += 1;
             drop(core);
