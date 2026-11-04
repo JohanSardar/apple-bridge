@@ -477,7 +477,7 @@ mod tests {
         assert_eq!(prepare(&invalid, &update(&json!({})), &expected()).unwrap_err().code, "invalid");
         let delete = update(&json!({"op": "calendar.delete_event"}));
         assert!(prepare(&invalid, &delete, &expected()).is_ok());
-        assert!(!invalid.calls.borrow().iter().skip(3).any(|call| call == "calendar.goal") || true);
+        assert!(!invalid.calls.borrow().iter().any(|call| call == "calendar.goal"));
     }
 
     #[test]
