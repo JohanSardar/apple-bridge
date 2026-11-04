@@ -614,7 +614,9 @@ impl Layer {
                 }
             }
         }
-        let args = canonical(&args)?;
+        let Ok(args) = canonical(&args) else {
+            return Ok(rejection(command_id, "invalid", "invalid", None));
+        };
         let prepared = json!({"action":durable_action(&command["action"]),"native_state":ticket.prepared["native_state"],"request_hash":command["request_hash"]});
         let permit = self.guard()?.begin(PreparedEffect {
             command_id: id.into(),
@@ -647,7 +649,9 @@ impl Layer {
         let operation = text(frame, "op")?;
         let fence = self.state()?.fence;
         let command_id = format!("native-query:{fence}:{id}");
-        let args = canonical(&json!({"session_query":true,"args":frame["args"]}))?;
+        let Ok(args) = canonical(&json!({"session_query":true,"args":frame["args"]})) else {
+            return Ok(json!({"t":"QueryError","id":id,"code":"invalid"}));
+        };
         let expires_at = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map_err(|_| Error::Invalid)?
@@ -731,6 +735,13 @@ impl Layer {
                 }
                 if self.guard()?.outcome(&id).is_some() {
                     return Err(Error::AlreadyStarted);
+                }
+                if canonical(value).is_err() {
+                    send(
+                        &mut *output.lock().map_err(|_| Error::WorkerPanicked)?,
+                        &rejection(&value["command_id"], "invalid", "invalid", None),
+                    )?;
+                    return Ok(false);
                 }
                 let mut state = self.state()?;
                 if state.commands.len() >= 8 || state.tickets.len() >= 8 {
