@@ -1,3 +1,4 @@
+#![allow(clippy::too_many_lines)]
 use crate::{demo, http::Client, journey::GATEWAY_SCOPE};
 use lab_demo::{Options, generate};
 use lab_runner::Evidence;
