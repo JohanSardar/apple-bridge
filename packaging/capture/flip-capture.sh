@@ -41,7 +41,7 @@ cfg.setdefault("poll_ms", 5000)
 for line in open(plan):
     name, root = line.rstrip("\n").split("\t", 1)
     entry = {"root": root}
-    if name in ("calendar", "contacts", "reminders", "files", "mac"):
+    if name in ("calendar", "contacts", "reminders", "files", "mac", "messages"):
         entry["facts"] = "native"
     if name == "files":
         entry["home"] = base

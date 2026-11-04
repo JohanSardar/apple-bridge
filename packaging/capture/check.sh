@@ -6,7 +6,8 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 export HOME="$work/home"
 mkdir -p "$HOME/Library/Mobile Documents/com~apple~CloudDocs/Bridge Test" "$HOME/Library/Safari" "$HOME/Library/Biome/streams" "$HOME/Library/Application Support/AppleBridgeLive"
-touch "$HOME/Library/Safari/History.db" "$HOME/Library/Application Support/AppleBridgeLive/state.db"
+mkdir -p "$HOME/Library/Messages"
+touch "$HOME/Library/Messages/chat.db" "$HOME/Library/Safari/History.db" "$HOME/Library/Application Support/AppleBridgeLive/state.db"
 gateway="$work/gateway"
 mkdir -p "$gateway/helper"
 touch "$gateway/state.db"
@@ -44,6 +45,14 @@ assert sources["files"]["home"] == sys.argv[2], sources["files"]
 assert sources["files"]["root"].endswith("com~apple~CloudDocs/Bridge Test"), sources["files"]
 assert "facts" not in sources["safari"], sources["safari"]
 P
+"$here/flip-capture.sh" messages --home "$gateway" >/dev/null
+python3 - "$config" <<'P'
+import json, sys
+sources = json.load(open(sys.argv[1]))["sources"]
+assert sources["messages"]["facts"] == "native", sources["messages"]
+assert sources["messages"]["root"].endswith("Library/Messages"), sources["messages"]
+P
+"$here/unflip-capture.sh" messages --home "$gateway" >/dev/null
 "$here/unflip-capture.sh" files,mac --home "$gateway" >/dev/null
 [ "$(sources)" = calendar,safari,usage ] || fail "unflip files,mac left $(sources)"
 "$here/unflip-capture.sh" usage --home "$gateway" >/dev/null
