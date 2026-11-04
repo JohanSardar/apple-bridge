@@ -150,6 +150,45 @@ fn inherited_descriptor(
 #[cfg(feature = "rust-capture")]
 const FACTS_DESCRIPTOR: &str = "AB_NATIVE_FACTS_FD";
 
+#[cfg(feature = "rust-capture")]
+type Links = (
+    Option<ab_session::production::EffectsLink>,
+    Option<std::os::unix::net::UnixStream>,
+);
+
+#[cfg(feature = "rust-capture")]
+fn native_links(
+    gateway: &std::os::unix::net::UnixStream,
+    helper: &std::os::unix::net::UnixStream,
+    effects_home: Option<String>,
+    wants_facts: bool,
+) -> Result<Links, Error> {
+    let mut taken = vec![gateway.as_raw_fd(), helper.as_raw_fd()];
+    let effects = match effects_home {
+        Some(home) => {
+            let native = inherited_descriptor("AB_NATIVE_FD", &taken)?;
+            taken.push(native.as_raw_fd());
+            Some(ab_session::production::EffectsLink {
+                native,
+                routing: ab_session::production::effects_routing(std::path::Path::new(&home))?,
+                home: std::path::PathBuf::from(home),
+            })
+        }
+        None => None,
+    };
+    let facts = if wants_facts {
+        let variable = if effects.is_none() && std::env::var_os(FACTS_DESCRIPTOR).is_none() {
+            "AB_NATIVE_FD"
+        } else {
+            FACTS_DESCRIPTOR
+        };
+        Some(inherited_descriptor(variable, &taken)?)
+    } else {
+        None
+    };
+    Ok((effects, facts))
+}
+
 fn run() -> Result<(), Error> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     #[cfg(feature = "rust-capture")]
@@ -216,31 +255,14 @@ fn run() -> Result<(), Error> {
     #[cfg(feature = "rust-capture")]
     #[allow(clippy::needless_return)]
     {
-        let mut taken = vec![gateway.as_raw_fd(), helper.as_raw_fd()];
-        let effects = match effects_home {
-            Some(home) => {
-                let native = inherited_descriptor("AB_NATIVE_FD", &taken)?;
-                taken.push(native.as_raw_fd());
-                Some(ab_session::production::EffectsLink {
-                    native,
-                    routing: ab_session::production::effects_routing(std::path::Path::new(&home))?,
-                    home: std::path::PathBuf::from(home),
-                })
-            }
-            None => None,
-        };
-        let facts = match &capture {
-            Some(loaded) if loaded.wants_inherited_facts() => {
-                let variable = if effects.is_none() && std::env::var_os(FACTS_DESCRIPTOR).is_none()
-                {
-                    "AB_NATIVE_FD"
-                } else {
-                    FACTS_DESCRIPTOR
-                };
-                Some(inherited_descriptor(variable, &taken)?)
-            }
-            _ => None,
-        };
+        let (effects, facts) = native_links(
+            &gateway,
+            &helper,
+            effects_home,
+            capture
+                .as_ref()
+                .is_some_and(ab_session::production::Loaded::wants_inherited_facts),
+        )?;
         return ab_session::production::serve_with_facts(
             gateway,
             helper,
