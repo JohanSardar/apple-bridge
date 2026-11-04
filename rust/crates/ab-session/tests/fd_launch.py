@@ -78,9 +78,9 @@ def launch(effects, facts_variable, facts_descriptor, effects_variable=True):
     return process, {name: pair[0] for name, pair in pairs.items()}
 
 
-def converse(process, sockets, effects_expected):
+def converse(process, sockets, effects_expected, facts_stream):
     seen_facts = []
-    threading.Thread(target=serve_facts, args=(sockets["facts" if effects_expected else "native"], seen_facts), daemon=True).start()
+    threading.Thread(target=serve_facts, args=(sockets[facts_stream], seen_facts), daemon=True).start()
     for sock in sockets.values():
         sock.settimeout(15)
     send(sockets["gateway"], {"t": "Open", "protocol": "ipc/1", "owner_fence": 7, "byte_credit": 4194304, "checkpoints": {}})
@@ -99,19 +99,19 @@ def converse(process, sockets, effects_expected):
     assert seen_facts[0] == "Hello" and seen_facts.count("Facts") >= 2, seen_facts
 
 
-def run_case(name, effects, facts_variable, facts_descriptor, effects_expected):
+def run_case(name, effects, facts_variable, facts_descriptor, effects_expected, facts_stream):
     process, sockets = launch(effects, facts_variable, facts_descriptor)
     try:
-        converse(process, sockets, effects_expected)
+        converse(process, sockets, effects_expected, facts_stream)
     finally:
         process.kill()
         process.wait()
     print("ok", name)
 
 
-run_case("effects and facts on separate streams", True, True, 201, True)
-run_case("facts only falls back to the native stream", False, False, 0, False)
-run_case("facts only on the facts stream", False, True, 201, False)
+run_case("effects and facts on separate streams", True, True, 201, True, "facts")
+run_case("facts only falls back to the native stream", False, False, 0, False, "native")
+run_case("facts only on the facts stream", False, True, 201, False, "facts")
 
 process, sockets = launch(True, True, 200)
 code = process.wait(timeout=15)
