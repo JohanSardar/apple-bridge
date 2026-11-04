@@ -1,6 +1,7 @@
 use crate::{Error, Result, ca::HOST};
 use rustls::{ClientConfig, ClientConnection, StreamOwned, pki_types::ServerName};
 use std::{
+    io::{Read, Write},
     net::{TcpStream, ToSocketAddrs},
     sync::Arc,
     time::{Duration, Instant},
@@ -38,7 +39,48 @@ impl Link {
         origin: Option<&str>,
     ) -> Result<Self> {
         let target = address.to_socket_addrs()?.next().ok_or(Error::Invalid)?;
+        let tcp = TcpStream::connect_timeout(&target, Duration::from_secs(5))?;
+        Self::over(tcp, name, target.port(), config, origin)
+    }
+    pub fn dial_via_proxy(
+        proxy: &str,
+        name: &str,
+        port: u16,
+        config: &Arc<ClientConfig>,
+        origin: Option<&str>,
+    ) -> Result<Self> {
+        let target = proxy.to_socket_addrs()?.next().ok_or(Error::Invalid)?;
         let mut tcp = TcpStream::connect_timeout(&target, Duration::from_secs(5))?;
+        tcp.set_read_timeout(Some(Duration::from_secs(10)))?;
+        tcp.set_write_timeout(Some(Duration::from_secs(5)))?;
+        tcp.write_all(
+            format!("CONNECT {name}:{port} HTTP/1.1\r\nHost: {name}:{port}\r\n\r\n").as_bytes(),
+        )?;
+        let mut head = Vec::new();
+        let mut byte = [0; 1];
+        while !head.ends_with(b"\r\n\r\n") {
+            if head.len() > 4096 || tcp.read(&mut byte)? == 0 {
+                return Err(Error::Invalid);
+            }
+            head.push(byte[0]);
+        }
+        let status: u16 = String::from_utf8_lossy(&head)
+            .split_whitespace()
+            .nth(1)
+            .and_then(|code| code.parse().ok())
+            .ok_or(Error::Invalid)?;
+        if status != 200 {
+            return Err(Error::Status(status));
+        }
+        Self::over(tcp, name, port, config, origin)
+    }
+    fn over(
+        mut tcp: TcpStream,
+        name: &str,
+        port: u16,
+        config: &Arc<ClientConfig>,
+        origin: Option<&str>,
+    ) -> Result<Self> {
         tcp.set_read_timeout(Some(Duration::from_secs(5)))?;
         tcp.set_write_timeout(Some(Duration::from_secs(5)))?;
         let mut connection = ClientConnection::new(
@@ -50,7 +92,6 @@ impl Link {
         }
         let mut binding = [0; 32];
         connection.export_keying_material(&mut binding, EXPORTER_LABEL, Some(&[]))?;
-        let port = target.port();
         let mut request = format!("wss://{name}:{port}/v1/feed").into_client_request()?;
         if let Some(origin) = origin {
             request

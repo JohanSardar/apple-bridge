@@ -1,5 +1,5 @@
 #![forbid(unsafe_code)]
-use lab_probe::{Error, Input, Route, checks, serve_proxy};
+use lab_probe::{Error, Input, Route, Session, checks, run_action, serve_proxy};
 use std::{
     io::Read,
     net::TcpListener,
@@ -36,7 +36,13 @@ fn run() -> Result<(), Error> {
             let listener = TcpListener::bind("127.0.0.1:0")?;
             serve_proxy(&listener, &route, &ready, &Arc::new(AtomicBool::new(false)))
         }
-        _ => Err(Error::Invalid("probe action")),
+        Some(action) => {
+            let stdin = std::io::stdin();
+            let stdout = std::io::stdout();
+            let mut session = Session::new(stdin.lock(), stdout.lock());
+            run_action(action, &mut session)
+        }
+        None => Err(Error::Invalid("probe action")),
     }
 }
 fn main() -> ExitCode {

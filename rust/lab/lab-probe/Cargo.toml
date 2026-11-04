@@ -14,5 +14,11 @@ webpki-roots = "1"
 serde_json.workspace = true
 thiserror.workspace = true
 rustls.workspace = true
-[dev-dependencies]
 lab-relay = { path = "../lab-relay" }
+jiff.workspace = true
+sha2.workspace = true
+hex = "0.4"
+base64 = "0.22"
+rand = "0.8"
+[dev-dependencies]
+tungstenite = { version = "0.28", default-features = false, features = ["handshake"] }

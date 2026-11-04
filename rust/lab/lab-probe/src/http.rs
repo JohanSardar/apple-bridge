@@ -81,7 +81,7 @@ impl Client {
         parse(&raw)
     }
 }
-fn parse(raw: &[u8]) -> Result<Reply> {
+pub(crate) fn parse(raw: &[u8]) -> Result<Reply> {
     let split = raw
         .windows(4)
         .position(|w| w == b"\r\n\r\n")
