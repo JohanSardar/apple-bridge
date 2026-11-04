@@ -431,8 +431,9 @@ impl crate::routed::Overlay for Layer {
         scope: &'scope thread::Scope<'scope, '_>,
         value: &Value,
         output: &Arc<Mutex<UnixStream>>,
+        helper: &Mutex<UnixStream>,
     ) -> Result<bool, Error> {
-        Layer::gateway(self, scope, value, output)
+        Layer::gateway(self, scope, value, output, helper)
     }
 
     fn helper(&self, value: &Value, size: usize) -> Result<(), Error> {
@@ -480,6 +481,16 @@ impl Layer {
     }
 
     pub fn helper(&self, value: &Value, size: usize) -> Result<(), Error> {
+        if value["t"] == "Outcome"
+            && let Some(id) = value["command_id"].as_str()
+        {
+            let mut guard = self.guard()?;
+            if guard.outcome(id).is_some_and(|saved| saved["t"] == "Outcome")
+                && let Some(disposition) = value["disposition"].as_str()
+            {
+                let _ = guard.finish(id, disposition, &value["evidence"]);
+            }
+        }
         self.state()?.helper(value, size)
     }
 
@@ -731,6 +742,7 @@ impl Layer {
         scope: &'scope thread::Scope<'scope, '_>,
         value: &Value,
         output: &Arc<Mutex<UnixStream>>,
+        helper: &Mutex<UnixStream>,
     ) -> Result<bool, Error> {
         match value["t"].as_str() {
             Some("Open") => {
@@ -794,6 +806,20 @@ impl Layer {
                 let Some(saved) = saved else {
                     return Ok(true);
                 };
+                if saved["t"] == "Outcome"
+                    && matches!(
+                        saved["disposition"].as_str(),
+                        Some("locally_observed" | "indeterminate")
+                    )
+                {
+                    let mut forwarded = value.clone();
+                    forwarded["saved"] = saved;
+                    send(
+                        &mut *helper.lock().map_err(|_| Error::WorkerPanicked)?,
+                        &forwarded,
+                    )?;
+                    return Ok(false);
+                }
                 send(
                     &mut *output.lock().map_err(|_| Error::WorkerPanicked)?,
                     &saved,

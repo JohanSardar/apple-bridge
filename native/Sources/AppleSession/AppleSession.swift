@@ -626,7 +626,9 @@ public actor AppleSession: ObservationSink {
         defer { ForegroundActivity.shared.end(activity) }
         let id = frame["command_id"].string
         do {
-            guard var outcome = await guardLog.outcomes[id] else { try reject(frame, code: "not_found"); return }
+            let routedSaved: JSON? = effectsRouted && !frame["saved"].object.isEmpty ? frame["saved"] : nil
+            let known = await guardLog.outcomes[id]
+            guard var outcome = routedSaved ?? known else { try reject(frame, code: "not_found"); return }
             if ["indeterminate", "locally_observed"].contains(outcome["disposition"].string) {
 let operation=outcome["evidence"]["prepared"]["action"]["op"].string
                 let saved=outcome["evidence"]
@@ -637,7 +639,7 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
                     if ["maps.open", "shortcuts.run", "speech.say", "capture.play_sound", "capture.screenshot", "capture.camera_photo", "capture.record_audio", "mac.screen_record", "print.document"].contains(operation) { committed = evidence }
                     else { committed = try await observedEvidence(evidence, fingerprint: outcome["evidence"]["prepared"]["request_hash"], operation: operation) }
                     outcome = .object(["t": .string("Outcome"), "command_id": .string(id), "disposition": evidence["disposition"].string.isEmpty ? .string("locally_observed") : evidence["disposition"], "evidence": committed])
-                    try await guardLog.append(outcome)
+                    if routedSaved == nil { try await guardLog.append(outcome) }
                 } else {
                     var unresolved = outcome.object
                     unresolved["disposition"] = .string("indeterminate")

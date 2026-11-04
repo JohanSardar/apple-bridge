@@ -135,6 +135,10 @@ fn native_route(commit_capture: bool, wrong_id: bool) -> Result<(), Box<dyn std:
             &mut gateway,
             &json!({"t":"Resolve","command_id":"fixture-command"}),
         )?;
+        let forwarded = receive(&mut helper)?;
+        assert_eq!(forwarded["t"], "Resolve");
+        assert_eq!(forwarded["saved"], outcome);
+        send(&mut helper, &outcome)?;
         assert_eq!(receive(&mut gateway)?, outcome);
         if commit_capture && !wrong_id {
             query_fixture(&mut gateway, &mut native)?;

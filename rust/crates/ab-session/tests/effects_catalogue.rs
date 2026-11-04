@@ -250,6 +250,24 @@ fn pre_dispatch_rejection_from_the_native_side_is_durable_and_resolvable() -> Fa
     assert_eq!(rejected["error"]["code"], "conflict");
     send(&mut harness.gateway, &json!({"t":"Resolve","command_id":"late"}))?;
     assert_eq!(receive(&mut harness.gateway)?, rejected);
+
+    harness.prepare("shipped", &json!({"op":"messages.send","args":{}}))?;
+    harness.dispatch("shipped")?;
+    receive(&mut harness.native)?;
+    send(
+        &mut harness.native,
+        &json!({"t":"EffectResult","id":"shipped","evidence":{"disposition":"locally_observed","observed":false}}),
+    )?;
+    let first = receive(&mut harness.gateway)?;
+    assert_eq!(first["disposition"], "locally_observed");
+    send(&mut harness.gateway, &json!({"t":"Resolve","command_id":"shipped"}))?;
+    let resolve = receive(&mut harness.helper)?;
+    assert_eq!(resolve["saved"], first);
+    let delivered = json!({"t":"Outcome","command_id":"shipped","disposition":"delivered","evidence":{"observed":true}});
+    send(&mut harness.helper, &delivered)?;
+    assert_eq!(receive(&mut harness.gateway)?, delivered);
+    send(&mut harness.gateway, &json!({"t":"Resolve","command_id":"shipped"}))?;
+    assert_eq!(receive(&mut harness.gateway)?["disposition"], "delivered");
     Ok(())
 }
 
