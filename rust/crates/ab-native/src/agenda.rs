@@ -183,9 +183,7 @@ impl Reader {
         self.records
             .iter()
             .filter(|(identity, previous)| {
-                !present.contains(*identity)
-                    && (self.source != "contacts" || previous["collection"] != "contacts.container")
-                    && !self.alias_covered(previous, rows.iter())
+                !present.contains(*identity) && !self.alias_covered(previous, rows.iter())
             })
             .map(|(_, previous)| previous.clone())
             .collect()
@@ -240,11 +238,11 @@ impl Reader {
             {
                 return Err(Error::Corrupt);
             }
-            let container_absence =
-                self.source == "contacts" && previous["collection"] == "contacts.container";
             if !same_generation
-                || disposition == Some(&Revalidation::Present)
-                || (disposition.is_none() && !container_absence)
+                || !matches!(
+                    disposition,
+                    Some(Revalidation::Absent | Revalidation::Evict)
+                )
             {
                 current.insert(identity.clone(), previous.clone());
                 continue;

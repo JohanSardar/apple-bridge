@@ -62,7 +62,8 @@ def fixtures():
     add("contacts", "alias-is-not-contact-data", [container, alias_changed, group])
     add("contacts", "revalidated-deletions", [container], {"contacts.contact/a": "absent", "contacts.group/g": "absent"})
     add("contacts", "generation-drop-without-false-deletion", [new_contact], generation="g2", drop=True)
-    add("contacts", "container-complete-absence", [new_contact], generation="g2")
+    add("contacts", "container-missing-from-snapshot-is-not-absence", [new_contact], generation="g2")
+    add("contacts", "container-revalidated-absence", [new_contact], {"contacts.container/c": "absent"}, generation="g2")
     add("contacts", "force-replay", [new_contact], force=True, generation="g2")
     add("contacts", "complete-empty", [], {"contacts.contact/b": "absent"}, generation="g2")
 
@@ -87,7 +88,7 @@ def build_source():
     calendar = CALENDAR.read_text()
     scalar = between(SUPPORT.read_text(), "public enum JSON:", "public enum SourceFailure:")
     contact_changes = between(contacts, "        for key in current.keys.sorted() {", '        trace.record("contacts_compared"')
-    contact_absence = between(contacts, "        if !drop {\n            let groups =", "        var handles = Dictionary")
+    contact_absence = between(contacts, "        if !drop {\n            let groups =", "        let handles = blobHandles()")
     calendar_absence = between(calendar, "        for (identity, previous) in committed.merging(offered", "        guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }\n        gate.trace.record(\"calendar_revalidation\"")
     calendar_events = between(calendar, "        for (identity, observation) in current where observation", "        let captureBytes =")
     calendar_time = TIME.read_text().replace("import SourceSupport", "")
@@ -116,6 +117,7 @@ def build_source():
         "let fullScan = !stage[\"incremental\"].bool",
         "let store = Store(identifiers: current.values.filter { $0[\"collection\"].string == \"contacts.group\" }.map { $0[\"native_key\"].string })",
         "func isAbsent(_ key: String) throws -> Bool { snapshot[\"revalidated\"][\"contacts.contact/\" + key].string == \"absent\" }",
+        "func containerExists(_ key: String) throws -> Bool { snapshot[\"revalidated\"][\"contacts.container/\" + key].string != \"absent\" }",
         contact_changes, contact_absence,
         "baselines[source] = drop ? committed.merging(current) { _, new in new } : current",
         "} else {",

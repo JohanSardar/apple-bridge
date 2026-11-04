@@ -81,7 +81,7 @@ fn swift_synthetic_shadow_replay_has_zero_differences() -> Result<(), Box<dyn st
         *counts.entry(source.to_owned()).or_insert(0) += 1;
     }
     assert_eq!(counts["calendar"], 9);
-    assert_eq!(counts["contacts"], 10);
+    assert_eq!(counts["contacts"], 11);
     Ok(())
 }
 
@@ -174,5 +174,71 @@ fn ack_from_different_checkpoint_state_is_rejected() -> Result<(), Box<dyn std::
     right.commit(other)?;
     let foreign = right.prepare(calendar_snapshot("g1", vec![]), &context("three"))?;
     assert!(left.commit(foreign).is_err());
+    Ok(())
+}
+
+fn contacts_snapshot(records: Vec<Value>, revalidated: &[(&str, Revalidation)]) -> Snapshot {
+    Snapshot {
+        generation: "g1".into(),
+        scope: vec![
+            "contacts.contact".into(),
+            "contacts.group".into(),
+            "contacts.container".into(),
+        ],
+        complete: true,
+        records,
+        revalidated: revalidated
+            .iter()
+            .map(|(identity, verdict)| ((*identity).into(), *verdict))
+            .collect(),
+        force: false,
+    }
+}
+
+fn contacts_record(collection: &str, key: &str) -> Value {
+    json!({"kind": "upsert", "collection": collection, "native_key": key,
+           "scoped_alias": format!("contacts/{collection}/{key}"), "data": {"name": key}})
+}
+
+#[test]
+fn a_container_missing_from_a_snapshot_is_deleted_only_on_a_missing_verdict()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut reader = contacts::Reader::default();
+    let full = vec![
+        contacts_record("contacts.container", "c1"),
+        contacts_record("contacts.container", "c2"),
+        contacts_record("contacts.contact", "p"),
+        contacts_record("contacts.contact", "q"),
+    ];
+    let first = reader.prepare(contacts_snapshot(full, &[]), &context("one"))?;
+    reader.commit(first)?;
+    let incremental = vec![contacts_record("contacts.contact", "p")];
+    let kept = reader.prepare(contacts_snapshot(incremental.clone(), &[]), &context("two"))?;
+    assert!(kept.observations.is_empty());
+    reader.commit(kept)?;
+    assert_eq!(
+        reader.unaccounted(&incremental).len(),
+        3,
+        "both containers and the other contact need an answer"
+    );
+    let present = reader.prepare(
+        contacts_snapshot(
+            incremental.clone(),
+            &[("contacts.container/c1", Revalidation::Present)],
+        ),
+        &context("three"),
+    )?;
+    assert!(present.observations.is_empty());
+    reader.commit(present)?;
+    let gone = reader.prepare(
+        contacts_snapshot(
+            incremental,
+            &[("contacts.container/c2", Revalidation::Absent)],
+        ),
+        &context("four"),
+    )?;
+    assert_eq!(gone.observations.len(), 1);
+    assert_eq!(gone.observations[0].kind, "absent");
+    assert_eq!(gone.observations[0].native_key, "c2");
     Ok(())
 }
