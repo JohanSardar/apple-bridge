@@ -204,10 +204,29 @@ impl Drop for Pebble {
     }
 }
 
-fn start_pebble(directory: &Path, dns: &str) -> Result<Pebble> {
-    let binary = std::env::var_os("AB_LAB_PEBBLE")
+fn pebble_binary() -> Result<PathBuf> {
+    if let Some(path) = std::env::var_os("AB_LAB_PEBBLE") {
+        return Ok(PathBuf::from(path));
+    }
+    let cache = std::env::var_os("XDG_CACHE_HOME")
         .map(PathBuf::from)
-        .ok_or_else(|| Error::Invalid("AB_LAB_PEBBLE is required for Pebble scenarios".into()))?;
+        .or_else(|| {
+            std::env::var_os("HOME").map(|home| {
+                PathBuf::from(home).join(if cfg!(target_os = "macos") {
+                    "Library/Caches"
+                } else {
+                    ".cache"
+                })
+            })
+        });
+    cache
+        .map(|cache| cache.join("apple-bridge/lab-tools/pebble"))
+        .filter(|path| path.is_file())
+        .ok_or_else(|| Error::Invalid("AB_LAB_PEBBLE is required for Pebble scenarios".into()))
+}
+
+fn start_pebble(directory: &Path, dns: &str) -> Result<Pebble> {
+    let binary = pebble_binary()?;
     let address = {
         let listener = TcpListener::bind("127.0.0.1:0")?;
         listener.local_addr()?.to_string()
