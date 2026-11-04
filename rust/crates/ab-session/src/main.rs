@@ -27,9 +27,7 @@ fn lab_listen(listen: &str, gateway: &str) -> Result<(), Error> {
             serde_json::to_value(source).map(|v| v.as_str().unwrap_or_default().to_owned())
         })
         .collect::<Result<_, _>>()?;
-    let mut supported = ab_session::production::SUPPORTED.to_vec();
-    supported.extend(["calendar", "contacts"]);
-    selection.validate_routed(&supported)?;
+    selection.validate_routed(ab_session::production::SUPPORTED)?;
     let config = std::env::var("AB_SESSION_RUST_SOURCES").map_err(|_| Error::Invalid)?;
     let poll = std::time::Duration::from_millis(
         std::env::var("AB_SESSION_RUST_POLL_MS")

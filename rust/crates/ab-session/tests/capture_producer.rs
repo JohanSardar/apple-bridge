@@ -164,7 +164,7 @@ fn media_fixture(source: &str, directory: &Path, duration: Option<u32>) -> Falli
             "INSERT INTO ZCALLRECORD VALUES(1,'synthetic','Fixture',946684800.0,?1,0,1,'com.apple.Telephony',1)",
         ),
         "voicemail" => (
-            "voicemail.db",
+            "FaceTimeMessageStore-local.sqlitedb",
             "CREATE TABLE IF NOT EXISTS Z_METADATA(Z_UUID TEXT);
              CREATE TABLE IF NOT EXISTS ZSTOREDMESSAGE(Z_PK INTEGER PRIMARY KEY,ZRECORDUUID TEXT,ZFROM TEXT,ZDATECREATED REAL,ZDURATION REAL,ZISREAD INTEGER,ZMAILBOXTYPE INTEGER,ZPROVIDER TEXT,ZMESSAGETYPE INTEGER);
              DELETE FROM ZSTOREDMESSAGE;",
@@ -560,7 +560,16 @@ fn production_config_flips_a_source_to_rust_and_back() -> Fallible<()> {
     assert_eq!(loaded.sources(), ["safari"]);
     std::fs::write(
         home.join(production::CONFIG_FILE),
-        json!({"sources":{"calendar":{"root":directory}}}).to_string(),
+        json!({"sources":{"calendar":{"root":directory},"contacts":{"root":directory}}})
+            .to_string(),
+    )?;
+    assert_eq!(
+        production::load(&home)?.ok_or("config")?.sources(),
+        ["calendar", "contacts"]
+    );
+    std::fs::write(
+        home.join(production::CONFIG_FILE),
+        json!({"sources":{"messages":{"root":directory}}}).to_string(),
     )?;
     assert!(production::load(&home).is_err());
 
