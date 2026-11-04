@@ -7,6 +7,9 @@ license.workspace = true
 [lints]
 workspace = true
 
+[features]
+lab = ["ab-domain/lab"]
+
 [dependencies]
 ab-domain = { path = "../ab-domain" }
 serde.workspace = true

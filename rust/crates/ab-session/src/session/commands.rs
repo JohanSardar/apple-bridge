@@ -25,7 +25,7 @@ use std::{
 };
 
 const TICKET_SECONDS: i64 = 30;
-const BIND_WAIT: Duration = Duration::from_secs(15);
+const BIND_WAIT: Duration = Duration::from_millis(500);
 const READ_WAIT: Duration = Duration::from_secs(10);
 const WRITE_WAIT: Duration = Duration::from_secs(30);
 const DISPOSITIONS: &[&str] = &[
@@ -120,6 +120,16 @@ fn raw(value: &Value) -> Result<Box<serde_json::value::RawValue>, Error> {
     Ok(serde_json::value::RawValue::from_string(value.to_string())?)
 }
 
+fn part_keys(evidence: &Value) -> Vec<String> {
+    evidence["parts"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|part| part["native_key"].as_str().map(str::to_owned))
+        .filter(|key| !key.is_empty())
+        .collect()
+}
+
 fn facts_source(operation: &str) -> bool {
     matches!(
         operation.split('.').next().unwrap_or_default(),
@@ -195,11 +205,10 @@ impl Hub {
         let Ok(command) = Command::from_ipc(frame) else {
             return self.refuse(&id, "invalid");
         };
-        let live = command.expires_unix().is_ok_and(|at| at > unix_now());
         if command.command_id.is_empty()
             || command.principal.is_empty()
             || command.request_hash.is_empty()
-            || !live
+            || command.expires_unix().is_err()
         {
             return self.refuse(&id, "invalid");
         }
@@ -283,7 +292,7 @@ impl Hub {
         let reconciled = self.primitive(&format!("{source}.reconcile"), &json!({}), WRITE_WAIT);
         let checkpoint = reconciled
             .ok()
-            .and_then(|_| self.bind(key, true, 0).ok().flatten())?;
+            .and_then(|_| self.bind(key, &[], true, 0).ok().flatten())?;
         Some(json!({"native_key": key, "capture_checkpoint": checkpoint}))
     }
 
@@ -465,7 +474,7 @@ impl Hub {
             ticket: frame.ticket.clone(),
             request_hash: ticket.command.request_hash.clone(),
             operation: ticket.command.operation(),
-            expires_at: u64::try_from(ticket.command.expires_unix().map_err(|_| Error::Invalid)?)
+            expires_at: u64::try_from(unix_now().saturating_add(TICKET_SECONDS))
                 .map_err(|_| Error::Invalid)?,
             prepared,
         });
@@ -526,10 +535,10 @@ impl Hub {
             drop(core);
             return self.refuse(&id, "not_found");
         };
-        let open = saved["t"] == "Outcome"
-            && ["indeterminate", "locally_observed"]
-                .contains(&saved["disposition"].as_str().unwrap_or_default());
+        let open = saved["t"] == "Outcome" && saved["disposition"] != "failed_no_effect";
         let owned = open
+            && ["indeterminate", "locally_observed"]
+                .contains(&saved["disposition"].as_str().unwrap_or_default())
             && core.commands.owned.contains(source_of(
                 saved["evidence"]["prepared"]["action"]["op"]
                     .as_str()
@@ -586,13 +595,8 @@ impl Hub {
             Some(command) if command.command_id == prepared.command_id => command,
             _ => return Err(Error::Invalid),
         };
-        let remaining = command.expires_unix().map_err(|_| Error::Invalid)? - unix_now();
-        if remaining <= 0 {
-            drop(core);
-            return self.refuse(&command.command_id, "expired");
-        }
         let ticket = random_hex(16)?;
-        let lifetime = u64::try_from(remaining.min(TICKET_SECONDS)).map_err(|_| Error::Invalid)?;
+        let lifetime = u64::try_from(TICKET_SECONDS).map_err(|_| Error::Invalid)?;
         let fingerprint = command.request_hash.clone();
         core.commands.tickets.insert(
             ticket.clone(),
@@ -653,8 +657,21 @@ impl Hub {
         let id = outcome.command_id.clone();
         let mut core = self.core()?;
         if core.commands.take_resolving(&id) {
+            drop(core);
+            let mut evidence = parsed(&outcome.evidence);
+            if outcome.disposition != "indeterminate" && evidence["observed"] == true {
+                let key = evidence["native_key"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .to_owned();
+                if !key.is_empty()
+                    && let Some(checkpoint) = self.bind(&key, &part_keys(&evidence), true, 0)?
+                {
+                    evidence["capture_checkpoint"] = Value::String(checkpoint);
+                }
+            }
+            let mut core = self.core()?;
             let saved = core.commands.guard.outcome(&id).cloned();
-            let evidence = parsed(&outcome.evidence);
             let changed = saved.is_none_or(|saved| {
                 saved["disposition"] != outcome.disposition || saved["evidence"] != evidence
             });
@@ -711,13 +728,15 @@ impl Hub {
             let bound = if key.is_empty() {
                 None
             } else {
-                self.bind(&key, facts_source(&operation), active.after)?
+                self.bind(
+                    &key,
+                    &part_keys(&evidence),
+                    facts_source(&operation),
+                    active.after,
+                )?
             };
             if let Some(checkpoint) = bound {
                 evidence["capture_checkpoint"] = Value::String(checkpoint);
-            } else {
-                disposition = "indeterminate".into();
-                evidence["reason"] = json!("capture_not_observed");
             }
         }
         let saved = {
@@ -732,14 +751,28 @@ impl Hub {
         self.send_gateway(&saved_frame(&saved)?)
     }
 
-    fn bind(&self, key: &str, facts: bool, after: u64) -> Result<Option<String>, Error> {
+    fn bind(
+        &self,
+        key: &str,
+        others: &[String],
+        facts: bool,
+        after: u64,
+    ) -> Result<Option<String>, Error> {
         let deadline = self.clock.elapsed() + BIND_WAIT;
         let mut core = self.core()?;
         loop {
             if let Some(seen) = core.flights.latest(key)
                 && (facts || seen.sequence > after)
             {
-                return Ok(Some(seen.checkpoint.clone()));
+                let mut best = (seen.sequence, seen.checkpoint.clone());
+                for other in others {
+                    if let Some(other) = core.flights.latest(other)
+                        && other.sequence > best.0
+                    {
+                        best = (other.sequence, other.checkpoint.clone());
+                    }
+                }
+                return Ok(Some(best.1));
             }
             if core.closed || self.clock.elapsed() >= deadline {
                 return Ok(None);

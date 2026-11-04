@@ -187,17 +187,13 @@ ab-session.
 | `BlobChunk` / `BlobUnavailable` | Swift to Rust | `handle`, `offset`, `bytes`, `digest`, `eof` / `handle`, `reason` |
 
 The fields are the ones the gateway already sends and expects; nothing is redesigned here. Authority moves
-to ab-session: it validates `Prepare` (non-empty ids, future expiry, one command in flight, no ticket
-outstanding, id never seen by the guard), mints the ticket after Swift's `Prepared` (30 seconds or the
-command's expiry, one shot), validates `Dispatch` (ticket, origin, command id, fence, expiry), fsyncs
+to ab-session: it validates `Prepare` (non-empty ids, a parsable expiry, one command in flight, no ticket
+outstanding, id never seen by the guard), mints the ticket after Swift's `Prepared` (30 seconds on the monotonic clock, one shot), validates `Dispatch` (ticket, origin, command id, fence, expiry), fsyncs
 `DispatchStarted` in `<home>/dispatch-guard.log` before it sends `Dispatch` to Swift, writes `Outcome` or
-`Rejected` to the same log, answers `Resolve` from the log (forwarding open outcomes to Swift with
-`saved`), and reports unresolved dispatches after `Ready` on the next connection. A `Rejected` that
+`Rejected` to the same log, answers `Resolve` from the log (offering every recorded outcome except
+`failed_no_effect` to Swift with `saved`; Swift decides whether to re-observe or echo it), and reports unresolved dispatches after `Ready` on the next connection. A `Rejected` that
 arrives for a started dispatch is recorded as a rejection; a started dispatch without an outcome stays
-indeterminate. For an observed `Outcome` with a `native_key`, ab-session waits (15 seconds) for a committed
-scan containing that key after the dispatch started (facts sources: the latest) and writes it as
-`capture_checkpoint`; otherwise the outcome degrades to indeterminate with `reason: capture_not_observed`.
-`evidence.prepared` is filled by ab-session when Swift omits it. Results larger than a native frame fail as
+indeterminate. For an observed `Outcome` with a `native_key`, ab-session binds `capture_checkpoint` to the committed scan that contains that key after the dispatch started (facts sources: the latest), waiting at most half a second for a scan that is still being acknowledged. A Helper reports an outcome only after its own reconciling scan was committed, so a key that is still unobserved is forwarded unchanged and without a checkpoint: the gateway's own capture bound decides (honest unknown). `evidence.prepared` is filled by ab-session when Swift omits it. Results larger than a native frame fail as
 `QueryError unavailable`; the oversized-body path stays a blob handle served through `BlobRead`.
 
 ### Primitives (Rust-owned commands, off by default)

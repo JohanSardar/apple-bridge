@@ -309,7 +309,7 @@ fn limit(scan: &Scan) -> usize {
 }
 
 fn split(scan: &Scan) -> Result<Vec<Vec<Observation>>, Error> {
-    let limit = limit(scan);
+    let limit = if scan.whole { usize::MAX } else { limit(scan) };
     let ordered = scan
         .observations
         .iter()

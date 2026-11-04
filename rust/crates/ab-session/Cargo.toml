@@ -9,7 +9,7 @@ workspace = true
 
 [features]
 default = []
-lab = []
+lab = ["ab-wire/lab", "ab-state/lab"]
 rust-effects = ["dep:sha2", "rust-capture"]
 rust-capture = ["dep:ab-native", "dep:sha2", "dep:base64"]
 
