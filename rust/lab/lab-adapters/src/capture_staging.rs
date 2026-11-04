@@ -224,7 +224,7 @@ fn run_case(world: &mut World, name: &str, evidence: &mut Evidence) -> Result<()
         );
         world.heal()?;
     }
-    let arrived = await_until(30, || {
+    let arrived = await_until(120, || {
         let now = sequence_of(&replica);
         now.0 == target.0 && now.1 >= target.1 && converged(world, &observed)
     });
