@@ -6,6 +6,7 @@ import subprocess
 
 HARNESS_ONLY = {'credential_backend_override_restored'}
 GO_TARGET_SCENARIOS = {'RELAY-LEGACY-COMPAT'}
+GO_RUST_GATEWAY_ONLY = {'core/RMT-PRIVATE-CONNECT'}
 BLOB_SCENARIOS = ['CORE-BLOB-CAP', 'CORE-BLOB-CORRUPT', 'CORE-BLOB-DUPLICATE-REFERENCE',
                   'CORE-BLOB-GATEWAY-RETRY', 'CORE-BLOB-GC', 'CORE-BLOB-INTERRUPT',
                   'CORE-BLOB-NO-DIGEST-AUTH', 'CORE-BLOB-OFFLOADED', 'CORE-BLOB-REFERENCE-INDEX',
@@ -338,10 +339,13 @@ def main():
     files = [str(root / f'{name}.yaml') for name in names]
     if not args.rust_only:
         with (out / 'go.jsonl').open('w') as stream:
-            impl = ['--impl', 'gateway=rust', '--rust-binary', str(Path(args.gateway).resolve())] if args.go_rust_gateway else []
+            rust_gateway = ['--impl', 'gateway=rust', '--rust-binary', str(Path(args.gateway).resolve())]
             level = ['--level', 'replica', '--local-replicas'] if args.replica else ['--level', 'sim']
-            subprocess.run([args.go_lab, 'run', *files, *level, '--json', *impl],
-                           stdout=stream, timeout=args.timeout, check=True)
+            for forced in (False, True):
+                batch = [f for f, n in zip(files, names) if (n in GO_RUST_GATEWAY_ONLY) == forced]
+                if batch:
+                    subprocess.run([args.go_lab, 'run', *batch, *level, '--json', *(rust_gateway if forced or args.go_rust_gateway else [])],
+                                   stdout=stream, timeout=args.timeout, check=True)
     with (out / 'rust.jsonl').open('w') as stream:
         subprocess.run([args.families, 'run', *files, '--gateway', args.gateway,
                         '--simapple', args.simapple, '--output', str(out / 'worlds')],
