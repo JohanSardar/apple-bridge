@@ -25,6 +25,14 @@ use std::{
 };
 
 mod commands;
+mod reminders;
+
+pub const RUST_COMMAND_SOURCES: [&str; 1] = ["reminders"];
+
+#[derive(Clone, Debug, Default)]
+pub struct Options {
+    pub rust_commands: Vec<String>,
+}
 
 pub trait Clock: Send + Sync {
     fn elapsed(&self) -> Duration;
@@ -240,7 +248,11 @@ fn rejected(command_id: &str, code: &str) -> Result<IpcFrame, Error> {
     })
 }
 
-fn gateway_frame(hub: &Hub, frame: &IpcFrame) -> Result<bool, Error> {
+fn gateway_frame<'scope>(
+    hub: &'scope Hub,
+    scope: &'scope thread::Scope<'scope, '_>,
+    frame: &IpcFrame,
+) -> Result<bool, Error> {
     match frame.t.as_str() {
         "Ping" => hub.send_gateway(&IpcFrame {
             t: "Pong".into(),
@@ -249,7 +261,7 @@ fn gateway_frame(hub: &Hub, frame: &IpcFrame) -> Result<bool, Error> {
         "Pong" => {}
         "Committed" => committed(hub, frame)?,
         "Query" | "QueryCancel" | "Prepare" | "Dispatch" | "Resolve" | "BlobRead" => {
-            hub.gateway_command(frame)?;
+            hub.gateway_command(scope, frame)?;
         }
         "Close" => return Ok(false),
         _ => return Err(Error::Invalid),
@@ -487,7 +499,6 @@ pub fn serve(
     serve_with(gateway, link, secret, home, Arc::new(SystemClock::start()))
 }
 
-#[allow(clippy::too_many_lines)]
 pub fn serve_with(
     gateway: UnixStream,
     link: UnixStream,
@@ -495,6 +506,25 @@ pub fn serve_with(
     home: &Path,
     clock: Arc<dyn Clock>,
 ) -> Result<(), Error> {
+    serve_configured(gateway, link, secret, home, clock, &Options::default())
+}
+
+#[allow(clippy::too_many_lines)]
+pub fn serve_configured(
+    gateway: UnixStream,
+    link: UnixStream,
+    secret: &[u8],
+    home: &Path,
+    clock: Arc<dyn Clock>,
+    options: &Options,
+) -> Result<(), Error> {
+    if options
+        .rust_commands
+        .iter()
+        .any(|source| !RUST_COMMAND_SOURCES.contains(&source.as_str()))
+    {
+        return Err(Error::Invalid);
+    }
     let mut gateway_read = gateway.try_clone()?;
     let mut link_read = link.try_clone()?;
     let (opened, fence) = match start(&mut gateway_read, &mut link_read, secret) {
@@ -510,7 +540,7 @@ pub fn serve_with(
         u64::try_from(opened.byte_credit).map_err(|_| Error::Invalid)?,
         committed_map(&opened)?,
     );
-    let commands = commands::Commands::open(home, fence)?;
+    let commands = commands::Commands::open(home, fence, &options.rust_commands)?;
     let unresolved = commands.unresolved();
     let hub = Hub {
         core: Mutex::new(Core {
@@ -540,7 +570,7 @@ pub fn serve_with(
                     Err(Error::Io(_)) => return Ok(()),
                     Err(error) => return Err(error),
                 };
-                if !gateway_frame(&hub, &frame)? {
+                if !gateway_frame(&hub, scope, &frame)? {
                     return Ok(());
                 }
             })();
@@ -584,6 +614,13 @@ pub fn serve_with(
                     Link::QueryError(failure) => {
                         hub.finish_query(&failure.id)?;
                         hub.send_gateway(&failure.into_ipc())?;
+                    }
+                    Link::PrimitiveResult(answer) => {
+                        let value = serde_json::from_str(answer.result.get())?;
+                        hub.finish_primitive(&answer.id, Ok(value))?;
+                    }
+                    Link::PrimitiveError(failure) => {
+                        hub.finish_primitive(&failure.id, Err(failure.code))?;
                     }
                     Link::BlobChunk(chunk) => hub.send_gateway(&chunk.into_ipc())?,
                     Link::BlobUnavailable(missing) => hub.send_gateway(&missing.into_ipc())?,
