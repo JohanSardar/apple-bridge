@@ -290,7 +290,7 @@ impl Hub {
         Ok(Rejected {
             command_id: command_id.into(),
             code: code.into(),
-            message: code.into(),
+            message: refusal.message.clone().unwrap_or_else(|| code.into()),
             evidence: evidence.map(|value| raw(&value)).transpose()?,
         })
     }
