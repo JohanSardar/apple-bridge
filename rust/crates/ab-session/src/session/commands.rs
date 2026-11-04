@@ -376,7 +376,7 @@ impl Hub {
             "native_state": state,
             "request_hash": command.request_hash,
         });
-        let (disposition, evidence) = match reminders::write(self, &action) {
+        let (disposition, evidence) = match reminders::write(self, &command.command_id, &action) {
             Ok(written) if reminders::verified(&operation, &written) => (
                 "locally_observed",
                 json!({

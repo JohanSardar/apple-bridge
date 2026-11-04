@@ -1005,7 +1005,7 @@ fn a_rust_owned_reminders_command_is_decided_in_rust_and_swift_only_reads_and_wr
     assert_eq!(op, "reminders.write");
     assert_eq!(
         args,
-        json!({"op": "reminders.update", "native_key": "r1", "list_key": "work", "args": {"title": "oat milk"}})
+        json!({"op": "reminders.update", "native_key": "r1", "list_key": "work", "args": {"title": "oat milk"}, "command_id": "c1"})
     );
     native::write_frame(
         &mut world.link,
@@ -1202,7 +1202,11 @@ fn crash_after_dispatch_started() -> std::path::PathBuf {
     let ticket = ticket_for(&mut world, "c1", "milk", "milk");
     ipc_send(&mut world.gateway, &dispatch_frame("c1", &ticket, 7));
     expect_read(&mut world, "reminders.read_list", &list_read(true));
-    expect_read(&mut world, "reminders.read_reminder", &reminder_read("milk"));
+    expect_read(
+        &mut world,
+        "reminders.read_reminder",
+        &reminder_read("milk"),
+    );
     let (_, op, _) = primitive(&mut world);
     assert_eq!(op, "reminders.write");
     let _ = finish(world);
@@ -1229,7 +1233,11 @@ fn restart_and_resolve(home: std::path::PathBuf) -> World {
 fn a_rust_owned_resolve_after_restart_observes_the_write_through_reads_only() {
     let home = crash_after_dispatch_started();
     let mut again = restart_and_resolve(home);
-    let args = expect_read(&mut again, "reminders.read_reminder", &reminder_read("oat milk"));
+    let args = expect_read(
+        &mut again,
+        "reminders.read_reminder",
+        &reminder_read("oat milk"),
+    );
     assert_eq!(args, json!({"native_key": "r1"}));
     let (id, op, args) = primitive(&mut again);
     assert_eq!(op, "reminders.reconcile");
@@ -1247,7 +1255,11 @@ fn a_rust_owned_resolve_after_restart_observes_the_write_through_reads_only() {
 fn a_rust_owned_resolve_stays_indeterminate_when_the_write_is_not_there() {
     let home = crash_after_dispatch_started();
     let mut again = restart_and_resolve(home);
-    expect_read(&mut again, "reminders.read_reminder", &reminder_read("milk"));
+    expect_read(
+        &mut again,
+        "reminders.read_reminder",
+        &reminder_read("milk"),
+    );
     let (resolved, _) = ipc_read(&mut again.gateway).expect("resolved");
     assert_eq!(resolved["disposition"], "indeterminate");
     assert!(resolved["evidence"]["resolved"].is_null());

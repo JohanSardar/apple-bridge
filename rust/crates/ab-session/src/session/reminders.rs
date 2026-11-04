@@ -219,7 +219,7 @@ pub(super) fn validate(
     Ok(())
 }
 
-pub(super) fn write(probe: &dyn Probe, action: &Value) -> Result<Value, String> {
+pub(super) fn write(probe: &dyn Probe, command_id: &str, action: &Value) -> Result<Value, String> {
     probe.call(
         "reminders.write",
         &json!({
@@ -227,6 +227,7 @@ pub(super) fn write(probe: &dyn Probe, action: &Value) -> Result<Value, String> 
             "native_key": action["native_key"],
             "list_key": action["list_key"],
             "args": action["args"],
+            "command_id": command_id,
         }),
     )
 }
@@ -299,9 +300,15 @@ pub(super) fn resolved(probe: &dyn Probe, evidence: &Value) -> Option<Value> {
                     let fields: Vec<_> = args
                         .as_object()?
                         .iter()
-                        .filter(|(name, _)| !matches!(name.as_str(), "id" | "list_id" | "due_all_day"))
+                        .filter(|(name, _)| {
+                            !matches!(name.as_str(), "id" | "list_id" | "due_all_day")
+                        })
                         .collect();
-                    if fields.is_empty() || !fields.iter().all(|(name, value)| field_matches(actual, name, value)) {
+                    if fields.is_empty()
+                        || !fields
+                            .iter()
+                            .all(|(name, value)| field_matches(actual, name, value))
+                    {
                         return None;
                     }
                 }
@@ -537,9 +544,7 @@ mod tests {
     #[test]
     fn resolve_observes_only_what_the_framework_shows() {
         let mut probe = Fake::new();
-        let evidence = |op: &str, args: Value| {
-            json!({"native_key": "r1", "prepared": {"request_hash": "h", "action": {"op": op, "native_key": "r1", "args": args}}})
-        };
+        let evidence = |op: &str, args: Value| json!({"native_key": "r1", "prepared": {"request_hash": "h", "action": {"op": op, "native_key": "r1", "args": args}}});
         let done = evidence("reminders.update", json!({"title": "milk"}));
         let seen = resolved(&probe, &done).unwrap();
         assert_eq!(seen["observed"], true);
@@ -569,13 +574,17 @@ mod tests {
         let mut gone = evidence("reminders.delete_list", json!({}));
         gone["prepared"]["action"]["native_key"] = json!("missing");
         assert_eq!(resolved(&probe, &gone).unwrap()["absent"], true);
-        let keyless = json!({"prepared": {"action": {"op": "reminders.create", "args": {"title": "x"}}}});
+        let keyless =
+            json!({"prepared": {"action": {"op": "reminders.create", "args": {"title": "x"}}}});
         assert!(resolved(&probe, &keyless).is_none());
     }
 
     #[test]
     fn numbers_compare_by_value() {
-        assert!(equal(&json!({"p": 0, "n": [1.0]}), &json!({"p": 0.0, "n": [1]})));
+        assert!(equal(
+            &json!({"p": 0, "n": [1.0]}),
+            &json!({"p": 0.0, "n": [1]})
+        ));
         assert!(!equal(&json!({"p": 1}), &json!({"p": 2})));
     }
 

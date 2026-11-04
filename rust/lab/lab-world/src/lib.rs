@@ -225,14 +225,19 @@ impl World {
             .create(true)
             .append(true)
             .open(self.directory.join("session.log"))?;
+        let mut command = Command::new(binary);
+        command
+            .arg("--lab-session-listen")
+            .arg(&listen)
+            .args(["--lab-gateway", gateway_socket, "--session-secret"])
+            .arg(self.gateway_home.join("apple-secret"))
+            .arg("--session-home")
+            .arg(&home);
+        if let Some(sources) = std::env::var_os("AB_LAB_RUST_COMMANDS").filter(|v| !v.is_empty()) {
+            command.arg("--rust-commands").arg(sources);
+        }
         self.session = Some(
-            Command::new(binary)
-                .arg("--lab-session-listen")
-                .arg(&listen)
-                .args(["--lab-gateway", gateway_socket, "--session-secret"])
-                .arg(self.gateway_home.join("apple-secret"))
-                .arg("--session-home")
-                .arg(&home)
+            command
                 .stdout(log.try_clone()?)
                 .stderr(log)
                 .spawn()?,
