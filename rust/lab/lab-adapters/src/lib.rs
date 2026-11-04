@@ -48,6 +48,7 @@ pub mod native_core;
 pub mod native_runner;
 pub mod notes;
 pub mod packaging;
+pub mod pair;
 pub mod phone;
 pub mod pkginstall;
 pub mod poster;
