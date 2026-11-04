@@ -12,6 +12,16 @@ use std::{
 
 const CALL_WAIT: Duration = Duration::from_secs(120);
 const HANDSHAKE_WAIT: Duration = Duration::from_secs(15);
+const ECHO_WAIT: Duration = if cfg!(test) {
+    Duration::from_millis(20)
+} else {
+    Duration::from_secs(30)
+};
+const ECHO_POLL: Duration = if cfg!(test) {
+    Duration::from_millis(1)
+} else {
+    Duration::from_millis(250)
+};
 
 struct LinkProbe {
     stream: RefCell<UnixStream>,
@@ -91,7 +101,13 @@ pub fn serve_cleanup(link: UnixStream, request: &Value) -> Result<(), Error> {
     Ok(())
 }
 
-const PENDING: [(&str, &str); 10] = [
+const READ_STATE: [(&str, &str); 3] = [
+    ("mark_read_first", "mark_read"),
+    ("mark_unread", "mark_unread"),
+    ("mark_read", "mark_read"),
+];
+
+const PENDING: [(&str, &str); 12] = [
     ("reply", "reply"),
     ("love_add", "react"),
     ("love_remove", "react"),
@@ -99,6 +115,8 @@ const PENDING: [(&str, &str); 10] = [
     ("emoji_remove", "react"),
     ("edit", "edit"),
     ("unsend", "unsend"),
+    ("mark_read_first", "mark_read"),
+    ("mark_read_last", "mark_read"),
     ("mark_read", "mark_read"),
     ("mark_unread", "mark_unread"),
     ("delete_message", "delete_message"),
@@ -270,6 +288,26 @@ impl Session<'_> {
         .map(|_| ())
     }
 
+    fn await_echo(&self, chat: &str, own: &str) {
+        let started = Instant::now();
+        loop {
+            let listed = self.call(
+                "messages.conversation_messages",
+                &json!({"chat_guid": chat}),
+            );
+            let arrived = listed.is_ok_and(|listed| {
+                listed["rows"]
+                    .as_array()
+                    .and_then(|rows| rows.first())
+                    .is_some_and(|newest| text(newest, "guid") != own)
+            });
+            if arrived || started.elapsed() >= ECHO_WAIT {
+                return;
+            }
+            std::thread::sleep(ECHO_POLL);
+        }
+    }
+
     fn limited(&self, name: &str, reason: &str) -> Result<Value, String> {
         let report = json!({
             "os_build": self.os_build,
@@ -346,6 +384,7 @@ fn walk(session: &mut Session<'_>, baseline_chat: &Value) -> Result<Value, Strin
     let initial = session.execute("send_text", "send", &send, "");
     let target = text(&initial, "native_key").to_owned();
     let observed = initial["observed"] == true;
+    let mut read_chat = None;
     if observed {
         let fixture = session.call(
             "messages.selftest_fixture_chat",
@@ -359,15 +398,17 @@ fn walk(session: &mut Session<'_>, baseline_chat: &Value) -> Result<Value, Strin
                 "created_by_run": session.chat.is_empty(),
                 "existing_self_chat": !session.chat.is_empty(),
             }))?;
-            session.execute("mark_unread", "mark_unread", &json!({}), &chat);
-            session.execute("mark_read", "mark_read", &json!({}), &chat);
+            session.await_echo(&chat, &target);
+            for (name, operation) in READ_STATE {
+                session.execute(name, operation, &json!({}), &chat);
+            }
+            read_chat = Some(chat);
         } else {
-            for operation in ["mark_read", "mark_unread"] {
-                session.unproven(operation, operation, "isolated_test_chat_unavailable");
+            for (name, operation) in READ_STATE {
+                session.unproven(name, operation, "isolated_test_chat_unavailable");
             }
         }
     }
-    send_file(session, &send);
     if observed && !target.is_empty() {
         targeted(session, &target, &tag);
     }
@@ -377,9 +418,14 @@ fn walk(session: &mut Session<'_>, baseline_chat: &Value) -> Result<Value, Strin
         let retract = session.execute("unsend_fixture", "send", &unsend, "");
         let key = text(&retract, "native_key").to_owned();
         if retract["observed"] == true && !key.is_empty() {
+            if let Some(chat) = &read_chat {
+                session.await_echo(chat, &key);
+                session.execute("mark_read_last", "mark_read", &json!({}), chat);
+            }
             session.execute("unsend", "unsend", &json!({}), &key);
         }
     }
+    send_file(session, &send);
     for (name, operation) in PENDING {
         let present = session.steps.iter().any(|step| text(step, "name") == name);
         if !present {
@@ -521,6 +567,7 @@ mod tests {
         cleanup: Value,
         restore: Value,
         cached: Value,
+        echo_after: usize,
     }
 
     impl Fake {
@@ -533,6 +580,7 @@ mod tests {
                 cleanup: json!({"passed": true}),
                 restore: json!({"restored": true}),
                 cached: json!({}),
+                echo_after: 1,
             }
         }
         fn count(&self, operation: &str) -> usize {
@@ -573,6 +621,13 @@ mod tests {
                 "messages.selftest_cleanup" => self.cleanup.clone(),
                 "messages.selftest_restore" => self.restore.clone(),
                 "messages.selftest_upload" => json!({"path": "/tmp/x", "digest": "d"}),
+                "messages.conversation_messages" => {
+                    if self.count(operation) >= self.echo_after {
+                        json!({"rows": [{"guid": "echo"}, {"guid": "key-messages.send"}]})
+                    } else {
+                        json!({"rows": [{"guid": "key-messages.send"}]})
+                    }
+                }
                 _ => json!({}),
             })
         }
@@ -647,9 +702,9 @@ mod tests {
             names(&report),
             [
                 "send_text",
+                "mark_read_first",
                 "mark_unread",
                 "mark_read",
-                "send_file",
                 "reply",
                 "love_add",
                 "love_remove",
@@ -658,7 +713,9 @@ mod tests {
                 "edit",
                 "delete_message",
                 "unsend_fixture",
+                "mark_read_last",
                 "unsend",
+                "send_file",
                 "cleanup",
                 "existing_self_chat_preserved"
             ]
@@ -678,14 +735,57 @@ mod tests {
         assert_eq!(seen[0], ("messages.send".to_owned(), String::new()));
         assert_eq!(
             seen[1],
-            ("messages.mark_unread".to_owned(), "chat-0".to_owned())
+            ("messages.mark_read".to_owned(), "chat-0".to_owned()),
+            "the echo arrives unread, so the chat is read first or Mark as Unread is never offered"
         );
         assert_eq!(
             seen[2],
+            ("messages.mark_unread".to_owned(), "chat-0".to_owned())
+        );
+        assert_eq!(
+            seen[3],
             ("messages.mark_read".to_owned(), "chat-0".to_owned())
         );
         assert!(seen.contains(&("messages.reply".to_owned(), "key-messages.send".to_owned())));
         assert!(seen.contains(&("messages.unsend".to_owned(), "key-messages.send".to_owned())));
+    }
+
+    #[test]
+    fn the_read_state_steps_wait_for_the_self_chat_echo() {
+        let mut probe = Fake::new();
+        probe.echo_after = 3;
+        let commands = script(everything);
+        run(&probe, &commands, &request()).unwrap();
+        assert!(probe.count("messages.conversation_messages") >= 3);
+    }
+
+    #[test]
+    fn a_missing_echo_does_not_stop_the_walk() {
+        let mut probe = Fake::new();
+        probe.echo_after = usize::MAX;
+        let commands = script(everything);
+        let report = run(&probe, &commands, &request()).unwrap();
+        assert_eq!(report["state"], "proven");
+        assert!(probe.count("messages.conversation_messages") > 1);
+    }
+
+    #[test]
+    fn the_chat_is_read_again_after_the_tapbacks_because_their_last_row_stays_unread() {
+        let probe = Fake::new();
+        let commands = script(everything);
+        let report = run(&probe, &commands, &request()).unwrap();
+        let names = names(&report);
+        let place = |name: &str| names.iter().position(|found| *found == name).unwrap();
+        assert!(place("emoji_remove") < place("mark_read_last"));
+        assert!(place("unsend_fixture") < place("mark_read_last"));
+        assert!(
+            place("mark_read_last") < place("unsend"),
+            "the unsent row has no tag, so it would make the read a conflict"
+        );
+        assert!(
+            place("mark_read_last") < place("send_file"),
+            "the file row has no tag, so it would make the read a conflict"
+        );
     }
 
     #[test]
