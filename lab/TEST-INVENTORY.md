@@ -1,3 +1,5 @@
+> Historical: written while the gateway and lab were Go. The Go code was deleted; the Rust gateway is `rust/crates/ab-runtime` and the lab runner is `rust/lab`. Go file and package names below are kept as the record of what was verified.
+
 # Test inventory and migration selection proposal
 
 Baseline measurements: main `10a397d6`. The integrated inventory also includes concurrent relay containment scenarios; their fresh measurements are identified separately. No real scenarios executed. No scenario files changed. Phase 0 owns [HARNESS-CLASSIFICATION.md](HARNESS-CLASSIFICATION.md) and the evidence implementation field; this report does not duplicate or modify either. The per-scenario in-process column below is derived independently from scenario dispatch paths. No live gateway accessed. Measurements use prebuilt lab-tagged Go product binaries; Go prebuilding and transport are excluded; native fixture compilation inside the timed window is included.

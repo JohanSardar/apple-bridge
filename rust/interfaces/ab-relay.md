@@ -1,3 +1,5 @@
+> Go oracle retired: the Go gateway, its parity oracles and the Go lab were deleted. Go commands, file names and Go-versus-Rust results below record what was verified while Go existed; the stored evidence files are unchanged. The Rust tests and `make rust-ci` are the gate now.
+
 # Production Go → Rust relay cutover runbook
 
 Status: **procedure only; not executed**. Target: the existing production relay service, with its existing address, DNS, owner allowlist, credentials and frozen relay/1 JSON state. This swaps the legacy forwarder only; it does not activate isolated account/control policy or relay/2.

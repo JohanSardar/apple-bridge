@@ -1,3 +1,5 @@
+> Historical: written while the gateway and lab were Go. The Go code was deleted; the Rust gateway is `rust/crates/ab-runtime` and the lab runner is `rust/lab`. Go file and package names below are kept as the record of what was verified.
+
 # Apple Bridge specification
 
 Status: binding build specification, written 2026-10-17 by the build leader. It integrates `DECISIONS.md` (wins over everything), `debate/RESOLUTION.md`, `debate/MODULES-RESOLUTION.md`, `astra/MODULES-astra.md` as amended, and the 20 findings in `claude/astra-critique-of-claude-r1.md` (cited as **F1–F20**). Background designs are superseded where they conflict. When code and this file disagree, one of them is a bug; fix the wrong one in the same change.

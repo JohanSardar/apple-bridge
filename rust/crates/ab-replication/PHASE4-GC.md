@@ -1,3 +1,5 @@
+> Go oracle retired: the Go gateway, its parity oracles and the Go lab were deleted. Go commands, file names and Go-versus-Rust results below record what was verified while Go existed; the stored evidence files are unchanged. The Rust tests and `make rust-ci` are the gate now.
+
 # Phase 4 G-C integration status
 
 PR #535 continues the original gateway feed work without replacing its commits. The continuation merges G-A's gateway State and preserves G-D's Trust/iPhone modules.

@@ -1,3 +1,5 @@
+> Go oracle retired: the Go gateway, its parity oracles and the Go lab were deleted. Go commands, file names and Go-versus-Rust results below record what was verified while Go existed; the stored evidence files are unchanged. The Rust tests and `make rust-ci` are the gate now.
+
 # Phase 3 CRUD investigation, 2026-11-02
 
 Harness prerequisite PR #543 was reviewed, rebased onto current main, tested with `go test ./lab/scenarios ./lab/world` and source lint on Ubuntu, and merged as 39e45547. No real-level scenario was run in this investigation.
