@@ -227,9 +227,6 @@ impl Reader {
         {
             return Err(Error::Corrupt);
         }
-        let containers_seen = current
-            .keys()
-            .any(|identity| identity.starts_with("contacts.container/"));
         for (identity, previous) in &self.records {
             if current.contains_key(identity) {
                 continue;
@@ -243,9 +240,8 @@ impl Reader {
             {
                 return Err(Error::Corrupt);
             }
-            let container_absence = self.source == "contacts"
-                && previous["collection"] == "contacts.container"
-                && containers_seen;
+            let container_absence =
+                self.source == "contacts" && previous["collection"] == "contacts.container";
             if !same_generation
                 || disposition == Some(&Revalidation::Present)
                 || (disposition.is_none() && !container_absence)
