@@ -113,7 +113,7 @@ case "$command" in
     ;;
   families)
     prepare
-    python3 rust/lab/families-parity.py --rust-only --families "$FAMILIES" --gateway "$BRIDGE" --simapple "$SIMAPPLE" --output "${FAMILIES_OUTPUT:-${TMPDIR:-/tmp}/ab-rust-families-$(date +%s)}" "$@"
+    python3 rust/lab/families-parity.py --families "$FAMILIES" --gateway "$BRIDGE" --simapple "$SIMAPPLE" --output "${FAMILIES_OUTPUT:-${TMPDIR:-/tmp}/ab-rust-families-$(date +%s)}" "$@"
     ;;
   replica)
     prepare

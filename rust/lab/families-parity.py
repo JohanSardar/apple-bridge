@@ -7,7 +7,6 @@ import subprocess
 
 HARNESS_ONLY = {'credential_backend_override_restored'}
 GO_TARGET_SCENARIOS = {'RELAY-LEGACY-COMPAT'}
-GO_RUST_GATEWAY_ONLY = {'core/RMT-PRIVATE-CONNECT'}
 BLOB_SCENARIOS = ['CORE-BLOB-CAP', 'CORE-BLOB-CORRUPT', 'CORE-BLOB-DUPLICATE-REFERENCE',
                   'CORE-BLOB-GATEWAY-RETRY', 'CORE-BLOB-GC', 'CORE-BLOB-INTERRUPT',
                   'CORE-BLOB-NO-DIGEST-AUTH', 'CORE-BLOB-OFFLOADED', 'CORE-BLOB-REFERENCE-INDEX',
@@ -232,10 +231,9 @@ def check_real_only(families):
 
 def main():
     parser = argparse.ArgumentParser()
-    for name in ['families', 'go-lab', 'gateway', 'simapple', 'output']:
+    for name in ['families', 'gateway', 'simapple', 'output']:
         parser.add_argument('--' + name)
     parser.add_argument('--check-real-only', dest='check_real_only', action='store_true')
-    parser.add_argument('--rust-only', dest='rust_only', action='store_true')
     parser.add_argument('--scenario', action='append')
     parser.add_argument('--timeout', type=int, default=900)
     parser.add_argument('--import', dest='imports', action='store_true')
@@ -254,7 +252,6 @@ def main():
     parser.add_argument('--shortcuts', dest='shortcuts', action='store_true')
     parser.add_argument('--relay', dest='relay', action='store_true')
     parser.add_argument('--relay-streams', dest='relay_streams', action='store_true')
-    parser.add_argument('--go-rust-gateway', dest='go_rust_gateway', action='store_true')
     parser.add_argument('--connectors', dest='connectors', action='store_true')
     parser.add_argument('--consent', dest='consent', action='store_true')
     parser.add_argument('--security', dest='security', action='store_true')
@@ -293,7 +290,6 @@ def main():
         if not args.session_fixtures:
             os.environ.update(SESSION_ENV)
         os.environ.update(SESSION_CONTROLS.get(args.session_control, {}))
-        args.go_rust_gateway = True
         if args.session_fixtures:
             args.scenario = (args.scenario or []) + SESSION_FIXTURE_SCENARIOS[args.session_fixtures]
         elif args.session_control:
@@ -305,9 +301,7 @@ def main():
     if args.check_real_only:
         check_real_only(args.families)
         return
-    for name in ['families', 'go_lab', 'gateway', 'simapple', 'output']:
-        if args.rust_only and name == 'go_lab':
-            continue
+    for name in ['families', 'gateway', 'simapple', 'output']:
         if not getattr(args, name):
             parser.error('--' + name.replace('_', '-') + ' is required')
     for flag, group in [(args.usage, USAGE_SCENARIOS), (args.darwin_usage, DARWIN_USAGE_SCENARIOS), (args.calls, CALLS_SCENARIOS), (args.helper, HELPER_SCENARIOS)]:
@@ -387,15 +381,6 @@ def main():
     out = Path(args.output).resolve()
     out.mkdir(mode=0o700, parents=True, exist_ok=False)
     files = [str(root / f'{name}.yaml') for name in names]
-    if not args.rust_only:
-        with (out / 'go.jsonl').open('w') as stream:
-            rust_gateway = ['--impl', 'gateway=rust', '--rust-binary', str(Path(args.gateway).resolve())]
-            level = ['--level', 'replica', '--local-replicas'] if args.replica else ['--level', 'sim']
-            for forced in (False, True):
-                batch = [f for f, n in zip(files, names) if (n in GO_RUST_GATEWAY_ONLY) == forced]
-                if batch:
-                    subprocess.run([args.go_lab, 'run', *batch, *level, '--json', *(rust_gateway if forced or args.go_rust_gateway else [])],
-                                   stdout=stream, timeout=args.timeout, check=not args.session_control)
     with (out / 'rust.jsonl').open('w') as stream:
         subprocess.run([args.families, 'run', *files, '--gateway', args.gateway,
                         '--simapple', args.simapple, '--output', str(out / 'worlds')],
@@ -403,23 +388,15 @@ def main():
     rust = verdicts(out / 'rust.jsonl')
     if args.session_control:
         failing = {name: sorted(a for a, (passed, status) in checks.items() if not passed and status != 'unverified') for name, checks in rust.items()}
-        if not args.rust_only and verdicts(out / 'go.jsonl') != rust:
-            raise SystemExit(f'control verdicts differ from the Go harness\n{rust}')
         if len(rust) != len(files) or not all(failing.values()):
             raise SystemExit(f'control {args.session_control} did not fail every scenario\n{failing}')
         print(json.dumps({'control': args.session_control, 'failing': failing}))
         return
-    if args.rust_only:
-        failing = {name: sorted(a for a, (passed, status) in checks.items() if not passed and status != 'unverified') for name, checks in rust.items()}
-        failing = {name: bad for name, bad in failing.items() if bad}
-        if len(rust) != len(files) or failing:
-            raise SystemExit(f'rust verdicts failed\n{failing}')
-        print(json.dumps({'scenarios': sorted(rust), 'rust_only': True}))
-        return
-    go = verdicts(out / 'go.jsonl')
-    if len(go) != len(files) or go != rust or not all(all(p or st == 'unverified' for p, st in v.values()) for v in rust.values()):
-        raise SystemExit(f'verdict mismatch\ngo={go}\nrust={rust}')
-    print(json.dumps({'scenarios': sorted(rust), 'identical': True, 'moved': MOVED_TO_RUST_TESTS}))
+    failing = {name: sorted(a for a, (passed, status) in checks.items() if not passed and status != 'unverified') for name, checks in rust.items()}
+    failing = {name: bad for name, bad in failing.items() if bad}
+    if len(rust) != len(files) or failing:
+        raise SystemExit(f'rust verdicts failed\n{failing}')
+    print(json.dumps({'scenarios': sorted(rust), 'moved': MOVED_TO_RUST_TESTS}))
 
 
 if __name__ == '__main__':
