@@ -1183,11 +1183,14 @@ fn messages_fixture(root: &Path, texts: &[&str], attachment: Option<&[u8]>) -> F
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn messages_reader_streams_history_then_live_rows_and_serves_attachment_bytes() -> Fallible<()> {
     let home = temporary("messages-home")?;
     let root = home.join("Library/Messages");
     std::fs::create_dir_all(&root)?;
-    let bytes: Vec<u8> = (0..300_000_u32).map(|n| u8::try_from(n % 239).unwrap_or(0)).collect();
+    let bytes: Vec<u8> = (0..300_000_u32)
+        .map(|n| u8::try_from(n % 239).unwrap_or(0))
+        .collect();
     messages_fixture(&root, &["first", "second"], Some(&bytes))?;
     let config = json!({"messages":{"root":root}}).to_string();
     let mut session = wire(readers::from_config(&config)?, polling(None), json!({}))?;
@@ -1205,7 +1208,11 @@ fn messages_reader_streams_history_then_live_rows_and_serves_attachment_bytes() 
                 attachment = row.clone();
             }
             if row["kind"] == "upsert" {
-                seen.insert(format!("{}/{}", row["collection"].as_str().unwrap_or(""), row["native_key"].as_str().unwrap_or("")));
+                seen.insert(format!(
+                    "{}/{}",
+                    row["collection"].as_str().unwrap_or(""),
+                    row["native_key"].as_str().unwrap_or("")
+                ));
             }
         }
         if let Some(found) = frame["blob_handles"].as_object() {
@@ -1218,13 +1225,21 @@ fn messages_reader_streams_history_then_live_rows_and_serves_attachment_bytes() 
         }
     }
     assert!(complete, "history scan never completed");
-    for key in ["messages.message/msg-1", "messages.message/msg-2", "messages.chat/iMessage;-;+15550100", "messages.attachment/att-1"] {
+    for key in [
+        "messages.message/msg-1",
+        "messages.message/msg-2",
+        "messages.chat/iMessage;-;+15550100",
+        "messages.attachment/att-1",
+    ] {
         assert!(seen.contains(key), "missing {key}: {seen:?}");
     }
     assert_eq!(handles.len(), 1, "{attachment}");
     let (digest, handle) = handles.iter().next().ok_or("handle")?;
     assert_eq!(handle, "att-1");
-    assert_eq!(attachment["data"]["blob"]["digest"], *digest, "{attachment}");
+    assert_eq!(
+        attachment["data"]["blob"]["digest"], *digest,
+        "{attachment}"
+    );
     assert!(attachment["data"]["blob"].get("handle").is_none());
 
     let mut read = Vec::new();

@@ -68,12 +68,7 @@ impl MessagesReader {
         }
     }
 
-    fn attach(
-        &mut self,
-        data: &mut Value,
-        guid: &str,
-        handles: &mut BTreeMap<String, String>,
-    ) {
+    fn attach(&mut self, data: &mut Value, guid: &str, handles: &mut BTreeMap<String, String>) {
         let Some(reader) = self.reader.as_ref() else {
             return;
         };
@@ -120,12 +115,18 @@ impl MessagesReader {
         let mut order: Vec<(String, String)> = Vec::new();
         for batch in batches {
             for observation in &batch.observations {
-                let mut row: Value = serde_json::from_slice(&observation.bytes().map_err(reader_error)?)?;
-                let key = (observation.collection.clone(), observation.native_key.clone());
+                let mut row: Value =
+                    serde_json::from_slice(&observation.bytes().map_err(reader_error)?)?;
+                let key = (
+                    observation.collection.clone(),
+                    observation.native_key.clone(),
+                );
                 row["observed_at"] = Value::String(at.clone());
                 row["revalidated"] = Value::Bool(true);
-                row["scoped_alias"] =
-                    Value::String(format!("{}/{}", observation.collection, observation.native_key));
+                row["scoped_alias"] = Value::String(format!(
+                    "{}/{}",
+                    observation.collection, observation.native_key
+                ));
                 if rows.insert(key.clone(), row).is_none() {
                     order.push(key);
                 } else if let Some(position) = order.iter().position(|k| *k == key) {

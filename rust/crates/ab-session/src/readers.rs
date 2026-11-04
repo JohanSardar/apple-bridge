@@ -1,10 +1,10 @@
 use crate::Error;
 
 mod messages;
-pub use messages::MessagesReader;
 use ab_native::{
     agenda, capture, contacts, mail, notes_reader, safari, telephony, usage, voice_memo,
 };
+pub use messages::MessagesReader;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::{
