@@ -1,8 +1,11 @@
 mod proxy;
 mod session;
+mod session_fixtures;
+mod session_notes;
 pub use proxy::FaultProxy;
 use serde_json::Value;
 pub use session::{session_binary, session_effects, session_sources};
+pub use session_fixtures::{session_control_empty, session_media_source, session_media_version};
 use std::{
     fs,
     io::Write,
@@ -276,6 +279,7 @@ impl World {
             simapple.arg("--native-socket").arg(native);
         }
         self.peer = Some(simapple.stdout(log.try_clone()?).stderr(log).spawn()?);
+        self.start_session_notes();
         let deadline = Instant::now() + Duration::from_secs(20);
         loop {
             if self.control("/inspect", &Value::Null).is_ok() {
@@ -374,6 +378,14 @@ impl World {
         self.control_for(route, input, 25)
     }
     pub fn control_for(&self, route: &str, input: &Value, seconds: u64) -> Result<Value> {
+        self.session_hook(route, input)?;
+        let result = self.control_request(route, input, seconds);
+        if result.is_ok() {
+            self.session_after(route);
+        }
+        result
+    }
+    fn control_request(&self, route: &str, input: &Value, seconds: u64) -> Result<Value> {
         let mut command = Command::new("curl");
         command
             .args(["--silent", "--show-error", "--fail", "--max-time"])
@@ -578,6 +590,7 @@ impl World {
         if let Some(proxy) = self.proxy.take() {
             proxy.close();
         }
+        self.stop_session_notes();
         stop(&mut self.peer);
         stop(&mut self.session);
         stop(&mut self.labsession_child);

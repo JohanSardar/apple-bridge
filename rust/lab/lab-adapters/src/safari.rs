@@ -171,6 +171,21 @@ fn run_limited(command: &mut Command, seconds: u64) -> Option<(bool, String)> {
     }
 }
 
+fn copy_fixture(source: &Path, target: &Path) -> Result<()> {
+    fs::create_dir_all(target)?;
+    for entry in fs::read_dir(source)? {
+        let entry = entry?;
+        if !entry.file_type()?.is_file() {
+            continue;
+        }
+        let name = entry.file_name();
+        let staging = target.join(format!(".{}.staging", name.to_string_lossy()));
+        fs::write(&staging, fs::read(entry.path())?)?;
+        fs::rename(staging, target.join(name))?;
+    }
+    Ok(())
+}
+
 fn fixture_directory() -> Result<PathBuf> {
     let directory = env::temp_dir().join(format!("ab-safari-{}", std::process::id()));
     fs::create_dir_all(&directory)?;
@@ -225,7 +240,12 @@ fn rows_match(client: &Client, observations: &[Value]) -> bool {
     found == observations.len()
 }
 
-fn gateway(world: &World, observations: &[Value], evidence: &mut Evidence) -> Result<()> {
+fn gateway(
+    world: &World,
+    observations: &[Value],
+    evidence: &mut Evidence,
+    stage: &dyn Fn() -> Result<()>,
+) -> Result<()> {
     for row in observations {
         let collection = row["collection"].as_str().unwrap_or_default();
         evidence.check(
@@ -251,7 +271,7 @@ fn gateway(world: &World, observations: &[Value], evidence: &mut Evidence) -> Re
     }
     let sent = world.control("/safari", &Value::Array(observations.to_vec()));
     evidence.check("simulated_native_capture", sent.is_ok(), "");
-    evidence.check("session_fixture_staged", true, "");
+    evidence.check("session_fixture_staged", stage().is_ok(), "");
     evidence.check(
         "gateway_fields_match_native_fixture",
         await_until(15, || rows_match(&client, observations)),
@@ -289,6 +309,22 @@ fn sim_in(world: &World, directory: &Path, id: &str, evidence: &mut Evidence) ->
     if !evidence.passed {
         return Ok(());
     }
+    let session_root = lab_world::session_sources()
+        .iter()
+        .any(|source| source == "safari")
+        .then(|| world.session_root("safari").map(Path::to_path_buf))
+        .flatten();
+    let pristine = PathBuf::from(format!("{}-pristine", directory.display()));
+    if session_root.is_some() {
+        evidence.check(
+            "session_fixture_root",
+            copy_fixture(directory, &pristine).is_ok(),
+            "",
+        );
+        if !evidence.passed {
+            return Ok(());
+        }
+    }
     let Some(binary) = build_checks(evidence) else {
         return Ok(());
     };
@@ -318,7 +354,15 @@ fn sim_in(world: &World, directory: &Path, id: &str, evidence: &mut Evidence) ->
     let Some(observations) = observations.filter(|_| valid) else {
         return Ok(());
     };
-    gateway(world, &observations, evidence)
+    let stage = || -> Result<()> {
+        match &session_root {
+            Some(root) if !lab_world::session_control_empty() => copy_fixture(&pristine, root),
+            _ => Ok(()),
+        }
+    };
+    let result = gateway(world, &observations, evidence, &stage);
+    let _ = fs::remove_dir_all(&pristine);
+    result
 }
 
 pub fn real_checks(evidence: &mut Evidence) -> Result<()> {

@@ -188,6 +188,11 @@ fn put(
     kind: &str,
     version: u64,
 ) -> bool {
+    if lab_world::session_media_source(source) {
+        return world
+            .stage_session_media(source, version, kind != "absent")
+            .is_ok();
+    }
     let mut data = fields.clone();
     data["fixture_version"] = json!(version);
     let at = jiff::Timestamp::now().to_string();
@@ -236,7 +241,15 @@ fn gateway_flow(world: &World, evidence: &mut Evidence) -> Result<()> {
                 return false;
             };
             let row = &rows[0];
-            if row["data"]["fixture_version"].as_u64() != Some(version)
+            let seen_version = if lab_world::session_media_source(source) {
+                u64::try_from(lab_world::session_media_version(
+                    row["data"]["duration"].as_f64().unwrap_or_default(),
+                ))
+                .ok()
+            } else {
+                row["data"]["fixture_version"].as_u64()
+            };
+            if seen_version != Some(version)
                 || row["version"].as_u64() != Some(version)
             {
                 return false;

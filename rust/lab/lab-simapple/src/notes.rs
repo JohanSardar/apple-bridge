@@ -127,6 +127,14 @@ fn folder(key: &str) -> Value {
     json!({"$ref":{"collection":"notes.folder","native_key":key}})
 }
 
+fn notes_session_source() -> bool {
+    std::env::var_os("AB_LAB_SESSION").is_some_and(|binary| !binary.is_empty())
+        && std::env::var("AB_LAB_SESSION_SOURCES")
+            .unwrap_or_default()
+            .split(',')
+            .any(|source| source.trim() == "notes")
+}
+
 impl Session<'_> {
     pub(super) fn note_prepare(&mut self, state: &Shared, frame: &Value) -> Result<()> {
         let command = string(frame, "command_id");
@@ -159,7 +167,8 @@ impl Session<'_> {
             if let Some(object) = native.as_object_mut() {
                 object.remove("folder_id");
             }
-            if expected != native
+            if !notes_session_source()
+                && expected != native
                 && !(expected.is_null()
                     && native.as_object().is_some_and(serde_json::Map::is_empty))
             {

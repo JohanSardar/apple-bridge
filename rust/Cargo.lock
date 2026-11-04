@@ -2630,6 +2630,9 @@ dependencies = [
 name = "lab-world"
 version = "0.0.0"
 dependencies = [
+ "base64 0.22.1",
+ "flate2",
+ "jiff",
  "serde_json",
  "thiserror 2.0.21",
 ]
