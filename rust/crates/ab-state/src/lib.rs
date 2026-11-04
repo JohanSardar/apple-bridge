@@ -1,4 +1,5 @@
 #![forbid(unsafe_code)]
+mod attachments;
 mod completion;
 mod protection;
 pub mod replay;

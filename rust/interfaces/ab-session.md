@@ -419,6 +419,21 @@ Lifecycle: `ab-session` resets SIGTERM/SIGINT/SIGHUP/SIGQUIT to default and unbl
 `POSIX_SPAWN_SETSIGDEF` and `POSIX_SPAWN_SETSIGMASK`), and exits when its parent pid changes.
 Not in the Rust reader: media derivatives (thumbnails and posters, `data.media` / `data.derivatives`)
 and the asynchronous pending-blob state; large attachments are hashed on the poll thread.
+
+Flip on an existing home. A capture upsert replaces the whole record `data`; a new generation reuses the
+existing record ids through `scoped_alias` (`<collection>/<native_key>`) and a scan only tombstones what the
+reader marks `absent`, so an offloaded file (state `offloaded`, never read because it is dataless) is not a
+deletion. What would have been lost is the data the Rust reader does not produce: `blob.digest` of an
+attachment that is now offloaded or unreadable, and `media` / `derivatives`. `ab-state`
+(`attachments::keep_known`, applied in `commit_capture` to `messages.attachment` only) therefore carries the
+previous record's `blob.digest` into an incoming `offloaded` or `missing` blob that has none, and carries
+`media` and `derivatives` that the incoming record omits when its blob digest equals the previous one. A
+changed digest, a `pending` blob, or keys present (even empty) in the incoming record replace as before, and a
+tombstoned record is never revived with old fields. The rule is a no-op for the Swift producer, which always
+emits those keys. Derivatives for attachments first seen after a flip are the follow-up: Rust decides (which
+attachment, which digest, when, how the row records the result, `unavailable` reasons) and Swift answers one
+narrow `native/1` request per digest (`messages.media`, args `{digest, guid}`) from ImageIO / AVFoundation and
+its digest-keyed cache, returning derivative descriptors whose bytes the Helper serves through `BlobRead`.
 The sim MSG family cannot run with the session on: simapple's message records are a model (`title`,
 synthetic keys) that cannot be inverted into a `chat.db`, so the family stays on the Helper path in the
 sim and the reader is proven by `tests/capture_producer.rs` and the 46-stage Swift/Rust projection oracle.
