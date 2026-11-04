@@ -245,48 +245,48 @@ through `reminders.read_list` / `reminders.read_reminder`, decides whether the f
 `--rust-commands reminders` (`AB_SESSION_RUST_COMMANDS` overrides the list), so Swift's native-session `Prepare`,
 `Dispatch` and `Resolve` handlers refuse `reminders.*`.
 
-### Messages primitives (`messages.send` in Rust, opt-in, off by default)
+### Messages commands in Rust
 
-`session/messages.rs` holds the Rust Prepare, dispatch-time validation, Dispatch and Resolve of `messages.send`:
-the origin rules (`CommandOrigin`), the send policy of `ab_session::messages_policy` (the shared vectors run through
-the real Prepare), file-name checks, the route (approved handles, chat members, direct chats), the resend rule,
-the agent policy (one pinned message, once), per-kind route proofs, then at Dispatch: route re-verification, the
-resend and agent checks again, the agent `.used` marker before the send, staging, one AppleScript send per part,
-chat.db correlation by polling outgoing rows (10 seconds in all, later parts never sent after a doubtful one),
-the aggregate disposition, lab proof recording (lab only) and the capture. It is selected by
-`--rust-commands messages.send` (or `messages.reply`, `messages.react`, `messages.edit`, `messages.unsend`, `messages.delete_message`, `messages.mark_read`, `messages.mark_unread`, `messages.delete_chat`; the per-operation names, or the bare source `messages` for all nine) and the Helper does not pass it by default.
+`session/messages.rs` holds Prepare, dispatch-time validation, Dispatch and Resolve of all nine operations:
+the origin rules, the send policy of `ab_session::messages_policy` (the shared vectors run through the real Prepare),
+file-name checks, the route (approved handles, chat members, direct chats), the resend rule, the agent policy (one
+pinned message, once), per-kind route proofs, then at Dispatch: route re-verification, the resend and agent checks
+again, the agent `.used` marker before the send, staging, one AppleScript send per part, chat.db correlation by polling
+outgoing rows (10 seconds in all, later parts never sent after a doubtful one), the aggregate disposition, lab proof
+recording (lab only) and the capture. The message-targeted and conversation operations add the tag rules, the edit
+(15 minutes, five edits) and unsend (2 minutes) windows, the expected-state conflict, the ledger authorisation, the
+foreign-activity refusal, the chat-delete rule and the read-state matcher. It is selected by `--rust-commands` with the
+per-operation names or the bare source `messages`.
 
-Swift answers read-only facts and primitive actions (`MessagesCommands.primitive`): `messages.config`,
-`own_handles`, `approved_handles`, `chat_members` (`handles` from a left join, `joined` from an inner join),
-`direct_chats`, `route_proofs`, `message`, `agent_policy`, `max_row_id`, `payload_fingerprint`, `rows_after`
-(outgoing rows with decoded body, peers and attachment names), `stage` (copies the uploads; a failure is reported,
-not decided), `send_part` (the AppleScript send, returning its error number), `mark_policy_used`, `record_proof`
-(lab only) and `reconcile` (captures the command's rows). For the message-targeted operations (reply, react,
-edit, unsend, delete) Swift also answers `target` (the decoded message and its row facts), `reactions`,
-`reaction_rows`, `replies`, `ui_available`, and the three UI actions `ui_prepare` (open the message, acknowledge a
-deleted-info sheet, validate the target), `ui_validate` and `ui_perform`; Rust owns the tag rules, the edit (15 minutes,
-five edits) and unsend (2 minutes) windows, the expected-state conflict, the route, the proofs and the observation
-of the effect. Rust decides; Swift never compares.
+`session/messages_local.rs` wraps the link. `messages.config` gives `chat_db`, `home`, `report_dir`, `os_build` and
+`agent_policy`, and ab-session then answers the facts itself: chat.db (`ab_native::messages::facts`), the route proofs,
+the ledger, the agent policy, staging and the self-test files. A child of the signed Helper inherits its macOS
+permissions, so this needs no call across the link. A peer that gives no `chat_db` (the simulator) answers every name
+itself. `session/messages_ui.rs` decides the UI path: which bubble, row, button or field is the intended one and
+whether it may be touched. `session/messages_cleanup.rs` selects what a test run may delete. `messages_policy` holds the
+identity normalisation, the self-chat rule, the isolated-chat choice, the media proof and the cleanup rules.
 
-The conversation operations (`mark_read`, `mark_unread`, `delete_chat`) add `conversation` (the chat row, its
-last-read timestamp and newest date), `conversation_messages`, `chat_recoverable`, `ledger` (the run's cleanup
-registration, read only), `is_self_chat` (the identity normalisation stays in Swift and is returned as a fact),
-`foreign_activity` (the two foreign-row queries as booleans) and `ui_activate_validate`. Rust owns the tag rule
-(a gated origin touches only a conversation whose newest message is tagged), the ledger authorisation (scenario,
-run, baseline row, text prefix, chat), the foreign-activity refusal, the chat-delete rule (every message tagged,
-chat created by the run after the ledger baseline) and the read-state matcher that observes the effect.
+Swift answers only framework calls (`MessagesCommands.primitive`):
 
-The self-test is orchestrated by `session/messages_selftest.rs` (the step order, the arguments, the proof
-invalidation of failed kinds, the cleanup state and the report) over these Swift primitives:
-`selftest_cached`, `selftest_facts` (UI allowed, the isolated self chat), `selftest_begin` (baseline capture and the
-run's ledger registration), `selftest_ledger` (merge into the ledger), `selftest_created` (record created message ids,
-including echoes and attachment rows), `selftest_fixture_chat`, `selftest_upload` and `selftest_upload_remove`,
-`selftest_cleanup` (the ledger-based `MessagesCleanup`), `selftest_restore` (baseline restore), `selftest_report`
-and `invalidate_proof`. The Helper's `selftest messages` command (and the self-test at Helper start) spawns
-`ab-session --selftest-messages 198 <request>` on a socketpair (`RustSelfTest.swift`); the child speaks the
-ordinary handshake (`Hello`, `Welcome`, `Session`) and sends only `Primitive` frames, Swift answers
-`PrimitiveResult`/`PrimitiveError` through `MessagesCommands.primitive` and writes nothing itself except what the
-primitives write (ledger, proofs, report). The run ends when the child closes the link.
+| Primitive | Call |
+|---|---|
+| `messages.config` | paths and the OS build |
+| `messages.me_card` | the Contacts "me" card handles |
+| `messages.send_part` | the AppleScript send, returning its error number |
+| `messages.delete_owned_item` | the IMCore move to Recently Deleted of one message id |
+| `messages.reconcile` | captures the command's rows |
+| `messages.ax_state` | Accessibility trusted, screen locked |
+| `messages.ax_activate`, `ax_open_url`, `ax_fence` | bring Messages forward, open a URL, refuse unless frontmost |
+| `messages.ax_find` | walk the tree or a subtree with a node budget; return `handle` and the asked attributes of matching nodes, optionally with a nested walk per match |
+| `messages.ax_value`, `ax_actions`, `ax_focused` | read an element |
+| `messages.ax_action`, `ax_key`, `ax_context_menu`, `ax_replace_text`, `ax_clear_text` | act on an element |
+| `messages.ax_preview_begin`, `ax_preview_values` | the values in Quick Look windows opened since the begin |
+
+The self-test is orchestrated by `session/messages_selftest.rs`. The Helper's `selftest messages` command (and the
+self-test at Helper start) spawns `ab-session --selftest-messages 198 <request>` on a socketpair, and the lab's
+`probe cleanup-tagged-self --tag <tag> --owned-only` spawns `ab-session --cleanup-messages 198 <request>` the same way
+(`RustSelfTest.swift`). The child speaks the ordinary handshake (`Hello`, `Welcome`, `Session`) and sends only
+`Primitive` frames, Swift answers `PrimitiveResult`/`PrimitiveError`. The run ends when the child closes the link.
 
 ## Ownership and migration
 

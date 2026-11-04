@@ -19,20 +19,6 @@ public actor MessagesCommands {
         self.path = path ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/chat.db").path
         self.labCommands = labCommands
     }
-    private var selfTestBaselines: [String: MessagesContentBaseline] = [:]
-    private var selfTestRows: [String: Int64] = [:]
-    private var selfTestReportURL: URL { PrivateReport.directory.appendingPathComponent("messages-selftest.json") }
-    private func selfTestLedgerURL(_ run: String) throws -> URL {
-        guard run.range(of: "^selftest_[0-9A-Za-z]+$", options: .regularExpression) != nil else { throw SourceFailure.invalid }
-        let directory = PrivateReport.directory.appendingPathComponent("messages-command-cleanup", isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-        return directory.appendingPathComponent(run + ".json")
-    }
-    private func selfTestLedger(_ run: String) throws -> [String: Any] {
-        let url = try selfTestLedgerURL(run)
-        guard let data = try? Data(contentsOf: url), let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { return [:] }
-        return object
-    }
     private var proofURL: URL { PrivateReport.directory.appendingPathComponent("messages-command-proofs.json") }
     private var osBuild: String { ProcessInfo.processInfo.operatingSystemVersionString }
     private func proofs() -> Set<String> {
@@ -148,211 +134,19 @@ public actor MessagesCommands {
     public func primitive(_ operation: String, args request: JSON) async throws -> JSON {
         switch operation {
         case "messages.config":
-            return .object(["lab_commands": .bool(labCommands)])
-        case "messages.own_handles":
-            guard let discovered = try? MessagesProbes.discoverSelfHandles() else { return .object(["handles": .null]) }
-            return .object(["handles": .array(discovered.handles.map(JSON.string))])
-        case "messages.approved_handles":
-            return .object(["handles": .array(try approvedHandles().sorted().map(JSON.string))])
-        case "messages.chat_members":
-            let reader = try MessagesReader(path: path)
-            let guid = request["chat_guid"].string
-            let all = try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID LEFT JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [guid]).map { $0["id"] }
-            let joined = try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [guid]).map { $0["id"] }
-            return .object(["handles": .array(all.map(JSON.string)), "joined": .array(joined.map(JSON.string))])
-        case "messages.direct_chats":
-            let reader = try MessagesReader(path: path)
-            let chats = try reader.query("SELECT c.guid,h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.service_name='iMessage' AND (SELECT count(*) FROM chat_handle_join x WHERE x.chat_id=c.ROWID)=1 ORDER BY c.ROWID DESC", [])
-            return .object(["chats": .array(chats.map { .object(["guid": .string($0["guid"]), "id": .string($0["id"])]) })])
-        case "messages.route_proofs":
-            return .object(["routes": .array(proofs().sorted().map(JSON.string))])
-        case "messages.message":
-            let reader = try MessagesReader(path: path)
-            guard let row = try reader.message(request["guid"].string) else { return .object(["exists": .bool(false)]) }
-            return .object(["exists": .bool(true), "is_from_me": .bool(row.flag("is_from_me")), "error": .number(Double(row.integer("error"))), "capture_chat_guid": .string(row["capture_chat_guid"])])
-        case "messages.agent_policy":
-            guard let agentPolicy, FileManager.default.fileExists(atPath: agentPolicy.path) else { return .object(["configured": .bool(false)]) }
-            let policy = try JSONDecoder().decode(JSON.self, from: Data(contentsOf: agentPolicy))
-            return .object(["configured": .bool(true), "policy": policy, "used": .bool(FileManager.default.fileExists(atPath: agentPolicy.path + ".used"))])
-        case "messages.max_row_id":
-            return .object(["value": .number(Double(try MessagesReader(path: path).maximum()))])
-        case "messages.rows_after":
-            let reader = try MessagesReader(path: path)
-            let rows = try reader.messageRows(after: Int64(request["maximum"].number), through: reader.maximum(), limit: Int(request["limit"].number)).filter { $0.flag("is_from_me") }
-            var result: [JSON] = []
-            for row in rows {
-                let peers = try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [row["capture_chat_guid"]]).map { $0["id"] }
-                let files = try reader.query("SELECT a.filename FROM attachment a JOIN message_attachment_join j ON j.attachment_id=a.ROWID JOIN message m ON m.ROWID=j.message_id WHERE m.guid=?", [row["guid"]]).map { URL(fileURLWithPath: $0["filename"]).lastPathComponent }
-                let body = row.blobs["attributedBody"].map { TypedStream.decode($0).text } ?? row.values["text"]
-                result.append(.object(["guid": .string(row["guid"]), "capture_chat_guid": .string(row["capture_chat_guid"]), "service": .string(row["service"]), "error": .number(Double(row.integer("error"))), "is_delivered": .bool(row.flag("is_delivered")), "text": .string(row.values["text"] ?? ""), "body": body.map(JSON.string) ?? .null, "has_body": .bool(row.blobs["attributedBody"] != nil), "peers": .array(peers.map(JSON.string)), "attachment_names": .array(files.map(JSON.string))]))
-            }
-            return .object(["rows": .array(result)])
-        case "messages.stage":
-            do { return .object(["parts": .array(try parts(commandID: request["command_id"].string, args: request["messages"]))]) }
-            catch {
-                let native = error as NSError
-                return .object(["failed": .object(["domain": .string(native.domain), "code": .number(Double(native.code))])])
-            }
+            var fields: [String: JSON] = ["lab_commands": .bool(labCommands), "chat_db": .string(path), "home": .string(FileManager.default.homeDirectoryForCurrentUser.path), "report_dir": .string(PrivateReport.directory.path), "os_build": .string(osBuild)]
+            if let agentPolicy { fields["agent_policy"] = .string(agentPolicy.path) }
+            return .object(fields)
+        case "messages.me_card":
+            return .object(["handles": .array(MessagesProbes.meCard().map(JSON.string))])
         case "messages.send_part":
             let error = await MessagesUI.send(request["part"], route: request["route"])
             return .object(["error": .number(Double(error))])
-        case "messages.mark_policy_used":
-            guard let agentPolicy, FileManager.default.fileExists(atPath: agentPolicy.path) else { throw SourceFailure.conflict }
-            try Data(request["command_id"].string.utf8).write(to: URL(fileURLWithPath: agentPolicy.path + ".used"), options: .withoutOverwriting)
-            return .object([:])
-        case "messages.record_proof":
-            guard labCommands else { throw SourceFailure.unsupported }
-            try recordProof(request["route"], parts: request["parts"].array)
-            return .object([:])
-        case "messages.target":
-            let reader = try MessagesReader(path: path)
-            guard let row = try reader.message(request["guid"].string), let item = try reader.messageObservations(row).first else { return .object(["exists": .bool(false)]) }
-            let target = try JSONDecoder().decode(JSON.self, from: JSONSerialization.data(withJSONObject: item.2, options: .sortedKeys))
-            return .object(["exists": .bool(true), "target": target, "row": .object(["guid": .string(row["guid"]), "capture_chat_guid": .string(row["capture_chat_guid"]), "service": .string(row["service"]), "is_from_me": .bool(row.flag("is_from_me")), "item_type": .number(Double(row.integer("item_type"))), "row_position": .number(Double(row.integer("row_position")))])])
-        case "messages.reactions":
-            let reader = try MessagesReader(path: path)
-            let rows = try reader.query("SELECT guid,associated_message_type,associated_message_emoji FROM message WHERE (is_from_me=1 OR ?='1') AND associated_message_guid LIKE ?", [request["self_chat"].bool ? "1" : "0", "%" + request["guid"].string])
-            return .object(["reactions": .array(rows.map { .object(["guid": .string($0["guid"]), "type": .string($0["associated_message_type"]), "emoji": .string($0["associated_message_emoji"])]) })])
-        case "messages.reaction_rows":
-            let reader = try MessagesReader(path: path)
-            let rows = try reader.query("SELECT guid,associated_message_type,associated_message_emoji FROM message WHERE (is_from_me=1 OR ?='1') AND associated_message_guid LIKE ? AND associated_message_type=?", [request["self_chat"].bool ? "1" : "0", "%" + request["guid"].string, String(Int(request["type"].number))])
-            return .object(["reactions": .array(rows.map { .object(["guid": .string($0["guid"]), "type": .string($0["associated_message_type"]), "emoji": .string($0["associated_message_emoji"])]) })])
-        case "messages.replies":
-            let reader = try MessagesReader(path: path)
-            let rows = try reader.query("SELECT guid FROM message WHERE ROWID>? AND is_from_me=1 AND thread_originator_guid=? AND (text=? OR instr(attributedBody,CAST(? AS BLOB))>0)", [String(Int64(request["max_row_id"].number)), request["guid"].string, request["text"].string, request["text"].string])
-            return .object(["guids": .array(rows.map { .string($0["guid"]) })])
-        case "messages.conversation":
-            let reader = try MessagesReader(path: path)
-            guard let conversation = try reader.query("SELECT ROWID AS row_position,* FROM chat WHERE guid=?", [request["chat_guid"].string]).first else { return .object(["exists": .bool(false)]) }
-            return .object(["exists": .bool(true), "row_position": .number(Double(conversation.integer("row_position"))), "last_read_message_timestamp": .string(conversation["last_read_message_timestamp"])])
-        case "messages.conversation_messages":
-            let reader = try MessagesReader(path: path)
-            let rows = try reader.query("SELECT m.guid,m.date FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=c.ROWID) ORDER BY m.ROWID DESC", [request["chat_guid"].string])
-            return .object(["rows": .array(rows.map { .object(["guid": .string($0["guid"]), "date": .string($0["date"])]) })])
-        case "messages.chat_recoverable":
-            return .object(["recoverable": .bool(try MessagesReader(path: path).recoverableChat(request["chat_guid"].string))])
-        case "messages.ledger":
-            let run = request["run"].string
-            guard !run.isEmpty, run.range(of: #"^[A-Za-z0-9_-]+$"#, options: .regularExpression) != nil else { throw SourceFailure.invalid }
-            let ledger = PrivateReport.directory.appendingPathComponent("messages-command-cleanup/" + run + ".json")
-            return try JSONDecoder().decode(JSON.self, from: Data(contentsOf: ledger))
-        case "messages.is_self_chat":
-            let participants = request["participants"].array.map(\.string)
-            return .object(["self_chat": .bool(MessagesSelfTestIsolation.isSelfChat(participants, own: try MessagesSelfTestIsolation.accountHandles(database: MessagesDatabase())))])
-        case "messages.foreign_activity":
-            let reader = try MessagesReader(path: path)
-            let chat = request["chat"].string, baseline = String(Int64(request["baseline"].number)), tag = request["tag"].string
-            let unread = try reader.query("SELECT 1 FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? AND m.ROWID<=? AND m.is_from_me=0 AND m.is_read=0 AND COALESCE(m.associated_message_type,0)=0 AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=m.ROWID) LIMIT 1", [chat, baseline])
-            let fresh = try reader.query("SELECT 1 FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? AND m.ROWID>? AND NOT (instr(COALESCE(m.text,''),?)>0 OR COALESCE(instr(m.attributedBody,CAST(? AS BLOB)),0)>0) AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=m.ROWID) LIMIT 1", [chat, baseline, tag, tag])
-            return .object(["foreign_unread": .bool(!unread.isEmpty), "foreign_new": .bool(!fresh.isEmpty)])
-        case "messages.ui_activate_validate":
-            let prepared = Prepared(nativeState: request["prepared"]["native_state"], fingerprint: request["prepared"]["fingerprint"].string, action: request["prepared"]["action"])
-            await MessagesUISession.activate()
-            try await MessagesAccessibility.validate(prepared)
-            return .object([:])
-        case "messages.ui_available":
-            return .object(["available": .bool(await MessagesAccessibility.available)])
-        case "messages.ui_prepare":
-            let prepared = Prepared(nativeState: request["prepared"]["native_state"], fingerprint: request["prepared"]["fingerprint"].string, action: request["prepared"]["action"])
-            try await MessagesAccessibility.openMessage(request["guid"].string)
-            if try await MessagesAccessibility.acknowledgeDeletedInfo() { try await MessagesAccessibility.openMessage(request["guid"].string) }
-            try await MessagesAccessibility.validate(prepared)
-            return .object([:])
-        case "messages.ui_validate":
-            let prepared = Prepared(nativeState: request["prepared"]["native_state"], fingerprint: request["prepared"]["fingerprint"].string, action: request["prepared"]["action"])
-            try await MessagesAccessibility.validate(prepared)
-            return .object([:])
-        case "messages.ui_perform":
-            let prepared = Prepared(nativeState: request["prepared"]["native_state"], fingerprint: request["prepared"]["fingerprint"].string, action: request["prepared"]["action"])
-            do { return .object(["ui": try await MessagesAccessibility.perform(prepared)]) }
-            catch { return .object(["ui": .object(["target_verified": .bool(false), "ui_error": .string(String(describing: error))])]) }
-        case "messages.payload_fingerprint":
-            return .object(["digest": .string(BodyDigest.hash(try JSONEncoder().encode(request["messages"])))])
-        case "messages.selftest_cached":
-            guard let data = try? Data(contentsOf: selfTestReportURL), let old = try? JSONDecoder().decode(JSON.self, from: data), old["os_build"].string == request["os_build"].string else { return .object([:]) }
-            return .object(["report": old])
-        case "messages.selftest_facts":
-            let session = CGSessionCopyCurrentDictionary() as? [String: Any]
-            let allowed = request["include_ui"].bool && AXIsProcessTrusted() && session?["CGSSessionScreenIsLocked"] as? Bool != true
-            let target = try MessagesSelfTestIsolation.target(database: MessagesDatabase())
-            return .object(["ui_allowed": .bool(allowed), "target": target.map { .object(["handle": .string($0.handle), "chat": .string($0.chat)]) } ?? .null])
-        case "messages.selftest_begin":
-            let run = request["run"].string
-            let chat = request["chat"].string
-            let database = try MessagesDatabase()
-            let baseline: MessagesContentBaseline?
-            do { baseline = chat.isEmpty ? nil : try MessagesContentBaseline.capture(chat) }
-            catch {
-                let reason = (error as? MessagesSelfTestBaselineFailure)?.description ?? "The self conversation baseline could not be verified. Keep Messages available and rerun the check."
-                return .object(["ok": .bool(false), "reason": .string(reason)])
-            }
-            let chatRow = Int64(try database.rows("SELECT COALESCE(MAX(ROWID),0) AS maximum FROM chat").first?["maximum"] ?? "0") ?? 0
-            let messageRow = Int64(try database.rows("SELECT COALESCE(MAX(ROWID),0) AS maximum FROM message").first?["maximum"] ?? "0") ?? 0
-            let registration: [String: Any] = ["scenario": "MSG-SELFTEST", "run_id": run, "baseline_max_row_id": messageRow, "media_attachment_names": [request["filename"].string], "cleanup_state": "pending_native_cleanup"]
-            try PrivateReport.write(registration, to: try selfTestLedgerURL(run))
-            selfTestBaselines[run] = baseline
-            selfTestRows[run] = messageRow
-            return .object(["ok": .bool(true), "baseline_chat": .number(Double(chatRow)), "baseline_row": .number(Double(messageRow))])
-        case "messages.selftest_ledger":
-            let run = request["run"].string
-            var registration = try selfTestLedger(run)
-            let patch = try JSONSerialization.jsonObject(with: JSONEncoder().encode(request["set"])) as? [String: Any] ?? [:]
-            for (key, value) in patch { registration[key] = value }
-            try PrivateReport.write(registration, to: try selfTestLedgerURL(run))
-            return .object([:])
-        case "messages.selftest_created":
-            let run = request["run"].string
-            var registration = try selfTestLedger(run)
-            let database = try MessagesDatabase()
-            let baseline = selfTestRows[run] ?? 0
-            let tag = request["tag"].string
-            let filename = request["filename"].string
-            var created = Set(registration["created_message_ids"] as? [String] ?? [])
-            for key in request["keys"].array.map(\.string) where !key.isEmpty { created.insert(key) }
-            let echoes = try database.rows("SELECT guid FROM message WHERE ROWID>? AND (instr(text,?)>0 OR instr(attributedBody,CAST(? AS BLOB))>0)", bindings: [String(baseline), tag, tag])
-            let files = try database.rows("SELECT DISTINCT m.guid FROM message m JOIN message_attachment_join j ON j.message_id=m.ROWID JOIN attachment a ON a.ROWID=j.attachment_id WHERE m.ROWID>? AND (a.filename=? OR a.filename LIKE ?)", bindings: [String(baseline), filename, "%/" + filename])
-            for row in echoes + files { if let guid = row["guid"] { created.insert(guid) } }
-            registration["created_message_ids"] = created.sorted()
-            try PrivateReport.write(registration, to: try selfTestLedgerURL(run))
-            return .object([:])
-        case "messages.selftest_fixture_chat":
-            let database = try MessagesDatabase()
-            guard let conversation = try? database.rows("SELECT c.guid,c.ROWID AS row_position FROM chat c JOIN chat_message_join j ON j.chat_id=c.ROWID JOIN message m ON m.ROWID=j.message_id WHERE m.guid=?", bindings: [request["target"].string]).first,
-                  let chat = conversation["guid"], let position = Int64(conversation["row_position"] ?? ""),
-                  MessagesSelfTestIsolation.qualifiesFixtureChat(chat, rowID: position, baseline: Int64(request["baseline_chat"].number), existing: request["existing_chat"].string) else { return .object(["qualifies": .bool(false)]) }
-            return .object(["qualifies": .bool(true), "chat": .string(chat)])
-        case "messages.selftest_upload":
-            let uploads = PrivateReport.directory.appendingPathComponent("messages-selftest", isDirectory: true).appendingPathComponent("message-uploads", isDirectory: true)
-            try FileManager.default.createDirectory(at: uploads, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-            let name = request["name"].string
-            guard !name.isEmpty, !name.contains("/") else { throw SourceFailure.invalid }
-            let upload = uploads.appendingPathComponent(name)
-            let bytes = Data(request["text"].string.utf8)
-            try bytes.write(to: upload, options: .atomic)
-            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: upload.path)
-            return .object(["path": .string(upload.path), "digest": .string(BodyDigest.hash(bytes))])
-        case "messages.selftest_upload_remove":
-            let uploads = PrivateReport.directory.appendingPathComponent("messages-selftest", isDirectory: true).appendingPathComponent("message-uploads", isDirectory: true).resolvingSymlinksInPath()
-            let file = URL(fileURLWithPath: request["path"].string).resolvingSymlinksInPath()
-            guard file.deletingLastPathComponent() == uploads else { throw SourceFailure.invalid }
-            try? FileManager.default.removeItem(at: file)
-            return .object([:])
-        case "messages.selftest_cleanup":
-            let cleaned = try await MessagesCleanup.run(["--tag", request["tag"].string, "--owned-only"])
-            let result = try JSONDecoder().decode(JSON.self, from: cleaned)
-            return .object(["passed": result["passed"], "failure": result["failure"]])
-        case "messages.selftest_restore":
-            guard let baseline = selfTestBaselines[request["run"].string] else { return .object(["restored": .bool(true)]) }
-            return .object(["restored": .bool((try? baseline.restoreAndVerify()) ?? false)])
-        case "messages.selftest_report":
-            let data = try JSONEncoder().encode(request["report"])
-            try data.write(to: selfTestReportURL, options: .atomic)
-            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: selfTestReportURL.path)
-            return .object([:])
-        case "messages.invalidate_proof":
-            try invalidateProof(request["kind"].string)
+        case "messages.delete_owned_item":
+            try await MessagesNativeSession.deleteOwnedItem(request["guid"].string, chat: request["chat"].string)
             return .object([:])
         default:
+            if operation.hasPrefix("messages.ax_") { return try await MessagesAXPrimitives.answer(operation, args: request) }
             throw SourceFailure.unsupported
         }
     }

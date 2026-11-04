@@ -24,11 +24,25 @@ actor RustSelfTest {
         let build = ProcessInfo.processInfo.operatingSystemVersionString
         let run = "selftest_" + UUID().uuidString.replacingOccurrences(of: "-", with: "")
         let request = JSON.object(["run": .string(run), "os_build": .string(build), "force": .bool(force), "include_ui": .bool(includeUI)])
+        try await serve(flag: "--selftest-messages", request: request)
+        guard let data = try? Data(contentsOf: reportURL), let report = try? JSONDecoder().decode(JSON.self, from: data),
+              report["run_id"].string == run || (!force && report["os_build"].string == build) else { throw SourceFailure.unavailable }
+        return report
+    }
+
+    func cleanup(tag: String, report: String) async throws {
+        guard !active else { throw SourceFailure.conflict }
+        active = true
+        defer { active = false }
+        try await serve(flag: "--cleanup-messages", request: .object(["tag": .string(tag), "report": .string(report)]))
+    }
+
+    private func serve(flag: String, request: JSON) async throws {
         let requestText = String(decoding: try JSONEncoder().encode(request), as: UTF8.self)
         var pair: [Int32] = [-1, -1]
         guard socketpair(AF_UNIX, SOCK_STREAM, 0, &pair) == 0, fcntl(pair[0], F_SETFD, FD_CLOEXEC) == 0, fcntl(pair[1], F_SETFD, FD_CLOEXEC) == 0 else { throw SourceFailure.unavailable }
         let child: pid_t
-        do { child = try Self.spawn(link: pair[1], request: requestText) }
+        do { child = try Self.spawn(flag: flag, link: pair[1], request: requestText) }
         catch { Darwin.close(pair[0]); Darwin.close(pair[1]); throw error }
         Darwin.close(pair[1])
         let descriptor = pair[0]
@@ -47,9 +61,6 @@ actor RustSelfTest {
             throw error
         }
         Self.reap(child)
-        guard let data = try? Data(contentsOf: reportURL), let report = try? JSONDecoder().decode(JSON.self, from: data),
-              report["run_id"].string == run || (!force && report["os_build"].string == build) else { throw SourceFailure.unavailable }
-        return report
     }
 
     private static func answer(_ frame: JSON, commands: MessagesCommands, link: NativeSessionLink) async throws {
@@ -72,7 +83,7 @@ actor RustSelfTest {
         }
     }
 
-    private static func spawn(link: Int32, request: String) throws -> pid_t {
+    private static func spawn(flag: String, link: Int32, request: String) throws -> pid_t {
         let binary = ProcessInfo.processInfo.environment["AB_SESSION_BINARY"] ?? Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/ab-session").path
         guard link < 198, FileManager.default.isExecutableFile(atPath: binary) else { throw SourceFailure.unavailable }
         var actions: posix_spawn_file_actions_t?
@@ -92,7 +103,7 @@ actor RustSelfTest {
               posix_spawnattr_setflags(&attributes, Int16(POSIX_SPAWN_CLOEXEC_DEFAULT | POSIX_SPAWN_SETSIGDEF | POSIX_SPAWN_SETSIGMASK)) == 0,
               posix_spawn_file_actions_adddup2(&actions, link, 198) == 0,
               posix_spawn_file_actions_addinherit_np(&actions, 2) == 0 else { throw SourceFailure.unavailable }
-        let arguments = [binary, "--selftest-messages", "198", request]
+        let arguments = [binary, flag, "198", request]
         let pointers = arguments.map { strdup($0) } + [nil]
         defer { for pointer in pointers { free(pointer) } }
         let environment = ProcessInfo.processInfo.environment.map { strdup($0.key + "=" + $0.value) } + [nil]

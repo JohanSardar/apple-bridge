@@ -29,10 +29,21 @@ mod capture;
 mod commands;
 mod contacts;
 mod messages;
+#[cfg(feature = "rust-capture")]
+mod messages_cleanup;
+#[cfg(feature = "rust-capture")]
+mod messages_local;
 mod messages_selftest;
+#[cfg(feature = "rust-capture")]
+mod messages_ui;
 
 pub fn selftest_messages(link: UnixStream, request: &serde_json::Value) -> Result<(), Error> {
     messages_selftest::serve(link, request)
+}
+
+#[cfg(feature = "rust-capture")]
+pub fn cleanup_messages(link: UnixStream, request: &serde_json::Value) -> Result<(), Error> {
+    messages_selftest::serve_cleanup(link, request)
 }
 
 mod notes;

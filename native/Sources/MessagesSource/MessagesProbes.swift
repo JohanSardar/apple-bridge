@@ -5,6 +5,11 @@ import AppKit
 import ApplicationServices
 
 public enum MessagesProbes {
+    public static func meCard() -> [String] {
+        guard CNContactStore.authorizationStatus(for: .contacts) == .authorized,
+              let contact = try? CNContactStore().unifiedMeContactWithKeys(toFetch: [CNContactPhoneNumbersKey as CNKeyDescriptor, CNContactEmailAddressesKey as CNKeyDescriptor]) else { return [] }
+        return contact.phoneNumbers.map { $0.value.stringValue } + contact.emailAddresses.map { $0.value as String }
+    }
     public static func discoverSelfHandles() throws -> (handles: [String], source: String) {
         var discovered: Set<String> = []
         if CNContactStore.authorizationStatus(for: .contacts) == .authorized {
