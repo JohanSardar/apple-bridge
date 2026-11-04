@@ -192,7 +192,7 @@ public actor MessagesCommands {
             let reader = try MessagesReader(path: path)
             guard let row = try reader.message(request["guid"].string), let item = try reader.messageObservations(row).first else { return .object(["exists": .bool(false)]) }
             let target = try JSONDecoder().decode(JSON.self, from: JSONSerialization.data(withJSONObject: item.2, options: .sortedKeys))
-            return .object(["exists": .bool(true), "target": target, "row": .object(["guid": .string(row["guid"]), "capture_chat_guid": .string(row["capture_chat_guid"]), "service": .string(row["service"]), "is_from_me": .bool(row.flag("is_from_me")), "item_type": .number(Double(row.integer("item_type")))])])
+            return .object(["exists": .bool(true), "target": target, "row": .object(["guid": .string(row["guid"]), "capture_chat_guid": .string(row["capture_chat_guid"]), "service": .string(row["service"]), "is_from_me": .bool(row.flag("is_from_me")), "item_type": .number(Double(row.integer("item_type"))), "row_position": .number(Double(row.integer("row_position")))])])
         case "messages.reactions":
             let reader = try MessagesReader(path: path)
             let rows = try reader.query("SELECT guid,associated_message_type,associated_message_emoji FROM message WHERE (is_from_me=1 OR ?='1') AND associated_message_guid LIKE ?", [request["self_chat"].bool ? "1" : "0", "%" + request["guid"].string])
@@ -205,6 +205,35 @@ public actor MessagesCommands {
             let reader = try MessagesReader(path: path)
             let rows = try reader.query("SELECT guid FROM message WHERE ROWID>? AND is_from_me=1 AND thread_originator_guid=? AND (text=? OR instr(attributedBody,CAST(? AS BLOB))>0)", [String(Int64(request["max_row_id"].number)), request["guid"].string, request["text"].string, request["text"].string])
             return .object(["guids": .array(rows.map { .string($0["guid"]) })])
+        case "messages.conversation":
+            let reader = try MessagesReader(path: path)
+            guard let conversation = try reader.query("SELECT ROWID AS row_position,* FROM chat WHERE guid=?", [request["chat_guid"].string]).first else { return .object(["exists": .bool(false)]) }
+            return .object(["exists": .bool(true), "row_position": .number(Double(conversation.integer("row_position"))), "last_read_message_timestamp": .string(conversation["last_read_message_timestamp"])])
+        case "messages.conversation_messages":
+            let reader = try MessagesReader(path: path)
+            let rows = try reader.query("SELECT m.guid,m.date FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=c.ROWID) ORDER BY m.ROWID DESC", [request["chat_guid"].string])
+            return .object(["rows": .array(rows.map { .object(["guid": .string($0["guid"]), "date": .string($0["date"])]) })])
+        case "messages.chat_recoverable":
+            return .object(["recoverable": .bool(try MessagesReader(path: path).recoverableChat(request["chat_guid"].string))])
+        case "messages.ledger":
+            let run = request["run"].string
+            guard !run.isEmpty, run.range(of: #"^[A-Za-z0-9_-]+$"#, options: .regularExpression) != nil else { throw SourceFailure.invalid }
+            let ledger = PrivateReport.directory.appendingPathComponent("messages-command-cleanup/" + run + ".json")
+            return try JSONDecoder().decode(JSON.self, from: Data(contentsOf: ledger))
+        case "messages.is_self_chat":
+            let participants = request["participants"].array.map(\.string)
+            return .object(["self_chat": .bool(MessagesSelfTestIsolation.isSelfChat(participants, own: try MessagesSelfTestIsolation.accountHandles(database: MessagesDatabase())))])
+        case "messages.foreign_activity":
+            let reader = try MessagesReader(path: path)
+            let chat = request["chat"].string, baseline = String(Int64(request["baseline"].number)), tag = request["tag"].string
+            let unread = try reader.query("SELECT 1 FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? AND m.ROWID<=? AND m.is_from_me=0 AND m.is_read=0 AND COALESCE(m.associated_message_type,0)=0 AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=m.ROWID) LIMIT 1", [chat, baseline])
+            let fresh = try reader.query("SELECT 1 FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? AND m.ROWID>? AND NOT (instr(COALESCE(m.text,''),?)>0 OR COALESCE(instr(m.attributedBody,CAST(? AS BLOB)),0)>0) AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=m.ROWID) LIMIT 1", [chat, baseline, tag, tag])
+            return .object(["foreign_unread": .bool(!unread.isEmpty), "foreign_new": .bool(!fresh.isEmpty)])
+        case "messages.ui_activate_validate":
+            let prepared = Prepared(nativeState: request["prepared"]["native_state"], fingerprint: request["prepared"]["fingerprint"].string, action: request["prepared"]["action"])
+            await MessagesUISession.activate()
+            try await MessagesAccessibility.validate(prepared)
+            return .object([:])
         case "messages.ui_available":
             return .object(["available": .bool(await MessagesAccessibility.available)])
         case "messages.ui_prepare":
