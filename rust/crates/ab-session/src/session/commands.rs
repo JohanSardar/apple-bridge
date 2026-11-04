@@ -551,8 +551,7 @@ impl Hub {
         };
         let owned = core
             .commands
-            .owned
-            .contains(source_of(&ticket.command.operation()))
+            .owns(&ticket.command.operation())
             .then(|| {
                 (
                     ticket.command.clone(),
