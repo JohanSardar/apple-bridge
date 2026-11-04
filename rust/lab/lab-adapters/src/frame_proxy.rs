@@ -167,14 +167,12 @@ fn from_replica(text: &str, receipts: &mut Vec<bool>, counters: &Counters) -> Op
             counters.dropped.fetch_add(1, Ordering::SeqCst);
             return None;
         }
-        if !receipts.is_empty() {
-            if receipts.remove(0) {
-                let mut seen = probe(counters);
-                if frame["cursor"].is_null() {
-                    seen.partial_ack_without_cursor += 1;
-                } else {
-                    seen.partial_ack_with_cursor += 1;
-                }
+        if !receipts.is_empty() && receipts.remove(0) {
+            let mut seen = probe(counters);
+            if frame["cursor"].is_null() {
+                seen.partial_ack_without_cursor += 1;
+            } else {
+                seen.partial_ack_with_cursor += 1;
             }
         }
     }
@@ -190,7 +188,7 @@ fn from_gateway(text: &str, receipts: &mut Vec<bool>, counters: &Counters) -> bo
         return false;
     };
     let kind = frame["t"].as_str().unwrap_or_default();
-    let partial = kind == "Batch" && frame["batch"]["partial"] == true;
+    let partial = kind == "Batch" && frame["partial"] == true;
     if matches!(
         kind,
         "Welcome" | "Reset" | "SnapshotBegin" | "SnapshotPage" | "SnapshotEnd" | "Batch"
@@ -198,9 +196,7 @@ fn from_gateway(text: &str, receipts: &mut Vec<bool>, counters: &Counters) -> bo
         receipts.push(partial);
     }
     let mut seen = probe(counters);
-    if kind == "Batch"
-        && (frame.get("partial").is_some() || frame["batch"].get("partial").is_some())
-    {
+    if kind == "Batch" && frame.get("partial").is_some() {
         seen.partial_fields += 1;
     }
     if kind == "Welcome" {
