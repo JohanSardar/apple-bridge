@@ -126,6 +126,7 @@ fn safari(root: &Path, options: &[String]) -> Result<(), Box<dyn std::error::Err
                         Kind::History => "history",
                         Kind::Bookmarks => "bookmarks",
                         Kind::Cloud => "cloud",
+                        Kind::Tabs => "tabs",
                     };
                     let mut out = std::io::stdout().lock();
                     write_json(

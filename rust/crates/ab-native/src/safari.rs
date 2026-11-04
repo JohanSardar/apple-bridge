@@ -12,6 +12,16 @@ use std::{
 
 const HISTORY_GENERATION: &str = "SELECT 'safari-history-1'";
 const CLOUD_GENERATION: &str = "SELECT 'safari-cloud-1'";
+const TABS_GENERATION: &str = "safari-tabs-1";
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Tab {
+    pub window: i64,
+    pub index: i64,
+    pub title: String,
+    pub url: String,
+    pub active: bool,
+}
 
 #[derive(Debug)]
 pub struct Scan {
@@ -221,6 +231,7 @@ pub enum Kind {
     History,
     Bookmarks,
     Cloud,
+    Tabs,
 }
 impl Kind {
     pub fn scope(self) -> Vec<String> {
@@ -228,6 +239,7 @@ impl Kind {
             Self::History => vec!["safari.history".into()],
             Self::Bookmarks => vec!["safari.bookmark".into(), "safari.reading_list".into()],
             Self::Cloud => vec!["safari.cloud_tab".into()],
+            Self::Tabs => vec!["safari.tab".into()],
         }
     }
     fn filename(self) -> &'static str {
@@ -235,6 +247,7 @@ impl Kind {
             Self::History => "History.db",
             Self::Bookmarks => "Bookmarks.plist",
             Self::Cloud => "CloudTabs.db",
+            Self::Tabs => "",
         }
     }
 }
@@ -427,8 +440,32 @@ impl Reader {
             )?,
             Kind::Bookmarks => bookmarks(root, &context.capture)?,
             Kind::Cloud => cloud_tabs(root, context.max_rows.min(100_000), &context.capture)?,
+            Kind::Tabs => return Err(Error::Corrupt),
         };
         self.prepare(kind, scan, input, &prior, context)
+    }
+    pub fn tabs(&mut self, tabs: &[Tab], context: &ReadContext) -> Result<Option<Pending>> {
+        let prior = self.states.get(&Kind::Tabs).cloned().unwrap_or_default();
+        let mut observations = Vec::with_capacity(tabs.len());
+        for tab in tabs {
+            let key = format!("{}:{}", tab.window, tab.index);
+            observations.push(observation(
+                "safari.tab",
+                &key,
+                json!({"window":tab.window,"index":tab.index,"title":tab.title,"url":tab.url,"active":tab.active}),
+                &context.capture,
+            )?);
+        }
+        let scan = Scan {
+            generation: TABS_GENERATION.into(),
+            observations,
+            expires_at: None,
+        };
+        let input = Inputs {
+            main: None,
+            wal: None,
+        };
+        self.prepare(Kind::Tabs, scan, input, &prior, context)
     }
     fn prepare(
         &mut self,

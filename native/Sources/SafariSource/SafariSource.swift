@@ -9,8 +9,9 @@ public actor SafariSource: Source {
     private let directory: URL
     private let cacheURL: URL?
     private var historyExpiry = Date.distantPast
+    private let tabsOnly: Bool
     private var generation = UUID().uuidString
-    public init(directory: URL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Safari"), cacheURL: URL? = nil, tabs: SafariTabs = SafariTabs(), clock: @escaping @Sendable () -> Date = { Date() }) { self.directory = directory; self.cacheURL = cacheURL; self.tabs = tabs; self.clock = clock }
+    public init(directory: URL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Safari"), cacheURL: URL? = nil, tabs: SafariTabs = SafariTabs(), tabsOnly: Bool = false, clock: @escaping @Sendable () -> Date = { Date() }) { self.directory = directory; self.cacheURL = cacheURL; self.tabs = tabs; self.tabsOnly = tabsOnly; self.clock = clock }
     public func open() async -> SourceReadiness {
         guard FileManager.default.fileExists(atPath: directory.path) else {
             return SourceReadiness(state: "unavailable", coverage: .object(["fields": .string("partial")]), reason: "Safari data directory unavailable")
@@ -80,25 +81,27 @@ public actor SafariSource: Source {
         guard scan.complete else { throw SourceFailure.unavailable }
         return (reader.generation, scan.rows.map { row in observation("safari.cloud_tab", row["key"]!.text!, ["device": .string(row["device"]?.text ?? ""), "title": .string(row["title"]?.text ?? ""), "url": .string(row["url"]?.text ?? "")]) })
     }
-    public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
-        let tabTask = Task {
-            let tabCache = cacheURL?.appendingPathExtension("tabs")
-            var previous: [JSON] = tabCache.flatMap { try? Data(contentsOf: $0) }.flatMap { try? JSONDecoder().decode([JSON].self, from: $0) } ?? []
-            while !Task.isCancelled {
-                do {
-                    let rows = try await tabs.tabs()
-                    let material = rows.map { row -> JSON in var o = row.object; o.removeValue(forKey: "observed_at"); return .object(o) }
-                    if material != previous {
-                        let keys = Set(rows.map { $0["native_key"].string })
-                        let absent = previous.filter { !keys.contains($0["native_key"].string) }.map { row in JSON.object(["kind": .string("absent"), "collection": .string("safari.tab"), "native_key": row["native_key"], "observed_at": .string(timestamp()), "revalidated": .bool(true)]) }
-                        try await sink.emitCheckpoint(source: name, generation: generation, checkpoint: UUID().uuidString, observations: rows + absent, scanID: UUID().uuidString, scanStartedAt: timestamp(), scope: ["safari.tab"], completionEvidence: "complete", blobHandles: [:], live: true)
-                        if let tabCache { try JSONEncoder().encode(material).write(to: tabCache, options: .atomic) }
-                        previous = material
-                    }
-                } catch {}
-                try await Task.sleep(for: .seconds(5))
-            }
+    private func liveTabs(into sink: any ObservationSink) async throws {
+        let tabCache = tabsOnly ? nil : cacheURL?.appendingPathExtension("tabs")
+        var previous: [JSON]? = tabsOnly ? nil : (tabCache.flatMap { try? Data(contentsOf: $0) }.flatMap { try? JSONDecoder().decode([JSON].self, from: $0) } ?? [])
+        while !Task.isCancelled {
+            do {
+                let rows = try await tabs.tabs()
+                let material = rows.map { row -> JSON in var o = row.object; o.removeValue(forKey: "observed_at"); return .object(o) }
+                if material != previous {
+                    let keys = Set(rows.map { $0["native_key"].string })
+                    let absent = (previous ?? []).filter { !keys.contains($0["native_key"].string) }.map { row in JSON.object(["kind": .string("absent"), "collection": .string("safari.tab"), "native_key": row["native_key"], "observed_at": .string(timestamp()), "revalidated": .bool(true)]) }
+                    try await sink.emitCheckpoint(source: name, generation: generation, checkpoint: UUID().uuidString, observations: rows + absent, scanID: UUID().uuidString, scanStartedAt: timestamp(), scope: ["safari.tab"], completionEvidence: "complete", blobHandles: [:], live: true)
+                    if let tabCache { try JSONEncoder().encode(material).write(to: tabCache, options: .atomic) }
+                    previous = material
+                }
+            } catch is CancellationError { throw CancellationError() } catch {}
+            try await Task.sleep(for: .seconds(5))
         }
+    }
+    public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
+        if tabsOnly { try await liveTabs(into: sink); return }
+        let tabTask = Task { try await liveTabs(into: sink) }
         defer { tabTask.cancel() }
         let cached = try SafariCaptureCache.load(cacheURL)
         if !resume["generation"].string.isEmpty { generation = resume["generation"].string }

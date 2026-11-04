@@ -1041,3 +1041,100 @@ fn concurrent_checkpoint_saves_never_race_on_the_temporary_file() -> Fallible<()
     std::fs::remove_dir_all(&directory)?;
     Ok(())
 }
+
+fn tab_frame(checkpoint: &str, tabs: &[(i64, i64, &str)], partial: bool) -> Value {
+    let rows: Vec<Value> = tabs
+        .iter()
+        .map(|(window, index, title)| {
+            json!({"kind":"upsert","collection":"safari.tab","native_key":format!("{window}:{index}"),
+                   "scoped_alias":format!("safari/safari.tab/{window}:{index}"),"observed_at":"2026-01-01T00:00:00.000Z",
+                   "data":{"window":window,"index":index,"title":title,"url":"https://example.com/","active":*index == 1}})
+        })
+        .collect();
+    json!({"t":"Capture","source":"safari","generation":"swift-tabs","checkpoint":checkpoint,"scan_id":checkpoint,
+           "scope":["safari.tab"],"completion_evidence":if partial {"partial"} else {"complete"},"observations":rows,"live":true})
+}
+
+#[test]
+fn safari_live_tabs_arrive_as_helper_facts_and_leave_as_rust_captures() -> Fallible<()> {
+    let directory = temporary("tabs")?;
+    let mut session = wire(
+        readers::from_config(&json!({"safari":{"root":directory}}).to_string())?,
+        polling(None),
+        json!({}),
+    )?;
+    expect_silence(&mut session.gateway)?;
+
+    send(
+        &mut session.helper,
+        &tab_frame("t1", &[(7, 1, "One"), (7, 2, "Two")], false),
+    )?;
+    let (_, committed) = receive(&mut session.helper)?;
+    assert_eq!(committed["t"], "Committed");
+    assert_eq!(committed["checkpoint"], "t1");
+    let (size, first) = receive(&mut session.gateway)?;
+    assert_eq!(first["source"], "safari");
+    assert_eq!(first["scope"], json!(["safari.tab"]));
+    assert_eq!(first["completion_evidence"], "complete");
+    assert_eq!(first["live"], false);
+    assert_eq!(first["predecessor"], "");
+    let keys: Vec<&str> = first["observations"]
+        .as_array()
+        .ok_or("observations")?
+        .iter()
+        .map(|row| row["native_key"].as_str().unwrap_or_default())
+        .collect();
+    assert_eq!(keys, ["7:1", "7:2"]);
+    assert_eq!(first["observations"][0]["data"]["title"], "One");
+    commit(&mut session, "safari", &first, size)?;
+
+    send(
+        &mut session.helper,
+        &tab_frame("t2", &[(7, 1, "One renamed")], false),
+    )?;
+    assert_eq!(receive(&mut session.helper)?.1["t"], "Committed");
+    let (size, second) = receive(&mut session.gateway)?;
+    assert_eq!(second["live"], true);
+    assert_eq!(second["predecessor"], first["checkpoint"]);
+    assert_eq!(second["generation"], first["generation"]);
+    let kinds: Vec<(&str, &str)> = second["observations"]
+        .as_array()
+        .ok_or("observations")?
+        .iter()
+        .map(|row| {
+            (
+                row["kind"].as_str().unwrap_or_default(),
+                row["native_key"].as_str().unwrap_or_default(),
+            )
+        })
+        .collect();
+    assert_eq!(kinds, [("upsert", "7:1"), ("absent", "7:2")]);
+    commit(&mut session, "safari", &second, size)?;
+
+    send(
+        &mut session.helper,
+        &tab_frame("t3", &[(7, 1, "One renamed")], false),
+    )?;
+    assert_eq!(receive(&mut session.helper)?.1["t"], "Committed");
+    expect_silence(&mut session.gateway)?;
+
+    send(&mut session.helper, &tab_frame("t4", &[], true))?;
+    assert_eq!(receive(&mut session.helper)?.1["t"], "Committed");
+    let mut other = tab_frame("t5", &[], false);
+    other["scope"] = json!(["safari.history"]);
+    send(&mut session.helper, &other)?;
+    assert_eq!(receive(&mut session.helper)?.1["t"], "Committed");
+    expect_silence(&mut session.gateway)?;
+
+    send(&mut session.helper, &tab_frame("t6", &[], false))?;
+    assert_eq!(receive(&mut session.helper)?.1["t"], "Committed");
+    let (_, closed) = receive(&mut session.gateway)?;
+    assert_eq!(closed["observations"][0]["kind"], "absent");
+    assert_eq!(closed["observations"][0]["native_key"], "7:1");
+
+    drop(session.gateway);
+    drop(session.helper);
+    let _ = session.worker.join();
+    std::fs::remove_dir_all(directory)?;
+    Ok(())
+}
