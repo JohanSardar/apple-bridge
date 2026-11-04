@@ -1,10 +1,12 @@
 import argparse
 import json
 from pathlib import Path
+import re
 import subprocess
 
 HARNESS_ONLY = {'credential_backend_override_restored'}
 GO_TARGET_SCENARIOS = {'RELAY-LEGACY-COMPAT'}
+GO_RUST_GATEWAY_ONLY = {'core/RMT-PRIVATE-CONNECT'}
 BLOB_SCENARIOS = ['CORE-BLOB-CAP', 'CORE-BLOB-CORRUPT', 'CORE-BLOB-DUPLICATE-REFERENCE',
                   'CORE-BLOB-GATEWAY-RETRY', 'CORE-BLOB-GC', 'CORE-BLOB-INTERRUPT',
                   'CORE-BLOB-NO-DIGEST-AUTH', 'CORE-BLOB-OFFLOADED', 'CORE-BLOB-REFERENCE-INDEX',
@@ -62,7 +64,7 @@ RELAY_SCENARIOS = ['RELAY-ENROLL', 'RELAY-PASSTHROUGH', 'RELAY-LIMITS', 'RELAY-R
                    'RELAY-LEGACY-COMPAT', 'RELAY-ACME', 'RELAY-OWN-DOMAIN']
 RELAY_STREAM_SCENARIOS = ['RELAY-STREAMS']
 SECURITY_SCENARIOS = ['SEC-REMOTE-ACCESS']
-CONSENT_SCENARIOS = ['./consent-connector']
+CONSENT_SCENARIOS = ['consent-connector']
 CONNECTOR_SCENARIOS = ['AUTH-SCOPES-METADATA', 'CONN-CHATGPT', 'CONN-CLAUDE-AI', 'RMT-PRIVATE-CONNECT']
 REMINDER_SCENARIOS = ['REM-CONFLICT', 'REM-EXTERNAL-RACE', 'REM-NATIVE-LIST-RACE', 'REM-OPERATION-SHAPES',
                       'REM-READONLY-LIST']
@@ -134,6 +136,20 @@ BENCH_SCENARIOS = ['CORE-READMODEL-UPDATE-PERF']
 REPLICA_SCENARIOS = ['CORE-QUERY-REPLICA', 'CORE-CRED-LIFECYCLE']
 
 
+def scenario_key(root, name):
+    name = name[2:] if name.startswith('./') else name
+    if '/' in name:
+        return name
+    for key in (f'core/{name}', name):
+        if (root / f'{key}.yaml').is_file():
+            return key
+    found = [path.relative_to(root).with_suffix('').as_posix() for path in sorted(root.rglob('*.yaml'))
+             if re.search(rf'^id:\s*{re.escape(name)}\s*$', path.read_text(), re.M)]
+    if len(found) != 1:
+        raise SystemExit(f'{name}: expected one scenario by file name or id under lab/scenarios, found {len(found)}')
+    return found[0]
+
+
 def ignored(scenario, name):
     if name in HARNESS_ONLY or name == 'world_started':
         return True
@@ -196,6 +212,7 @@ def main():
     parser.add_argument('--check-real-only', dest='check_real_only', action='store_true')
     parser.add_argument('--rust-only', dest='rust_only', action='store_true')
     parser.add_argument('--scenario', action='append')
+    parser.add_argument('--timeout', type=int, default=900)
     parser.add_argument('--import', dest='imports', action='store_true')
     parser.add_argument('--messages-a', dest='messages_a', action='store_true')
     parser.add_argument('--messages-a-commands', dest='messages_a_commands', action='store_true')
@@ -312,25 +329,27 @@ def main():
         args.scenario = (args.scenario or []) + WEB_AGENT_SCENARIOS
     if args.darwin_core:
         args.scenario = (args.scenario or []) + DARWIN_CORE_SCENARIOS
-    for name in args.scenario or []:
-        key = name if '/' in name else f'core/{name}'
+    root = Path(__file__).resolve().parents[2] / 'lab' / 'scenarios'
+    names = [scenario_key(root, n) for n in args.scenario or SCENARIOS]
+    for key in names:
         if key in MOVED_TO_RUST_TESTS:
             raise SystemExit(f'{key} is not run by families-parity: {MOVED_TO_RUST_TESTS[key]}')
     out = Path(args.output).resolve()
     out.mkdir(mode=0o700, parents=True, exist_ok=False)
-    root = Path(__file__).resolve().parents[2] / 'lab' / 'scenarios'
-    names = [n if '/' in n else f'core/{n}' for n in args.scenario or SCENARIOS]
     files = [str(root / f'{name}.yaml') for name in names]
     if not args.rust_only:
         with (out / 'go.jsonl').open('w') as stream:
-            impl = ['--impl', 'gateway=rust', '--rust-binary', str(Path(args.gateway).resolve())] if args.go_rust_gateway else []
+            rust_gateway = ['--impl', 'gateway=rust', '--rust-binary', str(Path(args.gateway).resolve())]
             level = ['--level', 'replica', '--local-replicas'] if args.replica else ['--level', 'sim']
-            subprocess.run([args.go_lab, 'run', *files, *level, '--json', *impl],
-                           stdout=stream, timeout=900, check=True)
+            for forced in (False, True):
+                batch = [f for f, n in zip(files, names) if (n in GO_RUST_GATEWAY_ONLY) == forced]
+                if batch:
+                    subprocess.run([args.go_lab, 'run', *batch, *level, '--json', *(rust_gateway if forced or args.go_rust_gateway else [])],
+                                   stdout=stream, timeout=args.timeout, check=True)
     with (out / 'rust.jsonl').open('w') as stream:
         subprocess.run([args.families, 'run', *files, '--gateway', args.gateway,
                         '--simapple', args.simapple, '--output', str(out / 'worlds')],
-                       stdout=stream, timeout=900, check=True)
+                       stdout=stream, timeout=args.timeout, check=True)
     rust = verdicts(out / 'rust.jsonl')
     if args.rust_only:
         failing = {name: sorted(a for a, (passed, status) in checks.items() if not passed and status != 'unverified') for name, checks in rust.items()}
