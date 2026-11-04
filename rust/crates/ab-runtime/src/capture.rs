@@ -108,12 +108,52 @@ impl Backend {
     }
 }
 
+const REARM_COOLDOWN: std::time::Duration = std::time::Duration::from_secs(60);
+
+#[derive(Default)]
+struct RearmCooldown(std::collections::HashMap<String, std::time::Instant>);
+impl RearmCooldown {
+    async fn rearm(
+        &self,
+        blobs: &Arc<Mutex<ab_blobs::Store>>,
+        digest: &ab_blobs::Digest,
+    ) -> Result<bool, crate::Error> {
+        let cooling = self
+            .0
+            .get(digest.as_str())
+            .is_some_and(|at| at.elapsed() < REARM_COOLDOWN);
+        Ok(!cooling && rearm(blobs, digest).await?)
+    }
+    async fn note(
+        &mut self,
+        blobs: &Arc<Mutex<ab_blobs::Store>>,
+        digest: &ab_blobs::Digest,
+        transferred: bool,
+    ) {
+        let exhausted = transferred
+            && blobs
+                .lock()
+                .await
+                .entries()
+                .get(digest.as_str())
+                .is_some_and(|entry| {
+                    entry.state == ab_blobs::BlobState::Failed
+                        && entry.reason == "ipc_retry_exhausted"
+                });
+        if exhausted {
+            self.0
+                .insert(digest.as_str().to_owned(), std::time::Instant::now());
+        }
+    }
+}
+
 pub async fn hydrate(
     blobs: Arc<Mutex<ab_blobs::Store>>,
     commands: ab_applepeer::Commands,
     mut jobs: mpsc::UnboundedReceiver<CaptureJob>,
     mut stop: watch::Receiver<bool>,
 ) -> Result<(), crate::Error> {
+    let mut cooldown = RearmCooldown::default();
     loop {
         let job = tokio::select! {
             _ = stop.changed() => return Ok(()),
@@ -135,7 +175,7 @@ pub async fn hydrate(
             let mut succeeded = false;
             let mut transferred = false;
             let mut known = true;
-            let rearmed = rearm(&blobs, &digest).await?;
+            let rearmed = cooldown.rearm(&blobs, &digest).await?;
             loop {
                 let entry = blobs.lock().await.entries().get(digest.as_str()).cloned();
                 let Some(entry) = entry else {
@@ -201,13 +241,8 @@ pub async fn hydrate(
                     break;
                 }
             }
-            tally.record(match (succeeded, known, transferred) {
-                (true, _, _) if rearmed => Outcome::Recovered,
-                (true, _, _) => Outcome::Stored,
-                (false, false, _) => Outcome::Unknown,
-                (false, true, true) => Outcome::FailedAfterRetry,
-                (false, true, false) => Outcome::PreviouslyFailed,
-            });
+            cooldown.note(&blobs, &digest, transferred).await;
+            tally.record(Outcome::of((succeeded, known, transferred), rearmed));
         }
         tally.report(total);
     }
@@ -219,6 +254,17 @@ enum Outcome {
     Unknown,
     FailedAfterRetry,
     PreviouslyFailed,
+}
+impl Outcome {
+    fn of(state: (bool, bool, bool), rearmed: bool) -> Self {
+        match state {
+            (true, _, _) if rearmed => Self::Recovered,
+            (true, _, _) => Self::Stored,
+            (false, false, _) => Self::Unknown,
+            (false, true, true) => Self::FailedAfterRetry,
+            (false, true, false) => Self::PreviouslyFailed,
+        }
+    }
 }
 #[derive(Default)]
 struct Tally {
