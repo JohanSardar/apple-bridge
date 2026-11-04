@@ -446,7 +446,7 @@ fn rust_voice_memos_serve_blob_reads_across_restart() -> Fallible<()> {
     let (size, capture) = receive(&mut first.gateway)?;
     assert_eq!(capture["source"], "voice_memos");
     let handles = capture["blob_handles"].as_object().ok_or("blob_handles")?;
-    assert_eq!(handles.len(), 1, "{attachment}");
+    assert_eq!(handles.len(), 1);
     let (digest, handle) = handles.iter().next().ok_or("handle")?;
     let handle = handle.as_str().ok_or("handle text")?.to_owned();
     let digest = digest.clone();
