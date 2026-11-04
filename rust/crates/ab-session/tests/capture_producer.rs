@@ -446,7 +446,7 @@ fn rust_voice_memos_serve_blob_reads_across_restart() -> Fallible<()> {
     let (size, capture) = receive(&mut first.gateway)?;
     assert_eq!(capture["source"], "voice_memos");
     let handles = capture["blob_handles"].as_object().ok_or("blob_handles")?;
-    assert_eq!(handles.len(), 1);
+    assert_eq!(handles.len(), 1, "{attachment}");
     let (digest, handle) = handles.iter().next().ok_or("handle")?;
     let handle = handle.as_str().ok_or("handle text")?.to_owned();
     let digest = digest.clone();
@@ -1211,7 +1211,7 @@ fn messages_reader_streams_history_then_live_rows_and_serves_attachment_bytes() 
     for key in ["messages.message/msg-1", "messages.message/msg-2", "messages.chat/iMessage;-;+15550100", "messages.attachment/att-1"] {
         assert!(seen.contains(key), "missing {key}: {seen:?}");
     }
-    assert_eq!(handles.len(), 1);
+    assert_eq!(handles.len(), 1, "{attachment}");
     let (digest, handle) = handles.iter().next().ok_or("handle")?;
     assert_eq!(handle, "att-1");
     assert_eq!(attachment["data"]["blob"]["digest"], *digest, "{attachment}");
