@@ -23,11 +23,9 @@ public actor AppleSession: ObservationSink {
         let expiry: ContinuousClock.Instant
         let fence: UInt64
     }
-    var nativeFiles: NativeFiles?
     var nativeSources: SessionSources.Builtins?
     var nativeSourcesTask: Task<SessionSources.Builtins, Error>?
-    var nativeAuthority = false
-    var ipcRunning = false
+    private var running = false
     var link: NativeSessionLink?
     private var scanWaiters: [String: CheckedContinuation<String, any Error>] = [:]
     private var scanSequence = 0
@@ -35,7 +33,6 @@ public actor AppleSession: ObservationSink {
     private var fence: UInt64 = 0
     private var permissionStates: [String: String] = [:]
     private var checkpoints: [String: JSON] = [:]
-    private var observedCheckpoints: [String: String] = [:]
     private var commandActive = false
     var additionalSources: [String: any Source] = [:]
     private var prefixedBlobReaders: [String: @Sendable (String, Int64, Int) async throws -> JSON] = [:]
@@ -111,7 +108,6 @@ public actor AppleSession: ObservationSink {
         for waiter in scanWaiters.values { waiter.resume(throwing: SourceFailure.unavailable) }
         scanWaiters = [:]
         permissionStates = [:]
-        observedCheckpoints = [:]
         for task in captureTasks { task.cancel() }
         captureTasks = []
         for task in frameTasks.values { task.cancel() }
@@ -389,9 +385,6 @@ public actor AppleSession: ObservationSink {
             try Data(checkpoint.utf8).write(to: marker, options: .atomic)
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: marker.path)
         }
-        for observation in observations where ["upsert", "absent"].contains(observation["kind"].string) {
-            observedCheckpoints[observation["collection"].string + "/" + observation["native_key"].string] = checkpoint
-        }
         if source == "reminders" { try await self.source.didCommit(observations.map(RemindersStoreProjection.baseObservation), generation: generation) }
     }
 
@@ -537,7 +530,7 @@ public actor AppleSession: ObservationSink {
         try await runNative(connect: { [self] in
             let started = try NativeSessionLauncher.launch(socket: socket, secretFile: secretFile, home: sessionHome)
             let descriptor = started.proxy.factsDescriptor
-            let facts = NativeServer(adapter: self, factsOnly: true)
+            let facts = NativeServer(adapter: self)
             let serving = Task {
                 defer { Darwin.close(descriptor) }
                 try? await facts.run(descriptor: descriptor)
@@ -553,9 +546,9 @@ public actor AppleSession: ObservationSink {
     }
 
     public func runNative(connect: @escaping @Sendable () throws -> (descriptor: Int32, stop: @Sendable () -> Void)) async throws {
-        guard !nativeAuthority, !ipcRunning else { throw SourceFailure.conflict }
-        ipcRunning = true
-        defer { ipcRunning = false }
+        guard !running else { throw SourceFailure.conflict }
+        running = true
+        defer { running = false }
         for (name, source) in sources.additional { additionalSources[name] = source }
         var backoff = 100
         while !Task.isCancelled && kill(gatewayPID, 0) == 0 {
@@ -671,12 +664,7 @@ public actor AppleSession: ObservationSink {
         }
         if frame["action"]["op"].string.hasPrefix("notes.") { return Rejection(code: code, message: code, evidence: nil) }
         guard code == "conflict", !key.isEmpty else { return Rejection(code: code, message: code, evidence: nil) }
-        do {
-            let isContact = frame["action"]["op"].string.hasPrefix("contacts.")
-            if isContact { try await contacts.reconcile(into: self, key: key) } else if frame["action"]["op"].string.hasPrefix("calendar.") { try await calendar.reconcile(into: self) } else { try await source.reconcile(into: self) }
-            guard let checkpoint = observedCheckpoints[(isContact ? "contacts.contact/" : frame["action"]["op"].string.hasPrefix("calendar.") ? "calendar.event/" : "reminders.reminder/") + key] else { throw SourceFailure.unavailable }
-            return Rejection(code: code, message: code, evidence: .object(["native_key": .string(key), "capture_checkpoint": .string(checkpoint)]))
-        } catch { return Rejection(code: "unavailable", message: "unavailable", evidence: nil) }
+        return Rejection(code: "unavailable", message: "unavailable", evidence: nil)
     }
 
     private func durableAction(_ action: JSON) -> JSON {

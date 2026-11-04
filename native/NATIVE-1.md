@@ -1,46 +1,16 @@
 # Helper native/1 adapter
 
-The default Helper session still connects directly with ipc/1. Set
-`AB_SESSION_PROXY=1` to launch the bundled `Contents/MacOS/ab-session` child.
-`AB_SESSION_BINARY` overrides that executable for a lab build. The parent connects
-and checks the gateway socket, then passes fd 198 (gateway), fd 199 (raw IPC),
-fd 200 (native channel for effects) and fd 201 (native channel for facts only) without
-disclaiming responsibility. Only the child receives `AB_NATIVE_FD=200` and
-`AB_NATIVE_FACTS_FD=201`; the Helper runs a second `NativeServer(factsOnly: true)` on the
-facts stream, so fact pulls never wait behind an effect. The existing authentication and IPC handlers run
-unchanged across the raw proxy. Child termination closes the session; reconnect
-starts a fresh child. The direct connection never creates these socketpairs.
+The Helper connects and checks the gateway socket, then starts its bundled `Contents/MacOS/ab-session` child without disclaiming
+responsibility, passing fd 198 (gateway), fd 199 (session link) and fd 200 (facts, `AB_NATIVE_FACTS_FD=200`). `AB_SESSION_BINARY`
+overrides that executable for a lab build. ab-session authenticates and owns ipc/1; Swift speaks only native/1. Child termination closes the session,
+and reconnecting starts a fresh child.
 
-The native channel stays idle until the child sends Hello. `NativeServer` wraps
-`NativeAdapter`; `AppleSession` supplies the framework adapter. Frames are capped
-at 256 KiB. Full reads use pinned, bounded-lifetime snapshots and snapshot-bound
-cursors. Intermediate and incomplete pages never claim completeness. Fact scans
-use separate source instances and storage under `native-facts`, preserving the
-IPC capture source state. Current source adapters accept full native scope with
-empty args; filtered requests fail unsupported. Calendar scope is the existing
-CalendarTime window. Facts enumerate only what the framework returns now: no baseline, no absent rows, no
-`ObservationSink`. `Revalidate` answers a framework fact (`present`, `missing`, `outside_scope`) per
-identity and `Changed` is pushed on the same stream; frames are handled concurrently by id. Rust owns
-the diff and every deletion decision.
-
-Effects remain disabled on the proxy channel while Swift owns IPC command
-authority. `AppleSession.runNative(descriptor:)` is the exclusive entry point for
-a later Rust routing cutover; it cannot run beside `run()`. The current Rust raw
-proxy does not perform that cutover. This prevents activating a second dispatch
-guard during Phase 6 step 1. Native permits bind the operation, canonical argument
-hash, owner fence, deadline, command, ticket and one-shot nonce. Existing source
-prepare, validation, dispatch and read-back remain authoritative. An invoked
-adapter failure yields indeterminate evidence and permanently consumes the nonce
-for that connection. Rust must never replay an ambiguous effect.
-
-Native command args contain the existing command envelope, including action,
-expected_state, origin, principal and the original IPC request_hash. The action op
-is bound to the native effect operation. Framework query args retain their
-existing shape. Document queries accept `file_ref` instead of arbitrary `file`
-paths. Large effect results use session-owned file refs. Release takes
-`args.file_ref` and replies Released. File helpers verify ownership, mode, regular
-file type, hardlink count, size and digest. Media derivatives reuse the existing
-engine and export its derivative bytes as file refs.
+`NativeServer` wraps `NativeAdapter` on the facts stream; `AppleSession` supplies the framework adapter. Frames are capped
+at 256 KiB. Full reads use pinned, bounded-lifetime snapshots and snapshot-bound cursors. Intermediate and incomplete pages never
+claim completeness. Fact scans use separate source instances and storage under `native-facts`. Current source adapters accept full native scope with
+empty args; filtered requests fail unsupported. Calendar scope is the existing CalendarTime window. Facts enumerate only what the framework returns now:
+no baseline, no absent rows, no `ObservationSink`. `Revalidate` answers a framework fact (`present`, `missing`, `outside_scope`) per
+identity and `Changed` is pushed on the same stream; frames are handled concurrently by id. Rust owns the diff and every deletion decision.
 
 Build checks in this checkout, never in the live Helper home:
 
@@ -50,6 +20,5 @@ python3 packaging/dev/generate-source-registrations.py native
 ~/bin/ab-local native/.build/clt-release/NativeChecks lab/fixtures/native-1/facts.json
 ```
 
-The fake-adapter executable checks permit rejection/replay, exact fixture facts,
-paging/completeness, real socketpair exchanges, frame bounds and file confinement.
-It does not prove live framework behavior or authorize a production cutover.
+The fake-adapter executable checks exact fixture facts, paging and completeness, real socketpair exchanges and frame bounds.
+It does not prove live framework behaviour.
