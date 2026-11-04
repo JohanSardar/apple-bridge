@@ -194,6 +194,14 @@ impl World {
                 "--helper-lab-commands".into(),
             ],
         };
+        if let Ok(source) = std::env::var("AB_LAB_CAPTURE_SOURCE")
+            && !source.is_empty()
+        {
+            let helper = world.gateway_home.join("helper");
+            fs::create_dir_all(&helper)?;
+            fs::set_permissions(&helper, fs::Permissions::from_mode(0o700))?;
+            fs::write(helper.join("lab-capture-source"), source)?;
+        }
         world.launch_gateway()?;
         world
             .gateway_cli(&["token", "create", "--scope", &world.config.scope])?
