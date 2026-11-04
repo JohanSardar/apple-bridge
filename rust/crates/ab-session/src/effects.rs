@@ -2,7 +2,7 @@ use crate::{
     Error,
     flight::Ledger,
     frame::{read_frame, send, text},
-    guard::{DispatchGuard, PreparedEffect},
+    guard::{DispatchGuard, PreparedEffect, durable_action},
 };
 use serde_json::{Number, Value, json};
 use sha2::{Digest, Sha256};
@@ -306,14 +306,6 @@ fn collections(operation: &str, evidence: &Value) -> Option<Vec<String>> {
         _ => return None,
     };
     Some(fixed.iter().map(|c| (*c).to_owned()).collect())
-}
-
-fn durable_action(command: &Value) -> Value {
-    let mut action = command["action"].clone();
-    if action["op"] == "mac.clipboard_write" {
-        action["args"] = json!({});
-    }
-    action
 }
 
 fn rejection(command_id: &Value, code: &str, message: &str, evidence: Option<Value>) -> Value {
@@ -623,7 +615,7 @@ impl Layer {
             }
         }
         let args = canonical(&args)?;
-        let prepared = json!({"action":durable_action(&command),"native_state":ticket.prepared["native_state"],"request_hash":command["request_hash"]});
+        let prepared = json!({"action":durable_action(&command["action"]),"native_state":ticket.prepared["native_state"],"request_hash":command["request_hash"]});
         let permit = self.guard()?.begin(PreparedEffect {
             command_id: id.into(),
             owner_fence: fence,

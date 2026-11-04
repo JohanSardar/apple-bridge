@@ -395,11 +395,17 @@ sim and the reader is proven by `tests/capture_producer.rs` and the 46-stage Swi
 
 ## Session mode (step 1 of the Swift boundary plan)
 
-`ab-session --gateway-fd N --helper-fd M --session-secret FILE` makes ab-session the only ipc/1 peer:
-`session::serve` authenticates, validates `Open`, speaks the native/1 session frames of `design/spec/native-1.md`
-to Swift and owns credit, flights, chunking, checkpoints, predecessor and `Committed`. It is exclusive with
-`--effects-home` and `--capture-home` and fails closed for commands (see the spec). The default remains the
-verbatim proxy and the routed relay, which keep the Swift ipc/1 peer.
+`ab-session --gateway-fd N --helper-fd M --session-secret FILE --session-home DIR` makes ab-session the only
+ipc/1 peer: `session::serve` authenticates, validates `Open`, speaks the native/1 session and command frames of
+`design/spec/native-1.md` to Swift and owns credit, flights, chunking, checkpoints, predecessor, `Committed`,
+tickets, the dispatch guard (`<DIR>/dispatch-guard.log`), rejection, resolve and evidence-to-checkpoint
+binding. It is exclusive with `--effects-home` and `--capture-home`. The default remains the verbatim proxy and
+the routed relay, which keep the Swift ipc/1 peer. `tests/session_peer.rs` drives it over socketpairs and
+`tests/session_launch.rs` launches the binary with inherited descriptors.
+
+Not done: no Swift or lab peer speaks these frames yet (Swift `NativeWire` has the framing but no session client,
+and `lab-simapple` still dials the gateway). The routed capture producers (`readers`, `production`) are not
+reachable from session mode; they stay on the routed relay until a source is moved.
 
 One flight tracker: `flight::Flights` holds the credit pool, one flight per source, committed checkpoints
 and the commit-ordered record of written keys. `routed::Gate` owns the only instance in a relay and

@@ -56,7 +56,7 @@ impl GoTime {
     pub fn unix_seconds(&self) -> i64 {
         self.0
             .parse::<jiff::Timestamp>()
-            .map_or(0, |time| time.as_second())
+            .map_or(0, jiff::Timestamp::as_second)
     }
 }
 

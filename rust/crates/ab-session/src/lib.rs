@@ -5,7 +5,6 @@ pub mod effects;
 pub mod flight;
 #[cfg(any(feature = "rust-effects", feature = "rust-capture"))]
 mod frame;
-#[cfg(feature = "rust-effects")]
 pub mod guard;
 #[cfg(feature = "rust-capture")]
 pub mod native_facts;

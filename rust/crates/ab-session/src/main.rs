@@ -204,11 +204,38 @@ fn exit_with_parent() {
     });
 }
 
-fn serve_session(gateway: i32, helper: i32, secret: &str) -> Result<(), Error> {
+#[derive(Default)]
+struct Flags {
+    effects_home: Option<String>,
+    capture_home: Option<String>,
+    session_secret: Option<String>,
+    session_home: Option<String>,
+}
+
+fn parse_flags(args: &[String]) -> Result<Flags, Error> {
+    let mut flags = Flags::default();
+    let mut rest = args.iter();
+    while let Some(flag) = rest.next() {
+        let value = rest.next().ok_or(Error::Invalid)?.clone();
+        let slot = match flag.as_str() {
+            "--effects-home" => &mut flags.effects_home,
+            "--capture-home" => &mut flags.capture_home,
+            "--session-secret" => &mut flags.session_secret,
+            "--session-home" => &mut flags.session_home,
+            _ => return Err(Error::Invalid),
+        };
+        if slot.replace(value).is_some() {
+            return Err(Error::Invalid);
+        }
+    }
+    Ok(flags)
+}
+
+fn serve_session(gateway: i32, helper: i32, secret: &str, home: &str) -> Result<(), Error> {
     let secret = ab_session::session::load_secret(std::path::Path::new(secret))?;
     let gateway = ab_sys::inherited_unix_stream(gateway)?;
     let helper = ab_sys::inherited_unix_stream(helper)?;
-    ab_session::session::serve(gateway, helper, &secret)
+    ab_session::session::serve(gateway, helper, &secret, std::path::Path::new(home))
 }
 
 fn run() -> Result<(), Error> {
@@ -235,24 +262,18 @@ fn run() -> Result<(), Error> {
     if gateway < 3 || helper < 3 || gateway == helper {
         return Err(Error::Invalid);
     }
-    let mut effects_home = None;
-    let mut capture_home = None;
-    let mut session_secret = None;
-    let mut rest = args[4..].iter();
-    while let Some(flag) = rest.next() {
-        let value = rest.next().ok_or(Error::Invalid)?;
-        match flag.as_str() {
-            "--effects-home" if effects_home.is_none() => effects_home = Some(value.clone()),
-            "--capture-home" if capture_home.is_none() => capture_home = Some(value.clone()),
-            "--session-secret" if session_secret.is_none() => session_secret = Some(value.clone()),
-            _ => return Err(Error::Invalid),
-        }
-    }
+    let Flags {
+        effects_home,
+        capture_home,
+        session_secret,
+        session_home,
+    } = parse_flags(&args[4..])?;
     if let Some(secret) = session_secret {
         if effects_home.is_some() || capture_home.is_some() {
             return Err(Error::Conflict);
         }
-        return serve_session(gateway, helper, &secret);
+        let home = session_home.ok_or(Error::Invalid)?;
+        return serve_session(gateway, helper, &secret, &home);
     }
     let mut selection = ab_session::ownership::Selection::default();
     if let Ok(value) = std::env::var("AB_SESSION_PRODUCERS") {
