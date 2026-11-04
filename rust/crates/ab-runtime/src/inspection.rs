@@ -80,7 +80,11 @@ fn bounded_integrity(db: &Connection, budget: Duration) -> Result<Option<String>
         Err(_) => Err(Error::Invalid),
     }
 }
-fn budget_results(result: &mut Value, integrity_complete: bool, shape_complete: bool) -> Result<(), Error> {
+fn budget_results(
+    result: &mut Value,
+    integrity_complete: bool,
+    shape_complete: bool,
+) -> Result<(), Error> {
     result["checks"] = json!({"sqlite_integrity": if integrity_complete { "complete" } else { "incomplete" }, "shape_scan": if shape_complete { "complete" } else { "incomplete" }});
     for (complete, warning) in [
         (
