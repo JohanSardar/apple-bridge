@@ -477,7 +477,7 @@ negative control). Swift answers the primitives (`RemindersSource.primitive`, `A
 answers them too (`AB_LAB_RUST_COMMANDS=reminders` starts the lab session with the flag;
 `AB_LAB_PRIMITIVE_CONTROL=refuse` is the negative control that fails every `reminders.write`). In native session
 mode the Helper always passes `--rust-commands reminders`. `Resolve` after a restart is decided in Rust as well.
-Nothing is flipped: native session mode itself is opt-in (`AB_SESSION_NATIVE=1`).
+Nothing is flipped: before the IPC peer is deleted native session mode is opt-in (`AB_SESSION_NATIVE=1`); after it, it is the only mode.
 
 Messages is routed per operation (`messages.send`, `messages.reply`, `messages.react`, `messages.edit`,
 `messages.unsend`, `messages.delete_message`, `messages.mark_read`, `messages.mark_unread`,
@@ -500,3 +500,16 @@ stream; the session-mode path never hashes command args.
 - **Notes hydration stall.** The reader needs three Helper facts while it hydrates a note: `mime:<uti>`, `supports:<uti>|<ext>` and `derivatives:<digest>`. The session supplied only the hashtag mime, so the first note with an image attachment returned `FactsRequired`, was re-queued at the front, and every later `next` retried it forever; bodies behind it stayed `pending`. The reader now re-queues a failed job at the back, and `NotesReader` resolves facts through `media_facts::MediaFacts`, which runs the Helper executable as `AppleBridgeHelper media-facts` (request JSON on stdin, response JSON on stdout, two minute deadline, derivative bytes read from the session-owned `media_root`, default `<home>/session/media-derivatives`, via `AB_MEDIA_DERIVATIVES_ROOT`). Facts come from the same `UTType` and `MediaDerivatives` code the Swift reader uses, so records are byte-identical. A fact that cannot be resolved leaves that note pending, is retried after 60 seconds and never blocks other notes. The executable is the sibling `AppleBridgeHelper` of `ab-session`, or `media_helper` in the source config.
 - **Usage.** The session now passes the local `knowledgeC.db` display-lock and lock intervals to the Usage reader (and includes the database and its `-wal` in the change signature) when the root is `~/Library/Biome`, as the Swift source does; the hardware id is `IOPlatformUUID`. Live power-sleep events exist only in the Swift process and are not reproduced.
 
+### Swift side after the IPC peer is deleted
+
+The Helper only speaks native/1: `AppleSession.runNative` is its single run loop, `NativeSessionLauncher` starts
+`ab-session --session-secret --session-home` and `SessionProxy` only passes the gateway descriptor and the helper
+link. Removed from Swift: `PeerWire` (Challenge/Authenticate, ipc/1 framing, proxy spawn), `DispatchGuard`,
+`EffectsRouting`, the IPC run loop and `handle`, `drain` with its credit, `Pending`/`Flight` and live/bulk queues,
+the ticket machinery in `prepare`/`dispatch`/`resolve`, `rejectCommand`, `observedEvidence` and the routed
+`dispatchNative`. `MessagesSelfTest` keeps its own in-memory id set instead of appending to the shared guard log.
+Still in Swift on purpose: `observedCheckpoints`, which only feeds the conflict evidence of `rejection`, until
+ab-session binds that too. The routed relay, the effects layer and the Rust capture producers (`routed`, `effects`,
+`readers`, `production`) have no Swift counterpart any more and are dead code in the Helper's path; their removal or
+re-homing in session mode is a separate change. The `wire-checks` lab command stays (the real-level helper release
+check lists it) and no longer goes through `PeerWire`.

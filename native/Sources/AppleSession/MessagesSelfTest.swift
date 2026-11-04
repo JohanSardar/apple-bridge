@@ -37,7 +37,7 @@ actor MessagesSelfTest {
         let uiAllowed = includeUI && AXIsProcessTrusted() && session?["CGSSessionScreenIsLocked"] as? Bool != true
         let run = "selftest_" + UUID().uuidString.replacingOccurrences(of: "-", with: "")
         let tag = "[ab-test " + run + "]"
-        let guardLog = try DispatchGuard(home: home)
+        var seen = Set<String>()
         let commands = MessagesCommands(path: nil, labCommands: true)
         let database = try MessagesDatabase()
         let selected = try MessagesSelfTestIsolation.target(database: database)
@@ -86,11 +86,10 @@ actor MessagesSelfTest {
             var reason = ""
             var dispatched = false
             do {
-                guard !(await guardLog.contains(id)) else { throw SourceFailure.conflict }
+                guard seen.insert(id).inserted else { throw SourceFailure.conflict }
                 let prepared = try await commands.prepare(frame)
                 try await commands.validate(prepared)
                 guard expiry > Date() else { throw SourceFailure.expired }
-                try await guardLog.append(.object(["t": .string("Started"), "command_id": .string(id), "prepared": .object(["action": prepared.action, "native_state": prepared.nativeState])]))
                 guard expiry > Date(), ContinuousClock.now < deadline else { throw SourceFailure.expired }
                 dispatched = true
                 result = try await commands.dispatch(prepared)
@@ -102,7 +101,6 @@ actor MessagesSelfTest {
                 registration["created_message_ids"] = created.sorted()
                 try PrivateReport.write(registration, to: ledger)
                 lateEffectPossible = lateEffectPossible || result["disposition"].string == "indeterminate"
-                try await guardLog.append(.object(["t": .string("Outcome"), "command_id": .string(id), "disposition": result["disposition"], "evidence": result]))
                 if !result["observed"].bool || !["locally_observed", "delivered"].contains(result["disposition"].string) {
                     reason = result["disposition"].string
                     var failed = result.object
