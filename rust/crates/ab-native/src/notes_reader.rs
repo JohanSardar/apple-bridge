@@ -131,6 +131,16 @@ fn equal(left: &Observation, right: &Observation) -> bool {
         _ => false,
     }
 }
+fn absent_identity<'a>(
+    identity: &'a str,
+    previous: &'a BTreeMap<String, Observation>,
+    first_scan: bool,
+) -> Option<(&'a str, &'a str)> {
+    previous
+        .get(identity)
+        .map(|row| (row.collection.as_str(), row.native_key.as_str()))
+        .or_else(|| identity.split_once('/').filter(|_| first_scan))
+}
 impl Reader {
     pub fn open(database: &Path, staging: &Path) -> Result<Self> {
         Ok(Self {
@@ -259,10 +269,11 @@ impl Reader {
             }
         }
         for key in &removed {
-            if let Some(row) = previous.get(key) {
+            if let Some((collection, native_key)) = absent_identity(key, &previous, scan.bootstrap)
+            {
                 observations.push(capture::absent(
-                    &row.collection,
-                    &row.native_key,
+                    collection,
+                    native_key,
                     None,
                     &context.capture,
                 ));

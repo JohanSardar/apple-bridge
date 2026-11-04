@@ -9,6 +9,13 @@ use std::time::Instant;
 const HASHTAG: &str = "com.apple.notes.inlinetextattachment.hashtag";
 const FACT_RETRY: Duration = Duration::from_secs(60);
 
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+struct SavedState {
+    signature: String,
+    generation: String,
+    identities: Vec<(String, String)>,
+}
+
 #[derive(Debug)]
 enum NotesPending {
     Scan(Box<notes_reader::Pending>),
@@ -26,6 +33,7 @@ pub struct NotesReader {
     facts: notes_reader::Facts,
     media: Option<MediaFacts>,
     failed_facts: BTreeMap<String, Instant>,
+    scanned_last: bool,
 }
 
 impl NotesReader {
@@ -46,6 +54,7 @@ impl NotesReader {
             },
             media: None,
             failed_facts: BTreeMap::new(),
+            scanned_last: false,
         })
     }
 
@@ -114,11 +123,26 @@ impl CaptureReader for NotesReader {
     }
 
     fn token(&self) -> Option<String> {
-        self.committed.as_ref().map(encode)
+        let signature = encode(self.committed.as_ref()?);
+        serde_json::to_string(&SavedState {
+            signature,
+            generation: self.reader.generation().to_owned(),
+            identities: self.reader.identities(),
+        })
+        .ok()
     }
 
     fn resume(&mut self, token: &str) -> bool {
-        self.committed = decode(token);
+        let Ok(saved) = serde_json::from_str::<SavedState>(token) else {
+            self.committed = decode(token);
+            return self.committed.is_some();
+        };
+        self.committed = decode(&saved.signature);
+        if !saved.generation.is_empty() {
+            let _ = self
+                .reader
+                .resume_identities(&saved.generation, &saved.identities);
+        }
         self.committed.is_some()
     }
 
@@ -141,6 +165,16 @@ impl CaptureReader for NotesReader {
             return Err(Error::Conflict);
         }
         let mut notes = self.notes_context(context)?;
+        let current = signature(&self.root)?;
+        let changed = self.committed.as_ref() != Some(&current);
+        if changed && !self.scanned_last {
+            let scan = self.reader.reconcile(&notes).map_err(reader_error)?;
+            let value = capture_value(&scan.batch)?;
+            self.pending = Some((NotesPending::Scan(Box::new(scan)), Some(current)));
+            self.scanned_last = true;
+            return Ok(Some(value));
+        }
+        self.scanned_last = false;
         let mut budget = self.reader.queued();
         while !self.held() && self.reader.has_hydration() {
             match self.reader.hydrate_next(&notes) {
@@ -167,13 +201,13 @@ impl CaptureReader for NotesReader {
                 .finish_hydration(SystemTime::now())
                 .map_err(reader_error)?;
         }
-        let current = signature(&self.root)?;
-        if self.committed.as_ref() == Some(&current) {
+        if !changed {
             return Ok(None);
         }
         let scan = self.reader.reconcile(&notes).map_err(reader_error)?;
         let value = capture_value(&scan.batch)?;
         self.pending = Some((NotesPending::Scan(Box::new(scan)), Some(current)));
+        self.scanned_last = true;
         Ok(Some(value))
     }
 

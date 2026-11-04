@@ -121,6 +121,167 @@ fn stale_metadata_and_hydration_acknowledgements_cannot_overwrite_new_notes() {
     std::fs::remove_dir_all(root).unwrap();
 }
 
+const LIFECYCLE_STORE: &str = "CREATE TABLE Z_METADATA(Z_UUID TEXT);INSERT INTO Z_METADATA VALUES('synthetic');CREATE TABLE Z_PRIMARYKEY(Z_ENT INTEGER,Z_NAME TEXT);INSERT INTO Z_PRIMARYKEY VALUES(1,'ICFolder'),(2,'ICNote'),(3,'ICAccount');CREATE TABLE ZICNOTEDATA(Z_PK INTEGER PRIMARY KEY,ZDATA BLOB,Z_OPT INTEGER);CREATE TABLE ZICCLOUDSYNCINGOBJECT(Z_PK INTEGER PRIMARY KEY,Z_ENT INTEGER,ZIDENTIFIER TEXT,ZTITLE1 TEXT,ZTITLE2 TEXT,ZNAME TEXT,ZACCOUNT8 INTEGER,ZPARENT INTEGER,ZFOLDER INTEGER,ZNOTEDATA INTEGER,ZMARKEDFORDELETION INTEGER DEFAULT 0,ZFOLDERTYPE INTEGER DEFAULT 0,ZISPASSWORDPROTECTED INTEGER DEFAULT 0,ZISPINNED INTEGER DEFAULT 0,Z_OPT INTEGER DEFAULT 1,ZNOTE1 INTEGER,ZPARENTATTACHMENT INTEGER,ZMEDIA INTEGER,ZTYPEUTI1 TEXT);INSERT INTO ZICCLOUDSYNCINGOBJECT(Z_PK,Z_ENT,ZIDENTIFIER,ZNAME) VALUES(1,3,'account','Synthetic');INSERT INTO ZICCLOUDSYNCINGOBJECT(Z_PK,Z_ENT,ZIDENTIFIER,ZTITLE2,ZACCOUNT8,ZFOLDERTYPE) VALUES(10,1,'folder','Synthetic',1,0),(11,1,'trash','Recently Deleted',1,1);INSERT INTO ZICCLOUDSYNCINGOBJECT(Z_PK,Z_ENT,ZIDENTIFIER,ZTITLE2,ZACCOUNT8,ZPARENT) VALUES(12,1,'inside-trash','Trashed folder',1,11);INSERT INTO ZICCLOUDSYNCINGOBJECT(Z_PK,Z_ENT,ZIDENTIFIER,ZTITLE2,ZACCOUNT8,ZMARKEDFORDELETION) VALUES(13,1,'marked-folder','Gone folder',1,1);INSERT INTO ZICCLOUDSYNCINGOBJECT(Z_PK,Z_ENT,ZIDENTIFIER,ZTITLE1,ZFOLDER,ZNOTEDATA,ZMARKEDFORDELETION) VALUES(20,2,'live','Live',10,1,0),(21,2,'in-trash','Trashed',11,1,0),(22,2,'in-trashed-folder','Nested',12,1,0),(23,2,'marked','Marked',10,1,1);";
+
+struct Lifecycle {
+    root: std::path::PathBuf,
+    db: rusqlite::Connection,
+    reader: ab_native::notes_reader::Reader,
+    context: ab_native::notes_reader::Context,
+}
+
+impl Lifecycle {
+    fn open(name: &str) -> Self {
+        use ab_native::{
+            capture,
+            notes_reader::{Context, Facts, Reader},
+        };
+        use std::time::{SystemTime, UNIX_EPOCH};
+        let root = std::env::temp_dir().join(format!(
+            "ab-notes-{name}-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir(&root).unwrap();
+        let path = root.join("NoteStore.sqlite");
+        let db = rusqlite::Connection::open(&path).unwrap();
+        db.execute_batch(LIFECYCLE_STORE).unwrap();
+        db.execute(
+            "INSERT INTO ZICNOTEDATA VALUES(1,?,1)",
+            [include_bytes!("../../../../lab/fixtures/notes/native-plain.gz").as_slice()],
+        )
+        .unwrap();
+        let reader = Reader::open(&path, &root.join("blobs")).unwrap();
+        Self {
+            root,
+            db,
+            reader,
+            context: Context {
+                capture: capture::Context {
+                    observed_at: "2026-01-01T00:00:00.000Z".into(),
+                    checkpoint: "a".into(),
+                    scan_id: "a".into(),
+                },
+                coverage: serde_json::json!({}),
+                facts: Facts::default(),
+                asset_paths: Vec::new(),
+            },
+        }
+    }
+
+    fn scan(
+        &mut self,
+    ) -> (
+        std::collections::BTreeSet<String>,
+        std::collections::BTreeSet<String>,
+    ) {
+        let pending = self.reader.reconcile(&self.context).unwrap();
+        let mut upserts = std::collections::BTreeSet::new();
+        let mut absences = std::collections::BTreeSet::new();
+        for row in &pending.batch.observations {
+            let name = format!("{}/{}", row.collection, row.native_key);
+            if row.kind == "absent" {
+                absences.insert(name);
+            } else {
+                upserts.insert(name);
+            }
+        }
+        self.reader.commit(pending).unwrap();
+        (upserts, absences)
+    }
+}
+
+impl Drop for Lifecycle {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.root);
+    }
+}
+
+fn names(items: &[&str]) -> std::collections::BTreeSet<String> {
+    items.iter().map(|item| (*item).to_owned()).collect()
+}
+
+#[test]
+fn a_first_scan_reports_what_the_store_no_longer_shows_and_never_publishes_it() {
+    let mut store = Lifecycle::open("first-scan");
+    let (upserts, absences) = store.scan();
+    assert_eq!(
+        absences,
+        names(&[
+            "notes.folder/marked-folder",
+            "notes.note/in-trash",
+            "notes.note/in-trashed-folder",
+            "notes.note/marked",
+        ])
+    );
+    assert!(upserts.contains("notes.note/live"));
+    assert!(!upserts.iter().any(|name| absences.contains(name)));
+    let (upserts, absences) = store.scan();
+    assert!(
+        upserts.is_empty() && absences.is_empty(),
+        "a quiet store says nothing"
+    );
+}
+
+#[test]
+fn a_note_leaves_when_moved_to_recently_deleted_and_returns_when_restored() {
+    let mut store = Lifecycle::open("trash");
+    store.scan();
+    store
+        .db
+        .execute_batch("UPDATE ZICCLOUDSYNCINGOBJECT SET ZFOLDER=11,Z_OPT=2 WHERE Z_PK=20")
+        .unwrap();
+    let (upserts, absences) = store.scan();
+    assert_eq!(absences, names(&["notes.note/live"]));
+    assert!(!upserts.contains("notes.note/live"));
+    store
+        .db
+        .execute_batch("UPDATE ZICCLOUDSYNCINGOBJECT SET ZFOLDER=10,Z_OPT=3 WHERE Z_PK=20")
+        .unwrap();
+    let (upserts, absences) = store.scan();
+    assert!(absences.is_empty());
+    assert!(upserts.contains("notes.note/live"));
+}
+
+#[test]
+fn a_note_under_a_folder_moved_to_recently_deleted_leaves_with_it() {
+    let mut store = Lifecycle::open("folder-trash");
+    store.scan();
+    store
+        .db
+        .execute_batch("UPDATE ZICCLOUDSYNCINGOBJECT SET ZPARENT=11,Z_OPT=2 WHERE Z_PK=10")
+        .unwrap();
+    let (_, absences) = store.scan();
+    assert!(absences.contains("notes.note/live"), "{absences:?}");
+}
+
+#[test]
+fn identities_from_the_last_run_catch_a_note_erased_while_nothing_watched() {
+    let mut store = Lifecycle::open("restart");
+    store.scan();
+    let identities = store.reader.identities();
+    let generation = store.reader.generation().to_owned();
+    assert!(identities.contains(&("notes.note".to_owned(), "live".to_owned())));
+    store
+        .db
+        .execute_batch("DELETE FROM ZICCLOUDSYNCINGOBJECT WHERE Z_PK=20")
+        .unwrap();
+    store.reader = ab_native::notes_reader::Reader::open(
+        &store.root.join("NoteStore.sqlite"),
+        &store.root.join("blobs"),
+    )
+    .unwrap();
+    store
+        .reader
+        .resume_identities(&generation, &identities)
+        .unwrap();
+    let (_, absences) = store.scan();
+    assert!(absences.contains("notes.note/live"), "{absences:?}");
+}
+
 #[test]
 fn blob_retention_clock_preserves_active_recent_and_symlink_entries() {
     use ab_native::assets::Store;
