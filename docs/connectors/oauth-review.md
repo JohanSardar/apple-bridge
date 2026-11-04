@@ -31,7 +31,7 @@ These have no maintained library, because they are this server's policy rather t
 Two kinds of test hold them to the specs:
 
 - `rust/crates/ab-frontdoor/tests/oauth_compliance.rs` runs the requirements above through the real HTTP routes, using the metadata the real clients publish.
-- `lab/compliance/` runs clients we did not write: `oauth4webapi`, a strict client library, and the MCP SDK's own `auth()`. They reject non-conforming metadata and responses.
+- `lab/compliance/` runs clients we did not write: `oauth4webapi`, a strict client library, and the MCP SDK's own `auth()`. They reject non-conforming metadata and responses. Run them against a real relay address too, since some checks only apply on public hosts: `node oauth-clients.mjs https://your-mac-address approve-command`.
 
 ## Found and fixed in this review
 
@@ -40,6 +40,7 @@ Two kinds of test hold them to the specs:
 | Each public hostname had its own in-memory approval queue, and the owner's socket read only the local one | A connector coming through the relay could never be approved. Sims passed because they run on localhost. | One queue per gateway |
 | The page that asks the Mac or iPhone had been deleted with the old web UI | The page offered only a passkey | New approval page |
 | The gateway never handed connector requests to the iPhone, and nothing opened the Mac window | No approval surface appeared | Wired both |
+| Agents approved through a connector were not allowed on public hosts | Claude got tokens, was refused on every MCP call and refreshed in a loop. Found by the first real Claude connection: every local test passed, because the check only runs on a public host. | Approval on a public host marks the agent as remote |
 | Loopback redirects matched exactly | Claude Code's published metadata lists `http://localhost/callback` and calls back on an ephemeral port, so it would fail. RFC 8252 section 7.3. | Port-agnostic match, loopback only |
 | `offline_access` was not advertised, and a token request naming it was refused | Claude only asks for refresh tokens when it is advertised | Advertised and accepted |
 | Registration refused a missing `client_name` or a requested auth method | RFC 7591 lets the server replace these | Replaced in the response |

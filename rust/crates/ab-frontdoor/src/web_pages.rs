@@ -290,11 +290,11 @@ pub(crate) fn approvals(rows: &[Value]) -> Response {
         let id = escape(row["command_id"].as_str().unwrap_or_default());
         let _ = write!(
             body,
-            "<article class=\"item\"><div class=\"item-head\"><h2>{}</h2><span class=\"tag\">{}</span></div><pre class=\"data\">{}</pre><details><summary class=\"small\">Everything this change would send</summary><pre class=\"data\">{}</pre></details><form method=\"post\" action=\"/approvals/{id}\"><div class=\"actions end\"><button name=\"decision\" value=\"reject\">Reject</button><button name=\"decision\" value=\"approve\" class=\"primary\">Approve</button></div></form></article>",
+            "<article class=\"item\"><div class=\"item-head\"><h2>{}</h2><span class=\"tag\">{}</span></div><pre class=\"data\">{}</pre><details><summary class=\"small\">Technical details</summary><pre class=\"data\">{}</pre></details><form method=\"post\" action=\"/approvals/{id}\"><div class=\"actions end\"><button name=\"decision\" value=\"reject\">Reject</button><button name=\"decision\" value=\"approve\" class=\"primary\">Approve</button></div></form></article>",
             escape(row["operation"].as_str().unwrap_or_default()),
             escape(row["principal"].as_str().unwrap_or_default()),
-            escape(row["arguments"].as_str().unwrap_or_default()),
             escape(row["owner_arguments"].as_str().unwrap_or_default()),
+            escape(row["arguments"].as_str().unwrap_or_default()),
         );
     }
     document(

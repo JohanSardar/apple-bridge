@@ -8,8 +8,12 @@ fn run(v: &Value) -> Result<Value, Box<dyn std::error::Error>> {
             a.register_oauth(serde_json::from_value(v["client"].clone())?)?,
         )?),
         "issue" => {
-            let (p, _) =
-                a.create_oauth_agent("synthetic", "approve", &[Grant::parse("messages:write")?])?;
+            let (p, _) = a.create_oauth_agent(
+                "synthetic",
+                "approve",
+                &[Grant::parse("messages:write")?],
+                false,
+            )?;
             let mut c: oauth::Code = serde_json::from_value(v["code"].clone())?;
             c.principal.clone_from(&p.id);
             Ok(json!({"code":a.issue_oauth_code(c)?,"principal":p.id}))

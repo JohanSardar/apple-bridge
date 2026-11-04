@@ -339,8 +339,8 @@ async fn reconcile(
                 if let Ok((name,outcome)) = result {
                     running.remove(name);
                     let cancelled = cancels.remove(name).is_none_or(|cancel| *cancel.borrow());
-                    if outcome.is_err() && !cancelled && !*stop.borrow() {
-                        eprintln!("remote setup failed; turn Remote off and try again");
+                    if let Err(error) = &outcome && !cancelled && !*stop.borrow() {
+                        eprintln!("remote setup failed; turn Remote off and try again: {error}");
                         failed.insert(name, ab_remote::state::read::<ab_remote::state::Config>(&home,"config").map(|config| config.id).unwrap_or_default());
                         gateway.progress(name, ab_remote::Progress::failed());
                     }

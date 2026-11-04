@@ -101,13 +101,27 @@ impl ServerHandler for Handler {
             .map_err(|_| ErrorData::internal_error("encoding", None))
     }
 }
+fn annotated_tools(descriptors: &[ab_catalog::OperationDescriptor]) -> serde_json::Value {
+    let mut tools = ab_catalog::mcp_tools(descriptors)["tools"].take();
+    for tool in tools.as_array_mut().into_iter().flatten() {
+        let command = descriptors.iter().any(|descriptor| {
+            descriptor.kind == ab_catalog::OperationKind::Command
+                && tool["name"].as_str() == Some(descriptor.name.replace('.', "_").as_str())
+        });
+        tool["annotations"] = if command {
+            json!({"readOnlyHint": false, "destructiveHint": true, "openWorldHint": true})
+        } else {
+            json!({"readOnlyHint": true, "openWorldHint": false})
+        };
+    }
+    tools
+}
 pub async fn handle(State(frontdoor): State<Arc<Frontdoor>>, request: Request) -> Response {
     let principal = request.extensions().get::<Principal>().cloned();
     let Ok(descriptors) = tool_descriptors() else {
         return problem(Code::Corrupt.into());
     };
-    let Ok(tools) = serde_json::from_value(ab_catalog::mcp_tools(&descriptors)["tools"].clone())
-    else {
+    let Ok(tools) = serde_json::from_value(annotated_tools(&descriptors)) else {
         return problem(Code::Corrupt.into());
     };
     let mut config = StreamableHttpServerConfig::default();
@@ -232,4 +246,27 @@ fn tool_descriptors() -> Result<Vec<ab_catalog::OperationDescriptor>, Error> {
         descriptors
     };
     Ok(descriptors)
+}
+
+#[cfg(test)]
+mod annotation_tests {
+    #[test]
+    fn reads_and_commands_say_which_they_are() -> Result<(), Box<dyn std::error::Error>> {
+        let descriptors = super::tool_descriptors().map_err(|_| "catalog")?;
+        let tools = super::annotated_tools(&descriptors);
+        let tool = |name: &str| {
+            tools
+                .as_array()
+                .and_then(|all| all.iter().find(|tool| tool["name"] == name))
+                .cloned()
+                .unwrap_or_default()
+        };
+        assert_eq!(tool("records_query")["annotations"]["readOnlyHint"], true);
+        assert_eq!(tool("messages_send")["annotations"]["readOnlyHint"], false);
+        assert_eq!(
+            tool("messages_send")["annotations"]["destructiveHint"],
+            true
+        );
+        Ok(())
+    }
 }

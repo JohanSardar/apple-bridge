@@ -301,8 +301,9 @@ impl Authority {
         name: &str,
         level: &str,
         scopes: &[Grant],
+        over_public_host: bool,
     ) -> Result<(Principal, String), Error> {
-        self.create_agent(
+        let (agent, secret) = self.create_agent(
             name,
             match level {
                 "read" => crate::AgentLevel::Read,
@@ -311,7 +312,19 @@ impl Authority {
                 _ => return Err(Error::Invalid),
             },
             agent_grants(level, scopes)?,
-        )
+        )?;
+        if !over_public_host {
+            return Ok((agent, secret));
+        }
+        self.update(|d| {
+            let stored = d
+                .principals
+                .iter_mut()
+                .find(|p| p.id == agent.id)
+                .ok_or(Error::Unavailable)?;
+            stored.remote = true;
+            Ok((stored.clone(), secret.clone()))
+        })
     }
     pub fn issue_oauth_code(&self, mut c: Code) -> Result<String, Error> {
         let raw = token(32);
@@ -440,6 +453,28 @@ impl Authority {
             Ok(())
         })?;
         Ok(p)
+    }
+}
+
+#[cfg(test)]
+mod remote_agent_tests {
+    #![allow(clippy::unwrap_used)]
+    use crate::{Authority, Grant};
+
+    #[test]
+    fn a_connector_approved_on_a_public_host_may_use_that_host() {
+        let home = tempfile::tempdir().unwrap();
+        let authority = Authority::open(home.path()).unwrap();
+        let scopes = [Grant::parse("calendar:read").unwrap()];
+        let (public, _) = authority
+            .create_oauth_agent("Claude", "approve", &scopes, true)
+            .unwrap();
+        let (local, _) = authority
+            .create_oauth_agent("Local", "approve", &scopes, false)
+            .unwrap();
+        assert!(public.remote);
+        assert!(!local.remote);
+        assert!(authority.principal(&public.id).unwrap().remote, "persisted");
     }
 }
 
