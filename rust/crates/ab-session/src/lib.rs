@@ -6,6 +6,7 @@ pub mod flight;
 #[cfg(any(feature = "rust-effects", feature = "rust-capture"))]
 mod frame;
 pub mod guard;
+pub mod messages_policy;
 #[cfg(feature = "rust-capture")]
 pub mod native_facts;
 pub mod ownership;
@@ -16,7 +17,6 @@ pub mod proxy;
 pub mod readers;
 #[cfg(feature = "rust-capture")]
 pub mod routed;
-pub mod messages_policy;
 pub mod session;
 #[cfg(feature = "rust-capture")]
 pub mod store;

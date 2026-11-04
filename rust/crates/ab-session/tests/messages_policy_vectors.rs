@@ -32,8 +32,8 @@ fn the_send_policy_matches_every_shared_vector() {
             "owner_self" => Origin::OwnerSelf,
             _ => Origin::Gated,
         };
-        let own: Option<BTreeSet<String>> = (!vector["own"].is_null())
-            .then(|| strings(&vector["own"]).into_iter().collect());
+        let own: Option<BTreeSet<String>> =
+            (!vector["own"].is_null()).then(|| strings(&vector["own"]).into_iter().collect());
         let recipients = strings(&vector["recipients"]);
         let files = usize::try_from(vector["files"].as_u64().unwrap()).unwrap();
         let result = check(
@@ -69,12 +69,20 @@ fn the_action_windows_match_every_shared_vector() {
             vector["sent_at"].as_f64(),
             u32::try_from(vector["edits"].as_u64().unwrap()).unwrap(),
         );
-        assert_eq!(window.is_some(), vector["exists"].as_bool().unwrap(), "{name}");
+        assert_eq!(
+            window.is_some(),
+            vector["exists"].as_bool().unwrap(),
+            "{name}"
+        );
         for check in vector["checks"].as_array().unwrap() {
             let allowed = window
                 .unwrap()
                 .allows(check["kind"] == "edit", check["at"].as_f64().unwrap());
-            assert_eq!(allowed, check["allowed"].as_bool().unwrap(), "{name} {check}");
+            assert_eq!(
+                allowed,
+                check["allowed"].as_bool().unwrap(),
+                "{name} {check}"
+            );
         }
     }
 }

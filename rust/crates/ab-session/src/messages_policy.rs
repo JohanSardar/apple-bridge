@@ -47,7 +47,10 @@ pub fn owns_recipients(own: Option<&BTreeSet<String>>, recipients: &[String]) ->
     let Some(own) = own else {
         return false;
     };
-    !recipients.is_empty() && recipients.iter().all(|handle| own.contains(&normalize(handle)))
+    !recipients.is_empty()
+        && recipients
+            .iter()
+            .all(|handle| own.contains(&normalize(handle)))
 }
 
 pub fn check(
@@ -59,7 +62,10 @@ pub fn check(
 ) -> Result<bool, Refusal> {
     let untagged = !text.is_empty() && !tagged(text);
     let owner_self = origin == Origin::OwnerSelf && untagged;
-    if origin != Origin::Interactive && untagged && !(owner_self && owns_recipients(own, recipients)) {
+    if origin != Origin::Interactive
+        && untagged
+        && !(owner_self && owns_recipients(own, recipients))
+    {
         return Err(Refusal::TextTagRequired);
     }
     if text.is_empty() && file_count == 0 {
