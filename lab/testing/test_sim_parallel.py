@@ -109,6 +109,26 @@ class RunnerTests(unittest.TestCase):
                 report = json.loads((output / 'summary.json').read_text())
                 self.assertEqual([r['id'] for r in report['results']], [expected])
 
+    def test_no_runner_scenario_does_not_fail_the_run(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            families = root / 'families'
+            make_executable(families, 'exit 1')
+            simapple = root / 'simapple'
+            make_executable(simapple, 'exit 0')
+            gateway = root / 'bridge'
+            make_executable(gateway, 'while [ $# -gt 0 ]; do [ "$1" = --socket ] && socket=$2; shift; done\ntouch "$socket"\nexec sleep 30')
+            inventory = root / 'map.json'
+            inventory.write_text(json.dumps({'selection': {}, 'scenarios': [
+                {'id': 'QUERY-AGENT', 'path': 'q.yaml', 'levels': ['sim'], 'host': 'linux', 'recommendation': 'keep', 'packages': []},
+            ]}))
+            output = root / 'out'
+            argv = ['runner', '--rust-binary', str(gateway), '--families-binary', str(families), '--simapple-binary', str(simapple), '--map', str(inventory), '--output', str(output)]
+            with patch.object(sys, 'argv', argv), patch.object(runner.platform, 'system', return_value='Linux'):
+                self.assertEqual(runner.main(), 0)
+            report = json.loads((output / 'summary.json').read_text())
+            self.assertEqual([r['status'] for r in report['results']], ['no-runner'])
+
     def test_registered_end_gates(self):
         inventory = json.loads((Path(__file__).parents[1] / 'test-selection.json').read_text())
         entries = {e['id']: e for e in inventory['scenarios']}
