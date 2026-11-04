@@ -383,16 +383,21 @@ pub(super) fn aggregate(parts: &[Value], fingerprint: &str, baseline: &Value) ->
         .iter()
         .find(|part| !text(part, "native_key").is_empty())
         .map_or(Value::Null, |part| part["native_key"].clone());
-    json!({
+    let observed = parts.iter().any(|part| part["observed"] == true);
+    let mut result = json!({
         "source": "messages",
         "collection": "messages.message",
         "native_key": native_key,
-        "observed": parts.iter().any(|part| part["observed"] == true),
+        "observed": observed,
         "disposition": disposition,
         "parts": parts,
         "fingerprint": fingerprint,
         "baseline": baseline,
-    })
+    });
+    if !observed && let Some(reason) = parts.iter().find_map(|part| part["reason"].as_str()) {
+        result["reason"] = json!(reason);
+    }
+    result
 }
 
 const DISPATCH_DEADLINE: Duration = if cfg!(test) {
@@ -475,7 +480,7 @@ pub(super) fn write(
         let maximum = baseline.max(current);
         let sent = probe.call(
             "messages.send_part",
-            &json!({"part": part, "route": route, "command_id": command_id}),
+            &json!({"part": part, "route": route, "command_id": command_id, "index": index, "count": parts.len()}),
         )?;
         let mut evidence = json!({"disposition": "indeterminate"});
         loop {
@@ -1624,5 +1629,19 @@ mod tests {
         assert_eq!(written["parts"][1]["disposition"], "not_dispatched");
         assert!(written["parts"][1]["reason"].is_null());
         assert_eq!(written["disposition"], "indeterminate");
+    }
+
+    #[test]
+    fn an_unobserved_aggregate_surfaces_the_reason_of_its_parts() {
+        let ghost =
+            json!({"disposition": "delivery_failed", "reason": "empty_unjoined_sms", "index": 0});
+        let result = aggregate(&[ghost], "fp", &Value::Null);
+        assert_eq!(
+            (result["reason"].as_str(), result["observed"].as_bool()),
+            (Some("empty_unjoined_sms"), Some(false))
+        );
+        assert!(result["native_key"].is_null());
+        let seen = json!({"disposition": "locally_observed", "observed": true, "native_key": "g1", "reason": "x"});
+        assert!(aggregate(&[seen], "fp", &Value::Null)["reason"].is_null());
     }
 }
