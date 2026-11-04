@@ -296,7 +296,9 @@ fn object(data: Option<&[u8]>) -> Option<Value> {
             return Some(plain(&value));
         }
     }
-    crate::plist::archive_root(data).ok().map(|value| plain(&value))
+    crate::plist::archive_root(data)
+        .ok()
+        .map(|value| plain(&value))
 }
 
 fn uuid(value: &Value) -> Option<String> {
@@ -308,7 +310,10 @@ impl Sections {
     pub fn decode(order: Option<&[u8]>, membership: Option<&[u8]>) -> Option<Self> {
         let raw = object(order)?;
         let values: Vec<Value> = if let Some(wrapper) = raw.as_object() {
-            if wrapper.get("minimumSupportedVersion").and_then(Value::as_f64) != Some(20_230_430.0)
+            if wrapper
+                .get("minimumSupportedVersion")
+                .and_then(Value::as_f64)
+                != Some(20_230_430.0)
             {
                 return None;
             }
@@ -344,7 +349,10 @@ impl Sections {
             .and_then(Value::as_object)
             .filter(|wrapper| wrapper.contains_key("memberships"))
         {
-            if wrapper.get("minimumSupportedVersion").and_then(Value::as_f64) != Some(20_230_430.0)
+            if wrapper
+                .get("minimumSupportedVersion")
+                .and_then(Value::as_f64)
+                != Some(20_230_430.0)
             {
                 return None;
             }
@@ -402,7 +410,10 @@ impl Sections {
         }
         let mut order = list.section_order.clone();
         if order.is_none() {
-            let dates: Vec<f64> = sections.iter().filter_map(|section| section.created).collect();
+            let dates: Vec<f64> = sections
+                .iter()
+                .filter_map(|section| section.created)
+                .collect();
             let distinct: BTreeSet<u64> = dates.iter().map(|date| date.to_bits()).collect();
             if dates.len() != sections.len()
                 || !dates.iter().all(|date| date.is_finite())
@@ -428,7 +439,13 @@ impl Sections {
         let decoded = Self::decode(order.as_deref(), list.section_membership.as_deref())?;
         let identities: Vec<String> = sections
             .iter()
-            .filter_map(|section| section.identity.identifier().as_deref().and_then(parse_uuid))
+            .filter_map(|section| {
+                section
+                    .identity
+                    .identifier()
+                    .as_deref()
+                    .and_then(parse_uuid)
+            })
             .collect();
         let identity_set: BTreeSet<&String> = identities.iter().collect();
         let order_set: BTreeSet<&String> = decoded.order.iter().collect();
@@ -439,7 +456,11 @@ impl Sections {
             .reminders
             .values()
             .filter(|row| row.list == Some(list.identity.key))
-            .filter_map(|row| reminder_identifier(Some(row)).as_deref().and_then(parse_uuid))
+            .filter_map(|row| {
+                reminder_identifier(Some(row))
+                    .as_deref()
+                    .and_then(parse_uuid)
+            })
             .collect();
         decoded
             .membership
@@ -457,7 +478,11 @@ impl Sections {
             .values()
             .filter(|section| section.list == Some(list.identity.key))
         {
-            let id = section.identity.identifier().as_deref().and_then(parse_uuid)?;
+            let id = section
+                .identity
+                .identifier()
+                .as_deref()
+                .and_then(parse_uuid)?;
             if by_id.insert(id, section).is_some() {
                 return None;
             }
@@ -509,16 +534,14 @@ pub fn reminder(
     let mut fields = Map::new();
     fields.insert(
         "store_identifier".into(),
-        row.identity
-            .identifier()
-            .map_or(Value::Null, Value::String),
+        row.identity.identifier().map_or(Value::Null, Value::String),
     );
     fields.insert("flagged".into(), boolean(row.flagged));
     fields.insert(
         "parent_id".into(),
-        parent
-            .as_ref()
-            .map_or(Value::Null, |parent| reference("reminders.reminder", parent)),
+        parent.as_ref().map_or(Value::Null, |parent| {
+            reference("reminders.reminder", parent)
+        }),
     );
     fields.insert("created_at".into(), date(row.created));
     fields.insert("store_status".into(), json!("partial"));
@@ -540,7 +563,14 @@ pub fn reminder(
     ] {
         covered.insert(
             field.to_owned(),
-            coverage(if columns.contains(column) { "complete" } else { "unsupported" }, ""),
+            coverage(
+                if columns.contains(column) {
+                    "complete"
+                } else {
+                    "unsupported"
+                },
+                "",
+            ),
         );
     }
     let own = row.identity.identifier().as_deref().and_then(parse_uuid);
@@ -553,14 +583,24 @@ pub fn reminder(
         covered.insert(
             "manual_order".into(),
             coverage(
-                if position.is_none() { "partial" } else { "complete" },
-                if position.is_none() { "reminder_not_in_ordering" } else { "" },
+                if position.is_none() {
+                    "partial"
+                } else {
+                    "complete"
+                },
+                if position.is_none() {
+                    "reminder_not_in_ordering"
+                } else {
+                    ""
+                },
             ),
         );
     }
     if let (Some(sections), Some(id)) = (
         sections,
-        reminder_identifier(Some(row)).as_deref().and_then(parse_uuid),
+        reminder_identifier(Some(row))
+            .as_deref()
+            .and_then(parse_uuid),
     ) {
         fields.insert(
             "section_id".into(),
@@ -664,7 +704,14 @@ pub fn list(row: &ListRow, snapshot: &Snapshot, columns: &BTreeSet<String>) -> V
     ] {
         covered.insert(
             field.to_owned(),
-            coverage(if columns.contains(column) { "complete" } else { "unsupported" }, ""),
+            coverage(
+                if columns.contains(column) {
+                    "complete"
+                } else {
+                    "unsupported"
+                },
+                "",
+            ),
         );
     }
     if let Some(sections) = Sections::fields(row, snapshot) {

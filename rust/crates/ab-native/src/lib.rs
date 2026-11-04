@@ -32,10 +32,10 @@ pub mod telephony;
 pub mod agenda;
 pub mod assets;
 pub mod calendar_store;
+pub mod contacts;
 pub mod reminders_enrichment;
 pub mod reminders_projection;
 pub mod reminders_store;
-pub mod contacts;
 pub mod voice_memo;
 
 pub mod mail;

@@ -1094,9 +1094,10 @@ impl AgendaReader {
     #[must_use]
     pub fn with_reminders_store(mut self, stores: PathBuf) -> Self {
         if self.source == "reminders" {
-            self.reminders_store = Some(reminders_enrichment::Enrichment::new(Box::new(
-                move || reminders_enrichment::paths_in(&stores),
-            )));
+            self.reminders_store =
+                Some(reminders_enrichment::Enrichment::new(Box::new(move || {
+                    reminders_enrichment::paths_in(&stores)
+                })));
         }
         self
     }

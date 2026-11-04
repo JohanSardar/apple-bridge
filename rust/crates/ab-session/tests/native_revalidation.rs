@@ -593,7 +593,8 @@ fn the_rust_store_enriches_pulled_calendar_events_and_serves_their_attachments()
 }
 
 #[test]
-fn the_rust_store_enriches_pulled_reminders_from_the_store_and_never_invents_fields() -> Fallible<()> {
+fn the_rust_store_enriches_pulled_reminders_from_the_store_and_never_invents_fields() -> Fallible<()>
+{
     let stores = std::env::temp_dir().join(format!("ab-session-remstore-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&stores);
     std::fs::create_dir_all(&stores)?;
@@ -607,7 +608,14 @@ fn the_rust_store_enriches_pulled_reminders_from_the_store_and_never_invents_fie
         .with_reminders_store(stores);
     let mut clock = Clock(0);
     let item = |collection: &str, key: &str| json!({"kind":"upsert","collection":collection,"native_key":key,"scoped_alias":"","data":{"title":key}});
-    set(&world, "agenda.reminder_lists", vec![item("reminders.list", "00000010-0000-4000-8000-000000000010")])?;
+    set(
+        &world,
+        "agenda.reminder_lists",
+        vec![item(
+            "reminders.list",
+            "00000010-0000-4000-8000-000000000010",
+        )],
+    )?;
     set(
         &world,
         "agenda.reminders",
@@ -622,7 +630,10 @@ fn the_rust_store_enriches_pulled_reminders_from_the_store_and_never_invents_fie
     let known = find("000000A0-0000-4000-8000-0000000000A0").ok_or("known")?;
     assert_eq!(known["data"]["store_status"], "partial");
     assert_eq!(known["data"]["tags"], json!(["home"]));
-    assert_eq!(known["data"]["title"], "000000A0-0000-4000-8000-0000000000A0");
+    assert_eq!(
+        known["data"]["title"],
+        "000000A0-0000-4000-8000-0000000000A0"
+    );
     let unknown = find("not-in-the-store").ok_or("unknown")?;
     assert_eq!(unknown["data"]["store_status"], "unavailable");
     assert_eq!(unknown["data"]["tags"], Value::Null);
