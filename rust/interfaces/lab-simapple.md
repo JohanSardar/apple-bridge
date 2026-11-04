@@ -337,3 +337,13 @@ Product fix found by the port: `ab-state` rebuilt the participant index (`handle
 SimApple's capture wait now scales with the frame size (110 s plus one second per 200 observations) so the 170000-message seed is not cut off.
 
 Gate: `python3 rust/lab/families-parity.py ... --web-rm-latency`. Run it with release builds of the gateway, `lab-simapple` and `lab-families` on a quiet host; the p95 budgets assume it.
+
+## Real-only and replica-only scenarios
+
+`families-parity.py` tracks the scenarios that have no sim-level parity run in two explicit lists. `REAL_ONLY_COMPILED` holds scenarios whose adapter has real steps (a registered real or standalone handler, the phone-real harness, or registered sim steps). `REAL_ONLY_STUB` holds scenarios whose adapter only returns an explicit not-ported error or an `unverified` placeholder: `APP-BUILD-REAL`, `CON-ME`, `CON-NOTE`, `CON-RELAY`, `FOC-IDLE`, `FOC-SET-REAL`, `FOC-STATUS-REAL`, `MAIL-AGENT`, `MAIL-BODY-REAL`, `MAIL-DRAFT-REAL`, `MAIL-ORGANIZE-REAL`, `MAIL-READ-REAL`, `MAIL-SEND-SELF-REAL` and `SC-IDLE`.
+
+`lab-families check YAML...` loads each YAML through the runner's own `Scenario` type and reports `compiled`, `stub` or an error. `python3 rust/lab/families-parity.py --check-real-only --families BIN` fails when a listed YAML does not load, a compiled scenario has no registered adapter at its level, a stub is listed as compiled, or a compiled scenario is listed as a stub. It never runs a scenario. Stubs are recognised from the constants next to the stub code (`contacts::STUB`, `mail::REAL_ONLY`, `iphone_real::STUB`, `shortcuts::real_only_stub`), so porting a stub means removing it from that constant and moving its ID between the two lists.
+
+The check found real-level adapters that existed only as sim-step handlers and were unreachable from `--level real`; they are now registered: the `mac_real` set (`MAC-*-REAL`, `MAC-REPLICA`, `TM-STATUS`, `BT-REAL`, `SHAZAM-REAL`), `CALL-READ-REAL`, `REM-LIST-LOST-ACK`, `AUD-TRANSCRIBE`, `SPEECH-SAY`, `VIS-IDLE` and `R1-DMG-REAL`. A scenario that declares only a `replica` level now also runs at the runner's sim level.
+
+`MSG-DELETE-VISIBILITY` (`messages_visibility.rs`) and `MSG-READ-RICH-FIELDS` (`messages_rich.rs`) are in `MESSAGES_B_NATIVE` (`--messages-b-native`) because their native checks need macOS. The retained-delete real proof (`messages_visibility::real`) is compile-only. `WEB-RM-REMINDERS-ITEMS` is run with `--web-rm-items`: the Rust gateway read model p95 for 1000 items is about 40 ms against the 10 ms budget the Go gateway meets.
