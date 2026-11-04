@@ -1,3 +1,5 @@
+> Go oracle retired: the Go gateway, its parity oracles and the Go lab were deleted. Go commands, file names and Go-versus-Rust results below record what was verified while Go existed; the stored evidence files are unchanged. The Rust tests and `make rust-ci` are the gate now.
+
 ## Phase 4 G-D1: OAuth and consent integration
 
 `ab_trust::oauth` exposes `Client`, `Code`, `Exchange`, `Tokens`, `agent_grants` and Authority methods `register_oauth`, `oauth_client`, `create_oauth_agent`, `issue_oauth_code`, `exchange_oauth`, `authenticate_oauth`. `authenticate_token` now recognizes agent and OAuth tokens as well as ordinary tokens. OAuth storage retains Go's credential envelopes, and every rotation happens under the existing credential file lock. Access principals retain level, grants, resource and access expiry; existing authorization adapters must enforce resource audience. Refresh reuse persists family revocation before returning unauthorized.

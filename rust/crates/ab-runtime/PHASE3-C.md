@@ -1,3 +1,5 @@
+> Go oracle retired: the Go gateway, its parity oracles and the Go lab were deleted. Go commands, file names and Go-versus-Rust results below record what was verified while Go existed; the stored evidence files are unchanged. The Rust tests and `make rust-ci` are the gate now.
+
 # Phase 3 C integration
 
 The runtime uses the merged State, Trust, Replication and Blobs crates. `replica-feed` is enabled by default. The home singleton lock precedes State/feed startup; actual API and inbound feed listen addresses are persisted. Commands use B's authenticated transport for direct mTLS and gateway-dials sessions, with cancellation and same-ID lookup recovery. Direct requests reuse a client keyed by the pinned gateway fingerprint, with deadlines applied per request. Connected readiness waits for the durable control acknowledgement to be flushed and, when ntp/1 is negotiated, for a matching clock pong sent after that acknowledgement. This proves the gateway has consumed the control receipt before commands or connected status are exposed.

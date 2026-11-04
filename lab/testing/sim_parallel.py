@@ -2,7 +2,6 @@ import argparse
 import concurrent.futures
 import json
 import os
-import re
 import tempfile
 from pathlib import Path
 import platform
@@ -12,28 +11,30 @@ import sys
 import time
 
 
-def execute(entry, binary, timeout, logs, implementation, rust_binary, startup_blocker, families=None, simapple=None):
+NO_RUNNER_FILE = Path(__file__).resolve().parents[1] / 'no-runner.json'
+
+
+def load_no_runner():
+    return json.loads(NO_RUNNER_FILE.read_text())
+
+
+def execute(entry, timeout, logs, rust_binary, startup_blocker, families, simapple, no_runner=None):
     started = time.monotonic()
     target = logs / (entry['id'] + '.log')
-    if 'gateway=rust' in implementation and re.search(r'^impl: go-only$', Path(entry['path']).read_text(), re.M):
-        return {'id': entry['id'], 'seconds': 0, 'status': 'excluded', 'implementation': implementation, 'reason': 'FINAL-PLAN §1 drops embedded tsnet login/Funnel flow'}
-    if 'gateway=rust' in implementation:
-        blockers = []
-        if startup_blocker:
-            blockers.append(startup_blocker)
-        if not rust_binary or not Path(rust_binary).is_file():
-            blockers.append('ab-runtime: Rust bridge executable unavailable')
-        if blockers:
-            target.write_text('\n'.join(blockers) + '\n')
-            return {'id': entry['id'], 'seconds': 0, 'status': 'blocked', 'execution_status': 'not-started', 'implementation': implementation, 'required_features': entry['packages'], 'blocked_on': blockers, 'harness_audit': [] if families else gateway_blockers(entry)}
+    if entry['id'] in (no_runner or {}):
+        reason = no_runner[entry['id']]
+        target.write_text('no-runner: ' + reason + '\n')
+        return {'id': entry['id'], 'seconds': 0, 'status': 'no-runner', 'reason': reason}
+    blockers = []
+    if startup_blocker:
+        blockers.append(startup_blocker)
+    if not rust_binary or not Path(rust_binary).is_file():
+        blockers.append('ab-runtime: Rust bridge executable unavailable')
+    if blockers:
+        target.write_text('\n'.join(blockers) + '\n')
+        return {'id': entry['id'], 'seconds': 0, 'status': 'blocked', 'execution_status': 'not-started', 'required_features': entry['packages'], 'blocked_on': blockers}
     with target.open('wb') as output:
-        if families:
-            command = [families, 'run', entry['path'], '--gateway', rust_binary, '--simapple', simapple, '--output', str(logs / (entry['id'] + '.world'))]
-        else:
-            command = [binary, 'run', entry['path'], '--level', 'sim', '--prebuilt', '--json']
-            command += ['--impl', implementation]
-            if rust_binary:
-                command += ['--rust-binary', rust_binary]
+        command = [families, 'run', entry['path'], '--gateway', rust_binary, '--simapple', simapple, '--output', str(logs / (entry['id'] + '.world'))]
         marker = logs / (entry['id'] + '.started')
         serialized = platform.system() == 'Darwin' and (Path.home() / 'bin/ab-local').is_file()
         if serialized:
@@ -80,35 +81,11 @@ def execute(entry, binary, timeout, logs, implementation, rust_binary, startup_b
                 scenario_blockers = [a.get('detail', 'harness: binary fixture adapter required') for a in evidence.get('assertions', []) if a.get('name') == 'binary_harness_required']
                 if not scenario_blockers:
                     scenario_blockers = ['harness: scenario reported blocked']
-    row = {'id': entry['id'], 'seconds': round(time.monotonic() - started, 3), 'status': status, 'implementation': implementation}
-    if 'gateway=rust' in implementation:
-        blockers = list(scenario_blockers)
-        row['harness_audit'] = [] if families else gateway_blockers(entry)
-        if startup_blocker:
-            blockers.append(startup_blocker)
-        if not rust_binary or not Path(rust_binary).is_file():
-            blockers.append('ab-runtime: Rust bridge executable unavailable')
-        row['required_features'] = entry['packages']
-        row['blocked_on'] = blockers
-        if blockers:
-            row['execution_status'] = status
-            row['status'] = 'blocked'
-    elif 'replica=rust' in implementation:
-        row['harness_audit'] = gateway_blockers(entry)
+    row = {'id': entry['id'], 'seconds': round(time.monotonic() - started, 3), 'status': status, 'required_features': entry['packages'], 'blocked_on': scenario_blockers}
+    if scenario_blockers:
+        row['execution_status'] = status
+        row['status'] = 'blocked'
     return row
-
-
-def gateway_blockers(entry):
-    blockers = ['harness: semantic product helper ' + call for call in entry.get('semantic_contract_calls', [])]
-    for name in entry.get('code_paths', []):
-        path = Path(name)
-        if not path.is_file():
-            continue
-        source = path.read_text()
-        dependencies = sorted(set(re.findall(r'"github.com/JohanSardar/apple-bridge/internal/(?!contracts")([^"/]+)"', source)))
-        if dependencies:
-            blockers.append('harness: ' + name + ' still imports product implementations: ' + ', '.join(dependencies))
-    return blockers
 
 
 def main():
@@ -118,13 +95,10 @@ def main():
     parser.add_argument('--select', action='append', default=[])
     parser.add_argument('--run-at-end', action='store_true')
     parser.add_argument('--host', choices=['linux', 'darwin', 'all'], default=platform.system().lower())
-    parser.add_argument('--binary', default='bin/bridge-lab')
-    parser.add_argument('--runner', choices=['go', 'rust'], default='go')
-    parser.add_argument('--families-binary', default='')
-    parser.add_argument('--simapple-binary', default='')
+    parser.add_argument('--families-binary', required=True)
+    parser.add_argument('--simapple-binary', required=True)
     parser.add_argument('--level', choices=['sim', 'replica'], default='sim')
-    parser.add_argument('--impl', default='gateway=go,replica=go')
-    parser.add_argument('--rust-binary', default='')
+    parser.add_argument('--rust-binary', required=True)
     parser.add_argument('--map', default='lab/test-selection.json')
     parser.add_argument('--output', required=True)
     args = parser.parse_args()
@@ -139,25 +113,18 @@ def main():
         if key not in known:
             parser.error('unknown selection: ' + key)
         ids.update(known[key])
-    if args.runner == 'rust':
-        args.impl = 'gateway=rust'
-        if not args.rust_binary or not args.families_binary or not args.simapple_binary:
-            parser.error('--runner rust needs --rust-binary, --families-binary and --simapple-binary')
-        for name in (args.families_binary, args.simapple_binary):
-            if not Path(name).is_file() or not os.access(name, os.X_OK):
-                parser.error('executable required: ' + name)
+    for name in (args.families_binary, args.simapple_binary):
+        if not Path(name).is_file() or not os.access(name, os.X_OK):
+            parser.error('executable required: ' + name)
     entries = [e for e in inventory['scenarios'] if args.level in e['levels'] and (not args.select or e['id'] in ids) and (args.host == 'all' or e['host'] == args.host) and (bool(args.select) or (e['recommendation'] == 'run-at-end') == args.run_at_end)]
     if not entries:
         parser.error('selection contains no ' + args.level.upper() + ' scenarios for this host')
-    binary_path = Path(args.binary).resolve()
-    if args.runner == 'go' and (not binary_path.is_file() or not os.access(binary_path, os.X_OK)):
-        parser.error('prebuilt bridge-lab executable required')
     destination = Path(args.output)
     if destination.exists():
         parser.error('output already exists; use a new run directory')
     destination.mkdir(parents=True, mode=0o700)
     startup_blocker = ''
-    if 'gateway=rust' in args.impl and args.rust_binary and Path(args.rust_binary).is_file():
+    if Path(args.rust_binary).is_file():
         with tempfile.TemporaryDirectory(prefix='ab-gateway-probe-') as home:
             probe_socket = str(Path(home) / 'ipc.sock')
             with (destination / 'gateway-startup.log').open('wb') as log:
@@ -178,23 +145,27 @@ def main():
                         except subprocess.TimeoutExpired:
                             process.kill()
                             process.wait()
-    binary = str(binary_path)
+    no_runner = load_no_runner()
+    families = str(Path(args.families_binary).resolve())
+    simapple = str(Path(args.simapple_binary).resolve())
     started = time.monotonic()
     rows = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.parallel) as pool:
-        futures = [pool.submit(execute, e, binary, args.timeout, destination, args.impl, args.rust_binary, startup_blocker, str(Path(args.families_binary).resolve()) if args.runner == 'rust' else None, str(Path(args.simapple_binary).resolve()) if args.runner == 'rust' else None) for e in entries]
+        futures = [pool.submit(execute, e, args.timeout, destination, args.rust_binary, startup_blocker, families, simapple, no_runner) for e in entries]
         for future in concurrent.futures.as_completed(futures):
             row = future.result()
             rows.append(row)
             print(f"{row['id']:<45} {row['status']:<9} {row['seconds']:>9.3f}s", flush=True)
             for blocker in row.get("blocked_on", []):
                 print("  blocked-on: " + blocker, flush=True)
+            if row['status'] == 'no-runner':
+                print("  no-runner: " + row['reason'], flush=True)
             report = {'wall_seconds': round(time.monotonic() - started, 3), 'parallel': args.parallel, 'host': platform.system().lower(), 'complete': len(rows) == len(entries), 'expected': len(entries), 'results': sorted(rows, key=lambda r: r['id'])}
             temporary = destination / 'summary.json.tmp'
             temporary.write_text(json.dumps(report, indent=2) + '\n')
             temporary.replace(destination / 'summary.json')
     print(f"Wall: {report['wall_seconds']:.3f}s; {len(rows)} scenarios", flush=True)
-    return int(any(r['status'] not in ('pass', 'excluded') for r in rows))
+    return int(any(r['status'] not in ('pass', 'no-runner') for r in rows))
 
 
 if __name__ == '__main__':

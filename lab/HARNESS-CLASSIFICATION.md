@@ -1,3 +1,5 @@
+> Historical: written while the gateway and lab were Go. The Go code was deleted; the Rust gateway is `rust/crates/ab-runtime` and the lab runner is `rust/lab`. Go file and package names below are kept as the record of what was verified.
+
 # Harness classification
 
 Baseline: Go main 10a397d6; the added passkey golden test has no internal imports. impl=go. This inventories direct internal imports, including tests and build-tagged files. Categories describe coupling, not a passing Rust qualification. Scenario timing and execution coverage belong to the separate TEST-INVENTORY.md worker.

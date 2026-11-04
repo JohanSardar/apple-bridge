@@ -8,4 +8,4 @@ The real probe stages an independent read-only copy of the source streams, compa
 
 The iPhone DeviceActivity report remains available inside the authorized iOS report extension. This macOS probe does not claim to export data from that privacy boundary or require an iPhone entitlement.
 
-Run `go run ./cmd/bridge-lab run lab/scenarios/usage/USE-ACTION-PROBE.yaml --level sim` locally. Run the real scenario on the Air through `~/bin/ab-real F9 ship/f9c-shortcuts shortcuts USE-ACTION-PROBE`.
+Run `make sim SCENARIOS=lab/scenarios/usage/USE-ACTION-PROBE.yaml` locally. Run the real scenario on the Air through `~/bin/ab-real F9 ship/f9c-shortcuts shortcuts USE-ACTION-PROBE`.

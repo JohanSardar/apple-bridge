@@ -1,0 +1,7 @@
+{
+  "AGENT-SUITE": "the agent level ran only on the deleted Go lab; no Rust agent runner exists",
+  "CORE-SEARCH-UPDATE-PERF": "drove the Go state store in-process; ported to rust/crates/ab-state/tests/search_update_perf.rs and run by make rust-search-perf",
+  "QUERY-AGENT": "the agent level ran only on the deleted Go lab; no Rust agent runner exists",
+  "RMT-ONECOMMAND-FLOW": "tests the embedded Tailscale flow that FINAL-PLAN section 1 dropped; it ran only on the deleted Go lab",
+  "RMT-TS-EMBEDDED": "tests the embedded Tailscale flow that FINAL-PLAN section 1 dropped; it ran only on the deleted Go lab"
+}

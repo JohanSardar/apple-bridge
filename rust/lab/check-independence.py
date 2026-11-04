@@ -6,7 +6,7 @@ def check(metadata):
     names = {p['id']: p['name'] for p in metadata['packages']}
     edges = {n['id']: n['dependencies'] for n in metadata['resolve']['nodes']}
     for root in metadata['workspace_members']:
-        if not (names[root].startswith('lab-') or names[root] == 'bridge-lab'):
+        if not names[root].startswith('lab-'):
             continue
         pending = [(root, [names[root]])]
         visited = set()

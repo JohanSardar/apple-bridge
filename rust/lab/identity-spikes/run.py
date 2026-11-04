@@ -109,10 +109,7 @@ def main():
         status = security.SecKeychainUnlock(reference, len(password), password, True)
         if status != 0:
             raise RuntimeError("Throwaway keychain unlock status " + str(status))
-        run("go", "run", "./rust/lab/identity-spikes/go-writer", keychain, cwd=ROOT)
         result["keychain"] = json.loads(subprocess.check_output([str(binary), "keychain", str(keychain)], text=True))
-        run("go", "run", "./rust/lab/identity-spikes/go-writer", keychain, "get", cwd=ROOT)
-        result["legacy_rollback_read"] = True
     finally:
         result["keychain_delete_status"] = security.SecKeychainDelete(reference)
         (stage / "keychain-password").unlink()

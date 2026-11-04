@@ -1,3 +1,5 @@
+> Go oracle retired: the Go gateway, its parity oracles and the Go lab were deleted. Go commands, file names and Go-versus-Rust results below record what was verified while Go existed; the stored evidence files are unchanged. The Rust tests and `make rust-ci` are the gate now.
+
 # ab-session integration contract
 
 Owner worktree: /Users/johansardar/.t3/worktrees/apple-bridge/t3-6e4deed1

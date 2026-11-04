@@ -1,3 +1,5 @@
+> Go oracle retired: the Go gateway, its parity oracles and the Go lab were deleted. Go commands, file names and Go-versus-Rust results below record what was verified while Go existed; the stored evidence files are unchanged. The Rust tests and `make rust-ci` are the gate now.
+
 # G-F gateway assembly: incremental lifecycle slice
 
 This change is incomplete gateway assembly. It adds Helper configuration and cancellable Go-compatible launch supervision, atomic private runtime configuration, locked offline restore and backup, remote backend selection commands, direct replica pairing, HTTPS iPhone pairing code admission, agent create/list/revoke, and principal revocation through Trust.

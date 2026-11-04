@@ -31,7 +31,7 @@ timing_sensitive() {
 # normal lane instead.
 too_heavy_for_light() {
   case " $* " in
-    *"make build"*|*"make rust-build"*|*"make native"*|*NATIVE_TARGET=*|*build-native*|*build-helper*|*build-truth*|*swift*|*xcodebuild*) return 0 ;;
+    *"make build"*|*"make native"*|*NATIVE_TARGET=*|*build-native*|*build-helper*|*build-truth*|*swift*|*xcodebuild*) return 0 ;;
   esac
   sensitive "$@"
 }
@@ -39,9 +39,9 @@ if [ -n "$light" ] && too_heavy_for_light "$@"; then
   echo "heavy.sh: native or sensitive job moved from the light lane to the normal lane" >&2
   light=""
 fi
-# A plain functional sim-level bridge-lab run (sim is the default level) is eligible for the sim lane.
+# A plain functional sim-level lab-families run (sim is the default level) is eligible for the sim lane.
 auto_sim() {
-  case " $* " in *bridge-lab*|*lab-families*|*rust-lab.sh*) ;; *) return 1 ;; esac
+  case " $* " in *lab-families*|*rust-lab.sh*) ;; *) return 1 ;; esac
   sensitive "$@" && return 1
   levels=$(printf ' %s ' "$*" | grep -o -- '--level[ =][A-Za-z]*' | sed 's/--level[ =]//' | sort -u)
   [ -z "$levels" ] || [ "$levels" = sim ]

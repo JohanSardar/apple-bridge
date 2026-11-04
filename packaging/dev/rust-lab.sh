@@ -58,11 +58,27 @@ scenario_files() {
   done
 }
 
+no_runner_filter() {
+  python3 -c 'import json,os,sys
+table=json.load(open("lab/no-runner.json"))
+for path in sys.stdin.read().split("\n"):
+    if not path:
+        continue
+    name=os.path.splitext(os.path.basename(path))[0]
+    if name in table:
+        print("no-runner " + name + ": " + table[name], file=sys.stderr)
+    else:
+        print(path)'
+}
+
 run_files() {
   local level=$1 output files=()
   shift
-  while IFS= read -r file; do files+=("$file"); done < <(scenario_files "$@")
-  [[ ${#files[@]} -gt 0 ]] || { echo "rust-lab: no scenarios" >&2; exit 1; }
+  while IFS= read -r file; do files+=("$file"); done < <(scenario_files "$@" | no_runner_filter)
+  if [[ ${#files[@]} -eq 0 ]]; then
+    echo "rust-lab: nothing to run" >&2
+    return 0
+  fi
   output=$(mktemp -d "${TMPDIR:-/tmp}/ab-rust-lab.XXXXXX")
   local extra=()
   if [[ $level == real ]]; then
@@ -90,18 +106,18 @@ case "$command" in
   sim)
     prepare
     if [[ $# -eq 0 ]] || ! selected "$@"; then
-      python3 lab/testing/sim_parallel.py --runner rust --parallel "${SIM_JOBS:-4}" --timeout "${SIM_TIMEOUT:-900}" --output "${SIM_OUTPUT:-${TMPDIR:-/tmp}/ab-rust-sim-$(date +%s)}" --rust-binary "$BRIDGE" --families-binary "$FAMILIES" --simapple-binary "$SIMAPPLE" ${SIM_SELECT:+--select "$SIM_SELECT"}
+      python3 lab/testing/sim_parallel.py --parallel "${SIM_JOBS:-4}" --timeout "${SIM_TIMEOUT:-900}" --output "${SIM_OUTPUT:-${TMPDIR:-/tmp}/ab-rust-sim-$(date +%s)}" --rust-binary "$BRIDGE" --families-binary "$FAMILIES" --simapple-binary "$SIMAPPLE" ${SIM_SELECT:+--select "$SIM_SELECT"} ${SIM_RUN_AT_END:+--run-at-end}
     else
       run_files sim "$@"
     fi
     ;;
   families)
     prepare
-    python3 rust/lab/families-parity.py --rust-only --families "$FAMILIES" --gateway "$BRIDGE" --simapple "$SIMAPPLE" --output "${FAMILIES_OUTPUT:-${TMPDIR:-/tmp}/ab-rust-families-$(date +%s)}" "$@"
+    python3 rust/lab/families-parity.py --families "$FAMILIES" --gateway "$BRIDGE" --simapple "$SIMAPPLE" --output "${FAMILIES_OUTPUT:-${TMPDIR:-/tmp}/ab-rust-families-$(date +%s)}" "$@"
     ;;
   replica)
     prepare
-    python3 lab/testing/sim_parallel.py --runner rust --level replica --parallel "${SIM_JOBS:-4}" --timeout "${SIM_TIMEOUT:-900}" --output "${SIM_OUTPUT:-${TMPDIR:-/tmp}/ab-rust-replica-$(date +%s)}" --rust-binary "$BRIDGE" --families-binary "$FAMILIES" --simapple-binary "$SIMAPPLE" ${SIM_SELECT:+--select "$SIM_SELECT"}
+    python3 lab/testing/sim_parallel.py --level replica --parallel "${SIM_JOBS:-4}" --timeout "${SIM_TIMEOUT:-900}" --output "${SIM_OUTPUT:-${TMPDIR:-/tmp}/ab-rust-replica-$(date +%s)}" --rust-binary "$BRIDGE" --families-binary "$FAMILIES" --simapple-binary "$SIMAPPLE" ${SIM_SELECT:+--select "$SIM_SELECT"}
     ;;
   real)
     if [[ $# -eq 0 ]] || ! selected "$@"; then
@@ -112,7 +128,8 @@ case "$command" in
     run_files real "$@"
     ;;
   agent)
-    echo "rust-lab: the agent level has no Rust runner yet; lab/agent is Go only (see GO-DELETE-LIST)" >&2
+    printf 'lab/scenarios/agent/AGENT-SUITE.yaml\nlab/scenarios/maps/QUERY-AGENT.yaml\n' | no_runner_filter >&2
+    echo "rust-lab: the agent level has no runner" >&2
     exit 1
     ;;
   *)
