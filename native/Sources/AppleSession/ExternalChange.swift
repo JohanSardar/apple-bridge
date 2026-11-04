@@ -214,13 +214,13 @@ enum ExternalChange {
             return done(id)
         case "update", "delete":
             let key = try text(request, "key")
-            guard Int(key) != nil else { throw Failure(reason: "argument_key") }
-            let current = try script("com.apple.Safari", "return URL of current tab of window id \(key)")
-            guard current.contains("ab-test=") else { throw Failure(reason: "target") }
+            let marker = try text(request, "marker")
+            guard Int(key) != nil, marker.hasPrefix("abtest") else { throw Failure(reason: "argument_key") }
+            let tab = "first tab of window id \(key) whose URL contains \(NotesScript.quote(marker))"
             if action == "update" {
-                _ = try script("com.apple.Safari", "set URL of current tab of window id \(key) to \(NotesScript.quote(try page()))\nreturn \"ok\"")
+                _ = try script("com.apple.Safari", "set URL of (\(tab)) to \(NotesScript.quote(try page()))\nreturn \"ok\"")
             } else {
-                _ = try script("com.apple.Safari", "close window id \(key)\nreturn \"ok\"")
+                _ = try script("com.apple.Safari", "close (\(tab))\nreturn \"ok\"")
             }
             return done(key)
         default: throw Failure(reason: "action")
