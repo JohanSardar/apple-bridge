@@ -351,7 +351,9 @@ Swift enumerates only what the framework returns now (`CalendarSource.enumerate`
 it keeps no baseline for this path, and the native facts handler has no `ObservationSink`. After a complete
 pull, `AgendaReader` asks `native_facts::Client::revalidate` about the identities the diff cannot account for
 (`agenda::Reader::unaccounted`) and passes only the answers to the diff; a record is deleted or evicted only
-on `missing` / `outside_scope`. An `Error`, a short or reordered answer, a timeout, a closed stream or a new
+on `missing` / `outside_scope`. Contacts containers are asked like contacts and groups (`contacts.containers`): a container that a
+snapshot omits (a transient framework answer, or an incremental Helper frame that lists only changed rows) stays a candidate and is
+tombstoned only on a `missing` verdict; Swift's own scan confirms a container the same way before it emits `absent`. An `Error`, a short or reordered answer, a timeout, a closed stream or a new
 generation emits nothing and deletes nothing (`tests/native_revalidation.rs`; simapple control
 `AB_LAB_SESSION_REVALIDATE_CONTROL=refuse|partial`). The reader token carries the diff state, so a restart
 keeps its baseline (`resume`). `native_facts::Client` multiplexes frames by id on one stream with a reader
