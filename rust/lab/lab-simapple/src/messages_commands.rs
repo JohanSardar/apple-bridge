@@ -1156,7 +1156,9 @@ impl Session<'_> {
                 self.emit(state, capture).map_err(fail)?;
                 Ok(json!({"ui":{"target_verified":true}}))
             }
-            "messages.mark_policy_used" | "messages.record_proof" | "messages.ui_validate" => Ok(json!({})),
+            "messages.mark_policy_used" | "messages.record_proof" | "messages.ui_validate" => {
+                Ok(json!({}))
+            }
             "messages.reconcile" => {
                 let capture = s.scan("messages").map_err(fail)?;
                 drop(s);
