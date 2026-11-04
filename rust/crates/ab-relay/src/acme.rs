@@ -28,7 +28,8 @@ impl ResolvesServerCert for Certificates {
         self.current.read().ok()?.clone()
     }
 }
-fn failed(_: impl std::fmt::Display) -> Error {
+fn failed(reason: impl std::fmt::Display) -> Error {
+    eprintln!("certificate request failed: {reason}");
     Error::Configuration
 }
 fn write_private(path: &Path, data: &[u8]) -> Result<()> {
@@ -164,10 +165,7 @@ async fn issue(path: &Path, host: &str, dns: &dyn DnsProvider, options: &Options
         let key =
             rustls::pki_types::PrivatePkcs8KeyDer::from(private_key(&path.join("relay-key.pem"))?);
         let key = rcgen::KeyPair::try_from(&key).map_err(failed)?;
-        let request = rcgen::CertificateParams::new(vec![host.to_owned()])
-            .map_err(failed)?
-            .serialize_request(&key)
-            .map_err(failed)?;
+        let request = certificate_request(host, &key).map_err(failed)?;
         order.finalize_csr(request.der()).await.map_err(failed)?;
         let chain = order
             .poll_certificate(&RetryPolicy::default())
@@ -180,6 +178,14 @@ async fn issue(path: &Path, host: &str, dns: &dyn DnsProvider, options: &Options
         .map_err(|_| Error::Denied);
     let _ = tokio::time::timeout(Duration::from_secs(15), dns.txt(&name, "")).await;
     result?
+}
+fn certificate_request(
+    host: &str,
+    key: &rcgen::KeyPair,
+) -> std::result::Result<rcgen::CertificateSigningRequest, rcgen::Error> {
+    let mut params = rcgen::CertificateParams::new(vec![host.to_owned()])?;
+    params.distinguished_name = rcgen::DistinguishedName::new();
+    params.serialize_request(key)
 }
 #[derive(Debug, Clone)]
 pub struct Options {
@@ -231,4 +237,22 @@ pub async fn start_with_options(
         }
     });
     Ok(certificates)
+}
+
+#[cfg(test)]
+mod request_tests {
+    #![allow(clippy::unwrap_used)]
+
+    #[test]
+    fn a_certificate_request_names_only_the_host() {
+        let key = rcgen::KeyPair::generate().unwrap();
+        let request = super::certificate_request("ab.example.com", &key).unwrap();
+        let der = request.der().as_ref();
+        let contains = |text: &[u8]| der.windows(text.len()).any(|window| window == text);
+        assert!(contains(b"ab.example.com"));
+        assert!(
+            !contains(b"rcgen"),
+            "Let's Encrypt refuses rcgen's default name"
+        );
+    }
 }

@@ -4,6 +4,15 @@ Your Mac's Apple data (Messages, Calendar, Reminders, Contacts, Notes, Screen Ti
 
 This repository owns the Rust gateway, native Mac Helper, consent pages, relay and gateway-side iPhone integration. The native iPhone app, widgets, extensions, client-side fixtures, signed builds and TestFlight tooling live in [apple-bridge-iphone](https://github.com/JohanSardar/apple-bridge-iphone).
 
+## Get started
+
+Install Apple Bridge on your Mac, then choose how apps reach it:
+
+- **Hosted relay:** ask for an invite, then run `bridge remote on`. A browser page links your Mac to your account.
+- **Your own relay:** follow [Run your own relay](docs/self-host.md). It takes about ten minutes and needs a small Linux server and a domain.
+
+Either way your Mac approves every app that connects to its data. See [connector approvals](docs/connectors/approvals.md).
+
 ## Mac development
 
 Use `make build` to build the gateway and native Helper. `make lint`, `make features` and `make rust-ci` check this repository. `make sim`, `make real` and `make replica` run the scenarios through the Rust lab runner. Mac builds need no iPhone checkout or Xcode iOS SDK. On the Air, run build and test steps serially through `~/bin/ab-local`.

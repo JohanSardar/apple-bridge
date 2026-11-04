@@ -130,8 +130,7 @@ impl Certificates {
             order.poll_ready(&RetryPolicy::default()).await?;
             let key_pem = load_key(&key_path)?;
             let key = rcgen::KeyPair::from_pem(&key_pem)?;
-            let params = rcgen::CertificateParams::new(vec![host.to_owned()])?;
-            let csr = params.serialize_request(&key)?;
+            let csr = certificate_request(host, &key)?;
             order.finalize_csr(csr.der()).await?;
             let pem = order.poll_certificate(&RetryPolicy::default()).await?;
             let fingerprint = self.install(&pem, &key_pem, host)?;
@@ -209,4 +208,31 @@ async fn report(id: &Identity, client: &reqwest::Client, bytes: &[u8]) -> Result
         serde_json::json!({"fingerprint":fingerprint}),
     )
     .await
+}
+
+fn certificate_request(
+    host: &str,
+    key: &rcgen::KeyPair,
+) -> std::result::Result<rcgen::CertificateSigningRequest, rcgen::Error> {
+    let mut params = rcgen::CertificateParams::new(vec![host.to_owned()])?;
+    params.distinguished_name = rcgen::DistinguishedName::new();
+    params.serialize_request(key)
+}
+
+#[cfg(test)]
+mod request_tests {
+    #![allow(clippy::unwrap_used)]
+
+    #[test]
+    fn a_certificate_request_names_only_the_host() {
+        let key = rcgen::KeyPair::generate().unwrap();
+        let request = super::certificate_request("mac.ab.example.com", &key).unwrap();
+        let der = request.der().as_ref();
+        let contains = |text: &[u8]| der.windows(text.len()).any(|window| window == text);
+        assert!(contains(b"mac.ab.example.com"));
+        assert!(
+            !contains(b"rcgen"),
+            "Let's Encrypt refuses rcgen's default name"
+        );
+    }
 }

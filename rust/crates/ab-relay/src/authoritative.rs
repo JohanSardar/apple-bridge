@@ -87,6 +87,10 @@ impl DnsProvider for Server {
                 return Err(Error::Denied);
             }
             let mut challenges = self.0.challenges.lock().map_err(|_| Error::Denied)?;
+            if value.is_empty() {
+                challenges.remove(&key);
+                return Ok(());
+            }
             let now = Instant::now();
             challenges.retain(|_, values| {
                 values.retain(|(_, until)| *until > now);
@@ -286,6 +290,14 @@ mod tests {
         server.txt(name, "token-value").await.unwrap();
         let reply = ask(&server, &format!("{name}."), RecordType::TXT);
         assert_eq!(reply.answers.len(), 1);
+        server.txt(name, "").await.unwrap();
+        assert_eq!(
+            ask(&server, &format!("{name}."), RecordType::TXT)
+                .answers
+                .len(),
+            0,
+            "an empty value clears it"
+        );
         assert!(
             server
                 .txt("_acme-challenge.other.example.org", "x")
