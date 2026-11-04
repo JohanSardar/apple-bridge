@@ -80,6 +80,27 @@ fn bounded_integrity(db: &Connection, budget: Duration) -> Result<Option<String>
         Err(_) => Err(Error::Invalid),
     }
 }
+fn budget_results(result: &mut Value, integrity_complete: bool, shape_complete: bool) -> Result<(), Error> {
+    result["checks"] = json!({"sqlite_integrity": if integrity_complete { "complete" } else { "incomplete" }, "shape_scan": if shape_complete { "complete" } else { "incomplete" }});
+    for (complete, warning) in [
+        (
+            integrity_complete,
+            "SQLite integrity check did not finish within its time budget on this large database; doctor reports it as incomplete. Run sqlite3 on a stopped copy for a full integrity_check.",
+        ),
+        (
+            shape_complete,
+            "Record shape scan did not finish within its time budget; the reported shape counts cover only the records scanned.",
+        ),
+    ] {
+        if !complete {
+            result["warnings"]
+                .as_array_mut()
+                .ok_or(Error::Invalid)?
+                .push(json!(warning));
+        }
+    }
+    Ok(())
+}
 fn doctor_report(home: &Path) -> Result<Value, Error> {
     ab_trust::passkeys::validate_home(home)?;
     let db = database(home)?;
@@ -168,15 +189,7 @@ fn doctor_report(home: &Path) -> Result<Value, Error> {
     let (shape, shape_complete) =
         crate::shape::violations(&db, started + SQLITE_BUDGET + SHAPE_BUDGET)?;
     result["shape"] = shape;
-    result["checks"] = json!({"sqlite_integrity": if integrity_complete { "complete" } else { "incomplete" }, "shape_scan": if shape_complete { "complete" } else { "incomplete" }});
-    for (complete, warning) in [
-        (integrity_complete, "SQLite integrity check did not finish within its time budget on this large database; doctor reports it as incomplete. Run sqlite3 on a stopped copy for a full integrity_check."),
-        (shape_complete, "Record shape scan did not finish within its time budget; the reported shape counts cover only the records scanned."),
-    ] {
-        if !complete {
-            result["warnings"].as_array_mut().ok_or(Error::Invalid)?.push(json!(warning));
-        }
-    }
+    budget_results(&mut result, integrity_complete, shape_complete)?;
     encryption(home, &mut result);
     encryption_warning(&mut result)?;
     for warning in ab_remote::ct::doctor(home, ab_remote::ct::now()) {

@@ -124,8 +124,7 @@ pub async fn hydrate(
         }
         let source = crate::helper_blobs::HelperBlobs(commands.clone(), job.session);
         let total = job.capture.blob_handles.len();
-        let (mut recovered, mut failed_after_retry, mut previously_failed, mut unknown) =
-            (0_usize, 0_usize, 0_usize, 0_usize);
+        let mut tally = Tally::default();
         for (digest, handle) in job.capture.blob_handles {
             let Ok(digest) = ab_blobs::Digest::try_from(digest) else {
                 continue;
@@ -204,19 +203,35 @@ pub async fn hydrate(
                     break;
                 }
             }
-            if succeeded {
-                recovered += usize::from(rearmed);
-            } else if !known {
-                unknown += 1;
-            } else if transferred {
-                failed_after_retry += 1;
-            } else {
-                previously_failed += 1;
-            }
+            tally.record(succeeded, rearmed, known, transferred);
         }
-        if failed_after_retry + previously_failed + unknown > 0 {
+        tally.report(total);
+    }
+}
+#[derive(Default)]
+struct Tally {
+    recovered: usize,
+    failed_after_retry: usize,
+    previously_failed: usize,
+    unknown: usize,
+}
+impl Tally {
+    fn record(&mut self, succeeded: bool, rearmed: bool, known: bool, transferred: bool) {
+        if succeeded {
+            self.recovered += usize::from(rearmed);
+        } else if !known {
+            self.unknown += 1;
+        } else if transferred {
+            self.failed_after_retry += 1;
+        } else {
+            self.previously_failed += 1;
+        }
+    }
+    fn report(&self, total: usize) {
+        if self.failed_after_retry + self.previously_failed + self.unknown > 0 {
             eprintln!(
-                "Helper blob transfer incomplete: capture of {total} blobs, {previously_failed} not retryable (corrupt or over capacity), {failed_after_retry} failed after retry, {unknown} not in the manifest, {recovered} recovered after an earlier failure. Failed blobs get one fresh attempt whenever the Helper offers them again."
+                "Helper blob transfer incomplete: capture of {total} blobs, {} not retryable (corrupt or over capacity), {} failed after retry, {} not in the manifest, {} recovered after an earlier failure. Failed blobs get one fresh attempt whenever the Helper offers them again.",
+                self.previously_failed, self.failed_after_retry, self.unknown, self.recovered
             );
         }
     }

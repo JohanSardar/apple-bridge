@@ -712,8 +712,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn rearm_gives_an_exhausted_blob_exactly_one_more_attempt() -> Result<(), Box<dyn std::error::Error>>
-    {
+    fn rearm_gives_an_exhausted_blob_exactly_one_more_attempt()
+    -> Result<(), Box<dyn std::error::Error>> {
         let home = tempfile::tempdir()?;
         let digest = Digest::try_from("b".repeat(64))?;
         let mut store = Store::open(home.path(), 0)?;
