@@ -237,6 +237,40 @@ struct NativeChecks {
         Darwin.close(pushPair[0])
         _ = await pushing.value
         Darwin.close(pushPair[1])
+        try await sessionLinkChecks(hello)
         print("native/1 checks passed")
     }
+}
+
+func sessionLinkChecks(_ hello: JSON) async throws {
+    var pair: [Int32] = [-1, -1]
+    guard socketpair(AF_UNIX, SOCK_STREAM, 0, &pair) == 0 else { throw CheckFailure.failed("session socketpair") }
+    defer { Darwin.close(pair[0]); Darwin.close(pair[1]) }
+    let peer = try NativeWire(descriptor: pair[1])
+    let linkDescriptor = pair[0]
+    let connecting = Task.detached { try NativeSessionLink(descriptor: linkDescriptor) }
+    try peer.send(hello)
+    let welcome = try await Task.detached { try peer.receive() }.value
+    try check(welcome == .object(["t": .string("Welcome"), "protocol": .string("native/1"), "version": .integer(1)]), "session link welcome")
+    try peer.send(.object(["t": .string("Session"), "checkpoints": .object(["reminders": .object(["generation": .string("g"), "checkpoint": .string("c0")])])]))
+    let link = try await connecting.value
+    try check(link.fence == 7 && link.checkpoints["reminders"]?["checkpoint"] == .string("c0"), "session link fence and checkpoints")
+    try link.send(NativeSessionFrame.scan(id: "s1", source: "reminders", generation: "g", observations: [], scanID: "", scanStartedAt: "", scope: ["x"], completionEvidence: "complete", blobHandles: [:], live: false))
+    let unscoped = try await Task.detached { try peer.receive() }.value
+    try check(unscoped["id"] == .string("s1") && unscoped["scan_id"] == .null && unscoped["scope"] == .null && unscoped["completion_evidence"] == .null, "unscoped scan omits scan fields")
+    try link.send(NativeSessionFrame.scan(id: "s2", source: "calendar", generation: "g", observations: [.object(["kind": .string("upsert")])], scanID: "a", scanStartedAt: "2026-01-02T03:04:05Z", scope: ["calendar.event"], completionEvidence: "complete", blobHandles: ["d": "h"], live: true))
+    let scoped = try await Task.detached { try peer.receive() }.value
+    try check(scoped["scan_id"] == .string("a") && scoped["scope"].array.count == 1 && scoped["live"].bool && scoped["blob_handles"]["d"] == .string("h") && scoped["completion_evidence"] == .string("complete"), "scoped scan carries its scan fields")
+    try link.send(NativeSessionFrame.rejected(commandID: .string("c"), code: "conflict", message: "m", evidence: nil))
+    let rejected = try await Task.detached { try peer.receive() }.value
+    try check(rejected["code"] == .string("conflict") && rejected["evidence"] == .null, "rejected frame")
+    link.close()
+    var bad: [Int32] = [-1, -1]
+    guard socketpair(AF_UNIX, SOCK_STREAM, 0, &bad) == 0 else { throw CheckFailure.failed("bad socketpair") }
+    defer { Darwin.close(bad[0]); Darwin.close(bad[1]) }
+    let badPeer = try NativeWire(descriptor: bad[1])
+    let refusedDescriptor = bad[0]
+    let refusing = Task.detached { try NativeSessionLink(descriptor: refusedDescriptor) }
+    try badPeer.send(.object(["t": .string("Hello"), "protocol": .string("native/2"), "version": .integer(1), "owner_fence": .integer(7)]))
+    do { _ = try await refusing.value; throw CheckFailure.failed("wrong protocol accepted") } catch SourceFailure.invalid {}
 }
