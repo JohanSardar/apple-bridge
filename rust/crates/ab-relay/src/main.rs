@@ -19,6 +19,14 @@ use tokio_rustls::TlsAcceptor;
 use tokio_util::sync::CancellationToken;
 use tower::Service;
 
+fn listen_addr(addr: &str) -> String {
+    if addr.starts_with(':') {
+        format!("[::]{addr}")
+    } else {
+        addr.to_owned()
+    }
+}
+
 fn options() -> std::result::Result<HashMap<String, String>, Box<dyn std::error::Error>> {
     let mut out = HashMap::new();
     let mut args = std::env::args().skip(1);
@@ -120,7 +128,7 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
     };
     let acceptor = TlsAcceptor::from(Arc::new(config));
     let control = if get("control-host", "").is_empty() {
-        Some(TcpListener::bind(get("control-addr", "127.0.0.1:8443")).await?)
+        Some(TcpListener::bind(listen_addr(&get("control-addr", "127.0.0.1:8443"))).await?)
     } else {
         None
     };
@@ -144,7 +152,7 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let api = Arc::new(api);
     let router = api.clone().router();
     let make = router.into_make_service_with_connect_info();
-    let public = TcpListener::bind(get("addr", "0.0.0.0:443")).await?;
+    let public = TcpListener::bind(listen_addr(&get("addr", "0.0.0.0:443"))).await?;
     let quit = stop.clone();
     tokio::spawn(async move {
         let Ok(mut term) =
@@ -222,4 +230,18 @@ fn configured_store(
         store.validate_owner_keys()?;
     }
     Ok(store)
+}
+
+#[cfg(test)]
+mod listen_addr_tests {
+    use super::listen_addr;
+
+    #[tokio::test]
+    async fn bare_port_binds_all_interfaces_like_go() -> std::io::Result<()> {
+        assert_eq!(listen_addr(":443"), "[::]:443");
+        assert_eq!(listen_addr("127.0.0.1:443"), "127.0.0.1:443");
+        let listener = tokio::net::TcpListener::bind(listen_addr(":0")).await?;
+        assert!(listener.local_addr()?.ip().is_unspecified());
+        Ok(())
+    }
 }
