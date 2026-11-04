@@ -29,14 +29,14 @@ fn commit(store: &mut State<Gateway>, number: u32, predecessor: &str, data: &Val
 
 fn stored(home: &std::path::Path) -> Value {
     let database = Connection::open(home.join("state.db")).expect("database");
-    let payload: String = database
+    let payload: Vec<u8> = database
         .query_row(
             "SELECT payload FROM records WHERE collection='notes.note'",
             [],
             |row| row.get(0),
         )
         .expect("record");
-    serde_json::from_str::<Value>(&payload).expect("json")["data"].clone()
+    serde_json::from_slice::<Value>(&payload).expect("json")["data"].clone()
 }
 
 fn note(fingerprint: &str, pending: bool) -> Value {
