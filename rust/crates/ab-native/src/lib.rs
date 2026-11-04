@@ -24,6 +24,7 @@ pub mod notes;
 pub mod plist;
 pub mod rich;
 pub mod safari;
+pub mod shortcut_actions;
 pub mod summary;
 pub mod usage;
 

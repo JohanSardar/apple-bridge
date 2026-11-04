@@ -47,9 +47,9 @@ public actor NativeServer {
         "reminders.create", "reminders.update", "reminders.complete", "reminders.delete", "reminders.create_list", "reminders.rename_list", "reminders.delete_list", "reminders.uncomplete",
         "contacts.create", "contacts.update", "contacts.delete", "contacts.create_group", "contacts.rename_group", "contacts.delete_group", "contacts.add_member", "contacts.remove_member",
         "messages.send", "messages.reply", "messages.react", "messages.edit", "messages.unsend", "messages.mark_read", "messages.mark_unread", "messages.delete_message", "messages.delete_chat",
-        "media.derive", "vision.ocr", "pdf.text", "pdf.search", "pdf.render", "pdf.annotate", "audio.transcribe", "speech.synthesize", "speech.say", "capture.play_sound",
+        "media.derive", "vision.ocr", "pdf.text", "pdf.search", "pdf.annotate", "audio.transcribe", "speech.synthesize", "speech.say", "capture.play_sound",
         "maps.snapshot", "maps.search", "maps.nearby", "maps.directions", "maps.eta", "maps.open", "location.current", "location.geocode", "location.reverse_geocode",
-        "capture.screenshot", "capture.camera_photo", "capture.record_audio", "mac.screen_record", "print.document", "focus.set", "shortcuts.run", "shortcuts.actions",
+        "capture.screenshot", "capture.camera_photo", "capture.record_audio", "mac.screen_record", "print.document", "focus.set", "shortcuts.run",
         "mac.set_volume", "mac.set_mute", "mac.set_appearance", "mac.launch_app", "mac.activate_app", "mac.quit_app", "mac.keep_awake", "mac.clipboard_write", "mac.clipboard_read", "mac.notify", "mac.open_settings", "mac.set_wallpaper", "mac.network_check", "mac.bluetooth_devices", "mac.time_machine_status", "mac.recognize_song", "mac.iwork_export"
     ]
     private struct Snapshot {

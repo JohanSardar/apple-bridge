@@ -6,12 +6,13 @@ use std::{
 };
 
 pub const MAX_FRAME: usize = 262_144;
+const MAX_LARGE_FRAME: usize = 1_114_112;
 
 fn read(stream: &mut UnixStream, large: &[&str]) -> Result<(Vec<u8>, Value), Error> {
     let mut header = [0; 4];
     stream.read_exact(&mut header)?;
     let size = usize::try_from(u32::from_be_bytes(header)).map_err(|_| Error::Invalid)?;
-    if size == 0 || size > 1_114_112 {
+    if size == 0 || size > MAX_LARGE_FRAME {
         return Err(Error::Invalid);
     }
     let mut bytes = vec![0; size];
@@ -33,8 +34,16 @@ pub fn read_frame(stream: &mut UnixStream) -> Result<(Vec<u8>, Value), Error> {
 }
 
 pub fn send(stream: &mut UnixStream, value: &Value) -> Result<(), Error> {
+    send_up_to(stream, value, MAX_FRAME)
+}
+
+pub fn send_large(stream: &mut UnixStream, value: &Value) -> Result<(), Error> {
+    send_up_to(stream, value, MAX_LARGE_FRAME)
+}
+
+fn send_up_to(stream: &mut UnixStream, value: &Value, limit: usize) -> Result<(), Error> {
     let bytes = serde_json::to_vec(value)?;
-    if bytes.is_empty() || bytes.len() > MAX_FRAME {
+    if bytes.is_empty() || bytes.len() > limit {
         return Err(Error::Invalid);
     }
     stream.write_all(

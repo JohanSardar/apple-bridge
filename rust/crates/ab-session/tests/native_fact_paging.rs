@@ -187,6 +187,7 @@ fn wire(sources: BTreeMap<String, Box<dyn readers::CaptureReader>>) -> Fallible<
         poll: Duration::from_millis(20),
         watch: false,
         state: None,
+        queries: ab_session::queries::NativeQueries::default(),
     };
     let worker = std::thread::spawn(move || {
         routed::relay_layered(session_gateway, session_helper, sources, &options, None)

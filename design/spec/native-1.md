@@ -92,7 +92,7 @@ an effect is supported: retain existing capability qualification and validation.
 | UI actor | messages.reply, messages.react, messages.edit, messages.unsend, messages.mark_read, messages.mark_unread, messages.delete_message, messages.delete_chat | MessagesSource/MessagesCommands.swift, MessagesUISession.swift, MessagesPins.swift |
 | Automation | messages.send to an exact chat or handle | MessagesSource/MessagesCommands.swift, MessagesRecipient.swift |
 | Media | media.derive | MediaDerivatives/MediaDerivatives.swift, Images.swift, Audiovisual.swift, Posters.swift |
-| Vision/PDF | vision.ocr, pdf.text, pdf.render, pdf.annotate | VisionSource/VisionQueries.swift; PDFSource/PDFQueries.swift, PDFSource.swift |
+| Vision/PDF | vision.ocr, pdf.text, pdf.annotate | VisionSource/VisionQueries.swift; PDFSource/PDFQueries.swift, PDFSource.swift |
 | Speech/audio | speech.synthesize, speech.say, capture.play_sound | SpeechSource/SpeechQueries.swift, SpeechPlayback.swift; CaptureSource/CapturePlayback.swift |
 | Maps/Location | maps.search, maps.nearby, maps.directions, maps.eta, maps.open, location.current, location.geocode, location.reverse_geocode | MapsSource/MapsQueries.swift, MapsCommands.swift |
 | Focus | focus.set | FocusSource/FocusSource.swift |
