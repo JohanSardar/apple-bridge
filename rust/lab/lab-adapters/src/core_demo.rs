@@ -20,12 +20,7 @@ fn doctor(home: &std::path::Path) -> Option<Value> {
         .ok()
         .and_then(|text| serde_json::from_str(&text).ok())
 }
-fn tail(
-    world: &World,
-    observed: &Observed,
-    observers: &[Watcher],
-    evidence: &mut Evidence,
-) -> Result<()> {
+fn tail(world: &World, observed: &Observed, observers: &[Watcher], evidence: &mut Evidence) {
     let drained = world.control("/flush", &json!({})).is_ok();
     evidence.check(
         "recovery_capture_drained_before_convergence",
@@ -33,11 +28,11 @@ fn tail(
         "final capture drain",
     );
     if !drained {
-        return Ok(());
+        return;
     }
     if !await_until(30, || converged(world, observed)) {
         evidence.check("truth_gateway_replica_convergence", false, "not converged");
-        return Ok(());
+        return;
     }
     evidence.check(
         "truth_gateway_replica_convergence",
@@ -46,7 +41,7 @@ fn tail(
     );
     if !automatic_healthy(world, observed, evidence) {
         evidence.check("automatic_sync_guarantees", false, "healthy probe failed");
-        return Ok(());
+        return;
     }
     let mut homes = vec![("gateway".to_owned(), world.gateway_home.clone())];
     homes.extend(
@@ -69,7 +64,6 @@ fn tail(
             "every observed delete is absent in SimApple truth",
         );
     }
-    Ok(())
 }
 fn message_count(world: &World) -> u64 {
     doctor(&world.gateway_home).map_or(0, |report| {
@@ -154,7 +148,8 @@ pub fn run(world: &mut World, case: &str, evidence: &mut Evidence) -> Result<()>
     if !messages_shape(world, evidence) {
         return Ok(());
     }
-    tail(world, &observed, &observers, evidence)
+    tail(world, &observed, &observers, evidence);
+    Ok(())
 }
 
 pub fn matches(case: &str, scenario: &str) -> bool {

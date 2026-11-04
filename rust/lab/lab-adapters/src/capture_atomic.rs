@@ -1,3 +1,4 @@
+#![allow(clippy::too_many_lines)]
 use crate::{
     assertions::{Observed, await_until, converged},
     http::{Client, random_id},

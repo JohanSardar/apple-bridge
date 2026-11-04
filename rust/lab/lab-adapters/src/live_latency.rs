@@ -166,8 +166,7 @@ fn stats(mut values: Vec<f64>) -> (usize, f64) {
     if values.is_empty() {
         return (0, 0.0);
     }
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-    let index = ((values.len() as f64) * 0.95).ceil() as usize - 1;
+    let index = (values.len() * 95).div_ceil(100) - 1;
     (values.len(), values[index])
 }
 
@@ -188,7 +187,7 @@ pub fn latency(world: &mut World, input: &Value, evidence: &mut Evidence) -> Res
             for (key, effect) in &run.stamps {
                 match watcher.first_seen_title(COLLECTION, &title(key)) {
                     Some(seen) => {
-                        values.push(seen.saturating_duration_since(*effect).as_secs_f64() * 1000.0)
+                        values.push(seen.saturating_duration_since(*effect).as_secs_f64() * 1000.0);
                     }
                     None => timeouts += 1,
                 }
