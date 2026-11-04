@@ -13,12 +13,10 @@ use std::{
     io::Write,
     net::Shutdown,
     os::unix::net::UnixStream,
-    sync::{
-        Arc, Condvar, Mutex, MutexGuard,
-        atomic::{AtomicBool, Ordering},
-    },
+    path::PathBuf,
+    sync::{Arc, Condvar, Mutex, MutexGuard},
     thread,
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
 type Slot = Mutex<Box<dyn CaptureReader>>;
@@ -95,11 +93,12 @@ struct Shared {
     saved: BTreeMap<String, (String, String)>,
     bound: BTreeMap<String, (String, String)>,
     dispatched: BTreeMap<String, u64>,
+    touched: BTreeSet<String>,
+    urgent: BTreeSet<String>,
 }
 
 #[derive(Debug)]
 struct Gate {
-    wake: AtomicBool,
     shared: Mutex<Shared>,
     changed: Condvar,
 }
@@ -140,10 +139,23 @@ impl Gate {
         self.shared.lock().map_err(|_| Error::WorkerPanicked)
     }
 
-    fn poke(&self) {
-        self.wake.store(true, Ordering::SeqCst);
-        drop(self.shared.lock());
-        self.changed.notify_all();
+    fn poke(&self, sources: &[&str], urgent: bool) {
+        let Ok(mut shared) = self.shared.lock() else {
+            return;
+        };
+        let mut fresh = false;
+        for source in sources {
+            let pending = if urgent {
+                &mut shared.urgent
+            } else {
+                &mut shared.touched
+            };
+            fresh |= pending.insert((*source).to_owned());
+        }
+        drop(shared);
+        if fresh {
+            self.changed.notify_all();
+        }
     }
 
     fn close(&self) {
@@ -274,25 +286,88 @@ fn persist(
     Ok(())
 }
 
-fn watch(gate: &Gate, roots: &[std::path::PathBuf]) {
+const REWALK: Duration = Duration::from_secs(30);
+const WALK_RETRY: Duration = Duration::from_secs(2);
+const WALK_FLOOR: Duration = Duration::from_millis(500);
+const WALK_DUTY: u32 = 20;
+const SCAN_FLOOR: Duration = Duration::from_secs(1);
+const SCAN_DUTY: u32 = 16;
+
+type Targets = Vec<(String, Vec<PathBuf>)>;
+
+fn owners<'a>(targets: &'a Targets, path: &std::path::Path) -> impl Iterator<Item = &'a str> {
+    let anywhere = path.as_os_str().is_empty();
+    targets
+        .iter()
+        .filter(move |(_, roots)| anywhere || roots.iter().any(|root| path.starts_with(root)))
+        .map(|(source, _)| source.as_str())
+}
+
+fn walk_trees(watcher: &mut ab_sys::watch::Watcher, targets: &Targets) -> (BTreeSet<String>, bool) {
+    let mut grown = BTreeSet::new();
+    let mut failed = false;
+    for (source, roots) in targets {
+        for root in roots {
+            match watcher.watch_tree(root) {
+                Ok(true) => {
+                    grown.insert(source.clone());
+                }
+                Ok(false) => {}
+                Err(_) => failed = true,
+            }
+        }
+    }
+    (grown, failed)
+}
+
+fn watch(gate: &Gate, targets: &Targets) {
     let Ok(mut watcher) = ab_sys::watch::Watcher::new() else {
         return;
     };
+    let mut pending = true;
+    let mut announce = false;
+    let mut spacing = WALK_FLOOR;
+    let mut walked = Instant::now();
+    let mut fallback = walked;
     loop {
-        let mut failed = false;
-        for root in roots {
-            failed |= watcher.watch_tree(root).is_err();
-        }
-        if failed {
-            thread::sleep(Duration::from_millis(100));
-        }
-        match watcher.wait(Duration::from_millis(250)) {
-            Ok(true) => {
-                thread::sleep(Duration::from_millis(15));
-                while matches!(watcher.wait(Duration::ZERO), Ok(true)) {}
-                gate.poke();
+        let now = Instant::now();
+        if (pending && now.saturating_duration_since(walked) >= spacing) || now >= fallback {
+            let (grown, failed) = walk_trees(&mut watcher, targets);
+            walked = Instant::now();
+            spacing = WALK_FLOOR.max(walked.saturating_duration_since(now) * WALK_DUTY);
+            pending = !grown.is_empty();
+            fallback = walked + if failed { WALK_RETRY } else { REWALK };
+            if announce && !grown.is_empty() {
+                let grown: Vec<&str> = grown.iter().map(String::as_str).collect();
+                gate.poke(&grown, false);
             }
-            Ok(false) => {}
+            announce = true;
+        }
+        let wait = if pending {
+            (walked + spacing)
+                .saturating_duration_since(Instant::now())
+                .clamp(Duration::from_millis(1), Duration::from_millis(250))
+        } else {
+            Duration::from_millis(250)
+        };
+        match watcher.poll(wait) {
+            Ok(mut changes) => {
+                if !changes.is_empty() {
+                    thread::sleep(Duration::from_millis(15));
+                    loop {
+                        match watcher.poll(Duration::ZERO) {
+                            Ok(more) if !more.is_empty() => changes.extend(more),
+                            _ => break,
+                        }
+                    }
+                    pending |= changes.iter().any(|change| change.structural);
+                    let touched: BTreeSet<&str> = changes
+                        .iter()
+                        .flat_map(|change| owners(targets, &change.path))
+                        .collect();
+                    gate.poke(&touched.into_iter().collect::<Vec<_>>(), false);
+                }
+            }
             Err(_) => return,
         }
         if gate.shared.lock().map_or(true, |shared| shared.closed) {
@@ -339,7 +414,7 @@ fn ingest(
         }
     }
     drop(reader);
-    gate.poke();
+    gate.poke(&[source], true);
     Ok(())
 }
 
@@ -558,6 +633,69 @@ fn wait_committed(gate: &Gate, source: &str) -> Result<bool, Error> {
     Ok(true)
 }
 
+#[derive(Debug, Default)]
+struct Pace {
+    scanned: Option<Instant>,
+    poked: Option<Instant>,
+    cost: Duration,
+}
+
+impl Pace {
+    fn due(
+        &self,
+        now: Instant,
+        poll: Duration,
+        touched: bool,
+        urgent: bool,
+    ) -> Result<(), Instant> {
+        let Some(scanned) = self.scanned else {
+            return Ok(());
+        };
+        if urgent {
+            return Ok(());
+        }
+        let mut when = scanned + poll;
+        if touched {
+            let gap = poll.min(SCAN_FLOOR).max(self.cost * SCAN_DUTY);
+            when = when.min(self.poked.map_or(now, |poked| poked + gap));
+        }
+        if now >= when { Ok(()) } else { Err(when) }
+    }
+}
+
+enum Claim {
+    Busy,
+    Wait(Instant),
+    Scan,
+}
+
+fn claim(
+    gate: &Gate,
+    source: &str,
+    state: &mut Pace,
+    began: Instant,
+    poll: Duration,
+) -> Result<Claim, Error> {
+    let (touched, urgent) = {
+        let mut shared = gate.lock()?;
+        if shared.flights.contains(source) {
+            return Ok(Claim::Busy);
+        }
+        (shared.touched.remove(source), shared.urgent.remove(source))
+    };
+    if let Err(when) = state.due(began, poll, touched, urgent) {
+        if touched {
+            gate.lock()?.touched.insert(source.to_owned());
+        }
+        return Ok(Claim::Wait(when));
+    }
+    state.scanned = Some(began);
+    if touched {
+        state.poked = Some(began);
+    }
+    Ok(Claim::Scan)
+}
+
 #[allow(clippy::too_many_arguments)]
 fn produce(
     gate: &Gate,
@@ -575,13 +713,23 @@ fn produce(
         .map_err(|_| Error::Invalid)?
         .as_nanos();
     let sources: Vec<String> = readers.keys().cloned().collect();
+    let mut pace: BTreeMap<String, Pace> = BTreeMap::new();
     if !wait_open(gate)? {
         return Ok(());
     }
     loop {
-        let mut again: Vec<&String> = Vec::new();
+        let mut deadline: Option<Instant> = None;
         for source in &sources {
-            if gate.lock()?.flights.contains(source) {
+            let state = pace.entry(source.clone()).or_default();
+            let began = Instant::now();
+            let postponed = match claim(gate, source, state, began, poll)? {
+                Claim::Busy => continue,
+                Claim::Wait(when) => Some(when),
+                Claim::Scan => None,
+            };
+            let soonest = postponed.unwrap_or(began + poll);
+            deadline = Some(deadline.map_or(soonest, |earlier| earlier.min(soonest)));
+            if postponed.is_some() {
                 continue;
             }
             ordinal += 1;
@@ -617,8 +765,9 @@ fn produce(
                     reader.adopts_generation(),
                 )
             };
+            state.cost = began.elapsed();
             if more {
-                again.push(source);
+                gate.lock()?.urgent.insert(source.clone());
             }
             let capture = match next {
                 Ok(Some(capture)) => capture,
@@ -637,24 +786,32 @@ fn produce(
                 return Ok(());
             }
         }
-        let shared = gate.lock()?;
-        if shared.closed {
-            return Ok(());
-        }
-        if gate.wake.swap(false, Ordering::SeqCst) {
-            continue;
-        }
-        if again.iter().any(|source| !shared.flights.contains(source)) {
-            continue;
-        }
-        let (shared, _) = gate
-            .changed
-            .wait_timeout(shared, poll)
-            .map_err(|_| Error::WorkerPanicked)?;
-        if shared.closed {
+        if !idle(gate, deadline, poll)? {
             return Ok(());
         }
     }
+}
+
+fn idle(gate: &Gate, deadline: Option<Instant>, poll: Duration) -> Result<bool, Error> {
+    let shared = gate.lock()?;
+    if shared.closed {
+        return Ok(false);
+    }
+    if shared
+        .urgent
+        .iter()
+        .any(|source| !shared.flights.contains(source))
+    {
+        return Ok(true);
+    }
+    let wait = deadline
+        .map_or(poll, |when| when.saturating_duration_since(Instant::now()))
+        .max(Duration::from_millis(1));
+    let (shared, _) = gate
+        .changed
+        .wait_timeout(shared, wait)
+        .map_err(|_| Error::WorkerPanicked)?;
+    Ok(!shared.closed)
 }
 
 const BLOB_LOCK_WAIT: Duration = Duration::from_secs(2);
@@ -858,14 +1015,13 @@ pub fn relay_layered(
     layer: Option<&dyn Overlay>,
 ) -> Result<(), Error> {
     let rust: BTreeSet<String> = readers.keys().cloned().collect();
-    let roots: Vec<std::path::PathBuf> = readers
-        .values()
-        .flat_map(|reader| reader.watch_paths())
+    let targets: Targets = readers
+        .iter()
+        .map(|(source, reader)| (source.clone(), reader.watch_paths()))
         .collect();
     let store = options.state.as_deref().map(Store::open).transpose()?;
     let store = store.as_ref();
     let gate = Gate {
-        wake: AtomicBool::new(false),
         shared: Mutex::new(Shared::default()),
         changed: Condvar::new(),
     };
@@ -955,9 +1111,9 @@ pub fn relay_layered(
             })
         });
         let watcher = (options.watch && !rust.is_empty()).then(|| {
-            let roots = &roots;
+            let targets = &targets;
             let gate = &gate;
-            scope.spawn(move || watch(gate, roots))
+            scope.spawn(move || watch(gate, targets))
         });
         let result = (|| -> Result<(), Error> {
             loop {

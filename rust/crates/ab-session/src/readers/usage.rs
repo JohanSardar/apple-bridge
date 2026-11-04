@@ -4,6 +4,18 @@ use super::{
 };
 use ab_native::usage;
 
+const PEERS: &str = "sync";
+const STREAM: &str = "streams/restricted/App.InFocus";
+
+fn consumed(root: &Path) -> Result<Signature, Error> {
+    let mut out = file_signature(&root.join(PEERS).join("sync.db"));
+    let stream = root.join(STREAM);
+    if stream.is_dir() {
+        out.extend(signature(&stream)?);
+    }
+    Ok(out)
+}
+
 #[derive(Debug)]
 pub struct UsageReader {
     root: PathBuf,
@@ -72,6 +84,10 @@ impl CaptureReader for UsageReader {
         &self.root
     }
 
+    fn watch_paths(&self) -> Vec<PathBuf> {
+        vec![self.root.join(PEERS), self.root.join(STREAM)]
+    }
+
     fn token(&self) -> Option<String> {
         self.committed.as_ref().map(encode)
     }
@@ -85,7 +101,7 @@ impl CaptureReader for UsageReader {
         if self.pending.is_some() {
             return Err(Error::Conflict);
         }
-        let mut current = signature(&self.root)?;
+        let mut current = consumed(&self.root)?;
         if let Some(history) = &self.history {
             current.extend(file_signature(history));
         }
@@ -128,5 +144,32 @@ impl CaptureReader for UsageReader {
         self.committed = Some(current);
         self.warm = true;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{STREAM, consumed};
+    use std::{fs, io, path::PathBuf};
+
+    #[test]
+    fn signature_follows_only_the_files_the_scan_reads() -> io::Result<()> {
+        let root: PathBuf =
+            std::env::temp_dir().join(format!("ab-usage-signature-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join("sync"))?;
+        fs::create_dir_all(root.join(STREAM).join("local"))?;
+        fs::create_dir_all(root.join("streams/other"))?;
+        fs::write(root.join("sync/sync.db"), "peers")?;
+        fs::write(root.join(STREAM).join("local/1"), "a")?;
+        let before = consumed(&root).map_err(|error| io::Error::other(error.to_string()))?;
+        fs::write(root.join("streams/other/9"), "unrelated churn")?;
+        fs::write(root.join("sync/sync.db-shm"), "shared memory")?;
+        let after = consumed(&root).map_err(|error| io::Error::other(error.to_string()))?;
+        assert_eq!(before, after);
+        fs::write(root.join(STREAM).join("local/1"), "a longer segment")?;
+        let changed = consumed(&root).map_err(|error| io::Error::other(error.to_string()))?;
+        assert_ne!(before, changed);
+        fs::remove_dir_all(&root)
     }
 }
