@@ -1017,7 +1017,7 @@ impl Session<'_> {
                 let data = record["data"].clone();
                 let chat = string(&data["chat_id"]["$ref"], "native_key");
                 Ok(
-                    json!({"exists":true,"target":data,"row":{"guid":key,"capture_chat_guid":chat,"service":data["service"].as_str().unwrap_or("iMessage"),"is_from_me":data["is_from_me"]==true,"item_type":i32::from(!(data["kind"] == "message" || data["kind"].is_null()))}}),
+                    json!({"exists":true,"target":data,"row":{"guid":key,"capture_chat_guid":chat,"service":data["service"].as_str().unwrap_or("iMessage"),"is_from_me":data["is_from_me"]==true,"item_type":i32::from(!(data["kind"] == "message" || data["kind"].is_null())),"row_position":1000}}),
                 )
             }
             "messages.reactions" | "messages.reaction_rows" => {
@@ -1079,6 +1079,48 @@ impl Session<'_> {
                     .collect();
                 Ok(json!({"guids":found}))
             }
+            "messages.conversation" => {
+                let chat = string(args, "chat_guid");
+                if !live_chat(&s, &chat) {
+                    return Ok(json!({"exists":false}));
+                }
+                let unread = s.data["records"][&chat]["data"]["is_unread"] == true;
+                Ok(
+                    json!({"exists":true,"row_position":1000,"last_read_message_timestamp":if unread { "50" } else { "100" }}),
+                )
+            }
+            "messages.conversation_messages" => {
+                let chat = string(args, "chat_guid");
+                let mut rows: Vec<(u64, String)> = s.data["records"]
+                    .as_object()
+                    .into_iter()
+                    .flatten()
+                    .filter(|(_, record)| {
+                        record["collection"] == "messages.message"
+                            && record["kind"] != "absent"
+                            && string(&record["data"]["chat_id"]["$ref"], "native_key") == chat
+                    })
+                    .map(|(key, record)| {
+                        (record["row_id"].as_u64().unwrap_or_default(), key.clone())
+                    })
+                    .collect();
+                rows.sort_by(|a, b| b.cmp(a));
+                Ok(
+                    json!({"rows":rows.into_iter().map(|(_, key)| json!({"guid":key,"date":"100"})).collect::<Vec<_>>()}),
+                )
+            }
+            "messages.chat_recoverable" => Ok(json!({"recoverable":false})),
+            "messages.ledger" => Ok(
+                json!({"run_id":string(args,"run"),"scenario":"MSG-SELFTEST","baseline_max_row_id":1,"created_chat_key":string(args,"chat"),"created_by_run":true,"baseline_max_chat_row_id":0}),
+            ),
+            "messages.is_self_chat" => {
+                let peers = args["participants"].as_array().cloned().unwrap_or_default();
+                Ok(
+                    json!({"self_chat":peers.len() == 1 && peers[0].as_str().is_some_and(own_handle)}),
+                )
+            }
+            "messages.foreign_activity" => Ok(json!({"foreign_unread":false,"foreign_new":false})),
+            "messages.ui_activate_validate" => Ok(json!({})),
             "messages.ui_available" => Ok(json!({"available":true})),
             "messages.ui_prepare" => {
                 if s.fault == "ui-interference-before" {
@@ -1135,6 +1177,33 @@ impl Session<'_> {
                             false,
                         );
                     }
+                    "messages.mark_read" | "messages.mark_unread" => {
+                        data["is_unread"] = json!(op == "messages.mark_unread");
+                        data["last_read_at"] = json!(now());
+                        if op == "messages.mark_read" {
+                            let keys: Vec<String> = s.data["records"]
+                                .as_object()
+                                .into_iter()
+                                .flatten()
+                                .filter(|(_, record)| {
+                                    record["collection"] == "messages.message"
+                                        && record["kind"] != "absent"
+                                        && string(&record["data"]["chat_id"]["$ref"], "native_key")
+                                            == target
+                                        && record["data"]["is_from_me"] != true
+                                        && record["data"]["read_at"].is_null()
+                                })
+                                .map(|(key, _)| key.clone())
+                                .collect();
+                            for key in keys {
+                                let mut message = record_data(&s, &key);
+                                message["read_at"] = json!(now());
+                                put(&mut s, &mut seen, "message", &key, message, false);
+                            }
+                        }
+                        put(&mut s, &mut seen, "chat", &target, data, false);
+                    }
+                    "messages.delete_chat" => put(&mut s, &mut seen, "chat", &target, data, true),
                     "messages.reply" => {
                         let chat = string(&data["chat_id"]["$ref"], "native_key");
                         let key = id("message").map_err(fail)?;

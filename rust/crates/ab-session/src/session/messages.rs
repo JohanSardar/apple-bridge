@@ -1,6 +1,7 @@
 use super::owned::{Driver, Probe, Refusal, Settled, equal, native_failure, refuse, text};
 use crate::messages_policy::{
-    ActionWindow, Failure, Origin, Refusal as Policy, check_with, normalize, tagged,
+    ActionWindow, Failure, Origin, Refusal as Policy, authorizes, check_with, first_tag, normalize,
+    read_state_matches, tag_at_start, tag_run, tagged,
 };
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -17,6 +18,11 @@ const TARGETED: [&str; 5] = [
     "messages.edit",
     "messages.unsend",
     "messages.delete_message",
+];
+const CONVERSATION: [&str; 3] = [
+    "messages.mark_read",
+    "messages.mark_unread",
+    "messages.delete_chat",
 ];
 const REACTIONS: [&str; 7] = [
     "love",
@@ -269,6 +275,9 @@ pub(super) fn prepare(probe: &dyn Probe, command: &Value) -> Result<Value, Refus
     if TARGETED.contains(&text(action, "op")) {
         return prepare_targeted(probe, command, interactive);
     }
+    if CONVERSATION.contains(&text(action, "op")) {
+        return prepare_conversation(probe, command, interactive);
+    }
     if text(action, "op") != SEND {
         return Err(refuse("unsupported"));
     }
@@ -454,9 +463,21 @@ pub(super) fn write(
     if TARGETED.contains(&text(action, "op")) {
         return write_targeted(probe, command_id, action, state);
     }
+    if CONVERSATION.contains(&text(action, "op")) {
+        return write_conversation(probe, command_id, action, state);
+    }
     if text(action, "op") != SEND {
         return Err("unsupported".into());
     }
+    write_send(probe, command_id, action, state)
+}
+
+fn write_send(
+    probe: &dyn Probe,
+    command_id: &str,
+    action: &Value,
+    state: &Value,
+) -> Result<Value, String> {
     let interactive = state["interactive"] == true;
     let route = verify_route(probe, action, interactive).map_err(|r| code_of(&r))?;
     if route != state["destination"] {
@@ -554,7 +575,7 @@ pub(super) fn write(
 }
 
 pub(super) fn settle(operation: &str, written: &Value) -> Option<Settled> {
-    if operation != SEND && !TARGETED.contains(&operation) {
+    if operation != SEND && !TARGETED.contains(&operation) && !CONVERSATION.contains(&operation) {
         return None;
     }
     let disposition = match text(written, "disposition") {
@@ -572,7 +593,9 @@ pub(super) fn settle(operation: &str, written: &Value) -> Option<Settled> {
 
 pub(super) fn resolved(probe: &dyn Probe, evidence: &Value) -> Option<Value> {
     let saved = &evidence["prepared"];
-    if TARGETED.contains(&text(&saved["action"], "op")) {
+    if TARGETED.contains(&text(&saved["action"], "op"))
+        || CONVERSATION.contains(&text(&saved["action"], "op"))
+    {
         if evidence["observed"] != true {
             return None;
         }
@@ -640,6 +663,17 @@ fn prepare_unsupported(
 }
 
 fn validate_send(probe: &dyn Probe, action: &Value, state: &Value) -> Result<(), Refusal> {
+    if text(action, "op") == "messages.delete_chat" {
+        call(
+            probe,
+            "messages.ui_validate",
+            &json!({"prepared": ui_prepared(action, state, "")}),
+        )?;
+        return Ok(());
+    }
+    if CONVERSATION.contains(&text(action, "op")) {
+        return Ok(());
+    }
     if TARGETED.contains(&text(action, "op")) {
         call(
             probe,
@@ -919,6 +953,235 @@ fn finish_targeted(
     Ok(result)
 }
 
+fn latest_date(rows: &[Value]) -> f64 {
+    rows.iter()
+        .filter_map(|row| {
+            row["date"]
+                .as_str()
+                .and_then(|date| date.parse::<f64>().ok())
+        })
+        .map(|date| if date > 1e12 { date / 1e9 } else { date })
+        .fold(0.0, f64::max)
+}
+
+fn ledger(probe: &dyn Probe, run: &str, chat: &str) -> Result<Value, Refusal> {
+    call(probe, "messages.ledger", &json!({"run": run, "chat": chat}))
+}
+
+fn read_state_fixture(
+    probe: &dyn Probe,
+    chat: &str,
+    target: &Value,
+    row: i64,
+) -> Result<(), Refusal> {
+    let body = text(target, "text");
+    let tag = tag_at_start(body).ok_or_else(invalid)?;
+    let run = tag_run(tag);
+    let registration = ledger(probe, run, chat)?;
+    if !authorizes(&registration, chat, row, body) {
+        return Err(invalid());
+    }
+    let members = call(probe, "messages.chat_members", &json!({"chat_guid": chat}))?;
+    let itself = call(
+        probe,
+        "messages.is_self_chat",
+        &json!({"participants": members["handles"]}),
+    )?;
+    if itself["self_chat"] != true {
+        return Err(invalid());
+    }
+    let baseline = registration["baseline_max_row_id"].as_i64().unwrap_or(0);
+    let foreign = call(
+        probe,
+        "messages.foreign_activity",
+        &json!({"chat": chat, "baseline": baseline, "tag": tag}),
+    )?;
+    if foreign["foreign_unread"] == true || foreign["foreign_new"] == true {
+        return Err(refuse("conflict"));
+    }
+    Ok(())
+}
+
+fn every_message_tagged(
+    probe: &dyn Probe,
+    rows: &[Value],
+    needle: Option<&str>,
+) -> Result<bool, Refusal> {
+    for item in rows {
+        let found = call(probe, "messages.target", &json!({"guid": item["guid"]}))?;
+        let body = text(&found["target"], "text");
+        let ok = found["exists"] == true
+            && needle.map_or_else(|| first_tag(body).is_some(), |tag| body.contains(tag));
+        if !ok {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
+fn prepare_conversation(
+    probe: &dyn Probe,
+    command: &Value,
+    interactive: bool,
+) -> Result<Value, Refusal> {
+    let action = &command["action"];
+    let operation = text(action, "op");
+    let chat = text(action, "native_key");
+    let unproven = || refuse("capability_unproven");
+    let conversation = call(probe, "messages.conversation", &json!({"chat_guid": chat}))?;
+    if conversation["exists"] != true {
+        return Err(unproven());
+    }
+    let listed = call(
+        probe,
+        "messages.conversation_messages",
+        &json!({"chat_guid": chat}),
+    )?;
+    let rows = listed["rows"].as_array().cloned().unwrap_or_default();
+    let last = rows.first().ok_or_else(unproven)?;
+    let found = call(probe, "messages.target", &json!({"guid": last["guid"]}))?;
+    if found["exists"] != true {
+        return Err(unproven());
+    }
+    let target = found["target"].clone();
+    if !interactive {
+        if !tagged(text(&target, "text")) {
+            return Err(invalid());
+        }
+        if matches!(operation, "messages.mark_read" | "messages.mark_unread") {
+            read_state_fixture(
+                probe,
+                chat,
+                &target,
+                found["row"]["row_position"].as_i64().unwrap_or(0),
+            )?;
+        } else if !every_message_tagged(probe, &rows, None)? {
+            return Err(refuse("unsupported"));
+        }
+    }
+    let mut destination = action.clone();
+    destination["list_key"] = json!(chat);
+    let route = verify_route(probe, &destination, interactive)?;
+    if operation == "messages.delete_chat" && !interactive {
+        let body = text(&target, "text");
+        let tag = first_tag(body).ok_or_else(invalid)?;
+        let run = tag_run(tag);
+        let registration = ledger(probe, run, chat)?;
+        let created_after = registration["baseline_max_chat_row_id"]
+            .as_i64()
+            .is_some_and(|baseline| conversation["row_position"].as_i64().unwrap_or(0) > baseline);
+        if registration["run_id"] != run
+            || text(&registration, "created_chat_key") != chat
+            || registration["created_by_run"] != true
+            || !created_after
+        {
+            return Err(refuse("unsupported"));
+        }
+        if !every_message_tagged(probe, &rows, Some(tag))? {
+            return Err(invalid());
+        }
+    }
+    let config = call(probe, "messages.config", &json!({}))?;
+    let proven = config["lab_commands"] == true
+        || known_routes(probe)?.contains(&route_proof(&route, operation));
+    let available = call(probe, "messages.ui_available", &json!({}))?["available"] == true;
+    if !(proven && available) {
+        return Err(unproven());
+    }
+    let state = json!({
+        "interactive": interactive,
+        "conversation_members": rows.iter().map(|row| row["guid"].clone()).collect::<Vec<_>>(),
+        "conversation_target": true,
+        "message_guid": last["guid"],
+        "target": target,
+        "destination": route,
+        "route": "accessibility",
+        "last_read_timestamp": conversation["last_read_message_timestamp"],
+        "latest_message_date": latest_date(&rows).to_string(),
+        "candidate_ids": [chat],
+    });
+    if operation == "messages.delete_chat" {
+        call(
+            probe,
+            "messages.ui_activate_validate",
+            &json!({"prepared": ui_prepared(action, &state, text(command, "request_hash"))}),
+        )?;
+    }
+    Ok(state)
+}
+
+fn write_conversation(
+    probe: &dyn Probe,
+    command_id: &str,
+    action: &Value,
+    state: &Value,
+) -> Result<Value, String> {
+    let operation = text(action, "op");
+    let chat = text(action, "native_key");
+    let mut destination = action.clone();
+    destination["list_key"] = json!(chat);
+    let route =
+        verify_route(probe, &destination, state["interactive"] == true).map_err(|r| code_of(&r))?;
+    if route != state["destination"] {
+        return Err("conflict".into());
+    }
+    let current = probe.call("messages.conversation", &json!({"chat_guid": chat}))?;
+    if current["exists"] != true
+        || current["last_read_message_timestamp"] != state["last_read_timestamp"]
+    {
+        return Err("conflict".into());
+    }
+    let listed = probe.call(
+        "messages.conversation_messages",
+        &json!({"chat_guid": chat}),
+    )?;
+    let rows = listed["rows"].as_array().cloned().unwrap_or_default();
+    let guids: Vec<Value> = rows.iter().map(|row| row["guid"].clone()).collect();
+    if json!(guids) != state["conversation_members"]
+        || latest_date(&rows).to_string() != text(state, "latest_message_date")
+    {
+        return Err("conflict".into());
+    }
+    let ui = probe.call(
+        "messages.ui_perform",
+        &json!({"prepared": ui_prepared(action, state, ""), "command_id": command_id}),
+    )?["ui"]
+        .clone();
+    let latest: f64 = text(state, "latest_message_date").parse().unwrap_or(0.0);
+    let started = Instant::now();
+    loop {
+        let now = probe.call("messages.conversation", &json!({"chat_guid": chat}))?;
+        let recoverable = probe.call("messages.chat_recoverable", &json!({"chat_guid": chat}))?["recoverable"]
+            == true;
+        let missing = now["exists"] != true;
+        let stamp: f64 = text(&now, "last_read_message_timestamp")
+            .parse()
+            .unwrap_or(0.0);
+        let observed = if operation == "messages.delete_chat" {
+            missing || recoverable
+        } else {
+            !missing && read_state_matches(stamp, latest, operation == "messages.mark_unread")
+        };
+        if observed {
+            let mut evidence = ui.as_object().cloned().map_or(json!({}), Value::Object);
+            evidence["source"] = json!("messages");
+            evidence["collection"] = json!("messages.chat");
+            evidence["native_key"] = json!(chat);
+            evidence["observed"] = json!(true);
+            evidence["absent"] = json!(missing);
+            evidence["disposition"] = json!("locally_observed");
+            return finish_targeted(probe, state, operation, evidence);
+        }
+        if started.elapsed() >= DISPATCH_DEADLINE {
+            break;
+        }
+        thread::sleep(POLL_GAP);
+    }
+    Ok(
+        json!({"source": "messages", "observed": false, "disposition": "indeterminate", "reason": "conversation_effect_unproven", "ui": ui}),
+    )
+}
+
 #[cfg(test)]
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
@@ -948,6 +1211,14 @@ mod tests {
         ui_available: bool,
         ui_prepare_fails: bool,
         ui_perform_fails: bool,
+        conversation: RefCell<Value>,
+        conversation_rows: Vec<Value>,
+        conversation_effect: RefCell<Option<Value>>,
+        ledger: Option<Value>,
+        self_chat: bool,
+        foreign_activity: Value,
+        recoverable: RefCell<bool>,
+        activate_fails: bool,
     }
 
     impl Fake {
@@ -974,6 +1245,14 @@ mod tests {
                 ui_available: true,
                 ui_prepare_fails: false,
                 ui_perform_fails: false,
+                conversation: RefCell::new(json!({"exists": false})),
+                conversation_rows: Vec::new(),
+                conversation_effect: RefCell::new(None),
+                ledger: None,
+                self_chat: true,
+                foreign_activity: json!({"foreign_unread": false, "foreign_new": false}),
+                recoverable: RefCell::new(false),
+                activate_fails: false,
             }
         }
     }
@@ -1042,9 +1321,26 @@ mod tests {
                     json!({})
                 }
                 "messages.ui_validate" => json!({}),
+                "messages.conversation" => self.conversation.borrow().clone(),
+                "messages.conversation_messages" => json!({"rows": self.conversation_rows}),
+                "messages.ledger" => {
+                    return self.ledger.clone().ok_or_else(|| "unavailable".to_owned());
+                }
+                "messages.is_self_chat" => json!({"self_chat": self.self_chat}),
+                "messages.foreign_activity" => self.foreign_activity.clone(),
+                "messages.chat_recoverable" => json!({"recoverable": *self.recoverable.borrow()}),
+                "messages.ui_activate_validate" => {
+                    if self.activate_fails {
+                        return Err("unavailable".into());
+                    }
+                    json!({})
+                }
                 "messages.ui_perform" => {
                     if self.ui_perform_fails {
                         return Err("unavailable".into());
+                    }
+                    if let Some(next) = self.conversation_effect.borrow_mut().take() {
+                        *self.conversation.borrow_mut() = next;
                     }
                     for (guid, replacement) in self.effects.borrow_mut().drain(..) {
                         self.targets.borrow_mut().insert(guid, replacement);
@@ -1470,7 +1766,7 @@ mod tests {
     #[test]
     fn operations_other_than_send_are_not_ported_yet() {
         let mut chat_op = direct("hi");
-        chat_op["action"]["op"] = json!("messages.delete_chat");
+        chat_op["action"]["op"] = json!("messages.explode");
         assert_eq!(
             prepare(&Fake::new(), &chat_op).unwrap_err().code,
             "unsupported"
@@ -1908,12 +2204,12 @@ mod tests {
                 .any(|call| call == "messages.record_proof")
         );
         let mut chat_op = direct("hi");
-        chat_op["action"]["op"] = json!("messages.delete_chat");
+        chat_op["action"]["op"] = json!("messages.explode");
         assert_eq!(
             write(&probe, "c1", &chat_op["action"], &state).unwrap_err(),
             "unsupported"
         );
-        assert!(settle("messages.delete_chat", &json!({"disposition": "delivered"})).is_none());
+        assert!(settle("messages.explode", &json!({"disposition": "delivered"})).is_none());
     }
 
     #[test]
@@ -2378,6 +2674,345 @@ mod tests {
         assert_eq!(
             prepare(&anyone, &interactive).unwrap()["destination"]["chat"],
             "chat-1"
+        );
+    }
+
+    fn conversation_probe(stamp: &str) -> Fake {
+        let mut probe = chat_probe();
+        *probe.conversation.borrow_mut() =
+            json!({"exists": true, "row_position": 50, "last_read_message_timestamp": stamp});
+        probe.conversation_rows = vec![
+            json!({"guid": "m1", "date": "100"}),
+            json!({"guid": "m0", "date": "90"}),
+        ];
+        probe
+            .chats
+            .insert("chat-1".into(), vec![json!("+15550100100")]);
+        let mut newest = message_target("[ab-test r1] hello", 60.0);
+        newest["row"]["row_position"] = json!(20);
+        probe.targets.borrow_mut().insert("m1".into(), newest);
+        probe
+            .targets
+            .borrow_mut()
+            .insert("m0".into(), message_target("[ab-test r1] earlier", 90.0));
+        probe.ledger = Some(
+            json!({"run_id": "r1", "scenario": "MSG-SELFTEST", "baseline_max_row_id": 10,
+            "created_chat_key": "chat-1", "created_by_run": true, "baseline_max_chat_row_id": 40}),
+        );
+        probe
+    }
+
+    fn conversation_command(operation: &str, origin: &str) -> Value {
+        json!({"command_id": "c1", "principal": "device:abc", "origin": origin, "expires_at": "2099-01-01T00:00:00Z",
+            "request_hash": "h", "action": {"op": operation, "native_key": "chat-1", "origin": if origin.is_empty() { Value::Null } else { json!(origin) }}})
+    }
+
+    #[test]
+    fn an_interactive_conversation_operation_prepares_with_the_conversation_baseline() {
+        let probe = conversation_probe("50");
+        let state = prepare(
+            &probe,
+            &conversation_command("messages.mark_read", "interactive"),
+        )
+        .unwrap();
+        assert_eq!(state["conversation_members"], json!(["m1", "m0"]));
+        assert_eq!(state["message_guid"], "m1");
+        assert_eq!(state["last_read_timestamp"], "50");
+        assert_eq!(state["latest_message_date"], "100");
+        assert_eq!(state["candidate_ids"], json!(["chat-1"]));
+        assert_eq!(state["route"], "accessibility");
+        assert!(
+            prepare(
+                &probe,
+                &conversation_command("messages.delete_chat", "interactive")
+            )
+            .is_ok()
+        );
+        assert!(
+            probe
+                .calls
+                .borrow()
+                .iter()
+                .any(|call| call == "messages.ui_activate_validate")
+        );
+        let reads = conversation_probe("50");
+        prepare(
+            &reads,
+            &conversation_command("messages.mark_unread", "interactive"),
+        )
+        .unwrap();
+        assert!(
+            !reads
+                .calls
+                .borrow()
+                .iter()
+                .any(|call| call == "messages.ui_activate_validate")
+        );
+        let gone = chat_probe();
+        assert_eq!(
+            prepare(
+                &gone,
+                &conversation_command("messages.mark_read", "interactive")
+            )
+            .unwrap_err()
+            .code,
+            "capability_unproven"
+        );
+        let mut empty = conversation_probe("50");
+        empty.conversation_rows = Vec::new();
+        assert_eq!(
+            prepare(
+                &empty,
+                &conversation_command("messages.mark_read", "interactive")
+            )
+            .unwrap_err()
+            .code,
+            "capability_unproven"
+        );
+        let mut blind = conversation_probe("50");
+        blind.ui_available = false;
+        assert_eq!(
+            prepare(
+                &blind,
+                &conversation_command("messages.mark_read", "interactive")
+            )
+            .unwrap_err()
+            .code,
+            "capability_unproven"
+        );
+        let mut unproven = conversation_probe("50");
+        unproven.lab = false;
+        assert_eq!(
+            prepare(
+                &unproven,
+                &conversation_command("messages.mark_read", "interactive")
+            )
+            .unwrap_err()
+            .code,
+            "capability_unproven"
+        );
+        let mut refused = conversation_probe("50");
+        refused.activate_fails = true;
+        assert_eq!(
+            prepare(
+                &refused,
+                &conversation_command("messages.delete_chat", "interactive")
+            )
+            .unwrap_err()
+            .code,
+            "unavailable"
+        );
+    }
+
+    #[test]
+    fn a_gated_read_state_change_needs_a_tagged_target_and_an_authorising_ledger() {
+        let gated = conversation_command("messages.mark_read", "");
+        assert!(prepare(&conversation_probe("50"), &gated).is_ok());
+        let untagged = conversation_probe("50");
+        untagged
+            .targets
+            .borrow_mut()
+            .insert("m1".into(), message_target("hello", 60.0));
+        assert_eq!(prepare(&untagged, &gated).unwrap_err().code, "invalid");
+        let mut missing = conversation_probe("50");
+        missing.ledger = None;
+        assert_eq!(prepare(&missing, &gated).unwrap_err().code, "unavailable");
+        for (field, value) in [
+            ("scenario", json!("MSG-OTHER")),
+            ("baseline_max_row_id", json!(25)),
+            ("run_id", json!("r2")),
+            ("created_chat_key", json!("chat-9")),
+        ] {
+            let mut probe = conversation_probe("50");
+            probe.ledger.as_mut().unwrap()[field] = value;
+            assert_eq!(
+                prepare(&probe, &gated).unwrap_err().code,
+                "invalid",
+                "{field}"
+            );
+        }
+        let mut stranger = conversation_probe("50");
+        stranger.self_chat = false;
+        assert_eq!(prepare(&stranger, &gated).unwrap_err().code, "invalid");
+        for flag in ["foreign_unread", "foreign_new"] {
+            let mut busy = conversation_probe("50");
+            busy.foreign_activity[flag] = json!(true);
+            assert_eq!(
+                prepare(&busy, &gated).unwrap_err().code,
+                "conflict",
+                "{flag}"
+            );
+        }
+        let mut foreign_chat = conversation_probe("50");
+        foreign_chat
+            .chats
+            .insert("chat-1".into(), vec![json!("+15559990000")]);
+        assert_eq!(prepare(&foreign_chat, &gated).unwrap_err().code, "invalid");
+    }
+
+    #[test]
+    fn a_gated_chat_delete_needs_every_message_tagged_and_a_ledger_for_this_chat() {
+        let gated = conversation_command("messages.delete_chat", "");
+        assert!(prepare(&conversation_probe("50"), &gated).is_ok());
+        let untagged_newest = conversation_probe("50");
+        untagged_newest
+            .targets
+            .borrow_mut()
+            .insert("m1".into(), message_target("hello", 60.0));
+        assert_eq!(
+            prepare(&untagged_newest, &gated).unwrap_err().code,
+            "invalid"
+        );
+        let untagged_older = conversation_probe("50");
+        untagged_older
+            .targets
+            .borrow_mut()
+            .insert("m0".into(), message_target("hello", 90.0));
+        assert_eq!(
+            prepare(&untagged_older, &gated).unwrap_err().code,
+            "unsupported"
+        );
+        let other_run = conversation_probe("50");
+        other_run
+            .targets
+            .borrow_mut()
+            .insert("m0".into(), message_target("[ab-test r2] earlier", 90.0));
+        assert_eq!(prepare(&other_run, &gated).unwrap_err().code, "invalid");
+        for (field, value) in [
+            ("created_by_run", json!(false)),
+            ("created_chat_key", json!("chat-9")),
+            ("baseline_max_chat_row_id", json!(60)),
+            ("run_id", json!("r2")),
+        ] {
+            let mut probe = conversation_probe("50");
+            probe.ledger.as_mut().unwrap()[field] = value;
+            assert_eq!(
+                prepare(&probe, &gated).unwrap_err().code,
+                "unsupported",
+                "{field}"
+            );
+        }
+        let mut missing = conversation_probe("50");
+        missing.ledger = None;
+        assert_eq!(prepare(&missing, &gated).unwrap_err().code, "unavailable");
+    }
+
+    #[test]
+    fn a_conversation_that_changed_since_prepare_is_a_conflict_before_the_ui_acts() {
+        let cmd = conversation_command("messages.mark_read", "interactive");
+        let probe = conversation_probe("50");
+        let state = prepare(&probe, &cmd).unwrap();
+        *probe.conversation.borrow_mut() =
+            json!({"exists": true, "row_position": 50, "last_read_message_timestamp": "60"});
+        assert_eq!(
+            write(&probe, "c1", &cmd["action"], &state).unwrap_err(),
+            "conflict"
+        );
+        *probe.conversation.borrow_mut() =
+            json!({"exists": true, "row_position": 50, "last_read_message_timestamp": "50"});
+        let mut more = conversation_probe("50");
+        more.conversation_rows
+            .insert(0, json!({"guid": "m2", "date": "110"}));
+        assert_eq!(
+            write(&more, "c1", &cmd["action"], &state).unwrap_err(),
+            "conflict"
+        );
+        let mut later = conversation_probe("50");
+        later.conversation_rows[0]["date"] = json!("101");
+        assert_eq!(
+            write(&later, "c1", &cmd["action"], &state).unwrap_err(),
+            "conflict"
+        );
+        let gated = conversation_command("messages.mark_read", "");
+        let mut moved = conversation_probe("50");
+        let gated_state = prepare(&moved, &gated).unwrap();
+        moved
+            .chats
+            .insert("chat-1".into(), vec![json!("+15559990000")]);
+        assert_eq!(
+            write(&moved, "c1", &gated["action"], &gated_state).unwrap_err(),
+            "invalid"
+        );
+        assert!(![&probe, &more, &later, &moved].iter().any(|p| {
+            p.calls
+                .borrow()
+                .iter()
+                .any(|call| call == "messages.ui_perform")
+        }));
+    }
+
+    #[test]
+    fn a_read_state_change_is_observed_only_when_the_timestamp_catches_up() {
+        let read = conversation_command("messages.mark_read", "interactive");
+        let probe = conversation_probe("50");
+        let state = prepare(&probe, &read).unwrap();
+        *probe.conversation_effect.borrow_mut() =
+            Some(json!({"exists": true, "row_position": 50, "last_read_message_timestamp": "100"}));
+        let written = write(&probe, "c1", &read["action"], &state).unwrap();
+        assert_eq!(
+            (
+                written["disposition"].as_str(),
+                written["native_key"].as_str(),
+                written["collection"].as_str()
+            ),
+            (
+                Some("locally_observed"),
+                Some("chat-1"),
+                Some("messages.chat")
+            )
+        );
+        let stuck = conversation_probe("50");
+        let state = prepare(&stuck, &read).unwrap();
+        let written = write(&stuck, "c1", &read["action"], &state).unwrap();
+        assert_eq!(
+            (written["disposition"].as_str(), written["reason"].as_str()),
+            (Some("indeterminate"), Some("conversation_effect_unproven"))
+        );
+        assert!(
+            !stuck
+                .calls
+                .borrow()
+                .iter()
+                .any(|call| call == "messages.reconcile")
+        );
+        let unread = conversation_command("messages.mark_unread", "interactive");
+        let reading = conversation_probe("100");
+        let state = prepare(&reading, &unread).unwrap();
+        assert_eq!(
+            write(&reading, "c1", &unread["action"], &state).unwrap()["disposition"],
+            "indeterminate"
+        );
+        *reading.conversation_effect.borrow_mut() =
+            Some(json!({"exists": true, "row_position": 50, "last_read_message_timestamp": "10"}));
+        assert_eq!(
+            write(&reading, "c1", &unread["action"], &state).unwrap()["disposition"],
+            "locally_observed"
+        );
+    }
+
+    #[test]
+    fn a_chat_delete_is_observed_when_the_chat_is_gone_or_recoverable() {
+        let delete = conversation_command("messages.delete_chat", "interactive");
+        let gone = conversation_probe("50");
+        let state = prepare(&gone, &delete).unwrap();
+        *gone.conversation_effect.borrow_mut() = Some(json!({"exists": false}));
+        let written = write(&gone, "c1", &delete["action"], &state).unwrap();
+        assert_eq!(
+            (written["disposition"].as_str(), written["absent"].as_bool()),
+            (Some("locally_observed"), Some(true))
+        );
+        let recoverable = conversation_probe("50");
+        let state = prepare(&recoverable, &delete).unwrap();
+        *recoverable.recoverable.borrow_mut() = true;
+        assert_eq!(
+            write(&recoverable, "c1", &delete["action"], &state).unwrap()["absent"],
+            false
+        );
+        let kept = conversation_probe("50");
+        let state = prepare(&kept, &delete).unwrap();
+        assert_eq!(
+            write(&kept, "c1", &delete["action"], &state).unwrap()["disposition"],
+            "indeterminate"
         );
     }
 }

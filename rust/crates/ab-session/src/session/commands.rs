@@ -323,6 +323,7 @@ impl Hub {
             Some(Some(found)) => (refusal.code.as_str(), Some(found)),
             None => (refusal.code.as_str(), None),
         };
+        eprintln!("ab-session: refused {command_id} as {code} ({})", refusal.code);
         Ok(Rejected {
             command_id: command_id.into(),
             code: code.into(),
