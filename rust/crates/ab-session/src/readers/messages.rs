@@ -17,7 +17,7 @@ const SCOPE: [&str; 5] = [
     "messages.reaction",
     "messages.attachment",
 ];
-const RECONCILE_EVERY: Duration = Duration::from_secs(15 * 60);
+const RECONCILE_EVERY: Duration = Duration::from_mins(15);
 const BLOB_CHUNK: usize = 128 * 1024;
 const MAX_IDLE_STEPS: u32 = 8;
 
@@ -73,27 +73,25 @@ impl MessagesReader {
         data: &mut Value,
         guid: &str,
         handles: &mut BTreeMap<String, String>,
-    ) -> Result<(), Error> {
+    ) {
         let Some(reader) = self.reader.as_ref() else {
-            return Ok(());
+            return;
         };
         if data.pointer("/blob/state").and_then(Value::as_str) != Some("present") {
-            return Ok(());
+            return;
         }
         let declared = data["size"].as_i64().unwrap_or(-1);
         let known = match self.blobs.get(guid) {
             Some(known) if known.declared == declared => Some((known.digest.clone(), known.size)),
             _ => None,
         };
-        let (digest, size) = match known {
-            Some(known) => known,
-            None => match Self::digest(reader, guid) {
-                Ok(found) => found,
-                Err(_) => {
-                    data["blob"] = json!({"state":"missing"});
-                    return Ok(());
-                }
-            },
+        let found = match known {
+            Some(known) => Ok(known),
+            None => Self::digest(reader, guid),
+        };
+        let Ok((digest, size)) = found else {
+            data["blob"] = json!({"state":"missing"});
+            return;
         };
         self.blobs.insert(
             guid.to_owned(),
@@ -105,7 +103,6 @@ impl MessagesReader {
         );
         data["blob"] = json!({"state":"present","digest":digest});
         handles.insert(digest, guid.to_owned());
-        Ok(())
     }
 
     fn frame(
@@ -144,7 +141,7 @@ impl MessagesReader {
             }
             if let Some(row) = rows.get_mut(&(collection.clone(), key.clone())) {
                 let mut data = row["data"].take();
-                self.attach(&mut data, key, &mut handles)?;
+                self.attach(&mut data, key, &mut handles);
                 row["data"] = data;
             }
         }
