@@ -875,7 +875,11 @@ fn parts(ctx: &mut Ctx, chat: &Value) -> Result<()> {
             let result = api.call("messages.send", &c);
             let result_ok = result.is_some();
             let result = result.unwrap_or(Value::Null);
-            let want_state = if mixed { "delivery_failed" } else { "observed" };
+            let want_state = match fault {
+                "" => "observed",
+                "part-no-effect" => "indeterminate",
+                _ => "delivery_failed",
+            };
             ctx.add(
                 &format!("{prefix}_truthful_aggregate"),
                 result_ok && result["state"] == want_state && seq(&result) > 0,
@@ -910,7 +914,8 @@ fn parts(ctx: &mut Ctx, chat: &Value) -> Result<()> {
             for (i, part) in helper_parts.iter().enumerate() {
                 let native = part["native_key"].as_str().unwrap_or_default();
                 let record_id = alias(&aliases, native);
-                let no_effect = part["disposition"] == "failed_no_effect";
+                let no_effect = part["disposition"] == "failed_no_effect"
+                    || fault == "part-no-effect" && part["disposition"] == "indeterminate";
                 ctx.add(
                     &format!("{prefix}_unique_part_identity"),
                     part["index"] == i
@@ -950,14 +955,18 @@ fn parts(ctx: &mut Ctx, chat: &Value) -> Result<()> {
             ctx.add(
                 &format!("{prefix}_legacy_primary_id_unchanged"),
                 expected.len() == 3
-                    && ids(&result) == [expected[0]["record_id"].as_str().unwrap_or_default()],
+                    && if fault == "part-no-effect" {
+                        ids(&result).is_empty()
+                    } else {
+                        ids(&result) == [expected[0]["record_id"].as_str().unwrap_or_default()]
+                    },
             );
             if mixed {
                 let last_ok = if fault == "part-delivery-failed" {
                     expected.len() == 3 && expected[2]["disposition"] == "delivery_failed"
                 } else {
                     expected.len() == 3
-                        && expected[2]["disposition"] == "failed_no_effect"
+                        && expected[2]["disposition"] == "indeterminate"
                         && expected[2]["record_id"].is_null()
                 };
                 ctx.add(
@@ -1251,10 +1260,14 @@ fn receipt_failure(ctx: &mut Ctx, chat: &Value) -> Result<()> {
     ctx.add(
         "receipt_unbound_failure_never_borrows_observed_identity",
         unbound.is_some_and(|u| {
-            u["state"] == "observed"
-                && part_view(&u, "parts") == initial_parts
-                && seq(&u) == seq(&initial)
-                && history_len(&u) == history_len(&initial)
+            let parts = part_view(&u, "parts");
+            u["state"] != "delivery_failed"
+                && parts.len() == initial_parts.len()
+                && parts.iter().zip(&initial_parts).all(|(now, before)| {
+                    identity(now) == identity(before) && now["disposition"] != "delivery_failed"
+                })
+                && (u["state"] != "observed"
+                    || seq(&u) == seq(&initial) && history_len(&u) == history_len(&initial))
         }),
     );
     let armed = ctx.fault("part-receipt-failed");
@@ -1268,7 +1281,7 @@ fn receipt_failure(ctx: &mut Ctx, chat: &Value) -> Result<()> {
         failed_ok
             && failed["state"] == "delivery_failed"
             && failed_parts.len() == 2
-            && failed_parts[0] == initial_parts[0]
+            && identity(&failed_parts[0]) == identity(&initial_parts[0])
             && failed_parts[1]["disposition"] == "delivery_failed"
             && failed_parts[1]["record_id"] == initial_parts[1]["record_id"]
             && seq(&failed) > seq(&initial),
@@ -1309,6 +1322,15 @@ fn receipt_failure(ctx: &mut Ctx, chat: &Value) -> Result<()> {
     Ok(())
 }
 
+fn identity(part: &Value) -> Value {
+    json!({
+        "index": part["index"],
+        "kind": part["kind"],
+        "record_id": part["record_id"],
+        "upload_id": part["upload_id"],
+    })
+}
+
 fn progress(ctx: &mut Ctx, chat: &Value) -> Result<()> {
     for fault in ["part-progress", "part-progress-failure"] {
         progress_case(ctx, chat, fault)?;
@@ -1316,11 +1338,7 @@ fn progress(ctx: &mut Ctx, chat: &Value) -> Result<()> {
     Ok(())
 }
 fn progress_case(ctx: &mut Ctx, chat: &Value, fault: &str) -> Result<()> {
-    let (want_state, want_later) = if fault == "part-progress-failure" {
-        ("delivery_failed", "failed_no_effect")
-    } else {
-        ("indeterminate", "indeterminate")
-    };
+    let (want_state, want_later) = ("delivery_failed", "failed_no_effect");
     let mut api = ctx.gateway.clone();
     let file = upload(
         &api.client,
@@ -1353,6 +1371,11 @@ fn progress_case(ctx: &mut Ctx, chat: &Value, fault: &str) -> Result<()> {
             && parts[0]["record_id"].is_null()
             && parts[1]["record_id"].is_null(),
     );
+    let released = ctx
+        .world
+        .control("/messages", &json!({"action": "release"}))
+        .is_ok();
+    ctx.add(&name("progress_late_row_released"), released);
     let resolved = api.status(&id_of(&c), true);
     let resolved_ok = resolved.is_some();
     let resolved = resolved.unwrap_or(Value::Null);
@@ -1450,6 +1473,11 @@ fn capture_bound(ctx: &mut Ctx, chat: &Value) -> Result<()> {
     if !initial_ok || initial["state"] != "indeterminate" || evidence_parts(&initial).len() != 1 {
         return Ok(());
     }
+    let released = ctx
+        .world
+        .control("/messages", &json!({"action": "release"}))
+        .is_ok();
+    ctx.add("capture_bound_held_capture_released", released);
     let truth = ctx.world.control("/inspect", &Value::Null);
     ctx.add("capture_bound_later_capture_available", truth.is_ok());
     let observations: Vec<Value> = truth

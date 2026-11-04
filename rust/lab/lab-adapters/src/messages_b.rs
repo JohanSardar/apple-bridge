@@ -242,6 +242,32 @@ impl Run<'_> {
             false,
         ))
     }
+    fn ledger_cleanup(&self, record: &Value) -> bool {
+        let aliases = gateway_aliases(&self.client).unwrap_or_default();
+        let truth = self
+            .world
+            .control("/inspect", &Value::Null)
+            .unwrap_or(Value::Null);
+        let native = truth.as_array().into_iter().flatten().find_map(|item| {
+            let key = format!(
+                "messages/{}/{}",
+                item["collection"].as_str().unwrap_or_default(),
+                item["native_key"].as_str().unwrap_or_default()
+            );
+            (item["collection"] == record["collection"]
+                && aliases.get(&key).map(String::as_str) == record["id"].as_str())
+            .then(|| item["native_key"].clone())
+        });
+        let Some(native) = native else { return false };
+        self.world
+            .control("/messages", &json!({"action": "delete", "key": native}))
+            .is_ok()
+            && await_until(5, || {
+                self.read("messages.message")
+                    .iter()
+                    .all(|item| item["id"] != record["id"])
+            })
+    }
     fn find_message(&self) -> Value {
         self.read("messages.message")
             .into_iter()
@@ -485,6 +511,14 @@ pub fn commands(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result
                     .as_str()
                     .is_some_and(|t| t.starts_with(&prefix));
                 if !own_id && !tagged {
+                    continue;
+                }
+                if !tagged {
+                    evidence.check(
+                        "owned_message_cleanup",
+                        run.ledger_cleanup(&message),
+                        "owned untagged message removed through the cleanup ledger",
+                    );
                     continue;
                 }
                 let result = run.submit(
