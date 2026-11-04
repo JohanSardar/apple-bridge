@@ -303,7 +303,11 @@ fn wide(number: i64) -> f64 {
 
 #[must_use]
 pub fn uuid_text(bytes: &[u8]) -> String {
-    let hex: String = bytes.iter().map(|byte| format!("{byte:02X}")).collect();
+    use std::fmt::Write as _;
+    let hex = bytes.iter().fold(String::new(), |mut text, byte| {
+        let _ = write!(text, "{byte:02X}");
+        text
+    });
     format!(
         "{}-{}-{}-{}-{}",
         &hex[0..8],
@@ -471,6 +475,7 @@ impl Store {
         Ok(())
     }
 
+    #[allow(clippy::too_many_lines)]
     fn read(&self, table: Table, key: Option<i64>, snapshot: &mut Snapshot) -> Result<()> {
         let schema = self.columns.get(table.name()).cloned().unwrap_or_default();
         let selected: Vec<&str> = table
@@ -634,6 +639,7 @@ impl Session {
         outcome
     }
 
+    #[allow(clippy::too_many_lines)]
     fn transact(&mut self, store: &mut Store, full: bool) -> Result<ReadResult> {
         let version = store.scalar("PRAGMA data_version", None)?;
         store.execute("BEGIN")?;

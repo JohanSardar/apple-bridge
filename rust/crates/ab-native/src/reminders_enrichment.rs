@@ -100,32 +100,29 @@ impl Enrichment {
             generation.clone_into(&mut self.generation);
         }
         let mut touched: BTreeSet<String> = BTreeSet::new();
-        match (self.paths)() {
-            Ok(paths) => {
-                let current: BTreeSet<PathBuf> = paths.iter().cloned().collect();
-                let gone: Vec<PathBuf> = self
-                    .sessions
-                    .keys()
-                    .filter(|path| !current.contains(*path))
-                    .cloned()
-                    .collect();
-                for path in gone {
+        if let Ok(paths) = (self.paths)() {
+            let current: BTreeSet<PathBuf> = paths.iter().cloned().collect();
+            let gone: Vec<PathBuf> = self
+                .sessions
+                .keys()
+                .filter(|path| !current.contains(*path))
+                .cloned()
+                .collect();
+            for path in gone {
+                self.forget(&path, &mut touched);
+            }
+            for path in current {
+                if self.refresh_path(&path, &mut touched).is_err() {
                     self.forget(&path, &mut touched);
                 }
-                for path in current {
-                    if self.refresh_path(&path, &mut touched).is_err() {
-                        self.forget(&path, &mut touched);
-                    }
-                }
             }
-            Err(_) => {
-                touched.extend(self.base.keys().cloned());
-                self.fields.clear();
-                self.snapshots.clear();
-                self.manual_orders.clear();
-                self.section_states.clear();
-                self.sessions.clear();
-            }
+        } else {
+            touched.extend(self.base.keys().cloned());
+            self.fields.clear();
+            self.snapshots.clear();
+            self.manual_orders.clear();
+            self.section_states.clear();
+            self.sessions.clear();
         }
         let mut outgoing: BTreeMap<String, Value> = BTreeMap::new();
         for observation in observations {
@@ -239,7 +236,7 @@ impl Enrichment {
             .iter()
             .copied()
             .filter(|key| {
-                snapshot.lists.get(key).is_none()
+                !snapshot.lists.contains_key(key)
                     || previous.lists.get(key).and_then(|list| list.ordering_json.clone())
                         != snapshot.lists.get(key).and_then(|list| list.ordering_json.clone())
                     || self
