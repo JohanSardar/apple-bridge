@@ -501,6 +501,7 @@ mod tests {
         }
     }
     impl ab_blobs::BlobRead for Helper {
+        #[allow(clippy::unused_async_trait_impl)]
         async fn read(
             &self,
             _handle: &str,
