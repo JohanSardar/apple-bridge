@@ -61,7 +61,7 @@ Live Photo pairs are explicit dataset references from a still attachment to its 
 
 Huge mode is opt-in and may take over a minute under host pressure. Gateway browser projects each receive a fresh world; use a focused declared project for an opt-in performance scenario within the default scenario timeout.
 
-Synthetic H.264/AAC clips are regenerated on macOS with `packaging/dev/heavy.sh swift lab/simapple/generate_media.swift`. Each one-second clip is under 50 KB. SimApple reports source geometry and presentation duration from the movie boxes; unparseable sources retain the 16×16 fallback with `dims_source: "sim-default"`.
+Synthetic H.264/AAC clips are frozen goldens in `rust/lab/lab-simapple/assets`, guarded by `SHA256SUMS` (see its README); the macOS-only `rust/lab/lab-simapple/generate_media.swift` does not reproduce them byte for byte. Each one-second clip is under 50 KB. SimApple reports source geometry and presentation duration from the movie boxes; unparseable sources retain the 16×16 fallback with `dims_source: "sim-default"`.
 
 Reminders adds six list records and ten reminders after Messages generation, so
 it preserves the existing Messages random sequence. Home is a disclosure group

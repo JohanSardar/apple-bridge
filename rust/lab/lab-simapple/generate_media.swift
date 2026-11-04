@@ -70,21 +70,15 @@ func encode(_ name: String, _ width: Int, _ height: Int, image: CGImage? = nil, 
  let bytes = normalized(try Data(contentsOf: final)); precondition(bytes.count < 50000, "clip exceeds 50 KB"); try bytes.write(to: final); print("\(name) \(width)x\(height) \(bytes.count) bytes")
  return final
 }
-func fixture(_ kind: String = "") throws -> Data {
- let source = Process(), pipe = Pipe(); source.executableURL = URL(fileURLWithPath: "/usr/bin/env"); source.arguments = ["go","run","./lab/simapple/generate-media"]+(kind.isEmpty ? [] : [kind]); source.currentDirectoryURL = directory.deletingLastPathComponent().deletingLastPathComponent(); source.standardOutput = pipe
- try source.run(); let data = pipe.fileHandleForReading.readDataToEndOfFile(); source.waitUntilExit(); precondition(source.terminationStatus == 0); return data
-}
-let still = try fixture(), audio = temporary.appendingPathComponent("silence.m4a")
-try fixture("audio").write(to: audio)
+let assets = directory.appendingPathComponent("assets"), inputs = assets.appendingPathComponent("inputs")
+let still = try Data(contentsOf: inputs.appendingPathComponent("still.png")), audio = inputs.appendingPathComponent("silence.m4a")
 let image = CGImageSourceCreateImageAtIndex(CGImageSourceCreateWithData(still as CFData,nil)!,0,nil)!
-var output = "package simapple\n\n"
 for (name,width,height) in [("Landscape",320,180),("Portrait",180,320),("Panorama",1920,200),("Live",360,360)] {
  let file = try encode(name,width,height,image: name == "Live" ? image : nil, audio: audio), data = try Data(contentsOf: file)
- output += "const simVideo\(name) = \"\(data.base64EncodedString())\"\n\n"
+ try data.write(to: assets.appendingPathComponent("video-\(name.lowercased()).mp4"))
  if name == "Live" {
   let frame = try AVAssetImageGenerator(asset: AVURLAsset(url: file)).copyCGImage(at: .zero, actualTime: nil), png = NSMutableData()
   let destination = CGImageDestinationCreateWithData(png,UTType.png.identifier as CFString,1,nil)!; CGImageDestinationAddImage(destination,frame,nil); precondition(CGImageDestinationFinalize(destination))
-  output += "const simLiveStill = \"\((png as Data).base64EncodedString())\"\n\n"
+  try (png as Data).write(to: assets.appendingPathComponent("live-still.png"))
  }
 }
-try output.write(to: directory.appendingPathComponent("media_video_clips.go"), atomically: true, encoding: .utf8)
