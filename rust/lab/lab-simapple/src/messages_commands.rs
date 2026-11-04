@@ -914,7 +914,11 @@ impl Session<'_> {
             "messages.agent_policy" => Ok(json!({"configured":false})),
             "messages.chat_members" => {
                 let chat = string(args, "chat_guid");
-                let peers = if live_chat(&s, &chat) { chat_peers(&s, &chat) } else { vec![] };
+                let peers = if live_chat(&s, &chat) {
+                    chat_peers(&s, &chat)
+                } else {
+                    vec![]
+                };
                 Ok(json!({"handles":peers,"joined":peers}))
             }
             "messages.direct_chats" => {
@@ -926,12 +930,18 @@ impl Session<'_> {
                     {
                         let peers = chat_peers(&s, key);
                         if peers.len() == 1 {
-                            chats.push((string(record, "observed_at"), key.clone(), peers[0].clone()));
+                            chats.push((
+                                string(record, "observed_at"),
+                                key.clone(),
+                                peers[0].clone(),
+                            ));
                         }
                     }
                 }
                 chats.sort_by(|a, b| b.0.cmp(&a.0));
-                Ok(json!({"chats":chats.iter().map(|(_, guid, id)| json!({"guid":guid,"id":id})).collect::<Vec<_>>()}))
+                Ok(
+                    json!({"chats":chats.iter().map(|(_, guid, id)| json!({"guid":guid,"id":id})).collect::<Vec<_>>()}),
+                )
             }
             "messages.message" => {
                 let record = &s.data["records"][string(args, "guid")];
@@ -939,9 +949,13 @@ impl Session<'_> {
                     return Ok(json!({"exists":false}));
                 }
                 let data = &record["data"];
-                Ok(json!({"exists":true,"is_from_me":data["is_from_me"]==true,"error":data["error_code"].as_i64().unwrap_or(0),"capture_chat_guid":string(&data["chat_id"]["$ref"],"native_key")}))
+                Ok(
+                    json!({"exists":true,"is_from_me":data["is_from_me"]==true,"error":data["error_code"].as_i64().unwrap_or(0),"capture_chat_guid":string(&data["chat_id"]["$ref"],"native_key")}),
+                )
             }
-            "messages.max_row_id" => Ok(json!({"value":s.data["message_rows"].as_u64().unwrap_or_default()})),
+            "messages.max_row_id" => {
+                Ok(json!({"value":s.data["message_rows"].as_u64().unwrap_or_default()}))
+            }
             "messages.payload_fingerprint" => {
                 Ok(json!({"digest":super::contacts::digest_text(&args["messages"].to_string())}))
             }
@@ -971,7 +985,9 @@ impl Session<'_> {
                     return Ok(json!({"failed":{"domain":"sim","code":1}}));
                 }
                 let text = string(m, "text");
-                Ok(json!({"parts":if text.is_empty() { vec![] } else { vec![json!({"kind":"text","text":text})] }}))
+                Ok(
+                    json!({"parts":if text.is_empty() { vec![] } else { vec![json!({"kind":"text","text":text})] }}),
+                )
             }
             "messages.mark_policy_used" | "messages.record_proof" => Ok(json!({})),
             "messages.reconcile" => {
@@ -989,8 +1005,22 @@ impl Session<'_> {
                     let handle = string(route, "handle");
                     chat = id("chat").map_err(fail)?;
                     let key = handle_key(&handle);
-                    put(&mut s, &mut seen, "handle", &key, json!({"address":handle,"service":"iMessage"}), false);
-                    put(&mut s, &mut seen, "chat", &chat, json!({"service":"iMessage","style":"direct","display_name":"","participants":[reference("handle",&key)]}), false);
+                    put(
+                        &mut s,
+                        &mut seen,
+                        "handle",
+                        &key,
+                        json!({"address":handle,"service":"iMessage"}),
+                        false,
+                    );
+                    put(
+                        &mut s,
+                        &mut seen,
+                        "chat",
+                        &chat,
+                        json!({"service":"iMessage","style":"direct","display_name":"","participants":[reference("handle",&key)]}),
+                        false,
+                    );
                 }
                 let fault = std::mem::take(&mut s.fault);
                 let native = id("message").map_err(fail)?;
@@ -1019,4 +1049,3 @@ impl Session<'_> {
         }
     }
 }
-
