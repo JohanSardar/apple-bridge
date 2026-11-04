@@ -162,7 +162,11 @@ fn canonical_permit_hash_rejects_ambiguous_numbers() -> Result<(), Box<dyn std::
         effects::request_hash(&json!({"b":"x/y","a":1}))?,
         effects::request_hash(&json!({"a":1,"b":"x/y"}))?
     );
-    assert!(effects::request_hash(&json!({"x":1.5})).is_err());
+    assert!(effects::request_hash(&json!({"x":1e-7})).is_err());
+    assert_eq!(
+        effects::request_hash(&json!({"x":2.0}))?,
+        effects::request_hash(&json!({"x":2}))?
+    );
     assert!(effects::request_hash(&json!({"x":9_007_199_254_740_992_u64})).is_err());
     Ok(())
 }

@@ -110,12 +110,8 @@ fn run() -> Result<(), Error> {
     }
     selection.validate_proxy()?;
     let effects_selected = std::env::var("AB_SESSION_EFFECTS").as_deref() == Ok("1");
-    if effects_home.is_some() != effects_selected {
-        return Err(if effects_home.is_some() {
-            Error::Invalid
-        } else {
-            Error::Conflict
-        });
+    if effects_selected && effects_home.is_none() {
+        return Err(Error::Conflict);
     }
     #[cfg(feature = "rust-capture")]
     let capture = match &capture_home {
@@ -142,6 +138,7 @@ fn run() -> Result<(), Error> {
                 }
                 Some(ab_session::production::EffectsLink {
                     native: ab_sys::inherited_unix_stream(native)?,
+                    routing: ab_session::production::effects_routing(std::path::Path::new(&home))?,
                     home: std::path::PathBuf::from(home),
                 })
             }
