@@ -188,6 +188,39 @@ public actor MessagesCommands {
             guard labCommands else { throw SourceFailure.unsupported }
             try recordProof(request["route"], parts: request["parts"].array)
             return .object([:])
+        case "messages.target":
+            let reader = try MessagesReader(path: path)
+            guard let row = try reader.message(request["guid"].string), let item = try reader.messageObservations(row).first else { return .object(["exists": .bool(false)]) }
+            let target = try JSONDecoder().decode(JSON.self, from: JSONSerialization.data(withJSONObject: item.2, options: .sortedKeys))
+            return .object(["exists": .bool(true), "target": target, "row": .object(["guid": .string(row["guid"]), "capture_chat_guid": .string(row["capture_chat_guid"]), "service": .string(row["service"]), "is_from_me": .bool(row.flag("is_from_me")), "item_type": .number(Double(row.integer("item_type")))])])
+        case "messages.reactions":
+            let reader = try MessagesReader(path: path)
+            let rows = try reader.query("SELECT guid,associated_message_type,associated_message_emoji FROM message WHERE (is_from_me=1 OR ?='1') AND associated_message_guid LIKE ?", [request["self_chat"].bool ? "1" : "0", "%" + request["guid"].string])
+            return .object(["reactions": .array(rows.map { .object(["guid": .string($0["guid"]), "type": .string($0["associated_message_type"]), "emoji": .string($0["associated_message_emoji"])]) })])
+        case "messages.reaction_rows":
+            let reader = try MessagesReader(path: path)
+            let rows = try reader.query("SELECT guid,associated_message_type,associated_message_emoji FROM message WHERE (is_from_me=1 OR ?='1') AND associated_message_guid LIKE ? AND associated_message_type=?", [request["self_chat"].bool ? "1" : "0", "%" + request["guid"].string, String(Int(request["type"].number))])
+            return .object(["reactions": .array(rows.map { .object(["guid": .string($0["guid"]), "type": .string($0["associated_message_type"]), "emoji": .string($0["associated_message_emoji"])]) })])
+        case "messages.replies":
+            let reader = try MessagesReader(path: path)
+            let rows = try reader.query("SELECT guid FROM message WHERE ROWID>? AND is_from_me=1 AND thread_originator_guid=? AND (text=? OR instr(attributedBody,CAST(? AS BLOB))>0)", [String(Int64(request["max_row_id"].number)), request["guid"].string, request["text"].string, request["text"].string])
+            return .object(["guids": .array(rows.map { .string($0["guid"]) })])
+        case "messages.ui_available":
+            return .object(["available": .bool(await MessagesAccessibility.available)])
+        case "messages.ui_prepare":
+            let prepared = Prepared(nativeState: request["prepared"]["native_state"], fingerprint: request["prepared"]["fingerprint"].string, action: request["prepared"]["action"])
+            try await MessagesAccessibility.openMessage(request["guid"].string)
+            if try await MessagesAccessibility.acknowledgeDeletedInfo() { try await MessagesAccessibility.openMessage(request["guid"].string) }
+            try await MessagesAccessibility.validate(prepared)
+            return .object([:])
+        case "messages.ui_validate":
+            let prepared = Prepared(nativeState: request["prepared"]["native_state"], fingerprint: request["prepared"]["fingerprint"].string, action: request["prepared"]["action"])
+            try await MessagesAccessibility.validate(prepared)
+            return .object([:])
+        case "messages.ui_perform":
+            let prepared = Prepared(nativeState: request["prepared"]["native_state"], fingerprint: request["prepared"]["fingerprint"].string, action: request["prepared"]["action"])
+            do { return .object(["ui": try await MessagesAccessibility.perform(prepared)]) }
+            catch { return .object(["ui": .object(["target_verified": .bool(false), "ui_error": .string(String(describing: error))])]) }
         case "messages.payload_fingerprint":
             return .object(["digest": .string(BodyDigest.hash(try JSONEncoder().encode(request["messages"])))])
         default:
