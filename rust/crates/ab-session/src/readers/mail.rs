@@ -36,6 +36,13 @@ impl CaptureReader for MailReader {
         &self.root
     }
 
+    fn watch_paths(&self) -> Vec<PathBuf> {
+        ["Envelope Index", "Envelope Index-wal", "Envelope Index-shm"]
+            .into_iter()
+            .map(|name| self.root.join(name))
+            .collect()
+    }
+
     fn token(&self) -> Option<String> {
         None
     }

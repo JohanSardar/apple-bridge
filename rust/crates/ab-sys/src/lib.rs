@@ -17,6 +17,22 @@ pub fn user_id() -> u32 {
 }
 
 #[allow(unsafe_code)]
+pub fn raise_open_files(wanted: u64) {
+    let mut limit = libc::rlimit {
+        rlim_cur: 0,
+        rlim_max: 0,
+    };
+    // SAFETY: getrlimit and setrlimit read and write one live rlimit.
+    unsafe {
+        if libc::getrlimit(libc::RLIMIT_NOFILE, &raw mut limit) != 0 || limit.rlim_cur >= wanted {
+            return;
+        }
+        limit.rlim_cur = wanted.min(limit.rlim_max);
+        libc::setrlimit(libc::RLIMIT_NOFILE, &raw const limit);
+    }
+}
+
+#[allow(unsafe_code)]
 pub fn inherited_unix_stream(fd: i32) -> io::Result<UnixStream> {
     if fd < 3 {
         return Err(io::Error::new(
