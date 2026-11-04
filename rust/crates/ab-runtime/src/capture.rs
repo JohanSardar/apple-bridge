@@ -123,6 +123,8 @@ pub async fn hydrate(
             continue;
         }
         let source = crate::helper_blobs::HelperBlobs(commands.clone(), job.session);
+        let total = job.capture.blob_handles.len();
+        let mut tally = Tally::default();
         for (digest, handle) in job.capture.blob_handles {
             let Ok(digest) = ab_blobs::Digest::try_from(digest) else {
                 continue;
@@ -131,9 +133,13 @@ pub async fn hydrate(
                 continue;
             };
             let mut succeeded = false;
+            let mut transferred = false;
+            let mut known = true;
+            let rearmed = rearm(&blobs, &digest).await?;
             loop {
                 let entry = blobs.lock().await.entries().get(digest.as_str()).cloned();
                 let Some(entry) = entry else {
+                    known = false;
                     break;
                 };
                 if matches!(
@@ -162,6 +168,7 @@ pub async fn hydrate(
                 {
                     break;
                 }
+                transferred = true;
                 let result = tokio::select! {
                     _ = stop.changed() => return Ok(()),
                     result = transfer(&blobs, &source, &handle, &digest) => result,
@@ -194,11 +201,58 @@ pub async fn hydrate(
                     break;
                 }
             }
-            if !succeeded {
-                eprintln!("Helper blob transfer incomplete");
-            }
+            tally.record(match (succeeded, known, transferred) {
+                (true, _, _) if rearmed => Outcome::Recovered,
+                (true, _, _) => Outcome::Stored,
+                (false, false, _) => Outcome::Unknown,
+                (false, true, true) => Outcome::FailedAfterRetry,
+                (false, true, false) => Outcome::PreviouslyFailed,
+            });
+        }
+        tally.report(total);
+    }
+}
+#[derive(Clone, Copy)]
+enum Outcome {
+    Stored,
+    Recovered,
+    Unknown,
+    FailedAfterRetry,
+    PreviouslyFailed,
+}
+#[derive(Default)]
+struct Tally {
+    recovered: usize,
+    failed_after_retry: usize,
+    previously_failed: usize,
+    unknown: usize,
+}
+impl Tally {
+    fn record(&mut self, outcome: Outcome) {
+        match outcome {
+            Outcome::Recovered => self.recovered += 1,
+            Outcome::Unknown => self.unknown += 1,
+            Outcome::FailedAfterRetry => self.failed_after_retry += 1,
+            Outcome::PreviouslyFailed => self.previously_failed += 1,
+            Outcome::Stored => {}
         }
     }
+    fn report(&self, total: usize) {
+        if self.failed_after_retry + self.previously_failed + self.unknown > 0 {
+            eprintln!(
+                "Helper blob transfer incomplete: capture of {total} blobs, {} not retryable (corrupt or over capacity), {} failed after retry, {} not in the manifest, {} recovered after an earlier failure. Failed blobs get one fresh attempt whenever the Helper offers them again.",
+                self.previously_failed, self.failed_after_retry, self.unknown, self.recovered
+            );
+        }
+    }
+}
+async fn rearm(
+    blobs: &Arc<Mutex<ab_blobs::Store>>,
+    digest: &ab_blobs::Digest,
+) -> Result<bool, crate::Error> {
+    mutate(blobs, |store| store.rearm(digest))
+        .await
+        .map_err(|_| crate::Error::Invalid)
 }
 async fn transfer(
     blobs: &Arc<Mutex<ab_blobs::Store>>,

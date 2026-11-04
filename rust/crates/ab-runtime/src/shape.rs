@@ -1,13 +1,21 @@
 use crate::Error;
 use serde_json::{Value, json};
-pub fn violations(db: &rusqlite::Connection) -> Result<Value, Error> {
+pub fn violations(
+    db: &rusqlite::Connection,
+    deadline: std::time::Instant,
+) -> Result<(Value, bool), Error> {
     let shapes: Value = serde_json::from_str(include_str!("record_shapes.json"))?;
     let mut out = serde_json::Map::new();
     let mut stmt=db.prepare("SELECT payload FROM records WHERE deleted=0 AND ((collection>='messages.' AND collection<'messages/') OR collection='phone.call' OR (collection>='mac.' AND collection<'mac/') OR (collection>='safari.' AND collection<'safari/'))").map_err(|_| Error::Invalid)?;
     let rows = stmt
         .query_map([], |r| r.get::<_, Vec<u8>>(0))
         .map_err(|_| Error::Invalid)?;
+    let mut complete = true;
     for row in rows {
+        if std::time::Instant::now() >= deadline {
+            complete = false;
+            break;
+        }
         let record: Value = serde_json::from_slice(&row.map_err(|_| Error::Invalid)?)?;
         let collection = record["collection"].as_str().ok_or(Error::Invalid)?;
         let Some(fields) = shapes[collection].as_object() else {
@@ -39,7 +47,7 @@ pub fn violations(db: &rusqlite::Connection) -> Result<Value, Error> {
             }
         }
     }
-    Ok(Value::Object(out))
+    Ok((Value::Object(out), complete))
 }
 fn increment(out: &mut serde_json::Map<String, Value>, key: String) {
     let count = out.get(&key).and_then(Value::as_u64).unwrap_or(0) + 1;

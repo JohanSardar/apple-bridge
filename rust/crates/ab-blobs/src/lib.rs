@@ -292,6 +292,20 @@ impl Store {
             &serde_json::to_vec(&self.manifest)?,
         )?)
     }
+    pub fn rearm(&mut self, d: &Digest) -> Result<bool, Error> {
+        let Some(e) = self.manifest.entries.get_mut(d.as_str()) else {
+            return Ok(false);
+        };
+        if e.state != BlobState::Failed || e.reason != "ipc_retry_exhausted" || e.corruptions > 0 {
+            return Ok(false);
+        }
+        e.state = BlobState::Pending;
+        e.reason.clear();
+        e.retry_attempts = 7;
+        e.next_attempt_at = zero_time();
+        self.save()?;
+        Ok(true)
+    }
     pub fn retry(&mut self, d: &Digest, completed: bool) -> Result<bool, Error> {
         let e = self
             .manifest
@@ -696,6 +710,27 @@ impl Store {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn rearm_gives_an_exhausted_blob_exactly_one_more_attempt()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let home = tempfile::tempdir()?;
+        let digest = Digest::try_from("b".repeat(64))?;
+        let mut store = Store::open(home.path(), 0)?;
+        assert!(!store.rearm(&digest)?);
+        store.begin(&digest, 1024)?;
+        for _ in 0..9 {
+            store.retry(&digest, false)?;
+        }
+        assert_eq!(store.entries()[digest.as_str()].state, BlobState::Failed);
+        assert!(store.rearm(&digest)?);
+        assert!(!store.rearm(&digest)?);
+        assert_eq!(store.entries()[digest.as_str()].state, BlobState::Pending);
+        assert!(store.retry(&digest, false)?);
+        assert!(!store.retry(&digest, false)?);
+        assert_eq!(store.entries()[digest.as_str()].state, BlobState::Failed);
+        Ok(())
+    }
 
     #[test]
     fn retry_budget_and_deadline_survive_reopen() -> Result<(), Box<dyn std::error::Error>> {
