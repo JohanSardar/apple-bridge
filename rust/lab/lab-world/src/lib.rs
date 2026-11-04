@@ -352,8 +352,8 @@ impl World {
             &mut self.session,
             &mut self.labsession_child,
         ]
-            .into_iter()
-            .flatten()
+        .into_iter()
+        .flatten()
         {
             if let Some(status) = child.try_wait()? {
                 return Err(Error::Invalid(format!("child exited {status}")));
