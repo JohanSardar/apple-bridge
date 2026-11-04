@@ -1,5 +1,6 @@
 use crate::{
-    Error, Gateway, Ingress, IngressFuture, Progress, Result, certificate::Certificates,
+    Error, Gateway, Ingress, IngressFuture, Progress, Result,
+    certificate::Certificates,
     dns::{self, Resolver},
     smux, state, stopped,
 };
@@ -266,7 +267,9 @@ impl Relay {
         )
         .await
         .map_err(|_| Error::Contract("tunnel timeout"))??;
-        self.certificates.ensure(identity, host, &self.client).await?;
+        self.certificates
+            .ensure(identity, host, &self.client)
+            .await?;
         let _active = gateway.ready("relay", host);
         let certs = self.certificates.clone();
         let renew = async {

@@ -309,7 +309,13 @@ async fn custom_domain_waits_for_records_registers_and_routes_by_sni() {
         );
     }
     let ready = observed.clone();
-    wait_for(|| ready.borrow().get("relay").is_some_and(|entry| entry.active)).await;
+    wait_for(|| {
+        ready
+            .borrow()
+            .get("relay")
+            .is_some_and(|entry| entry.active)
+    })
+    .await;
     let entry = observed.borrow().get("relay").cloned().unwrap();
     assert_eq!(entry.host, domain);
     assert!(entry.progress.is_none());
@@ -335,7 +341,9 @@ async fn custom_domain_waits_for_records_registers_and_routes_by_sni() {
     .with_root_certificates(roots)
     .with_no_client_auth();
     let connector = tokio_rustls::TlsConnector::from(Arc::new(visitor));
-    let socket = tokio::net::TcpStream::connect(fixture.public).await.unwrap();
+    let socket = tokio::net::TcpStream::connect(fixture.public)
+        .await
+        .unwrap();
     let mut secure = connector
         .connect(
             rustls::pki_types::ServerName::try_from(domain.to_owned()).unwrap(),

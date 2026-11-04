@@ -320,7 +320,10 @@ mod flag_tests {
         set_domain(home.path(), "mac.example.test")?;
         let config = select(home.path(), "on", "relay", "id1")?;
         assert_eq!(config.domain, "mac.example.test");
-        assert_eq!(read::<Config>(home.path(), "config")?.domain, "mac.example.test");
+        assert_eq!(
+            read::<Config>(home.path(), "config")?.domain,
+            "mac.example.test"
+        );
         set_domain(home.path(), "")?;
         assert_eq!(read::<Config>(home.path(), "config")?.domain, "");
         let raw = std::fs::read_to_string(home.path().join("remote/config.json"))?;

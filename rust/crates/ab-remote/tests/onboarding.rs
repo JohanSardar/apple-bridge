@@ -38,7 +38,7 @@ fn opener() -> Opener {
     Arc::new(|_| true)
 }
 
-async fn publish_after(home: &Path, steps: Vec<Status>) -> Check {
+async fn publish_after(home: &Path, steps: Vec<Status>) -> ab_remote::Result<()> {
     for _ in 0..200 {
         if let Ok(config) = state::read::<Config>(home, "config") {
             for mut step in steps {
@@ -50,7 +50,7 @@ async fn publish_after(home: &Path, steps: Vec<Status>) -> Check {
         }
         tokio::time::sleep(Duration::from_millis(10)).await;
     }
-    Err("config never written".into())
+    Err(ab_remote::Error::Contract("config never written"))
 }
 
 #[tokio::test]

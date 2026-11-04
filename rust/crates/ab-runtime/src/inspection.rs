@@ -184,7 +184,8 @@ pub fn credential_lifecycle(home: &Path) -> Result<(), Error> {
 }
 
 fn document_checks(db: &Connection, result: &mut Value) -> Result<(), Error> {
-    let visibility = std::collections::HashMap::from([("vision".into(), true), ("pdf".into(), true)]);
+    let visibility =
+        std::collections::HashMap::from([("vision".into(), true), ("pdf".into(), true)]);
     let statuses = ab_state::source_statuses(db, &visibility).map_err(|_| Error::Invalid)?;
     let mut checks = serde_json::Map::from_iter([
         ("vision".to_owned(), json!("unavailable")),
@@ -192,7 +193,9 @@ fn document_checks(db: &Connection, result: &mut Value) -> Result<(), Error> {
     ]);
     for record in statuses["records"].as_array().into_iter().flatten() {
         let data = &record["data"];
-        let Some(source) = data["source"].as_str().filter(|source| checks.contains_key(*source))
+        let Some(source) = data["source"]
+            .as_str()
+            .filter(|source| checks.contains_key(*source))
         else {
             continue;
         };

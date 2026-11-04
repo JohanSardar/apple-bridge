@@ -200,7 +200,10 @@ fn rewrite(text: &str, session: Option<&str>) -> Result<String> {
 }
 const TAILSCALE_REQUIRED: &str = "bridge connect needs the Tailscale app (or tailscaled) installed, running and signed in to the same Tailscale network as this invitation. Install Tailscale from https://tailscale.com/download, sign in, then run bridge connect again";
 
-async fn dial(api: &crate::localapi::LocalApi, host: &str) -> Result<Box<dyn crate::localapi::Stream>> {
+async fn dial(
+    api: &crate::localapi::LocalApi,
+    host: &str,
+) -> Result<Box<dyn crate::localapi::Stream>> {
     let (mut socket, authorization) = api.connect().await?;
     let authorization =
         authorization.map_or_else(String::new, |value| format!("Authorization: {value}\r\n"));

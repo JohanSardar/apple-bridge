@@ -17,7 +17,9 @@ fn gateway_home(home: &std::path::Path) -> Check {
     let path = home.join("runtime.json");
     std::fs::write(
         &path,
-        serde_json::to_vec(&serde_json::json!({"role":"gateway","home":home,"peer_address":"","api_address":"","socket":""}))?,
+        serde_json::to_vec(
+            &serde_json::json!({"role":"gateway","home":home,"peer_address":"","api_address":"","socket":""}),
+        )?,
     )?;
     std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))?;
     Ok(())
@@ -47,16 +49,12 @@ fn doctor_reports_document_sources_like_go() -> Check {
         serde_json::json!({"vision":"ready","pdf":"unavailable"})
     );
     let warnings = report["warnings"].as_array().ok_or("warnings")?;
-    assert!(
-        warnings
-            .iter()
-            .any(|w| w == "pdf document source is not ready; start the current Helper and check sources.status")
-    );
-    assert!(
-        !warnings
-            .iter()
-            .any(|w| w.as_str().is_some_and(|w| w.starts_with("vision document source")))
-    );
+    assert!(warnings.iter().any(|w| w
+        == "pdf document source is not ready; start the current Helper and check sources.status"));
+    assert!(!warnings.iter().any(|w| {
+        w.as_str()
+            .is_some_and(|w| w.starts_with("vision document source"))
+    }));
     Ok(())
 }
 
@@ -74,7 +72,10 @@ fn doctor_marks_missing_document_sources_unavailable() -> Check {
         .as_array()
         .ok_or("warnings")?
         .iter()
-        .filter(|w| w.as_str().is_some_and(|w| w.contains("document source is not ready")))
+        .filter(|w| {
+            w.as_str()
+                .is_some_and(|w| w.contains("document source is not ready"))
+        })
         .count();
     assert_eq!(count, 2);
     Ok(())
