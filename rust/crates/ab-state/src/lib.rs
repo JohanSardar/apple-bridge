@@ -195,6 +195,9 @@ pub(crate) fn project(mut record: Record, visibility: &Visibility) -> Result<Rec
     }
     Ok(record)
 }
+pub fn source_statuses(db: &Connection, visibility: &Visibility) -> Result<serde_json::Value> {
+    specialized::sources(db, visibility)
+}
 pub fn digest(records: &[Record]) -> String {
     let mut records: Vec<_> = records.iter().collect();
     records

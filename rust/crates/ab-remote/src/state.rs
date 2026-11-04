@@ -253,6 +253,31 @@ pub fn annotate(home: &Path, name: &str) -> Result<()> {
     write(home, "config", &config)
 }
 
+pub fn set_domain(home: &Path, domain: &str) -> Result<()> {
+    use std::os::unix::fs::OpenOptionsExt;
+    let dir = home.join("remote");
+    fs::create_dir_all(&dir)?;
+    fs::set_permissions(&dir, fs::Permissions::from_mode(0o700))?;
+    let lock = fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .mode(0o600)
+        .open(dir.join("config.lock"))?;
+    fs2::FileExt::lock_exclusive(&lock)?;
+    let mut config = match read::<Config>(home, "config") {
+        Ok(value) => value,
+        Err(Error::Io(e)) if e.kind() == std::io::ErrorKind::NotFound => Config::default(),
+        Err(e) => return Err(e),
+    };
+    if config.domain != domain {
+        domain.clone_into(&mut config.domain);
+        write(home, "config", &config)?;
+    }
+    Ok(())
+}
+
 pub fn snippets(home: &Path) -> Result<String> {
     let status: Status = read(home, "status")?;
     if status.state != "on" || status.url.is_empty() {
@@ -286,6 +311,23 @@ mod flag_tests {
             snippets(home.path())?,
             "Claude Code: claude mcp add --transport http apple-bridge https://h.example/mcp\nclaude.ai connector: https://h.example/mcp\nChatGPT connector: https://h.example/mcp\nCodex config.toml:\n[mcp_servers.apple-bridge]\nurl = \"https://h.example/mcp\"\nGrok connector URL: https://h.example/mcp\nGrok (xai_sdk.tools): mcp(server_url=\"https://h.example/mcp\", server_label=\"apple-bridge\", authorization=\"Bearer <agent-token>\")\n"
         );
+        Ok(())
+    }
+
+    #[test]
+    fn domain_is_stored_kept_through_selection_and_cleared() -> Check {
+        let home = tempfile::tempdir()?;
+        set_domain(home.path(), "mac.example.test")?;
+        let config = select(home.path(), "on", "relay", "id1")?;
+        assert_eq!(config.domain, "mac.example.test");
+        assert_eq!(
+            read::<Config>(home.path(), "config")?.domain,
+            "mac.example.test"
+        );
+        set_domain(home.path(), "")?;
+        assert_eq!(read::<Config>(home.path(), "config")?.domain, "");
+        let raw = std::fs::read_to_string(home.path().join("remote/config.json"))?;
+        assert!(!raw.contains("domain"));
         Ok(())
     }
 

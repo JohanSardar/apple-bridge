@@ -108,7 +108,6 @@ fn remote_flags_validate_like_go() -> Check {
             "--via",
             "private",
         ][..],
-        &["remote", "on", "--domain", "example.com"][..],
     ] {
         assert_eq!(bridge(home.path(), arguments)?.status.code(), Some(1));
     }

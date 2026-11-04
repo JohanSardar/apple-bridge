@@ -2,6 +2,7 @@
 
 pub mod certificate;
 pub mod ct;
+pub mod dns;
 pub mod localapi;
 pub mod onboarding;
 pub mod private;
