@@ -24,6 +24,8 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
+mod commands;
+
 const BULK_CHUNK_BYTES: usize = 16_000;
 const LIVE_CHUNK_BYTES: usize = 64_000;
 const CALENDAR_LIVE_CHUNK_BYTES: usize = 240_000;
@@ -38,6 +40,7 @@ struct Origin {
 
 struct Core {
     flights: Flights<Origin>,
+    commands: commands::Commands,
     closed: bool,
 }
 
@@ -222,23 +225,11 @@ fn gateway_frame(hub: &Hub, frame: &IpcFrame) -> Result<bool, Error> {
             t: "Pong".into(),
             ..IpcFrame::default()
         })?,
-        "Pong" | "QueryCancel" => {}
+        "Pong" => {}
         "Committed" => committed(hub, frame)?,
-        "Query" => hub.send_gateway(&IpcFrame {
-            t: "QueryError".into(),
-            id: frame.id.clone(),
-            code: "unsupported".into(),
-            ..IpcFrame::default()
-        })?,
-        "Prepare" => hub.send_gateway(&rejected(&frame.command_id, "unsupported")?)?,
-        "Dispatch" => hub.send_gateway(&rejected(&frame.command_id, "conflict")?)?,
-        "Resolve" => hub.send_gateway(&rejected(&frame.command_id, "not_found")?)?,
-        "BlobRead" => hub.send_gateway(&IpcFrame {
-            t: "BlobUnavailable".into(),
-            handle: frame.handle.clone(),
-            reason: "unavailable".into(),
-            ..IpcFrame::default()
-        })?,
+        "Query" | "QueryCancel" | "Prepare" | "Dispatch" | "Resolve" | "BlobRead" => {
+            hub.gateway_command(frame)?;
+        }
         "Close" => return Ok(false),
         _ => return Err(Error::Invalid),
     }
@@ -256,7 +247,7 @@ fn committed(hub: &Hub, frame: &IpcFrame) -> Result<(), Error> {
             return Err(Error::Invalid);
         }
         core.flights
-            .complete(&source, true, false)
+            .complete(&source, true, facts(&source))
             .ok_or(Error::Conflict)?
     };
     hub.changed.notify_all();
@@ -268,6 +259,10 @@ fn committed(hub: &Hub, frame: &IpcFrame) -> Result<(), Error> {
         }))?;
     }
     Ok(())
+}
+
+fn facts(source: &str) -> bool {
+    matches!(source, "calendar" | "contacts" | "reminders")
 }
 
 fn limit(scan: &Scan) -> usize {
@@ -462,10 +457,15 @@ fn start(
     Ok((opened, fence))
 }
 
-pub fn serve(gateway: UnixStream, link: UnixStream, secret: &[u8]) -> Result<(), Error> {
+pub fn serve(
+    gateway: UnixStream,
+    link: UnixStream,
+    secret: &[u8],
+    home: &Path,
+) -> Result<(), Error> {
     let mut gateway_read = gateway.try_clone()?;
     let mut link_read = link.try_clone()?;
-    let (opened, _) = match start(&mut gateway_read, &mut link_read, secret) {
+    let (opened, fence) = match start(&mut gateway_read, &mut link_read, secret) {
         Ok(started) => started,
         Err(error) => {
             let _ = gateway.shutdown(Shutdown::Both);
@@ -478,9 +478,12 @@ pub fn serve(gateway: UnixStream, link: UnixStream, secret: &[u8]) -> Result<(),
         u64::try_from(opened.byte_credit).map_err(|_| Error::Invalid)?,
         committed_map(&opened)?,
     );
+    let commands = commands::Commands::open(home, fence)?;
+    let unresolved = commands.unresolved();
     let hub = Hub {
         core: Mutex::new(Core {
             flights,
+            commands,
             closed: false,
         }),
         changed: Condvar::new(),
@@ -492,6 +495,10 @@ pub fn serve(gateway: UnixStream, link: UnixStream, secret: &[u8]) -> Result<(),
             .map_err(|_| Error::Invalid)?
             .as_nanos(),
     };
+    for outcome in unresolved {
+        let frame: IpcFrame = serde_json::from_value(outcome)?;
+        hub.send_gateway(&frame)?;
+    }
     thread::scope(|scope| {
         let upstream = scope.spawn(|| -> Result<(), Error> {
             let result = (|| loop {
@@ -524,6 +531,29 @@ pub fn serve(gateway: UnixStream, link: UnixStream, secret: &[u8]) -> Result<(),
                             }
                         });
                     }
+                    Link::Prepared(prepared) => hub.prepared(prepared)?,
+                    Link::Rejected(rejection) => hub.rejected_by_helper(rejection)?,
+                    Link::Outcome(outcome) => {
+                        if let Some((active, outcome)) = hub.outcome_from_helper(outcome)? {
+                            let hub = &hub;
+                            scope.spawn(move || {
+                                if let Err(error) = hub.settle(&active, outcome) {
+                                    eprintln!("ab-session: settle failed: {error}");
+                                    hub.close();
+                                }
+                            });
+                        }
+                    }
+                    Link::QueryResult(result) => {
+                        hub.finish_query(&result.id)?;
+                        hub.send_gateway(&result.into_ipc())?;
+                    }
+                    Link::QueryError(failure) => {
+                        hub.finish_query(&failure.id)?;
+                        hub.send_gateway(&failure.into_ipc())?;
+                    }
+                    Link::BlobChunk(chunk) => hub.send_gateway(&chunk.into_ipc())?,
+                    Link::BlobUnavailable(missing) => hub.send_gateway(&missing.into_ipc())?,
                     Link::Close => return Ok(()),
                     _ => return Err(Error::Invalid),
                 }

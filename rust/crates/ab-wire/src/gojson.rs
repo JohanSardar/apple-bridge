@@ -49,6 +49,15 @@ impl GoTime {
     pub fn as_str(&self) -> &str {
         &self.0
     }
+    pub fn from_unix(seconds: i64) -> Result<Self, Error> {
+        let stamp = jiff::Timestamp::from_second(seconds).map_err(|_| Error::Time)?;
+        Self::parse(&stamp.to_string())
+    }
+    pub fn unix_seconds(&self) -> i64 {
+        self.0
+            .parse::<jiff::Timestamp>()
+            .map_or(0, jiff::Timestamp::as_second)
+    }
 }
 
 #[derive(Debug)]
