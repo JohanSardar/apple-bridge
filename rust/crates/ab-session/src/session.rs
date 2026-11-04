@@ -32,12 +32,17 @@ mod notes;
 mod owned;
 mod reminders;
 
-pub const RUST_COMMAND_SOURCES: [&str; 5] = [
+pub const RUST_COMMAND_SOURCES: [&str; 10] = [
     "reminders",
     "calendar",
     "contacts",
     "notes",
     "messages.send",
+    "messages.reply",
+    "messages.react",
+    "messages.edit",
+    "messages.unsend",
+    "messages.delete_message",
 ];
 
 #[derive(Clone, Debug, Default)]

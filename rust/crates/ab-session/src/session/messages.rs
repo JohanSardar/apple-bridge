@@ -1,5 +1,7 @@
-use super::owned::{Driver, Probe, Refusal, Settled, native_failure, refuse, text};
-use crate::messages_policy::{Failure, Origin, Refusal as Policy, check_with, normalize};
+use super::owned::{Driver, Probe, Refusal, Settled, equal, native_failure, refuse, text};
+use crate::messages_policy::{
+    ActionWindow, Failure, Origin, Refusal as Policy, check_with, normalize, tagged,
+};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::{
@@ -9,6 +11,22 @@ use std::{
 };
 
 const SEND: &str = "messages.send";
+const TARGETED: [&str; 5] = [
+    "messages.reply",
+    "messages.react",
+    "messages.edit",
+    "messages.unsend",
+    "messages.delete_message",
+];
+const REACTIONS: [&str; 7] = [
+    "love",
+    "like",
+    "dislike",
+    "laugh",
+    "emphasize",
+    "question",
+    "emoji",
+];
 const SAFETY_MESSAGE: &str = "untagged text requires a local owner token and verified own recipients; other sends require [ab-test <id>]";
 
 fn invalid() -> Refusal {
@@ -248,6 +266,9 @@ pub(super) fn prepare(probe: &dyn Probe, command: &Value) -> Result<Value, Refus
     if agent["configured"] == true && text(action, "op") != SEND {
         return Err(invalid());
     }
+    if TARGETED.contains(&text(action, "op")) {
+        return prepare_targeted(probe, command, interactive);
+    }
     if text(action, "op") != SEND {
         return Err(refuse("unsupported"));
     }
@@ -430,6 +451,9 @@ pub(super) fn write(
     action: &Value,
     state: &Value,
 ) -> Result<Value, String> {
+    if TARGETED.contains(&text(action, "op")) {
+        return write_targeted(probe, command_id, action, state);
+    }
     if text(action, "op") != SEND {
         return Err("unsupported".into());
     }
@@ -530,7 +554,7 @@ pub(super) fn write(
 }
 
 pub(super) fn settle(operation: &str, written: &Value) -> Option<Settled> {
-    if operation != SEND {
+    if operation != SEND && !TARGETED.contains(&operation) {
         return None;
     }
     let disposition = match text(written, "disposition") {
@@ -548,6 +572,15 @@ pub(super) fn settle(operation: &str, written: &Value) -> Option<Settled> {
 
 pub(super) fn resolved(probe: &dyn Probe, evidence: &Value) -> Option<Value> {
     let saved = &evidence["prepared"];
+    if TARGETED.contains(&text(&saved["action"], "op")) {
+        if evidence["observed"] != true {
+            return None;
+        }
+        let mut kept = evidence.clone();
+        kept["fingerprint"] = saved["request_hash"].clone();
+        kept["prepared"] = saved.clone();
+        return Some(kept);
+    }
     if text(&saved["action"], "op") != SEND {
         return None;
     }
@@ -607,6 +640,14 @@ fn prepare_unsupported(
 }
 
 fn validate_send(probe: &dyn Probe, action: &Value, state: &Value) -> Result<(), Refusal> {
+    if TARGETED.contains(&text(action, "op")) {
+        call(
+            probe,
+            "messages.ui_validate",
+            &json!({"prepared": ui_prepared(action, state, "")}),
+        )?;
+        return Ok(());
+    }
     validate(probe, &json!({"action": action}), state)
 }
 
@@ -621,12 +662,270 @@ pub(super) const DRIVER: Driver = Driver {
     reconcile_args,
 };
 
+fn seconds_of(value: &Value) -> Option<f64> {
+    let stamp: jiff::Timestamp = value.as_str()?.parse().ok()?;
+    #[allow(clippy::cast_precision_loss)]
+    Some(stamp.as_second() as f64 + f64::from(stamp.subsec_nanosecond()) / 1e9)
+}
+
+fn now_seconds() -> f64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0.0, |elapsed| elapsed.as_secs_f64())
+}
+
+fn ui_prepared(action: &Value, state: &Value, fingerprint: &str) -> Value {
+    json!({"action": action, "native_state": state, "fingerprint": fingerprint})
+}
+
+fn prepare_targeted(
+    probe: &dyn Probe,
+    command: &Value,
+    interactive: bool,
+) -> Result<Value, Refusal> {
+    let action = &command["action"];
+    let operation = text(action, "op");
+    let args = &action["messages"];
+    let found = call(
+        probe,
+        "messages.target",
+        &json!({"guid": text(action, "native_key")}),
+    )?;
+    if found["exists"] != true {
+        return Err(refuse("capability_unproven"));
+    }
+    let target = &found["target"];
+    let row = &found["row"];
+    if !target["deleted_at"].is_null() {
+        return Err(refuse("unsupported"));
+    }
+    if !(interactive || tagged(text(target, "text"))) {
+        return Err(invalid());
+    }
+    if !interactive && !text(args, "text").is_empty() && !tagged(text(args, "text")) {
+        return Err(invalid());
+    }
+    let mut destination = action.clone();
+    destination["list_key"] = row["capture_chat_guid"].clone();
+    let route = verify_route(probe, &destination, interactive)?;
+    if matches!(operation, "messages.edit" | "messages.unsend") {
+        let window = ActionWindow::new(
+            text(row, "service"),
+            row["is_from_me"] == true,
+            row["item_type"].as_i64() == Some(0),
+            seconds_of(&target["sent_at"]),
+            u32::try_from(target["edit_history"].as_array().map_or(0, Vec::len))
+                .unwrap_or(u32::MAX),
+        );
+        if !window.is_some_and(|window| window.allows(operation == "messages.edit", now_seconds()))
+        {
+            return Err(refuse("unsupported"));
+        }
+    }
+    for field in ["text", "edit_history", "retracted_parts"] {
+        let expected = &command["expected_state"][field];
+        if !expected.is_null() && !equal(expected, &target[field]) {
+            return Err(refuse("conflict"));
+        }
+    }
+    let own = own_handles(probe)?.ok_or_else(|| refuse("unavailable"))?;
+    let members = call(
+        probe,
+        "messages.chat_members",
+        &json!({"chat_guid": row["capture_chat_guid"]}),
+    )?;
+    let peers = strings(&members["joined"]);
+    let self_chat = !peers.is_empty() && peers.iter().all(|peer| own.contains(&normalize(peer)));
+    let reactions = call(
+        probe,
+        "messages.reactions",
+        &json!({"guid": row["guid"], "self_chat": self_chat}),
+    )?["reactions"]
+        .clone();
+    let maximum = call(probe, "messages.max_row_id", &json!({}))?["value"].clone();
+    let state = json!({
+        "self_chat": self_chat,
+        "reactions": reactions,
+        "route": "accessibility",
+        "destination": route,
+        "target": target,
+        "max_row_id": maximum,
+        "candidate_ids": [row["guid"]],
+    });
+    let config = call(probe, "messages.config", &json!({}))?;
+    let proven = config["lab_commands"] == true
+        || known_routes(probe)?.contains(&route_proof(&route, operation));
+    let available = call(probe, "messages.ui_available", &json!({}))?["available"] == true;
+    if !(proven && available) {
+        return Err(refuse("capability_unproven"));
+    }
+    call(
+        probe,
+        "messages.ui_prepare",
+        &json!({"guid": row["guid"], "prepared": ui_prepared(action, &state, text(command, "request_hash"))}),
+    )?;
+    Ok(state)
+}
+
+fn current_target(probe: &dyn Probe, guid: &str) -> Result<Value, String> {
+    probe.call("messages.target", &json!({"guid": guid}))
+}
+
+fn write_targeted(
+    probe: &dyn Probe,
+    command_id: &str,
+    action: &Value,
+    state: &Value,
+) -> Result<Value, String> {
+    let operation = text(action, "op");
+    let args = &action["messages"];
+    let native = text(action, "native_key");
+    let before = current_target(probe, native)?;
+    if before["exists"] != true {
+        return Err("conflict".into());
+    }
+    let current = before["target"].clone();
+    for field in [
+        "text",
+        "is_from_me",
+        "edit_history",
+        "retracted_parts",
+        "retracted_at",
+        "deleted_at",
+    ] {
+        if !equal(&current[field], &state["target"][field]) {
+            return Err("conflict".into());
+        }
+    }
+    let reaction_type = if operation == "messages.react" {
+        let index = REACTIONS
+            .iter()
+            .position(|kind| *kind == text(args, "reaction"))
+            .ok_or("invalid")?;
+        Some((if args["remove"] == true { 3000 } else { 2000 }) + index)
+    } else {
+        None
+    };
+    let ui = match probe.call(
+        "messages.ui_perform",
+        &json!({"prepared": ui_prepared(action, state, ""), "command_id": command_id}),
+    ) {
+        Ok(answer) => answer["ui"].clone(),
+        Err(code) => json!({"target_verified": false, "ui_error": code}),
+    };
+    let base = |extra: Value| {
+        let mut evidence = ui.as_object().cloned().map_or(json!({}), Value::Object);
+        for (key, value) in extra.as_object().into_iter().flatten() {
+            evidence[key] = value.clone();
+        }
+        evidence
+    };
+    let started = Instant::now();
+    loop {
+        let seen = current_target(probe, native)?;
+        let found = observe_targeted(probe, action, state, &current, &seen, reaction_type)?;
+        if let Some(mut found) = found {
+            found["source"] = json!("messages");
+            found["observed"] = json!(true);
+            found["disposition"] = json!("locally_observed");
+            found["parts"] = json!([]);
+            let result = base(found);
+            return finish_targeted(probe, state, operation, result);
+        }
+        if started.elapsed() >= DISPATCH_DEADLINE {
+            break;
+        }
+        thread::sleep(POLL_GAP);
+    }
+    Ok(base(
+        json!({"source": "messages", "observed": false, "disposition": "indeterminate"}),
+    ))
+}
+
+fn observe_targeted(
+    probe: &dyn Probe,
+    action: &Value,
+    state: &Value,
+    current: &Value,
+    seen: &Value,
+    reaction_type: Option<usize>,
+) -> Result<Option<Value>, String> {
+    let operation = text(action, "op");
+    let args = &action["messages"];
+    let native = text(action, "native_key");
+    let data = if seen["exists"] == true {
+        seen["target"].clone()
+    } else {
+        Value::Null
+    };
+    let message = |key: &Value, absent: bool| json!({"native_key": key, "collection": "messages.message", "absent": absent});
+    Ok(match operation {
+        "messages.edit" => (equal(&data["text"], &args["text"])
+            && data["edit_history"].as_array().map_or(0, Vec::len)
+                > current["edit_history"].as_array().map_or(0, Vec::len))
+        .then(|| message(&json!(native), false)),
+        "messages.unsend" => (!data["retracted_at"].is_null()
+            || data["retracted_parts"]
+                .as_array()
+                .is_some_and(|parts| !parts.is_empty()))
+        .then(|| message(&json!(native), false)),
+        "messages.delete_message" => (seen["exists"] != true || !data["deleted_at"].is_null())
+            .then(|| message(&json!(native), seen["exists"] != true)),
+        "messages.reply" => {
+            let replies = probe.call(
+                "messages.replies",
+                &json!({"guid": native, "text": text(args, "text"), "max_row_id": state["max_row_id"]}),
+            )?;
+            let guids = strings(&replies["guids"]);
+            (guids.len() == 1).then(|| message(&json!(guids[0]), false))
+        }
+        "messages.react" => {
+            let rows = probe.call(
+                "messages.reaction_rows",
+                &json!({"guid": native, "self_chat": state["self_chat"], "type": reaction_type}),
+            )?;
+            let known = state["reactions"].as_array().cloned().unwrap_or_default();
+            let fresh: Vec<&Value> = rows["reactions"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter(|item| {
+                    !known.iter().any(|old| equal(old, item))
+                        && (text(args, "reaction") != "emoji"
+                            || args["remove"] == true
+                            || item["emoji"] == args["emoji"])
+                })
+                .collect();
+            (fresh.len() == 1).then(|| json!({"native_key": fresh[0]["guid"], "collection": "messages.reaction", "absent": false}))
+        }
+        _ => None,
+    })
+}
+
+fn finish_targeted(
+    probe: &dyn Probe,
+    state: &Value,
+    operation: &str,
+    result: Value,
+) -> Result<Value, String> {
+    let config = call(probe, "messages.config", &json!({})).map_err(|r| code_of(&r))?;
+    if config["lab_commands"] == true {
+        probe.call(
+            "messages.record_proof",
+            &json!({"route": state["destination"], "parts": [{"kind": operation}]}),
+        )?;
+    }
+    probe.call("messages.reconcile", &json!({"result": result}))?;
+    Ok(result)
+}
+
 #[cfg(test)]
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
     use super::*;
     use std::{cell::RefCell, collections::BTreeMap};
 
+    #[allow(clippy::struct_excessive_bools)]
     struct Fake {
         own: Option<Vec<String>>,
         approved: Vec<String>,
@@ -641,6 +940,14 @@ mod tests {
         stage: Value,
         policy_used_fails: bool,
         send_delay: Duration,
+        targets: RefCell<BTreeMap<String, Value>>,
+        effects: RefCell<Vec<(String, Value)>>,
+        reaction_state: Vec<Value>,
+        reaction_hits: RefCell<Vec<Value>>,
+        reply_guids: RefCell<Vec<String>>,
+        ui_available: bool,
+        ui_prepare_fails: bool,
+        ui_perform_fails: bool,
     }
 
     impl Fake {
@@ -659,6 +966,14 @@ mod tests {
                 stage: json!({"parts": [{"kind": "text", "text": "hello"}]}),
                 policy_used_fails: false,
                 send_delay: Duration::ZERO,
+                targets: RefCell::new(BTreeMap::new()),
+                effects: RefCell::new(Vec::new()),
+                reaction_state: Vec::new(),
+                reaction_hits: RefCell::new(Vec::new()),
+                reply_guids: RefCell::new(Vec::new()),
+                ui_available: true,
+                ui_prepare_fails: false,
+                ui_perform_fails: false,
             }
         }
     }
@@ -708,6 +1023,34 @@ mod tests {
                     json!({"rows": rows})
                 }
                 "messages.stage" => self.stage.clone(),
+                "messages.target" => self
+                    .targets
+                    .borrow()
+                    .get(text(args, "guid"))
+                    .cloned()
+                    .unwrap_or(json!({"exists": false})),
+                "messages.reactions" => json!({"reactions": self.reaction_state}),
+                "messages.reaction_rows" => {
+                    json!({"reactions": self.reaction_hits.borrow().clone()})
+                }
+                "messages.replies" => json!({"guids": self.reply_guids.borrow().clone()}),
+                "messages.ui_available" => json!({"available": self.ui_available}),
+                "messages.ui_prepare" => {
+                    if self.ui_prepare_fails {
+                        return Err("unavailable".into());
+                    }
+                    json!({})
+                }
+                "messages.ui_validate" => json!({}),
+                "messages.ui_perform" => {
+                    if self.ui_perform_fails {
+                        return Err("unavailable".into());
+                    }
+                    for (guid, replacement) in self.effects.borrow_mut().drain(..) {
+                        self.targets.borrow_mut().insert(guid, replacement);
+                    }
+                    json!({"ui": {"target_verified": true}})
+                }
                 "messages.send_part" => {
                     thread::sleep(self.send_delay);
                     json!({"error": 0})
@@ -1126,10 +1469,10 @@ mod tests {
 
     #[test]
     fn operations_other_than_send_are_not_ported_yet() {
-        let mut edit = direct("hi");
-        edit["action"]["op"] = json!("messages.edit");
+        let mut chat_op = direct("hi");
+        chat_op["action"]["op"] = json!("messages.delete_chat");
         assert_eq!(
-            prepare(&Fake::new(), &edit).unwrap_err().code,
+            prepare(&Fake::new(), &chat_op).unwrap_err().code,
             "unsupported"
         );
     }
@@ -1564,13 +1907,13 @@ mod tests {
                 .iter()
                 .any(|call| call == "messages.record_proof")
         );
-        let mut edit = direct("hi");
-        edit["action"]["op"] = json!("messages.edit");
+        let mut chat_op = direct("hi");
+        chat_op["action"]["op"] = json!("messages.delete_chat");
         assert_eq!(
-            write(&probe, "c1", &edit["action"], &state).unwrap_err(),
+            write(&probe, "c1", &chat_op["action"], &state).unwrap_err(),
             "unsupported"
         );
-        assert!(settle("messages.edit", &json!({"disposition": "delivered"})).is_none());
+        assert!(settle("messages.delete_chat", &json!({"disposition": "delivered"})).is_none());
     }
 
     #[test]
@@ -1643,5 +1986,398 @@ mod tests {
         assert!(result["native_key"].is_null());
         let seen = json!({"disposition": "locally_observed", "observed": true, "native_key": "g1", "reason": "x"});
         assert!(aggregate(&[seen], "fp", &Value::Null)["reason"].is_null());
+    }
+
+    fn message_target(text_body: &str, sent_ago: f64) -> Value {
+        let sent = jiff::Timestamp::now()
+            .checked_sub(jiff::SignedDuration::from_secs_f64(sent_ago))
+            .unwrap();
+        json!({"exists": true,
+            "target": {"text": text_body, "is_from_me": true, "edit_history": [], "retracted_parts": [], "retracted_at": null,
+                "deleted_at": null, "sent_at": sent.to_string()},
+            "row": {"guid": "m1", "capture_chat_guid": "chat-1", "service": "iMessage", "is_from_me": true, "item_type": 0}})
+    }
+
+    fn targeted(operation: &str, extra: &Value) -> Value {
+        let mut action =
+            json!({"op": operation, "native_key": "m1", "messages": {"text": "new words"}});
+        for (key, value) in extra.as_object().unwrap() {
+            action["messages"][key] = value.clone();
+        }
+        json!({"command_id": "c1", "principal": "device:abc", "origin": "interactive", "expires_at": "2099-01-01T00:00:00Z",
+            "request_hash": "h", "action": action})
+    }
+
+    fn ui_probe(text_body: &str, sent_ago: f64) -> Fake {
+        let mut probe = chat_probe();
+        probe
+            .targets
+            .borrow_mut()
+            .insert("m1".into(), message_target(text_body, sent_ago));
+        probe
+            .chats
+            .insert("chat-1".into(), vec![json!("+15550100100")]);
+        probe
+    }
+
+    #[test]
+    fn an_edit_is_prepared_inside_its_window_and_refused_outside_it() {
+        let cmd = targeted("messages.edit", &json!({}));
+        let state = prepare(&ui_probe("old", 60.0), &cmd).unwrap();
+        assert_eq!(state["route"], "accessibility");
+        assert_eq!(state["candidate_ids"], json!(["m1"]));
+        assert_eq!(state["self_chat"], true);
+        assert!(prepare(&ui_probe("old", 899.0), &cmd).is_ok());
+        assert_eq!(
+            prepare(&ui_probe("old", 901.0), &cmd).unwrap_err().code,
+            "unsupported"
+        );
+        let unsend = targeted("messages.unsend", &json!({}));
+        assert!(prepare(&ui_probe("old", 100.0), &unsend).is_ok());
+        assert_eq!(
+            prepare(&ui_probe("old", 121.0), &unsend).unwrap_err().code,
+            "unsupported"
+        );
+        let capped = ui_probe("old", 60.0);
+        let mut target = message_target("old", 60.0);
+        target["target"]["edit_history"] = json!([1, 2, 3, 4, 5]);
+        capped.targets.borrow_mut().insert("m1".into(), target);
+        assert_eq!(prepare(&capped, &cmd).unwrap_err().code, "unsupported");
+        let mut sms = message_target("old", 60.0);
+        sms["row"]["service"] = json!("SMS");
+        let texted = ui_probe("old", 60.0);
+        texted.targets.borrow_mut().insert("m1".into(), sms);
+        assert_eq!(prepare(&texted, &cmd).unwrap_err().code, "unsupported");
+        let mut theirs = message_target("old", 60.0);
+        theirs["row"]["is_from_me"] = json!(false);
+        let incoming = ui_probe("old", 60.0);
+        incoming.targets.borrow_mut().insert("m1".into(), theirs);
+        assert_eq!(prepare(&incoming, &cmd).unwrap_err().code, "unsupported");
+    }
+
+    #[test]
+    fn a_gated_ui_operation_needs_a_tagged_target_and_a_tagged_text() {
+        let mut gated = targeted("messages.edit", &json!({"text": "[ab-test x] new"}));
+        gated["origin"] = json!("");
+        let probe = ui_probe("[ab-test x] old", 60.0);
+        assert!(prepare(&probe, &gated).is_ok());
+        let untagged_target = ui_probe("old", 60.0);
+        assert_eq!(
+            prepare(&untagged_target, &gated).unwrap_err().code,
+            "invalid"
+        );
+        let mut untagged_text = targeted("messages.edit", &json!({"text": "new"}));
+        untagged_text["origin"] = json!("");
+        assert_eq!(prepare(&probe, &untagged_text).unwrap_err().code, "invalid");
+    }
+
+    #[test]
+    fn deleted_missing_stale_and_unproven_targets_are_refused() {
+        let cmd = targeted("messages.edit", &json!({}));
+        assert_eq!(
+            prepare(&chat_probe(), &cmd).unwrap_err().code,
+            "capability_unproven"
+        );
+        let deleted = ui_probe("old", 60.0);
+        let mut target = message_target("old", 60.0);
+        target["target"]["deleted_at"] = json!("2026-01-01T00:00:00Z");
+        deleted.targets.borrow_mut().insert("m1".into(), target);
+        assert_eq!(prepare(&deleted, &cmd).unwrap_err().code, "unsupported");
+        let mut stale = cmd.clone();
+        stale["expected_state"] = json!({"text": "something else"});
+        assert_eq!(
+            prepare(&ui_probe("old", 60.0), &stale).unwrap_err().code,
+            "conflict"
+        );
+        let mut agreeing = cmd.clone();
+        agreeing["expected_state"] = json!({"text": "old"});
+        assert!(prepare(&ui_probe("old", 60.0), &agreeing).is_ok());
+        let mut unproven = ui_probe("old", 60.0);
+        unproven.lab = false;
+        assert_eq!(
+            prepare(&unproven, &cmd).unwrap_err().code,
+            "capability_unproven"
+        );
+        unproven.proofs = vec![route_proof(
+            &json!({"kind": "imessage_buddy", "handle": "x", "service": "iMessage"}),
+            "messages.edit",
+        )];
+        assert_eq!(
+            prepare(&unproven, &cmd).unwrap_err().code,
+            "capability_unproven"
+        );
+        let mut blind = ui_probe("old", 60.0);
+        blind.ui_available = false;
+        assert_eq!(
+            prepare(&blind, &cmd).unwrap_err().code,
+            "capability_unproven"
+        );
+        let mut refused = ui_probe("old", 60.0);
+        refused.ui_prepare_fails = true;
+        assert_eq!(prepare(&refused, &cmd).unwrap_err().code, "unavailable");
+        let mut anonymous = ui_probe("old", 60.0);
+        anonymous.own = None;
+        assert_eq!(prepare(&anonymous, &cmd).unwrap_err().code, "unavailable");
+    }
+
+    #[test]
+    fn an_edit_is_observed_only_when_the_store_shows_the_new_text_and_a_longer_history() {
+        let cmd = targeted("messages.edit", &json!({}));
+        let probe = ui_probe("old", 60.0);
+        let state = prepare(&probe, &cmd).unwrap();
+        let mut edited = message_target("new words", 60.0);
+        edited["target"]["edit_history"] = json!([{"text": "old"}]);
+        probe.effects.borrow_mut().push(("m1".into(), edited));
+        let written = write(&probe, "c1", &cmd["action"], &state).unwrap();
+        assert_eq!(
+            (
+                written["disposition"].as_str(),
+                written["native_key"].as_str(),
+                written["observed"].as_bool()
+            ),
+            (Some("locally_observed"), Some("m1"), Some(true))
+        );
+        assert_eq!(written["ui"], Value::Null);
+        assert_eq!(written["target_verified"], true);
+        let calls = probe.calls.borrow();
+        assert!(calls.iter().any(|call| call == "messages.record_proof"));
+        assert!(calls.iter().any(|call| call == "messages.reconcile"));
+        drop(calls);
+        let same_text = ui_probe("old", 60.0);
+        let state = prepare(&same_text, &cmd).unwrap();
+        let mut unchanged = message_target("new words", 60.0);
+        unchanged["target"]["edit_history"] = json!([]);
+        same_text
+            .effects
+            .borrow_mut()
+            .push(("m1".into(), unchanged));
+        let written = write(&same_text, "c1", &cmd["action"], &state).unwrap();
+        assert_eq!(written["disposition"], "indeterminate");
+        assert!(
+            !same_text
+                .calls
+                .borrow()
+                .iter()
+                .any(|call| call == "messages.reconcile")
+        );
+        let wrong_text = ui_probe("old", 60.0);
+        let state = prepare(&wrong_text, &cmd).unwrap();
+        let mut other = message_target("different", 60.0);
+        other["target"]["edit_history"] = json!([{"text": "old"}]);
+        wrong_text.effects.borrow_mut().push(("m1".into(), other));
+        assert_eq!(
+            write(&wrong_text, "c1", &cmd["action"], &state).unwrap()["disposition"],
+            "indeterminate"
+        );
+    }
+
+    #[test]
+    fn a_target_changed_since_prepare_is_a_conflict_before_the_ui_acts() {
+        let cmd = targeted("messages.edit", &json!({}));
+        let probe = ui_probe("old", 60.0);
+        let state = prepare(&probe, &cmd).unwrap();
+        for (field, value) in [
+            ("text", json!("edited by someone")),
+            ("edit_history", json!([1])),
+            ("retracted_parts", json!([0])),
+            ("deleted_at", json!("2026-01-01T00:00:00Z")),
+        ] {
+            let mut moved = message_target("old", 60.0);
+            moved["target"][field] = value;
+            probe.targets.borrow_mut().insert("m1".into(), moved);
+            assert_eq!(
+                write(&probe, "c1", &cmd["action"], &state).unwrap_err(),
+                "conflict",
+                "{field}"
+            );
+        }
+        probe.targets.borrow_mut().remove("m1");
+        assert_eq!(
+            write(&probe, "c1", &cmd["action"], &state).unwrap_err(),
+            "conflict"
+        );
+        assert!(
+            !probe
+                .calls
+                .borrow()
+                .iter()
+                .any(|call| call == "messages.ui_perform")
+        );
+    }
+
+    #[test]
+    fn unsend_and_delete_are_observed_through_the_store() {
+        let unsend = targeted("messages.unsend", &json!({}));
+        let probe = ui_probe("old", 60.0);
+        let state = prepare(&probe, &unsend).unwrap();
+        let mut retracted = message_target("old", 60.0);
+        retracted["target"]["retracted_at"] = json!("2026-01-01T00:00:00Z");
+        probe.effects.borrow_mut().push(("m1".into(), retracted));
+        assert_eq!(
+            write(&probe, "c1", &unsend["action"], &state).unwrap()["disposition"],
+            "locally_observed"
+        );
+        let idle = ui_probe("old", 60.0);
+        let state = prepare(&idle, &unsend).unwrap();
+        assert_eq!(
+            write(&idle, "c1", &unsend["action"], &state).unwrap()["disposition"],
+            "indeterminate"
+        );
+        let delete = targeted("messages.delete_message", &json!({}));
+        let gone = ui_probe("old", 60.0);
+        let state = prepare(&gone, &delete).unwrap();
+        gone.effects
+            .borrow_mut()
+            .push(("m1".into(), json!({"exists": false})));
+        let written = write(&gone, "c1", &delete["action"], &state).unwrap();
+        assert_eq!(
+            (written["disposition"].as_str(), written["absent"].as_bool()),
+            (Some("locally_observed"), Some(true))
+        );
+        let marked = ui_probe("old", 60.0);
+        let state = prepare(&marked, &delete).unwrap();
+        let mut hidden = message_target("old", 60.0);
+        hidden["target"]["deleted_at"] = json!("2026-01-01T00:00:00Z");
+        marked.effects.borrow_mut().push(("m1".into(), hidden));
+        assert_eq!(
+            write(&marked, "c1", &delete["action"], &state).unwrap()["absent"],
+            false
+        );
+    }
+
+    #[test]
+    fn a_reply_and_a_reaction_need_exactly_one_new_row() {
+        let reply = targeted("messages.reply", &json!({}));
+        let probe = ui_probe("old", 60.0);
+        let state = prepare(&probe, &reply).unwrap();
+        assert_eq!(
+            write(&probe, "c1", &reply["action"], &state).unwrap()["disposition"],
+            "indeterminate"
+        );
+        probe.reply_guids.borrow_mut().push("r1".into());
+        let written = write(&probe, "c1", &reply["action"], &state).unwrap();
+        assert_eq!(
+            (
+                written["native_key"].as_str(),
+                written["collection"].as_str()
+            ),
+            (Some("r1"), Some("messages.message"))
+        );
+        probe.reply_guids.borrow_mut().push("r2".into());
+        assert_eq!(
+            write(&probe, "c1", &reply["action"], &state).unwrap()["disposition"],
+            "indeterminate"
+        );
+        let react = targeted("messages.react", &json!({"reaction": "love"}));
+        let mut tapback = ui_probe("old", 60.0);
+        tapback.reaction_state = vec![json!({"guid": "old-r", "type": "2000", "emoji": ""})];
+        let state = prepare(&tapback, &react).unwrap();
+        tapback
+            .reaction_hits
+            .borrow_mut()
+            .push(json!({"guid": "old-r", "type": "2000", "emoji": ""}));
+        assert_eq!(
+            write(&tapback, "c1", &react["action"], &state).unwrap()["disposition"],
+            "indeterminate"
+        );
+        tapback
+            .reaction_hits
+            .borrow_mut()
+            .push(json!({"guid": "new-r", "type": "2000", "emoji": ""}));
+        let written = write(&tapback, "c1", &react["action"], &state).unwrap();
+        assert_eq!(
+            (
+                written["native_key"].as_str(),
+                written["collection"].as_str()
+            ),
+            (Some("new-r"), Some("messages.reaction"))
+        );
+        let bad = targeted("messages.react", &json!({"reaction": "sparkles"}));
+        let state = prepare(&tapback, &bad).unwrap();
+        assert_eq!(
+            write(&tapback, "c1", &bad["action"], &state).unwrap_err(),
+            "invalid"
+        );
+        let emoji = targeted(
+            "messages.react",
+            &json!({"reaction": "emoji", "emoji": "x"}),
+        );
+        let picky = ui_probe("old", 60.0);
+        let state = prepare(&picky, &emoji).unwrap();
+        picky
+            .reaction_hits
+            .borrow_mut()
+            .push(json!({"guid": "n", "type": "2006", "emoji": "y"}));
+        assert_eq!(
+            write(&picky, "c1", &emoji["action"], &state).unwrap()["disposition"],
+            "indeterminate"
+        );
+    }
+
+    #[test]
+    fn the_ui_failing_does_not_hide_an_effect_the_store_shows() {
+        let cmd = targeted("messages.edit", &json!({}));
+        let mut probe = ui_probe("old", 60.0);
+        probe.ui_perform_fails = true;
+        let state = prepare(&probe, &cmd).unwrap();
+        let mut edited = message_target("new words", 60.0);
+        edited["target"]["edit_history"] = json!([{"text": "old"}]);
+        probe
+            .targets
+            .borrow_mut()
+            .insert("m1".into(), message_target("old", 60.0));
+        let written = write(&probe, "c1", &cmd["action"], &state).unwrap();
+        assert_eq!(written["target_verified"], false);
+        assert_eq!(written["disposition"], "indeterminate");
+        assert!(validate_send(&probe, &cmd["action"], &state).is_ok());
+    }
+
+    #[test]
+    fn resolve_keeps_only_an_observed_ui_outcome() {
+        let probe = Fake::new();
+        let saved =
+            json!({"action": {"op": "messages.edit"}, "request_hash": "h", "native_state": {}});
+        let seen = json!({"prepared": saved, "observed": true, "native_key": "m1", "disposition": "locally_observed"});
+        let found = resolved(&probe, &seen).unwrap();
+        assert_eq!(
+            (found["fingerprint"].as_str(), found["native_key"].as_str()),
+            (Some("h"), Some("m1"))
+        );
+        let unseen = json!({"prepared": saved, "observed": false, "disposition": "indeterminate"});
+        assert!(resolved(&probe, &unseen).is_none());
+    }
+
+    #[test]
+    fn a_gated_ui_operation_needs_a_route_inside_the_approved_handles_or_proofs() {
+        let mut gated = targeted("messages.edit", &json!({"text": "[ab-test x] new"}));
+        gated["origin"] = json!("");
+        let mut foreign = ui_probe("[ab-test x] old", 60.0);
+        foreign
+            .chats
+            .insert("chat-1".into(), vec![json!("+15559990000")]);
+        assert_eq!(prepare(&foreign, &gated).unwrap_err().code, "invalid");
+        foreign.proofs = vec![route_proof(
+            &json!({"kind": "chat_id_raw", "chat": "chat-1"}),
+            "messages.edit",
+        )];
+        let state = prepare(&foreign, &gated).unwrap();
+        assert_eq!(
+            state["destination"],
+            json!({"kind": "chat_id_raw", "chat": "chat-1"})
+        );
+        foreign.proofs = vec![route_proof(
+            &json!({"kind": "chat_id_raw", "chat": "chat-1"}),
+            "messages.react",
+        )];
+        assert_eq!(prepare(&foreign, &gated).unwrap_err().code, "invalid");
+        let interactive = targeted("messages.edit", &json!({}));
+        let mut anyone = ui_probe("old", 60.0);
+        anyone
+            .chats
+            .insert("chat-1".into(), vec![json!("+15559990000")]);
+        assert_eq!(
+            prepare(&anyone, &interactive).unwrap()["destination"]["chat"],
+            "chat-1"
+        );
     }
 }
