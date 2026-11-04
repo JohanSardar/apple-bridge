@@ -297,7 +297,11 @@ impl State {
             Some("Capture") => {
                 let source = text(value, "source")?.to_owned();
                 let checkpoint = text(value, "checkpoint")?.to_owned();
-                let observations = value["observations"].as_array().ok_or(Error::Invalid)?;
+                let observations: &[Value] = match &value["observations"] {
+                    Value::Array(items) => items,
+                    Value::Null => &[],
+                    _ => return Err(Error::Invalid),
+                };
                 let keys = observations
                     .iter()
                     .filter(|o| o["kind"] == "upsert" || o["kind"] == "absent")
