@@ -74,7 +74,7 @@ public final class MacSource: Source {
             return (String(device), .object(value))
         }
     }
-    private func scan(_ sink: any ObservationSink, live: Bool) async throws {
+    public func state() throws -> [String: JSON] {
         var current: [String: JSON] = [:]
         for (key, value) in try audio() { current["mac.audio_device/" + key] = value }
         current["mac.power/system"] = power()
@@ -91,6 +91,10 @@ public final class MacSource: Source {
             guard let bundle = app.bundleIdentifier else { continue }
             current["mac.app/" + String(app.processIdentifier)] = .object(["bundle_id": .string(bundle), "name": .string(app.localizedName ?? bundle), "running": .bool(!app.isTerminated), "frontmost": .bool(app.isActive), "hidden": .bool(app.isHidden)])
         }
+        return current
+    }
+    private func scan(_ sink: any ObservationSink, live: Bool) async throws {
+        let current = try state()
         let started = timestamp()
         var observations: [JSON] = []
         for (key, value) in current where !live || committed[key] != value {
@@ -106,6 +110,9 @@ public final class MacSource: Source {
     }
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
         if !resume["generation"].string.isEmpty { generation = resume["generation"].string }
+        try await observe { live in try await self.scan(sink, live: live) }
+    }
+    public func observe(_ handler: @MainActor (Bool) async throws -> Void) async throws {
         let initialDevices = Set(try audio().compactMap { UInt32($0.0) } + [AudioObjectID(kAudioObjectSystemObject)])
         let (changes, continuation) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
         let wifi = CWWiFiClient.shared()
@@ -154,14 +161,14 @@ public final class MacSource: Source {
             withExtendedLifetime(powerContext) {}
             continuation.finish()
         }
-        try await scan(sink, live: false)
+        try await handler(false)
         for await _ in changes {
             try Task.checkCancellation()
             let current = Set(try audio().compactMap { UInt32($0.0) } + [AudioObjectID(kAudioObjectSystemObject)])
             for device in devices.subtracting(current) { for var address in addresses(device) { AudioObjectRemovePropertyListenerBlock(device, &address, .main, listener) } }
             for device in current.subtracting(devices) { for var address in addresses(device) { AudioObjectAddPropertyListenerBlock(device, &address, .main, listener) } }
             devices = current
-            try await scan(sink, live: true)
+            try await handler(true)
         }
     }
     private func script(_ text: String) throws -> String {

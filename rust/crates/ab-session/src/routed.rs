@@ -6,7 +6,7 @@ use crate::{
     readers::{BlobServer, CaptureReader, ScanContext},
     store::{Record, Store},
 };
-use ab_wire::gateway::{BlobRead, Committed, Dispatch, GatewayFrame};
+use ab_wire::gateway::{BlobRead, CaptureHeader, Committed, Dispatch, GatewayFrame, HelperFrame};
 use serde_json::{Value, json};
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -884,29 +884,28 @@ pub fn relay_layered(
         let result = (|| -> Result<(), Error> {
             loop {
                 let (bytes, mut value) = read_frame(&mut helper_read)?;
-                match value["t"].as_str() {
-                    Some("Capture") => {
-                        let source = text(&value, "source")?;
-                        let checkpoint =
-                            value["checkpoint"].as_str().unwrap_or_default().to_owned();
-                        let generation =
-                            value["generation"].as_str().unwrap_or_default().to_owned();
+                match HelperFrame::from_value(&value).map_err(|_| Error::Invalid)? {
+                    HelperFrame::Capture(CaptureHeader {
+                        source,
+                        checkpoint,
+                        generation,
+                    }) => {
                         let size = u64::try_from(bytes.len()).map_err(|_| Error::Invalid)?;
-                        if rust.contains(source) {
+                        if rust.contains(&source) {
                             ingest(
                                 &gate,
                                 &readers,
                                 &held,
                                 &to_helper,
-                                source,
+                                &source,
                                 &value,
                                 (checkpoint, size),
                             )?;
                             continue;
                         }
-                        register(&gate, source, &value, generation, checkpoint, size)?;
+                        register(&gate, &source, &value, generation, checkpoint, size)?;
                     }
-                    Some("Outcome" | "Rejected") if !rust.is_empty() => {
+                    HelperFrame::Outcome | HelperFrame::Rejected if !rust.is_empty() => {
                         if forward_outcome(&gate, &to_gateway, &mut value)? {
                             if let Some(layer) = layer {
                                 layer.helper(&value)?;
@@ -914,7 +913,7 @@ pub fn relay_layered(
                             continue;
                         }
                     }
-                    Some("Ready") => {
+                    HelperFrame::Ready => {
                         if let Some(layer) = layer {
                             layer.helper(&value)?;
                         }

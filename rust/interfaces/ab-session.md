@@ -32,7 +32,7 @@ on successful terminal exhaustive page, no missing rows, stable scope/generation
 Interrupted/truncated/expired scans never imply absence. Error: {t:Error,id,code}.
 Codes: invalid,unsupported,unavailable,permission_missing,expired,conflict,corrupt.
 Closed fact ops: agenda.calendars, agenda.events, agenda.reminder_lists, agenda.reminders,
-contacts.containers, contacts.groups, contacts.contacts. No generic SQL/script selector. `Revalidate`
+contacts.containers, contacts.groups, contacts.contacts, files.ubiquity, mac.state. No generic SQL/script selector. `Revalidate`
 (`id`,`op`,`args.identities`) answers `Revalidated` with one `state` (`present`/`missing`/`outside_scope`)
 per identity, and Swift pushes `Changed` (`source`,`generation`); both ride the facts stream.
 
@@ -301,6 +301,13 @@ so effects keep fd 200 (`AB_NATIVE_FD`) and facts get a second stream and a seco
 `Facts` and refuses `Effect` and `Release` with `unsupported` (permit nonces are per server, so effects can never be replayed there).
 Without `AB_SESSION_EFFECTS` and without `AB_NATIVE_FACTS_FD` the facts client falls back to `AB_NATIVE_FD`. The two descriptors must
 differ from each other, the gateway fd and the Helper fd. `ipc/1`, `feed/1` and the native/1 frames are unchanged.
+Files and Mac are Rust captures built on facts (`"facts": "native"` or a socket in the switch file). `ab_native::files` walks the Files roots
+itself (the configured root, `roots`, and `Library/Application Support/AppleBridge/files-roots.json` under `home`; symlinks never followed,
+10000 items, depth 16, tags from the `com.apple.metadata:_kMDItemUserTags` attribute) and asks Swift only for `files.ubiquity`, 500 paths per
+request. The diff is `capture::State` per root: a complete walk reports deletions, an incomplete one (truncated, unreadable subtree) emits
+upserts with empty `completion_evidence` and no absence. `ab_native::mac` takes the `mac.state` rows, derives `scoped_alias`, and `capture::State`
+decides upserts and absences; Swift pushes `Changed` (`mac`) and ab-session pulls, so the Swift Helper keeps only the framework reads
+and the change listeners. Generation for both is `native/1`.
 `facts: {"socket": "/abs/path"}` dials a native/1 server (lab: the second connection to the same simapple socket). `facts_poll_ms` (default
 15000) is the fallback pull interval. The client (`native_facts::Client`) sends `Hello` with the `Open` fence, then pages
 `agenda.calendars` + `agenda.events` (Calendar) or `contacts.containers` + `contacts.groups` + `contacts.contacts` (Contacts) with

@@ -2,6 +2,8 @@ use crate::{Error, native_facts};
 
 mod agenda;
 mod config;
+mod files;
+mod mac;
 mod mail;
 mod messages;
 mod notes;
@@ -12,6 +14,8 @@ mod voice_memos;
 use ab_native::capture;
 pub use agenda::AgendaReader;
 pub use config::{confine_staging, from_config, from_config_linked, wants_inherited_facts};
+pub use files::FilesReader;
+pub use mac::MacReader;
 pub use mail::MailReader;
 pub use messages::MessagesReader;
 pub use notes::NotesReader;

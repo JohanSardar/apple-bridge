@@ -5,7 +5,7 @@ root=$(cd "$here/../.." && pwd)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 export HOME="$work/home"
-mkdir -p "$HOME/Library/Safari" "$HOME/Library/Biome/streams" "$HOME/Library/Application Support/AppleBridgeLive"
+mkdir -p "$HOME/Library/Mobile Documents/com~apple~CloudDocs/Bridge Test" "$HOME/Library/Safari" "$HOME/Library/Biome/streams" "$HOME/Library/Application Support/AppleBridgeLive"
 touch "$HOME/Library/Safari/History.db" "$HOME/Library/Application Support/AppleBridgeLive/state.db"
 gateway="$work/gateway"
 mkdir -p "$gateway/helper"
@@ -35,6 +35,17 @@ P
 [ -f "$config.prev" ] || fail "previous switch file was not kept"
 [ "$(python3 -c 'import os,sys; print(oct(os.stat(sys.argv[1]).st_mode & 0o777)[2:])' "$config")" = 600 ] || fail "switch file is not mode 600"
 
+"$here/flip-capture.sh" files,mac --home "$gateway" >/dev/null
+python3 - "$config" "$HOME" <<'P'
+import json, sys
+sources = json.load(open(sys.argv[1]))["sources"]
+assert sources["mac"]["facts"] == "native" and sources["files"]["facts"] == "native", sources
+assert sources["files"]["home"] == sys.argv[2], sources["files"]
+assert sources["files"]["root"].endswith("com~apple~CloudDocs/Bridge Test"), sources["files"]
+assert "facts" not in sources["safari"], sources["safari"]
+P
+"$here/unflip-capture.sh" files,mac --home "$gateway" >/dev/null
+[ "$(sources)" = calendar,safari,usage ] || fail "unflip files,mac left $(sources)"
 "$here/unflip-capture.sh" usage --home "$gateway" >/dev/null
 [ "$(sources)" = calendar,safari ] || fail "unflip one left $(sources)"
 "$here/unflip-capture.sh" all --home "$gateway" >/dev/null

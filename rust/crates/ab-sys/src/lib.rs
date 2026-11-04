@@ -2,6 +2,7 @@
 
 pub mod keychain;
 pub mod watch;
+pub mod xattr;
 
 use std::{
     io,

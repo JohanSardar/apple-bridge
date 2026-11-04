@@ -439,6 +439,12 @@ pub struct ScanInput<'a> {
 }
 impl State {
     pub fn prepare(&self, input: ScanInput<'_>) -> Result<Pending> {
+        self.build(input, true)
+    }
+    pub fn prepare_incomplete(&self, input: ScanInput<'_>) -> Result<Pending> {
+        self.build(input, false)
+    }
+    fn build(&self, input: ScanInput<'_>, complete: bool) -> Result<Pending> {
         let ScanInput {
             source,
             generation,
@@ -492,12 +498,16 @@ impl State {
         if same {
             for (key, old) in &self.records {
                 if !current.contains_key(key) {
-                    changes.push(absent(
-                        &old.collection,
-                        &old.native_key,
-                        old.scoped_alias.clone(),
-                        context,
-                    ));
+                    if complete {
+                        changes.push(absent(
+                            &old.collection,
+                            &old.native_key,
+                            old.scoped_alias.clone(),
+                            context,
+                        ));
+                    } else {
+                        current.insert(key.clone(), old.clone());
+                    }
                 }
             }
         }
@@ -515,7 +525,7 @@ impl State {
                 scan_id: context.scan_id.clone(),
                 scan_started_at: context.observed_at.clone(),
                 scope,
-                completion_evidence: "complete",
+                completion_evidence: if complete { "complete" } else { "" },
                 coverage,
                 observations: changes,
                 blob_handles: BTreeMap::new(),

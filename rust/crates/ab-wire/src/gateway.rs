@@ -52,6 +52,38 @@ pub enum GatewayFrame {
     Other,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CaptureHeader {
+    pub source: String,
+    pub checkpoint: String,
+    pub generation: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum HelperFrame {
+    Capture(CaptureHeader),
+    Outcome,
+    Rejected,
+    Ready,
+    Other,
+}
+
+impl HelperFrame {
+    pub fn from_value(value: &Value) -> Result<Self, Malformed> {
+        Ok(match value["t"].as_str() {
+            Some("Capture") => Self::Capture(CaptureHeader {
+                source: text(value, "source").ok_or(Malformed)?,
+                checkpoint: owned(value, "checkpoint"),
+                generation: owned(value, "generation"),
+            }),
+            Some("Outcome") => Self::Outcome,
+            Some("Rejected") => Self::Rejected,
+            Some("Ready") => Self::Ready,
+            _ => Self::Other,
+        })
+    }
+}
+
 fn text(value: &Value, field: &str) -> Option<String> {
     value[field]
         .as_str()
@@ -158,6 +190,40 @@ mod tests {
                 offset: None,
                 length: Some(16)
             }))
+        );
+    }
+
+    #[test]
+    fn helper_frames_are_classified_and_captures_need_a_source() {
+        assert_eq!(
+            HelperFrame::from_value(
+                &json!({"t":"Capture","source":"mail","checkpoint":"c","generation":"g"})
+            ),
+            Ok(HelperFrame::Capture(CaptureHeader {
+                source: "mail".into(),
+                checkpoint: "c".into(),
+                generation: "g".into()
+            }))
+        );
+        assert_eq!(
+            HelperFrame::from_value(&json!({"t":"Capture"})),
+            Err(Malformed)
+        );
+        assert_eq!(
+            HelperFrame::from_value(&json!({"t":"Outcome"})),
+            Ok(HelperFrame::Outcome)
+        );
+        assert_eq!(
+            HelperFrame::from_value(&json!({"t":"Rejected"})),
+            Ok(HelperFrame::Rejected)
+        );
+        assert_eq!(
+            HelperFrame::from_value(&json!({"t":"Ready"})),
+            Ok(HelperFrame::Ready)
+        );
+        assert_eq!(
+            HelperFrame::from_value(&json!({"t":"QueryResult"})),
+            Ok(HelperFrame::Other)
         );
     }
 

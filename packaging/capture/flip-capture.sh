@@ -22,15 +22,15 @@ PLAN="$(mktemp)"
 for s in $SOURCES; do
   root="$(source_root "$s")"; probe="$(root_probe "$s")"
   case "$s" in
-    calendar|contacts|reminders) mkdir -p "$root" ;;
+    calendar|contacts|reminders|mac) mkdir -p "$root" ;;
     *) [ -d "$root" ] || die "$s: root not found: $root"
        [ -z "$probe" ] || [ -e "$root/$probe" ] || die "$s: $probe not found under $root" ;;
   esac
   printf '%s\t%s\n' "$s" "$root" >> "$PLAN"
 done
-NEW="$(python3 - "$CONFIG" "$PLAN" <<'P'
+NEW="$(python3 - "$CONFIG" "$PLAN" "$SOURCE_BASE" <<'P'
 import json, os, sys
-path, plan = sys.argv[1], sys.argv[2]
+path, plan, base = sys.argv[1], sys.argv[2], sys.argv[3]
 try:
     cfg = json.load(open(path))
 except FileNotFoundError:
@@ -40,7 +40,12 @@ cfg.setdefault("watch", True)
 cfg.setdefault("poll_ms", 5000)
 for line in open(plan):
     name, root = line.rstrip("\n").split("\t", 1)
-    cfg["sources"][name] = {"root": root}
+    entry = {"root": root}
+    if name in ("files", "mac"):
+        entry["facts"] = "native"
+    if name == "files":
+        entry["home"] = base
+    cfg["sources"][name] = entry
 print(json.dumps(cfg, indent=2, sort_keys=True))
 P
 )"

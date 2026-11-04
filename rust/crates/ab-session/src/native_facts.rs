@@ -173,7 +173,11 @@ impl Client {
     }
 
     pub fn fetch(&self, fence: u64, operation: &str) -> Result<FactSet, Error> {
-        self.guarded(fence, |link| self.exchange(link, operation))
+        self.fetch_with(fence, operation, &json!({}))
+    }
+
+    pub fn fetch_with(&self, fence: u64, operation: &str, args: &Value) -> Result<FactSet, Error> {
+        self.guarded(fence, |link| self.exchange(link, operation, args))
     }
 
     pub fn revalidate(
@@ -340,14 +344,14 @@ impl Client {
         Ok(verdicts)
     }
 
-    fn exchange(&self, link: &Link, operation: &str) -> Result<FactSet, Failure> {
+    fn exchange(&self, link: &Link, operation: &str, args: &Value) -> Result<FactSet, Failure> {
         let mut snapshot = Value::Null;
         let mut cursor = Value::Null;
         let mut items: Vec<Value> = Vec::new();
         let mut first: Option<(Value, String)> = None;
         for _ in 0..MAX_PAGES {
             let page = self.call(link, "facts", |id| {
-                json!({"t":"Facts","id":id,"op":operation,"args":{},"snapshot":snapshot,"cursor":cursor,"limit":PAGE_LIMIT})
+                json!({"t":"Facts","id":id,"op":operation,"args":args,"snapshot":snapshot,"cursor":cursor,"limit":PAGE_LIMIT})
             })?;
             if page["t"] != "FactPage" || page["op"] != json!(operation) {
                 return Err(Error::Invalid.into());

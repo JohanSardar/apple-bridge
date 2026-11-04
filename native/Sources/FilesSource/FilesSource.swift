@@ -46,6 +46,16 @@ public actor FilesSource: Source {
         if failed { complete = false }
         return (rows, complete)
     }
+    public func ubiquity(_ paths: [String]) throws -> [JSON] {
+        guard !paths.isEmpty, paths.count <= 500 else { throw SourceFailure.invalid }
+        return try paths.map { path in
+            guard path.hasPrefix("/") else { throw SourceFailure.invalid }
+            let url = URL(fileURLWithPath: path).standardizedFileURL
+            guard url.path == path, roots.contains(where: { path.hasPrefix($0.path + "/") }) else { throw SourceFailure.invalid }
+            let status = (try? url.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey]))?.ubiquitousItemDownloadingStatus?.rawValue ?? "local"
+            return .object(["path": .string(path), "status": .string(status)])
+        }
+    }
     public func reconcile(into sink: any ObservationSink) async throws {
         while reconciling { try await Task.sleep(for: .milliseconds(25)) }
         reconciling = true
