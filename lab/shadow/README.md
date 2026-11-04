@@ -102,3 +102,14 @@ Lab Go (`Delivery.Handler`) and Rust (`ab-iphone` router) gateways accept `APPLE
 `shadow replay --iphone-device <file>` re-drives those rows. The file holds a synthetic paired device ID and Ed25519 seed (`bridge-lab iphone-device --home <home> --output <file>` pairs one through the real pairing path before the starting snapshot). Each replayed request gets a fresh signature over the recorded payload. With a recorded clock, its `at` is the row's wall second and both gateways verify it, expire commands and sweep against the decision clock, so repeated replays are byte-identical. Without one it uses the current time. A recording from a real phone replays only against a starting home whose paired phone is replaced by the synthetic device.
 
 `prove.py` pairs a synthetic device and an approval-level agent before the snapshot, then has the agent submit `iphone.ping`, and the device approve it, poll `/pending` and send a signed `observed` result. It requires the command to end `observed`, 8 of 8 exact Go-vs-Go replays and zero Go-vs-Rust table differences. The result is signed but not authenticated by Apple: it does not prove a real phone executed anything.
+
+## Without Go
+
+The synthetic proof and replay run with no Go toolchain and no `bin/bridge-lab`. Build `bridge` (`ab-runtime --features lab-queries`), `lab-simapple` and `ab-shadow-tools`, then:
+
+```sh
+python3 lab/shadow/prove.py --output "$SHADOW/synthetic-proof" --bridge "$BRIDGE" --go "$BRIDGE" --rust "$BRIDGE" --simapple "$LAB_SIMAPPLE" --tools "$AB_SHADOW_TOOLS"
+python3 lab/shadow/shadow.py replay ... --lab-binary "$AB_SHADOW_TOOLS"
+```
+
+`ab-shadow-tools iphone-device` and `ab-shadow-tools shadow-feed` replace the `bridge-lab` subcommands of the same names. `--go` may point at a prebuilt Go gateway for a Go-versus-Rust comparison. Linux replay still needs the loopback-only network namespace described above.
