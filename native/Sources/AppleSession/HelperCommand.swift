@@ -81,7 +81,8 @@ public enum HelperCommand {
             Task { @MainActor in
                 if !arguments.contains("--lab-commands") { _ = try? await MessagesSelfTest.shared.run() }
                 await SessionSources.register(into: peer, home: home, labEnabled: arguments.contains("--lab-commands"))
-                try? await peer.run()
+                if ProcessInfo.processInfo.environment["AB_SESSION_NATIVE"] == "1" { try? await peer.runNative(socket: socket, secretFile: secretFile) }
+                else { try? await peer.run() }
                 NSApplication.shared.terminate(nil)
             }
             NSApplication.shared.run()
