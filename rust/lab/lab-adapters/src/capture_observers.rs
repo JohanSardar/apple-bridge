@@ -81,7 +81,14 @@ fn pending_state(replica: &Client, command: &str) -> (Option<bool>, String) {
     let found = rows.iter().find(|row| row["id"] == command);
     (
         found.map(|row| row["data"]["awaiting_approval"] == true),
-        format!("{} rows; {}", rows.len(), found.map_or_else(|| rows.first().map_or_else(String::new, ToString::to_string), ToString::to_string)),
+        format!(
+            "{} rows; {}",
+            rows.len(),
+            found.map_or_else(
+                || rows.first().map_or_else(String::new, ToString::to_string),
+                ToString::to_string
+            )
+        ),
     )
 }
 
@@ -105,11 +112,18 @@ fn approvals_page(owner: &Owner) -> Option<String> {
 }
 
 fn effect(world: &World, id: &str) -> Option<u64> {
-    Some(world.control("/effects", &Value::Null).ok()?[id].as_u64().unwrap_or(0))
+    Some(
+        world.control("/effects", &Value::Null).ok()?[id]
+            .as_u64()
+            .unwrap_or(0),
+    )
 }
 
 fn approval_observer(world: &World, gateway: &Client, owner: &Owner, evidence: &mut Evidence) {
-    let Some(replica) = replicas::endpoints().first().map(replicas::Endpoint::client) else {
+    let Some(replica) = replicas::endpoints()
+        .first()
+        .map(replicas::Endpoint::client)
+    else {
         evidence.check("approval_authority", false, "no replica");
         return;
     };
@@ -136,10 +150,14 @@ fn approval_observer(world: &World, gateway: &Client, owner: &Owner, evidence: &
         "args": {"handles": ["self@example.com"], "service": "iMessage", "text": format!("{MARKER} pending approval")},
         "wait_ms": 15000
     });
-    let (code, pending) = post(world, &token, "/v1/op/messages.send", &command)
-        .unwrap_or((0, Value::Null));
+    let (code, pending) =
+        post(world, &token, "/v1/op/messages.send", &command).unwrap_or((0, Value::Null));
     let waiting = code == 200 && text(&pending, "state") == "awaiting_approval";
-    evidence.check("approval_pending_before_observation", waiting, &pending.to_string());
+    evidence.check(
+        "approval_pending_before_observation",
+        waiting,
+        &pending.to_string(),
+    );
     if !waiting {
         return;
     }
