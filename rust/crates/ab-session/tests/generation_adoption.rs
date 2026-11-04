@@ -170,11 +170,11 @@ fn flip_on_an_existing_home_keeps_every_record_id() -> Fallible<()> {
     assert!(before.values().all(|deleted| !deleted));
 
     let rust = rust_scan(&source, &checkpoints(&state)?, None)?;
-    assert_eq!(rust["generation"], "swift-gen");
-    assert_eq!(rust["predecessor"], "swift-cp-1");
     state.commit_capture(&typed(&rust)?)?;
 
     assert_eq!(ids(&home)?, before);
+    assert_eq!(rust["generation"], "swift-gen");
+    assert_eq!(rust["predecessor"], "swift-cp-1");
     std::fs::remove_dir_all(source)?;
     std::fs::remove_dir_all(home)?;
     Ok(())

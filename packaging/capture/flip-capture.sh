@@ -40,7 +40,10 @@ cfg.setdefault("watch", True)
 cfg.setdefault("poll_ms", 5000)
 for line in open(plan):
     name, root = line.rstrip("\n").split("\t", 1)
-    cfg["sources"][name] = {"root": root}
+    entry = {"root": root}
+    if name in ("calendar", "contacts", "reminders"):
+        entry["facts"] = "native"
+    cfg["sources"][name] = entry
 print(json.dumps(cfg, indent=2, sort_keys=True))
 P
 )"
