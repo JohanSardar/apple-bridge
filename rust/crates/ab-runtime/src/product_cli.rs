@@ -216,6 +216,13 @@ mod tests {
 
     type Check = Result<(), Box<dyn std::error::Error>>;
 
+    fn serial() -> std::sync::MutexGuard<'static, ()> {
+        static SPAWNING: std::sync::Mutex<()> = std::sync::Mutex::new(());
+        SPAWNING
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+
     fn script(dir: &Path, body: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
         let path = dir.join("open");
         std::fs::write(&path, format!("#!/bin/sh\n{body}\n"))?;
@@ -287,6 +294,7 @@ mod tests {
 
     #[test]
     fn permission_request_runs_chain_and_reads_report() -> Check {
+        let _serial = serial();
         let dir = tempfile::tempdir()?;
         let log = dir.path().join("argv");
         let program = script(
@@ -310,6 +318,7 @@ mod tests {
 
     #[test]
     fn permission_request_rejects_unknown_names() -> Check {
+        let _serial = serial();
         let dir = tempfile::tempdir()?;
         let program = script(dir.path(), "exit 0")?;
         assert!(permissions_request(&program, dir.path(), "", "fake", None).is_err());
@@ -319,6 +328,7 @@ mod tests {
 
     #[test]
     fn selftest_reports_state() -> Check {
+        let _serial = serial();
         let dir = tempfile::tempdir()?;
         let program = script(
             dir.path(),
@@ -342,6 +352,7 @@ mod tests {
 
     #[test]
     fn run_times_out_and_surfaces_failure() -> Check {
+        let _serial = serial();
         let dir = tempfile::tempdir()?;
         let slow = script(dir.path(), "sleep 5")?;
         assert!(
