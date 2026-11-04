@@ -29,7 +29,6 @@ public actor AgendaActor {
 @AgendaActor
 public final class AgendaGate {
     public let store = EKEventStore()
-    public let trace: CaptureTrace
     public private(set) var notificationAt: UInt64 = 0
     public private(set) var debounceAt: UInt64 = 0
     public private(set) var calendarNotificationAt: UInt64 = 0
@@ -43,13 +42,11 @@ public final class AgendaGate {
     private var calendarWaiting: [CheckedContinuation<Void, Never>] = []
     private var listeners: [UUID: (calendar: Bool, continuation: AsyncStream<Void>.Continuation)] = [:]
 
-    public nonisolated init(trace: CaptureTrace = CaptureTrace()) {
-        self.trace = trace
+    public nonisolated init() {
         Task { @AgendaActor [weak self] in
             guard let self else { return }
-            observer = NotificationCenter.default.addObserver(forName: .EKEventStoreChanged, object: store, queue: nil) { @Sendable [weak self, trace] _ in
-                let delivered = CaptureTrace.now()
-                trace.record("notification", fields: ["delivered_ns": .integer(delivered)])
+            observer = NotificationCenter.default.addObserver(forName: .EKEventStoreChanged, object: store, queue: nil) { @Sendable [weak self] _ in
+                let delivered = DispatchTime.now().uptimeNanoseconds
                 Task(priority: .high) { @AgendaActor in self?.changed(delivered) }
             }
             var previous = [EKEventStore.authorizationStatus(for: .reminder), EKEventStore.authorizationStatus(for: .event)]
@@ -87,8 +84,7 @@ public final class AgendaGate {
             }
             do { try await Task.sleep(for: .milliseconds(50)) } catch { return }
             notificationAt = max(notificationAt, delivered)
-            debounceAt = CaptureTrace.now()
-            trace.record("debounce", fields: ["notification_ns": .integer(notificationAt)])
+            debounceAt = DispatchTime.now().uptimeNanoseconds
             for listener in listeners.values where !listener.calendar { listener.continuation.yield(()) }
         }
     }
@@ -122,12 +118,10 @@ public final class AgendaGate {
     }
 
     public func remindersHint(_ delivered: UInt64) {
-        trace.record("reminders_database_hint", fields: ["delivered_ns": .integer(delivered)])
         changed(delivered)
     }
 
     public func calendarHint(_ delivered: UInt64) {
-        trace.record("calendar_database_hint", fields: ["delivered_ns": .integer(delivered)])
         calendarChanged(delivered)
     }
 
@@ -138,9 +132,8 @@ public final class AgendaGate {
             defer { ForegroundActivity.shared.end(activity) }
             do { try await Task.sleep(for: .milliseconds(50)) } catch { return }
             calendarNotificationAt = delivered
-            calendarDebounceAt = CaptureTrace.now()
+            calendarDebounceAt = DispatchTime.now().uptimeNanoseconds
             calendarDebounce = nil
-            trace.record("calendar_debounce", fields: ["notification_ns": .integer(delivered)])
             for listener in listeners.values where listener.calendar { listener.continuation.yield(()) }
         }
     }
@@ -164,12 +157,10 @@ public final class AgendaGate {
             resumeCalendar()
         }
         if let calendars, calendars.isEmpty { return [] }
-        let trace = self.trace
         let predicate = store.predicateForReminders(in: calendars)
         let fetched: ReminderFetch = try await withCheckedThrowingContinuation { continuation in
             let completion = ReminderCompletion(continuation)
             DispatchQueue.global().asyncAfter(deadline: .now() + 3) { @Sendable in
-                trace.record("fetch_timer_fired")
                 completion.finish(.failure(SourceFailure.unavailable))
             }
             store.fetchReminders(matching: predicate) { result in completion.finish(.success(ReminderFetch(values: result))) }

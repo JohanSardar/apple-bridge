@@ -1,6 +1,5 @@
 import NativeProtocol
 import PDFSource
-import CallsSource
 import FilesSource
 import MailSource
 import Foundation
@@ -9,35 +8,26 @@ import Darwin
 import SourceSupport
 import AgendaGate
 import RemindersSource
-import RemindersStore
 import NotesSource
 import ContactsSource
-import UsageSource
 import CalendarSource
 import MessagesSource
 
-public actor AppleSession: ObservationSink {
+public actor AppleSession {
     private struct Ticket {
         let command: JSON
         let prepared: Prepared
         let expiry: ContinuousClock.Instant
         let fence: UInt64
     }
-    var nativeSources: SessionSources.Builtins?
-    var nativeSourcesTask: Task<SessionSources.Builtins, Error>?
     private var running = false
     var link: NativeSessionLink?
-    private var scanWaiters: [String: CheckedContinuation<String, any Error>] = [:]
-    private var scanSequence = 0
+    private var facts: NativeServer?
     private var connected: Bool { link != nil }
     private var fence: UInt64 = 0
     private var permissionStates: [String: String] = [:]
-    private var checkpoints: [String: JSON] = [:]
     private var commandActive = false
     var additionalSources: [String: any Source] = [:]
-    private var prefixedBlobReaders: [String: @Sendable (String, Int64, Int) async throws -> JSON] = [:]
-    private var blobReader: (@Sendable (String, Int64, Int) async throws -> JSON)?
-    private var captureTasks: [Task<Void, Never>] = []
     private var queryAudio: [String: (Data, Date)] = [:]
     var queryHandlers: [String: @Sendable (JSON) async throws -> QueryOutput] = [:]
     struct RegisteredBlobReader: Sendable {
@@ -56,65 +46,38 @@ public actor AppleSession: ObservationSink {
         guard link == nil, !prefix.isEmpty, !source.isEmpty, !registeredBlobReaders.keys.contains(where: { $0.hasPrefix(prefix) || prefix.hasPrefix($0) }) else { throw SourceFailure.conflict }
         registeredBlobReaders[prefix] = RegisteredBlobReader(source: source, read: reader)
     }
-    private var queryBodies: [String: (Data, Date)] = [:]
     private var queryTasks: [String: Task<Void, Never>] = [:]
     private var frameTasks: [UUID: Task<Void, Never>] = [:]
-    private let trace: CaptureTrace
     let sources: SessionSources.Builtins
     var contacts: ContactsSource { sources.contacts }
     var source: RemindersSource { sources.reminders }
-    private var remindersStore: RemindersStoreEnrichment { sources.remindersStore }
     var calendar: CalendarSource { sources.calendar }
-    private var remindersRefreshHistogram = StoreRefreshHistogram()
-    private let ownership: CaptureOwnership
     private let socket: String
     private let secretFile: String
     private let gatewayPID: Int32
     let home: URL
-    private let labEnabled: Bool
 
     @MainActor
     public init(socket: String, secretFile: String, home: URL, gatewayPID: Int32, commandsEnabled: Bool) throws {
         self.socket = socket; self.secretFile = secretFile; self.gatewayPID = gatewayPID
-        self.home = home; self.labEnabled = commandsEnabled
-        let trace = CaptureTrace(url: commandsEnabled ? home.appendingPathComponent("capture-trace.jsonl") : nil)
-        self.trace = trace
-        sources = try SessionSources.Builtins(home: home, labEnabled: commandsEnabled, trace: trace)
-        ownership = CaptureOwnership(home: home)
+        self.home = home
+        sources = try SessionSources.Builtins(home: home)
         let pidFile = home.appendingPathComponent("helper.pid")
         try Data(String(getpid()).utf8).write(to: pidFile, options: .atomic)
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: pidFile.path)
     }
 
-    public func register(_ source: any Source, blobPrefix: String? = nil, readBlob: (@Sendable (String, Int64, Int) async throws -> JSON)? = nil) throws {
+    public func register(_ source: any Source) throws {
         guard link == nil, source.name != "reminders", additionalSources[source.name] == nil else { throw SourceFailure.conflict }
         additionalSources[source.name] = source
-        if let readBlob {
-            if let blobPrefix { prefixedBlobReaders[blobPrefix] = readBlob }
-            else { blobReader = readBlob }
-        }
-    }
-
-    private func startCaptures() {
-        let selected = labEnabled ? (try? String(contentsOf: home.appendingPathComponent("lab-capture-source"), encoding: .utf8)) : nil
-        func wanted(_ name: String) -> Bool { (selected == nil || selected == name) && ownership.swiftCaptures(name) }
-        if wanted("reminders") { captureTasks.append(Task { await self.capture() }) }
-        if wanted("calendar") { captureTasks.append(Task { await self.captureAdditional(calendar) }) }
-        for source in additionalSources.values where wanted(source.name) { captureTasks.append(Task { await self.captureAdditional(source) }) }
     }
 
     private func disconnect() {
         link?.close(); link = nil
-        for waiter in scanWaiters.values { waiter.resume(throwing: SourceFailure.unavailable) }
-        scanWaiters = [:]
         permissionStates = [:]
-        for task in captureTasks { task.cancel() }
-        captureTasks = []
         for task in frameTasks.values { task.cancel() }
         frameTasks = [:]
         for task in queryTasks.values { task.cancel() }; queryTasks = [:]
-        queryBodies = [:]
-        trace.record("capture_session_disconnected")
     }
 
     public func sourceState(source: String, state: String, coverage: JSON, capabilities: [String], reason: String) async throws {
@@ -124,64 +87,22 @@ public actor AppleSession: ObservationSink {
         }
     }
 
-    private func publishReadiness() async throws {
-        let readiness = await source.open()
-        if readiness.state != permissionStates["reminders"] {
-            permissionStates["reminders"] = readiness.state
-            try await sourceState(source: "reminders", state: readiness.state, coverage: readiness.coverage, capabilities: readiness.capabilities, reason: readiness.reason)
-        }
-        let calendarReadiness = await calendar.open()
-        if calendarReadiness.state != permissionStates["calendar"] {
-            permissionStates["calendar"] = calendarReadiness.state
-            try await sourceState(source: "calendar", state: calendarReadiness.state, coverage: calendarReadiness.coverage, capabilities: calendarReadiness.capabilities, reason: calendarReadiness.reason)
-        }
+    private var frameworkSources: [any Source] {
+        [source, calendar] + additionalSources.values.filter { !SessionSources.rustDecidesReadiness.contains($0.name) }
     }
 
-    private func captureResume(_ name: String) -> JSON {
-        let checkpoint = checkpoints[name] ?? .null
-        return checkpoint["refresh_blobs"].bool ? .null : checkpoint
-    }
-
-    private func capture() async {
-        while !Task.isCancelled && connected {
-            do {
-                try await publishReadiness()
-                let readiness = await source.open()
-                if readiness.state == "ready" { try await source.capture(captureResume("reminders"), into: self) }
-            } catch {
-                if !connected || Task.isCancelled { return }
-                if case SourceFailure.permissionMissing = error {
-                    try? await publishReadiness()
-                } else {
-                    try? await sourceState(source: "reminders", state: "degraded", coverage: RemindersSource.coverage, capabilities: [], reason: "capture_failed")
-                }
-                if !(error is SourceFailure) { link?.close(); return }
-            }
-            do { try await Task.sleep(for: .seconds(1)) } catch { return }
-        }
-    }
-
-    private func captureAdditional(_ source: any Source) async {
-        var retry = CaptureRetry()
-        while !Task.isCancelled && connected {
-            let started = ContinuousClock.now
-            var delay = Duration.seconds(1)
+    private func publishReadiness(force: Bool = false) async throws {
+        for source in frameworkSources {
             let readiness = await source.open()
-            do {
+            if force || readiness.state != permissionStates[source.name] {
+                permissionStates[source.name] = readiness.state
                 try await sourceState(source: source.name, state: readiness.state, coverage: readiness.coverage, capabilities: readiness.capabilities, reason: readiness.reason)
-                try await source.capture(captureResume(source.name), into: self)
-                retry = CaptureRetry()
-            } catch {
-                if Task.isCancelled || !connected { return }
-                let permissionMissing: Bool
-                if case SourceFailure.permissionMissing = error { permissionMissing = true } else { permissionMissing = false }
-                delay = retry.delay(after: started.duration(to: .now), permissionMissing: permissionMissing)
-                trace.record("capture_retry", fields: ["source": .string(source.name), "delay_seconds": .number(Double(delay.components.seconds))])
-                try? await sourceState(source: source.name, state: permissionMissing ? "permission_missing" : "degraded", coverage: readiness.coverage, capabilities: [], reason: permissionMissing ? "permission_required" : "capture_failed")
             }
-            do { try await Task.sleep(for: delay) } catch { return }
         }
     }
+
+
+
 
     private func launchFrame(_ frame: JSON) {
         let id = UUID()
@@ -213,17 +134,7 @@ public actor AppleSession: ObservationSink {
                 if frame["op"].string == "speech.synthesize", let reference = try cacheQueryAudio(&result) { blobs = [reference] }
                 guard !Task.isCancelled else { return }
                 let encoded = try JSONEncoder().encode(result)
-                guard encoded.count <= 64 << 20 else { throw SourceFailure.invalid }
-                if encoded.count > 1 << 20 {
-                    guard frame["op"].string == "mail.body" else { throw SourceFailure.invalid }
-                    queryBodies = queryBodies.filter { $0.value.1 > Date() }
-                    guard queryBodies.values.reduce(0, { $0 + $1.0.count }) + encoded.count <= 64 << 20 else { throw SourceFailure.unavailable }
-                    let digest = SHA256.hash(data: encoded).map { String(format: "%02x", $0) }.joined()
-                    let handle = "query-body:" + UUID().uuidString
-                    queryBodies[handle] = (encoded, Date().addingTimeInterval(60))
-                    transmit(.object(["t": .string("QueryResult"), "id": id, "result_json": .object(["body_blob": .string(digest)]), "blobs": .array([.object(["digest": .string(digest), "size": .number(Double(encoded.count)), "handle": .string(handle)])])]))
-                    return
-                }
+                guard encoded.count <= 1 << 20 else { throw SourceFailure.invalid }
                 guard output.blobs.count <= 16, output.blobs.allSatisfy({ $0.size <= 64 << 20 && !$0.handle.isEmpty }) else { throw SourceFailure.invalid }
 
                 blobs = frame["op"].string == "files.read" ? [.object(["digest": result["digest"], "size": result["size"], "handle": .string("files-blob:" + result["digest"].string)])] : blobs
@@ -260,26 +171,14 @@ public actor AppleSession: ObservationSink {
         defer { ForegroundActivity.shared.end(activity) }
         guard let nativeLink = link else { return }
         func current() -> Bool { link === nativeLink }
-        let started = CaptureTrace.now()
-        var prepared: UInt64 = 0
         let registered = registeredBlobReaders.first(where: { frame["handle"].string.hasPrefix($0.key) })?.value
         var contactsVariant = false
         if registered == nil, frame["handle"].string.hasPrefix("media:") { contactsVariant = await contacts.serves(frame["handle"].string) }
-        let source = registered?.source ?? (contactsVariant ? "contacts" : frame["handle"].string.hasPrefix("pdf:") ? "pdf" : frame["handle"].string.hasPrefix("files-blob:") ? "files" : frame["handle"].string.hasPrefix("notes-blob:") ? "notes" : (frame["handle"].string.hasPrefix("contacts-image:") ? "contacts" : (frame["handle"].string.hasPrefix("calendar-attachment:") ? "calendar" : "messages")))
-        defer { trace.record("helper_blob_read", fields: ["source": .string(source), "started_ns": .integer(started), "prepared_ns": .integer(prepared), "finished_ns": .integer(CaptureTrace.now())]) }
         do {
             guard !frame["handle"].string.isEmpty, frame["offset"].number >= 0, frame["offset"].number < Double(Int64.max), frame["length"].number > 0, frame["length"].number <= 131072, frame["length"].number.rounded(.down) == frame["length"].number, frame["offset"].number.rounded(.down) == frame["offset"].number else { throw SourceFailure.invalid }
             let response: JSON
             if let registered { response = try await registered.read(frame["handle"].string, Int(frame["offset"].number), Int(frame["length"].number)) }
-            else if frame["handle"].string.hasPrefix("query-body:") {
-                guard let (data, expires) = queryBodies[frame["handle"].string], expires > Date() else { throw SourceFailure.unavailable }
-                let offset = Int(frame["offset"].number)
-                guard offset <= data.count else { throw SourceFailure.invalid }
-                let end = min(data.count, offset + Int(frame["length"].number))
-                let digest = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
-                response = .object(["t": .string("BlobChunk"), "handle": frame["handle"], "offset": .number(Double(offset)), "bytes": .string(data.subdata(in: offset..<end).base64EncodedString()), "digest": .string(digest), "eof": .bool(end == data.count)])
-                if end == data.count { queryBodies.removeValue(forKey: frame["handle"].string) }
-            } else if frame["handle"].string.hasPrefix("query-audio:") {
+            else if frame["handle"].string.hasPrefix("query-audio:") {
                 guard let cached = queryAudio[frame["handle"].string], Date().timeIntervalSince(cached.1) < 60 else { throw SourceFailure.unavailable }
                 let offset = Int(frame["offset"].number)
                 guard offset <= cached.0.count else { throw SourceFailure.invalid }
@@ -287,12 +186,7 @@ public actor AppleSession: ObservationSink {
                 let digest = SHA256.hash(data: cached.0).map { String(format: "%02x", $0) }.joined()
                 response = .object(["t": .string("BlobChunk"), "handle": frame["handle"], "offset": frame["offset"], "bytes": .string(cached.0.subdata(in: offset..<end).base64EncodedString()), "digest": .string(digest), "eof": .bool(end == cached.0.count)])
             }
-            else if frame["handle"].string.hasPrefix("notes-blob:") {
-                guard let notes = additionalSources["notes"] as? NotesSource else { throw SourceFailure.unavailable }
-                response = try await notes.readBlob(frame["handle"].string, offset: Int(frame["offset"].number), length: Int(frame["length"].number))
-            }
             else if frame["handle"].string.hasPrefix("contacts-image:") || contactsVariant { response = try await contacts.readBlob(frame["handle"].string, offset: Int(frame["offset"].number), length: Int(frame["length"].number)) }
-            else if frame["handle"].string.hasPrefix("calendar-attachment:") { response = try await calendar.readBlob(frame["handle"].string, offset: Int(frame["offset"].number), length: Int(frame["length"].number)) }
             else if frame["handle"].string.hasPrefix("pdf:") {
                 guard let pdf = additionalSources["pdf"] as? PDFSource else { throw SourceFailure.unavailable }
                 response = try await pdf.readBlob(frame["handle"].string, offset: Int64(frame["offset"].number), length: Int(frame["length"].number))
@@ -301,13 +195,8 @@ public actor AppleSession: ObservationSink {
                 guard let files = additionalSources["files"] as? FilesSource else { throw SourceFailure.unavailable }
                 response = try await files.readBlob(frame["handle"].string, offset: Int64(frame["offset"].number), length: Int(frame["length"].number))
             }
-            else if let prefix = prefixedBlobReaders.keys.sorted().first(where: { frame["handle"].string.hasPrefix($0) }), let reader = prefixedBlobReaders[prefix] {
-                response = try await reader(frame["handle"].string, Int64(frame["offset"].number), Int(frame["length"].number))
-            }
-            else if let blobReader { response = try await blobReader(frame["handle"].string, Int64(frame["offset"].number), Int(frame["length"].number)) }
             else { throw SourceFailure.unavailable }
             guard current(), !Task.isCancelled else { return }
-            prepared = CaptureTrace.now()
             try nativeLink.send(response)
         } catch {
             guard current(), !Task.isCancelled else { return }
@@ -315,78 +204,10 @@ public actor AppleSession: ObservationSink {
         }
     }
 
-    public func emit(source: String, generation: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws {
-        guard connected else { throw SourceFailure.unavailable }
-        try await emitCheckpoint(source: source, generation: generation, checkpoint: "", observations: observations, scanID: scanID, scanStartedAt: scanStartedAt, scope: scope, completionEvidence: completionEvidence, blobHandles: blobHandles, live: live)
-    }
 
-    public func emitCheckpoint(source: String, generation: String, checkpoint: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws {
-        guard connected else { throw SourceFailure.unavailable }
-        if let link, !ownership.swiftCaptures(source) {
-            try await sendHint(link, source: source, generation: generation, observations: observations, scanID: scanID, scanStartedAt: scanStartedAt, scope: scope, completionEvidence: completionEvidence)
-            return
-        }
-        let metadata: [String: JSON] = ["source": .string(source), "scan_id": .string(scanID)]
-        trace.record("capture_received", fields: metadata)
-        let refreshStarted = source == "reminders" && labEnabled ? CaptureTrace.now() : 0
-        let observations = source == "reminders" ? await remindersStore.refresh(observations, generation: generation) : observations
-        let refreshFinished = source == "reminders" && labEnabled ? CaptureTrace.now() : 0
-        guard !Task.isCancelled else { throw SourceFailure.unavailable }
-        if source == "reminders", labEnabled {
-            let milliseconds = Double(refreshFinished - refreshStarted) / 1_000_000
-            trace.record("reminders_store_refresh", keys: observations.map { $0["native_key"].string }, fields: ["duration_ms": .number(milliseconds), "started_ns": .integer(refreshStarted), "finished_ns": .integer(refreshFinished), "histogram": remindersRefreshHistogram.record(milliseconds)])
-        }
-        let maximumBytes = live ? (source == "calendar" ? 240000 : 64000) : 16000
-        let chunks = try split(observations, maximumBytes: maximumBytes)
-        trace.record("capture_split", fields: metadata)
-        guard let link else { throw SourceFailure.unavailable }
-        try await sendScans(link, chunks: chunks, source: source, generation: generation, scanID: scanID, scanStartedAt: scanStartedAt, scope: scope, completionEvidence: completionEvidence, blobHandles: blobHandles, live: live)
-    }
 
-    private func sendScans(_ link: NativeSessionLink, chunks: [[JSON]], source: String, generation: String, scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws {
-        for chunk in chunks {
-            var sending = chunk
-            if !live && source == "reminders" {
-                guard let validated = try await self.source.revalidate(chunk, generation: generation) else { throw SourceFailure.unavailable }
-                sending = await remindersStore.apply(validated)
-            }
-            guard self.link === link, !Task.isCancelled else { throw SourceFailure.unavailable }
-            scanSequence += 1
-            let id = "scan-\(scanSequence)"
-            let handles = blobHandles.filter { digest, _ in Self.containsDigest(.array(sending), digest: digest) }
-            let started = scanID.isEmpty ? "" : (scanStartedAt.isEmpty ? timestamp() : scanStartedAt)
-            let observations = sending
-            let checkpoint = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<String, any Error>) in
-                scanWaiters[id] = continuation
-                do { try link.send(NativeSessionFrame.scan(id: id, source: source, generation: generation, observations: observations, scanID: scanID, scanStartedAt: started, scope: scope, completionEvidence: completionEvidence, blobHandles: handles, live: live)) }
-                catch { scanWaiters.removeValue(forKey: id); continuation.resume(throwing: error) }
-            }
-            try await committedNative(source: source, generation: generation, checkpoint: checkpoint, observations: sending)
-        }
-    }
 
-    private func sendHint(_ link: NativeSessionLink, source: String, generation: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String) async throws {
-        scanSequence += 1
-        let id = "scan-\(scanSequence)"
-        let started = scanID.isEmpty ? "" : (scanStartedAt.isEmpty ? timestamp() : scanStartedAt)
-        let checkpoint = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<String, any Error>) in
-            scanWaiters[id] = continuation
-            do { try link.send(NativeSessionFrame.scan(id: id, source: source, generation: generation, observations: [], scanID: scanID, scanStartedAt: started, scope: scope, completionEvidence: completionEvidence, blobHandles: [:], live: true)) }
-            catch { scanWaiters.removeValue(forKey: id); continuation.resume(throwing: error) }
-        }
-        try await committedNative(source: source, generation: generation, checkpoint: checkpoint, observations: observations)
-    }
 
-    private func committedNative(source: String, generation: String, checkpoint: String, observations: [JSON]) async throws {
-        try await pause("capture", observations: observations)
-        checkpoints[source] = .object(["generation": .string(generation), "checkpoint": .string(checkpoint)])
-        if labEnabled {
-            let marker = home.appendingPathComponent("lab-committed-" + source)
-            try Data(checkpoint.utf8).write(to: marker, options: .atomic)
-            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: marker.path)
-        }
-        if source == "reminders" { try await self.source.didCommit(observations.map(RemindersStoreProjection.baseObservation), generation: generation) }
-    }
 
     private func nativeReject(_ frame: JSON, error: any Error, connection: NativeSessionLink) async {
         let details = await rejection(frame, error: error)
@@ -405,19 +226,14 @@ public actor AppleSession: ObservationSink {
         do {
             let operation = frame["op"].string
             let result: JSON
-            if operation.hasPrefix("reminders.") { result = try await source.primitive(operation, args: frame["args"], into: self) }
-            else if operation.hasPrefix("calendar.") { result = try await calendar.primitive(operation, args: frame["args"], into: self) }
-            else if operation.hasPrefix("contacts.") { result = try await contacts.primitive(operation, args: frame["args"], into: self) }
-            else if operation.hasPrefix("messages."), let messages = additionalSources["messages"] as? Messages { result = try await messages.primitive(operation, args: frame["args"], into: self)
-                if operation == "messages.reconcile" {
-                    let readiness = await messages.open()
-                    try await sourceState(source: "messages", state: readiness.state, coverage: readiness.coverage, capabilities: readiness.capabilities, reason: readiness.reason)
-                }
-            }
-            else if operation.hasPrefix("notes."), let notes = additionalSources["notes"] as? NotesSource { result = try await notes.primitive(operation, args: frame["args"], into: self) }
+            if operation.hasPrefix("reminders.") { result = try await source.primitive(operation, args: frame["args"]) }
+            else if operation.hasPrefix("calendar.") { result = try await calendar.primitive(operation, args: frame["args"]) }
+            else if operation.hasPrefix("contacts.") { result = try await contacts.primitive(operation, args: frame["args"]) }
+            else if operation.hasPrefix("messages."), let messages = additionalSources["messages"] as? Messages { result = try await messages.primitive(operation, args: frame["args"]) }
+            else if operation.hasPrefix("notes."), let notes = additionalSources["notes"] as? NotesSource { result = try await notes.primitive(operation, args: frame["args"]) }
             else { throw SourceFailure.unsupported }
-            if operation.hasSuffix(".write") || operation.hasSuffix(".write_group"), let nativeSources {
-                await nativeSources.enumerations.invalidate(captureRoute(operation))
+            if operation.hasSuffix(".write") || operation.hasSuffix(".write_group") {
+                await sources.enumerations.invalidate(captureRoute(operation))
             }
             guard link === connection, !Task.isCancelled else { return }
             try connection.send(NativeSessionFrame.primitiveResult(id: id, result: result))
@@ -436,8 +252,7 @@ public actor AppleSession: ObservationSink {
         do {
             _ = try CommandOrigin(frame)
             guard !frame["command_id"].string.isEmpty, !frame["principal"].string.isEmpty, !frame["request_hash"].string.isEmpty, let expires = parseTimestamp(frame["expires_at"].string), expires > Date() else { throw SourceFailure.invalid }
-            let selected = additionalSources[captureRoute(frame["action"]["op"].string)] ?? source
-            guard !Self.rustOwned(frame["action"]["op"].string) else { throw SourceFailure.unsupported }
+            guard !Self.rustOwned(frame["action"]["op"].string), let selected = additionalSources[captureRoute(frame["action"]["op"].string)] else { throw SourceFailure.unsupported }
             let prepared = try await selected.prepare(frame)
             guard !Task.isCancelled, link === connection, expires > Date() else { throw SourceFailure.expired }
             try connection.send(NativeSessionFrame.prepared(commandID: frame["command_id"], nativeState: prepared.nativeState, route: prepared.nativeState["route"].string.isEmpty ? "eventkit" : prepared.nativeState["route"].string, candidateIDs: prepared.nativeState["candidate_ids"].array, fingerprint: prepared.fingerprint))
@@ -456,7 +271,7 @@ public actor AppleSession: ObservationSink {
         let command: JSON = .object(["command_id": frame["command_id"], "request_hash": frame["request_hash"], "action": frame["action"]])
         let ticket = Ticket(command: command, prepared: Prepared(nativeState: frame["native_state"], fingerprint: frame["fingerprint"].string, action: frame["action"]), expiry: ContinuousClock.now.advanced(by: .seconds(30)), fence: fence)
         do {
-            let evidence = try await executeValidated(operation, ticket: ticket, preState: nil, expiresAt: UInt64.max)
+            let evidence = try await executeValidated(operation, ticket: ticket, expiresAt: UInt64.max)
             guard link === connection, !Task.isCancelled else { return }
             let disposition = evidence["disposition"].string.isEmpty ? "locally_observed" : evidence["disposition"].string
             try connection.send(NativeSessionFrame.outcome(commandID: frame["command_id"], disposition: disposition, evidence: evidence))
@@ -481,12 +296,9 @@ public actor AppleSession: ObservationSink {
             if ["indeterminate", "locally_observed"].contains(disposition) {
                 let operation = saved["evidence"]["prepared"]["action"]["op"].string
                 guard !Self.rustOwned(operation) else { throw SourceFailure.unsupported }
-                let selected = additionalSources[captureRoute(operation)] ?? source
-                let resolved = operation.hasPrefix("contacts.") ? await contacts.resolve(id, evidence: saved["evidence"]) : operation.hasPrefix("calendar.") ? await calendar.resolve(id, evidence: saved["evidence"]) : await selected.resolve(id, evidence: saved["evidence"])
+                guard let selected = additionalSources[captureRoute(operation)] else { throw SourceFailure.unsupported }
+                let resolved = await selected.resolve(id, evidence: saved["evidence"])
                 if resolved["observed"].bool {
-                    if !["maps.open", "shortcuts.run", "speech.say", "capture.play_sound", "capture.screenshot", "capture.camera_photo", "capture.record_audio", "mac.screen_record", "print.document"].contains(operation) {
-                        try await reconcileObserved(operation, selected: selected, result: resolved)
-                    }
                     var result = resolved.object
                     result["fingerprint"] = saved["evidence"]["prepared"]["request_hash"]
                     result["prepared"] = saved["evidence"]["prepared"]
@@ -504,12 +316,6 @@ public actor AppleSession: ObservationSink {
 
     private func handleNative(_ frame: JSON) async throws {
         switch frame["t"].string {
-        case "ScanCommitted":
-            guard let waiter = scanWaiters.removeValue(forKey: frame["id"].string) else { throw SourceFailure.invalid }
-            waiter.resume(returning: frame["checkpoint"].string)
-        case "ScanFailed":
-            guard let waiter = scanWaiters.removeValue(forKey: frame["id"].string) else { throw SourceFailure.invalid }
-            waiter.resume(throwing: SourceFailure.unavailable)
         case "Prepare", "Dispatch", "Resolve", "BlobRead", "Primitive":
             launchFrame(frame)
         case "Query":
@@ -525,12 +331,15 @@ public actor AppleSession: ObservationSink {
         }
     }
 
+    private func setFacts(_ server: NativeServer) { facts = server }
+
     public func runNative(socket: String, secretFile: String) async throws {
         let sessionHome = self.home.path
         try await runNative(connect: { [self] in
             let started = try NativeSessionLauncher.launch(socket: socket, secretFile: secretFile, home: sessionHome)
             let descriptor = started.proxy.factsDescriptor
             let facts = NativeServer(adapter: self)
+            Task { await self.setFacts(facts) }
             let serving = Task {
                 defer { Darwin.close(descriptor) }
                 try? await facts.run(descriptor: descriptor)
@@ -559,19 +368,16 @@ public actor AppleSession: ObservationSink {
                 let descriptor = started.descriptor
                 let connected = try await Task.detached { try NativeSessionLink(descriptor: descriptor) }.value
                 link = connected
-                fence = connected.fence; checkpoints = connected.checkpoints
-                let readiness = await source.open()
-                let calendarReadiness = await calendar.open()
-                var coverage: [String: JSON] = ["reminders": readiness.coverage, "calendar": calendarReadiness.coverage]
-                var capabilities: [String: JSON] = ["reminders": .array(readiness.capabilities.map(JSON.string)), "calendar": .array(calendarReadiness.capabilities.map(JSON.string))]
-                for (name, source) in additionalSources {
+                fence = connected.fence
+                var coverage: [String: JSON] = [:]
+                var capabilities: [String: JSON] = [:]
+                for source in frameworkSources {
                     let state = await source.open()
-                    coverage[name] = state.coverage
-                    capabilities[name] = .array(state.capabilities.map(JSON.string))
+                    coverage[source.name] = state.coverage
+                    capabilities[source.name] = .array(state.capabilities.map(JSON.string))
                 }
                 try connected.send(NativeSessionFrame.ready(coverage: coverage, capabilities: capabilities, helperBuild: "m1-session", osBuild: ProcessInfo.processInfo.operatingSystemVersionString))
-                try await publishReadiness()
-                startCaptures()
+                try await publishReadiness(force: true)
                 let watchdog = Task {
                     var delay = Duration.seconds(1)
                     while !Task.isCancelled {
@@ -586,7 +392,7 @@ public actor AppleSession: ObservationSink {
                 while !Task.isCancelled {
                     let frame = try await connected.receive()
                     try await handleNative(frame)
-                    if frame["t"].string == "ScanCommitted" { backoff = 100 }
+                    backoff = 100
                 }
             } catch {
                 disconnect()
@@ -598,44 +404,11 @@ public actor AppleSession: ObservationSink {
         }
     }
 
-    private static func containsDigest(_ value: JSON, digest: String) -> Bool {
-        switch value {
-        case .object(let fields): return fields["digest"]?.string == digest || fields.values.contains { containsDigest($0, digest: digest) }
-        case .array(let values): return values.contains { containsDigest($0, digest: digest) }
-        default: return false
-        }
-    }
 
-    private func split(_ observations: [JSON], maximumBytes: Int) throws -> [[JSON]] {
-        var chunks: [[JSON]] = [], current: [JSON] = []
-        var bytes = 0
-        let ordered = observations.filter { $0["kind"].string != "absent" } + observations.filter { $0["kind"].string == "absent" }
-        for observation in ordered {
-            let count = try JSONEncoder().encode(observation).count + 1
-            guard count < 240000 else { throw SourceFailure.invalid }
-            if !current.isEmpty && bytes + count > maximumBytes { chunks.append(current); current = []; bytes = 0 }
-            current.append(observation); bytes += count
-        }
-        if !current.isEmpty || chunks.isEmpty { chunks.append(current) }
-        return chunks
-    }
 
     func captureRoute(_ operation: String) -> String {
         if ["mac.screen_record", "print.document"].contains(operation) { return "capture" }
         return operation.components(separatedBy: ".").first ?? ""
-    }
-    private func pause(_ point: String, observations: [JSON] = []) async throws {
-        guard labEnabled else { return }
-        let marker = home.appendingPathComponent("lab-pause-" + point)
-        guard FileManager.default.fileExists(atPath: marker.path) else { return }
-        if point == "capture", let title = try? String(contentsOf: marker, encoding: .utf8), title.hasPrefix("[ab-test "), !observations.contains(where: { $0["data"]["title"].string == title }) { return }
-        let signal = home.appendingPathComponent("lab-paused-" + point)
-        try Data("paused".utf8).write(to: signal, options: .atomic)
-        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: signal.path)
-        while FileManager.default.fileExists(atPath: marker.path) {
-            guard kill(gatewayPID, 0) == 0 else { throw SourceFailure.unavailable }
-            try await Task.sleep(for: .milliseconds(10))
-        }
     }
 
     private func errorCode(_ error: any Error) -> String {
@@ -674,23 +447,12 @@ public actor AppleSession: ObservationSink {
         return .object(safe)
     }
 
-    private func executeValidated(_ operation: String, ticket: Ticket, preState: JSON?, expiresAt: UInt64) async throws -> JSON {
+    private func executeValidated(_ operation: String, ticket: Ticket, expiresAt: UInt64) async throws -> JSON {
         guard !commandActive else { throw NativeEffectRejection(code: "conflict", message: "conflict") }
         commandActive = true
         defer { commandActive = false }
-        let selected = additionalSources[captureRoute(operation)] ?? source
-        let notes = selected as? NotesSource
+        guard let selected = additionalSources[captureRoute(operation)] else { throw NativeEffectRejection(code: "unsupported", message: "unsupported") }
         do {
-            if let notes {
-                if let preState, !ticket.prepared.action["native_key"].string.isEmpty || operation == "notes.rename_folder" {
-                    guard !preState["native_fingerprint"].string.isEmpty else { throw SourceFailure.unavailable }
-                    try await notes.validate(ticket.prepared, preState: preState)
-                } else { try await notes.validate(ticket.prepared) }
-            }
-            else if operation.hasPrefix("contacts.") { try await contacts.validate(ticket.prepared) }
-            else if operation.hasPrefix("calendar.") { try await calendar.validate(ticket.prepared) }
-            else if selected.name == "reminders" { try await source.validate(ticket.prepared) }
-            else if let messages = selected as? Messages { try await messages.validate(ticket.prepared) }
             guard ticket.fence == fence, connected, ContinuousClock.now < ticket.expiry,
                   expiresAt > UInt64(Date().timeIntervalSince1970) else { throw SourceFailure.expired }
         } catch {
@@ -700,14 +462,8 @@ public actor AppleSession: ObservationSink {
         }
         let prepared: JSON = .object(["action": durableAction(ticket.prepared.action), "native_state": ticket.prepared.nativeState, "request_hash": ticket.command["request_hash"]])
         do {
-            let result: JSON
-            if let notes, preState != nil { result = try await notes.dispatchValidated(ticket.prepared) }
-            else { result = operation.hasPrefix("contacts.") ? try await contacts.dispatch(ticket.prepared) : operation.hasPrefix("calendar.") ? try await calendar.dispatch(ticket.prepared) : try await selected.dispatch(ticket.prepared) }
-            if result["observed"].bool { try await reconcileObserved(operation, selected: selected, result: result) }
-            if let messages = selected as? Messages {
-                let readiness = await messages.open()
-                try await sourceState(source: "messages", state: readiness.state, coverage: readiness.coverage, capabilities: readiness.capabilities, reason: readiness.reason)
-            }
+            let result = try await selected.dispatch(ticket.prepared)
+            if result["observed"].bool, operation == "pdf.annotate" { await facts?.changed(source: "pdf", generation: "native/1") }
             var fields = result.object
             fields["fingerprint"] = ticket.command["request_hash"]
             fields["before"] = ticket.prepared.nativeState
@@ -722,22 +478,5 @@ public actor AppleSession: ObservationSink {
         }
     }
 
-    private func reconcileObserved(_ operation: String, selected: any Source, result: JSON) async throws {
-        let notes = selected as? NotesSource
-            if operation.hasPrefix("contacts.") {
-                try await contacts.reconcile(into: self)
-                if result["absent"].bool { try await contacts.confirmAbsence(result["native_key"].string, into: self) }
-            } else if operation.hasPrefix("calendar.") {
-                try await calendar.reconcile(into: self)
-                if result["absent"].bool { try await calendar.confirmAbsence(result["native_key"].string, into: self) }
-            } else if operation.hasPrefix("reminders.") {
-                try await source.reconcile(into: self)
-                if result["absent"].bool { try await source.confirmAbsence(result["native_key"].string, list: operation == "reminders.delete_list", into: self) }
-            } else if let messages = selected as? Messages { try await messages.captureCommand(result, into: self) }
-            else if let mail = selected as? MailSource { try await mail.captureCommand(result, into: self) }
-            else if let notes { try await notes.reconcile(into: self) }
-            else if let files = selected as? FilesSource { try await files.reconcile(into: self) }
-            else if let pdf = selected as? PDFSource, operation == "pdf.annotate" { try await pdf.captureCommand(result, into: self) }
-    }
 
 }

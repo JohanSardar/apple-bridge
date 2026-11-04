@@ -8,15 +8,11 @@ public actor PDFSource: Source {
     public nonisolated let name = "pdf"
     private let writer: BlobWriter
     private var artifacts: [String: (JSON, StagedBlob)] = [:]
-    private let generation = UUID().uuidString
     public init(home: URL) throws {
         writer = try BlobWriter(directory: home.appendingPathComponent("Library/Caches/AppleBridge/pdf-blobs"))
     }
     public func open() async -> SourceReadiness {
         SourceReadiness(state: "ready", coverage: .object(["fields": .string("complete")]), capabilities: ["pdf.annotate"])
-    }
-    public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
-        try await sink.emitCheckpoint(source: name, generation: generation, checkpoint: UUID().uuidString, observations: [], scanID: "", scanStartedAt: "", scope: [], completionEvidence: "", blobHandles: [:], live: false)
     }
     public func prepare(_ command: JSON) async throws -> Prepared {
         let action = command["action"]
@@ -64,11 +60,12 @@ public actor PDFSource: Source {
         guard artifacts[evidence["native_key"].string] != nil else { return .null }
         return evidence
     }
-    public func captureCommand(_ evidence: JSON, into sink: any ObservationSink) async throws {
-        let key = evidence["native_key"].string
-        guard let artifact = artifacts[key] else { throw SourceFailure.unavailable }
-        let row: JSON = .object(["kind": .string("upsert"), "collection": .string("pdf.artifact"), "native_key": .string(key), "observed_at": .string(timestamp()), "data": artifact.0])
-        try await sink.emitCheckpoint(source: name, generation: generation, checkpoint: UUID().uuidString, observations: [row], scanID: "", scanStartedAt: "", scope: [], completionEvidence: "", blobHandles: [artifact.1.digest: "pdf:" + artifact.1.digest], live: true)
+    public func artifactFacts() -> [JSON] {
+        var items: [JSON] = artifacts.keys.sorted().compactMap { key in
+            artifacts[key].map { .object(["kind": .string("upsert"), "collection": .string("pdf.artifact"), "native_key": .string(key), "data": $0.0]) }
+        }
+        items += artifacts.values.map { .object(["kind": .string("blob_handle"), "digest": .string($0.1.digest), "handle": .string("pdf:" + $0.1.digest)]) }
+        return items
     }
     public func readBlob(_ handle: String, offset: Int64, length: Int) throws -> JSON {
         let digest = String(handle.dropFirst(4))

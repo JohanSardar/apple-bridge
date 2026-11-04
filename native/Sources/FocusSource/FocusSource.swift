@@ -6,7 +6,6 @@ import ShortcutsSource
 @MainActor
 public final class FocusSource: Source {
     public nonisolated let name = "focus"
-    private let generation = UUID().uuidString
     private let readStatus: @MainActor () -> JSON
     private let run: @MainActor (JSON) async throws -> JSON
     public init(status: (@MainActor () -> JSON)? = nil, runner: (@MainActor (JSON) async throws -> JSON)? = nil) {
@@ -41,6 +40,17 @@ public final class FocusSource: Source {
         guard let records = value as? [[String: Any]] else { return nil }
         return !records.isEmpty
     }
+    public static func frameworkStatus() -> JSON {
+        let center = INFocusStatusCenter.default
+        let authorization: String
+        switch center.authorizationStatus {
+        case .authorized: authorization = "authorized"
+        case .denied: authorization = "denied"
+        case .restricted: authorization = "restricted"
+        default: authorization = "not_determined"
+        }
+        return .object(["authorization": .string(authorization), "center_focused": center.authorizationStatus == .authorized ? center.focusStatus.isFocused.map { .bool($0) } ?? .null : .null])
+    }
     public static func status() -> JSON {
         let center = INFocusStatusCenter.default
         let authorization: String
@@ -62,19 +72,6 @@ public final class FocusSource: Source {
     public func open() async -> SourceReadiness {
         let authorized = readStatus()["authorization"].string == "authorized"
         return SourceReadiness(state: "ready", coverage: coverage, capabilities: authorized ? ["focus.set"] : [], reason: authorized ? "" : "needs Focus status permission")
-    }
-    public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
-        var previous: JSON?
-        while !Task.isCancelled {
-            let data = readStatus()
-            if data != previous {
-                let started = timestamp()
-                let observation: JSON = .object(["kind": .string("upsert"), "collection": .string("focus.status"), "native_key": .string("current"), "scoped_alias": .string("focus/status/current"), "observed_at": .string(started), "data": data])
-                try await sink.emitCheckpoint(source: name, generation: generation, checkpoint: UUID().uuidString, observations: [observation], scanID: UUID().uuidString, scanStartedAt: started, scope: ["focus.status"], completionEvidence: "complete", blobHandles: [:], live: false)
-                previous = data
-            }
-            try await Task.sleep(for: .seconds(30))
-        }
     }
     public func prepare(_ command: JSON) async throws -> Prepared {
         let action = command["action"]

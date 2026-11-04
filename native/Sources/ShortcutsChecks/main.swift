@@ -4,16 +4,6 @@ import SourceSupport
 import ShortcutsSource
 import SQLite3
 
-actor Sink: ObservationSink {
-    var values: [JSON] = []
-    func sourceState(source: String, state: String, coverage: JSON, capabilities: [String], reason: String) async throws {}
-    func emit(source: String, generation: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws {}
-    func emitCheckpoint(source: String, generation: String, checkpoint: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws {
-        guard scope == ["shortcuts.folder", "shortcuts.shortcut"], completionEvidence == "complete", !generation.isEmpty else { throw SourceFailure.invalid }
-        values = observations
-    }
-}
-
 @main
 struct Checks {
     static func main() async throws {
@@ -22,27 +12,6 @@ struct Checks {
             return
         }
         let source = ShortcutsSource(executable: URL(fileURLWithPath: CommandLine.arguments[1]))
-        if CommandLine.arguments[2] == "SC-CAPTURE" {
-            let readiness = await source.open()
-            guard readiness.coverage["pack_version"].string.isEmpty else { throw SourceFailure.corrupt }
-            let marker = URL(fileURLWithPath: CommandLine.arguments[1]).deletingLastPathComponent().appendingPathComponent("pack")
-            try Data().write(to: marker)
-            let installed = await source.open()
-            guard installed.coverage["pack_version"].string == "1" else { throw SourceFailure.corrupt }
-            try FileManager.default.removeItem(at: marker)
-            let sink = Sink()
-            let task = Task { try await source.capture(.null, into: sink) }
-            defer { task.cancel() }
-            for _ in 0..<100 {
-                let values = await sink.values
-                if values.count == 2 {
-                    guard values[0]["collection"].string == "shortcuts.folder", values[1]["data"]["name"].string == "Synthetic", values[1]["data"]["folder_id"]["$ref"]["native_key"].string == "00000000-0000-0000-0000-000000000001" else { throw SourceFailure.corrupt }
-                    return
-                }
-                try await Task.sleep(for: .milliseconds(50))
-            }
-            throw SourceFailure.unavailable
-        }
         let blob = try await source.prepare(.object(["request_hash": .string("synthetic"), "action": .object(["op": .string("shortcuts.run"), "args": .object(["shortcut": .string("echo"), "input_base64": .string("AAH/")])])]))
         let blobResult = try await source.dispatch(blob)
         guard blobResult["output_base64"].string == "AAH/", blobResult["output_bytes"].number == 3, blobResult["output_sha256"].string.count == 64 else { throw SourceFailure.corrupt }

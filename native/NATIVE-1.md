@@ -7,7 +7,7 @@ and reconnecting starts a fresh child.
 
 `NativeServer` wraps `NativeAdapter` on the facts stream; `AppleSession` supplies the framework adapter. Frames are capped
 at 256 KiB. Full reads use pinned, bounded-lifetime snapshots and snapshot-bound cursors. Intermediate and incomplete pages never
-claim completeness. Fact scans use separate source instances and storage under `native-facts`. Current source adapters accept full native scope with
+claim completeness. Current source adapters accept full native scope with
 empty args; filtered requests fail unsupported. Calendar scope is the existing CalendarTime window. Facts enumerate only what the framework returns now:
 no baseline, no absent rows, no `ObservationSink`. `Revalidate` answers a framework fact (`present`, `missing`, `outside_scope`) per
 identity and `Changed` is pushed on the same stream; frames are handled concurrently by id. Rust owns the diff and every deletion decision.

@@ -3,33 +3,14 @@ import Foundation
 import AppKit
 import Darwin
 import MessagesSource
-import RemindersStore
 import SourceSupport
 import NotesSource
-import SafariSource
-import MailSource
 import FocusSource
 
 enum HelperLabCommand {
     @MainActor
     static func run(_ arguments: [String]) throws -> Bool {
         switch arguments.first {
-        case "reminders-fixture-checks":
-            RemindersFixtureChecks.run()
-            return true
-        case "reminders-sections-proof", "reminders-parity-proof":
-            let reportURL = try report(arguments)
-            var result: Result<JSON, any Error>?
-            Task { @MainActor in
-                do {
-                    if arguments.first == "reminders-parity-proof" { result = .success(try await RemindersParityProof.run()) }
-                    else { result = .success(try await RemindersSectionsProof.run()) }
-                }
-                catch { result = .failure(error) }
-            }
-            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
-            try JSONEncoder().encode(result!.get()).write(to: reportURL, options: .atomic)
-            return true
         case "focus-phone-pack":
             let reportURL = try report(arguments)
             guard arguments.count > 1 else { throw ProbeFailure.invalidArguments }
@@ -62,145 +43,6 @@ enum HelperLabCommand {
             Task { @MainActor in result = await MacNotifyProof.run() }
             while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
             try JSONEncoder().encode(result!).write(to: reportURL, options: .atomic)
-            return true
-        case "mail-real-checks":
-            let reportURL = try report(arguments)
-            guard arguments.count > 2 else { throw ProbeFailure.invalidArguments }
-            let cleanup = arguments[1] == "MAIL-CLEANUP"
-            let deadline = MailQualification.deadline(after: cleanup ? 45 : 80) { @Sendable in
-                let proof: JSON = .object([cleanup ? "cleanup_passed" : "fixture_and_commands": .bool(false), cleanup ? "cleanup_error" : "command_error": .string(MailCommandFailure.timeout.localizedDescription)])
-                try? JSONEncoder().encode(proof).write(to: reportURL, options: .atomic)
-                exit(1)
-            }
-            defer { deadline.cancel() }
-            var result: JSON?
-            Task { @MainActor in
-                do { result = try await MailQualification().run(scenario: arguments[1], tag: arguments[2]) }
-                catch { result = .object(["fixture_and_commands": .bool(false), "command_error": .string(MailCommands.failureMessage(error))]) }
-            }
-            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
-            try JSONEncoder().encode(result!).write(to: reportURL, options: .atomic)
-            return true
-        case "reminders-store-profile":
-            let reportURL = try report(arguments)
-            var result: Result<JSON, any Error>?
-            var stage = "cold_responsiveness"
-            Task { @MainActor in
-                do {
-                    let responsiveness = try await RemindersStoreResponsiveness.run()
-                    stage = "warm_profile"
-                    var profile = try await RemindersStoreProfile.typed().object
-                    profile["responsiveness"] = responsiveness
-                    result = .success(.object(profile))
-                }
-                catch { result = .failure(error) }
-            }
-            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.005)) }
-            let profile: JSON
-            do { profile = try result!.get() }
-            catch {
-                let failure = error as NSError
-                let reason = error is SourceFailure ? String(describing: error) : failure.domain + ":" + String(failure.code)
-                try PrivateReport.write(["status": "unavailable", "stage": stage, "reason": reason], to: reportURL)
-                throw error
-            }
-            try JSONEncoder().encode(profile).write(to: reportURL, options: .atomic)
-            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
-            return true
-        case "reminders-store-flag-proof":
-            let reportURL = try report(arguments)
-            func option(_ key: String) throws -> String {
-                guard let index = arguments.firstIndex(of: key), index + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
-                return arguments[index + 1]
-            }
-            let tag = try option("--tag"), item = try option("--item-id"), list = try option("--list-id")
-            var result: Result<JSON, any Error>?
-            Task { @MainActor in
-                do { result = .success(try await RemindersFlagProof.run(tag: tag, itemIdentifier: item, listIdentifier: list)) }
-                catch { result = .failure(error) }
-            }
-            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.005)) }
-            let proof = try result!.get()
-            try JSONEncoder().encode(proof).write(to: reportURL, options: .atomic)
-            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
-            return true
-        case "reminders-store-blob-fixture":
-            let reportURL = try report(arguments)
-            var result: Result<JSON, any Error>?
-            Task { @MainActor in
-                do {
-                    let proof: JSON
-                    if arguments.contains("--cleanup") { proof = try await RemindersBlobFixture.recover(journal: reportURL) }
-                    else { proof = try await RemindersBlobFixture.run(journal: reportURL) }
-                    result = .success(proof)
-                }
-                catch { result = .failure(error) }
-            }
-            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.005)) }
-            try JSONEncoder().encode(try result!.get()).write(to: reportURL, options: .atomic)
-            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
-            return true
-        case "reminders-store-proof":
-            let reportURL = try report(arguments)
-            func option(_ key: String) throws -> String {
-                guard let index = arguments.firstIndex(of: key), index + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
-                return arguments[index + 1]
-            }
-            let proof = try RemindersStoreProof.run(tag: option("--tag"), itemIdentifier: option("--item-id"), listIdentifier: option("--list-id"))
-            try JSONEncoder().encode(proof).write(to: reportURL, options: .atomic)
-            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
-            return true
-        case "calendar-parity-proof":
-            let reportURL = try report(arguments)
-            var result: Result<JSON, any Error>?
-            Task { @MainActor in
-                do { result = .success(try await CalendarParityProof.run()) }
-                catch { result = .failure(error) }
-            }
-            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.005)) }
-            try JSONEncoder().encode(try result!.get()).write(to: reportURL, options: .atomic)
-            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
-            return true
-        case "calendar-parity-probe":
-            let reportURL = try report(arguments)
-            var result: Result<JSON, any Error>?
-            Task { @MainActor in
-                do { result = .success(try await CalendarParityProbe.run(requestConsent: arguments.contains("--request-consent"))) }
-                catch { result = .failure(error) }
-            }
-            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.005)) }
-            try JSONEncoder().encode(try result!.get()).write(to: reportURL, options: .atomic)
-            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
-            return true
-        case "safari-run-cleanup":
-            let reportURL = try report(arguments)
-            guard let index = arguments.firstIndex(of: "--request"), index + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
-            let request = try JSONDecoder().decode(JSON.self, from: Data(contentsOf: URL(fileURLWithPath: arguments[index + 1])))
-            var result: JSON?
-            Task { @MainActor in
-                do { result = try await SafariCleanup.run(request) }
-                catch { result = .object(["limited": .bool(error as? SourceFailure == .permissionMissing), "passed": .bool(false)]) }
-            }
-            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
-            try JSONEncoder().encode(result!).write(to: reportURL, options: .atomic)
-            return true
-        case "notes-owned-cleanup":
-            let reportURL = try report(arguments)
-            guard let index = arguments.firstIndex(of: "--request"), index + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
-            let request = try JSONDecoder().decode(JSON.self, from: Data(contentsOf: URL(fileURLWithPath: arguments[index + 1])))
-            var result: JSON?
-            Task { @MainActor in result = await NotesFolderUI.run(request) }
-            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
-            try JSONEncoder().encode(result!).write(to: reportURL, options: .atomic)
-            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
-            return true
-        case "notes-parity-probe":
-            let reportURL = try report(arguments)
-            var result: JSON?
-            Task { @MainActor in result = await NotesParityProbe.run() }
-            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
-            try JSONEncoder().encode(result!).write(to: reportURL, options: .atomic)
-            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
             return true
         case "calendar-facts-proof":
             let reportURL = try report(arguments)

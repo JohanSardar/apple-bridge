@@ -10,7 +10,6 @@ public actor MapsCommands: Source {
     public func open() async -> SourceReadiness {
         SourceReadiness(state: "ready", coverage: .object(["fields": .string("complete")]), capabilities: ["maps.open"])
     }
-    public func capture(_ resume: JSON, into sink: any ObservationSink) async throws { try await Task.sleep(for: .seconds(30)) }
     public func prepare(_ command: JSON) async throws -> Prepared {
         let action = command["action"]
         guard action["op"].string == "maps.open" else { throw SourceFailure.invalid }

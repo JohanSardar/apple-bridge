@@ -15,21 +15,14 @@ public final class ContactsSource: Source {
     public nonisolated let name = "contacts"
     private let store = CNContactStore()
     private let commandsEnabled: Bool
-    private let trace: CaptureTrace
     private var generation = UUID().uuidString
-    private var token: Data?
-    private var committed: [String: JSON] = [:]
     private var blobs: [String: Data] = [:]
-    private var scanning = false
-    private var groupSelfTesting = false
-    private var groupSelfTestCreatedKey = ""
     private var meIdentifier: String?
-    private var photoContinuation: AsyncStream<String>.Continuation?
     private var queuedPhotos: Set<String> = []
+    private var photoReady: AsyncStream<Void>.Continuation?
     private var photoResults: [String: MediaResult] = [:]
     private var variantURLs: [String: URL] = [:]
     private let photoInputDirectory: URL
-    private let baselineURL: URL
     private static let groupOperations = ["contacts.create_group", "contacts.rename_group", "contacts.delete_group", "contacts.add_member", "contacts.remove_member"]
     private static let operations = ["contacts.create", "contacts.update", "contacts.delete"]
     public nonisolated static let coverage: JSON = .object(["fields": .string("partial"), "missing": .array([.string("note: CNContactNoteKey requires com.apple.developer.contacts.notes; Helper lacks this restricted entitlement"), .string("writability: conservatively limited to default container"), .string("contact_poster: unavailable through public Contacts API on this SDK")])])
@@ -38,10 +31,8 @@ public final class ContactsSource: Source {
         (Array(scalarKeys.values) + [CNContactIdentifierKey, CNContactTypeKey, CNContactPhoneNumbersKey, CNContactEmailAddressesKey, CNContactPostalAddressesKey, CNContactUrlAddressesKey, CNContactBirthdayKey, CNContactNonGregorianBirthdayKey, CNContactDatesKey, CNContactSocialProfilesKey, CNContactInstantMessageAddressesKey, CNContactRelationsKey, CNContactImageDataKey, CNContactThumbnailImageDataKey, CNContactImageDataAvailableKey]).map { $0 as NSString }
     }
 
-    public nonisolated init(home: URL, commandsEnabled: Bool = false, trace: CaptureTrace = CaptureTrace()) throws {
-        self.trace = trace
+    public nonisolated init(home: URL, commandsEnabled: Bool = false) throws {
         self.commandsEnabled = commandsEnabled
-        baselineURL = home.appendingPathComponent("contacts-baseline.json")
         photoInputDirectory = home.appendingPathComponent("contacts-photo-inputs", isDirectory: true)
     }
 
@@ -103,7 +94,7 @@ public final class ContactsSource: Source {
             fields["image"] = .object(["digest": .string(digest), "state": .string("present")])
             if photoResults[digest] == nil { photoResults[digest] = MediaDerivatives.cached(digest) }
             if let result = photoResults[digest] { try attachPhoto(result, to: &fields) }
-            else if queuedPhotos.insert(digest).inserted { photoContinuation?.yield(digest) }
+            else if queuedPhotos.insert(digest).inserted { Task { await self.makePhoto(digest) } }
         }
         if let image = contact.thumbnailImageData {
             let digest = hash(image)
@@ -121,14 +112,6 @@ public final class ContactsSource: Source {
         request.unifyResults = true; request.predicate = predicate
         var result: [CNContact] = []
         try store.enumerateContacts(with: request) { contact, _ in result.append(contact) }
-        return result
-    }
-    private func history(_ starting: Data?) throws -> AppleBridgeContactsHistoryBatch {
-        guard authorized else { throw SourceFailure.permissionMissing }
-        let request = CNChangeHistoryFetchRequest()
-        request.startingToken = starting; request.shouldUnifyResults = true; request.includeGroupChanges = true
-        request.additionalContactKeyDescriptors = [CNContactIdentifierKey as NSString]
-        guard let result = AppleBridgeContactsHistory.fetch(store: store, request: request) else { throw SourceFailure.unavailable }
         return result
     }
     private func fresh(_ key: String) throws -> CNContact {
@@ -154,95 +137,6 @@ public final class ContactsSource: Source {
         guard authorized else { throw SourceFailure.permissionMissing }
         return try !store.containers(matching: CNContainer.predicateForContainers(withIdentifiers: [key])).isEmpty
     }
-    private func scan(into sink: any ObservationSink, live: Bool, force: Bool = false, notificationAt: UInt64 = 0, poll: Bool = false) async throws {
-        let scanID = UUID().uuidString
-        let metadata: [String: JSON] = ["scan_id": .string(scanID), "notification_ns": .integer(notificationAt)]
-        trace.record("contacts_scan_requested", fields: metadata)
-        while scanning { try await Task.sleep(for: .milliseconds(5)) }
-        var completed = false
-        scanning = true
-        defer {
-            scanning = false
-            trace.record(completed ? "contacts_scan_finished" : "contacts_scan_abandoned", fields: metadata)
-        }
-        let started = timestamp()
-        trace.record("contacts_scan_started", fields: metadata)
-        if poll && !force && authorized, let token, store.currentHistoryToken == token,
-           (try? store.unifiedMeContactWithKeys(toFetch: [CNContactIdentifierKey as NSString]).identifier) == meIdentifier {
-            completed = true
-            return
-        }
-        let batch: AppleBridgeContactsHistoryBatch
-        do { batch = try history(token) }
-        catch {
-            guard authorized else { throw SourceFailure.permissionMissing }
-            guard token != nil else { throw error }
-            trace.record("contacts_history_reset", fields: metadata)
-            token = nil
-            batch = try history(nil)
-        }
-        let next = batch.token
-        let drop = batch.droppedEverything
-        let nextMeIdentifier = try? store.unifiedMeContactWithKeys(toFetch: [CNContactIdentifierKey as NSString]).identifier
-        let fullScan = force || drop || token == nil || batch.requiresFullScan || nextMeIdentifier != meIdentifier
-        trace.record("contacts_history_fetched", fields: metadata.merging(["changed_groups": .number(Double(batch.changedGroupIdentifiers.count)), "full_scan": .bool(fullScan), "token_changed": .bool(next != token), "forced": .bool(force), "dropped_everything": .bool(drop), "initial_token": .bool(token == nil), "full_scan_event_kinds": .array(batch.fullScanEventKinds.map(JSON.string))]) { _, new in new })
-        guard fullScan || next != token else { completed = true; return }
-        let activity = ForegroundActivity.shared.begin()
-        defer { ForegroundActivity.shared.end(activity) }
-        if drop { generation = UUID().uuidString }
-        meIdentifier = nextMeIdentifier
-        var current: [String: JSON] = fullScan ? [:] : committed
-        if fullScan { current = try readEverything(metadata) } else {
-            for key in batch.changedContactIdentifiers {
-                if try isAbsent(key) { current.removeValue(forKey: "contacts.contact/" + key) }
-                else {
-                    let contact = try fresh(key)
-                    trace.record("contacts_contact_fetched", fields: metadata)
-                    current["contacts.contact/" + key] = observation("contacts.contact", key, try data(contact))
-                }
-            }
-            if !batch.changedGroupIdentifiers.isEmpty {
-                let changedGroups = try store.groups(matching: CNGroup.predicateForGroups(withIdentifiers: batch.changedGroupIdentifiers))
-                let byID = Dictionary(uniqueKeysWithValues: changedGroups.map { ($0.identifier, $0) })
-                for key in batch.changedGroupIdentifiers {
-                    guard let group = byID[key] else { current.removeValue(forKey: "contacts.group/" + key); continue }
-                    let members = try contacts(CNContact.predicateForContactsInGroup(withIdentifier: group.identifier), identifiersOnly: true)
-                    let value = try groupData(group, members: members)
-                    current["contacts.group/" + key] = observation("contacts.group", key, value)
-                }
-            }
-        }
-        trace.record("contacts_encoded", fields: metadata)
-        guard authorized else { throw SourceFailure.permissionMissing }
-        var observations: [JSON] = []
-        for key in current.keys.sorted() {
-            guard let value = current[key] else { continue }
-            let changed = value["data"] != (committed[key]?["data"] ?? .null)
-            if force || drop || token == nil || changed { observations.append(value) }
-        }
-        trace.record("contacts_compared", fields: metadata)
-        if !drop {
-            let groups = fullScan ? Set(try store.groups(matching: nil).map(\.identifier)) : Set(current.values.filter { $0["collection"].string == "contacts.group" }.map { $0["native_key"].string })
-            for (key, previous) in committed where current[key] == nil {
-                let collection = previous["collection"].string
-                if collection == "contacts.contact" { if try !isAbsent(previous["native_key"].string) { continue } }
-                if collection == "contacts.group" && groups.contains(previous["native_key"].string) { continue }
-                if collection == "contacts.container", try containerExists(previous["native_key"].string) { current[key] = previous; continue }
-                var absent = previous.object; absent["kind"] = .string("absent"); absent["revalidated"] = .bool(true); absent["observed_at"] = .string(timestamp())
-                observations.append(.object(absent))
-            }
-        }
-        let handles = blobHandles()
-        trace.record("contacts_capture_ready", fields: metadata.merging(["empty": .bool(observations.isEmpty)]) { _, new in new })
-        try await sink.emitCheckpoint(source: name, generation: generation, checkpoint: next.base64EncodedString(), observations: observations, scanID: scanID, scanStartedAt: started, scope: ["contacts.contact", "contacts.group", "contacts.container"], completionEvidence: "complete", blobHandles: handles, live: live)
-        trace.record("contacts_capture_committed", fields: metadata)
-        token = next
-        committed = drop ? committed.merging(current) { _, new in new } : current
-        let baseline: JSON = .object(["checkpoint": .string(next.base64EncodedString()), "generation": .string(generation), "records": .object(committed)])
-        try JSONEncoder().encode(baseline).write(to: baselineURL, options: .atomic)
-        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: baselineURL.path)
-        completed = true
-    }
     private func readEverything(_ metadata: [String: JSON]) throws -> [String: JSON] {
         var current: [String: JSON] = [:]
         var containers: [String: Set<String>] = [:]
@@ -252,7 +146,6 @@ public final class ContactsSource: Source {
             for member in try contacts(CNContact.predicateForContactsInContainer(withIdentifier: container.identifier), identifiersOnly: true) { containers[member.identifier, default: []].insert(container.identifier) }
         }
         let fetched = try contacts()
-        trace.record("contacts_fetched", fields: metadata)
         for contact in fetched {
             let memberships = containers[contact.identifier] ?? []
             let containerID = memberships.count == 1 ? memberships.first ?? "" : ""
@@ -299,51 +192,7 @@ public final class ContactsSource: Source {
         return states
     }
 
-    public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
-        token = Data(base64Encoded: resume["checkpoint"].string)
-        generation = resume["generation"].string.isEmpty ? UUID().uuidString : resume["generation"].string
-        if let bytes = try? Data(contentsOf: baselineURL), let baseline = try? JSONDecoder().decode(JSON.self, from: bytes) {
-            committed = baseline["records"].object
-            if baseline["checkpoint"] != resume["checkpoint"] { token = nil }
-        } else { committed = [:]; token = nil }
-        let (photoJobs, photoSink) = AsyncStream<String>.makeStream()
-        photoContinuation = photoSink
-        queuedPhotos = []
-        let photoWorker = Task { @ContactsActor in
-            for await digest in photoJobs {
-                guard !Task.isCancelled else { return }
-                await makePhoto(digest, into: sink)
-            }
-        }
-        defer { photoSink.finish(); photoContinuation = nil; photoWorker.cancel() }
-        let (changes, continuation) = AsyncStream<UInt64>.makeStream(bufferingPolicy: .bufferingNewest(1))
-        let observer = NotificationCenter.default.addObserver(forName: .CNContactStoreDidChange, object: nil, queue: nil) { @Sendable [trace] _ in let delivered = CaptureTrace.now(); trace.record("contacts_notified", fields: ["delivered_ns": .integer(delivered)]); continuation.yield(delivered) }
-        let polling = Task { @ContactsActor in
-            while !Task.isCancelled {
-                do { try await Task.sleep(for: .seconds(30)); continuation.yield(0) } catch { return }
-            }
-        }
-        defer { polling.cancel(); NotificationCenter.default.removeObserver(observer); continuation.finish() }
-        try await scan(into: sink, live: false, force: true)
-        for await notified in changes {
-            try Task.checkCancellation()
-            try await Task.sleep(for: .milliseconds(50))
-            try await scan(into: sink, live: true, notificationAt: notified, poll: notified == 0)
-        }
-    }
 
-    public func reconcile(into sink: any ObservationSink, key: String = "") async throws {
-        let wasGroup = committed["contacts.group/" + key] != nil
-        try await scan(into: sink, live: true)
-        if !key.isEmpty, !wasGroup, try store.groups(matching: CNGroup.predicateForGroups(withIdentifiers: [key])).isEmpty, try isAbsent(key) { try await confirmAbsence(key, into: sink) }
-    }
-    public func confirmAbsence(_ key: String, into sink: any ObservationSink) async throws {
-        guard try isAbsent(key) else { throw SourceFailure.conflict }
-        let next = try history(token).token
-        let absent: JSON = .object(["kind": .string("absent"), "collection": .string("contacts.contact"), "native_key": .string(key), "scoped_alias": .string("contacts/contacts.contact/" + key), "revalidated": .bool(true), "observed_at": .string(timestamp())])
-        try await sink.emitCheckpoint(source: name, generation: generation, checkpoint: next.base64EncodedString(), observations: [absent], scanID: UUID().uuidString, scanStartedAt: timestamp(), scope: ["contacts.contact"], completionEvidence: "complete", blobHandles: [:], live: true)
-        token = next
-    }
     public func serves(_ handle: String) -> Bool { variantURLs[handle] != nil }
     public func readBlob(_ handle: String, offset: Int, length: Int) throws -> JSON {
         guard authorized else { throw SourceFailure.permissionMissing }
@@ -361,22 +210,14 @@ public final class ContactsSource: Source {
         let end = min(offset + length, bytes.count)
         return .object(["t": .string("BlobChunk"), "handle": .string(handle), "offset": .number(Double(offset)), "bytes": .string(bytes.subdata(in: offset..<end).base64EncodedString()), "digest": .string(String(handle.dropFirst("contacts-image:".count))), "eof": .bool(end == bytes.count)])
     }
-    private func attachPhoto(_ result: MediaResult, to fields: inout [String: JSON]) throws {
-        var derivatives: [String: JSON] = [:]
-        for (name, variant) in result.derivatives {
-            var value = try JSONDecoder().decode(JSON.self, from: JSONEncoder().encode(variant)).object
-            value.removeValue(forKey: "file")
-            value["state"] = .string("present")
-            derivatives[name] = .object(value)
-            variantURLs[variant.handle] = MediaDerivatives.url(variant)
-        }
-        fields["derivatives"] = .object(derivatives)
-        fields["media"] = try JSONDecoder().decode(JSON.self, from: JSONEncoder().encode(result.media))
+    public func photosReady() -> AsyncStream<Void> {
+        let (stream, continuation) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
+        photoReady = continuation
+        return stream
     }
-    private func makePhoto(_ digest: String, into sink: any ObservationSink) async {
+    private func makePhoto(_ digest: String) async {
         defer { queuedPhotos.remove(digest) }
         guard let bytes = blobs["contacts-image:" + digest] else { return }
-        let expectedGeneration = generation
         let input = photoInputDirectory.appendingPathComponent(digest + ".image")
         let work = Task.detached(executorPreference: MediaExecutor.shared, priority: .utility) {
             try await ForegroundActivity.shared.waitUntilIdle(for: .milliseconds(250))
@@ -393,61 +234,21 @@ public final class ContactsSource: Source {
             }, trace: { _ in })
             return try await MediaWork.$current.withValue(activity) { try await MediaDerivatives.make(input, digest: digest) }
         }
-        do {
-            let result = try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
-            while scanning { try await Task.sleep(for: .milliseconds(5)) }
-            guard !Task.isCancelled, authorized, expectedGeneration == generation else { return }
-            scanning = true
-            defer { scanning = false }
-            photoResults[digest] = result
-            var observations: [JSON] = []
-            var changed: [String: JSON] = [:]
-            for (key, previous) in committed where previous["collection"].string == "contacts.contact" && previous["data"]["image"]["digest"].string == digest {
-                var fields = previous["data"].object
-                try attachPhoto(result, to: &fields)
-                let value = observation("contacts.contact", previous["native_key"].string, .object(fields))
-                changed[key] = value
-                observations.append(value)
-            }
-            guard !observations.isEmpty, let token else { return }
-            var handles: [String: String] = [:]
-            for variant in result.derivatives.values { handles[variant.digest] = variant.handle }
-            try await sink.emitCheckpoint(source: name, generation: generation, checkpoint: token.base64EncodedString(), observations: observations, scanID: UUID().uuidString, scanStartedAt: timestamp(), scope: ["contacts.contact"], completionEvidence: "", blobHandles: handles, live: false)
-            committed.merge(changed) { _, new in new }
-            let baseline: JSON = .object(["checkpoint": .string(token.base64EncodedString()), "generation": .string(generation), "records": .object(committed)])
-            try JSONEncoder().encode(baseline).write(to: baselineURL, options: .atomic)
-            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: baselineURL.path)
-        } catch { trace.record("contacts_photo_deferred") }
+        guard let result = try? await withTaskCancellationHandler(operation: { try await work.value }, onCancel: { work.cancel() }), !Task.isCancelled else { return }
+        photoResults[digest] = result
+        photoReady?.yield(())
     }
-    public func prepare(_ command: JSON) async throws -> Prepared {
-        guard authorized else { throw SourceFailure.permissionMissing }
-        guard commandsEnabled, (Self.operations + Self.groupOperations).contains(command["action"]["op"].string) else { throw SourceFailure.unsupported }
-        let action = command["action"]
-        trace.record("contacts_prepare_started", fields: ["operation": action["op"]])
-        if Self.groupOperations.contains(action["op"].string) { return try prepareGroup(command) }
-        var before = JSON.null
-        if action["op"].string == "contacts.create" {
-            let key = store.defaultContainerIdentifier()
-            guard !key.isEmpty, try store.containers(matching: CNContainer.predicateForContainers(withIdentifiers: [key])).count == 1 else { throw SourceFailure.unsupported }
-        } else {
-            before = try data(commandContact(action["native_key"].string))
-            guard before == command["expected_state"] else { throw SourceFailure.conflict }
-            guard before["writable"].bool else { throw SourceFailure.unsupported }
+    private func attachPhoto(_ result: MediaResult, to fields: inout [String: JSON]) throws {
+        var derivatives: [String: JSON] = [:]
+        for (name, variant) in result.derivatives {
+            var value = try JSONDecoder().decode(JSON.self, from: JSONEncoder().encode(variant)).object
+            value.removeValue(forKey: "file")
+            value["state"] = .string("present")
+            derivatives[name] = .object(value)
+            variantURLs[variant.handle] = MediaDerivatives.url(variant)
         }
-        let candidate = CNMutableContact()
-        try patch(candidate, action["args"])
-        let prepared = Prepared(nativeState: before, fingerprint: try hash(action), action: action)
-        trace.record("contacts_prepared", fields: ["operation": action["op"]])
-        return prepared
-    }
-    public func validate(_ prepared: Prepared) async throws {
-        guard authorized else { throw SourceFailure.permissionMissing }
-        if Self.groupOperations.contains(prepared.action["op"].string) { try validateGroup(prepared); return }
-        if prepared.action["op"].string != "contacts.create" {
-            let current = try data(commandContact(prepared.action["native_key"].string))
-            guard current == prepared.nativeState else { throw SourceFailure.conflict }
-            guard current["writable"].bool else { throw SourceFailure.unsupported }
-        }
+        fields["derivatives"] = .object(derivatives)
+        fields["media"] = try JSONDecoder().decode(JSON.self, from: JSONEncoder().encode(result.media))
     }
     private func components(_ value: JSON) throws -> DateComponents? {
         if value == .null { return nil }
@@ -495,44 +296,6 @@ public final class ContactsSource: Source {
             }
         }
     }
-    public func dispatch(_ prepared: Prepared) async throws -> JSON {
-        try await validate(prepared)
-        if Self.groupOperations.contains(prepared.action["op"].string) { return try await dispatchGroup(prepared) }
-        let action = prepared.action, operation = prepared.action["op"].string
-        let request = CNSaveRequest()
-        let contact: CNMutableContact
-        if operation == "contacts.create" { contact = CNMutableContact(); try patch(contact, action["args"]); request.add(contact, toContainerWithIdentifier: store.defaultContainerIdentifier()) }
-        else {
-            guard let current = try commandContact(action["native_key"].string).mutableCopy() as? CNMutableContact else { throw SourceFailure.corrupt }
-            contact = current
-            if operation == "contacts.delete" { request.delete(contact) }
-            else { try patch(contact, action["args"]); request.update(contact) }
-        }
-        trace.record("contacts_save_started", keys: [contact.identifier], fields: ["operation": .string(operation)])
-        try store.execute(request)
-        trace.record("contacts_effect_done", keys: [contact.identifier], fields: ["operation": .string(operation)])
-        if operation == "contacts.delete" { guard try isAbsent(contact.identifier) else { throw SourceFailure.unavailable } }
-        else { guard try data(fresh(contact.identifier)) == data(contact) else { throw SourceFailure.unavailable } }
-        trace.record("contacts_effect_revalidated", keys: [contact.identifier], fields: ["operation": .string(operation)])
-        return .object(["native_key": .string(contact.identifier), "observed": .bool(true), "absent": .bool(operation == "contacts.delete")])
-    }
-    public func resolve(_ command: String, evidence: JSON) async -> JSON {
-        guard authorized else { return .null }
-        let action = evidence["prepared"]["action"]
-        if Self.groupOperations.contains(action["op"].string) { return resolveGroup(evidence) }
-        let key = action["native_key"].string.isEmpty ? evidence["native_key"].string : action["native_key"].string
-        guard !key.isEmpty else { return .null }
-        do {
-            if action["op"].string == "contacts.delete" { guard try isAbsent(key) else { return .null } }
-            else {
-                let actual = try fresh(key)
-                guard let desired = actual.mutableCopy() as? CNMutableContact else { return .null }
-                try patch(desired, action["args"])
-                guard try data(actual) == data(desired) else { return .null }
-            }
-            return .object(["native_key": .string(key), "observed": .bool(true), "absent": .bool(action["op"].string == "contacts.delete"), "prepared": evidence["prepared"]])
-        } catch { return .null }
-    }
 
     private var groupProofURL: URL { FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/AppleBridgeDev/contacts-group-proofs.json") }
     private func groupCapabilities() -> [String] {
@@ -540,7 +303,6 @@ public final class ContactsSource: Source {
         return Self.groupOperations.filter { op in value["operations"].array.contains(.string(op)) }
     }
     private func requireGroupCapability(_ operation: String) throws {
-        if groupSelfTesting { return }
         guard groupCapabilities().contains(operation) else { throw SourceFailure.capabilityUnproven }
     }
     private func group(_ key: String) throws -> CNGroup {
@@ -553,40 +315,6 @@ public final class ContactsSource: Source {
         let contacts = try members ?? self.contacts(CNContact.predicateForContactsInGroup(withIdentifier: group.identifier), identifiersOnly: true)
         return .object(["name": .string(group.name), "container_id": .string(container), "writable": .bool(!container.isEmpty && container == store.defaultContainerIdentifier()), "member_ids": .array(contacts.sorted { $0.identifier < $1.identifier }.map { .object(["$ref": .object(["collection": .string("contacts.contact"), "native_key": .string($0.identifier)])]) })])
     }
-    private func prepareGroup(_ command: JSON) throws -> Prepared {
-        let action = command["action"]
-        try requireGroupCapability(action["op"].string)
-        let before: JSON
-        if action["op"].string == "contacts.create_group" {
-            let key = store.defaultContainerIdentifier()
-            guard !key.isEmpty, try store.containers(matching: CNContainer.predicateForContainers(withIdentifiers: [key])).count == 1 else { throw SourceFailure.unsupported }
-            before = .null
-        } else {
-            before = try groupData(group(action["native_key"].string))
-            guard before == command["expected_state"] else { throw SourceFailure.conflict }
-            guard before["writable"].bool else { throw SourceFailure.unsupported }
-        }
-        let prepared = Prepared(nativeState: before, fingerprint: try hash(action), action: action)
-        try validateGroup(prepared)
-        return prepared
-    }
-    private func validateGroup(_ prepared: Prepared) throws {
-        let action = prepared.action, op = action["op"].string
-        try requireGroupCapability(op)
-        if op != "contacts.create_group" {
-            let current = try groupData(group(action["native_key"].string))
-            guard current == prepared.nativeState else { throw SourceFailure.conflict }
-            guard current["writable"].bool else { throw SourceFailure.unsupported }
-        }
-        if op == "contacts.create_group" || op == "contacts.rename_group" {
-            let name = action["args"]["name"].string
-            guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, name.utf8.count <= 256 else { throw SourceFailure.invalid }
-        }
-        if op == "contacts.add_member" || op == "contacts.remove_member" {
-            let contact = try commandContact(action["list_key"].string)
-            guard try container(contact) == prepared.nativeState["container_id"].string else { throw SourceFailure.unsupported }
-        }
-    }
     private func groupEffect(_ action: JSON, key: String) throws -> Bool {
         let op = action["op"].string
         let observer = CNContactStore()
@@ -597,48 +325,8 @@ public final class ContactsSource: Source {
         let members = try observer.unifiedContacts(matching: CNContact.predicateForContactsInGroup(withIdentifier: key), keysToFetch: [CNContactIdentifierKey as NSString])
         return members.contains { $0.identifier == action["list_key"].string } == (op == "contacts.add_member")
     }
-    private func dispatchGroup(_ prepared: Prepared) async throws -> JSON {
-        let action = prepared.action, op = prepared.action["op"].string
-        let request = CNSaveRequest()
-        let mutable: CNMutableGroup
-        if op == "contacts.create_group" {
-            mutable = CNMutableGroup(); mutable.name = action["args"]["name"].string
-            request.add(mutable, toContainerWithIdentifier: store.defaultContainerIdentifier())
-        } else {
-            guard let value = try group(action["native_key"].string).mutableCopy() as? CNMutableGroup else { throw SourceFailure.corrupt }
-            mutable = value
-            switch op {
-            case "contacts.rename_group": mutable.name = action["args"]["name"].string; request.update(mutable)
-            case "contacts.delete_group": request.delete(mutable)
-            case "contacts.add_member", "contacts.remove_member":
-                let contact = try commandContact(action["list_key"].string)
-                if op == "contacts.add_member" { request.addMember(contact, to: mutable) }
-                else { request.removeMember(contact, from: mutable) }
-            default: throw SourceFailure.unsupported
-            }
-        }
-        try store.execute(request)
-        if groupSelfTesting && op == "contacts.create_group" { groupSelfTestCreatedKey = mutable.identifier }
-        var observed = false
-        for _ in 0..<20 {
-            if try groupEffect(action, key: mutable.identifier) { observed = true; break }
-            try await Task.sleep(for: .milliseconds(50))
-        }
-        guard observed else { throw SourceFailure.unavailable }
-        return .object(["native_key": .string(mutable.identifier), "observed": .bool(true), "absent": .bool(op == "contacts.delete_group")])
-    }
-    private func resolveGroup(_ evidence: JSON) -> JSON {
-        let action = evidence["prepared"]["action"]
-        let key = action["native_key"].string.isEmpty ? evidence["native_key"].string : action["native_key"].string
-        guard !key.isEmpty, (try? groupEffect(action, key: key)) == true else { return .null }
-        return .object(["native_key": .string(key), "observed": .bool(true), "absent": .bool(action["op"].string == "contacts.delete_group"), "prepared": evidence["prepared"]])
-    }
     public func proveGroups() async -> JSON {
         guard authorized else { return .object(["state": .string("limited"), "reason": .string("contacts_full_access_required")]) }
-        guard !groupSelfTesting else { return .object(["state": .string("limited"), "reason": .string("proof_already_running")]) }
-        groupSelfTesting = true
-        groupSelfTestCreatedKey = ""
-        defer { groupSelfTesting = false }
         let tag = "[ab-test " + UUID().uuidString + "]"
         let contact = CNMutableContact()
         contact.givenName = tag; contact.organizationName = "Bridge Test"
@@ -669,10 +357,8 @@ public final class ContactsSource: Source {
                 var args: [String: JSON] = [:]
                 if op == "contacts.create_group" || op == "contacts.rename_group" { args["name"] = .string("Bridge Test " + tag + (op == "contacts.rename_group" ? " renamed" : "")) }
                 let action: JSON = .object(["op": .string(op), "native_key": .string(groupKey), "list_key": .string(contact.identifier), "args": .object(args)])
-                let expected = groupKey.isEmpty ? JSON.null : try groupData(group(groupKey))
-                let prepared = try prepareGroup(.object(["action": action, "expected_state": expected]))
                 verification = "dispatch_and_read_back"
-                let result = try await dispatch(prepared)
+                let result = try writeGroup(action)
                 groupKey = result["native_key"].string
                 verification = "independent_read_back"
                 guard try groupEffect(action, key: groupKey) else { throw SourceFailure.unavailable }
@@ -689,7 +375,6 @@ public final class ContactsSource: Source {
             return .object(["state": .string("proven"), "steps": .array(steps), "cleaned": .bool(true)])
         } catch {
             let reason = String(describing: error)
-            if groupKey.isEmpty { groupKey = groupSelfTestCreatedKey }
             var diagnostic = JSON.null
             if operation == "contacts.remove_member", !groupKey.isEmpty {
                 do {
@@ -715,7 +400,7 @@ public final class ContactsSource: Source {
     }
 
 
-    public func primitive(_ operation: String, args request: JSON, into sink: any ObservationSink) async throws -> JSON {
+    public func primitive(_ operation: String, args request: JSON) async throws -> JSON {
         guard authorized else { throw SourceFailure.permissionMissing }
         guard commandsEnabled else { throw SourceFailure.unsupported }
         let key = request["native_key"].string
@@ -747,12 +432,8 @@ public final class ContactsSource: Source {
             guard let desired = actual.mutableCopy() as? CNMutableContact else { throw SourceFailure.corrupt }
             try patch(desired, request["args"])
             return .object(["actual": try data(actual), "desired": try data(desired)])
-        case "contacts.reconcile":
-            if !request["absent_key"].string.isEmpty { try await confirmAbsence(request["absent_key"].string, into: sink) }
-            else { try await reconcile(into: sink, key: request["conflict_key"].string) }
-            return .object([:])
         case "contacts.write":
-            return try await writeContact(request, into: sink)
+            return try await writeContact(request)
         case "contacts.write_group":
             return try writeGroup(request)
         default:
@@ -760,7 +441,7 @@ public final class ContactsSource: Source {
         }
     }
 
-    private func writeContact(_ request: JSON, into sink: any ObservationSink) async throws -> JSON {
+    private func writeContact(_ request: JSON) async throws -> JSON {
         let operation = request["op"].string
         meIdentifier = try? store.unifiedMeContactWithKeys(toFetch: [CNContactIdentifierKey as NSString]).identifier
         guard Self.operations.contains(operation) else { throw SourceFailure.unsupported }
@@ -773,17 +454,11 @@ public final class ContactsSource: Source {
             if operation == "contacts.delete" { save.delete(contact) }
             else { try patch(contact, request["args"]); save.update(contact) }
         }
-        trace.record("contacts_save_started", keys: [contact.identifier], fields: ["operation": .string(operation)])
         try store.execute(save)
-        trace.record("contacts_effect_done", keys: [contact.identifier], fields: ["operation": .string(operation)])
         let deleted = operation == "contacts.delete"
         let exists = !(try isAbsent(contact.identifier))
         let saved: JSON = deleted ? .null : try data(contact)
         let observed: JSON = exists && !deleted ? try data(fresh(contact.identifier)) : .null
-        if !request["session_captures"].bool {
-            try await reconcile(into: sink)
-            if deleted && !exists { try await confirmAbsence(contact.identifier, into: sink) }
-        }
         return .object(["native_key": .string(contact.identifier), "exists_after": .bool(exists), "saved": saved, "observed": observed])
     }
 

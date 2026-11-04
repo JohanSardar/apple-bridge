@@ -34,9 +34,8 @@ final class SessionProxy: @unchecked Sendable {
               posix_spawnattr_setsigmask(&attributes, &mask) == 0,
               posix_spawnattr_setflags(&attributes, Int16(POSIX_SPAWN_CLOEXEC_DEFAULT | POSIX_SPAWN_SETSIGDEF | POSIX_SPAWN_SETSIGMASK)) == 0 else { throw fail() }
         var spawned: pid_t = 0
-        var arguments = [binary, "--gateway-fd", "198", "--helper-fd", "199", "--session-secret", session, "--session-home", home]
-        let owned = ProcessInfo.processInfo.environment["AB_SESSION_RUST_COMMANDS"] ?? "reminders,calendar,contacts,notes,messages"
-        if !owned.isEmpty { arguments += ["--rust-commands", owned] }
+        var arguments = [binary, "--gateway-fd", "198", "--helper-fd", "199", "--session-secret", session, "--session-home", home, "--user-home", FileManager.default.homeDirectoryForCurrentUser.path]
+        if let owned = ProcessInfo.processInfo.environment["AB_SESSION_RUST_COMMANDS"], !owned.isEmpty { arguments += ["--rust-commands", owned] }
         let pointers = arguments.map { strdup($0) } + [nil]
         defer { for pointer in pointers { free(pointer) } }
         let environment = ProcessInfo.processInfo.environment.filter { $0.key != "AB_NATIVE_FACTS_FD" }.map { strdup($0.key + "=" + $0.value) } + [strdup("AB_NATIVE_FACTS_FD=200"), nil]

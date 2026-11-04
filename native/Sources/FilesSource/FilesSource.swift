@@ -9,9 +9,6 @@ public actor FilesSource: Source {
     let roots: [URL]
     private let writer: BlobWriter
     private var blobs: [String: URL] = [:]
-    private var scanGuard = FileScanGuard()
-    private var reconciling = false
-    private let generation = UUID().uuidString
     public init(home: URL = FileManager.default.homeDirectoryForCurrentUser, roots: [URL] = []) throws {
         let defaultRoot = home.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/Bridge Test")
         try FileManager.default.createDirectory(at: defaultRoot, withIntermediateDirectories: true)
@@ -24,28 +21,6 @@ public actor FilesSource: Source {
     public func open() async -> SourceReadiness {
         SourceReadiness(state: "ready", coverage: .object(["roots": .number(Double(roots.count)), "max_items": .number(10000), "max_depth": .number(16)]), capabilities: ["files.search", "files.read", "files.transform"] + Self.commands)
     }
-    public func snapshot(_ root: URL) throws -> ([JSON], Bool) {
-        guard roots.contains(root.standardizedFileURL.resolvingSymlinksInPath()) else { throw SourceFailure.invalid }
-        var complete = true
-        var failed = false
-        let keys: Set<URLResourceKey> = [.isSymbolicLinkKey, .isDirectoryKey, .fileSizeKey, .creationDateKey, .contentModificationDateKey, .tagNamesKey, .ubiquitousItemDownloadingStatusKey, .isUbiquitousItemKey]
-        guard let tree = FileManager.default.enumerator(at: root, includingPropertiesForKeys: Array(keys), options: [], errorHandler: { _, _ in failed = true; return false }) else { throw SourceFailure.unavailable }
-        var rows: [JSON] = []
-        var visited = 0
-        while let url = tree.nextObject() as? URL {
-            try Task.checkCancellation()
-            visited += 1
-            if visited > 10000 { complete = false; break }
-            let path = String(url.path.dropFirst(root.path.count + 1))
-            if path.split(separator: "/").count > 16 { tree.skipDescendants(); complete = false; continue }
-            let v = try url.resourceValues(forKeys: keys)
-            if v.isSymbolicLink == true { tree.skipDescendants(); continue }
-            let data: JSON = .object(["root": .string(root.path), "path": .string(path), "name": .string(url.lastPathComponent), "kind": .string(v.isDirectory == true ? "directory" : url.pathExtension), "size": .number(Double(v.fileSize ?? 0)), "created": v.creationDate.map { .string(timestamp($0)) } ?? .null, "modified": v.contentModificationDate.map { .string(timestamp($0)) } ?? .null, "tags": .array((v.tagNames ?? []).map(JSON.string)), "downloaded": .bool(v.ubiquitousItemDownloadingStatus != .notDownloaded), "icloud_status": .string(v.ubiquitousItemDownloadingStatus?.rawValue ?? "local")])
-            rows.append(.object(["kind": .string("upsert"), "collection": .string("files.item"), "native_key": .string(url.path), "observed_at": .string(timestamp()), "data": data]))
-        }
-        if failed { complete = false }
-        return (rows, complete)
-    }
     public func ubiquity(_ paths: [String]) throws -> [JSON] {
         guard !paths.isEmpty, paths.count <= 500 else { throw SourceFailure.invalid }
         return try paths.map { path in
@@ -55,30 +30,6 @@ public actor FilesSource: Source {
             let status = (try? url.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey]))?.ubiquitousItemDownloadingStatus?.rawValue ?? "local"
             return .object(["path": .string(path), "status": .string(status)])
         }
-    }
-    public func reconcile(into sink: any ObservationSink) async throws {
-        while reconciling { try await Task.sleep(for: .milliseconds(25)) }
-        reconciling = true
-        defer { reconciling = false }
-        for root in roots {
-            let started = timestamp()
-            let (scanned, complete) = try snapshot(root)
-            var rows = scanned
-            var nextGuard = scanGuard
-            let absent = nextGuard.finish(root: root.path, keys: Set(rows.map { $0["native_key"].string }), complete: complete)
-            rows += absent.map { .object(["kind": .string("absent"), "collection": .string("files.item"), "native_key": .string($0), "observed_at": .string(timestamp()), "revalidated": .bool(true)]) }
-            try await sink.emit(source: name, generation: generation, observations: rows, scanID: UUID().uuidString, scanStartedAt: started, scope: ["files.item"], completionEvidence: complete ? "complete" : "", blobHandles: [:], live: false)
-            scanGuard = nextGuard
-        }
-    }
-    public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
-        let watcher = DatabaseWatcher(path: roots[0].path, coalescing: .milliseconds(250))
-        defer { watcher.close() }
-        repeat {
-            try await reconcile(into: sink)
-            var iterator = watcher.changes.makeAsyncIterator()
-            guard await iterator.next() != nil else { return }
-        } while !Task.isCancelled
     }
     public func read(_ args: JSON) async throws -> JSON {
         let root = URL(fileURLWithPath: args["root"].string).standardizedFileURL.resolvingSymlinksInPath()

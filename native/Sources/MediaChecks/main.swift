@@ -10,6 +10,8 @@ struct MediaChecks {
     static func main() async throws {
         let args = CommandLine.arguments
         switch args[1] {
+        case "export-yield":
+            try await MediaExportYieldChecks.run()
         case "export-safety":
             try await ExportSafetyChecks.run()
         case "export-overlap":

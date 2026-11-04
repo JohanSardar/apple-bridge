@@ -83,23 +83,18 @@ public struct Prepared: Sendable {
     }
 }
 
-public protocol ObservationSink: Sendable {
-    func emitCheckpoint(source: String, generation: String, checkpoint: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws
-    func sourceState(source: String, state: String, coverage: JSON, capabilities: [String], reason: String) async throws
-    func emit(source: String, generation: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws
-}
-
 public protocol Source: Sendable {
     var name: String { get }
     func open() async -> SourceReadiness
-    func capture(_ resume: JSON, into sink: any ObservationSink) async throws
     func prepare(_ command: JSON) async throws -> Prepared
     func dispatch(_ prepared: Prepared) async throws -> JSON
     func resolve(_ command: String, evidence: JSON) async -> JSON
 }
 
-public extension ObservationSink {
-    func emitCheckpoint(source: String, generation: String, checkpoint: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws { throw SourceFailure.unsupported }
+public extension Source {
+    func prepare(_ command: JSON) async throws -> Prepared { throw SourceFailure.unsupported }
+    func dispatch(_ prepared: Prepared) async throws -> JSON { throw SourceFailure.unsupported }
+    func resolve(_ command: String, evidence: JSON) async -> JSON { .null }
 }
 
 @globalActor

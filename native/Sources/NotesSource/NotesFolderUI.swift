@@ -98,11 +98,10 @@ public enum NotesFolderUI {
         return true
     }
     public static var available: Bool { AXIsProcessTrusted() }
-    public static func rename(id: String, from oldTitle: String, to newTitle: String, trace: CaptureTrace? = nil) async throws {
+    public static func rename(id: String, from oldTitle: String, to newTitle: String) async throws {
         var stage = "permission", rowCount = 0, menuCount = 0, fieldCount = 0
         defer {
             let fields: [String: JSON] = ["source": .string("notes"), "ui_step": .string(stage), "rows": .number(Double(rowCount)), "menus": .number(Double(menuCount)), "fields": .number(Double(fieldCount)), "deadline_expired": .bool(Date() >= deadline)]
-            trace?.record("notes_folder_rename_ui", fields: fields)
             let report = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/AppleBridgeDev/notes-folder-rename-ui.json")
             try? JSONEncoder().encode(JSON.object(fields)).write(to: report, options: .atomic)
             try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: report.path)
@@ -150,118 +149,4 @@ public enum NotesFolderUI {
             up.post(tap: .cghidEventTap)
         }
     }
-    #if LAB
-    private static func purgeCapturedNote(_ request: JSON) async -> JSON {
-        deadline = Date().addingTimeInterval(30)
-        var stage = "validate_captured_note"
-        do {
-            guard available, request["notes"].array.count == 1 else { throw Failure(stage: "captured_note_request_unavailable") }
-            let id = request["notes"].array[0]["id"].string, tag = request["tag"].string
-            guard tag.hasPrefix("[ab-test "), tag.hasSuffix("]"), !tag.contains("\n"), let tail = id.split(separator: "/").last, tail.first == "p", let pk = Int(tail.dropFirst()) else { throw Failure(stage: "invalid_captured_note") }
-            let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Group Containers/group.com.apple.notes/NoteStore.sqlite").path
-            let db = try NotesDatabase(path: path)
-            let uuid = try db.query("SELECT Z_UUID FROM Z_METADATA", []).first?["Z_UUID"]?.string ?? ""
-            guard id == "x-coredata://" + uuid + "/ICNote/p" + String(pk) else { throw Failure(stage: "captured_note_store_changed") }
-            guard let note = try db.query("SELECT * FROM ZICCLOUDSYNCINGOBJECT WHERE Z_PK=? AND Z_ENT=(SELECT Z_ENT FROM Z_PRIMARYKEY WHERE Z_NAME='ICNote')", [String(pk)]).first else { return .object(["passed": .bool(true)]) }
-            if note["ZMARKEDFORDELETION"]?.number != 0 { return .object(["passed": .bool(true)]) }
-            let title = note["ZTITLE1"]?.string ?? "", key = note["ZIDENTIFIER"]?.string ?? ""
-            guard title.hasPrefix(tag), !key.isEmpty, note["ZISPASSWORDPROTECTED"]?.number != 1,
-                  let folder = try db.query("SELECT * FROM ZICCLOUDSYNCINGOBJECT WHERE Z_PK=? AND ZFOLDERTYPE=1", [String(Int(note["ZFOLDER"]?.number ?? 0))]).first else { throw Failure(stage: "captured_note_is_not_owned_trash") }
-            let trash = "x-coredata://" + uuid + "/ICFolder/p" + String(Int(folder["Z_PK"]?.number ?? 0))
-            guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.Notes").first else { throw Failure(stage: "notes_not_running") }
-            let root = AXUIElementCreateApplication(app.processIdentifier)
-            AXUIElementSetMessagingTimeout(root, 0.5)
-            _ = app.activate()
-            try cancelBlockingDialog(root)
-            stage = "select_captured_trash_note"
-            let result = try NotesScript.run("set targetNote to first note of folder id " + NotesScript.quote(trash) + " whose id is " + NotesScript.quote(id) + "\nshow targetNote\nset selection to {targetNote}\nif (count of selection) is not 1 then error \"Test note selection changed.\"\nreturn id of item 1 of selection")
-            guard result == id else { throw Failure(stage: "captured_note_selection_changed") }
-            try await Task.sleep(for: .milliseconds(250))
-            let rows = all(root).filter { value($0, kAXRoleAttribute) == kAXRowRole && all($0).contains { named($0, [title]) } }
-            guard rows.count == 1, await openContext(rows[0], app: app) else { throw Failure(stage: "captured_trash_note_row") }
-            try await Task.sleep(for: .milliseconds(200))
-            stage = "delete_captured_trash_note"
-            let menus = all(root).filter { value($0, kAXRoleAttribute) == kAXMenuItemRole && named($0, ["Delete Note", "Delete Note…", "Delete Note...", "Delete Permanently", "Delete"]) && enabled($0) }
-            guard menus.count == 1, AXUIElementPerformAction(menus[0], kAXPressAction as CFString) == .success else { throw Failure(stage: "captured_note_delete_menu") }
-            try await Task.sleep(for: .milliseconds(250))
-            _ = try confirm(root, tag: title, initiated: true)
-            let store = NotesStore(path: path)
-            stage = "verify_permanent_captured_note"
-            for _ in 0..<200 {
-                if try ["gone", "marked"].contains(store.deletionState(key, collection: "notes.note")) { return .object(["passed": .bool(true)]) }
-                try await Task.sleep(for: .milliseconds(50))
-            }
-            throw Failure(stage: "captured_note_permanent_deletion_unverified")
-        } catch { return .object(["passed": .bool(false), "stage": .string((error as? Failure)?.stage ?? stage + "_unavailable")]) }
-    }
-    public static func run(_ request: JSON) async -> JSON {
-        if !request["notes"].array.isEmpty { return await purgeCapturedNote(request) }
-        deadline = Date().addingTimeInterval(30)
-        guard AXIsProcessTrusted() else { return .object(["passed": .bool(false), "stage": .string("accessibility_permission_missing")]) }
-        let tag = request["tag"].string, folders = request["folders"].array
-        guard tag.hasPrefix("[ab-test "), tag.hasSuffix("]"), !tag.contains("\n"), !folders.isEmpty else { return .object(["passed": .bool(false), "stage": .string("invalid_owned_request")]) }
-        let store = NotesStore(path: FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Group Containers/group.com.apple.notes/NoteStore.sqlite").path)
-        var removed = 0
-        var stage = "validate_owned_folders"
-        do {
-            let snapshot = try store.read(metadataOnly: true).observations
-            var targets: [(String, String, String)] = []
-            for owned in folders {
-                let id = owned["id"].string, title = owned["title"].string
-                guard !id.isEmpty, title == "Bridge Test " + tag || title.hasPrefix("Bridge Test " + tag + " ") else { throw Failure(stage: "unowned_folder") }
-                guard let folder = snapshot.first(where: { $0["collection"].string == "notes.folder" && $0["scoped_alias"].string == id }) else { continue }
-                let key = folder["native_key"].string
-                guard folder["data"]["title"].string == title, !folder["data"]["read_only"].bool,
-                      !snapshot.contains(where: { $0["data"]["folder_id"]["$ref"]["native_key"].string == key || $0["data"]["parent_id"]["$ref"]["native_key"].string == key }) else { throw Failure(stage: "owned_folder_not_empty") }
-                targets.append((id, title, key))
-            }
-            for (id, title, key) in targets {
-                if try ["gone", "marked", "trashed"].contains(store.deletionState(key, collection: "notes.folder")) { removed += 1; continue }
-                stage = "revalidate_owned_folder"
-                let fresh = try store.read(metadataOnly: true).observations
-                guard fresh.contains(where: { $0["scoped_alias"].string == id && $0["data"]["title"].string == title }),
-                      !fresh.contains(where: { $0["data"]["folder_id"]["$ref"]["native_key"].string == key || $0["data"]["parent_id"]["$ref"]["native_key"].string == key }) else { throw Failure(stage: "owned_folder_changed") }
-                guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.Notes").first else { throw Failure(stage: "notes_not_running") }
-                let root = AXUIElementCreateApplication(app.processIdentifier)
-                AXUIElementSetMessagingTimeout(root, 0.5)
-                _ = app.activate()
-                stage = "confirm_owned_folder"
-                if try !confirm(root, tag: title) {
-                    try cancelBlockingDialog(root)
-                    try await Task.sleep(for: .milliseconds(150))
-                    guard dialogs(root).isEmpty else { throw Failure(stage: "notes_dialog_still_open") }
-                    stage = "show_owned_folder"
-                    _ = try NotesScript.run("show folder id " + NotesScript.quote(id))
-                    try await Task.sleep(for: .milliseconds(300))
-                    stage = "find_owned_sidebar_row"
-                    let rows = all(root).filter { node in
-                        value(node, kAXRoleAttribute) == kAXRowRole && all(node).contains { child in [kAXTitleAttribute, kAXValueAttribute, kAXDescriptionAttribute].contains { value(child, $0) == title } }
-                    }
-                    guard rows.count == 1 else { throw Failure(stage: "owned_sidebar_row_" + String(rows.count)) }
-                    stage = "open_owned_context_menu"
-                    guard await openContext(rows[0], app: app) else { throw Failure(stage: "owned_folder_context_menu") }
-                    try await Task.sleep(for: .milliseconds(200))
-                    stage = "find_owned_delete_menu"
-                    let items = all(root).filter { node in
-                        value(node, kAXRoleAttribute) == kAXMenuItemRole && ["Delete Folder", "Delete Folder…", "Delete Folder...", "Delete"].contains(value(node, kAXTitleAttribute)) && enabled(node)
-                    }
-                    guard items.count == 1, AXUIElementPerformAction(items[0], kAXPressAction as CFString) == .success else { throw Failure(stage: "owned_delete_menu_" + String(items.count)) }
-                    try await Task.sleep(for: .milliseconds(300))
-                    _ = try confirm(root, tag: title, initiated: true)
-                }
-                stage = "verify_owned_folder_deletion"
-                var verified = false
-                for _ in 0..<200 {
-                    if try ["gone", "marked", "trashed"].contains(store.deletionState(key, collection: "notes.folder")) { verified = true; break }
-                    try await Task.sleep(for: .milliseconds(50))
-                }
-                guard verified else { throw Failure(stage: "owned_folder_notestore_unverified") }
-                removed += 1
-            }
-            return .object(["passed": .bool(true), "removed_count": .number(Double(removed))])
-        } catch {
-            return .object(["passed": .bool(false), "removed_count": .number(Double(removed)), "stage": .string((error as? Failure)?.stage ?? stage + "_" + ((error as? SourceFailure).map { String(describing: $0) } ?? "unavailable"))])
-        }
-    }
-    #endif
 }

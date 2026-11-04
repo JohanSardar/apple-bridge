@@ -1,5 +1,4 @@
 import Foundation
-import Decoders
 import Contacts
 import AppKit
 import ApplicationServices
@@ -23,8 +22,6 @@ public enum MessagesProbes {
 
     public static func run(_ arguments: [String]) throws -> [String: Any] {
         switch arguments[1] {
-        case "rich-counts":
-            return try richCounts()
         case "keychain-state":
             return try keychainState()
         case "session-state":
@@ -70,19 +67,6 @@ public enum MessagesProbes {
         return result
     }
 
-    private static func decodedProbeText(_ row: [String: String]) -> String? {
-        if let text = row["text"] { return text }
-        guard let hex = row["body_hex"], hex.count.isMultiple(of: 2) else { return nil }
-        var bytes = Data()
-        var index = hex.startIndex
-        while index < hex.endIndex {
-            let end = hex.index(index, offsetBy: 2)
-            guard let byte = UInt8(hex[index..<end], radix: 16) else { return nil }
-            bytes.append(byte)
-            index = end
-        }
-        return TypedStream.decode(bytes).text
-    }
 
     private static func accessibilityNode(_ element: AXUIElement, depth: Int, count: inout Int, raw: Bool) -> [String: Any] {
         count += 1
