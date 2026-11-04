@@ -962,6 +962,7 @@ impl Session<'_> {
             "messages.rows_after" => {
                 let after = args["maximum"].as_u64().unwrap_or_default();
                 let mut rows: Vec<(u64, Value)> = vec![];
+                let mut reads: Vec<(String, u64)> = vec![];
                 for (key, record) in s.data["records"].as_object().into_iter().flatten() {
                     let row = record["row_id"].as_u64().unwrap_or_default();
                     let data = &record["data"];
@@ -974,7 +975,12 @@ impl Session<'_> {
                     }
                     let chat = string(&data["chat_id"]["$ref"], "native_key");
                     let body = string(data, "text");
-                    rows.push((row, json!({"guid":key,"capture_chat_guid":chat,"service":data["service"].as_str().unwrap_or("iMessage"),"error":data["error_code"].as_i64().unwrap_or(0),"is_delivered":false,"text":body,"body":body,"has_body":false,"peers":if chat.is_empty() { vec![] } else { chat_peers(&s, &chat) },"attachment_names":[]})));
+                    let seen = record["row_reads"].as_u64().unwrap_or_default() + 1;
+                    reads.push((key.clone(), seen));
+                    rows.push((row, json!({"guid":key,"capture_chat_guid":chat,"service":data["service"].as_str().unwrap_or("iMessage"),"error":data["error_code"].as_i64().unwrap_or(0),"is_delivered":seen > 1,"text":body,"body":body,"has_body":false,"peers":if chat.is_empty() { vec![] } else { chat_peers(&s, &chat) },"attachment_names":[]})));
+                }
+                for (key, seen) in reads {
+                    s.data["records"][&key]["row_reads"] = json!(seen);
                 }
                 rows.sort_by_key(|(row, _)| *row);
                 Ok(json!({"rows":rows.into_iter().map(|(_, row)| row).collect::<Vec<_>>()}))
@@ -1023,6 +1029,11 @@ impl Session<'_> {
                     );
                 }
                 let fault = std::mem::take(&mut s.fault);
+                let command = string(args, "command_id");
+                if !command.is_empty() {
+                    let count = s.data["effects"][&command].as_u64().unwrap_or_default() + 1;
+                    s.data["effects"][&command] = json!(count);
+                }
                 let native = id("message").map_err(fail)?;
                 let body = string(part, "text");
                 new_message(&mut s, &mut seen, &native, &body, &chat, true);

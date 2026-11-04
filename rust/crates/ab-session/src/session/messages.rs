@@ -473,7 +473,10 @@ pub(super) fn write(
             .as_i64()
             .unwrap_or(0);
         let maximum = baseline.max(current);
-        let sent = probe.call("messages.send_part", &json!({"part": part, "route": route}))?;
+        let sent = probe.call(
+            "messages.send_part",
+            &json!({"part": part, "route": route, "command_id": command_id}),
+        )?;
         let mut evidence = json!({"disposition": "indeterminate"});
         loop {
             let rows = outgoing_rows(probe, maximum)?;
