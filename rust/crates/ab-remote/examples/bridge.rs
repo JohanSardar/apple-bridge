@@ -40,7 +40,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             certificates.root = option("--ca").map(PathBuf::from);
             certificates
         }
-        .ensure(&id, &client)
+        .ensure(
+            &id,
+            &option("--domain").unwrap_or_else(|| id.credential.hostname.clone()),
+            &client,
+        )
         .await?;
         return Ok(());
     }
@@ -72,6 +76,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 option("--directory").unwrap_or_default(),
             )),
             tls: Arc::new(tls),
+            domain: option("--domain").unwrap_or_default(),
+            resolver: match option("--dns-server") {
+                Some(address) => Some(Arc::new(ab_remote::dns::System::server(address.parse()?)?)),
+                None => None,
+            },
+            domain_poll: std::time::Duration::from_millis(200),
         }));
     }
     if via == "tailscale-app" || via == "both" {
