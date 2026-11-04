@@ -281,6 +281,15 @@ impl Snapshot {
             result.push(value);
         }
     }
+    pub fn has_column(&self, table: &str, column: &str) -> Result<bool> {
+        let rows = self.query(
+            &format!("PRAGMA table_info(\"{}\")", table.replace('"', "\"\"")),
+            &[],
+            100_000,
+            Duration::from_secs(5),
+        )?;
+        Ok(rows.iter().any(|row| text(row, "name") == column))
+    }
     pub fn require(&self, required: &[(&str, &[&str])]) -> Result<()> {
         for (table, columns) in required {
             let rows = self.query(

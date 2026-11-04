@@ -56,7 +56,7 @@ fn projection(
         }
         #[allow(clippy::cast_possible_truncation)]
         let mailbox = n as i64;
-        let data = json!({"subject":capture::text(&row,"subject"),"from":capture::text(&row,"sender"),"received_at":capture::timestamp(capture::number(&row,"date_received"))?,"read":capture::number(&row,"read")!=0.0,"message_id":alias,"mailbox_ids":[format!("mailbox/{mailbox}")],"account_id":parsed.account,"to":null,"cc":null,"sent_at":null,"flagged":null,"flag_color":null,"has_attachments":null,"size":null,"snippet":null,"body_state":null});
+        let data = json!({"subject":capture::text(&row,"subject"),"from":capture::text(&row,"sender"),"received_at":capture::timestamp(capture::number(&row,"date_received"))?,"read":capture::number(&row,"read")!=0.0,"message_id":alias,"mailbox_ids":[format!("mailbox/{mailbox}")],"account_id":parsed.account,"to":null,"cc":null,"sent_at":null,"flagged":flag(&row),"flag_color":flag_color(&row),"has_attachments":null,"size":null,"snippet":null,"body_state":null});
         let alias = if alias.starts_with('<') && alias.ends_with('>') && alias.contains('@') {
             Some(format!("mail/{}/{alias}", parsed.account))
         } else {
@@ -65,6 +65,12 @@ fn projection(
         observations.push(capture::upsert("mail.message", key, alias, data, context)?);
     }
     Ok(observations)
+}
+fn flag(row: &capture::Row) -> Option<bool> {
+    (capture::number(row, "flagged") > 0.0).then_some(true)
+}
+fn flag_color(row: &capture::Row) -> Option<f64> {
+    flag(row).map(|_| capture::number(row, "flag_color"))
 }
 #[derive(Debug, Clone, Default)]
 struct State {
@@ -111,7 +117,14 @@ impl Reader {
             ("subjects", &["subject"]),
             ("addresses", &["address"]),
         ])?;
-        let rows=reader.query_partial("SELECT CAST(m.ROWID AS TEXT) AS native_key, m.mailbox, b.url, coalesce(s.subject,'') AS subject, coalesce(a.address,'') AS sender, m.date_received, m.read, coalesce(m.message_id,'') AS message_id FROM messages m LEFT JOIN mailboxes b ON b.ROWID=m.mailbox LEFT JOIN subjects s ON s.ROWID=m.subject LEFT JOIN addresses a ON a.ROWID=m.sender ORDER BY m.ROWID",&[],max_rows,Duration::from_secs(5))?;
+        let flags = if reader.has_column("messages", "flagged")?
+            && reader.has_column("messages", "flag_color")?
+        {
+            ", m.flagged, m.flag_color"
+        } else {
+            ""
+        };
+        let rows=reader.query_partial(&format!("SELECT CAST(m.ROWID AS TEXT) AS native_key, m.mailbox, b.url, coalesce(s.subject,'') AS subject, coalesce(a.address,'') AS sender, m.date_received, m.read, coalesce(m.message_id,'') AS message_id{flags} FROM messages m LEFT JOIN mailboxes b ON b.ROWID=m.mailbox LEFT JOIN subjects s ON s.ROWID=m.subject LEFT JOIN addresses a ON a.ROWID=m.sender ORDER BY m.ROWID"),&[],max_rows,Duration::from_secs(5))?;
         let mut keys = BTreeSet::new();
         for row in &rows.rows {
             let key = capture::text(row, "native_key");

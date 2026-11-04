@@ -1,4 +1,4 @@
-import glob, json, os, secrets, signal, sqlite3, subprocess, sys, time, urllib.error, urllib.request
+import glob, json, os, random, secrets, signal, sqlite3, subprocess, sys, time, urllib.error, urllib.request
 
 app, bridge, source = sys.argv[1], sys.argv[2], sys.argv[3]
 label = sys.argv[4] if len(sys.argv) > 4 else "run"
@@ -373,10 +373,6 @@ def tab_with(token):
 
 
 def history_with(token):
-    reply = op("search", {"query": token, "collections": ["safari.history"], "limit": 5})
-    rows = (reply.get("results") or reply.get("records") or []) if isinstance(reply, dict) else []
-    if rows:
-        return rows
     return next((r for r in records("safari.history") if live(r) and token in blob(r)), None)
 
 
@@ -389,34 +385,33 @@ def run_safari(tag):
     if not check("external_create_done", made.get("state") == "done", made.get("reason")):
         return
     key = made["key"]
-    safari_windows.append(key)
+    safari_windows.append((key, token))
     check("tab_create_reaches_gateway", timed("tab_create_visible", lambda: tab_with(token + "-a"), EXTERNAL_BOUND))
     check("history_visit_reaches_gateway", timed("history_create_visible", lambda: history_with(token + "-a"), float(os.environ.get("REAL_HISTORY_BOUND", "120"))))
     rounds = int(os.environ.get("REAL_TAB_ROUNDS", "3"))
     for index in range(rounds):
         marker = "%s-n%d" % (token, index)
-        moved = helper_change("update", key=key, url="https://example.com/?ab-test=%s" % marker)
+        moved = helper_change("update", key=key, marker=token, url="https://example.com/?ab-test=%s" % marker)
         check("tab_update_done_%d" % index, moved.get("state") == "done", moved.get("reason"))
         check("tab_update_reaches_gateway_%d" % index, timed("tab_update_%d" % index, lambda: tab_with(marker), EXTERNAL_BOUND))
         check("tab_old_url_replaced_%d" % index, tab_with(token + "-a") is None)
         time.sleep(float(os.environ.get("REAL_TAB_GAP", "30")))
-    moved = helper_change("update", key=key, url=second)
+    moved = helper_change("update", key=key, marker=token, url=second)
     check("external_update_done", moved.get("state") == "done", moved.get("reason"))
     check("tab_update_reaches_gateway", timed("tab_update_visible", lambda: tab_with(token + "-b"), EXTERNAL_BOUND))
-    closed = helper_change("delete", key=key)
+    closed = helper_change("delete", key=key, marker=token)
     if check("external_delete_done", closed.get("state") == "done", closed.get("reason")):
-        safari_windows.remove(key)
+        safari_windows.remove((key, token))
         check("tab_close_reaches_gateway", timed("tab_close_visible", lambda: tab_with(token) is None, EXTERNAL_BOUND))
     note("safari history visits stay in Safari, which offers no scripted removal: https://example.com/?ab-test=%s-*" % token)
 
 
-def mail_with(subject):
-    reply = op("search", {"query": subject.split()[-1], "collections": ["mail.message"], "limit": 10})
-    for row in (reply.get("results", []) if isinstance(reply, dict) else []):
-        record = get("mail.message", row.get("id")) if row.get("id") else None
-        if live(record) and subject in blob(record):
-            return record
-    return None
+def mail_records(subject):
+    return [r for r in records("mail.message") if subject in blob(r)]
+
+
+def mail_in(subject, predicate):
+    return next((r for r in mail_records(subject) if live(r) and predicate(r)), None)
 
 
 def run_mail(tag):
@@ -427,16 +422,17 @@ def run_mail(tag):
         return
     mail_subjects.append(subject)
     bound = float(os.environ.get("REAL_MAIL_BOUND", "120"))
-    record = timed("draft_create_visible", lambda: mail_with(subject), bound)
+    record = timed("draft_create_visible", lambda: mail_in(subject, lambda r: True), bound)
     if not check("draft_reaches_gateway", record):
         return
     flagged = helper_change("update", title=subject)
     if check("external_update_done", flagged.get("state") == "done", flagged.get("reason")):
-        check("flag_reaches_gateway", timed("flag_visible", lambda: (lambda r: r if r and r.get("data", {}).get("flagged") else None)(get("mail.message", record["id"])), bound))
+        check("flag_reaches_gateway", timed("flag_visible", lambda: mail_in(subject, lambda r: r.get("data", {}).get("flagged")), bound))
     removed = helper_change("delete", title=subject)
     if check("external_delete_done", removed.get("state") == "done", removed.get("reason")):
         mail_subjects.remove(subject)
-        check("delete_reaches_gateway", timed("delete_visible", lambda: gone("mail.message", record["id"]), bound))
+        # Mail deletes by moving to Deleted Messages, as a new row: the draft's record leaves and the new one is in another mailbox.
+        check("delete_reaches_gateway", timed("delete_visible", lambda: gone("mail.message", record["id"]) or mail_in(subject, lambda r: r.get("data", {}).get("mailbox_ids") != record.get("data", {}).get("mailbox_ids")), bound))
 
 
 def run_usage(tag):
@@ -448,7 +444,7 @@ def run_usage(tag):
         total = 0
         for row in records("usage.app_day"):
             data = row.get("data", {})
-            if live(row) and data.get("bundle_id") == bundle and data.get("day") == today:
+            if live(row) and data.get("bundle_id") == bundle and str(data.get("day")).startswith(today):
                 total += data.get("seconds_estimated", 0) or 0
         return total
 
@@ -523,6 +519,41 @@ def calendar_enumeration_proof():
     check("calendar_enumerates_with_reminder_hint_pending", data.get("state") == "done", data)
 
 
+def calendar_update_rounds(tag):
+    """One outside event updated again and again, at gaps that sweep the pull interval. Every update has to arrive."""
+    rounds = int(os.environ.get("REAL_CALENDAR_ROUNDS", "0"))
+    if not rounds:
+        return
+    title = tag + " rounds"
+    made = helper_change("create", container_title="Bridge Test", title=title)
+    if not check("rounds_create_done", made.get("state") == "done", made.get("reason")):
+        return
+    key = made["key"]
+    externals.append(key)
+    check("rounds_create_reaches_gateway", timed("rounds_create", lambda: find_tagged("calendar.event", title), EXTERNAL_BOUND))
+    seen = []
+    missed = 0
+    for index in range(rounds):
+        marker = "%s %d" % (title, index)
+        started = time.time()
+        moved = helper_change("update", key=key, title=marker)
+        if moved.get("state") != "done":
+            check("rounds_update_done_%d" % index, False, moved.get("reason"))
+            continue
+        arrived = wait_for(lambda: find_tagged("calendar.event", marker), EXTERNAL_BOUND, 0.4)
+        seconds = time.time() - started
+        seen.append(seconds)
+        latencies.append(("rounds_update_%d" % index, seconds))
+        missed += 0 if arrived else 1
+        time.sleep(random.uniform(0, float(os.environ.get("REAL_CALENDAR_GAP", "18"))))
+    seen.sort()
+    note("calendar rounds=%d missed=%d median=%.1fs max=%.1fs" % (len(seen), missed, seen[len(seen) // 2] if seen else 0, seen[-1] if seen else 0))
+    check("every_calendar_update_arrived", missed == 0, "%d missed" % missed)
+    removed = helper_change("delete", key=key)
+    if removed.get("state") == "done":
+        externals.remove(key)
+
+
 def run_calendar(tag):
     calendar_enumeration_proof()
     fixtures = [r for r in records("calendar.calendar") if live(r) and r.get("data", {}).get("title") == "Bridge Test"]
@@ -547,6 +578,7 @@ def run_calendar(tag):
         check("stale_version_rejected", isinstance(stale, dict) and stale.get("error"))
         delete_checked("delete", "calendar.delete_event", "calendar.event", event["id"])
     external_cycle("Bridge Test", tag + " ext", tag + " ext revised", "calendar.event")
+    calendar_update_rounds(tag)
 
 
 def run_contacts(tag):
@@ -611,12 +643,12 @@ def cleanup_created():
     for key in list(externals):
         removed = external_delete(key)
         note("cleanup external by key: %s" % removed.get("state"))
-    for key in list(safari_windows):
-        note("cleanup safari window: %s" % helper_change("delete", key=key).get("state"))
+    for key, marker in list(safari_windows):
+        note("cleanup safari tab: %s" % helper_change("delete", key=key, marker=marker).get("state"))
     for subject in list(mail_subjects):
         note("cleanup mail draft: %s" % helper_change("delete", title=subject).get("state"))
     for name in launched:
-        subprocess.run(["osascript", "-e", 'quit app "%s"' % name], check=False, timeout=30)
+        subprocess.run(["pkill", "-TERM", "-x", name], check=False, timeout=30)
 
 
 ready = wait_for(lambda: any(r.get("data", {}).get("source") == source and r.get("data", {}).get("state") == "ready" for r in records("system.source")), 240, 1)
@@ -624,6 +656,24 @@ check("%s_source_ready" % source, ready)
 if not ready:
     finish(1)
 check("capture_has_%s" % ANCHOR[source], wait_for(lambda: len(records(ANCHOR[source])) > 0, 300, 2))
+def settled():
+    """The first capture arrives in batches. Commands and baselines wait until the counts stop growing."""
+    last = None
+    quiet_since = time.time()
+    deadline = time.time() + float(os.environ.get("REAL_SETTLE_BOUND", "300"))
+    while time.time() < deadline:
+        counts = {collection: len(records(collection)) for collection in COLLECTIONS[source]}
+        if counts != last:
+            last = counts
+            quiet_since = time.time()
+        elif time.time() - quiet_since >= 15:
+            return True
+        time.sleep(2)
+    return False
+
+
+check("first_capture_settled", settled())
+time.sleep(float(os.environ.get("REAL_SETTLE_EXTRA", "0")))
 before = snapshot()
 note("before " + ",".join("%s=%d" % (k, len(v)) for k, v in before.items()))
 tag = "[ab-test] real-%s %s" % (source, secrets.token_hex(3))

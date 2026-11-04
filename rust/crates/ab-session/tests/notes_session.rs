@@ -130,14 +130,28 @@ fn a_restart_remembers_what_the_gateway_was_told() {
 }
 
 #[test]
-fn a_token_from_the_previous_build_still_resumes() {
+fn a_token_from_the_previous_build_rescans_even_a_quiet_store() {
     let mut rig = Rig::new();
+    rig.edit("UPDATE ZICCLOUDSYNCINGOBJECT SET ZFOLDER=11,Z_OPT=2 WHERE Z_PK=20");
     let mut reader = rig.reader();
     rig.step(&mut reader).expect("first scan");
     let token: Value = serde_json::from_str(&reader.token().expect("token")).expect("json");
     let old = token["signature"].as_str().expect("signature");
     let mut restarted = rig.reader();
     assert!(restarted.resume(old));
+    let capture = rig.step(&mut restarted).expect("a first scan, not silence");
+    assert!(absent(&capture).contains("one"), "{capture}");
+}
+
+#[test]
+fn a_current_token_over_an_unchanged_store_stays_silent() {
+    let mut rig = Rig::new();
+    let mut reader = rig.reader();
+    rig.step(&mut reader).expect("first scan");
+    let token = reader.token().expect("token");
+    let mut restarted = rig.reader();
+    assert!(restarted.resume(&token));
+    assert!(rig.step(&mut restarted).is_none());
 }
 
 #[test]
