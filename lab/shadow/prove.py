@@ -62,7 +62,12 @@ def main():
     parser.add_argument('--rust', default='bin/bridge')
     parser.add_argument('--go-go-runs', type=int, default=8)
     parser.add_argument('--lab', default='bin/bridge-lab')
+    parser.add_argument('--bridge', default='bin/bridge')
+    parser.add_argument('--simapple', default='')
+    parser.add_argument('--tools', default='')
     args = parser.parse_args()
+    simapple = [args.simapple] if args.simapple else [args.lab, 'simapple']
+    tools = args.tools or args.lab
     root = private_directory(args.output)
     if list(root.iterdir()):
         raise ValueError('synthetic output must be empty')
@@ -71,7 +76,7 @@ def main():
     socket = root / 'gateway.sock'
     proxy = root / 'proxy.sock'
     log = (root / 'processes.log').open('x')
-    gateway_args = ['bin/bridge', 'start', '--role', 'gateway', '--home', str(home), '--socket', str(socket), '--peer-addr', '127.0.0.1:0', '--api-addr', '127.0.0.1:0']
+    gateway_args = [args.bridge, 'start', '--role', 'gateway', '--home', str(home), '--socket', str(socket), '--peer-addr', '127.0.0.1:0', '--api-addr', '127.0.0.1:0']
     feed_peer = root / 'feed-peer'
     feed_log = root / 'feed.log'
     gateway = subprocess.Popen(gateway_args, stdout=log, stderr=log)
@@ -80,10 +85,10 @@ def main():
         wait(socket, gateway)
         wait(home / 'runtime.json', gateway)
         peer_address = json.loads((home / 'runtime.json').read_text())['peer_address']
-        code = subprocess.check_output(['bin/bridge', 'pair', '--home', str(home), '--scope', 'admin', '--peer-addr', peer_address], text=True).splitlines()[0].strip()
-        subprocess.run(['bin/bridge', 'join', '--home', str(feed_peer), code], check=True, stdout=subprocess.DEVNULL, stderr=log)
-        token = subprocess.check_output(['bin/bridge', 'token', 'create', '--home', str(home), '--scope', 'admin'], text=True).strip()
-        primer = subprocess.Popen(['bin/bridge-lab', 'simapple', '--socket', str(socket), '--secret-file', str(home / 'apple-secret'), '--control', str(root / 'prime.sock')], stdout=log, stderr=log)
+        code = subprocess.check_output([args.bridge, 'pair', '--home', str(home), '--scope', 'admin', '--peer-addr', peer_address], text=True).splitlines()[0].strip()
+        subprocess.run([args.bridge, 'join', '--home', str(feed_peer), code], check=True, stdout=subprocess.DEVNULL, stderr=log)
+        token = subprocess.check_output([args.bridge, 'token', 'create', '--home', str(home), '--scope', 'admin'], text=True).strip()
+        primer = subprocess.Popen([*simapple, '--socket', str(socket), '--secret-file', str(home / 'apple-secret'), '--control', str(root / 'prime.sock')], stdout=log, stderr=log)
         wait(root / 'prime.sock', primer)
         client = http.client.HTTPConnection('sim', timeout=10)
         client.sock = sockets.socket(sockets.AF_UNIX)
@@ -107,8 +112,8 @@ def main():
         if primer:
             stop(primer)
         stop(gateway)
-    (root / 'iphone-agent.json').write_text(subprocess.check_output(['bin/bridge', 'agent', 'create', '--home', str(home), '--name', 'shadow-approver', '--level', 'approve', '--scope', 'iphone:write'], text=True))
-    subprocess.run(['bin/bridge-lab', 'iphone-device', '--home', str(home), '--output', str(root / 'iphone-device.json')], check=True, stdout=log)
+    (root / 'iphone-agent.json').write_text(subprocess.check_output([args.bridge, 'agent', 'create', '--home', str(home), '--name', 'shadow-approver', '--level', 'approve', '--scope', 'iphone:write'], text=True))
+    subprocess.run([tools, 'iphone-device', '--home', str(home), '--output', str(root / 'iphone-device.json')], check=True, stdout=log)
     shutil.copytree(home, root / 'starting')
     (home / 'runtime.json').unlink(missing_ok=True)
     observer = root / 'iphone-observer.sock'
@@ -122,7 +127,7 @@ def main():
             admission_port = reservation.getsockname()[1]
         tap = subprocess.Popen([sys.executable, 'lab/shadow/shadow.py', 'record', '--listen', str(proxy), '--upstream', str(socket), '--output', str(root / 'recording'), '--iphone-observer', str(observer), '--admission-listen', '127.0.0.1:' + str(admission_port), '--admission-upstream', json.loads((home / 'runtime.json').read_text())['api_address'], '--delegated-log', str(feed_log)], stdout=log, stderr=log)
         wait(proxy, tap)
-        helper = subprocess.Popen(['bin/bridge-lab', 'simapple', '--socket', str(proxy), '--secret-file', str(home / 'apple-secret'), '--control', str(root / 'sim.sock')], stdout=log, stderr=log)
+        helper = subprocess.Popen([*simapple, '--socket', str(proxy), '--secret-file', str(home / 'apple-secret'), '--control', str(root / 'sim.sock')], stdout=log, stderr=log)
         wait(root / 'sim.sock', helper)
         def control_action(path, value):
             control = http.client.HTTPConnection('sim', timeout=10)
@@ -180,7 +185,7 @@ def main():
         feed_address = config['peer_address']
         def feed_call(request):
             request['delegation'] = {'local_principal': 'token:shadow-feed', 'local_grants': ['reminders:write']}
-            result = subprocess.run([args.lab, 'shadow-feed', '--peer-home', str(feed_peer), '--address', feed_address], input=json.dumps(request), capture_output=True, text=True, timeout=60)
+            result = subprocess.run([tools, 'shadow-feed', '--peer-home', str(feed_peer), '--address', feed_address], input=json.dumps(request), capture_output=True, text=True, timeout=60)
             if result.returncode:
                 raise RuntimeError('synthetic feed request failed: ' + result.stderr.strip())
             return json.loads(result.stdout)['outcome']
@@ -308,12 +313,12 @@ def main():
     manifest = root / 'decisions.json'
     subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'decisions', '--recording', str(recording), '--home', str(home), '--starting-home', str(root / 'starting'), '--output', str(manifest)], check=True, stdout=subprocess.DEVNULL)
     for run in range(args.go_go_runs):
-        result = subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'replay', '--recording', str(recording), '--starting-home', str(root / 'starting'), '--output', str(root / ('replay-go-go-' + str(run))), '--go', args.go, '--rust', args.go, '--decisions', str(manifest), '--iphone-device', str(root / 'iphone-device.json'), '--exact', '--feed-peer-home', str(feed_peer), '--lab-binary', args.lab], capture_output=True, text=True)
+        result = subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'replay', '--recording', str(recording), '--starting-home', str(root / 'starting'), '--output', str(root / ('replay-go-go-' + str(run))), '--go', args.go, '--rust', args.go, '--decisions', str(manifest), '--iphone-device', str(root / 'iphone-device.json'), '--exact', '--feed-peer-home', str(feed_peer), '--lab-binary', tools], capture_output=True, text=True)
         report = json.loads(result.stdout) if result.stdout else {'digests': []}
         if result.returncode or not report['digests'] or any(not row['equal'] for row in report['digests']):
             raise RuntimeError('synthetic Go-Go exact replay failed in run ' + str(run) + ': ' + result.stderr.strip())
         shutil.rmtree(root / ('replay-go-go-' + str(run)))
-    result = subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'replay', '--recording', str(recording), '--starting-home', str(root / 'starting'), '--output', str(root / 'replay-exact'), '--go', args.go, '--rust', args.rust, '--decisions', str(manifest), '--iphone-device', str(root / 'iphone-device.json'), '--exact', '--feed-peer-home', str(feed_peer), '--lab-binary', args.lab], capture_output=True, text=True)
+    result = subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'replay', '--recording', str(recording), '--starting-home', str(root / 'starting'), '--output', str(root / 'replay-exact'), '--go', args.go, '--rust', args.rust, '--decisions', str(manifest), '--iphone-device', str(root / 'iphone-device.json'), '--exact', '--feed-peer-home', str(feed_peer), '--lab-binary', tools], capture_output=True, text=True)
     report = json.loads(result.stdout) if result.stdout else {'digests': []}
     if result.returncode or any(not row['equal'] for row in report['digests']):
         raise RuntimeError('synthetic exact decision replay failed: ' + result.stderr.strip())

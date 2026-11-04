@@ -4,6 +4,10 @@ if [[ $(uname -s) != Linux ]]; then
   echo 'gateway-matrix requires Linux; sync this checkout and run make gateway-matrix on ssh build' >&2
   exit 1
 fi
+if [[ ${AB_LAB_RUNNER:-go} == rust ]]; then
+  : "${SIM_OUTPUT:?}"
+  exec "$(dirname "$0")/rust-lab.sh" sim
+fi
 go build -tags lab -o bin/bridge ./cmd/bridge
 go build -o bin/bridge-lab ./cmd/bridge-lab
 bin/bridge-lab build-legacy

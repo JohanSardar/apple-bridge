@@ -54,7 +54,7 @@ Verification: the real scenario passed 20 assertions; `make lint`, `go test ./la
 - `ab-wire::gojson` preserves number tokens using `RawValue`, orders maps, applies Go HTML/no-HTML escaping, replaces unpaired UTF-16 surrogates, formats UTC `GoTime`, and encodes the capitalized command fields in declaration order. It deliberately does not expose a universal struct canonicalizer.
 - `tools/lint` rejects the two prohibited serde_json features in manifests. `cargo deny` also rejects their resolved activation, including through transitive dependencies.
 
-Reproduce synthetic checks: build `rust/spikes` and `go build -o <oracle> ./tools/rust-spike`, then `<oracle> <ab-spikes>`. Optional following database paths invoke the hash-only comparison. Clone with `sqlite3 -readonly`: begin a read transaction, read `sqlite_schema` to establish its snapshot, invoke `.backup` into an owner-only temporary directory, then roll back. The explicit read transaction prevents online-backup restarts under active capture. Never pass a live database to the comparator. No raw capture recording was enabled or read from the gateway.
+The Go oracle that reproduced these synthetic checks (`tools/rust-spike`) is retired with the Go tree; the checks run from `rust/spikes` alone. Optional following database paths invoke the hash-only comparison. Clone with `sqlite3 -readonly`: begin a read transaction, read `sqlite_schema` to establish its snapshot, invoke `.backup` into an owner-only temporary directory, then roll back. The explicit read transaction prevents online-backup restarts under active capture. Never pass a live database to the comparator. No raw capture recording was enabled or read from the gateway.
 
 **Phase 0 golden verification passed after it landed on main `a02485dd`: 22 compatibility comparisons, 0 mismatches, in two Rust integration tests.** These check all four JSON vectors in both escape modes, all four command preimages and hashes, five timestamp normalizations, and the Capture fixture observation Data. This fixture is synthetic; it does not replace a recorded live-capture corpus. Reproduce with `cargo test --manifest-path rust/Cargo.toml -p ab-wire`.
 
@@ -75,7 +75,7 @@ Reproduce with `<oracle> sqlite <temporary-path-prefix> <ab-spikes>`. Use a fres
 
 **10 cases, 0 mismatches**: Go server/Rust client and Rust server/Go client both exchanged application bytes; four wrong-pin cases and four expired-certificate cases were rejected. Go uses the actual `internal/trust` `PinnedListener` and `ClientTLS` implementations. Synthetic identities are generated in a temporary directory and deleted; no live credentials were accessed. The plan's separate smux/relay component is outside this requested mTLS spike and remains unverified.
 
-Reproduce with `python3 rust/spikes/tls_matrix.py <oracle> <ab-spikes>`.
+Reproduced with `python3 rust/spikes/tls_matrix.py <oracle> <ab-spikes>` while the Go `tools/rust-spike` oracle existed; the oracle is retired and the committed results stand as the record.
 
 ## S8: legacy Python Keychain item from Rust
 

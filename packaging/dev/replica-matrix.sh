@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
+if [[ ${AB_LAB_RUNNER:-go} == rust ]]; then
+  flags=${REPLICA_MATRIX_FLAGS:---local-replicas --jobs 4}
+  jobs=$(printf '%s\n' "$flags" | sed -n 's/.*--jobs \([0-9][0-9]*\).*/\1/p')
+  if [[ -n "${SCENARIOS:-}" && "$SCENARIOS" != lab/scenarios ]]; then
+    exec "$(dirname "$0")/rust-lab.sh" sim "$SCENARIOS"
+  fi
+  SIM_JOBS=${jobs:-4} exec "$(dirname "$0")/rust-lab.sh" replica
+fi
 read -r -a matrix_flags <<< "${REPLICA_MATRIX_FLAGS:---local-replicas --jobs 4}"
 implementation=${REPLICA_IMPL:-gateway=go,replica=rust}
 if [[ "$implementation" == "gateway=go,replica=go" ]]; then

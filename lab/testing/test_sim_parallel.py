@@ -62,6 +62,23 @@ class RunnerTests(unittest.TestCase):
                 runner.execute({'id': 'fixture', 'path': 'fixture.yaml'}, str(binary), 5, root, 'gateway=go', '', '')
             self.assertEqual((root / 'fixture.log').read_text().splitlines(), ['run', 'fixture.yaml', '--level', 'sim', '--prebuilt', '--json', '--impl', 'gateway=go'])
 
+    def test_rust_runner_uses_families_without_go_audit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            families = root / 'families'
+            families.write_text('#!/bin/sh\nprintf \"%s\\n\" \"$@\"\n')
+            families.chmod(0o700)
+            gateway = root / 'bridge'
+            gateway.write_text('')
+            scenario = root / 'fixture.yaml'
+            scenario.write_text('id: fixture\n')
+            entry = {'id': 'fixture', 'path': str(scenario), 'packages': [], 'code_paths': ['missing.go'], 'semantic_contract_calls': ['x']}
+            with patch.object(runner.platform, 'system', return_value='Linux'):
+                row = runner.execute(entry, '', 5, root, 'gateway=rust', str(gateway), '', str(families), '/sim/apple')
+            self.assertEqual((root / 'fixture.log').read_text().splitlines(), ['run', str(scenario), '--gateway', str(gateway), '--simapple', '/sim/apple', '--output', str(root / 'fixture.world')])
+            self.assertEqual(row['harness_audit'], [])
+            self.assertEqual(row['status'], 'pass')
+
     def test_default_and_end_sets(self):
         import json
         import sys
