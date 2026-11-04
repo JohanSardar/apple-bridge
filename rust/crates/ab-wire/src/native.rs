@@ -172,6 +172,26 @@ pub struct QueryCancel {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Primitive {
+    pub id: String,
+    pub op: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub args: Option<Raw>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct PrimitiveResult {
+    pub id: String,
+    pub result: Raw,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct PrimitiveError {
+    pub id: String,
+    pub code: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BlobRead {
     pub handle: String,
     pub offset: i64,
@@ -215,6 +235,9 @@ pub enum Frame {
     QueryResult(QueryResult),
     QueryError(QueryError),
     QueryCancel(QueryCancel),
+    Primitive(Primitive),
+    PrimitiveResult(PrimitiveResult),
+    PrimitiveError(PrimitiveError),
     BlobRead(BlobRead),
     BlobChunk(BlobChunk),
     BlobUnavailable(BlobUnavailable),
@@ -344,6 +367,9 @@ impl Frame {
             "QueryResult" => Self::QueryResult(body(bytes)?),
             "QueryError" => Self::QueryError(body(bytes)?),
             "QueryCancel" => Self::QueryCancel(body(bytes)?),
+            "Primitive" => Self::Primitive(body(bytes)?),
+            "PrimitiveResult" => Self::PrimitiveResult(body(bytes)?),
+            "PrimitiveError" => Self::PrimitiveError(body(bytes)?),
             "BlobRead" => Self::BlobRead(body(bytes)?),
             "BlobChunk" => Self::BlobChunk(body(bytes)?),
             "BlobUnavailable" => Self::BlobUnavailable(body(bytes)?),
@@ -385,6 +411,9 @@ impl Frame {
             Self::QueryResult(frame) => tagged("QueryResult", frame),
             Self::QueryError(frame) => tagged("QueryError", frame),
             Self::QueryCancel(frame) => tagged("QueryCancel", frame),
+            Self::Primitive(frame) => tagged("Primitive", frame),
+            Self::PrimitiveResult(frame) => tagged("PrimitiveResult", frame),
+            Self::PrimitiveError(frame) => tagged("PrimitiveError", frame),
             Self::BlobRead(frame) => tagged("BlobRead", frame),
             Self::BlobChunk(frame) => tagged("BlobChunk", frame),
             Self::BlobUnavailable(frame) => tagged("BlobUnavailable", frame),

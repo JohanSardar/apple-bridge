@@ -426,3 +426,20 @@ and the commit-ordered record of written keys. `routed::Gate` owns the only inst
 implements `flight::Ledger`; `effects::Layer` no longer registers captures or `Committed` itself and
 correlates dispatch evidence through the ledger (`sequence()` counts commits, `written()` waits for the
 key). Only rows with kind `upsert` or `absent` are correlated.
+
+
+### Rust-owned commands (step 3, off by default)
+
+`--rust-commands reminders` (session mode; the sources are `session::RUST_COMMAND_SOURCES`) routes the
+Reminders `Prepare`/`Dispatch` of the gateway through `session/reminders.rs` instead of the Swift source. The
+decisions (operation and writability checks, expected-state conflict, list move, drift between prepare and
+dispatch, read-back verification, conflict evidence) are Rust; Swift answers the native/1 `Primitive` frames
+documented in `design/spec/native-1.md` and carries no `rust_pre_state`, no ipc/1 command and no ticket. A
+source not named keeps the Swift path, and the flag without session mode is refused. Proof today is the
+Rust decision tests plus `tests/session_peer.rs` (a fake Swift answering primitives; each rule has a
+negative control). Swift primitives and the lab world's primitives are not written yet, so the flag is not
+usable end to end and nothing is flipped.
+
+The routed effects layer now refuses a command whose numbers the permit hash cannot represent (below 1e-4 or
+at or above 1e15) with `Rejected invalid` (`QueryError invalid` for queries) instead of closing the gateway
+stream; the session-mode path never hashes command args.

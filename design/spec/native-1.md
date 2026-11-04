@@ -198,6 +198,40 @@ scan containing that key after the dispatch started (facts sources: the latest) 
 `evidence.prepared` is filled by ab-session when Swift omits it. Results larger than a native frame fail as
 `QueryError unavailable`; the oversized-body path stays a blob handle served through `BlobRead`.
 
+### Primitives (Rust-owned commands, off by default)
+
+`ab-session --rust-commands reminders` (session mode only) makes Rust own prepare, validation and the
+conflict decision for the named sources. For their operations Swift never sees `Prepare`, `Dispatch` or a
+ticket; it answers closed primitives and reports what the framework did.
+
+| Frame | Direction | Fields |
+| --- | --- | --- |
+| `Primitive` | Rust to Swift | `id`, `op`, `args` |
+| `PrimitiveResult` | Swift to Rust | `id`, `result` |
+| `PrimitiveError` | Swift to Rust | `id`, `code` (`permission_missing`, `unsupported`, `invalid`, `conflict`, anything else is `unavailable`) |
+
+One request is answered once; an answer after Rust gave up (10 seconds for reads, 30 for a write) is ignored,
+an answer to an id Rust never sent closes the session. A primitive returns framework facts, never a
+decision: Swift does not compare against `expected_state`, does not check a native state and does not judge
+its own write.
+
+Reminders primitives (`reminders.*` operations):
+
+| Op | Args | Result |
+| --- | --- | --- |
+| `reminders.read_list` | `native_key` | `{exists, writable, data}` (`data` is the list's native fields) |
+| `reminders.read_reminder` | `native_key` | `{exists, writable, list_key, data}` (`writable` is the owning list's) |
+| `reminders.can_create_list` | none | `{allowed}` (the default account accepts a new list) |
+| `reminders.reconcile` | none | `{}` after Swift emitted a fresh `Scan` of the source (used to evidence a conflict) |
+| `reminders.write` | `op`, `native_key`, `list_key`, `args` | `{native_key, saved, observed, exists_after}`: `saved` is the record as written, `observed` a fresh read of it, `null` when absent. Swift emits its normal `Scan` of the change before answering |
+
+Rust decides: unsupported operation or read-only list (`unsupported`); a missing reminder, a changed list or
+reminder, an unexpected owning list (`conflict`, with `{native_key, capture_checkpoint}` evidence when the
+fresh scan shows the key); drift between `Prepare` and `Dispatch` (rejected before any write, the dispatch
+slot already written to the guard); and whether the read-back proves the write (`locally_observed`) or not
+(`indeterminate`, never retried). Projection-only fields (store enrichment) never take part in a comparison.
+`Resolve` after a restart still goes to Swift (`saved` forwarded) until its resolve logic moves.
+
 ## Ownership and migration
 
 See rust/interfaces/ab-session.md. Exactly one external ipc/1 session and one authoritative
