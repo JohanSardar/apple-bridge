@@ -24,10 +24,12 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
+mod calendar;
 mod commands;
+mod owned;
 mod reminders;
 
-pub const RUST_COMMAND_SOURCES: [&str; 1] = ["reminders"];
+pub const RUST_COMMAND_SOURCES: [&str; 2] = ["reminders", "calendar"];
 
 #[derive(Clone, Debug, Default)]
 pub struct Options {
