@@ -53,4 +53,5 @@ name = "frontdoor_fixture"
 required-features = ["replica-feed", "lab-harness"]
 
 [dev-dependencies]
+ab-session = { path = "../ab-session", features = ["rust-effects", "rust-capture"] }
 tempfile = "3"

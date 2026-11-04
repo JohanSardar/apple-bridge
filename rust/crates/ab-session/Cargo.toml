@@ -9,7 +9,7 @@ workspace = true
 
 [features]
 default = []
-lab = ["ab-wire/lab", "ab-state/lab"]
+lab = ["ab-wire/lab"]
 rust-effects = ["dep:sha2", "rust-capture"]
 rust-capture = ["dep:ab-native", "dep:sha2", "dep:base64"]
 
@@ -26,5 +26,4 @@ base64 = { version = "=0.22.1", optional = true }
 jiff.workspace = true
 
 [dev-dependencies]
-ab-state = { path = "../ab-state" }
 rusqlite.workspace = true
