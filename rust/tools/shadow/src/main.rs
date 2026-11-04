@@ -47,15 +47,11 @@ fn iphone_device(args: impl Iterator<Item = String>) -> Result<(), Failure> {
     let home = required(&values, "--home")?;
     let output = required(&values, "--output")?;
     let authority = Authority::open(home)?;
-    let raw = authority.pair_iphone_code(
-        "https://iphone.invalid",
-        false,
-        Duration::from_secs(60),
-    )?;
+    let raw =
+        authority.pair_iphone_code("https://iphone.invalid", false, Duration::from_secs(60))?;
     let encoded = raw.strip_prefix("ab1-").ok_or("pair code prefix")?;
-    let code: Value = serde_json::from_slice(
-        &data_encoding::BASE32_NOPAD.decode(encoded.as_bytes())?,
-    )?;
+    let code: Value =
+        serde_json::from_slice(&data_encoding::BASE32_NOPAD.decode(encoded.as_bytes())?)?;
     let id = code["id"].as_str().ok_or("pair code id")?;
     let secret = STANDARD.decode(code["secret"].as_str().ok_or("pair code secret")?)?;
     let seed = random32();
@@ -118,18 +114,13 @@ fn post(
     header: &str,
     body: &[u8],
 ) -> Result<(u16, Vec<u8>), Failure> {
-    let socket = address
-        .to_socket_addrs()?
-        .next()
-        .ok_or("gateway address")?;
+    let socket = address.to_socket_addrs()?.next().ok_or("gateway address")?;
     let tcp = TcpStream::connect_timeout(&socket, Duration::from_secs(2))?;
     tcp.set_read_timeout(Some(Duration::from_secs(60)))?;
     tcp.set_write_timeout(Some(Duration::from_secs(60)))?;
     let name = rustls::pki_types::ServerName::IpAddress(socket.ip().into());
-    let connection = rustls::ClientConnection::new(
-        Arc::new(authority.client_tls(fingerprint)?),
-        name,
-    )?;
+    let connection =
+        rustls::ClientConnection::new(Arc::new(authority.client_tls(fingerprint)?), name)?;
     let mut stream = rustls::StreamOwned::new(connection, tcp);
     let head = format!(
         "POST /v1/commands HTTP/1.1\r\nHost: {address}\r\nX-Apple-Bridge-Delegation: {header}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
@@ -160,9 +151,10 @@ fn post(
         .nth(1)
         .ok_or("status line")?
         .parse::<u16>()?;
-    let is_chunked = head
-        .lines()
-        .any(|line| line.to_ascii_lowercase().starts_with("transfer-encoding: chunked"));
+    let is_chunked = head.lines().any(|line| {
+        line.to_ascii_lowercase()
+            .starts_with("transfer-encoding: chunked")
+    });
     let payload = &raw[split + 4..];
     Ok((
         status,
@@ -179,7 +171,11 @@ fn command_id(command: &Value, id: &mut String, hash: &mut String) -> Result<(),
         .unwrap_or_default()
         .clone_into(id);
     if hash.is_empty() {
-        let expires = GoTime::parse(command["expires_at"].as_str().unwrap_or("0001-01-01T00:00:00Z"))?;
+        let expires = GoTime::parse(
+            command["expires_at"]
+                .as_str()
+                .unwrap_or("0001-01-01T00:00:00Z"),
+        )?;
         *hash = CommandHash {
             op: command["op"].as_str().unwrap_or_default(),
             args: serde_json::to_string(&command["args"])?.as_bytes(),
@@ -247,7 +243,11 @@ fn shadow_feed(args: impl Iterator<Item = String>) -> Result<(), Failure> {
     let level = text("local_level");
     let principal = Principal {
         id: text("local_principal"),
-        kind: if level.is_empty() { String::new() } else { "agent".into() },
+        kind: if level.is_empty() {
+            String::new()
+        } else {
+            "agent".into()
+        },
         grants,
         level,
         ..Principal::default()
@@ -257,7 +257,9 @@ fn shadow_feed(args: impl Iterator<Item = String>) -> Result<(), Failure> {
     let mut outcome = json!({"status": 200});
     if status != 200 {
         let envelope: Value = serde_json::from_slice(&raw).map_err(|_| "gateway unavailable")?;
-        let code = envelope["error"]["code"].as_str().ok_or("gateway unavailable")?;
+        let code = envelope["error"]["code"]
+            .as_str()
+            .ok_or("gateway unavailable")?;
         outcome = json!({"status": 400, "error": code});
     } else if request["method"] == "list" {
         let rows: Vec<Value> = serde_json::from_slice(&raw)?;
