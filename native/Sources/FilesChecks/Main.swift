@@ -167,7 +167,25 @@ struct Checks {
         } catch SourceFailure.invalid {}
         print("transforms=4 passed=true")
     }
+    static func ubiquity() async throws {
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent("ab-test-" + UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: home) }
+        let source = try FilesSource(home: home)
+        let root = home.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/Bridge Test").resolvingSymlinksInPath()
+        let file = root.appendingPathComponent("a.txt")
+        try Data("a".utf8).write(to: file)
+        let answer = try await source.ubiquity([file.path, root.appendingPathComponent("gone.txt").path])
+        guard answer.count == 2, answer[0]["path"].string == file.path, answer[0]["status"].string == "local", answer[1]["status"].string == "local" else { throw SourceFailure.corrupt }
+        for refused in [[], ["relative.txt"], ["/etc/hosts"], [root.path + "/../escape"], [root.path], Array(repeating: file.path, count: 501)] as [[String]] {
+            do {
+                _ = try await source.ubiquity(refused)
+                throw SourceFailure.corrupt
+            } catch SourceFailure.invalid {}
+        }
+        print("ubiquity passed=true")
+    }
     static func main() async throws {
+        if CommandLine.arguments.last == "FILES-UBIQUITY" { try await ubiquity(); return }
         if CommandLine.arguments.contains("FILE-COMMANDS") || CommandLine.arguments.contains("FILE-CRUD-REAL") { try await commands(); return }
         if CommandLine.arguments.last == "FILES-TRANSFORM" {
             try await transforms()

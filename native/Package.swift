@@ -37,6 +37,7 @@ let package = Package(
         .executableTarget(name: "CaptureChecks", dependencies: ["CaptureSource", "MacSource", "SourceSupport"]),
         .executableTarget(name: "MailChecks", dependencies: ["MailSource", "SourceSupport"]),
         .executableTarget(name: "FilesChecks", dependencies: ["FilesSource", "SourceSupport"]),
+        .executableTarget(name: "MacChecks", dependencies: ["MacSource", "SourceSupport"]),
         .executableTarget(name: "RecordingsChecks", dependencies: ["VoiceMemosSource", "VoicemailSource", "SourceSupport"]),
         .executableTarget(name: "CallsChecks", dependencies: ["CallsSource", "SourceSupport"]),
         .executableTarget(name: "SafariChecks", dependencies: ["SafariSource", "SourceSupport"]),

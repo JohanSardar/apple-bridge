@@ -68,6 +68,13 @@ struct NativeChecks {
         try check(await fake.reads == 1, "single snapshot fetch")
         request["op"] = .string("contacts.contacts")
         try check(await server.handle(.object(request))["code"] == .string("expired"), "terminal snapshot released")
+        var closed: [String: JSON] = ["t": .string("Facts"), "id": .string("ubiquity"), "op": .string("files.ubiquity"), "args": .object(["paths": .array([.string("/a")])]), "snapshot": .null, "cursor": .null, "limit": .integer(100)]
+        let ubiquity = await server.handle(.object(closed))
+        try check(ubiquity["t"] == .string("FactPage") && ubiquity["op"] == .string("files.ubiquity") && ubiquity["complete"] == .bool(true), "files.ubiquity is a fact operation")
+        closed["id"] = .string("mac"); closed["op"] = .string("mac.state"); closed["args"] = .object([:])
+        try check(await server.handle(.object(closed))["op"] == .string("mac.state"), "mac.state is a fact operation")
+        closed["id"] = .string("unknown"); closed["op"] = .string("files.search")
+        try check(await server.handle(.object(closed))["code"] == .string("unsupported"), "a files query is not a fact")
         request["snapshot"] = .null; request["cursor"] = .null; request["limit"] = .integer(100); request["args"] = .object(["partial": .bool(true)])
         try check(await server.handle(.object(request))["complete"] == .bool(false), "partial scan")
         let args: JSON = .object(["text": .string("synthetic")])

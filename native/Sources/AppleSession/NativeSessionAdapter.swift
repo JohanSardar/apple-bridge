@@ -6,6 +6,7 @@ import CalendarSource
 import ContactsSource
 import RemindersSource
 import MacSource
+import FilesSource
 import MessagesSource
 import MapsSource
 import MediaDerivatives
@@ -40,7 +41,30 @@ extension AppleSession: NativeAdapter {
         return NativeFacts(items: items, scope: .object(["collections": .array([.string(collection)]), "history_token": .string("")]), generation: enumeration.generation, complete: true)
     }
 
+    private func nativeFacts(files paths: [String]) async throws -> NativeFacts {
+        guard let source = additionalSources["files"] as? FilesSource else { throw SourceFailure.unavailable }
+        return NativeFacts(items: try await source.ubiquity(paths), scope: .string("files"), generation: "native/1", complete: true)
+    }
+
+    private func nativeFacts(macState source: MacSource) async throws -> NativeFacts {
+        let state = try await MainActor.run { try source.state() }
+        let rows = state.sorted { $0.key < $1.key }.map { key, value -> JSON in
+            let parts = key.split(separator: "/", maxSplits: 1).map(String.init)
+            return .object(["kind": .string("upsert"), "collection": .string(parts[0]), "native_key": .string(parts[1]), "data": value])
+        }
+        return NativeFacts(items: rows, scope: .string("mac"), generation: "native/1", complete: true)
+    }
+
     public func facts(_ operation: String, args: JSON) async throws -> NativeFacts {
+        if operation == "files.ubiquity" {
+            guard Set(args.object.keys) == ["paths"], case .array(let paths) = args["paths"], paths.allSatisfy({ if case .string = $0 { return true } else { return false } }) else { throw SourceFailure.invalid }
+            return try await nativeFacts(files: paths.map(\.string))
+        }
+        if operation == "mac.state" {
+            guard args.object.isEmpty else { throw SourceFailure.unsupported }
+            guard let source = additionalSources["mac"] as? MacSource else { throw SourceFailure.unavailable }
+            return try await nativeFacts(macState: source)
+        }
         guard args.object.isEmpty else { throw SourceFailure.unsupported }
         let builtins = try await agendaSources()
         let cache = builtins.enumerations
@@ -80,6 +104,7 @@ extension AppleSession: NativeAdapter {
     public func forwardChanges(to server: NativeServer) async {
         guard let builtins = try? await agendaSources() else { return }
         let cache = builtins.enumerations, agenda = builtins.agenda
+        let mac = CaptureOwnership(home: home).rust.contains("mac") ? additionalSources["mac"] as? MacSource : nil
         await withTaskGroup(of: Void.self) { group in
             group.addTask {
                 for await _ in await agenda.changes(calendar: true) { await cache.invalidate("calendar"); await server.changed(source: "calendar", generation: "native/1") }
@@ -89,6 +114,11 @@ extension AppleSession: NativeAdapter {
             }
             group.addTask {
                 for await _ in NotificationCenter.default.notifications(named: .CNContactStoreDidChange) { await cache.invalidate("contacts"); await server.changed(source: "contacts", generation: "native/1") }
+            }
+            if let mac {
+                group.addTask {
+                    try? await mac.observe { live in if live { await server.changed(source: "mac", generation: "native/1") } }
+                }
             }
         }
     }
