@@ -64,19 +64,18 @@ public actor MessagesCommands {
         try data.write(to: proofURL, options: .atomic)
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: proofURL.path)
     }
-    private func tagged(_ text: String) -> Bool {
-        text.range(of: #"\[ab-test [A-Za-z0-9_-]+\]"#, options: .regularExpression) != nil
+    private func tagged(_ text: String) -> Bool { MessagesSendPolicy.tagged(text) }
+    private func ownHandles() -> Set<String>? {
+        (try? MessagesProbes.discoverSelfHandles()).map { Set($0.handles) }
+    }
+    private func recipients(_ action: JSON, reader: MessagesReader) throws -> [String] {
+        if !action["list_key"].string.isEmpty {
+            return try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID LEFT JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [action["list_key"].string]).map { $0["id"] }
+        }
+        return action["messages"]["handles"].array.map(\.string)
     }
     private func ownsRecipients(_ action: JSON, reader: MessagesReader) throws -> Bool {
-        guard let discovered = try? MessagesProbes.discoverSelfHandles() else { return false }
-        let own = Set(discovered.handles)
-        let recipients: [String]
-        if !action["list_key"].string.isEmpty {
-            recipients = try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID LEFT JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [action["list_key"].string]).map { $0["id"] }
-        } else {
-            recipients = action["messages"]["handles"].array.map(\.string)
-        }
-        return !recipients.isEmpty && recipients.allSatisfy { own.contains(MessagesProbes.normalize($0)) }
+        try MessagesSendPolicy.ownsRecipients(own: ownHandles(), recipients: { try recipients(action, reader: reader) })
     }
     private func validateOwnSend(_ prepared: Prepared) throws {
         if prepared.nativeState["owner_self"].bool {
@@ -136,11 +135,7 @@ public actor MessagesCommands {
         if let agentPolicy, FileManager.default.fileExists(atPath: agentPolicy.path), action["op"].string != "messages.send" { throw SourceFailure.invalid }
         if action["op"].string != "messages.send" {return try await prepareAccessibility(command)}
         let args = action["messages"]
-        let ownerSelf = try CommandOrigin(command) == .ownerSelf && !args["text"].string.isEmpty && !tagged(args["text"].string)
-        if !interactive && !args["text"].string.isEmpty && !tagged(args["text"].string) {
-            guard ownerSelf, try ownsRecipients(action, reader: MessagesReader(path: path)) else { throw MessagesSendSafetyFailure.textTagRequired }
-        }
-        guard !args["text"].string.isEmpty || !args["files"].array.isEmpty else { throw SourceFailure.invalid }
+        let ownerSelf = try MessagesSendPolicy.check(origin: CommandOrigin(command), text: args["text"].string, fileCount: args["files"].array.count, own: { ownHandles() }, recipients: { try recipients(action, reader: MessagesReader(path: path)) })
         for file in args["files"].array {
             let name=file["name"].string
             guard !name.isEmpty,name==URL(fileURLWithPath:name).lastPathComponent,name != ".",name != "..",file["data"].string.isEmpty else {throw SourceFailure.invalid}

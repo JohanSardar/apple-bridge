@@ -12,6 +12,12 @@ struct MessagesSafetyChecks {
             print(String(decoding: try JSONEncoder().encode(MessagesMediaCleanupProof.check(fixture)), as: UTF8.self))
             return
         }
+        if kind == "policy-vectors" {
+            guard CommandLine.arguments.count > 2 else { throw SourceFailure.invalid }
+            let vectors = try JSONDecoder().decode(JSON.self, from: Data(contentsOf: URL(fileURLWithPath: CommandLine.arguments[2])))
+            print(String(decoding: try JSONEncoder().encode(PolicyVectors.run(vectors)), as: UTF8.self))
+            return
+        }
         var checks = try await AccessibilityInputChecks.run()
         checks["multipart_capture_repeats_all_parts_in_one_batch"] = try await CommandCaptureChecks.run()
         checks["self_echo_does_not_cancel_same_media_render"] = !Messages.shouldPreemptMedia(activeDigest: "same", incomingDigest: "same", activeLive: true, incomingImage: true)
