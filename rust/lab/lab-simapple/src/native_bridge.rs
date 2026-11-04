@@ -54,7 +54,7 @@ fn write_native(stream: &Mutex<UnixStream>, value: &Value) -> Result<()> {
 #[derive(Default)]
 struct Book {
     sequence: u64,
-    scans: BTreeMap<String, (String, String, usize)>,
+    scans: BTreeMap<String, (String, usize)>,
     origins: BTreeMap<String, Value>,
     tickets: BTreeMap<String, Value>,
     dispatching: BTreeSet<String>,
@@ -73,25 +73,6 @@ impl Shared {
         self.book.lock().map_err(|_| invalid("bridge book"))
     }
 
-    fn map_path(&self) -> PathBuf {
-        self.home.join("native-checkpoints.json")
-    }
-
-    fn map(&self) -> Value {
-        fs::read(self.map_path())
-            .ok()
-            .and_then(|bytes| serde_json::from_slice(&bytes).ok())
-            .unwrap_or_else(|| json!({"to_sim": {}, "to_session": {}}))
-    }
-
-    fn record(&self, simulated: &str, session: &str) -> Result<()> {
-        let mut map = self.map();
-        map["to_sim"][session] = json!(simulated);
-        map["to_session"][simulated] = json!(session);
-        fs::write(self.map_path(), serde_json::to_vec(&map)?)?;
-        Ok(())
-    }
-
     fn log(&self, line: &str) {
         if let Ok(mut file) = fs::OpenOptions::new()
             .create(true)
@@ -108,33 +89,6 @@ fn object(value: &Value) -> Value {
         value.clone()
     } else {
         json!({})
-    }
-}
-
-fn session_checkpoints(shared: &Shared, value: &mut Value) {
-    let map = shared.map();
-    rewrite(&map["to_session"], value);
-}
-
-fn rewrite(map: &Value, value: &mut Value) {
-    match value {
-        Value::Object(fields) => {
-            for (key, item) in fields.iter_mut() {
-                if key == "capture_checkpoint"
-                    && let Some(mapped) = item.as_str().and_then(|name| map[name].as_str())
-                {
-                    *item = json!(mapped);
-                } else {
-                    rewrite(map, item);
-                }
-            }
-        }
-        Value::Array(items) => {
-            for item in items {
-                rewrite(map, item);
-            }
-        }
-        _ => {}
     }
 }
 
@@ -186,14 +140,9 @@ pub fn connect(path: &str, secret: &[u8], home: &Path) -> Result<UnixStream> {
     let (simulator, bridge) = UnixStream::pair()?;
     let secret = secret.to_vec();
     let mut open_checkpoints = serde_json::Map::new();
-    let map = shared.map();
     if let Some(offered) = session["checkpoints"].as_object() {
         for (source, checkpoint) in offered {
-            let mut entry = checkpoint.clone();
-            if let Some(simulated) = map["to_sim"][text(checkpoint, "checkpoint")].as_str() {
-                entry["checkpoint"] = json!(simulated);
-            }
-            open_checkpoints.insert(source.clone(), entry);
+            open_checkpoints.insert(source.clone(), checkpoint.clone());
         }
     }
     thread::spawn(move || {
@@ -308,10 +257,7 @@ fn to_native(shared: &Shared, frame: &Value, size: usize) -> Result<Option<Value
             let mut book = shared.book()?;
             book.sequence += 1;
             let id = format!("scan-{}", book.sequence);
-            book.scans.insert(
-                id.clone(),
-                (text(frame, "source"), text(frame, "checkpoint"), size),
-            );
+            book.scans.insert(id.clone(), (text(frame, "source"), size));
             let handles: serde_json::Map<String, Value> = frame["blob_handles"]
                 .as_object()
                 .map(|map| {
@@ -342,7 +288,6 @@ fn to_native(shared: &Shared, frame: &Value, size: usize) -> Result<Option<Value
             let mut rejected = json!({"t":"Rejected","command_id":frame["command_id"],"code":text(&frame["error"],"code"),"message":text(&frame["error"],"message")});
             if frame["evidence"].is_object() {
                 rejected["evidence"] = frame["evidence"].clone();
-                session_checkpoints(shared, &mut rejected["evidence"]);
             }
             rejected
         }
@@ -361,9 +306,7 @@ fn to_native(shared: &Shared, frame: &Value, size: usize) -> Result<Option<Value
             if !live {
                 return Ok(None);
             }
-            let mut evidence = frame["evidence"].clone();
-            session_checkpoints(shared, &mut evidence);
-            json!({"t":"Outcome","command_id":command,"disposition":frame["disposition"],"evidence":evidence})
+            json!({"t":"Outcome","command_id":command,"disposition":frame["disposition"],"evidence":frame["evidence"]})
         }
         "QueryResult" => {
             json!({"t":"QueryResult","id":frame["id"],"result_json":frame["result_json"],"blobs":frame["blobs"].as_array().cloned().unwrap_or_default()})
@@ -388,15 +331,14 @@ fn to_ipc(shared: &Shared, frame: &Value) -> Result<Option<Value>> {
     Ok(Some(match kind {
         "ScanCommitted" => {
             let id = text(frame, "id");
-            let (source, simulated, size) = shared
+            let (source, size) = shared
                 .book()?
                 .scans
                 .remove(&id)
                 .ok_or_else(|| invalid("unknown scan"))?;
             let session = text(frame, "checkpoint");
-            shared.record(&simulated, &session)?;
             shared.log(&format!("committed {source} {session}"));
-            json!({"t":"Committed","source":source,"checkpoint":simulated,"credit":size})
+            json!({"t":"Committed","source":source,"checkpoint":session,"credit":size})
         }
         "ScanFailed" => return Err(invalid("scan failed")),
         "Prepare" => {

@@ -187,9 +187,8 @@ ab-session.
 | `BlobChunk` / `BlobUnavailable` | Swift to Rust | `handle`, `offset`, `bytes`, `digest`, `eof` / `handle`, `reason` |
 
 The fields are the ones the gateway already sends and expects; nothing is redesigned here. Authority moves
-to ab-session: it validates `Prepare` (non-empty ids, future expiry, one command in flight, no ticket
-outstanding, id never seen by the guard), mints the ticket after Swift's `Prepared` (30 seconds or the
-command's expiry, one shot), validates `Dispatch` (ticket, origin, command id, fence, expiry), fsyncs
+to ab-session: it validates `Prepare` (non-empty ids, a parsable expiry, one command in flight, no ticket
+outstanding, id never seen by the guard), mints the ticket after Swift's `Prepared` (30 seconds on the monotonic clock, one shot), validates `Dispatch` (ticket, origin, command id, fence, expiry), fsyncs
 `DispatchStarted` in `<home>/dispatch-guard.log` before it sends `Dispatch` to Swift, writes `Outcome` or
 `Rejected` to the same log, answers `Resolve` from the log (offering every recorded outcome except
 `failed_no_effect` to Swift with `saved`; Swift decides whether to re-observe or echo it), and reports unresolved dispatches after `Ready` on the next connection. A `Rejected` that

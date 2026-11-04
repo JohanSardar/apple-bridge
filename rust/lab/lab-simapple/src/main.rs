@@ -645,6 +645,7 @@ struct Session<'a> {
     hint: Option<u64>,
     full: bool,
     real: Option<UnixStream>,
+    native: bool,
 }
 impl Session<'_> {
     fn emit(&mut self, state: &Shared, frame: Value) -> Result<()> {
@@ -811,11 +812,16 @@ impl Session<'_> {
             match reply["t"].as_str() {
                 Some("Committed") => {
                     if reply["source"] != src
-                        || reply["checkpoint"] != checkpoint
+                        || (!self.native && reply["checkpoint"] != checkpoint)
                         || reply["credit"].as_u64() != Some(n as u64)
                     {
                         return Err(invalid("commit identity or credit"));
                     }
+                    let checkpoint = if self.native {
+                        string(&reply, "checkpoint")
+                    } else {
+                        checkpoint
+                    };
                     {
                         let mut s = lock(state)?;
                         s.data["protocol"]["acked"][&src] = json!(checkpoint);
@@ -898,11 +904,16 @@ impl Session<'_> {
             match reply["t"].as_str() {
                 Some("Committed") => {
                     if reply["source"] != src
-                        || reply["checkpoint"] != checkpoint
+                        || (!self.native && reply["checkpoint"] != checkpoint)
                         || reply["credit"].as_u64() != Some(n as u64)
                     {
                         return Err(invalid("commit identity or credit"));
                     }
+                    let checkpoint = if self.native {
+                        string(&reply, "checkpoint")
+                    } else {
+                        checkpoint
+                    };
                     {
                         let mut s = lock(state)?;
                         s.data["protocol"]["acked"][&src] = json!(checkpoint);
@@ -1157,6 +1168,7 @@ fn session(
     secret: &[u8],
     state: &Shared,
     requests: &mpsc::Receiver<Request>,
+    native: bool,
 ) -> Result<()> {
     let mut stream = stream;
     stream.set_read_timeout(Some(Duration::from_secs(5)))?;
@@ -1286,6 +1298,7 @@ fn session(
         hint: None,
         full: false,
         real: None,
+        native,
     };
     for src in sources {
         let generation = generation_of(&lock(state)?.data, src, &session.generation);
@@ -1495,7 +1508,7 @@ fn run() -> Result<()> {
             None => UnixStream::connect(&socket).ok(),
         };
         if let Some(stream) = stream
-            && let Err(e) = session(stream, &secret, &state, &rx)
+            && let Err(e) = session(stream, &secret, &state, &rx, native.is_some())
         {
             eprintln!("session: {e}");
         }

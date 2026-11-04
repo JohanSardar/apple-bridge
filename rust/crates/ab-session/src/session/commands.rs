@@ -205,11 +205,10 @@ impl Hub {
         let Ok(command) = Command::from_ipc(frame) else {
             return self.refuse(&id, "invalid");
         };
-        let live = command.expires_unix().is_ok_and(|at| at > unix_now());
         if command.command_id.is_empty()
             || command.principal.is_empty()
             || command.request_hash.is_empty()
-            || !live
+            || command.expires_unix().is_err()
         {
             return self.refuse(&id, "invalid");
         }
@@ -475,7 +474,7 @@ impl Hub {
             ticket: frame.ticket.clone(),
             request_hash: ticket.command.request_hash.clone(),
             operation: ticket.command.operation(),
-            expires_at: u64::try_from(ticket.command.expires_unix().map_err(|_| Error::Invalid)?)
+            expires_at: u64::try_from(unix_now().saturating_add(TICKET_SECONDS))
                 .map_err(|_| Error::Invalid)?,
             prepared,
         });
@@ -596,13 +595,8 @@ impl Hub {
             Some(command) if command.command_id == prepared.command_id => command,
             _ => return Err(Error::Invalid),
         };
-        let remaining = command.expires_unix().map_err(|_| Error::Invalid)? - unix_now();
-        if remaining <= 0 {
-            drop(core);
-            return self.refuse(&command.command_id, "expired");
-        }
         let ticket = random_hex(16)?;
-        let lifetime = u64::try_from(remaining.min(TICKET_SECONDS)).map_err(|_| Error::Invalid)?;
+        let lifetime = u64::try_from(TICKET_SECONDS).map_err(|_| Error::Invalid)?;
         let fingerprint = command.request_hash.clone();
         core.commands.tickets.insert(
             ticket.clone(),
