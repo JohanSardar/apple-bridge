@@ -198,8 +198,13 @@ fn rewrite(text: &str, session: Option<&str>) -> Result<String> {
     out.push_str("\r\n");
     Ok(out)
 }
-async fn dial(host: &str) -> Result<Box<dyn crate::localapi::Stream>> {
-    let (mut socket, authorization) = crate::localapi::LocalApi::Discover.connect().await?;
+const TAILSCALE_REQUIRED: &str = "bridge connect needs the Tailscale app (or tailscaled) installed, running and signed in to the same Tailscale network as this invitation. Install Tailscale from https://tailscale.com/download, sign in, then run bridge connect again";
+
+async fn dial(
+    api: &crate::localapi::LocalApi,
+    host: &str,
+) -> Result<Box<dyn crate::localapi::Stream>> {
+    let (mut socket, authorization) = api.connect().await?;
     let authorization =
         authorization.map_or_else(String::new, |value| format!("Authorization: {value}\r\n"));
     socket.write_all(format!("POST /localapi/v0/dial HTTP/1.1\r\nHost: local-tailscaled.sock\r\n{authorization}Tailscale-Cap: 142\r\nConnection: upgrade\r\nUpgrade: ts-dial\r\nDial-Host: {host}\r\nDial-Port: 7780\r\nDial-Network: tcp\r\nContent-Length: 0\r\n\r\n").as_bytes()).await?;
@@ -209,6 +214,13 @@ async fn dial(host: &str) -> Result<Box<dyn crate::localapi::Stream>> {
     Ok(socket)
 }
 pub async fn connect(code: &str, address: &str) -> Result<()> {
+    connect_with(&crate::localapi::LocalApi::Discover, code, address).await
+}
+pub async fn connect_with(
+    api: &crate::localapi::LocalApi,
+    code: &str,
+    address: &str,
+) -> Result<()> {
     if code.len() > 4096 {
         return Err(Error::Contract("invalid private code"));
     }
@@ -230,7 +242,9 @@ pub async fn connect(code: &str, address: &str) -> Result<()> {
     if !listener.local_addr()?.ip().is_loopback() {
         return Err(Error::Contract("private proxy requires loopback"));
     }
-    let mut upstream = dial(&invitation.host).await?;
+    let mut upstream = dial(api, &invitation.host)
+        .await
+        .map_err(|_| Error::Remote(TAILSCALE_REQUIRED.into()))?;
     upstream.write_all(format!("POST /_bridge/private/invite HTTP/1.1\r\nHost: localhost:7780\r\nAuthorization: Bearer {}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",invitation.secret).as_bytes()).await?;
     let response = head(&mut upstream).await?;
     if !response.starts_with("HTTP/1.1 200 ") {
@@ -253,11 +267,11 @@ pub async fn connect(code: &str, address: &str) -> Result<()> {
     loop {
         tokio::select! {
             accepted = listener.accept(), if tasks.len() < 64 => {
-                let (mut socket, _) = accepted?; let host = invitation.host.clone(); let session = session.clone();
+                let (mut socket, _) = accepted?; let host = invitation.host.clone(); let session = session.clone(); let api = api.clone();
                 tasks.spawn(async move {
                     let text = head(&mut socket).await?;
                     if header(&text,"host") != Some("localhost:7780") { return reply(&mut socket,"403 Forbidden","{}").await; }
-                    let mut upstream = dial(&host).await?;
+                    let mut upstream = dial(&api, &host).await?;
                     upstream.write_all(rewrite(&text,Some(&session))?.as_bytes()).await?;
                     tokio::io::copy_bidirectional(&mut socket,&mut upstream).await?;
                     Ok(())
@@ -271,6 +285,24 @@ pub async fn connect(code: &str, address: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn connect_without_tailscale_says_what_to_install() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let api = crate::localapi::LocalApi::Unix(directory.path().join("missing.sock"));
+        let code = URL_SAFE_NO_PAD.encode(serde_json::to_vec(&Invitation {
+            host: "bridge.example.ts.net".into(),
+            secret: URL_SAFE_NO_PAD.encode([7u8; 32]),
+        })?);
+        let Err(error) = connect_with(&api, &code, "127.0.0.1:0").await else {
+            return Err(Error::Contract("connect must fail"));
+        };
+        let text = error.to_string();
+        assert!(text.contains("Tailscale app"), "{text}");
+        assert!(text.contains("https://tailscale.com/download"), "{text}");
+        Ok(())
+    }
+
     #[test]
     fn invitations_expire_and_are_single_use() {
         let mut grant = Grant {
