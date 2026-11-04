@@ -2,8 +2,8 @@ use crate::{Error, native_facts};
 
 mod messages;
 use ab_native::{
-    agenda, calendar_store, capture, contacts, mail, notes_reader, safari, telephony, usage,
-    voice_memo,
+    agenda, calendar_store, capture, contacts, mail, notes_reader, reminders_enrichment, safari,
+    telephony, usage, voice_memo,
 };
 pub use messages::MessagesReader;
 use serde::{Deserialize, Serialize};
@@ -917,6 +917,7 @@ pub struct AgendaReader {
     pull: Option<native_facts::Pull>,
     replay: bool,
     store: Option<calendar_store::Enrichment>,
+    reminders_store: Option<reminders_enrichment::Enrichment>,
 }
 
 fn identity(row: &Value) -> String {
@@ -965,6 +966,7 @@ impl AgendaReader {
             pull: None,
             replay: false,
             store: None,
+            reminders_store: None,
         }
     }
 
@@ -980,6 +982,7 @@ impl AgendaReader {
             pull: None,
             replay: false,
             store: None,
+            reminders_store: None,
         }
     }
 
@@ -995,6 +998,7 @@ impl AgendaReader {
             pull: None,
             replay: false,
             store: None,
+            reminders_store: None,
         }
     }
 
@@ -1087,7 +1091,21 @@ impl AgendaReader {
         self
     }
 
-    fn enrich(&mut self, collected: &mut native_facts::Collected) {
+    #[must_use]
+    pub fn with_reminders_store(mut self, stores: PathBuf) -> Self {
+        if self.source == "reminders" {
+            self.reminders_store = Some(reminders_enrichment::Enrichment::new(Box::new(
+                move || reminders_enrichment::paths_in(&stores),
+            )));
+        }
+        self
+    }
+
+    fn enrich(&mut self, collected: &mut native_facts::Collected, generation: &str) {
+        if let Some(store) = self.reminders_store.as_mut() {
+            collected.rows = store.refresh(&collected.rows, generation);
+            return;
+        }
         let Some(store) = self.store.as_mut() else {
             return;
         };
@@ -1127,7 +1145,8 @@ impl AgendaReader {
         let Some(mut collected) = pull.collect(context.fence)? else {
             return Ok(());
         };
-        self.enrich(&mut collected);
+        let generation = collected.generation.clone();
+        self.enrich(&mut collected, &generation);
         let capture = json!({"generation": collected.generation, "observations": collected.rows, "blob_handles": collected.handles, "live": live});
         self.facts = Some(self.parse(&capture)?);
         self.partial = false;
@@ -1470,7 +1489,10 @@ pub fn from_config_linked(
                 Box::new(MessagesReader::new(config.root, home))
             }
             "calendar" | "contacts" | "reminders" => {
-                if config.store.is_some() && (source != "calendar" || config.facts.is_none()) {
+                if config.store.is_some()
+                    && (!["calendar", "reminders"].contains(&source.as_str())
+                        || config.facts.is_none())
+                {
                     return Err(Error::Invalid);
                 }
                 let reader = match source.as_str() {
@@ -1480,7 +1502,11 @@ pub fn from_config_linked(
                         None => AgendaReader::calendar(config.root),
                     },
                     "contacts" => AgendaReader::contacts(config.root),
-                    _ => AgendaReader::reminders(config.root),
+                    _ => match config.store {
+                        Some(store) => AgendaReader::reminders(config.root)
+                            .with_reminders_store(lexical(&store)?),
+                        None => AgendaReader::reminders(config.root),
+                    },
                 };
                 match linked_client(config.facts.as_ref(), inherited)? {
                     Some(client) => Box::new(
