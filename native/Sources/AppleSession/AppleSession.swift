@@ -651,7 +651,6 @@ public actor AppleSession: ObservationSink {
         case SourceFailure.expired: return "expired"
         case SourceFailure.unsupported: return "unsupported"
  case SourceFailure.capabilityUnproven: return "capability_unproven"
-        case is MessagesSendSafetyFailure: return "invalid"
         case SourceFailure.invalid: return "invalid"
         default: return "unavailable"
         }
@@ -667,7 +666,7 @@ public actor AppleSession: ObservationSink {
         let code = errorCode(error)
         let key = frame["action"]["native_key"].string
         if frame["action"]["op"].string.hasPrefix("messages.") {
-            let detail = (error as? MessagesSendSafetyFailure)?.rawValue ?? (error as? MessagesUIFailure)?.rawValue ?? code
+            let detail = (error as? MessagesUIFailure)?.rawValue ?? code
             return Rejection(code: code, message: detail, evidence: nil)
         }
         if frame["action"]["op"].string.hasPrefix("notes.") { return Rejection(code: code, message: code, evidence: nil) }

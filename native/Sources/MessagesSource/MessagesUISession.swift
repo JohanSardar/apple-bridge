@@ -3,39 +3,6 @@ import AppKit
 import ApplicationServices
 import SourceSupport
 
-public enum MessagesUIActions {
-    public static func readStateAction(unread: Bool, titles: [String]) -> String? {
-        let desired = unread ? "Mark as Unread" : "Mark as Read"
-        let opposite = unread ? "Mark as Read" : "Mark as Unread"
-        guard titles.filter({ $0 == desired || $0 == opposite }).count == 1 else { return nil }
-        return titles.contains(desired) ? desired : ""
-    }
-    public static func resolve<Element>(until deadline: Date, now: () -> Date = { Date() }, wait: () -> Void, attempt: () throws -> Element) throws -> Element {
-        repeat {
-            do { return try attempt() }
-            catch MessagesUIFailure.targetUnavailable {
-                guard now() < deadline else { throw MessagesUIFailure.targetUnavailable }
-                wait()
-            }
-        } while now() <= deadline
-        throw MessagesUIFailure.targetUnavailable
-    }
-    public static func buttons<Element>(in root: Element, title: String, children: (Element) -> [Element], value: (Element, String) -> String) -> [Element] {
-        var budget = 4000
-        func visit(_ node: Element) -> [Element] {
-            guard budget > 0, value(node, kAXRoleAttribute) != kAXMenuBarRole else { return [] }
-            budget -= 1
-            let labels = [title, title.replacingOccurrences(of: "…", with: "")]
-            let matches = [kAXMenuItemRole, kAXButtonRole].contains(value(node, kAXRoleAttribute)) && (labels.contains(value(node, kAXTitleAttribute)) || value(node, kAXDescriptionAttribute) == title)
-            var result = matches ? [node] : []
-            for child in children(node) { result += visit(child) }
-            return result
-        }
-        let result = visit(root)
-        return budget > 0 ? result : []
-    }
-}
-
 public enum MessagesUIInput: Sendable, Equatable {
     case click(CGPoint), controlClick(CGPoint, dismissFirst: Bool), keys([Int], command: Bool), replaceText(String), clearText
     var script: String {
@@ -130,11 +97,6 @@ public enum MessagesUIScript {
 
 @UIActor
 public struct MessagesUISession {
-    public nonisolated static func canReplaceDraft(_ previous: String, with text: String) -> Bool {
-        if previous.isEmpty { return true }
-        guard let range = text.range(of: #"^\[ab-test [A-Za-z0-9_-]+\]"#, options: .regularExpression) else { return false }
-        return previous.hasPrefix(String(text[range]))
-    }
     public nonisolated static let enter = 36
     public nonisolated static let escape = 53
     public let pid: pid_t
@@ -187,25 +149,5 @@ public struct MessagesUISession {
     public func erase(_ element: AXUIElement) throws {
         try focus(element, failure: MessagesUIFailure.composerUnavailable)
         try input(.clearText)
-    }
-    public func type(_ text: String, into element: AXUIElement, value: (AXUIElement) -> String) throws {
-        try focus(element, failure: MessagesUIFailure.composerUnavailable)
-        try input(.replaceText(text))
-        let deadline = Date().addingTimeInterval(3)
-        repeat {
-            if value(element) == text { return }
-            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
-        } while Date() < deadline
-        throw MessagesUIFailure.messageValueRejected
-    }
-    public func clear(_ element: AXUIElement, value: (AXUIElement) -> String) throws -> Bool {
-        try focus(element, failure: MessagesUIFailure.composerUnavailable)
-        try input(.clearText)
-        let deadline = Date().addingTimeInterval(3)
-        repeat {
-            if value(element).isEmpty { return true }
-            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
-        } while Date() < deadline
-        throw MessagesUIFailure.messageValueRejected
     }
 }

@@ -36,48 +36,6 @@ enum MessagesNativeSession {
     private static func checkpoint(_ stage: String) {
         try? PrivateReport.write(["stage": stage], to: PrivateReport.directory.appendingPathComponent("messages-native-session-diagnostic.json"))
     }
-    private static func chat(_ guid: String) throws -> AnyObject {
-        checkpoint("framework_requested")
-        guard !guid.isEmpty, dlopen("/System/Library/PrivateFrameworks/IMCore.framework/IMCore", RTLD_LAZY) != nil,
-              let controllerType = NSClassFromString("IMDaemonController"), let registryType = NSClassFromString("IMChatRegistry"),
-              let controller = try object(controllerType, "sharedController"), let registry = try object(registryType, "sharedInstance") else { throw SourceFailure.unsupported }
-        checkpoint("connection_requested")
-        _ = try flag(controller, "connectToDaemon")
-        var connected = (try? flag(controller, "isConnected")) == true
-        let connectionDeadline = Date().addingTimeInterval(5)
-        while !connected, Date() < connectionDeadline {
-            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
-            connected = (try? flag(controller, "isConnected")) == true
-        }
-        guard connected else {
-            checkpoint("connection_unavailable")
-            throw SourceFailure.unsupported
-        }
-        checkpoint("connection_established")
-        let candidates = MessagesSelfTestIsolation.nativeChatCandidates(guid)
-        let components = guid.split(separator: ";", maxSplits: 2, omittingEmptySubsequences: false).map(String.init)
-        let identifier = candidates.count == 2 ? components[2] : ""
-        let deadline = Date().addingTimeInterval(5)
-        var chat: AnyObject?
-        if !identifier.isEmpty { chat = try object(registry, "loadChatFromDaemonWithChatIdentifier:", argument: identifier as NSString) }
-        repeat {
-            for candidate in candidates {
-                chat = try object(registry, "existingChatWithGUID:", argument: candidate as NSString)
-                if chat != nil { break }
-            }
-            if chat == nil, !identifier.isEmpty { chat = try object(registry, "existingChatWithChatIdentifier:", argument: identifier as NSString) }
-            if chat != nil { break }
-            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
-        } while Date() < deadline
-        guard let chat, let actual = try object(chat, "guid") as? String, candidates.contains(where: { $0.caseInsensitiveCompare(actual) == .orderedSame }) else {
-            let known = try? object(registry, "allExistingChats")
-            let count = (known as? NSArray)?.count ?? (known as? NSSet)?.count ?? -1
-            try? PrivateReport.write(["registry_chat_count": count, "route_candidate_count": candidates.count, "chat_resolved": false], to: PrivateReport.directory.appendingPathComponent("messages-native-chat-diagnostic.json"))
-            throw SourceFailure.conflict
-        }
-        checkpoint("self_chat_resolved")
-        return chat
-    }
     static func deleteOwnedItem(_ guid: String, chat chatGUID: String) throws {
         guard UUID(uuidString: guid) != nil, !chatGUID.isEmpty,
               dlopen("/System/Library/PrivateFrameworks/IMCore.framework/IMCore", RTLD_LAZY) != nil,
@@ -93,21 +51,5 @@ enum MessagesNativeSession {
         typealias Move = @convention(c) (AnyObject, Selector, NSArray, NSDate, NSString) -> Void
         checkpoint("owned_item_soft_delete_requested")
         unsafeBitCast(implementation, to: Move.self)(daemon, selector, [guid] as NSArray, NSDate(), UUID().uuidString as NSString)
-    }
-    static func failedSelfFixture(_ text: String, chat guid: String, register: (String) throws -> Void) throws -> String {
-        guard text.range(of: #"^\[ab-test run_[A-Z0-9]{26}\] failed fixture$"#, options: .regularExpression) != nil else { throw SourceFailure.invalid }
-        let chat = try chat(guid)
-        guard let type = NSClassFromString("IMMessage") else { throw SourceFailure.unavailable }
-        let (factorySelector, factoryImplementation) = try method(type, "instantMessageWithText:flags:threadIdentifier:")
-        typealias Factory = @convention(c) (AnyObject, Selector, NSAttributedString, UInt64, NSString?) -> Unmanaged<AnyObject>?
-        guard let message = unsafeBitCast(factoryImplementation, to: Factory.self)(type, factorySelector, NSAttributedString(string: text), 0x100005, nil)?.takeUnretainedValue(),
-              try flag(message, "isFromMe"), let native = try object(message, "guid") as? String, !native.isEmpty else { throw SourceFailure.conflict }
-        let (sendSelector, sendImplementation) = try method(chat, "sendMessage:")
-        let (cancelSelector, cancelImplementation) = try method(chat, "cancelMessage:")
-        try register(native)
-        typealias Call = @convention(c) (AnyObject, Selector, AnyObject) -> Void
-        unsafeBitCast(sendImplementation, to: Call.self)(chat, sendSelector, message)
-        unsafeBitCast(cancelImplementation, to: Call.self)(chat, cancelSelector, message)
-        return native
     }
 }

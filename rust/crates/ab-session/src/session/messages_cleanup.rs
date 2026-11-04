@@ -440,6 +440,22 @@ fn delete_row(run: &mut Run<'_>, guid: &str, target: &Value, tag: &str) -> Resul
     }
 }
 
+fn remaining_rows(run: &mut Run<'_>) -> Result<usize, String> {
+    let mut still: BTreeSet<String> = run
+        .candidates()?
+        .into_iter()
+        .map(|(guid, _)| guid)
+        .collect();
+    still.extend(run.unreachable.iter().cloned());
+    let mut owned_left = 0;
+    for guid in &run.ledger.owned {
+        if Run::sql(run.reader.is_live_after(guid, run.ledger.baseline))? {
+            owned_left += 1;
+        }
+    }
+    Ok(still.len().max(owned_left))
+}
+
 pub(super) fn run(
     screen: &dyn Screen,
     config: &Config,
@@ -513,14 +529,7 @@ pub(super) fn run(
         deleted += removed;
         progress(config, initial, deleted, left, "deleting");
     }
-    let candidates = run.candidates()?.len() + run.unreachable.len();
-    let mut owned_left = 0;
-    for guid in &run.ledger.owned {
-        if Run::sql(run.reader.is_live_after(guid, run.ledger.baseline))? {
-            owned_left += 1;
-        }
-    }
-    let remaining = candidates.max(owned_left);
+    let remaining = remaining_rows(&mut run)?;
     if !run.unreachable.is_empty() && failure.is_empty() {
         "owned_native_item_not_removed".clone_into(&mut failure);
     }

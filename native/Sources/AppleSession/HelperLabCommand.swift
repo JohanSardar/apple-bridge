@@ -30,17 +30,6 @@ enum HelperLabCommand {
             while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
             try JSONEncoder().encode(result!.get()).write(to: reportURL, options: .atomic)
             return true
-        case "messages-resend-fixture":
-            let reportURL = try report(arguments)
-            guard arguments.count > 1 else { throw ProbeFailure.invalidArguments }
-            var result: JSON?
-            Task { @MainActor in
-                do { result = try await MessagesResendFixture.run(arguments[1]) }
-                catch { result = .object(["passed": .bool(false), "failed_fixture_count": .number(0)]) }
-            }
-            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
-            try JSONEncoder().encode(result!).write(to: reportURL, options: .atomic)
-            return true
         case "focus-phone-pack":
             let reportURL = try report(arguments)
             guard arguments.count > 1 else { throw ProbeFailure.invalidArguments }
@@ -91,12 +80,6 @@ enum HelperLabCommand {
             }
             while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
             try JSONEncoder().encode(result!).write(to: reportURL, options: .atomic)
-            return true
-        case "media-cleanup-checks":
-            guard let index = arguments.firstIndex(of: "--fixtures"), index + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
-            let fixture = try JSONDecoder().decode(JSON.self, from: Data(contentsOf: URL(fileURLWithPath: arguments[index + 1])))
-            let result = try MessagesMediaCleanupProof.check(fixture)
-            print(String(decoding: try JSONEncoder().encode(result), as: UTF8.self))
             return true
         case "wire-checks":
             guard let index = arguments.firstIndex(of: "--fixtures"), index + 1 < arguments.count else { throw ProbeFailure.invalidArguments }

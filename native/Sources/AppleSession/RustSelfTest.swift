@@ -75,7 +75,7 @@ actor RustSelfTest {
             case SourceFailure.conflict: code = "conflict"
             case SourceFailure.expired: code = "expired"
             case SourceFailure.unsupported: code = "unsupported"
-            case SourceFailure.invalid, is MessagesSendSafetyFailure: code = "invalid"
+            case SourceFailure.invalid: code = "invalid"
             case SourceFailure.permissionMissing: code = "permission_missing"
             default: code = "unavailable"
             }
