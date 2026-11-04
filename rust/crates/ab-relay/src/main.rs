@@ -62,6 +62,10 @@ fn options() -> std::result::Result<HashMap<String, String>, Box<dyn std::error:
             "control-acme",
             "apns-key",
             "apns-sandbox",
+            "app-host",
+            "app-upstream",
+            "dns-listen",
+            "public-ip",
         ]
         .contains(&key.as_str())
         {
@@ -87,45 +91,8 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
     }
     let store = configured_store(&args)?;
     let stop = CancellationToken::new();
-    let dns: Option<Arc<dyn ab_relay::http::DnsProvider>> =
-        if let Some(project) = args.get("dns-project").filter(|s| !s.is_empty()) {
-            Some(Arc::new(ab_relay::cloud_dns::CloudDns::new(
-                project,
-                &get("dns-zone", ""),
-                &get("zone", ""),
-            )?))
-        } else {
-            None
-        };
-    let builder = rustls::ServerConfig::builder_with_provider(Arc::new(
-        rustls::crypto::ring::default_provider(),
-    ))
-    .with_safe_default_protocol_versions()?
-    .with_no_client_auth();
-    let config = if args.get("control-acme").is_some_and(|v| v == "true") {
-        let state = PathBuf::from(get("state", "relay-state.json"));
-        let path = state
-            .parent()
-            .unwrap_or(std::path::Path::new("."))
-            .join("control-tls/remote");
-        builder.with_cert_resolver(
-            ab_relay::acme::start(
-                path,
-                get("control-host", ""),
-                dns.clone()
-                    .ok_or("control ACME requires hostname and DNS provider")?,
-                stop.clone(),
-            )
-            .await?,
-        )
-    } else {
-        let cert = std::fs::read(get("control-cert", ""))?;
-        let key = std::fs::read(get("control-key", ""))?;
-        let certs = rustls::pki_types::CertificateDer::pem_slice_iter(&cert)
-            .collect::<std::result::Result<Vec<_>, _>>()?;
-        let key = rustls::pki_types::PrivateKeyDer::from_pem_slice(&key)?;
-        builder.with_single_cert(certs, key)?
-    };
+    let dns = dns_provider(&args).await?;
+    let config = control_tls(&args, tls_builder()?, dns.clone(), stop.clone()).await?;
     let acceptor = TlsAcceptor::from(Arc::new(config));
     let control = if get("control-host", "").is_empty() {
         Some(TcpListener::bind(listen_addr(&get("control-addr", "127.0.0.1:8443"))).await?)
@@ -137,12 +104,20 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
     if let Some(host) = args.get("control-host").filter(|s| !s.is_empty()) {
         server.control = Some((host.clone(), control_tx));
     }
+    let app_host = get("app-host", "");
+    let (app_tx, app_rx) = tokio::sync::mpsc::channel(256);
+    if !app_host.is_empty() {
+        server.app = Some((app_host.clone(), app_tx));
+    }
     let server = Arc::new(server);
     let mut api = Api::new(
         server.clone(),
         std::env::var("APPLE_BRIDGE_RELAY_ADMIN").unwrap_or_default(),
     )?;
-    api.dns = dns;
+    api.dns = dns.clone();
+    if !app_host.is_empty() {
+        api.accounts_url = format!("https://{app_host}");
+    }
     if let Some(path) = args.get("apns-key").filter(|p| !p.is_empty()) {
         api.push.provider = Some(Arc::new(ab_relay::push::Apns::load(
             std::path::Path::new(path),
@@ -166,10 +141,121 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
     });
     let stop_api = stop.clone();
     tokio::spawn(ab_relay::ct::monitor(api, stop.clone()));
+    if !app_host.is_empty() {
+        let dns = dns.clone().ok_or("the sign-in host needs a DNS provider")?;
+        let state = PathBuf::from(get("state", "relay-state.json"));
+        let path = state
+            .parent()
+            .unwrap_or(std::path::Path::new("."))
+            .join("control-tls/app");
+        let upstream = get("app-upstream", "127.0.0.1:8789");
+        tokio::spawn(serve_app(
+            path,
+            app_host,
+            upstream,
+            dns,
+            tls_builder()?,
+            app_rx,
+            stop.clone(),
+        ));
+    }
     let api_task = serve_control(control, control_rx, make, acceptor, stop_api);
     tokio::select! { result = server.serve(public,stop.clone()) => result?, result = api_task => result? }
     stop.cancel();
     Ok(())
+}
+
+type TlsBuilder = rustls::ConfigBuilder<rustls::ServerConfig, rustls::server::WantsServerCert>;
+type Dns = Option<Arc<dyn ab_relay::http::DnsProvider>>;
+
+fn tls_builder() -> std::result::Result<TlsBuilder, rustls::Error> {
+    Ok(rustls::ServerConfig::builder_with_provider(Arc::new(
+        rustls::crypto::ring::default_provider(),
+    ))
+    .with_safe_default_protocol_versions()?
+    .with_no_client_auth())
+}
+
+async fn dns_provider(
+    args: &HashMap<String, String>,
+) -> std::result::Result<Dns, Box<dyn std::error::Error>> {
+    let get =
+        |key: &str, default: &str| args.get(key).cloned().unwrap_or_else(|| default.to_owned());
+    if let Some(listen) = args.get("dns-listen").filter(|s| !s.is_empty()) {
+        let public_ip = get("public-ip", "").parse()?;
+        return Ok(Some(
+            ab_relay::authoritative::Server::start(listen, &get("zone", ""), public_ip).await?,
+        ));
+    }
+    if let Some(project) = args.get("dns-project").filter(|s| !s.is_empty()) {
+        return Ok(Some(Arc::new(ab_relay::cloud_dns::CloudDns::new(
+            project,
+            &get("dns-zone", ""),
+            &get("zone", ""),
+        )?)));
+    }
+    Ok(None)
+}
+
+async fn control_tls(
+    args: &HashMap<String, String>,
+    builder: TlsBuilder,
+    dns: Dns,
+    stop: CancellationToken,
+) -> std::result::Result<rustls::ServerConfig, Box<dyn std::error::Error>> {
+    let get =
+        |key: &str, default: &str| args.get(key).cloned().unwrap_or_else(|| default.to_owned());
+    if args.get("control-acme").is_some_and(|v| v == "true") {
+        let state = PathBuf::from(get("state", "relay-state.json"));
+        let path = state
+            .parent()
+            .unwrap_or(std::path::Path::new("."))
+            .join("control-tls/remote");
+        let dns = dns.ok_or("control ACME requires hostname and DNS provider")?;
+        let resolver = ab_relay::acme::start(path, get("control-host", ""), dns, stop).await?;
+        return Ok(builder.with_cert_resolver(resolver));
+    }
+    let cert = std::fs::read(get("control-cert", ""))?;
+    let key = std::fs::read(get("control-key", ""))?;
+    let certs = rustls::pki_types::CertificateDer::pem_slice_iter(&cert)
+        .collect::<std::result::Result<Vec<_>, _>>()?;
+    let key = rustls::pki_types::PrivateKeyDer::from_pem_slice(&key)?;
+    Ok(builder.with_single_cert(certs, key)?)
+}
+
+async fn serve_app(
+    path: PathBuf,
+    host: String,
+    upstream: String,
+    dns: Arc<dyn ab_relay::http::DnsProvider>,
+    builder: TlsBuilder,
+    incoming: tokio::sync::mpsc::Receiver<ab_relay::server::ControlConnection>,
+    stop: CancellationToken,
+) {
+    let certificates = loop {
+        if let Ok(certificates) =
+            ab_relay::acme::start(path.clone(), host.clone(), dns.clone(), stop.clone()).await
+        {
+            break certificates;
+        }
+        eprintln!("sign-in host certificate unavailable; retrying");
+        tokio::select! {
+            () = stop.cancelled() => return,
+            () = tokio::time::sleep(Duration::from_mins(10)) => {}
+        }
+    };
+    let acceptor = TlsAcceptor::from(Arc::new(builder.with_cert_resolver(certificates)));
+    let Ok(router) = ab_relay::app::router(&upstream) else {
+        eprintln!("sign-in host proxy unavailable");
+        return;
+    };
+    let make = router.into_make_service_with_connect_info();
+    if serve_control(None, incoming, make, acceptor, stop)
+        .await
+        .is_err()
+    {
+        eprintln!("sign-in host stopped");
+    }
 }
 
 async fn serve_control(
@@ -227,7 +313,9 @@ fn configured_store(
     )?;
     if let Some(path) = args.get("owner-keys-file").filter(|s| !s.is_empty()) {
         store.require_owner_keys(path.into());
-        store.validate_owner_keys()?;
+        if args.get("app-host").is_none_or(String::is_empty) {
+            store.validate_owner_keys()?;
+        }
     }
     Ok(store)
 }

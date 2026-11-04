@@ -97,6 +97,67 @@ impl Identity {
     }
 }
 
+#[derive(Debug, Default, Deserialize)]
+pub struct RelayInfo {
+    #[serde(default)]
+    pub zone: String,
+    #[serde(default)]
+    pub accounts: String,
+}
+pub async fn info(endpoint: &str, client: &reqwest::Client) -> Result<RelayInfo> {
+    Ok(client
+        .get(format!("{endpoint}/info"))
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?)
+}
+fn load_identity(home: &Path, endpoint: &str) -> Result<Identity> {
+    match state::read(home, "relay") {
+        Ok(identity) => Ok(identity),
+        Err(Error::Io(e)) if e.kind() == std::io::ErrorKind::NotFound => {
+            let key = SigningKey::from_bytes(&rand::random());
+            let identity = Identity {
+                key: STANDARD.encode(key.to_keypair_bytes()),
+                credential: Credential::default(),
+                endpoint: endpoint.into(),
+            };
+            state::write(home, "relay", &identity)?;
+            Ok(identity)
+        }
+        Err(e) => Err(e),
+    }
+}
+enum Enrollment {
+    Enrolled(Credential),
+    NotListed,
+}
+async fn enroll_by_key(
+    identity: &Identity,
+    zone: &str,
+    client: &reqwest::Client,
+) -> Result<Enrollment> {
+    let key = identity.signing_key()?;
+    let challenge: RelayChallenge = client
+        .get(format!("{}/challenge", identity.endpoint))
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    let message = format!("apple-bridge-relay-enroll\n{zone}\n{}", challenge.nonce);
+    let response = client.post(format!("{}/enroll", identity.endpoint)).json(&serde_json::json!({
+        "public_key": URL_SAFE_NO_PAD.encode(key.verifying_key().as_bytes()), "nonce": challenge.nonce,
+        "signature": URL_SAFE_NO_PAD.encode(key.sign(message.as_bytes()).to_bytes())
+    })).send().await?;
+    if response.status() == reqwest::StatusCode::FORBIDDEN {
+        return Ok(Enrollment::NotListed);
+    }
+    Ok(Enrollment::Enrolled(
+        response.error_for_status()?.json().await?,
+    ))
+}
 pub async fn enroll(
     home: &Path,
     endpoint: &str,
@@ -106,41 +167,143 @@ pub async fn enroll(
     if !endpoint.starts_with("https://") {
         return Err(Error::Contract("relay requires HTTPS"));
     }
-    let mut identity: Identity = match state::read(home, "relay") {
-        Ok(id) => id,
-        Err(Error::Io(e)) if e.kind() == std::io::ErrorKind::NotFound => {
-            let key = SigningKey::from_bytes(&rand::random());
-            let identity = Identity {
-                key: STANDARD.encode(key.to_keypair_bytes()),
-                credential: Credential::default(),
-                endpoint: endpoint.into(),
-            };
-            state::write(home, "relay", &identity)?;
-            identity
-        }
-        Err(e) => return Err(e),
-    };
-    let key = identity.signing_key()?;
+    let mut identity = load_identity(home, endpoint)?;
     if identity.endpoint != endpoint {
         return Err(Error::Contract("relay identity endpoint mismatch"));
     }
     if !identity.credential.hostname.is_empty() {
         return Ok(identity);
     }
-    let challenge: RelayChallenge = client
-        .get(format!("{endpoint}/challenge"))
+    match enroll_by_key(&identity, zone, client).await? {
+        Enrollment::Enrolled(credential) => {
+            identity.credential = credential;
+            state::write(home, "relay", &identity)?;
+            Ok(identity)
+        }
+        Enrollment::NotListed => Err(Error::Remote(format!(
+            "This relay does not list this Mac. Add this key to its owner-keys file, then turn Remote on again: {}",
+            URL_SAFE_NO_PAD.encode(identity.signing_key()?.verifying_key().as_bytes())
+        ))),
+    }
+}
+
+pub fn public_key(home: &Path, endpoint: &str) -> Result<String> {
+    let identity = load_identity(home, endpoint)?;
+    Ok(URL_SAFE_NO_PAD.encode(identity.signing_key()?.verifying_key().as_bytes()))
+}
+
+#[derive(Deserialize)]
+struct GrantStart {
+    polling_secret: String,
+    user_code: String,
+    fingerprint: String,
+    #[serde(default)]
+    verification_uri: String,
+    #[serde(default)]
+    verification_uri_complete: String,
+    interval: u64,
+    expires_in: u64,
+}
+#[derive(Deserialize)]
+struct GrantProof {
+    transaction: String,
+    nonce: String,
+}
+
+fn computer_name() -> String {
+    std::process::Command::new("scutil")
+        .args(["--get", "ComputerName"])
+        .output()
+        .ok()
+        .filter(|output| output.status.success())
+        .and_then(|output| String::from_utf8(output.stdout).ok())
+        .map_or_else(|| "Mac".to_owned(), |name| name.trim().to_owned())
+}
+
+async fn link_to_account(
+    home: &Path,
+    identity: &mut Identity,
+    accounts: &str,
+    client: &reqwest::Client,
+    gateway: &Gateway,
+    stop: &mut watch::Receiver<bool>,
+) -> Result<bool> {
+    let key = identity.signing_key()?;
+    let public_key = URL_SAFE_NO_PAD.encode(key.verifying_key().as_bytes());
+    let start: GrantStart = client
+        .post(format!("{accounts}/v1/device-start"))
+        .json(&serde_json::json!({"public_key": public_key, "name": computer_name()}))
         .send()
         .await?
         .error_for_status()?
         .json()
         .await?;
-    let message = format!("apple-bridge-relay-enroll\n{zone}\n{}", challenge.nonce);
-    identity.credential = client.post(format!("{endpoint}/enroll")).json(&serde_json::json!({
-        "public_key": URL_SAFE_NO_PAD.encode(key.verifying_key().as_bytes()), "nonce": challenge.nonce,
-        "signature": URL_SAFE_NO_PAD.encode(key.sign(message.as_bytes()).to_bytes())
-    })).send().await?.error_for_status()?.json().await?;
-    state::write(home, "relay", &identity)?;
-    Ok(identity)
+    let link = if start.verification_uri_complete.is_empty() {
+        start.verification_uri.clone()
+    } else {
+        start.verification_uri_complete.clone()
+    };
+    gateway.progress(
+        "relay",
+        Progress {
+            state: "pending",
+            message: format!(
+                "Link this Mac at {}\nCode: {}\nKey: {}",
+                start.verification_uri, start.user_code, start.fingerprint
+            ),
+            pending_link: "account link pending".into(),
+            last_error: String::new(),
+            link,
+        },
+    );
+    let mut interval = start.interval.max(1);
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(start.expires_in);
+    while tokio::time::Instant::now() < deadline {
+        tokio::select! {
+            () = stopped(stop) => return Ok(false),
+            () = tokio::time::sleep(Duration::from_secs(interval)) => {}
+        }
+        let response = client
+            .post(format!("{accounts}/v1/device-poll"))
+            .json(&serde_json::json!({"polling_secret": start.polling_secret}))
+            .send()
+            .await?;
+        match response.status() {
+            reqwest::StatusCode::ACCEPTED => {}
+            reqwest::StatusCode::TOO_MANY_REQUESTS => interval = (interval + 5).min(60),
+            status if status.is_success() => {
+                let proof: GrantProof = response.json().await?;
+                let message = ab_wire::framing::device_link_message(
+                    accounts,
+                    &proof.transaction,
+                    &proof.nonce,
+                    &public_key,
+                );
+                identity.credential = client
+                    .post(format!("{accounts}/v1/device-complete"))
+                    .json(&serde_json::json!({
+                        "polling_secret": start.polling_secret,
+                        "signature": URL_SAFE_NO_PAD.encode(key.sign(&message).to_bytes()),
+                    }))
+                    .send()
+                    .await?
+                    .error_for_status()?
+                    .json()
+                    .await?;
+                state::write(home, "relay", identity)?;
+                gateway.clear_progress("relay");
+                return Ok(true);
+            }
+            _ => {
+                return Err(Error::Remote(
+                    "This link expired. Turn Remote on again.".into(),
+                ));
+            }
+        }
+    }
+    Err(Error::Remote(
+        "This link expired. Turn Remote on again.".into(),
+    ))
 }
 
 #[derive(Debug)]
@@ -158,7 +321,9 @@ pub struct Relay {
 impl Ingress for Relay {
     fn run(&self, gateway: Gateway, mut stop: watch::Receiver<bool>) -> IngressFuture<'_> {
         Box::pin(async move {
-            let id = enroll(&self.home, &self.endpoint, &self.zone, &self.client).await?;
+            let Some(id) = self.identity(&gateway, &mut stop).await? else {
+                return Ok(());
+            };
             let host = if self.domain.is_empty() {
                 id.credential.hostname.clone()
             } else {
@@ -199,6 +364,51 @@ impl Ingress for Relay {
     }
 }
 impl Relay {
+    async fn identity(
+        &self,
+        gateway: &Gateway,
+        stop: &mut watch::Receiver<bool>,
+    ) -> Result<Option<Identity>> {
+        if !self.endpoint.starts_with("https://") {
+            return Err(Error::Contract("relay requires HTTPS"));
+        }
+        let mut identity = load_identity(&self.home, &self.endpoint)?;
+        if identity.endpoint != self.endpoint {
+            return Err(Error::Contract("relay identity endpoint mismatch"));
+        }
+        if !identity.credential.hostname.is_empty() {
+            return Ok(Some(identity));
+        }
+        let info = info(&self.endpoint, &self.client).await.unwrap_or_default();
+        let zone = if self.zone.is_empty() {
+            &info.zone
+        } else {
+            &self.zone
+        };
+        match enroll_by_key(&identity, zone, &self.client).await? {
+            Enrollment::Enrolled(credential) => {
+                identity.credential = credential;
+                state::write(&self.home, "relay", &identity)?;
+                Ok(Some(identity))
+            }
+            Enrollment::NotListed if !info.accounts.is_empty() => {
+                let linked = link_to_account(
+                    &self.home,
+                    &mut identity,
+                    &info.accounts,
+                    &self.client,
+                    gateway,
+                    stop,
+                )
+                .await?;
+                Ok(linked.then_some(identity))
+            }
+            Enrollment::NotListed => Err(Error::Remote(format!(
+                "This relay does not list this Mac. Add this key to its owner-keys file, then turn Remote on again: {}",
+                URL_SAFE_NO_PAD.encode(identity.signing_key()?.verifying_key().as_bytes())
+            ))),
+        }
+    }
     async fn claim(
         &self,
         identity: &Identity,

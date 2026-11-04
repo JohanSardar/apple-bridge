@@ -34,6 +34,7 @@ pub struct Server {
     pub sessions: Mutex<HashMap<String, Arc<Session>>>,
     pub idle: Duration,
     pub control: Option<(String, ControlConnections)>,
+    pub app: Option<(String, ControlConnections)>,
 }
 impl Server {
     pub fn new(store: Store, idle: Duration) -> Self {
@@ -42,6 +43,7 @@ impl Server {
             sessions: Mutex::new(HashMap::new()),
             idle,
             control: None,
+            app: None,
         }
     }
     pub async fn attach(
@@ -114,9 +116,11 @@ impl Server {
             tokio::time::timeout(Duration::from_secs(5), hello::client_hello(&mut socket))
                 .await
                 .map_err(|_| Error::Denied)??;
-        if let Some((control, incoming)) = &self.control
-            && *control == host
-        {
+        let terminating = [&self.control, &self.app]
+            .into_iter()
+            .flatten()
+            .find(|(name, _)| *name == host);
+        if let Some((_, incoming)) = terminating {
             let (done, wait) = oneshot::channel();
             incoming
                 .send(ControlConnection {

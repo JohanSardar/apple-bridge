@@ -247,3 +247,23 @@ impl RelayProof {
         serde_json::from_slice(&raw).map_err(|_| ErrorCode::Invalid)
     }
 }
+
+pub fn device_link_message(
+    relay: &str,
+    transaction: &str,
+    nonce: &str,
+    public_key: &str,
+) -> Vec<u8> {
+    format!("apple-bridge-device-link/1\n{relay}\n{transaction}\n{nonce}\n{public_key}")
+        .into_bytes()
+}
+
+pub fn device_key_fingerprint(public_key: &[u8; 32]) -> String {
+    use sha2::Digest;
+    let digest = sha2::Sha256::digest(public_key);
+    digest[..8]
+        .chunks(2)
+        .map(|pair| format!("{:02X}{:02X}", pair[0], pair[1]))
+        .collect::<Vec<_>>()
+        .join("-")
+}

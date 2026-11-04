@@ -3,21 +3,22 @@ name = "ab-relay-control"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+description = "Links a person's Macs to a relay and manages their tunnels. Identity comes from Better Auth. It has no route to Mac data."
 
 [lints]
 workspace = true
 
 [features]
 default = []
-isolated-control = []
 r2-certificates = []
 
 [[bin]]
 name = "ab-relay-control"
 path = "src/main.rs"
-required-features = ["isolated-control"]
 
 [dependencies]
+ab-pages = { path = "../ab-pages" }
+ab-wire = { path = "../ab-wire" }
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
@@ -29,8 +30,6 @@ ed25519-dalek.workspace = true
 base64 = "0.22"
 getrandom = "0.3"
 fs2 = "0.4"
-p256 = { version = "0.14", features = ["ecdsa"] }
-ciborium = "0.2"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
 url = "2"
 jiff.workspace = true
@@ -39,6 +38,7 @@ jiff.workspace = true
 tempfile = "3"
 tower = { version = "0.5", features = ["util"] }
 http-body-util = "0.1"
+ed25519-dalek = { workspace = true, features = ["rand_core"] }
 
 [[test]]
 name = "relay_caa_account"

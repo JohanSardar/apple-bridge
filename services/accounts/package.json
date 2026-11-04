@@ -1,0 +1,19 @@
+{
+  "name": "ab-accounts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Accounts and invites for an Apple Bridge relay, on Better Auth. Accounts manage tunnels only; they never reach Mac data.",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "build": "esbuild src/main.ts --bundle --platform=node --target=node24 --format=esm --outfile=dist/accounts.mjs --external:better-sqlite3 --external:bun:sqlite --external:pg --external:mysql2 --external:kysely-bun-worker --banner:js=\"import {createRequire} from 'node:module';const require=createRequire(import.meta.url);\"",
+    "test": "node --test --test-concurrency=1 test/*.test.ts"
+  },
+  "dependencies": {
+    "@better-auth/passkey": "1.7.17",
+    "better-auth": "1.7.17"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12"
+  }
+}

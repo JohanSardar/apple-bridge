@@ -428,9 +428,8 @@ fn adapter(home: &Path, name: &str) -> Result<Box<dyn Ingress>, Error> {
         domain,
         resolver,
         domain_poll: std::time::Duration::from_secs(5),
-        endpoint: std::env::var("APPLE_BRIDGE_RELAY_URL")
-            .unwrap_or_else(|_| "https://ab.lexaai.tech".into()),
-        zone: std::env::var("APPLE_BRIDGE_RELAY_ZONE").unwrap_or_else(|_| "ab.lexaai.tech".into()),
+        endpoint: relay_endpoint(home),
+        zone: std::env::var("APPLE_BRIDGE_RELAY_ZONE").unwrap_or_default(),
         client,
         certificates: Arc::new(ab_remote::certificate::Certificates::new(
             home.to_owned(),
@@ -439,6 +438,14 @@ fn adapter(home: &Path, name: &str) -> Result<Box<dyn Ingress>, Error> {
         )),
         tls: Arc::new(tls),
     }))
+}
+fn relay_endpoint(home: &Path) -> String {
+    ab_remote::state::read::<ab_remote::state::Config>(home, "config")
+        .ok()
+        .map(|config| config.relay_url)
+        .filter(|url| !url.is_empty())
+        .or_else(|| std::env::var("APPLE_BRIDGE_RELAY_URL").ok())
+        .unwrap_or_else(|| "https://ab.lexaai.tech".into())
 }
 #[cfg(test)]
 mod legacy_tests {
