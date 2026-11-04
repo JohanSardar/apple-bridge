@@ -426,3 +426,18 @@ and the commit-ordered record of written keys. `routed::Gate` owns the only inst
 implements `flight::Ledger`; `effects::Layer` no longer registers captures or `Committed` itself and
 correlates dispatch evidence through the ledger (`sequence()` counts commits, `written()` waits for the
 key). Only rows with kind `upsert` or `absent` are correlated.
+
+
+### Swift side after the IPC peer is deleted
+
+The Helper only speaks native/1: `AppleSession.runNative` is its single run loop, `NativeSessionLauncher` starts
+`ab-session --session-secret --session-home` and `SessionProxy` only passes the gateway descriptor and the helper
+link. Removed from Swift: `PeerWire` (Challenge/Authenticate, ipc/1 framing, proxy spawn), `DispatchGuard`,
+`EffectsRouting`, the IPC run loop and `handle`, `drain` with its credit, `Pending`/`Flight` and live/bulk queues,
+the ticket machinery in `prepare`/`dispatch`/`resolve`, `rejectCommand`, `observedEvidence` and the routed
+`dispatchNative`. `MessagesSelfTest` keeps its own in-memory id set instead of appending to the shared guard log.
+Still in Swift on purpose: `observedCheckpoints`, which only feeds the conflict evidence of `rejection`, until
+ab-session binds that too. The routed relay, the effects layer and the Rust capture producers (`routed`, `effects`,
+`readers`, `production`) have no Swift counterpart any more and are dead code in the Helper's path; their removal or
+re-homing in session mode is a separate change. The `wire-checks` lab command stays (the real-level helper release
+check lists it) and no longer goes through `PeerWire`.
