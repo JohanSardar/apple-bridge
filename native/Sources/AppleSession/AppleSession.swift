@@ -804,8 +804,8 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
             if let notes {
                 if !ticket.prepared.action["native_key"].string.isEmpty || operation == "notes.rename_folder" {
                     guard !preState["native_fingerprint"].string.isEmpty else { throw SourceFailure.unavailable }
-                    try notes.validate(ticket.prepared, preState: preState)
-                } else { try notes.validate(ticket.prepared) }
+                    try await notes.validate(ticket.prepared, preState: preState)
+                } else { try await notes.validate(ticket.prepared) }
             }
             else if operation.hasPrefix("contacts.") { try await contacts.validate(ticket.prepared) }
             else if operation.hasPrefix("calendar.") { try await calendar.validate(ticket.prepared) }
