@@ -535,12 +535,7 @@ impl Enrichment {
         self.attachments(data, coverage, row);
     }
 
-    fn travel(
-        &self,
-        data: &mut Map<String, Value>,
-        coverage: &mut Map<String, Value>,
-        row: &Row,
-    ) {
+    fn travel(&self, data: &mut Map<String, Value>, coverage: &mut Map<String, Value>, row: &Row) {
         let get = |key: &str| row.get(key).cloned().unwrap_or(Value::Null);
         let travel = get("travel_time");
         let known_zero = travel.as_f64() == Some(0.0);
