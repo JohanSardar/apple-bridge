@@ -1016,12 +1016,22 @@ impl Session<'_> {
                 }
                 let data = record["data"].clone();
                 let chat = string(&data["chat_id"]["$ref"], "native_key");
-                Ok(json!({"exists":true,"target":data,"row":{"guid":key,"capture_chat_guid":chat,"service":data["service"].as_str().unwrap_or("iMessage"),"is_from_me":data["is_from_me"]==true,"item_type":if data["kind"] == "message" || data["kind"].is_null() { 0 } else { 1 }}}))
+                Ok(
+                    json!({"exists":true,"target":data,"row":{"guid":key,"capture_chat_guid":chat,"service":data["service"].as_str().unwrap_or("iMessage"),"is_from_me":data["is_from_me"]==true,"item_type":i32::from(!(data["kind"] == "message" || data["kind"].is_null()))}}),
+                )
             }
             "messages.reactions" | "messages.reaction_rows" => {
                 let guid = string(args, "guid");
                 let wanted = args["type"].as_i64();
-                let kinds = ["love", "like", "dislike", "laugh", "emphasize", "question", "emoji"];
+                let kinds = [
+                    "love",
+                    "like",
+                    "dislike",
+                    "laugh",
+                    "emphasize",
+                    "question",
+                    "emoji",
+                ];
                 let mut found = vec![];
                 for (key, record) in s.data["records"].as_object().into_iter().flatten() {
                     if record["collection"] != "messages.reaction"
@@ -1030,8 +1040,15 @@ impl Session<'_> {
                     {
                         continue;
                     }
-                    let index = kinds.iter().position(|kind| *kind == string(&record["data"], "kind")).unwrap_or(0);
-                    let code = (if record["data"]["removed"] == true { 3000 } else { 2000 }) + i64::try_from(index).unwrap_or(0);
+                    let index = kinds
+                        .iter()
+                        .position(|kind| *kind == string(&record["data"], "kind"))
+                        .unwrap_or(0);
+                    let code = (if record["data"]["removed"] == true {
+                        3000
+                    } else {
+                        2000
+                    }) + i64::try_from(index).unwrap_or(0);
                     if wanted.is_some_and(|wanted| wanted != code) {
                         continue;
                     }
@@ -1052,7 +1069,10 @@ impl Session<'_> {
                             && record["kind"] != "absent"
                             && record["row_id"].as_u64().unwrap_or_default() > after
                             && record["data"]["is_from_me"] == true
-                            && string(&record["data"]["thread_originator_id"]["$ref"], "native_key") == guid
+                            && string(
+                                &record["data"]["thread_originator_id"]["$ref"],
+                                "native_key",
+                            ) == guid
                             && string(&record["data"], "text") == text
                     })
                     .map(|(key, _)| json!(key))
@@ -1060,7 +1080,6 @@ impl Session<'_> {
                 Ok(json!({"guids":found}))
             }
             "messages.ui_available" => Ok(json!({"available":true})),
-            "messages.ui_validate" => Ok(json!({})),
             "messages.ui_prepare" => {
                 if s.fault == "ui-interference-before" {
                     s.fault.clear();
@@ -1083,12 +1102,14 @@ impl Session<'_> {
                 let mut data = record_data(&s, &target);
                 match op.as_str() {
                     "messages.edit" => {
-                        let mut history = data["edit_history"].as_array().cloned().unwrap_or_default();
+                        let mut history =
+                            data["edit_history"].as_array().cloned().unwrap_or_default();
                         history.push(json!({"text":data["text"],"timestamp":now()}));
                         data["edit_history"] = json!(history);
                         data["text"] = json!(string(m, "text"));
                         for part in data["parts"].as_array_mut().into_iter().flatten() {
-                            if part["index"].as_u64() == Some(part_index) && part["kind"] == "text" {
+                            if part["index"].as_u64() == Some(part_index) && part["kind"] == "text"
+                            {
                                 part["text"] = json!(string(m, "text"));
                             }
                         }
@@ -1100,10 +1121,19 @@ impl Session<'_> {
                         data["retracted_parts"] = json!([part_index]);
                         put(&mut s, &mut seen, "message", &target, data, false);
                     }
-                    "messages.delete_message" => put(&mut s, &mut seen, "message", &target, data, true),
+                    "messages.delete_message" => {
+                        put(&mut s, &mut seen, "message", &target, data, true);
+                    }
                     "messages.react" => {
                         let key = id("reaction").map_err(fail)?;
-                        put(&mut s, &mut seen, "reaction", &key, json!({"message_id":reference("message",&target),"part_index":part_index,"kind":string(m,"reaction"),"emoji":string(m,"emoji"),"removed":m["remove"]==true,"is_from_me":true}), false);
+                        put(
+                            &mut s,
+                            &mut seen,
+                            "reaction",
+                            &key,
+                            json!({"message_id":reference("message",&target),"part_index":part_index,"kind":string(m,"reaction"),"emoji":string(m,"emoji"),"removed":m["remove"]==true,"is_from_me":true}),
+                            false,
+                        );
                     }
                     "messages.reply" => {
                         let chat = string(&data["chat_id"]["$ref"], "native_key");
@@ -1126,7 +1156,7 @@ impl Session<'_> {
                 self.emit(state, capture).map_err(fail)?;
                 Ok(json!({"ui":{"target_verified":true}}))
             }
-            "messages.mark_policy_used" | "messages.record_proof" => Ok(json!({})),
+            "messages.mark_policy_used" | "messages.record_proof" | "messages.ui_validate" => Ok(json!({})),
             "messages.reconcile" => {
                 let capture = s.scan("messages").map_err(fail)?;
                 drop(s);
