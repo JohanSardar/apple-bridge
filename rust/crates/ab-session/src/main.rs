@@ -43,9 +43,6 @@ fn lab_effects(
 
 #[cfg(feature = "rust-capture")]
 fn lab_listen(listen: &str, gateway: &str, native: Option<&str>) -> Result<(), Error> {
-    if let Some(home) = &capture_home {
-        keep_log(std::path::Path::new(home));
-    }
     let mut selection = ab_session::ownership::Selection::default();
     if let Ok(value) = std::env::var("AB_SESSION_PRODUCERS") {
         let sources: std::collections::BTreeMap<
@@ -267,6 +264,9 @@ fn run() -> Result<(), Error> {
             "--capture-home" if capture_home.is_none() => capture_home = Some(value.clone()),
             _ => return Err(Error::Invalid),
         }
+    }
+    if let Some(home) = &capture_home {
+        keep_log(std::path::Path::new(home));
     }
     let mut selection = ab_session::ownership::Selection::default();
     if let Ok(value) = std::env::var("AB_SESSION_PRODUCERS") {
