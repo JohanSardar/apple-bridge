@@ -17,6 +17,7 @@ use std::{
 pub const SUPPORTED: &[&str] = &[
     "calendar",
     "contacts",
+    "reminders",
     "mail",
     "messages",
     "safari",

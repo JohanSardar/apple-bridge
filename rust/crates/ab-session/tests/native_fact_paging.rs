@@ -491,6 +491,166 @@ fn contacts_pull_all_three_collections_over_the_socket_link() -> Fallible<()> {
     Ok(())
 }
 
+fn reminder(collection: &str, key: &str, alias: &str, title: &str) -> Value {
+    let mut value = json!({"kind":"upsert","collection":collection,"native_key":key,"data":{"title":title},"observed_at":"2026-11-03T00:00:00Z"});
+    if !alias.is_empty() {
+        value["scoped_alias"] = json!(alias);
+    }
+    value
+}
+
+fn reminders_fixture(page: usize) -> Fallible<Fixture> {
+    let (native, server) = UnixStream::pair()?;
+    let facts: Facts = Arc::new(Mutex::new(BTreeMap::new()));
+    let requests = Arc::new(Mutex::new(Vec::new()));
+    serve(server, Arc::clone(&facts), page, Arc::clone(&requests));
+    let client = Arc::new(Client::inherited(native)?);
+    let reader = readers::AgendaReader::reminders("/nonexistent".into())
+        .paged(client, Duration::from_millis(60));
+    let mut sources: BTreeMap<String, Box<dyn readers::CaptureReader>> = BTreeMap::new();
+    sources.insert("reminders".into(), Box::new(reader));
+    Ok(Fixture {
+        facts,
+        requests,
+        wire: wire(sources)?,
+    })
+}
+
+fn reminder_operation(items: Vec<Value>) -> Operation {
+    Operation {
+        generation: "eventkit-lineage",
+        ..operation(items)
+    }
+}
+
+#[test]
+fn reminders_pull_pages_both_collections_and_follows_absent_rows_and_alias_moves() -> Fallible<()> {
+    let mut f = reminders_fixture(2)?;
+    set(
+        &f.facts,
+        "agenda.reminder_lists",
+        reminder_operation(vec![reminder("reminders.list", "list-1", "", "Home")]),
+    )?;
+    set(
+        &f.facts,
+        "agenda.reminders",
+        reminder_operation(vec![
+            reminder("reminders.reminder", "r1", "list-1/ext1", "One"),
+            reminder("reminders.reminder", "r2", "list-1/ext2", "Two"),
+            reminder("reminders.reminder", "r3", "", "Three"),
+            reminder("reminders.reminder", "r4", "", "Four"),
+        ]),
+    )?;
+    let (size, first) = receive(&mut f.wire.gateway)?;
+    assert_eq!(first["source"], "reminders");
+    assert_eq!(first["generation"], "eventkit-lineage");
+    assert_eq!(
+        first["scope"],
+        json!(["reminders.list", "reminders.reminder"])
+    );
+    assert_eq!(names(&first, "upsert"), ["list-1", "r1", "r2", "r3", "r4"]);
+    let observations = first["observations"].as_array().ok_or("observations")?;
+    assert!(observations[0].get("scoped_alias").is_none());
+    assert_eq!(observations[1]["scoped_alias"], "list-1/ext1");
+    commit(&mut f.wire, "reminders", &first, size)?;
+    expect_silence(&mut f.wire.gateway)?;
+    assert!(
+        f.requests
+            .lock()
+            .map_err(|_| "poisoned")?
+            .iter()
+            .any(|request| request["op"] == "agenda.reminders" && request["args"] == json!({}))
+    );
+
+    set(
+        &f.facts,
+        "agenda.reminders",
+        reminder_operation(vec![
+            reminder("reminders.reminder", "r1", "list-1/ext1", "One renamed"),
+            reminder("reminders.reminder", "r2", "list-1/ext2-moved", "Two"),
+            reminder("reminders.reminder", "r4", "", "Four"),
+            json!({"kind":"absent","collection":"reminders.reminder","native_key":"r3","scoped_alias":"","data":{"title":"Three"},"observed_at":"2026-11-03T00:00:00Z","revalidated":true}),
+        ]),
+    )?;
+    let (size, second) = receive(&mut f.wire.gateway)?;
+    assert_eq!(second["predecessor"], first["checkpoint"]);
+    assert_eq!(names(&second, "upsert"), ["r1", "r2"]);
+    assert_eq!(names(&second, "absent"), ["r3"]);
+    commit(&mut f.wire, "reminders", &second, size)?;
+
+    set(
+        &f.facts,
+        "agenda.reminders",
+        reminder_operation(vec![
+            reminder(
+                "reminders.reminder",
+                "r1-rekeyed",
+                "list-1/ext1",
+                "One renamed",
+            ),
+            reminder("reminders.reminder", "r2", "list-1/ext2-moved", "Two"),
+        ]),
+    )?;
+    let (size, third) = receive(&mut f.wire.gateway)?;
+    assert_eq!(names(&third, "upsert"), ["r1-rekeyed"]);
+    assert_eq!(names(&third, "absent"), Vec::<String>::new());
+    commit(&mut f.wire, "reminders", &third, size)?;
+
+    set(
+        &f.facts,
+        "agenda.reminders",
+        reminder_operation(vec![reminder(
+            "reminders.reminder",
+            "r1-rekeyed",
+            "list-1/ext1",
+            "One renamed",
+        )]),
+    )?;
+    expect_silence(&mut f.wire.gateway)?;
+    Ok(())
+}
+
+#[test]
+fn reminders_list_absence_and_incomplete_pages_never_delete() -> Fallible<()> {
+    let mut f = reminders_fixture(5)?;
+    set(
+        &f.facts,
+        "agenda.reminder_lists",
+        reminder_operation(vec![
+            reminder("reminders.list", "list-1", "", "Home"),
+            reminder("reminders.list", "list-2", "", "Work"),
+        ]),
+    )?;
+    set(
+        &f.facts,
+        "agenda.reminders",
+        reminder_operation(vec![reminder("reminders.reminder", "r1", "", "One")]),
+    )?;
+    let (size, first) = receive(&mut f.wire.gateway)?;
+    commit(&mut f.wire, "reminders", &first, size)?;
+    set(
+        &f.facts,
+        "agenda.reminder_lists",
+        Operation {
+            complete: false,
+            ..reminder_operation(vec![reminder("reminders.list", "list-1", "", "Home")])
+        },
+    )?;
+    expect_silence(&mut f.wire.gateway)?;
+    set(
+        &f.facts,
+        "agenda.reminder_lists",
+        reminder_operation(vec![
+            reminder("reminders.list", "list-1", "", "Home"),
+            json!({"kind":"absent","collection":"reminders.list","native_key":"list-2","data":{"title":"Work"},"observed_at":"2026-11-03T00:00:00Z","revalidated":true}),
+        ]),
+    )?;
+    let (_, second) = receive(&mut f.wire.gateway)?;
+    assert_eq!(names(&second, "absent"), ["list-2"]);
+    assert_eq!(names(&second, "upsert"), Vec::<String>::new());
+    Ok(())
+}
+
 #[test]
 fn a_facts_link_without_a_native_endpoint_is_refused() {
     assert!(

@@ -33,7 +33,8 @@ extension AppleSession: NativeAdapter {
         case "agenda.reminder_lists", "agenda.reminders":
             guard (await source.open()).state == "ready" else { throw SourceFailure.permissionMissing }
             try await source.nativeFacts(into: sink)
-            return await sink.result(collection: operation == "agenda.reminders" ? "reminders.reminder" : "reminders.list")
+            let enrichment = builtins.remindersStore
+            return await sink.result(collection: operation == "agenda.reminders" ? "reminders.reminder" : "reminders.list", enriching: { rows, generation in await enrichment.refresh(rows, generation: generation) })
         case "contacts.history":
             guard Set(args.object.keys) == ["history_token"] else { throw SourceFailure.invalid }
             let history = try await contacts.nativeHistory(args["history_token"].string)
