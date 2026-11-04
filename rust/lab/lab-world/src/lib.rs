@@ -1,6 +1,8 @@
 mod proxy;
+mod session;
 pub use proxy::FaultProxy;
 use serde_json::Value;
+pub use session::{session_binary, session_effects, session_sources};
 use std::{
     fs,
     io::Write,
@@ -115,6 +117,8 @@ pub struct World {
     gateway: Option<Child>,
     peer: Option<Child>,
     session: Option<Child>,
+    labsession: session::Session,
+    labsession_child: Option<Child>,
     proxy: Option<FaultProxy>,
     token: String,
     gateway_env: Vec<(String, String)>,
@@ -140,6 +144,8 @@ impl World {
             gateway: None,
             peer: None,
             session: None,
+            labsession: session::Session::default(),
+            labsession_child: None,
             proxy: None,
             token: String::new(),
             gateway_env: Vec::new(),
@@ -174,6 +180,8 @@ impl World {
             gateway: None,
             peer: None,
             session: None,
+            labsession: session::Session::default(),
+            labsession_child: None,
             proxy: None,
             token: String::new(),
             gateway_env: Vec::new(),
@@ -248,15 +256,24 @@ impl World {
             .create(true)
             .append(true)
             .open(self.directory.join("simapple.log"))?;
+        self.start_session(&socket)?;
         let native = self.launch_session(&socket)?;
         let mut simapple = Command::new(&self.config.simapple);
         simapple
-            .args(["simapple", "--socket", &socket, "--secret-file"])
+            .args([
+                "simapple",
+                "--socket",
+                &self.helper_socket(&socket),
+                "--secret-file",
+            ])
             .arg(self.gateway_home.join("apple-secret"))
             .arg("--control")
             .arg(self.directory.join("sim.sock"));
         if let Some(path) = &native {
             simapple.arg("--native-session").arg(path);
+        }
+        if let Some(native) = self.sim_native_socket() {
+            simapple.arg("--native-socket").arg(native);
         }
         self.peer = Some(simapple.stdout(log.try_clone()?).stderr(log).spawn()?);
         let deadline = Instant::now() + Duration::from_secs(20);
@@ -329,9 +346,14 @@ impl World {
         }
     }
     fn check_children(&mut self) -> Result<()> {
-        for child in [&mut self.gateway, &mut self.peer, &mut self.session]
-            .into_iter()
-            .flatten()
+        for child in [
+            &mut self.gateway,
+            &mut self.peer,
+            &mut self.session,
+            &mut self.labsession_child,
+        ]
+        .into_iter()
+        .flatten()
         {
             if let Some(status) = child.try_wait()? {
                 return Err(Error::Invalid(format!("child exited {status}")));
@@ -558,7 +580,9 @@ impl World {
         }
         stop(&mut self.peer);
         stop(&mut self.session);
+        stop(&mut self.labsession_child);
         stop(&mut self.gateway);
+        self.keep_session_evidence();
     }
 }
 fn stop(child: &mut Option<Child>) {
