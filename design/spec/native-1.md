@@ -191,8 +191,8 @@ to ab-session: it validates `Prepare` (non-empty ids, future expiry, one command
 outstanding, id never seen by the guard), mints the ticket after Swift's `Prepared` (30 seconds or the
 command's expiry, one shot), validates `Dispatch` (ticket, origin, command id, fence, expiry), fsyncs
 `DispatchStarted` in `<home>/dispatch-guard.log` before it sends `Dispatch` to Swift, writes `Outcome` or
-`Rejected` to the same log, answers `Resolve` from the log (forwarding open outcomes to Swift with
-`saved`), and reports unresolved dispatches after `Ready` on the next connection. A `Rejected` that
+`Rejected` to the same log, answers `Resolve` from the log (offering every recorded outcome except
+`failed_no_effect` to Swift with `saved`; Swift decides whether to re-observe or echo it), and reports unresolved dispatches after `Ready` on the next connection. A `Rejected` that
 arrives for a started dispatch is recorded as a rejection; a started dispatch without an outcome stays
 indeterminate. For an observed `Outcome` with a `native_key`, ab-session waits (15 seconds) for a committed
 scan containing that key after the dispatch started (facts sources: the latest) and writes it as

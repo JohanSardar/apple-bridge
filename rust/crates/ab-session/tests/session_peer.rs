@@ -1265,3 +1265,80 @@ fn a_rust_owned_resolve_stays_indeterminate_when_the_write_is_not_there() {
     assert!(resolved["evidence"]["resolved"].is_null());
     let _ = finish(again);
 }
+
+#[test]
+fn a_recorded_outcome_is_offered_to_the_helper_and_a_failed_no_effect_one_is_not() {
+    let mut world = start(4_194_304, &json!({}));
+    let ticket = prepare_ticket(&mut world, "c1", "mac.set_volume");
+    ipc_send(&mut world.gateway, &dispatch_frame("c1", &ticket, 7));
+    assert!(matches!(
+        native::read_frame(&mut world.link),
+        Ok(Frame::Dispatch(_))
+    ));
+    native::write_frame(
+        &mut world.link,
+        &Frame::Outcome(native::Outcome {
+            command_id: "c1".into(),
+            disposition: "delivered".into(),
+            evidence: raw(&json!({"observed": true})),
+        }),
+    )
+    .expect("outcome");
+    assert_eq!(
+        ipc_read(&mut world.gateway).expect("outcome").0["disposition"],
+        "delivered"
+    );
+    let mut resolve = frame("Resolve");
+    resolve.command_id = "c1".into();
+    ipc_send(&mut world.gateway, &resolve);
+    let Ok(Frame::Resolve(asked)) = native::read_frame(&mut world.link) else {
+        panic!("a delivered outcome was not offered to the helper");
+    };
+    assert!(asked.saved.get().contains("delivered"));
+    native::write_frame(
+        &mut world.link,
+        &Frame::Outcome(native::Outcome {
+            command_id: "c1".into(),
+            disposition: "delivery_failed".into(),
+            evidence: raw(&json!({"observed": true, "error_code": 100})),
+        }),
+    )
+    .expect("strengthened");
+    let (strengthened, _) = ipc_read(&mut world.gateway).expect("strengthened");
+    assert_eq!(strengthened["disposition"], "delivery_failed");
+    assert_eq!(strengthened["evidence"]["error_code"], 100);
+
+    let ticket = prepare_ticket(&mut world, "c2", "mac.set_volume");
+    ipc_send(&mut world.gateway, &dispatch_frame("c2", &ticket, 7));
+    assert!(matches!(
+        native::read_frame(&mut world.link),
+        Ok(Frame::Dispatch(_))
+    ));
+    native::write_frame(
+        &mut world.link,
+        &Frame::Rejected(native::Rejected {
+            command_id: "c2".into(),
+            code: "conflict".into(),
+            message: "stale".into(),
+            evidence: None,
+        }),
+    )
+    .expect("rejected");
+    assert_eq!(
+        ipc_read(&mut world.gateway).expect("rejected").0["t"],
+        "Rejected"
+    );
+    let mut again = frame("Resolve");
+    again.command_id = "c2".into();
+    ipc_send(&mut world.gateway, &again);
+    assert_eq!(
+        ipc_read(&mut world.gateway).expect("saved").0["t"],
+        "Rejected"
+    );
+    world
+        .link
+        .set_read_timeout(Some(Duration::from_millis(250)))
+        .expect("timeout");
+    assert!(native::read_frame(&mut world.link).is_err());
+    let _ = finish(world);
+}

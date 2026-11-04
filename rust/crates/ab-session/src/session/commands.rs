@@ -526,10 +526,10 @@ impl Hub {
             drop(core);
             return self.refuse(&id, "not_found");
         };
-        let open = saved["t"] == "Outcome"
-            && ["indeterminate", "locally_observed"]
-                .contains(&saved["disposition"].as_str().unwrap_or_default());
+        let open = saved["t"] == "Outcome" && saved["disposition"] != "failed_no_effect";
         let owned = open
+            && ["indeterminate", "locally_observed"]
+                .contains(&saved["disposition"].as_str().unwrap_or_default())
             && core.commands.owned.contains(source_of(
                 saved["evidence"]["prepared"]["action"]["op"]
                     .as_str()
