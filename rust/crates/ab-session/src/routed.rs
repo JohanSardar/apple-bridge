@@ -720,7 +720,7 @@ pub fn relay_layered(
     let rust: BTreeSet<String> = readers.keys().cloned().collect();
     let roots: Vec<std::path::PathBuf> = readers
         .values()
-        .map(|reader| reader.root().to_path_buf())
+        .flat_map(|reader| reader.watch_paths())
         .collect();
     let store = options.state.as_deref().map(Store::open).transpose()?;
     let store = store.as_ref();

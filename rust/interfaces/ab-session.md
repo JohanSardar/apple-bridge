@@ -190,7 +190,7 @@ source is in `AB_LAB_SESSION_SOURCES`; the version travels in `duration` (100 + 
 `AB_LAB_SESSION_CONTROL=empty` skips the writes and is the negative control. `AB_SESSION_RUST_POLL_MS` is
 not a reliable control when other sources keep committing, because any gate change wakes the poll loop.
 Notes: `readers::NotesReader` wraps `ab_native::notes_reader::Reader` over `<root>/NoteStore.sqlite`
-(staging beside the root as `<root>-staging`). `next` drains the hydration queue first (each
+(staging in the required `staging` config path, never inside or above the root). `next` drains the hydration queue first (each
 hydration is its own flight with an empty scope), then reconciles when the file-tree signature
 changed. Generation is `notes-<Z_UUID>` from the store, so a stable store never rescans. The lab
 world polls simapple's `/inspect` every 25 ms (and after each `/external-change`) and rebuilds
@@ -213,12 +213,14 @@ Open: NOTE-LIST asserts a note inside a recently-deleted folder and a fixed thum
 ## Production readiness (all switches off by default)
 
 - **Checkpoint persistence.** With a state directory (`AB_SESSION_RUST_STATE` in lab mode, `<home>/session/capture-state` in production) the session fsyncs `<source>.json` (`generation`, `checkpoint`, reader `token`) after the gateway commits a Rust capture and the reader has settled. The token is the committed input-tree signature. On `Open`, a record is trusted only when its generation and checkpoint equal `Open.checkpoints[source]`; the reader then resumes and an unchanged source emits nothing. A mismatch (or no record) means a normal first full scan under the gateway's predecessor, so a stale or crashed state file can only cause a rescan, never a skipped change.
-- **Blob handles.** A reader can own a handle prefix (`CaptureReader::owns`/`blob`). Gateway `BlobRead` frames for an owned handle are answered by the session with `BlobChunk` or `BlobUnavailable`, and are never forwarded to the Helper. Voice Memos (`voice_memos`, config `root`, optional `staging`, default `<state>/blobs/voice_memos`) produces `voice-memo-blob:<digest>` handles; the asset store re-adopts staged files on open, so handles keep resolving after a restart.
+- **Blob handles.** A reader can own a handle prefix (`CaptureReader::owns`/`blob`). Gateway `BlobRead` frames for an owned handle are answered by the session with `BlobChunk` or `BlobUnavailable`, and are never forwarded to the Helper. Voice Memos (`voice_memos`, config `root` and required `staging`) produces `voice-memo-blob:<digest>` handles; the asset store re-adopts staged files on open, so handles keep resolving after a restart.
 - **Watcher scheduling.** `ab_sys::watch::Watcher` uses kqueue (`EVFILT_VNODE`, macOS) or inotify (Linux) on every directory and file under a reader's root and re-registers after each event. An event wakes the producer immediately (15 ms debounce). The poll interval is only the fallback; if the watcher cannot start, polling continues unchanged. Lab: `AB_SESSION_RUST_WATCH=1`; production: `watch` in the config file (default true).
 - **With `rust-effects`.** `effects::Layer` is an overlay on the same relay (`routed::relay_layered`). Rust captures register their keys with the effects state before being written, so Dispatch evidence correlation sees Rust-committed captures like Swift ones. `effects::relay` now runs through the same relay.
-- **Production switch.** `ab-session --gateway-fd N --helper-fd M [--effects-home H] [--capture-home H]`. With `--capture-home`, `<home>/session/rust-capture.json` (`{"sources":{"safari":{"root":"..."}},"watch":true,"poll_ms":5000}`) selects Rust sources (`safari`, `usage`, `notes`, `voice_memos`, `mail`, `phone`, `voicemail`, `calendar`, `contacts`; Calendar and Contacts take `{"root":"DIR"}` only as the watcher root because their data arrives as Helper facts); an unsupported source fails startup, an absent file or empty `sources` is the verbatim proxy. Flipping a source is editing the file and restarting the Helper; flipping back is removing the entry. The Swift SessionProxy passes `--capture-home` only when the file exists. A binary built without `rust-capture` rejects the flag. Generation changes on a flip cost one rescan and never a false deletion.
+- **Production switch.** `ab-session --gateway-fd N --helper-fd M [--effects-home H] [--capture-home H]`. With `--capture-home`, `<home>/session/rust-capture.json` (`{"sources":{"safari":{"root":"..."}},"watch":true,"poll_ms":5000}`) selects Rust sources (`safari`, `usage`, `notes`, `voice_memos`, `mail`, `phone`, `voicemail`, `calendar`, `contacts`, `messages`; Calendar and Contacts take `{"root":"DIR"}` only as the watcher root because their data arrives as Helper facts); an unsupported source fails startup, an absent file or empty `sources` is the verbatim proxy. Flipping a source is editing the file and restarting the Helper; flipping back is removing the entry. The Swift SessionProxy passes `--capture-home` only when the file exists. A binary built without `rust-capture` rejects the flag. Generation changes on a flip cost one rescan and never a false deletion.
 
-Open items: watcher-driven scheduling and persistence are proven for Screen Time in the sim; blob reads and effects plus capture are proven by socketpair tests only (simapple has no native/1 endpoint and no Voice Memos file fixture world); Mail, Notes, Messages and the other sources still need readers.
+Staging never lives in an Apple container. `voice_memos` and `notes` need a `staging` path that is not inside or above the source root (symlinks and `..` resolved); `production::load` fills `<home>/session/staging/<source>` when it is absent and `from_config` fails without one. `tests/staging_confinement.rs` fails if a scan, commit or blob read creates any path under the root. Staged files are copied to a temp name and hard-linked into place inside the staging directory, so no rename crosses a device.
+
+Open items: watcher-driven scheduling and persistence are proven for Screen Time in the sim; blob reads and effects plus capture are proven by socketpair tests only (simapple has no native/1 endpoint and no Voice Memos file fixture world); the other sources still need readers.
 
 ### Calendar and Contacts (facts-driven)
 
@@ -244,3 +246,37 @@ final part is held, and the diff runs once per scan. The producer is woken by ev
 keeps accepting while the gateway is restarting.
 
 Known gaps: native/1 fact paging in place of the Helper capture frame and Contacts container facts.
+
+### Safari live tabs (facts)
+
+`safari.tab` comes from AppleScript, so it stays in Swift and arrives as facts. With `safari` in
+`session/rust-capture.json` the registration builds `SafariSource(tabsOnly: true)`: only the 5 s tab
+loop runs, and its `Capture` (scope `["safari.tab"]`, complete evidence, upserts for every open tab) is
+the full current tab set; the first emission is never skipped, even when empty. `SafariReader::ingest`
+stores it, the Helper `Committed` is released at once, and `safari::Reader::tabs` diffs it against the
+last committed tabs (upserts for changes, `absent` for closed tabs, `live` after the first scan). Frames
+with another scope, partial evidence or a malformed row are ignored. History, bookmarks and cloud tabs
+are read by the Rust reader from the Safari directory.
+
+### Messages
+
+`readers::MessagesReader` wraps `ab_native::messages::Reader` (`root` is the directory holding `chat.db`;
+`home` is the user home whose `Library/Messages/Attachments` and pinning preferences it reads, derived
+from a `.../Library/Messages` root when absent). Only the `chat.db`, `-wal` and `-shm` files are watched
+(`CaptureReader::watch_paths`), never the Attachments tree. `next` runs `step` until the reconciliation
+queue drains and returns one capture: live work alone while only live batches arrive, otherwise the whole
+history scan with `complete` evidence on the last page; a failed step after some pages emits those pages
+without completion evidence. A 15 minute reconciliation is requested like the Swift reader. Attachment
+digests are SHA-256 over the file read through `Reader::read_blob`, cached per guid and declared size;
+`blob_handles` maps digest to the attachment guid and BlobRead for a known guid is answered by the
+session. A Helper `Capture` for `messages` (the Swift `captureCommand` evidence) is not forwarded: its
+`(collection, native_key)` list invalidates those fingerprints (`Reader::invalidate`) so the next poll
+re-emits them even when the row did not change, and `bind_outcome` can attach the Rust checkpoint.
+With `messages` in the config the Helper builds `Messages(rustCapture: true)`: its capture loop idles,
+commands and `captureCommand` keep working.
+
+Not in the Rust reader: media derivatives (thumbnails and posters, `data.media` / `data.derivatives`)
+and the asynchronous pending-blob state; large attachments are hashed on the poll thread.
+The sim MSG family cannot run with the session on: simapple's message records are a model (`title`,
+synthetic keys) that cannot be inverted into a `chat.db`, so the family stays on the Helper path in the
+sim and the reader is proven by `tests/capture_producer.rs` and the 46-stage Swift/Rust projection oracle.
