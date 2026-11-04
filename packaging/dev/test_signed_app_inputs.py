@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from signed_app_inputs import cache_directory, source_key
+from signed_app_inputs import cache_directory, session_inputs, source_key
 
 
 class SignedAppCacheDirectoryTests(unittest.TestCase):
@@ -49,6 +49,34 @@ class SignedAppCacheDirectoryTests(unittest.TestCase):
 
     def test_explicit_cache_directory_takes_precedence(self):
         self.assertEqual(cache_directory(Path("/checkout"), {"AB_TICKET": "F7b", "APPLE_BRIDGE_SIGNED_APP_CACHE": "/configured"}), Path("/configured"))
+
+
+class SessionBundleKeyTests(unittest.TestCase):
+    def test_plain_helper_builds_add_nothing_to_the_key(self):
+        with tempfile.TemporaryDirectory() as directory:
+            self.assertEqual(session_inputs(Path(directory), {}), {})
+
+    def test_prebuilt_session_binary_content_changes_the_key(self):
+        with tempfile.TemporaryDirectory() as directory:
+            binary = Path(directory) / "ab-session"
+            binary.write_bytes(b"one")
+            first = session_inputs(Path(directory), {"AB_SESSION_BINARY": str(binary)})
+            binary.write_bytes(b"two")
+            second = session_inputs(Path(directory), {"AB_SESSION_BINARY": str(binary)})
+            self.assertNotEqual(first, second)
+
+    def test_built_session_follows_the_rust_sources(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "rust/crates/ab-session/src"
+            source.mkdir(parents=True)
+            (root / "rust/Cargo.lock").write_text("lock")
+            (root / "rust/Cargo.toml").write_text("workspace")
+            (source / "lib.rs").write_text("one")
+            first = session_inputs(root, {"AB_SESSION_BUILD": "1"})
+            (source / "lib.rs").write_text("two")
+            second = session_inputs(root, {"AB_SESSION_BUILD": "1"})
+            self.assertNotEqual(first, second)
 
 
 class AdHocSigningTests(unittest.TestCase):
