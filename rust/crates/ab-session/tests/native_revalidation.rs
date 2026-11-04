@@ -301,6 +301,38 @@ fn a_refused_or_failed_revalidation_emits_nothing_and_deletes_nothing() -> Falli
 }
 
 #[test]
+fn a_changed_push_survives_a_failed_pull_or_revalidation() -> Fallible<()> {
+    let (native, server) = UnixStream::pair()?;
+    let mut pusher = server.try_clone()?;
+    let world: Shared = Arc::new(Mutex::new(World {
+        generation: "eventkit-calendar-v1".into(),
+        ..World::default()
+    }));
+    serve(server, Arc::clone(&world));
+    let client = Arc::new(Client::inherited(native)?);
+    let mut reader = AgendaReader::calendar("/nonexistent".into())
+        .paged(Arc::clone(&client), Duration::from_secs(3600));
+    let mut clock = Clock(0);
+    seed(&world, &mut reader, &mut clock)?;
+    set(
+        &world,
+        "agenda.events",
+        vec![event("a", "A revised"), event("b", "B")],
+    )?;
+    world.lock().map_err(|_| "poisoned")?.refuse = true;
+    send(
+        &mut pusher,
+        &json!({"t":"Changed","source":"calendar","generation":"eventkit-calendar-v1"}),
+    )?;
+    std::thread::sleep(Duration::from_millis(200));
+    assert!(pull(&mut reader, &mut clock)?.is_none());
+    world.lock().map_err(|_| "poisoned")?.refuse = false;
+    let recovered = pull(&mut reader, &mut clock)?.ok_or("no second pull inside the hour")?;
+    assert_eq!(kinds(&recovered, "upsert"), ["a"]);
+    Ok(())
+}
+
+#[test]
 fn a_new_generation_never_asks_and_never_deletes() -> Fallible<()> {
     let (world, client) = rig()?;
     let mut reader = calendar_reader(&client);

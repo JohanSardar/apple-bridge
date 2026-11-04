@@ -259,10 +259,18 @@ impl Reader {
             }
         }
         for key in &removed {
-            if let Some(row) = previous.get(key) {
+            let known = previous
+                .get(key)
+                .map(|row| (row.collection.as_str(), row.native_key.as_str()));
+            // A first scan cannot know what the gateway holds: a note moved to Recently Deleted
+            // while nothing was watching would stay live there forever. The store names those
+            // notes, and the gateway records nothing for one it never had or already removed.
+            if let Some((collection, native_key)) =
+                known.or_else(|| key.split_once('/').filter(|_| scan.bootstrap))
+            {
                 observations.push(capture::absent(
-                    &row.collection,
-                    &row.native_key,
+                    collection,
+                    native_key,
                     None,
                     &context.capture,
                 ));

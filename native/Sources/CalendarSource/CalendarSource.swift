@@ -419,8 +419,8 @@ public final class CalendarSource: Source {
         for calendar in gate.store.calendars(for: .event) {
             current["calendar.calendar/" + calendar.calendarIdentifier] = observation("calendar.calendar", calendar.calendarIdentifier, calendarData(calendar))
         }
+        // No wait for a Reminders refetch here: the caller pulls one source at a time, so that refetch can only come after this answer.
         for chunk in CalendarTime.chunks(Date()) {
-            await gate.waitForReminderRefetch()
             for event in try events(chunk) {
                 try Task.checkCancellation()
                 guard Self.canMaterialize(event) else { throw SourceFailure.unavailable }

@@ -9,6 +9,15 @@ use std::time::Instant;
 const HASHTAG: &str = "com.apple.notes.inlinetextattachment.hashtag";
 const FACT_RETRY: Duration = Duration::from_secs(60);
 
+/// What survives a restart. The identities let the next first scan notice a note erased from the
+/// store while nothing was watching.
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+struct SavedState {
+    signature: String,
+    generation: String,
+    identities: Vec<(String, String)>,
+}
+
 #[derive(Debug)]
 enum NotesPending {
     Scan(Box<notes_reader::Pending>),
@@ -114,11 +123,27 @@ impl CaptureReader for NotesReader {
     }
 
     fn token(&self) -> Option<String> {
-        self.committed.as_ref().map(encode)
+        let signature = encode(self.committed.as_ref()?);
+        serde_json::to_string(&SavedState {
+            signature,
+            generation: self.reader.generation().to_owned(),
+            identities: self.reader.identities(),
+        })
+        .ok()
     }
 
     fn resume(&mut self, token: &str) -> bool {
-        self.committed = decode(token);
+        let Ok(saved) = serde_json::from_str::<SavedState>(token) else {
+            self.committed = decode(token);
+            return self.committed.is_some();
+        };
+        self.committed = decode(&saved.signature);
+        // A store whose identities cannot be restored still resumes: the first scan rereads it.
+        if !saved.generation.is_empty() {
+            let _ = self
+                .reader
+                .resume_identities(&saved.generation, &saved.identities);
+        }
         self.committed.is_some()
     }
 

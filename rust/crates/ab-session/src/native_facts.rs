@@ -549,6 +549,13 @@ impl Pull {
         self.hinted = false;
         self.client.acknowledge(self.source);
         self.last = Some(std::time::Instant::now());
+        let collected = self.collect_pages(fence);
+        // The push this pull answered is spent, so a failed pull has to ask again.
+        self.hinted = collected.is_err();
+        collected
+    }
+
+    fn collect_pages(&mut self, fence: u64) -> Result<Option<Collected>, Error> {
         let mut generation: Option<String> = None;
         let mut rows = Vec::new();
         let mut handles = serde_json::Map::new();

@@ -485,7 +485,13 @@ impl CaptureReader for AgendaReader {
         let revalidated = if self.pull.is_some() {
             match self.revalidate(&facts, context.fence) {
                 Ok(verdicts) => verdicts,
-                Err(_) => return Ok(None),
+                Err(_) => {
+                    // These facts are dropped here, and any update in them with it.
+                    if let Some(pull) = self.pull.as_mut() {
+                        pull.hint();
+                    }
+                    return Ok(None);
+                }
             }
         } else {
             let present: BTreeSet<String> = facts.rows.iter().map(identity).collect();
