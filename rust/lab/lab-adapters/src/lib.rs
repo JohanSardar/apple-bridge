@@ -70,7 +70,9 @@ pub mod relay;
 pub mod relay_acme;
 pub mod relay_certs;
 pub mod relay_gated;
+pub mod relay_host;
 pub mod relay_more;
+pub mod relay_replica;
 pub mod relay_service;
 pub mod relay_splice;
 pub mod relay_streams;
@@ -327,6 +329,14 @@ pub fn registry() -> Registry {
     registry.register_real("CONN-CLAUDE-CODE", remote_real::claude_code);
     registry.register_real("CONN-RELAY-CLAUDE", remote_real::relay_claude);
     registry.register_real("RMT-STATUS-OFF", remote_real::status_off);
+    registry.register_real("RELAY-REAL", remote_real::relay_real);
+    for id in relay_replica::SIM_BACKED {
+        registry.register_real_simulated(id, relay_replica::run);
+    }
+    registry.register_real_simulated(relay_replica::FUNNEL, relay_replica::run);
+    for id in relay_replica::NATIVE {
+        registry.register_real(id, relay_replica::run);
+    }
     registry.register_real("SEC-REMOTE-ACCESS", security::real);
     registry
 }
@@ -372,6 +382,13 @@ fn register_pim(registry: &mut Registry) {
             web_agents::web(world, input, evidence)
         } else if web_relay::SCENARIOS.contains(&evidence.scenario.as_str()) {
             web_relay::web_relay(world, input, evidence)
+        } else if relay_replica::handles(&evidence.scenario) {
+            evidence.check(
+                "replica_level_only",
+                false,
+                "needs --level real with Tailscale and ubuntu; never run at the sim level",
+            );
+            Ok(())
         } else {
             notes::run(world, input, evidence)
         }

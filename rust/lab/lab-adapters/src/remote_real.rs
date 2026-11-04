@@ -79,7 +79,7 @@ fn public_probe(url: &str, evidence: &mut Evidence) {
 
 const PROBE_HOST: &str = "ubuntu";
 
-fn host_and_port(url: &str) -> Option<(String, String)> {
+pub(crate) fn host_and_port(url: &str) -> Option<(String, String)> {
     let rest = url.strip_prefix("https://")?;
     let authority = rest.split(['/', '?', '#']).next()?;
     if authority.is_empty() || authority.contains('@') {
@@ -93,7 +93,7 @@ fn host_and_port(url: &str) -> Option<(String, String)> {
     })
 }
 
-fn public_ip(dig: &str) -> Option<String> {
+pub(crate) fn public_ip(dig: &str) -> Option<String> {
     dig.split_whitespace()
         .find(|line| {
             line.parse::<IpAddr>().is_ok_and(|ip| match ip {
@@ -122,20 +122,7 @@ fn ssh(arguments: &[&str]) -> std::io::Result<std::process::Output> {
         .output()
 }
 
-fn external_probe(world: &World, url: &str, evidence: &mut Evidence) {
-    let Some((host, port)) = host_and_port(url) else {
-        evidence.check("ubuntu_public_dns", false, "unparsable remote URL");
-        return;
-    };
-    let dig = ssh(&["dig", "@1.1.1.1", "+short", "A", &host]);
-    let ip = dig
-        .as_ref()
-        .ok()
-        .and_then(|o| public_ip(&String::from_utf8_lossy(&o.stdout)));
-    evidence.check("ubuntu_public_dns", dig.is_ok() && ip.is_some(), "");
-    let Some(ip) = ip else {
-        return;
-    };
+pub(crate) fn tls_checks(url: &str, host: &str, port: &str, ip: &str, evidence: &mut Evidence) {
     let resolve = format!("{host}:{port}:{ip}");
     for path in ["/", "/v1/health"] {
         let target = format!("{url}{path}");
@@ -158,6 +145,23 @@ fn external_probe(world: &World, url: &str, evidence: &mut Evidence) {
             "",
         );
     }
+}
+
+fn external_probe(world: &World, url: &str, evidence: &mut Evidence) {
+    let Some((host, port)) = host_and_port(url) else {
+        evidence.check("ubuntu_public_dns", false, "unparsable remote URL");
+        return;
+    };
+    let dig = ssh(&["dig", "@1.1.1.1", "+short", "A", &host]);
+    let ip = dig
+        .as_ref()
+        .ok()
+        .and_then(|o| public_ip(&String::from_utf8_lossy(&o.stdout)));
+    evidence.check("ubuntu_public_dns", dig.is_ok() && ip.is_some(), "");
+    let Some(ip) = ip else {
+        return;
+    };
+    tls_checks(url, &host, &port, &ip, evidence);
     let binary = std::env::var_os("AB_LAB_PROBE").map(std::path::PathBuf::from);
     let present = binary.as_deref().is_some_and(Path::is_file);
     evidence.check(

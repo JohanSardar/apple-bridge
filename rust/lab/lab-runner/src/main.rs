@@ -52,6 +52,7 @@ fn run() -> Result<bool, Box<dyn std::error::Error>> {
                 &scenario,
                 RealConfig {
                     gateway: gateway.clone(),
+                    simapple: simapple.clone(),
                     helper_app: helper.clone(),
                     directory,
                     scope: scope.into(),

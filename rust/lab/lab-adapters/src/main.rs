@@ -98,17 +98,20 @@ fn run() -> Result<bool, Box<dyn std::error::Error>> {
     }
     let real = level == "real";
     let gateway = gateway.ok_or("--gateway required")?.canonicalize()?;
-    let simapple = if real {
-        PathBuf::new()
-    } else {
-        simapple.ok_or("--simapple required")?.canonicalize()?
+    let simapple = match (real, simapple) {
+        (_, Some(path)) => path.canonicalize()?,
+        (true, None) => PathBuf::new(),
+        (false, None) => return Err("--simapple required".into()),
     };
     let output = output.ok_or("--output required")?;
     let phone_only = !paths.is_empty()
         && paths.iter().all(|path| {
             path.file_stem()
                 .and_then(|stem| stem.to_str())
-                .is_some_and(lab_adapters::iphone_real::handles)
+                .is_some_and(|stem| {
+                    lab_adapters::iphone_real::handles(stem)
+                        || lab_adapters::relay_replica::sim_backed(stem)
+                })
         });
     if real && !phone_only {
         lab_world::require_signed_helper(helper.as_deref())?;
@@ -145,6 +148,7 @@ fn run() -> Result<bool, Box<dyn std::error::Error>> {
                 &scenario,
                 RealConfig {
                     gateway: gateway.clone(),
+                    simapple: simapple.clone(),
                     helper_app: helper.clone(),
                     directory: output.join(format!("world-{index}")),
                     scope: "location:read,maps:read,maps:write,files:read,files:write,safari:read,system:read".into(),
