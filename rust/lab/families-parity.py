@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -149,6 +150,21 @@ def scenario_key(root, name):
         raise SystemExit(f'{name}: expected one scenario by file name or id under lab/scenarios, found {len(found)}')
     return found[0]
 
+SESSION_ENV = {
+    'AB_LAB_SESSION_SOURCES': 'calendar,contacts,reminders',
+    'AB_LAB_SESSION_EFFECTS': '1',
+    'AB_LAB_SESSION_NATIVE_FACTS': '1',
+}
+SESSION_SAMPLE = ['notes/NOTE-CRUD', 'messages/MSG-EDIT', 'files/FILE-COMMANDS', 'mac/MAC-ACTIONS', 'maps/MAP-SIM',
+                  'vision/PDF-TEXT', 'shortcuts/SC-RUN', 'CORE-HELPER-RESTART', 'CORE-RESUME']
+SESSION_CONTROL_SCENARIOS = ['calendar/CAL-CRUD', 'contacts/CON-CRUD', 'reminders/REM-CRUD']
+SESSION_CONTROLS = {
+    'revalidate-refuse': {'AB_LAB_SESSION_REVALIDATE_CONTROL': 'refuse'},
+    'revalidate-partial': {'AB_LAB_SESSION_REVALIDATE_CONTROL': 'partial'},
+    'effects-refuse': {'AB_LAB_SESSION_EFFECTS_CONTROL': 'refuse'},
+    'facts-missing': {'AB_LAB_SESSION_NATIVE_FACTS': 'missing'},
+}
+
 
 def ignored(scenario, name):
     if name in HARNESS_ONLY or name == 'world_started':
@@ -251,7 +267,24 @@ def main():
     parser.add_argument('--vision-native', dest='vision_native', action='store_true')
     parser.add_argument('--web-agents', dest='web_agents', action='store_true')
     parser.add_argument('--darwin-core', dest='darwin_core', action='store_true')
+    parser.add_argument('--session', action='store_true')
+    parser.add_argument('--session-control', dest='session_control', choices=sorted(SESSION_CONTROLS))
     args = parser.parse_args()
+    session = args.session or bool(args.session_control)
+    if session:
+        binary = os.environ.get('AB_SESSION_BINARY')
+        if not binary:
+            parser.error('--session needs AB_SESSION_BINARY (the ab-session binary)')
+        os.environ['AB_LAB_SESSION'] = binary
+        os.environ.update(SESSION_ENV)
+        os.environ.update(SESSION_CONTROLS.get(args.session_control, {}))
+        args.go_rust_gateway = True
+        if args.session_control:
+            args.scenario = (args.scenario or []) + SESSION_CONTROL_SCENARIOS
+        else:
+            args.scenario = (args.scenario or []) + [n for n in CALENDAR_SCENARIOS if n != 'web/WEB-CAL-WRITE'] + CONTACTS_SCENARIOS + REMINDER_SCENARIOS + REMINDER_NATIVE_SCENARIOS + SESSION_SAMPLE
+    if session:
+        args.timeout = max(args.timeout, 3600)
     if args.check_real_only:
         check_real_only(args.families)
         return
@@ -345,12 +378,20 @@ def main():
                 batch = [f for f, n in zip(files, names) if (n in GO_RUST_GATEWAY_ONLY) == forced]
                 if batch:
                     subprocess.run([args.go_lab, 'run', *batch, *level, '--json', *(rust_gateway if forced or args.go_rust_gateway else [])],
-                                   stdout=stream, timeout=args.timeout, check=True)
+                                   stdout=stream, timeout=args.timeout, check=not args.session_control)
     with (out / 'rust.jsonl').open('w') as stream:
         subprocess.run([args.families, 'run', *files, '--gateway', args.gateway,
                         '--simapple', args.simapple, '--output', str(out / 'worlds')],
-                       stdout=stream, timeout=args.timeout, check=True)
+                       stdout=stream, timeout=args.timeout, check=not args.session_control)
     rust = verdicts(out / 'rust.jsonl')
+    if args.session_control:
+        failing = {name: sorted(a for a, (passed, status) in checks.items() if not passed and status != 'unverified') for name, checks in rust.items()}
+        if not args.rust_only and verdicts(out / 'go.jsonl') != rust:
+            raise SystemExit(f'control verdicts differ from the Go harness\n{rust}')
+        if len(rust) != len(files) or not all(failing.values()):
+            raise SystemExit(f'control {args.session_control} did not fail every scenario\n{failing}')
+        print(json.dumps({'control': args.session_control, 'failing': failing}))
+        return
     if args.rust_only:
         failing = {name: sorted(a for a, (passed, status) in checks.items() if not passed and status != 'unverified') for name, checks in rust.items()}
         failing = {name: bad for name, bad in failing.items() if bad}

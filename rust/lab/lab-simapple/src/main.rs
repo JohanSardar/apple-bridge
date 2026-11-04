@@ -10,6 +10,7 @@ mod maps;
 mod media;
 mod messages;
 mod messages_commands;
+mod native;
 mod native_bridge;
 mod notes;
 mod query;
@@ -252,6 +253,7 @@ struct Request {
     whole: bool,
     exact: bool,
     revision: Option<u64>,
+    native: Option<native::Job>,
 }
 fn enqueue(tx: &mpsc::Sender<Request>, frame: Value, wait: bool) -> Result<()> {
     enqueue_mode(tx, frame, wait, false)
@@ -270,14 +272,17 @@ fn enqueue_request(
     let observations = frame["observations"].as_array().map_or(0, Vec::len);
     let seconds = 110 + u64::try_from(observations / 200).unwrap_or_default();
     let revision = frame["source"].as_str().and_then(bumped);
+    let source = string(&frame, "source");
     tx.send(Request {
         frame,
         done: if wait { Some(done) } else { None },
         whole,
         exact,
         revision,
+        native: None,
     })
     .map_err(|_| invalid("session stopped"))?;
+    native::changed(&source);
     if wait {
         rx.recv_timeout(Duration::from_secs(seconds))
             .map_err(|_| invalid("capture not committed"))?;
@@ -639,9 +644,13 @@ struct Session<'a> {
     finished_rx: mpsc::Receiver<(String, Value)>,
     hint: Option<u64>,
     full: bool,
+    real: Option<UnixStream>,
 }
 impl Session<'_> {
     fn emit(&mut self, state: &Shared, frame: Value) -> Result<()> {
+        self.divert(|session| session.emit_frame(state, frame))
+    }
+    fn emit_frame(&mut self, state: &Shared, frame: Value) -> Result<()> {
         let owned = self.hint.is_none();
         if owned {
             self.hint = frame["source"].as_str().and_then(bumped);
@@ -758,6 +767,9 @@ impl Session<'_> {
         Ok(())
     }
     fn serve(&mut self, state: &Shared, request: Request) -> Result<()> {
+        if let Some(job) = request.native {
+            return self.native_job(state, &job);
+        }
         if request.frame["t"] == "Close" {
             send(&mut self.stream, &request.frame)?;
             loop {
@@ -780,6 +792,9 @@ impl Session<'_> {
         Ok(())
     }
     fn emit_exact(&mut self, state: &Shared, frame: &Value) -> Result<()> {
+        self.divert(|session| session.emit_exact_frame(state, frame))
+    }
+    fn emit_exact_frame(&mut self, state: &Shared, frame: &Value) -> Result<()> {
         let src = string(frame, "source");
         let checkpoint = string(frame, "checkpoint");
         let size = lab_wire::frame_bytes(&lab_wire::encode_json(frame)?)?.len();
@@ -822,7 +837,10 @@ impl Session<'_> {
             }
         }
     }
-    fn emit_part(&mut self, state: &Shared, mut frame: Value) -> Result<()> {
+    fn emit_part(&mut self, state: &Shared, frame: Value) -> Result<()> {
+        self.divert(|session| session.emit_part_frame(state, frame))
+    }
+    fn emit_part_frame(&mut self, state: &Shared, mut frame: Value) -> Result<()> {
         if frame["t"] != "Capture" {
             send(&mut self.stream, &frame)?;
             return Ok(());
@@ -1254,6 +1272,7 @@ fn session(
         finished_rx,
         hint: None,
         full: false,
+        real: None,
     };
     for src in sources {
         let generation = generation_of(&lock(state)?.data, src, &session.generation);
@@ -1437,7 +1456,9 @@ fn run() -> Result<()> {
     fs::set_permissions(&control, fs::Permissions::from_mode(0o600))?;
     let (tx, rx) = mpsc::channel();
     let shared = Arc::clone(&state);
+    let control_tx = tx.clone();
     thread::spawn(move || {
+        let tx = control_tx;
         for stream in listener.incoming() {
             let Ok(stream) = stream else {
                 break;
@@ -1451,6 +1472,9 @@ fn run() -> Result<()> {
             });
         }
     });
+    if let Some(path) = options.get("--native-socket") {
+        native::serve(path, &state, &tx)?;
+    }
     let native = options.get("--native-session").cloned();
     loop {
         let stream = match &native {
