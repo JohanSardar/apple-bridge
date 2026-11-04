@@ -1,8 +1,13 @@
 use super::{
-    CaptureReader, Debug, Error, Path, PathBuf, ScanContext, Signature, SystemTime, Value,
-    capture_value, confine_staging, decode, encode, reader_error, signature,
+    BTreeMap, CaptureReader, Debug, Duration, Error, Path, PathBuf, ScanContext, Signature,
+    SystemTime, Value, capture_value, confine_staging, decode, encode, reader_error, signature,
 };
+use crate::media_facts::MediaFacts;
 use ab_native::{capture, notes_reader};
+use std::time::Instant;
+
+const HASHTAG: &str = "com.apple.notes.inlinetextattachment.hashtag";
+const FACT_RETRY: Duration = Duration::from_secs(60);
 
 #[derive(Debug)]
 enum NotesPending {
@@ -17,6 +22,10 @@ pub struct NotesReader {
     pending: Option<(NotesPending, Option<Signature>)>,
     committed: Option<Signature>,
     hold: Option<PathBuf>,
+    staging: PathBuf,
+    facts: notes_reader::Facts,
+    media: Option<MediaFacts>,
+    failed_facts: BTreeMap<String, Instant>,
 }
 
 impl NotesReader {
@@ -30,6 +39,13 @@ impl NotesReader {
             pending: None,
             committed: None,
             hold: None,
+            staging: staging.to_path_buf(),
+            facts: notes_reader::Facts {
+                mime: BTreeMap::from([(HASHTAG.to_owned(), None)]),
+                ..notes_reader::Facts::default()
+            },
+            media: None,
+            failed_facts: BTreeMap::new(),
         })
     }
 
@@ -39,11 +55,42 @@ impl NotesReader {
         self
     }
 
+    #[must_use]
+    pub fn with_media(mut self, media: Option<MediaFacts>) -> Self {
+        self.media = media;
+        self
+    }
+
+    fn resolve(&mut self, fact: &str) -> bool {
+        if self
+            .failed_facts
+            .get(fact)
+            .is_some_and(|at| at.elapsed() < FACT_RETRY)
+        {
+            return false;
+        }
+        let resolved = match &self.media {
+            Some(media) => media.resolve(fact, &self.staging, &mut self.facts),
+            None => Err(Error::Conflict),
+        };
+        match resolved {
+            Ok(()) => {
+                self.failed_facts.remove(fact);
+                true
+            }
+            Err(error) => {
+                eprintln!("ab-session: notes fact {fact}: {error}");
+                self.failed_facts.insert(fact.to_owned(), Instant::now());
+                false
+            }
+        }
+    }
+
     fn held(&self) -> bool {
         self.hold.as_ref().is_some_and(|hold| hold.exists())
     }
 
-    fn notes_context(context: &ScanContext) -> Result<notes_reader::Context, Error> {
+    fn notes_context(&self, context: &ScanContext) -> Result<notes_reader::Context, Error> {
         Ok(notes_reader::Context {
             capture: capture::Context {
                 observed_at: context.observed_at()?,
@@ -51,13 +98,7 @@ impl NotesReader {
                 scan_id: context.scan_id.clone(),
             },
             coverage: serde_json::json!({}),
-            facts: notes_reader::Facts {
-                mime: std::collections::BTreeMap::from([(
-                    "com.apple.notes.inlinetextattachment.hashtag".to_owned(),
-                    None,
-                )]),
-                ..notes_reader::Facts::default()
-            },
+            facts: self.facts.clone(),
             asset_paths: Vec::new(),
         })
     }
@@ -99,7 +140,8 @@ impl CaptureReader for NotesReader {
         if self.pending.is_some() {
             return Err(Error::Conflict);
         }
-        let notes = Self::notes_context(context)?;
+        let mut notes = self.notes_context(context)?;
+        let mut budget = self.reader.queued();
         while !self.held() && self.reader.has_hydration() {
             match self.reader.hydrate_next(&notes) {
                 Ok(Some(hydration)) => {
@@ -108,6 +150,15 @@ impl CaptureReader for NotesReader {
                     return Ok(Some(value));
                 }
                 Ok(None) => {}
+                Err(capture::Error::FactsRequired(fact)) => {
+                    if self.resolve(&fact) {
+                        notes = self.notes_context(context)?;
+                    } else if budget == 0 {
+                        break;
+                    } else {
+                        budget -= 1;
+                    }
+                }
                 Err(error) => return Err(reader_error(error)),
             }
         }

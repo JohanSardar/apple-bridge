@@ -9,6 +9,9 @@ struct AppleBridgeHelper {
     @MainActor
     static func main() {
         umask(0o077)
+        if CommandLine.arguments.count == 2, CommandLine.arguments[1] == "media-facts" {
+            exit(MediaFacts.run())
+        }
         #if LAB
         if CommandLine.arguments.count == 3, CommandLine.arguments[1] == "lab-tcc-probe" {
             do { try LabTCCProbe.run(CommandLine.arguments[2]) }
