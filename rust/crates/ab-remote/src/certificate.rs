@@ -92,10 +92,9 @@ impl Certificates {
                 && parsed.validity().not_after.timestamp()
                     - x509_parser::time::ASN1Time::now().timestamp()
                     > 30 * 86400
+                && let Ok(fingerprint) = self.install(&cert, &key, host)
             {
-                if let Ok(fingerprint) = self.install(&cert, &key, host) {
-                    return report(identity, client, &fingerprint).await;
-                }
+                return report(identity, client, &fingerprint).await;
             }
         }
         let account_path = dir.join("acme-account.pem");

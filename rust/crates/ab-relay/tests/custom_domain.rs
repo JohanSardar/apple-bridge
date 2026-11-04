@@ -260,7 +260,7 @@ async fn custom_domain_waits_for_records_registers_and_routes_by_sni() {
         )),
         tls,
         domain: domain.into(),
-        resolver: Some(Arc::new(dns::System::server(dns_address).unwrap())),
+        resolver: Some(Arc::new(dns::Hickory::server(dns_address).unwrap())),
         domain_poll: Duration::from_millis(100),
     };
     let upstream = origin().await;
@@ -390,7 +390,7 @@ async fn custom_domain_owned_by_another_device_is_refused() {
         )),
         tls,
         domain: domain.into(),
-        resolver: Some(Arc::new(dns::System::server(dns_address).unwrap())),
+        resolver: Some(Arc::new(dns::Hickory::server(dns_address).unwrap())),
         domain_poll: Duration::from_millis(100),
     };
     let claimed = ab_remote::relay::enroll(home.path(), &fixture.endpoint, "relay.test", &http)

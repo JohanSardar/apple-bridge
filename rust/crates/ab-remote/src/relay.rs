@@ -209,7 +209,7 @@ impl Relay {
         let resolver: &dyn Resolver = if let Some(resolver) = &self.resolver {
             resolver.as_ref()
         } else {
-            system = dns::System::system()?;
+            system = dns::Hickory::system()?;
             &system
         };
         loop {

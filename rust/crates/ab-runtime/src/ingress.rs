@@ -412,7 +412,7 @@ fn adapter(home: &Path, name: &str) -> Result<Box<dyn Ingress>, Error> {
     #[cfg(feature = "lab-harness")]
     let resolver: Option<Arc<dyn ab_remote::dns::Resolver>> =
         match std::env::var("APPLE_BRIDGE_LAB_DNS_SERVER") {
-            Ok(address) => Some(Arc::new(ab_remote::dns::System::server(
+            Ok(address) => Some(Arc::new(ab_remote::dns::Hickory::server(
                 address.parse().map_err(|_| Error::Invalid)?,
             )?)),
             Err(_) => None,

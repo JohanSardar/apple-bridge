@@ -78,7 +78,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             tls: Arc::new(tls),
             domain: option("--domain").unwrap_or_default(),
             resolver: match option("--dns-server") {
-                Some(address) => Some(Arc::new(ab_remote::dns::System::server(address.parse()?)?)),
+                Some(address) => Some(Arc::new(ab_remote::dns::Hickory::server(address.parse()?)?)),
                 None => None,
             },
             domain_poll: std::time::Duration::from_millis(200),

@@ -14,9 +14,9 @@ pub trait Resolver: std::fmt::Debug + Send + Sync {
 }
 
 #[derive(Debug)]
-pub struct System(TokioResolver);
+pub struct Hickory(TokioResolver);
 
-impl System {
+impl Hickory {
     pub fn system() -> Result<Self> {
         let resolver = TokioResolver::builder_tokio()
             .map_err(|_| Error::Contract("DNS resolver unavailable"))?
@@ -38,7 +38,7 @@ impl System {
     }
 }
 
-impl Resolver for System {
+impl Resolver for Hickory {
     fn cname<'a>(&'a self, name: &'a str) -> CnameFuture<'a> {
         Box::pin(async move {
             let answer = self
