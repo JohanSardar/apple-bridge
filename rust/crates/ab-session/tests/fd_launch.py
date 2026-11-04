@@ -58,9 +58,8 @@ def launch(effects, facts_variable, facts_descriptor, effects_variable=True):
     pairs = {name: socket.socketpair() for name in ("gateway", "helper", "native", "facts")}
     targets = {"gateway": 198, "helper": 199, "native": 200, "facts": 201}
 
-    def prepare():
-        for name, (_, child) in pairs.items():
-            os.dup2(child.fileno(), targets[name], inheritable=True)
+    for name, (_, child) in pairs.items():
+        os.dup2(child.fileno(), targets[name], inheritable=True)
 
     environment = {key: value for key, value in os.environ.items() if not key.startswith("AB_")}
     if effects_variable:
@@ -71,9 +70,11 @@ def launch(effects, facts_variable, facts_descriptor, effects_variable=True):
     if effects:
         environment["AB_SESSION_EFFECTS"] = "1"
         arguments += ["--effects-home", home]
-    process = subprocess.Popen(arguments, env=environment, pass_fds=(198, 199, 200, 201), preexec_fn=prepare, stderr=subprocess.PIPE)
+    process = subprocess.Popen(arguments, env=environment, pass_fds=(198, 199, 200, 201), stderr=subprocess.PIPE)
     for _, child in pairs.values():
         child.close()
+    for descriptor in targets.values():
+        os.close(descriptor)
     return process, {name: pair[0] for name, pair in pairs.items()}
 
 
