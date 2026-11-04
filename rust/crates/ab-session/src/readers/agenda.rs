@@ -447,6 +447,13 @@ impl CaptureReader for AgendaReader {
         restored
     }
 
+    fn refresh_blobs(&mut self) {
+        self.replay = true;
+        if let Some(pull) = self.pull.as_mut() {
+            pull.hint();
+        }
+    }
+
     fn ingest(&mut self, capture: &Value) -> Result<bool, Error> {
         if let Some(pull) = self.pull.as_mut() {
             let partial = capture["scan_id"]

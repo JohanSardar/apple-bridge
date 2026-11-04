@@ -28,21 +28,15 @@ impl ab_applepeer::Backend for Backend {
                 return Ok(BTreeMap::new());
             }
             let mut checkpoints = self.state.checkpoints()?;
-            if self
-                .blobs
-                .lock()
-                .await
-                .entries()
-                .values()
-                .any(|entry| entry.state == ab_blobs::BlobState::Pending)
-            {
-                for value in checkpoints.values_mut() {
-                    let mut checkpoint: serde_json::Value =
-                        serde_json::from_str(value.get()).map_err(|_| Code::Corrupt)?;
-                    checkpoint["refresh_blobs"] = serde_json::json!(true);
-                    *value =
-                        serde_json::value::to_raw_value(&checkpoint).map_err(|_| Code::Corrupt)?;
+            let wanted = refresh_wanted(self.blobs.lock().await.entries());
+            for (source, value) in &mut checkpoints {
+                if !wanted.includes(source) {
+                    continue;
                 }
+                let mut checkpoint: serde_json::Value =
+                    serde_json::from_str(value.get()).map_err(|_| Code::Corrupt)?;
+                checkpoint["refresh_blobs"] = serde_json::json!(true);
+                *value = serde_json::value::to_raw_value(&checkpoint).map_err(|_| Code::Corrupt)?;
             }
             Ok(checkpoints)
         })
@@ -106,6 +100,30 @@ impl Backend {
             .map_err(|_| Code::Unavailable)?;
         Ok(result)
     }
+}
+
+#[derive(Debug, Default, PartialEq, Eq)]
+struct RefreshWanted {
+    all: bool,
+    sources: std::collections::BTreeSet<String>,
+}
+impl RefreshWanted {
+    fn includes(&self, source: &str) -> bool {
+        self.all || self.sources.contains(source)
+    }
+}
+
+fn refresh_wanted(entries: &BTreeMap<String, ab_blobs::Entry>) -> RefreshWanted {
+    let mut wanted = RefreshWanted::default();
+    for entry in entries.values().filter(|entry| entry.wants_offer()) {
+        match entry.source() {
+            Some(source) => {
+                wanted.sources.insert(source.to_owned());
+            }
+            None => wanted.all = true,
+        }
+    }
+    wanted
 }
 
 const REARM_COOLDOWN: std::time::Duration = std::time::Duration::from_secs(60);
@@ -210,6 +228,12 @@ pub async fn hydrate(
         cooldown.session(job.session);
         let source = crate::helper_blobs::HelperBlobs(commands.clone(), job.session);
         let total = job.capture.blob_handles.len();
+        let origin = job
+            .capture
+            .source
+            .as_ref()
+            .and_then(|source| serde_json::to_value(source).ok())
+            .and_then(|value| value.as_str().map(str::to_owned));
         let handles = job
             .capture
             .blob_handles
@@ -222,6 +246,15 @@ pub async fn hydrate(
             })
             .collect::<Vec<_>>();
         let live = || commands.session() == Some(job.session);
+        if let Some(origin) = origin
+            && !handles.is_empty()
+        {
+            mutate(&blobs, |store| {
+                store.note_source(handles.iter().map(|(digest, _)| digest), &origin)
+            })
+            .await
+            .map_err(|_| crate::Error::Invalid)?;
+        }
         let Some(tally) = offer(&blobs, &source, &mut cooldown, &mut stop, &live, handles).await?
         else {
             return Ok(());
@@ -703,6 +736,60 @@ mod tests {
         let second = run(&blobs, &helper, &mut cooldown, &digest).await?;
         assert_eq!((second.not_retryable, second.recovered), (1, 0));
         assert_eq!(helper.reads(), reads);
+        Ok(())
+    }
+
+    fn entry(state: ab_blobs::BlobState, source: Option<&str>) -> ab_blobs::Entry {
+        let mut entry = ab_blobs::Entry {
+            state,
+            ..ab_blobs::Entry::default()
+        };
+        if let Some(source) = source {
+            entry
+                .extra
+                .insert("source".into(), serde_json::Value::String(source.into()));
+        }
+        entry
+    }
+
+    #[test]
+    fn only_the_sources_that_own_failed_or_pending_blobs_are_asked_to_offer_again() {
+        let mut entries = BTreeMap::new();
+        entries.insert("a".into(), entry(ab_blobs::BlobState::Present, None));
+        entries.insert("b".into(), entry(ab_blobs::BlobState::Offloaded, None));
+        assert_eq!(refresh_wanted(&entries), RefreshWanted::default());
+        let mut exhausted = entry(ab_blobs::BlobState::Failed, Some("contacts"));
+        exhausted.reason = "ipc_retry_exhausted".into();
+        entries.insert("c".into(), exhausted);
+        let wanted = refresh_wanted(&entries);
+        assert!(wanted.includes("contacts") && !wanted.includes("calendar"));
+        let mut corrupt = entry(ab_blobs::BlobState::Failed, Some("notes"));
+        corrupt.reason = "ipc_retry_exhausted".into();
+        corrupt.corruptions = 1;
+        entries.insert("d".into(), corrupt);
+        assert!(!refresh_wanted(&entries).includes("notes"));
+        entries.insert("e".into(), entry(ab_blobs::BlobState::Pending, None));
+        assert!(refresh_wanted(&entries).includes("calendar"));
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn an_offered_blob_remembers_its_source() -> Check {
+        let bytes = vec![2_u8; 300];
+        let digest = digest_of(&bytes);
+        let home = tempfile::tempdir()?;
+        seed(home.path(), &digest, bytes.len(), 0)?;
+        let blobs = open(home.path())?;
+        let parsed = ab_blobs::Digest::try_from(digest.clone())?;
+        mutate(&blobs, |store| store.note_source([&parsed], "contacts")).await?;
+        drop(blobs);
+        let reopened = open(home.path())?;
+        let source = reopened
+            .lock()
+            .await
+            .entries()
+            .get(&digest)
+            .and_then(|entry| entry.source().map(str::to_owned));
+        assert_eq!(source.as_deref(), Some("contacts"));
         Ok(())
     }
 

@@ -954,6 +954,12 @@ fn gateway_frame(
             Ok(false)
         }
         GatewayFrame::Open(open) => {
+            let refresh: Vec<String> = open
+                .checkpoints
+                .iter()
+                .filter(|(_, point)| point.refresh_blobs)
+                .map(|(source, _)| source.clone())
+                .collect();
             let mut shared = gate.lock()?;
             shared.fence = open.owner_fence;
             let committed = open
@@ -991,6 +997,11 @@ fn gateway_frame(
             }
             shared.opened = true;
             drop(shared);
+            for source in refresh {
+                if readers.contains_key(&source) {
+                    lock(readers, &source)?.refresh_blobs();
+                }
+            }
             gate.changed.notify_all();
             Ok(true)
         }

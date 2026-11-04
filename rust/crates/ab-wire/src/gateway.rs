@@ -8,6 +8,7 @@ pub struct Malformed;
 pub struct CheckpointRef {
     pub generation: String,
     pub checkpoint: String,
+    pub refresh_blobs: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -111,6 +112,9 @@ impl GatewayFrame {
                             CheckpointRef {
                                 generation: owned(checkpoint, "generation"),
                                 checkpoint: owned(checkpoint, "checkpoint"),
+                                refresh_blobs: checkpoint["refresh_blobs"]
+                                    .as_bool()
+                                    .unwrap_or(false),
                             },
                         )
                     })
@@ -147,7 +151,7 @@ mod tests {
     fn open_carries_fence_credit_and_checkpoints() {
         let frame = GatewayFrame::from_value(&json!({
             "t":"Open","owner_fence":7,"byte_credit":4096,
-            "checkpoints":{"mail":{"generation":"g","checkpoint":"c"},"notes":{}}
+            "checkpoints":{"mail":{"generation":"g","checkpoint":"c"},"notes":{},"contacts":{"refresh_blobs":true}}
         }));
         let Ok(GatewayFrame::Open(open)) = frame else {
             panic!("not an Open: {frame:?}")
@@ -157,10 +161,13 @@ mod tests {
             open.checkpoints["mail"],
             CheckpointRef {
                 generation: "g".into(),
-                checkpoint: "c".into()
+                checkpoint: "c".into(),
+                refresh_blobs: false,
             }
         );
         assert_eq!(open.checkpoints["notes"].checkpoint, "");
+        assert!(open.checkpoints["contacts"].refresh_blobs);
+        assert!(!open.checkpoints["notes"].refresh_blobs);
     }
 
     #[test]

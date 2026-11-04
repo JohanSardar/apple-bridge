@@ -103,6 +103,14 @@ impl Default for Entry {
 }
 impl Entry {
     #[must_use]
+    pub fn source(&self) -> Option<&str> {
+        self.extra.get("source").and_then(serde_json::Value::as_str)
+    }
+    #[must_use]
+    pub fn wants_offer(&self) -> bool {
+        self.state == BlobState::Pending || self.rearmable()
+    }
+    #[must_use]
     pub fn rearmable(&self) -> bool {
         self.state == BlobState::Failed
             && self.reason == "ipc_retry_exhausted"
@@ -299,6 +307,24 @@ impl Store {
             &self.root.join("manifest.json"),
             &serde_json::to_vec(&self.manifest)?,
         )?)
+    }
+    pub fn note_source<'a>(
+        &mut self,
+        digests: impl IntoIterator<Item = &'a Digest>,
+        source: &str,
+    ) -> Result<(), Error> {
+        let mut changed = false;
+        for digest in digests {
+            if let Some(entry) = self.manifest.entries.get_mut(digest.as_str())
+                && entry.source() != Some(source)
+            {
+                entry
+                    .extra
+                    .insert("source".into(), serde_json::Value::String(source.into()));
+                changed = true;
+            }
+        }
+        if changed { self.save() } else { Ok(()) }
     }
     pub fn rearm(&mut self, d: &Digest) -> Result<bool, Error> {
         let Some(e) = self.manifest.entries.get_mut(d.as_str()) else {

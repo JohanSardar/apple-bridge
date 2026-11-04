@@ -495,7 +495,13 @@ fn contacts_pull_all_three_collections_over_the_socket_link() -> Fallible<()> {
                 contact("contacts.group", "g2"),
             ],
         ),
-        ("contacts.contacts", vec![contact("contacts.contact", "p1")]),
+        (
+            "contacts.contacts",
+            vec![
+                contact("contacts.contact", "p1"),
+                json!({"kind":"blob_handle","digest":"d1","handle":"media:d1"}),
+            ],
+        ),
     ] {
         set(
             &facts,
@@ -783,5 +789,33 @@ fn a_dead_inherited_facts_link_ends_the_session_instead_of_stalling_every_poll()
     let ended = finished.recv_timeout(Duration::from_secs(10))?;
     assert!(matches!(ended, Ok(Err(_))));
     drop((wire.gateway, wire.helper));
+    Ok(())
+}
+
+#[test]
+fn an_open_asking_for_blobs_makes_an_unchanged_source_offer_its_handles_again() -> Fallible<()> {
+    let (mut wire, directory, _server) = contacts_over_socket(false)?;
+    let (size, first) = receive(&mut wire.gateway)?;
+    assert_eq!(first["blob_handles"], json!({"d1":"media:d1"}));
+    commit(&mut wire, "contacts", &first, size)?;
+    expect_silence(&mut wire.gateway)?;
+    let checkpoint = json!({"generation":first["generation"],"checkpoint":first["checkpoint"]});
+    send(
+        &mut wire.gateway,
+        &json!({"t":"Open","protocol":"ipc/1","owner_fence":1,"byte_credit":4_194_304,"checkpoints":{"contacts":checkpoint}}),
+    )?;
+    expect_silence(&mut wire.gateway)?;
+    let mut asking = checkpoint;
+    asking["refresh_blobs"] = json!(true);
+    send(
+        &mut wire.gateway,
+        &json!({"t":"Open","protocol":"ipc/1","owner_fence":1,"byte_credit":4_194_304,"checkpoints":{"contacts":asking}}),
+    )?;
+    let (_, again) = receive(&mut wire.gateway)?;
+    assert_eq!(again["source"], "contacts");
+    assert_eq!(again["blob_handles"], json!({"d1":"media:d1"}));
+    drop((wire.gateway, wire.helper));
+    let _ = wire.worker.join();
+    let _ = std::fs::remove_dir_all(&directory);
     Ok(())
 }
