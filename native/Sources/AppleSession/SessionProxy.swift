@@ -8,7 +8,7 @@ final class SessionProxy: @unchecked Sendable {
     let factsDescriptor: Int32
     private let child: pid_t
 
-    init(gateway: Int32, binary: String, home: String, effects: Bool) throws {
+    init(gateway: Int32, binary: String, home: String, effects: Bool, session: String? = nil) throws {
         var pair: [Int32] = [-1, -1]
         var native: [Int32] = [-1, -1]
         var facts: [Int32] = [-1, -1]
@@ -38,8 +38,11 @@ final class SessionProxy: @unchecked Sendable {
               posix_spawnattr_setflags(&attributes, Int16(POSIX_SPAWN_CLOEXEC_DEFAULT | POSIX_SPAWN_SETSIGDEF | POSIX_SPAWN_SETSIGMASK)) == 0 else { throw fail() }
         var spawned: pid_t = 0
         var arguments = [binary, "--gateway-fd", "198", "--helper-fd", "199"]
-        if effects { arguments += ["--effects-home", home] }
-        if FileManager.default.fileExists(atPath: (home as NSString).appendingPathComponent("session/rust-capture.json")) { arguments += ["--capture-home", home] }
+        if let session { arguments += ["--session-secret", session, "--session-home", home] }
+        else {
+            if effects { arguments += ["--effects-home", home] }
+            if FileManager.default.fileExists(atPath: (home as NSString).appendingPathComponent("session/rust-capture.json")) { arguments += ["--capture-home", home] }
+        }
         let pointers = arguments.map { strdup($0) } + [nil]
         defer { for pointer in pointers { free(pointer) } }
         let environment = ProcessInfo.processInfo.environment.filter { $0.key != "AB_NATIVE_FD" && $0.key != "AB_NATIVE_FACTS_FD" }.map { strdup($0.key + "=" + $0.value) } + [strdup("AB_NATIVE_FD=200"), strdup("AB_NATIVE_FACTS_FD=201"), nil]
