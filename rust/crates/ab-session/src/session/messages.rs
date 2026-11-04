@@ -590,7 +590,11 @@ fn reconcile_args(found: &Value, _operation: &str) -> Value {
     json!({"result": found})
 }
 
-fn prepare_unsupported(_probe: &dyn Probe, _action: &Value, _expected: &Value) -> Result<Value, Refusal> {
+fn prepare_unsupported(
+    _probe: &dyn Probe,
+    _action: &Value,
+    _expected: &Value,
+) -> Result<Value, Refusal> {
     Err(refuse("unsupported"))
 }
 

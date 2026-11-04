@@ -511,7 +511,12 @@ public actor AppleSession: ObservationSink {
             if operation.hasPrefix("reminders.") { result = try await source.primitive(operation, args: frame["args"], into: self) }
             else if operation.hasPrefix("calendar.") { result = try await calendar.primitive(operation, args: frame["args"], into: self) }
             else if operation.hasPrefix("contacts.") { result = try await contacts.primitive(operation, args: frame["args"], into: self) }
-            else if operation.hasPrefix("messages."), let messages = additionalSources["messages"] as? Messages { result = try await messages.primitive(operation, args: frame["args"]) }
+            else if operation.hasPrefix("messages."), let messages = additionalSources["messages"] as? Messages { result = try await messages.primitive(operation, args: frame["args"], into: self)
+                if operation == "messages.reconcile" {
+                    let readiness = await messages.open()
+                    try await sourceState(source: "messages", state: readiness.state, coverage: readiness.coverage, capabilities: readiness.capabilities, reason: readiness.reason)
+                }
+            }
             else if operation.hasPrefix("notes."), let notes = additionalSources["notes"] as? NotesSource { result = try await notes.primitive(operation, args: frame["args"], into: self) }
             else { throw SourceFailure.unsupported }
             guard link === connection, !Task.isCancelled else { return }

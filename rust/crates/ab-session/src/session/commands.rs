@@ -414,7 +414,9 @@ impl Hub {
                         found["capture_checkpoint"] = Value::String(checkpoint);
                         let disposition = match found["disposition"].as_str() {
                             Some("delivered") if driver.name == "messages" => "delivered",
-                            Some("delivery_failed") if driver.name == "messages" => "delivery_failed",
+                            Some("delivery_failed") if driver.name == "messages" => {
+                                "delivery_failed"
+                            }
                             Some("indeterminate") if driver.name == "messages" => "indeterminate",
                             _ => "locally_observed",
                         };

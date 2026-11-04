@@ -16,10 +16,12 @@ pub(super) struct Settled {
     pub evidence: Value,
 }
 
+type PrepareCommand = fn(&dyn Probe, &Value) -> Result<Value, Refusal>;
+
 pub(super) struct Driver {
     pub name: &'static str,
     pub prepare: fn(&dyn Probe, &Value, &Value) -> Result<Value, Refusal>,
-    pub prepare_command: Option<fn(&dyn Probe, &Value) -> Result<Value, Refusal>>,
+    pub prepare_command: Option<PrepareCommand>,
     pub validate: fn(&dyn Probe, &Value, &Value) -> Result<(), Refusal>,
     pub write: fn(&dyn Probe, &str, &Value, &Value) -> Result<Value, String>,
     pub settle: fn(&str, &Value) -> Option<Settled>,
