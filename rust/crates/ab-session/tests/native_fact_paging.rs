@@ -505,8 +505,8 @@ fn reminders_fixture(page: usize) -> Fallible<Fixture> {
     let requests = Arc::new(Mutex::new(Vec::new()));
     serve(server, Arc::clone(&facts), page, Arc::clone(&requests));
     let client = Arc::new(Client::inherited(native)?);
-    let reader =
-        readers::AgendaReader::reminders("/nonexistent".into()).paged(client, Duration::from_millis(60));
+    let reader = readers::AgendaReader::reminders("/nonexistent".into())
+        .paged(client, Duration::from_millis(60));
     let mut sources: BTreeMap<String, Box<dyn readers::CaptureReader>> = BTreeMap::new();
     sources.insert("reminders".into(), Box::new(reader));
     Ok(Fixture {
@@ -544,7 +544,10 @@ fn reminders_pull_pages_both_collections_and_follows_absent_rows_and_alias_moves
     let (size, first) = receive(&mut f.wire.gateway)?;
     assert_eq!(first["source"], "reminders");
     assert_eq!(first["generation"], "eventkit-lineage");
-    assert_eq!(first["scope"], json!(["reminders.list", "reminders.reminder"]));
+    assert_eq!(
+        first["scope"],
+        json!(["reminders.list", "reminders.reminder"])
+    );
     assert_eq!(names(&first, "upsert"), ["list-1", "r1", "r2", "r3", "r4"]);
     let observations = first["observations"].as_array().ok_or("observations")?;
     assert!(observations[0].get("scoped_alias").is_none());
@@ -579,7 +582,12 @@ fn reminders_pull_pages_both_collections_and_follows_absent_rows_and_alias_moves
         &f.facts,
         "agenda.reminders",
         reminder_operation(vec![
-            reminder("reminders.reminder", "r1-rekeyed", "list-1/ext1", "One renamed"),
+            reminder(
+                "reminders.reminder",
+                "r1-rekeyed",
+                "list-1/ext1",
+                "One renamed",
+            ),
             reminder("reminders.reminder", "r2", "list-1/ext2-moved", "Two"),
         ]),
     )?;
