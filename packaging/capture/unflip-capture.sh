@@ -6,8 +6,7 @@ usage() {
 usage: unflip-capture.sh <sources|all> --home DIR [--restart-helper] [--dry-run]
 
 Returns the listed sources to the Swift capture. "all" moves the whole switch file aside as
-rust-capture.json.off-<timestamp> (absent file = verbatim Swift proxy, and the Swift SessionProxy
-stops passing --capture-home). The capture-state directory is kept: a stale record can only cause a rescan.
+rust-capture.json.off-<timestamp> (absent file = the session owns no capture). The capture-state directory is kept: a stale record can only cause a rescan.
 Nothing is restarted unless --restart-helper is given.
 Refuses the live home unless AB_FLIP_LIVE=yes.
 U
@@ -48,7 +47,7 @@ cat <<V
 
 verify:
   ls "$HELPER_HOME/session/"
-  ps -ax -o pid,command | grep '[a]b-session'     (no --capture-home for fully unflipped homes)
+  ps -ax -o pid,command | grep '[a]b-session'
   the first Swift capture after the restart arrives with the Swift generation (one rescan, never a false deletion)
 re-flip: $(dirname "$0")/flip-capture.sh ${ARGS[0]} --home "$HOME_DIR" --restart-helper
 V

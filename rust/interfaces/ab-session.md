@@ -5,24 +5,21 @@
 Owner worktree: /Users/johansardar/.t3/worktrees/apple-bridge/t3-6e4deed1
 Branch: t3/ab-session-native-proxy. Canonical protocol: design/spec/native-1.md.
 
-## Launch / default proxy (Phase 6 step 1)
+## Launch
 
-Helper opens the gateway Unix socket WITHOUT authenticating, creates a local socketpair,
-and posix_spawns its bundled ab-session child without disclaiming responsibility (S2).
-Child arguments: `--gateway-fd 198 --helper-fd 199`. Both descriptors are connected Unix
-streams, distinct, >=3. Child owns inherited descriptors. Parent closes child ends and its
-copy of gateway fd. Existing PeerWire uses parent socketpair end in place of connecting;
-its existing Challenge/Authenticate handshake and all other IPC logic remain unchanged.
-Proxy relays raw bytes including authentication; it does not parse or re-encode frames.
-EOF / errors terminate the connection; parent reaps child before reconnect. No daemon,
-network listener, secret parsing, capture assignment, or guard in the child proxy path.
-Default remains existing direct Swift connection; opt in with AB_SESSION_PROXY=1 and
-AB_SESSION_BINARY (lab override; production bundled executable).
+The Helper connects the gateway socket without authenticating, creates two socketpairs and posix_spawns its bundled `ab-session`
+child without disclaiming responsibility (S2):
 
-## Native endpoint (separate socketpair, inactive in proxy mode)
+`ab-session --gateway-fd 198 --helper-fd 199 --session-secret FILE --session-home DIR [--rust-commands LIST]`, with `AB_NATIVE_FACTS_FD=200`.
 
-AB_NATIVE_FD supplies an inherited connected stream. Native/1 MUST NOT share the IPC
-proxy stream. Rust client sends {"t":"Hello","protocol":"native/1","version":1,"owner_fence":1};
+The child owns the inherited descriptors, and the parent closes its ends and its copy of the gateway descriptor. fd 199 carries the
+native/1 session (`design/spec/native-1.md`); fd 200 carries the facts link. EOF or an error ends the session, and the parent reaps the
+child before reconnecting. `AB_SESSION_BINARY` overrides the bundled executable in a lab build. There is no other mode: the verbatim
+proxy, the routed relay, the effects layer and the flags and variables that selected them were removed with the Swift ipc/1 peer.
+
+## Facts link
+
+`AB_NATIVE_FACTS_FD` supplies an inherited connected stream, separate from the session link. Rust client sends {"t":"Hello","protocol":"native/1","version":1,"owner_fence":1};
 Swift replies {"t":"Welcome","protocol":"native/1","version":1}.
 Frames: u32 big-endian byte length + UTF-8 JSON object, 1..262144 bytes. Unknown t/op,
 wrong version or missing required field rejected. Requests correlate by nonempty id.
@@ -38,165 +35,29 @@ contacts.containers, contacts.groups, contacts.contacts, files.ubiquity, mac.sta
 (`id`,`op`,`args.identities`) answers `Revalidated` with one `state` (`present`/`missing`/`outside_scope`)
 per identity, and Swift pushes `Changed` (`source`,`generation`); both ride the facts stream.
 
-Effect request: {t:Effect,id,op,args,permit:{command_id,owner_fence,ticket,request_hash,
-operation,expires_at,nonce}}. EffectResult: {t:EffectResult,id,evidence:{...}}.
-Permits bind op, canonical request hash, fence, ticket, expiry and one-shot nonce.
-Swift rejects missing permit, wrong op/fence/hash, expired or reused nonce before effect.
-Rust alone mints permit after fsync DispatchStarted, feature `rust-effects` OFF by default.
-No automatic fallback between Swift and Rust command authority. Queries which trigger
-framework/network work (Vision, Speech, Maps) are effects too. Permission facts never prompt.
-File refs: {path,size,sha256,mime}; confined to session-owned 0700 exchange root, regular
-0600 files, no symlink traversal; receiver verifies bytes/hash and acknowledges release.
+## Reader ownership
 
-## Reader ownership API
+Exactly one producer per source, decided when the session starts. `<home>/session/rust-capture.json` names the sources ab-session captures;
+the Helper starts no capture for them (`CaptureOwnership`; Safari keeps only its live tabs) and still registers them for commands,
+queries and facts. A source that is not named stays with Swift: Swift sends observations as `Scan` frames and ab-session owns their chunks,
+credit and checkpoints. Switching a source means editing the file and restarting the Helper; there is no hot takeover.
 
-Exactly one producer per source, decided at registration. Per source: Swift (default) or Rust.
-When the capture switch (`session/rust-capture.json`) names a source, the Helper does not start
-that source's Swift capture at all (`CaptureOwnership` in AppleSession; Safari keeps only its live
-tabs); it still registers the source for commands, queries and facts. Proxy rejects any configured
-authoritative Rust producer; it cannot safely filter IPC. In Swift mode Swift assigns capture IDs,
-spends credits, receives Committed and persists checkpoints. In routed Rust mode ab-session does all
-four; ab-native only reads and diffs. Switch only disconnected after all captures committed; reopen
-with committed checkpoint. No hot takeover. Native/1 facts are NOT ipc/1 Captures.
+## Rust capture in session mode
 
-Native request_hash: lowercase SHA256 hex of canonical args JSON (recursively sorted keys, compact UTF-8, unescaped slash, no non-finite numbers). Separate from frozen ipc/1 request_hash. Hello includes positive owner_fence; permit must match it. expires_at is Unix seconds (integer).
+`session/capture.rs` runs the readers of the named sources. Once the session is open a producer thread polls each `CaptureReader` (the
+watcher wakes it earlier; the poll is the fallback). A reader returns a pending `Capture`; the session adds `predecessor` (the committed
+checkpoint of the same generation, else empty), assigns a checkpoint and scan id, waits for pool credit and writes the frame. One flight per source,
+in the same `flight::Flights` as Swift scans. A gateway `Committed` for a reader flight must match checkpoint and credit; it calls
+`CaptureReader::commit` while the flight is still open, returns credit and advances the committed checkpoint.
 
-Swift integration agreement: Helper reserves separate native socketpair child fd 200 via AB_NATIVE_FD; raw IPC proxy does not read it or send Hello. Native server rejects effects conflict while Swift IPC owns authority. Source adapters initially support full bounded scope args={} only; unsupported filters return unsupported. contacts.history accepts history_token. Scope may be structured {collections,history_token}; pages bind exact scope equality. Release uses args.file_ref and replies Released with id.
+A `Scan` of an owned source is a hint: `CaptureReader::ingest` sees it and Swift sends no rows. `Ok(true)` holds its `ScanCommitted` until the
+reader's capture that followed it is committed, `Ok(false)` releases it at once. `<source>.reconcile` is answered by the session when
+`CaptureReader::refresh` returns true (agenda facts readers, Notes): it returns after a reader pass that began after the request has finished. `bind` nudges
+the reader and waits up to 15 s for the capture of a key in an owned source, 0.5 s otherwise. Messages keeps its `Primitive`: its reader needs the Helper's row
+identities.
 
-Binary selection configuration: AB_SESSION_PRODUCERS JSON object maps source names to
-"Swift" or "Rust". Default Swift. Rust fails closed in this proxy build.
+Configuration in a lab world: `AB_LAB_SESSION_SOURCES=a,b` writes `session-home/session/rust-capture.json` from fixture directories, and `--lab-session-listen` loads it.
 
-## Swift endpoint delivery
-
-The Swift implementation is in NativeProtocol and AppleSession; native/NATIVE-1.md
-records launch and activation details. NativeChecks uses fake adapters and the
-synthetic Calendar range / Contacts list scenario facts. Scalar scopes are strings;
-collection scopes include collections and the Contacts history_token. Contacts history
-pages individual changed identifiers, without implying deletion. Completed snapshots
-release their retained rows; continuation after terminal completion returns expired.
-Existing registered query operations maps.snapshot, pdf.search, audio.transcribe and
-plus shortcuts.run, are permit-gated native effects (shortcuts.actions is answered by ab-session itself when the shortcuts source is routed: `ab_native::shortcut_actions`). The closed
-Swift catalogue is NativeServer.effectOperations. The proxy leaves effects disabled;
-AppleSession.runNative is exclusive with the IPC run loop and is not selected by the
-current raw Rust proxy. No live framework parity or production cutover was performed.
-
-## Opt-in effect routing
-
-Build ab-session with `--features rust-effects` and select both
-`AB_SESSION_PROXY=1` and `AB_SESSION_EFFECTS=1` before starting an isolated
-Helper. SessionProxy supplies `--effects-home` using the actual Helper home.
-The default remains the verbatim proxy. A binary without the feature rejects
-this selection; it never falls back to Swift dispatch. No live selection was
-changed by this implementation.
-
-The routed proxy keeps authentication and capture bytes intact, retains Prepare
-and Prepared bindings, consumes each ticket once, and binds Dispatch origin,
-command, fence and deadline. Rust fsyncs the authoritative dispatch guard before
-sending the native permit. Swift's IPC Dispatch entry point rejects calls for
-routed operations; the Rust guard lives in `<home>/native-effects` and Swift's
-own guard keeps `<home>`. Swift
-validates and consumes its prepared ticket through native/1 and publishes the
-resulting captures. Rust correlates only acknowledged capture identities from
-frames sent after dispatch started, checks the request fingerprint, and fsyncs
-the Outcome before sending it. Missing commits, mismatched native IDs, transport
-failure or unavailable evidence remain indeterminate. Resolve never repeats an
-effect (see below); unresolved guard entries are reported at Ready after
-restart. The default Swift path retains its existing resolution.
-
-Framework queries in the native effect catalogue also receive durable permits;
-read-only queries (`mail.body`, `files.search`, `files.read`) continue through IPC. A native query
-result carries its blobs as `native_query_blobs` (digest, size, handle); the gateway reads them with
-IPC `BlobRead`, which the session forwards to the Helper because Rust does not own those handles.
-A Swift query failure with code `invalid` or `unsupported` travels as `native_query_error` and becomes
-the matching `QueryError`. Inline results are capped by the 262144 byte native frame; native file
-references are not wired for queries.
-
-### Effects end to end (opt-in, off by default)
-
-`effects::COMMANDS` plus `effects::EFFECT_QUERIES` is the closed catalogue; it equals
-`NativeServer.effectOperations` (a test parses the Swift file and compares the sets). It covers every
-command a source advertises: `calendar.*`, `reminders.*`, `contacts.*` (with groups), `messages.*`,
-`notes.*`, `mail.*`, `files.*` (including `files.transform`), `pdf.annotate`, `speech.say`,
-`capture.*`, `mac.screen_record`, `print.document`, `maps.open`, `shortcuts.run`, `focus.set` and the
-`mac.*` commands (including `mac.iwork_export`, which is a command, not a query).
-
-Routing is per source. `AB_SESSION_EFFECTS=1` (with `AB_SESSION_PROXY=1`) routes every catalogue source;
-`AB_SESSION_EFFECTS_SOURCES=calendar,mail` names sources (source = `captureRoute` of the operation:
-`mac.screen_record` and `print.document` belong to `capture`); in production the same list is
-`<home>/session/rust-effects.json` (`{"sources":["calendar"]}`, an empty list routes nothing). The Swift
-SessionProxy passes `--effects-home` when either is present. Operations of a routed source that are
-outside the catalogue are refused before the Helper sees them (`Rejected unsupported`; Swift also
-refuses them in `prepare` and removes them from the capabilities it advertises). Operations of a source
-that is not routed pass through verbatim, including `Prepare`, `Dispatch`, `Resolve` and `Query`, and
-the Swift dispatch guard keeps authority for them. The Rust guard lives in `<home>/native-effects`.
-
-Evidence mapping. `AppleSession.dispatchNative` returns the source evidence with its own `disposition`
-(`locally_observed`, `delivered`, `delivery_failed`, `failed_no_effect`, `indeterminate`); Rust keeps it.
-`observed: true` evidence is then verified: `focus.set` needs `readback.authorization`, `mac.*` a readback,
-`speech.say` and `capture.play_sound` a finished callback bound to the request hash, capture and file
-operations a committed capture of `native_key`. Facts-driven sources (Calendar, Contacts) and sources
-Swift captures take the latest committed checkpoint of the key; Rust-owned readers need a capture committed
-after the dispatch started. Both wait up to ten seconds for it; a missing capture keeps the evidence and
-degrades the outcome to `indeterminate` (`reason: capture_not_observed`). A validation failure on the Swift
-side travels as `evidence.rejected {code,message,evidence}`; Rust records it as a durable `Rejected` frame
-(`rejected_before_dispatch`) and returns it, with `capture_checkpoint` for conflict evidence of a known key.
-`Resolve` for an id in the Rust guard is forwarded to the Helper with the saved outcome as `saved`; Swift
-re-observes exactly as it did from its own guard and the resulting `Outcome` is written back to the Rust
-guard. Rejected entries are answered directly.
-
-Notes pre-state. While it holds the dispatch slot and before it mints the permit, Rust reads the Notes
-store with `ab_native::notes_reader::pre_state` (config `sources.notes.root`, else `AB_SESSION_NOTES_ROOT`,
-else the user's Group Container) and adds `rust_pre_state: {native_fingerprint}` to the Effect args, so the
-permit's request hash binds it. A missing note is `Rejected conflict`, an unreadable store `unavailable`.
-Swift `NotesSource.validate(_:preState:)` compares it with the fingerprint recorded at `Prepare` and no
-longer reads the store; `dispatchValidated` skips the second read. `prepare` and the dispatch body still
-use `NotesStore` (target alias and verification loop).
-
-Request hash. Numbers must round-trip identically on both sides: unsigned integers pass, negative integers
-within 2^53, floats are normalised (`2.0` is `2`), floats below 1e-4 or at least 1e15 are refused.
-
-Lab: `AB_LAB_SESSION=<ab-session> AB_LAB_SESSION_EFFECTS=1` (with `AB_LAB_SESSION_SOURCES` optional) starts
-the session with `--lab-native native.sock` and simapple with `--native-socket`; simapple runs each Effect
-through its existing Dispatch (or Query) handler on the session loop and answers with the outcome as
-evidence. `AB_LAB_SESSION_EFFECTS_CONTROL=refuse` is the negative control (every native effect fails).
-`AB_LAB_SESSION_EFFECTS_EVIDENCE=<dir>` keeps each world's guard and process logs.
-
-Not production qualification: no live Helper has used this path, Swift `DispatchGuard` and the IPC
-Dispatch entry still exist for unrouted sources, and Resolve after a Helper restart depends on the
-Swift source's own re-observation.
-
-## Rust capture producer (per source, lab-only today)
-
-Build ab-session with `--features rust-capture`. Without it the binary is unchanged and
-`Selection::validate_proxy` still rejects `Producer::Rust`. The mode is separate from the
-fd-launched proxy and from `rust-effects`; the two relays are not combined yet.
-
-Entry point: `ab-session --lab-listen PATH --lab-gateway PATH`, present only in a binary built with `--features lab,rust-capture` (the shipped build has no `--lab-*` flags). It listens where the Helper (or
-simapple) would dial the gateway, dials the gateway socket for every accepted connection, and runs
-`routed::relay`. Configuration is two environment variables:
-`AB_SESSION_PRODUCERS={"safari":"Rust"}` selects sources (others stay Swift/simapple), and
-`AB_SESSION_RUST_SOURCES={"safari":{"root":"DIR"},"usage":{"root":"DIR","zone":"UTC","local_name":"..."}}`
-gives each Rust source its fixture directory (optional `generation`, default `rust-native/1`).
-`AB_SESSION_RUST_POLL_MS` (default 100) is the reader poll interval. Every Rust source must have
-a config entry and be in the supported list (`mail`, `notes`, `phone`, `safari`, `usage`, `voice_memos`, `voicemail`); otherwise startup fails.
-
-Behaviour of `routed::relay(gateway, helper, readers, poll)` (framing and byte-credit accounting
-copy `effects.rs`: whole frame length including the 4-byte header is the credit):
-
-- Authentication and every frame for non-Rust sources pass through as raw bytes.
-- `Open` is parsed: fence, `byte_credit` and `checkpoints` seed a shared pool. Checkpoints seed the
-  per-source committed `(generation, checkpoint)` used for `predecessor`.
-- A Helper `Capture` for a Rust source is dropped and answered with a synthetic `Committed`
-  (same source, checkpoint and whole-frame credit) so the Swift/simapple loop does not stall.
-  Other sources' captures register a flight and spend pool credit.
-- After `Ready`, a producer thread polls each Rust source's `CaptureReader`. A reader returns a
-  pending `Capture` (generation, scan id, scope, `complete` evidence, observations, `live`;
-  coverage is removed). Session adds `predecessor` (committed checkpoint of the same generation,
-  else empty), assigns a unique checkpoint and scan id, waits for pool credit, writes the frame
-  and registers a flight. One flight per source.
-- Gateway `Committed` for a Rust flight must match checkpoint and credit; it is consumed, returns
-  credit, advances the committed checkpoint and calls `CaptureReader::commit`. It is never sent
-  to the Helper. `Committed` for other sources passes through and also updates bookkeeping.
 - A scan is split into frames like the Swift sink: 16000 bytes of observations per frame (64000 when
   `live`), absences last, one scan id throughout. Every frame but the last carries a derived checkpoint,
   waits for its own `Committed`, and uses the previous frame's checkpoint as `predecessor`. Only the
@@ -211,7 +72,7 @@ Rolling out another source (what to copy, in order):
    from `ScanContext` (checkpoint, scan id, now) and returns the serialised batch with
    `coverage` removed; `commit` calls the reader's commit. Skip unchanged input cheaply
    (Safari uses the reader's input signature, Usage a file-tree signature).
-2. Register the source name in `readers::from_config` and the `validate_routed` list in `main.rs`.
+2. Register the source name in `readers::from_config` and `production::SUPPORTED`.
 3. Lab world: `AB_LAB_SESSION=<ab-session>` and `AB_LAB_SESSION_SOURCES=safari,usage,notes` make
    `lab/world/session.go` start ab-session on `session.sock`, point simapple at it, and keep the
    gateway socket unchanged. Fixture roots default to `<world>/session-<source>`; a scenario that
@@ -258,20 +119,19 @@ Pending bodies: the Rust reader publishes a metadata-only record (`body_status: 
 Open: NOTE-LIST asserts a note inside a recently-deleted folder and a fixed thumbnail digest (`bbbb...`). The reader query (`notes_store.rs`, `excluded` CTE: `ZFOLDERTYPE=1` or marked-for-deletion folders and their descendants) never selects a note inside a recently-deleted folder, and a derivative digest is the SHA-256 of staged bytes, so neither can come from a faithful store. With the session on, NOTE-LIST fails 11 assertions (`replica_converged` truth_alias_failed, `content_versions_0/1`, `{rest,mcp}_{0,1}_preview_thumbnail`, `{rest,mcp}_{0,1}_recently_deleted_read_only`); with it off it passes. It tests gateway read-model behaviour, so it runs with the session off.
 
 
-## Production readiness (all switches off by default)
+## Readers across restarts
 
-- **Checkpoint persistence.** With a state directory (`AB_SESSION_RUST_STATE` in lab mode, `<home>/session/capture-state` in production) the session fsyncs `<source>.json` (`generation`, `checkpoint`, reader `token`) after the gateway commits a Rust capture and the reader has settled. The token is the committed input-tree signature. On `Open`, a record is trusted only when its generation and checkpoint equal `Open.checkpoints[source]`; the reader then resumes and an unchanged source emits nothing. A mismatch (or no record) means a normal first full scan under the gateway's predecessor, so a stale or crashed state file can only cause a rescan, never a skipped change.
+- **Checkpoint persistence.** With a state directory (`<home>/session/capture-state` in production) the session fsyncs `<source>.json` (`generation`, `checkpoint`, reader `token`) after the gateway commits a Rust capture and the reader has settled. The token is the committed input-tree signature. On `Open`, a record is trusted only when its generation and checkpoint equal `Open.checkpoints[source]`; the reader then resumes and an unchanged source emits nothing. A mismatch (or no record) means a normal first full scan under the gateway's predecessor, so a stale or crashed state file can only cause a rescan, never a skipped change.
 - **Blob handles.** A reader can own a handle prefix (`CaptureReader::owns`/`blob`). Gateway `BlobRead` frames for an owned handle are answered by the session with `BlobChunk` or `BlobUnavailable`, and are never forwarded to the Helper. Voice Memos (`voice_memos`, config `root` and required `staging`) produces `voice-memo-blob:<digest>` handles; the asset store re-adopts staged files on open, so handles keep resolving after a restart.
-- **Watcher scheduling.** `ab_sys::watch::Watcher` uses kqueue (`EVFILT_VNODE`, macOS) or inotify (Linux) on every directory and file under a reader's root and re-registers after each event. An event wakes the producer immediately (15 ms debounce). The poll interval is only the fallback; if the watcher cannot start, polling continues unchanged. Lab: `AB_SESSION_RUST_WATCH=1`; production: `watch` in the config file (default true).
-- **With `rust-effects`.** `effects::Layer` is an overlay on the same relay (`routed::relay_layered`). Rust captures register their keys with the effects state before being written, so Dispatch evidence correlation sees Rust-committed captures like Swift ones. `effects::relay` now runs through the same relay.
-- **Production switch.** `ab-session --gateway-fd N --helper-fd M [--effects-home H] [--capture-home H]`. With `--capture-home`, `<helper home>/session/rust-capture.json` (the Helper home is `<gateway home>/helper`; `flip-capture.sh --home` takes the gateway home) (`{"sources":{"safari":{"root":"..."}},"watch":true,"poll_ms":5000}`) selects Rust sources (`safari`, `usage`, `notes`, `voice_memos`, `mail`, `phone`, `voicemail`, `calendar`, `contacts`, `messages`; Calendar and Contacts take `{"root":"DIR"}` only as the watcher root because their data arrives as Helper facts); an unsupported source fails startup, an absent file or empty `sources` is the verbatim proxy. Flipping a source is editing the file and restarting the Helper; flipping back is removing the entry. The Swift SessionProxy passes `--capture-home` only when the file exists. A binary built without `rust-capture` rejects the flag. Generation changes on a flip cost one rescan and never a false deletion.
+- **Watcher scheduling.** `ab_sys::watch::Watcher` uses kqueue (`EVFILT_VNODE`, macOS) or inotify (Linux) on every directory and file under a reader's root and re-registers after each event. An event wakes the producer immediately (15 ms debounce). The poll interval is only the fallback; if the watcher cannot start, polling continues unchanged. `watch` in the config file (default true).
+- **Switch.** `<helper home>/session/rust-capture.json` (the Helper home is `<gateway home>/helper`; `flip-capture.sh --home` takes the gateway home), for example `{"sources":{"safari":{"root":"..."}},"watch":true,"poll_ms":5000}`, selects sources (`production::SUPPORTED`). An unsupported source fails startup; an absent file or empty `sources` means the session owns no capture. A generation change on a switch costs one rescan and never a false deletion.
 
 Record ids across a flip. The gateway reuses a record id only for the same `(source, generation, collection, native_key)` or the
 same `scoped_alias`, and a Rust reader hashes its own generation, so a flipped source (Phone, Mail, Notes, Messages, Calendar, Contacts)
 used to write a second id per item beside the Swift ones and leave the old ones alive; Safari kept its ids only because its aliases carry no
-generation. The routed relay therefore adopts the generation the gateway has committed for the source: on its first scan of a connection
+generation. The session therefore adopts the generation the gateway has committed for the source: on its first scan of a connection
 the Rust reader's native generation is bound to `Open.checkpoints[source].generation` and every capture reports that generation
-(`routed::reported_generation`; predecessor, flights and the committed checkpoint use the reported one). The binding is saved next to the
+(`reported_generation` in `session/capture.rs`; predecessor, flights and the committed checkpoint use the reported one). The binding is saved next to the
 checkpoint in `capture-state/<source>.json` (`native`) and restored on `Open` while the gateway's committed generation is still the saved
 one. A native generation change while Rust owns the source (a regenerated database) is reported as itself, i.e. a normal generation change.
 Rolling back is the same in reverse: Swift emits its own generation, which is the committed one, so ids stay. A reader whose scans legitimately
@@ -280,7 +140,7 @@ id doubling, on a rollback that duplicates or loses a record, and on a regenerat
 `"facts":"native"` for `calendar`, `contacts` and `reminders`; without that link the Helper's Swift capture is suppressed by the switch and
 the reader has no facts.
 
-Bundling: `AB_SESSION_BINARY=<path>` or `AB_SESSION_BUILD=1` (builds `ab-session` with `rust-capture,rust-effects` through `packaging/dev/build-session.sh`) makes `packaging/dev/build-helper.sh` copy it to `Contents/MacOS/ab-session`; `sign.sh` signs it with the identity of the app before the app itself, so the app's designated requirement is unchanged. Both values are part of the signed-app cache key.
+Bundling: `AB_SESSION_BINARY=<path>` or `AB_SESSION_BUILD=1` (builds `ab-session` through `packaging/dev/build-session.sh`) makes `packaging/dev/build-helper.sh` copy it to `Contents/MacOS/ab-session`; `sign.sh` signs it with the identity of the app before the app itself, so the app's designated requirement is unchanged. Both values are part of the signed-app cache key.
 
 Staging never lives in an Apple container. `voice_memos` and `notes` need a `staging` path that is not inside or above the source root (symlinks and `..` resolved); `production::load` fills `<home>/session/staging/<source>` when it is absent and `from_config` fails without one. `tests/staging_confinement.rs` fails if a scan, commit or blob read creates any path under the root. Staged files are copied to a temp name and hard-linked into place inside the staging directory, so no rename crosses a device.
 
@@ -288,7 +148,7 @@ Open items: watcher-driven scheduling and persistence are proven for Screen Time
 
 ### Calendar and Contacts (facts-driven)
 
-`calendar` and `contacts` are routed sources whose Rust reader is `readers::AgendaReader`. Framework
+`calendar` and `contacts` are sources whose Rust reader is `readers::AgendaReader`. Framework
 enumeration stays Swift (EventKit, Contacts). The Helper's `Capture` frame for the source is taken as
 the raw fact set (upserts are the complete current records, `absent` and `evict` are revalidation
 results). `CaptureReader::ingest` stores it, the relay holds the Helper `Committed`, and the session
@@ -301,7 +161,7 @@ without a result remain candidates, never deletions. Lab: `AB_LAB_SESSION_SOURCE
 `contacts`; negative control `AB_SESSION_RUST_POLL_MS=3600000`.
 
 Command effects: a Helper `Outcome` or `Rejected` whose evidence carries `native_key` and `capture_checkpoint`
-is rebound to the Rust checkpoint that last committed that key (`routed::bind_outcome`). For Calendar and
+is rebound to the Rust checkpoint that last committed that key (`Hub::bind`). For Calendar and
 Contacts the Helper `Committed` is held until the Rust commit, so the binding is immediate and uses the latest
 capture of the key even when the command changed nothing; Notes waits for a capture after `Dispatch`. A
 `Resolve` after a gateway restart binds the same way. Multi-part Helper scans (`scan_id` set,
@@ -309,14 +169,9 @@ capture of the key even when the command changed nothing; Notes waits for a capt
 final part is held, and the diff runs once per scan. The producer is woken by every ingest. The lab listener
 keeps accepting while the gateway is restarting.
 
-Fact paging (`facts` in the source entry, off by default): `{"calendar":{"root":"DIR","facts":"native"}}` makes the reader a
-native/1 client instead of a consumer of the Helper `Capture` frame. `facts: "native"` uses its own inherited stream,
-`AB_NATIVE_FACTS_FD` (fd 201), so it runs together with `AB_SESSION_EFFECTS`: the Swift native server handles one request at a
-time per stream, and an `Effect` in flight (a transcription, a screen recording) would block every page pull if both shared fd 200,
-so effects keep fd 200 (`AB_NATIVE_FD`) and facts get a second stream and a second `NativeServer(factsOnly: true)`, which answers
-`Facts` and refuses `Effect` and `Release` with `unsupported` (permit nonces are per server, so effects can never be replayed there).
-Without `AB_SESSION_EFFECTS` and without `AB_NATIVE_FACTS_FD` the facts client falls back to `AB_NATIVE_FD`. The two descriptors must
-differ from each other, the gateway fd and the Helper fd. `ipc/1`, `feed/1` and the native/1 frames are unchanged.
+Fact paging: `{"calendar":{"root":"DIR","facts":"native"}}` makes the reader a native/1 client on the facts link
+(`AB_NATIVE_FACTS_FD`), a separate stream with a `NativeServer` that answers `Facts` and `Revalidate` and pushes `Changed`. The descriptor must
+differ from the gateway and session descriptors. `ipc/1` and `feed/1` are unchanged.
 Files and Mac are Rust captures built on facts (`"facts": "native"` or a socket in the switch file). `ab_native::files` walks the Files roots
 itself (the configured root, `roots`, and `Library/Application Support/AppleBridge/files-roots.json` under `home`; symlinks never followed,
 10000 items, depth 16, tags from the `com.apple.metadata:_kMDItemUserTags` attribute) and asks Swift only for `files.ubiquity`, 500 paths per
@@ -342,8 +197,7 @@ diff compares `data` and `scoped_alias`, drops a record whose alias reappears un
 disappears from the page stays. An empty alias is omitted from the capture, as the Swift list rows omit it. The Swift fact scan now emits
 `absent` rows for the baseline identities it can no longer find (it did so only for the live scan before), and `AppleSession.facts`
 runs the SQLite store enrichment (`store_*` fields) over the pulled rows with the fact scan's own `RemindersStoreEnrichment`, so pulled rows
-carry the same fields as the IPC capture. `reminders` is also a fact source for outcome binding (`effects::FACT_SOURCES`,
-`routed::holds_facts`): the latest committed capture of the key binds the Outcome.
+carry the same fields as the IPC capture. `reminders` is also a fact source for outcome binding (`facts_source` in `session/commands.rs`): the latest committed capture of the key binds the Outcome.
 
 Rust owns the baseline and the deletion decision for these three sources (`AgendaReader` with `facts`).
 Swift enumerates only what the framework returns now (`CalendarSource.enumerate`, `ContactsSource.enumerate`,
@@ -409,7 +263,7 @@ re-emits them even when the row did not change, and `bind_outcome` can attach th
 With `messages` in the config the Helper builds `Messages(rustCapture: true)`: its capture loop idles,
 commands and `captureCommand` keep working.
 
-Isolation: the upstream thread (gateway frames to the Helper) never waits for a scan. `routed` keeps one
+Isolation: the gateway thread never waits for a scan. The session keeps one
 lock per reader, answers BlobRead for a handle owned by a `BlobServer` lock-free and waits at most two
 seconds for the reader behind a prefixed handle (`notes-blob:`, `voice-memo-blob:`) before replying
 `BlobUnavailable`. `Committed` calls `commit` before the flight is released, so the producer cannot start
@@ -449,20 +303,10 @@ sim and the reader is proven by `tests/capture_producer.rs` and the 46-stage Swi
 ipc/1 peer: `session::serve` authenticates, validates `Open`, speaks the native/1 session and command frames of
 `design/spec/native-1.md` to Swift and owns credit, flights, chunking, checkpoints, predecessor, `Committed`,
 tickets, the dispatch guard (`<DIR>/dispatch-guard.log`), rejection, resolve and evidence-to-checkpoint
-binding. It is exclusive with `--effects-home` and `--capture-home`. The default remains the verbatim proxy and
-the routed relay, which keep the Swift ipc/1 peer. `tests/session_peer.rs` drives it over socketpairs and
+binding. `tests/session_peer.rs` drives it over socketpairs and
 `tests/session_launch.rs` launches the binary with inherited descriptors.
 
-Not done: no Swift or lab peer speaks these frames yet (Swift `NativeWire` has the framing but no session client,
-and `lab-simapple` still dials the gateway). The routed capture producers (`readers`, `production`) are not
-reachable from session mode; they stay on the routed relay until a source is moved.
-
-One flight tracker: `flight::Flights` holds the credit pool, one flight per source, committed checkpoints
-and the commit-ordered record of written keys. `routed::Gate` owns the only instance in a relay and
-implements `flight::Ledger`; `effects::Layer` no longer registers captures or `Committed` itself and
-correlates dispatch evidence through the ledger (`sequence()` counts commits, `written()` waits for the
-key). Only rows with kind `upsert` or `absent` are correlated.
-
+One flight tracker: `flight::Flights` holds the credit pool, one flight per source, committed checkpoints and the commit-ordered record of written keys.
 
 ### Rust-owned commands (step 3, off by default)
 
@@ -477,8 +321,6 @@ negative control). Swift answers the primitives (`RemindersSource.primitive`, `A
 answers them too (`AB_LAB_RUST_COMMANDS=reminders` starts the lab session with the flag;
 `AB_LAB_PRIMITIVE_CONTROL=refuse` is the negative control that fails every `reminders.write`). In native session
 mode the Helper always passes `--rust-commands reminders`. `Resolve` after a restart is decided in Rust as well.
-Nothing is flipped: before the IPC peer is deleted native session mode is opt-in (`AB_SESSION_NATIVE=1`); after it, it is the only mode.
-
 Messages is routed per operation (`messages.send`, `messages.reply`, `messages.react`, `messages.edit`,
 `messages.unsend`, `messages.delete_message`, `messages.mark_read`, `messages.mark_unread`,
 `messages.delete_chat`) or as the bare source `messages` for all nine; the Helper default list
@@ -491,25 +333,8 @@ outcome is open (indeterminate, locally observed, or a failed aggregate with an 
 checkpoint of an observed Messages part is bound even while the aggregate is indeterminate, as the Swift
 dispatch does.
 
-The routed effects layer now refuses a command whose numbers the permit hash cannot represent (below 1e-4 or
-at or above 1e15) with `Rejected invalid` (`QueryError invalid` for queries) instead of closing the gateway
-stream; the session-mode path never hashes command args.
-
 ### Notes media facts and Usage clipping (real-data fixes)
 
 - **Notes hydration stall.** The reader needs three Helper facts while it hydrates a note: `mime:<uti>`, `supports:<uti>|<ext>` and `derivatives:<digest>`. The session supplied only the hashtag mime, so the first note with an image attachment returned `FactsRequired`, was re-queued at the front, and every later `next` retried it forever; bodies behind it stayed `pending`. The reader now re-queues a failed job at the back, and `NotesReader` resolves facts through `media_facts::MediaFacts`, which runs the Helper executable as `AppleBridgeHelper media-facts` (request JSON on stdin, response JSON on stdout, two minute deadline, derivative bytes read from the session-owned `media_root`, default `<home>/session/media-derivatives`, via `AB_MEDIA_DERIVATIVES_ROOT`). Facts come from the same `UTType` and `MediaDerivatives` code the Swift reader uses, so records are byte-identical. A fact that cannot be resolved leaves that note pending, is retried after 60 seconds and never blocks other notes. The executable is the sibling `AppleBridgeHelper` of `ab-session`, or `media_helper` in the source config.
 - **Usage.** The session now passes the local `knowledgeC.db` display-lock and lock intervals to the Usage reader (and includes the database and its `-wal` in the change signature) when the root is `~/Library/Biome`, as the Swift source does; the hardware id is `IOPlatformUUID`. Live power-sleep events exist only in the Swift process and are not reproduced.
 
-### Swift side after the IPC peer is deleted
-
-The Helper only speaks native/1: `AppleSession.runNative` is its single run loop, `NativeSessionLauncher` starts
-`ab-session --session-secret --session-home` and `SessionProxy` only passes the gateway descriptor and the helper
-link. Removed from Swift: `PeerWire` (Challenge/Authenticate, ipc/1 framing, proxy spawn), `DispatchGuard`,
-`EffectsRouting`, the IPC run loop and `handle`, `drain` with its credit, `Pending`/`Flight` and live/bulk queues,
-the ticket machinery in `prepare`/`dispatch`/`resolve`, `rejectCommand`, `observedEvidence` and the routed
-`dispatchNative`. `MessagesSelfTest` keeps its own in-memory id set instead of appending to the shared guard log.
-Still in Swift on purpose: `observedCheckpoints`, which only feeds the conflict evidence of `rejection`, until
-ab-session binds that too. The routed relay, the effects layer and the Rust capture producers (`routed`, `effects`,
-`readers`, `production`) have no Swift counterpart any more and are dead code in the Helper's path; their removal or
-re-homing in session mode is a separate change. The `wire-checks` lab command stays (the real-level helper release
-check lists it) and no longer goes through `PeerWire`.
