@@ -60,6 +60,7 @@ pub mod poster;
 pub mod private;
 pub mod queries;
 pub mod query_helper;
+pub mod query_replica;
 pub mod rawhttp;
 pub mod readmodel_perf;
 pub mod readmodels;
@@ -180,6 +181,8 @@ pub fn registry() -> Registry {
             labcore::start_world(world, id, usize::try_from(replicas).unwrap_or(0))?;
         } else if native_runner::starts_world(id) {
             native_runner::start_world(world)?;
+        } else if replicas != 0 && id == "CORE-QUERY-REPLICA" {
+            query_replica::start_world(world, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && capture_atomic::SCENARIOS.contains(&id) {
             capture_atomic::start_world(world, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && robust::SCENARIOS.contains(&id) {

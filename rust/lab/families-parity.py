@@ -124,6 +124,7 @@ MOVED_TO_RUST_TESTS = {
 }
 CAPTURE_SCENARIOS = ['CORE-REPLICA-CAPTURE-ATOMIC', 'CORE-LIVE-LATENCY', 'CORE-MESSAGES-SHAPE']
 BENCH_SCENARIOS = ['CORE-READMODEL-UPDATE-PERF']
+REPLICA_SCENARIOS = ['CORE-QUERY-REPLICA']
 
 
 def ignored(scenario, name):
@@ -218,6 +219,7 @@ def main():
     parser.add_argument('--web', dest='web', action='store_true')
     parser.add_argument('--native-media', dest='native_media', action='store_true')
     parser.add_argument('--bench', action='store_true')
+    parser.add_argument('--replica', action='store_true')
     parser.add_argument('--core-capture', dest='core_capture', action='store_true')
     parser.add_argument('--calendar', dest='calendar', action='store_true')
     parser.add_argument('--calendar-native', dest='calendar_native', action='store_true')
@@ -286,6 +288,8 @@ def main():
         args.scenario = (args.scenario or []) + VISION_NATIVE_SCENARIOS
     if args.core_capture:
         args.scenario = (args.scenario or []) + CAPTURE_SCENARIOS
+    if args.replica:
+        args.scenario = (args.scenario or []) + REPLICA_SCENARIOS
     if args.bench:
         args.scenario = (args.scenario or []) + BENCH_SCENARIOS
     if args.native_media:
@@ -310,7 +314,8 @@ def main():
     if not args.rust_only:
         with (out / 'go.jsonl').open('w') as stream:
             impl = ['--impl', 'gateway=rust', '--rust-binary', str(Path(args.gateway).resolve())] if args.go_rust_gateway else []
-            subprocess.run([args.go_lab, 'run', *files, '--level', 'sim', '--json', *impl],
+            level = ['--level', 'replica', '--local-replicas'] if args.replica else ['--level', 'sim']
+            subprocess.run([args.go_lab, 'run', *files, *level, '--json', *impl],
                            stdout=stream, timeout=900, check=True)
     with (out / 'rust.jsonl').open('w') as stream:
         subprocess.run([args.families, 'run', *files, '--gateway', args.gateway,
