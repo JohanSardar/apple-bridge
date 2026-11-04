@@ -138,8 +138,11 @@ func runClockPack(ctx context.Context, s Scenario, level string) Evidence {
 		return e
 	}
 	defer os.RemoveAll(dir)
-	command := exec.CommandContext(ctx, "go", "run", "./tools/shortcuts", "build", "-source", "packaging/shortcuts/ab-clock.json", "-out", dir, "-unsigned")
-	output, err := command.CombinedOutput()
+	tool, err := buildShortcutsTool(ctx)
+	var output []byte
+	if err == nil {
+		output, err = exec.CommandContext(ctx, tool, "build", "-source", "packaging/shortcuts/ab-clock.json", "-out", dir, "-unsigned").CombinedOutput()
+	}
 	add("repo_source_compiles", err == nil)
 	if err != nil {
 		os.Stderr.Write(output)

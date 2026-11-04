@@ -47,7 +47,7 @@ features:
     title: Deterministic workflow compilation and macOS shortcut signing
     requirements: [R-PKG]
     milestone: G0
-    modules: [tools/shortcuts, packaging/shortcuts]
+    modules: [rust/crates/ab-shortcuts, packaging/shortcuts]
     depends_on: []
     status: done
     scenarios:
