@@ -828,10 +828,14 @@ impl Layer {
             };
             self.active.store(false, Ordering::SeqCst);
             if let Ok(mut output) = output.lock() {
-                if let Ok(result) = result {
-                    let _ = send(&mut output, &result);
-                } else {
-                    let _ = output.shutdown(Shutdown::Both);
+                match result {
+                    Ok(result) => {
+                        let _ = send(&mut output, &result);
+                    }
+                    Err(error) => {
+                        eprintln!("ab-session: effect failed: {error}");
+                        let _ = output.shutdown(Shutdown::Both);
+                    }
                 }
             }
         });
