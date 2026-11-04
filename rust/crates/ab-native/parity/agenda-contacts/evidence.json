@@ -1,8 +1,8 @@
 {
   "source_sha256": {
-    "native/Sources/CalendarSource/CalendarSource.swift": "b8629bbe48360401c5b64210341a8c94997964184d10ca025fd7d81948d50a97",
-    "native/Sources/ContactsSource/ContactsSource.swift": "3513e07a7b1fb01ada80666d1287b9d6afb9bcec9290755a000f062414ece866",
-    "native/Sources/SourceSupport/Source.swift": "9a301ffa8b9efadd8ba6b473c261d7f6ba384f0a7b610ef48da06f17a2078966",
+    "native/Sources/CalendarSource/CalendarSource.swift": "6baa291c70be69c18333bb0a18f51b20321de621132b717dd462b5b760dc0c19",
+    "native/Sources/ContactsSource/ContactsSource.swift": "62911934077b8bbca82be5e158fdc470487a88ea143db4c2c47ed38aa1998799",
+    "native/Sources/SourceSupport/Source.swift": "95c6ee2908205c9ecb9cefa38e5c4f2bf61ed8b44e7027a98efc106a1e5e13ed",
     "native/Sources/CalendarSource/CalendarTime.swift": "b78dc9f93211bec04f98762c47201f48972786da3a5c83b9c176a95bfb9d7527",
     "native/Sources/CalendarSource/CalendarScanScope.swift": "1382700d11a415052180b25101ca53e907c675c56638ac7dacd87f0fc9d2e5c4"
   },
