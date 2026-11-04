@@ -58,6 +58,7 @@ let package = Package(
         .executableTarget(name: "MessagesBench", dependencies: ["MessagesSource", "SourceSupport"]),
         .target(name: "AppleSession", dependencies: sourceTargets.map { .target(name: $0.name) } + ["RemindersStore", "AgendaGate", "SourceSupport", "MediaDerivatives", "NativeProtocol"]),
         .executableTarget(name: "NativeChecks", dependencies: ["NativeProtocol", "SourceSupport"]),
+        .executableTarget(name: "SessionChecks", dependencies: ["AppleSession", "NativeProtocol", "SourceSupport"]),
         .executableTarget(name: "CalendarChecks", dependencies: ["CalendarSource"], path: "Tests/CalendarChecks"),
         .executableTarget(name: "CalendarStoreOracle", dependencies: ["CalendarSource", "SourceSupport"], path: "Tests/CalendarStoreOracle"),
         .executableTarget(name: "CommandOriginChecks", dependencies: ["SourceSupport"], path: "Tests/CommandOriginChecks"),
