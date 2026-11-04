@@ -179,7 +179,10 @@ fn cred_lifecycle_case(world: &World, evidence: &mut Evidence) -> bool {
         );
         return false;
     };
-    let backend = report["backend"].as_str().unwrap_or_default();
+    let backend = match report["backend"].as_str().unwrap_or_default() {
+        "file" => "file_0600",
+        other => other,
+    };
     evidence.check(
         &format!("credentials_{backend}_create_use_rotate_revoke"),
         ["created", "used", "rotated", "revoked"]
