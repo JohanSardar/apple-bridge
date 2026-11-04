@@ -60,26 +60,7 @@ pub fn disposition(body: &Value) -> &str {
 fn query<R: Read, W: Write>(session: &mut Session<R, W>) -> Result<()> {
     let input = common(&session.input::<Value>()?)?;
     let local = Local::new(&input)?;
-    let mut records: Vec<Value> = Vec::new();
-    let mut cursor = Value::Null;
-    let mut after = String::new();
-    loop {
-        let mut request = json!({"collection": input.collection, "limit": 200});
-        if !after.is_empty() {
-            request["after"] = Value::String(after.clone());
-        }
-        let page = local.op("records.query", &request)?;
-        if after.is_empty() {
-            cursor = page["cursor"].clone();
-        } else if cursor != page["cursor"] {
-            return failed("snapshot changed during pagination");
-        }
-        records.extend(page["records"].as_array().cloned().unwrap_or_default());
-        match page["next"].as_str() {
-            Some(next) if !next.is_empty() => next.clone_into(&mut after),
-            _ => break,
-        }
-    }
+    let (records, cursor) = local.snapshot(&input.collection)?;
     let status = local.op("sources.status", &json!({}))?;
     let credentials = read_json(&format!("{}/credentials.json", input.home))?;
     let route = read_json(&input.proxy_ready)?;

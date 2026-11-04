@@ -229,6 +229,28 @@ impl Local {
             }
         }
     }
+    pub fn snapshot(&self, collection: &str) -> Result<(Vec<Value>, Value)> {
+        let mut records: Vec<Value> = Vec::new();
+        let mut cursor = Value::Null;
+        let mut after = String::new();
+        loop {
+            let mut request = json!({"collection": collection, "limit": 200});
+            if !after.is_empty() {
+                request["after"] = Value::String(after.clone());
+            }
+            let page = self.op("records.query", &request)?;
+            if after.is_empty() {
+                cursor = page["cursor"].clone();
+            } else if cursor != page["cursor"] {
+                return failed("snapshot changed during pagination");
+            }
+            records.extend(page["records"].as_array().cloned().unwrap_or_default());
+            match page["next"].as_str() {
+                Some(next) if !next.is_empty() => next.clone_into(&mut after),
+                _ => return Ok((records, cursor)),
+            }
+        }
+    }
     pub fn watch<F>(&self, after: &Value, handler: F) -> Result<Watch>
     where
         F: FnMut(i128, &Value) + Send + 'static,
