@@ -297,9 +297,14 @@ final part is held, and the diff runs once per scan. The producer is woken by ev
 keeps accepting while the gateway is restarting.
 
 Fact paging (`facts` in the source entry, off by default): `{"calendar":{"root":"DIR","facts":"native"}}` makes the reader a
-native/1 client instead of a consumer of the Helper `Capture` frame. `facts: "native"` uses the inherited `AB_NATIVE_FD`
-(fd 200) and is refused together with `AB_SESSION_EFFECTS` because the Swift native server takes one request at a time on that
-stream and `effects::Layer` owns it; `facts: {"socket": "/abs/path"}` dials a native/1 server (lab). `facts_poll_ms` (default
+native/1 client instead of a consumer of the Helper `Capture` frame. `facts: "native"` uses its own inherited stream,
+`AB_NATIVE_FACTS_FD` (fd 201), so it runs together with `AB_SESSION_EFFECTS`: the Swift native server handles one request at a
+time per stream, and an `Effect` in flight (a transcription, a screen recording) would block every page pull if both shared fd 200,
+so effects keep fd 200 (`AB_NATIVE_FD`) and facts get a second stream and a second `NativeServer(factsOnly: true)`, which answers
+`Facts` and refuses `Effect` and `Release` with `unsupported` (permit nonces are per server, so effects can never be replayed there).
+Without `AB_SESSION_EFFECTS` and without `AB_NATIVE_FACTS_FD` the facts client falls back to `AB_NATIVE_FD`. The two descriptors must
+differ from each other, the gateway fd and the Helper fd. `ipc/1`, `feed/1` and the native/1 frames are unchanged.
+`facts: {"socket": "/abs/path"}` dials a native/1 server (lab: the second connection to the same simapple socket). `facts_poll_ms` (default
 15000) is the fallback pull interval. The client (`native_facts::Client`) sends `Hello` with the `Open` fence, then pages
 `agenda.calendars` + `agenda.events` (Calendar) or `contacts.containers` + `contacts.groups` + `contacts.contacts` (Contacts) with
 `args: {}`, `limit` 500 and the pinned `snapshot`/`cursor`. Every page must echo `id` and `op` and carry the same snapshot, scope

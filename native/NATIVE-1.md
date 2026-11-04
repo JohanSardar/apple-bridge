@@ -4,8 +4,10 @@ The default Helper session still connects directly with ipc/1. Set
 `AB_SESSION_PROXY=1` to launch the bundled `Contents/MacOS/ab-session` child.
 `AB_SESSION_BINARY` overrides that executable for a lab build. The parent connects
 and checks the gateway socket, then passes fd 198 (gateway), fd 199 (raw IPC),
-and fd 200 (separate native channel) without disclaiming responsibility. Only the
-child receives `AB_NATIVE_FD=200`. The existing authentication and IPC handlers run
+fd 200 (native channel for effects) and fd 201 (native channel for facts only) without
+disclaiming responsibility. Only the child receives `AB_NATIVE_FD=200` and
+`AB_NATIVE_FACTS_FD=201`; the Helper runs a second `NativeServer(factsOnly: true)` on the
+facts stream, so fact pulls never wait behind an effect. The existing authentication and IPC handlers run
 unchanged across the raw proxy. Child termination closes the session; reconnect
 starts a fresh child. The direct connection never creates these socketpairs.
 
