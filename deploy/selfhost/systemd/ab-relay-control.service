@@ -1,0 +1,23 @@
+[Unit]
+Description=Apple Bridge control service (Mac linking and tunnels)
+After=network-online.target ab-relay.service ab-accounts.service
+Wants=network-online.target
+
+[Service]
+User=ab-relay
+Group=ab-relay
+EnvironmentFile=/etc/ab-relay/control.env
+ExecStart=/usr/local/lib/ab-relay/bin/ab-relay-control
+Restart=on-failure
+RestartSec=5
+StateDirectory=ab-relay-control
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target

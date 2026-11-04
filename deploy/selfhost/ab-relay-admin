@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -euo pipefail
+usage() {
+  cat <<'USAGE'
+ab-relay-admin add-key KEY            Let the Mac with this key use the relay (from: bridge remote key)
+ab-relay-admin keys                   List Macs allowed by key
+ab-relay-admin invite [--uses N] [--days N] [--note TEXT]   Create an invite link (accounts mode)
+ab-relay-admin invites                List invites
+ab-relay-admin revoke-invite ID       Cancel an invite
+ab-relay-admin users                  List accounts
+ab-relay-admin reset-password EMAIL   Print a new password and end that account's sessions
+ab-relay-admin status                 Show service health
+USAGE
+}
+keys=/etc/ab-relay/owner-keys
+accounts() {
+  [ -f /etc/ab-relay/accounts.env ] || { echo "This relay runs without accounts. Reinstall with --accounts to add them." >&2; exit 1; }
+  set -a; . /etc/ab-relay/accounts.env; set +a
+  runuser -u ab-relay --preserve-environment -- \
+    /usr/local/lib/ab-relay/node/bin/node --disable-warning=ExperimentalWarning /usr/local/lib/ab-relay/accounts.mjs "$@"
+}
+case "${1:-}" in
+  add-key)
+    key=${2:-}
+    [[ "$key" =~ ^[A-Za-z0-9_-]{43}$ ]] || { echo "That is not a Mac key. Get one with: bridge remote key" >&2; exit 1; }
+    grep -qxF "$key" "$keys" 2>/dev/null || printf '%s\n' "$key" >>"$keys"
+    echo "Added. No restart needed." ;;
+  keys) cat "$keys" ;;
+  invite) shift; accounts invite create "$@" ;;
+  invites) accounts invite list ;;
+  revoke-invite) accounts invite revoke "${2:-}" ;;
+  users) accounts user list ;;
+  reset-password) accounts user reset-password "${2:-}" ;;
+  status)
+    for unit in ab-relay ab-relay-control ab-accounts; do
+      if systemctl list-unit-files "$unit.service" --no-legend | grep -q "$unit"; then
+        printf '%-18s %s\n' "$unit" "$(systemctl is-active "$unit" || true)"
+      fi
+    done ;;
+  *) usage; exit 2 ;;
+esac

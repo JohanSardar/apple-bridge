@@ -1,0 +1,24 @@
+[Unit]
+Description=Apple Bridge accounts service (Better Auth)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=ab-relay
+Group=ab-relay
+EnvironmentFile=/etc/ab-relay/accounts.env
+ExecStart=/usr/local/lib/ab-relay/node/bin/node --disable-warning=ExperimentalWarning /usr/local/lib/ab-relay/accounts.mjs serve
+Restart=on-failure
+RestartSec=5
+StateDirectory=ab-accounts
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+MemoryMax=256M
+
+[Install]
+WantedBy=multi-user.target
