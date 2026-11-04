@@ -165,7 +165,7 @@ def main():
             temporary.write_text(json.dumps(report, indent=2) + '\n')
             temporary.replace(destination / 'summary.json')
     print(f"Wall: {report['wall_seconds']:.3f}s; {len(rows)} scenarios", flush=True)
-    return int(any(r['status'] not in ('pass', 'excluded') for r in rows))
+    return int(any(r['status'] not in ('pass', 'no-runner') for r in rows))
 
 
 if __name__ == '__main__':
