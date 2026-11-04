@@ -827,7 +827,8 @@ impl Session<'_> {
                     return Ok(());
                 }
                 Some(
-                    "Prepare" | "Dispatch" | "Resolve" | "Query" | "QueryCancel" | "BlobRead" | "Primitive",
+                    "Prepare" | "Dispatch" | "Resolve" | "Query" | "QueryCancel" | "BlobRead"
+                    | "Primitive",
                 ) => {
                     self.pending.push_back(reply);
                 }
@@ -936,7 +937,8 @@ impl Session<'_> {
                     return Ok(());
                 }
                 Some(
-                    "Prepare" | "Dispatch" | "Resolve" | "Query" | "QueryCancel" | "BlobRead" | "Primitive",
+                    "Prepare" | "Dispatch" | "Resolve" | "Query" | "QueryCancel" | "BlobRead"
+                    | "Primitive",
                 ) => {
                     self.pending.push_back(reply);
                 }

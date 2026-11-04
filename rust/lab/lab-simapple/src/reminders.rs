@@ -5,11 +5,34 @@ use super::{
 use std::thread;
 
 const PROJECTION: [&str; 28] = [
-    "store_identifier", "flagged", "parent_id", "section_id", "tags", "manual_order", "created_at",
-    "early_reminders", "assignment", "store_alarms", "store_recurrence", "attachment_ids",
-    "badge_emblem", "is_group", "display_order", "pinned", "pinned_at", "sorting_style",
-    "categorize_groceries", "grocery_locale", "sharing_status", "shared_owner_name",
-    "smart_list_type", "smart_filter", "sections", "store_color", "store_status", "store_coverage",
+    "store_identifier",
+    "flagged",
+    "parent_id",
+    "section_id",
+    "tags",
+    "manual_order",
+    "created_at",
+    "early_reminders",
+    "assignment",
+    "store_alarms",
+    "store_recurrence",
+    "attachment_ids",
+    "badge_emblem",
+    "is_group",
+    "display_order",
+    "pinned",
+    "pinned_at",
+    "sorting_style",
+    "categorize_groceries",
+    "grocery_locale",
+    "sharing_status",
+    "shared_owner_name",
+    "smart_list_type",
+    "smart_filter",
+    "sections",
+    "store_color",
+    "store_status",
+    "store_coverage",
 ];
 
 fn native_fields(data: &Value) -> Value {
@@ -414,11 +437,7 @@ impl Session<'_> {
         Ok(json!({}))
     }
 
-    fn write(
-        &mut self,
-        state: &Shared,
-        frame: &Value,
-    ) -> std::result::Result<Value, &'static str> {
+    fn write(&mut self, state: &Shared, frame: &Value) -> std::result::Result<Value, &'static str> {
         let fail = |_| "unavailable";
         let args = &frame["args"];
         let op = string(args, "op");
@@ -429,7 +448,11 @@ impl Session<'_> {
             key = id("native").map_err(fail)?;
         }
         let list_op = LIST_OPS.contains(&op.as_str());
-        let collection = if list_op { "reminders.list" } else { "reminders.reminder" };
+        let collection = if list_op {
+            "reminders.list"
+        } else {
+            "reminders.reminder"
+        };
         let mut data = s.data["records"][&key]["data"].clone();
         if !data.is_object() {
             data = json!({});
@@ -497,9 +520,19 @@ impl Session<'_> {
         if fault == "crash-before-outcome" {
             std::process::exit(78);
         }
-        let shown = if gone { Value::Null } else { native_fields(&record["data"]) };
+        let shown = if gone {
+            Value::Null
+        } else {
+            native_fields(&record["data"])
+        };
         let ambiguous = fault == "ambiguous-outcome";
-        let observed = if ambiguous { Value::Null } else { shown.clone() };
-        Ok(json!({"native_key":key,"saved":shown,"observed":observed,"exists_after":!gone || ambiguous}))
+        let observed = if ambiguous {
+            Value::Null
+        } else {
+            shown.clone()
+        };
+        Ok(
+            json!({"native_key":key,"saved":shown,"observed":observed,"exists_after":!gone || ambiguous}),
+        )
     }
 }

@@ -236,12 +236,7 @@ impl World {
         if let Some(sources) = std::env::var_os("AB_LAB_RUST_COMMANDS").filter(|v| !v.is_empty()) {
             command.arg("--rust-commands").arg(sources);
         }
-        self.session = Some(
-            command
-                .stdout(log.try_clone()?)
-                .stderr(log)
-                .spawn()?,
-        );
+        self.session = Some(command.stdout(log.try_clone()?).stderr(log).spawn()?);
         let deadline = Instant::now() + Duration::from_secs(10);
         while !listen.exists() {
             self.check_children()?;
