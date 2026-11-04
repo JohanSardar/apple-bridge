@@ -1141,7 +1141,7 @@ impl Session<'_> {
                 }
                 let unread = s.data["records"][&chat]["data"]["is_unread"] == true;
                 Ok(
-                    json!({"exists":true,"row_position":1000,"last_read_message_timestamp":if unread { "50" } else { "100" }}),
+                    json!({"exists":true,"row_position":1000,"last_read_message_timestamp":if unread { "50" } else { "100" },"unread":unread}),
                 )
             }
             "messages.conversation_messages" => {

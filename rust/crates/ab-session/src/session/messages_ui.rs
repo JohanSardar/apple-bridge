@@ -22,6 +22,7 @@ const TITLE: &str = "AXTitle";
 const BODY_FIELD: &str = "messageBodyField";
 const BALLOON: &str = "CKBalloonTextView";
 const BUBBLE: &str = "Sticker";
+const DISMISS_REPLIES: &str = "Dismiss replies";
 const ENTER: i64 = 36;
 const ESCAPE: i64 = 53;
 const MEDIA_ATTRIBUTES: [&str; 8] = [
@@ -691,6 +692,41 @@ impl<'a> Ui<'a> {
         }
     }
 
+    fn reply_shown(&self) -> Result<Option<i64>> {
+        let (controls, _) = self.scan(&Scan {
+            description: Some(&[DISMISS_REPLIES]),
+            attributes: &[DESCRIPTION],
+            budget: 4000,
+            ..Scan::default()
+        })?;
+        Ok(match controls.as_slice() {
+            [only] => Some(only.handle),
+            _ => None,
+        })
+    }
+
+    fn enter_reply_mode(&self) -> Result<()> {
+        let until = deadline(2000);
+        while self.reply_shown()?.is_none() {
+            if Instant::now() >= until {
+                let _ = self.press_key(ESCAPE);
+                return Err(Failure::MenuUnavailable);
+            }
+            sleep(50);
+        }
+        Ok(())
+    }
+
+    fn dismiss_replies(&self) {
+        if self.press_key(ESCAPE).is_err() {
+            return;
+        }
+        let until = deadline(3000);
+        while self.reply_shown().is_ok_and(|shown| shown.is_some()) && Instant::now() < until {
+            sleep(100);
+        }
+    }
+
     fn type_text(&self, handle: i64, value: &str) -> Result<()> {
         self.call(
             "messages.ax_replace_text",
@@ -953,7 +989,12 @@ impl<'a> Ui<'a> {
                     .collect()
             })
             .unwrap_or_default();
-        if let [only] = direct.as_slice() {
+        if operation == "messages.reply" {
+            self.perform_action(bubble, "AXShowMenu")
+                .map_err(|_| Failure::MenuUnavailable)?;
+            self.press_title(&menu)?;
+            self.enter_reply_mode()?;
+        } else if let [only] = direct.as_slice() {
             self.perform_action(bubble, only)
                 .map_err(|_| Failure::Conflict)?;
         } else {
@@ -967,8 +1008,12 @@ impl<'a> Ui<'a> {
                 text(&prepared["native_state"]["target"], "text"),
             )?,
             "messages.reply" => {
-                self.replace(text(args, "text"))?;
-                self.press_key(ENTER)?;
+                let sent = self
+                    .replace(text(args, "text"))
+                    .and_then(|()| self.press_key(ENTER));
+                sleep(500);
+                self.dismiss_replies();
+                sent?;
             }
             "messages.delete_message" | "messages.delete_chat" => {
                 if let Err(failure) = self.press_title("Delete") {
@@ -1052,6 +1097,7 @@ mod tests {
     struct Tree {
         nodes: Vec<Value>,
         calls: RefCell<Vec<(String, Value)>>,
+        typed: RefCell<String>,
     }
 
     fn node(handle: i64, attrs: &Value, nested: &[Value]) -> Value {
@@ -1088,25 +1134,37 @@ mod tests {
                 .push((operation.to_owned(), args.clone()));
             match operation {
                 "messages.ax_find" => {
-                    let nodes: Vec<&Value> =
-                        self.nodes
-                            .iter()
-                            .filter(|node| {
-                                args["match"].as_object().into_iter().flatten().all(
-                                    |(key, wanted)| {
-                                        wanted.as_array().is_some_and(|list| {
-                                            list.iter().any(|item| item == &node["attrs"][key])
-                                        })
-                                    },
-                                )
-                            })
-                            .collect();
+                    let escaped =
+                        self.calls.borrow().iter().any(|(name, args)| {
+                            name == "messages.ax_key" && args["code"] == ESCAPE
+                        });
+                    let nodes: Vec<&Value> = self
+                        .nodes
+                        .iter()
+                        .filter(|node| !(escaped && node["attrs"][DESCRIPTION] == DISMISS_REPLIES))
+                        .filter(|node| {
+                            args["match"]
+                                .as_object()
+                                .into_iter()
+                                .flatten()
+                                .all(|(key, wanted)| {
+                                    wanted.as_array().is_some_and(|list| {
+                                        list.iter().any(|item| item == &node["attrs"][key])
+                                    })
+                                })
+                        })
+                        .collect();
                     Ok(json!({"nodes": nodes, "budget_left": 100}))
                 }
                 "messages.ax_actions" => {
                     Ok(json!({"actions": ["Name:Reply\nTarget:0", "Name:😂\nTarget:0"]}))
                 }
                 "messages.ax_focused" => Ok(json!({"node": null})),
+                "messages.ax_replace_text" => {
+                    text(args, "text").clone_into(&mut self.typed.borrow_mut());
+                    Ok(json!({}))
+                }
+                "messages.ax_value" => Ok(json!({"value": self.typed.borrow().clone()})),
                 _ => Ok(json!({})),
             }
         }
@@ -1300,6 +1358,66 @@ mod tests {
         assert_eq!(ui.validate(&target), Ok(()));
         target["action"]["messages"]["emoji"] = json!("🦀");
         assert_eq!(ui.validate(&target), Err(Failure::Unproven));
+    }
+
+    fn reply_tree(in_reply_mode: bool) -> Tree {
+        let mut nodes = vec![
+            bubble(1, "Your iMessage, today", &["[ab-test r] hi"]),
+            node(7, &json!({ROLE: "AXMenuItem", TITLE: "Reply…"}), &[]),
+            node(5, &json!({IDENTIFIER: BODY_FIELD}), &[]),
+        ];
+        if in_reply_mode {
+            nodes.push(node(
+                8,
+                &json!({ROLE: "AXButton", DESCRIPTION: "Dismiss replies"}),
+                &[],
+            ));
+        }
+        Tree {
+            nodes,
+            ..Tree::default()
+        }
+    }
+
+    fn reply_request() -> Value {
+        let mut prepared = prepared("messages.reply", "[ab-test r] hi", true, false);
+        prepared["action"]["messages"] = json!({"text": "[ab-test r] reply"});
+        prepared
+    }
+
+    fn keys(tree: &Tree) -> Vec<i64> {
+        tree.calls
+            .borrow()
+            .iter()
+            .filter(|(name, _)| name == "messages.ax_key")
+            .map(|(_, args)| args["code"].as_i64().unwrap())
+            .collect()
+    }
+
+    #[test]
+    fn a_reply_goes_through_the_bubble_menu_and_reply_mode_is_closed_after_sending() {
+        let tree = reply_tree(true);
+        let ui = Ui::new(&tree, config());
+        ui.perform(&reply_request()).unwrap();
+        assert_eq!(
+            actions(&tree),
+            [
+                json!({"handle": 1, "action": "AXShowMenu"}),
+                json!({"handle": 7, "action": "AXPress"}),
+            ],
+            "the bubble's named Reply action reports success but sends an unthreaded message"
+        );
+        assert_eq!(*tree.typed.borrow(), "[ab-test r] reply");
+        assert_eq!(keys(&tree), [ENTER, ESCAPE], "Escape closes reply mode");
+    }
+
+    #[test]
+    fn a_reply_that_never_enters_reply_mode_sends_nothing() {
+        let tree = reply_tree(false);
+        let ui = Ui::new(&tree, config());
+        assert_eq!(ui.perform(&reply_request()), Err(Failure::MenuUnavailable));
+        assert_eq!(*tree.typed.borrow(), "", "nothing is typed");
+        assert!(!keys(&tree).contains(&ENTER), "nothing is sent");
     }
 
     #[test]
