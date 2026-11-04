@@ -1022,6 +1022,7 @@ fn concurrent_checkpoint_saves_never_race_on_the_temporary_file() -> Fallible<()
         generation: "g".into(),
         checkpoint: format!("c{round}"),
         token: "t".into(),
+        native: String::new(),
     };
     std::thread::scope(|scope| {
         let workers: Vec<_> = (0..4)
