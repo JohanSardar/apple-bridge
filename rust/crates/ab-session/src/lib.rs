@@ -6,6 +6,8 @@ pub mod effects;
 mod frame;
 #[cfg(feature = "rust-effects")]
 pub mod guard;
+#[cfg(feature = "rust-capture")]
+pub mod media_facts;
 pub mod ownership;
 #[cfg(feature = "rust-capture")]
 pub mod production;

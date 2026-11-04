@@ -60,6 +60,6 @@ let package = Package(
         .executableTarget(name: "NativeChecks", dependencies: ["NativeProtocol", "SourceSupport"]),
         .executableTarget(name: "CalendarChecks", dependencies: ["CalendarSource"], path: "Tests/CalendarChecks"),
         .executableTarget(name: "CommandOriginChecks", dependencies: ["SourceSupport"], path: "Tests/CommandOriginChecks"),
-        .executableTarget(name: "AppleBridgeHelper", dependencies: ["AppleSession", "ShortcutsSource"])
+        .executableTarget(name: "AppleBridgeHelper", dependencies: ["AppleSession", "ShortcutsSource", "MediaDerivatives"])
     ]
 )
