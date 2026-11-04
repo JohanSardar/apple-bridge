@@ -116,7 +116,7 @@ fn voice_memos_never_write_inside_the_source_container() -> Fallible<()> {
     let chunk = reader.blob(handle, 0, 1024)?;
     assert_eq!(chunk["t"], "BlobChunk");
     assert_eq!(tree(&root)?, before);
-    assert!(!names(&staging)?.is_empty());
+    assert_ne!(names(&staging)?.len(), 0);
     std::fs::remove_dir_all(root)?;
     std::fs::remove_dir_all(home)?;
     Ok(())
@@ -136,7 +136,7 @@ fn notes_never_write_inside_the_source_container() -> Fallible<()> {
     let mut readers = readers::from_config(&config)?;
     let reader = readers.get_mut("notes").ok_or("reader")?;
     let frames = drive(reader.as_mut())?;
-    assert!(!frames.is_empty());
+    assert_ne!(frames.len(), 0);
     assert_eq!(tree(&root)?, before);
     assert_eq!(names(&parent)?, before_parent);
     assert!(staging.is_dir());
@@ -163,7 +163,7 @@ fn production_defaults_staging_into_the_bridge_home() -> Fallible<()> {
     let before = (tree(&root)?, tree(&notes)?, names(&parent)?);
     let loaded = production::load(&home)?.ok_or("loaded")?;
     let mut readers = loaded.readers()?;
-    for (_, reader) in readers.iter_mut() {
+    for reader in readers.values_mut() {
         drive(reader.as_mut())?;
     }
     assert_eq!((tree(&root)?, tree(&notes)?, names(&parent)?), before);
