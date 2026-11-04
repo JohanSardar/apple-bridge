@@ -102,7 +102,11 @@ enum HelperLabCommand {
             guard let index = arguments.firstIndex(of: "--fixtures"), index + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
             let frames = try JSONDecoder().decode([JSON].self, from: Data(contentsOf: URL(fileURLWithPath: arguments[index + 1])))
             for frame in frames {
-                let bytes = try PeerWire.encode(frame)
+                let body = try JSONEncoder().encode(frame)
+                guard !frame["t"].string.isEmpty, body.count <= 1024 * 1024 + 64 * 1024, body.count <= 256 * 1024 || frame["t"].string == "QueryResult" else { throw ProbeFailure.invalidArguments }
+                var length = UInt32(body.count).bigEndian
+                var bytes = withUnsafeBytes(of: &length) { Data($0) }
+                bytes.append(body)
                 let decoded = try JSONDecoder().decode(JSON.self, from: bytes.dropFirst(4))
                 guard decoded == frame else { throw ProbeFailure.invalidArguments }
                 switch frame["t"].string {
