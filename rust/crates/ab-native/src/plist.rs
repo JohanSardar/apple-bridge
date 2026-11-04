@@ -318,6 +318,11 @@ fn resolve(
                     );
                 }
             }
+            if let Some(Value::Data(bytes)) = result.get("NS.uuidbytes")
+                && bytes.len() == 16
+            {
+                return Ok(Value::String(crate::reminders_store::uuid_text(bytes)));
+            }
             if let (Some(Value::Array(keys)), Some(Value::Array(values))) =
                 (result.get("NS.keys"), result.get("NS.objects"))
                 && keys.len() == values.len()
@@ -343,21 +348,25 @@ fn resolve(
         _ => Ok(value.clone()),
     }
 }
-pub fn archive(data: &[u8]) -> Result<BTreeMap<String, Value>> {
+pub fn archive_root(data: &[u8]) -> Result<Value> {
     let Value::Dictionary(raw) = decode(data)? else {
         return Err(DecodeError::Malformed);
     };
     let (Some(Value::Array(objects)), Some(Value::Dictionary(top))) =
         (raw.get("$objects"), raw.get("$top"))
     else {
-        return Ok(raw);
+        return Ok(Value::Dictionary(raw));
     };
     let value = top
         .get("root")
         .or_else(|| top.get("NSKeyedArchiveRootObjectKey"))
         .unwrap_or(&Value::Null);
-    let Value::Dictionary(result) = resolve(value, objects, &[], 0, &mut 100_000)? else {
-        return Err(DecodeError::Malformed);
-    };
-    Ok(result)
+    resolve(value, objects, &[], 0, &mut 100_000)
+}
+
+pub fn archive(data: &[u8]) -> Result<BTreeMap<String, Value>> {
+    match archive_root(data)? {
+        Value::Dictionary(result) => Ok(result),
+        _ => Err(DecodeError::Malformed),
+    }
 }

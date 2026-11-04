@@ -52,8 +52,10 @@ extension AppleSession: NativeAdapter {
             return page(enumeration, collection: operation == "agenda.events" ? "calendar.event" : "calendar.calendar", handles: operation == "agenda.events")
         case "agenda.reminder_lists", "agenda.reminders":
             let enrichment = builtins.remindersStore
+            let rustStore = await SessionSources.rustStore(home: home, source: "reminders")
             let enumeration = try await cache.read("reminders") {
                 let raw = try await reminders.enumerate()
+                if rustStore { return raw }
                 return SourceEnumeration(generation: raw.generation, rows: await enrichment.refresh(raw.rows, generation: raw.generation), handles: raw.handles)
             }
             return page(enumeration, collection: operation == "agenda.reminders" ? "reminders.reminder" : "reminders.list", handles: false)
