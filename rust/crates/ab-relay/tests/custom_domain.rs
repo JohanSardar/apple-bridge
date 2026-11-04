@@ -251,9 +251,7 @@ async fn visit(public: SocketAddr, site: CertificateDer<'static>, domain: &str) 
     .with_root_certificates(roots)
     .with_no_client_auth();
     let connector = tokio_rustls::TlsConnector::from(Arc::new(visitor));
-    let socket = tokio::net::TcpStream::connect(public)
-        .await
-        .unwrap();
+    let socket = tokio::net::TcpStream::connect(public).await.unwrap();
     let mut secure = connector
         .connect(
             rustls::pki_types::ServerName::try_from(domain.to_owned()).unwrap(),
@@ -352,7 +350,11 @@ async fn custom_domain_waits_for_records_registers_and_routes_by_sni() {
     assert_eq!(entry.host, domain);
     assert!(entry.progress.is_none());
     assert_eq!(device_domain(&fixture, &host).await, domain);
-    assert!(visit(fixture.public, site, domain).await.ends_with("alias-origin"));
+    assert!(
+        visit(fixture.public, site, domain)
+            .await
+            .ends_with("alias-origin")
+    );
     stop.send(true).unwrap();
     tokio::time::timeout(Duration::from_secs(5), run)
         .await
