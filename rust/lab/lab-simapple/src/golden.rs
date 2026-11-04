@@ -20,9 +20,15 @@ fn frozen_media_assets_match_their_recorded_digests() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("assets");
     let mut listed = BTreeSet::new();
     for line in MANIFEST.lines() {
-        let (digest, name) = line.split_once("  ").unwrap_or_else(|| panic!("bad line {line}"));
+        let (digest, name) = line
+            .split_once("  ")
+            .unwrap_or_else(|| panic!("bad line {line}"));
         let bytes = fs::read(root.join(name)).unwrap_or_else(|_| panic!("missing {name}"));
-        assert_eq!(hex::encode(Sha256::digest(&bytes)), digest, "{name} changed");
+        assert_eq!(
+            hex::encode(Sha256::digest(&bytes)),
+            digest,
+            "{name} changed"
+        );
         listed.insert(name.to_owned());
     }
     let mut present = BTreeSet::new();
@@ -40,14 +46,39 @@ fn recorded_assets_are_the_embedded_fixture_bytes() {
         .map(|(digest, name)| (name, digest))
         .collect();
     for (name, bytes) in [
-        ("video-default.mp4", include_bytes!("../assets/video-default.mp4").as_slice()),
-        ("video-landscape.mp4", include_bytes!("../assets/video-landscape.mp4").as_slice()),
-        ("video-portrait.mp4", include_bytes!("../assets/video-portrait.mp4").as_slice()),
-        ("video-panorama.mp4", include_bytes!("../assets/video-panorama.mp4").as_slice()),
-        ("video-live.mp4", include_bytes!("../assets/video-live.mp4").as_slice()),
-        ("live-still.png", include_bytes!("../assets/live-still.png").as_slice()),
-        ("audio.m4a", include_bytes!("../assets/audio.m4a").as_slice()),
+        (
+            "video-default.mp4",
+            include_bytes!("../assets/video-default.mp4").as_slice(),
+        ),
+        (
+            "video-landscape.mp4",
+            include_bytes!("../assets/video-landscape.mp4").as_slice(),
+        ),
+        (
+            "video-portrait.mp4",
+            include_bytes!("../assets/video-portrait.mp4").as_slice(),
+        ),
+        (
+            "video-panorama.mp4",
+            include_bytes!("../assets/video-panorama.mp4").as_slice(),
+        ),
+        (
+            "video-live.mp4",
+            include_bytes!("../assets/video-live.mp4").as_slice(),
+        ),
+        (
+            "live-still.png",
+            include_bytes!("../assets/live-still.png").as_slice(),
+        ),
+        (
+            "audio.m4a",
+            include_bytes!("../assets/audio.m4a").as_slice(),
+        ),
     ] {
-        assert_eq!(manifest.get(name).copied(), Some(hex::encode(Sha256::digest(bytes)).as_str()), "{name}");
+        assert_eq!(
+            manifest.get(name).copied(),
+            Some(hex::encode(Sha256::digest(bytes)).as_str()),
+            "{name}"
+        );
     }
 }
