@@ -9,6 +9,11 @@ import SQLite3
 @main
 struct Main {
     static func main() async throws {
+        if CommandLine.arguments.count > 2 && CommandLine.arguments[2] == "SAF-TABS-ONLY" {
+            try await tabsOnlyChecks()
+            print("tabs-only ok")
+            return
+        }
         if CommandLine.arguments.count > 2 && ["SAF-HISTORY-REAL", "SAF-BOOKMARKS-REAL"].contains(CommandLine.arguments[2]) {
             let source = SafariSource(directory: URL(fileURLWithPath: CommandLine.arguments[1]))
             let rows: [JSON]
@@ -128,8 +133,67 @@ struct Main {
         guard await resumedSink.absences == 1, await resumedSink.generation == sourceGeneration else { throw SourceFailure.corrupt }
         resumedTask.cancel()
         _ = try? await resumedTask.value
+        try await tabsOnlyChecks()
         print(String(data: try JSONEncoder().encode(history + bookmarks + cloud), encoding: .utf8)!)
     }
+    static func tabsOnlyChecks() async throws {
+        let state = TabState()
+        let tabs = SafariTabs(execute: { _ in state.descriptor() })
+        let source = SafariSource(directory: URL(fileURLWithPath: CommandLine.arguments[1]).appendingPathComponent("tabs-only-missing"), tabs: tabs, tabsOnly: true)
+        let sink = TabSink()
+        let task = Task { try await source.capture(.null, into: sink) }
+        for _ in 0..<100 {
+            if await sink.frames.count == 1 { break }
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        guard await sink.frames.count == 1, await sink.frames[0].keys.isEmpty, await sink.frames[0].scope == ["safari.tab"] else { throw SourceFailure.corrupt }
+        state.set([(7, 1, "One", "https://example.com/a", true), (7, 2, "Two", "https://example.com/b", false)])
+        for _ in 0..<200 {
+            if await sink.frames.count == 2 { break }
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        guard await sink.frames.count == 2, await sink.frames[1].keys == ["7:1", "7:2"], await sink.frames[1].absent.isEmpty else { throw SourceFailure.corrupt }
+        state.set([(7, 1, "One", "https://example.com/a", true)])
+        for _ in 0..<200 {
+            if await sink.frames.count == 3 { break }
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        guard await sink.frames.count == 3, await sink.frames[2].keys == ["7:1"], await sink.frames[2].absent == ["7:2"] else { throw SourceFailure.corrupt }
+        guard await sink.frames.allSatisfy({ $0.scope == ["safari.tab"] && $0.source == "safari" }) else { throw SourceFailure.corrupt }
+        task.cancel()
+        _ = try? await task.value
+    }
+}
+
+final class TabState: @unchecked Sendable {
+    private let lock = NSLock()
+    private var rows: [(Int32, Int32, String, String, Bool)] = []
+    func set(_ value: [(Int32, Int32, String, String, Bool)]) { lock.lock(); rows = value; lock.unlock() }
+    func descriptor() -> NSAppleEventDescriptor {
+        lock.lock(); defer { lock.unlock() }
+        let list = NSAppleEventDescriptor.list()
+        for (index, row) in rows.enumerated() {
+            let item = NSAppleEventDescriptor.list()
+            item.insert(NSAppleEventDescriptor(int32: row.0), at: 1)
+            item.insert(NSAppleEventDescriptor(int32: row.1), at: 2)
+            item.insert(NSAppleEventDescriptor(string: row.2), at: 3)
+            item.insert(NSAppleEventDescriptor(string: row.3), at: 4)
+            item.insert(NSAppleEventDescriptor(boolean: row.4), at: 5)
+            list.insert(item, at: index + 1)
+        }
+        return list
+    }
+}
+
+actor TabSink: ObservationSink {
+    struct Frame { let source: String; let scope: [String]; let keys: [String]; let absent: [String] }
+    var frames: [Frame] = []
+    func emitCheckpoint(source: String, generation: String, checkpoint: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws {
+        guard completionEvidence == "complete" else { throw SourceFailure.corrupt }
+        frames.append(Frame(source: source, scope: scope, keys: observations.filter { $0["kind"].string == "upsert" }.map { $0["native_key"].string }, absent: observations.filter { $0["kind"].string == "absent" }.map { $0["native_key"].string }))
+    }
+    func emit(source: String, generation: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws { throw SourceFailure.unsupported }
+    func sourceState(source: String, state: String, coverage: JSON, capabilities: [String], reason: String) async throws { throw SourceFailure.corrupt }
 }
 
 actor CaptureSink: ObservationSink {
