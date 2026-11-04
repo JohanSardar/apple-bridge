@@ -370,3 +370,10 @@ CORE-SIM-PROGRESS-RECOVERY reads the durable progress the peer already writes: `
 CORE-SHORTCUT-SIGN runs the `ab-shortcuts` binary found next to the gateway (or `AB_LAB_SHORTCUTS`) and reads plists back with `plutil`, so it runs on macOS only and is in the `--native` group. Its real-level part is compiled, never run.
 
 CORE-SEARCH-UPDATE-PERF is not run by `families-parity.py`. It drives the Go state store in-process, so it moved to `rust/crates/ab-state/tests/search_update_perf.rs` (`make rust-search-perf`, part of `rust-ci`). Speed is recorded (`AB_SEARCH_PERF_OUT` writes JSON), not enforced. ab-state rebuilds the search index inside `open()`, so the Go assertions about search being unavailable or retryable during a background rebuild have no equivalent.
+
+
+## Core bulk port B (Phase 8)
+
+`lab-adapters` ports CORE-GAP-REJECT, CORE-FEED-PIPELINED-ACKS, CORE-FORGED-DELEGATION, CORE-GATEWAY-DIALS, CORE-CLOCK-DELAY-GATEWAY-DIALS, CORE-BENCH, CORE-DISK-FULL and CORE-BLOB-NATIVE-STAGE (`core_frames.rs`, `core_dials.rs`, `core_delegation.rs`, `core_bulk.rs`). `families-parity.py` runs the first six on Linux and macOS (`--darwin-core` selects CORE-DISK-FULL and CORE-BLOB-NATIVE-STAGE, which need `hdiutil` and the native blob stage); every scenario gives identical per-assertion verdicts for the Go harness and the Rust gateway.
+
+Stable additions: `core_frames.rs` is a TLS and WebSocket frame proxy between replica and gateway (replica and gateway identities from their homes, any-peer verifiers) that counts connections and outstanding credit, drops one gateway batch while acknowledging it upstream, and withholds replica acks; it passes bytes through untouched until armed, like the Go proxy. `lab-world` gains `install_proxy_to`, `peer_address`, `proxy_address` and `gateway_pid`. Gateway-dials worlds start the replica with `--listen`, pair with `--dial-replica` through the fault proxy and join with `--listen`. The peer `/seed` route gives `messages.message` the `needle` text fixture,. CORE-BENCH honours `APPLE_BRIDGE_LAB_CONTENDED_BENCH=1` (15 minute deadlines) like the Go harness and prints its numbers to stderr.

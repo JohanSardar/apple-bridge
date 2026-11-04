@@ -618,7 +618,9 @@ pub fn register(registry: &mut lab_runner::Registry) {
         crate::reminders_store::run(world, evidence)
     });
     registry.register("latency", |world, input, evidence| {
-        if evidence.scenario == "REM-STORE-PERF" {
+        if evidence.scenario == "CORE-GATEWAY-DIALS" {
+            crate::core_dials::latency(world, input, evidence)
+        } else if evidence.scenario == "REM-STORE-PERF" {
             Ok(())
         } else {
             crate::live_latency::latency(world, input, evidence)

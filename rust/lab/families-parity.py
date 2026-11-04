@@ -102,6 +102,10 @@ ROBUST_SCENARIOS = ['CORE-KILL-DURING-APPLY', 'CORE-KILL-GATEWAY-CAPTURE', 'CORE
 CORE_BULK_SCENARIOS = ['CORE-ACK-DURABLE', 'CORE-CAPTURE-ALIASES', 'CORE-CREDENTIAL-STORE', 'CORE-BOOT',
                        'CORE-DISCONNECT-DETECT', 'CORE-DOCTOR', 'CORE-CLOCK-DELAY']
 SCENARIOS += CORE_BULK_SCENARIOS
+CORE_BULK2_SCENARIOS = ['CORE-GAP-REJECT', 'CORE-FEED-PIPELINED-ACKS', 'CORE-FORGED-DELEGATION', 'CORE-GATEWAY-DIALS',
+                        'CORE-CLOCK-DELAY-GATEWAY-DIALS', 'CORE-BENCH']
+SCENARIOS += CORE_BULK2_SCENARIOS
+DARWIN_CORE_SCENARIOS = ['CORE-DISK-FULL', 'CORE-BLOB-NATIVE-STAGE']
 SCENARIOS += ROBUST_SCENARIOS
 REAL_ONLY_COMPILED = ['CORE-PERMISSION-STATUS', 'CORE-QUERY-HELPER', 'APP-ALARM-REAL', 'APP-APPROVE-REAL', 'APP-CAPTURE-REAL', 'APP-CMD-REAL',
     'APP-DEVICE-REAL', 'APP-HEALTH-REAL', 'APP-HEALTH-WRITE-REAL', 'APP-INTENTS-REAL', 'APP-LIVE-REAL',
@@ -229,6 +233,7 @@ def main():
     parser.add_argument('--vision', action='store_true')
     parser.add_argument('--vision-native', dest='vision_native', action='store_true')
     parser.add_argument('--web-agents', dest='web_agents', action='store_true')
+    parser.add_argument('--darwin-core', dest='darwin_core', action='store_true')
     args = parser.parse_args()
     if args.check_real_only:
         check_real_only(args.families)
@@ -305,6 +310,8 @@ def main():
         args.scenario = (args.scenario or []) + CALENDAR_NATIVE
     if args.web_agents:
         args.scenario = (args.scenario or []) + WEB_AGENT_SCENARIOS
+    if args.darwin_core:
+        args.scenario = (args.scenario or []) + DARWIN_CORE_SCENARIOS
     for name in args.scenario or []:
         key = name if '/' in name else f'core/{name}'
         if key in MOVED_TO_RUST_TESTS:

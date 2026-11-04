@@ -311,6 +311,16 @@ pub fn register(registry: &mut lab_runner::Registry) {
     registry.register("source_ready", crate::core_journey::source_ready);
     registry.register("capture_safety", crate::core_journey::capture_safety);
     registry.register("old_sse_cursor", crate::core_journey::old_sse_cursor);
+    registry.register("CORE-BLOB-NATIVE-STAGE", crate::core_bulk::native_stage);
+    registry.register_real(
+        "CORE-BLOB-NATIVE-STAGE",
+        crate::core_bulk::native_stage_real,
+    );
+    registry.register("changes", crate::core_dials::changes);
+    registry.register("gateway_commands", crate::core_dials::commands);
+    registry.register("gateway_revoke", crate::core_dials::revoke);
+    registry.register("finish:CORE-GATEWAY-DIALS", crate::labcore::finish_hook);
+    registry.register("finish:CORE-DISK-FULL", crate::core_bulk::finish_disk);
     registry.register("finish:CORE-BOOT", crate::labcore::finish_hook);
     registry.register("finish:CORE-DISCONNECT-DETECT", crate::labcore::finish_hook);
 }

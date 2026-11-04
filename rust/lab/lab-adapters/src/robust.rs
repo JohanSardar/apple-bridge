@@ -42,7 +42,7 @@ pub fn start(world: &mut World, id: &str, count: usize) -> Result<()> {
     replicas::start(world, count)
 }
 
-fn change(world: &World, prefix: &str, count: usize) -> bool {
+pub(crate) fn change(world: &World, prefix: &str, count: usize) -> bool {
     (0..count).all(|i| {
         world
             .control(
@@ -53,7 +53,7 @@ fn change(world: &World, prefix: &str, count: usize) -> bool {
     })
 }
 
-fn replica_connected() -> bool {
+pub(crate) fn replica_connected() -> bool {
     replicas::endpoints()
         .first()
         .is_some_and(|e| replicas::status(e).is_ok_and(|v| v["replica"]["state"] == "connected"))
@@ -481,18 +481,22 @@ fn kill_gateway_capture(world: &mut World, observed: &Observed, evidence: &mut E
     true
 }
 
+#[allow(clippy::too_many_lines)]
 pub fn robustness(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result<()> {
     let case = input["case"].as_str().unwrap_or_default().to_owned();
-    if !matches!(
-        (case.as_str(), evidence.scenario.as_str()),
-        ("helper-restart", "CORE-HELPER-RESTART")
-            | ("kill-during-apply", "CORE-KILL-DURING-APPLY")
-            | ("kill-gateway-capture", "CORE-KILL-GATEWAY-CAPTURE")
-            | ("auth-scopes-metadata", "AUTH-SCOPES-METADATA")
-            | ("doctor", "CORE-DOCTOR")
-            | ("clock-delay", "CORE-CLOCK-DELAY")
-            | ("cred-lifecycle", "CORE-CRED-LIFECYCLE")
-    ) {
+    let bulk = crate::core_bulk::handles(&case, &evidence.scenario);
+    if !bulk
+        && !matches!(
+            (case.as_str(), evidence.scenario.as_str()),
+            ("helper-restart", "CORE-HELPER-RESTART")
+                | ("kill-during-apply", "CORE-KILL-DURING-APPLY")
+                | ("kill-gateway-capture", "CORE-KILL-GATEWAY-CAPTURE")
+                | ("auth-scopes-metadata", "AUTH-SCOPES-METADATA")
+                | ("doctor", "CORE-DOCTOR")
+                | ("clock-delay", "CORE-CLOCK-DELAY")
+                | ("cred-lifecycle", "CORE-CRED-LIFECYCLE")
+        )
+    {
         return Err(Error::Invalid(format!(
             "robustness case not ported: {case}"
         )));
@@ -501,21 +505,31 @@ pub fn robustness(world: &mut World, input: &Value, evidence: &mut Evidence) -> 
         crate::journey::seed(world, &json!({"count": 4}), evidence)?;
     }
     let gateway = gateway_client(world)?;
-    let observed = Observed::new(gateway.clone(), GATEWAY_SCOPE);
+    let mut observed = Observed::new(gateway.clone(), GATEWAY_SCOPE);
     evidence.check(
-        "feed_network_loopback",
+        &format!(
+            "feed_network_{}",
+            crate::core_bulk::network(&evidence.scenario)
+        ),
         true,
-        "replicas dial the gateway on loopback",
+        "replicas reach the gateway through the fault proxy",
     );
     if !await_until(15, || converged(world, &observed)) {
         evidence.check("initial_convergence", false, "world did not converge");
         return Ok(());
     }
     let mut observers = vec![];
-    for client in observed.clients() {
-        observers.push(Watcher::start(&client, false)?);
+    if case != "bench" {
+        for client in observed.clients() {
+            observers.push(Watcher::start(&client, false)?);
+        }
     }
     let proceed = match case.as_str() {
+        _ if bulk => {
+            let proceed = crate::core_bulk::run(&case, world, &observed, evidence);
+            observed = crate::core_bulk::observed(world, &case, &gateway);
+            proceed
+        }
         "helper-restart" => helper_restart(world, &gateway, evidence)?,
         "kill-during-apply" => kill_during_apply(world, &observed, evidence),
         "auth-scopes-metadata" => {
@@ -537,7 +551,9 @@ pub fn robustness(world: &mut World, input: &Value, evidence: &mut Evidence) -> 
     if !drained {
         return Ok(());
     }
-    if !await_until(30, || converged(world, &observed)) {
+    if !await_until(crate::core_bulk::tail_seconds(&evidence.scenario), || {
+        converged(world, &observed)
+    }) {
         evidence.check("truth_gateway_replica_convergence", false, "not converged");
         return Ok(());
     }
@@ -572,7 +588,9 @@ pub fn robustness(world: &mut World, input: &Value, evidence: &mut Evidence) -> 
             "every observed delete is absent in SimApple truth",
         );
     }
-    if !NO_RESET_CHECK.contains(&evidence.scenario.as_str()) {
+    if !NO_RESET_CHECK.contains(&evidence.scenario.as_str())
+        && !crate::core_bulk::skips_reset_check(&evidence.scenario)
+    {
         let resets: usize = observers.iter().map(Watcher::resets).sum();
         evidence.check(
             "no_oversized_capture_observer_resets",
@@ -593,7 +611,9 @@ pub fn dispatch(world: &mut World, input: &Value, evidence: &mut Evidence) -> Re
         &evidence.scenario,
     ) {
         crate::core_demo::run(world, input["case"].as_str().unwrap_or_default(), evidence)
-    } else if SCENARIOS.contains(&evidence.scenario.as_str()) {
+    } else if SCENARIOS.contains(&evidence.scenario.as_str())
+        || crate::core_bulk::SCENARIOS.contains(&evidence.scenario.as_str())
+    {
         robustness(world, input, evidence)
     } else {
         crate::packaging::robustness(world, input, evidence)

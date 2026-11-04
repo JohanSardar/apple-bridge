@@ -21,18 +21,20 @@ use std::{
     time::{Duration, Instant},
 };
 
-pub const JOURNEYS: [&str; 6] = [
+pub const JOURNEYS: [&str; 7] = [
     "CORE-RESUME",
     "LAB-SSE",
     "LAB-TRUTH-MULTIPLICITY",
     "CORE-BOOT",
     "CORE-DISCONNECT-DETECT",
     "CORE-LIVE-LATENCY",
+    "CORE-GATEWAY-DIALS",
 ];
 pub const CALENDAR_SCOPE: &str =
     "calendar:read,calendar:write,reminders:read,reminders:write,system:read";
-pub const SCENARIOS: [&str; 8] = [
+pub const SCENARIOS: [&str; 9] = [
     "CORE-LIVE-LATENCY",
+    "CORE-GATEWAY-DIALS",
     "CORE-BOOT",
     "CORE-DISCONNECT-DETECT",
     "CORE-RESUME",
@@ -58,6 +60,41 @@ pub(crate) struct Run {
     pub(crate) partition_effects: Vec<String>,
     pub(crate) settled: bool,
 }
+impl Run {
+    pub(crate) fn forget_effect(&mut self, key: &str) {
+        self.effects.retain(|k| k != key);
+        self.stamps.retain(|(k, _)| k != key);
+    }
+    pub(crate) fn latencies(&self) -> Vec<(String, Vec<f64>, usize)> {
+        self.observers
+            .watchers
+            .iter()
+            .enumerate()
+            .map(|(index, watcher)| {
+                let name = if index == 0 {
+                    "effect_done→gateway_visible".to_owned()
+                } else {
+                    format!("effect_done→replica_visible:replica{}", index - 1)
+                };
+                let mut values = vec![];
+                let mut timeouts = 0;
+                for key in &self.effects {
+                    match (
+                        watcher.first_seen_title(COLLECTION, &title(key)),
+                        self.stamps.iter().find(|(k, _)| k == key).map(|(_, at)| at),
+                    ) {
+                        (Some(at), Some(effect)) => {
+                            values
+                                .push(at.saturating_duration_since(*effect).as_secs_f64() * 1000.0);
+                        }
+                        _ => timeouts += 1,
+                    }
+                }
+                (name, values, timeouts)
+            })
+            .collect()
+    }
+}
 static RUN: Mutex<Option<Run>> = Mutex::new(None);
 static STALE: Mutex<Option<Value>> = Mutex::new(None);
 
@@ -80,6 +117,9 @@ pub(crate) fn change(world: &World, run: &mut Run, key: &str, measured: bool) ->
     Ok(())
 }
 pub fn start_world(world: &mut World, id: &str, replicas: usize) -> Result<()> {
+    if id == "CORE-GATEWAY-DIALS" {
+        return crate::core_dials::start(world, replicas);
+    }
     if id == "CORE-RESUME" || id == "CORE-DISCONNECT-DETECT" {
         world.install_proxy()?;
     }
@@ -91,7 +131,10 @@ pub fn seed(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result
         return Ok(());
     }
     evidence.check(
-        "feed_network_loopback",
+        &format!(
+            "feed_network_{}",
+            crate::core_bulk::network(&evidence.scenario)
+        ),
         true,
         "replicas dial the gateway on loopback",
     );
@@ -183,7 +226,11 @@ pub fn heal(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()>
             evidence.check("reconnect", false, "replica did not reconnect");
             return Err(Error::Invalid("reconnect".into()));
         }
-        change(world, run, "healed", true)
+        change(world, run, "healed", true)?;
+        if evidence.scenario == "CORE-GATEWAY-DIALS" {
+            run.forget_effect("healed");
+        }
+        Ok(())
     })
 }
 fn count_titled(values: &[Value], wanted: &str) -> usize {
@@ -323,7 +370,7 @@ pub(crate) fn finish(world: &World, evidence: &mut Evidence) -> Result<()> {
     *lock(&RUN) = None;
     if matches!(
         evidence.scenario.as_str(),
-        "CORE-RESUME" | "CORE-DISCONNECT-DETECT" | "CORE-LIVE-LATENCY"
+        "CORE-RESUME" | "CORE-DISCONNECT-DETECT" | "CORE-LIVE-LATENCY" | "CORE-GATEWAY-DIALS"
     ) {
         oversized_resets(world, evidence);
     }
@@ -336,7 +383,8 @@ pub fn converge(world: &mut World, input: &Value, evidence: &mut Evidence) -> Re
         | "LAB-SSE"
         | "CORE-BOOT"
         | "CORE-DISCONNECT-DETECT"
-        | "CORE-LIVE-LATENCY" => settle(world, evidence),
+        | "CORE-LIVE-LATENCY"
+        | "CORE-GATEWAY-DIALS" => settle(world, evidence),
         _ => journey::converge(world, input, evidence),
     }
 }
@@ -352,6 +400,9 @@ pub fn resumed(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<
                 && status["snapshots"] == 1,
             "the replica resumed from its cursor with its original snapshot",
         );
+    }
+    if evidence.scenario == "CORE-GATEWAY-DIALS" {
+        return Ok(());
     }
     finish(world, evidence)
 }

@@ -81,7 +81,7 @@ fn doctor_case(world: &World, evidence: &mut Evidence) -> bool {
     );
     true
 }
-fn clock_delay_case(world: &World, evidence: &mut Evidence) -> bool {
+pub(crate) fn clock_delay_case(world: &World, evidence: &mut Evidence) -> bool {
     let Some(endpoint) = replicas::endpoints().into_iter().next() else {
         return false;
     };
