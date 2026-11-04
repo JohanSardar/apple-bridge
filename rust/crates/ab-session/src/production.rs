@@ -25,6 +25,8 @@ pub const SUPPORTED: &[&str] = &[
 ];
 pub const CONFIG_FILE: &str = "session/rust-capture.json";
 pub const STATE_DIRECTORY: &str = "session/capture-state";
+pub const STAGING_DIRECTORY: &str = "session/staging";
+const STAGED: &[&str] = &["notes", "voice_memos"];
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -74,9 +76,19 @@ pub fn load(home: &Path) -> Result<Option<Loaded>, Error> {
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
         Err(error) => return Err(error.into()),
     };
-    let file: File = serde_json::from_slice(&bytes)?;
+    let mut file: File = serde_json::from_slice(&bytes)?;
     if file.sources.is_empty() {
         return Ok(None);
+    }
+    for name in STAGED {
+        if let Some(source) = file.sources.get_mut(*name) {
+            let object = source.as_object_mut().ok_or(Error::Invalid)?;
+            if !object.contains_key("staging") {
+                let path = home.join(STAGING_DIRECTORY).join(name);
+                let text = path.to_str().ok_or(Error::Invalid)?;
+                object.insert("staging".into(), text.into());
+            }
+        }
     }
     let mut selection = Selection::default();
     for name in file.sources.keys() {

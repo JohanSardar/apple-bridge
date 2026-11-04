@@ -66,6 +66,13 @@ func (w *World) startSession(ctx context.Context, gatewaySocket string) (string,
 		}
 		producers[source] = "Rust"
 		config[source] = map[string]string{"root": root}
+		if source == "notes" || source == "voice_memos" {
+			staging := filepath.Join(w.Dir, "session-staging-"+source)
+			if err := os.MkdirAll(staging, 0700); err != nil {
+				return "", err
+			}
+			config[source]["staging"] = staging
+		}
 		w.sessionRoots[source] = root
 	}
 	if _, ok := config["notes"]; ok {

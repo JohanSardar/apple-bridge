@@ -411,16 +411,16 @@ pub struct VoiceMemosReader {
 }
 
 impl VoiceMemosReader {
-    #[must_use]
-    pub fn new(root: &Path) -> Self {
-        Self {
+    pub fn new(root: &Path, staging: &Path) -> Result<Self, Error> {
+        confine_staging(root, staging)?;
+        Ok(Self {
             path: root.join("CloudRecordings.db"),
-            staging: root.join(".ab-session-assets"),
+            staging: staging.to_path_buf(),
             reader: None,
             pending: None,
             committed: None,
             warm: false,
-        }
+        })
     }
 
     fn assets(&mut self) -> Result<&mut voice_memo::Reader, Error> {
@@ -510,13 +510,9 @@ pub struct NotesReader {
 }
 
 impl NotesReader {
-    pub fn new(root: PathBuf) -> Result<Self, Error> {
-        let name = root
-            .file_name()
-            .and_then(|name| name.to_str())
-            .ok_or(Error::Invalid)?;
-        let staging = root.with_file_name(format!("{name}-staging"));
-        let reader = notes_reader::Reader::open(&root.join("NoteStore.sqlite"), &staging)
+    pub fn new(root: PathBuf, staging: &Path) -> Result<Self, Error> {
+        confine_staging(&root, staging)?;
+        let reader = notes_reader::Reader::open(&root.join("NoteStore.sqlite"), staging)
             .map_err(reader_error)?;
         Ok(Self {
             root,
@@ -980,7 +976,59 @@ struct SourceConfig {
     local_name: String,
     #[serde(default)]
     hydration_hold: Option<PathBuf>,
+    #[serde(default)]
+    staging: Option<PathBuf>,
 }
+
+fn lexical(path: &Path) -> Result<PathBuf, Error> {
+    if !path.is_absolute() {
+        return Err(Error::Invalid);
+    }
+    let mut out = PathBuf::new();
+    for part in path.components() {
+        match part {
+            std::path::Component::ParentDir => {
+                if !out.pop() {
+                    return Err(Error::Invalid);
+                }
+            }
+            std::path::Component::CurDir => {}
+            other => out.push(other.as_os_str()),
+        }
+    }
+    Ok(out)
+}
+
+fn resolved(path: &Path) -> Result<PathBuf, Error> {
+    let path = lexical(path)?;
+    let mut tail = Vec::new();
+    let mut head = path.as_path();
+    loop {
+        match head.canonicalize() {
+            Ok(mut base) => {
+                for part in tail.iter().rev() {
+                    base.push(part);
+                }
+                return Ok(base);
+            }
+            Err(_) => {
+                let name = head.file_name().ok_or(Error::Invalid)?;
+                tail.push(name.to_owned());
+                head = head.parent().ok_or(Error::Invalid)?;
+            }
+        }
+    }
+}
+
+pub fn confine_staging(root: &Path, staging: &Path) -> Result<(), Error> {
+    let root = resolved(root)?;
+    let staging = resolved(staging)?;
+    if staging.starts_with(&root) || root.starts_with(&staging) {
+        return Err(Error::Invalid);
+    }
+    Ok(())
+}
+
 
 fn default_generation() -> String {
     "rust-native/1".into()
@@ -1009,8 +1057,14 @@ pub fn from_config(config: &str) -> Result<BTreeMap<String, Box<dyn CaptureReade
             )),
             "phone" => Box::new(TelephonyReader::calls(&config.root)),
             "voicemail" => Box::new(TelephonyReader::voicemail(&config.root)),
-            "voice_memos" => Box::new(VoiceMemosReader::new(&config.root)),
-            "notes" => Box::new(NotesReader::new(config.root)?.holding(config.hydration_hold)),
+            "voice_memos" => {
+                let staging = config.staging.clone().ok_or(Error::Invalid)?;
+                Box::new(VoiceMemosReader::new(&config.root, &staging)?)
+            }
+            "notes" => {
+                let staging = config.staging.clone().ok_or(Error::Invalid)?;
+                Box::new(NotesReader::new(config.root, &staging)?.holding(config.hydration_hold))
+            }
             "calendar" => Box::new(AgendaReader::calendar(config.root)),
             "contacts" => Box::new(AgendaReader::contacts(config.root)),
             _ => return Err(Error::Invalid),
