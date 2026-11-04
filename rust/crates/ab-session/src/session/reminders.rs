@@ -486,7 +486,7 @@ mod tests {
             prepare(&probe, &update(&json!({})), &expected())
                 .unwrap_err()
                 .code,
-            "permission_missing"
+            "unavailable"
         );
         probe.fail = Some(("reminders.read_reminder", "anything_else"));
         assert_eq!(

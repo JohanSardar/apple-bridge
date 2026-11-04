@@ -41,7 +41,7 @@ pub(super) fn conflict(key: &str) -> Refusal {
 
 pub(super) fn native_failure(code: &str) -> Refusal {
     match code {
-        "permission_missing" | "unsupported" | "invalid" | "conflict" => refuse(code),
+        "unsupported" | "invalid" | "conflict" => refuse(code),
         _ => refuse("unavailable"),
     }
 }
