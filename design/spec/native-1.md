@@ -298,3 +298,9 @@ They compare complete key/data snapshots with scope/generation. Partial snapshot
 inconclusive. A source switches only after draining all captures and disconnecting, then
 reopens from its committed checkpoint. Routed Rust production is explicitly rejected by
 this proxy until a separate routing implementation lands. No two-peer extension.
+
+## Calendar and Reminders changes
+
+EventKit posts one `EKEventStoreChanged` for Calendar and Reminders alike, so the fact server pushes `Changed` for both. Rust pulls one source at a time with Calendar first, so a Calendar enumeration never waits for a Reminders refetch: that refetch could only come after the 60-second link timeout. This wait was behind outside Calendar changes arriving more than a minute late. A pull or revalidation that fails asks again on the next pass, because the `Changed` it answered is already spent.
+
+The lab command `calendar-facts-proof` reads the real Calendar with a Reminders hint outstanding and no Reminders fetch coming. It reports `blocked` while the wait exists.

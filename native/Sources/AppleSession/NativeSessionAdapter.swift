@@ -120,7 +120,12 @@ extension AppleSession: NativeAdapter {
                 for await _ in await agenda.changes(calendar: true) { await cache.invalidate("calendar"); await server.changed(source: "calendar", generation: "native/1") }
             }
             group.addTask {
-                for await _ in await agenda.changes() { await cache.invalidate("reminders"); await server.changed(source: "reminders", generation: "native/1") }
+                for await _ in await agenda.changes() {
+                    await cache.invalidate("reminders")
+                    await server.changed(source: "reminders", generation: "native/1")
+                    await cache.invalidate("calendar")
+                    await server.changed(source: "calendar", generation: "native/1")
+                }
             }
             group.addTask {
                 for await _ in NotificationCenter.default.notifications(named: .CNContactStoreDidChange) { await cache.invalidate("contacts"); await server.changed(source: "contacts", generation: "native/1") }
