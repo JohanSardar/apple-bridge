@@ -99,6 +99,22 @@ impl Commands {
     }
 }
 
+fn ticket_lifetime(expires_at_millis: i64) -> Duration {
+    let ticket = TICKET_SECONDS * 1000;
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |elapsed| {
+            i64::try_from(elapsed.as_millis()).unwrap_or(i64::MAX)
+        });
+    let remaining = expires_at_millis.saturating_sub(now);
+    let millis = if remaining > -ticket && remaining < ticket {
+        remaining.max(0)
+    } else {
+        ticket
+    };
+    Duration::from_millis(u64::try_from(millis).unwrap_or(0))
+}
+
 fn unix_now() -> i64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -645,14 +661,14 @@ impl Hub {
             _ => return Err(Error::Invalid),
         };
         let ticket = random_hex(16)?;
-        let lifetime = u64::try_from(TICKET_SECONDS).map_err(|_| Error::Invalid)?;
+        let lifetime = ticket_lifetime(command.expires_unix_millis().map_err(|_| Error::Invalid)?);
         let fingerprint = command.request_hash.clone();
         core.commands.tickets.insert(
             ticket.clone(),
             Ticket {
                 command,
                 prepared: prepared.clone(),
-                expiry: Instant::now() + Duration::from_secs(lifetime),
+                expiry: Instant::now() + lifetime,
             },
         );
         drop(core);

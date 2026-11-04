@@ -1480,3 +1480,70 @@ fn a_rust_owned_resolve_whose_key_is_never_committed_stays_indeterminate() {
     assert_eq!(resolved["evidence"]["reason"], "capture_not_observed");
     let _ = finish(again);
 }
+
+fn prepare_expiring_in(id: &str, millis: i64) -> IpcFrame {
+    let mut prepare = prepare_frame(id, "mac.set_volume");
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("clock")
+        .as_millis();
+    let seconds = (i64::try_from(now).expect("now") + millis) / 1000;
+    prepare.expires_at = GoTime::from_unix(seconds).expect("time");
+    prepare
+}
+
+#[test]
+fn a_short_lived_command_frees_the_ticket_slot() {
+    let mut world = start(4_194_304, &json!({}));
+    ipc_send(&mut world.gateway, &prepare_expiring_in("c1", 100));
+    assert!(matches!(
+        native::read_frame(&mut world.link),
+        Ok(Frame::Prepare(_))
+    ));
+    native::write_frame(&mut world.link, &prepared_frame("c1")).expect("prepared");
+    let (prepared, _) = ipc_read(&mut world.gateway).expect("prepared");
+    let ticket = prepared["ticket"].as_str().expect("ticket").to_owned();
+    thread::sleep(Duration::from_millis(1200));
+    ipc_send(&mut world.gateway, &prepare_frame("c2", "mac.set_volume"));
+    assert!(matches!(
+        native::read_frame(&mut world.link),
+        Ok(Frame::Prepare(_))
+    ));
+    native::write_frame(&mut world.link, &prepared_frame("c2")).expect("prepared");
+    assert_eq!(
+        ipc_read(&mut world.gateway).expect("second").0["t"],
+        "Prepared"
+    );
+    ipc_send(&mut world.gateway, &dispatch_frame("c1", &ticket, 7));
+    assert_eq!(
+        ipc_read(&mut world.gateway).expect("refused").0["error"]["code"],
+        "conflict"
+    );
+
+    let _ = finish(world);
+}
+
+#[test]
+fn a_command_expiry_far_from_the_clock_is_treated_as_skew_not_as_expired() {
+    let mut world = start(4_194_304, &json!({}));
+    world
+        .link
+        .set_read_timeout(Some(Duration::from_secs(5)))
+        .expect("timeout");
+    let mut skewed = prepare_frame("c1", "mac.set_volume");
+    skewed.expires_at = GoTime::from_unix(3_600).expect("epoch");
+    ipc_send(&mut world.gateway, &skewed);
+    assert!(matches!(
+        native::read_frame(&mut world.link),
+        Ok(Frame::Prepare(_))
+    ));
+    native::write_frame(&mut world.link, &prepared_frame("c1")).expect("prepared");
+    let (prepared, _) = ipc_read(&mut world.gateway).expect("prepared");
+    let ticket = prepared["ticket"].as_str().expect("ticket").to_owned();
+    ipc_send(&mut world.gateway, &dispatch_frame("c1", &ticket, 7));
+    assert!(matches!(
+        native::read_frame(&mut world.link),
+        Ok(Frame::Dispatch(_))
+    ));
+    let _ = finish(world);
+}
