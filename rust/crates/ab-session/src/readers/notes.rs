@@ -122,6 +122,17 @@ impl CaptureReader for NotesReader {
         &self.root
     }
 
+    fn watch_paths(&self) -> Vec<PathBuf> {
+        [
+            "NoteStore.sqlite",
+            "NoteStore.sqlite-wal",
+            "NoteStore.sqlite-shm",
+        ]
+        .into_iter()
+        .map(|name| self.root.join(name))
+        .collect()
+    }
+
     fn token(&self) -> Option<String> {
         let signature = encode(self.committed.as_ref()?);
         serde_json::to_string(&SavedState {

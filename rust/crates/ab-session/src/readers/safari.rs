@@ -88,6 +88,19 @@ impl CaptureReader for SafariReader {
         &self.root
     }
 
+    fn watch_paths(&self) -> Vec<PathBuf> {
+        [
+            "History.db",
+            "History.db-wal",
+            "CloudTabs.db",
+            "CloudTabs.db-wal",
+            "Bookmarks.plist",
+        ]
+        .into_iter()
+        .map(|name| self.root.join(name))
+        .collect()
+    }
+
     fn token(&self) -> Option<String> {
         self.settled.as_ref().map(encode)
     }

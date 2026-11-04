@@ -378,6 +378,7 @@ fn lab_entry(args: &[String]) -> Option<Result<(), Error>> {
 
 #[allow(clippy::too_many_lines)]
 const LOG_LIMIT: u64 = 4 << 20;
+const OPEN_FILES: u64 = 4096;
 
 fn keep_log(home: &std::path::Path) {
     use std::os::unix::fs::OpenOptionsExt;
@@ -405,6 +406,7 @@ fn keep_log(home: &std::path::Path) {
 
 fn run() -> Result<(), Error> {
     ab_sys::reset_signals();
+    ab_sys::raise_open_files(OPEN_FILES);
     let args: Vec<String> = std::env::args().skip(1).collect();
     #[cfg(feature = "lab")]
     if let Some(result) = lab_entry(&args) {

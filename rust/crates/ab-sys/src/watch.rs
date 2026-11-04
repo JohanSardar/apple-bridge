@@ -139,9 +139,11 @@ impl Watcher {
         let present: HashSet<&Path> = found.iter().map(PathBuf::as_path).collect();
         let mut dropped = Vec::new();
         self.files.retain(|path, entry| {
-            let keep = present.contains(path.as_path())
-                && std::fs::symlink_metadata(path)
-                    .is_ok_and(|current| current.dev() == entry.dev && current.ino() == entry.ino);
+            let keep = !path.starts_with(root)
+                || present.contains(path.as_path())
+                    && std::fs::symlink_metadata(path).is_ok_and(|current| {
+                        current.dev() == entry.dev && current.ino() == entry.ino
+                    });
             if !keep {
                 dropped.push(entry.fd.as_raw_fd());
             }
@@ -262,7 +264,7 @@ impl Watcher {
         let present: HashSet<&Path> = found.iter().map(PathBuf::as_path).collect();
         let descriptors = &mut self.descriptors;
         self.watched.retain(|path, wd| {
-            let keep = present.contains(path.as_path());
+            let keep = !path.starts_with(root) || present.contains(path.as_path());
             if !keep {
                 descriptors.remove(wd);
             }
@@ -487,6 +489,28 @@ mod tests {
         assert!(!watcher.watch_tree(&dir)?);
         fs::remove_dir_all(&dir)?;
         Ok(())
+    }
+
+    #[test]
+    fn every_root_stays_watched_and_a_settled_walk_of_several_roots_grows_nothing() -> io::Result<()>
+    {
+        let first = scratch("first-root")?;
+        let second = scratch("second-root")?;
+        fs::write(first.join("a.db"), "one")?;
+        fs::write(second.join("b.db"), "two")?;
+        let mut watcher = Watcher::new()?;
+        assert!(watcher.watch_tree(&first)?);
+        assert!(watcher.watch_tree(&second)?);
+        assert!(!watcher.watch_tree(&first)?);
+        assert!(!watcher.watch_tree(&second)?);
+        settle(&mut watcher)?;
+        fs::write(first.join("a.db"), "changed")?;
+        assert!(woke(&mut watcher)?);
+        settle(&mut watcher)?;
+        fs::write(second.join("b.db"), "changed")?;
+        assert!(woke(&mut watcher)?);
+        fs::remove_dir_all(first)?;
+        fs::remove_dir_all(second)
     }
 
     #[test]
