@@ -2352,16 +2352,32 @@ mod tests {
         let mut gated = targeted("messages.edit", &json!({"text": "[ab-test x] new"}));
         gated["origin"] = json!("");
         let mut foreign = ui_probe("[ab-test x] old", 60.0);
-        foreign.chats.insert("chat-1".into(), vec![json!("+15559990000")]);
+        foreign
+            .chats
+            .insert("chat-1".into(), vec![json!("+15559990000")]);
         assert_eq!(prepare(&foreign, &gated).unwrap_err().code, "invalid");
-        foreign.proofs = vec![route_proof(&json!({"kind": "chat_id_raw", "chat": "chat-1"}), "messages.edit")];
+        foreign.proofs = vec![route_proof(
+            &json!({"kind": "chat_id_raw", "chat": "chat-1"}),
+            "messages.edit",
+        )];
         let state = prepare(&foreign, &gated).unwrap();
-        assert_eq!(state["destination"], json!({"kind": "chat_id_raw", "chat": "chat-1"}));
-        foreign.proofs = vec![route_proof(&json!({"kind": "chat_id_raw", "chat": "chat-1"}), "messages.react")];
+        assert_eq!(
+            state["destination"],
+            json!({"kind": "chat_id_raw", "chat": "chat-1"})
+        );
+        foreign.proofs = vec![route_proof(
+            &json!({"kind": "chat_id_raw", "chat": "chat-1"}),
+            "messages.react",
+        )];
         assert_eq!(prepare(&foreign, &gated).unwrap_err().code, "invalid");
         let interactive = targeted("messages.edit", &json!({}));
         let mut anyone = ui_probe("old", 60.0);
-        anyone.chats.insert("chat-1".into(), vec![json!("+15559990000")]);
-        assert_eq!(prepare(&anyone, &interactive).unwrap()["destination"]["chat"], "chat-1");
+        anyone
+            .chats
+            .insert("chat-1".into(), vec![json!("+15559990000")]);
+        assert_eq!(
+            prepare(&anyone, &interactive).unwrap()["destination"]["chat"],
+            "chat-1"
+        );
     }
 }

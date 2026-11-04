@@ -1008,6 +1008,124 @@ impl Session<'_> {
                 }
                 Ok(json!({"parts":parts}))
             }
+            "messages.target" => {
+                let key = string(args, "guid");
+                let record = &s.data["records"][&key];
+                if record["collection"] != "messages.message" || record["kind"] == "absent" {
+                    return Ok(json!({"exists":false}));
+                }
+                let data = record["data"].clone();
+                let chat = string(&data["chat_id"]["$ref"], "native_key");
+                Ok(json!({"exists":true,"target":data,"row":{"guid":key,"capture_chat_guid":chat,"service":data["service"].as_str().unwrap_or("iMessage"),"is_from_me":data["is_from_me"]==true,"item_type":if data["kind"] == "message" || data["kind"].is_null() { 0 } else { 1 }}}))
+            }
+            "messages.reactions" | "messages.reaction_rows" => {
+                let guid = string(args, "guid");
+                let wanted = args["type"].as_i64();
+                let kinds = ["love", "like", "dislike", "laugh", "emphasize", "question", "emoji"];
+                let mut found = vec![];
+                for (key, record) in s.data["records"].as_object().into_iter().flatten() {
+                    if record["collection"] != "messages.reaction"
+                        || record["kind"] == "absent"
+                        || string(&record["data"]["message_id"]["$ref"], "native_key") != guid
+                    {
+                        continue;
+                    }
+                    let index = kinds.iter().position(|kind| *kind == string(&record["data"], "kind")).unwrap_or(0);
+                    let code = (if record["data"]["removed"] == true { 3000 } else { 2000 }) + i64::try_from(index).unwrap_or(0);
+                    if wanted.is_some_and(|wanted| wanted != code) {
+                        continue;
+                    }
+                    found.push(json!({"guid":key,"type":code.to_string(),"emoji":string(&record["data"],"emoji")}));
+                }
+                Ok(json!({"reactions":found}))
+            }
+            "messages.replies" => {
+                let guid = string(args, "guid");
+                let after = args["max_row_id"].as_u64().unwrap_or_default();
+                let text = string(args, "text");
+                let found: Vec<Value> = s.data["records"]
+                    .as_object()
+                    .into_iter()
+                    .flatten()
+                    .filter(|(_, record)| {
+                        record["collection"] == "messages.message"
+                            && record["kind"] != "absent"
+                            && record["row_id"].as_u64().unwrap_or_default() > after
+                            && record["data"]["is_from_me"] == true
+                            && string(&record["data"]["thread_originator_id"]["$ref"], "native_key") == guid
+                            && string(&record["data"], "text") == text
+                    })
+                    .map(|(key, _)| json!(key))
+                    .collect();
+                Ok(json!({"guids":found}))
+            }
+            "messages.ui_available" => Ok(json!({"available":true})),
+            "messages.ui_validate" => Ok(json!({})),
+            "messages.ui_prepare" => {
+                if s.fault == "ui-interference-before" {
+                    s.fault.clear();
+                    return Err("conflict");
+                }
+                Ok(json!({}))
+            }
+            "messages.ui_perform" => {
+                let action = args["prepared"]["action"].clone();
+                let op = string(&action, "op");
+                let command = string(args, "command_id");
+                if s.fault == "ui-interference" {
+                    s.fault.clear();
+                    return Ok(json!({"ui":{"target_verified":false,"ui_error":"interference"}}));
+                }
+                let m = &action["messages"];
+                let target = string(&action, "native_key");
+                let part_index = m["part_index"].as_u64().unwrap_or_default();
+                let mut seen: Vec<Value> = vec![];
+                let mut data = record_data(&s, &target);
+                match op.as_str() {
+                    "messages.edit" => {
+                        let mut history = data["edit_history"].as_array().cloned().unwrap_or_default();
+                        history.push(json!({"text":data["text"],"timestamp":now()}));
+                        data["edit_history"] = json!(history);
+                        data["text"] = json!(string(m, "text"));
+                        for part in data["parts"].as_array_mut().into_iter().flatten() {
+                            if part["index"].as_u64() == Some(part_index) && part["kind"] == "text" {
+                                part["text"] = json!(string(m, "text"));
+                            }
+                        }
+                        data["edited_at"] = json!(now());
+                        put(&mut s, &mut seen, "message", &target, data, false);
+                    }
+                    "messages.unsend" => {
+                        data["retracted_at"] = json!(now());
+                        data["retracted_parts"] = json!([part_index]);
+                        put(&mut s, &mut seen, "message", &target, data, false);
+                    }
+                    "messages.delete_message" => put(&mut s, &mut seen, "message", &target, data, true),
+                    "messages.react" => {
+                        let key = id("reaction").map_err(fail)?;
+                        put(&mut s, &mut seen, "reaction", &key, json!({"message_id":reference("message",&target),"part_index":part_index,"kind":string(m,"reaction"),"emoji":string(m,"emoji"),"removed":m["remove"]==true,"is_from_me":true}), false);
+                    }
+                    "messages.reply" => {
+                        let chat = string(&data["chat_id"]["$ref"], "native_key");
+                        let key = id("message").map_err(fail)?;
+                        new_message(&mut s, &mut seen, &key, &string(m, "text"), &chat, true);
+                        let mut d = record_data(&s, &key);
+                        d["thread_originator_id"] = reference("message", &target);
+                        put(&mut s, &mut seen, "message", &key, d, false);
+                        stamp_row(&mut s, &key);
+                    }
+                    _ => return Err("unsupported"),
+                }
+                if !command.is_empty() {
+                    let count = s.data["effects"][&command].as_u64().unwrap_or_default() + 1;
+                    s.data["effects"][&command] = json!(count);
+                }
+                s.save().map_err(fail)?;
+                let capture = s.scan("messages").map_err(fail)?;
+                drop(s);
+                self.emit(state, capture).map_err(fail)?;
+                Ok(json!({"ui":{"target_verified":true}}))
+            }
             "messages.mark_policy_used" | "messages.record_proof" => Ok(json!({})),
             "messages.reconcile" => {
                 let capture = s.scan("messages").map_err(fail)?;
