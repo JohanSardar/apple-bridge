@@ -133,7 +133,7 @@ impl World {
         let binary =
             session_binary().ok_or_else(|| Error::Invalid("AB_LAB_SESSION is not set".into()))?;
         let listen = self
-            .session
+            .labsession
             .listen
             .clone()
             .ok_or_else(|| Error::Invalid("session socket".into()))?;
@@ -158,7 +158,7 @@ impl World {
         let deadline = Instant::now() + READY;
         while !listen.exists() {
             if let Some(status) = self
-                .session_child
+                .labsession_child
                 .as_mut()
                 .and_then(|child| child.try_wait().ok().flatten())
             {
