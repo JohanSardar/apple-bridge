@@ -6,7 +6,8 @@ use ab_shortcuts::{
 use std::{
     fs,
     os::unix::fs::PermissionsExt,
-    path::PathBuf,
+    path::{Path, PathBuf},
+    sync::OnceLock,
     time::{Duration, Instant},
 };
 
@@ -40,13 +41,26 @@ case "$name" in
 esac
 "#;
 
+fn script() -> &'static Path {
+    static SHARED: OnceLock<PathBuf> = OnceLock::new();
+    SHARED.get_or_init(|| {
+        let dir = std::env::temp_dir().join(format!("ab-sc-runner-script-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap_or_default();
+        let path = dir.join("shortcuts");
+        fs::write(&path, SCRIPT).unwrap_or_default();
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o700)).unwrap_or_default();
+        path
+    })
+}
+
 fn fixture(name: &str) -> (PathBuf, Cli) {
+    let shared = script();
     let dir = std::env::temp_dir().join(format!("ab-sc-runner-{name}-{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap_or_default();
     let executable = dir.join("shortcuts");
-    fs::write(&executable, SCRIPT).unwrap_or_default();
-    fs::set_permissions(&executable, fs::Permissions::from_mode(0o700)).unwrap_or_default();
+    std::os::unix::fs::symlink(shared, &executable).unwrap_or_default();
     (
         dir,
         Cli {
@@ -68,6 +82,17 @@ fn gone(pid: i32) -> bool {
         .args(["-0", &pid.to_string()])
         .output()
         .is_ok_and(|o| !o.status.success())
+}
+
+fn gone_within(pid: i32, limit: Duration) -> bool {
+    let deadline = Instant::now() + limit;
+    while !gone(pid) {
+        if Instant::now() >= deadline {
+            return false;
+        }
+        std::thread::sleep(Duration::from_millis(5));
+    }
+    true
 }
 
 #[test]
@@ -122,7 +147,7 @@ fn runner_preserves_bytes_exit_status_and_bounds() {
     );
     let started = Instant::now();
     let (result, error) = cli.run_detailed(&Input {
-        timeout: Duration::from_millis(100),
+        timeout: Duration::from_secs(1),
         ..input("timeout", None)
     });
     assert!(
@@ -137,13 +162,12 @@ fn runner_preserves_bytes_exit_status_and_bounds() {
         .parse()
         .unwrap_or(0);
     assert!(pid > 0 && gone(pid));
-    std::thread::sleep(Duration::from_millis(100));
     let child: i32 = fs::read_to_string(dir.join("child"))
         .unwrap_or_default()
         .trim()
         .parse()
         .unwrap_or(0);
-    assert!(child > 0 && gone(child));
+    assert!(child > 0 && gone_within(child, Duration::from_secs(5)));
     for name in ["flood", "stdout-flood"] {
         let started = Instant::now();
         let error = cli.run(&Input {

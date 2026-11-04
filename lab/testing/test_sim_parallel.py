@@ -19,26 +19,37 @@ class RunnerTests(unittest.TestCase):
             with patch.object(runner.platform, 'system', return_value='Linux'):
                 return runner.execute({'id': 'fixture', 'path': 'fixture.yaml'}, str(binary), timeout, root, 'gateway=go', '', '')
 
-    def test_static_blocker_prevents_execution(self):
+    def test_startup_blockers_prevent_execution_and_import_audit_does_not(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             marker = root / 'executed'
             binary = root / 'lab'
             binary.write_text('#!/bin/sh\ntouch "' + str(marker) + '"\n')
             binary.chmod(0o700)
+            scenario = root / 'fixture.yaml'
+            scenario.write_text('id: blocked\n')
             source = root / 'blocked.go'
             source.write_text('package fixture\nimport "github.com/JohanSardar/apple-bridge/internal/runtime"\n')
-            entry = {'id':'blocked','path':'fixture.yaml','packages':['internal/runtime'],'code_paths':[str(source)]}
-            with patch.object(runner.platform,'system',return_value='Linux'):
-                row = runner.execute(entry,str(binary),5,root,'gateway=rust','/usr/bin/true','')
-            self.assertFalse(marker.exists(),'statically blocked scenario process was started')
-            self.assertEqual(row['status'],'blocked')
-            self.assertEqual(row['execution_status'],'not-started')
-            self.assertTrue(row['blocked_on'])
-            with patch.object(runner.platform,'system',return_value='Linux'):
-                control = runner.execute(entry,str(binary),5,root,'gateway=go','','')
+            entry = {'id': 'blocked', 'path': str(scenario), 'packages': ['internal/runtime'], 'code_paths': [str(source)]}
+            for startup, rust_binary, expected in [('ab-runtime: gateway ipc/1 socket unavailable', '/usr/bin/true', 'ab-runtime: gateway ipc/1 socket unavailable'), ('', str(root / 'missing'), 'ab-runtime: Rust bridge executable unavailable')]:
+                with patch.object(runner.platform, 'system', return_value='Linux'):
+                    row = runner.execute(entry, str(binary), 5, root, 'gateway=rust', rust_binary, startup)
+                self.assertFalse(marker.exists(), 'blocked scenario process was started')
+                self.assertEqual(row['status'], 'blocked')
+                self.assertEqual(row['execution_status'], 'not-started')
+                self.assertEqual(row['blocked_on'], [expected])
+                self.assertEqual(len(row['harness_audit']), 1)
+            with patch.object(runner.platform, 'system', return_value='Linux'):
+                audited = runner.execute(entry, str(binary), 5, root, 'gateway=rust', '/usr/bin/true', '')
             self.assertTrue(marker.exists())
-            self.assertEqual(control['status'],'pass')
+            self.assertEqual(audited['status'], 'pass')
+            self.assertEqual(audited['blocked_on'], [])
+            self.assertEqual(len(audited['harness_audit']), 1)
+            marker.unlink()
+            with patch.object(runner.platform, 'system', return_value='Linux'):
+                control = runner.execute(entry, str(binary), 5, root, 'gateway=go', '', '')
+            self.assertTrue(marker.exists())
+            self.assertEqual(control['status'], 'pass')
 
     def test_native_start_handshake(self):
         with tempfile.TemporaryDirectory() as directory:
