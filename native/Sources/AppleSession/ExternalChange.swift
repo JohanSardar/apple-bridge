@@ -178,7 +178,9 @@ enum ExternalChange {
                 _ = try NotesScript.run(guardLine + "move n to (first folder whose name is \(NotesScript.quote(folder)))\nreturn \"ok\"")
             case "trash":
                 // What the Notes window does. Scripted `delete` only reaches the store at Notes' next save.
-                _ = try NotesScript.run(guardLine + "move n to (first folder of (container of (container of n)) whose name is \"Recently Deleted\")\nreturn \"ok\"")
+                let trash = try text(request, "trash_folder_id")
+                guard trash.hasPrefix("x-coredata://"), trash.contains("/ICFolder/p") else { throw Failure(reason: "argument_trash_folder_id") }
+                _ = try NotesScript.run(guardLine + "move n to folder id \(NotesScript.quote(trash))\nreturn \"ok\"")
             default:
                 _ = try NotesScript.run(guardLine + "delete n\nreturn \"ok\"")
             }

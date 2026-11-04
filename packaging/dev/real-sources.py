@@ -261,6 +261,13 @@ def delete_checked(name, operation, collection, record_id):
     return ok
 
 
+def external_delete(key):
+    # Notes writes a scripted `delete` only at its next save; moving to Recently Deleted is what its window does.
+    if source == "notes":
+        return helper_change("trash", key=key, trash_folder_id=note_trash_folder())
+    return helper_change("delete", key=key)
+
+
 def external_cycle(container_title, create_title, update_title, collection):
     created_ext = helper_change("create", container_title=container_title, title=create_title)
     check("external_create_done", created_ext.get("state") == "done", created_ext.get("reason"))
@@ -277,7 +284,7 @@ def external_cycle(container_title, create_title, update_title, collection):
     if updated.get("state") == "done":
         record = timed("external_update_visible", lambda: find_tagged(collection, update_title), EXTERNAL_BOUND)
         check("external_update_reaches_gateway", record, "within %ds" % EXTERNAL_BOUND)
-    removed = helper_change("delete", key=key)
+    removed = external_delete(key)
     check("external_delete_done", removed.get("state") == "done", removed.get("reason"))
     if removed.get("state") == "done":
         externals.remove(key)
@@ -306,6 +313,18 @@ def note_store_state(title):
     return "trash" if row[0] == 1 or row[1] else "live"
 
 
+def note_trash_folder():
+    store = sqlite3.connect("file:%s/NoteStore.sqlite?mode=ro" % RUST_ROOTS["notes"].replace(" ", "%20"), uri=True)
+    try:
+        uuid = store.execute("SELECT Z_UUID FROM Z_METADATA").fetchone()[0]
+        rows = store.execute("SELECT Z_PK FROM ZICCLOUDSYNCINGOBJECT WHERE ZFOLDERTYPE = 1 AND COALESCE(ZMARKEDFORDELETION, 0) = 0 AND ZPARENT IS NULL").fetchall()
+    finally:
+        store.close()
+    if len(rows) != 1:
+        raise RuntimeError("expected one Recently Deleted folder, found %d" % len(rows))
+    return "x-coredata://%s/ICFolder/p%d" % (uuid, rows[0][0])
+
+
 def run_notes_lifecycle(folder_title, tag):
     """A note moved to Recently Deleted leaves the live view, and moving it back returns it under the same record."""
     title = tag + " lifecycle"
@@ -318,7 +337,7 @@ def run_notes_lifecycle(folder_title, tag):
     if not check("lifecycle_create_reaches_gateway", found):
         return
     for attempt in ("a", "b"):
-        trashed = helper_change("trash", key=key)
+        trashed = helper_change("trash", key=key, trash_folder_id=note_trash_folder())
         check("lifecycle_trash_done_" + attempt, trashed.get("state") == "done", trashed.get("reason"))
         check("lifecycle_trash_in_store_" + attempt, timed("lifecycle_trash_store_" + attempt, lambda: note_store_state(title) == "trash", EXTERNAL_BOUND))
         check("lifecycle_trash_reaches_gateway_" + attempt, timed("lifecycle_trash_visible_" + attempt, lambda: gone("notes.note", found["id"]), EXTERNAL_BOUND))
@@ -332,10 +351,14 @@ def run_notes_lifecycle(folder_title, tag):
     if scripted.get("state") == "done":
         externals.remove(key)
     # Scripted delete: measured, not asserted. Notes writes it at its next save, and the gateway follows the store.
-    timed("scripted_delete_store_commit", lambda: note_store_state(title) == "trash", float(os.environ.get("REAL_SCRIPTED_BOUND", "150")))
+    timed("scripted_delete_store_commit", lambda: note_store_state(title) == "trash", float(os.environ.get("REAL_SCRIPTED_BOUND", "30")))
     note("scripted delete store_state=%s" % note_store_state(title))
-    if note_store_state(title) == "trash":
-        check("scripted_delete_reaches_gateway_once_written", timed("scripted_delete_visible", lambda: gone("notes.note", found["id"]), EXTERNAL_BOUND))
+    # Any later save writes it: this note is what makes Notes save here.
+    nudge = helper_change("create", container_title=folder_title, title=tag + " nudge")
+    if nudge.get("state") == "done":
+        externals.append(nudge["key"])
+    check("scripted_delete_written_by_next_save", wait_for(lambda: note_store_state(title) == "trash", EXTERNAL_BOUND))
+    check("scripted_delete_reaches_gateway_once_written", timed("scripted_delete_visible", lambda: gone("notes.note", found["id"]), EXTERNAL_BOUND))
 
 
 def tab_with(token):
@@ -579,7 +602,7 @@ def cleanup_created():
                 reply = command("notes.delete", {"id": record["id"]}, record.get("version"))
                 note("cleanup late note by id: %s" % brief(reply))
     for key in list(externals):
-        removed = helper_change("delete", key=key)
+        removed = external_delete(key)
         note("cleanup external by key: %s" % removed.get("state"))
     for key in list(safari_windows):
         note("cleanup safari window: %s" % helper_change("delete", key=key).get("state"))

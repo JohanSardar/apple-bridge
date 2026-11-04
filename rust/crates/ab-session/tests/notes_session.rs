@@ -20,11 +20,10 @@ impl Drop for Rig {
 
 impl Rig {
     fn new() -> Self {
-        let unique = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .expect("clock")
-            .as_nanos();
-        let home = std::env::temp_dir().join(format!("ab-notes-session-{unique}"));
+        static NEXT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+        let unique = NEXT.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        let home =
+            std::env::temp_dir().join(format!("ab-notes-session-{}-{unique}", std::process::id()));
         std::fs::create_dir_all(home.join("store")).expect("store");
         let db = rusqlite::Connection::open(home.join("store/NoteStore.sqlite")).expect("database");
         db.execute_batch(STORE).expect("schema");
