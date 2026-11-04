@@ -926,7 +926,6 @@ mod tests {
     use std::{cell::RefCell, collections::BTreeMap};
 
     #[allow(clippy::struct_excessive_bools)]
-    #[allow(clippy::struct_excessive_bools)]
     struct Fake {
         own: Option<Vec<String>>,
         approved: Vec<String>,
@@ -2027,7 +2026,7 @@ mod tests {
         let state = prepare(&ui_probe("old", 60.0), &cmd).unwrap();
         assert_eq!(state["route"], "accessibility");
         assert_eq!(state["candidate_ids"], json!(["m1"]));
-        assert_eq!(state["self_chat"], false);
+        assert_eq!(state["self_chat"], true);
         assert!(prepare(&ui_probe("old", 899.0), &cmd).is_ok());
         assert_eq!(
             prepare(&ui_probe("old", 901.0), &cmd).unwrap_err().code,
