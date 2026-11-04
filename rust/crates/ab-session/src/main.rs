@@ -69,6 +69,12 @@ fn lab_listen(listen: &str, gateway: &str, native: Option<&str>) -> Result<(), E
         .ok()
         .map(std::path::PathBuf::from);
     let watch = std::env::var("AB_SESSION_RUST_WATCH").as_deref() == Ok("1");
+    #[cfg(feature = "rust-effects")]
+    let effects = lab_effects(native, &rust, &config)?;
+    #[cfg(not(feature = "rust-effects"))]
+    if native.is_some() {
+        return Err(Error::Conflict);
+    }
     let build = move || -> Result<_, Error> {
         let mut readers = ab_session::readers::from_config(&config)?;
         readers.retain(|source, _| rust.contains(source));
@@ -78,12 +84,6 @@ fn lab_listen(listen: &str, gateway: &str, native: Option<&str>) -> Result<(), E
         Ok(readers)
     };
     build()?;
-    #[cfg(feature = "rust-effects")]
-    let effects = lab_effects(native, &rust, &config)?;
-    #[cfg(not(feature = "rust-effects"))]
-    if native.is_some() {
-        return Err(Error::Conflict);
-    }
     let _ = std::fs::remove_file(listen);
     let listener = std::os::unix::net::UnixListener::bind(listen)?;
     for helper in listener.incoming() {
