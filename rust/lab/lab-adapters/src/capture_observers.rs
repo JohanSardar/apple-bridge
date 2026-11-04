@@ -1,5 +1,5 @@
 use crate::{
-    assertions::{Observed, await_until, converged},
+    assertions::{Observed, await_until, replica_integrity},
     capture_staging::sql,
     http::{Client, random_id},
     labcore, replicas,
@@ -137,7 +137,7 @@ fn approval_observer(world: &World, gateway: &Client, owner: &Owner, evidence: &
     if first.is_none() {
         return;
     }
-    let settled = await_until(10, || converged(world, &observed));
+    let settled = await_until(10, || replica_integrity(&observed));
     evidence.check("approval_pending_replicated_after_capture", settled, "");
     let (state, detail) = pending_state(&replica, &id);
     evidence.check(
@@ -168,7 +168,7 @@ fn approval_observer(world: &World, gateway: &Client, owner: &Owner, evidence: &
         second.is_some(),
         "",
     );
-    let settled = await_until(10, || converged(world, &observed));
+    let settled = await_until(10, || replica_integrity(&observed));
     evidence.check("resolved_approval_capture_replicated", settled, "");
     let (state, detail) = pending_state(&replica, &id);
     evidence.check(
@@ -247,7 +247,7 @@ fn observers(world: &World, gateway: &Client, evidence: &mut Evidence) {
         )
         .is_ok()
         && world.control_for("/flush", &json!({}), 5).is_ok()
-        && await_until(10, || converged(world, &observed));
+        && await_until(10, || replica_integrity(&observed));
     evidence.check("observer_fixture_converges", fixture, "");
     if !fixture {
         return;
