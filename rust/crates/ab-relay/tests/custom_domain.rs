@@ -240,6 +240,49 @@ async fn wait_for<F: FnMut() -> bool>(mut condition: F) {
     panic!("condition not reached");
 }
 
+async fn visit(public: SocketAddr, site: CertificateDer<'static'>, domain: &str) -> String {
+    let mut roots = rustls::RootCertStore::empty();
+    roots.add(site).unwrap();
+    let visitor = rustls::ClientConfig::builder_with_provider(Arc::new(
+        rustls::crypto::ring::default_provider(),
+    ))
+    .with_safe_default_protocol_versions()
+    .unwrap()
+    .with_root_certificates(roots)
+    .with_no_client_auth();
+    let connector = tokio_rustls::TlsConnector::from(Arc::new(visitor));
+    let socket = tokio::net::TcpStream::connect(public)
+        .await
+        .unwrap();
+    let mut secure = connector
+        .connect(
+            rustls::pki_types::ServerName::try_from(domain.to_owned()).unwrap(),
+            socket,
+        )
+        .await
+        .unwrap();
+    secure
+        .write_all(format!("GET / HTTP/1.1\r\nhost: {domain}\r\n\r\n").as_bytes())
+        .await
+        .unwrap();
+    let mut body = Vec::new();
+    let _ = secure.read_to_end(&mut body).await;
+    String::from_utf8_lossy(&body).into_owned()
+}
+
+async fn device_domain(fixture: &Fixture, host: &str) -> String {
+    fixture
+        .server
+        .store
+        .lock()
+        .await
+        .devices
+        .get(host)
+        .unwrap()
+        .domain
+        .clone()
+}
+
 #[tokio::test]
 async fn custom_domain_waits_for_records_registers_and_routes_by_sni() {
     let fixture = fixture().await;
@@ -288,18 +331,7 @@ async fn custom_domain_waits_for_records_registers_and_routes_by_sni() {
         .unwrap();
     assert_eq!(progress.state, "pending");
     assert_eq!(progress.message, expected);
-    assert!(
-        fixture
-            .server
-            .store
-            .lock()
-            .await
-            .devices
-            .get(&host)
-            .unwrap()
-            .domain
-            .is_empty()
-    );
+    assert_eq!(device_domain(&fixture, &host).await, "");
     for records in [&dns_records, &fixture.records] {
         let mut records = records.lock().unwrap();
         records.insert(domain.into(), host.clone());
@@ -319,45 +351,8 @@ async fn custom_domain_waits_for_records_registers_and_routes_by_sni() {
     let entry = observed.borrow().get("relay").cloned().unwrap();
     assert_eq!(entry.host, domain);
     assert!(entry.progress.is_none());
-    assert_eq!(
-        fixture
-            .server
-            .store
-            .lock()
-            .await
-            .devices
-            .get(&host)
-            .unwrap()
-            .domain,
-        domain
-    );
-    let mut roots = rustls::RootCertStore::empty();
-    roots.add(site).unwrap();
-    let visitor = rustls::ClientConfig::builder_with_provider(Arc::new(
-        rustls::crypto::ring::default_provider(),
-    ))
-    .with_safe_default_protocol_versions()
-    .unwrap()
-    .with_root_certificates(roots)
-    .with_no_client_auth();
-    let connector = tokio_rustls::TlsConnector::from(Arc::new(visitor));
-    let socket = tokio::net::TcpStream::connect(fixture.public)
-        .await
-        .unwrap();
-    let mut secure = connector
-        .connect(
-            rustls::pki_types::ServerName::try_from(domain.to_owned()).unwrap(),
-            socket,
-        )
-        .await
-        .unwrap();
-    secure
-        .write_all(format!("GET / HTTP/1.1\r\nhost: {domain}\r\n\r\n").as_bytes())
-        .await
-        .unwrap();
-    let mut body = Vec::new();
-    let _ = secure.read_to_end(&mut body).await;
-    assert!(String::from_utf8_lossy(&body).ends_with("alias-origin"));
+    assert_eq!(device_domain(&fixture, &host).await, domain);
+    assert!(visit(fixture.public, site, domain).await.ends_with("alias-origin"));
     stop.send(true).unwrap();
     tokio::time::timeout(Duration::from_secs(5), run)
         .await
