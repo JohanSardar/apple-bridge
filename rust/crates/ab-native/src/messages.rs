@@ -104,7 +104,6 @@ pub struct Batch {
 }
 #[derive(Debug)]
 struct Scan {
-    version: i64,
     cursor: i64,
     seen: BTreeSet<String>,
 }
@@ -833,9 +832,8 @@ impl Reader {
         }
         let version = self.version.ok_or(Error::Replaced)?;
         let mut scan = match self.pending_scan.take() {
-            Some(scan) if scan.version == version => scan,
-            _ => Scan {
-                version,
+            Some(scan) => scan,
+            None => Scan {
                 cursor: 0,
                 seen: self
                     .small_observations()?
@@ -844,32 +842,37 @@ impl Reader {
                     .collect(),
             },
         };
+        let page_start = scan.cursor;
         self.db.execute_batch("BEGIN")?;
         let result = self.history_page(&mut scan);
         let end = self.db.execute_batch("ROLLBACK");
-        if result.is_err() || end.is_err() {
-            for (key, old) in std::mem::take(&mut self.undo_hashes) {
-                if let Some(h) = old {
-                    self.hashes.insert(key, h);
-                } else {
-                    self.hashes.remove(&key);
+        let (mut batches, done) = match result {
+            Ok(page) if end.is_ok() => page,
+            failed => {
+                for (key, old) in std::mem::take(&mut self.undo_hashes) {
+                    if let Some(h) = old {
+                        self.hashes.insert(key, h);
+                    } else {
+                        self.hashes.remove(&key);
+                    }
                 }
-            }
-            for (key, old) in std::mem::take(&mut self.undo_native) {
-                if let Some(h) = old {
-                    self.native_hashes.insert(key, h);
-                } else {
-                    self.native_hashes.remove(&key);
+                for (key, old) in std::mem::take(&mut self.undo_native) {
+                    if let Some(h) = old {
+                        self.native_hashes.insert(key, h);
+                    } else {
+                        self.native_hashes.remove(&key);
+                    }
                 }
+                self.reconciliation_requested = true;
+                scan.cursor = page_start;
+                self.pending_scan = Some(scan);
+                end?;
+                return failed.map(|(batches, _)| batches);
             }
-            self.reconciliation_requested = true;
-        }
+        };
         self.undo_hashes.clear();
         self.undo_native.clear();
-        end?;
-        let (mut batches, done) = result?;
-        let after: i64 = self.db.query_row("PRAGMA data_version", [], |r| r.get(0))?;
-        if after != version || !self.current()? {
+        if !self.current()? {
             self.reconciliation_requested = true;
             return Ok(batches);
         }
@@ -882,6 +885,22 @@ impl Reader {
             self.pending_scan = Some(scan);
         }
         Ok(batches)
+    }
+    pub fn scan_cursor(&self) -> Option<i64> {
+        self.pending_scan.as_ref().map(|scan| scan.cursor)
+    }
+    pub fn resume_scan(&mut self, cursor: i64) -> Result<()> {
+        if cursor < 0 {
+            return Err(Error::Replaced);
+        }
+        let seen = self
+            .small_observations()?
+            .iter()
+            .map(Observation::key)
+            .collect();
+        self.pending_scan = Some(Scan { cursor, seen });
+        self.reconciliation_requested = true;
+        Ok(())
     }
     fn history_page(&mut self, scan: &mut Scan) -> Result<(Vec<Batch>, bool)> {
         let rows = self.projected(

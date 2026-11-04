@@ -1,4 +1,4 @@
-use crate::{Error, native_facts};
+use crate::Error;
 
 mod messages;
 use ab_native::{
@@ -12,7 +12,6 @@ use std::{
     fmt::Debug,
     fs,
     path::{Path, PathBuf},
-    sync::Arc,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
@@ -25,13 +24,17 @@ pub struct ScanContext {
     pub checkpoint: String,
     pub scan_id: String,
     pub now: f64,
-    pub fence: u64,
 }
 
 impl ScanContext {
     fn observed_at(&self) -> Result<String, Error> {
         capture::timestamp(self.now).map_err(reader_error)
     }
+}
+
+pub trait BlobServer: Send + Sync + Debug {
+    fn owns(&self, handle: &str) -> bool;
+    fn read(&self, handle: &str, offset: u64, length: usize) -> Result<Value, Error>;
 }
 
 pub trait CaptureReader: Send + Debug {
@@ -45,6 +48,15 @@ pub trait CaptureReader: Send + Debug {
     fn token(&self) -> Option<String>;
     fn resume(&mut self, token: &str) -> bool;
     fn owns(&self, _handle: &str) -> bool {
+        false
+    }
+    fn handle_prefix(&self) -> Option<&'static str> {
+        None
+    }
+    fn blobs(&self) -> Option<std::sync::Arc<dyn BlobServer>> {
+        None
+    }
+    fn more(&self) -> bool {
         false
     }
     fn blob(&mut self, _handle: &str, _offset: u64, _length: usize) -> Result<Value, Error> {
@@ -518,6 +530,10 @@ impl CaptureReader for VoiceMemosReader {
         handle.starts_with("voice-memo-blob:")
     }
 
+    fn handle_prefix(&self) -> Option<&'static str> {
+        Some("voice-memo-blob:")
+    }
+
     fn blob(&mut self, handle: &str, offset: u64, length: usize) -> Result<Value, Error> {
         self.assets()?
             .read_blob(handle, offset, length)
@@ -638,6 +654,10 @@ impl CaptureReader for NotesReader {
 
     fn owns(&self, handle: &str) -> bool {
         handle.starts_with("notes-blob:")
+    }
+
+    fn handle_prefix(&self) -> Option<&'static str> {
+        Some("notes-blob:")
     }
 
     fn blob(&mut self, handle: &str, offset: u64, length: usize) -> Result<Value, Error> {
@@ -840,7 +860,6 @@ pub struct AgendaReader {
     facts: Option<Facts>,
     partial: bool,
     pending: Option<agenda::Pending>,
-    pull: Option<native_facts::Pull>,
 }
 
 fn identity(row: &Value) -> String {
@@ -886,7 +905,6 @@ impl AgendaReader {
             facts: None,
             partial: false,
             pending: None,
-            pull: None,
         }
     }
 
@@ -899,39 +917,7 @@ impl AgendaReader {
             facts: None,
             partial: false,
             pending: None,
-            pull: None,
         }
-    }
-
-    #[must_use]
-    pub fn paged(mut self, client: Arc<native_facts::Client>, interval: Duration) -> Self {
-        let operations: &'static [&'static str] = match self.state {
-            AgendaState::Calendar(_) => &["agenda.calendars", "agenda.events"],
-            AgendaState::Contacts(_) => &[
-                "contacts.containers",
-                "contacts.groups",
-                "contacts.contacts",
-            ],
-        };
-        self.pull = Some(native_facts::Pull::new(client, operations, interval));
-        self
-    }
-
-    fn page(&mut self, context: &ScanContext) -> Result<(), Error> {
-        let Some(pull) = self.pull.as_mut() else {
-            return Ok(());
-        };
-        if !pull.due() {
-            return Ok(());
-        }
-        let live = pull.live();
-        let Some(collected) = pull.collect(context.fence)? else {
-            return Ok(());
-        };
-        let capture = json!({"generation": collected.generation, "observations": collected.rows, "blob_handles": collected.handles, "live": live});
-        self.facts = Some(self.parse(&capture)?);
-        self.partial = false;
-        Ok(())
     }
 
     fn parse(&self, capture: &Value) -> Result<Facts, Error> {
@@ -1000,17 +986,6 @@ impl CaptureReader for AgendaReader {
     }
 
     fn ingest(&mut self, capture: &Value) -> Result<bool, Error> {
-        if let Some(pull) = self.pull.as_mut() {
-            let partial = capture["scan_id"]
-                .as_str()
-                .is_some_and(|scan| !scan.is_empty())
-                && capture["completion_evidence"].as_str() != Some("complete");
-            if partial {
-                return Ok(false);
-            }
-            pull.hint();
-            return Ok(true);
-        }
         let parsed = self.parse(capture)?;
         self.partial = capture["scan_id"]
             .as_str()
@@ -1030,7 +1005,6 @@ impl CaptureReader for AgendaReader {
         if self.partial {
             return Ok(None);
         }
-        self.page(context)?;
         let Some(facts) = self.facts.take() else {
             return Ok(None);
         };
@@ -1091,27 +1065,6 @@ struct SourceConfig {
     staging: Option<PathBuf>,
     #[serde(default)]
     home: Option<PathBuf>,
-    #[serde(default)]
-    facts: Option<FactsLink>,
-    #[serde(default = "default_facts_poll")]
-    facts_poll_ms: u64,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(untagged)]
-enum FactsLink {
-    Native(NativeMarker),
-    Socket { socket: PathBuf },
-}
-
-#[derive(Debug, Deserialize)]
-enum NativeMarker {
-    #[serde(rename = "native")]
-    Native,
-}
-
-fn default_facts_poll() -> u64 {
-    15_000
 }
 
 fn lexical(path: &Path) -> Result<PathBuf, Error> {
@@ -1172,35 +1125,6 @@ fn default_local_name() -> String {
 }
 
 pub fn from_config(config: &str) -> Result<BTreeMap<String, Box<dyn CaptureReader>>, Error> {
-    from_config_linked(config, None)
-}
-
-#[must_use]
-pub fn wants_inherited_facts(config: &str) -> bool {
-    serde_json::from_str::<BTreeMap<String, SourceConfig>>(config).is_ok_and(|sources| {
-        sources
-            .values()
-            .any(|source| matches!(source.facts, Some(FactsLink::Native(_))))
-    })
-}
-
-fn linked_client(
-    facts: Option<&FactsLink>,
-    inherited: Option<&Arc<native_facts::Client>>,
-) -> Result<Option<Arc<native_facts::Client>>, Error> {
-    match facts {
-        None => Ok(None),
-        Some(FactsLink::Native(_)) => Ok(Some(Arc::clone(inherited.ok_or(Error::Invalid)?))),
-        Some(FactsLink::Socket { socket }) => Ok(Some(Arc::new(native_facts::Client::socket(
-            socket.clone(),
-        )?))),
-    }
-}
-
-pub fn from_config_linked(
-    config: &str,
-    inherited: Option<&Arc<native_facts::Client>>,
-) -> Result<BTreeMap<String, Box<dyn CaptureReader>>, Error> {
     let sources: BTreeMap<String, SourceConfig> = serde_json::from_str(config)?;
     let mut readers: BTreeMap<String, Box<dyn CaptureReader>> = BTreeMap::new();
     for (source, config) in sources {
@@ -1239,19 +1163,8 @@ pub fn from_config_linked(
                 }
                 Box::new(MessagesReader::new(config.root, home))
             }
-            "calendar" | "contacts" => {
-                let reader = if source == "calendar" {
-                    AgendaReader::calendar(config.root)
-                } else {
-                    AgendaReader::contacts(config.root)
-                };
-                match linked_client(config.facts.as_ref(), inherited)? {
-                    Some(client) => Box::new(
-                        reader.paged(client, Duration::from_millis(config.facts_poll_ms.max(1))),
-                    ),
-                    None => Box::new(reader),
-                }
-            }
+            "calendar" => Box::new(AgendaReader::calendar(config.root)),
+            "contacts" => Box::new(AgendaReader::contacts(config.root)),
             _ => return Err(Error::Invalid),
         };
         readers.insert(source, reader);
