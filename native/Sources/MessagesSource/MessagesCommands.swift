@@ -129,6 +129,43 @@ public actor MessagesCommands {
         let policy = try JSONDecoder().decode(JSON.self, from: Data(contentsOf: agentPolicy))
         guard action["messages"]["variant"] == .null, action["op"].string == "messages.send", route["kind"].string == "chat_id_raw", route["chat"].string == policy["chat_guid"].string, action["messages"]["text"].string == policy["text"].string, action["messages"]["files"].array.isEmpty, !FileManager.default.fileExists(atPath: agentPolicy.path + ".used") else { throw SourceFailure.invalid }
     }
+    public func primitive(_ operation: String, args request: JSON) async throws -> JSON {
+        switch operation {
+        case "messages.config":
+            return .object(["lab_commands": .bool(labCommands)])
+        case "messages.own_handles":
+            guard let discovered = try? MessagesProbes.discoverSelfHandles() else { return .object(["handles": .null]) }
+            return .object(["handles": .array(discovered.handles.map(JSON.string))])
+        case "messages.approved_handles":
+            return .object(["handles": .array(try approvedHandles().sorted().map(JSON.string))])
+        case "messages.chat_members":
+            let reader = try MessagesReader(path: path)
+            let guid = request["chat_guid"].string
+            let all = try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID LEFT JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [guid]).map { $0["id"] }
+            let joined = try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [guid]).map { $0["id"] }
+            return .object(["handles": .array(all.map(JSON.string)), "joined": .array(joined.map(JSON.string))])
+        case "messages.direct_chats":
+            let reader = try MessagesReader(path: path)
+            let chats = try reader.query("SELECT c.guid,h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.service_name='iMessage' AND (SELECT count(*) FROM chat_handle_join x WHERE x.chat_id=c.ROWID)=1 ORDER BY c.ROWID DESC", [])
+            return .object(["chats": .array(chats.map { .object(["guid": .string($0["guid"]), "id": .string($0["id"])]) })])
+        case "messages.route_proofs":
+            return .object(["routes": .array(proofs().sorted().map(JSON.string))])
+        case "messages.message":
+            let reader = try MessagesReader(path: path)
+            guard let row = try reader.message(request["guid"].string) else { return .object(["exists": .bool(false)]) }
+            return .object(["exists": .bool(true), "is_from_me": .bool(row.flag("is_from_me")), "error": .number(Double(row.integer("error"))), "capture_chat_guid": .string(row["capture_chat_guid"])])
+        case "messages.agent_policy":
+            guard let agentPolicy, FileManager.default.fileExists(atPath: agentPolicy.path) else { return .object(["configured": .bool(false)]) }
+            let policy = try JSONDecoder().decode(JSON.self, from: Data(contentsOf: agentPolicy))
+            return .object(["configured": .bool(true), "policy": policy, "used": .bool(FileManager.default.fileExists(atPath: agentPolicy.path + ".used"))])
+        case "messages.max_row_id":
+            return .object(["value": .number(Double(try MessagesReader(path: path).maximum()))])
+        case "messages.payload_fingerprint":
+            return .object(["digest": .string(BodyDigest.hash(try JSONEncoder().encode(request["messages"])))])
+        default:
+            throw SourceFailure.unsupported
+        }
+    }
     public func prepare(_ command: JSON) async throws -> Prepared {
         let interactive = try CommandOrigin(command) == .interactive
         let action = command["action"]

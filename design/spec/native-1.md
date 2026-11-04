@@ -235,6 +235,17 @@ through `reminders.read_list` / `reminders.read_reminder`, decides whether the f
 `--rust-commands reminders` (`AB_SESSION_RUST_COMMANDS` overrides the list), so Swift's native-session `Prepare`,
 `Dispatch` and `Resolve` handlers refuse `reminders.*`.
 
+### Messages primitives (send Prepare in Rust, not routable yet)
+
+`session/messages.rs` holds the Rust Prepare and dispatch-time validation of `messages.send`: the origin rules
+(`CommandOrigin`), the send policy of `ab_session::messages_policy` (the 43 shared vectors run through the real
+Prepare), file-name checks, the route (approved handles, chat members, direct chats), the resend rule, the
+agent policy (one pinned message, once) and the per-kind route proofs. It is **not in** `RUST_COMMAND_SOURCES`,
+so no flag routes it: Dispatch, the UI operations and the self-test still need their primitives. Swift answers
+read-only facts (`MessagesCommands.primitive`): `messages.config`, `own_handles`, `approved_handles`,
+`chat_members` (`handles` from a left join, `joined` from an inner join), `direct_chats`, `route_proofs`,
+`message`, `agent_policy`, `max_row_id`, `payload_fingerprint`. Rust decides; Swift never compares.
+
 ## Ownership and migration
 
 See rust/interfaces/ab-session.md. Exactly one external ipc/1 session and one authoritative
