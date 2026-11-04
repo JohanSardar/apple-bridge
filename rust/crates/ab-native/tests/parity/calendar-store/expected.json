@@ -1,0 +1,976 @@
+{
+  "blob_digests" : [
+    "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+    "d10cace57a4d118b0857615e1eecde2e6dcb2ac14db1e2dca0e10566c316a847"
+  ],
+  "observations" : [
+    {
+      "collection" : "calendar.calendar",
+      "data" : {
+        "title" : "Home"
+      },
+      "kind" : "upsert",
+      "native_key" : "AAAAAAAA-0000-0000-0000-000000000001",
+      "observed_at" : "2026-11-04T00:00:00Z",
+      "scoped_alias" : ""
+    },
+    {
+      "collection" : "calendar.event",
+      "data" : {
+        "attachments" : null,
+        "attendee_proposals" : null,
+        "calendar_id" : {
+          "$ref" : {
+            "collection" : "calendar.calendar",
+            "native_key" : "AAAAAAAA-0000-0000-0000-000000000001"
+          }
+        },
+        "conference_url" : null,
+        "invitation_status" : null,
+        "owner_participation_status" : null,
+        "participant_comments" : null,
+        "priority" : null,
+        "privacy_level" : null,
+        "start_location" : null,
+        "store_alarm_details" : null,
+        "store_coverage" : {
+          "attachments" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "attendee_proposals" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "conference_url" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "invitation_status" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "owner_participation_status" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "participant_comments" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "priority" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "privacy_level" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "start_location" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "store_alarm_details" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "store_identifier_match" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "structured_location" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "travel_advisory_behavior" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "travel_time" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          }
+        },
+        "store_identifier_match" : null,
+        "store_status" : "unsupported",
+        "structured_location" : null,
+        "title" : "EXT-DUP",
+        "travel_advisory_behavior" : null,
+        "travel_time" : null
+      },
+      "kind" : "upsert",
+      "native_key" : "EXT-DUP",
+      "observed_at" : "2026-11-04T00:00:00Z",
+      "scoped_alias" : ""
+    },
+    {
+      "collection" : "calendar.event",
+      "data" : {
+        "attachments" : [
+          {
+            "blob" : {
+              "digest" : "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+              "size" : 5,
+              "state" : "present"
+            },
+            "derivatives" : {
+
+            },
+            "filename" : "b.txt",
+            "mime_type" : "text/plain"
+          }
+        ],
+        "attendee_proposals" : null,
+        "calendar_id" : {
+          "$ref" : {
+            "collection" : "calendar.calendar",
+            "native_key" : "AAAAAAAA-0000-0000-0000-000000000001"
+          }
+        },
+        "conference_url" : "https://meet.example/a",
+        "invitation_status" : 2,
+        "is_exception" : false,
+        "owner_participation_status" : 2,
+        "participant_comments" : null,
+        "priority" : 5,
+        "privacy_level" : 0,
+        "start_location" : null,
+        "store_alarm_details" : null,
+        "store_coverage" : {
+          "attachment_derivatives" : {
+            "reason" : "native_calendar_derivatives_not_verified",
+            "status" : "unsupported"
+          },
+          "attachments" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "attendee_proposals" : {
+            "reason" : "positive_native_fixture_not_verified_on_this_os",
+            "status" : "unsupported"
+          },
+          "conference_url" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "invitation_status" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "owner_participation_status" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "participant_comments" : {
+            "reason" : "positive_native_fixture_not_verified_on_this_os",
+            "status" : "unsupported"
+          },
+          "priority" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "privacy_level" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "start_location" : {
+            "reason" : "positive_native_fixture_not_verified_on_this_os",
+            "status" : "unsupported"
+          },
+          "store_alarm_details" : {
+            "reason" : "positive_native_fixture_not_verified_on_this_os",
+            "status" : "unsupported"
+          },
+          "store_identifier_match" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "structured_location" : {
+            "reason" : "coordinate_units_not_verified_on_this_os",
+            "status" : "partial"
+          },
+          "travel_advisory_behavior" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "travel_time" : {
+            "reason" : "",
+            "status" : "complete"
+          }
+        },
+        "store_identifier_match" : "calendarItemIdentifier:unique_identifier",
+        "store_status" : "partial",
+        "structured_location" : {
+          "address" : "1 Main St",
+          "latitude" : null,
+          "longitude" : null,
+          "radius" : null,
+          "title" : "HQ"
+        },
+        "title" : "ID-A|2026-11-10T10:00:00Z",
+        "travel_advisory_behavior" : 1,
+        "travel_time" : 0
+      },
+      "kind" : "upsert",
+      "native_key" : "ID-A|2026-11-10T10:00:00Z",
+      "observed_at" : "2026-11-04T00:00:00Z",
+      "scoped_alias" : ""
+    },
+    {
+      "collection" : "calendar.event",
+      "data" : {
+        "attachments" : null,
+        "attendee_proposals" : null,
+        "calendar_id" : {
+          "$ref" : {
+            "collection" : "calendar.calendar",
+            "native_key" : "AAAAAAAA-0000-0000-0000-000000000001"
+          }
+        },
+        "conference_url" : null,
+        "invitation_status" : null,
+        "is_exception" : true,
+        "owner_participation_status" : null,
+        "participant_comments" : null,
+        "priority" : null,
+        "privacy_level" : null,
+        "start_location" : null,
+        "store_alarm_details" : null,
+        "store_coverage" : {
+          "attachments" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "attendee_proposals" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "conference_url" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "invitation_status" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "owner_participation_status" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "participant_comments" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "priority" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "privacy_level" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "start_location" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "store_alarm_details" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "store_identifier_match" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "structured_location" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "travel_advisory_behavior" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "travel_time" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          }
+        },
+        "store_identifier_match" : null,
+        "store_status" : "unsupported",
+        "structured_location" : null,
+        "title" : "ID-A|detached",
+        "travel_advisory_behavior" : null,
+        "travel_time" : null
+      },
+      "kind" : "upsert",
+      "native_key" : "ID-A|detached",
+      "observed_at" : "2026-11-04T00:00:00Z",
+      "scoped_alias" : ""
+    },
+    {
+      "collection" : "calendar.event",
+      "data" : {
+        "attachments" : [
+
+        ],
+        "attendee_proposals" : null,
+        "calendar_id" : {
+          "$ref" : {
+            "collection" : "calendar.calendar",
+            "native_key" : "AAAAAAAA-0000-0000-0000-000000000001"
+          }
+        },
+        "conference_url" : "https://meet.example/solo",
+        "invitation_status" : 0,
+        "owner_participation_status" : 3,
+        "participant_comments" : null,
+        "priority" : 0,
+        "privacy_level" : 1,
+        "start_location" : null,
+        "store_alarm_details" : null,
+        "store_coverage" : {
+          "attachments" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "attendee_proposals" : {
+            "reason" : "positive_native_fixture_not_verified_on_this_os",
+            "status" : "unsupported"
+          },
+          "conference_url" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "invitation_status" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "owner_participation_status" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "participant_comments" : {
+            "reason" : "positive_native_fixture_not_verified_on_this_os",
+            "status" : "unsupported"
+          },
+          "priority" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "privacy_level" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "start_location" : {
+            "reason" : "positive_native_fixture_not_verified_on_this_os",
+            "status" : "unsupported"
+          },
+          "store_alarm_details" : {
+            "reason" : "positive_native_fixture_not_verified_on_this_os",
+            "status" : "unsupported"
+          },
+          "store_identifier_match" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "structured_location" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "travel_advisory_behavior" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "travel_time" : {
+            "reason" : "positive_travel_time_units_not_verified_on_this_os",
+            "status" : "unsupported"
+          }
+        },
+        "store_identifier_match" : "calendarItemIdentifier:unique_identifier",
+        "store_status" : "partial",
+        "structured_location" : null,
+        "title" : "ID-B",
+        "travel_advisory_behavior" : 0,
+        "travel_time" : null
+      },
+      "kind" : "upsert",
+      "native_key" : "ID-B",
+      "observed_at" : "2026-11-04T00:00:00Z",
+      "scoped_alias" : ""
+    },
+    {
+      "collection" : "calendar.event",
+      "data" : {
+        "attachments" : [
+
+        ],
+        "attendee_proposals" : null,
+        "calendar_id" : {
+          "$ref" : {
+            "collection" : "calendar.calendar",
+            "native_key" : "AAAAAAAA-0000-0000-0000-000000000001"
+          }
+        },
+        "conference_url" : null,
+        "invitation_status" : 0,
+        "owner_participation_status" : null,
+        "participant_comments" : null,
+        "priority" : 0,
+        "privacy_level" : 0,
+        "start_location" : null,
+        "store_alarm_details" : null,
+        "store_coverage" : {
+          "attachment_derivatives" : {
+            "reason" : "native_calendar_derivatives_not_verified",
+            "status" : "unsupported"
+          },
+          "attachments" : {
+            "reason" : "attachment_bytes_not_locally_available_or_path_unverified",
+            "status" : "partial"
+          },
+          "attendee_proposals" : {
+            "reason" : "positive_native_fixture_not_verified_on_this_os",
+            "status" : "unsupported"
+          },
+          "conference_url" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "invitation_status" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "owner_participation_status" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "participant_comments" : {
+            "reason" : "positive_native_fixture_not_verified_on_this_os",
+            "status" : "unsupported"
+          },
+          "priority" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "privacy_level" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "start_location" : {
+            "reason" : "positive_native_fixture_not_verified_on_this_os",
+            "status" : "unsupported"
+          },
+          "store_alarm_details" : {
+            "reason" : "positive_native_fixture_not_verified_on_this_os",
+            "status" : "unsupported"
+          },
+          "store_identifier_match" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "structured_location" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "travel_advisory_behavior" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "travel_time" : {
+            "reason" : "travel_time_unavailable",
+            "status" : "unsupported"
+          }
+        },
+        "store_identifier_match" : "calendarItemIdentifier:unique_identifier",
+        "store_status" : "partial",
+        "structured_location" : null,
+        "title" : "ID-C",
+        "travel_advisory_behavior" : 0,
+        "travel_time" : null
+      },
+      "kind" : "upsert",
+      "native_key" : "ID-C",
+      "observed_at" : "2026-11-04T00:00:00Z",
+      "scoped_alias" : ""
+    },
+    {
+      "collection" : "calendar.event",
+      "data" : {
+        "attachments" : [
+
+        ],
+        "attendee_proposals" : null,
+        "calendar_id" : {
+          "$ref" : {
+            "collection" : "calendar.calendar",
+            "native_key" : "AAAAAAAA-0000-0000-0000-000000000001"
+          }
+        },
+        "conference_url" : null,
+        "invitation_status" : 0,
+        "owner_participation_status" : null,
+        "participant_comments" : null,
+        "priority" : 0,
+        "privacy_level" : 0,
+        "start_location" : null,
+        "store_alarm_details" : null,
+        "store_coverage" : {
+          "attachments" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "attendee_proposals" : {
+            "reason" : "positive_native_fixture_not_verified_on_this_os",
+            "status" : "unsupported"
+          },
+          "conference_url" : {
+            "reason" : "unsupported_conference_url_scheme",
+            "status" : "unsupported"
+          },
+          "invitation_status" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "owner_participation_status" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "participant_comments" : {
+            "reason" : "positive_native_fixture_not_verified_on_this_os",
+            "status" : "unsupported"
+          },
+          "priority" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "privacy_level" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "start_location" : {
+            "reason" : "positive_native_fixture_not_verified_on_this_os",
+            "status" : "unsupported"
+          },
+          "store_alarm_details" : {
+            "reason" : "positive_native_fixture_not_verified_on_this_os",
+            "status" : "unsupported"
+          },
+          "store_identifier_match" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "structured_location" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "travel_advisory_behavior" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "travel_time" : {
+            "reason" : "",
+            "status" : "complete"
+          }
+        },
+        "store_identifier_match" : "calendarItemIdentifier:unique_identifier",
+        "store_status" : "partial",
+        "structured_location" : null,
+        "title" : "ID-E",
+        "travel_advisory_behavior" : 0,
+        "travel_time" : 0
+      },
+      "kind" : "upsert",
+      "native_key" : "ID-E",
+      "observed_at" : "2026-11-04T00:00:00Z",
+      "scoped_alias" : ""
+    },
+    {
+      "collection" : "calendar.event",
+      "data" : {
+        "attachments" : [
+
+        ],
+        "attendee_proposals" : null,
+        "calendar_id" : {
+          "$ref" : {
+            "collection" : "calendar.calendar",
+            "native_key" : "aaaaaaaa-0000-0000-0000-000000000002"
+          }
+        },
+        "conference_url" : null,
+        "invitation_status" : 0,
+        "owner_participation_status" : null,
+        "participant_comments" : null,
+        "priority" : 0,
+        "privacy_level" : 0,
+        "start_location" : null,
+        "store_alarm_details" : null,
+        "store_coverage" : {
+          "attachments" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "attendee_proposals" : {
+            "reason" : "positive_native_fixture_not_verified_on_this_os",
+            "status" : "unsupported"
+          },
+          "conference_url" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "invitation_status" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "owner_participation_status" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "participant_comments" : {
+            "reason" : "positive_native_fixture_not_verified_on_this_os",
+            "status" : "unsupported"
+          },
+          "priority" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "privacy_level" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "start_location" : {
+            "reason" : "positive_native_fixture_not_verified_on_this_os",
+            "status" : "unsupported"
+          },
+          "store_alarm_details" : {
+            "reason" : "positive_native_fixture_not_verified_on_this_os",
+            "status" : "unsupported"
+          },
+          "store_identifier_match" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "structured_location" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "travel_advisory_behavior" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "travel_time" : {
+            "reason" : "",
+            "status" : "complete"
+          }
+        },
+        "store_identifier_match" : "calendarItemIdentifier:unique_identifier",
+        "store_status" : "partial",
+        "structured_location" : null,
+        "title" : "ID-F",
+        "travel_advisory_behavior" : 0,
+        "travel_time" : 0
+      },
+      "kind" : "upsert",
+      "native_key" : "ID-F",
+      "observed_at" : "2026-11-04T00:00:00Z",
+      "scoped_alias" : ""
+    },
+    {
+      "collection" : "calendar.event",
+      "data" : {
+        "attachments" : [
+
+        ],
+        "attendee_proposals" : null,
+        "calendar_id" : {
+          "$ref" : {
+            "collection" : "calendar.calendar",
+            "native_key" : "AAAAAAAA-0000-0000-0000-000000000001"
+          }
+        },
+        "conference_url" : null,
+        "invitation_status" : 0,
+        "owner_participation_status" : null,
+        "participant_comments" : null,
+        "priority" : 0,
+        "privacy_level" : 0,
+        "start_location" : null,
+        "store_alarm_details" : null,
+        "store_coverage" : {
+          "attachments" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "attendee_proposals" : {
+            "reason" : "positive_native_fixture_not_verified_on_this_os",
+            "status" : "unsupported"
+          },
+          "conference_url" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "invitation_status" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "owner_participation_status" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "participant_comments" : {
+            "reason" : "positive_native_fixture_not_verified_on_this_os",
+            "status" : "unsupported"
+          },
+          "priority" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "privacy_level" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "start_location" : {
+            "reason" : "positive_native_fixture_not_verified_on_this_os",
+            "status" : "unsupported"
+          },
+          "store_alarm_details" : {
+            "reason" : "positive_native_fixture_not_verified_on_this_os",
+            "status" : "unsupported"
+          },
+          "store_identifier_match" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "structured_location" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "travel_advisory_behavior" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "travel_time" : {
+            "reason" : "",
+            "status" : "complete"
+          }
+        },
+        "store_identifier_match" : "calendarItemIdentifier:unique_identifier",
+        "store_status" : "partial",
+        "structured_location" : null,
+        "title" : "ID-G",
+        "travel_advisory_behavior" : 0,
+        "travel_time" : 0
+      },
+      "kind" : "upsert",
+      "native_key" : "ID-G",
+      "observed_at" : "2026-11-04T00:00:00Z",
+      "scoped_alias" : ""
+    },
+    {
+      "collection" : "calendar.event",
+      "data" : {
+        "attachments" : [
+          {
+            "blob" : {
+              "digest" : "d10cace57a4d118b0857615e1eecde2e6dcb2ac14db1e2dca0e10566c316a847",
+              "size" : 11,
+              "state" : "present"
+            },
+            "derivatives" : {
+
+            },
+            "filename" : "a.pdf",
+            "mime_type" : "application/pdf"
+          },
+          {
+            "blob" : {
+              "digest" : "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+              "size" : 5,
+              "state" : "present"
+            },
+            "derivatives" : {
+
+            },
+            "filename" : "b.txt",
+            "mime_type" : "text/plain"
+          }
+        ],
+        "attendee_proposals" : null,
+        "calendar_id" : {
+          "$ref" : {
+            "collection" : "calendar.calendar",
+            "native_key" : "AAAAAAAA-0000-0000-0000-000000000001"
+          }
+        },
+        "conference_url" : null,
+        "invitation_status" : 0,
+        "owner_participation_status" : null,
+        "participant_comments" : null,
+        "priority" : 0,
+        "privacy_level" : 0,
+        "start_location" : null,
+        "store_alarm_details" : null,
+        "store_coverage" : {
+          "attachment_derivatives" : {
+            "reason" : "native_calendar_derivatives_not_verified",
+            "status" : "unsupported"
+          },
+          "attachments" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "attendee_proposals" : {
+            "reason" : "positive_native_fixture_not_verified_on_this_os",
+            "status" : "unsupported"
+          },
+          "conference_url" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "invitation_status" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "owner_participation_status" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "participant_comments" : {
+            "reason" : "positive_native_fixture_not_verified_on_this_os",
+            "status" : "unsupported"
+          },
+          "priority" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "privacy_level" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "start_location" : {
+            "reason" : "positive_native_fixture_not_verified_on_this_os",
+            "status" : "unsupported"
+          },
+          "store_alarm_details" : {
+            "reason" : "positive_native_fixture_not_verified_on_this_os",
+            "status" : "unsupported"
+          },
+          "store_identifier_match" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "structured_location" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "travel_advisory_behavior" : {
+            "reason" : "",
+            "status" : "complete"
+          },
+          "travel_time" : {
+            "reason" : "",
+            "status" : "complete"
+          }
+        },
+        "store_identifier_match" : "calendarItemIdentifier:unique_identifier",
+        "store_status" : "partial",
+        "structured_location" : null,
+        "title" : "ID-H",
+        "travel_advisory_behavior" : 0,
+        "travel_time" : 0
+      },
+      "kind" : "upsert",
+      "native_key" : "ID-H",
+      "observed_at" : "2026-11-04T00:00:00Z",
+      "scoped_alias" : ""
+    },
+    {
+      "collection" : "calendar.event",
+      "data" : {
+        "attachments" : null,
+        "attendee_proposals" : null,
+        "calendar_id" : {
+          "$ref" : {
+            "collection" : "calendar.calendar",
+            "native_key" : "AAAAAAAA-0000-0000-0000-000000000001"
+          }
+        },
+        "conference_url" : null,
+        "invitation_status" : null,
+        "owner_participation_status" : null,
+        "participant_comments" : null,
+        "priority" : null,
+        "privacy_level" : null,
+        "start_location" : null,
+        "store_alarm_details" : null,
+        "store_coverage" : {
+          "attachments" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "attendee_proposals" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "conference_url" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "invitation_status" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "owner_participation_status" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "participant_comments" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "priority" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "privacy_level" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "start_location" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "store_alarm_details" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "store_identifier_match" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "structured_location" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "travel_advisory_behavior" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          },
+          "travel_time" : {
+            "reason" : "calendar_store_identity_unverified",
+            "status" : "unsupported"
+          }
+        },
+        "store_identifier_match" : null,
+        "store_status" : "unsupported",
+        "structured_location" : null,
+        "title" : "ID-UNKNOWN",
+        "travel_advisory_behavior" : null,
+        "travel_time" : null
+      },
+      "kind" : "upsert",
+      "native_key" : "ID-UNKNOWN",
+      "observed_at" : "2026-11-04T00:00:00Z",
+      "scoped_alias" : ""
+    }
+  ]
+}
