@@ -115,3 +115,50 @@ fn every_swift_emlx_and_mime_fixture() {
         );
     }
 }
+
+#[test]
+fn a_flag_reaches_the_record_and_clearing_it_returns_to_null() {
+    use ab_native::{capture, mail};
+    let root = std::env::temp_dir().join(format!("ab-mail-flag-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(&root).unwrap();
+    let path = root.join("Envelope Index");
+    let db = rusqlite::Connection::open(&path).unwrap();
+    db.execute_batch("CREATE TABLE mailboxes(url TEXT);CREATE TABLE subjects(subject TEXT);CREATE TABLE addresses(address TEXT);CREATE TABLE messages(mailbox INTEGER,subject INTEGER,sender INTEGER,date_received REAL,read INTEGER,message_id TEXT,flagged INTEGER,flag_color INTEGER);INSERT INTO mailboxes(rowid,url) VALUES(1,'imap://ACCOUNT/INBOX');INSERT INTO subjects(rowid,subject) VALUES(1,'s');INSERT INTO addresses(rowid,address) VALUES(1,'a');INSERT INTO messages(rowid,mailbox,subject,sender,date_received,read,message_id,flagged,flag_color) VALUES(7,1,1,1,1.0,1,'',0,0);").unwrap();
+    let context = capture::Context {
+        observed_at: "2026-01-01T00:00:00.000Z".into(),
+        checkpoint: "c".into(),
+        scan_id: "s".into(),
+    };
+    let flagged = |reader: &mail::Reader| {
+        let pending = reader.snapshot(&path, &context, 100, true).unwrap();
+        let row = pending
+            .batch
+            .observations
+            .iter()
+            .find(|row| row.collection == "mail.message")
+            .unwrap()
+            .data
+            .as_ref()
+            .unwrap()
+            .get()
+            .to_owned();
+        let value: serde_json::Value = serde_json::from_str(&row).unwrap();
+        (value["flagged"].clone(), value["flag_color"].clone())
+    };
+    let reader = mail::Reader::default();
+    assert_eq!(
+        flagged(&reader),
+        (serde_json::Value::Null, serde_json::Value::Null)
+    );
+    db.execute_batch("UPDATE messages SET flagged=1,flag_color=3")
+        .unwrap();
+    assert_eq!(
+        flagged(&reader),
+        (serde_json::json!(true), serde_json::json!(3))
+    );
+    db.execute_batch("UPDATE messages SET flagged=0").unwrap();
+    assert_eq!(flagged(&reader).0, serde_json::Value::Null);
+    drop(db);
+    let _ = std::fs::remove_dir_all(root);
+}

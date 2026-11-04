@@ -27,3 +27,8 @@ Results contain `state`, `plain_text` and `html`. MIME alternatives, base64, quo
 MAIL-BODY qualifies native fixtures and the authenticated gateway query using SimApplePeer. Its harness reuses MailChecks only when its binary is newer than all MailSource, MailChecks, SourceSupport, manifest and build-script inputs; absent or stale builds invoke `packaging/dev/build-native.sh` automatically.
 
 T19 adds command descriptors and a native scripting seam for create_draft, send, move, set_flag, mark_read and delete-to-Trash. Inputs use to/cc arrays, subject/body, or a bridge message id with account/mailbox, flagged or read. Gateway resolves message IDs through visibility checks. Attachments and reply_to/forward_of explicitly reject as unsupported in this slice. Native capabilities remain withheld until real qualification and gateway capture-checkpoint reconciliation is implemented. Readback is a separate scripting call; missing evidence returns observed=false and must remain indeterminate. MAIL-COMMANDS exercises all six native paths with an injected provider and missing evidence. Real scenarios never contact Mail: limited because grant: Automation dev.applebridge.helper → com.apple.mail; no configured Mail account. No real email was sent.
+
+`flagged` is `true` for a flagged message and `null` otherwise, with `flag_color` set alongside it. A plain `false` would rewrite every message record on the first scan after an upgrade, for no new information.
+
+Mail deletes by moving: the draft's row goes, and a new row appears in Deleted Messages. So the deleted message's record is tombstoned and a new record takes its place in that mailbox.
+
