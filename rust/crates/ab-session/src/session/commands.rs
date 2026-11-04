@@ -47,7 +47,7 @@ pub(super) struct Commands {
     preparing: Option<Command>,
     tickets: BTreeMap<String, Ticket>,
     active: Option<Active>,
-    resolving: BTreeSet<String>,
+    resolving: BTreeMap<String, u32>,
     queries: BTreeSet<String>,
 }
 
@@ -59,9 +59,20 @@ impl Commands {
             preparing: None,
             tickets: BTreeMap::new(),
             active: None,
-            resolving: BTreeSet::new(),
+            resolving: BTreeMap::new(),
             queries: BTreeSet::new(),
         })
+    }
+
+    fn take_resolving(&mut self, id: &str) -> bool {
+        match self.resolving.get_mut(id) {
+            Some(count) if *count > 1 => {
+                *count -= 1;
+                true
+            }
+            Some(_) => self.resolving.remove(id).is_some(),
+            None => false,
+        }
     }
 
     pub(super) fn unresolved(&self) -> Vec<Value> {
@@ -248,7 +259,7 @@ impl Hub {
             && ["indeterminate", "locally_observed"]
                 .contains(&saved["disposition"].as_str().unwrap_or_default());
         if open {
-            core.commands.resolving.insert(id.clone());
+            *core.commands.resolving.entry(id.clone()).or_default() += 1;
             drop(core);
             return self.send_link(&Link::Resolve(Resolve {
                 command_id: id,
@@ -342,7 +353,7 @@ impl Hub {
             drop(core);
             return self.send_gateway(&saved_frame(&saved)?);
         }
-        if core.commands.resolving.remove(&id) {
+        if core.commands.take_resolving(&id) {
             drop(core);
             return self.send_gateway(&rejection.into_ipc().map_err(|_| Error::Invalid)?);
         }
@@ -355,7 +366,7 @@ impl Hub {
     ) -> Result<Option<(Active, Outcome)>, Error> {
         let id = outcome.command_id.clone();
         let mut core = self.core()?;
-        if core.commands.resolving.remove(&id) {
+        if core.commands.take_resolving(&id) {
             let saved = core.commands.guard.outcome(&id).cloned();
             let evidence = parsed(&outcome.evidence);
             let changed = saved.is_none_or(|saved| {
