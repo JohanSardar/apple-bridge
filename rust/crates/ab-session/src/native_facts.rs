@@ -18,6 +18,7 @@ use std::{
 const PAGE_LIMIT: u64 = 500;
 const MAX_ITEMS: usize = 100_000;
 const MAX_PAGES: usize = 4_096;
+const MAX_EARLY_CHANGES: usize = 64;
 const IO_TIMEOUT: Duration = Duration::from_secs(60);
 pub const MAX_REVALIDATE: usize = 500;
 
@@ -263,7 +264,11 @@ impl Client {
             Connection::Raw(stream) => stream,
             Connection::Closed => {
                 let Origin::Socket(path) = &self.origin else {
-                    return Err(Error::Conflict);
+                    return Err(if matches!(self.origin, Origin::Inherited) {
+                        Error::LinkLost
+                    } else {
+                        Error::Conflict
+                    });
                 };
                 let stream = UnixStream::connect(path)?;
                 stream.set_read_timeout(Some(IO_TIMEOUT))?;
@@ -275,13 +280,7 @@ impl Client {
             &mut stream,
             &json!({"t":"Hello","protocol":"native/1","version":1,"owner_fence":fence}),
         )?;
-        let (_, welcome) = match read_frame(&mut stream) {
-            Ok(frame) => frame,
-            Err(error) => {
-                eprintln!("ab-session: native/1 facts link: no welcome: {error}");
-                return Err(error);
-            }
-        };
+        let welcome = self.welcome(&mut stream)?;
         if welcome != json!({"t":"Welcome","protocol":"native/1","version":1}) {
             eprintln!(
                 "ab-session: native/1 facts link: unexpected reply t={} code={}",
@@ -308,6 +307,29 @@ impl Client {
         });
         *connection = Connection::Live(Arc::clone(&link));
         Ok(link)
+    }
+
+    fn welcome(&self, stream: &mut UnixStream) -> Result<Value, Error> {
+        for _ in 0..MAX_EARLY_CHANGES {
+            let (_, frame) = match read_frame(stream) {
+                Ok(frame) => frame,
+                Err(error) => {
+                    eprintln!("ab-session: native/1 facts link: no welcome: {error}");
+                    return Err(error);
+                }
+            };
+            if frame["t"] != "Changed" {
+                return Ok(frame);
+            }
+            if let (Some(source), Ok(mut changed)) = (
+                frame["source"].as_str().filter(|text| !text.is_empty()),
+                self.changed.lock(),
+            ) {
+                changed.insert(source.to_owned());
+            }
+        }
+        eprintln!("ab-session: native/1 facts link: no welcome after repeated Changed");
+        Err(Error::Invalid)
     }
 
     fn call(

@@ -37,6 +37,8 @@ pub enum Error {
     Invalid,
     #[error("ownership conflict")]
     Conflict,
+    #[error("native/1 facts link lost")]
+    LinkLost,
     #[error("dispatch already started")]
     AlreadyStarted,
     #[error("source reader: {0}")]
