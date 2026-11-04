@@ -84,6 +84,117 @@ pub struct ScanFailed {
     pub code: String,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Command {
+    pub command_id: String,
+    pub principal: String,
+    pub request_hash: String,
+    #[serde(default)]
+    pub origin: String,
+    pub expires_at: String,
+    pub action: Raw,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expected_state: Option<Raw>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Prepared {
+    pub command_id: String,
+    pub native_state: Raw,
+    #[serde(default)]
+    pub route: String,
+    #[serde(default)]
+    pub candidate_ids: Vec<Raw>,
+    #[serde(default)]
+    pub fingerprint: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Rejected {
+    pub command_id: String,
+    pub code: String,
+    #[serde(default)]
+    pub message: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub evidence: Option<Raw>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Dispatch {
+    pub command_id: String,
+    pub request_hash: String,
+    pub action: Raw,
+    pub native_state: Raw,
+    #[serde(default)]
+    pub fingerprint: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Outcome {
+    pub command_id: String,
+    pub disposition: String,
+    pub evidence: Raw,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Resolve {
+    pub command_id: String,
+    pub saved: Raw,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Query {
+    pub id: String,
+    pub op: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub args: Option<Raw>,
+    #[serde(default)]
+    pub deadline_ms: i64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct QueryResult {
+    pub id: String,
+    pub result_json: Raw,
+    #[serde(default)]
+    pub blobs: Vec<Raw>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct QueryError {
+    pub id: String,
+    pub code: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct QueryCancel {
+    pub id: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct BlobRead {
+    pub handle: String,
+    pub offset: i64,
+    pub length: i64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct BlobChunk {
+    pub handle: String,
+    pub offset: i64,
+    pub bytes: String,
+    pub digest: String,
+    #[serde(default)]
+    pub eof: bool,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct BlobUnavailable {
+    pub handle: String,
+    #[serde(default)]
+    pub reason: String,
+}
+
 #[derive(Debug)]
 pub enum Frame {
     Hello { owner_fence: u64 },
@@ -94,6 +205,19 @@ pub enum Frame {
     Scan(Scan),
     ScanCommitted(ScanCommitted),
     ScanFailed(ScanFailed),
+    Prepare(Command),
+    Prepared(Prepared),
+    Rejected(Rejected),
+    Dispatch(Dispatch),
+    Outcome(Outcome),
+    Resolve(Resolve),
+    Query(Query),
+    QueryResult(QueryResult),
+    QueryError(QueryError),
+    QueryCancel(QueryCancel),
+    BlobRead(BlobRead),
+    BlobChunk(BlobChunk),
+    BlobUnavailable(BlobUnavailable),
     Close,
 }
 
@@ -210,6 +334,19 @@ impl Frame {
             }
             "ScanCommitted" => Self::ScanCommitted(body(bytes)?),
             "ScanFailed" => Self::ScanFailed(body(bytes)?),
+            "Prepare" => Self::Prepare(body(bytes)?),
+            "Prepared" => Self::Prepared(body(bytes)?),
+            "Rejected" => Self::Rejected(body(bytes)?),
+            "Dispatch" => Self::Dispatch(body(bytes)?),
+            "Outcome" => Self::Outcome(body(bytes)?),
+            "Resolve" => Self::Resolve(body(bytes)?),
+            "Query" => Self::Query(body(bytes)?),
+            "QueryResult" => Self::QueryResult(body(bytes)?),
+            "QueryError" => Self::QueryError(body(bytes)?),
+            "QueryCancel" => Self::QueryCancel(body(bytes)?),
+            "BlobRead" => Self::BlobRead(body(bytes)?),
+            "BlobChunk" => Self::BlobChunk(body(bytes)?),
+            "BlobUnavailable" => Self::BlobUnavailable(body(bytes)?),
             "Close" => Self::Close,
             _ => return Err(ErrorCode::Invalid),
         })
@@ -238,6 +375,19 @@ impl Frame {
             Self::Scan(frame) => tagged("Scan", frame),
             Self::ScanCommitted(frame) => tagged("ScanCommitted", frame),
             Self::ScanFailed(frame) => tagged("ScanFailed", frame),
+            Self::Prepare(frame) => tagged("Prepare", frame),
+            Self::Prepared(frame) => tagged("Prepared", frame),
+            Self::Rejected(frame) => tagged("Rejected", frame),
+            Self::Dispatch(frame) => tagged("Dispatch", frame),
+            Self::Outcome(frame) => tagged("Outcome", frame),
+            Self::Resolve(frame) => tagged("Resolve", frame),
+            Self::Query(frame) => tagged("Query", frame),
+            Self::QueryResult(frame) => tagged("QueryResult", frame),
+            Self::QueryError(frame) => tagged("QueryError", frame),
+            Self::QueryCancel(frame) => tagged("QueryCancel", frame),
+            Self::BlobRead(frame) => tagged("BlobRead", frame),
+            Self::BlobChunk(frame) => tagged("BlobChunk", frame),
+            Self::BlobUnavailable(frame) => tagged("BlobUnavailable", frame),
             Self::Close => tagged("Close", &Empty {}),
         }?;
         if json.is_empty() || json.len() > MAX_FRAME {
@@ -301,6 +451,158 @@ impl SourceState {
             state: self.state,
             coverage: self.coverage,
             capabilities: self.capabilities,
+            reason: self.reason,
+            ..IpcFrame::default()
+        }
+    }
+}
+
+fn raw_json(value: &serde_json::Value) -> Result<Raw, ErrorCode> {
+    RawValue::from_string(value.to_string()).map_err(|_| ErrorCode::Invalid)
+}
+
+impl Command {
+    pub fn from_ipc(frame: &IpcFrame) -> Result<Self, ErrorCode> {
+        Ok(Self {
+            command_id: frame.command_id.clone(),
+            principal: frame.principal.clone(),
+            request_hash: frame.request_hash.clone(),
+            origin: frame.origin.clone(),
+            expires_at: frame.expires_at.as_str().to_owned(),
+            action: frame.action.clone().ok_or(ErrorCode::Invalid)?,
+            expected_state: frame.expected_state.clone(),
+        })
+    }
+
+    pub fn expires_unix(&self) -> Result<i64, ErrorCode> {
+        GoTime::parse(&self.expires_at)
+            .map(|time| time.unix_seconds())
+            .map_err(|_| ErrorCode::Invalid)
+    }
+
+    #[must_use]
+    pub fn operation(&self) -> String {
+        serde_json::from_str::<serde_json::Value>(self.action.get())
+            .ok()
+            .and_then(|action| action["op"].as_str().map(str::to_owned))
+            .unwrap_or_default()
+    }
+}
+
+impl Query {
+    pub fn from_ipc(frame: &IpcFrame) -> Self {
+        Self {
+            id: frame.id.clone(),
+            op: frame.op.clone(),
+            args: frame.args.clone(),
+            deadline_ms: frame.deadline_ms,
+        }
+    }
+}
+
+impl BlobRead {
+    #[must_use]
+    pub fn from_ipc(frame: &IpcFrame) -> Self {
+        Self {
+            handle: frame.handle.clone(),
+            offset: frame.offset,
+            length: frame.length,
+        }
+    }
+}
+
+impl Prepared {
+    pub fn into_ipc(self, ticket: String, fingerprint: String) -> IpcFrame {
+        IpcFrame {
+            t: "Prepared".into(),
+            command_id: self.command_id,
+            ticket,
+            native_state: Some(self.native_state),
+            route: if self.route.is_empty() {
+                "eventkit".into()
+            } else {
+                self.route
+            },
+            fingerprint,
+            candidate_ids: Some(self.candidate_ids),
+            ..IpcFrame::default()
+        }
+    }
+}
+
+impl Rejected {
+    pub fn into_ipc(self) -> Result<IpcFrame, ErrorCode> {
+        let error = raw_json(&serde_json::json!({"code": self.code, "message": self.message}))?;
+        Ok(IpcFrame {
+            t: "Rejected".into(),
+            command_id: self.command_id,
+            disposition: "rejected_before_dispatch".into(),
+            error: Some(error),
+            evidence: self.evidence,
+            ..IpcFrame::default()
+        })
+    }
+}
+
+impl Outcome {
+    #[must_use]
+    pub fn into_ipc(self) -> IpcFrame {
+        IpcFrame {
+            t: "Outcome".into(),
+            command_id: self.command_id,
+            disposition: self.disposition,
+            evidence: Some(self.evidence),
+            ..IpcFrame::default()
+        }
+    }
+}
+
+impl QueryResult {
+    #[must_use]
+    pub fn into_ipc(self) -> IpcFrame {
+        IpcFrame {
+            t: "QueryResult".into(),
+            id: self.id,
+            result_json: Some(self.result_json),
+            blobs: Some(self.blobs),
+            ..IpcFrame::default()
+        }
+    }
+}
+
+impl QueryError {
+    #[must_use]
+    pub fn into_ipc(self) -> IpcFrame {
+        IpcFrame {
+            t: "QueryError".into(),
+            id: self.id,
+            code: self.code,
+            ..IpcFrame::default()
+        }
+    }
+}
+
+impl BlobChunk {
+    #[must_use]
+    pub fn into_ipc(self) -> IpcFrame {
+        IpcFrame {
+            t: "BlobChunk".into(),
+            handle: self.handle,
+            offset: self.offset,
+            bytes: self.bytes,
+            digest: self.digest,
+            eof: self.eof,
+            ..IpcFrame::default()
+        }
+    }
+}
+
+impl BlobUnavailable {
+    #[must_use]
+    pub fn into_ipc(self) -> IpcFrame {
+        IpcFrame {
+            t: "BlobUnavailable".into(),
+            handle: self.handle,
             reason: self.reason,
             ..IpcFrame::default()
         }
