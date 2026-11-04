@@ -1,6 +1,7 @@
 use crate::http::random_id;
 use lab_runner::Evidence;
-use lab_world::{Error, Result};
+use lab_world::{Error, Result, World};
+use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::{
     collections::BTreeMap,
@@ -45,14 +46,14 @@ fn helper_app(scratch: &Path) -> Result<PathBuf> {
         Err(Error::Invalid("signed helper build failed".into()))
     }
 }
-fn report(app: &Path) -> Result<BTreeMap<String, String>> {
+fn report(app: &Path, command: &str, name: &str) -> Result<BTreeMap<String, String>> {
     let directory = home().join("Library/Application Support/AppleBridgeDev");
     fs::create_dir_all(&directory)?;
     let path = directory.join(format!("permissions-{}.json", random_id("run")?));
     let status = Command::new("open")
         .args(["-n", "-W", "-g", "-a"])
         .arg(app)
-        .args(["--args", "permission-status-proof", "", "--report"])
+        .args(["--args", command, name, "--report"])
         .arg(&path)
         .status()?;
     let data = fs::read(&path);
@@ -73,7 +74,7 @@ pub fn real(evidence: &mut Evidence) -> Result<()> {
         return Ok(());
     };
     let before = fingerprint();
-    let states = report(&app);
+    let states = report(&app, "permission-status-proof", "");
     let _ = fs::remove_dir_all(&scratch);
     let mut states = states.unwrap_or_default();
     let calls = states
@@ -132,5 +133,27 @@ pub fn real(evidence: &mut Evidence) -> Result<()> {
         before.is_some() && before == after,
         "TCC databases unchanged by the report",
     );
+    Ok(())
+}
+
+pub fn sim(_: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> {
+    let scratch = env::temp_dir().join(random_id("permission-helper-")?);
+    fs::create_dir_all(&scratch)?;
+    let Ok(app) = helper_app(&scratch) else {
+        evidence.check("signed_helper_build", false, "build-helper.sh failed");
+        let _ = fs::remove_dir_all(&scratch);
+        return Ok(());
+    };
+    let states = report(&app, "permission-fake", "fake");
+    let _ = fs::remove_dir_all(&scratch);
+    let states = states.unwrap_or_default();
+    evidence.check(
+        "helper_report",
+        states.len() == 12,
+        &format!("{} permission states", states.len()),
+    );
+    for (key, state) in &states {
+        evidence.check(key, state == "1", state);
+    }
     Ok(())
 }
