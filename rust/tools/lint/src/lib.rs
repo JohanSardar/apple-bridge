@@ -1,3 +1,4 @@
+mod boundary;
 mod registries;
 mod rustsrc;
 mod swift;
@@ -7,6 +8,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+pub use boundary::{ALLOWLIST, lint_boundary};
 pub use registries::{lint_bootstrap_registrations, lint_source_registries};
 pub use rustsrc::{lint_cargo, lint_rust};
 pub use swift::lint_swift;
@@ -51,6 +53,12 @@ pub fn lint_tree(root: &Path) -> Vec<Finding> {
     let mut findings = lint_source_registries(root);
     let mut files = Vec::new();
     walk(root, root, &mut files);
+    let swift: Vec<(String, PathBuf)> = files
+        .iter()
+        .filter(|(_, path)| path.extension().is_some_and(|ext| ext == "swift"))
+        .cloned()
+        .collect();
+    findings.extend(lint_boundary(root, &swift));
     for (relative, path) in files {
         let name = path
             .file_name()
