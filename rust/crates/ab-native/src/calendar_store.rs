@@ -531,7 +531,7 @@ impl Enrichment {
             "complete",
             "",
         );
-        self.travel(data, coverage, row);
+        Self::travel(data, coverage, row);
         self.attachments(data, coverage, row);
     }
 
