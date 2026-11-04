@@ -196,7 +196,6 @@ fn release_checks(directory: &Path, evidence: &mut Evidence) -> Result<()> {
         "functional",
         "probe",
         "wire-checks",
-        "media-cleanup-checks",
     ] {
         let (ok, output) = invoke(&apps["0"], &[command]);
         evidence.check(

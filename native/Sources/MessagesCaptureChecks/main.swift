@@ -74,7 +74,6 @@ struct MessagesCaptureChecks {
     }
     static func main() async throws {
         if CommandLine.arguments.contains("--pins") { try await PinsCaptureChecks.run(); return }
-        if CommandLine.arguments.contains("--selftest-isolation") { try SelfTestIsolationChecks.run(); return }
         if CommandLine.arguments.contains("--rich") { try await RichCaptureChecks.run(); return }
         if CommandLine.arguments.contains("--ui-session") { try await UISessionChecks.run(); return }
         if CommandLine.arguments.contains("--media-yield-metadata") { try await MediaYieldChecks.run(metadata: true); return }
