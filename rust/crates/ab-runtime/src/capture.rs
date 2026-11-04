@@ -109,7 +109,7 @@ impl Backend {
 }
 
 const REARM_COOLDOWN: std::time::Duration = std::time::Duration::from_secs(60);
-const REARM_COOLDOWN_CAP: std::time::Duration = std::time::Duration::from_secs(30 * 60);
+const REARM_COOLDOWN_CAP: std::time::Duration = std::time::Duration::from_mins(30);
 
 struct Cooling {
     at: std::time::Instant,
@@ -162,7 +162,7 @@ impl RearmCooldown {
         digest: &ab_blobs::Digest,
         attempt: &Attempt,
     ) {
-        if attempt.succeeded {
+        if attempt.standing == Standing::Present {
             self.digests.remove(digest.as_str());
             return;
         }
@@ -256,9 +256,15 @@ async fn offer<S: ab_blobs::BlobRead>(
     Ok(Some(tally))
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Standing {
+    Unknown,
+    Absent,
+    Present,
+}
+
 struct Attempt {
-    succeeded: bool,
-    known: bool,
+    standing: Standing,
     transferred: bool,
     refused: bool,
 }
@@ -272,15 +278,14 @@ async fn attempt<S: ab_blobs::BlobRead>(
     digest: &ab_blobs::Digest,
 ) -> Result<Option<Attempt>, crate::Error> {
     let mut attempt = Attempt {
-        succeeded: false,
-        known: true,
+        standing: Standing::Absent,
         transferred: false,
         refused: false,
     };
     loop {
         let entry = blobs.lock().await.entries().get(digest.as_str()).cloned();
         let Some(entry) = entry else {
-            attempt.known = false;
+            attempt.standing = Standing::Unknown;
             break;
         };
         if matches!(
@@ -289,7 +294,9 @@ async fn attempt<S: ab_blobs::BlobRead>(
                 | ab_blobs::BlobState::Failed
                 | ab_blobs::BlobState::OverCap
         ) {
-            attempt.succeeded = entry.state == ab_blobs::BlobState::Present;
+            if entry.state == ab_blobs::BlobState::Present {
+                attempt.standing = Standing::Present;
+            }
             break;
         }
         if let Ok(deadline) = entry.next_attempt_at.parse::<jiff::Timestamp>() {
@@ -318,7 +325,7 @@ async fn attempt<S: ab_blobs::BlobRead>(
             mutate(blobs, |store| store.retry(digest, true))
                 .await
                 .map_err(|_| crate::Error::Invalid)?;
-            attempt.succeeded = true;
+            attempt.standing = Standing::Present;
             break;
         }
         attempt.refused = matches!(result, Err(ab_blobs::Error::Io(_)));
@@ -358,14 +365,14 @@ enum Outcome {
 }
 impl Outcome {
     fn of(attempt: &Attempt, rearmed: bool, rearmable: bool) -> Self {
-        match (attempt.succeeded, attempt.known, attempt.transferred) {
-            (true, _, _) if rearmed => Self::Recovered,
-            (true, _, _) => Self::Stored,
-            (false, false, _) => Self::Unknown,
-            (false, true, true) if attempt.refused => Self::Unserved,
-            (false, true, true) => Self::FailedAfterRetry,
-            (false, true, false) if rearmable => Self::Cooling,
-            (false, true, false) => Self::NotRetryable,
+        match (attempt.standing, attempt.transferred) {
+            (Standing::Present, _) if rearmed => Self::Recovered,
+            (Standing::Present, _) => Self::Stored,
+            (Standing::Unknown, _) => Self::Unknown,
+            (Standing::Absent, true) if attempt.refused => Self::Unserved,
+            (Standing::Absent, true) => Self::FailedAfterRetry,
+            (Standing::Absent, false) if rearmable => Self::Cooling,
+            (Standing::Absent, false) => Self::NotRetryable,
         }
     }
 }
