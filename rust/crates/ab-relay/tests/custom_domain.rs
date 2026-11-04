@@ -240,7 +240,7 @@ async fn wait_for<F: FnMut() -> bool>(mut condition: F) {
     panic!("condition not reached");
 }
 
-async fn visit(public: SocketAddr, site: CertificateDer<'static'>, domain: &str) -> String {
+async fn visit(public: SocketAddr, site: CertificateDer<'static>, domain: &str) -> String {
     let mut roots = rustls::RootCertStore::empty();
     roots.add(site).unwrap();
     let visitor = rustls::ClientConfig::builder_with_provider(Arc::new(
