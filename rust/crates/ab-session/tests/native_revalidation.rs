@@ -591,3 +591,42 @@ fn the_rust_store_enriches_pulled_calendar_events_and_serves_their_attachments()
     assert!(!AgendaReader::calendar("/nonexistent".into()).owns(handle));
     Ok(())
 }
+
+#[test]
+fn the_rust_store_enriches_pulled_reminders_from_the_store_and_never_invents_fields() -> Fallible<()> {
+    let stores = std::env::temp_dir().join(format!("ab-session-remstore-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&stores);
+    std::fs::create_dir_all(&stores)?;
+    rusqlite::Connection::open(stores.join("Data-fixture.sqlite"))?.execute_batch(include_str!(
+        "../../ab-native/tests/parity/reminders-store/schema.sql"
+    ))?;
+    let (world, client) = rig()?;
+    world.lock().map_err(|_| "poisoned")?.generation = "eventkit-abc".into();
+    let mut reader = AgendaReader::reminders("/nonexistent".into())
+        .paged(Arc::clone(&client), Duration::from_millis(1))
+        .with_reminders_store(stores);
+    let mut clock = Clock(0);
+    let item = |collection: &str, key: &str| json!({"kind":"upsert","collection":collection,"native_key":key,"scoped_alias":"","data":{"title":key}});
+    set(&world, "agenda.reminder_lists", vec![item("reminders.list", "00000010-0000-4000-8000-000000000010")])?;
+    set(
+        &world,
+        "agenda.reminders",
+        vec![
+            item("reminders.reminder", "000000A0-0000-4000-8000-0000000000A0"),
+            item("reminders.reminder", "not-in-the-store"),
+        ],
+    )?;
+    let capture = pull(&mut reader, &mut clock)?.ok_or("capture")?;
+    let rows = capture["observations"].as_array().ok_or("rows")?;
+    let find = |key: &str| rows.iter().find(|row| row["native_key"] == key);
+    let known = find("000000A0-0000-4000-8000-0000000000A0").ok_or("known")?;
+    assert_eq!(known["data"]["store_status"], "partial");
+    assert_eq!(known["data"]["tags"], json!(["home"]));
+    assert_eq!(known["data"]["title"], "000000A0-0000-4000-8000-0000000000A0");
+    let unknown = find("not-in-the-store").ok_or("unknown")?;
+    assert_eq!(unknown["data"]["store_status"], "unavailable");
+    assert_eq!(unknown["data"]["tags"], Value::Null);
+    let list = find("00000010-0000-4000-8000-000000000010").ok_or("list")?;
+    assert_eq!(list["data"]["badge_emblem"], "star");
+    Ok(())
+}

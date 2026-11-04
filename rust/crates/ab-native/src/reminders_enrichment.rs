@@ -10,7 +10,10 @@ use std::path::{Path, PathBuf};
 type Paths = Box<dyn Fn() -> Result<Vec<PathBuf>> + Send>;
 
 pub fn default_paths(home: &Path) -> Result<Vec<PathBuf>> {
-    let stores = home.join("Library/Group Containers/group.com.apple.reminders/Container_v1/Stores");
+    paths_in(&home.join("Library/Group Containers/group.com.apple.reminders/Container_v1/Stores"))
+}
+
+pub fn paths_in(stores: &Path) -> Result<Vec<PathBuf>> {
     let mut found: Vec<PathBuf> = std::fs::read_dir(stores)?
         .filter_map(std::result::Result::ok)
         .map(|entry| entry.path())
