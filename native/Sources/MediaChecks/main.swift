@@ -66,6 +66,23 @@ struct MediaChecks {
             for variant in result.derivatives.values { variants[variant.digest] = try Data(contentsOf: MediaDerivatives.url(variant)).base64EncodedString() }
             let record: [String: Any] = ["fact": fact, "media": fields.media, "derivatives": fields.derivatives, "variants": variants, "source_digest": digest]
             print(String(data: try JSONSerialization.data(withJSONObject: record, options: [.sortedKeys]), encoding: .utf8)!)
+        case "messages-confined":
+            let inside = URL(fileURLWithPath: args[2], isDirectory: true)
+            let outside = URL(fileURLWithPath: args[3])
+            let digest = String(repeating: "a", count: 64)
+            do {
+                _ = try await MessagesMediaFact.answer(["digest": digest, "file": outside.path], allowedRoot: inside, paused: { false })
+                throw CheckFailure.mismatch
+            } catch is CheckFailure { throw CheckFailure.mismatch } catch {}
+            do {
+                _ = try await MessagesMediaFact.answer(["digest": "short", "file": inside.appendingPathComponent("x").path], allowedRoot: inside, paused: { false })
+                throw CheckFailure.mismatch
+            } catch is CheckFailure { throw CheckFailure.mismatch } catch {}
+            let unsupported = try await MessagesMediaFact.answer(["digest": digest, "file": inside.appendingPathComponent("x.txt").path, "uti": "public.plain-text", "mime": "text/plain"], allowedRoot: inside, paused: { false })
+            guard unsupported["status"] as? String == "unsupported" else { throw CheckFailure.mismatch }
+            let paused = try await MessagesMediaFact.answer(["digest": digest, "file": inside.appendingPathComponent("x.png").path, "uti": "public.png"], allowedRoot: inside, paused: { true })
+            guard paused["status"] as? String == "paused" else { throw CheckFailure.mismatch }
+            print("messages media confinement checks passed")
         case "derive":
             let file = URL(fileURLWithPath: args[2])
             let digest = args.count > 3 ? args[3] : SHA256.hash(data: try Data(contentsOf: file)).map { String(format: "%02x", $0) }.joined()
