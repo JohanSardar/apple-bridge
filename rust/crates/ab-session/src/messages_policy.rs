@@ -663,6 +663,65 @@ pub fn media_target(
     }
 }
 
+#[must_use]
+pub fn media_cleanup_check(fixture: &serde_json::Value) -> Option<serde_json::Value> {
+    let strings = |value: &serde_json::Value| -> Vec<String> {
+        value
+            .as_array()
+            .map(|items| {
+                items
+                    .iter()
+                    .filter_map(|item| item.as_str().map(ToOwned::to_owned))
+                    .collect()
+            })
+            .unwrap_or_default()
+    };
+    let proof = MediaProof::new(&fixture["registration"], fixture["tag"].as_str()?)?;
+    let row = &fixture["row"];
+    let attachments = strings(&row["attachments"]);
+    let own: BTreeSet<String> = strings(&fixture["own"])
+        .iter()
+        .map(|h| normalize(h))
+        .collect();
+    let authorized = proof.authorizes(
+        whole(&row["row_id"])?,
+        &attachments,
+        &strings(&row["peers"]),
+        &own,
+    );
+    let names: BTreeSet<String> = proof.target_names(&attachments).into_iter().collect();
+    let bubbles: Vec<MediaBubble> = fixture["candidates"]
+        .as_array()?
+        .iter()
+        .map(|candidate| {
+            let description = candidate["description"].as_str().unwrap_or_default();
+            let mut values = strings(&candidate["values"]);
+            let outgoing = if description.is_empty() {
+                candidate["outgoing"].as_bool()
+            } else {
+                values.push(description.to_owned());
+                media_direction(description)
+            };
+            MediaBubble { outgoing, values }
+        })
+        .collect();
+    let copies = usize::try_from(whole(&fixture["owned_copies"]).unwrap_or(1))
+        .unwrap_or(1)
+        .max(1);
+    let target = media_target(
+        &bubbles,
+        &names,
+        row["is_from_me"] == true,
+        fixture["allow_self_echo"] == true,
+        fixture["equivalent_owned"] == true,
+        copies,
+    );
+    Some(serde_json::json!({
+        "authorized": authorized,
+        "target_verified": authorized && target.is_some(),
+    }))
+}
+
 #[cfg(test)]
 mod conversation_tests {
     use super::*;

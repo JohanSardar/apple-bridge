@@ -410,6 +410,14 @@ fn run() -> Result<(), Error> {
     if let Some(result) = lab_entry(&args) {
         return result;
     }
+    if let ["--media-cleanup-check", path] = args.iter().map(String::as_str).collect::<Vec<_>>()[..]
+    {
+        let fixture: serde_json::Value = serde_json::from_slice(&std::fs::read(path)?)?;
+        let answer =
+            ab_session::messages_policy::media_cleanup_check(&fixture).ok_or(Error::Invalid)?;
+        println!("{answer}");
+        return Ok(());
+    }
     if args.first().map(String::as_str) == Some("--selftest-messages") {
         return selftest_messages(&args[1..]);
     }
