@@ -1343,7 +1343,13 @@ fn upserted(frame: &Value) -> Vec<i64> {
         .into_iter()
         .flatten()
         .filter(|row| row["kind"] == "upsert")
-        .filter_map(|row| row["native_key"].as_str()?.strip_prefix("msg-")?.parse().ok())
+        .filter_map(|row| {
+            row["native_key"]
+                .as_str()?
+                .strip_prefix("msg-")?
+                .parse()
+                .ok()
+        })
         .collect()
 }
 
@@ -1358,7 +1364,11 @@ fn messages_history_commits_in_single_frame_pages_and_resumes_after_a_reset() ->
     grow_messages(&database, 3000)?;
     let config = json!({"messages":{"root":root}}).to_string();
 
-    let mut first = wire(readers::from_config(&config)?, polling(Some(&state)), json!({}))?;
+    let mut first = wire(
+        readers::from_config(&config)?,
+        polling(Some(&state)),
+        json!({}),
+    )?;
     let mut history_frames = 0;
     let mut last = Value::Null;
     let mut committed_history: Vec<i64> = Vec::new();
@@ -1366,7 +1376,11 @@ fn messages_history_commits_in_single_frame_pages_and_resumes_after_a_reset() ->
         let (size, frame) = receive(&mut first.gateway)?;
         assert_eq!(frame["completion_evidence"], "", "scan finished too early");
         let checkpoint = frame["checkpoint"].as_str().ok_or("checkpoint")?;
-        assert_eq!(checkpoint.matches('-').count(), 2, "page split: {checkpoint}");
+        assert_eq!(
+            checkpoint.matches('-').count(),
+            2,
+            "page split: {checkpoint}"
+        );
         assert!(size < 70_000, "frame of {size} bytes");
         if frame["live"] == false {
             history_frames += 1;
