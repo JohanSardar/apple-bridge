@@ -1252,7 +1252,11 @@ fn messages_reader_streams_history_then_live_rows_and_serves_attachment_bytes() 
     loop {
         send(
             &mut session.gateway,
-            &json!({"t":"BlobRead","handle":"att-1","offset":offset,"length":131_072}),
+            &if offset == 0 {
+                json!({"t":"BlobRead","handle":"att-1","length":131_072})
+            } else {
+                json!({"t":"BlobRead","handle":"att-1","offset":offset,"length":131_072})
+            },
         )?;
         let (_, chunk) = loop {
             let frame = receive(&mut session.gateway)?;

@@ -123,7 +123,10 @@ impl GatewayFrame {
             }),
             Some("BlobRead") => Self::BlobRead(BlobRead {
                 handle: text(value, "handle").ok_or(Malformed)?,
-                offset: value["offset"].as_u64(),
+                offset: match &value["offset"] {
+                    serde_json::Value::Null => Some(0),
+                    other => other.as_u64(),
+                },
                 length: value["length"].as_u64(),
             }),
             Some("Dispatch") => Self::Dispatch(Dispatch {
@@ -181,6 +184,14 @@ mod tests {
                 source: "mail".into(),
                 checkpoint: "c".into(),
                 credit: Some(9)
+            }))
+        );
+        assert_eq!(
+            GatewayFrame::from_value(&json!({"t":"BlobRead","handle":"h","length":16})),
+            Ok(GatewayFrame::BlobRead(BlobRead {
+                handle: "h".into(),
+                offset: Some(0),
+                length: Some(16)
             }))
         );
         assert_eq!(
