@@ -180,6 +180,14 @@ public struct MessagesUISession {
         try fence()
         guard AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, kCFBooleanTrue) == .success, focused(element) else { throw failure }
     }
+    public func enter(_ text: String, into element: AXUIElement) throws {
+        try focus(element, failure: MessagesUIFailure.composerUnavailable)
+        try input(.replaceText(text))
+    }
+    public func erase(_ element: AXUIElement) throws {
+        try focus(element, failure: MessagesUIFailure.composerUnavailable)
+        try input(.clearText)
+    }
     public func type(_ text: String, into element: AXUIElement, value: (AXUIElement) -> String) throws {
         try focus(element, failure: MessagesUIFailure.composerUnavailable)
         try input(.replaceText(text))

@@ -15,6 +15,7 @@ use std::{
 #[cfg(target_os = "macos")]
 use std::os::macos::fs::MetadataExt as _;
 
+pub mod facts;
 mod observations;
 
 #[derive(Debug, thiserror::Error)]

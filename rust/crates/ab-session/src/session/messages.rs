@@ -146,7 +146,7 @@ pub(super) fn policy_stage(
     })
 }
 
-fn route_proof(route: &Value, kind: &str) -> String {
+pub(super) fn route_proof(route: &Value, kind: &str) -> String {
     let joined = format!(
         "{}|{}|{}|{}",
         text(route, "kind"),
@@ -685,14 +685,24 @@ fn validate_send(probe: &dyn Probe, action: &Value, state: &Value) -> Result<(),
     validate(probe, &json!({"action": action}), state)
 }
 
+#[cfg(feature = "rust-capture")]
+fn local<T>(probe: &dyn Probe, run: impl FnOnce(&dyn Probe) -> T) -> T {
+    run(&super::messages_local::Local::over(probe))
+}
+
+#[cfg(not(feature = "rust-capture"))]
+fn local<T>(probe: &dyn Probe, run: impl FnOnce(&dyn Probe) -> T) -> T {
+    run(probe)
+}
+
 pub(super) const DRIVER: Driver = Driver {
     name: "messages",
     prepare: prepare_unsupported,
-    prepare_command: Some(prepare),
-    validate: validate_send,
-    write,
+    prepare_command: Some(|probe, command| local(probe, |probe| prepare(probe, command))),
+    validate: |probe, action, state| local(probe, |probe| validate_send(probe, action, state)),
+    write: |probe, id, action, state| local(probe, |probe| write(probe, id, action, state)),
     settle,
-    resolved,
+    resolved: |probe, evidence| local(probe, |probe| resolved(probe, evidence)),
     reconcile_args,
 };
 

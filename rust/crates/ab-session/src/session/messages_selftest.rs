@@ -11,7 +11,6 @@ use std::{
 };
 
 const CALL_WAIT: Duration = Duration::from_secs(120);
-const CLEANUP_WAIT: Duration = Duration::from_secs(600);
 const HANDSHAKE_WAIT: Duration = Duration::from_secs(15);
 
 struct LinkProbe {
@@ -54,11 +53,7 @@ impl Probe for LinkProbe {
             op: operation.into(),
             args: Some(RawValue::from_string(args.to_string()).map_err(|_| unavailable())?),
         });
-        let wait = if operation == "messages.selftest_cleanup" {
-            CLEANUP_WAIT
-        } else {
-            CALL_WAIT
-        };
+        let wait = CALL_WAIT;
         let mut stream = self.stream.borrow_mut();
         stream
             .set_read_timeout(Some(wait))
@@ -79,11 +74,31 @@ impl Probe for LinkProbe {
     }
 }
 
+#[cfg(feature = "rust-capture")]
+pub fn serve(link: UnixStream, request: &Value) -> Result<(), Error> {
+    let probe = LinkProbe::open(link)?;
+    let local = super::messages_local::Local::over(&probe);
+    run(&local, &Driven(&local), request)
+        .map(|_| ())
+        .map_err(|_| Error::Invalid)
+}
+
+#[cfg(not(feature = "rust-capture"))]
 pub fn serve(link: UnixStream, request: &Value) -> Result<(), Error> {
     let probe = LinkProbe::open(link)?;
     run(&probe, &Driven(&probe), request)
         .map(|_| ())
         .map_err(|_| Error::Invalid)
+}
+
+#[cfg(feature = "rust-capture")]
+pub fn serve_cleanup(link: UnixStream, request: &Value) -> Result<(), Error> {
+    let probe = LinkProbe::open(link)?;
+    let local = super::messages_local::Local::over(&probe);
+    let report = local.cleanup_report(&probe, text(request, "tag"));
+    let body = report.unwrap_or_else(|code| json!({"state": "unavailable", "reason": code}));
+    std::fs::write(text(request, "report"), body.to_string())?;
+    Ok(())
 }
 
 const PENDING: [(&str, &str); 10] = [
@@ -939,6 +954,10 @@ mod tests {
         });
         super::serve(ours, &request()).unwrap();
         let seen = swift.join().unwrap();
+        let seen: Vec<_> = seen
+            .into_iter()
+            .filter(|(name, _)| name != "messages.config")
+            .collect();
         let names: Vec<&str> = seen.iter().map(|(name, _)| name.as_str()).collect();
         assert_eq!(
             names,
