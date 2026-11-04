@@ -540,7 +540,10 @@ mod tests {
         );
         let other = Fake::new();
         let never = json!({"op": "contacts.rename_group", "native_key": "g1", "args": {"name": "Elsewhere"}});
-        assert_eq!(write(&other, "c", &never, &Value::Null).unwrap_err(), "unavailable");
+        assert_eq!(
+            write(&other, "c", &never, &Value::Null).unwrap_err(),
+            "unavailable"
+        );
         let settling = Fake::new();
         settling
             .group_after
@@ -553,7 +556,10 @@ mod tests {
             json!([{"$ref": {"collection": "contacts.contact", "native_key": "m1"}}]);
         assert!(write(&member, "c", &add, &Value::Null).is_ok());
         let remove = json!({"op": "contacts.remove_member", "native_key": "g1", "list_key": "m1"});
-        assert_eq!(write(&member, "c", &remove, &Value::Null).unwrap_err(), "unavailable");
+        assert_eq!(
+            write(&member, "c", &remove, &Value::Null).unwrap_err(),
+            "unavailable"
+        );
     }
 
     #[test]

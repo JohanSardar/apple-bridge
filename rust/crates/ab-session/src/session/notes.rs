@@ -21,7 +21,11 @@ const FORBIDDEN_ORIGINAL: [&str; 6] = [
 ];
 const HTML_LIMIT: usize = 1_000_000;
 const OBSERVATIONS: u32 = 100;
-const OBSERVATION_GAP: Duration = Duration::from_millis(50);
+const OBSERVATION_GAP: Duration = if cfg!(test) {
+    Duration::ZERO
+} else {
+    Duration::from_millis(50)
+};
 
 fn truthy(data: &Value, field: &str) -> bool {
     data[field] == true
@@ -169,10 +173,8 @@ pub(super) fn validate(
         let current = read(probe, "notes.folder", key)?;
         let fingerprint = text(&current, "folder_fingerprint");
         return if !fingerprint.is_empty()
-            && equal(
-                &json!(fingerprint),
-                &native_state["native_fingerprint"],
-            ) {
+            && equal(&json!(fingerprint), &native_state["native_fingerprint"])
+        {
             Ok(())
         } else {
             Err(refuse("conflict"))
@@ -246,7 +248,9 @@ pub(super) fn write(
             } else {
                 seen["native_key"].clone()
             };
-            return Ok(json!({"native_key": key, "observed": true, "absent": seen["observed"] != true}));
+            return Ok(
+                json!({"native_key": key, "observed": true, "absent": seen["observed"] != true}),
+            );
         }
         if attempt + 1 < OBSERVATIONS {
             thread::sleep(OBSERVATION_GAP);
@@ -347,7 +351,8 @@ mod tests {
     }
 
     fn update(extra: &Value) -> Value {
-        let mut action = json!({"op": "notes.update", "native_key": "n1", "note_args": {"plain_text": "bye"}});
+        let mut action =
+            json!({"op": "notes.update", "native_key": "n1", "note_args": {"plain_text": "bye"}});
         for (key, value) in extra.as_object().unwrap() {
             action[key] = value.clone();
         }
@@ -361,7 +366,10 @@ mod tests {
     #[test]
     fn a_matching_plain_edit_prepares_with_the_fingerprint_and_text() {
         let state = prepare(&Fake::new(), &update(&json!({})), &expected()).unwrap();
-        assert_eq!(state, json!({"native_fingerprint": "f1", "plain_text": "hello"}));
+        assert_eq!(
+            state,
+            json!({"native_fingerprint": "f1", "plain_text": "hello"})
+        );
     }
 
     #[test]
@@ -370,48 +378,94 @@ mod tests {
         let refused = prepare(&Fake::new(), &update(&json!({})), &stale).unwrap_err();
         assert_eq!((refused.code.as_str(), refused.key), ("conflict", None));
         let gone = update(&json!({"native_key": "gone"}));
-        assert_eq!(prepare(&Fake::new(), &gone, &expected()).unwrap_err().code, "conflict");
+        assert_eq!(
+            prepare(&Fake::new(), &gone, &expected()).unwrap_err().code,
+            "conflict"
+        );
         for field in ["locked", "read_only", "recently_deleted"] {
             let mut probe = Fake::new();
             probe.note[field] = json!(true);
             assert_eq!(
-                prepare(&probe, &update(&json!({})), &expected()).unwrap_err().code,
+                prepare(&probe, &update(&json!({})), &expected())
+                    .unwrap_err()
+                    .code,
                 "unsupported",
                 "{field}"
             );
         }
         let mut rich = Fake::new();
         rich.note["editable"] = json!("rich");
-        assert_eq!(prepare(&rich, &update(&json!({})), &expected()).unwrap_err().code, "unsupported");
+        assert_eq!(
+            prepare(&rich, &update(&json!({})), &expected())
+                .unwrap_err()
+                .code,
+            "unsupported"
+        );
         let unknown = json!({"op": "notes.delete_folder"});
-        assert_eq!(prepare(&Fake::new(), &unknown, &Value::Null).unwrap_err().code, "unsupported");
+        assert_eq!(
+            prepare(&Fake::new(), &unknown, &Value::Null)
+                .unwrap_err()
+                .code,
+            "unsupported"
+        );
         let create = json!({"op": "notes.create", "folder_key": "d1", "note_args": {}});
         assert!(prepare(&Fake::new(), &create, &Value::Null).is_ok());
         let mut readonly = Fake::new();
         readonly.folder["read_only"] = json!(true);
-        assert_eq!(prepare(&readonly, &create, &Value::Null).unwrap_err().code, "unsupported");
-        let missing = json!({"op": "notes.move", "native_key": "n1", "folder_key": "nope", "note_args": {}});
-        assert_eq!(prepare(&Fake::new(), &missing, &expected()).unwrap_err().code, "conflict");
+        assert_eq!(
+            prepare(&readonly, &create, &Value::Null).unwrap_err().code,
+            "unsupported"
+        );
+        let missing =
+            json!({"op": "notes.move", "native_key": "n1", "folder_key": "nope", "note_args": {}});
+        assert_eq!(
+            prepare(&Fake::new(), &missing, &expected())
+                .unwrap_err()
+                .code,
+            "conflict"
+        );
     }
 
     #[test]
     fn rich_edits_keep_the_structure_and_refuse_everything_else() {
         let before = note("<div>hello</div><div><br></div>");
-        assert!(rich_edit_allowed(&before, "<div>other words</div><div><br></div>"));
+        assert!(rich_edit_allowed(
+            &before,
+            "<div>other words</div><div><br></div>"
+        ));
         assert!(!rich_edit_allowed(&before, "<div>hello</div>"));
-        assert!(!rich_edit_allowed(&before, "<div>hello</div><div><br></div><div>x</div>"));
+        assert!(!rich_edit_allowed(
+            &before,
+            "<div>hello</div><div><br></div><div>x</div>"
+        ));
         assert!(!rich_edit_allowed(&before, ""));
         assert!(!rich_edit_allowed(&before, "<div>a\0</div><div><br></div>"));
-        assert!(!rich_edit_allowed(&before, "<div>a < b</div><div><br></div>"));
-        assert!(!rich_edit_allowed(&before, &format!("<div>{}</div><div><br></div>", "x".repeat(1_000_001))));
+        assert!(!rich_edit_allowed(
+            &before,
+            "<div>a < b</div><div><br></div>"
+        ));
+        assert!(!rich_edit_allowed(
+            &before,
+            &format!("<div>{}</div><div><br></div>", "x".repeat(1_000_001))
+        ));
         for marker in FORBIDDEN_ORIGINAL {
             let marked = note(&format!("<div>hello</div>{marker}>"));
-            assert!(!rich_edit_allowed(&marked, &format!("<div>x</div>{marker}>")), "{marker}");
+            assert!(
+                !rich_edit_allowed(&marked, &format!("<div>x</div>{marker}>")),
+                "{marker}"
+            );
         }
-        for (field, value) in [("content_status", "partial"), ("block_status", "partial"), ("round_trip_status", "proven")] {
+        for (field, value) in [
+            ("content_status", "partial"),
+            ("block_status", "partial"),
+            ("round_trip_status", "proven"),
+        ] {
             let mut changed = before.clone();
             changed[field] = json!(value);
-            assert!(!rich_edit_allowed(&changed, "<div>x</div><div><br></div>"), "{field}");
+            assert!(
+                !rich_edit_allowed(&changed, "<div>x</div><div><br></div>"),
+                "{field}"
+            );
         }
         let mut attached = before.clone();
         attached["attachments"] = json!([{"id": "a"}]);
@@ -419,7 +473,10 @@ mod tests {
         for field in ["locked", "read_only", "recently_deleted"] {
             let mut flagged = before.clone();
             flagged[field] = json!(true);
-            assert!(!rich_edit_allowed(&flagged, "<div>x</div><div><br></div>"), "{field}");
+            assert!(
+                !rich_edit_allowed(&flagged, "<div>x</div><div><br></div>"),
+                "{field}"
+            );
         }
         let mut empty = before.clone();
         empty["html"] = json!("");
@@ -430,17 +487,36 @@ mod tests {
     fn folder_renames_are_limited_to_test_folders_and_the_expected_title() {
         let rename = json!({"op": "notes.rename_folder", "native_key": "d1", "note_args": {"title": "Bridge Test [ab-test y]"}});
         let current = json!({"title": "Bridge Test [ab-test x]"});
-        assert_eq!(prepare(&Fake::new(), &rename, &current).unwrap()["native_fingerprint"], "ff1");
+        assert_eq!(
+            prepare(&Fake::new(), &rename, &current).unwrap()["native_fingerprint"],
+            "ff1"
+        );
         let stale = json!({"title": "Bridge Test [ab-test z]"});
-        assert_eq!(prepare(&Fake::new(), &rename, &stale).unwrap_err().code, "conflict");
+        assert_eq!(
+            prepare(&Fake::new(), &rename, &stale).unwrap_err().code,
+            "conflict"
+        );
         let outside = json!({"op": "notes.rename_folder", "native_key": "d1", "note_args": {"title": "Personal"}});
-        assert_eq!(prepare(&Fake::new(), &outside, &current).unwrap_err().code, "conflict");
+        assert_eq!(
+            prepare(&Fake::new(), &outside, &current).unwrap_err().code,
+            "conflict"
+        );
         let mut real = Fake::new();
         real.folder["title"] = json!("Personal");
-        assert_eq!(prepare(&real, &rename, &json!({"title": "Personal"})).unwrap_err().code, "conflict");
-        let state = prepare(&Fake::new(), &rename, &current).unwrap();
-        assert!(validate(&Fake::new(), &rename, &state).is_ok());
-        assert_eq!(validate(&Fake::new(), &rename, &json!({"native_fingerprint": "old"})).unwrap_err().code, "conflict");
+        assert_eq!(
+            prepare(&real, &rename, &json!({"title": "Personal"}))
+                .unwrap_err()
+                .code,
+            "conflict"
+        );
+        let prepared = prepare(&Fake::new(), &rename, &current).unwrap();
+        assert!(validate(&Fake::new(), &rename, &prepared).is_ok());
+        assert_eq!(
+            validate(&Fake::new(), &rename, &json!({"native_fingerprint": "old"}))
+                .unwrap_err()
+                .code,
+            "conflict"
+        );
     }
 
     #[test]
@@ -449,7 +525,12 @@ mod tests {
         let state = prepare(&probe, &update(&json!({})), &expected()).unwrap();
         assert!(validate(&probe, &update(&json!({})), &state).is_ok());
         probe.note["native_fingerprint"] = json!("f2");
-        assert_eq!(validate(&probe, &update(&json!({})), &state).unwrap_err().code, "conflict");
+        assert_eq!(
+            validate(&probe, &update(&json!({})), &state)
+                .unwrap_err()
+                .code,
+            "conflict"
+        );
     }
 
     #[test]
@@ -462,31 +543,62 @@ mod tests {
         ]);
         let written = write(&probe, "c", &update(&json!({})), &state).unwrap();
         assert_eq!(written["native_key"], "n1");
-        assert!(probe.calls.borrow().iter().any(|call| call == "notes.reconcile"));
+        assert!(
+            probe
+                .calls
+                .borrow()
+                .iter()
+                .any(|call| call == "notes.reconcile")
+        );
         let rich = update(&json!({"note_args": {"html": "<div>x</div>"}}));
         let html = Fake::new();
-        html.seen.borrow_mut().push(json!({"observed": true, "native_key": "n1", "data": {"html": "<div>x</div>"}}));
+        html.seen
+            .borrow_mut()
+            .push(json!({"observed": true, "native_key": "n1", "data": {"html": "<div>x</div>"}}));
         assert!(write(&html, "c", &rich, &state).is_ok());
-        let moved = json!({"op": "notes.move", "native_key": "n1", "folder_key": "d2", "note_args": {}});
+        let moved =
+            json!({"op": "notes.move", "native_key": "n1", "folder_key": "d2", "note_args": {}});
         let elsewhere = Fake::new();
         elsewhere.seen.borrow_mut().extend(std::iter::repeat_n(json!({"observed": true, "native_key": "n1", "data": {"folder_id": {"$ref": {"native_key": "d1"}}}}), 100));
-        assert_eq!(write(&elsewhere, "c", &moved, &state).unwrap_err(), "unavailable");
+        assert_eq!(
+            write(&elsewhere, "c", &moved, &state).unwrap_err(),
+            "unavailable"
+        );
         let delete = json!({"op": "notes.delete", "native_key": "n1", "note_args": {}});
         let trashed = Fake::new();
-        trashed.seen.borrow_mut().push(json!({"observed": false, "deletion_state": "trashed"}));
+        trashed
+            .seen
+            .borrow_mut()
+            .push(json!({"observed": false, "deletion_state": "trashed"}));
         let written = write(&trashed, "c", &delete, &state).unwrap();
-        assert_eq!((written["native_key"].as_str(), written["absent"].as_bool()), (Some("n1"), Some(true)));
+        assert_eq!(
+            (written["native_key"].as_str(), written["absent"].as_bool()),
+            (Some("n1"), Some(true))
+        );
         let active = Fake::new();
-        active.seen.borrow_mut().extend(std::iter::repeat_n(json!({"observed": true, "deletion_state": "active", "native_key": "n1"}), 100));
+        active.seen.borrow_mut().extend(std::iter::repeat_n(
+            json!({"observed": true, "deletion_state": "active", "native_key": "n1"}),
+            100,
+        ));
         assert!(write(&active, "c", &delete, &state).is_err());
     }
 
     #[test]
     fn outcomes_need_an_observed_key() {
-        assert!(settle("notes.update", &json!({"native_key": "n1", "observed": true})).is_some());
+        assert!(
+            settle(
+                "notes.update",
+                &json!({"native_key": "n1", "observed": true})
+            )
+            .is_some()
+        );
         assert!(settle("notes.update", &json!({"observed": true})).is_none());
         assert!(settle("notes.update", &json!({"native_key": "n1"})).is_none());
-        let deleted = settle("notes.delete", &json!({"native_key": "n1", "observed": true, "absent": true})).unwrap();
+        let deleted = settle(
+            "notes.delete",
+            &json!({"native_key": "n1", "observed": true, "absent": true}),
+        )
+        .unwrap();
         assert_eq!(deleted.evidence["absent"], true);
     }
 }
