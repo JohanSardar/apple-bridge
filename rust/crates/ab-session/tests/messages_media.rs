@@ -4,6 +4,7 @@ use ab_session::{native_facts::Client, readers, routed};
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
+use std::fmt::Write as _;
 use std::{
     io::{Read, Write},
     os::unix::net::UnixStream,
@@ -78,7 +79,6 @@ fn answer(world: &World, args: &Value) -> Fallible<Value> {
     fact["root"] = json!(world.root);
     fact["digest"] = args["digest"].clone();
     match world.mode {
-        Mode::Ready => {}
         Mode::Waiting => {
             if args["companions"].as_array().is_none_or(Vec::is_empty) {
                 fact["result"]["awaitingLive"] = json!(true);
@@ -92,7 +92,7 @@ fn answer(world: &World, args: &Value) -> Fallible<Value> {
             fact["status"] = json!("unsupported");
             fact.as_object_mut().ok_or("fact")?.remove("result");
         }
-        Mode::Broken => {}
+        Mode::Ready | Mode::Broken => {}
     }
     Ok(fact)
 }
@@ -317,8 +317,10 @@ fn blob(wire: &mut Wire, handle: &str) -> Fallible<Vec<u8>> {
 fn digest(bytes: &[u8]) -> String {
     Sha256::digest(bytes)
         .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
+        .fold(String::new(), |mut out, byte| {
+            let _ = write!(out, "{byte:02x}");
+            out
+        })
 }
 
 #[test]
