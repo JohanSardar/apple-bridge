@@ -3,6 +3,8 @@ mod blobs;
 mod calendar;
 mod contacts;
 mod files;
+#[cfg(test)]
+mod golden;
 mod mac;
 mod maps;
 mod media;
