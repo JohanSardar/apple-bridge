@@ -328,7 +328,9 @@ impl Session<'_> {
                 {
                     return Ok(json!({"exists":false}));
                 }
-                let digest = hex::encode(<sha2::Sha256 as sha2::Digest>::digest(record["data"].to_string()));
+                let digest = hex::encode(<sha2::Sha256 as sha2::Digest>::digest(
+                    record["data"].to_string(),
+                ));
                 Ok(json!({"exists":true,"data":record["data"],"folder_fingerprint":digest}))
             }
             "notes.observe" => {
