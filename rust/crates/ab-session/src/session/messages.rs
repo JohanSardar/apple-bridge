@@ -1,7 +1,7 @@
 use super::owned::{Driver, Probe, Refusal, Settled, equal, native_failure, refuse, text};
 use crate::messages_policy::{
     ActionWindow, Failure, Origin, Refusal as Policy, authorizes, check_with, first_tag, normalize,
-    read_state_matches, tag_at_start, tag_run, tagged,
+    tag_at_start, tag_run, tagged,
 };
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -1151,20 +1151,16 @@ fn write_conversation(
         &json!({"prepared": ui_prepared(action, state, ""), "command_id": command_id}),
     )?["ui"]
         .clone();
-    let latest: f64 = text(state, "latest_message_date").parse().unwrap_or(0.0);
     let started = Instant::now();
     loop {
         let now = probe.call("messages.conversation", &json!({"chat_guid": chat}))?;
         let recoverable = probe.call("messages.chat_recoverable", &json!({"chat_guid": chat}))?["recoverable"]
             == true;
         let missing = now["exists"] != true;
-        let stamp: f64 = text(&now, "last_read_message_timestamp")
-            .parse()
-            .unwrap_or(0.0);
         let observed = if operation == "messages.delete_chat" {
             missing || recoverable
         } else {
-            !missing && read_state_matches(stamp, latest, operation == "messages.mark_unread")
+            !missing && (now["unread"] == true) == (operation == "messages.mark_unread")
         };
         if observed {
             let mut evidence = ui.as_object().cloned().map_or(json!({}), Value::Object);
@@ -2710,8 +2706,7 @@ mod tests {
 
     fn conversation_probe(stamp: &str) -> Fake {
         let mut probe = chat_probe();
-        *probe.conversation.borrow_mut() =
-            json!({"exists": true, "row_position": 50, "last_read_message_timestamp": stamp});
+        *probe.conversation.borrow_mut() = json!({"exists": true, "row_position": 50, "last_read_message_timestamp": stamp, "unread": true});
         probe.conversation_rows = vec![
             json!({"guid": "m1", "date": "100"}),
             json!({"guid": "m0", "date": "90"}),
@@ -2973,12 +2968,13 @@ mod tests {
     }
 
     #[test]
-    fn a_read_state_change_is_observed_only_when_the_timestamp_catches_up() {
+    fn a_read_state_change_is_observed_on_the_rows_not_the_timestamp() {
         let read = conversation_command("messages.mark_read", "interactive");
         let probe = conversation_probe("50");
         let state = prepare(&probe, &read).unwrap();
-        *probe.conversation_effect.borrow_mut() =
-            Some(json!({"exists": true, "row_position": 50, "last_read_message_timestamp": "100"}));
+        *probe.conversation_effect.borrow_mut() = Some(
+            json!({"exists": true, "row_position": 50, "last_read_message_timestamp": "100", "unread": false}),
+        );
         let written = write(&probe, "c1", &read["action"], &state).unwrap();
         assert_eq!(
             (
@@ -3008,13 +3004,15 @@ mod tests {
         );
         let unread = conversation_command("messages.mark_unread", "interactive");
         let reading = conversation_probe("100");
+        reading.conversation.borrow_mut()["unread"] = json!(false);
         let state = prepare(&reading, &unread).unwrap();
         assert_eq!(
             write(&reading, "c1", &unread["action"], &state).unwrap()["disposition"],
             "indeterminate"
         );
-        *reading.conversation_effect.borrow_mut() =
-            Some(json!({"exists": true, "row_position": 50, "last_read_message_timestamp": "10"}));
+        *reading.conversation_effect.borrow_mut() = Some(
+            json!({"exists": true, "row_position": 50, "last_read_message_timestamp": "100", "unread": true}),
+        );
         assert_eq!(
             write(&reading, "c1", &unread["action"], &state).unwrap()["disposition"],
             "locally_observed"

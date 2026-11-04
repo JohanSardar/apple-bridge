@@ -291,11 +291,18 @@ impl Reader {
                 )?;
                 match rows.first() {
                     None => json!({"exists": false}),
-                    Some(row) => json!({
-                        "exists": true,
-                        "row_position": row.int("row_position"),
-                        "last_read_message_timestamp": row.text("last_read_message_timestamp"),
-                    }),
+                    Some(row) => {
+                        let unread = self.query(
+                            &format!("SELECT 1 FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? AND m.is_from_me=0 AND m.is_read=0 AND {VISIBLE} LIMIT 1"),
+                            &[string(args, "chat_guid").to_owned()],
+                        )?;
+                        json!({
+                            "exists": true,
+                            "row_position": row.int("row_position"),
+                            "last_read_message_timestamp": row.text("last_read_message_timestamp"),
+                            "unread": !unread.is_empty(),
+                        })
+                    }
                 }
             }
             "messages.conversation_messages" => {

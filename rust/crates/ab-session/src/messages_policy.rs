@@ -151,19 +151,6 @@ impl ActionWindow {
     }
 }
 
-#[must_use]
-pub fn read_state_matches(timestamp: f64, latest: f64, unread: bool) -> bool {
-    if !timestamp.is_finite() || !latest.is_finite() || timestamp < 0.0 || latest <= 0.0 {
-        return false;
-    }
-    let seconds = |value: f64| if value > 1e12 { value / 1e9 } else { value };
-    if unread {
-        seconds(timestamp) < seconds(latest)
-    } else {
-        seconds(timestamp) >= seconds(latest)
-    }
-}
-
 fn tag_length(rest: &str) -> Option<usize> {
     let id = rest.find(|c: char| !(c.is_ascii_alphanumeric() || c == '_' || c == '-'))?;
     (id > 0 && rest[id..].starts_with(']')).then_some(TAG_OPEN.len() + id + 1)
@@ -726,20 +713,6 @@ pub fn media_cleanup_check(fixture: &serde_json::Value) -> Option<serde_json::Va
 mod conversation_tests {
     use super::*;
     use serde_json::json;
-
-    #[test]
-    fn the_read_state_matcher_follows_the_swift_checks() {
-        assert!(read_state_matches(20.0, 20.0, false));
-        assert!(read_state_matches(19.0, 20.0, true));
-        assert!(!read_state_matches(19.0, 20.0, false));
-        assert!(read_state_matches(2_000_000_000_000.0, 2000.0, false));
-        assert!(!read_state_matches(f64::NAN, 20.0, true));
-        assert!(!read_state_matches(f64::INFINITY, 20.0, false));
-        assert!(!read_state_matches(-1.0, 20.0, true));
-        assert!(!read_state_matches(5.0, 0.0, true));
-        assert!(!read_state_matches(20.0, 20.0, true));
-        assert!(read_state_matches(1.0e9 * 1.9e3, 1.9e3, false));
-    }
 
     #[test]
     fn tags_are_found_at_the_start_or_anywhere_as_asked() {

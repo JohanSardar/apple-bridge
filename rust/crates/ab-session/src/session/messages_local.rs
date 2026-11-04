@@ -908,6 +908,44 @@ mod tests {
     }
 
     #[test]
+    fn a_conversation_reports_unread_from_its_incoming_rows() {
+        let fixture = fixture("unread");
+        let local = Local::with(&NoLink, Some(fixture.config.clone()));
+        let unread = |local: &Local<'_>| {
+            local
+                .call("messages.conversation", &json!({"chat_guid": "self"}))
+                .unwrap()["unread"]
+                .clone()
+        };
+        assert_eq!(unread(&local), false);
+        let db = Connection::open(&fixture.config.chat_db).unwrap();
+        db.execute_batch(
+            "INSERT INTO message(ROWID,guid,text,is_from_me,is_read) VALUES (3,'echo','x',0,0);
+             INSERT INTO chat_message_join VALUES (1,3);",
+        )
+        .unwrap();
+        assert_eq!(unread(&local), true, "an incoming unread row");
+        db.execute("UPDATE message SET is_from_me=1 WHERE guid='echo'", [])
+            .unwrap();
+        assert_eq!(unread(&local), false, "my own row is not unread");
+        db.execute_batch(
+            "UPDATE message SET is_from_me=0, associated_message_type=3006 WHERE guid='echo'",
+        )
+        .unwrap();
+        assert_eq!(
+            unread(&local),
+            true,
+            "Messages marks a trailing tapback row unread too"
+        );
+        db.execute_batch(
+            "INSERT INTO chat_recoverable_message_join VALUES (1,3,1);
+             DELETE FROM chat_message_join WHERE message_id=3;",
+        )
+        .unwrap();
+        assert_eq!(unread(&local), false, "a recoverable row is gone");
+    }
+
+    #[test]
     fn the_self_test_takes_only_the_self_chat_and_refuses_unread_messages() {
         let fixture = fixture("selftest");
         write_pins(&fixture, &[]);

@@ -1,7 +1,7 @@
 use super::{Observation, Reader, Result, Row, dataless, reaction, reference, target};
 use crate::{body_digest, rich, summary, typedstream};
 use serde_json::{Value, json};
-use std::{fs, io::Read};
+use std::{collections::BTreeSet, fs, io::Read};
 
 fn time(raw: f64) -> Option<String> {
     if !raw.is_finite() {
@@ -67,6 +67,9 @@ impl Reader {
             ("date_retracted", "retracted_at"),
         ] {
             optional(&mut data, field, timestamp(row, native));
+        }
+        if !row.flag("is_from_me") && row.flag("is_read") && data.get("read_at").is_none() {
+            optional(&mut data, "read_at", timestamp(row, "date"));
         }
         for (native, field) in [
             ("reply_to_guid", "reply_to_id"),
@@ -181,6 +184,17 @@ impl Reader {
             }
         }
         if self.has("chat", &["guid"]) {
+            let marked_unread: BTreeSet<String> = if self
+                .has("message", &["is_from_me", "is_read", "date_read"])
+                && self.has("chat_message_join", &["chat_id", "message_id"])
+            {
+                self.query("SELECT DISTINCT j.chat_id FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE m.is_from_me=0 AND m.is_read=0 AND m.date_read>0",&[])?
+                        .iter()
+                        .map(|row| row.text("chat_id").to_owned())
+                        .collect()
+            } else {
+                BTreeSet::new()
+            };
             for row in self.query(
                 &format!(
                     "SELECT c.ROWID AS row_position,c.*,{} AS capture_deleted_date FROM chat c",
@@ -201,6 +215,9 @@ impl Reader {
                     "last_read_at",
                     timestamp(&row, "last_read_message_timestamp"),
                 );
+                if marked_unread.contains(row.text("row_position")) {
+                    data["is_unread"] = json!(true);
+                }
                 optional(
                     &mut data,
                     "deleted_at",
