@@ -85,6 +85,32 @@ fn pending_state(replica: &Client, command: &str) -> (Option<bool>, String) {
     )
 }
 
+fn difference(gateway: &Client, replica: &Client) -> String {
+    let (Ok(left), Ok(right)) = (
+        crate::assertions::read_all(gateway, true, false),
+        crate::assertions::read_all(replica, true, false),
+    ) else {
+        return "unreadable".into();
+    };
+    let keys = |read: &crate::assertions::Read| -> std::collections::BTreeMap<String, String> {
+        read.records
+            .iter()
+            .map(|r| (crate::watch::record_key(r), r["version"].to_string()))
+            .collect()
+    };
+    let (a, b) = (keys(&left), keys(&right));
+    let only: Vec<String> = a
+        .iter()
+        .filter(|(k, v)| b.get(*k) != Some(*v))
+        .map(|(k, v)| format!("gw {k}@{v} rep {:?}", b.get(k)))
+        .chain(b.keys().filter(|k| !a.contains_key(*k)).map(|k| format!("rep-only {k}")))
+        .collect();
+    format!(
+        "cursors {:?}/{:?} {}",
+        left.cursor, right.cursor, only.join("; ")
+    )
+}
+
 fn approvals_page(owner: &Owner) -> Option<String> {
     let reply = owner
         .request("GET", "/approvals", "application/json", b"")
@@ -138,7 +164,11 @@ fn approval_observer(world: &World, gateway: &Client, owner: &Owner, evidence: &
         return;
     }
     let settled = await_until(10, || replica_integrity(&observed));
-    evidence.check("approval_pending_replicated_after_capture", settled, "");
+    evidence.check(
+        "approval_pending_replicated_after_capture",
+        settled,
+        &difference(gateway, &replica),
+    );
     let (state, detail) = pending_state(&replica, &id);
     evidence.check(
         "replica_pending_approval_survives_capture",
