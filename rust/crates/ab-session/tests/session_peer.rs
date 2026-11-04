@@ -1242,9 +1242,20 @@ fn a_rust_owned_resolve_after_restart_observes_the_write_through_reads_only() {
     let (id, op, args) = primitive(&mut again);
     assert_eq!(op, "reminders.reconcile");
     assert_eq!(args, json!({}));
+    native::write_frame(
+        &mut again.link,
+        &Frame::Scan(scan("s9", "reminders", &[("upsert", "r1", 10)], false)),
+    )
+    .expect("scan");
     answer(&mut again, &id, &json!({}));
+    let (capture, size) = ipc_read(&mut again.gateway).expect("capture");
+    commit(&mut again.gateway, &capture, size);
     let (resolved, _) = ipc_read(&mut again.gateway).expect("resolved");
     assert_eq!(resolved["disposition"], "locally_observed");
+    assert_eq!(
+        resolved["evidence"]["capture_checkpoint"],
+        capture["checkpoint"]
+    );
     assert_eq!(resolved["evidence"]["native_key"], "r1");
     assert_eq!(resolved["evidence"]["resolved"], true);
     assert_eq!(resolved["evidence"]["fingerprint"], "hash-c1");
@@ -1263,5 +1274,42 @@ fn a_rust_owned_resolve_stays_indeterminate_when_the_write_is_not_there() {
     let (resolved, _) = ipc_read(&mut again.gateway).expect("resolved");
     assert_eq!(resolved["disposition"], "indeterminate");
     assert!(resolved["evidence"]["resolved"].is_null());
+    let _ = finish(again);
+}
+
+#[test]
+fn a_rust_owned_resolve_whose_key_is_never_committed_stays_indeterminate() {
+    let home = crash_after_dispatch_started();
+    let clock = std::sync::Arc::new(ManualClock(std::sync::atomic::AtomicU64::new(0)));
+    let mut again = start_configured(home, 4_194_304, &json!({}), clock.clone(), &owned());
+    let (unresolved, _) = ipc_read(&mut again.gateway).expect("unresolved");
+    assert_eq!(unresolved["disposition"], "indeterminate");
+    let mut resolve = frame("Resolve");
+    resolve.command_id = "c1".into();
+    ipc_send(&mut again.gateway, &resolve);
+    expect_read(
+        &mut again,
+        "reminders.read_reminder",
+        &reminder_read("oat milk"),
+    );
+    let (id, op, _) = primitive(&mut again);
+    assert_eq!(op, "reminders.reconcile");
+    answer(&mut again, &id, &json!({}));
+    again
+        .gateway
+        .set_read_timeout(Some(Duration::from_millis(300)))
+        .expect("timeout");
+    assert!(
+        ipc_read(&mut again.gateway).is_err(),
+        "resolved before its capture committed"
+    );
+    clock.0.store(15_000, std::sync::atomic::Ordering::SeqCst);
+    again
+        .gateway
+        .set_read_timeout(Some(Duration::from_secs(5)))
+        .expect("timeout");
+    let (resolved, _) = ipc_read(&mut again.gateway).expect("resolved");
+    assert_eq!(resolved["disposition"], "indeterminate");
+    assert_eq!(resolved["evidence"]["reason"], "capture_not_observed");
     let _ = finish(again);
 }

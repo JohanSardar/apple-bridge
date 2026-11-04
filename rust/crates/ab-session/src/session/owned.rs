@@ -69,6 +69,7 @@ pub(super) fn driver(source: &str) -> Option<&'static Driver> {
     match source {
         "reminders" => Some(&super::reminders::DRIVER),
         "calendar" => Some(&super::calendar::DRIVER),
+        "contacts" => Some(&super::contacts::DRIVER),
         _ => None,
     }
 }
