@@ -75,8 +75,8 @@ fn rows(connection: &Connection, sql: &str) -> Result<Vec<Row>> {
     let mut statement = connection.prepare(sql).map_err(|_| Error::Corrupt)?;
     let names: Vec<String> = statement
         .column_names()
-        .iter()
-        .map(|name| (*name).to_owned())
+        .into_iter()
+        .map(str::to_owned)
         .collect();
     let mut cursor = statement.query([]).map_err(|_| Error::Corrupt)?;
     let mut result = Vec::new();
