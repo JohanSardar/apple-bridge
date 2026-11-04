@@ -64,7 +64,7 @@ impl DispatchGuard {
                 .ok_or(Error::Invalid)?
                 .to_owned();
             match entry["t"].as_str() {
-                Some("Outcome") => {
+                Some("Outcome" | "Rejected") => {
                     outcomes.insert(id, entry);
                 }
                 Some("DispatchStarted") => {
@@ -157,12 +157,38 @@ impl DispatchGuard {
 
     pub fn finish(&mut self, id: &str, disposition: &str, evidence: &Value) -> Result<(), Error> {
         if !self.outcomes.contains_key(id)
-            || !["locally_observed", "indeterminate"].contains(&disposition)
+            || ![
+                "locally_observed",
+                "indeterminate",
+                "delivered",
+                "delivery_failed",
+                "failed_no_effect",
+            ]
+            .contains(&disposition)
         {
             return Err(Error::Invalid);
         }
         let entry =
             json!({"t":"Outcome","command_id":id,"disposition":disposition,"evidence":evidence});
+        self.append(&entry)?;
+        self.outcomes.insert(id.to_owned(), entry);
+        Ok(())
+    }
+
+    pub fn reject(
+        &mut self,
+        id: &str,
+        code: &str,
+        message: &str,
+        evidence: &Value,
+    ) -> Result<(), Error> {
+        if !self.outcomes.contains_key(id) {
+            return Err(Error::Invalid);
+        }
+        let mut entry = json!({"t":"Rejected","command_id":id,"disposition":"rejected_before_dispatch","error":{"code":code,"message":message}});
+        if evidence.is_object() {
+            entry["evidence"] = evidence.clone();
+        }
         self.append(&entry)?;
         self.outcomes.insert(id.to_owned(), entry);
         Ok(())

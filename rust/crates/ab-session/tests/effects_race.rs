@@ -47,6 +47,7 @@ fn query_fixture(
     Ok(())
 }
 
+#[allow(clippy::too_many_lines)]
 fn native_route(commit_capture: bool, wrong_id: bool) -> Result<(), Box<dyn std::error::Error>> {
     let home = std::env::temp_dir().join(format!(
         "ab-effects-{}-{}",
@@ -61,7 +62,16 @@ fn native_route(commit_capture: bool, wrong_id: bool) -> Result<(), Box<dyn std:
     }
     let route_home = home.clone();
     let relay = std::thread::spawn(move || {
-        effects::relay(session_gateway, session_helper, session_native, &route_home)
+        effects::relay_with(
+            session_gateway,
+            session_helper,
+            session_native,
+            &route_home,
+            effects::Config {
+                correlation_wait: Duration::from_millis(300),
+                ..effects::Config::default()
+            },
+        )
     });
     let result = (|| -> Result<(), Box<dyn std::error::Error>> {
         send(
@@ -135,6 +145,10 @@ fn native_route(commit_capture: bool, wrong_id: bool) -> Result<(), Box<dyn std:
             &mut gateway,
             &json!({"t":"Resolve","command_id":"fixture-command"}),
         )?;
+        let forwarded = receive(&mut helper)?;
+        assert_eq!(forwarded["t"], "Resolve");
+        assert_eq!(forwarded["saved"], outcome);
+        send(&mut helper, &outcome)?;
         assert_eq!(receive(&mut gateway)?, outcome);
         if commit_capture && !wrong_id {
             query_fixture(&mut gateway, &mut native)?;
@@ -162,7 +176,12 @@ fn canonical_permit_hash_rejects_ambiguous_numbers() -> Result<(), Box<dyn std::
         effects::request_hash(&json!({"b":"x/y","a":1}))?,
         effects::request_hash(&json!({"a":1,"b":"x/y"}))?
     );
-    assert!(effects::request_hash(&json!({"x":1.5})).is_err());
-    assert!(effects::request_hash(&json!({"x":9_007_199_254_740_992_u64})).is_err());
+    assert!(effects::request_hash(&json!({"x":1e-7})).is_err());
+    assert_eq!(
+        effects::request_hash(&json!({"x":2.0}))?,
+        effects::request_hash(&json!({"x":2}))?
+    );
+    assert!(effects::request_hash(&json!({"x":-9_007_199_254_740_992_i64})).is_err());
+    assert!(effects::request_hash(&json!({"x":9_007_199_254_740_992_u64})).is_ok());
     Ok(())
 }

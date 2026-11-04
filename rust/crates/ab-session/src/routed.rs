@@ -26,6 +26,7 @@ pub trait Overlay: Sync {
         scope: &'scope thread::Scope<'scope, '_>,
         value: &Value,
         output: &Arc<Mutex<UnixStream>>,
+        helper: &Mutex<UnixStream>,
     ) -> Result<bool, Error>;
     fn helper(&self, value: &Value, size: usize) -> Result<(), Error>;
     fn helper_ready(&self, output: &Mutex<UnixStream>) -> Result<(), Error>;
@@ -742,7 +743,7 @@ pub fn relay_layered(
             let result = (|| loop {
                 let (bytes, value) = read_frame(&mut gateway_read)?;
                 let layered = match layer {
-                    Some(layer) => layer.gateway(scope, &value, &to_gateway)?,
+                    Some(layer) => layer.gateway(scope, &value, &to_gateway, &to_helper)?,
                     None => true,
                 };
                 let pass = gateway_frame(&gate, &readers, store, &to_gateway, &to_helper, &value)?;
