@@ -28,15 +28,18 @@ mod calendar;
 mod commands;
 mod contacts;
 mod messages;
+#[allow(dead_code)]
+mod messages_selftest;
 mod notes;
 mod owned;
 mod reminders;
 
-pub const RUST_COMMAND_SOURCES: [&str; 13] = [
+pub const RUST_COMMAND_SOURCES: [&str; 14] = [
     "reminders",
     "calendar",
     "contacts",
     "notes",
+    "messages",
     "messages.send",
     "messages.reply",
     "messages.react",

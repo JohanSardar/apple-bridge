@@ -479,6 +479,18 @@ answers them too (`AB_LAB_RUST_COMMANDS=reminders` starts the lab session with t
 mode the Helper always passes `--rust-commands reminders`. `Resolve` after a restart is decided in Rust as well.
 Nothing is flipped: native session mode itself is opt-in (`AB_SESSION_NATIVE=1`).
 
+Messages is routed per operation (`messages.send`, `messages.reply`, `messages.react`, `messages.edit`,
+`messages.unsend`, `messages.delete_message`, `messages.mark_read`, `messages.mark_unread`,
+`messages.delete_chat`) or as the bare source `messages` for all nine; the Helper default list
+(`AB_SESSION_RUST_COMMANDS`) does not include it. The Linux lab runs all 34 Messages scenarios on the old path
+and with the bare source owned by Rust with identical results (the six that differ from green are the
+Darwin-only native checks, which fail the same way on both). `session/messages_selftest.rs` orchestrates the
+self-test over Swift primitives and is not yet launched by anything: the Helper's `selftest messages` still runs
+the Swift `MessagesSelfTest`. A `Resolve` for an owned operation is answered from the guard log unless the
+outcome is open (indeterminate, locally observed, or a failed aggregate with an unsettled part), and the capture
+checkpoint of an observed Messages part is bound even while the aggregate is indeterminate, as the Swift
+dispatch does.
+
 The routed effects layer now refuses a command whose numbers the permit hash cannot represent (below 1e-4 or
 at or above 1e15) with `Rejected invalid` (`QueryError invalid` for queries) instead of closing the gateway
 stream; the session-mode path never hashes command args.

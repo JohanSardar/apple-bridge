@@ -244,8 +244,7 @@ the agent policy (one pinned message, once), per-kind route proofs, then at Disp
 resend and agent checks again, the agent `.used` marker before the send, staging, one AppleScript send per part,
 chat.db correlation by polling outgoing rows (10 seconds in all, later parts never sent after a doubtful one),
 the aggregate disposition, lab proof recording (lab only) and the capture. It is selected by
-`--rust-commands messages.send` (or `messages.reply`, `messages.react`, `messages.edit`, `messages.unsend`, `messages.delete_message`; the per-operation names; the bare source `messages` is not accepted until the UI
-operations and the self-test are ported) and the Helper does not pass it by default.
+`--rust-commands messages.send` (or `messages.reply`, `messages.react`, `messages.edit`, `messages.unsend`, `messages.delete_message`, `messages.mark_read`, `messages.mark_unread`, `messages.delete_chat`; the per-operation names, or the bare source `messages` for all nine) and the Helper does not pass it by default.
 
 Swift answers read-only facts and primitive actions (`MessagesCommands.primitive`): `messages.config`,
 `own_handles`, `approved_handles`, `chat_members` (`handles` from a left join, `joined` from an inner join),
@@ -258,6 +257,23 @@ edit, unsend, delete) Swift also answers `target` (the decoded message and its r
 deleted-info sheet, validate the target), `ui_validate` and `ui_perform`; Rust owns the tag rules, the edit (15 minutes,
 five edits) and unsend (2 minutes) windows, the expected-state conflict, the route, the proofs and the observation
 of the effect. Rust decides; Swift never compares.
+
+The conversation operations (`mark_read`, `mark_unread`, `delete_chat`) add `conversation` (the chat row, its
+last-read timestamp and newest date), `conversation_messages`, `chat_recoverable`, `ledger` (the run's cleanup
+registration, read only), `is_self_chat` (the identity normalisation stays in Swift and is returned as a fact),
+`foreign_activity` (the two foreign-row queries as booleans) and `ui_activate_validate`. Rust owns the tag rule
+(a gated origin touches only a conversation whose newest message is tagged), the ledger authorisation (scenario,
+run, baseline row, text prefix, chat), the foreign-activity refusal, the chat-delete rule (every message tagged,
+chat created by the run after the ledger baseline) and the read-state matcher that observes the effect.
+
+The self-test is orchestrated by `session/messages_selftest.rs` (the step order, the arguments, the proof
+invalidation of failed kinds, the cleanup state and the report) over these Swift primitives:
+`selftest_cached`, `selftest_facts` (UI allowed, the isolated self chat), `selftest_begin` (baseline capture and the
+run's ledger registration), `selftest_ledger` (merge into the ledger), `selftest_created` (record created message ids,
+including echoes and attachment rows), `selftest_fixture_chat`, `selftest_upload` and `selftest_upload_remove`,
+`selftest_cleanup` (the ledger-based `MessagesCleanup`), `selftest_restore` (baseline restore), `selftest_report`
+and `invalidate_proof`. The Helper's `selftest messages` command still runs the Swift `MessagesSelfTest`; nothing
+launches the Rust orchestrator yet.
 
 ## Ownership and migration
 
