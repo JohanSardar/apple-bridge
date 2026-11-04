@@ -118,7 +118,17 @@ fn difference(gateway: &Client, replica: &Client) -> String {
         .map(|(k, v)| format!("gw {k}@{v} rep {:?}", b.get(k)))
         .chain(b.keys().filter(|k| !a.contains_key(*k)).map(|k| format!("rep-only {k}")))
         .collect();
-    format!("{} {}", only.join("; "), changed.join(""))
+    let visible: Vec<Value> = left.records.clone();
+    let same = crate::assertions::record_multiset(&right.records, true)
+        == crate::assertions::record_multiset(&visible, true);
+    format!(
+        "multiset_same={same} epoch={} seq={}/{} {} {}",
+        left.cursor.epoch == right.cursor.epoch,
+        left.cursor.sequence,
+        right.cursor.sequence,
+        only.join("; "),
+        changed.join("")
+    )
 }
 
 fn approvals_page(owner: &Owner) -> Option<String> {
