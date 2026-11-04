@@ -155,15 +155,14 @@ SESSION_ENV = {
     'AB_LAB_SESSION_EFFECTS': '1',
     'AB_LAB_SESSION_NATIVE_FACTS': '1',
 }
-SESSION_SAMPLE = ['notes/NOTE-CRUD', 'files/FILE-COMMANDS', 'mac/MAC-ACTIONS', 'maps/MAP-SIM', 'vision/PDF-TEXT', 'CORE-RESUME']
+SESSION_SAMPLE = ['notes/NOTE-CRUD', 'messages/MSG-EDIT', 'shortcuts/SC-RUN-REAL', 'files/FILE-COMMANDS', 'mac/MAC-ACTIONS', 'maps/MAP-SIM', 'vision/PDF-TEXT', 'CORE-RESUME']
 SESSION_FIXTURE_SOURCES = {
     'linux': 'notes,usage',
     'darwin': 'safari,phone,voicemail,voice_memos,mail',
 }
 SESSION_FIXTURE_SCENARIOS = {
     'linux': ['notes/NOTE-CRUD', 'notes/NOTE-EXTERNAL', 'notes/NOTE-EXTRAS', 'notes/NOTE-IMPORT', 'notes/NOTE-EDIT-PARITY',
-              'notes/NOTE-RICH-REJECT', 'usage/USE-IMPORT', 'usage/USE-LOCK-CLIP', 'usage/USE-READONLY', 'usage/USE-REMOTE-LAG',
-              'messages/MSG-EDIT', 'shortcuts/SC-RUN-REAL'],
+              'notes/NOTE-RICH-REJECT', 'usage/USE-IMPORT', 'usage/USE-LOCK-CLIP', 'usage/USE-READONLY', 'usage/USE-REMOTE-LAG'],
     'darwin': ['safari/SAF-CAPTURE', 'phone/CALL-CAPTURE', 'phone/VM-CAPTURE', 'phone/VMEMO-CAPTURE', 'mail/MAIL-CAPTURE',
                'mail/MAIL-BODY', 'mail/MAIL-LIVE', 'mail/MAIL-NO-FALSE-DELETE'],
 }
