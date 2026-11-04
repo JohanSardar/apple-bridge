@@ -1,8 +1,8 @@
 #![allow(dead_code, clippy::expect_used, clippy::unwrap_used)]
 
 use ab_session::{
+    production::Options,
     readers::CaptureReader,
-    routed::Options,
     session::{self, Attached, SystemClock},
 };
 use ab_wire::{crypto::ipc_proof, messages::IpcFrame};
@@ -165,7 +165,7 @@ pub fn wire_with(
     authenticate(&mut gateway)?;
     send(
         &mut gateway,
-        &json!({"t":"Open","protocol":"ipc/1","owner_fence":7,"byte_credit":4_194_304,"checkpoints":checkpoints.into()}),
+        &json!({"t":"Open","protocol":"ipc/1","owner_fence":1,"byte_credit":4_194_304,"checkpoints":checkpoints.into()}),
     )?;
     let (_, hello) = receive(&mut link)?;
     assert_eq!(hello["t"], "Hello");

@@ -1,5 +1,3 @@
-#![cfg(feature = "rust-capture")]
-
 use ab_session::{
     production,
     readers::{self, CaptureReader, ScanContext},

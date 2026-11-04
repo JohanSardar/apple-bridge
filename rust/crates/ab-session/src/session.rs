@@ -30,19 +30,15 @@ mod commands;
 mod contacts;
 mod messages;
 mod messages_advertise;
-#[cfg(feature = "rust-capture")]
 mod messages_cleanup;
-#[cfg(feature = "rust-capture")]
 mod messages_local;
 mod messages_selftest;
-#[cfg(feature = "rust-capture")]
 mod messages_ui;
 
 pub fn selftest_messages(link: UnixStream, request: &serde_json::Value) -> Result<(), Error> {
     messages_selftest::serve(link, request)
 }
 
-#[cfg(feature = "rust-capture")]
 pub fn cleanup_messages(link: UnixStream, request: &serde_json::Value) -> Result<(), Error> {
     messages_selftest::serve_cleanup(link, request)
 }
@@ -341,7 +337,7 @@ fn committed(hub: &Hub, frame: &IpcFrame) -> Result<(), Error> {
     let flight = hub
         .core()?
         .flights
-        .complete(&source, true, facts(&source))
+        .complete(&source)
         .ok_or(Error::Conflict)?;
     hub.changed.notify_all();
     match &flight.origin {
@@ -356,10 +352,6 @@ fn committed(hub: &Hub, frame: &IpcFrame) -> Result<(), Error> {
         Origin::Helper { .. } => {}
     }
     Ok(())
-}
-
-fn facts(source: &str) -> bool {
-    matches!(source, "calendar" | "contacts" | "reminders")
 }
 
 fn limit(scan: &Scan) -> usize {

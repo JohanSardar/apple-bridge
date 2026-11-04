@@ -54,7 +54,7 @@ MESSAGES_A_COMMAND_SCENARIOS = ['messages/MSG-CAPABILITY-MATRIX', 'messages/MSG-
                                 'messages/MSG-FAILED-OBSERVED-IDS', 'messages/MSG-MARK-READ',
                                 'messages/MSG-OWNER-TOKEN-SELFCHAT', 'messages/MSG-DELETE-REAL',
                                 'messages/MSG-DECODE-BALLOON', 'messages/MSG-DECODE-FORMATTING']
-HELPER_SCENARIOS = ['helper/HELPER-IPC-RESPONSIVE', 'helper/SESSION-PROXY-BYTES', 'helper/SIRI-INTENTS']
+HELPER_SCENARIOS = ['helper/HELPER-IPC-RESPONSIVE', 'helper/SIRI-INTENTS']
 IPHONE_SCENARIOS = ['iphone/APP-ALARM-SIM', 'iphone/APP-SHELL-SIM', 'iphone/APP-PAIR-SIM', 'iphone/APP-DEVICE-SIM',
                     'iphone/APP-MOTION-SIM', 'iphone/APP-HEALTH-WRITE-SIM', 'iphone/APP-SCREENTIME-SIM',
                     'iphone/APP-HEALTH-SIM', 'iphone/APP-LOC-SIM', 'iphone/APP-LIVE-SIM', 'iphone/APP-APPROVE-SIM',
@@ -151,7 +151,6 @@ def scenario_key(root, name):
 
 SESSION_ENV = {
     'AB_LAB_SESSION_SOURCES': 'calendar,contacts,reminders',
-    'AB_LAB_SESSION_EFFECTS': '1',
     'AB_LAB_SESSION_NATIVE_FACTS': '1',
 }
 SESSION_SAMPLE = ['notes/NOTE-CRUD', 'messages/MSG-EDIT', 'shortcuts/SC-RUN-REAL', 'files/FILE-COMMANDS', 'mac/MAC-ACTIONS', 'maps/MAP-SIM', 'vision/PDF-TEXT', 'CORE-RESUME']
@@ -169,7 +168,6 @@ SESSION_CONTROL_SCENARIOS = ['calendar/CAL-CRUD', 'contacts/CON-CRUD', 'reminder
 SESSION_CONTROLS = {
     'revalidate-refuse': {'AB_LAB_SESSION_REVALIDATE_CONTROL': 'refuse'},
     'revalidate-partial': {'AB_LAB_SESSION_REVALIDATE_CONTROL': 'partial'},
-    'effects-refuse': {'AB_LAB_SESSION_EFFECTS_CONTROL': 'refuse'},
     'facts-missing': {'AB_LAB_SESSION_NATIVE_FACTS': 'missing'},
 }
 

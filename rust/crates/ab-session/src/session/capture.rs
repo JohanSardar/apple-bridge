@@ -4,10 +4,9 @@ use crate::{
     flight::{Flight, Refused, rows},
     frame::{MAX_FRAME, send, send_large, text},
     native_facts::Client,
-    production::Loaded,
+    production::{Loaded, Options},
     queries::NativeQueries,
     readers::{BlobServer, CaptureReader, ScanContext},
-    routed::Options,
     store::{Record, Store},
 };
 use ab_wire::{

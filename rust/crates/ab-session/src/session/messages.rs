@@ -685,14 +685,8 @@ fn validate_send(probe: &dyn Probe, action: &Value, state: &Value) -> Result<(),
     validate(probe, &json!({"action": action}), state)
 }
 
-#[cfg(feature = "rust-capture")]
 fn local<T>(probe: &dyn Probe, run: impl FnOnce(&dyn Probe) -> T) -> T {
     run(&super::messages_local::Local::over(probe))
-}
-
-#[cfg(not(feature = "rust-capture"))]
-fn local<T>(probe: &dyn Probe, run: impl FnOnce(&dyn Probe) -> T) -> T {
-    run(probe)
 }
 
 pub(super) const DRIVER: Driver = Driver {

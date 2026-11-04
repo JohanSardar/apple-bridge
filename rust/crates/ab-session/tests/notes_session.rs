@@ -1,4 +1,3 @@
-#![cfg(feature = "rust-capture")]
 #![allow(clippy::expect_used)]
 
 use ab_session::readers::{CaptureReader, NotesReader, ScanContext};

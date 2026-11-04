@@ -549,7 +549,6 @@ pub fn run(world: &mut World, evidence: &mut Evidence) -> Result<()> {
 
 pub fn cases(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> {
     match evidence.scenario.as_str() {
-        "SESSION-PROXY-BYTES" => crate::session_proxy::run(world, evidence),
         "HELPER-IPC-RESPONSIVE" => run(world, evidence),
         other => Err(Error::Invalid(format!("helper_ipc not ported for {other}"))),
     }

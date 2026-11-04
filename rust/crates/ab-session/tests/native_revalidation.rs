@@ -1,5 +1,3 @@
-#![cfg(feature = "rust-capture")]
-
 use ab_session::{
     native_facts::Client,
     readers::{AgendaReader, CaptureReader, ScanContext},

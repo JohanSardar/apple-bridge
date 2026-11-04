@@ -1,6 +1,6 @@
 use super::{
-    Arc, BTreeMap, BTreeSet, CaptureReader, Debug, Duration, Error, Path, PathBuf, ScanContext,
-    Value, json, native_facts, reader_error,
+    Arc, BTreeMap, CaptureReader, Debug, Duration, Error, Path, PathBuf, ScanContext, Value, json,
+    native_facts, reader_error,
 };
 use ab_native::{agenda, calendar_store, capture, contacts, reminders_enrichment};
 
@@ -21,13 +21,6 @@ impl AgendaState {
                 "contacts.container".into(),
             ],
             Self::Reminders(_) => vec!["reminders.list".into(), "reminders.reminder".into()],
-        }
-    }
-
-    fn knows(&self, identity: &str) -> bool {
-        match self {
-            Self::Calendar(reader) | Self::Reminders(reader) => reader.knows(identity),
-            Self::Contacts(reader) => reader.knows(identity),
         }
     }
 
@@ -111,7 +104,6 @@ const REVALIDATE_BYTES: usize = 180_000;
 struct Facts {
     generation: String,
     rows: Vec<Value>,
-    absences: BTreeMap<String, agenda::Revalidation>,
     live: bool,
     blob_handles: Option<Value>,
 }
@@ -122,45 +114,11 @@ pub struct AgendaReader {
     root: PathBuf,
     state: AgendaState,
     facts: Option<Facts>,
-    partial: bool,
     pending: Option<agenda::Pending>,
     pull: Option<native_facts::Pull>,
     replay: bool,
     store: Option<calendar_store::Enrichment>,
     reminders_store: Option<reminders_enrichment::Enrichment>,
-}
-
-fn identity(row: &Value) -> String {
-    format!(
-        "{}/{}",
-        row["collection"].as_str().unwrap_or_default(),
-        row["native_key"].as_str().unwrap_or_default()
-    )
-}
-
-impl Facts {
-    fn merge(mut self, later: Self) -> Self {
-        let mut rows: BTreeMap<String, Value> = self
-            .rows
-            .drain(..)
-            .map(|row| (identity(&row), row))
-            .collect();
-        for row in later.rows {
-            let key = identity(&row);
-            self.absences.remove(&key);
-            rows.insert(key, row);
-        }
-        for (key, disposition) in later.absences {
-            rows.remove(&key);
-            self.absences.insert(key, disposition);
-        }
-        self.rows = rows.into_values().collect();
-        self.live |= later.live;
-        if later.blob_handles.is_some() {
-            self.blob_handles = later.blob_handles;
-        }
-        self
-    }
 }
 
 impl AgendaReader {
@@ -171,7 +129,6 @@ impl AgendaReader {
             root,
             state: AgendaState::Calendar(agenda::Reader::default()),
             facts: None,
-            partial: false,
             pending: None,
             pull: None,
             replay: false,
@@ -187,7 +144,6 @@ impl AgendaReader {
             root,
             state: AgendaState::Contacts(contacts::Reader::default()),
             facts: None,
-            partial: false,
             pending: None,
             pull: None,
             replay: false,
@@ -203,7 +159,6 @@ impl AgendaReader {
             root,
             state: AgendaState::Reminders(agenda::Reader::reminders()),
             facts: None,
-            partial: false,
             pending: None,
             pull: None,
             replay: false,
@@ -360,7 +315,6 @@ impl AgendaReader {
         self.enrich(&mut collected, &generation);
         let capture = json!({"generation": collected.generation, "observations": collected.rows, "blob_handles": collected.handles, "live": live});
         self.facts = Some(self.parse(&capture)?);
-        self.partial = false;
         Ok(())
     }
 
@@ -373,7 +327,6 @@ impl AgendaReader {
         let observations = capture["observations"].as_array().ok_or(Error::Invalid)?;
         let scope = self.state.scope();
         let mut rows = Vec::new();
-        let mut absences = BTreeMap::new();
         for observation in observations {
             let collection = observation["collection"].as_str().ok_or(Error::Invalid)?;
             let key = observation["native_key"].as_str().ok_or(Error::Invalid)?;
@@ -388,21 +341,12 @@ impl AgendaReader {
                     "scoped_alias": observation["scoped_alias"].as_str().unwrap_or_default(),
                     "data": observation["data"],
                 })),
-                Some(kind @ ("absent" | "evict")) => {
-                    let disposition = if kind == "evict" && self.source == "calendar" {
-                        agenda::Revalidation::Evict
-                    } else {
-                        agenda::Revalidation::Absent
-                    };
-                    absences.insert(format!("{collection}/{key}"), disposition);
-                }
                 _ => return Err(Error::Invalid),
             }
         }
         Ok(Facts {
             generation,
             rows,
-            absences,
             live: capture["live"].as_bool().unwrap_or(false),
             blob_handles: capture
                 .get("blob_handles")
@@ -448,27 +392,18 @@ impl CaptureReader for AgendaReader {
     }
 
     fn ingest(&mut self, capture: &Value) -> Result<bool, Error> {
-        if let Some(pull) = self.pull.as_mut() {
-            let partial = capture["scan_id"]
-                .as_str()
-                .is_some_and(|scan| !scan.is_empty())
-                && capture["completion_evidence"].as_str() != Some("complete");
-            if partial {
-                return Ok(false);
-            }
-            pull.hint();
-            return Ok(true);
-        }
-        let parsed = self.parse(capture)?;
-        self.partial = capture["scan_id"]
+        let Some(pull) = self.pull.as_mut() else {
+            return Ok(false);
+        };
+        let partial = capture["scan_id"]
             .as_str()
             .is_some_and(|scan| !scan.is_empty())
             && capture["completion_evidence"].as_str() != Some("complete");
-        self.facts = Some(match self.facts.take() {
-            Some(earlier) if earlier.generation == parsed.generation => earlier.merge(parsed),
-            _ => parsed,
-        });
-        Ok(!self.partial)
+        if partial {
+            return Ok(false);
+        }
+        pull.hint();
+        Ok(true)
     }
 
     fn refresh(&mut self) -> bool {
@@ -485,29 +420,15 @@ impl CaptureReader for AgendaReader {
         if self.pending.is_some() {
             return Err(Error::Conflict);
         }
-        if self.partial {
-            return Ok(None);
-        }
         self.page(context)?;
         let Some(facts) = self.facts.take() else {
             return Ok(None);
         };
-        let revalidated = if self.pull.is_some() {
-            let Ok(verdicts) = self.revalidate(&facts, context.fence) else {
-                if let Some(pull) = self.pull.as_mut() {
-                    pull.hint();
-                }
-                return Ok(None);
-            };
-            verdicts
-        } else {
-            let present: BTreeSet<String> = facts.rows.iter().map(identity).collect();
-            facts
-                .absences
-                .iter()
-                .filter(|(identity, _)| self.state.knows(identity) && !present.contains(*identity))
-                .map(|(identity, disposition)| (identity.clone(), *disposition))
-                .collect()
+        let Ok(revalidated) = self.revalidate(&facts, context.fence) else {
+            if let Some(pull) = self.pull.as_mut() {
+                pull.hint();
+            }
+            return Ok(None);
         };
         let read = capture::Context {
             observed_at: context.observed_at()?,

@@ -98,7 +98,6 @@ pub mod robust;
 pub mod safari;
 pub mod search;
 pub mod security;
-pub mod session_proxy;
 pub mod shortcut_sign;
 pub mod shortcuts;
 pub mod shortcuts_run;
