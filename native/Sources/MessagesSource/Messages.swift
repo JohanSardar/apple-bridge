@@ -64,10 +64,8 @@ public actor Messages: Source {
     private var mediaPressure = false
     private var variantURLs: [String: URL] = [:]
     private let attachmentHome: URL
-    private let rustCapture: Bool
-    public init(path: String? = nil, diagnostics: URL? = nil, watcherEventsEnabled: Bool = true, labCommands: Bool = false, pinsURL: URL? = nil, attachmentHome: URL = FileManager.default.homeDirectoryForCurrentUser, rustCapture: Bool = false) {
+    public init(path: String? = nil, diagnostics: URL? = nil, watcherEventsEnabled: Bool = true, labCommands: Bool = false, pinsURL: URL? = nil, attachmentHome: URL = FileManager.default.homeDirectoryForCurrentUser) {
         self.attachmentHome = attachmentHome
-        self.rustCapture = rustCapture
         self.pinsURL = pinsURL
  commands = MessagesCommands(path:path, labCommands:labCommands, agentPolicy: diagnostics?.deletingLastPathComponent().appendingPathComponent("agent-message-policy.json"))
         self.watcherEventsEnabled = watcherEventsEnabled
@@ -677,7 +675,6 @@ public actor Messages: Source {
         }
     }
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
-        if rustCapture { try await Task.sleep(for: .seconds(365 * 86400)); return }
         guard !captureActive else { throw SourceFailure.conflict }
         captureActive = true
         candidates.formUnion(hashes.keys)
