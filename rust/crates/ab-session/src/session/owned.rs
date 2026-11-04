@@ -8,6 +8,7 @@ pub(super) trait Probe {
 pub(super) struct Refusal {
     pub code: String,
     pub key: Option<String>,
+    pub message: Option<String>,
 }
 
 pub(super) struct Settled {
@@ -29,6 +30,7 @@ pub(super) fn refuse(code: &str) -> Refusal {
     Refusal {
         code: code.into(),
         key: None,
+        message: None,
     }
 }
 
@@ -36,6 +38,7 @@ pub(super) fn conflict(key: &str) -> Refusal {
     Refusal {
         code: "conflict".into(),
         key: (!key.is_empty()).then(|| key.to_owned()),
+        message: None,
     }
 }
 
