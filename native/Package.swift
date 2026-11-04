@@ -60,6 +60,7 @@ let package = Package(
         .executableTarget(name: "NativeChecks", dependencies: ["NativeProtocol", "SourceSupport"]),
         .executableTarget(name: "SessionChecks", dependencies: ["AppleSession", "NativeProtocol", "SourceSupport"]),
         .executableTarget(name: "CalendarChecks", dependencies: ["CalendarSource"], path: "Tests/CalendarChecks"),
+        .executableTarget(name: "RemindersStoreOracle", dependencies: ["RemindersStore", "SourceSupport"], path: "Tests/RemindersStoreOracle"),
         .executableTarget(name: "CalendarStoreOracle", dependencies: ["CalendarSource", "SourceSupport"], path: "Tests/CalendarStoreOracle"),
         .executableTarget(name: "CommandOriginChecks", dependencies: ["SourceSupport"], path: "Tests/CommandOriginChecks"),
         .executableTarget(name: "AppleBridgeHelper", dependencies: ["AppleSession", "ShortcutsSource"])
