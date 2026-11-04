@@ -91,12 +91,11 @@ fn version_mode_matches_the_swift_oracle_step_by_step() -> Fallible<()> {
 }
 
 #[test]
-fn a_missing_store_reports_unavailable_and_never_invents_fields() -> Fallible<()> {
+fn a_missing_store_reports_unavailable_and_never_invents_fields() {
     let mut enrichment = Enrichment::new(Box::new(|| Ok(Vec::new())));
     let observation = serde_json::json!({"kind":"upsert","collection":"reminders.reminder","native_key":"x","data":{"title":"t"}});
     let rows = enrichment.refresh(&[observation], "g");
     assert_eq!(rows[0]["data"]["store_status"], "unavailable");
     assert_eq!(rows[0]["data"]["title"], "t");
     assert_eq!(rows[0]["data"]["flagged"], Value::Null);
-    Ok(())
 }
