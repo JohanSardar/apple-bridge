@@ -15,6 +15,13 @@ internal enum SessionSources {
               let sources = object["sources"] as? [String: Any] else { return [] }
         return Set(sources.keys)
     }
+    static func rustStore(home: URL, source: String) -> Bool {
+        guard let data = try? Data(contentsOf: home.appendingPathComponent("session/rust-capture.json")),
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let sources = object["sources"] as? [String: Any],
+              let entry = sources[source] as? [String: Any] else { return false }
+        return entry["store"] != nil
+    }
     struct Builtins: Sendable {
         let agenda: AgendaGate
         let reminders: RemindersSource

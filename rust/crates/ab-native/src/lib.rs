@@ -31,6 +31,7 @@ pub mod telephony;
 
 pub mod agenda;
 pub mod assets;
+pub mod calendar_store;
 pub mod contacts;
 pub mod voice_memo;
 

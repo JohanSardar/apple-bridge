@@ -2,7 +2,8 @@ use crate::{Error, native_facts};
 
 mod messages;
 use ab_native::{
-    agenda, capture, contacts, mail, notes_reader, safari, telephony, usage, voice_memo,
+    agenda, calendar_store, capture, contacts, mail, notes_reader, safari, telephony, usage,
+    voice_memo,
 };
 pub use messages::MessagesReader;
 use serde::{Deserialize, Serialize};
@@ -915,6 +916,7 @@ pub struct AgendaReader {
     pending: Option<agenda::Pending>,
     pull: Option<native_facts::Pull>,
     replay: bool,
+    store: Option<calendar_store::Enrichment>,
 }
 
 fn identity(row: &Value) -> String {
@@ -962,6 +964,7 @@ impl AgendaReader {
             pending: None,
             pull: None,
             replay: false,
+            store: None,
         }
     }
 
@@ -976,6 +979,7 @@ impl AgendaReader {
             pending: None,
             pull: None,
             replay: false,
+            store: None,
         }
     }
 
@@ -990,6 +994,7 @@ impl AgendaReader {
             pending: None,
             pull: None,
             replay: false,
+            store: None,
         }
     }
 
@@ -1074,6 +1079,43 @@ impl AgendaReader {
         Ok(verdicts)
     }
 
+    #[must_use]
+    pub fn with_calendar_store(mut self, root: PathBuf) -> Self {
+        if self.source == "calendar" {
+            self.store = Some(calendar_store::Enrichment::new(root));
+        }
+        self
+    }
+
+    fn enrich(&mut self, collected: &mut native_facts::Collected) {
+        let Some(store) = self.store.as_mut() else {
+            return;
+        };
+        let externals: BTreeMap<String, String> = collected
+            .rows
+            .iter()
+            .filter(|row| row["collection"] == "calendar.event")
+            .filter_map(|row| {
+                let alias = row["scoped_alias"].as_str()?;
+                let series = alias.splitn(3, '/').nth(2)?;
+                Some((
+                    row["native_key"].as_str()?.to_owned(),
+                    series.split('|').next().unwrap_or_default().to_owned(),
+                ))
+            })
+            .collect();
+        collected.rows = store.enrich(
+            &collected.rows,
+            &|native| externals.get(native).cloned().unwrap_or_default(),
+            false,
+        );
+        for (digest, handle) in store.handles() {
+            collected
+                .handles
+                .insert(digest.clone(), Value::String(handle.clone()));
+        }
+    }
+
     fn page(&mut self, context: &ScanContext) -> Result<(), Error> {
         let Some(pull) = self.pull.as_mut() else {
             return Ok(());
@@ -1082,9 +1124,10 @@ impl AgendaReader {
             return Ok(());
         }
         let live = pull.live();
-        let Some(collected) = pull.collect(context.fence)? else {
+        let Some(mut collected) = pull.collect(context.fence)? else {
             return Ok(());
         };
+        self.enrich(&mut collected);
         let capture = json!({"generation": collected.generation, "observations": collected.rows, "blob_handles": collected.handles, "live": live});
         self.facts = Some(self.parse(&capture)?);
         self.partial = false;
@@ -1142,6 +1185,22 @@ impl AgendaReader {
 impl CaptureReader for AgendaReader {
     fn source(&self) -> &'static str {
         self.source
+    }
+
+    fn owns(&self, handle: &str) -> bool {
+        self.store.is_some() && handle.starts_with("calendar-attachment:")
+    }
+
+    fn handle_prefix(&self) -> Option<&'static str> {
+        self.store.as_ref().map(|_| "calendar-attachment:")
+    }
+
+    fn blob(&mut self, handle: &str, offset: u64, length: usize) -> Result<Value, Error> {
+        self.store
+            .as_ref()
+            .ok_or(Error::Invalid)?
+            .read_blob(handle, offset, length)
+            .map_err(reader_error)
     }
 
     fn root(&self) -> &Path {
@@ -1264,6 +1323,8 @@ struct SourceConfig {
     facts: Option<FactsLink>,
     #[serde(default = "default_facts_poll")]
     facts_poll_ms: u64,
+    #[serde(default)]
+    store: Option<PathBuf>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1409,8 +1470,15 @@ pub fn from_config_linked(
                 Box::new(MessagesReader::new(config.root, home))
             }
             "calendar" | "contacts" | "reminders" => {
+                if config.store.is_some() && (source != "calendar" || config.facts.is_none()) {
+                    return Err(Error::Invalid);
+                }
                 let reader = match source.as_str() {
-                    "calendar" => AgendaReader::calendar(config.root),
+                    "calendar" => match config.store {
+                        Some(store) => AgendaReader::calendar(config.root)
+                            .with_calendar_store(lexical(&store)?),
+                        None => AgendaReader::calendar(config.root),
+                    },
                     "contacts" => AgendaReader::contacts(config.root),
                     _ => AgendaReader::reminders(config.root),
                 };

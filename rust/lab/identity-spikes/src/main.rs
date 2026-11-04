@@ -21,6 +21,36 @@ fn database(path: &Path, table: &str) -> Value {
     }
 }
 
+fn reminders_store(home: &Path) -> Value {
+    let stores =
+        home.join("Library/Group Containers/group.com.apple.reminders/Container_v1/Stores");
+    let found = std::fs::read_dir(&stores).map(|entries| {
+        let mut paths: Vec<PathBuf> = entries
+            .filter_map(Result::ok)
+            .map(|entry| entry.path())
+            .filter(|path| {
+                path.file_name()
+                    .and_then(|name| name.to_str())
+                    .is_some_and(|name| name.starts_with("Data-") && name.ends_with(".sqlite"))
+            })
+            .collect();
+        paths.sort();
+        paths
+    });
+    match found {
+        Ok(paths) if !paths.is_empty() => {
+            let counts: Vec<Value> = paths
+                .iter()
+                .map(|path| database(path, "ZREMCDREMINDER"))
+                .collect();
+            let pass = counts.iter().all(|count| count["pass"] == true);
+            json!({"pass": pass, "stores": counts})
+        }
+        Ok(_) => json!({"pass": false, "stores": 0}),
+        Err(error) => json!({"pass": false, "errno": error.raw_os_error()}),
+    }
+}
+
 fn readable(path: &Path) -> Value {
     let result = File::open(path).and_then(|mut f| f.read(&mut [0u8; 1]));
     match result {
@@ -70,7 +100,9 @@ fn tcc() -> Result<Value, Box<dyn std::error::Error>> {
         "attachment": attachment,
         "notes": database(&home.join("Library/Group Containers/group.com.apple.notes/NoteStore.sqlite"), "ZICCLOUDSYNCINGOBJECT"),
         "biome": biome,
-        "safari": database(&home.join("Library/Safari/History.db"), "history_items")
+        "safari": database(&home.join("Library/Safari/History.db"), "history_items"),
+        "calendar_store": database(&home.join("Library/Group Containers/group.com.apple.calendar/Calendar.sqlitedb"), "CalendarItem"),
+        "reminders_store": reminders_store(&home)
     }))
 }
 

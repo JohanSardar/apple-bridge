@@ -1,0 +1,11 @@
+{
+ "ID-B": {
+  "external": "EXT-B"
+ },
+ "ID-C": {
+  "external": "EXT-C-NONE"
+ },
+ "EXT-DUP": {
+  "external": "EXT-DUP"
+ }
+}
