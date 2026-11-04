@@ -20,7 +20,7 @@ const SCOPE: &str = "admin";
 pub const SCENARIOS: [&str; 1] = ["CORE-REPLICA-CAPTURE-OBSERVERS"];
 const COLLECTION: &str = "reminders.reminder";
 const MARKER: &str = "[ab-test capture observer]";
-const WIDTH: usize = 150;
+const WIDTH: u64 = 150;
 
 fn observation(key: &str) -> (Value, Value) {
     let data = json!({"title": format!("{MARKER} {key}"), "text": "Bridge Test capture observer"});
@@ -64,7 +64,7 @@ fn oversized_capture(world: &World, gateway: &Client, prefix: &str) -> Option<Cu
         ),
     );
     let span = through.sequence.saturating_sub(before.sequence);
-    (span >= WIDTH as u64 && width >= WIDTH as i64).then_some(through)
+    (span >= WIDTH && u64::try_from(width).is_ok_and(|width| width >= WIDTH)).then_some(through)
 }
 
 fn pending_state(replica: &Client, command: &str) -> (Option<bool>, String) {
