@@ -355,6 +355,9 @@ impl Session<'_> {
             "reminders.read_reminder" => self.read_reminder(state, &key),
             "reminders.can_create_list" => Ok(json!({"allowed":true})),
             "reminders.reconcile" => self.reconcile(state, args),
+            "reminders.write" if std::env::var("AB_LAB_PRIMITIVE_CONTROL").as_deref() == Ok("refuse") => {
+                Err("unavailable")
+            }
             "reminders.write" => self.write(state, frame),
             _ => Err("unsupported"),
         };
