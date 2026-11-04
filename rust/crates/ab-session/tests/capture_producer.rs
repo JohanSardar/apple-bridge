@@ -1272,11 +1272,12 @@ fn messages_reader_streams_history_then_live_rows_and_serves_attachment_bytes() 
     )?;
 
     expect_silence(&mut session.gateway)?;
-    database.execute(
-        "INSERT INTO message(ROWID,guid,date,text,handle_id,is_from_me) VALUES(3,'msg-3',700000000000000003,'third',1,0)",
-        [],
+    database.execute_batch(
+        "BEGIN;
+         INSERT INTO message(ROWID,guid,date,text,handle_id,is_from_me) VALUES(3,'msg-3',700000000000000003,'third',1,0);
+         INSERT INTO chat_message_join VALUES(1,3);
+         COMMIT;",
     )?;
-    database.execute("INSERT INTO chat_message_join VALUES(1,3)", [])?;
     let (size, live) = receive(&mut session.gateway)?;
     assert_eq!(live["live"], true);
     let keys: Vec<&str> = live["observations"]
