@@ -16,25 +16,27 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("invalid request")]
+    #[error("That doesn't look right. Check it and try again.")]
     Invalid,
-    #[error("authentication required")]
+    #[error("Sign in first.")]
     Unauthorized,
     #[error("sign in again to do this")]
     SignInAgain,
-    #[error("access denied")]
+    #[error("You can't do that from this account.")]
     Forbidden,
-    #[error("capacity exhausted")]
+    #[error("This account already has all the Macs it can hold. Remove one first.")]
     Capacity,
-    #[error("slow_down")]
+    #[error("Too many tries. Wait a moment and try again.")]
     SlowDown,
     #[error("authorization_pending")]
     Pending,
-    #[error("expired or consumed")]
+    #[error(
+        "That code has expired or was already used. Turn Remote on again on your Mac for a new one."
+    )]
     Expired,
-    #[error("policy unavailable")]
+    #[error("The relay can't do that right now. Try again in a minute.")]
     Unavailable,
-    #[error("restore fenced")]
+    #[error("The relay can't do that right now. Try again in a minute.")]
     Fenced,
 }
 impl From<rusqlite::Error> for Error {

@@ -309,6 +309,25 @@ async fn link_to_account(
     ))
 }
 
+const SUSPENDED_RETRY: Duration = Duration::from_secs(15);
+fn refused_by_relay(error: &Error) -> bool {
+    matches!(
+        error,
+        Error::WebSocket(tokio_tungstenite::tungstenite::Error::Http(response))
+            if response.status() == 403
+    )
+}
+fn suspended_progress() -> Progress {
+    Progress {
+        state: "pending",
+        message:
+            "The relay refused this Mac's tunnel. It may be suspended or removed in your account."
+                .into(),
+        pending_link: String::new(),
+        last_error: String::new(),
+        link: String::new(),
+    }
+}
 #[derive(Debug)]
 pub struct Relay {
     pub home: PathBuf,
@@ -358,10 +377,22 @@ impl Ingress for Relay {
                 tokio::select! {
                     () = stopped(&mut stop) => return Ok(()),
                     result = &mut monitor => return result,
-                    result = self.connect(&id, &host, gateway.clone()) => { if let Err(e) = result { eprintln!("relay connection ended: {e}"); } }
+                    result = self.connect(&id, &host, gateway.clone()) => {
+                        if let Err(e) = result {
+                            if refused_by_relay(&e) {
+                                gateway.progress("relay", suspended_progress());
+                                delay = SUSPENDED_RETRY;
+                            }
+                            eprintln!("relay connection ended: {e}");
+                        }
+                    }
                 }
                 tokio::select! { () = stopped(&mut stop) => return Ok(()), () = tokio::time::sleep(delay) => {} }
-                delay = (delay * 2).min(Duration::from_secs(2));
+                delay = if delay == SUSPENDED_RETRY {
+                    Duration::from_millis(100)
+                } else {
+                    (delay * 2).min(Duration::from_secs(2))
+                };
             }
         })
     }
