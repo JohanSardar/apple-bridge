@@ -106,7 +106,7 @@ case "$command" in
   sim)
     prepare
     if [[ $# -eq 0 ]] || ! selected "$@"; then
-      python3 lab/testing/sim_parallel.py --runner rust --parallel "${SIM_JOBS:-4}" --timeout "${SIM_TIMEOUT:-900}" --output "${SIM_OUTPUT:-${TMPDIR:-/tmp}/ab-rust-sim-$(date +%s)}" --rust-binary "$BRIDGE" --families-binary "$FAMILIES" --simapple-binary "$SIMAPPLE" ${SIM_SELECT:+--select "$SIM_SELECT"} ${SIM_RUN_AT_END:+--run-at-end}
+      python3 lab/testing/sim_parallel.py --parallel "${SIM_JOBS:-4}" --timeout "${SIM_TIMEOUT:-900}" --output "${SIM_OUTPUT:-${TMPDIR:-/tmp}/ab-rust-sim-$(date +%s)}" --rust-binary "$BRIDGE" --families-binary "$FAMILIES" --simapple-binary "$SIMAPPLE" ${SIM_SELECT:+--select "$SIM_SELECT"} ${SIM_RUN_AT_END:+--run-at-end}
     else
       run_files sim "$@"
     fi
@@ -117,7 +117,7 @@ case "$command" in
     ;;
   replica)
     prepare
-    python3 lab/testing/sim_parallel.py --runner rust --level replica --parallel "${SIM_JOBS:-4}" --timeout "${SIM_TIMEOUT:-900}" --output "${SIM_OUTPUT:-${TMPDIR:-/tmp}/ab-rust-replica-$(date +%s)}" --rust-binary "$BRIDGE" --families-binary "$FAMILIES" --simapple-binary "$SIMAPPLE" ${SIM_SELECT:+--select "$SIM_SELECT"}
+    python3 lab/testing/sim_parallel.py --level replica --parallel "${SIM_JOBS:-4}" --timeout "${SIM_TIMEOUT:-900}" --output "${SIM_OUTPUT:-${TMPDIR:-/tmp}/ab-rust-replica-$(date +%s)}" --rust-binary "$BRIDGE" --families-binary "$FAMILIES" --simapple-binary "$SIMAPPLE" ${SIM_SELECT:+--select "$SIM_SELECT"}
     ;;
   real)
     if [[ $# -eq 0 ]] || ! selected "$@"; then
