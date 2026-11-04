@@ -308,6 +308,7 @@ type TelephonyScan =
 pub struct TelephonyReader {
     name: &'static str,
     path: PathBuf,
+    preferred: Option<PathBuf>,
     scan: TelephonyScan,
     state: capture::State,
     pending: Option<(capture::Pending, Signature)>,
@@ -327,13 +328,16 @@ impl TelephonyReader {
 
     #[must_use]
     pub fn voicemail(root: &Path) -> Self {
-        Self::new("voicemail", root.join("voicemail.db"), telephony::voicemail)
+        let mut reader = Self::new("voicemail", root.join("voicemail.db"), telephony::voicemail);
+        reader.preferred = Some(root.join("FaceTimeMessageStore-local.sqlitedb"));
+        reader
     }
 
     fn new(name: &'static str, path: PathBuf, scan: TelephonyScan) -> Self {
         Self {
             name,
             path,
+            preferred: None,
             scan,
             state: capture::State::default(),
             pending: None,
@@ -364,6 +368,12 @@ impl CaptureReader for TelephonyReader {
     fn next(&mut self, context: &ScanContext) -> Result<Option<Value>, Error> {
         if self.pending.is_some() {
             return Err(Error::Conflict);
+        }
+        if let Some(preferred) = &self.preferred
+            && preferred.exists()
+        {
+            self.path = preferred.clone();
+            self.preferred = None;
         }
         let current = file_signature(&self.path);
         if current.is_empty() || self.committed.as_ref() == Some(&current) {
