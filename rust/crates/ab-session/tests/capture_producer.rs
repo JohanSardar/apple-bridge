@@ -1130,7 +1130,7 @@ fn safari_live_tabs_arrive_as_helper_facts_and_leave_as_rust_captures() -> Falli
 }
 
 fn messages_fixture(root: &Path, texts: &[&str], attachment: Option<&[u8]>) -> Fallible<()> {
-    let attachments = root.parent().ok_or("home")?.join("Library/Messages/Attachments");
+    let attachments = root.join("Attachments");
     std::fs::create_dir_all(&attachments)?;
     let connection = rusqlite::Connection::open(root.join("chat.db"))?;
     connection.execute_batch(
