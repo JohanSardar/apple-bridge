@@ -36,6 +36,12 @@ pub enum Error {
 }
 type Result<T> = std::result::Result<T, Error>;
 
+#[derive(Debug, Clone)]
+pub struct MediaSource {
+    pub path: PathBuf,
+    pub sticker: bool,
+}
+
 #[derive(Debug, Default)]
 struct Row {
     attachments: Vec<Row>,
@@ -946,6 +952,54 @@ impl Reader {
             })
             .ok()?;
         (resolved.starts_with(&root) && resolved != root).then_some(resolved)
+    }
+    pub fn media_source(&self, guid: &str) -> Result<Option<MediaSource>> {
+        if !self.has("attachment", &["guid", "filename"]) {
+            return Ok(None);
+        }
+        let sticker = if self.has("attachment", &["is_sticker"]) {
+            "is_sticker"
+        } else {
+            "0 AS is_sticker"
+        };
+        let rows = self.query(
+            &format!("SELECT filename,{sticker} FROM attachment WHERE guid=?"),
+            &[guid.into()],
+        )?;
+        let Some(row) = rows.first() else {
+            return Ok(None);
+        };
+        let Some(path) = self.attachment_path(row.text("filename")) else {
+            return Ok(None);
+        };
+        if fs::metadata(&path).is_ok_and(|meta| dataless(&meta)) {
+            return Ok(None);
+        }
+        Ok(Some(MediaSource {
+            path,
+            sticker: row.flag("is_sticker"),
+        }))
+    }
+    pub fn live_companions(&self, guid: &str) -> Result<Vec<PathBuf>> {
+        if !self.has("attachment", &["guid", "filename"]) {
+            return Ok(Vec::new());
+        }
+        let position = self.query(
+            "SELECT ROWID AS position FROM attachment WHERE guid=?",
+            &[guid.into()],
+        )?;
+        let Some(position) = position.first().map(|row| row.text("position").to_owned()) else {
+            return Ok(Vec::new());
+        };
+        let rows = self.query(
+            "SELECT filename FROM attachment WHERE lower(filename) LIKE '%.mov' ORDER BY abs(ROWID-?) LIMIT 16",
+            &[position],
+        )?;
+        Ok(rows
+            .iter()
+            .filter_map(|row| self.attachment_path(row.text("filename")))
+            .filter(|path| fs::metadata(path).is_ok_and(|meta| !dataless(&meta)))
+            .collect())
     }
     pub fn read_blob(&self, handle: &str, offset: u64, length: usize) -> Result<Vec<u8>> {
         if length == 0 || length > 128 * 1024 {

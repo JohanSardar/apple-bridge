@@ -36,7 +36,7 @@ public extension NativeAdapter {
 }
 
 public actor NativeServer {
-    public static let factOperations: Set<String> = ["agenda.calendars", "agenda.events", "agenda.reminder_lists", "agenda.reminders", "contacts.containers", "contacts.groups", "contacts.contacts", "files.ubiquity", "mac.state"]
+    public static let factOperations: Set<String> = ["agenda.calendars", "agenda.events", "agenda.reminder_lists", "agenda.reminders", "contacts.containers", "contacts.groups", "contacts.contacts", "files.ubiquity", "mac.state", "messages.media"]
     public static let maximumUbiquityPaths = 500
     public static let revalidationCollections: [String: String] = ["agenda.calendars": "calendar.calendar", "agenda.events": "calendar.event", "agenda.reminder_lists": "reminders.list", "agenda.reminders": "reminders.reminder", "contacts.containers": "contacts.container", "contacts.groups": "contacts.group", "contacts.contacts": "contacts.contact"]
     public static let maximumRevalidation = 500

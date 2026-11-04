@@ -34,6 +34,8 @@ struct SourceConfig {
     media_root: Option<PathBuf>,
     #[serde(default)]
     roots: Vec<PathBuf>,
+    #[serde(default = "default_media_retry")]
+    media_retry_ms: u64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -47,6 +49,10 @@ enum FactsLink {
 enum NativeMarker {
     #[serde(rename = "native")]
     Native,
+}
+
+fn default_media_retry() -> u64 {
+    60_000
 }
 
 fn default_facts_poll() -> u64 {
@@ -184,7 +190,11 @@ pub fn from_config_linked(
                 if !home.is_absolute() {
                     return Err(Error::Invalid);
                 }
-                Box::new(MessagesReader::new(config.root, home))
+                let client = linked_client(config.facts.as_ref(), inherited)?;
+                Box::new(
+                    MessagesReader::new(config.root, home)
+                        .with_media(client, Duration::from_millis(config.media_retry_ms)),
+                )
             }
             "files" | "mac" => {
                 let client =

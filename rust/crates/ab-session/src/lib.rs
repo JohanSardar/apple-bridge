@@ -8,6 +8,8 @@ mod frame;
 pub mod guard;
 #[cfg(feature = "rust-capture")]
 pub mod media_facts;
+#[cfg(feature = "rust-capture")]
+pub mod messages_media;
 pub mod messages_policy;
 #[cfg(feature = "rust-capture")]
 pub mod native_facts;

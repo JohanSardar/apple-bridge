@@ -419,8 +419,7 @@ fails only that read; it used to shut the Helper connection, which reset every s
 Lifecycle: `ab-session` resets SIGTERM/SIGINT/SIGHUP/SIGQUIT to default and unblocks all signals at start
 (a parent that ignores or blocks SIGTERM is inherited by `posix_spawn`; SessionProxy now also passes
 `POSIX_SPAWN_SETSIGDEF` and `POSIX_SPAWN_SETSIGMASK`), and exits when its parent pid changes.
-Not in the Rust reader: media derivatives (thumbnails and posters, `data.media` / `data.derivatives`)
-and the asynchronous pending-blob state; large attachments are hashed on the poll thread.
+Not in the Rust reader: the asynchronous pending-blob state; large attachments are hashed on the poll thread.
 
 Flip on an existing home. A capture upsert replaces the whole record `data`; a new generation reuses the
 existing record ids through `scoped_alias` (`<collection>/<native_key>`) and a scan only tombstones what the
@@ -432,10 +431,13 @@ previous record's `blob.digest` into an incoming `offloaded` or `missing` blob t
 `media` and `derivatives` that the incoming record omits when its blob digest equals the previous one. A
 changed digest, a `pending` blob, or keys present (even empty) in the incoming record replace as before, and a
 tombstoned record is never revived with old fields. The rule is a no-op for the Swift producer, which always
-emits those keys. Derivatives for attachments first seen after a flip are the follow-up: Rust decides (which
-attachment, which digest, when, how the row records the result, `unavailable` reasons) and Swift answers one
-narrow `native/1` request per digest (`messages.media`, args `{digest, guid}`) from ImageIO / AVFoundation and
-its digest-keyed cache, returning derivative descriptors whose bytes the Helper serves through `BlobRead`.
+emits those keys. Derivatives for attachments first seen after a flip are built by `messages_media`: Rust decides which attachment, which digest, when to retry and how the row records the result; Swift answers one narrow `native/1` fact, `messages.media`, with ImageIO / AVFoundation and its digest-keyed cache.
+
+- **Link.** The messages source needs `"facts":"native"` (the inherited native/1 stream, as for `files` and `mac`); without it the reader behaves as before and attachments carry no `media` / `derivatives`. `media_retry_ms` (default 60000) is the retry delay.
+- **Request.** Once a `present` attachment has its SHA-256, the reader asks `messages.media` with `{digest, file, uti, mime, sticker, companions}` (`file` and `companions` are absolute paths from the `chat.db` rows, confined by Swift to `<home>/Library/Messages/Attachments`; Swift never opens `chat.db`). One worker thread asks, one attachment at a time, with a ten minute patience that fails only that request: a late answer never closes the shared native/1 stream. The row is emitted first without `media` / `derivatives` (support is not known yet), so the message and the attachment never wait.
+- **Answer.** One item: `status` `ready` (with `root`, the Helper's derivative directory, and `result`, Swift's `MediaResult`: `media`, `derivatives` with `file` relative to `root`, optional `unavailable` and `awaitingLive`), `unsupported` (`MediaDerivatives.supports` is false: the row keeps no `media` / `derivatives`, as Swift leaves it), `paused` (thermal or battery pressure: asked again after five seconds, nothing recorded) or `failed`.
+- **Row.** `ready` re-emits the attachment with `media` = `result.media` and `derivatives` = each variant without `file` plus `"state":"present"`, then `{"state":"unavailable","reason"}` for each `unavailable` entry, the same shaping as `MediaResult.attachmentFields()` which Swift's own `attachMedia` now calls. `blob_handles` maps each variant digest to `media:<digest>`; Rust serves those through `BlobRead` straight from `root` (relative names without `..`, size checked). `failed` or an unreachable Helper re-emits with `media:{}` and `derivatives:{}` and asks again after the retry delay; `awaitingLive` (a Live Photo whose `.mov` has not arrived) records the partial result and asks again after the delay with up to 16 nearest `.mov` attachments as `companions`. A result whose digest no longer matches the attachment is dropped.
+- **Differences from Swift.** Swift yields to foreground activity, hot battery and thermal state inside `make`; Rust asks one at a time and honours only Swift's own `paused` answer. Swift looks at every `.mov` attachment for a Live Photo companion, Rust at the 16 nearest by row id. Swift's poster upgrade of an older cached result is not triggered for new attachments. During the first emission Swift writes `media:{}` before it knows the result; Rust writes nothing until the answer, so the final row is identical and only the placeholder differs.
 The sim MSG family cannot run with the session on: simapple's message records are a model (`title`,
 synthetic keys) that cannot be inverted into a `chat.db`, so the family stays on the Helper path in the
 sim and the reader is proven by `tests/capture_producer.rs` and the 46-stage Swift/Rust projection oracle.
