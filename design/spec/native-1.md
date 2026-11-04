@@ -235,16 +235,24 @@ through `reminders.read_list` / `reminders.read_reminder`, decides whether the f
 `--rust-commands reminders` (`AB_SESSION_RUST_COMMANDS` overrides the list), so Swift's native-session `Prepare`,
 `Dispatch` and `Resolve` handlers refuse `reminders.*`.
 
-### Messages primitives (send Prepare in Rust, not routable yet)
+### Messages primitives (`messages.send` in Rust, opt-in, off by default)
 
-`session/messages.rs` holds the Rust Prepare and dispatch-time validation of `messages.send`: the origin rules
-(`CommandOrigin`), the send policy of `ab_session::messages_policy` (the 43 shared vectors run through the real
-Prepare), file-name checks, the route (approved handles, chat members, direct chats), the resend rule, the
-agent policy (one pinned message, once) and the per-kind route proofs. It is **not in** `RUST_COMMAND_SOURCES`,
-so no flag routes it: Dispatch, the UI operations and the self-test still need their primitives. Swift answers
-read-only facts (`MessagesCommands.primitive`): `messages.config`, `own_handles`, `approved_handles`,
-`chat_members` (`handles` from a left join, `joined` from an inner join), `direct_chats`, `route_proofs`,
-`message`, `agent_policy`, `max_row_id`, `payload_fingerprint`. Rust decides; Swift never compares.
+`session/messages.rs` holds the Rust Prepare, dispatch-time validation, Dispatch and Resolve of `messages.send`:
+the origin rules (`CommandOrigin`), the send policy of `ab_session::messages_policy` (the shared vectors run through
+the real Prepare), file-name checks, the route (approved handles, chat members, direct chats), the resend rule,
+the agent policy (one pinned message, once), per-kind route proofs, then at Dispatch: route re-verification, the
+resend and agent checks again, the agent `.used` marker before the send, staging, one AppleScript send per part,
+chat.db correlation by polling outgoing rows (10 seconds in all, later parts never sent after a doubtful one),
+the aggregate disposition, lab proof recording (lab only) and the capture. It is selected by
+`--rust-commands messages.send` (the per-operation name; the bare source `messages` is not accepted until the UI
+operations and the self-test are ported) and the Helper does not pass it by default.
+
+Swift answers read-only facts and primitive actions (`MessagesCommands.primitive`): `messages.config`,
+`own_handles`, `approved_handles`, `chat_members` (`handles` from a left join, `joined` from an inner join),
+`direct_chats`, `route_proofs`, `message`, `agent_policy`, `max_row_id`, `payload_fingerprint`, `rows_after`
+(outgoing rows with decoded body, peers and attachment names), `stage` (copies the uploads; a failure is reported,
+not decided), `send_part` (the AppleScript send, returning its error number), `mark_policy_used`, `record_proof`
+(lab only) and `reconcile` (captures the command's rows). Rust decides; Swift never compares.
 
 ## Ownership and migration
 

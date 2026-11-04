@@ -838,3 +838,228 @@ impl Session<'_> {
         Ok(())
     }
 }
+
+fn peer_address(s: &State, reference: &Value) -> String {
+    let key = string(&reference["$ref"], "native_key");
+    let address = string(&s.data["records"][&key]["data"], "address");
+    if !address.is_empty() {
+        return address;
+    }
+    match key.as_str() {
+        "message-self" => "self@example.com".into(),
+        "message-self-email" => "second-self@example.com".into(),
+        other => format!("{}@example.com", other.trim_start_matches("synthetic-")),
+    }
+}
+
+fn chat_peers(s: &State, chat: &str) -> Vec<String> {
+    s.data["records"][chat]["data"]["participants"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(|peer| peer_address(s, peer))
+        .collect()
+}
+
+fn live_chat(s: &State, key: &str) -> bool {
+    let record = &s.data["records"][key];
+    record["collection"] == "messages.chat" && record["kind"] != "absent"
+}
+
+fn next_row(s: &mut State) -> u64 {
+    let row = s.data["message_rows"].as_u64().unwrap_or_default() + 1;
+    s.data["message_rows"] = json!(row);
+    row
+}
+
+fn stamp_row(s: &mut State, key: &str) {
+    let row = next_row(s);
+    s.data["records"][key]["row_id"] = json!(row);
+}
+
+impl Session<'_> {
+    pub(super) fn messages_primitive(&mut self, state: &Shared, frame: &Value) -> Result<()> {
+        let id = frame["id"].clone();
+        let answer = self.messages_answer(state, &frame["args"], &string(frame, "op"));
+        match answer {
+            Ok(result) => send(
+                &mut self.stream,
+                &json!({"t":"PrimitiveResult","id":id,"result":result}),
+            )?,
+            Err(code) => send(
+                &mut self.stream,
+                &json!({"t":"PrimitiveError","id":id,"code":code}),
+            )?,
+        };
+        Ok(())
+    }
+
+    #[allow(clippy::too_many_lines)]
+    fn messages_answer(
+        &mut self,
+        state: &Shared,
+        args: &Value,
+        op: &str,
+    ) -> std::result::Result<Value, &'static str> {
+        let fail = |_| "unavailable";
+        let mut s = lock(state).map_err(fail)?;
+        if s.denied.get("messages") == Some(&true) {
+            return Err("permission_missing");
+        }
+        let own = json!(["self@example.com", "second-self@example.com"]);
+        match op {
+            "messages.config" => Ok(json!({"lab_commands":true})),
+            "messages.own_handles" | "messages.approved_handles" => Ok(json!({"handles":own})),
+            "messages.route_proofs" => Ok(json!({"routes":[]})),
+            "messages.agent_policy" => Ok(json!({"configured":false})),
+            "messages.chat_members" => {
+                let chat = string(args, "chat_guid");
+                let peers = if live_chat(&s, &chat) {
+                    chat_peers(&s, &chat)
+                } else {
+                    vec![]
+                };
+                Ok(json!({"handles":peers,"joined":peers}))
+            }
+            "messages.direct_chats" => {
+                let mut chats: Vec<(String, String, String)> = vec![];
+                for (key, record) in s.data["records"].as_object().into_iter().flatten() {
+                    if record["collection"] == "messages.chat"
+                        && record["kind"] != "absent"
+                        && record["data"]["service"] == "iMessage"
+                    {
+                        let peers = chat_peers(&s, key);
+                        if peers.len() == 1 {
+                            chats.push((
+                                string(record, "observed_at"),
+                                key.clone(),
+                                peers[0].clone(),
+                            ));
+                        }
+                    }
+                }
+                chats.sort_by(|a, b| b.0.cmp(&a.0));
+                Ok(
+                    json!({"chats":chats.iter().map(|(_, guid, id)| json!({"guid":guid,"id":id})).collect::<Vec<_>>()}),
+                )
+            }
+            "messages.message" => {
+                let record = &s.data["records"][string(args, "guid")];
+                if record["collection"] != "messages.message" || record["kind"] == "absent" {
+                    return Ok(json!({"exists":false}));
+                }
+                let data = &record["data"];
+                Ok(
+                    json!({"exists":true,"is_from_me":data["is_from_me"]==true,"error":data["error_code"].as_i64().unwrap_or(0),"capture_chat_guid":string(&data["chat_id"]["$ref"],"native_key")}),
+                )
+            }
+            "messages.max_row_id" => {
+                Ok(json!({"value":s.data["message_rows"].as_u64().unwrap_or_default()}))
+            }
+            "messages.payload_fingerprint" => {
+                Ok(json!({"digest":super::contacts::digest_text(&args["messages"].to_string())}))
+            }
+            "messages.rows_after" => {
+                let after = args["maximum"].as_u64().unwrap_or_default();
+                let mut rows: Vec<(u64, Value)> = vec![];
+                let mut reads: Vec<(String, u64)> = vec![];
+                for (key, record) in s.data["records"].as_object().into_iter().flatten() {
+                    let row = record["row_id"].as_u64().unwrap_or_default();
+                    let data = &record["data"];
+                    if record["collection"] != "messages.message"
+                        || record["kind"] == "absent"
+                        || row <= after
+                        || data["is_from_me"] != true
+                    {
+                        continue;
+                    }
+                    let chat = string(&data["chat_id"]["$ref"], "native_key");
+                    let body = string(data, "text");
+                    let seen = record["row_reads"].as_u64().unwrap_or_default() + 1;
+                    reads.push((key.clone(), seen));
+                    rows.push((row, json!({"guid":key,"capture_chat_guid":chat,"service":data["service"].as_str().unwrap_or("iMessage"),"error":data["error_code"].as_i64().unwrap_or(0),"is_delivered":seen > 1,"text":body,"body":body,"has_body":false,"peers":if chat.is_empty() { vec![] } else { chat_peers(&s, &chat) },"attachment_names":[]})));
+                }
+                for (key, seen) in reads {
+                    s.data["records"][&key]["row_reads"] = json!(seen);
+                }
+                rows.sort_by_key(|(row, _)| *row);
+                Ok(json!({"rows":rows.into_iter().map(|(_, row)| row).collect::<Vec<_>>()}))
+            }
+            "messages.stage" => {
+                let m = &args["messages"];
+                if m["files"].as_array().is_some_and(|files| !files.is_empty()) {
+                    return Ok(json!({"failed":{"domain":"sim","code":1}}));
+                }
+                let text = string(m, "text");
+                Ok(
+                    json!({"parts":if text.is_empty() { vec![] } else { vec![json!({"kind":"text","text":text})] }}),
+                )
+            }
+            "messages.mark_policy_used" | "messages.record_proof" => Ok(json!({})),
+            "messages.reconcile" => {
+                let capture = s.scan("messages").map_err(fail)?;
+                drop(s);
+                self.emit(state, capture).map_err(fail)?;
+                Ok(json!({}))
+            }
+            "messages.send_part" => {
+                let route = &args["route"];
+                let part = &args["part"];
+                let mut seen: Vec<Value> = vec![];
+                let mut chat = string(route, "chat");
+                if chat.is_empty() {
+                    let handle = string(route, "handle");
+                    chat = id("chat").map_err(fail)?;
+                    let key = handle_key(&handle);
+                    put(
+                        &mut s,
+                        &mut seen,
+                        "handle",
+                        &key,
+                        json!({"address":handle,"service":"iMessage"}),
+                        false,
+                    );
+                    put(
+                        &mut s,
+                        &mut seen,
+                        "chat",
+                        &chat,
+                        json!({"service":"iMessage","style":"direct","display_name":"","participants":[reference("handle",&key)]}),
+                        false,
+                    );
+                }
+                let fault = std::mem::take(&mut s.fault);
+                let command = string(args, "command_id");
+                if !command.is_empty() {
+                    let count = s.data["effects"][&command].as_u64().unwrap_or_default() + 1;
+                    s.data["effects"][&command] = json!(count);
+                }
+                let native = id("message").map_err(fail)?;
+                let body = string(part, "text");
+                new_message(&mut s, &mut seen, &native, &body, &chat, true);
+                stamp_row(&mut s, &native);
+                if fault == "delivery-failed" {
+                    set_error(&mut s, &mut seen, &native);
+                } else if fault == "ghost-send" {
+                    let mut d = record_data(&s, &native);
+                    if let Some(object) = d.as_object_mut() {
+                        object.remove("chat_id");
+                    }
+                    d["text"] = json!("");
+                    d["parts"] = json!([]);
+                    d["service"] = json!("SMS");
+                    put(&mut s, &mut seen, "message", &native, d, false);
+                } else {
+                    let echo = format!("{native}-echo");
+                    new_message(&mut s, &mut seen, &echo, &body, &chat, false);
+                }
+                s.save().map_err(fail)?;
+                let capture = s.scan("messages").map_err(fail)?;
+                drop(s);
+                self.emit(state, capture).map_err(fail)?;
+                Ok(json!({"error":0}))
+            }
+            _ => Err("unsupported"),
+        }
+    }
+}

@@ -160,6 +160,34 @@ public actor MessagesCommands {
             return .object(["configured": .bool(true), "policy": policy, "used": .bool(FileManager.default.fileExists(atPath: agentPolicy.path + ".used"))])
         case "messages.max_row_id":
             return .object(["value": .number(Double(try MessagesReader(path: path).maximum()))])
+        case "messages.rows_after":
+            let reader = try MessagesReader(path: path)
+            let rows = try reader.messageRows(after: Int64(request["maximum"].number), through: reader.maximum(), limit: Int(request["limit"].number)).filter { $0.flag("is_from_me") }
+            var result: [JSON] = []
+            for row in rows {
+                let peers = try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [row["capture_chat_guid"]]).map { $0["id"] }
+                let files = try reader.query("SELECT a.filename FROM attachment a JOIN message_attachment_join j ON j.attachment_id=a.ROWID JOIN message m ON m.ROWID=j.message_id WHERE m.guid=?", [row["guid"]]).map { URL(fileURLWithPath: $0["filename"]).lastPathComponent }
+                let body = row.blobs["attributedBody"].map { TypedStream.decode($0).text } ?? row.values["text"]
+                result.append(.object(["guid": .string(row["guid"]), "capture_chat_guid": .string(row["capture_chat_guid"]), "service": .string(row["service"]), "error": .number(Double(row.integer("error"))), "is_delivered": .bool(row.flag("is_delivered")), "text": .string(row.values["text"] ?? ""), "body": body.map(JSON.string) ?? .null, "has_body": .bool(row.blobs["attributedBody"] != nil), "peers": .array(peers.map(JSON.string)), "attachment_names": .array(files.map(JSON.string))]))
+            }
+            return .object(["rows": .array(result)])
+        case "messages.stage":
+            do { return .object(["parts": .array(try parts(commandID: request["command_id"].string, args: request["messages"]))]) }
+            catch {
+                let native = error as NSError
+                return .object(["failed": .object(["domain": .string(native.domain), "code": .number(Double(native.code))])])
+            }
+        case "messages.send_part":
+            let error = await MessagesUI.send(request["part"], route: request["route"])
+            return .object(["error": .number(Double(error))])
+        case "messages.mark_policy_used":
+            guard let agentPolicy, FileManager.default.fileExists(atPath: agentPolicy.path) else { throw SourceFailure.conflict }
+            try Data(request["command_id"].string.utf8).write(to: URL(fileURLWithPath: agentPolicy.path + ".used"), options: .withoutOverwriting)
+            return .object([:])
+        case "messages.record_proof":
+            guard labCommands else { throw SourceFailure.unsupported }
+            try recordProof(request["route"], parts: request["parts"].array)
+            return .object([:])
         case "messages.payload_fingerprint":
             return .object(["digest": .string(BodyDigest.hash(try JSONEncoder().encode(request["messages"])))])
         default:
@@ -367,11 +395,13 @@ public actor MessagesCommands {
         return staged[0]
     }
     private func parts(_ prepared: Prepared) throws -> [JSON] {
-        let args = prepared.action["messages"]
+        try parts(commandID: prepared.nativeState["command_id"].string, args: prepared.action["messages"])
+    }
+    private func parts(commandID: String, args: JSON) throws -> [JSON] {
         var parts: [JSON] = []
         if !args["text"].string.isEmpty { parts.append(.object(["kind": .string("text"), "text": args["text"]])) }
         let root = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/Attachments/AppleBridgeOutgoing", isDirectory: true)
-        let directory = root.appendingPathComponent(BodyDigest.hash(Data(prepared.nativeState["command_id"].string.utf8)), isDirectory: true)
+        let directory = root.appendingPathComponent(BodyDigest.hash(Data(commandID.utf8)), isDirectory: true)
         if !args["files"].array.isEmpty {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         }

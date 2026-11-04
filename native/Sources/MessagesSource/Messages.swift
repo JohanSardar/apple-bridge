@@ -750,7 +750,13 @@ public actor Messages: Source {
         if let failure { throw failure }
     }
     public func prepare(_ command: JSON) async throws -> Prepared { try await commands.prepare(command) }
-    public func primitive(_ operation: String, args: JSON) async throws -> JSON { try await commands.primitive(operation, args: args) }
+    public func primitive(_ operation: String, args: JSON, into sink: any ObservationSink) async throws -> JSON {
+        if operation == "messages.reconcile" {
+            try await captureCommand(args["result"], into: sink)
+            return .object([:])
+        }
+        return try await commands.primitive(operation, args: args)
+    }
     public func dispatch(_ prepared: Prepared) async throws -> JSON { try await commands.dispatch(prepared) }
     public func resolve(_ command: String, evidence: JSON) async -> JSON { await commands.resolve(evidence) }
     private func commandCoverage() async -> JSON {
