@@ -70,6 +70,7 @@ type World struct {
 	sessionState      string
 	sessionListen     string
 	sessionNative     string
+	sessionFacts      string
 	sessionGateway    string
 	sessionRoots      map[string]string
 	sessionUsage      map[string]*sessionDevice
@@ -475,8 +476,8 @@ func newEnvironment(ctx context.Context, level string, replicas, seed int, nativ
 			return nil, err
 		}
 		simArgs := []string{"simapple", "--socket", helperSocket, "--secret-file", filepath.Join(gatewayHome, "apple-secret"), "--control", control}
-		if w.sessionNative != "" {
-			simArgs = append(simArgs, "--native-socket", w.sessionNative)
+		if socket := w.simNativeSocket(); socket != "" {
+			simArgs = append(simArgs, "--native-socket", socket)
 		}
 		if legacy, _ := ctx.Value(legacyHelperKey{}).(bool); legacy {
 			simArgs = append(simArgs, "--legacy-sources")
