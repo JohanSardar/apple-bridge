@@ -549,15 +549,12 @@ impl Hub {
             native_state: ticket.prepared.native_state.clone(),
             fingerprint: ticket.prepared.fingerprint.clone(),
         };
-        let owned = core
-            .commands
-            .owns(&ticket.command.operation())
-            .then(|| {
-                (
-                    ticket.command.clone(),
-                    parsed(&ticket.prepared.native_state),
-                )
-            });
+        let owned = core.commands.owns(&ticket.command.operation()).then(|| {
+            (
+                ticket.command.clone(),
+                parsed(&ticket.prepared.native_state),
+            )
+        });
         core.commands.active = Some(Active {
             command: ticket.command,
             prepared: ticket.prepared,
