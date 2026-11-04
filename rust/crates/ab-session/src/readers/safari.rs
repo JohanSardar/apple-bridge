@@ -92,6 +92,10 @@ impl CaptureReader for SafariReader {
         self.settled.as_ref().map(encode)
     }
 
+    fn adopts_generation(&self) -> bool {
+        false
+    }
+
     fn resume(&mut self, token: &str) -> bool {
         self.settled = decode(token);
         self.settled.is_some()

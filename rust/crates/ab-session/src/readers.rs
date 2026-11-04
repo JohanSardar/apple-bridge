@@ -75,6 +75,9 @@ pub trait CaptureReader: Send + Debug {
     fn more(&self) -> bool {
         false
     }
+    fn adopts_generation(&self) -> bool {
+        true
+    }
     fn blob(&mut self, _handle: &str, _offset: u64, _length: usize) -> Result<Value, Error> {
         Err(Error::Invalid)
     }
