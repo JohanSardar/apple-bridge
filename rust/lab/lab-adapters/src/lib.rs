@@ -81,6 +81,7 @@ pub mod rm_thread;
 pub mod robust;
 pub mod safari;
 pub mod search;
+pub mod security;
 pub mod session_proxy;
 pub mod shortcut_sign;
 pub mod shortcuts;
@@ -306,10 +307,12 @@ pub fn registry() -> Registry {
     registry.register_real("REM-LIST-LOST-ACK", |world, evidence| {
         native_runner::run(world, &serde_json::Value::Null, evidence)
     });
+    registry.register("security_remote", security::run);
     registry.register_real("RELAY-REAL", remote_real::relay_real);
     registry.register_real("CONN-CLAUDE-CODE", remote_real::claude_code);
     registry.register_real("CONN-RELAY-CLAUDE", remote_real::relay_claude);
     registry.register_real("RMT-STATUS-OFF", remote_real::status_off);
+    registry.register_real("SEC-REMOTE-ACCESS", security::real);
     registry
 }
 
@@ -367,6 +370,7 @@ pub fn prepare(scenario: &mut lab_runner::Scenario) {
     connectors::inject(scenario);
     calendar::inject(scenario);
     consent::inject(scenario);
+    security::inject(scenario);
 }
 
 #[must_use]

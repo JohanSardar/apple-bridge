@@ -167,9 +167,12 @@ pub struct Fixture {
 }
 impl Fixture {
     pub fn open(binary: &Path, state: &Path, limits: Limits) -> Result<Self> {
+        Self::open_zone(binary, state, ZONE, limits)
+    }
+    pub fn open_zone(binary: &Path, state: &Path, zone: &str, limits: Limits) -> Result<Self> {
         let mut child = Command::new(binary)
             .arg(state)
-            .arg(ZONE)
+            .arg(zone)
             .arg(limits.json().to_string())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())

@@ -61,6 +61,7 @@ RELAY_SCENARIOS = ['RELAY-ENROLL', 'RELAY-PASSTHROUGH', 'RELAY-LIMITS', 'RELAY-R
                    'RELAY-CT-INDEPENDENT', 'RELAY-CAA-ACCOUNT', 'RELAY-TLS-SPLICE', 'RELAY-DOWNGRADE',
                    'RELAY-LEGACY-COMPAT', 'RELAY-ACME', 'RELAY-OWN-DOMAIN']
 RELAY_STREAM_SCENARIOS = ['RELAY-STREAMS']
+SECURITY_SCENARIOS = ['SEC-REMOTE-ACCESS']
 CONSENT_SCENARIOS = ['./consent-connector']
 CONNECTOR_SCENARIOS = ['AUTH-SCOPES-METADATA', 'CONN-CHATGPT', 'CONN-CLAUDE-AI', 'RMT-PRIVATE-CONNECT']
 REMINDER_SCENARIOS = ['REM-CONFLICT', 'REM-EXTERNAL-RACE', 'REM-NATIVE-LIST-RACE', 'REM-OPERATION-SHAPES',
@@ -204,6 +205,7 @@ def main():
     parser.add_argument('--go-rust-gateway', dest='go_rust_gateway', action='store_true')
     parser.add_argument('--connectors', dest='connectors', action='store_true')
     parser.add_argument('--consent', dest='consent', action='store_true')
+    parser.add_argument('--security', dest='security', action='store_true')
     parser.add_argument('--reminders', dest='reminders', action='store_true')
     parser.add_argument('--mac', dest='mac', action='store_true')
     parser.add_argument('--reminders-mac', dest='reminders_mac', action='store_true')
@@ -260,6 +262,8 @@ def main():
         args.scenario = (args.scenario or []) + RELAY_SCENARIOS
     if args.relay_streams:
         args.scenario = (args.scenario or []) + RELAY_STREAM_SCENARIOS
+    if args.security:
+        args.scenario = (args.scenario or []) + SECURITY_SCENARIOS
     if args.consent:
         args.scenario = (args.scenario or []) + CONSENT_SCENARIOS
     if args.connectors:
