@@ -166,7 +166,7 @@ enum ExternalChange {
             let id = try NotesScript.run("set n to make new note at (first folder whose name is \(NotesScript.quote(folder))) with properties {body:\(NotesScript.quote(body))}\nreturn id of n")
             guard !id.isEmpty else { throw Failure(reason: "no_id") }
             return done(id)
-        case "update", "delete", "restore", "trash":
+        case "update", "delete", "restore", "trash", "window-delete":
             let key = try text(request, "key")
             let guardLine = "set n to note id \(NotesScript.quote(key))\nif (name of n) does not start with \(NotesScript.quote(tag)) then error \"untagged\" number 9001\n"
             switch action {
@@ -181,6 +181,11 @@ enum ExternalChange {
                 let trash = try text(request, "trash_folder_id")
                 guard trash.hasPrefix("x-coredata://"), trash.contains("/ICFolder/p") else { throw Failure(reason: "argument_trash_folder_id") }
                 _ = try NotesScript.run(guardLine + "move n to folder id \(NotesScript.quote(trash))\nreturn \"ok\"")
+            case "window-delete":
+                // The owner's own route: select the note in the Notes window and press Command-Delete. It presses only when the window selects exactly this note.
+                let selected = try NotesScript.run(guardLine + "activate\nshow n\ndelay 1\nset picked to selection\nif (count of picked) is not 1 then error \"selection\" number 9002\nreturn id of (item 1 of picked)")
+                guard selected == key else { throw Failure(reason: "selection") }
+                _ = try script("com.apple.systemevents", "tell process \"Notes\"\nif frontmost is not true then error \"frontmost\" number 9003\nkey code 51 using command down\nend tell\nreturn \"ok\"")
             default:
                 _ = try NotesScript.run(guardLine + "delete n\nreturn \"ok\"")
             }

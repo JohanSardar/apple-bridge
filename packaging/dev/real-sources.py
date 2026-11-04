@@ -347,6 +347,13 @@ def run_notes_lifecycle(folder_title, tag):
         check("lifecycle_restore_reaches_gateway_" + attempt, back)
         if back:
             check("lifecycle_restore_has_body_" + attempt, wait_for(lambda: "external" in blob(get("notes.note", found["id"]) or {}), EXTERNAL_BOUND))
+    pressed = helper_change("window-delete", key=key)
+    check("window_delete_done", pressed.get("state") == "done", pressed.get("reason"))
+    if pressed.get("state") == "done":
+        check("window_delete_in_store", timed("window_delete_store", lambda: note_store_state(title) == "trash", EXTERNAL_BOUND))
+        check("window_delete_reaches_gateway", timed("window_delete_visible", lambda: gone("notes.note", found["id"]), EXTERNAL_BOUND))
+        restored = helper_change("restore", key=key, container_title=folder_title)
+        check("window_restore_reaches_gateway", restored.get("state") == "done" and timed("window_restore_visible", lambda: (lambda r: r if live(r) else None)(get("notes.note", found["id"])), EXTERNAL_BOUND), restored.get("reason"))
     scripted = helper_change("delete", key=key)
     if scripted.get("state") == "done":
         externals.remove(key)
