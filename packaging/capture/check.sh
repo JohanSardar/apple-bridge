@@ -33,7 +33,7 @@ P
 "$here/flip-capture.sh" usage,calendar --home "$gateway" >/dev/null
 [ "$(sources)" = calendar,safari,usage ] || fail "second flip did not merge: $(sources)"
 [ -f "$config.prev" ] || fail "previous switch file was not kept"
-[ "$(stat -f %Lp "$config" 2>/dev/null || stat -c %a "$config")" = 600 ] || fail "switch file is not mode 600"
+[ "$(python3 -c 'import os,sys; print(oct(os.stat(sys.argv[1]).st_mode & 0o777)[2:])' "$config")" = 600 ] || fail "switch file is not mode 600"
 
 "$here/unflip-capture.sh" usage --home "$gateway" >/dev/null
 [ "$(sources)" = calendar,safari ] || fail "unflip one left $(sources)"
