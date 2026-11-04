@@ -95,27 +95,78 @@ changed by this implementation.
 The routed proxy keeps authentication and capture bytes intact, retains Prepare
 and Prepared bindings, consumes each ticket once, and binds Dispatch origin,
 command, fence and deadline. Rust fsyncs the authoritative dispatch guard before
-sending the native permit. Swift's IPC Dispatch entry point rejects calls in
-this mode; its compatibility guard uses a separate inactive directory. Swift
+sending the native permit. Swift's IPC Dispatch entry point rejects calls for
+routed operations; the Rust guard lives in `<home>/native-effects` and Swift's
+own guard keeps `<home>`. Swift
 validates and consumes its prepared ticket through native/1 and publishes the
 resulting captures. Rust correlates only acknowledged capture identities from
 frames sent after dispatch started, checks the request fingerprint, and fsyncs
 the Outcome before sending it. Missing commits, mismatched native IDs, transport
-failure or unavailable evidence remain indeterminate. Resolve returns the saved
-outcome without repeating an effect; unresolved guard entries are reported at
-Ready after restart. The default Swift path retains its existing resolution.
+failure or unavailable evidence remain indeterminate. Resolve never repeats an
+effect (see below); unresolved guard entries are reported at Ready after
+restart. The default Swift path retains its existing resolution.
 
 Framework queries in the native effect catalogue also receive durable permits;
-read-only queries continue through IPC. Native query results currently support
-inline JSON only. Blob-producing queries remain indeterminate until native file
-references and IPC BlobRead ownership are integrated. Query cancellation has no
-native cancellation message; the connection read deadline bounds its wait.
-Operations outside the existing native effect catalogue cannot use Swift IPC
-Dispatch as a fallback. This is an isolated routing gate, not production effect
-qualification. Existing capabilities must be narrowed before enabling it for a
-production Helper. Authoritative Rust source selection is still rejected;
-reader scheduling, capture credit and checkpoint persistence integration remain
-separate work.
+read-only queries (`mail.body`, `files.search`, `files.read`) continue through IPC. A native query
+result carries its blobs as `native_query_blobs` (digest, size, handle); the gateway reads them with
+IPC `BlobRead`, which the session forwards to the Helper because Rust does not own those handles.
+A Swift query failure with code `invalid` or `unsupported` travels as `native_query_error` and becomes
+the matching `QueryError`. Inline results are capped by the 262144 byte native frame; native file
+references are not wired for queries.
+
+### Effects end to end (opt-in, off by default)
+
+`effects::COMMANDS` plus `effects::EFFECT_QUERIES` is the closed catalogue; it equals
+`NativeServer.effectOperations` (a test parses the Swift file and compares the sets). It covers every
+command a source advertises: `calendar.*`, `reminders.*`, `contacts.*` (with groups), `messages.*`,
+`notes.*`, `mail.*`, `files.*` (including `files.transform`), `pdf.annotate`, `speech.say`,
+`capture.*`, `mac.screen_record`, `print.document`, `maps.open`, `shortcuts.run`, `focus.set` and the
+`mac.*` commands (including `mac.iwork_export`, which is a command, not a query).
+
+Routing is per source. `AB_SESSION_EFFECTS=1` (with `AB_SESSION_PROXY=1`) routes every catalogue source;
+`AB_SESSION_EFFECTS_SOURCES=calendar,mail` names sources (source = `captureRoute` of the operation:
+`mac.screen_record` and `print.document` belong to `capture`); in production the same list is
+`<home>/session/rust-effects.json` (`{"sources":["calendar"]}`, an empty list routes nothing). The Swift
+SessionProxy passes `--effects-home` when either is present. Operations of a routed source that are
+outside the catalogue are refused before the Helper sees them (`Rejected unsupported`; Swift also
+refuses them in `prepare` and removes them from the capabilities it advertises). Operations of a source
+that is not routed pass through verbatim, including `Prepare`, `Dispatch`, `Resolve` and `Query`, and
+the Swift dispatch guard keeps authority for them. The Rust guard lives in `<home>/native-effects`.
+
+Evidence mapping. `AppleSession.dispatchNative` returns the source evidence with its own `disposition`
+(`locally_observed`, `delivered`, `delivery_failed`, `failed_no_effect`, `indeterminate`); Rust keeps it.
+`observed: true` evidence is then verified: `focus.set` needs `readback.authorization`, `mac.*` a readback,
+`speech.say` and `capture.play_sound` a finished callback bound to the request hash, capture and file
+operations a committed capture of `native_key`. Facts-driven sources (Calendar, Contacts) and sources
+Swift captures take the latest committed checkpoint of the key; Rust-owned readers need a capture committed
+after the dispatch started. Both wait up to ten seconds for it; a missing capture keeps the evidence and
+degrades the outcome to `indeterminate` (`reason: capture_not_observed`). A validation failure on the Swift
+side travels as `evidence.rejected {code,message,evidence}`; Rust records it as a durable `Rejected` frame
+(`rejected_before_dispatch`) and returns it, with `capture_checkpoint` for conflict evidence of a known key.
+`Resolve` for an id in the Rust guard is forwarded to the Helper with the saved outcome as `saved`; Swift
+re-observes exactly as it did from its own guard and the resulting `Outcome` is written back to the Rust
+guard. Rejected entries are answered directly.
+
+Notes pre-state. While it holds the dispatch slot and before it mints the permit, Rust reads the Notes
+store with `ab_native::notes_reader::pre_state` (config `sources.notes.root`, else `AB_SESSION_NOTES_ROOT`,
+else the user's Group Container) and adds `rust_pre_state: {native_fingerprint}` to the Effect args, so the
+permit's request hash binds it. A missing note is `Rejected conflict`, an unreadable store `unavailable`.
+Swift `NotesSource.validate(_:preState:)` compares it with the fingerprint recorded at `Prepare` and no
+longer reads the store; `dispatchValidated` skips the second read. `prepare` and the dispatch body still
+use `NotesStore` (target alias and verification loop).
+
+Request hash. Numbers must round-trip identically on both sides: unsigned integers pass, negative integers
+within 2^53, floats are normalised (`2.0` is `2`), floats below 1e-4 or at least 1e15 are refused.
+
+Lab: `AB_LAB_SESSION=<ab-session> AB_LAB_SESSION_EFFECTS=1` (with `AB_LAB_SESSION_SOURCES` optional) starts
+the session with `--lab-native native.sock` and simapple with `--native-socket`; simapple runs each Effect
+through its existing Dispatch (or Query) handler on the session loop and answers with the outcome as
+evidence. `AB_LAB_SESSION_EFFECTS_CONTROL=refuse` is the negative control (every native effect fails).
+`AB_LAB_SESSION_EFFECTS_EVIDENCE=<dir>` keeps each world's guard and process logs.
+
+Not production qualification: no live Helper has used this path, Swift `DispatchGuard` and the IPC
+Dispatch entry still exist for unrouted sources, and Resolve after a Helper restart depends on the
+Swift source's own re-observation.
 
 ## Rust capture producer (per source, lab-only today)
 

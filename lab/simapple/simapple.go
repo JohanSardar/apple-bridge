@@ -23,6 +23,7 @@ type Config struct {
 	Socket        string
 	SecretFile    string
 	Control       string
+	NativeSocket  string
 }
 type Action struct {
 	OmitCapture bool            `json:"omit_capture"`
@@ -42,6 +43,7 @@ type captureRequest struct {
 	Close       bool
 }
 type fakeApple struct {
+	nativeJobs             chan nativeJob
 	legacySources          bool
 	notificationPermission string
 
@@ -425,6 +427,14 @@ func Run(ctx context.Context, cfg Config) error {
 	secret, err := os.ReadFile(cfg.SecretFile)
 	if err != nil {
 		return err
+	}
+	if cfg.NativeSocket != "" {
+		fake.nativeJobs = make(chan nativeJob)
+		stop, err := fake.serveNative(ctx, cfg.NativeSocket)
+		if err != nil {
+			return err
+		}
+		defer stop()
 	}
 	generation := fake.durable.Generation
 	for ctx.Err() == nil {
@@ -867,6 +877,8 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 			} else if reply.T != "Pong" {
 				return contracts.ErrInvalid
 			}
+		case job := <-f.nativeJobs:
+			f.runNative(ctx, job, open.OwnerFence, commandEmit, func(source contracts.Source) string { return checkpoints[source] })
 		case req := <-f.liveChanges:
 			emitRevision, emitFull = req.Revision, false
 			if req.SourceState != nil {

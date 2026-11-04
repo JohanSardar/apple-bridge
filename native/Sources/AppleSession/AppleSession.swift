@@ -90,7 +90,10 @@ public actor AppleSession: ObservationSink {
     private var remindersStore: RemindersStoreEnrichment { sources.remindersStore }
     var calendar: CalendarSource { sources.calendar }
     private var remindersRefreshHistogram = StoreRefreshHistogram()
-    var effectsRouted: Bool { ProcessInfo.processInfo.environment["AB_SESSION_EFFECTS"] == "1" && ProcessInfo.processInfo.environment["AB_SESSION_PROXY"] == "1" }
+    let effectsRouting: EffectsRouting?
+    var effectsRouted: Bool { effectsRouting != nil }
+    func routedOperation(_ operation: String) -> Bool { effectsRouting?.routes(operation) ?? false }
+    private func narrowed(_ capabilities: [String]) -> [String] { effectsRouting?.narrowed(capabilities) ?? capabilities }
     private let guardLog: DispatchGuard
     private let socket: String
     private let secretFile: String
@@ -105,8 +108,8 @@ public actor AppleSession: ObservationSink {
         let trace = CaptureTrace(url: commandsEnabled ? home.appendingPathComponent("capture-trace.jsonl") : nil)
         self.trace = trace
         sources = try SessionSources.Builtins(home: home, labEnabled: commandsEnabled, trace: trace)
-        let routed = ProcessInfo.processInfo.environment["AB_SESSION_EFFECTS"] == "1" && ProcessInfo.processInfo.environment["AB_SESSION_PROXY"] == "1"
-        guardLog = try DispatchGuard(home: routed ? home.appendingPathComponent("inactive-swift-guard") : home)
+        effectsRouting = EffectsRouting.load(home: home)
+        guardLog = try DispatchGuard(home: home)
         let pidFile = home.appendingPathComponent("helper.pid")
         try Data(String(getpid()).utf8).write(to: pidFile, options: .atomic)
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: pidFile.path)
@@ -138,11 +141,11 @@ public actor AppleSession: ObservationSink {
                 let readiness = await source.open()
                 let calendarReadiness=await calendar.open()
  var coverage: [String: JSON] = ["reminders": readiness.coverage, "calendar": calendarReadiness.coverage]
-                var capabilities: [String: JSON] = ["reminders": .array(readiness.capabilities.map(JSON.string)), "calendar": .array(calendarReadiness.capabilities.map(JSON.string))]
+                var capabilities: [String: JSON] = ["reminders": .array(narrowed(readiness.capabilities).map(JSON.string)), "calendar": .array(narrowed(calendarReadiness.capabilities).map(JSON.string))]
                 for (name, source) in additionalSources {
                     let state = await source.open()
                     coverage[name] = state.coverage
-                    capabilities[name] = .array(state.capabilities.map(JSON.string))
+                    capabilities[name] = .array(narrowed(state.capabilities).map(JSON.string))
                 }
                 try connected.send(.object(["t": .string("Ready"), "protocol": .string("ipc/1"), "coverage": .object(coverage), "capabilities": .object(capabilities), "helper_build": .string("m1-session"), "os_build": .string(ProcessInfo.processInfo.operatingSystemVersionString)]))
                 try await publishReadiness()
@@ -198,7 +201,7 @@ public actor AppleSession: ObservationSink {
 
     public func sourceState(source: String, state: String, coverage: JSON, capabilities: [String], reason: String) async throws {
         guard let wire else { throw SourceFailure.unavailable }
-        try wire.send(.object(["t": .string("SourceState"), "source": .string(source), "state": .string(state), "coverage": .object([source: coverage]), "capabilities": .object([source: .array(capabilities.map(JSON.string))]), "reason": .string(reason)]))
+        try wire.send(.object(["t": .string("SourceState"), "source": .string(source), "state": .string(state), "coverage": .object([source: coverage]), "capabilities": .object([source: .array(narrowed(capabilities).map(JSON.string))]), "reason": .string(reason)]))
         Task { do { try await drain() } catch { disconnect() } }
     }
 
@@ -278,7 +281,7 @@ public actor AppleSession: ObservationSink {
     private func query(_ frame: JSON) async {
         guard !Task.isCancelled else { return }
         let id = frame["id"]
-        if effectsRouted && NativeServer.effectOperations.contains(frame["op"].string) {
+        if routedOperation(frame["op"].string) {
             try? wire?.send(.object(["t": .string("QueryError"), "id": id, "code": .string("conflict")]))
             return
         }
@@ -287,15 +290,7 @@ public actor AppleSession: ObservationSink {
                 let output = try await handler(frame["args"])
                 var result = output.result
                 var blobs: [JSON] = output.blobs.map(\.wireReference)
-                if frame["op"].string == "speech.synthesize", let data = Data(base64Encoded: result["data_base64"].string), !data.isEmpty {
-                    queryAudio = queryAudio.filter { Date().timeIntervalSince($0.value.1) < 60 }
-                    guard queryAudio.count < 8 else { throw SourceFailure.unavailable }
-                    let digest = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
-                    let handle = "query-audio:" + UUID().uuidString
-                    queryAudio[handle] = (data, Date())
-                    result = .object(["media_type": .string("audio/wav")])
-                    blobs = [.object(["digest": .string(digest), "size": .number(Double(data.count)), "handle": .string(handle)])]
-                }
+                if frame["op"].string == "speech.synthesize", let reference = try cacheQueryAudio(&result) { blobs = [reference] }
                 guard !Task.isCancelled else { return }
                 let encoded = try JSONEncoder().encode(result)
                 guard encoded.count <= 64 << 20 else { throw SourceFailure.invalid }
@@ -327,6 +322,17 @@ public actor AppleSession: ObservationSink {
         let result = JSON.object(["version": .string(version), "helper_build": .string("m1-session"), "protocol": .string("ipc/1")])
         guard !Task.isCancelled else { return }
         try? wire?.send(.object(["t": .string("QueryResult"), "id": id, "result_json": result, "blobs": .array([])]))
+    }
+
+    func cacheQueryAudio(_ result: inout JSON) throws -> JSON? {
+        guard let data = Data(base64Encoded: result["data_base64"].string), !data.isEmpty else { return nil }
+        queryAudio = queryAudio.filter { Date().timeIntervalSince($0.value.1) < 60 }
+        guard queryAudio.count < 8 else { throw SourceFailure.unavailable }
+        let digest = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+        let handle = "query-audio:" + UUID().uuidString
+        queryAudio[handle] = (data, Date())
+        result = .object(["media_type": .string("audio/wav")])
+        return .object(["digest": .string(digest), "size": .number(Double(data.count)), "handle": .string(handle)])
     }
 
     private func readBlob(_ frame: JSON) async {
@@ -620,7 +626,9 @@ public actor AppleSession: ObservationSink {
         defer { ForegroundActivity.shared.end(activity) }
         let id = frame["command_id"].string
         do {
-            guard var outcome = await guardLog.outcomes[id] else { try reject(frame, code: "not_found"); return }
+            let routedSaved: JSON? = effectsRouted && !frame["saved"].object.isEmpty ? frame["saved"] : nil
+            let known = await guardLog.outcomes[id]
+            guard var outcome = routedSaved ?? known else { try reject(frame, code: "not_found"); return }
             if ["indeterminate", "locally_observed"].contains(outcome["disposition"].string) {
 let operation=outcome["evidence"]["prepared"]["action"]["op"].string
                 let saved=outcome["evidence"]
@@ -631,7 +639,7 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
                     if ["maps.open", "shortcuts.run", "speech.say", "capture.play_sound", "capture.screenshot", "capture.camera_photo", "capture.record_audio", "mac.screen_record", "print.document"].contains(operation) { committed = evidence }
                     else { committed = try await observedEvidence(evidence, fingerprint: outcome["evidence"]["prepared"]["request_hash"], operation: operation) }
                     outcome = .object(["t": .string("Outcome"), "command_id": .string(id), "disposition": evidence["disposition"].string.isEmpty ? .string("locally_observed") : evidence["disposition"], "evidence": committed])
-                    try await guardLog.append(outcome)
+                    if routedSaved == nil { try await guardLog.append(outcome) }
                 } else {
                     var unresolved = outcome.object
                     unresolved["disposition"] = .string("indeterminate")
@@ -672,23 +680,34 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
         try wire?.send(.object(["t": .string("Rejected"), "command_id": frame["command_id"], "disposition": .string("rejected_before_dispatch"), "error": .object(["code": .string(code), "message": .string(code)])]))
     }
 
-    private func rejectCommand(_ frame: JSON, error: any Error) async {
+    struct Rejection {
+        let code: String
+        let message: String
+        let evidence: JSON?
+    }
+
+    private func rejection(_ frame: JSON, error: any Error) async -> Rejection {
         let code = errorCode(error)
         let key = frame["action"]["native_key"].string
         if frame["action"]["op"].string.hasPrefix("messages.") {
             let detail = (error as? MessagesSendSafetyFailure)?.rawValue ?? (error as? MessagesUIFailure)?.rawValue ?? code
-            try? wire?.send(.object(["t": .string("Rejected"), "command_id": frame["command_id"], "disposition": .string("rejected_before_dispatch"), "error": .object(["code": .string(code), "message": .string(detail)])]))
-            return
+            return Rejection(code: code, message: detail, evidence: nil)
         }
-        if frame["action"]["op"].string.hasPrefix("notes.") {try? reject(frame,code:code);return}
-        guard code == "conflict", !key.isEmpty else { try? reject(frame, code: code); return }
+        if frame["action"]["op"].string.hasPrefix("notes.") { return Rejection(code: code, message: code, evidence: nil) }
+        guard code == "conflict", !key.isEmpty else { return Rejection(code: code, message: code, evidence: nil) }
         do {
             let isContact = frame["action"]["op"].string.hasPrefix("contacts.")
             if isContact { try await contacts.reconcile(into: self, key: key) } else if frame["action"]["op"].string.hasPrefix("calendar.") { try await calendar.reconcile(into: self) } else { try await source.reconcile(into: self) }
             guard let checkpoint = observedCheckpoints[(isContact ? "contacts.contact/" : frame["action"]["op"].string.hasPrefix("calendar.") ? "calendar.event/" : "reminders.reminder/") + key] else { throw SourceFailure.unavailable }
-            let evidence = JSON.object(["native_key": .string(key), "capture_checkpoint": .string(checkpoint)])
-            try wire?.send(.object(["t": .string("Rejected"), "command_id": frame["command_id"], "disposition": .string("rejected_before_dispatch"), "error": .object(["code": .string(code), "message": .string(code)]), "evidence": evidence]))
-        } catch { try? reject(frame, code: "unavailable") }
+            return Rejection(code: code, message: code, evidence: .object(["native_key": .string(key), "capture_checkpoint": .string(checkpoint)]))
+        } catch { return Rejection(code: "unavailable", message: "unavailable", evidence: nil) }
+    }
+
+    private func rejectCommand(_ frame: JSON, error: any Error) async {
+        let details = await rejection(frame, error: error)
+        var rejected: [String: JSON] = ["t": .string("Rejected"), "command_id": frame["command_id"], "disposition": .string("rejected_before_dispatch"), "error": .object(["code": .string(details.code), "message": .string(details.message)])]
+        if let evidence = details.evidence { rejected["evidence"] = evidence }
+        try? wire?.send(.object(rejected))
     }
 
     private func prepare(_ frame: JSON) async {
@@ -700,6 +719,7 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
         defer { if preparing == nonce { preparing = nil } }
         do {
             _ = try CommandOrigin(frame)
+            if let routing = effectsRouting, routing.covers(frame["action"]["op"].string), !NativeServer.effectOperations.contains(frame["action"]["op"].string) { throw SourceFailure.unsupported }
             guard !frame["command_id"].string.isEmpty, !frame["principal"].string.isEmpty, !frame["request_hash"].string.isEmpty, let expires = parseTimestamp(frame["expires_at"].string), expires > Date() else { throw SourceFailure.invalid }
             tickets = tickets.filter { ContinuousClock.now < $0.value.expiry }
             guard !commandActive, tickets.isEmpty, preparing == nil else { throw SourceFailure.conflict }
@@ -724,9 +744,9 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
     }
 
     private func dispatch(_ frame: JSON) async {
-        guard !effectsRouted else { try? reject(frame, code: "conflict"); return }
         let activity = ForegroundActivity.shared.begin()
         defer { ForegroundActivity.shared.end(activity) }
+        if let held = tickets[frame["ticket"].string], routedOperation(held.prepared.action["op"].string) { try? reject(frame, code: "conflict"); return }
         guard let ticket = tickets.removeValue(forKey: frame["ticket"].string) else { try? reject(frame, code: "conflict"); return }
         let id = ticket.command["command_id"]
         guard !commandActive else { try? reject(ticket.command, code: "conflict"); return }
@@ -766,45 +786,77 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
         }
     }
     func dispatchNative(_ operation: String, args: JSON, permit: JSON) async throws -> JSON {
-        guard effectsRouted, ipcRunning, wire != nil, !commandActive,
+        var preState = JSON.null
+        var args = args
+        if case .object(var fields) = args {
+            preState = fields.removeValue(forKey: "rust_pre_state") ?? .null
+            args = .object(fields)
+        }
+        guard routedOperation(operation), ipcRunning, wire != nil, !commandActive,
               let ticket = tickets.removeValue(forKey: permit["ticket"].string),
               ticket.command["command_id"] == permit["command_id"],
               ticket.command == args, ticket.fence == permit["owner_fence"].unsigned,
               ticket.fence == fence, ContinuousClock.now < ticket.expiry,
-              ticket.prepared.action["op"].string == operation else { throw SourceFailure.conflict }
+              ticket.prepared.action["op"].string == operation else { throw NativeEffectRejection(code: "conflict", message: "conflict") }
         commandActive = true
         defer { commandActive = false }
         let selected = additionalSources[captureRoute(operation)] ?? source
-        if operation.hasPrefix("contacts.") { try await contacts.validate(ticket.prepared) }
-        else if operation.hasPrefix("calendar.") { try await calendar.validate(ticket.prepared) }
-        else if selected.name == "reminders" { try await source.validate(ticket.prepared) }
-        else if let messages = selected as? Messages { try await messages.validate(ticket.prepared) }
-        else if let notes = selected as? NotesSource { try await notes.validate(ticket.prepared) }
-        guard ticket.fence == fence, wire != nil, ContinuousClock.now < ticket.expiry,
-              permit["expires_at"].unsigned > UInt64(Date().timeIntervalSince1970) else { throw SourceFailure.expired }
-        let result = operation.hasPrefix("contacts.") ? try await contacts.dispatch(ticket.prepared) : operation.hasPrefix("calendar.") ? try await calendar.dispatch(ticket.prepared) : try await selected.dispatch(ticket.prepared)
-        if result["observed"].bool {
-            if operation.hasPrefix("contacts.") {
-                try await contacts.reconcile(into: self)
-                if result["absent"].bool { try await contacts.confirmAbsence(result["native_key"].string, into: self) }
-            } else if operation.hasPrefix("calendar.") {
-                try await calendar.reconcile(into: self)
-                if result["absent"].bool { try await calendar.confirmAbsence(result["native_key"].string, into: self) }
-            } else if operation.hasPrefix("reminders.") {
-                try await source.reconcile(into: self)
-                if result["absent"].bool { try await source.confirmAbsence(result["native_key"].string, list: operation == "reminders.delete_list", into: self) }
-            } else if let messages = selected as? Messages { try await messages.captureCommand(result, into: self) }
-            else if let mail = selected as? MailSource { try await mail.captureCommand(result, into: self) }
-            else if let notes = selected as? NotesSource { try await notes.reconcile(into: self) }
-            else if let files = selected as? FilesSource { try await files.reconcile(into: self) }
-            else if let pdf = selected as? PDFSource, operation == "pdf.annotate" { try await pdf.captureCommand(result, into: self) }
+        let notes = selected as? NotesSource
+        do {
+            if let notes {
+                if !ticket.prepared.action["native_key"].string.isEmpty || operation == "notes.rename_folder" {
+                    guard !preState["native_fingerprint"].string.isEmpty else { throw SourceFailure.unavailable }
+                    try await notes.validate(ticket.prepared, preState: preState)
+                } else { try await notes.validate(ticket.prepared) }
+            }
+            else if operation.hasPrefix("contacts.") { try await contacts.validate(ticket.prepared) }
+            else if operation.hasPrefix("calendar.") { try await calendar.validate(ticket.prepared) }
+            else if selected.name == "reminders" { try await source.validate(ticket.prepared) }
+            else if let messages = selected as? Messages { try await messages.validate(ticket.prepared) }
+            guard ticket.fence == fence, wire != nil, ContinuousClock.now < ticket.expiry,
+                  permit["expires_at"].unsigned > UInt64(Date().timeIntervalSince1970) else { throw SourceFailure.expired }
+        } catch {
+            if error is CancellationError { throw error }
+            let details = await rejection(ticket.command, error: error)
+            throw NativeEffectRejection(code: details.code, message: details.message, evidence: details.evidence ?? .null)
         }
-        var fields = result.object
-        fields["fingerprint"] = ticket.command["request_hash"]
-        fields["before"] = ticket.prepared.nativeState
-        fields["candidate_ids"] = ticket.prepared.nativeState["candidate_ids"]
-        fields["prepared"] = .object(["action": durableAction(ticket.prepared.action), "native_state": ticket.prepared.nativeState, "request_hash": ticket.command["request_hash"]])
-        return .object(fields)
+        let prepared: JSON = .object(["action": durableAction(ticket.prepared.action), "native_state": ticket.prepared.nativeState, "request_hash": ticket.command["request_hash"]])
+        do {
+            let result: JSON
+            if let notes { result = try await notes.dispatchValidated(ticket.prepared) }
+            else { result = operation.hasPrefix("contacts.") ? try await contacts.dispatch(ticket.prepared) : operation.hasPrefix("calendar.") ? try await calendar.dispatch(ticket.prepared) : try await selected.dispatch(ticket.prepared) }
+            if result["observed"].bool {
+                if operation.hasPrefix("contacts.") {
+                    try await contacts.reconcile(into: self)
+                    if result["absent"].bool { try await contacts.confirmAbsence(result["native_key"].string, into: self) }
+                } else if operation.hasPrefix("calendar.") {
+                    try await calendar.reconcile(into: self)
+                    if result["absent"].bool { try await calendar.confirmAbsence(result["native_key"].string, into: self) }
+                } else if operation.hasPrefix("reminders.") {
+                    try await source.reconcile(into: self)
+                    if result["absent"].bool { try await source.confirmAbsence(result["native_key"].string, list: operation == "reminders.delete_list", into: self) }
+                } else if let messages = selected as? Messages { try await messages.captureCommand(result, into: self) }
+                else if let mail = selected as? MailSource { try await mail.captureCommand(result, into: self) }
+                else if let notes { try await notes.reconcile(into: self) }
+                else if let files = selected as? FilesSource { try await files.reconcile(into: self) }
+                else if let pdf = selected as? PDFSource, operation == "pdf.annotate" { try await pdf.captureCommand(result, into: self) }
+            }
+            if let messages = selected as? Messages {
+                let readiness = await messages.open()
+                try await sourceState(source: "messages", state: readiness.state, coverage: readiness.coverage, capabilities: readiness.capabilities, reason: readiness.reason)
+            }
+            var fields = result.object
+            fields["fingerprint"] = ticket.command["request_hash"]
+            fields["before"] = ticket.prepared.nativeState
+            fields["candidate_ids"] = ticket.prepared.nativeState["candidate_ids"]
+            fields["prepared"] = prepared
+            return .object(fields)
+        } catch {
+            if error is CancellationError { throw error }
+            let nativeCode = (error as? SourceFailure).map { String(describing: $0) } ?? (error as? MessagesUIFailure)?.rawValue ?? "native_error"
+            let reason = (error as? MailCommandFailure)?.localizedDescription ?? "dispatch_evidence_unavailable"
+            return .object(["disposition": .string("indeterminate"), "observed": .bool(false), "reason": .string(reason), "native_error_code": .string(nativeCode), "prepared": prepared])
+        }
     }
 
 }

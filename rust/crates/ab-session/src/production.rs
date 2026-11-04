@@ -52,6 +52,7 @@ pub struct Loaded {
     sources: String,
     names: Vec<String>,
     options: Options,
+    notes_root: Option<PathBuf>,
 }
 
 impl Loaded {
@@ -63,6 +64,11 @@ impl Loaded {
     #[must_use]
     pub fn options(&self) -> &Options {
         &self.options
+    }
+
+    #[must_use]
+    pub fn notes_root(&self) -> Option<&Path> {
+        self.notes_root.as_deref()
     }
 
     pub fn readers(&self) -> Result<BTreeMap<String, Box<dyn CaptureReader>>, Error> {
@@ -140,7 +146,13 @@ pub fn load(home: &Path) -> Result<Option<Loaded>, Error> {
         )?;
     }
     selection.validate_routed(SUPPORTED)?;
+    let notes_root = file
+        .sources
+        .get("notes")
+        .and_then(|source| source["root"].as_str())
+        .map(PathBuf::from);
     let loaded = Loaded {
+        notes_root,
         sources: serde_json::to_string(&file.sources)?,
         names: file.sources.keys().cloned().collect(),
         options: Options {
@@ -157,6 +169,51 @@ pub fn load(home: &Path) -> Result<Option<Loaded>, Error> {
 pub struct EffectsLink {
     pub native: UnixStream,
     pub home: PathBuf,
+    #[cfg(feature = "rust-effects")]
+    pub routing: crate::effects::Routing,
+}
+
+pub const EFFECTS_DIRECTORY: &str = "native-effects";
+pub const EFFECTS_FILE: &str = "session/rust-effects.json";
+
+#[cfg(feature = "rust-effects")]
+fn notes_database(capture: Option<&Loaded>) -> Option<PathBuf> {
+    let root = capture
+        .and_then(Loaded::notes_root)
+        .map(Path::to_path_buf)
+        .or_else(|| {
+            std::env::var_os("AB_SESSION_NOTES_ROOT")
+                .map(PathBuf::from)
+                .or_else(|| {
+                    std::env::var_os("HOME").map(|home| {
+                        PathBuf::from(home).join("Library/Group Containers/group.com.apple.notes")
+                    })
+                })
+        })?;
+    let database = root.join("NoteStore.sqlite");
+    database.exists().then_some(database)
+}
+
+#[cfg(feature = "rust-effects")]
+pub fn effects_routing(home: &Path) -> Result<crate::effects::Routing, Error> {
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct Effects {
+        sources: Vec<String>,
+    }
+    if let Ok(list) = std::env::var("AB_SESSION_EFFECTS_SOURCES") {
+        return Ok(crate::effects::Routing::parse(&list));
+    }
+    match std::fs::read(home.join(EFFECTS_FILE)) {
+        Ok(bytes) => {
+            let file: Effects = serde_json::from_slice(&bytes)?;
+            Ok(crate::effects::Routing::only(file.sources))
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            Ok(crate::effects::Routing::all())
+        }
+        Err(error) => Err(error.into()),
+    }
 }
 
 pub fn serve(
@@ -167,7 +224,19 @@ pub fn serve(
 ) -> Result<(), Error> {
     #[cfg(feature = "rust-effects")]
     if let Some(link) = effects {
-        let layer = crate::effects::Layer::open(link.native, &link.home)?;
+        let mut config = crate::effects::Config {
+            routing: link.routing,
+            ..crate::effects::Config::default()
+        };
+        if let Some(loaded) = capture {
+            config.rust_sources = loaded.sources().iter().cloned().collect();
+        }
+        config.notes_database = notes_database(capture);
+        let layer = crate::effects::Layer::open_with(
+            link.native,
+            &link.home.join(EFFECTS_DIRECTORY),
+            config,
+        )?;
         let (readers, options) = match capture {
             Some(loaded) => (loaded.readers()?, loaded.options().clone()),
             None => (BTreeMap::new(), Options::default()),

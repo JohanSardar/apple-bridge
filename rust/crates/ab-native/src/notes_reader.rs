@@ -82,6 +82,44 @@ fn data(row: &Observation) -> Result<Value> {
         serde_json::from_str(raw.get()).map_err(Error::from)
     })
 }
+pub fn pre_state(database: &Path, collection: &str, key: &str) -> Result<Option<Value>> {
+    if !matches!(collection, "notes.note" | "notes.folder") || key.is_empty() {
+        return Err(Error::Unsupported);
+    }
+    let db = Database::open(database)?;
+    let context = capture::Context {
+        observed_at: "1970-01-01T00:00:00Z".into(),
+        checkpoint: "pre-state".into(),
+        scan_id: "pre-state".into(),
+    };
+    let keys = BTreeSet::from([key.to_owned()]);
+    let snapshot = notes_store::read(
+        &db,
+        database,
+        Some(&keys),
+        true,
+        &Facts::default(),
+        &context,
+    )?;
+    db.finish()?;
+    let Some(row) = snapshot
+        .observations
+        .iter()
+        .find(|row| row.collection == collection && row.native_key == key)
+    else {
+        return Ok(None);
+    };
+    let fresh = data(row)?;
+    let fingerprint = if collection == "notes.folder" {
+        Value::String(crate::body_digest(&native_json::foundation_data(&fresh)?))
+    } else {
+        fresh["native_fingerprint"].clone()
+    };
+    if !fingerprint.is_string() {
+        return Err(Error::Corrupt);
+    }
+    Ok(Some(json!({"native_fingerprint": fingerprint})))
+}
 fn replace_data(row: &mut Observation, value: &Value) -> Result<()> {
     row.data = Some(serde_json::from_slice(&native_json::record_data(value)?)?);
     Ok(())

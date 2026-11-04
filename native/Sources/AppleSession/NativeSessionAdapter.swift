@@ -81,10 +81,24 @@ extension AppleSession: NativeAdapter {
     public func effect(_ operation: String, args: JSON, permit: JSON) async throws -> JSON {
         if effectsRouted {
             if args["session_query"] == .bool(true) {
-                guard let handler = queryHandlers[operation], case .object = args["args"] else { throw SourceFailure.unsupported }
-                let output = try await handler(args["args"])
-                guard output.blobs.isEmpty, try JSONEncoder().encode(output.result).count < 230000 else { throw SourceFailure.unsupported }
-                return .object(["observed": .bool(true), "native_query_result": output.result])
+                guard routedOperation(operation), let handler = queryHandlers[operation], case .object = args["args"] else { throw SourceFailure.unsupported }
+                let output: QueryOutput
+                do { output = try await handler(args["args"]) }
+                catch let failure as SourceFailure {
+                    let code: String
+                    switch failure {
+                    case .invalid: code = "invalid"
+                    case .unsupported: code = "unsupported"
+                    default: throw failure
+                    }
+                    return .object(["observed": .bool(false), "native_query_error": .string(code)])
+                }
+                guard output.blobs.count <= 16, output.blobs.allSatisfy({ $0.size <= 64 << 20 && !$0.handle.isEmpty }) else { throw SourceFailure.invalid }
+                var result = output.result
+                var blobs: [JSON] = output.blobs.map(\.wireReference)
+                if operation == "speech.synthesize", let reference = try cacheQueryAudio(&result) { blobs = [reference] }
+                guard try JSONEncoder().encode(result).count < 230000 else { throw SourceFailure.unsupported }
+                return .object(["observed": .bool(true), "native_query_result": result, "native_query_blobs": .array(blobs)])
             }
             return try await dispatchNative(operation, args: args, permit: permit)
         }
