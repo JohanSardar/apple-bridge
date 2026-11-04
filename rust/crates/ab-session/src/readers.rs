@@ -63,6 +63,43 @@ pub struct SafariReader {
     reader: safari::Reader,
     pending: Option<safari::Pending>,
     settled: Option<Signature>,
+    tabs: Option<Vec<safari::Tab>>,
+}
+
+fn tab_facts(capture: &Value) -> Result<Option<Vec<safari::Tab>>, Error> {
+    if capture["scope"] != json!(["safari.tab"]) {
+        return Ok(None);
+    }
+    if capture["completion_evidence"].as_str() != Some("complete") {
+        return Err(Error::Invalid);
+    }
+    let mut tabs = Vec::new();
+    let mut seen = BTreeSet::new();
+    for row in capture["observations"].as_array().ok_or(Error::Invalid)? {
+        if row["collection"].as_str() != Some("safari.tab") {
+            return Err(Error::Invalid);
+        }
+        match row["kind"].as_str() {
+            Some("absent") => continue,
+            Some("upsert") => {}
+            _ => return Err(Error::Invalid),
+        }
+        let data = &row["data"];
+        let tab = safari::Tab {
+            window: data["window"].as_i64().ok_or(Error::Invalid)?,
+            index: data["index"].as_i64().ok_or(Error::Invalid)?,
+            title: data["title"].as_str().ok_or(Error::Invalid)?.to_owned(),
+            url: data["url"].as_str().ok_or(Error::Invalid)?.to_owned(),
+            active: data["active"].as_bool().ok_or(Error::Invalid)?,
+        };
+        if row["native_key"].as_str() != Some(&format!("{}:{}", tab.window, tab.index))
+            || !seen.insert((tab.window, tab.index))
+        {
+            return Err(Error::Invalid);
+        }
+        tabs.push(tab);
+    }
+    Ok(Some(tabs))
 }
 
 impl SafariReader {
@@ -74,7 +111,23 @@ impl SafariReader {
             reader: safari::Reader::default(),
             pending: None,
             settled: None,
+            tabs: None,
         }
+    }
+
+    fn read_context(&self, context: &ScanContext) -> Result<safari::ReadContext, Error> {
+        Ok(safari::ReadContext {
+            capture: capture::Context {
+                observed_at: context.observed_at()?,
+                checkpoint: context.checkpoint.clone(),
+                scan_id: context.scan_id.clone(),
+            },
+            generation: self.generation.clone(),
+            now: context.now,
+            days: 90.0,
+            max_rows: 1_000_000,
+            automation_permitted: true,
+        })
     }
 }
 
@@ -96,9 +149,24 @@ impl CaptureReader for SafariReader {
         self.settled.is_some()
     }
 
+    fn ingest(&mut self, capture: &Value) -> Result<bool, Error> {
+        if let Some(tabs) = tab_facts(capture)? {
+            self.tabs = Some(tabs);
+        }
+        Ok(false)
+    }
+
     fn next(&mut self, context: &ScanContext) -> Result<Option<Value>, Error> {
         if self.pending.is_some() {
             return Err(Error::Conflict);
+        }
+        if let Some(tabs) = self.tabs.take() {
+            let read = self.read_context(context)?;
+            if let Some(pending) = self.reader.tabs(&tabs, &read).map_err(reader_error)? {
+                let value = capture_value(&pending.batch)?;
+                self.pending = Some(pending);
+                return Ok(Some(value));
+            }
         }
         let current = signature(&self.root)?;
         if self.settled.as_ref() == Some(&current) {
@@ -110,18 +178,7 @@ impl CaptureReader for SafariReader {
             safari::Kind::Bookmarks,
             safari::Kind::Cloud,
         ] {
-            let read = safari::ReadContext {
-                capture: capture::Context {
-                    observed_at: context.observed_at()?,
-                    checkpoint: context.checkpoint.clone(),
-                    scan_id: context.scan_id.clone(),
-                },
-                generation: self.generation.clone(),
-                now: context.now,
-                days: 90.0,
-                max_rows: 1_000_000,
-                automation_permitted: true,
-            };
+            let read = self.read_context(context)?;
             let pending = match self.reader.poll(&self.root, kind, &read) {
                 Ok(Some(pending)) => pending,
                 Ok(None) => continue,
