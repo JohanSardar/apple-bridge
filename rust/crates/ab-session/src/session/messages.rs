@@ -837,7 +837,9 @@ fn write_targeted(
         }
         thread::sleep(POLL_GAP);
     }
-    Ok(base(json!({"source": "messages", "observed": false, "disposition": "indeterminate"})))
+    Ok(base(
+        json!({"source": "messages", "observed": false, "disposition": "indeterminate"}),
+    ))
 }
 
 fn observe_targeted(
@@ -851,7 +853,11 @@ fn observe_targeted(
     let operation = text(action, "op");
     let args = &action["messages"];
     let native = text(action, "native_key");
-    let data = if seen["exists"] == true { seen["target"].clone() } else { Value::Null };
+    let data = if seen["exists"] == true {
+        seen["target"].clone()
+    } else {
+        Value::Null
+    };
     let message = |key: &Value, absent: bool| json!({"native_key": key, "collection": "messages.message", "absent": absent});
     Ok(match operation {
         "messages.edit" => (equal(&data["text"], &args["text"])
@@ -859,7 +865,9 @@ fn observe_targeted(
                 > current["edit_history"].as_array().map_or(0, Vec::len))
         .then(|| message(&json!(native), false)),
         "messages.unsend" => (!data["retracted_at"].is_null()
-            || data["retracted_parts"].as_array().is_some_and(|parts| !parts.is_empty()))
+            || data["retracted_parts"]
+                .as_array()
+                .is_some_and(|parts| !parts.is_empty()))
         .then(|| message(&json!(native), false)),
         "messages.delete_message" => (seen["exists"] != true || !data["deleted_at"].is_null())
             .then(|| message(&json!(native), seen["exists"] != true)),
@@ -917,6 +925,8 @@ mod tests {
     use super::*;
     use std::{cell::RefCell, collections::BTreeMap};
 
+    #[allow(clippy::struct_excessive_bools)]
+    #[allow(clippy::struct_excessive_bools)]
     struct Fake {
         own: Option<Vec<String>>,
         approved: Vec<String>,
@@ -1021,7 +1031,9 @@ mod tests {
                     .cloned()
                     .unwrap_or(json!({"exists": false})),
                 "messages.reactions" => json!({"reactions": self.reaction_state}),
-                "messages.reaction_rows" => json!({"reactions": self.reaction_hits.borrow().clone()}),
+                "messages.reaction_rows" => {
+                    json!({"reactions": self.reaction_hits.borrow().clone()})
+                }
                 "messages.replies" => json!({"guids": self.reply_guids.borrow().clone()}),
                 "messages.ui_available" => json!({"available": self.ui_available}),
                 "messages.ui_prepare" => {
@@ -1988,7 +2000,8 @@ mod tests {
     }
 
     fn targeted(operation: &str, extra: &Value) -> Value {
-        let mut action = json!({"op": operation, "native_key": "m1", "messages": {"text": "new words"}});
+        let mut action =
+            json!({"op": operation, "native_key": "m1", "messages": {"text": "new words"}});
         for (key, value) in extra.as_object().unwrap() {
             action["messages"][key] = value.clone();
         }
@@ -1997,14 +2010,15 @@ mod tests {
     }
 
     fn ui_probe(text_body: &str, sent_ago: f64) -> Fake {
-        let probe = chat_probe();
-        probe.targets.borrow_mut().insert("m1".into(), message_target(text_body, sent_ago));
-        probe.chats_insert("chat-1", vec![json!("+15550100100")]);
+        let mut probe = chat_probe();
         probe
-    }
-
-    impl Fake {
-        fn chats_insert(&self, _chat: &str, _handles: Vec<Value>) {}
+            .targets
+            .borrow_mut()
+            .insert("m1".into(), message_target(text_body, sent_ago));
+        probe
+            .chats
+            .insert("chat-1".into(), vec![json!("+15550100100")]);
+        probe
     }
 
     #[test]
@@ -2015,10 +2029,16 @@ mod tests {
         assert_eq!(state["candidate_ids"], json!(["m1"]));
         assert_eq!(state["self_chat"], false);
         assert!(prepare(&ui_probe("old", 899.0), &cmd).is_ok());
-        assert_eq!(prepare(&ui_probe("old", 901.0), &cmd).unwrap_err().code, "unsupported");
+        assert_eq!(
+            prepare(&ui_probe("old", 901.0), &cmd).unwrap_err().code,
+            "unsupported"
+        );
         let unsend = targeted("messages.unsend", &json!({}));
         assert!(prepare(&ui_probe("old", 100.0), &unsend).is_ok());
-        assert_eq!(prepare(&ui_probe("old", 121.0), &unsend).unwrap_err().code, "unsupported");
+        assert_eq!(
+            prepare(&ui_probe("old", 121.0), &unsend).unwrap_err().code,
+            "unsupported"
+        );
         let capped = ui_probe("old", 60.0);
         let mut target = message_target("old", 60.0);
         target["target"]["edit_history"] = json!([1, 2, 3, 4, 5]);
@@ -2041,23 +2061,24 @@ mod tests {
         let mut gated = targeted("messages.edit", &json!({"text": "[ab-test x] new"}));
         gated["origin"] = json!("");
         let probe = ui_probe("[ab-test x] old", 60.0);
-        probe.approved_insert();
         assert!(prepare(&probe, &gated).is_ok());
         let untagged_target = ui_probe("old", 60.0);
-        assert_eq!(prepare(&untagged_target, &gated).unwrap_err().code, "invalid");
+        assert_eq!(
+            prepare(&untagged_target, &gated).unwrap_err().code,
+            "invalid"
+        );
         let mut untagged_text = targeted("messages.edit", &json!({"text": "new"}));
         untagged_text["origin"] = json!("");
         assert_eq!(prepare(&probe, &untagged_text).unwrap_err().code, "invalid");
     }
 
-    impl Fake {
-        fn approved_insert(&self) {}
-    }
-
     #[test]
     fn deleted_missing_stale_and_unproven_targets_are_refused() {
         let cmd = targeted("messages.edit", &json!({}));
-        assert_eq!(prepare(&chat_probe(), &cmd).unwrap_err().code, "capability_unproven");
+        assert_eq!(
+            prepare(&chat_probe(), &cmd).unwrap_err().code,
+            "capability_unproven"
+        );
         let deleted = ui_probe("old", 60.0);
         let mut target = message_target("old", 60.0);
         target["target"]["deleted_at"] = json!("2026-01-01T00:00:00Z");
@@ -2065,18 +2086,33 @@ mod tests {
         assert_eq!(prepare(&deleted, &cmd).unwrap_err().code, "unsupported");
         let mut stale = cmd.clone();
         stale["expected_state"] = json!({"text": "something else"});
-        assert_eq!(prepare(&ui_probe("old", 60.0), &stale).unwrap_err().code, "conflict");
+        assert_eq!(
+            prepare(&ui_probe("old", 60.0), &stale).unwrap_err().code,
+            "conflict"
+        );
         let mut agreeing = cmd.clone();
         agreeing["expected_state"] = json!({"text": "old"});
         assert!(prepare(&ui_probe("old", 60.0), &agreeing).is_ok());
         let mut unproven = ui_probe("old", 60.0);
         unproven.lab = false;
-        assert_eq!(prepare(&unproven, &cmd).unwrap_err().code, "capability_unproven");
-        unproven.proofs = vec![route_proof(&json!({"kind": "imessage_buddy", "handle": "x", "service": "iMessage"}), "messages.edit")];
-        assert_eq!(prepare(&unproven, &cmd).unwrap_err().code, "capability_unproven");
+        assert_eq!(
+            prepare(&unproven, &cmd).unwrap_err().code,
+            "capability_unproven"
+        );
+        unproven.proofs = vec![route_proof(
+            &json!({"kind": "imessage_buddy", "handle": "x", "service": "iMessage"}),
+            "messages.edit",
+        )];
+        assert_eq!(
+            prepare(&unproven, &cmd).unwrap_err().code,
+            "capability_unproven"
+        );
         let mut blind = ui_probe("old", 60.0);
         blind.ui_available = false;
-        assert_eq!(prepare(&blind, &cmd).unwrap_err().code, "capability_unproven");
+        assert_eq!(
+            prepare(&blind, &cmd).unwrap_err().code,
+            "capability_unproven"
+        );
         let mut refused = ui_probe("old", 60.0);
         refused.ui_prepare_fails = true;
         assert_eq!(prepare(&refused, &cmd).unwrap_err().code, "unavailable");
@@ -2094,7 +2130,14 @@ mod tests {
         edited["target"]["edit_history"] = json!([{"text": "old"}]);
         probe.effects.borrow_mut().push(("m1".into(), edited));
         let written = write(&probe, "c1", &cmd["action"], &state).unwrap();
-        assert_eq!((written["disposition"].as_str(), written["native_key"].as_str(), written["observed"].as_bool()), (Some("locally_observed"), Some("m1"), Some(true)));
+        assert_eq!(
+            (
+                written["disposition"].as_str(),
+                written["native_key"].as_str(),
+                written["observed"].as_bool()
+            ),
+            (Some("locally_observed"), Some("m1"), Some(true))
+        );
         assert_eq!(written["ui"], Value::Null);
         assert_eq!(written["target_verified"], true);
         let calls = probe.calls.borrow();
@@ -2105,16 +2148,28 @@ mod tests {
         let state = prepare(&same_text, &cmd).unwrap();
         let mut unchanged = message_target("new words", 60.0);
         unchanged["target"]["edit_history"] = json!([]);
-        same_text.effects.borrow_mut().push(("m1".into(), unchanged));
+        same_text
+            .effects
+            .borrow_mut()
+            .push(("m1".into(), unchanged));
         let written = write(&same_text, "c1", &cmd["action"], &state).unwrap();
         assert_eq!(written["disposition"], "indeterminate");
-        assert!(!same_text.calls.borrow().iter().any(|call| call == "messages.reconcile"));
+        assert!(
+            !same_text
+                .calls
+                .borrow()
+                .iter()
+                .any(|call| call == "messages.reconcile")
+        );
         let wrong_text = ui_probe("old", 60.0);
         let state = prepare(&wrong_text, &cmd).unwrap();
         let mut other = message_target("different", 60.0);
         other["target"]["edit_history"] = json!([{"text": "old"}]);
         wrong_text.effects.borrow_mut().push(("m1".into(), other));
-        assert_eq!(write(&wrong_text, "c1", &cmd["action"], &state).unwrap()["disposition"], "indeterminate");
+        assert_eq!(
+            write(&wrong_text, "c1", &cmd["action"], &state).unwrap()["disposition"],
+            "indeterminate"
+        );
     }
 
     #[test]
@@ -2122,15 +2177,33 @@ mod tests {
         let cmd = targeted("messages.edit", &json!({}));
         let probe = ui_probe("old", 60.0);
         let state = prepare(&probe, &cmd).unwrap();
-        for (field, value) in [("text", json!("edited by someone")), ("edit_history", json!([1])), ("retracted_parts", json!([0])), ("deleted_at", json!("2026-01-01T00:00:00Z"))] {
+        for (field, value) in [
+            ("text", json!("edited by someone")),
+            ("edit_history", json!([1])),
+            ("retracted_parts", json!([0])),
+            ("deleted_at", json!("2026-01-01T00:00:00Z")),
+        ] {
             let mut moved = message_target("old", 60.0);
             moved["target"][field] = value;
             probe.targets.borrow_mut().insert("m1".into(), moved);
-            assert_eq!(write(&probe, "c1", &cmd["action"], &state).unwrap_err(), "conflict", "{field}");
+            assert_eq!(
+                write(&probe, "c1", &cmd["action"], &state).unwrap_err(),
+                "conflict",
+                "{field}"
+            );
         }
         probe.targets.borrow_mut().remove("m1");
-        assert_eq!(write(&probe, "c1", &cmd["action"], &state).unwrap_err(), "conflict");
-        assert!(!probe.calls.borrow().iter().any(|call| call == "messages.ui_perform"));
+        assert_eq!(
+            write(&probe, "c1", &cmd["action"], &state).unwrap_err(),
+            "conflict"
+        );
+        assert!(
+            !probe
+                .calls
+                .borrow()
+                .iter()
+                .any(|call| call == "messages.ui_perform")
+        );
     }
 
     #[test]
@@ -2141,22 +2214,36 @@ mod tests {
         let mut retracted = message_target("old", 60.0);
         retracted["target"]["retracted_at"] = json!("2026-01-01T00:00:00Z");
         probe.effects.borrow_mut().push(("m1".into(), retracted));
-        assert_eq!(write(&probe, "c1", &unsend["action"], &state).unwrap()["disposition"], "locally_observed");
+        assert_eq!(
+            write(&probe, "c1", &unsend["action"], &state).unwrap()["disposition"],
+            "locally_observed"
+        );
         let idle = ui_probe("old", 60.0);
         let state = prepare(&idle, &unsend).unwrap();
-        assert_eq!(write(&idle, "c1", &unsend["action"], &state).unwrap()["disposition"], "indeterminate");
+        assert_eq!(
+            write(&idle, "c1", &unsend["action"], &state).unwrap()["disposition"],
+            "indeterminate"
+        );
         let delete = targeted("messages.delete_message", &json!({}));
         let gone = ui_probe("old", 60.0);
         let state = prepare(&gone, &delete).unwrap();
-        gone.effects.borrow_mut().push(("m1".into(), json!({"exists": false})));
+        gone.effects
+            .borrow_mut()
+            .push(("m1".into(), json!({"exists": false})));
         let written = write(&gone, "c1", &delete["action"], &state).unwrap();
-        assert_eq!((written["disposition"].as_str(), written["absent"].as_bool()), (Some("locally_observed"), Some(true)));
+        assert_eq!(
+            (written["disposition"].as_str(), written["absent"].as_bool()),
+            (Some("locally_observed"), Some(true))
+        );
         let marked = ui_probe("old", 60.0);
         let state = prepare(&marked, &delete).unwrap();
         let mut hidden = message_target("old", 60.0);
         hidden["target"]["deleted_at"] = json!("2026-01-01T00:00:00Z");
         marked.effects.borrow_mut().push(("m1".into(), hidden));
-        assert_eq!(write(&marked, "c1", &delete["action"], &state).unwrap()["absent"], false);
+        assert_eq!(
+            write(&marked, "c1", &delete["action"], &state).unwrap()["absent"],
+            false
+        );
     }
 
     #[test]
@@ -2164,29 +2251,68 @@ mod tests {
         let reply = targeted("messages.reply", &json!({}));
         let probe = ui_probe("old", 60.0);
         let state = prepare(&probe, &reply).unwrap();
-        assert_eq!(write(&probe, "c1", &reply["action"], &state).unwrap()["disposition"], "indeterminate");
+        assert_eq!(
+            write(&probe, "c1", &reply["action"], &state).unwrap()["disposition"],
+            "indeterminate"
+        );
         probe.reply_guids.borrow_mut().push("r1".into());
         let written = write(&probe, "c1", &reply["action"], &state).unwrap();
-        assert_eq!((written["native_key"].as_str(), written["collection"].as_str()), (Some("r1"), Some("messages.message")));
+        assert_eq!(
+            (
+                written["native_key"].as_str(),
+                written["collection"].as_str()
+            ),
+            (Some("r1"), Some("messages.message"))
+        );
         probe.reply_guids.borrow_mut().push("r2".into());
-        assert_eq!(write(&probe, "c1", &reply["action"], &state).unwrap()["disposition"], "indeterminate");
+        assert_eq!(
+            write(&probe, "c1", &reply["action"], &state).unwrap()["disposition"],
+            "indeterminate"
+        );
         let react = targeted("messages.react", &json!({"reaction": "love"}));
         let mut tapback = ui_probe("old", 60.0);
         tapback.reaction_state = vec![json!({"guid": "old-r", "type": "2000", "emoji": ""})];
         let state = prepare(&tapback, &react).unwrap();
-        tapback.reaction_hits.borrow_mut().push(json!({"guid": "old-r", "type": "2000", "emoji": ""}));
-        assert_eq!(write(&tapback, "c1", &react["action"], &state).unwrap()["disposition"], "indeterminate");
-        tapback.reaction_hits.borrow_mut().push(json!({"guid": "new-r", "type": "2000", "emoji": ""}));
+        tapback
+            .reaction_hits
+            .borrow_mut()
+            .push(json!({"guid": "old-r", "type": "2000", "emoji": ""}));
+        assert_eq!(
+            write(&tapback, "c1", &react["action"], &state).unwrap()["disposition"],
+            "indeterminate"
+        );
+        tapback
+            .reaction_hits
+            .borrow_mut()
+            .push(json!({"guid": "new-r", "type": "2000", "emoji": ""}));
         let written = write(&tapback, "c1", &react["action"], &state).unwrap();
-        assert_eq!((written["native_key"].as_str(), written["collection"].as_str()), (Some("new-r"), Some("messages.reaction")));
+        assert_eq!(
+            (
+                written["native_key"].as_str(),
+                written["collection"].as_str()
+            ),
+            (Some("new-r"), Some("messages.reaction"))
+        );
         let bad = targeted("messages.react", &json!({"reaction": "sparkles"}));
         let state = prepare(&tapback, &bad).unwrap();
-        assert_eq!(write(&tapback, "c1", &bad["action"], &state).unwrap_err(), "invalid");
-        let emoji = targeted("messages.react", &json!({"reaction": "emoji", "emoji": "x"}));
+        assert_eq!(
+            write(&tapback, "c1", &bad["action"], &state).unwrap_err(),
+            "invalid"
+        );
+        let emoji = targeted(
+            "messages.react",
+            &json!({"reaction": "emoji", "emoji": "x"}),
+        );
         let picky = ui_probe("old", 60.0);
         let state = prepare(&picky, &emoji).unwrap();
-        picky.reaction_hits.borrow_mut().push(json!({"guid": "n", "type": "2006", "emoji": "y"}));
-        assert_eq!(write(&picky, "c1", &emoji["action"], &state).unwrap()["disposition"], "indeterminate");
+        picky
+            .reaction_hits
+            .borrow_mut()
+            .push(json!({"guid": "n", "type": "2006", "emoji": "y"}));
+        assert_eq!(
+            write(&picky, "c1", &emoji["action"], &state).unwrap()["disposition"],
+            "indeterminate"
+        );
     }
 
     #[test]
@@ -2197,7 +2323,10 @@ mod tests {
         let state = prepare(&probe, &cmd).unwrap();
         let mut edited = message_target("new words", 60.0);
         edited["target"]["edit_history"] = json!([{"text": "old"}]);
-        probe.targets.borrow_mut().insert("m1".into(), message_target("old", 60.0));
+        probe
+            .targets
+            .borrow_mut()
+            .insert("m1".into(), message_target("old", 60.0));
         let written = write(&probe, "c1", &cmd["action"], &state).unwrap();
         assert_eq!(written["target_verified"], false);
         assert_eq!(written["disposition"], "indeterminate");
@@ -2207,10 +2336,14 @@ mod tests {
     #[test]
     fn resolve_keeps_only_an_observed_ui_outcome() {
         let probe = Fake::new();
-        let saved = json!({"action": {"op": "messages.edit"}, "request_hash": "h", "native_state": {}});
+        let saved =
+            json!({"action": {"op": "messages.edit"}, "request_hash": "h", "native_state": {}});
         let seen = json!({"prepared": saved, "observed": true, "native_key": "m1", "disposition": "locally_observed"});
         let found = resolved(&probe, &seen).unwrap();
-        assert_eq!((found["fingerprint"].as_str(), found["native_key"].as_str()), (Some("h"), Some("m1")));
+        assert_eq!(
+            (found["fingerprint"].as_str(), found["native_key"].as_str()),
+            (Some("h"), Some("m1"))
+        );
         let unseen = json!({"prepared": saved, "observed": false, "disposition": "indeterminate"});
         assert!(resolved(&probe, &unseen).is_none());
     }
