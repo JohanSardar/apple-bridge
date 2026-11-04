@@ -85,8 +85,7 @@ impl MediaFacts {
             }
             "supports" => {
                 let (uti, extension) = argument.split_once('|').ok_or(Error::Invalid)?;
-                let response =
-                    self.call(&json!({"kind":"supports","uti":uti,"ext":extension}))?;
+                let response = self.call(&json!({"kind":"supports","uti":uti,"ext":extension}))?;
                 let supported = response["supports"].as_bool().ok_or(Error::Invalid)?;
                 facts.supports.insert(argument.to_owned(), supported);
             }
@@ -116,7 +115,10 @@ impl MediaFacts {
     }
 
     fn derivatives(&self, response: &Value) -> Result<DerivativeFacts, Error> {
-        let status = response["status"].as_str().ok_or(Error::Invalid)?.to_owned();
+        let status = response["status"]
+            .as_str()
+            .ok_or(Error::Invalid)?
+            .to_owned();
         let mut variants = std::collections::BTreeMap::new();
         if let Some(items) = response["variants"].as_object() {
             for (name, item) in items {
