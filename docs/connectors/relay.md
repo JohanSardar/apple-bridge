@@ -9,9 +9,9 @@ In Claude Code, register an HTTP MCP server with `claude mcp add --transport htt
 Run each qualification separately:
 
 ```
-go run ./cmd/bridge-lab run lab/scenarios/core/CONN-CHATGPT.yaml --level real
-go run ./cmd/bridge-lab run lab/scenarios/core/CONN-CLAUDE-AI.yaml --level real
-go run ./cmd/bridge-lab run lab/scenarios/core/CONN-CLAUDE-CODE.yaml --level real
+make real SCENARIOS=lab/scenarios/core/CONN-CHATGPT.yaml
+make real SCENARIOS=lab/scenarios/core/CONN-CLAUDE-AI.yaml
+make real SCENARIOS=lab/scenarios/core/CONN-CLAUDE-CODE.yaml
 ```
 
 The web scenarios currently report `limited: needs connector login`: the available browser is signed out of ChatGPT and Claude web requires security verification. They do not claim an approved OAuth grant or successful web tool call. Claude Code qualification creates a temporary synthetic gateway through the public relay, loads an isolated bearer-authenticated MCP connector configuration, and requires an actual Claude tool-use event and successful tool result. Its temporary credentials and gateway are cleaned up. This proves the Code transport and tool call, while interactive OAuth approval is a separate owner step.

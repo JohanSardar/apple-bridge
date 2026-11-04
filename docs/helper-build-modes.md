@@ -28,8 +28,8 @@ The signed-app cache includes the normalized compilation condition in its source
 
 ## Native checks at sim level
 
-`make sim` builds the lab native targets before running scenarios. Simulation includes synthetic native media and usage decoder checks, so a Go build alone does not prepare the suite. Before running one of these scenarios directly through `bridge-lab`, run `make native` through `packaging/dev/heavy.sh`. Native output pointers belong to the current worktree and build mode.
+`make sim` builds the lab native targets before running scenarios. Simulation includes synthetic native media and usage decoder checks, so a gateway build alone does not prepare the suite. Before running one of these scenarios directly through `lab-families`, run `make native` through `packaging/dev/heavy.sh`. Native output pointers belong to the current worktree and build mode.
 
-Run isolated timing checks through the sensitive heavy lane, including scenarios whose names do not contain `perf`: `APPLE_BRIDGE_HEAVY_NO_SIM_LANE=1 packaging/dev/heavy.sh go run ./cmd/bridge-lab run <scenario.yaml> --level sim`. Preserve the host conditions with the result; a failed timing budget under contention requires a quiet rerun with the same threshold.
+Run isolated timing checks through the sensitive heavy lane, including scenarios whose names do not contain `perf`: `APPLE_BRIDGE_HEAVY_NO_SIM_LANE=1 packaging/dev/heavy.sh packaging/dev/rust-lab.sh sim <scenario.yaml>`. Preserve the host conditions with the result; a failed timing budget under contention requires a quiet rerun with the same threshold.
 
 The recovery check keeps durable scan counts per source: Calendar revalidates its window on reconnect, while checkpoint-resumable sources must perform zero additional scans. Raw Truth comparisons omit the gateway-owned Notes `content_version`; gateway-to-replica comparisons retain the complete record, and `NOTE-LIST` checks that captured notes have valid content versions.

@@ -37,7 +37,7 @@ features:
     title: Explicit Helper permission requests and non-prompting status
     requirements: [R-PKG]
     milestone: G0
-    modules: [native/Sources/AppleSession, internal/runtime, internal/operations]
+    modules: [native/Sources/AppleSession, rust/crates/ab-runtime, rust/crates/ab-operations]
     depends_on: []
     status: done
     notes: Screen Recording preflight failure and unavailable Automation targets return unknown; real status reads verify unchanged TCC, zero native request API calls and no new on-screen dialog owner windows; sim checks each native dispatch adapter and unknown-name rejection.
@@ -54,7 +54,7 @@ features:
       - {id: CORE-SHORTCUT-SIGN, levels: [sim, real]}
   # Append each new source as a contiguous block of feature entries here; readers consume the flat list.
   - id: core.harness
-    title: bridge-lab World, SimApplePeer, SimTruth, scenario runner, evidence, feature graph
+    title: lab World, SimApplePeer, SimTruth, scenario runner, evidence, feature graph
     notes: Append-friendly registries preserve the frozen descriptor order, generate native imports and calls from per-source declarations, and reject shared bootstrap registrations.
     requirements: [R-FULL, R-LIVE]
     milestone: M0
@@ -519,7 +519,7 @@ features:
     title: Server rendered passkey consent and command approvals
     requirements: [R-WEB-SECURE, R-AGENT]
     milestone: W1
-    modules: [internal/web, trust, operations]
+    modules: [rust/crates/ab-frontdoor, trust, operations]
     depends_on: [web.readmodels]
     status: done
     scenarios:
@@ -646,7 +646,7 @@ features:
     title: Bounded Shortcuts CLI runner
     requirements: [R-RW]
     milestone: M0
-    modules: [internal/shortcut, packaging/shortcuts, native/Sources/ShortcutsSource]
+    modules: [rust/crates/ab-shortcuts, packaging/shortcuts, native/Sources/ShortcutsSource]
     depends_on: [core.shortcuts]
     status: done
     notes: Native inventory and the bounded text runner are integrated. AB Echo returns its input on the Air. Installed pack version requires unique AB Pack v1, AB Echo, AB Clock and AB Focus inventory entries. Idle budgets were dropped by the owner.
@@ -659,7 +659,7 @@ features:
     title: Clock helper pack qualification
     requirements: [R-RW]
     milestone: M0
-    modules: [internal/clockpack, packaging/shortcuts/ab-clock.json]
+    modules: [rust/crates/ab-shortcuts, packaging/shortcuts/ab-clock.json]
     depends_on: [shortcuts.runner]
     status: done
     notes: Real alarm creation, field readback, toggling and deletion pass through AB Clock. Native timer creation, duration, label, running state, cancellation and Recents cleanup pass with complete baseline restoration. All tagged historical test entries were removed through Clock controls. Clock operations remain unadvertised.
@@ -683,7 +683,7 @@ features:
     title: Mail Envelope Index capture foundation
     requirements: [R-RW]
     milestone: M0
-    modules: [native/Sources/MailSource, internal/contracts]
+    modules: [native/Sources/MailSource, rust/crates/ab-domain]
     depends_on: []
     status: done
     scenarios:
@@ -712,7 +712,7 @@ features:
     title: Read local Mail bodies
     requirements: [R-RW]
     milestone: M0
-    modules: [native/Sources/MailSource, internal/contracts]
+    modules: [native/Sources/MailSource, rust/crates/ab-domain]
     depends_on: [mail.capture]
     status: done
     scenarios:
@@ -722,7 +722,7 @@ features:
     title: Mail commands with readback
     requirements: [R-RW]
     milestone: M0
-    modules: [native/Sources/MailSource, internal/contracts, internal/operations]
+    modules: [native/Sources/MailSource, rust/crates/ab-domain, rust/crates/ab-operations]
     depends_on: [mail.capture]
     status: done
     scenarios:
@@ -734,7 +734,7 @@ features:
     title: Local call history capture
     requirements: [R-API, R-SCOPE]
     milestone: G4
-    modules: [native/Sources/CallsSource, internal/contracts, lab/simapple]
+    modules: [native/Sources/CallsSource, rust/crates/ab-domain, rust/lab/lab-simapple]
     depends_on: []
     status: done
     scenarios:
@@ -746,7 +746,7 @@ features:
     title: Focus status and approved DND writes
     requirements: [R-RW]
     milestone: G5
-    modules: [internal/focuspack, native/Sources/FocusSource]
+    modules: [rust/crates/ab-shortcuts, native/Sources/FocusSource]
     depends_on: [shortcuts.runner]
     status: done
     notes: focus.set runs AB Focus for Do Not Disturb on/off and optional RFC3339 expiry, with independent authorized status readback and approval for every agent. Named Focus identity remains unavailable. Tests require an inactive prior state and restore it after dispatch, including failures.
@@ -760,7 +760,7 @@ features:
     title: Voice Memos assets and voicemail metadata
     requirements: [R-API, R-SCOPE]
     milestone: G4
-    modules: [native/Sources/VoiceMemosSource, native/Sources/VoicemailSource, internal/contracts]
+    modules: [native/Sources/VoiceMemosSource, native/Sources/VoicemailSource, rust/crates/ab-domain]
     depends_on: []
     status: done
     scenarios:
@@ -773,7 +773,7 @@ features:
     title: Bounded installed App Intents discovery
     requirements: [R-RW]
     milestone: M0
-    modules: [native/Sources/ShortcutsSource, lab/simapple]
+    modules: [native/Sources/ShortcutsSource, rust/lab/lab-simapple]
     depends_on: [shortcuts.runner]
     status: done
     notes: Read-only metadata discovery; no stable executable schema promised. File transform command remains pending.
@@ -783,7 +783,7 @@ features:
     title: Opt-in file commands with readback
     requirements: [R-API, R-SCOPE]
     milestone: G9
-    modules: [native/Sources/FilesSource, internal/contracts, internal/operations]
+    modules: [native/Sources/FilesSource, rust/crates/ab-domain, rust/crates/ab-operations]
     depends_on: [files.capture]
     status: done
     scenarios:
@@ -814,7 +814,7 @@ features:
     title: Mac system commands
     requirements: [R-API, R-SCOPE]
     milestone: G6
-    modules: [native/Sources/MacSource, internal/contracts]
+    modules: [native/Sources/MacSource, rust/crates/ab-domain]
     depends_on: [mac.capture]
     status: done
     scenarios:
@@ -831,7 +831,7 @@ features:
     title: Mac notifications settings wallpaper power and network
     requirements: [R-API, R-SCOPE]
     milestone: G6
-    modules: [native/Sources/MacSource, internal/contracts]
+    modules: [native/Sources/MacSource, rust/crates/ab-domain]
     depends_on: [mac.capture]
     status: done
     scenarios:
@@ -861,7 +861,7 @@ features:
     title: Read-only Safari database capture
     requirements: [R-FULL, R-NO-FALSE-DELETE, R-LIVE]
     milestone: G11
-    modules: [native/Sources/SafariSource, internal/contracts, lab/simapple]
+    modules: [native/Sources/SafariSource, rust/crates/ab-domain, rust/lab/lab-simapple]
     depends_on: []
     status: done
     notes: Real history and bookmark Truth counts and digests match. CloudTabs.db is absent on this host; cloud schema coverage uses synthetic databases.
@@ -887,7 +887,7 @@ features:
     title: Screen Time capture probe with independent comparison
     requirements: [R-USAGE]
     milestone: M4
-    modules: [lab/scenarios]
+    modules: [rust/lab/lab-adapters]
     depends_on: [usage.read]
     status: done
     notes: Real Biome usage capture returns output, matches independent day totals after bounded historical backfill, and replicates through MCP with provenance and device freshness.
@@ -907,7 +907,7 @@ features:
     title: Mac Bluetooth iWork Time Machine and song recognition
     requirements: [R-API, R-SCOPE]
     milestone: G16
-    modules: [native/Sources/MacSource, internal/contracts, lab/simapple]
+    modules: [native/Sources/MacSource, rust/crates/ab-domain, rust/lab/lab-simapple]
     depends_on: [mac.capture]
     status: done
     scenarios:
@@ -920,7 +920,7 @@ features:
     title: Incremental HealthKit samples and day or week summaries
     requirements: [R-API, R-SECURE]
     milestone: G13
-    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/HealthRead, internal/contracts, internal/state, internal/iphone]
+    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/HealthRead, rust/crates/ab-domain, rust/crates/ab-state, rust/crates/ab-iphone]
     depends_on: [iphone.delivery]
     status: done
     scenarios:
@@ -930,7 +930,7 @@ features:
     title: Log water, weight, mindful minutes and workouts
     requirements: [R-API, R-SECURE]
     milestone: G13
-    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/HealthWrite, internal/contracts]
+    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/HealthWrite, rust/crates/ab-domain]
     depends_on: [iphone.health]
     status: done
     scenarios:
@@ -959,7 +959,7 @@ features:
     title: iPhone device keys and one-time gateway pairing
     requirements: [R-SECURE, R-API]
     milestone: G13
-    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Pairing, internal/trust, internal/contracts, internal/operations, lab/simapple]
+    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Pairing, rust/crates/ab-trust, rust/crates/ab-domain, rust/crates/ab-operations, rust/lab/lab-simapple]
     depends_on: [iphone.shell]
     status: done
     scenarios:
@@ -969,7 +969,7 @@ features:
     title: Encrypted iPhone push commands and signed results
     requirements: [R-SECURE, R-SAFE-CMD, R-API]
     milestone: G13
-    modules: [internal/iphone, internal/relay, https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Delivery, lab/simapple]
+    modules: [rust/crates/ab-iphone, rust/crates/ab-relay, https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Delivery, rust/lab/lab-simapple]
     depends_on: [iphone.pairing]
     status: done
     scenarios:
@@ -979,7 +979,7 @@ features:
     title: iPhone notifications and interactive button results
     requirements: [R-SECURE, R-SAFE-CMD, R-API]
     milestone: G13
-    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/Notifications, https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Delivery, internal/contracts, lab/scenarios]
+    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/Notifications, https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Delivery, rust/crates/ab-domain, rust/lab/lab-adapters]
     depends_on: [iphone.delivery]
     status: done
     scenarios:
@@ -989,7 +989,7 @@ features:
     title: iPhone activity, pedometer, floors and seven-day history
     requirements: [R-API]
     milestone: G13
-    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/Motion, internal/contracts]
+    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/Motion, rust/crates/ab-domain]
     depends_on: [iphone.delivery]
     status: done
     scenarios:
@@ -999,7 +999,7 @@ features:
     title: iPhone AlarmKit alarms and timers
     requirements: [R-SAFE-CMD, R-API]
     milestone: G13
-    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/Alarms, internal/contracts]
+    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/Alarms, rust/crates/ab-domain]
     depends_on: [iphone.delivery]
     status: done
     scenarios:
@@ -1009,7 +1009,7 @@ features:
     title: iPhone battery, charging, Wi-Fi, name and Focus filter
     requirements: [R-API]
     milestone: G13
-    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/DeviceContext, internal/contracts]
+    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/DeviceContext, rust/crates/ab-domain]
     depends_on: [iphone.delivery]
     status: done
     scenarios:
@@ -1020,7 +1020,7 @@ features:
     title: Bridge-owned Screen Time shields, downtime and usage report
     requirements: [R-SAFE-CMD, R-API]
     milestone: G13
-    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/ScreenTime, https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/ScreenTimeShared, https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Extensions, internal/contracts]
+    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/ScreenTime, https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/ScreenTimeShared, https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Extensions, rust/crates/ab-domain]
     depends_on: [iphone.delivery]
     status: done
     scenarios:
@@ -1030,7 +1030,7 @@ features:
     title: iPhone precise location and named geofence event records
     requirements: [R-API, R-SAFE-CMD]
     milestone: G13
-    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/Location, internal/contracts, internal/iphone]
+    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/Location, rust/crates/ab-domain, rust/crates/ab-iphone]
     depends_on: [iphone.delivery]
     status: done
     scenarios:
@@ -1050,7 +1050,7 @@ features:
     title: Face ID command approvals
     requirements: [R-SECURE, R-SAFE-CMD, R-API]
     milestone: G13
-    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/Approvals, internal/iphone, internal/operations]
+    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/Approvals, rust/crates/ab-iphone, rust/crates/ab-operations]
     depends_on: [iphone.notifications]
     status: done
     scenarios:
@@ -1060,7 +1060,7 @@ features:
     title: Agent task Live Activities and bridge status widgets
     requirements: [R-API]
     milestone: G13
-    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/Widgets, https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/BridgeWidgets, https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/WidgetShared, internal/iphone, internal/relay]
+    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/Widgets, https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/BridgeWidgets, https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/WidgetShared, rust/crates/ab-iphone, rust/crates/ab-relay]
     depends_on: [iphone.delivery]
     status: done
     scenarios:
@@ -1073,7 +1073,7 @@ features:
     title: Face ID gated photo and microphone capture
     requirements: [R-SECURE, R-SAFE-CMD, R-API]
     milestone: G13
-    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/Capture, internal/iphone]
+    modules: [https://github.com/JohanSardar/apple-bridge-iphone/tree/main/ios/Capabilities/Capture, rust/crates/ab-iphone]
     depends_on: [iphone.approvals]
     status: done
     scenarios:

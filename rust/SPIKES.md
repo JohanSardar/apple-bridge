@@ -1,3 +1,5 @@
+> Go oracle retired: the Go gateway, its parity oracles and the Go lab were deleted. Go commands, file names and Go-versus-Rust results below record what was verified while Go existed; the stored evidence files are unchanged. The Rust tests and `make rust-ci` are the gate now.
+
 # Phase 1 Rust spikes
 
 Measured 2026-11-02; initially against Go main `10a397d6`, then updated and reverified against Phase 0 main `a02485dd`. No gateway deployment or live-home writes. Database comparisons used online `.backup` snapshots, read-only connections on Ubuntu, and SHA-256 comparisons only. Both local and remote database clones were deleted after comparison. No record or command payloads are retained here.

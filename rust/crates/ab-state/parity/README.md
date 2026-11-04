@@ -1,3 +1,5 @@
+> Go oracle retired: the Go gateway, its parity oracles and the Go lab were deleted. Go commands, file names and Go-versus-Rust results below record what was verified while Go existed; the stored evidence files are unchanged. The Rust tests and `make rust-ci` are the gate now.
+
 # Replica compatibility evidence
 
 This is a synthetic, process-driven compatibility scenario for worker A. It drives Go's real State/Operations APIs and Rust's `State<Replica>` through separate line-oriented binaries; it is not the Phase 3 mixed gateway/replica scenario gate owned by worker D.

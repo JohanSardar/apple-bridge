@@ -17,8 +17,8 @@ These commands use a Unix socket in a directory accessible only to the gateway's
 ## Reproduce A1
 
 ```
-go run ./cmd/bridge-lab run lab/scenarios/core/CONN-CLAUDE-AI.yaml --level sim
-go run ./cmd/bridge-lab run lab/scenarios/core/CONN-CHATGPT.yaml --level sim
+make sim SCENARIOS=lab/scenarios/core/CONN-CLAUDE-AI.yaml
+make sim SCENARIOS=lab/scenarios/core/CONN-CHATGPT.yaml
 ssh air '~/bin/ab-real A1 ship/a1-approve connector CONN-CLAUDE-AI CONN-CHATGPT'
 ```
 

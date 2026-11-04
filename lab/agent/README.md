@@ -1,9 +1,11 @@
+> No runner: the Go agent suite was deleted and `AGENT-SUITE` and `QUERY-AGENT` are reported `no-runner` (see `lab/no-runner.json`). The task files and `codex.py` stay as the specification for a future Rust agent runner.
+
 # MCP agent suite
 
 From the Air worktree, run:
 
 ```sh
-packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/agent --level agent --json
+packaging/dev/rust-lab.sh agent
 ```
 
 The suite builds an Ubuntu replica and stages signed Helper and AppleTruth apps for each attempt. Ubuntu needs an authenticated `codex` CLI, Python 3, and SSH access from the Air. Tasks whose required features are done run up to three times, stopping after two successes or two failures; every task needs at least two successful attempts. Each attempt uses an isolated Codex home, `gpt-6-luna`, read-only sandboxing, disabled shell tools and one bearer-authenticated MCP server at the Ubuntu replica.
@@ -20,4 +22,4 @@ Usage selects a historical app-day entry, confirms its estimate against the inde
 
 Notes asks the agent to create a plain-text packing list in an existing Bridge Test folder. AppleTruth independently checks its exact title and body, the replica must agree, and tagged note cleanup must succeed.
 
-`go run ./cmd/bridge-lab run lab/scenarios/maps/QUERY-AGENT.yaml --level sim` runs a scripted agent against the Maps MCP tool, verifies that the tool advertises its required lat/lon coordinates, and checks that the answer uses the returned ETA and distance. `--level real` (also `--level agent`) runs authenticated Codex on Ubuntu against an Ubuntu replica through the Air. Only `maps_eta` is enabled. The provider is synthetic; this qualifies the agent and bridge path, not live traffic. The grader requires a successful MCP result for the requested public Ferry Building and Coit Tower coordinates, then matches the answer's millisecond duration and meter distance to that result. Evidence contains checks and counts only; transcripts remain private. Run the real check through `~/bin/ab-real F11 ship/f11-query-agent none QUERY-AGENT` on the Air.
+`QUERY-AGENT` at sim level runs a scripted agent against the Maps MCP tool, verifies that the tool advertises its required lat/lon coordinates, and checks that the answer uses the returned ETA and distance. `--level real` (also `--level agent`) runs authenticated Codex on Ubuntu against an Ubuntu replica through the Air. Only `maps_eta` is enabled. The provider is synthetic; this qualifies the agent and bridge path, not live traffic. The grader requires a successful MCP result for the requested public Ferry Building and Coit Tower coordinates, then matches the answer's millisecond duration and meter distance to that result. Evidence contains checks and counts only; transcripts remain private. Run the real check through `~/bin/ab-real F11 ship/f11-query-agent none QUERY-AGENT` on the Air.

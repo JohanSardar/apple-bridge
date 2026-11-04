@@ -1,3 +1,5 @@
+> Go oracle retired: the Go gateway, its parity oracles and the Go lab were deleted. Go commands, file names and Go-versus-Rust results below record what was verified while Go existed; the stored evidence files are unchanged. The Rust tests and `make rust-ci` are the gate now.
+
 # G-B2 lifecycle and local query integration
 
 G-B3 owns `ab-commands` validation and ordered native-action encoding. G-B2 owns the durable lifecycle, native-record binding, upload leases, outcome correlation and local query/BlobRead routing. No second ledger or dispatcher is introduced. Error Code retains unknown native strings in Other(String), preserving Go rejection/error bytes; Code is Clone rather than Copy.

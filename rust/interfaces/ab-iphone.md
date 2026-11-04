@@ -1,3 +1,5 @@
+> Go oracle retired: the Go gateway, its parity oracles and the Go lab were deleted. Go commands, file names and Go-versus-Rust results below record what was verified while Go existed; the stored evidence files are unchanged. The Rust tests and `make rust-ci` are the gate now.
+
 # Gateway-side scenario qualification (FIX-MISC)
 
 APP-APPROVE-SIM, APP-CMD-SIM, APP-LIVE-SIM and APP-PAIR-SIM currently stop in the generic replica qualification guard before starting the selected Rust gateway. The command/live journeys construct Go iphone, operations, relay, state and trust implementations directly; pairing uses Go trust directly. They require a binary-driven fixture adapter before gateway parity can be measured. Merely allowing these IDs through the guard would leave the Go implementation under test.

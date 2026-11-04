@@ -1,3 +1,5 @@
+> Go oracle retired: the Go gateway, its parity oracles and the Go lab were deleted. Go commands, file names and Go-versus-Rust results below record what was verified while Go existed; the stored evidence files are unchanged. The Rust tests and `make rust-ci` are the gate now.
+
 # Gateway ApplePeer and local command foundation
 
 The server accepts the unchanged Go SimApplePeer over ipc/1. It binds an owner-only Unix socket, checks peer UID, authenticates fresh HMAC nonces, allocates an owner fence, replaces the active session, bounds mutation bytes and separates query responses from capture commits. Capture receipts are installed before Committed and before queued command replies. A cancellation token prevents cleanup from an earlier phase from deleting the next phase's waiter for the same command ID.

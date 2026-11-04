@@ -1,13 +1,8 @@
-# Go compatibility freeze
+# Frozen compatibility corpora
 
-All inputs and cryptographic material here are synthetic and public test vectors. `impl=go` identifies the producer. Files containing JSON strings preserve the exact bytes of each embedded wire message, including key order and escaping. IPC also includes the four-byte big-endian length prefix in hex. These are compatibility decoder tests explicitly requested for Phase 0.
+All inputs and cryptographic material here are synthetic and public test vectors. `impl=go` marks corpora recorded from the retired Go gateway; they are frozen and the Rust tests read them directly. Files containing JSON strings preserve the exact bytes of each embedded wire message, including key order and escaping. IPC also includes the four-byte big-endian length prefix in hex. These are compatibility decoder tests explicitly requested for Phase 0.
 
-Regenerate from the repository root, review the diff, then run again without the update flag:
-
-```sh
-~/bin/ab-local env AB_UPDATE_GOLDEN=1 go test ./contracts/golden ./internal/iphone ./internal/frontdoor ./internal/web ./lab/scenarios -run Golden -count=1
-~/bin/ab-local go test ./contracts/golden ./internal/iphone ./internal/frontdoor ./internal/web ./lab/scenarios -run Golden -count=1
-```
+The Go generators are deleted. Rust tests under `rust/crates/*/tests/golden.rs` read these files directly; run them with `make rust-golden`. A corpus changes only through a reviewed edit of the JSON file.
 
 | Corpus | Producer / verification |
 | --- | --- |
@@ -23,6 +18,6 @@ Regenerate from the repository root, review the diff, then run again without the
 
 OAuth replaces random client IDs, codes and bearer tokens with named synthetic placeholders. The comparison is byte-for-byte after that explicit normalization. Passkey keys, challenges, counter and deterministic RFC6979 signatures are fixed; no native authenticator or permissions are used. The passkey corpus exercises the Go WebAuthn library and virtual authenticator, while focused consent/OAuth sim scenarios verify their HTTP integration. No local golden test claims live Rust parity, cancellation parity or complete protocol coverage; Phase 1 spikes and later scenario gates remain required.
 
-Phase 2 adds `messages.json` (24 IPC and 13 feed variants), `blob.json` (three binary chunk vectors), `collections.json` (46 prefixes), `catalog.json` (147 descriptors), and `openapi.json`. The descriptor input/output schemas are declarative Rust catalog data; the Go exports remain independent test oracles. MCP comparisons include all 147 tools in both frozen transports.
+Phase 2 adds `messages.json` (24 IPC and 13 feed variants), `blob.json` (three binary chunk vectors), `collections.json` (46 prefixes), `catalog.json` (147 descriptors), and `openapi.json`. The descriptor input/output schemas are declarative Rust catalog data; the Go exports that served as independent oracles are retired. MCP comparisons include all 147 tools in both frozen transports.
 
-Run `make rust-ci` for Go lint and golden verification, Rust workspace tests (including cargo-metadata dependency boundaries), formatting, clippy and dependency policy checks. On the Air, invoke each heavy command through the per-command build lock; `rust/check.sh` acquires it separately for each Cargo command. Rust authentication document tests exercise frozen serialization only; OAuth and WebAuthn ceremonies remain outside the shared-core implementation.
+Run `make rust-ci` for lint, golden verification, Rust workspace tests (including cargo-metadata dependency boundaries), formatting, clippy and dependency policy checks. On the Air, invoke each heavy command through the per-command build lock; `rust/check.sh` acquires it separately for each Cargo command. Rust authentication document tests exercise frozen serialization only; OAuth and WebAuthn ceremonies remain outside the shared-core implementation.
