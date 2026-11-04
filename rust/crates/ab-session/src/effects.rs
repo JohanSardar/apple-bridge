@@ -40,7 +40,6 @@ pub const EFFECT_QUERIES: &[&str] = &[
     "mac.bluetooth_devices",
     "mac.time_machine_status",
     "mac.recognize_song",
-    "mac.iwork_export",
 ];
 
 pub const COMMANDS: &[&str] = &[
@@ -117,6 +116,7 @@ pub const COMMANDS: &[&str] = &[
     "mac.notify",
     "mac.open_settings",
     "mac.set_wallpaper",
+    "mac.iwork_export",
 ];
 
 const DISPOSITIONS: &[&str] = &[
