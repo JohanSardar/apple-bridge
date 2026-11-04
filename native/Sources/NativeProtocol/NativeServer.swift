@@ -12,6 +12,15 @@ public struct NativeFacts: Sendable {
     }
 }
 
+public struct NativeEffectRejection: Error, Sendable {
+    public let code: String
+    public let message: String
+    public let evidence: JSON
+    public init(code: String, message: String, evidence: JSON = .null) {
+        self.code = code; self.message = message; self.evidence = evidence
+    }
+}
+
 public protocol NativeAdapter: Sendable {
     func effectsAllowed() async -> Bool
     func facts(_ operation: String, args: JSON) async throws -> NativeFacts
@@ -26,6 +35,9 @@ public actor NativeServer {
     public static let factOperations: Set<String> = ["agenda.calendars", "agenda.events", "agenda.reminder_lists", "agenda.reminders", "contacts.containers", "contacts.groups", "contacts.contacts", "contacts.history", "ui.target", "ui.actions", "focus.status", "mac.state", "location.status", "permissions.status"]
     public static let effectOperations: Set<String> = [
         "calendar.create_event", "calendar.update_event", "calendar.delete_event", "calendar.create_calendar",
+        "notes.create", "notes.update", "notes.delete", "notes.create_folder", "notes.move", "notes.rename_folder", "notes.delete_folder",
+        "mail.create_draft", "mail.send", "mail.move", "mail.set_flag", "mail.mark_read", "mail.delete",
+        "files.create", "files.write", "files.move", "files.rename", "files.trash", "files.set_tags", "files.download", "files.evict", "files.transform",
         "reminders.create", "reminders.update", "reminders.complete", "reminders.delete", "reminders.create_list", "reminders.rename_list", "reminders.delete_list", "reminders.uncomplete",
         "contacts.create", "contacts.update", "contacts.delete", "contacts.create_group", "contacts.rename_group", "contacts.delete_group", "contacts.add_member", "contacts.remove_member",
         "messages.send", "messages.reply", "messages.react", "messages.edit", "messages.unsend", "messages.mark_read", "messages.mark_unread", "messages.delete_message", "messages.delete_chat",
@@ -89,6 +101,11 @@ public actor NativeServer {
                 usedNonces.insert(permit["nonce"].string); usedCommands.insert(permit["command_id"].string)
                 var result: JSON
                 do { result = try await adapter.effect(op, args: frame["args"], permit: permit) }
+                catch let rejection as NativeEffectRejection {
+                    var rejected: [String: JSON] = ["code": .string(rejection.code), "message": .string(rejection.message)]
+                    if rejection.evidence != .null { rejected["evidence"] = rejection.evidence }
+                    result = .object(["rejected": .object(rejected)])
+                }
                 catch {
                     result = .object(["disposition": .string("indeterminate"), "observed": .bool(false), "reason": .string("native_effect_evidence_unavailable")])
                 }

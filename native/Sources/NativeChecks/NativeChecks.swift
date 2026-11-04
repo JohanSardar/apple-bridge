@@ -13,6 +13,7 @@ actor FakeNative: NativeAdapter {
     func effect(_ operation: String, args: JSON, permit: JSON) async throws -> JSON {
         effects += 1
         if args["interference"] == .bool(true) { throw SourceFailure.conflict }
+        if args["reject"] == .bool(true) { throw NativeEffectRejection(code: "conflict", message: "conflict", evidence: .object(["native_key": .string("fixture-key")])) }
         return .object(["observed": .bool(true)])
     }
 }
@@ -83,6 +84,28 @@ struct NativeChecks {
         try check(interrupted["t"] == .string("EffectResult") && interrupted["evidence"]["disposition"] == .string("indeterminate"), "interference evidence")
         try check(await server.handle(.object(effect))["code"] == .string("conflict"), "interference cannot replay")
         try check(await fake.effects == 2, "failed effect invoked once")
+        for (index, operation) in ["notes.update", "mail.send", "files.write", "notes.delete_folder", "mail.mark_read", "files.transform"].enumerated() {
+            let operationArgs: JSON = .object(["index": .integer(UInt64(index))])
+            var operationPermit = permit
+            operationPermit["operation"] = .string(operation)
+            operationPermit["command_id"] = .string("catalogue-\(index)")
+            operationPermit["nonce"] = .string(String(repeating: "c", count: 63) + String(index))
+            operationPermit["request_hash"] = .string(try NativeServer.requestHash(operation: operation, args: operationArgs))
+            effect["op"] = .string(operation); effect["args"] = operationArgs; effect["permit"] = .object(operationPermit)
+            try check(await server.handle(.object(effect))["t"] == .string("EffectResult"), "catalogue \(operation)")
+        }
+        let rejectArgs: JSON = .object(["reject": .bool(true)])
+        var rejectPermit = permit
+        rejectPermit["operation"] = .string("notes.update")
+        rejectPermit["command_id"] = .string("reject-1")
+        rejectPermit["nonce"] = .string(String(repeating: "f", count: 64))
+        rejectPermit["request_hash"] = .string(try NativeServer.requestHash(operation: "notes.update", args: rejectArgs))
+        effect["op"] = .string("notes.update"); effect["args"] = rejectArgs; effect["permit"] = .object(rejectPermit)
+        let rejection = await server.handle(.object(effect))
+        try check(rejection["t"] == .string("EffectResult") && rejection["evidence"]["rejected"]["code"] == .string("conflict") && rejection["evidence"]["rejected"]["evidence"]["native_key"] == .string("fixture-key"), "rejection evidence")
+        effect["op"] = .string("mail.forward")
+        try check(await server.handle(.object(effect))["code"] == .string("unsupported"), "unknown operation")
+        effect["op"] = .string("messages.reply")
         var pair: [Int32] = [-1, -1]
         guard socketpair(AF_UNIX, SOCK_STREAM, 0, &pair) == 0 else { throw CheckFailure.failed("socketpair") }
         defer { Darwin.close(pair[0]); Darwin.close(pair[1]) }
