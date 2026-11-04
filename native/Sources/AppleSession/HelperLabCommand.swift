@@ -242,6 +242,14 @@ enum HelperLabCommand {
             try JSONEncoder().encode(result!).write(to: reportURL, options: .atomic)
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
             return true
+        case "calendar-facts-proof":
+            let reportURL = try report(arguments)
+            var result: (state: String, reason: String)?
+            Task { @MainActor in result = await ExternalChange.calendarEnumerationProof() }
+            let deadline = Date().addingTimeInterval(20)
+            while result == nil, Date() < deadline { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
+            try PrivateReport.write(["state": result?.state ?? "blocked", "reason": result?.reason ?? "enumeration_waited_for_reminders"], to: reportURL)
+            return true
         case "external-change":
             let reportURL = try report(arguments)
             guard let index = arguments.firstIndex(of: "--request"), index + 1 < arguments.count,
