@@ -105,12 +105,35 @@ fn start(credit: i64, checkpoints: &Value) -> World {
     start_in(fresh_home(), credit, checkpoints)
 }
 
+#[derive(Debug)]
+struct ManualClock(std::sync::atomic::AtomicU64);
+
+impl session::Clock for ManualClock {
+    fn elapsed(&self) -> Duration {
+        Duration::from_millis(self.0.load(std::sync::atomic::Ordering::SeqCst))
+    }
+}
+
 fn start_in(home: std::path::PathBuf, credit: i64, checkpoints: &Value) -> World {
+    start_with(
+        home,
+        credit,
+        checkpoints,
+        std::sync::Arc::new(session::SystemClock::start()),
+    )
+}
+
+fn start_with(
+    home: std::path::PathBuf,
+    credit: i64,
+    checkpoints: &Value,
+    clock: std::sync::Arc<dyn session::Clock>,
+) -> World {
     let (mut gateway, session_gateway) = UnixStream::pair().expect("pair");
     let (mut link, session_link) = UnixStream::pair().expect("pair");
     let session_home = home.clone();
     let session = thread::spawn(move || {
-        session::serve(session_gateway, session_link, &SECRET, &session_home)
+        session::serve_with(session_gateway, session_link, &SECRET, &session_home, clock)
     });
     authenticate(&mut gateway, true);
     open(&mut gateway, credit, checkpoints);
@@ -477,6 +500,23 @@ fn dispatch_frame(id: &str, ticket: &str, fence: u64) -> IpcFrame {
     dispatch
 }
 
+fn swift_loader_view(lines: &[Value]) -> std::collections::BTreeMap<String, String> {
+    let mut view = std::collections::BTreeMap::new();
+    for line in lines {
+        let id = line["command_id"].as_str().expect("id").to_owned();
+        let disposition = if line["t"] == "Outcome" {
+            line["disposition"]
+                .as_str()
+                .expect("disposition")
+                .to_owned()
+        } else {
+            "indeterminate".to_owned()
+        };
+        view.insert(id, disposition);
+    }
+    view
+}
+
 fn guard_lines(home: &std::path::Path) -> Vec<Value> {
     std::fs::read_to_string(home.join("dispatch-guard.log"))
         .expect("guard log")
@@ -573,10 +613,17 @@ fn only_one_command_is_in_flight_and_a_started_id_is_never_prepared_again() {
     let (rejected, _) = ipc_read(&mut world.gateway).expect("rejected");
     assert_eq!(rejected["t"], "Rejected");
     assert_eq!(rejected["error"]["code"], "conflict");
+    let home = world.home.clone();
+    let lines = guard_lines(&home);
+    assert!(lines.iter().all(|line| {
+        ["DispatchStarted", "Outcome"].contains(&line["t"].as_str().unwrap_or_default())
+    }));
     assert_eq!(
-        guard_lines(&world.home).last().expect("line")["t"],
-        "Rejected"
+        lines.last().expect("line")["disposition"],
+        "failed_no_effect"
     );
+    let swift = swift_loader_view(&lines);
+    assert_eq!(swift["c1"], "failed_no_effect");
     ipc_send(&mut world.gateway, &prepare_frame("c1", "mac.set_volume"));
     let (refused, _) = ipc_read(&mut world.gateway).expect("refused");
     assert_eq!(refused["error"]["code"], "conflict");
@@ -787,4 +834,50 @@ fn a_gateway_close_ends_the_session_cleanly() {
     ipc_send(&mut world.gateway, &frame("Close"));
     assert!(native::read_frame(&mut world.link).is_err());
     assert!(finish(world).is_ok());
+}
+
+#[test]
+fn evidence_whose_key_is_never_committed_degrades_after_the_bind_window_on_the_injected_clock() {
+    let clock = std::sync::Arc::new(ManualClock(std::sync::atomic::AtomicU64::new(0)));
+    let mut world = start_with(fresh_home(), 4_194_304, &json!({}), clock.clone());
+    let ticket = prepare_ticket(&mut world, "c1", "notes.update");
+    ipc_send(&mut world.gateway, &dispatch_frame("c1", &ticket, 7));
+    assert!(matches!(
+        native::read_frame(&mut world.link),
+        Ok(Frame::Dispatch(_))
+    ));
+    native::write_frame(
+        &mut world.link,
+        &Frame::Outcome(native::Outcome {
+            command_id: "c1".into(),
+            disposition: "locally_observed".into(),
+            evidence: raw(&json!({"observed": true, "native_key": "never-scanned"})),
+        }),
+    )
+    .expect("outcome");
+    world
+        .gateway
+        .set_read_timeout(Some(Duration::from_millis(300)))
+        .expect("timeout");
+    assert!(
+        ipc_read(&mut world.gateway).is_err(),
+        "outcome sent while the window was open"
+    );
+    clock.0.store(14_999, std::sync::atomic::Ordering::SeqCst);
+    assert!(
+        ipc_read(&mut world.gateway).is_err(),
+        "outcome sent one millisecond early"
+    );
+    clock.0.store(15_000, std::sync::atomic::Ordering::SeqCst);
+    world
+        .gateway
+        .set_read_timeout(Some(Duration::from_secs(5)))
+        .expect("timeout");
+    let (outcome, _) = ipc_read(&mut world.gateway).expect("outcome");
+    assert_eq!(outcome["disposition"], "indeterminate");
+    assert_eq!(outcome["evidence"]["reason"], "capture_not_observed");
+    assert!(outcome["evidence"].get("capture_checkpoint").is_none());
+    let lines = guard_lines(&world.home);
+    assert_eq!(lines.last().expect("line")["disposition"], "indeterminate");
+    let _ = finish(world);
 }

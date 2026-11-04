@@ -436,7 +436,7 @@ impl Hub {
     }
 
     fn bind(&self, key: &str, facts: bool, after: u64) -> Result<Option<String>, Error> {
-        let deadline = Instant::now() + BIND_WAIT;
+        let deadline = self.clock.elapsed() + BIND_WAIT;
         let mut core = self.core()?;
         loop {
             if let Some(seen) = core.flights.latest(key)
@@ -444,13 +444,12 @@ impl Hub {
             {
                 return Ok(Some(seen.checkpoint.clone()));
             }
-            let now = Instant::now();
-            if core.closed || now >= deadline {
+            if core.closed || self.clock.elapsed() >= deadline {
                 return Ok(None);
             }
             core = self
                 .changed
-                .wait_timeout(core, (deadline - now).min(Duration::from_millis(100)))
+                .wait_timeout(core, Duration::from_millis(20))
                 .map_err(|_| Error::WorkerPanicked)?
                 .0;
         }

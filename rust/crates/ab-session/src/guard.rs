@@ -10,6 +10,20 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
+fn rejection_frame(entry: &Value) -> Value {
+    let rejected = &entry["evidence"]["rejected"];
+    let mut frame = json!({
+        "t": "Rejected",
+        "command_id": entry["command_id"],
+        "disposition": "rejected_before_dispatch",
+        "error": {"code": rejected["code"], "message": rejected["message"]},
+    });
+    if rejected["evidence"].is_object() {
+        frame["evidence"] = rejected["evidence"].clone();
+    }
+    frame
+}
+
 #[must_use]
 pub fn durable_action(action: &Value) -> Value {
     let mut action = action.clone();
@@ -73,6 +87,9 @@ impl DispatchGuard {
                 .ok_or(Error::Invalid)?
                 .to_owned();
             match entry["t"].as_str() {
+                Some("Outcome") if entry["rejection"] == true => {
+                    outcomes.insert(id, rejection_frame(&entry));
+                }
                 Some("Outcome" | "Rejected") => {
                     outcomes.insert(id, entry);
                 }
@@ -194,12 +211,15 @@ impl DispatchGuard {
         if !self.outcomes.contains_key(id) {
             return Err(Error::Invalid);
         }
-        let mut entry = json!({"t":"Rejected","command_id":id,"disposition":"rejected_before_dispatch","error":{"code":code,"message":message}});
+        let mut frame = json!({"t":"Rejected","command_id":id,"disposition":"rejected_before_dispatch","error":{"code":code,"message":message}});
+        let mut rejected = json!({"code":code,"message":message});
         if evidence.is_object() {
-            entry["evidence"] = evidence.clone();
+            frame["evidence"] = evidence.clone();
+            rejected["evidence"] = evidence.clone();
         }
-        self.append(&entry)?;
-        self.outcomes.insert(id.to_owned(), entry);
+        let line = json!({"t":"Outcome","command_id":id,"disposition":"failed_no_effect","rejection":true,"evidence":{"rejected":rejected}});
+        self.append(&line)?;
+        self.outcomes.insert(id.to_owned(), frame);
         Ok(())
     }
 }

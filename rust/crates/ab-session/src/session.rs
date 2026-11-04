@@ -17,7 +17,7 @@ use std::{
     os::unix::{fs::MetadataExt, net::UnixStream},
     path::Path,
     sync::{
-        Condvar, Mutex, MutexGuard,
+        Arc, Condvar, Mutex, MutexGuard,
         atomic::{AtomicU64, Ordering},
     },
     thread,
@@ -25,6 +25,26 @@ use std::{
 };
 
 mod commands;
+
+pub trait Clock: Send + Sync {
+    fn elapsed(&self) -> Duration;
+}
+
+#[derive(Debug)]
+pub struct SystemClock(std::time::Instant);
+
+impl SystemClock {
+    #[must_use]
+    pub fn start() -> Self {
+        Self(std::time::Instant::now())
+    }
+}
+
+impl Clock for SystemClock {
+    fn elapsed(&self) -> Duration {
+        self.0.elapsed()
+    }
+}
 
 const BULK_CHUNK_BYTES: usize = 16_000;
 const LIVE_CHUNK_BYTES: usize = 64_000;
@@ -51,6 +71,7 @@ struct Hub {
     link: Mutex<UnixStream>,
     sequence: AtomicU64,
     epoch: u128,
+    clock: Arc<dyn Clock>,
 }
 
 impl Hub {
@@ -463,6 +484,17 @@ pub fn serve(
     secret: &[u8],
     home: &Path,
 ) -> Result<(), Error> {
+    serve_with(gateway, link, secret, home, Arc::new(SystemClock::start()))
+}
+
+#[allow(clippy::too_many_lines)]
+pub fn serve_with(
+    gateway: UnixStream,
+    link: UnixStream,
+    secret: &[u8],
+    home: &Path,
+    clock: Arc<dyn Clock>,
+) -> Result<(), Error> {
     let mut gateway_read = gateway.try_clone()?;
     let mut link_read = link.try_clone()?;
     let (opened, fence) = match start(&mut gateway_read, &mut link_read, secret) {
@@ -489,6 +521,7 @@ pub fn serve(
         changed: Condvar::new(),
         gateway: Mutex::new(gateway),
         link: Mutex::new(link),
+        clock,
         sequence: AtomicU64::new(0),
         epoch: SystemTime::now()
             .duration_since(UNIX_EPOCH)
