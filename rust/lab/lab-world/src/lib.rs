@@ -114,6 +114,7 @@ pub struct World {
     config: WorldConfig,
     gateway: Option<Child>,
     peer: Option<Child>,
+    session: Option<Child>,
     proxy: Option<FaultProxy>,
     token: String,
     gateway_env: Vec<(String, String)>,
@@ -138,6 +139,7 @@ impl World {
             config,
             gateway: None,
             peer: None,
+            session: None,
             proxy: None,
             token: String::new(),
             gateway_env: Vec::new(),
@@ -171,6 +173,7 @@ impl World {
             },
             gateway: None,
             peer: None,
+            session: None,
             proxy: None,
             token: String::new(),
             gateway_env: Vec::new(),
@@ -195,6 +198,47 @@ impl World {
         }
         Ok(world)
     }
+    fn launch_session(&mut self, gateway_socket: &str) -> Result<Option<PathBuf>> {
+        let mode = std::env::var("AB_LAB_SESSION_NATIVE").unwrap_or_default();
+        if mode.is_empty() || mode == "0" {
+            return Ok(None);
+        }
+        if self.session.is_some() {
+            return Ok(Some(self.directory.join("session.sock")));
+        }
+        let binary = std::env::var_os("AB_SESSION_BINARY")
+            .filter(|value| !value.is_empty())
+            .ok_or_else(|| {
+                Error::Invalid("AB_SESSION_BINARY is required for AB_LAB_SESSION_NATIVE".into())
+            })?;
+        let listen = self.directory.join("session.sock");
+        let home = self.directory.join("session-home");
+        let log = fs::File::options()
+            .create(true)
+            .append(true)
+            .open(self.directory.join("session.log"))?;
+        self.session = Some(
+            Command::new(binary)
+                .arg("--lab-session-listen")
+                .arg(&listen)
+                .args(["--lab-gateway", gateway_socket, "--session-secret"])
+                .arg(self.gateway_home.join("apple-secret"))
+                .arg("--session-home")
+                .arg(&home)
+                .stdout(log.try_clone()?)
+                .stderr(log)
+                .spawn()?,
+        );
+        let deadline = Instant::now() + Duration::from_secs(10);
+        while !listen.exists() {
+            self.check_children()?;
+            if Instant::now() >= deadline {
+                return Err(Error::Invalid("session readiness timeout".into()));
+            }
+            thread::sleep(Duration::from_millis(25));
+        }
+        Ok(Some(listen))
+    }
     fn launch_peer(&mut self) -> Result<()> {
         let socket = self.runtime["socket"]
             .as_str()
@@ -204,16 +248,17 @@ impl World {
             .create(true)
             .append(true)
             .open(self.directory.join("simapple.log"))?;
-        self.peer = Some(
-            Command::new(&self.config.simapple)
-                .args(["simapple", "--socket", &socket, "--secret-file"])
-                .arg(self.gateway_home.join("apple-secret"))
-                .arg("--control")
-                .arg(self.directory.join("sim.sock"))
-                .stdout(log.try_clone()?)
-                .stderr(log)
-                .spawn()?,
-        );
+        let native = self.launch_session(&socket)?;
+        let mut simapple = Command::new(&self.config.simapple);
+        simapple
+            .args(["simapple", "--socket", &socket, "--secret-file"])
+            .arg(self.gateway_home.join("apple-secret"))
+            .arg("--control")
+            .arg(self.directory.join("sim.sock"));
+        if let Some(path) = &native {
+            simapple.arg("--native-session").arg(path);
+        }
+        self.peer = Some(simapple.stdout(log.try_clone()?).stderr(log).spawn()?);
         let deadline = Instant::now() + Duration::from_secs(20);
         loop {
             if self.control("/inspect", &Value::Null).is_ok() {
@@ -284,7 +329,10 @@ impl World {
         }
     }
     fn check_children(&mut self) -> Result<()> {
-        for child in [&mut self.gateway, &mut self.peer].into_iter().flatten() {
+        for child in [&mut self.gateway, &mut self.peer, &mut self.session]
+            .into_iter()
+            .flatten()
+        {
             if let Some(status) = child.try_wait()? {
                 return Err(Error::Invalid(format!("child exited {status}")));
             }
@@ -509,6 +557,7 @@ impl World {
             proxy.close();
         }
         stop(&mut self.peer);
+        stop(&mut self.session);
         stop(&mut self.gateway);
     }
 }

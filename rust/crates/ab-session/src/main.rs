@@ -232,6 +232,29 @@ fn parse_flags(args: &[String]) -> Result<Flags, Error> {
     Ok(flags)
 }
 
+fn lab_session(args: &[String]) -> Result<(), Error> {
+    let [_, listen, _, gateway, _, secret, _, home] = args else {
+        return Err(Error::Invalid);
+    };
+    let secret = std::fs::read(secret)?;
+    let home = std::path::PathBuf::from(home);
+    let _ = std::fs::remove_file(listen);
+    let listener = std::os::unix::net::UnixListener::bind(listen)?;
+    for link in listener.incoming() {
+        let link = link?;
+        let Ok(stream) = std::os::unix::net::UnixStream::connect(gateway) else {
+            continue;
+        };
+        let (secret, home) = (secret.clone(), home.clone());
+        std::thread::spawn(move || {
+            if let Err(error) = ab_session::session::serve(stream, link, &secret, &home) {
+                eprintln!("ab-session: {error}");
+            }
+        });
+    }
+    Ok(())
+}
+
 fn serve_session(gateway: i32, helper: i32, secret: &str, home: &str) -> Result<(), Error> {
     let secret = ab_session::session::load_secret(std::path::Path::new(secret))?;
     let gateway = ab_sys::inherited_unix_stream(gateway)?;
@@ -242,6 +265,14 @@ fn serve_session(gateway: i32, helper: i32, secret: &str, home: &str) -> Result<
 fn run() -> Result<(), Error> {
     ab_sys::reset_signals();
     let args: Vec<String> = std::env::args().skip(1).collect();
+    if args.len() == 8
+        && args[0] == "--lab-session-listen"
+        && args[2] == "--lab-gateway"
+        && args[4] == "--session-secret"
+        && args[6] == "--session-home"
+    {
+        return lab_session(&args);
+    }
     #[cfg(feature = "rust-capture")]
     if args.len() == 4 && args[0] == "--lab-listen" && args[2] == "--lab-gateway" {
         return lab_listen(&args[1], &args[3], None);

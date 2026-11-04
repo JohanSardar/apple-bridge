@@ -10,6 +10,7 @@ mod maps;
 mod media;
 mod messages;
 mod messages_commands;
+mod native_bridge;
 mod notes;
 mod query;
 mod reminders;
@@ -1450,8 +1451,13 @@ fn run() -> Result<()> {
             });
         }
     });
+    let native = options.get("--native-session").cloned();
     loop {
-        if let Ok(stream) = UnixStream::connect(&socket)
+        let stream = match &native {
+            Some(path) => native_bridge::connect(path, &secret, home).ok(),
+            None => UnixStream::connect(&socket).ok(),
+        };
+        if let Some(stream) = stream
             && let Err(e) = session(stream, &secret, &state, &rx)
         {
             eprintln!("session: {e}");
