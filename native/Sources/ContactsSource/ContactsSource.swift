@@ -705,4 +705,96 @@ public final class ContactsSource: Source {
         }
     }
 
+
+    public func primitive(_ operation: String, args request: JSON, into sink: any ObservationSink) async throws -> JSON {
+        guard authorized else { throw SourceFailure.permissionMissing }
+        guard commandsEnabled else { throw SourceFailure.unsupported }
+        let key = request["native_key"].string
+        switch operation {
+        case "contacts.read_contact":
+            do { return .object(["exists": .bool(true), "data": try data(commandContact(key))]) }
+            catch SourceFailure.conflict { return .object(["exists": .bool(false)]) }
+        case "contacts.can_create":
+            let container = store.defaultContainerIdentifier()
+            let matching = container.isEmpty ? 0 : try store.containers(matching: CNContainer.predicateForContainers(withIdentifiers: [container])).count
+            return .object(["allowed": .bool(matching == 1)])
+        case "contacts.check_patch":
+            try patch(CNMutableContact(), request["args"])
+            return .object([:])
+        case "contacts.group_capabilities":
+            return .object(["operations": .array(groupCapabilities().map(JSON.string))])
+        case "contacts.read_group":
+            if request["observer"].bool {
+                let observer = CNContactStore()
+                guard let found = try observer.groups(matching: CNGroup.predicateForGroups(withIdentifiers: [key])).first else { return .object(["exists": .bool(false)]) }
+                let members = try observer.unifiedContacts(matching: CNContact.predicateForContactsInGroup(withIdentifier: key), keysToFetch: [CNContactIdentifierKey as NSString])
+                return .object(["exists": .bool(true), "data": .object(["name": .string(found.name), "member_ids": .array(members.sorted { $0.identifier < $1.identifier }.map { .object(["$ref": .object(["collection": .string("contacts.contact"), "native_key": .string($0.identifier)])]) })])])
+            }
+            do { return .object(["exists": .bool(true), "data": try groupData(group(key))]) }
+            catch SourceFailure.conflict { return .object(["exists": .bool(false)]) }
+        case "contacts.goal":
+            let actual = try fresh(key)
+            guard let desired = actual.mutableCopy() as? CNMutableContact else { throw SourceFailure.corrupt }
+            try patch(desired, request["args"])
+            return .object(["actual": try data(actual), "desired": try data(desired)])
+        case "contacts.reconcile":
+            if !request["absent_key"].string.isEmpty { try await confirmAbsence(request["absent_key"].string, into: sink) }
+            else { try await reconcile(into: sink, key: request["conflict_key"].string) }
+            return .object([:])
+        case "contacts.write":
+            return try await writeContact(request, into: sink)
+        case "contacts.write_group":
+            return try writeGroup(request)
+        default:
+            throw SourceFailure.unsupported
+        }
+    }
+
+    private func writeContact(_ request: JSON, into sink: any ObservationSink) async throws -> JSON {
+        let operation = request["op"].string
+        guard Self.operations.contains(operation) else { throw SourceFailure.unsupported }
+        let save = CNSaveRequest()
+        let contact: CNMutableContact
+        if operation == "contacts.create" { contact = CNMutableContact(); try patch(contact, request["args"]); save.add(contact, toContainerWithIdentifier: store.defaultContainerIdentifier()) }
+        else {
+            guard let current = try commandContact(request["native_key"].string).mutableCopy() as? CNMutableContact else { throw SourceFailure.corrupt }
+            contact = current
+            if operation == "contacts.delete" { save.delete(contact) }
+            else { try patch(contact, request["args"]); save.update(contact) }
+        }
+        trace.record("contacts_save_started", keys: [contact.identifier], fields: ["operation": .string(operation)])
+        try store.execute(save)
+        trace.record("contacts_effect_done", keys: [contact.identifier], fields: ["operation": .string(operation)])
+        let deleted = operation == "contacts.delete"
+        let exists = !(try isAbsent(contact.identifier))
+        let saved: JSON = deleted ? .null : try data(contact)
+        let observed: JSON = exists && !deleted ? try data(fresh(contact.identifier)) : .null
+        try await reconcile(into: sink)
+        if deleted && !exists { try await confirmAbsence(contact.identifier, into: sink) }
+        return .object(["native_key": .string(contact.identifier), "exists_after": .bool(exists), "saved": saved, "observed": observed])
+    }
+
+    private func writeGroup(_ request: JSON) throws -> JSON {
+        let operation = request["op"].string
+        guard Self.groupOperations.contains(operation) else { throw SourceFailure.unsupported }
+        let save = CNSaveRequest()
+        let mutable: CNMutableGroup
+        if operation == "contacts.create_group" {
+            mutable = CNMutableGroup(); mutable.name = request["args"]["name"].string
+            save.add(mutable, toContainerWithIdentifier: store.defaultContainerIdentifier())
+        } else {
+            guard let value = try group(request["native_key"].string).mutableCopy() as? CNMutableGroup else { throw SourceFailure.corrupt }
+            mutable = value
+            switch operation {
+            case "contacts.rename_group": mutable.name = request["args"]["name"].string; save.update(mutable)
+            case "contacts.delete_group": save.delete(mutable)
+            default:
+                let contact = try commandContact(request["list_key"].string)
+                if operation == "contacts.add_member" { save.addMember(contact, to: mutable) }
+                else { save.removeMember(contact, from: mutable) }
+            }
+        }
+        try store.execute(save)
+        return .object(["native_key": .string(mutable.identifier)])
+    }
 }

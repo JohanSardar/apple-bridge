@@ -497,7 +497,7 @@ public actor AppleSession: ObservationSink {
     }
 
     private static func rustOwned(_ operation: String) -> Bool {
-        operation.hasPrefix("reminders.") || operation.hasPrefix("calendar.")
+        operation.hasPrefix("reminders.") || operation.hasPrefix("calendar.") || operation.hasPrefix("contacts.")
     }
 
     private func nativePrimitive(_ frame: JSON) async {
@@ -510,6 +510,7 @@ public actor AppleSession: ObservationSink {
             let result: JSON
             if operation.hasPrefix("reminders.") { result = try await source.primitive(operation, args: frame["args"], into: self) }
             else if operation.hasPrefix("calendar.") { result = try await calendar.primitive(operation, args: frame["args"], into: self) }
+            else if operation.hasPrefix("contacts.") { result = try await contacts.primitive(operation, args: frame["args"], into: self) }
             else { throw SourceFailure.unsupported }
             guard link === connection, !Task.isCancelled else { return }
             try connection.send(NativeSessionFrame.primitiveResult(id: id, result: result))
@@ -530,7 +531,7 @@ public actor AppleSession: ObservationSink {
             guard !frame["command_id"].string.isEmpty, !frame["principal"].string.isEmpty, !frame["request_hash"].string.isEmpty, let expires = parseTimestamp(frame["expires_at"].string), expires > Date() else { throw SourceFailure.invalid }
             let selected = additionalSources[captureRoute(frame["action"]["op"].string)] ?? source
             guard !Self.rustOwned(frame["action"]["op"].string) else { throw SourceFailure.unsupported }
-            let prepared = frame["action"]["op"].string.hasPrefix("contacts.") ? try await contacts.prepare(frame) : try await selected.prepare(frame)
+            let prepared = try await selected.prepare(frame)
             guard !Task.isCancelled, link === connection, expires > Date() else { throw SourceFailure.expired }
             try connection.send(NativeSessionFrame.prepared(commandID: frame["command_id"], nativeState: prepared.nativeState, route: prepared.nativeState["route"].string.isEmpty ? "eventkit" : prepared.nativeState["route"].string, candidateIDs: prepared.nativeState["candidate_ids"].array, fingerprint: prepared.fingerprint))
         } catch { if link === connection && !Task.isCancelled { await nativeReject(frame, error: error, connection: connection) } }

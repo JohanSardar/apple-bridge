@@ -995,8 +995,11 @@ impl Session<'_> {
     #[allow(clippy::needless_pass_by_value)]
     fn command(&mut self, state: &Shared, frame: Value) -> Result<()> {
         if frame["t"] == "Primitive" {
-            return if string(&frame, "op").starts_with("calendar.") {
+            let family = string(&frame, "op");
+            return if family.starts_with("calendar.") {
                 self.calendar_primitive(state, &frame)
+            } else if family.starts_with("contacts.") {
+                self.contacts_primitive(state, &frame)
             } else {
                 self.primitive(state, &frame)
             };
