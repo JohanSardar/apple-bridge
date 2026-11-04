@@ -135,6 +135,46 @@ fn notes_session_source() -> bool {
             .any(|source| source.trim() == "notes")
 }
 
+fn notes_data(action: &Value, op: &str, mut data: Value) -> Result<(&'static str, Value)> {
+    let args = &action["note_args"];
+    let mut collection = "notes.note";
+    let title = string(args, "title");
+    match op {
+        "notes.rename_folder" => {
+            collection = "notes.folder";
+            data["title"] = json!(title);
+        }
+        "notes.create_folder" => {
+            collection = "notes.folder";
+            data = json!({"title":title,"account":"sim"});
+        }
+        "notes.create" => {
+            let text = string(args, "plain_text");
+            data = json!({"folder_id":folder(&string(action,"folder_key")),"title":title,"plain_text":format!("{title}\n{text}"),"locked":false,"editable":"plain","content_status":"complete","attachments":[],"created_at":now(),"modified_at":now()});
+        }
+        "notes.move" => {
+            data["folder_id"] = folder(&string(action, "folder_key"));
+        }
+        "notes.update" => {
+            let mut text;
+            if let Some(html) = args["html"].as_str() {
+                data["html"] = json!(html);
+                text = plain(html)?;
+            } else {
+                text = string(args, "plain_text");
+            }
+            if string(args, "mode") == "append" {
+                text = format!("{}{text}", string(&data, "plain_text"));
+            }
+            data["title"] = json!(text.split('\n').next().unwrap_or_default());
+            data["plain_text"] = json!(text);
+            data["modified_at"] = json!(now());
+        }
+        _ => {}
+    }
+    Ok((collection, data))
+}
+
 impl Session<'_> {
     pub(super) fn note_prepare(&mut self, state: &Shared, frame: &Value) -> Result<()> {
         let command = string(frame, "command_id");
@@ -213,7 +253,6 @@ impl Session<'_> {
         }
         let action = &ticket.prepare["action"];
         let op = string(action, "op");
-        let args = &action["note_args"];
         let mut key = string(action, "native_key");
         let mut s = lock(state)?;
         if !key.is_empty() && s.data["records"][&key]["data"] != ticket.before {
@@ -221,47 +260,13 @@ impl Session<'_> {
             return self.reject(frame, "conflict");
         }
         s.guard(&json!({"command_id":command,"ticket":frame["ticket"],"started_at":now()}))?;
-        let mut collection = "notes.note";
-        let mut data = if key.is_empty() {
+        let data = if key.is_empty() {
             key = id("note")?;
             json!({})
         } else {
             ticket.before.clone()
         };
-        let title = string(args, "title");
-        match op.as_str() {
-            "notes.rename_folder" => {
-                collection = "notes.folder";
-                data["title"] = json!(title);
-            }
-            "notes.create_folder" => {
-                collection = "notes.folder";
-                data = json!({"title":title,"account":"sim"});
-            }
-            "notes.create" => {
-                let text = string(args, "plain_text");
-                data = json!({"folder_id":folder(&string(action,"folder_key")),"title":title,"plain_text":format!("{title}\n{text}"),"locked":false,"editable":"plain","content_status":"complete","attachments":[],"created_at":now(),"modified_at":now()});
-            }
-            "notes.move" => {
-                data["folder_id"] = folder(&string(action, "folder_key"));
-            }
-            "notes.update" => {
-                let mut text;
-                if let Some(html) = args["html"].as_str() {
-                    data["html"] = json!(html);
-                    text = plain(html)?;
-                } else {
-                    text = string(args, "plain_text");
-                }
-                if string(args, "mode") == "append" {
-                    text = format!("{}{text}", string(&data, "plain_text"));
-                }
-                data["title"] = json!(text.split('\n').next().unwrap_or_default());
-                data["plain_text"] = json!(text);
-                data["modified_at"] = json!(now());
-            }
-            _ => {}
-        }
+        let (collection, data) = notes_data(action, &op, data)?;
         let mut record = observation(collection, &key, data);
         let absent = op == "notes.delete";
         if absent {
@@ -285,5 +290,98 @@ impl Session<'_> {
         drop(s);
         send(&mut self.stream, &outcome)?;
         Ok(())
+    }
+}
+
+impl Session<'_> {
+    pub(super) fn notes_primitive(&mut self, state: &Shared, frame: &Value) -> Result<()> {
+        let id = frame["id"].clone();
+        let answer = self.notes_answer(state, &frame["args"], &string(frame, "op"));
+        match answer {
+            Ok(result) => send(
+                &mut self.stream,
+                &json!({"t":"PrimitiveResult","id":id,"result":result}),
+            )?,
+            Err(code) => send(
+                &mut self.stream,
+                &json!({"t":"PrimitiveError","id":id,"code":code}),
+            )?,
+        };
+        Ok(())
+    }
+
+    fn notes_answer(
+        &mut self,
+        state: &Shared,
+        args: &Value,
+        op: &str,
+    ) -> std::result::Result<Value, &'static str> {
+        let fail = |_| "unavailable";
+        let key = string(args, "native_key");
+        let mut s = lock(state).map_err(fail)?;
+        match op {
+            "notes.read" => {
+                let record = &s.data["records"][&key];
+                if key.is_empty()
+                    || record["collection"] != string(args, "collection").as_str()
+                    || record["kind"] == "absent"
+                {
+                    return Ok(json!({"exists":false}));
+                }
+                let digest = hex::encode(<sha2::Sha256 as sha2::Digest>::digest(
+                    record["data"].to_string(),
+                ));
+                Ok(json!({"exists":true,"data":record["data"],"folder_fingerprint":digest}))
+            }
+            "notes.observe" => {
+                let target = string(args, "script_id");
+                let record = &s.data["records"][&target];
+                let live = !record.is_null() && record["kind"] != "absent";
+                let mut result =
+                    json!({"observed":live,"deletion_state":if live { "active" } else { "gone" }});
+                if live {
+                    result["native_key"] = json!(target);
+                    result["data"] = record["data"].clone();
+                }
+                Ok(result)
+            }
+            "notes.write"
+                if std::env::var("AB_LAB_PRIMITIVE_CONTROL").as_deref() == Ok("refuse") =>
+            {
+                Err("unavailable")
+            }
+            "notes.write" => {
+                let action = json!({"op":args["op"],"native_key":args["native_key"],"folder_key":args["folder_key"],"note_args":args["note_args"]});
+                let op = string(args, "op");
+                let command = string(args, "command_id");
+                let mut target = key.clone();
+                let data = if target.is_empty() {
+                    target = id("note").map_err(fail)?;
+                    json!({})
+                } else {
+                    s.data["records"][&target]["data"].clone()
+                };
+                let (collection, data) = notes_data(&action, &op, data).map_err(fail)?;
+                let mut record = observation(collection, &target, data);
+                if op == "notes.delete" {
+                    record["kind"] = json!("absent");
+                    record["revalidated"] = json!(true);
+                }
+                s.put(record);
+                if !command.is_empty() {
+                    let count = s.data["effects"][&command].as_u64().unwrap_or_default() + 1;
+                    s.data["effects"][&command] = json!(count);
+                }
+                s.save().map_err(fail)?;
+                Ok(json!({"script_id":target,"failure":null}))
+            }
+            "notes.reconcile" => {
+                let capture = s.scan("notes").map_err(fail)?;
+                drop(s);
+                self.emit(state, capture).map_err(fail)?;
+                Ok(json!({}))
+            }
+            _ => Err("unsupported"),
+        }
     }
 }

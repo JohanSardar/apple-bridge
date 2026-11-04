@@ -308,8 +308,8 @@ public final class NotesSource: Source {
         try validate(prepared)
         return try await dispatchValidated(prepared)
     }
-    public func dispatchValidated(_ prepared: Prepared) async throws -> JSON {
-        let action = prepared.action, args = action["note_args"]
+    private func performNative(_ action: JSON) async throws -> (scriptID: String, renameFailure: (any Error)?) {
+        let args = action["note_args"]
         let op = action["op"].string
         var scriptID = ""
         var renameFailure: (any Error)?
@@ -342,6 +342,13 @@ public final class NotesSource: Source {
                 _ = try NotesScript.run("set body of note id " + NotesScript.quote(scriptID) + " to " + NotesScript.quote(html))
             }
         }
+        return (scriptID, renameFailure)
+    }
+
+    public func dispatchValidated(_ prepared: Prepared) async throws -> JSON {
+        let action = prepared.action, args = action["note_args"]
+        let op = action["op"].string
+        let (scriptID, renameFailure) = try await performNative(action)
         for _ in 0..<100 {
             let snapshot = try store.read(nativeID: scriptID)
             let observed = snapshot.observations.first { $0["scoped_alias"].string == scriptID }
@@ -371,4 +378,34 @@ public final class NotesSource: Source {
         throw SourceFailure.unavailable
     }
     public func resolve(_ command: String, evidence: JSON) async -> JSON { .null }
+
+    public func primitive(_ operation: String, args request: JSON, into sink: any ObservationSink) async throws -> JSON {
+        switch operation {
+        case "notes.read":
+            let collection = request["collection"].string
+            guard let note = try? find(request["native_key"].string, collection: collection) else { return .object(["exists": .bool(false)]) }
+            var result: [String: JSON] = ["exists": .bool(true), "data": note["data"]]
+            if collection == "notes.folder" { result["folder_fingerprint"] = .string(try folderFingerprint(note["data"])) }
+            return .object(result)
+        case "notes.observe":
+            let scriptID = request["script_id"].string
+            let observed = try store.read(nativeID: scriptID).observations.first { $0["scoped_alias"].string == scriptID }
+            var result: [String: JSON] = ["observed": .bool(observed != nil)]
+            if let observed { result["native_key"] = observed["native_key"]; result["data"] = observed["data"] }
+            if !request["native_key"].string.isEmpty, let state = try? store.deletionState(request["native_key"].string, collection: "notes.note") { result["deletion_state"] = .string(state) }
+            return .object(result)
+        case "notes.write":
+            let action: JSON = .object(["op": request["op"], "native_key": request["native_key"], "folder_key": request["folder_key"], "note_args": request["note_args"]])
+            guard Self.operations.contains(action["op"].string) else { throw SourceFailure.unsupported }
+            let performed = try await performNative(action)
+            var failure = JSON.null
+            if let error = performed.renameFailure { failure = .string((error as? SourceFailure).map { String(describing: $0) } ?? "unavailable") }
+            return .object(["script_id": .string(performed.scriptID), "failure": failure])
+        case "notes.reconcile":
+            try await reconcile(into: sink)
+            return .object([:])
+        default:
+            throw SourceFailure.unsupported
+        }
+    }
 }

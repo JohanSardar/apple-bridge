@@ -1000,6 +1000,8 @@ impl Session<'_> {
                 self.calendar_primitive(state, &frame)
             } else if family.starts_with("contacts.") {
                 self.contacts_primitive(state, &frame)
+            } else if family.starts_with("notes.") {
+                self.notes_primitive(state, &frame)
             } else {
                 self.primitive(state, &frame)
             };
