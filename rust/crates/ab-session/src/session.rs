@@ -29,6 +29,7 @@ mod capture;
 mod commands;
 mod contacts;
 mod messages;
+mod messages_advertise;
 #[cfg(feature = "rust-capture")]
 mod messages_cleanup;
 #[cfg(feature = "rust-capture")]
@@ -544,9 +545,10 @@ fn start(
             .encode()
             .map_err(|_| Error::Invalid)?,
     )?;
-    let Ok(Link::Ready(ready)) = native::read_frame(link) else {
+    let Ok(Link::Ready(mut ready)) = native::read_frame(link) else {
         return Err(Error::Invalid);
     };
+    messages_advertise::apply(&mut ready.coverage, &mut ready.capabilities);
     gateway.write_all(&ready.into_ipc().encode().map_err(|_| Error::Invalid)?)?;
     gateway.set_read_timeout(None)?;
     link.set_read_timeout(None)?;
@@ -678,7 +680,10 @@ pub fn serve_attached(
                     Err(_) => return Err(Error::Invalid),
                 };
                 match frame {
-                    Link::SourceState(state) => hub.send_gateway(&state.into_ipc())?,
+                    Link::SourceState(mut state) => {
+                        messages_advertise::apply(&mut state.coverage, &mut state.capabilities);
+                        hub.send_gateway(&state.into_ipc())?;
+                    }
                     Link::Scan(scan) => {
                         let hub = &hub;
                         let source = name(scan.source)?;
