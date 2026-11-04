@@ -287,6 +287,7 @@ fn reconcile_args(_found: &Value, _operation: &str) -> Value {
 pub(super) const DRIVER: Driver = Driver {
     name: "notes",
     prepare,
+    prepare_command: None,
     validate,
     write,
     settle,
