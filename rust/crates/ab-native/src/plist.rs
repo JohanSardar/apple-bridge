@@ -321,15 +321,7 @@ fn resolve(
             if let Some(Value::Data(bytes)) = result.get("NS.uuidbytes")
                 && bytes.len() == 16
             {
-                let hex: String = bytes.iter().map(|byte| format!("{byte:02X}")).collect();
-                return Ok(Value::String(format!(
-                    "{}-{}-{}-{}-{}",
-                    &hex[0..8],
-                    &hex[8..12],
-                    &hex[12..16],
-                    &hex[16..20],
-                    &hex[20..32]
-                )));
+                return Ok(Value::String(crate::reminders_store::uuid_text(bytes)));
             }
             if let (Some(Value::Array(keys)), Some(Value::Array(values))) =
                 (result.get("NS.keys"), result.get("NS.objects"))

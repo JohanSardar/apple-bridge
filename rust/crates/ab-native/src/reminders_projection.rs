@@ -365,11 +365,11 @@ impl Sections {
                     return None;
                 }
             }
-        } else if let Some(pairs) = decoded
-            .as_ref()
-            .and_then(Value::as_array)
-            .filter(|pairs| pairs.len() % 2 == 0)
-        {
+        } else {
+            let pairs = decoded
+                .as_ref()
+                .and_then(Value::as_array)
+                .filter(|pairs| pairs.len() % 2 == 0)?;
             for pair in pairs.chunks(2) {
                 if let Some(reminders) = pair[1].as_array() {
                     if !reminders.iter().all(|reminder| insert(reminder, &pair[0])) {
@@ -379,8 +379,6 @@ impl Sections {
                     return None;
                 }
             }
-        } else {
-            return None;
         }
         Some(Self {
             order: identifiers,
@@ -495,6 +493,7 @@ fn index_number(index: usize) -> f64 {
 }
 
 #[must_use]
+#[allow(clippy::too_many_lines)]
 pub fn reminder(
     row: &ReminderRow,
     snapshot: &Snapshot,
