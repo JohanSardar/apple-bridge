@@ -1,0 +1,52 @@
+{
+  "send": [
+    {"name": "gated_tagged_text_is_allowed", "origin": "gated", "text": "hello [ab-test run-1_a] there", "files": 0, "own": ["+15550100100"], "recipients": ["+15559990000"], "expect": "allow"},
+    {"name": "gated_untagged_text_needs_a_tag", "origin": "gated", "text": "hello", "files": 0, "own": ["+15550100100"], "recipients": ["+15550100100"], "expect": "text_tag_required"},
+    {"name": "tag_without_an_id_is_not_a_tag", "origin": "gated", "text": "[ab-test ]", "files": 0, "own": [], "recipients": [], "expect": "text_tag_required"},
+    {"name": "tag_with_a_space_in_the_id_is_not_a_tag", "origin": "gated", "text": "[ab-test a b]", "files": 0, "own": [], "recipients": [], "expect": "text_tag_required"},
+    {"name": "tag_with_a_symbol_in_the_id_is_not_a_tag", "origin": "gated", "text": "[ab-test a!]", "files": 0, "own": [], "recipients": [], "expect": "text_tag_required"},
+    {"name": "tag_is_case_sensitive", "origin": "gated", "text": "[AB-TEST x]", "files": 0, "own": [], "recipients": [], "expect": "text_tag_required"},
+    {"name": "tag_without_brackets_is_not_a_tag", "origin": "gated", "text": "ab-test x", "files": 0, "own": [], "recipients": [], "expect": "text_tag_required"},
+    {"name": "unterminated_tag_is_not_a_tag", "origin": "gated", "text": "[ab-test x", "files": 0, "own": [], "recipients": [], "expect": "text_tag_required"},
+    {"name": "a_later_valid_tag_counts", "origin": "gated", "text": "[ab-test ] and [ab-test ok]", "files": 0, "own": [], "recipients": [], "expect": "allow"},
+    {"name": "own_recipients_do_not_excuse_a_gated_origin", "origin": "gated", "text": "hello", "files": 0, "own": ["+15550100100"], "recipients": ["+15550100100"], "expect": "text_tag_required"},
+    {"name": "interactive_untagged_text_is_allowed", "origin": "interactive", "text": "hello", "files": 0, "own": null, "recipients": ["+15559990000"], "expect": "allow"},
+    {"name": "owner_self_untagged_to_only_own_handles_is_allowed", "origin": "owner_self", "text": "note to self", "files": 0, "own": ["+15550100100", "me@example.com"], "recipients": ["+15550100100", "me@example.com"], "expect": "allow", "owner_self": true},
+    {"name": "owner_self_untagged_with_one_foreign_recipient_is_refused", "origin": "owner_self", "text": "note", "files": 0, "own": ["+15550100100"], "recipients": ["+15550100100", "+15559990000"], "expect": "text_tag_required"},
+    {"name": "owner_self_untagged_with_no_recipients_is_refused", "origin": "owner_self", "text": "note", "files": 0, "own": ["+15550100100"], "recipients": [], "expect": "text_tag_required"},
+    {"name": "owner_self_untagged_without_known_own_handles_is_refused", "origin": "owner_self", "text": "note", "files": 0, "own": null, "recipients": ["+15550100100"], "expect": "text_tag_required"},
+    {"name": "owner_self_untagged_with_an_empty_own_set_is_refused", "origin": "owner_self", "text": "note", "files": 0, "own": [], "recipients": ["+15550100100"], "expect": "text_tag_required"},
+    {"name": "owner_self_tagged_text_needs_no_own_check", "origin": "owner_self", "text": "[ab-test x] hi", "files": 0, "own": ["+15550100100"], "recipients": ["+15559990000"], "expect": "allow", "owner_self": false},
+    {"name": "owner_self_files_only_needs_no_own_check", "origin": "owner_self", "text": "", "files": 1, "own": null, "recipients": ["+15559990000"], "expect": "allow", "owner_self": false},
+    {"name": "recipient_phone_formatting_is_normalized", "origin": "owner_self", "text": "note", "files": 0, "own": ["+15550100100"], "recipients": ["tel:+1 (555) 010-0100"], "expect": "allow", "owner_self": true},
+    {"name": "recipient_phone_spaces_are_normalized", "origin": "owner_self", "text": "note", "files": 0, "own": ["+15550100100"], "recipients": ["+1555 010 0100"], "expect": "allow", "owner_self": true},
+    {"name": "recipient_email_is_lowercased_and_prefix_stripped", "origin": "owner_self", "text": "note", "files": 0, "own": ["me@example.com"], "recipients": ["mailto:Me@Example.COM"], "expect": "allow", "owner_self": true},
+    {"name": "recipient_service_prefix_is_stripped", "origin": "owner_self", "text": "note", "files": 0, "own": ["+15550100100"], "recipients": ["iMessage:+15550100100"], "expect": "allow", "owner_self": true},
+    {"name": "a_similar_foreign_number_is_foreign", "origin": "owner_self", "text": "note", "files": 0, "own": ["+15550100100"], "recipients": ["+15550100101"], "expect": "text_tag_required"},
+    {"name": "empty_text_and_no_files_is_invalid", "origin": "interactive", "text": "", "files": 0, "own": null, "recipients": ["+15550100100"], "expect": "invalid"},
+    {"name": "empty_text_and_no_files_is_invalid_for_a_gated_origin", "origin": "gated", "text": "", "files": 0, "own": null, "recipients": [], "expect": "invalid"}
+  ],
+  "windows": [
+    {"name": "fresh_imessage_from_me", "service": "iMessage", "is_from_me": true, "is_message": true, "sent_at": 1000, "edits": 0, "exists": true, "checks": [
+      {"kind": "edit", "at": 999, "allowed": false},
+      {"kind": "edit", "at": 1000, "allowed": true},
+      {"kind": "edit", "at": 1899, "allowed": true},
+      {"kind": "edit", "at": 1900, "allowed": false},
+      {"kind": "unsend", "at": 999, "allowed": false},
+      {"kind": "unsend", "at": 1000, "allowed": true},
+      {"kind": "unsend", "at": 1119, "allowed": true},
+      {"kind": "unsend", "at": 1120, "allowed": false}
+    ]},
+    {"name": "edit_limit_reached_closes_edit_but_not_unsend", "service": "iMessage", "is_from_me": true, "is_message": true, "sent_at": 1000, "edits": 5, "exists": true, "checks": [
+      {"kind": "edit", "at": 1001, "allowed": false},
+      {"kind": "unsend", "at": 1001, "allowed": true}
+    ]},
+    {"name": "four_edits_still_allow_one_more", "service": "iMessage", "is_from_me": true, "is_message": true, "sent_at": 1000, "edits": 4, "exists": true, "checks": [
+      {"kind": "edit", "at": 1001, "allowed": true}
+    ]},
+    {"name": "sms_has_no_window", "service": "SMS", "is_from_me": true, "is_message": true, "sent_at": 1000, "edits": 0, "exists": false, "checks": []},
+    {"name": "someone_elses_message_has_no_window", "service": "iMessage", "is_from_me": false, "is_message": true, "sent_at": 1000, "edits": 0, "exists": false, "checks": []},
+    {"name": "a_non_message_row_has_no_window", "service": "iMessage", "is_from_me": true, "is_message": false, "sent_at": 1000, "edits": 0, "exists": false, "checks": []},
+    {"name": "an_unknown_send_time_has_no_window", "service": "iMessage", "is_from_me": true, "is_message": true, "sent_at": null, "edits": 0, "exists": false, "checks": []}
+  ]
+}
