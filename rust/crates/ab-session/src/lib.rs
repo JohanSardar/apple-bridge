@@ -2,6 +2,7 @@
 
 #[cfg(feature = "rust-effects")]
 pub mod effects;
+pub mod flight;
 #[cfg(any(feature = "rust-effects", feature = "rust-capture"))]
 mod frame;
 #[cfg(feature = "rust-effects")]
@@ -16,6 +17,7 @@ pub mod proxy;
 pub mod readers;
 #[cfg(feature = "rust-capture")]
 pub mod routed;
+pub mod session;
 #[cfg(feature = "rust-capture")]
 pub mod store;
 

@@ -322,8 +322,10 @@ dependencies = [
 name = "ab-session"
 version = "0.0.0"
 dependencies = [
+ "ab-domain",
  "ab-native",
  "ab-sys",
+ "ab-wire",
  "base64 0.22.1",
  "jiff",
  "rusqlite",

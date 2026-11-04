@@ -1,5 +1,6 @@
 use crate::{
     Error,
+    flight::{Flight, Flights, Ledger, Refused, rows},
     frame::{MAX_FRAME, read_frame, send, text},
     readers::{BlobServer, CaptureReader, ScanContext},
     store::{Record, Store},
@@ -46,8 +47,9 @@ pub trait Overlay: Sync {
         value: &Value,
         output: &Arc<Mutex<UnixStream>>,
         helper: &Mutex<UnixStream>,
+        ledger: &'scope dyn Ledger,
     ) -> Result<bool, Error>;
-    fn helper(&self, value: &Value, size: usize) -> Result<(), Error>;
+    fn helper(&self, value: &Value) -> Result<(), Error>;
     fn helper_ready(&self, output: &Mutex<UnixStream>) -> Result<(), Error>;
     fn shutdown(&self);
 }
@@ -70,14 +72,10 @@ impl Default for Options {
 }
 
 #[derive(Debug)]
-struct Flight {
-    generation: String,
-    checkpoint: String,
-    bytes: u64,
+struct Origin {
     rust: bool,
     last: bool,
     covers: Covers,
-    keys: Vec<String>,
 }
 
 type Covers = Vec<(String, u64)>;
@@ -89,13 +87,8 @@ struct Shared {
     opened: bool,
     ready: bool,
     closed: bool,
-    credit: u64,
-    total: u64,
-    committed: BTreeMap<String, (String, String)>,
-    flights: BTreeMap<String, Flight>,
+    flights: Flights<Origin>,
     saved: BTreeMap<String, (String, String)>,
-    sequence: u64,
-    observed: BTreeMap<String, (String, u64, bool)>,
     dispatched: BTreeMap<String, u64>,
 }
 
@@ -104,6 +97,37 @@ struct Gate {
     wake: AtomicBool,
     shared: Mutex<Shared>,
     changed: Condvar,
+}
+
+impl Ledger for Gate {
+    fn sequence(&self) -> Result<u64, Error> {
+        Ok(self.lock()?.flights.sequence())
+    }
+
+    fn written(
+        &self,
+        collections: &[&str],
+        key: &str,
+        after: Option<u64>,
+        wait: Duration,
+    ) -> Result<Option<String>, Error> {
+        let deadline = std::time::Instant::now() + wait;
+        let mut shared = self.lock()?;
+        loop {
+            if let Some(checkpoint) = shared.flights.written(collections, key, after) {
+                return Ok(Some(checkpoint));
+            }
+            let now = std::time::Instant::now();
+            if shared.closed || now >= deadline {
+                return Ok(None);
+            }
+            shared = self
+                .changed
+                .wait_timeout(shared, (deadline - now).min(Duration::from_millis(100)))
+                .map_err(|_| Error::WorkerPanicked)?
+                .0;
+        }
+    }
 }
 
 impl Gate {
@@ -174,10 +198,10 @@ fn persist(
         return Ok(());
     };
     let shared = gate.lock()?;
-    if shared.flights.contains_key(source) {
+    if shared.flights.contains(source) {
         return Ok(());
     }
-    let Some((generation, checkpoint)) = shared.committed.get(source).cloned() else {
+    let Some((generation, checkpoint)) = shared.flights.committed(source).cloned() else {
         return Ok(());
     };
     if shared.saved.get(source) == Some(&(checkpoint.clone(), token.clone())) {
@@ -273,40 +297,30 @@ fn ingest(
 fn register(
     gate: &Gate,
     source: &str,
+    value: &Value,
     generation: String,
     checkpoint: String,
     size: u64,
 ) -> Result<(), Error> {
-    let mut shared = gate.lock()?;
-    shared.credit = shared.credit.saturating_sub(size);
-    let flight = Flight {
-        generation,
-        checkpoint,
-        bytes: size,
-        rust: false,
-        last: true,
-        covers: Vec::new(),
-        keys: Vec::new(),
-    };
-    if shared.flights.insert(source.to_owned(), flight).is_some() {
-        return Err(Error::Conflict);
-    }
-    Ok(())
-}
-
-fn capture_keys(capture: &Value) -> Vec<String> {
-    capture["observations"]
-        .as_array()
-        .map(|rows| {
-            rows.iter()
-                .filter_map(|row| row["native_key"].as_str().map(str::to_owned))
-                .collect()
-        })
-        .unwrap_or_default()
+    let observations: &[Value] = value["observations"].as_array().map_or(&[], Vec::as_slice);
+    gate.lock()?.flights.track(
+        source,
+        Flight::new(
+            generation,
+            checkpoint,
+            size,
+            rows(observations),
+            Origin {
+                rust: false,
+                last: true,
+                covers: Vec::new(),
+            },
+        ),
+    )
 }
 
 fn note_dispatch(shared: &mut Shared, value: &Value) {
-    let sequence = shared.sequence;
+    let sequence = shared.flights.sequence();
     if let Some(id) = value["command_id"].as_str() {
         shared.dispatched.insert(id.to_owned(), sequence);
     }
@@ -314,17 +328,6 @@ fn note_dispatch(shared: &mut Shared, value: &Value) {
 
 fn holds_facts(source: &str) -> bool {
     matches!(source, "calendar" | "contacts" | "reminders")
-}
-
-fn note_observed(shared: &mut Shared, source: &str, flight: &Flight) {
-    shared.sequence += 1;
-    let sequence = shared.sequence;
-    for key in &flight.keys {
-        shared.observed.insert(
-            key.clone(),
-            (flight.checkpoint.clone(), sequence, holds_facts(source)),
-        );
-    }
 }
 
 fn bind_outcome(gate: &Gate, value: &mut Value, rejected: bool) -> Result<bool, Error> {
@@ -336,13 +339,14 @@ fn bind_outcome(gate: &Gate, value: &mut Value, rejected: bool) -> Result<bool, 
     let after = value["command_id"]
         .as_str()
         .and_then(|id| shared.dispatched.remove(id))
-        .unwrap_or(shared.sequence);
+        .unwrap_or_else(|| shared.flights.sequence());
     let deadline = std::time::Instant::now() + Duration::from_secs(15);
     loop {
-        if let Some((checkpoint, sequence, facts)) = shared.observed.get(&key)
-            && (rejected || *facts || *sequence > after)
+        if let Some(seen) = shared.flights.latest(&key)
+            && seen.rust
+            && (rejected || seen.facts || seen.sequence > after)
         {
-            value["evidence"]["capture_checkpoint"] = Value::String(checkpoint.clone());
+            value["evidence"]["capture_checkpoint"] = Value::String(seen.checkpoint.clone());
             return Ok(true);
         }
         if shared.closed || std::time::Instant::now() >= deadline {
@@ -392,51 +396,46 @@ fn send_scan(
             format!("{checkpoint}-{index}")
         };
         chunk["checkpoint"] = Value::String(chunk_checkpoint.clone());
-        let predecessor = gate
-            .lock()?
-            .committed
-            .get(source)
-            .filter(|(committed_generation, _)| *committed_generation == generation)
-            .map(|(_, checkpoint)| checkpoint.clone())
-            .unwrap_or_default();
+        let predecessor = gate.lock()?.flights.predecessor(source, &generation);
         chunk["predecessor"] = Value::String(predecessor);
         chunk["t"] = json!("Capture");
         let bytes = frame_bytes(&chunk)?;
         let size = u64::try_from(bytes.len()).map_err(|_| Error::Invalid)?;
+        let observations: &[Value] = chunk["observations"].as_array().map_or(&[], Vec::as_slice);
         let mut shared = gate.lock()?;
-        if size > shared.total {
-            return Err(Error::Invalid);
-        }
-        while shared.credit < size {
-            if shared.closed {
-                return Ok(false);
-            }
-            shared = gate
-                .changed
-                .wait_timeout(shared, Duration::from_millis(100))
-                .map_err(|_| Error::WorkerPanicked)?
-                .0;
-        }
-        shared.credit -= size;
-        shared.flights.insert(
-            source.to_owned(),
-            Flight {
-                generation: generation.clone(),
-                checkpoint: chunk_checkpoint,
-                bytes: size,
-                rust: true,
-                last,
-                covers: if last {
-                    std::mem::take(&mut covers)
-                } else {
-                    Vec::new()
+        loop {
+            let flight = Flight::new(
+                generation.clone(),
+                chunk_checkpoint.clone(),
+                size,
+                rows(observations),
+                Origin {
+                    rust: true,
+                    last,
+                    covers: if last { covers.clone() } else { Vec::new() },
                 },
-                keys: capture_keys(&chunk),
-            },
-        );
+            );
+            match shared.flights.reserve(source, flight) {
+                Ok(()) => break,
+                Err(Refused::TooLarge) => return Err(Error::Invalid),
+                Err(Refused::Busy | Refused::Credit) => {
+                    if shared.closed {
+                        return Ok(false);
+                    }
+                    shared = gate
+                        .changed
+                        .wait_timeout(shared, Duration::from_millis(100))
+                        .map_err(|_| Error::WorkerPanicked)?
+                        .0;
+                }
+            }
+        }
+        if last {
+            covers.clear();
+        }
         drop(shared);
         if let Some(layer) = layer {
-            layer.helper(&chunk, usize::try_from(size).map_err(|_| Error::Invalid)?)?;
+            layer.helper(&chunk)?;
         }
         to_gateway
             .lock()
@@ -490,7 +489,7 @@ fn split(capture: &Value) -> Result<Vec<Value>, Error> {
 
 fn wait_committed(gate: &Gate, source: &str) -> Result<bool, Error> {
     let mut shared = gate.lock()?;
-    while shared.flights.contains_key(source) {
+    while shared.flights.contains(source) {
         if shared.closed {
             return Ok(false);
         }
@@ -526,7 +525,7 @@ fn produce(
     loop {
         let mut again: Vec<&String> = Vec::new();
         for source in &sources {
-            if gate.lock()?.flights.contains_key(source) {
+            if gate.lock()?.flights.contains(source) {
                 continue;
             }
             ordinal += 1;
@@ -575,10 +574,7 @@ fn produce(
         if gate.wake.swap(false, Ordering::SeqCst) {
             continue;
         }
-        if again
-            .iter()
-            .any(|source| !shared.flights.contains_key(*source))
-        {
+        if again.iter().any(|source| !shared.flights.contains(source)) {
             continue;
         }
         let (shared, _) = gate
@@ -663,13 +659,15 @@ fn committed(
     let Some(flight) = shared.flights.get(source) else {
         return Ok(true);
     };
-    if flight.rust
-        && (value["checkpoint"] != flight.checkpoint
-            || value["credit"].as_u64() != Some(flight.bytes))
+    if flight.origin.rust
+        && !flight.matches(
+            value["checkpoint"].as_str().unwrap_or_default(),
+            value["credit"].as_u64(),
+        )
     {
         return Err(Error::Conflict);
     }
-    let (rust, last) = (flight.rust, flight.last);
+    let (rust, last) = (flight.origin.rust, flight.origin.last);
     drop(shared);
     let mut token = None;
     if rust && last {
@@ -677,22 +675,16 @@ fn committed(
         reader.commit()?;
         token = reader.token();
     }
-    let mut shared = gate.lock()?;
-    let flight = shared.flights.remove(source).ok_or(Error::Conflict)?;
-    shared.credit = shared.credit.saturating_add(flight.bytes);
-    shared.committed.insert(
-        source.to_owned(),
-        (flight.generation.clone(), flight.checkpoint.clone()),
-    );
-    if flight.rust {
-        note_observed(&mut shared, source, &flight);
-    }
-    drop(shared);
+    let flight = gate
+        .lock()?
+        .flights
+        .complete(source, rust, holds_facts(source))
+        .ok_or(Error::Conflict)?;
     gate.changed.notify_all();
-    if flight.rust {
-        if flight.last {
+    if rust {
+        if last {
             persist(gate, token, store, source)?;
-            release(to_helper, source, &flight.covers)?;
+            release(to_helper, source, &flight.origin.covers)?;
         }
         return Ok(false);
     }
@@ -723,11 +715,12 @@ fn gateway_frame(
             let mut shared = gate.lock()?;
             let credit = value["byte_credit"].as_u64().unwrap_or(0);
             shared.fence = value["owner_fence"].as_u64().unwrap_or(0);
-            shared.credit = credit;
-            shared.total = credit;
-            if let Some(checkpoints) = value["checkpoints"].as_object() {
-                for (source, checkpoint) in checkpoints {
-                    shared.committed.insert(
+            let committed = value["checkpoints"]
+                .as_object()
+                .into_iter()
+                .flatten()
+                .map(|(source, checkpoint)| {
+                    (
                         source.clone(),
                         (
                             checkpoint["generation"]
@@ -739,17 +732,18 @@ fn gateway_frame(
                                 .unwrap_or_default()
                                 .to_owned(),
                         ),
-                    );
-                }
-            }
+                    )
+                })
+                .collect();
+            shared.flights.open(credit, committed);
             if let Some(store) = store {
                 for source in readers.keys() {
                     let Some(record) = store.load(source) else {
                         continue;
                     };
                     let matches = shared
-                        .committed
-                        .get(source)
+                        .flights
+                        .committed(source)
                         .is_some_and(|(g, c)| *g == record.generation && *c == record.checkpoint);
                     if matches && lock(readers, source)?.resume(&record.token) {
                         shared
@@ -836,7 +830,7 @@ pub fn relay_layered(
             let result = (|| loop {
                 let (bytes, value) = read_frame(&mut gateway_read)?;
                 let layered = match layer {
-                    Some(layer) => layer.gateway(scope, &value, &to_gateway, &to_helper)?,
+                    Some(layer) => layer.gateway(scope, &value, &to_gateway, &to_helper, &gate)?,
                     None => true,
                 };
                 let pass = gateway_frame(
@@ -911,19 +905,19 @@ pub fn relay_layered(
                             )?;
                             continue;
                         }
-                        register(&gate, source, generation, checkpoint, size)?;
+                        register(&gate, source, &value, generation, checkpoint, size)?;
                     }
                     Some("Outcome" | "Rejected") if !rust.is_empty() => {
                         if forward_outcome(&gate, &to_gateway, &mut value)? {
                             if let Some(layer) = layer {
-                                layer.helper(&value, bytes.len())?;
+                                layer.helper(&value)?;
                             }
                             continue;
                         }
                     }
                     Some("Ready") => {
                         if let Some(layer) = layer {
-                            layer.helper(&value, bytes.len())?;
+                            layer.helper(&value)?;
                         }
                         to_gateway
                             .lock()
@@ -939,7 +933,7 @@ pub fn relay_layered(
                     _ => {}
                 }
                 if let Some(layer) = layer {
-                    layer.helper(&value, bytes.len())?;
+                    layer.helper(&value)?;
                 }
                 to_gateway
                     .lock()

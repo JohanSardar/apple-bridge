@@ -204,6 +204,13 @@ fn exit_with_parent() {
     });
 }
 
+fn serve_session(gateway: i32, helper: i32, secret: &str) -> Result<(), Error> {
+    let secret = ab_session::session::load_secret(std::path::Path::new(secret))?;
+    let gateway = ab_sys::inherited_unix_stream(gateway)?;
+    let helper = ab_sys::inherited_unix_stream(helper)?;
+    ab_session::session::serve(gateway, helper, &secret)
+}
+
 fn run() -> Result<(), Error> {
     ab_sys::reset_signals();
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -230,14 +237,22 @@ fn run() -> Result<(), Error> {
     }
     let mut effects_home = None;
     let mut capture_home = None;
+    let mut session_secret = None;
     let mut rest = args[4..].iter();
     while let Some(flag) = rest.next() {
         let value = rest.next().ok_or(Error::Invalid)?;
         match flag.as_str() {
             "--effects-home" if effects_home.is_none() => effects_home = Some(value.clone()),
             "--capture-home" if capture_home.is_none() => capture_home = Some(value.clone()),
+            "--session-secret" if session_secret.is_none() => session_secret = Some(value.clone()),
             _ => return Err(Error::Invalid),
         }
+    }
+    if let Some(secret) = session_secret {
+        if effects_home.is_some() || capture_home.is_some() {
+            return Err(Error::Conflict);
+        }
+        return serve_session(gateway, helper, &secret);
     }
     let mut selection = ab_session::ownership::Selection::default();
     if let Ok(value) = std::env::var("AB_SESSION_PRODUCERS") {
