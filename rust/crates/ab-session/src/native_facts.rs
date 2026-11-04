@@ -17,6 +17,20 @@ const PAGE_LIMIT: u64 = 500;
 const MAX_ITEMS: usize = 100_000;
 const MAX_PAGES: usize = 4_096;
 const IO_TIMEOUT: Duration = Duration::from_secs(60);
+pub const MAX_REVALIDATE: usize = 500;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Disposition {
+    Present,
+    Absent,
+    Evict,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Verdict {
+    pub identity: String,
+    pub disposition: Disposition,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FactSet {
@@ -90,6 +104,34 @@ impl Client {
     }
 
     pub fn fetch(&self, fence: u64, operation: &str) -> Result<FactSet, Error> {
+        self.fetch_with(fence, operation, &json!({}))
+    }
+
+    pub fn fetch_with(&self, fence: u64, operation: &str, args: &Value) -> Result<FactSet, Error> {
+        self.run(fence, |connection| {
+            self.exchange(connection, fence, operation, args)
+        })
+    }
+
+    pub fn revalidate(
+        &self,
+        fence: u64,
+        operation: &str,
+        identities: &[Value],
+    ) -> Result<Vec<Verdict>, Error> {
+        if identities.is_empty() || identities.len() > MAX_REVALIDATE {
+            return Err(Error::Invalid);
+        }
+        self.run(fence, |connection| {
+            self.verdicts(connection, fence, operation, identities)
+        })
+    }
+
+    fn run<T>(
+        &self,
+        fence: u64,
+        exchange: impl FnOnce(&mut Connection) -> Result<T, Failure>,
+    ) -> Result<T, Error> {
         if fence == 0 {
             return Err(Error::Invalid);
         }
@@ -104,14 +146,65 @@ impl Client {
             *guard = Some(Connection { stream, fence: 0 });
         }
         let connection = guard.as_mut().ok_or(Error::Conflict)?;
-        match self.exchange(connection, fence, operation) {
-            Ok(set) => Ok(set),
+        match exchange(connection) {
+            Ok(value) => Ok(value),
             Err(Failure::Remote(code)) => Err(Error::Reader(format!("native/1 {code}"))),
             Err(Failure::Broken(error)) => {
                 *guard = None;
                 Err(error)
             }
         }
+    }
+
+    fn verdicts(
+        &self,
+        connection: &mut Connection,
+        fence: u64,
+        operation: &str,
+        identities: &[Value],
+    ) -> Result<Vec<Verdict>, Failure> {
+        Self::handshake(connection, fence)?;
+        let id = format!("revalidate-{}", self.requests.fetch_add(1, Ordering::SeqCst) + 1);
+        send(
+            &mut connection.stream,
+            &json!({"t":"Revalidate","id":id,"op":operation,"args":{"identities":identities}}),
+        )?;
+        let (_, reply) = read_frame(&mut connection.stream)?;
+        if reply["id"] != json!(id) {
+            return Err(Error::Invalid.into());
+        }
+        match reply["t"].as_str() {
+            Some("Error") => {
+                let code = reply["code"].as_str().unwrap_or("unavailable");
+                return Err(Failure::Remote(code.to_owned()));
+            }
+            Some("Revalidated") if reply["op"] == json!(operation) => {}
+            _ => return Err(Error::Invalid.into()),
+        }
+        let results = reply["results"].as_array().ok_or(Error::Invalid)?;
+        if results.len() != identities.len() {
+            return Err(Error::Invalid.into());
+        }
+        let mut verdicts = Vec::with_capacity(results.len());
+        for (result, asked) in results.iter().zip(identities) {
+            let collection = result["collection"].as_str().ok_or(Error::Invalid)?;
+            let native_key = result["native_key"].as_str().ok_or(Error::Invalid)?;
+            if asked["collection"] != json!(collection) || asked["native_key"] != json!(native_key)
+            {
+                return Err(Error::Invalid.into());
+            }
+            let disposition = match result["disposition"].as_str() {
+                Some("present") => Disposition::Present,
+                Some("absent") => Disposition::Absent,
+                Some("evict") => Disposition::Evict,
+                _ => return Err(Error::Invalid.into()),
+            };
+            verdicts.push(Verdict {
+                identity: format!("{collection}/{native_key}"),
+                disposition,
+            });
+        }
+        Ok(verdicts)
     }
 
     fn handshake(connection: &mut Connection, fence: u64) -> Result<(), Failure> {
@@ -138,6 +231,7 @@ impl Client {
         connection: &mut Connection,
         fence: u64,
         operation: &str,
+        args: &Value,
     ) -> Result<FactSet, Failure> {
         Self::handshake(connection, fence)?;
         let mut snapshot = Value::Null;
@@ -148,7 +242,7 @@ impl Client {
             let id = format!("facts-{}", self.requests.fetch_add(1, Ordering::SeqCst) + 1);
             send(
                 &mut connection.stream,
-                &json!({"t":"Facts","id":id,"op":operation,"args":{},"snapshot":snapshot,"cursor":cursor,"limit":PAGE_LIMIT}),
+                &json!({"t":"Facts","id":id,"op":operation,"args":args,"snapshot":snapshot,"cursor":cursor,"limit":PAGE_LIMIT}),
             )?;
             let (_, page) = read_frame(&mut connection.stream)?;
             if page["id"] != json!(id) {
@@ -229,6 +323,7 @@ pub struct Collected {
 pub struct Pull {
     client: std::sync::Arc<Client>,
     operations: &'static [&'static str],
+    args: Value,
     interval: Duration,
     last: Option<std::time::Instant>,
     hinted: bool,
@@ -245,11 +340,23 @@ impl Pull {
         Self {
             client,
             operations,
+            args: json!({}),
             interval,
             last: None,
             hinted: false,
             pulled: false,
         }
+    }
+
+    #[must_use]
+    pub fn with_args(mut self, args: Value) -> Self {
+        self.args = args;
+        self
+    }
+
+    #[must_use]
+    pub fn client(&self) -> &std::sync::Arc<Client> {
+        &self.client
     }
 
     pub fn hint(&mut self) {
@@ -272,7 +379,7 @@ impl Pull {
         let mut rows = Vec::new();
         let mut handles = serde_json::Map::new();
         for operation in self.operations {
-            let set = self.client.fetch(fence, operation)?;
+            let set = self.client.fetch_with(fence, operation, &self.args)?;
             if !set.complete {
                 return Ok(None);
             }

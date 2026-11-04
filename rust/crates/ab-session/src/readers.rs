@@ -845,7 +845,56 @@ impl AgendaState {
             Self::Contacts(reader) => reader.commit(pending),
         }
     }
+
+    fn unaccounted(&self, rows: &[Value]) -> Vec<Value> {
+        match self {
+            Self::Calendar(reader) | Self::Reminders(reader) => reader.unaccounted(rows),
+            Self::Contacts(reader) => reader.unaccounted(rows),
+        }
+    }
+
+    fn encode(&self) -> Option<String> {
+        match self {
+            Self::Calendar(reader) | Self::Reminders(reader) => serde_json::to_string(reader).ok(),
+            Self::Contacts(reader) => serde_json::to_string(reader).ok(),
+        }
+    }
+
+    fn restore(&mut self, token: &str) -> bool {
+        match self {
+            Self::Calendar(reader) | Self::Reminders(reader) => {
+                match serde_json::from_str::<agenda::Reader>(token) {
+                    Ok(saved) if saved.same_shape(reader) => {
+                        *reader = saved;
+                        true
+                    }
+                    _ => false,
+                }
+            }
+            Self::Contacts(reader) => match serde_json::from_str::<contacts::Reader>(token) {
+                Ok(saved) if saved.same_shape(reader) => {
+                    *reader = saved;
+                    true
+                }
+                _ => false,
+            },
+        }
+    }
 }
+
+fn revalidation_operation(collection: &str) -> Option<&'static str> {
+    Some(match collection {
+        "calendar.calendar" => "agenda.calendars",
+        "calendar.event" => "agenda.events",
+        "reminders.list" => "agenda.reminder_lists",
+        "reminders.reminder" => "agenda.reminders",
+        "contacts.contact" => "contacts.contacts",
+        "contacts.group" => "contacts.groups",
+        _ => return None,
+    })
+}
+
+const REVALIDATE_BYTES: usize = 180_000;
 
 #[derive(Debug)]
 struct Facts {
@@ -865,6 +914,7 @@ pub struct AgendaReader {
     partial: bool,
     pending: Option<agenda::Pending>,
     pull: Option<native_facts::Pull>,
+    owns_diff: bool,
 }
 
 fn identity(row: &Value) -> String {
@@ -911,6 +961,7 @@ impl AgendaReader {
             partial: false,
             pending: None,
             pull: None,
+            owns_diff: false,
         }
     }
 
@@ -924,6 +975,7 @@ impl AgendaReader {
             partial: false,
             pending: None,
             pull: None,
+            owns_diff: false,
         }
     }
 
@@ -937,6 +989,7 @@ impl AgendaReader {
             partial: false,
             pending: None,
             pull: None,
+            owns_diff: false,
         }
     }
 
@@ -953,6 +1006,77 @@ impl AgendaReader {
         };
         self.pull = Some(native_facts::Pull::new(client, operations, interval));
         self
+    }
+
+    #[must_use]
+    pub fn owning_diff(mut self) -> Self {
+        self.pull = self
+            .pull
+            .take()
+            .map(|pull| pull.with_args(json!({"absence": "rust"})));
+        self.owns_diff = self.pull.is_some();
+        self
+    }
+
+    fn revalidate(
+        &self,
+        facts: &Facts,
+        fence: u64,
+    ) -> Result<BTreeMap<String, agenda::Revalidation>, Error> {
+        let mut verdicts = BTreeMap::new();
+        let Some(pull) = self.pull.as_ref() else {
+            return Ok(verdicts);
+        };
+        if self.state.generation() != facts.generation {
+            return Ok(verdicts);
+        }
+        let mut grouped: BTreeMap<&'static str, Vec<Value>> = BTreeMap::new();
+        for previous in self.state.unaccounted(&facts.rows) {
+            let collection = previous["collection"].as_str().unwrap_or_default();
+            let Some(operation) = revalidation_operation(collection) else {
+                continue;
+            };
+            grouped.entry(operation).or_default().push(json!({
+                "collection": previous["collection"],
+                "native_key": previous["native_key"],
+                "scoped_alias": previous["scoped_alias"],
+                "data": previous["data"],
+            }));
+        }
+        for (operation, identities) in grouped {
+            let mut batch: Vec<Value> = Vec::new();
+            let mut bytes = 0;
+            let mut batches = Vec::new();
+            for identity in identities {
+                let size = serde_json::to_vec(&identity)?.len() + 1;
+                if !batch.is_empty()
+                    && (bytes + size > REVALIDATE_BYTES
+                        || batch.len() >= native_facts::MAX_REVALIDATE)
+                {
+                    batches.push(std::mem::take(&mut batch));
+                    bytes = 0;
+                }
+                bytes += size;
+                batch.push(identity);
+            }
+            if !batch.is_empty() {
+                batches.push(batch);
+            }
+            for batch in batches {
+                for verdict in pull.client().revalidate(fence, operation, &batch)? {
+                    let disposition = match verdict.disposition {
+                        native_facts::Disposition::Present => agenda::Revalidation::Present,
+                        native_facts::Disposition::Absent => agenda::Revalidation::Absent,
+                        native_facts::Disposition::Evict if self.source == "calendar" => {
+                            agenda::Revalidation::Evict
+                        }
+                        native_facts::Disposition::Evict => return Err(Error::Invalid),
+                    };
+                    verdicts.insert(verdict.identity, disposition);
+                }
+            }
+        }
+        Ok(verdicts)
     }
 
     fn page(&mut self, context: &ScanContext) -> Result<(), Error> {
@@ -1030,11 +1154,11 @@ impl CaptureReader for AgendaReader {
     }
 
     fn token(&self) -> Option<String> {
-        None
+        self.owns_diff.then(|| self.state.encode()).flatten()
     }
 
-    fn resume(&mut self, _token: &str) -> bool {
-        false
+    fn resume(&mut self, token: &str) -> bool {
+        self.owns_diff && self.state.restore(token)
     }
 
     fn ingest(&mut self, capture: &Value) -> Result<bool, Error> {
@@ -1072,12 +1196,20 @@ impl CaptureReader for AgendaReader {
         let Some(facts) = self.facts.take() else {
             return Ok(None);
         };
-        let present: BTreeSet<String> = facts.rows.iter().map(identity).collect();
-        let revalidated = facts
-            .absences
-            .into_iter()
-            .filter(|(identity, _)| self.state.knows(identity) && !present.contains(identity))
-            .collect();
+        let revalidated = if self.owns_diff {
+            match self.revalidate(&facts, context.fence) {
+                Ok(verdicts) => verdicts,
+                Err(_) => return Ok(None),
+            }
+        } else {
+            let present: BTreeSet<String> = facts.rows.iter().map(identity).collect();
+            facts
+                .absences
+                .iter()
+                .filter(|(identity, _)| self.state.knows(identity) && !present.contains(*identity))
+                .map(|(identity, disposition)| (identity.clone(), *disposition))
+                .collect()
+        };
         let read = capture::Context {
             observed_at: context.observed_at()?,
             checkpoint: context.checkpoint.clone(),
@@ -1133,6 +1265,8 @@ struct SourceConfig {
     facts: Option<FactsLink>,
     #[serde(default = "default_facts_poll")]
     facts_poll_ms: u64,
+    #[serde(default)]
+    revalidate: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1284,9 +1418,16 @@ pub fn from_config_linked(
                     _ => AgendaReader::reminders(config.root),
                 };
                 match linked_client(config.facts.as_ref(), inherited)? {
-                    Some(client) => Box::new(
-                        reader.paged(client, Duration::from_millis(config.facts_poll_ms.max(1))),
-                    ),
+                    Some(client) => {
+                        let paged =
+                            reader.paged(client, Duration::from_millis(config.facts_poll_ms.max(1)));
+                        Box::new(if config.revalidate {
+                            paged.owning_diff()
+                        } else {
+                            paged
+                        })
+                    }
+                    None if config.revalidate => return Err(Error::Invalid),
                     None => Box::new(reader),
                 }
             }
