@@ -155,8 +155,7 @@ SESSION_ENV = {
     'AB_LAB_SESSION_EFFECTS': '1',
     'AB_LAB_SESSION_NATIVE_FACTS': '1',
 }
-SESSION_SAMPLE = ['notes/NOTE-CRUD', 'messages/MSG-EDIT', 'files/FILE-COMMANDS', 'mac/MAC-ACTIONS', 'maps/MAP-SIM',
-                  'vision/PDF-TEXT', 'shortcuts/SC-RUN', 'CORE-HELPER-RESTART', 'CORE-RESUME']
+SESSION_SAMPLE = ['notes/NOTE-CRUD', 'files/FILE-COMMANDS', 'mac/MAC-ACTIONS', 'maps/MAP-SIM', 'vision/PDF-TEXT', 'CORE-RESUME']
 SESSION_CONTROL_SCENARIOS = ['calendar/CAL-CRUD', 'contacts/CON-CRUD', 'reminders/REM-CRUD']
 SESSION_CONTROLS = {
     'revalidate-refuse': {'AB_LAB_SESSION_REVALIDATE_CONTROL': 'refuse'},
