@@ -201,7 +201,9 @@ fn media_source_is_routed(source: &str) -> Fallible<()> {
         SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos()
     ));
     std::fs::create_dir_all(&directory)?;
-    let sources = readers::from_config(&json!({source:{"root":directory}}).to_string())?;
+    let staging = temporary(&format!("{source}-staging"))?;
+    let sources =
+        readers::from_config(&json!({source:{"root":directory,"staging":staging}}).to_string())?;
     let (mut gateway, session_gateway) = UnixStream::pair()?;
     let (mut helper, session_helper) = UnixStream::pair()?;
     for socket in [&gateway, &helper] {
@@ -437,7 +439,8 @@ fn rust_voice_memos_serve_blob_reads_across_restart() -> Fallible<()> {
         .map(|n| u8::try_from(n % 251).unwrap_or(0))
         .collect();
     voice_memo_fixture(&directory, &audio)?;
-    let config = json!({"voice_memos":{"root":directory}}).to_string();
+    let staging = temporary("voice-staging")?;
+    let config = json!({"voice_memos":{"root":directory,"staging":staging}}).to_string();
     let build = || readers::from_config(&config);
 
     let mut first = wire(build()?, polling(None), json!({}))?;
