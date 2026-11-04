@@ -88,7 +88,7 @@ def build_source():
     calendar = CALENDAR.read_text()
     scalar = between(SUPPORT.read_text(), "public enum JSON:", "public enum SourceFailure:")
     contact_changes = between(contacts, "        for key in current.keys.sorted() {", '        trace.record("contacts_compared"')
-    contact_absence = between(contacts, "        if !drop {\n            let groups =", "        var handles = Dictionary")
+    contact_absence = between(contacts, "        if !drop {\n            let groups =", "        let handles = blobHandles()")
     calendar_absence = between(calendar, "        for (identity, previous) in committed.merging(offered", "        guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }\n        gate.trace.record(\"calendar_revalidation\"")
     calendar_events = between(calendar, "        for (identity, observation) in current where observation", "        let captureBytes =")
     calendar_time = TIME.read_text().replace("import SourceSupport", "")

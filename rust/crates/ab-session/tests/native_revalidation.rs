@@ -391,7 +391,7 @@ fn contacts_ask_about_a_missing_container_and_delete_it_only_on_a_missing_verdic
         .filter_map(|request| request["op"].as_str().map(str::to_owned))
         .collect();
     operations.sort();
-    assert_eq!(operations, ["contacts.containers", "contacts.contacts"]);
+    assert_eq!(operations, ["contacts.contacts", "contacts.containers"]);
     Ok(())
 }
 

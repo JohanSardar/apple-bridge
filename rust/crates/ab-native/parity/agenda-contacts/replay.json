@@ -518,7 +518,7 @@
   },
   {
     "source": "contacts",
-    "name": "container-complete-absence",
+    "name": "container-missing-from-snapshot-is-not-absence",
     "snapshot": {
       "generation": "g2",
       "scope": [
@@ -547,6 +547,46 @@
       "observed_at": "2026-11-03T00:00:00.000Z",
       "checkpoint": "checkpoint-7",
       "scan_id": "scan-7"
+    },
+    "drop": false,
+    "token_nil": false,
+    "lookup": {},
+    "expected": [],
+    "expected_data": []
+  },
+  {
+    "source": "contacts",
+    "name": "container-revalidated-absence",
+    "snapshot": {
+      "generation": "g2",
+      "scope": [
+        "contacts.contact",
+        "contacts.group",
+        "contacts.container"
+      ],
+      "complete": true,
+      "records": [
+        {
+          "kind": "upsert",
+          "collection": "contacts.contact",
+          "native_key": "b",
+          "data": {
+            "given_name": "Second",
+            "phones": []
+          },
+          "scoped_alias": "contacts/contacts.contact/b",
+          "observed_at": "2026-11-03T00:00:00.000Z"
+        }
+      ],
+      "revalidated": {
+        "contacts.container/c": "absent"
+      },
+      "force": false
+    },
+    "context": {
+      "observed_at": "2026-11-03T00:00:00.000Z",
+      "checkpoint": "checkpoint-8",
+      "scan_id": "scan-8"
     },
     "drop": false,
     "token_nil": false,
@@ -598,8 +638,8 @@
     },
     "context": {
       "observed_at": "2026-11-03T00:00:00.000Z",
-      "checkpoint": "checkpoint-8",
-      "scan_id": "scan-8"
+      "checkpoint": "checkpoint-9",
+      "scan_id": "scan-9"
     },
     "drop": false,
     "token_nil": false,
@@ -640,8 +680,8 @@
     },
     "context": {
       "observed_at": "2026-11-03T00:00:00.000Z",
-      "checkpoint": "checkpoint-9",
-      "scan_id": "scan-9"
+      "checkpoint": "checkpoint-10",
+      "scan_id": "scan-10"
     },
     "drop": false,
     "token_nil": false,
@@ -720,8 +760,8 @@
     },
     "context": {
       "observed_at": "2026-11-03T00:00:00.000Z",
-      "checkpoint": "checkpoint-10",
-      "scan_id": "scan-10"
+      "checkpoint": "checkpoint-11",
+      "scan_id": "scan-11"
     },
     "drop": false,
     "token_nil": false,
@@ -829,8 +869,8 @@
     },
     "context": {
       "observed_at": "2026-11-03T00:00:00.000Z",
-      "checkpoint": "checkpoint-11",
-      "scan_id": "scan-11"
+      "checkpoint": "checkpoint-12",
+      "scan_id": "scan-12"
     },
     "drop": false,
     "token_nil": false,
@@ -894,8 +934,8 @@
     },
     "context": {
       "observed_at": "2026-11-03T00:00:00.000Z",
-      "checkpoint": "checkpoint-12",
-      "scan_id": "scan-12"
+      "checkpoint": "checkpoint-13",
+      "scan_id": "scan-13"
     },
     "drop": false,
     "token_nil": false,
@@ -976,8 +1016,8 @@
     },
     "context": {
       "observed_at": "2026-11-03T00:00:00.000Z",
-      "checkpoint": "checkpoint-13",
-      "scan_id": "scan-13"
+      "checkpoint": "checkpoint-14",
+      "scan_id": "scan-14"
     },
     "drop": false,
     "token_nil": false,
@@ -1058,8 +1098,8 @@
     },
     "context": {
       "observed_at": "2026-11-03T00:00:00.000Z",
-      "checkpoint": "checkpoint-14",
-      "scan_id": "scan-14"
+      "checkpoint": "checkpoint-15",
+      "scan_id": "scan-15"
     },
     "drop": false,
     "token_nil": false,
@@ -1128,8 +1168,8 @@
     },
     "context": {
       "observed_at": "2026-11-03T00:00:00.000Z",
-      "checkpoint": "checkpoint-15",
-      "scan_id": "scan-15"
+      "checkpoint": "checkpoint-16",
+      "scan_id": "scan-16"
     },
     "drop": false,
     "token_nil": false,
@@ -1193,8 +1233,8 @@
     },
     "context": {
       "observed_at": "2026-11-03T00:00:00.000Z",
-      "checkpoint": "checkpoint-16",
-      "scan_id": "scan-16"
+      "checkpoint": "checkpoint-17",
+      "scan_id": "scan-17"
     },
     "drop": false,
     "token_nil": false,
@@ -1248,8 +1288,8 @@
     },
     "context": {
       "observed_at": "2026-11-03T00:00:00.000Z",
-      "checkpoint": "checkpoint-17",
-      "scan_id": "scan-17"
+      "checkpoint": "checkpoint-18",
+      "scan_id": "scan-18"
     },
     "drop": false,
     "token_nil": false,
@@ -1289,8 +1329,8 @@
     },
     "context": {
       "observed_at": "2026-11-03T00:00:00.000Z",
-      "checkpoint": "checkpoint-18",
-      "scan_id": "scan-18"
+      "checkpoint": "checkpoint-19",
+      "scan_id": "scan-19"
     },
     "drop": false,
     "token_nil": false,
