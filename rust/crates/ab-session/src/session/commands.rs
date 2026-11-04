@@ -1,4 +1,8 @@
-use super::{Hub, rejected, reminders};
+use super::{
+    Hub,
+    owned::{self, Probe, Refusal},
+    rejected,
+};
 use crate::{
     Error,
     guard::{DispatchGuard, PreparedEffect, durable_action},
@@ -148,9 +152,9 @@ fn source_of(operation: &str) -> &str {
     operation.split('.').next().unwrap_or_default()
 }
 
-impl reminders::Probe for Hub {
+impl Probe for Hub {
     fn call(&self, operation: &str, args: &Value) -> Result<Value, String> {
-        let wait = if operation == "reminders.write" {
+        let wait = if matches!(operation, "reminders.write" | "calendar.write") {
             WRITE_WAIT
         } else {
             READ_WAIT
@@ -233,7 +237,10 @@ impl Hub {
             .expected_state
             .as_deref()
             .map_or(Value::Null, parsed);
-        match reminders::prepare(self, &action, &expected) {
+        let Some(driver) = owned::driver(source_of(&command.operation())) else {
+            return Err(Error::Invalid);
+        };
+        match (driver.prepare)(self, &action, &expected) {
             Ok(state) => self.prepared(Prepared {
                 command_id: command.command_id.clone(),
                 native_state: raw(&state)?,
@@ -241,15 +248,24 @@ impl Hub {
                 candidate_ids: Vec::new(),
                 fingerprint: command.request_hash.clone(),
             }),
-            Err(refusal) => self.rejected_by_helper(self.rejection(&command.command_id, &refusal)?),
+            Err(refusal) => self.rejected_by_helper(self.rejection(
+                source_of(&command.operation()),
+                &command.command_id,
+                &refusal,
+            )?),
         }
     }
 
-    fn rejection(&self, command_id: &str, refusal: &reminders::Refusal) -> Result<Rejected, Error> {
+    fn rejection(
+        &self,
+        source: &str,
+        command_id: &str,
+        refusal: &Refusal,
+    ) -> Result<Rejected, Error> {
         let evidence = refusal
             .key
             .as_deref()
-            .map(|key| self.conflict_evidence(key));
+            .map(|key| self.conflict_evidence(source, key));
         let (code, evidence) = match evidence {
             Some(None) => ("unavailable", None),
             Some(Some(found)) => (refusal.code.as_str(), Some(found)),
@@ -263,8 +279,8 @@ impl Hub {
         })
     }
 
-    fn conflict_evidence(&self, key: &str) -> Option<Value> {
-        let reconciled = self.primitive("reminders.reconcile", &json!({}), WRITE_WAIT);
+    fn conflict_evidence(&self, source: &str, key: &str) -> Option<Value> {
+        let reconciled = self.primitive(&format!("{source}.reconcile"), &json!({}), WRITE_WAIT);
         let checkpoint = reconciled
             .ok()
             .and_then(|_| self.bind(key, true, 0).ok().flatten())?;
@@ -344,13 +360,11 @@ impl Hub {
         let operation = evidence["prepared"]["action"]["op"]
             .as_str()
             .unwrap_or_default();
-        let observed = reminders::resolved(self, evidence).filter(|found| {
-            let args = if found["absent"] == true {
-                json!({"absent_key": found["native_key"], "list": operation == "reminders.delete_list"})
-            } else {
-                json!({})
-            };
-            self.primitive("reminders.reconcile", &args, WRITE_WAIT).is_ok()
+        let driver = owned::driver(source_of(operation)).ok_or(Error::Invalid)?;
+        let observed = (driver.resolved)(self, evidence).filter(|found| {
+            let args = (driver.reconcile_args)(found, operation);
+            self.primitive(&format!("{}.reconcile", driver.name), &args, WRITE_WAIT)
+                .is_ok()
         });
         let (disposition, evidence) = match observed {
             Some(found) => ("locally_observed", found),
@@ -368,35 +382,39 @@ impl Hub {
     fn dispatch_owned(&self, command: &Command, state: &Value) -> Result<(), Error> {
         let action = parsed(&command.action);
         let operation = command.operation();
-        if let Err(refusal) = reminders::validate(self, &action, state) {
-            return self.rejected_by_helper(self.rejection(&command.command_id, &refusal)?);
+        let source = source_of(&operation);
+        let driver = owned::driver(source).ok_or(Error::Invalid)?;
+        if let Err(refusal) = (driver.validate)(self, &action, state) {
+            return self.rejected_by_helper(self.rejection(
+                source,
+                &command.command_id,
+                &refusal,
+            )?);
         }
         let prepared = json!({
             "action": durable_action(&action),
             "native_state": state,
             "request_hash": command.request_hash,
         });
-        let (disposition, evidence) = match reminders::write(self, &command.command_id, &action) {
-            Ok(written) if reminders::verified(&operation, &written) => (
-                "locally_observed",
-                json!({
-                    "native_key": written["native_key"],
-                    "fingerprint": command.request_hash,
-                    "observed": true,
-                    "absent": reminders::absent(&operation),
-                    "before": state,
-                    "candidate_ids": state["candidate_ids"],
-                    "prepared": prepared,
-                }),
-            ),
-            Ok(_) => (
-                "indeterminate",
-                json!({"observed": false, "reason": "dispatch_evidence_unavailable", "native_error_code": "unavailable", "prepared": prepared}),
-            ),
-            Err(code) => (
+        let failed = |code: &str| {
+            (
                 "indeterminate",
                 json!({"observed": false, "reason": "dispatch_evidence_unavailable", "native_error_code": code, "prepared": prepared}),
-            ),
+            )
+        };
+        let (disposition, evidence) = match (driver.write)(self, &command.command_id, &action) {
+            Ok(written) => match (driver.settle)(&operation, &written) {
+                Some(settled) => {
+                    let mut fields = settled.evidence;
+                    fields["fingerprint"] = json!(command.request_hash);
+                    fields["before"] = state.clone();
+                    fields["candidate_ids"] = state["candidate_ids"].clone();
+                    fields["prepared"] = prepared.clone();
+                    (settled.disposition, fields)
+                }
+                None => failed("unavailable"),
+            },
+            Err(code) => failed(&code),
         };
         let outcome = Outcome {
             command_id: command.command_id.clone(),

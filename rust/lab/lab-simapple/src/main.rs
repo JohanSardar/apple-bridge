@@ -984,7 +984,11 @@ impl Session<'_> {
     #[allow(clippy::needless_pass_by_value)]
     fn command(&mut self, state: &Shared, frame: Value) -> Result<()> {
         if frame["t"] == "Primitive" {
-            return self.primitive(state, &frame);
+            return if string(&frame, "op").starts_with("calendar.") {
+                self.calendar_primitive(state, &frame)
+            } else {
+                self.primitive(state, &frame)
+            };
         }
         let command = string(&frame, "command_id");
         if matches!(frame["t"].as_str(), Some("Prepare" | "Dispatch")) {

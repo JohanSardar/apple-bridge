@@ -796,3 +796,146 @@ fn apply(s: &mut State, mut plan: Plan, op: &str) -> Result<String> {
     }
     Ok(plan.native)
 }
+
+impl Session<'_> {
+    pub(super) fn calendar_primitive(&mut self, state: &Shared, frame: &Value) -> Result<()> {
+        let id = frame["id"].clone();
+        let answer = self.calendar_answer(state, &frame["args"], &string(frame, "op"));
+        match answer {
+            Ok(result) => send(
+                &mut self.stream,
+                &json!({"t":"PrimitiveResult","id":id,"result":result}),
+            )?,
+            Err(code) => send(
+                &mut self.stream,
+                &json!({"t":"PrimitiveError","id":id,"code":code}),
+            )?,
+        };
+        Ok(())
+    }
+
+    fn calendar_answer(
+        &mut self,
+        state: &Shared,
+        args: &Value,
+        op: &str,
+    ) -> std::result::Result<Value, &'static str> {
+        let fail = |_| "unavailable";
+        let key = string(args, "native_key");
+        let s = lock(state).map_err(fail)?;
+        if s.denied.get("calendar") == Some(&true) {
+            return Err("permission_missing");
+        }
+        match op {
+            "calendar.read_event" => {
+                let record = &s.data["records"][&key];
+                if key.is_empty()
+                    || record["collection"] != "calendar.event"
+                    || record["kind"] == "absent"
+                {
+                    return Ok(json!({"exists":false,"known_absent":true}));
+                }
+                let data = record["data"].clone();
+                let list = string(&data["calendar_id"]["$ref"], "native_key");
+                Ok(
+                    json!({"exists":true,"writable":writable(&s.data["records"][&list]),"calendar_key":list,"all_day":data["all_day"]==true,"data":data,"native_result":data}),
+                )
+            }
+            "calendar.read_calendar" => {
+                let record = &s.data["records"][&key];
+                if key.is_empty()
+                    || record["collection"] != "calendar.calendar"
+                    || record["kind"] == "absent"
+                {
+                    return Ok(json!({"exists":false}));
+                }
+                Ok(json!({"exists":true,"writable":writable(record),"data":record["data"]}))
+            }
+            "calendar.can_create_calendar" => Ok(json!({"allowed":true})),
+            "calendar.goal" => {
+                let request = &args["calendar_args"];
+                let goal = if request["recurrence"].is_null() {
+                    json!({})
+                } else {
+                    json!({"recurrence":request["recurrence"]})
+                };
+                Ok(json!({"goal":goal,"all_day":false}))
+            }
+            "calendar.reconcile" => {
+                let absent = string(args, "absent_key");
+                let capture = if absent.is_empty() || s.data["records"][&absent]["kind"] != "absent"
+                {
+                    s.scan("calendar").map_err(fail)?
+                } else {
+                    json!({"t":"Capture","source":"calendar","observations":[s.data["records"][&absent].clone()],"scan_id":id("scan").map_err(fail)?,"scope":["calendar.calendar","calendar.event"],"scan_started_at":now(),"completion_evidence":"complete"})
+                };
+                drop(s);
+                self.emit(state, capture).map_err(fail)?;
+                Ok(json!({}))
+            }
+            "calendar.write"
+                if std::env::var("AB_LAB_PRIMITIVE_CONTROL").as_deref() == Ok("refuse") =>
+            {
+                Err("unavailable")
+            }
+            "calendar.write" => {
+                drop(s);
+                self.calendar_write(state, args)
+            }
+            _ => Err("unsupported"),
+        }
+    }
+
+    fn calendar_write(
+        &mut self,
+        state: &Shared,
+        args: &Value,
+    ) -> std::result::Result<Value, &'static str> {
+        let fail = |_| "unavailable";
+        let action = json!({"op":args["op"],"native_key":args["native_key"],"list_key":args["list_key"],"calendar_args":args["calendar_args"]});
+        let op = string(args, "op");
+        let command = string(args, "command_id");
+        let mut s = lock(state).map_err(fail)?;
+        let plan = Plan::new(&action, &op).map_err(fail)?;
+        let native = apply(&mut s, plan, &op).map_err(fail)?;
+        if !command.is_empty() {
+            let count = s.data["effects"][&command].as_u64().unwrap_or_default() + 1;
+            s.data["effects"][&command] = json!(count);
+        }
+        s.save().map_err(fail)?;
+        let capture = s.scan("calendar").map_err(fail)?;
+        let primary = s.data["records"][&native].clone();
+        let actual = primary["data"].clone();
+        drop(s);
+        let large = capture["observations"]
+            .as_array()
+            .is_some_and(|items| items.len() > 64);
+        self.emit(state, capture).map_err(fail)?;
+        if large {
+            self.emit(
+                state,
+                json!({"t":"Capture","source":"calendar","observations":[primary],"scan_id":id("scan").map_err(fail)?,"scope":["calendar.calendar","calendar.event"],"scan_started_at":now(),"completion_evidence":"complete"}),
+            )
+            .map_err(fail)?;
+        }
+        let request = &action["calendar_args"];
+        if op.ends_with("delete_event") {
+            return Ok(json!({"native_key":native,"exists_after":false}));
+        }
+        if op == "calendar.create_calendar" {
+            return Ok(
+                json!({"native_key":native,"saved_title":request["title"],"observed_title":actual["title"],"actual":actual,"exists_after":true}),
+            );
+        }
+        let goal = if request["recurrence"].is_null() {
+            json!({})
+        } else if rules_match(&actual["recurrence"], &request["recurrence"]) {
+            json!({"recurrence":actual["recurrence"]})
+        } else {
+            json!({"recurrence":request["recurrence"]})
+        };
+        Ok(
+            json!({"native_key":native,"goal":goal,"all_day":false,"actual":actual,"exists_after":true}),
+        )
+    }
+}

@@ -10,7 +10,7 @@ workspace = true
 [features]
 default = []
 lab = []
-rust-effects = ["dep:sha2", "dep:jiff", "rust-capture"]
+rust-effects = ["dep:sha2", "rust-capture"]
 rust-capture = ["dep:ab-native", "dep:sha2", "dep:base64"]
 
 [dependencies]
@@ -23,7 +23,7 @@ thiserror.workspace = true
 
 sha2 = { workspace = true, optional = true }
 base64 = { version = "=0.22.1", optional = true }
-jiff = { workspace = true, optional = true }
+jiff.workspace = true
 
 [dev-dependencies]
 rusqlite.workspace = true
