@@ -13,7 +13,8 @@ use lab_world::{Error, Result, World};
 use serde_json::{Value, json};
 use std::time::{Duration, Instant};
 
-pub const COMMAND_SCENARIOS: [&str; 16] = [
+pub const COMMAND_SCENARIOS: [&str; 17] = [
+    "CORE-FORGED-DELEGATION",
     "CORE-REST-MCP-PARITY",
     "CORE-LOCALHOST-DEFENSE",
     "CORE-CMD-IDEMPOTENT",
@@ -239,6 +240,14 @@ fn run_scenario(
         "CORE-CMD-IDEMPOTENT" => idempotent(world, gateway, list_id, evidence),
         other if crate::reminders::SCENARIOS.contains(&other) => {
             crate::reminders::run(world, gateway, list_id, reminder, evidence)
+        }
+        "CORE-FORGED-DELEGATION" => {
+            evidence.check(
+                "forged_delegation_rejected",
+                crate::core_delegation::run(world, list_id),
+                "a delegation beyond the delegable set is refused before any effect",
+            );
+            Ok(())
         }
         "CORE-REST-MCP-PARITY" => crate::frontdoor::parity(world, gateway, list_id, evidence),
         "CORE-LOCALHOST-DEFENSE" => crate::frontdoor::localhost(world, gateway, list_id, evidence),

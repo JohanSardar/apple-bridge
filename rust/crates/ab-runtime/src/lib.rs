@@ -195,8 +195,17 @@ impl ab_frontdoor::Audit for AuditLog {
         let mut bytes =
             serde_json::to_vec(&entry).map_err(|_| OperationError::from(Code::Corrupt))?;
         bytes.push(b'\n');
-        file.write_all(&bytes)
-            .map_err(|_| OperationError::from(Code::Unavailable))
+        match file.write_all(&bytes) {
+            Ok(()) => Ok(()),
+            Err(error) if error.raw_os_error() == Some(28) => {
+                eprintln!(
+                    "{}",
+                    serde_json::json!({"stage":"frontdoor_audit_deferred","reason":"capacity"})
+                );
+                Ok(())
+            }
+            Err(_) => Err(OperationError::from(Code::Unavailable)),
+        }
     }
 }
 pub fn default_home() -> Result<PathBuf, Error> {

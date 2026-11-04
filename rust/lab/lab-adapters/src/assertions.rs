@@ -249,7 +249,7 @@ impl Observed {
     }
 }
 pub fn truth_matches(world: &World, observed: &Observed) -> bool {
-    let Ok(truth) = world.control("/inspect", &Value::Null) else {
+    let Ok(truth) = world.control_for("/inspect", &Value::Null, 120) else {
         return false;
     };
     let (Ok(gateway), Ok(aliases)) = (
@@ -451,7 +451,7 @@ pub fn scoped_clients(
     Ok(out)
 }
 pub fn false_deletion_free(world: &World, observed: &Observed, watcher: &Watcher) -> bool {
-    let Ok(truth) = world.control("/inspect", &Value::Null) else {
+    let Ok(truth) = world.control_for("/inspect", &Value::Null, 120) else {
         return false;
     };
     let Ok(aliases) = gateway_aliases(&observed.gateway) else {

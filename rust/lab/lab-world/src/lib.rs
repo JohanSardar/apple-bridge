@@ -363,14 +363,14 @@ impl World {
         Ok(value)
     }
     pub fn install_proxy(&mut self) -> Result<()> {
-        let target = self.runtime["peer_address"]
-            .as_str()
-            .ok_or_else(|| Error::Invalid("runtime peer address".into()))?
-            .to_owned();
+        let target = self.peer_address()?;
+        self.install_proxy_to(&target)
+    }
+    pub fn install_proxy_to(&mut self, target: &str) -> Result<()> {
         if let Some(old) = self.proxy.take() {
             old.close();
         }
-        self.proxy = Some(FaultProxy::start(&target)?);
+        self.proxy = Some(FaultProxy::start(target)?);
         Ok(())
     }
     pub fn retarget_proxy(&self, target: Option<&str>) -> Result<()> {
@@ -389,6 +389,12 @@ impl World {
             .as_str()
             .map(str::to_owned)
             .ok_or_else(|| Error::Invalid("runtime peer address".into()))
+    }
+    pub fn proxy_address(&self) -> Result<String> {
+        self.proxy
+            .as_ref()
+            .map(|proxy| proxy.address().to_owned())
+            .ok_or_else(|| Error::Invalid("no fault proxy".into()))
     }
     pub fn pair_address(&self) -> Result<String> {
         if let Some(proxy) = &self.proxy {
@@ -472,6 +478,10 @@ impl World {
     pub fn stop_gateway(&mut self) {
         stop(&mut self.gateway);
         let _ = fs::remove_file(self.gateway_home.join("runtime.json"));
+    }
+    #[must_use]
+    pub fn gateway_pid(&self) -> Option<u32> {
+        self.gateway.as_ref().map(Child::id)
     }
     pub fn stop_helper(&mut self) {
         stop(&mut self.peer);

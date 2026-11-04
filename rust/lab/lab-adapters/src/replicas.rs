@@ -10,10 +10,11 @@ use std::{
     time::{Duration, Instant},
 };
 
-const SCOPE: &str = "reminders:read,reminders:write,system:read";
+pub(crate) const SCOPE: &str = "reminders:read,reminders:write,system:read";
 static GATEWAY: OnceLock<PathBuf> = OnceLock::new();
 static CHILDREN: Mutex<Vec<Child>> = Mutex::new(Vec::new());
 static ENDPOINTS: Mutex<Vec<Endpoint>> = Mutex::new(Vec::new());
+static PAIR: Mutex<Option<String>> = Mutex::new(None);
 
 #[derive(Debug, Clone)]
 pub struct Endpoint {
@@ -77,7 +78,10 @@ pub fn start_with_args(
     wait_connected(15)
 }
 pub fn spawn(world: &World, scope: &str, cap: u64, extra: &[String]) -> Result<usize> {
-    let peer = world.pair_address()?;
+    let peer = match lock(&PAIR).clone() {
+        Some(address) => address,
+        None => world.pair_address()?,
+    };
     let index = lock(&ENDPOINTS).len();
     let home = world.directory.join(format!("replica{index}"));
     let name = format!("replica{index}");
@@ -204,7 +208,7 @@ pub fn identity(index: usize) -> Result<String> {
         .map(str::to_owned)
         .ok_or_else(|| Error::Invalid("replica identity".into()))
 }
-fn await_runtime(home: &Path) -> Result<String> {
+pub(crate) fn await_runtime(home: &Path) -> Result<String> {
     let deadline = Instant::now() + Duration::from_secs(20);
     loop {
         if let Ok(bytes) = fs::read(home.join("runtime.json"))
@@ -229,7 +233,19 @@ pub fn status(endpoint: &Endpoint) -> Result<Value> {
         .call("sources.status", &json!({}), 10)?
         .ok_or_else(|| Error::Invalid("replica status rejected".into()))
 }
+pub(crate) fn pair_through(address: Option<String>) {
+    *lock(&PAIR) = address;
+}
+pub(crate) fn adopt(child: Child, endpoint: Endpoint) {
+    lock(&CHILDREN).push(child);
+    lock(&ENDPOINTS).push(endpoint);
+}
+pub(crate) fn pid(index: usize) -> Option<u32> {
+    lock(&CHILDREN).get(index).map(Child::id)
+}
 pub fn stop_all() {
+    crate::core_frames::shutdown();
+    pair_through(None);
     lock(&ENDPOINTS).clear();
     for mut child in lock(&CHILDREN).drain(..) {
         let _ = child.kill();

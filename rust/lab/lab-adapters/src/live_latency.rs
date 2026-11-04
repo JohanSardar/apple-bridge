@@ -123,6 +123,9 @@ fn calendar_delta(
 }
 
 pub fn changes(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result<()> {
+    if evidence.scenario == "CORE-GATEWAY-DIALS" {
+        return crate::core_dials::changes(world, input, evidence);
+    }
     if evidence.scenario != "CORE-LIVE-LATENCY" {
         return Err(Error::Invalid(format!(
             "changes not ported for {}",

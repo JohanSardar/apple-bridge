@@ -548,9 +548,12 @@ fn no_digest_auth(context: &mut Context, digest: &str, record: &str) -> Result<b
     Ok(true)
 }
 
-fn native_stage(world: &mut World, evidence: &mut Evidence, gateway: &Client, id: &str) {
-    let same = id == "CORE-BLOB-STAGE-SAME-DIGEST";
-    evidence.check("isolated_world_ready", true, "world ready");
+fn concurrent_transfer(
+    world: &mut World,
+    evidence: &mut Evidence,
+    gateway: &Client,
+    same: bool,
+) -> bool {
     let size: u64 = if same { 172_032 } else { 4 << 20 };
     let mut input = json!({"size":size,"slow_ms":1000});
     if same {
@@ -559,7 +562,7 @@ fn native_stage(world: &mut World, evidence: &mut Evidence, gateway: &Client, id
     let sent = world.control("/blob-fixture", &input).is_ok();
     evidence.check("slow_native_blob_fixture", sent, "slow fixture");
     if !sent {
-        return;
+        return false;
     }
     let transferring = await_until(10, || {
         progress(gateway)
@@ -573,7 +576,13 @@ fn native_stage(world: &mut World, evidence: &mut Evidence, gateway: &Client, id
             })
     });
     evidence.check("native_transfer_in_progress", transferring, "pending entry");
-    if !transferring {
+    transferring
+}
+
+pub(crate) fn native_stage(world: &mut World, evidence: &mut Evidence, gateway: &Client, id: &str) {
+    let same = id == "CORE-BLOB-STAGE-SAME-DIGEST";
+    evidence.check("isolated_world_ready", true, "world ready");
+    if id != "CORE-BLOB-NATIVE-STAGE" && !concurrent_transfer(world, evidence, gateway, same) {
         return;
     }
     let staged = world.blob_control(&json!({"action":"relay-fixture"}));

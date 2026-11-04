@@ -14,7 +14,11 @@ pub mod consent;
 pub mod contacts;
 pub mod contacts_list;
 pub mod core;
+pub mod core_bulk;
+pub mod core_delegation;
 pub mod core_demo;
+pub mod core_dials;
+pub mod core_frames;
 pub mod core_journey;
 pub mod core_robust;
 pub mod demo;
@@ -189,6 +193,8 @@ pub fn registry() -> Registry {
             query_replica::start_world(world, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && capture_atomic::SCENARIOS.contains(&id) {
             capture_atomic::start_world(world, usize::try_from(replicas).unwrap_or(0))?;
+        } else if replicas != 0 && core_bulk::SCENARIOS.contains(&id) {
+            core_bulk::start_world(world, id, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && robust::SCENARIOS.contains(&id) {
             robust::start(world, id, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && contacts_list::SCENARIOS.contains(&id) {
