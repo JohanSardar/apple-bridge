@@ -58,8 +58,8 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(row['status'], 'no-runner')
             self.assertEqual(row['reason'], 'no agent runner')
 
-    def test_no_runner_table_names_the_four_scenarios(self):
-        self.assertEqual(sorted(runner.load_no_runner()), ['AGENT-SUITE', 'QUERY-AGENT', 'RMT-ONECOMMAND-FLOW', 'RMT-TS-EMBEDDED'])
+    def test_no_runner_table_names_its_scenarios(self):
+        self.assertEqual(sorted(runner.load_no_runner()), ['AGENT-SUITE', 'CORE-SEARCH-UPDATE-PERF', 'QUERY-AGENT', 'RMT-ONECOMMAND-FLOW', 'RMT-TS-EMBEDDED'])
 
     def test_native_start_handshake(self):
         with tempfile.TemporaryDirectory() as directory:

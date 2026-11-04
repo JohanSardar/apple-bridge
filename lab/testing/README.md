@@ -8,7 +8,7 @@
 
 `make sim` runs the default set, which excludes `run-at-end` entries. Run those serially with `make sim-run-at-end SIM_OUTPUT=/absolute/new/end-directory` on each host. Explicit selectors may run either set. `SIM_JOBS`, `SIM_TIMEOUT`, `SIM_SELECT`, `SIM_OUTPUT` and `RUST_BRIDGE` are the overrides.
 
-`lab/no-runner.json` lists scenarios that no runner executes (`AGENT-SUITE`, `QUERY-AGENT`, `RMT-ONECOMMAND-FLOW`, `RMT-TS-EMBEDDED`), each with the reason. `sim_parallel.py` and `rust-lab.sh` report them as `no-runner` with that reason and do not count them as failures. The agent level has no runner: `make agent` names them and exits 1.
+`lab/no-runner.json` lists scenarios that no runner executes (`AGENT-SUITE`, `QUERY-AGENT`, `RMT-ONECOMMAND-FLOW`, `RMT-TS-EMBEDDED`, and `CORE-SEARCH-UPDATE-PERF`, which moved to `make rust-search-perf`), each with the reason. `sim_parallel.py` and `rust-lab.sh` report them as `no-runner` with that reason and do not count them as failures. The agent level has no runner: `make agent` names them and exits 1.
 
 The gateway matrix runs on Linux only (`make gateway-matrix` on `ssh build`). Set `APPLE_BRIDGE_LAB_ROOT` to a private disk-backed directory when `/tmp` has a quota. Worlds use that root; the default is `/tmp/ablab`. Logs and summaries use `SIM_OUTPUT` independently.
 
