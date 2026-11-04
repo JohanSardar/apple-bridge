@@ -135,11 +135,7 @@ fn notes_session_source() -> bool {
             .any(|source| source.trim() == "notes")
 }
 
-fn notes_data(
-    action: &Value,
-    op: &str,
-    mut data: Value,
-) -> Result<(&'static str, Value)> {
+fn notes_data(action: &Value, op: &str, mut data: Value) -> Result<(&'static str, Value)> {
     let args = &action["note_args"];
     let mut collection = "notes.note";
     let title = string(args, "title");
@@ -257,7 +253,6 @@ impl Session<'_> {
         }
         let action = &ticket.prepare["action"];
         let op = string(action, "op");
-        let args = &action["note_args"];
         let mut key = string(action, "native_key");
         let mut s = lock(state)?;
         if !key.is_empty() && s.data["records"][&key]["data"] != ticket.before {
@@ -333,14 +328,15 @@ impl Session<'_> {
                 {
                     return Ok(json!({"exists":false}));
                 }
-                let digest = hex::encode(sha2::Sha256::digest(record["data"].to_string()));
+                let digest = hex::encode(<sha2::Sha256 as sha2::Digest>::digest(record["data"].to_string()));
                 Ok(json!({"exists":true,"data":record["data"],"folder_fingerprint":digest}))
             }
             "notes.observe" => {
                 let target = string(args, "script_id");
                 let record = &s.data["records"][&target];
                 let live = !record.is_null() && record["kind"] != "absent";
-                let mut result = json!({"observed":live,"deletion_state":if live { "active" } else { "gone" }});
+                let mut result =
+                    json!({"observed":live,"deletion_state":if live { "active" } else { "gone" }});
                 if live {
                     result["native_key"] = json!(target);
                     result["data"] = record["data"].clone();
@@ -387,4 +383,3 @@ impl Session<'_> {
         }
     }
 }
-
