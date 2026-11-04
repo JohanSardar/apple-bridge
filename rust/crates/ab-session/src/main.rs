@@ -289,6 +289,7 @@ fn serve_session(
     home: &str,
     rust_commands: Option<&str>,
 ) -> Result<(), Error> {
+    keep_log(std::path::Path::new(home));
     let secret = ab_session::session::load_secret(std::path::Path::new(secret))?;
     let gateway = ab_sys::inherited_unix_stream(gateway)?;
     let helper = ab_sys::inherited_unix_stream(helper)?;
@@ -340,6 +341,7 @@ const LOG_LIMIT: u64 = 4 << 20;
 
 fn keep_log(home: &std::path::Path) {
     use std::os::unix::fs::OpenOptionsExt;
+    let _ = std::fs::create_dir_all(home.join("session"));
     let path = home.join("session").join("ab-session.log");
     if std::fs::metadata(&path).is_ok_and(|meta| meta.len() > LOG_LIMIT) {
         let _ = std::fs::remove_file(&path);
