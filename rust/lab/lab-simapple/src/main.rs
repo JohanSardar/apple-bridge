@@ -329,7 +329,7 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
         "/effects" => Ok(s.data["effects"].clone()),
         "/command-origins" => Ok(s.data["origins"].clone()),
         "/stats" => Ok(
-            json!({"blob_digests":blobs::digests(&s.blob),"scans":s.progress["scans"],"source_scans":s.progress["source_scans"],"revision":s.data["revision"],"committed":s.progress["committed"]}),
+            json!({"blob_digests":blobs::digests(&s.blob),"scans":s.progress["scans"],"source_scans":s.progress["source_scans"],"revision":s.data["revision"],"committed":s.progress["committed"],"checkpoints":s.progress["checkpoints"]}),
         ),
         "/fault" => {
             let name = string(&input, "name");
@@ -344,6 +344,7 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
                     "ui-interference",
                     "ui-interference-before",
                     "calendar-rule-mismatch",
+                    "calendar-part-delay",
                     "external-move-before-prepare",
                     "external-edit-between-prepare-and-dispatch",
                 ]
@@ -391,9 +392,15 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
             ));
             let collection = input["collection"].as_str().unwrap_or("reminders.reminder");
             let src = source(collection).to_owned();
-            for _ in 0..input["count"].as_u64().unwrap_or_default() {
+            for index in 0..input["count"].as_u64().unwrap_or_default() {
                 let key = id("seed")?;
-                s.put(observation(collection,&key,json!({"title":format!("[ab-test] {key}"),"completed":false,"opaque_number":9_007_199_254_740_993_u64,"list_id":{"$ref":{"collection":"reminders.list","native_key":"list"}}})));
+                let data = if collection == "messages.message" {
+                    let needle = if index % 1000 == 0 { " needle" } else { "" };
+                    json!({"title":format!("[ab-test] {key}"),"text":format!("[ab-test] synthetic message {index} benchmark{needle}"),"optional_future":{"counter":9_007_199_254_740_993_u64}})
+                } else {
+                    json!({"title":format!("[ab-test] {key}"),"completed":false,"opaque_number":9_007_199_254_740_993_u64,"list_id":{"$ref":{"collection":"reminders.list","native_key":"list"}}})
+                };
+                s.put(observation(collection, &key, data));
             }
             s.save()?;
             let frame = s.scan(&src)?;
@@ -528,6 +535,11 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
                     format!("{collection}/{key}")
                 });
                 sources::dataset_alias(&mut record);
+                if source(&collection) == "messages" {
+                    let mut data = record["data"].clone();
+                    messages_commands::facts(&s.data["records"], &collection, &mut data);
+                    record["data"] = data;
+                }
                 s.put(record);
             }
             s.save()?;
@@ -641,14 +653,43 @@ impl Session<'_> {
         if let Some(observations) = frame["observations"].as_array_mut() {
             observations.sort_by_key(|record| record["kind"] == "absent");
         }
-        let Some(observations) = frame["observations"].as_array().filter(|v| v.len() > 64) else {
+        let calendar = frame["source"] == "calendar";
+        let Some(observations) = frame["observations"]
+            .as_array()
+            .filter(|v| calendar || v.len() > 64)
+        else {
             return self.emit_part(state, frame);
         };
-        for (index, chunk) in observations.chunks(64).enumerate() {
+        let mut bare = frame.clone();
+        bare["observations"] = json!([]);
+        let chunks: Vec<Vec<Value>> = if calendar {
+            let budget =
+                lab_wire::MAX_FRAME.saturating_sub(serde_json::to_vec(&bare)?.len() + 1024);
+            let mut chunks: Vec<Vec<Value>> = vec![vec![]];
+            let mut used = 0;
+            for record in observations {
+                let size = serde_json::to_vec(record)?.len() + 1;
+                if used + size > budget && !chunks[chunks.len() - 1].is_empty() {
+                    chunks.push(vec![]);
+                    used = 0;
+                }
+                used += size;
+                let last = chunks.len() - 1;
+                chunks[last].push(record.clone());
+            }
+            chunks
+        } else {
+            observations.chunks(64).map(<[Value]>::to_vec).collect()
+        };
+        if chunks.len() == 1 {
+            return self.emit_part(state, frame);
+        }
+        let total = chunks.len();
+        for (index, chunk) in chunks.iter().enumerate() {
             self.hold_bulk(state, &frame, chunk)?;
-            let mut part = frame.clone();
+            let mut part = bare.clone();
             part["observations"] = json!(chunk);
-            if (index + 1) * 64 < observations.len()
+            if index + 1 < total
                 && chunk
                     .last()
                     .is_some_and(|record| record["kind"] != "absent")
@@ -658,6 +699,19 @@ impl Session<'_> {
                     .remove("completion_evidence");
             }
             self.emit_part(state, part)?;
+            if calendar && index + 1 < total {
+                let delay = {
+                    let mut s = lock(state)?;
+                    let armed = s.fault == "calendar-part-delay";
+                    if armed {
+                        s.fault.clear();
+                    }
+                    armed
+                };
+                if delay {
+                    thread::sleep(Duration::from_millis(250));
+                }
+            }
         }
         Ok(())
     }

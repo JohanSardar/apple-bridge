@@ -293,6 +293,10 @@ impl Watcher {
         lock(&self.state).last.clone()
     }
     #[must_use]
+    pub fn timed_changes(&self) -> Vec<(Value, Instant)> {
+        lock(&self.state).changes.clone()
+    }
+    #[must_use]
     pub fn resets(&self) -> usize {
         lock(&self.state).resets
     }

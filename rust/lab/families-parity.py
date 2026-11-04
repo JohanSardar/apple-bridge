@@ -122,6 +122,8 @@ SCENARIOS += ['CORE-SIM-PROGRESS-RECOVERY', 'CORE-SNAPSHOT-POOL']
 MOVED_TO_RUST_TESTS = {
     'core/CORE-SEARCH-UPDATE-PERF': 'drives the Go state store in-process; the Rust runner has no store access. Ported to rust/crates/ab-state/tests/search_update_perf.rs (make rust-search-perf). Speed numbers are recorded, not enforced. The Go assertions search_unavailable_during_rebuild, search_rest_preparing_is_retryable_error_not_empty, search_mcp_preparing_is_retryable_error_not_empty and restart_resumes_pending_rebuild have no Rust equivalent because ab-state rebuilds the search index inside open() instead of in a background migration.',
 }
+CAPTURE_SCENARIOS = ['CORE-REPLICA-CAPTURE-ATOMIC', 'CORE-LIVE-LATENCY', 'CORE-MESSAGES-SHAPE']
+BENCH_SCENARIOS = ['CORE-READMODEL-UPDATE-PERF']
 
 
 def ignored(scenario, name):
@@ -215,6 +217,8 @@ def main():
     parser.add_argument('--helper', action='store_true')
     parser.add_argument('--web', dest='web', action='store_true')
     parser.add_argument('--native-media', dest='native_media', action='store_true')
+    parser.add_argument('--bench', action='store_true')
+    parser.add_argument('--core-capture', dest='core_capture', action='store_true')
     parser.add_argument('--calendar', dest='calendar', action='store_true')
     parser.add_argument('--calendar-native', dest='calendar_native', action='store_true')
     parser.add_argument('--vision', action='store_true')
@@ -280,6 +284,10 @@ def main():
         args.scenario = (args.scenario or []) + VISION_SCENARIOS
     if args.vision_native:
         args.scenario = (args.scenario or []) + VISION_NATIVE_SCENARIOS
+    if args.core_capture:
+        args.scenario = (args.scenario or []) + CAPTURE_SCENARIOS
+    if args.bench:
+        args.scenario = (args.scenario or []) + BENCH_SCENARIOS
     if args.native_media:
         args.scenario = (args.scenario or []) + NATIVE_MEDIA_SCENARIOS
     if args.maps:

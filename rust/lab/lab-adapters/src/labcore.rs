@@ -21,14 +21,18 @@ use std::{
     time::{Duration, Instant},
 };
 
-pub const JOURNEYS: [&str; 5] = [
+pub const JOURNEYS: [&str; 6] = [
     "CORE-RESUME",
     "LAB-SSE",
     "LAB-TRUTH-MULTIPLICITY",
     "CORE-BOOT",
     "CORE-DISCONNECT-DETECT",
+    "CORE-LIVE-LATENCY",
 ];
-pub const SCENARIOS: [&str; 7] = [
+pub const CALENDAR_SCOPE: &str =
+    "calendar:read,calendar:write,reminders:read,reminders:write,system:read";
+pub const SCENARIOS: [&str; 8] = [
+    "CORE-LIVE-LATENCY",
     "CORE-BOOT",
     "CORE-DISCONNECT-DETECT",
     "CORE-RESUME",
@@ -37,14 +41,22 @@ pub const SCENARIOS: [&str; 7] = [
     "CORE-STALE-FENCE",
     "LAB-MALFORMED-SCENARIO",
 ];
-const COLLECTION: &str = "reminders.reminder";
+pub(crate) const COLLECTION: &str = "reminders.reminder";
+pub(crate) fn scope_for(id: &str) -> &'static str {
+    if id == "CORE-LIVE-LATENCY" {
+        CALENDAR_SCOPE
+    } else {
+        GATEWAY_SCOPE
+    }
+}
 
 pub(crate) struct Run {
     pub(crate) observed: Observed,
-    observers: Observers,
-    effects: Vec<String>,
-    partition_effects: Vec<String>,
-    settled: bool,
+    pub(crate) observers: Observers,
+    pub(crate) effects: Vec<String>,
+    pub(crate) stamps: Vec<(String, Instant)>,
+    pub(crate) partition_effects: Vec<String>,
+    pub(crate) settled: bool,
 }
 static RUN: Mutex<Option<Run>> = Mutex::new(None);
 static STALE: Mutex<Option<Value>> = Mutex::new(None);
@@ -54,13 +66,14 @@ fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
         .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
-fn title(key: &str) -> String {
+pub(crate) fn title(key: &str) -> String {
     format!("[ab-test] {key}")
 }
 pub(crate) fn change(world: &World, run: &mut Run, key: &str, measured: bool) -> Result<()> {
     world.control("/external-change", &json!({"key": key}))?;
     if measured {
         run.effects.push(key.to_owned());
+        run.stamps.push((key.to_owned(), Instant::now()));
     } else {
         run.partition_effects.push(key.to_owned());
     }
@@ -70,7 +83,7 @@ pub fn start_world(world: &mut World, id: &str, replicas: usize) -> Result<()> {
     if id == "CORE-RESUME" || id == "CORE-DISCONNECT-DETECT" {
         world.install_proxy()?;
     }
-    replicas::start(world, replicas)
+    replicas::start_with(world, replicas, scope_for(id), 0)
 }
 pub fn seed(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result<()> {
     journey::seed(world, input, evidence)?;
@@ -87,8 +100,9 @@ pub fn seed(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result
         true,
         "replicas run on the harness host",
     );
-    let gateway = journey::gateway_client(world)?;
-    let observed = Observed::new(gateway.clone(), GATEWAY_SCOPE);
+    let scope = scope_for(&evidence.scenario);
+    let gateway = Client::new(world, scope)?;
+    let observed = Observed::new(gateway.clone(), scope);
     if !await_until(15, || converged(world, &observed)) {
         evidence.check("initial_convergence", false, "world did not converge");
         return Err(Error::Invalid("initial convergence".into()));
@@ -113,6 +127,7 @@ pub fn seed(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result
         observed,
         observers,
         effects: vec![],
+        stamps: vec![],
         partition_effects: vec![],
         settled: false,
     };
@@ -276,7 +291,7 @@ pub fn finish_hook(world: &mut World, _: &Value, evidence: &mut Evidence) -> Res
     *lock(&RUN) = None;
     settled.and(finished)
 }
-fn finish(world: &World, evidence: &mut Evidence) -> Result<()> {
+pub(crate) fn finish(world: &World, evidence: &mut Evidence) -> Result<()> {
     with_run(|run| {
         if !await_until(15, || converged(world, &run.observed)) {
             evidence.check(
@@ -305,7 +320,7 @@ fn finish(world: &World, evidence: &mut Evidence) -> Result<()> {
     *lock(&RUN) = None;
     if matches!(
         evidence.scenario.as_str(),
-        "CORE-RESUME" | "CORE-DISCONNECT-DETECT"
+        "CORE-RESUME" | "CORE-DISCONNECT-DETECT" | "CORE-LIVE-LATENCY"
     ) {
         oversized_resets(world, evidence);
     }
@@ -314,9 +329,11 @@ fn finish(world: &World, evidence: &mut Evidence) -> Result<()> {
 pub fn converge(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result<()> {
     match evidence.scenario.as_str() {
         "LAB-TRUTH-MULTIPLICITY" => Ok(()),
-        "CORE-RESUME" | "LAB-SSE" | "CORE-BOOT" | "CORE-DISCONNECT-DETECT" => {
-            settle(world, evidence)
-        }
+        "CORE-RESUME"
+        | "LAB-SSE"
+        | "CORE-BOOT"
+        | "CORE-DISCONNECT-DETECT"
+        | "CORE-LIVE-LATENCY" => settle(world, evidence),
         _ => journey::converge(world, input, evidence),
     }
 }

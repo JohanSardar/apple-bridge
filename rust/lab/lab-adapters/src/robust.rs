@@ -15,8 +15,10 @@ use std::{
     time::{Duration, Instant},
 };
 
-pub const SCENARIOS: [&str; 8] = [
+pub const SCENARIOS: [&str; 10] = [
     "CORE-PAIR",
+    "CORE-MESSAGES-SHAPE",
+    "CORE-READMODEL-UPDATE-PERF",
     "CORE-HELPER-RESTART",
     "CORE-KILL-DURING-APPLY",
     "CORE-KILL-GATEWAY-CAPTURE",
@@ -586,6 +588,11 @@ pub fn dispatch(world: &mut World, input: &Value, evidence: &mut Evidence) -> Re
         crate::core::robustness(world, input, evidence)
     } else if input["case"] == "pair" && evidence.scenario == "CORE-PAIR" {
         crate::pair::run(world, evidence)
+    } else if crate::core_demo::matches(
+        input["case"].as_str().unwrap_or_default(),
+        &evidence.scenario,
+    ) {
+        crate::core_demo::run(world, input["case"].as_str().unwrap_or_default(), evidence)
     } else if SCENARIOS.contains(&evidence.scenario.as_str()) {
         robustness(world, input, evidence)
     } else {
