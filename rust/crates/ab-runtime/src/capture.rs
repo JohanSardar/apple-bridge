@@ -135,9 +135,7 @@ pub async fn hydrate(
             let mut succeeded = false;
             let mut transferred = false;
             let mut known = true;
-            let rearmed = mutate(&blobs, |store| store.rearm(&digest))
-                .await
-                .map_err(|_| crate::Error::Invalid)?;
+            let rearmed = rearm(&blobs, &digest).await?;
             loop {
                 let entry = blobs.lock().await.entries().get(digest.as_str()).cloned();
                 let Some(entry) = entry else {
@@ -214,6 +212,7 @@ pub async fn hydrate(
         tally.report(total);
     }
 }
+#[derive(Clone, Copy)]
 enum Outcome {
     Stored,
     Recovered,
@@ -246,6 +245,14 @@ impl Tally {
             );
         }
     }
+}
+async fn rearm(
+    blobs: &Arc<Mutex<ab_blobs::Store>>,
+    digest: &ab_blobs::Digest,
+) -> Result<bool, crate::Error> {
+    mutate(blobs, |store| store.rearm(digest))
+        .await
+        .map_err(|_| crate::Error::Invalid)
 }
 async fn transfer(
     blobs: &Arc<Mutex<ab_blobs::Store>>,
