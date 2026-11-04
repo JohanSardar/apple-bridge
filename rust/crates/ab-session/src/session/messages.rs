@@ -1610,7 +1610,10 @@ mod tests {
         let mut probe = chat_probe();
         probe.stage = json!({"parts": [{"kind": "text", "text": "hello"}, {"kind": "text", "text": "again"}]});
         probe.send_delay = Duration::from_millis(400);
-        probe.rows.borrow_mut().push(vec![row("g1", "chat-1", "hello")]);
+        probe
+            .rows
+            .borrow_mut()
+            .push(vec![row("g1", "chat-1", "hello")]);
         let cmd = direct("hello");
         let state = prepared(&probe, &cmd);
         let written = write(&probe, "c1", &cmd["action"], &state).unwrap();
