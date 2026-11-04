@@ -431,8 +431,11 @@ dispatch, read-back verification, conflict evidence) are Rust; Swift answers the
 documented in `design/spec/native-1.md` and carries no `rust_pre_state`, no ipc/1 command and no ticket. A
 source not named keeps the Swift path, and the flag without session mode is refused. Proof today is the
 Rust decision tests plus `tests/session_peer.rs` (a fake Swift answering primitives; each rule has a
-negative control). Swift primitives and the lab world's primitives are not written yet, so the flag is not
-usable end to end and nothing is flipped.
+negative control). Swift answers the primitives (`RemindersSource.primitive`, `AppleSession.nativePrimitive`) and lab-simapple
+answers them too (`AB_LAB_RUST_COMMANDS=reminders` starts the lab session with the flag;
+`AB_LAB_PRIMITIVE_CONTROL=refuse` is the negative control that fails every `reminders.write`). In native session
+mode the Helper always passes `--rust-commands reminders`. `Resolve` after a restart is decided in Rust as well.
+Nothing is flipped: native session mode itself is opt-in (`AB_SESSION_NATIVE=1`).
 
 The routed effects layer now refuses a command whose numbers the permit hash cannot represent (below 1e-4 or
 at or above 1e15) with `Rejected invalid` (`QueryError invalid` for queries) instead of closing the gateway

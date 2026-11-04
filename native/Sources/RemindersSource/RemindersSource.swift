@@ -462,4 +462,80 @@ public final class RemindersSource: Source {
         }
         return .object(["native_key": .string(key), "observed": .bool(true), "absent": .bool(current == nil), "resolved": .bool(true), "prepared": evidence["prepared"]])
     }
+
+    public func primitive(_ operation: String, args: JSON, into sink: any ObservationSink) async throws -> JSON {
+        guard commandsEnabled else { throw SourceFailure.unsupported }
+        guard gate.authorized(.reminder) else { throw SourceFailure.permissionMissing }
+        let key = args["native_key"].string
+        switch operation {
+        case "reminders.read_list":
+            guard !key.isEmpty, let list = gate.store.calendar(withIdentifier: key) else { return .object(["exists": .bool(false)]) }
+            return .object(["exists": .bool(true), "writable": .bool(list.allowsContentModifications), "data": listData(list)])
+        case "reminders.read_reminder":
+            guard !key.isEmpty, let reminder = try await gate.reminders().first(where: { $0.calendarItemIdentifier == key }) else { return .object(["exists": .bool(false)]) }
+            return .object(["exists": .bool(true), "writable": .bool(reminder.calendar.allowsContentModifications), "list_key": .string(reminder.calendar.calendarIdentifier), "data": data(reminder)])
+        case "reminders.can_create_list":
+            return .object(["allowed": .bool(gate.store.defaultCalendarForNewReminders()?.allowsContentModifications == true)])
+        case "reminders.reconcile":
+            if args["absent_key"].string.isEmpty { try await reconcile(into: sink) }
+            else { try await confirmAbsence(args["absent_key"].string, list: args["list"].bool, into: sink) }
+            return .object([:])
+        case "reminders.write":
+            return try await writeNative(args, into: sink)
+        default:
+            throw SourceFailure.unsupported
+        }
+    }
+
+    private func writeNative(_ args: JSON, into sink: any ObservationSink) async throws -> JSON {
+        let operation = args["op"].string
+        guard Self.operations.contains(operation) else { throw SourceFailure.unsupported }
+        var key = args["native_key"].string
+        var saved = JSON.null
+        var observed = JSON.null
+        var existsAfter = false
+        if operation == "reminders.rename_list" || operation == "reminders.delete_list" {
+            guard let list = gate.store.calendar(withIdentifier: key) else { throw SourceFailure.unavailable }
+            if operation == "reminders.delete_list" { try gate.store.removeCalendar(list, commit: true) }
+            else { list.title = args["args"]["title"].string; try gate.store.saveCalendar(list, commit: true); key = list.calendarIdentifier; saved = listData(list) }
+            let after = gate.store.calendars(for: .reminder).first { $0.calendarIdentifier == key }
+            existsAfter = after != nil
+            observed = after.map(listData) ?? .null
+        } else if operation == "reminders.create_list" {
+            guard let source = gate.store.defaultCalendarForNewReminders()?.source else { throw SourceFailure.unavailable }
+            let calendar = EKCalendar(for: .reminder, eventStore: gate.store)
+            calendar.title = args["args"]["title"].string; calendar.source = source
+            try gate.store.saveCalendar(calendar, commit: true)
+            key = calendar.calendarIdentifier
+            saved = listData(calendar)
+            let after = gate.store.calendar(withIdentifier: key)
+            existsAfter = after != nil
+            observed = after.map(listData) ?? .null
+        } else {
+            let reminder: EKReminder
+            if operation == "reminders.create" {
+                reminder = EKReminder(eventStore: gate.store)
+                guard let calendar = gate.store.calendar(withIdentifier: args["list_key"].string) else { throw SourceFailure.unavailable }
+                reminder.calendar = calendar
+            } else {
+                reminder = try await fresh(key)
+            }
+            if operation == "reminders.delete" { try gate.store.remove(reminder, commit: true) }
+            else {
+                if let destination = gate.store.calendar(withIdentifier: args["list_key"].string) { reminder.calendar = destination }
+                try patch(reminder, args["args"])
+                if operation == "reminders.complete" { reminder.isCompleted = true }
+                if operation == "reminders.uncomplete" { reminder.isCompleted = false }
+                try gate.store.save(reminder, commit: true)
+                key = reminder.calendarItemIdentifier
+                saved = data(reminder)
+            }
+            let after = try await gate.reminders().first(where: { $0.calendarItemIdentifier == key })
+            existsAfter = after != nil
+            observed = after.map(data) ?? .null
+        }
+        try await reconcile(into: sink)
+        if !existsAfter { try await confirmAbsence(key, list: operation == "reminders.delete_list", into: sink) }
+        return .object(["native_key": .string(key), "saved": saved, "observed": observed, "exists_after": .bool(existsAfter)])
+    }
 }

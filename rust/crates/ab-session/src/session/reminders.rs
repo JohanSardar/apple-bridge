@@ -78,6 +78,21 @@ fn native_failure(code: &str) -> Refusal {
     }
 }
 
+fn equal(left: &Value, right: &Value) -> bool {
+    match (left, right) {
+        (Value::Number(a), Value::Number(b)) => a == b || a.as_f64() == b.as_f64(),
+        (Value::Array(a), Value::Array(b)) => {
+            a.len() == b.len() && a.iter().zip(b).all(|(x, y)| equal(x, y))
+        }
+        (Value::Object(a), Value::Object(b)) => {
+            a.len() == b.len()
+                && a.iter()
+                    .all(|(key, x)| b.get(key).is_some_and(|y| equal(x, y)))
+        }
+        _ => left == right,
+    }
+}
+
 fn text<'a>(value: &'a Value, key: &str) -> &'a str {
     value[key].as_str().unwrap_or_default()
 }
@@ -137,7 +152,7 @@ pub(super) fn prepare(
         if LIST_EDITS.contains(&operation) {
             let list = writable_list(probe, key)?;
             before = list["data"].clone();
-            if before != Value::Object(base(expected_state)) {
+            if !equal(&before, &Value::Object(base(expected_state))) {
                 return Err(conflict(key));
             }
         } else {
@@ -150,8 +165,8 @@ pub(super) fn prepare(
             if !expected_list.is_empty() && text(&reminder, "list_key") != expected_list {
                 return Err(conflict(key));
             }
-            let current = without_list(base(&before));
-            if without_list(base(expected_state)) != current {
+            let current = Value::Object(without_list(base(&before)));
+            if !equal(&Value::Object(without_list(base(expected_state))), &current) {
                 return Err(conflict(key));
             }
             if !writable(&reminder) {
@@ -188,14 +203,14 @@ pub(super) fn validate(
     }
     if LIST_EDITS.contains(&operation) {
         let list = writable_list(probe, key)?;
-        return if &list["data"] == native_state {
+        return if equal(&list["data"], native_state) {
             Ok(())
         } else {
             Err(conflict(key))
         };
     }
     let current = read(probe, "reminders.read_reminder", key)?;
-    if !present(&current) || &current["data"] != native_state {
+    if !present(&current) || !equal(&current["data"], native_state) {
         return Err(conflict(key));
     }
     if !writable(&current) {
@@ -204,7 +219,7 @@ pub(super) fn validate(
     Ok(())
 }
 
-pub(super) fn write(probe: &dyn Probe, action: &Value) -> Result<Value, String> {
+pub(super) fn write(probe: &dyn Probe, command_id: &str, action: &Value) -> Result<Value, String> {
     probe.call(
         "reminders.write",
         &json!({
@@ -212,6 +227,7 @@ pub(super) fn write(probe: &dyn Probe, action: &Value) -> Result<Value, String> 
             "native_key": action["native_key"],
             "list_key": action["list_key"],
             "args": action["args"],
+            "command_id": command_id,
         }),
     )
 }
@@ -228,12 +244,94 @@ pub(super) fn verified(operation: &str, written: &Value) -> bool {
         "reminders.create_list" | "reminders.rename_list" => {
             observed.is_object() && observed["title"] == written["saved"]["title"]
         }
-        _ => observed.is_object() && observed == &written["saved"],
+        _ => observed.is_object() && equal(observed, &written["saved"]),
     }
 }
 
 pub(super) fn absent(operation: &str) -> bool {
     matches!(operation, "reminders.delete" | "reminders.delete_list")
+}
+
+pub(super) fn resolved(probe: &dyn Probe, evidence: &Value) -> Option<Value> {
+    let prepared = &evidence["prepared"];
+    let action = &prepared["action"];
+    let operation = text(action, "op");
+    let key = match text(action, "native_key") {
+        "" => text(evidence, "native_key"),
+        key => key,
+    };
+    if key.is_empty() || !OPERATIONS.contains(&operation) {
+        return None;
+    }
+    let args = &action["args"];
+    let mut gone = false;
+    match operation {
+        "reminders.delete_list" => {
+            if present(&read(probe, "reminders.read_list", key).ok()?) {
+                return None;
+            }
+            gone = true;
+        }
+        "reminders.create_list" | "reminders.rename_list" => {
+            let list = read(probe, "reminders.read_list", key).ok()?;
+            if !present(&list) || list["data"]["title"] != args["title"] {
+                return None;
+            }
+        }
+        _ => {
+            let current = read(probe, "reminders.read_reminder", key).ok()?;
+            if operation == "reminders.delete" {
+                if present(&current) {
+                    return None;
+                }
+                gone = true;
+            } else {
+                if !present(&current) {
+                    return None;
+                }
+                let actual = &current["data"];
+                let completed = actual["completed"] == true;
+                if (operation == "reminders.complete" && !completed)
+                    || (operation == "reminders.uncomplete" && completed)
+                {
+                    return None;
+                }
+                if matches!(operation, "reminders.update" | "reminders.create") {
+                    let fields: Vec<_> = args
+                        .as_object()?
+                        .iter()
+                        .filter(|(name, _)| {
+                            !matches!(name.as_str(), "id" | "list_id" | "due_all_day")
+                        })
+                        .collect();
+                    if fields.is_empty()
+                        || !fields
+                            .iter()
+                            .all(|(name, value)| field_matches(actual, name, value))
+                    {
+                        return None;
+                    }
+                }
+            }
+        }
+    }
+    Some(json!({
+        "native_key": key,
+        "observed": true,
+        "absent": gone,
+        "resolved": true,
+        "fingerprint": prepared["request_hash"],
+        "prepared": prepared,
+    }))
+}
+
+fn field_matches(actual: &Value, name: &str, value: &Value) -> bool {
+    let clears = matches!(name, "due" | "start" | "url" | "notes") && value == "";
+    let expected = if clears { &Value::Null } else { value };
+    if name == "notes" && expected.is_null() {
+        return actual[name].is_null() || actual[name] == "";
+    }
+    equal(&actual[name], expected)
 }
 
 #[cfg(test)]
@@ -441,6 +539,53 @@ mod tests {
                 .code,
             "unsupported"
         );
+    }
+
+    #[test]
+    fn resolve_observes_only_what_the_framework_shows() {
+        let mut probe = Fake::new();
+        let evidence = |op: &str, args: Value| json!({"native_key": "r1", "prepared": {"request_hash": "h", "action": {"op": op, "native_key": "r1", "args": args}}});
+        let done = evidence("reminders.update", json!({"title": "milk"}));
+        let seen = resolved(&probe, &done).unwrap();
+        assert_eq!(seen["observed"], true);
+        assert_eq!(seen["fingerprint"], "h");
+        assert_eq!(seen["absent"], false);
+        let undone = evidence("reminders.update", json!({"title": "oat milk"}));
+        assert!(resolved(&probe, &undone).is_none());
+        let nothing = evidence("reminders.update", json!({}));
+        assert!(resolved(&probe, &nothing).is_none());
+        let complete = evidence("reminders.complete", json!({}));
+        assert!(resolved(&probe, &complete).is_none());
+        probe.reminders["r1"]["completed"] = json!(true);
+        assert!(resolved(&probe, &complete).is_some());
+        assert!(resolved(&probe, &evidence("reminders.uncomplete", json!({}))).is_none());
+        let delete = evidence("reminders.delete", json!({}));
+        assert!(resolved(&probe, &delete).is_none());
+        probe.reminders = json!({});
+        assert_eq!(resolved(&probe, &delete).unwrap()["absent"], true);
+        assert!(resolved(&probe, &complete).is_none());
+        let rename = evidence("reminders.rename_list", json!({"title": "Work"}));
+        let mut rename = rename;
+        rename["native_key"] = json!("work");
+        rename["prepared"]["action"]["native_key"] = json!("work");
+        assert!(resolved(&probe, &rename).is_some());
+        rename["prepared"]["action"]["args"]["title"] = json!("Other");
+        assert!(resolved(&probe, &rename).is_none());
+        let mut gone = evidence("reminders.delete_list", json!({}));
+        gone["prepared"]["action"]["native_key"] = json!("missing");
+        assert_eq!(resolved(&probe, &gone).unwrap()["absent"], true);
+        let keyless =
+            json!({"prepared": {"action": {"op": "reminders.create", "args": {"title": "x"}}}});
+        assert!(resolved(&probe, &keyless).is_none());
+    }
+
+    #[test]
+    fn numbers_compare_by_value() {
+        assert!(equal(
+            &json!({"p": 0, "n": [1.0]}),
+            &json!({"p": 0.0, "n": [1]})
+        ));
+        assert!(!equal(&json!({"p": 1}), &json!({"p": 2})));
     }
 
     #[test]

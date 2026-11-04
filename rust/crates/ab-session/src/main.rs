@@ -244,8 +244,21 @@ fn parse_flags(args: &[String]) -> Result<Flags, Error> {
 
 #[cfg(feature = "lab")]
 fn lab_session(args: &[String]) -> Result<(), Error> {
+    let (args, rust_commands) = match args {
+        [rest @ .., flag, sources] if flag == "--rust-commands" => (rest, Some(sources.clone())),
+        all => (all, None),
+    };
     let [_, listen, _, gateway, _, secret, _, home] = args else {
         return Err(Error::Invalid);
+    };
+    let options = ab_session::session::Options {
+        rust_commands: rust_commands
+            .as_deref()
+            .unwrap_or_default()
+            .split(',')
+            .filter(|source| !source.is_empty())
+            .map(str::to_owned)
+            .collect(),
     };
     let secret = std::fs::read(secret)?;
     let home = std::path::PathBuf::from(home);
@@ -256,9 +269,12 @@ fn lab_session(args: &[String]) -> Result<(), Error> {
         let Ok(stream) = std::os::unix::net::UnixStream::connect(gateway) else {
             continue;
         };
-        let (secret, home) = (secret.clone(), home.clone());
+        let (secret, home, options) = (secret.clone(), home.clone(), options.clone());
         std::thread::spawn(move || {
-            if let Err(error) = ab_session::session::serve(stream, link, &secret, &home) {
+            let clock = std::sync::Arc::new(ab_session::session::SystemClock::start());
+            if let Err(error) =
+                ab_session::session::serve_configured(stream, link, &secret, &home, clock, &options)
+            {
                 eprintln!("ab-session: {error}");
             }
         });
@@ -296,7 +312,7 @@ fn serve_session(
 
 #[cfg(feature = "lab")]
 fn lab_entry(args: &[String]) -> Option<Result<(), Error>> {
-    if args.len() == 8
+    if (args.len() == 8 || args.len() == 10)
         && args[0] == "--lab-session-listen"
         && args[2] == "--lab-gateway"
         && args[4] == "--session-secret"
