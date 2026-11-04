@@ -614,6 +614,12 @@ func (w *World) Close() {
 	for _, home := range w.localExtraHomes {
 		os.RemoveAll(home)
 	}
+	if keep := os.Getenv("AB_LAB_SESSION_EFFECTS_EVIDENCE"); keep != "" && w.sessionNative != "" {
+		if guard, err := os.ReadFile(filepath.Join(w.Dir, "session-effects", "dispatch-guard.log")); err == nil {
+			os.MkdirAll(keep, 0700)
+			os.WriteFile(filepath.Join(keep, filepath.Base(w.Dir)+".log"), guard, 0600)
+		}
+	}
 	os.RemoveAll(w.Dir)
 	if w.secretOverride {
 		if w.previousSecretStoreSet {
