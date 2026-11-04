@@ -369,6 +369,10 @@ fn to_native(shared: &Shared, frame: &Value, size: usize) -> Result<Option<Value
             json!({"t":"QueryResult","id":frame["id"],"result_json":frame["result_json"],"blobs":frame["blobs"].as_array().cloned().unwrap_or_default()})
         }
         "QueryError" => json!({"t":"QueryError","id":frame["id"],"code":frame["code"]}),
+        "PrimitiveResult" => {
+            json!({"t":"PrimitiveResult","id":frame["id"],"result":frame["result"]})
+        }
+        "PrimitiveError" => json!({"t":"PrimitiveError","id":frame["id"],"code":frame["code"]}),
         "BlobChunk" => {
             json!({"t":"BlobChunk","handle":frame["handle"],"offset":frame["offset"],"bytes":frame["bytes"],"digest":frame["digest"],"eof":frame["eof"].as_bool().unwrap_or(false)})
         }
@@ -422,6 +426,9 @@ fn to_ipc(shared: &Shared, frame: &Value) -> Result<Option<Value>> {
             json!({"t":"Query","id":frame["id"],"op":frame["op"],"args":frame["args"],"deadline_ms":frame["deadline_ms"]})
         }
         "QueryCancel" => json!({"t":"QueryCancel","id":frame["id"]}),
+        "Primitive" => {
+            json!({"t":"Primitive","id":frame["id"],"op":frame["op"],"args":frame["args"]})
+        }
         "BlobRead" => {
             json!({"t":"BlobRead","handle":frame["handle"],"offset":frame["offset"],"length":frame["length"]})
         }

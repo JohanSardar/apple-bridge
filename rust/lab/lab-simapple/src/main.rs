@@ -826,7 +826,10 @@ impl Session<'_> {
                     self.credit += n;
                     return Ok(());
                 }
-                Some("Prepare" | "Dispatch" | "Resolve" | "Query" | "QueryCancel" | "BlobRead") => {
+                Some(
+                    "Prepare" | "Dispatch" | "Resolve" | "Query" | "QueryCancel" | "BlobRead"
+                    | "Primitive",
+                ) => {
                     self.pending.push_back(reply);
                 }
                 Some("Ping") => {
@@ -933,7 +936,10 @@ impl Session<'_> {
                     self.credit += n;
                     return Ok(());
                 }
-                Some("Prepare" | "Dispatch" | "Resolve" | "Query" | "QueryCancel" | "BlobRead") => {
+                Some(
+                    "Prepare" | "Dispatch" | "Resolve" | "Query" | "QueryCancel" | "BlobRead"
+                    | "Primitive",
+                ) => {
                     self.pending.push_back(reply);
                 }
                 Some("Ping") => {
@@ -977,6 +983,9 @@ impl Session<'_> {
     }
     #[allow(clippy::needless_pass_by_value)]
     fn command(&mut self, state: &Shared, frame: Value) -> Result<()> {
+        if frame["t"] == "Primitive" {
+            return self.primitive(state, &frame);
+        }
         let command = string(&frame, "command_id");
         if matches!(frame["t"].as_str(), Some("Prepare" | "Dispatch")) {
             let mut s = lock(state)?;

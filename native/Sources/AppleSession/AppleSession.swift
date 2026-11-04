@@ -291,6 +291,7 @@ public actor AppleSession: ObservationSink {
             case "Dispatch": if link != nil { await nativeDispatch(frame) } else { await dispatch(frame) }
             case "Resolve": if link != nil { await nativeResolve(frame) } else { await resolve(frame) }
             case "BlobRead": await readBlob(frame)
+            case "Primitive": await nativePrimitive(frame)
             default: break
             }
             frameTasks.removeValue(forKey: id)
@@ -495,6 +496,24 @@ public actor AppleSession: ObservationSink {
         try? connection.send(NativeSessionFrame.rejected(commandID: frame["command_id"], code: details.code, message: details.message, evidence: details.evidence))
     }
 
+    private func nativePrimitive(_ frame: JSON) async {
+        let activity = ForegroundActivity.shared.begin()
+        defer { ForegroundActivity.shared.end(activity) }
+        guard let connection = link else { return }
+        let id = frame["id"]
+        do {
+            guard frame["op"].string.hasPrefix("reminders.") else { throw SourceFailure.unsupported }
+            let result = try await source.primitive(frame["op"].string, args: frame["args"], into: self)
+            guard link === connection, !Task.isCancelled else { return }
+            try connection.send(NativeSessionFrame.primitiveResult(id: id, result: result))
+        } catch {
+            guard link === connection, !Task.isCancelled else { return }
+            let code: String
+            if case SourceFailure.permissionMissing = error { code = "permission_missing" } else { code = errorCode(error) }
+            try? connection.send(NativeSessionFrame.primitiveError(id: id, code: code))
+        }
+    }
+
     private func nativePrepare(_ frame: JSON) async {
         let activity = ForegroundActivity.shared.begin()
         defer { ForegroundActivity.shared.end(activity) }
@@ -503,9 +522,8 @@ public actor AppleSession: ObservationSink {
             _ = try CommandOrigin(frame)
             guard !frame["command_id"].string.isEmpty, !frame["principal"].string.isEmpty, !frame["request_hash"].string.isEmpty, let expires = parseTimestamp(frame["expires_at"].string), expires > Date() else { throw SourceFailure.invalid }
             let selected = additionalSources[captureRoute(frame["action"]["op"].string)] ?? source
-            var nativeFrame = frame.object
-            if frame["action"]["op"].string.hasPrefix("reminders.") { nativeFrame["expected_state"] = RemindersStoreProjection.baseData(frame["expected_state"]) }
-            let prepared = frame["action"]["op"].string.hasPrefix("contacts.") ? try await contacts.prepare(frame) : frame["action"]["op"].string.hasPrefix("calendar.") ? try await calendar.prepare(frame) : try await selected.prepare(.object(nativeFrame))
+            guard !frame["action"]["op"].string.hasPrefix("reminders.") else { throw SourceFailure.unsupported }
+            let prepared = frame["action"]["op"].string.hasPrefix("contacts.") ? try await contacts.prepare(frame) : frame["action"]["op"].string.hasPrefix("calendar.") ? try await calendar.prepare(frame) : try await selected.prepare(frame)
             guard !Task.isCancelled, link === connection, expires > Date() else { throw SourceFailure.expired }
             try connection.send(NativeSessionFrame.prepared(commandID: frame["command_id"], nativeState: prepared.nativeState, route: prepared.nativeState["route"].string.isEmpty ? "eventkit" : prepared.nativeState["route"].string, candidateIDs: prepared.nativeState["candidate_ids"].array, fingerprint: prepared.fingerprint))
         } catch { if link === connection && !Task.isCancelled { await nativeReject(frame, error: error, connection: connection) } }
@@ -516,6 +534,10 @@ public actor AppleSession: ObservationSink {
         defer { ForegroundActivity.shared.end(activity) }
         guard let connection = link else { return }
         let operation = frame["action"]["op"].string
+        guard !operation.hasPrefix("reminders.") else {
+            try? connection.send(NativeSessionFrame.rejected(commandID: frame["command_id"], code: "unsupported", message: "unsupported", evidence: nil))
+            return
+        }
         let command: JSON = .object(["command_id": frame["command_id"], "request_hash": frame["request_hash"], "action": frame["action"]])
         let ticket = Ticket(command: command, prepared: Prepared(nativeState: frame["native_state"], fingerprint: frame["fingerprint"].string, action: frame["action"]), expiry: ContinuousClock.now.advanced(by: .seconds(30)), fence: fence)
         do {
@@ -543,6 +565,7 @@ public actor AppleSession: ObservationSink {
         do {
             if ["indeterminate", "locally_observed"].contains(disposition) {
                 let operation = saved["evidence"]["prepared"]["action"]["op"].string
+                guard !operation.hasPrefix("reminders.") else { throw SourceFailure.unsupported }
                 let selected = additionalSources[captureRoute(operation)] ?? source
                 let resolved = operation.hasPrefix("contacts.") ? await contacts.resolve(id, evidence: saved["evidence"]) : operation.hasPrefix("calendar.") ? await calendar.resolve(id, evidence: saved["evidence"]) : await selected.resolve(id, evidence: saved["evidence"])
                 if resolved["observed"].bool {
@@ -572,7 +595,7 @@ public actor AppleSession: ObservationSink {
         case "ScanFailed":
             guard let waiter = scanWaiters.removeValue(forKey: frame["id"].string) else { throw SourceFailure.invalid }
             waiter.resume(throwing: SourceFailure.unavailable)
-        case "Prepare", "Dispatch", "Resolve", "BlobRead":
+        case "Prepare", "Dispatch", "Resolve", "BlobRead", "Primitive":
             launchFrame(frame)
         case "Query":
             let id = frame["id"].string

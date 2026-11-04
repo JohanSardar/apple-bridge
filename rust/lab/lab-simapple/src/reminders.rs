@@ -4,6 +4,51 @@ use super::{
 };
 use std::thread;
 
+const PROJECTION: [&str; 28] = [
+    "store_identifier",
+    "flagged",
+    "parent_id",
+    "section_id",
+    "tags",
+    "manual_order",
+    "created_at",
+    "early_reminders",
+    "assignment",
+    "store_alarms",
+    "store_recurrence",
+    "attachment_ids",
+    "badge_emblem",
+    "is_group",
+    "display_order",
+    "pinned",
+    "pinned_at",
+    "sorting_style",
+    "categorize_groceries",
+    "grocery_locale",
+    "sharing_status",
+    "shared_owner_name",
+    "smart_list_type",
+    "smart_filter",
+    "sections",
+    "store_color",
+    "store_status",
+    "store_coverage",
+];
+
+fn native_fields(data: &Value) -> Value {
+    let mut data = data.clone();
+    if let Some(fields) = data.as_object_mut() {
+        fields.retain(|key, _| !PROJECTION.contains(&key.as_str()));
+    }
+    data
+}
+
+fn live_record<'a>(state: &'a super::State, key: &str, collection: &str) -> Option<&'a Value> {
+    let record = &state.data["records"][key];
+    (!key.is_empty() && record["collection"] == collection && record["kind"] != "absent")
+        .then_some(record)
+}
+
 const LIST_OPS: [&str; 3] = [
     "reminders.create_list",
     "reminders.rename_list",
@@ -290,5 +335,209 @@ impl Session<'_> {
         drop(s);
         send(&mut self.stream, &outcome)?;
         Ok(())
+    }
+
+    pub(super) fn primitive(&mut self, state: &Shared, frame: &Value) -> Result<()> {
+        let id = frame["id"].clone();
+        let args = &frame["args"];
+        let key = string(args, "native_key");
+        let answer = match string(frame, "op").as_str() {
+            "reminders.read_list" => {
+                let s = lock(state)?;
+                Ok(match live_record(&s, &key, "reminders.list") {
+                    Some(record) => {
+                        let data = native_fields(&record["data"]);
+                        json!({"exists":true,"writable":data["writable"]==true,"data":data})
+                    }
+                    None => json!({"exists":false}),
+                })
+            }
+            "reminders.read_reminder" => self.read_reminder(state, &key),
+            "reminders.can_create_list" => Ok(json!({"allowed":true})),
+            "reminders.reconcile" => self.reconcile(state, args),
+            "reminders.write"
+                if std::env::var("AB_LAB_PRIMITIVE_CONTROL").as_deref() == Ok("refuse") =>
+            {
+                Err("unavailable")
+            }
+            "reminders.write" => self.write(state, frame),
+            _ => Err("unsupported"),
+        };
+        match answer {
+            Ok(result) => send(
+                &mut self.stream,
+                &json!({"t":"PrimitiveResult","id":id,"result":result}),
+            )?,
+            Err(code) => send(
+                &mut self.stream,
+                &json!({"t":"PrimitiveError","id":id,"code":code}),
+            )?,
+        };
+        Ok(())
+    }
+
+    fn read_reminder(
+        &mut self,
+        state: &Shared,
+        key: &str,
+    ) -> std::result::Result<Value, &'static str> {
+        let fail = |_| "unavailable";
+        let mut s = lock(state).map_err(fail)?;
+        let fault = s.fault.clone();
+        let mut changed = None;
+        if fault == "external-move-before-prepare"
+            && let Some(mut record) = live_record(&s, key, "reminders.reminder").cloned()
+        {
+            record["data"]["list_id"] = reference("other-list");
+            record["observed_at"] = json!(now());
+            s.put(record.clone());
+            s.fault.clear();
+            s.save().map_err(fail)?;
+            changed = Some(record);
+        }
+        let current = live_record(&s, key, "reminders.reminder").cloned();
+        let answer = match &current {
+            Some(record) => {
+                let list = membership(&record["data"]);
+                json!({"exists":true,"writable":writable(&s, &list),"list_key":list,"data":native_fields(&record["data"])})
+            }
+            None => json!({"exists":false}),
+        };
+        if fault == "external-edit-between-prepare-and-dispatch"
+            && let Some(mut record) = current
+        {
+            record["data"]["title"] = json!("[ab-test] external race");
+            record["observed_at"] = json!(now());
+            s.put(record.clone());
+            s.fault.clear();
+            s.save().map_err(fail)?;
+            changed = Some(record);
+        }
+        drop(s);
+        if let Some(record) = changed {
+            self.emit(
+                state,
+                json!({"t":"Capture","source":"reminders","observations":[record]}),
+            )
+            .map_err(fail)?;
+        }
+        Ok(answer)
+    }
+
+    fn reconcile(
+        &mut self,
+        state: &Shared,
+        args: &Value,
+    ) -> std::result::Result<Value, &'static str> {
+        let fail = |_| "unavailable";
+        let key = string(args, "absent_key");
+        let s = lock(state).map_err(fail)?;
+        let capture = if key.is_empty() || s.data["records"][&key]["kind"] != "absent" {
+            s.scan("reminders").map_err(fail)?
+        } else {
+            json!({"t":"Capture","source":"reminders","observations":[s.data["records"][&key].clone()]})
+        };
+        drop(s);
+        self.emit(state, capture).map_err(fail)?;
+        Ok(json!({}))
+    }
+
+    fn write(&mut self, state: &Shared, frame: &Value) -> std::result::Result<Value, &'static str> {
+        let fail = |_| "unavailable";
+        let args = &frame["args"];
+        let op = string(args, "op");
+        let mut key = string(args, "native_key");
+        let mut s = lock(state).map_err(fail)?;
+        let command = string(args, "command_id");
+        if key.is_empty() {
+            key = id("native").map_err(fail)?;
+        }
+        let list_op = LIST_OPS.contains(&op.as_str());
+        let collection = if list_op {
+            "reminders.list"
+        } else {
+            "reminders.reminder"
+        };
+        let mut data = s.data["records"][&key]["data"].clone();
+        if !data.is_object() {
+            data = json!({});
+        }
+        if let Some(fields) = args["args"].as_object() {
+            for (k, v) in fields {
+                if k == "id" || k == "list_id" {
+                    continue;
+                }
+                let clears = matches!(k.as_str(), "due" | "start" | "url" | "notes") && v == "";
+                data[k] = if clears { Value::Null } else { v.clone() };
+            }
+        }
+        if list_op {
+            data["writable"] = json!(true);
+        } else {
+            if op == "reminders.create" {
+                data["flagged"] = json!(false);
+                data["parent_id"] = Value::Null;
+                data["section_id"] = Value::Null;
+                data["tags"] = json!([]);
+                data["assignment"] = Value::Null;
+                data["created_at"] = json!(now());
+                let mut coverage = serde_json::Map::new();
+                for field in COVERED {
+                    coverage.insert(field.into(), json!({"status":"complete"}));
+                }
+                data["store_coverage"] = Value::Object(coverage);
+            }
+            if data["completed"].is_null() {
+                data["completed"] = json!(false);
+            }
+            data["list_id"] = reference(&string(args, "list_key"));
+        }
+        if op == "reminders.complete" {
+            data["completed"] = json!(true);
+        }
+        if op == "reminders.uncomplete" {
+            data["completed"] = json!(false);
+        }
+        let mut record = observation(collection, &key, data);
+        let gone = op == "reminders.delete" || op == "reminders.delete_list";
+        if gone {
+            record["kind"] = json!("absent");
+            record["revalidated"] = json!(true);
+        }
+        s.put(record.clone());
+        if !command.is_empty() {
+            let count = s.data["effects"][&command].as_u64().unwrap_or_default() + 1;
+            s.data["effects"][&command] = json!(count);
+            s.data["evidence"][&command] = json!({"t":"Outcome","command_id":command,"disposition":"locally_observed","evidence":{"native_key":key,"observed":true,"absent":gone}});
+        }
+        s.save().map_err(fail)?;
+        let fault = std::mem::take(&mut s.fault);
+        if fault == "crash-after-effect" {
+            std::process::exit(78);
+        }
+        let capture = if gone {
+            s.scan("reminders").map_err(fail)?
+        } else {
+            json!({"t":"Capture","source":"reminders","observations":[record.clone()]})
+        };
+        drop(s);
+        self.emit(state, capture).map_err(fail)?;
+        if fault == "crash-before-outcome" {
+            std::process::exit(78);
+        }
+        let shown = if gone {
+            Value::Null
+        } else {
+            native_fields(&record["data"])
+        };
+        let ambiguous = fault == "ambiguous-outcome";
+        let observed = if ambiguous {
+            Value::Null
+        } else {
+            shown.clone()
+        };
+        Ok(
+            json!({"native_key":key,"saved":shown,"observed":observed,"exists_after":!gone || ambiguous}),
+        )
     }
 }

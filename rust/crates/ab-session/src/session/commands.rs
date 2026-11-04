@@ -168,7 +168,7 @@ impl Hub {
         match frame.t.as_str() {
             "Prepare" => self.prepare(scope, frame),
             "Dispatch" => self.dispatch(scope, frame),
-            "Resolve" => self.resolve(frame),
+            "Resolve" => self.resolve(scope, frame),
             "Query" => self.query(frame),
             "QueryCancel" => self.send_link(&Link::QueryCancel(QueryCancel {
                 id: frame.id.clone(),
@@ -339,6 +339,32 @@ impl Hub {
         Ok(())
     }
 
+    fn resolve_owned(&self, id: &str, saved: &Value) -> Result<(), Error> {
+        let evidence = &saved["evidence"];
+        let operation = evidence["prepared"]["action"]["op"]
+            .as_str()
+            .unwrap_or_default();
+        let observed = reminders::resolved(self, evidence).filter(|found| {
+            let args = if found["absent"] == true {
+                json!({"absent_key": found["native_key"], "list": operation == "reminders.delete_list"})
+            } else {
+                json!({})
+            };
+            self.primitive("reminders.reconcile", &args, WRITE_WAIT).is_ok()
+        });
+        let (disposition, evidence) = match observed {
+            Some(found) => ("locally_observed", found),
+            None => ("indeterminate", evidence.clone()),
+        };
+        let outcome = Outcome {
+            command_id: id.into(),
+            disposition: disposition.into(),
+            evidence: raw(&evidence)?,
+        };
+        self.outcome_from_helper(outcome)?;
+        Ok(())
+    }
+
     fn dispatch_owned(&self, command: &Command, state: &Value) -> Result<(), Error> {
         let action = parsed(&command.action);
         let operation = command.operation();
@@ -350,7 +376,7 @@ impl Hub {
             "native_state": state,
             "request_hash": command.request_hash,
         });
-        let (disposition, evidence) = match reminders::write(self, &action) {
+        let (disposition, evidence) = match reminders::write(self, &command.command_id, &action) {
             Ok(written) if reminders::verified(&operation, &written) => (
                 "locally_observed",
                 json!({
@@ -471,7 +497,11 @@ impl Hub {
         self.send_link(&Link::Dispatch(message))
     }
 
-    fn resolve(&self, frame: &IpcFrame) -> Result<(), Error> {
+    fn resolve<'scope>(
+        &'scope self,
+        scope: &'scope thread::Scope<'scope, '_>,
+        frame: &IpcFrame,
+    ) -> Result<(), Error> {
         let id = frame.command_id.clone();
         let mut core = self.core()?;
         let Some(saved) = core.commands.guard.outcome(&id).cloned() else {
@@ -481,9 +511,24 @@ impl Hub {
         let open = saved["t"] == "Outcome"
             && ["indeterminate", "locally_observed"]
                 .contains(&saved["disposition"].as_str().unwrap_or_default());
+        let owned = open
+            && core.commands.owned.contains(source_of(
+                saved["evidence"]["prepared"]["action"]["op"]
+                    .as_str()
+                    .unwrap_or_default(),
+            ));
         if open {
             *core.commands.resolving.entry(id.clone()).or_default() += 1;
             drop(core);
+            if owned {
+                scope.spawn(move || {
+                    if let Err(error) = self.resolve_owned(&id, &saved) {
+                        eprintln!("ab-session: resolve failed: {error}");
+                        self.close();
+                    }
+                });
+                return Ok(());
+            }
             return self.send_link(&Link::Resolve(Resolve {
                 command_id: id,
                 saved: raw(&saved)?,
