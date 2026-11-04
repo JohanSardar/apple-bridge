@@ -148,9 +148,11 @@ fn keeps_hydrated_note(old: Option<&Record>, observation: &Observation) -> Resul
     }
     let previous: Value = serde_json::from_str(old.data.get())?;
     let fingerprint = next.get("native_fingerprint").and_then(Value::as_str);
-    Ok(previous.get("body_status").and_then(Value::as_str) != Some("pending")
-        && fingerprint.is_some_and(|f| !f.is_empty())
-        && previous.get("native_fingerprint").and_then(Value::as_str) == fingerprint)
+    Ok(
+        previous.get("body_status").and_then(Value::as_str) != Some("pending")
+            && fingerprint.is_some_and(|f| !f.is_empty())
+            && previous.get("native_fingerprint").and_then(Value::as_str) == fingerprint,
+    )
 }
 fn note_version(old: Option<&Record>, value: &mut Value) -> Result<()> {
     let next = value.as_object_mut().ok_or(ErrorCode::Corrupt)?;
