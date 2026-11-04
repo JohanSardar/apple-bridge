@@ -124,7 +124,8 @@ SCENARIOS += ['CORE-SIM-PROGRESS-RECOVERY', 'CORE-SNAPSHOT-POOL']
 MOVED_TO_RUST_TESTS = {
     'core/CORE-SEARCH-UPDATE-PERF': 'drives the Go state store in-process; the Rust runner has no store access. Ported to rust/crates/ab-state/tests/search_update_perf.rs (make rust-search-perf). Speed numbers are recorded, not enforced. The Go assertions search_unavailable_during_rebuild, search_rest_preparing_is_retryable_error_not_empty, search_mcp_preparing_is_retryable_error_not_empty and restart_resumes_pending_rebuild have no Rust equivalent because ab-state rebuilds the search index inside open() instead of in a background migration.',
 }
-CAPTURE_SCENARIOS = ['CORE-REPLICA-CAPTURE-ATOMIC', 'CORE-LIVE-LATENCY', 'CORE-MESSAGES-SHAPE']
+CAPTURE_SCENARIOS = ['CORE-REPLICA-CAPTURE-ATOMIC', 'CORE-LIVE-LATENCY', 'CORE-MESSAGES-SHAPE',
+                     'CORE-REPLICA-CAPTURE-STAGING', 'CORE-REPLICA-CAPTURE-LEGACY', 'CORE-REPLICA-CAPTURE-OBSERVERS']
 BENCH_SCENARIOS = ['CORE-READMODEL-UPDATE-PERF']
 REPLICA_SCENARIOS = ['CORE-QUERY-REPLICA', 'CORE-CRED-LIFECYCLE']
 
