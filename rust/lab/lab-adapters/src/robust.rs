@@ -481,9 +481,6 @@ fn kill_gateway_capture(world: &mut World, observed: &Observed, evidence: &mut E
 
 pub fn robustness(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result<()> {
     let case = input["case"].as_str().unwrap_or_default().to_owned();
-    if case == "pair" && evidence.scenario == "CORE-PAIR" {
-        return crate::pair::run(world, evidence);
-    }
     if !matches!(
         (case.as_str(), evidence.scenario.as_str()),
         ("helper-restart", "CORE-HELPER-RESTART")
@@ -587,6 +584,8 @@ pub fn robustness(world: &mut World, input: &Value, evidence: &mut Evidence) -> 
 pub fn dispatch(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result<()> {
     if input["case"] == "credential-store" {
         crate::core::robustness(world, input, evidence)
+    } else if input["case"] == "pair" && evidence.scenario == "CORE-PAIR" {
+        crate::pair::run(world, evidence)
     } else if SCENARIOS.contains(&evidence.scenario.as_str()) {
         robustness(world, input, evidence)
     } else {
