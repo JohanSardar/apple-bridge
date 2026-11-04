@@ -615,9 +615,15 @@ func (w *World) Close() {
 		os.RemoveAll(home)
 	}
 	if keep := os.Getenv("AB_LAB_SESSION_EFFECTS_EVIDENCE"); keep != "" && w.sessionNative != "" {
+		destination := filepath.Join(keep, filepath.Base(w.Dir))
+		os.MkdirAll(destination, 0700)
 		if guard, err := os.ReadFile(filepath.Join(w.Dir, "session-effects", "dispatch-guard.log")); err == nil {
-			os.MkdirAll(keep, 0700)
-			os.WriteFile(filepath.Join(keep, filepath.Base(w.Dir)+".log"), guard, 0600)
+			os.WriteFile(filepath.Join(destination, "dispatch-guard.log"), guard, 0600)
+		}
+		for _, name := range []string{"session.log", "simapple.log", "gateway.log"} {
+			if data, err := os.ReadFile(filepath.Join(w.Dir, name)); err == nil {
+				os.WriteFile(filepath.Join(destination, name), data, 0600)
+			}
 		}
 	}
 	os.RemoveAll(w.Dir)
