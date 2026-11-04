@@ -123,6 +123,9 @@ pub async fn hydrate(
             continue;
         }
         let source = crate::helper_blobs::HelperBlobs(commands.clone(), job.session);
+        let total = job.capture.blob_handles.len();
+        let (mut recovered, mut failed_after_retry, mut previously_failed, mut unknown) =
+            (0_usize, 0_usize, 0_usize, 0_usize);
         for (digest, handle) in job.capture.blob_handles {
             let Ok(digest) = ab_blobs::Digest::try_from(digest) else {
                 continue;
@@ -131,9 +134,15 @@ pub async fn hydrate(
                 continue;
             };
             let mut succeeded = false;
+            let mut transferred = false;
+            let mut known = true;
+            let rearmed = mutate(&blobs, |store| store.rearm(&digest))
+                .await
+                .map_err(|_| crate::Error::Invalid)?;
             loop {
                 let entry = blobs.lock().await.entries().get(digest.as_str()).cloned();
                 let Some(entry) = entry else {
+                    known = false;
                     break;
                 };
                 if matches!(
@@ -162,6 +171,7 @@ pub async fn hydrate(
                 {
                     break;
                 }
+                transferred = true;
                 let result = tokio::select! {
                     _ = stop.changed() => return Ok(()),
                     result = transfer(&blobs, &source, &handle, &digest) => result,
@@ -194,9 +204,20 @@ pub async fn hydrate(
                     break;
                 }
             }
-            if !succeeded {
-                eprintln!("Helper blob transfer incomplete");
+            if succeeded {
+                recovered += usize::from(rearmed);
+            } else if !known {
+                unknown += 1;
+            } else if transferred {
+                failed_after_retry += 1;
+            } else {
+                previously_failed += 1;
             }
+        }
+        if failed_after_retry + previously_failed + unknown > 0 {
+            eprintln!(
+                "Helper blob transfer incomplete: capture of {total} blobs, {previously_failed} not retryable (corrupt or over capacity), {failed_after_retry} failed after retry, {unknown} not in the manifest, {recovered} recovered after an earlier failure. Failed blobs get one fresh attempt whenever the Helper offers them again."
+            );
         }
     }
 }

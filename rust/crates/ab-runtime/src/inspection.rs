@@ -1,7 +1,13 @@
 use crate::{Config, Error};
 use rusqlite::{Connection, OpenFlags};
 use serde_json::{Value, json};
-use std::{fs, os::unix::fs::PermissionsExt, path::Path};
+use std::{
+    fs,
+    os::unix::fs::PermissionsExt,
+    path::Path,
+    sync::mpsc,
+    time::{Duration, Instant},
+};
 fn database(home: &Path) -> Result<Connection, Error> {
     Connection::open_with_flags(home.join("state.db"), OpenFlags::SQLITE_OPEN_READ_ONLY)
         .map_err(|_| Error::Invalid)
@@ -51,13 +57,37 @@ pub fn doctor(home: &Path) -> Result<Value, Error> {
         Err(error) => Err(error),
     }
 }
+const SQLITE_BUDGET: Duration = Duration::from_secs(5);
+const SHAPE_BUDGET: Duration = Duration::from_secs(5);
+fn bounded_integrity(db: &Connection, budget: Duration) -> Result<Option<String>, Error> {
+    let handle = db.get_interrupt_handle();
+    let (done, finished) = mpsc::channel::<()>();
+    let watchdog = std::thread::spawn(move || {
+        if finished.recv_timeout(budget).is_err() {
+            handle.interrupt();
+        }
+    });
+    let outcome = db.query_row("PRAGMA integrity_check", [], |r| r.get::<_, String>(0));
+    drop(done);
+    watchdog.join().map_err(|_| Error::Invalid)?;
+    match outcome {
+        Ok(value) => Ok(Some(value)),
+        Err(rusqlite::Error::SqliteFailure(failure, _))
+            if failure.code == rusqlite::ErrorCode::OperationInterrupted =>
+        {
+            Ok(None)
+        }
+        Err(_) => Err(Error::Invalid),
+    }
+}
 fn doctor_report(home: &Path) -> Result<Value, Error> {
     ab_trust::passkeys::validate_home(home)?;
     let db = database(home)?;
     db.execute_batch("BEGIN").map_err(|_| Error::Invalid)?;
-    let integrity: String = db
-        .query_row("PRAGMA integrity_check", [], |r| r.get(0))
-        .map_err(|_| Error::Invalid)?;
+    let started = Instant::now();
+    let integrity = bounded_integrity(&db, SQLITE_BUDGET)?;
+    let integrity_complete = integrity.is_some();
+    let integrity = integrity.unwrap_or_else(|| "ok".into());
     let schema: String = db
         .query_row(
             "SELECT value FROM meta WHERE key='schema_version'",
@@ -66,7 +96,7 @@ fn doctor_report(home: &Path) -> Result<Value, Error> {
         )
         .unwrap_or_default();
     let modes = private(home)?;
-    let mut result = json!({"ok":integrity == "ok" && modes,"private_modes":modes,"sqlite":integrity,"schema":schema,"credentials":{"store":"file"},"disk_encryption":"unverified","clock_skew":"unverified","versions":{"runtime":"rust","ipc":"ipc/1","feed":"feed/1","sqlite":rusqlite::version()},"warnings":[]});
+    let mut result = json!({"ok":integrity == "ok" && modes,"private_modes":modes,"sqlite":if integrity_complete { integrity.as_str() } else { "incomplete" },"schema":schema,"credentials":{"store":"file"},"disk_encryption":"unverified","clock_skew":"unverified","versions":{"runtime":"rust","ipc":"ipc/1","feed":"feed/1","sqlite":rusqlite::version()},"warnings":[]});
     let cursor_raw: String = db
         .query_row("SELECT value FROM meta WHERE key='cursor'", [], |r| {
             r.get(0)
@@ -135,7 +165,18 @@ fn doctor_report(home: &Path) -> Result<Value, Error> {
     result["applied"] = json!(applied);
     result["exactly_once"] = json!(exactly_once);
     result["ok"] = json!(integrity == "ok" && modes && inconsistent == 0 && exactly_once);
-    result["shape"] = crate::shape::violations(&db)?;
+    let (shape, shape_complete) =
+        crate::shape::violations(&db, started + SQLITE_BUDGET + SHAPE_BUDGET)?;
+    result["shape"] = shape;
+    result["checks"] = json!({"sqlite_integrity": if integrity_complete { "complete" } else { "incomplete" }, "shape_scan": if shape_complete { "complete" } else { "incomplete" }});
+    for (complete, warning) in [
+        (integrity_complete, "SQLite integrity check did not finish within its time budget on this large database; doctor reports it as incomplete. Run sqlite3 on a stopped copy for a full integrity_check."),
+        (shape_complete, "Record shape scan did not finish within its time budget; the reported shape counts cover only the records scanned."),
+    ] {
+        if !complete {
+            result["warnings"].as_array_mut().ok_or(Error::Invalid)?.push(json!(warning));
+        }
+    }
     encryption(home, &mut result);
     encryption_warning(&mut result)?;
     for warning in ab_remote::ct::doctor(home, ab_remote::ct::now()) {
@@ -285,4 +326,26 @@ fn clock(home: &Path, result: &mut Value) -> Result<(), Error> {
     }
     result["warnings"].as_array_mut().ok_or(Error::Invalid)?.push(json!("Authenticated gateway clock exchange unavailable; reconnect peers with clock-exchange support, then rerun doctor."));
     Ok(())
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn integrity_check_is_bounded_and_reports_incomplete() -> Result<(), Box<dyn std::error::Error>>
+    {
+        let db = Connection::open_in_memory()?;
+        db.execute_batch(
+            "CREATE TABLE t(a INTEGER, b TEXT); CREATE INDEX t_b ON t(b);
+             WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i+1 FROM n WHERE i<400000)
+             INSERT INTO t SELECT i, hex(randomblob(16)) FROM n;",
+        )?;
+        let started = Instant::now();
+        assert_eq!(bounded_integrity(&db, Duration::from_millis(1))?, None);
+        assert!(started.elapsed() < Duration::from_secs(5));
+        assert_eq!(
+            bounded_integrity(&db, Duration::from_secs(60))?,
+            Some("ok".into())
+        );
+        Ok(())
+    }
 }
