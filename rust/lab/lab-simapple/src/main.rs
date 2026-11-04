@@ -1139,7 +1139,7 @@ impl Session<'_> {
                     send(&mut self.stream, &reply)?;
                 }
             },
-            _ => return Err(invalid("session frame")),
+            _ => return Err(invalid(&format!("session frame {}", frame["t"]))),
         }
         Ok(())
     }
