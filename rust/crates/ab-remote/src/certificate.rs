@@ -71,12 +71,16 @@ impl Certificates {
             .map_err(|_| Error::Contract("certificate lock"))? = Some(Arc::new(config));
         Ok(fingerprint)
     }
-    pub async fn ensure(&self, identity: &Identity, client: &reqwest::Client) -> Result<()> {
+    pub async fn ensure(
+        &self,
+        identity: &Identity,
+        host: &str,
+        client: &reqwest::Client,
+    ) -> Result<()> {
         let _guard = self.renewal.lock().await;
         let dir = self.home.join("remote");
         let key_path = dir.join("relay-key.pem");
         let cert_path = dir.join("relay-cert.pem");
-        let host = &identity.credential.hostname;
         if let (Ok(cert), Ok(key)) = (
             std::fs::read_to_string(&cert_path),
             std::fs::read_to_string(&key_path),
@@ -88,8 +92,8 @@ impl Certificates {
                 && parsed.validity().not_after.timestamp()
                     - x509_parser::time::ASN1Time::now().timestamp()
                     > 30 * 86400
+                && let Ok(fingerprint) = self.install(&cert, &key, host)
             {
-                let fingerprint = self.install(&cert, &key, host)?;
                 return report(identity, client, &fingerprint).await;
             }
         }
@@ -107,7 +111,7 @@ impl Certificates {
         let (account, _) = builder
             .create_from_key((key, private), self.directory.clone())
             .await?;
-        let identifiers = [Identifier::Dns(host.clone())];
+        let identifiers = [Identifier::Dns(host.to_owned())];
         let mut order = account.new_order(&NewOrder::new(&identifiers)).await?;
         let result = async {
             let mut auths = order.authorizations();
@@ -126,7 +130,7 @@ impl Certificates {
             order.poll_ready(&RetryPolicy::default()).await?;
             let key_pem = load_key(&key_path)?;
             let key = rcgen::KeyPair::from_pem(&key_pem)?;
-            let params = rcgen::CertificateParams::new(vec![host.clone()])?;
+            let params = rcgen::CertificateParams::new(vec![host.to_owned()])?;
             let csr = params.serialize_request(&key)?;
             order.finalize_csr(csr.der()).await?;
             let pem = order.poll_certificate(&RetryPolicy::default()).await?;

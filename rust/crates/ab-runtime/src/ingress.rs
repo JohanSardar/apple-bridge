@@ -314,6 +314,7 @@ async fn reconcile(
     let mut tick = tokio::time::interval(std::time::Duration::from_secs(1));
     let mut failed = BTreeMap::<&str, String>::new();
     let mut forwarded = (String::new(), String::new());
+    let mut domains = BTreeMap::<&str, String>::new();
     loop {
         tokio::select! {
             _ = statuses.changed() => {
@@ -346,6 +347,10 @@ async fn reconcile(
                 for (name,cancel) in &cancels {
                     if current.get(*name) != Some(&true) { let _ = cancel.send(true); }
                 }
+                let domain = configured_domain(&home);
+                if domains.get("relay").is_some_and(|started| *started != domain) && let Some(cancel) = cancels.get("relay") {
+                    let _ = cancel.send(true);
+                }
                 prior = current.clone();
                 publish(&home,&current,&statuses.borrow())?;
                 let id = ab_remote::state::read::<ab_remote::state::Config>(&home,"config").map(|config| config.id).unwrap_or_default();
@@ -366,11 +371,17 @@ async fn reconcile(
                     let gateway = gateway.clone(); let (cancel, stop) = watch::channel(false);
                     cancels.insert(name,cancel);
                     running.insert(name);
+                    domains.insert(name, configured_domain(&home));
                     tasks.spawn(async move { (name, adapter.run(gateway,stop).await) });
                 }
             }
         }
     }
+}
+fn configured_domain(home: &Path) -> String {
+    ab_remote::state::read::<ab_remote::state::Config>(home, "config")
+        .map(|config| config.domain)
+        .unwrap_or_default()
 }
 fn adapter(home: &Path, name: &str) -> Result<Box<dyn Ingress>, Error> {
     if name == "private" {
@@ -397,8 +408,22 @@ fn adapter(home: &Path, name: &str) -> Result<Box<dyn Ingress>, Error> {
         .redirect(reqwest::redirect::Policy::none())
         .build()
         .map_err(|_| Error::Invalid)?;
+    let domain = configured_domain(home);
+    #[cfg(feature = "lab-harness")]
+    let resolver: Option<Arc<dyn ab_remote::dns::Resolver>> =
+        match std::env::var("APPLE_BRIDGE_LAB_DNS_SERVER") {
+            Ok(address) => Some(Arc::new(ab_remote::dns::Hickory::server(
+                address.parse().map_err(|_| Error::Invalid)?,
+            )?)),
+            Err(_) => None,
+        };
+    #[cfg(not(feature = "lab-harness"))]
+    let resolver: Option<Arc<dyn ab_remote::dns::Resolver>> = None;
     Ok(Box::new(ab_remote::relay::Relay {
         home: home.to_owned(),
+        domain,
+        resolver,
+        domain_poll: std::time::Duration::from_secs(5),
         endpoint: std::env::var("APPLE_BRIDGE_RELAY_URL")
             .unwrap_or_else(|_| "https://ab.lexaai.tech".into()),
         zone: std::env::var("APPLE_BRIDGE_RELAY_ZONE").unwrap_or_else(|_| "ab.lexaai.tech".into()),
