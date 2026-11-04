@@ -56,11 +56,7 @@ fn calls(directory: &Path, rows: &[(u32, f64)], uuid: &str) -> Fallible<()> {
     Ok(())
 }
 
-fn rust_scan(
-    directory: &Path,
-    checkpoints: &Value,
-    state: Option<&Path>,
-) -> Fallible<Value> {
+fn rust_scan(directory: &Path, checkpoints: &Value, state: Option<&Path>) -> Fallible<Value> {
     let sources = readers::from_config(&json!({"phone":{"root":directory}}).to_string())?;
     let (mut gateway, session_gateway) = UnixStream::pair()?;
     let (mut helper, session_helper) = UnixStream::pair()?;
@@ -147,7 +143,9 @@ fn ids(home: &Path) -> Fallible<BTreeMap<String, bool>> {
     )?;
     let mut statement =
         connection.prepare("SELECT id,deleted FROM records WHERE collection='phone.call'")?;
-    let rows = statement.query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)? != 0)))?;
+    let rows = statement.query_map([], |row| {
+        Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)? != 0))
+    })?;
     Ok(rows.collect::<Result<_, _>>()?)
 }
 

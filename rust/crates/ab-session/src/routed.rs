@@ -589,7 +589,13 @@ fn produce(
                     .remove(source)
                     .unwrap_or_default();
                 let more = next.is_ok() && reader.more();
-                (next, covers, reader.token(), more, reader.adopts_generation())
+                (
+                    next,
+                    covers,
+                    reader.token(),
+                    more,
+                    reader.adopts_generation(),
+                )
             };
             if more {
                 again.push(source);
