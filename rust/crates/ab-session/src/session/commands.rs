@@ -166,7 +166,7 @@ impl Probe for Hub {
     fn call(&self, operation: &str, args: &Value) -> Result<Value, String> {
         let wait = if matches!(
             operation,
-            "reminders.write" | "calendar.write" | "contacts.write" | "contacts.write_group"
+            "reminders.write" | "calendar.write" | "contacts.write" | "contacts.write_group" | "notes.write"
         ) {
             WRITE_WAIT
         } else {
@@ -431,7 +431,7 @@ impl Hub {
                 json!({"observed": false, "reason": "dispatch_evidence_unavailable", "native_error_code": code, "prepared": prepared}),
             )
         };
-        let (disposition, evidence) = match (driver.write)(self, &command.command_id, &action) {
+        let (disposition, evidence) = match (driver.write)(self, &command.command_id, &action, state) {
             Ok(written) => match (driver.settle)(&operation, &written) {
                 Some(settled) => {
                     let mut fields = settled.evidence;

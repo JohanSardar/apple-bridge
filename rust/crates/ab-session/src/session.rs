@@ -27,10 +27,11 @@ use std::{
 mod calendar;
 mod commands;
 mod contacts;
+mod notes;
 mod owned;
 mod reminders;
 
-pub const RUST_COMMAND_SOURCES: [&str; 3] = ["reminders", "calendar", "contacts"];
+pub const RUST_COMMAND_SOURCES: [&str; 4] = ["reminders", "calendar", "contacts", "notes"];
 
 #[derive(Clone, Debug, Default)]
 pub struct Options {

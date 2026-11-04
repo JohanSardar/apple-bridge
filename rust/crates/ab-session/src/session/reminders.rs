@@ -172,7 +172,12 @@ pub(super) fn validate(
     Ok(())
 }
 
-pub(super) fn write(probe: &dyn Probe, command_id: &str, action: &Value) -> Result<Value, String> {
+pub(super) fn write(
+    probe: &dyn Probe,
+    command_id: &str,
+    action: &Value,
+    _state: &Value,
+) -> Result<Value, String> {
     probe.call(
         "reminders.write",
         &json!({
