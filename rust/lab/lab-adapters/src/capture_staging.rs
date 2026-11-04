@@ -12,7 +12,10 @@ use rusqlite::{Connection, OpenFlags};
 use serde_json::json;
 use std::{fs, path::Path, time::Duration};
 
-pub const SCENARIOS: [&str; 2] = ["CORE-REPLICA-CAPTURE-STAGING", "CORE-REPLICA-CAPTURE-LEGACY"];
+pub const SCENARIOS: [&str; 2] = [
+    "CORE-REPLICA-CAPTURE-STAGING",
+    "CORE-REPLICA-CAPTURE-LEGACY",
+];
 const BACKLOG: usize = 80;
 const CREDIT_WINDOW: u64 = 4 * 1024 * 1024;
 
@@ -209,11 +212,7 @@ fn run_case(world: &mut World, name: &str, evidence: &mut Evidence) -> Result<()
         replicas::crash(0)?;
         world.partition()?;
         let restarted = replicas::restart(0);
-        if !case.add(
-            "restart_while_ingress_partitioned",
-            restarted.is_ok(),
-            "",
-        ) {
+        if !case.add("restart_while_ingress_partitioned", restarted.is_ok(), "") {
             proxy.close();
             return Ok(());
         }
@@ -276,7 +275,10 @@ fn run_case(world: &mut World, name: &str, evidence: &mut Evidence) -> Result<()
             case.add(
                 "resume_starts_at_capture_beginning",
                 seen.hello_sequences.last() == Some(&before.1),
-                &format!("hello sequences {:?} before {}", seen.hello_sequences, before.1),
+                &format!(
+                    "hello sequences {:?} before {}",
+                    seen.hello_sequences, before.1
+                ),
             );
             let applied = sql(
                 &endpoint.home,
@@ -304,7 +306,11 @@ fn run_case(world: &mut World, name: &str, evidence: &mut Evidence) -> Result<()
                 &world.gateway_home,
                 "SELECT COUNT(*) FROM journal_commits WHERE through_seq<=(SELECT CAST(value AS INTEGER) FROM meta WHERE key='retention_floor')",
             );
-            case.add("retention_prunes_commit_end_rows", pruned && remaining == 0, "");
+            case.add(
+                "retention_prunes_commit_end_rows",
+                pruned && remaining == 0,
+                "",
+            );
         } else {
             let discarded = endpoint.home.join("lab-capture-discarded").exists();
             case.add(
@@ -315,8 +321,7 @@ fn run_case(world: &mut World, name: &str, evidence: &mut Evidence) -> Result<()
             let snapshots = status["replica"]["snapshots"].as_u64().unwrap_or(0);
             case.add(
                 "resnapshot_never_interleaves_partial_apply",
-                snapshots >= 2
-                    && sql(&endpoint.home, "SELECT COUNT(*) FROM pending_changes") == 0,
+                snapshots >= 2 && sql(&endpoint.home, "SELECT COUNT(*) FROM pending_changes") == 0,
                 &format!("snapshots {snapshots}"),
             );
         }
