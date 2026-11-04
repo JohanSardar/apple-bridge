@@ -244,7 +244,7 @@ the agent policy (one pinned message, once), per-kind route proofs, then at Disp
 resend and agent checks again, the agent `.used` marker before the send, staging, one AppleScript send per part,
 chat.db correlation by polling outgoing rows (10 seconds in all, later parts never sent after a doubtful one),
 the aggregate disposition, lab proof recording (lab only) and the capture. It is selected by
-`--rust-commands messages.send` (the per-operation name; the bare source `messages` is not accepted until the UI
+`--rust-commands messages.send` (or `messages.reply`, `messages.react`, `messages.edit`, `messages.unsend`, `messages.delete_message`; the per-operation names; the bare source `messages` is not accepted until the UI
 operations and the self-test are ported) and the Helper does not pass it by default.
 
 Swift answers read-only facts and primitive actions (`MessagesCommands.primitive`): `messages.config`,
@@ -252,7 +252,12 @@ Swift answers read-only facts and primitive actions (`MessagesCommands.primitive
 `direct_chats`, `route_proofs`, `message`, `agent_policy`, `max_row_id`, `payload_fingerprint`, `rows_after`
 (outgoing rows with decoded body, peers and attachment names), `stage` (copies the uploads; a failure is reported,
 not decided), `send_part` (the AppleScript send, returning its error number), `mark_policy_used`, `record_proof`
-(lab only) and `reconcile` (captures the command's rows). Rust decides; Swift never compares.
+(lab only) and `reconcile` (captures the command's rows). For the message-targeted operations (reply, react,
+edit, unsend, delete) Swift also answers `target` (the decoded message and its row facts), `reactions`,
+`reaction_rows`, `replies`, `ui_available`, and the three UI actions `ui_prepare` (open the message, acknowledge a
+deleted-info sheet, validate the target), `ui_validate` and `ui_perform`; Rust owns the tag rules, the edit (15 minutes,
+five edits) and unsend (2 minutes) windows, the expected-state conflict, the route, the proofs and the observation
+of the effect. Rust decides; Swift never compares.
 
 ## Ownership and migration
 
