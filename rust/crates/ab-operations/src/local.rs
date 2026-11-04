@@ -1274,6 +1274,9 @@ fn outcome_timeout(command: &Command) -> Result<Duration, Error> {
     if crate::outcome::capture(&command.op) {
         return Ok(Duration::from_secs(75));
     }
+    if command.op.starts_with("messages.") {
+        return Ok(Duration::from_secs(35));
+    }
     if command.op == "shortcuts.run" {
         let args: Value = serde_json::from_str(command.args.get()).map_err(|_| Code::Invalid)?;
         let millis = args["timeout_ms"].as_u64().unwrap_or(0);
