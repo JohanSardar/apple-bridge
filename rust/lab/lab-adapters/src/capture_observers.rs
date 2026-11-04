@@ -99,16 +99,26 @@ fn difference(gateway: &Client, replica: &Client) -> String {
             .collect()
     };
     let (a, b) = (keys(&left), keys(&right));
+    let full = |read: &crate::assertions::Read| -> std::collections::BTreeMap<String, Value> {
+        read.records
+            .iter()
+            .map(|r| (crate::watch::record_key(r), r.clone()))
+            .collect()
+    };
+    let (fa, fb) = (full(&left), full(&right));
+    let changed: Vec<String> = fa
+        .iter()
+        .filter(|(k, v)| fb.get(*k).is_some_and(|other| other != *v))
+        .take(1)
+        .map(|(k, v)| format!("DIFF {k} gw={v} rep={}", fb[k]))
+        .collect();
     let only: Vec<String> = a
         .iter()
         .filter(|(k, v)| b.get(*k) != Some(*v))
         .map(|(k, v)| format!("gw {k}@{v} rep {:?}", b.get(k)))
         .chain(b.keys().filter(|k| !a.contains_key(*k)).map(|k| format!("rep-only {k}")))
         .collect();
-    format!(
-        "cursors {:?}/{:?} {}",
-        left.cursor, right.cursor, only.join("; ")
-    )
+    format!("{} {}", only.join("; "), changed.join(""))
 }
 
 fn approvals_page(owner: &Owner) -> Option<String> {
