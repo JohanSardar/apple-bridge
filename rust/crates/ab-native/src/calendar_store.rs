@@ -531,6 +531,17 @@ impl Enrichment {
             "complete",
             "",
         );
+        self.travel(data, coverage, row);
+        self.attachments(data, coverage, row);
+    }
+
+    fn travel(
+        &self,
+        data: &mut Map<String, Value>,
+        coverage: &mut Map<String, Value>,
+        row: &Row,
+    ) {
+        let get = |key: &str| row.get(key).cloned().unwrap_or(Value::Null);
         let travel = get("travel_time");
         let known_zero = travel.as_f64() == Some(0.0);
         let reason = if known_zero {
@@ -601,6 +612,15 @@ impl Enrichment {
                 "unsupported_conference_url_scheme",
             );
         }
+    }
+
+    fn attachments(
+        &mut self,
+        data: &mut Map<String, Value>,
+        coverage: &mut Map<String, Value>,
+        row: &Row,
+    ) {
+        let get = |key: &str| row.get(key).cloned().unwrap_or(Value::Null);
         let owner = get("item_id").as_f64().and_then(exact).unwrap_or(0);
         let attachments = self
             .snapshot
