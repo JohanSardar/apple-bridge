@@ -31,14 +31,50 @@ fn require_lab_gateway(
     )
     .into())
 }
-use std::{env, fs, path::PathBuf, process::ExitCode};
+fn check(args: impl Iterator<Item = String>) -> Result<bool, Box<dyn std::error::Error>> {
+    let registry = lab_adapters::registry();
+    let mut passed = true;
+    let mut count = 0;
+    for path in args {
+        count += 1;
+        let id = PathBuf::from(&path)
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .unwrap_or_default()
+            .to_owned();
+        let outcome = fs::read(&path)
+            .map_err(|e| e.to_string())
+            .and_then(|bytes| lab_adapters::registration::load(&bytes))
+            .and_then(|scenario| {
+                if scenario.id == id {
+                    lab_adapters::registration::classify(&scenario, &registry)
+                } else {
+                    Err(format!("id {} does not match file name", scenario.id))
+                }
+            });
+        passed &= outcome.is_ok();
+        let (ok, detail) = match outcome {
+            Ok(kind) => (true, kind.to_owned()),
+            Err(error) => (false, error),
+        };
+        println!(
+            "{}",
+            serde_json::json!({"scenario": id, "ok": ok, "kind": detail})
+        );
+    }
+    Ok(passed && count > 0)
+}
 #[allow(clippy::too_many_lines)]
 fn run() -> Result<bool, Box<dyn std::error::Error>> {
     let mut args = env::args().skip(1);
-    if args.next().as_deref() != Some("run") {
-        return Err(
-            "usage: lab-families run YAML... --gateway BIN --simapple BIN --output DIR [--level sim|real --helper-app APP]".into(),
-        );
+    match args.next().as_deref() {
+        Some("run") => {}
+        Some("check") => return check(args),
+        _ => {
+            return Err(
+                "usage: lab-families run YAML... --gateway BIN --simapple BIN --output DIR [--level sim|real --helper-app APP] | lab-families check YAML...".into(),
+            );
+        }
     }
     let mut paths = vec![];
     let mut gateway = None;

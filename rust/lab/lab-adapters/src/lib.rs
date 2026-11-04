@@ -41,6 +41,8 @@ pub mod maps;
 pub mod media;
 pub mod messages_a;
 pub mod messages_b;
+pub mod messages_rich;
+pub mod messages_visibility;
 pub mod native;
 pub mod native_runner;
 pub mod notes;
@@ -53,6 +55,7 @@ pub mod private;
 pub mod queries;
 pub mod rawhttp;
 pub mod readmodels;
+pub mod registration;
 pub mod relay;
 pub mod relay_acme;
 pub mod relay_certs;
@@ -118,6 +121,7 @@ pub fn registry() -> Registry {
         };
         let self_started = media::MEDIA_SCENARIOS.contains(&id)
             || id == "MSG-MEDIA-CLEANUP"
+            || messages_visibility::SCENARIOS.contains(&id)
             || readmodels::SCENARIOS.contains(&id)
             || calls::NATIVE_SCENARIOS.contains(&id)
             || usage::NATIVE_SCENARIOS.contains(&id)
@@ -276,6 +280,23 @@ pub fn registry() -> Registry {
     registry.register("SIRI-INTENTS", siri::intents);
     registry.register("connector_approval", connectors::connector_approval);
     registry.register("consent_connector", consent::run);
+    for id in mac_real::SCENARIOS {
+        registry.register_real(id, mac_real::run);
+    }
+    for id in ["AUD-TRANSCRIBE", "SPEECH-SAY", "VIS-IDLE"] {
+        registry.register_real(id, vision::run);
+    }
+    registry.register_standalone("R1-DMG-REAL", |evidence| {
+        packaging::release_dmg(evidence);
+        Ok(())
+    });
+    registry.register_real("MSG-DELETE-VISIBILITY", messages_visibility::real);
+    registry.register_real("CALL-READ-REAL", |world, evidence| {
+        calls::phone(world, &serde_json::Value::Null, evidence)
+    });
+    registry.register_real("REM-LIST-LOST-ACK", |world, evidence| {
+        native_runner::run(world, &serde_json::Value::Null, evidence)
+    });
     registry.register_real("RELAY-REAL", remote_real::relay_real);
     registry.register_real("CONN-CLAUDE-CODE", remote_real::claude_code);
     registry.register_real("CONN-RELAY-CLAUDE", remote_real::relay_claude);

@@ -1287,10 +1287,14 @@ fn perf(world: &World, evidence: &mut Evidence) -> Result<()> {
             }
             longest_text = longest_text.max(text_length);
         }
-        check(
-            evidence,
+        let p95 = percentile95(&mut server_values);
+        evidence.check(
             &format!("{protocol}_1000_items_gateway_p95_under_10ms"),
-            server_values.len() == 100 && missing == 0 && percentile95(&mut server_values) < 10.0,
+            server_values.len() == 100 && missing == 0 && p95 < 10.0,
+            &format!(
+                "samples={} missing={missing} p95={p95:.3}ms",
+                server_values.len()
+            ),
         );
         check(
             evidence,

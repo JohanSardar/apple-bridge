@@ -14,6 +14,8 @@ pub const SENSOR_REAL: [&str; 8] = [
     "APP-CAPTURE-REAL",
 ];
 
+pub const STUB: [&str; 1] = ["APP-BUILD-REAL"];
+
 pub fn summarize(evidence: &mut Evidence, raw: &[u8], succeeded: bool) {
     let parsed = serde_json::from_slice::<Value>(raw).ok();
     let checks: BTreeMap<String, bool> = parsed
@@ -65,7 +67,7 @@ pub fn run_real(scenario: &Scenario) -> Option<Evidence> {
         summarize(&mut evidence, &raw, succeeded);
         return Some(evidence);
     }
-    if scenario.id == "APP-BUILD-REAL" {
+    if STUB.contains(&scenario.id.as_str()) {
         evidence.check(
             "real_device_acceptance",
             false,
