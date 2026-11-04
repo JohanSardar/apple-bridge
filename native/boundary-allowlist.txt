@@ -5,17 +5,7 @@ gateway native/Sources/CallsSource/CallsSource.swift observation-baseline-moves-
 gateway native/Sources/ContactsSource/ContactsSource.swift observation-baseline-moves-to-rust-diff
 gateway native/Sources/MacSource/MacSource.swift observation-baseline-moves-to-rust-diff
 gateway native/Sources/MessagesSource/Messages.swift messages-baseline-moves-to-rust-diff
-gateway native/Sources/MessagesSource/MessagesAccessibility.swift messages-baseline-moves-to-rust-diff
 gateway native/Sources/MessagesSource/MessagesBaseline.swift messages-baseline-moves-to-rust-diff
-gateway native/Sources/MessagesSource/MessagesBaselineProperties.swift messages-baseline-moves-to-rust-diff
-gateway native/Sources/MessagesSource/MessagesCleanup.swift messages-baseline-moves-to-rust-diff
-gateway native/Sources/MessagesSource/MessagesCommands.swift messages-baseline-moves-to-rust-diff
-gateway native/Sources/MessagesSource/MessagesMediaCleanupProof.swift messages-baseline-moves-to-rust-diff
-gateway native/Sources/MessagesSource/MessagesProbes.swift messages-baseline-moves-to-rust-diff
-gateway native/Sources/MessagesSource/MessagesReadStateFixture.swift messages-baseline-moves-to-rust-diff
-gateway native/Sources/MessagesSource/MessagesResendFixture.swift messages-baseline-moves-to-rust-diff
-gateway native/Sources/MessagesSource/MessagesSelfTestBaseline.swift messages-baseline-moves-to-rust-diff
-gateway native/Sources/MessagesSource/MessagesSelfTestIsolation.swift messages-baseline-moves-to-rust-diff
 gateway native/Sources/NotesSource/NotesSource.swift observation-baseline-moves-to-rust-diff
 gateway native/Sources/RemindersSource/RemindersSource.swift observation-baseline-moves-to-rust-diff
 gateway native/Sources/RemindersStore/StoreTimings.swift perf-timing-label-not-a-gateway-baseline
