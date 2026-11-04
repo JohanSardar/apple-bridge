@@ -68,6 +68,27 @@ fn serve(mut stream: UnixStream, facts: Facts, page: usize, requests: Arc<Mutex<
                 .ok();
             let op = frame["op"].as_str().unwrap_or_default().to_owned();
             let reply = (|| {
+                if frame["t"] == "Revalidate" {
+                    let results: Vec<Value> = frame["args"]["identities"]
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                        .map(|identity| {
+                            let key = format!(
+                                "verdict:{}/{}",
+                                identity["collection"].as_str().unwrap_or_default(),
+                                identity["native_key"].as_str().unwrap_or_default()
+                            );
+                            let state = facts
+                                .lock()
+                                .ok()
+                                .and_then(|guard| guard.get(&key).map(|value| value.error))
+                                .unwrap_or("present");
+                            json!({"collection":identity["collection"],"native_key":identity["native_key"],"state":state})
+                        })
+                        .collect();
+                    return json!({"t":"Revalidated","id":frame["id"],"op":op,"results":results});
+                }
                 let (token, offset) = if frame["snapshot"].is_null() {
                     let Ok(guard) = facts.lock() else {
                         return json!({"t":"Error","id":frame["id"],"code":"unavailable"});
@@ -112,6 +133,19 @@ fn serve(mut stream: UnixStream, facts: Facts, page: usize, requests: Arc<Mutex<
             }
         }
     });
+}
+
+fn verdict(facts: &Facts, identity: &str, state: &'static str) -> Fallible<()> {
+    facts.lock().map_err(|_| "poisoned")?.insert(
+        format!("verdict:{identity}"),
+        Operation {
+            error: state,
+            complete: true,
+            generation: "",
+            items: Vec::new(),
+        },
+    );
+    Ok(())
 }
 
 fn row(collection: &str, key: &str, title: &str) -> Value {
@@ -250,9 +284,9 @@ fn rust_pages_calendar_facts_from_native_and_diffs_them() -> Fallible<()> {
             row("calendar.event", "b", "B"),
             row("calendar.event", "c", "C"),
             row("calendar.event", "d", "D"),
-            json!({"kind":"evict","collection":"calendar.event","native_key":"e","scoped_alias":"cal/e","data":{"title":"E"},"observed_at":"2026-11-03T00:00:00Z"}),
         ]),
     )?;
+    verdict(&f.facts, "calendar.event/e", "outside_scope")?;
     let (size, second) = receive(&mut f.wire.gateway)?;
     assert_eq!(second["predecessor"], first["checkpoint"]);
     assert_eq!(names(&second, "upsert"), ["a"]);
@@ -569,9 +603,9 @@ fn reminders_pull_pages_both_collections_and_follows_absent_rows_and_alias_moves
             reminder("reminders.reminder", "r1", "list-1/ext1", "One renamed"),
             reminder("reminders.reminder", "r2", "list-1/ext2-moved", "Two"),
             reminder("reminders.reminder", "r4", "", "Four"),
-            json!({"kind":"absent","collection":"reminders.reminder","native_key":"r3","scoped_alias":"","data":{"title":"Three"},"observed_at":"2026-11-03T00:00:00Z","revalidated":true}),
         ]),
     )?;
+    verdict(&f.facts, "reminders.reminder/r3", "missing")?;
     let (size, second) = receive(&mut f.wire.gateway)?;
     assert_eq!(second["predecessor"], first["checkpoint"]);
     assert_eq!(names(&second, "upsert"), ["r1", "r2"]);
@@ -640,11 +674,9 @@ fn reminders_list_absence_and_incomplete_pages_never_delete() -> Fallible<()> {
     set(
         &f.facts,
         "agenda.reminder_lists",
-        reminder_operation(vec![
-            reminder("reminders.list", "list-1", "", "Home"),
-            json!({"kind":"absent","collection":"reminders.list","native_key":"list-2","data":{"title":"Work"},"observed_at":"2026-11-03T00:00:00Z","revalidated":true}),
-        ]),
+        reminder_operation(vec![reminder("reminders.list", "list-1", "", "Home")]),
     )?;
+    verdict(&f.facts, "reminders.list/list-2", "missing")?;
     let (_, second) = receive(&mut f.wire.gateway)?;
     assert_eq!(names(&second, "absent"), ["list-2"]);
     assert_eq!(names(&second, "upsert"), Vec::<String>::new());

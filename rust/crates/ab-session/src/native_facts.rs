@@ -4,11 +4,13 @@ use crate::{
 };
 use serde_json::{Value, json};
 use std::{
+    collections::{BTreeMap, BTreeSet},
     os::unix::net::UnixStream,
     path::PathBuf,
     sync::{
-        Mutex,
+        Arc, Mutex,
         atomic::{AtomicU64, Ordering},
+        mpsc,
     },
     time::Duration,
 };
@@ -17,6 +19,20 @@ const PAGE_LIMIT: u64 = 500;
 const MAX_ITEMS: usize = 100_000;
 const MAX_PAGES: usize = 4_096;
 const IO_TIMEOUT: Duration = Duration::from_secs(60);
+pub const MAX_REVALIDATE: usize = 500;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum State {
+    Present,
+    Missing,
+    OutsideScope,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Verdict {
+    pub identity: String,
+    pub state: State,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FactSet {
@@ -34,27 +50,84 @@ enum Origin {
 }
 
 #[derive(Debug)]
-struct Connection {
-    stream: UnixStream,
-    fence: u64,
-}
-
-#[derive(Debug)]
 enum Failure {
     Remote(String),
+    Malformed,
     Broken(Error),
 }
 
 impl From<Error> for Failure {
     fn from(error: Error) -> Self {
-        Self::Broken(error)
+        match error {
+            Error::Invalid => Self::Malformed,
+            other => Self::Broken(other),
+        }
     }
+}
+
+type Changes = Arc<Mutex<BTreeSet<String>>>;
+
+#[derive(Debug)]
+struct Inbox {
+    waiters: Mutex<BTreeMap<String, mpsc::Sender<Value>>>,
+    changed: Changes,
+}
+
+impl Inbox {
+    fn route(&self, frame: Value) {
+        if frame["t"] == "Changed" {
+            if let (Some(source), Ok(mut changed)) = (
+                frame["source"].as_str().filter(|text| !text.is_empty()),
+                self.changed.lock(),
+            ) {
+                changed.insert(source.to_owned());
+            }
+            return;
+        }
+        let Some(id) = frame["id"].as_str() else {
+            return;
+        };
+        if let Ok(waiters) = self.waiters.lock()
+            && let Some(waiter) = waiters.get(id)
+        {
+            let _ = waiter.send(frame);
+        }
+    }
+
+    fn close(&self) {
+        if let Ok(mut waiters) = self.waiters.lock() {
+            waiters.clear();
+        }
+    }
+}
+
+#[derive(Debug)]
+struct Link {
+    writer: Mutex<UnixStream>,
+    fence: u64,
+    inbox: Arc<Inbox>,
+}
+
+impl Drop for Link {
+    fn drop(&mut self) {
+        if let Ok(writer) = self.writer.lock() {
+            let _ = writer.shutdown(std::net::Shutdown::Both);
+        }
+    }
+}
+
+#[derive(Debug)]
+enum Connection {
+    Closed,
+    Raw(UnixStream),
+    Live(Arc<Link>),
 }
 
 #[derive(Debug)]
 pub struct Client {
     origin: Origin,
-    connection: Mutex<Option<Connection>>,
+    connection: Mutex<Connection>,
+    changed: Changes,
     requests: AtomicU64,
 }
 
@@ -63,104 +136,221 @@ impl Client {
         if !path.is_absolute() {
             return Err(Error::Invalid);
         }
-        Ok(Self {
-            origin: Origin::Socket(path),
-            connection: Mutex::new(None),
-            requests: AtomicU64::new(0),
-        })
+        Ok(Self::new(Origin::Socket(path), Connection::Closed))
     }
 
     pub fn inherited(stream: UnixStream) -> Result<Self, Error> {
         stream.set_read_timeout(Some(IO_TIMEOUT))?;
         stream.set_write_timeout(Some(IO_TIMEOUT))?;
-        Ok(Self {
-            origin: Origin::Inherited,
-            connection: Mutex::new(Some(Connection { stream, fence: 0 })),
-            requests: AtomicU64::new(0),
-        })
+        Ok(Self::new(Origin::Inherited, Connection::Raw(stream)))
     }
 
     #[must_use]
     pub fn detached() -> Self {
+        Self::new(Origin::Detached, Connection::Closed)
+    }
+
+    fn new(origin: Origin, connection: Connection) -> Self {
         Self {
-            origin: Origin::Detached,
-            connection: Mutex::new(None),
+            origin,
+            connection: Mutex::new(connection),
+            changed: Changes::default(),
             requests: AtomicU64::new(0),
         }
     }
 
+    #[must_use]
+    pub fn changed(&self, source: &str) -> bool {
+        self.changed
+            .lock()
+            .is_ok_and(|changed| changed.contains(source))
+    }
+
+    pub fn acknowledge(&self, source: &str) {
+        if let Ok(mut changed) = self.changed.lock() {
+            changed.remove(source);
+        }
+    }
+
     pub fn fetch(&self, fence: u64, operation: &str) -> Result<FactSet, Error> {
+        self.guarded(fence, |link| self.exchange(link, operation))
+    }
+
+    pub fn revalidate(
+        &self,
+        fence: u64,
+        operation: &str,
+        identities: &[Value],
+    ) -> Result<Vec<Verdict>, Error> {
+        if identities.is_empty() || identities.len() > MAX_REVALIDATE {
+            return Err(Error::Invalid);
+        }
+        self.guarded(fence, |link| self.verdicts(link, operation, identities))
+    }
+
+    fn guarded<T>(
+        &self,
+        fence: u64,
+        work: impl FnOnce(&Arc<Link>) -> Result<T, Failure>,
+    ) -> Result<T, Error> {
         if fence == 0 {
             return Err(Error::Invalid);
         }
-        let mut guard = self.connection.lock().map_err(|_| Error::WorkerPanicked)?;
-        if guard.is_none() {
-            let Origin::Socket(path) = &self.origin else {
-                return Err(Error::Conflict);
-            };
-            let stream = UnixStream::connect(path)?;
-            stream.set_read_timeout(Some(IO_TIMEOUT))?;
-            stream.set_write_timeout(Some(IO_TIMEOUT))?;
-            *guard = Some(Connection { stream, fence: 0 });
-        }
-        let connection = guard.as_mut().ok_or(Error::Conflict)?;
-        match self.exchange(connection, fence, operation) {
-            Ok(set) => Ok(set),
+        let link = self.link(fence)?;
+        match work(&link) {
+            Ok(value) => Ok(value),
             Err(Failure::Remote(code)) => Err(Error::Reader(format!("native/1 {code}"))),
+            Err(Failure::Malformed) => Err(Error::Invalid),
             Err(Failure::Broken(error)) => {
-                *guard = None;
+                self.drop_link(&link);
                 Err(error)
             }
         }
     }
 
-    fn handshake(connection: &mut Connection, fence: u64) -> Result<(), Failure> {
-        if connection.fence == fence {
-            return Ok(());
+    fn drop_link(&self, link: &Arc<Link>) {
+        if let Ok(mut connection) = self.connection.lock()
+            && matches!(&*connection, Connection::Live(live) if Arc::ptr_eq(live, link))
+        {
+            *connection = Connection::Closed;
         }
-        if connection.fence != 0 {
-            return Err(Error::Conflict.into());
-        }
-        send(
-            &mut connection.stream,
-            &json!({"t":"Hello","protocol":"native/1","version":1,"owner_fence":fence}),
-        )?;
-        let (_, welcome) = read_frame(&mut connection.stream)?;
-        if welcome != json!({"t":"Welcome","protocol":"native/1","version":1}) {
-            return Err(Error::Invalid.into());
-        }
-        connection.fence = fence;
-        Ok(())
     }
 
-    fn exchange(
+    fn link(&self, fence: u64) -> Result<Arc<Link>, Error> {
+        let mut connection = self.connection.lock().map_err(|_| Error::WorkerPanicked)?;
+        let mut stream = match std::mem::replace(&mut *connection, Connection::Closed) {
+            Connection::Live(link) => {
+                let same = link.fence == fence;
+                *connection = Connection::Live(link.clone());
+                return if same { Ok(link) } else { Err(Error::Conflict) };
+            }
+            Connection::Raw(stream) => stream,
+            Connection::Closed => {
+                let Origin::Socket(path) = &self.origin else {
+                    return Err(Error::Conflict);
+                };
+                let stream = UnixStream::connect(path)?;
+                stream.set_read_timeout(Some(IO_TIMEOUT))?;
+                stream.set_write_timeout(Some(IO_TIMEOUT))?;
+                stream
+            }
+        };
+        send(
+            &mut stream,
+            &json!({"t":"Hello","protocol":"native/1","version":1,"owner_fence":fence}),
+        )?;
+        let (_, welcome) = read_frame(&mut stream)?;
+        if welcome != json!({"t":"Welcome","protocol":"native/1","version":1}) {
+            return Err(Error::Invalid);
+        }
+        let mut reader = stream.try_clone()?;
+        reader.set_read_timeout(None)?;
+        let inbox = Arc::new(Inbox {
+            waiters: Mutex::new(BTreeMap::new()),
+            changed: Arc::clone(&self.changed),
+        });
+        let link = Arc::new(Link {
+            writer: Mutex::new(stream),
+            fence,
+            inbox: Arc::clone(&inbox),
+        });
+        std::thread::spawn(move || {
+            while let Ok((_, frame)) = read_frame(&mut reader) {
+                inbox.route(frame);
+            }
+            inbox.close();
+        });
+        *connection = Connection::Live(Arc::clone(&link));
+        Ok(link)
+    }
+
+    fn call(
         &self,
-        connection: &mut Connection,
-        fence: u64,
+        link: &Link,
+        prefix: &str,
+        build: impl FnOnce(&str) -> Value,
+    ) -> Result<Value, Failure> {
+        let id = format!(
+            "{prefix}-{}",
+            self.requests.fetch_add(1, Ordering::SeqCst) + 1
+        );
+        let (waiter, reply) = mpsc::channel();
+        link.inbox
+            .waiters
+            .lock()
+            .map_err(|_| Error::WorkerPanicked)?
+            .insert(id.clone(), waiter);
+        let sent = {
+            let mut writer = link.writer.lock().map_err(|_| Error::WorkerPanicked)?;
+            send(&mut writer, &build(&id))
+        };
+        let received = sent.and_then(|()| {
+            reply
+                .recv_timeout(IO_TIMEOUT)
+                .map_err(|_| Error::Reader("native/1 stream closed".to_owned()))
+        });
+        if let Ok(mut waiters) = link.inbox.waiters.lock() {
+            waiters.remove(&id);
+        }
+        let frame = received?;
+        if frame["t"] == "Error" {
+            let code = frame["code"].as_str().unwrap_or("unavailable");
+            return Err(Failure::Remote(code.to_owned()));
+        }
+        Ok(frame)
+    }
+
+    fn verdicts(
+        &self,
+        link: &Link,
         operation: &str,
-    ) -> Result<FactSet, Failure> {
-        Self::handshake(connection, fence)?;
+        identities: &[Value],
+    ) -> Result<Vec<Verdict>, Failure> {
+        let reply = self.call(
+            link,
+            "revalidate",
+            |id| json!({"t":"Revalidate","id":id,"op":operation,"args":{"identities":identities}}),
+        )?;
+        if reply["t"] != "Revalidated" || reply["op"] != json!(operation) {
+            return Err(Error::Invalid.into());
+        }
+        let results = reply["results"].as_array().ok_or(Error::Invalid)?;
+        if results.len() != identities.len() {
+            return Err(Error::Invalid.into());
+        }
+        let mut verdicts = Vec::with_capacity(results.len());
+        for (result, asked) in results.iter().zip(identities) {
+            let collection = result["collection"].as_str().ok_or(Error::Invalid)?;
+            let native_key = result["native_key"].as_str().ok_or(Error::Invalid)?;
+            if asked["collection"] != json!(collection) || asked["native_key"] != json!(native_key)
+            {
+                return Err(Error::Invalid.into());
+            }
+            let state = match result["state"].as_str() {
+                Some("present") => State::Present,
+                Some("missing") => State::Missing,
+                Some("outside_scope") => State::OutsideScope,
+                _ => return Err(Error::Invalid.into()),
+            };
+            verdicts.push(Verdict {
+                identity: format!("{collection}/{native_key}"),
+                state,
+            });
+        }
+        Ok(verdicts)
+    }
+
+    fn exchange(&self, link: &Link, operation: &str) -> Result<FactSet, Failure> {
         let mut snapshot = Value::Null;
         let mut cursor = Value::Null;
         let mut items: Vec<Value> = Vec::new();
         let mut first: Option<(Value, String)> = None;
         for _ in 0..MAX_PAGES {
-            let id = format!("facts-{}", self.requests.fetch_add(1, Ordering::SeqCst) + 1);
-            send(
-                &mut connection.stream,
-                &json!({"t":"Facts","id":id,"op":operation,"args":{},"snapshot":snapshot,"cursor":cursor,"limit":PAGE_LIMIT}),
-            )?;
-            let (_, page) = read_frame(&mut connection.stream)?;
-            if page["id"] != json!(id) {
+            let page = self.call(link, "facts", |id| {
+                json!({"t":"Facts","id":id,"op":operation,"args":{},"snapshot":snapshot,"cursor":cursor,"limit":PAGE_LIMIT})
+            })?;
+            if page["t"] != "FactPage" || page["op"] != json!(operation) {
                 return Err(Error::Invalid.into());
-            }
-            match page["t"].as_str() {
-                Some("Error") => {
-                    let code = page["code"].as_str().unwrap_or("unavailable");
-                    return Err(Failure::Remote(code.to_owned()));
-                }
-                Some("FactPage") if page["op"] == json!(operation) => {}
-                _ => return Err(Error::Invalid.into()),
             }
             let token = page["snapshot"]
                 .as_str()
@@ -227,7 +417,8 @@ pub struct Collected {
 
 #[derive(Debug)]
 pub struct Pull {
-    client: std::sync::Arc<Client>,
+    client: Arc<Client>,
+    source: &'static str,
     operations: &'static [&'static str],
     interval: Duration,
     last: Option<std::time::Instant>,
@@ -238,18 +429,25 @@ pub struct Pull {
 impl Pull {
     #[must_use]
     pub fn new(
-        client: std::sync::Arc<Client>,
+        client: Arc<Client>,
+        source: &'static str,
         operations: &'static [&'static str],
         interval: Duration,
     ) -> Self {
         Self {
             client,
+            source,
             operations,
             interval,
             last: None,
             hinted: false,
             pulled: false,
         }
+    }
+
+    #[must_use]
+    pub fn client(&self) -> &Arc<Client> {
+        &self.client
     }
 
     pub fn hint(&mut self) {
@@ -262,11 +460,14 @@ impl Pull {
     }
 
     pub fn due(&self) -> bool {
-        self.hinted || self.last.is_none_or(|at| at.elapsed() >= self.interval)
+        self.hinted
+            || self.client.changed(self.source)
+            || self.last.is_none_or(|at| at.elapsed() >= self.interval)
     }
 
     pub fn collect(&mut self, fence: u64) -> Result<Option<Collected>, Error> {
         self.hinted = false;
+        self.client.acknowledge(self.source);
         self.last = Some(std::time::Instant::now());
         let mut generation: Option<String> = None;
         let mut rows = Vec::new();

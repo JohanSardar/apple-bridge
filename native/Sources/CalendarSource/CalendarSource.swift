@@ -182,14 +182,17 @@ public final class CalendarSource: Source {
         try saveOffered(pending)
     }
 
+    private func saveLookups() throws {
+        guard lookups != savedLookups else { return }
+        try JSONEncoder().encode(lookups).write(to: lookupURL, options: .atomic)
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: lookupURL.path)
+        savedLookups = lookups
+        gate.trace.record("calendar_lookups_saved")
+    }
+
     private func save(_ values: [String: JSON]) throws {
         let started = CaptureTrace.now()
-        if lookups != savedLookups {
-            try JSONEncoder().encode(lookups).write(to: lookupURL, options: .atomic)
-            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: lookupURL.path)
-            savedLookups = lookups
-            gate.trace.record("calendar_lookups_saved")
-        }
+        try saveLookups()
         let baseline = Self.baselineData(values)
         guard baseline != savedBaseline else { return }
         try JSONEncoder().encode(values).write(to: baselineURL, options: .atomic)
@@ -405,9 +408,60 @@ public final class CalendarSource: Source {
         try await scan(into: sink, live: true, command: revision)
     }
 
-    public func nativeFacts(into sink: any ObservationSink) async throws {
-        forceFull = true
-        try await scan(into: sink, live: false)
+    public func enumerate() async throws -> SourceEnumeration {
+        guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
+        let activity = ForegroundActivity.shared.begin()
+        defer { ForegroundActivity.shared.end(activity) }
+        while scanning || waitingCommands > 0 { try await Task.sleep(for: .milliseconds(10)) }
+        scanning = true
+        defer { scanning = false }
+        var current: [String: JSON] = [:]
+        for calendar in gate.store.calendars(for: .event) {
+            current["calendar.calendar/" + calendar.calendarIdentifier] = observation("calendar.calendar", calendar.calendarIdentifier, calendarData(calendar))
+        }
+        for chunk in CalendarTime.chunks(Date()) {
+            await gate.waitForReminderRefetch()
+            for event in try events(chunk) {
+                try Task.checkCancellation()
+                guard Self.canMaterialize(event) else { throw SourceFailure.unavailable }
+                let native = key(event)
+                guard current["calendar.event/" + native] == nil else { continue }
+                try remember(event)
+                current["calendar.event/" + native] = eventObservation(event, native: native)
+            }
+        }
+        guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
+        current = await storeEnrichment.enrich(current, lookups: lookups, force: true)
+        try saveLookups()
+        return SourceEnumeration(generation: "eventkit-calendar-v1", rows: current.keys.sorted().compactMap { current[$0] }, handles: storeEnrichment.handles)
+    }
+
+    public func revalidate(_ identities: [JSON]) async throws -> [String] {
+        guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
+        let bounds = CalendarTime.window(Date())
+        var states: [String] = []
+        for identity in identities {
+            let native = identity["native_key"].string
+            switch identity["collection"].string {
+            case "calendar.calendar":
+                states.append(gate.store.calendar(withIdentifier: native) == nil ? RevalidationState.missing : RevalidationState.present)
+            case "calendar.event":
+                if let found = try lookup(native) {
+                    let value = data(found)
+                    let zone = value["all_day"].bool ? TimeZone.current : (TimeZone(identifier: value["time_zone"].string) ?? .current)
+                    guard let start = try? CalendarTime.date(value["start"].string, allDay: value["all_day"].bool, zone: zone), let end = try? CalendarTime.date(value["end"].string, allDay: value["all_day"].bool, zone: zone) else { states.append(RevalidationState.present); continue }
+                    states.append(start >= bounds.end || end <= bounds.start ? RevalidationState.outsideScope : RevalidationState.present)
+                } else {
+                    let value = identity["data"]
+                    let original = value["occurrence_date"].string.isEmpty ? value["start"].string : value["occurrence_date"].string
+                    guard let date = try? CalendarTime.date(original, allDay: value["all_day"].bool, zone: .current) else { states.append(RevalidationState.present); continue }
+                    states.append(date < bounds.start || date >= bounds.end ? RevalidationState.outsideScope : RevalidationState.missing)
+                }
+            default: throw SourceFailure.invalid
+            }
+            guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
+        }
+        return states
     }
 
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {

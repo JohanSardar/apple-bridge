@@ -22,6 +22,7 @@ internal enum SessionSources {
         let calendar: CalendarSource
         let contacts: ContactsSource
         let usage: UsageSource
+        let enumerations = EnumerationCache()
 
         var additional: [String: any Source] {
             [contacts.name: contacts, usage.name: usage]
@@ -41,4 +42,18 @@ internal enum SessionSources {
             calendar = try CalendarSource(gate: agenda, home: home, commandsEnabled: true, profilingEnabled: labEnabled)
         }
     }
+}
+
+actor EnumerationCache {
+    private var entries: [String: (at: Date, task: Task<SourceEnumeration, Error>)] = [:]
+
+    func read(_ source: String, ttl: TimeInterval = 5, _ make: @escaping @Sendable () async throws -> SourceEnumeration) async throws -> SourceEnumeration {
+        if let entry = entries[source], Date().timeIntervalSince(entry.at) < ttl { return try await entry.task.value }
+        let task = Task { try await make() }
+        entries[source] = (Date(), task)
+        do { return try await task.value }
+        catch { entries[source] = nil; throw error }
+    }
+
+    func invalidate(_ source: String) { entries[source] = nil }
 }

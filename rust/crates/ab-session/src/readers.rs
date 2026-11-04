@@ -845,7 +845,56 @@ impl AgendaState {
             Self::Contacts(reader) => reader.commit(pending),
         }
     }
+
+    fn unaccounted(&self, rows: &[Value]) -> Vec<Value> {
+        match self {
+            Self::Calendar(reader) | Self::Reminders(reader) => reader.unaccounted(rows),
+            Self::Contacts(reader) => reader.unaccounted(rows),
+        }
+    }
+
+    fn encode(&self) -> Option<String> {
+        match self {
+            Self::Calendar(reader) | Self::Reminders(reader) => serde_json::to_string(reader).ok(),
+            Self::Contacts(reader) => serde_json::to_string(reader).ok(),
+        }
+    }
+
+    fn restore(&mut self, token: &str) -> bool {
+        match self {
+            Self::Calendar(reader) | Self::Reminders(reader) => {
+                match serde_json::from_str::<agenda::Reader>(token) {
+                    Ok(saved) if saved.same_shape(reader) => {
+                        *reader = saved;
+                        true
+                    }
+                    _ => false,
+                }
+            }
+            Self::Contacts(reader) => match serde_json::from_str::<contacts::Reader>(token) {
+                Ok(saved) if saved.same_shape(reader) => {
+                    *reader = saved;
+                    true
+                }
+                _ => false,
+            },
+        }
+    }
 }
+
+fn revalidation_operation(collection: &str) -> Option<&'static str> {
+    Some(match collection {
+        "calendar.calendar" => "agenda.calendars",
+        "calendar.event" => "agenda.events",
+        "reminders.list" => "agenda.reminder_lists",
+        "reminders.reminder" => "agenda.reminders",
+        "contacts.contact" => "contacts.contacts",
+        "contacts.group" => "contacts.groups",
+        _ => return None,
+    })
+}
+
+const REVALIDATE_BYTES: usize = 180_000;
 
 #[derive(Debug)]
 struct Facts {
@@ -865,6 +914,7 @@ pub struct AgendaReader {
     partial: bool,
     pending: Option<agenda::Pending>,
     pull: Option<native_facts::Pull>,
+    replay: bool,
 }
 
 fn identity(row: &Value) -> String {
@@ -911,6 +961,7 @@ impl AgendaReader {
             partial: false,
             pending: None,
             pull: None,
+            replay: false,
         }
     }
 
@@ -924,6 +975,7 @@ impl AgendaReader {
             partial: false,
             pending: None,
             pull: None,
+            replay: false,
         }
     }
 
@@ -937,6 +989,7 @@ impl AgendaReader {
             partial: false,
             pending: None,
             pull: None,
+            replay: false,
         }
     }
 
@@ -951,8 +1004,74 @@ impl AgendaReader {
             ],
             AgendaState::Reminders(_) => &["agenda.reminder_lists", "agenda.reminders"],
         };
-        self.pull = Some(native_facts::Pull::new(client, operations, interval));
+        self.pull = Some(native_facts::Pull::new(
+            client,
+            self.source,
+            operations,
+            interval,
+        ));
         self
+    }
+
+    fn revalidate(
+        &self,
+        facts: &Facts,
+        fence: u64,
+    ) -> Result<BTreeMap<String, agenda::Revalidation>, Error> {
+        let mut verdicts = BTreeMap::new();
+        let Some(pull) = self.pull.as_ref() else {
+            return Ok(verdicts);
+        };
+        if self.state.generation() != facts.generation {
+            return Ok(verdicts);
+        }
+        let mut grouped: BTreeMap<&'static str, Vec<Value>> = BTreeMap::new();
+        for previous in self.state.unaccounted(&facts.rows) {
+            let collection = previous["collection"].as_str().unwrap_or_default();
+            let Some(operation) = revalidation_operation(collection) else {
+                continue;
+            };
+            grouped.entry(operation).or_default().push(json!({
+                "collection": previous["collection"],
+                "native_key": previous["native_key"],
+                "scoped_alias": previous["scoped_alias"],
+                "data": previous["data"],
+            }));
+        }
+        for (operation, identities) in grouped {
+            let mut batch: Vec<Value> = Vec::new();
+            let mut bytes = 0;
+            let mut batches = Vec::new();
+            for identity in identities {
+                let size = serde_json::to_vec(&identity)?.len() + 1;
+                if !batch.is_empty()
+                    && (bytes + size > REVALIDATE_BYTES
+                        || batch.len() >= native_facts::MAX_REVALIDATE)
+                {
+                    batches.push(std::mem::take(&mut batch));
+                    bytes = 0;
+                }
+                bytes += size;
+                batch.push(identity);
+            }
+            if !batch.is_empty() {
+                batches.push(batch);
+            }
+            for batch in batches {
+                for verdict in pull.client().revalidate(fence, operation, &batch)? {
+                    let disposition = match verdict.state {
+                        native_facts::State::Present => agenda::Revalidation::Present,
+                        native_facts::State::Missing => agenda::Revalidation::Absent,
+                        native_facts::State::OutsideScope if self.source == "calendar" => {
+                            agenda::Revalidation::Evict
+                        }
+                        native_facts::State::OutsideScope => return Err(Error::Invalid),
+                    };
+                    verdicts.insert(verdict.identity, disposition);
+                }
+            }
+        }
+        Ok(verdicts)
     }
 
     fn page(&mut self, context: &ScanContext) -> Result<(), Error> {
@@ -1030,11 +1149,13 @@ impl CaptureReader for AgendaReader {
     }
 
     fn token(&self) -> Option<String> {
-        None
+        self.pull.is_some().then(|| self.state.encode()).flatten()
     }
 
-    fn resume(&mut self, _token: &str) -> bool {
-        false
+    fn resume(&mut self, token: &str) -> bool {
+        let restored = self.pull.is_some() && self.state.restore(token);
+        self.replay |= restored;
+        restored
     }
 
     fn ingest(&mut self, capture: &Value) -> Result<bool, Error> {
@@ -1072,12 +1193,20 @@ impl CaptureReader for AgendaReader {
         let Some(facts) = self.facts.take() else {
             return Ok(None);
         };
-        let present: BTreeSet<String> = facts.rows.iter().map(identity).collect();
-        let revalidated = facts
-            .absences
-            .into_iter()
-            .filter(|(identity, _)| self.state.knows(identity) && !present.contains(identity))
-            .collect();
+        let revalidated = if self.pull.is_some() {
+            match self.revalidate(&facts, context.fence) {
+                Ok(verdicts) => verdicts,
+                Err(_) => return Ok(None),
+            }
+        } else {
+            let present: BTreeSet<String> = facts.rows.iter().map(identity).collect();
+            facts
+                .absences
+                .iter()
+                .filter(|(identity, _)| self.state.knows(identity) && !present.contains(*identity))
+                .map(|(identity, disposition)| (identity.clone(), *disposition))
+                .collect()
+        };
         let read = capture::Context {
             observed_at: context.observed_at()?,
             checkpoint: context.checkpoint.clone(),
@@ -1089,7 +1218,7 @@ impl CaptureReader for AgendaReader {
             complete: true,
             records: facts.rows,
             revalidated,
-            force: false,
+            force: self.replay,
         };
         let pending = self.state.prepare(snapshot, &read).map_err(reader_error)?;
         if pending.observations.is_empty() && self.state.generation() == facts.generation {
@@ -1109,7 +1238,9 @@ impl CaptureReader for AgendaReader {
 
     fn commit(&mut self) -> Result<(), Error> {
         let pending = self.pending.take().ok_or(Error::Conflict)?;
-        self.state.commit(pending).map_err(reader_error)
+        self.state.commit(pending).map_err(reader_error)?;
+        self.replay = false;
+        Ok(())
     }
 }
 

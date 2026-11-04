@@ -81,6 +81,11 @@ impl Reader {
         &self.generation
     }
 
+    #[must_use]
+    pub fn same_shape(&self, other: &Self) -> bool {
+        self.source == other.source && self.scope == other.scope
+    }
+
     pub fn prepare(&self, snapshot: Snapshot, context: &Context) -> Result<Pending> {
         self.validate(&snapshot, context)?;
         let same_generation = self.generation == snapshot.generation;
@@ -147,6 +152,45 @@ impl Reader {
         })
     }
 
+    fn alias_covered<'a>(
+        &self,
+        previous: &Value,
+        mut current: impl Iterator<Item = &'a Value>,
+    ) -> bool {
+        let alias = previous["scoped_alias"].as_str().unwrap_or_default();
+        !alias.is_empty()
+            && match self.source.as_str() {
+                "calendar" => current.any(|row| row["scoped_alias"] == alias),
+                "reminders" => current.any(|row| {
+                    row["collection"] == previous["collection"] && row["scoped_alias"] == alias
+                }),
+                _ => false,
+            }
+    }
+
+    #[must_use]
+    pub fn unaccounted(&self, rows: &[Value]) -> Vec<Value> {
+        let present: BTreeSet<String> = rows
+            .iter()
+            .filter_map(|row| {
+                Some(format!(
+                    "{}/{}",
+                    row["collection"].as_str()?,
+                    row["native_key"].as_str()?
+                ))
+            })
+            .collect();
+        self.records
+            .iter()
+            .filter(|(identity, previous)| {
+                !present.contains(*identity)
+                    && (self.source != "contacts" || previous["collection"] != "contacts.container")
+                    && !self.alias_covered(previous, rows.iter())
+            })
+            .map(|(_, previous)| previous.clone())
+            .collect()
+    }
+
     fn aliased(&self) -> bool {
         matches!(self.source.as_str(), "calendar" | "reminders")
     }
@@ -187,16 +231,7 @@ impl Reader {
             if current.contains_key(identity) {
                 continue;
             }
-            let alias = previous["scoped_alias"].as_str().unwrap_or_default();
-            if !alias.is_empty()
-                && match self.source.as_str() {
-                    "calendar" => current.values().any(|row| row["scoped_alias"] == alias),
-                    "reminders" => current.values().any(|row| {
-                        row["collection"] == previous["collection"] && row["scoped_alias"] == alias
-                    }),
-                    _ => false,
-                }
-            {
+            if self.alias_covered(previous, current.values()) {
                 continue;
             }
             let disposition = revalidated.get(identity);

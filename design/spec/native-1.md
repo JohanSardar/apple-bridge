@@ -36,19 +36,12 @@ Unknown operations return unsupported, not a dynamically discovered method.
 | contacts.containers | native container IDs | ContactsSource/ContactsSource.swift |
 | contacts.groups | container IDs; group descriptors | ContactsSource/ContactsSource.swift |
 | contacts.contacts | container/group IDs; native contact fields | ContactsSource/ContactsSource.swift |
-| contacts.history | opaque history token; changes or token-invalid result | ContactsSource/ContactsSource.swift, ContactsHistory/ContactsHistory.m |
-| ui.target | exact chat/handle/message key; verified native target facts | MessagesSource/MessagesAX.swift, MessagesAccessibility.swift, MessagesNativeSession.swift |
-| ui.actions | qualified action names and readiness, no execution | MessagesSource/MessagesCommands.swift |
-| focus.status | current authorization/observed status | FocusSource/FocusSource.swift |
-| location.status | non-prompting authorization | MapsSource/LocationStatus.swift |
-| mac.state | bounded state projection | MacSource/MacSource.swift |
-| permissions.status | non-prompting permission states | AppleSession/Permissions.swift, NewPermissions.swift |
 
 `Facts` fields: `id`, `op`, `args` object, `snapshot` (null on first page), `cursor`
 (null on first page), `limit` (1..1000, default 100). `FactPage` fields: `id`, `op`,
 `snapshot` nonempty opaque token, `items` array, `cursor` (next token or null),
 `complete` boolean, `scope` nonempty string or structured object (including collections and history_token) and `generation` nonempty string.
-Initial source adapters accept args={} for their full bounded source scope; unsupported nonempty filters return unsupported, never false completeness. contacts.history accepts history_token.
+Source adapters accept args={} for their full bounded source scope; unsupported nonempty filters return unsupported, never false completeness. Enumeration lists only records the framework returns now: no `absent` or `evict` rows, no baseline, no deletion decision.
 All pages of a snapshot pin one materialized read, scope, generation and argument
 set. Continuations bind operation, args and snapshot; another request cannot reuse
 a cursor. No page is larger than the frame limit; reduce count or use file refs.
@@ -58,10 +51,33 @@ failed, missing, timed-out or truncated reads. Nonterminal pages have complete f
 Truncated terminal pages have cursor null and complete false. Expired snapshots return
 expired, never a replacement token. Invalidated Contacts history requires a new full
 snapshot. Token advancement happens only after gateway Committed for the corresponding
-capture. Notifications invalidate snapshots; they do not imply deletions. An optional
-`Changed` frame carries `source` and `generation` as an invalidation hint only.
+capture. Notifications invalidate snapshots; they do not imply deletions. `Changed` (below) is an invalidation hint only.
 Absence is evidence only after all pages complete with unchanged scope/generation,
 as required by SourceSupport/CompleteScan.swift and SQLiteSnapshot.swift.
+
+## Revalidation and push
+
+One server handles frames by `id` concurrently on each stream: a `Revalidate`, a page and an
+`Effect` in flight at once never queue behind each other, and a request id already in flight
+returns `conflict`. Revalidation and `Changed` ride the same stream as facts; there is no extra socket.
+
+`Revalidate` fields: `id`, `op`, `args:{identities:[{collection,native_key,data?}]}` with 1..500
+identities, every `collection` the one `op` enumerates (`agenda.calendars`/`agenda.events`/
+`agenda.reminder_lists`/`agenda.reminders`/`contacts.groups`/`contacts.contacts`; containers are never
+asked). `Revalidated` fields: `id`, `op`, `results:[{collection,native_key,state}]`, one result per
+identity in request order. `state` is a framework fact: `present` (the framework still has it),
+`missing` (the framework answered and the record does not exist), `outside_scope` (Calendar only: the
+event exists or aged out of the enumerated window). A result count or order that differs from the request,
+an `Error`, a timeout or a closed stream is a failed revalidation, never a short answer.
+
+Rust owns the diff and the decision to delete. It asks only about records it knows and a full
+enumeration no longer lists, only for an unchanged generation, and it deletes (`absent`) or evicts
+(`evict`) only on a well-formed complete answer of `missing` / `outside_scope`. Anything else keeps the
+record and emits nothing for it.
+
+`Changed` is pushed unsolicited by Swift: `{"t":"Changed","source":"calendar|contacts|reminders",
+"generation":"..."}`. It has no `id`, is an invalidation hint only and never implies a deletion; Rust
+pulls on it instead of on a timer.
 
 ## Permit-gated effect catalogue
 
@@ -86,7 +102,7 @@ an effect is supported: retain existing capability qualification and validation.
 These are wire adapters around existing implementations, not new capabilities.
 Unsupported adapter operations return unsupported. mac.lock_screen, mac.sleep_display,
 mac.restart and mac.shutdown remain unsupported, matching the current prepare rejection.
-No permission request operation exists: permissions.status is facts only and never prompts.
+No permission request operation exists, and no fact operation prompts.
 
 `Effect` fields: `id`, `op`, `args`, `permit`. `EffectResult` fields: `id`, `evidence`.
 Permit fields: `command_id`, positive `owner_fence`, `ticket`, `request_hash`, `operation`,

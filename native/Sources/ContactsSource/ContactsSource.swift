@@ -188,26 +188,7 @@ public final class ContactsSource: Source {
         if drop { generation = UUID().uuidString }
         meIdentifier = nextMeIdentifier
         var current: [String: JSON] = fullScan ? [:] : committed
-        if fullScan {
-        var containers: [String: Set<String>] = [:]
-        for container in try store.containers(matching: nil) {
-            let value: JSON = .object(["identifier": .string(container.identifier), "name": .string(container.name), "type": .number(Double(container.type.rawValue)), "writable": .bool(container.identifier == store.defaultContainerIdentifier())])
-            current["contacts.container/" + container.identifier] = observation("contacts.container", container.identifier, value)
-            for member in try contacts(CNContact.predicateForContactsInContainer(withIdentifier: container.identifier), identifiersOnly: true) { containers[member.identifier, default: []].insert(container.identifier) }
-        }
-        let fetched = try contacts()
-        trace.record("contacts_fetched", fields: metadata)
-        for contact in fetched {
-            let memberships = containers[contact.identifier] ?? []
-            let containerID = memberships.count == 1 ? memberships.first ?? "" : ""
-            current["contacts.contact/" + contact.identifier] = observation("contacts.contact", contact.identifier, try data(contact, containerID: containerID))
-        }
-        for group in try store.groups(matching: nil) {
-            let members = try contacts(CNContact.predicateForContactsInGroup(withIdentifier: group.identifier), identifiersOnly: true)
-            let value = try groupData(group, members: members)
-            current["contacts.group/" + group.identifier] = observation("contacts.group", group.identifier, value)
-        }
-        } else {
+        if fullScan { current = try readEverything(metadata) } else {
             for key in batch.changedContactIdentifiers {
                 if try isAbsent(key) { current.removeValue(forKey: "contacts.contact/" + key) }
                 else {
@@ -246,8 +227,7 @@ public final class ContactsSource: Source {
                 observations.append(.object(absent))
             }
         }
-        var handles = Dictionary(uniqueKeysWithValues: blobs.keys.map { (String($0.dropFirst("contacts-image:".count)), $0) })
-        for handle in variantURLs.keys { handles[String(handle.dropFirst("media:".count))] = handle }
+        let handles = blobHandles()
         trace.record("contacts_capture_ready", fields: metadata.merging(["empty": .bool(observations.isEmpty)]) { _, new in new })
         try await sink.emitCheckpoint(source: name, generation: generation, checkpoint: next.base64EncodedString(), observations: observations, scanID: scanID, scanStartedAt: started, scope: ["contacts.contact", "contacts.group", "contacts.container"], completionEvidence: "complete", blobHandles: handles, live: live)
         trace.record("contacts_capture_committed", fields: metadata)
@@ -258,16 +238,57 @@ public final class ContactsSource: Source {
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: baselineURL.path)
         completed = true
     }
-    public func nativeHistory(_ starting: String) throws -> JSON {
-        guard let bytes = Data(base64Encoded: starting), !bytes.isEmpty else { throw SourceFailure.invalid }
-        let batch = try history(bytes)
-        guard !batch.droppedEverything, !batch.requiresFullScan else { throw SourceFailure.expired }
-        return .object(["history_token": .string(batch.token.base64EncodedString()), "changed_contact_ids": .array(batch.changedContactIdentifiers.map(JSON.string)), "changed_group_ids": .array(batch.changedGroupIdentifiers.map(JSON.string))])
+    private func readEverything(_ metadata: [String: JSON]) throws -> [String: JSON] {
+        var current: [String: JSON] = [:]
+        var containers: [String: Set<String>] = [:]
+        for container in try store.containers(matching: nil) {
+            let value: JSON = .object(["identifier": .string(container.identifier), "name": .string(container.name), "type": .number(Double(container.type.rawValue)), "writable": .bool(container.identifier == store.defaultContainerIdentifier())])
+            current["contacts.container/" + container.identifier] = observation("contacts.container", container.identifier, value)
+            for member in try contacts(CNContact.predicateForContactsInContainer(withIdentifier: container.identifier), identifiersOnly: true) { containers[member.identifier, default: []].insert(container.identifier) }
+        }
+        let fetched = try contacts()
+        trace.record("contacts_fetched", fields: metadata)
+        for contact in fetched {
+            let memberships = containers[contact.identifier] ?? []
+            let containerID = memberships.count == 1 ? memberships.first ?? "" : ""
+            current["contacts.contact/" + contact.identifier] = observation("contacts.contact", contact.identifier, try data(contact, containerID: containerID))
+        }
+        for group in try store.groups(matching: nil) {
+            let members = try contacts(CNContact.predicateForContactsInGroup(withIdentifier: group.identifier), identifiersOnly: true)
+            let value = try groupData(group, members: members)
+            current["contacts.group/" + group.identifier] = observation("contacts.group", group.identifier, value)
+        }
+        return current
     }
-
-    public func nativeFacts(into sink: any ObservationSink) async throws {
+    private func blobHandles() -> [String: String] {
+        var handles = Dictionary(uniqueKeysWithValues: blobs.keys.map { (String($0.dropFirst("contacts-image:".count)), $0) })
+        for handle in variantURLs.keys { handles[String(handle.dropFirst("media:".count))] = handle }
+        return handles
+    }
+    public func enumerate() async throws -> SourceEnumeration {
         guard authorized else { throw SourceFailure.permissionMissing }
-        try await scan(into: sink, live: false, force: true)
+        let activity = ForegroundActivity.shared.begin()
+        defer { ForegroundActivity.shared.end(activity) }
+        let current = try readEverything([:])
+        guard authorized else { throw SourceFailure.permissionMissing }
+        return SourceEnumeration(generation: generation, rows: current.keys.sorted().compactMap { current[$0] }, handles: blobHandles())
+    }
+    public func revalidate(_ identities: [JSON]) async throws -> [String] {
+        guard authorized else { throw SourceFailure.permissionMissing }
+        var states: [String] = []
+        for identity in identities {
+            let key = identity["native_key"].string
+            switch identity["collection"].string {
+            case "contacts.contact":
+                states.append(try isAbsent(key) ? RevalidationState.missing : RevalidationState.present)
+            case "contacts.group":
+                let groups = try store.groups(matching: CNGroup.predicateForGroups(withIdentifiers: [key]))
+                states.append(groups.isEmpty ? RevalidationState.missing : RevalidationState.present)
+            default: throw SourceFailure.invalid
+            }
+            guard authorized else { throw SourceFailure.permissionMissing }
+        }
+        return states
     }
 
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {

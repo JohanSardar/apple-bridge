@@ -43,6 +43,8 @@ type captureRequest struct {
 	Close       bool
 }
 type fakeApple struct {
+	nativeMu               sync.Mutex
+	nativeLinks            map[*nativeLink]struct{}
 	nativeJobs             chan nativeJob
 	legacySources          bool
 	notificationPermission string
@@ -129,6 +131,7 @@ func (f *fakeApple) enqueueCapture(ctx context.Context, c contracts.Capture, wai
 	case <-ctx.Done():
 		return ctx.Err()
 	}
+	f.broadcastChanged(c.Source)
 	if wait {
 		select {
 		case <-req.Done:

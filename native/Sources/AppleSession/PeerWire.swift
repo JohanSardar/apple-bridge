@@ -13,6 +13,7 @@ final class PeerWire: @unchecked Sendable {
     private var proxy: SessionProxy?
     private var nativeTask: Task<Void, Never>?
     private var factsTask: Task<Void, Never>?
+    private var changesTask: Task<Void, Never>?
 
     init(socket path: String, secretFile: String, nativeAdapter: (any NativeAdapter)? = nil, sessionHome: String? = nil) throws {
         var info = stat()
@@ -50,10 +51,12 @@ final class PeerWire: @unchecked Sendable {
                         defer { Darwin.close(child.nativeDescriptor) }
                         try? await NativeServer(adapter: nativeAdapter).run(descriptor: child.nativeDescriptor)
                     }
+                    let factsServer = NativeServer(adapter: nativeAdapter, factsOnly: true)
                     factsTask = Task {
                         defer { Darwin.close(child.factsDescriptor) }
-                        try? await NativeServer(adapter: nativeAdapter, factsOnly: true).run(descriptor: child.factsDescriptor)
+                        try? await factsServer.run(descriptor: child.factsDescriptor)
                     }
+                    changesTask = Task { await nativeAdapter.forwardChanges(to: factsServer) }
                 }
             }
             var timeout = timeval(tv_sec: 15, tv_usec: 0)
@@ -100,6 +103,7 @@ final class PeerWire: @unchecked Sendable {
     private func stopProxy() {
         nativeTask?.cancel()
         factsTask?.cancel()
+        changesTask?.cancel()
         if let proxy {
             shutdown(proxy.nativeDescriptor, SHUT_RDWR)
             shutdown(proxy.factsDescriptor, SHUT_RDWR)
