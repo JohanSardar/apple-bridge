@@ -511,6 +511,12 @@ impl Command {
             .map_err(|_| ErrorCode::Invalid)
     }
 
+    pub fn expires_unix_millis(&self) -> Result<i64, ErrorCode> {
+        GoTime::parse(&self.expires_at)
+            .map(|time| time.unix_millis())
+            .map_err(|_| ErrorCode::Invalid)
+    }
+
     #[must_use]
     pub fn operation(&self) -> String {
         serde_json::from_str::<serde_json::Value>(self.action.get())

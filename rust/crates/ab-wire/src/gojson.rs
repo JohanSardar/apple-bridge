@@ -53,6 +53,11 @@ impl GoTime {
         let stamp = jiff::Timestamp::from_second(seconds).map_err(|_| Error::Time)?;
         Self::parse(&stamp.to_string())
     }
+    pub fn unix_millis(&self) -> i64 {
+        self.0
+            .parse::<jiff::Timestamp>()
+            .map_or(0, jiff::Timestamp::as_millisecond)
+    }
     pub fn unix_seconds(&self) -> i64 {
         self.0
             .parse::<jiff::Timestamp>()
