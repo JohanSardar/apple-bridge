@@ -134,8 +134,8 @@ impl CaptureReader for NotesReader {
 
     fn resume(&mut self, token: &str) -> bool {
         let Ok(saved) = serde_json::from_str::<SavedState>(token) else {
-            self.committed = decode(token);
-            return self.committed.is_some();
+            self.committed = None;
+            return decode(token).is_some();
         };
         self.committed = decode(&saved.signature);
         if !saved.generation.is_empty() {
