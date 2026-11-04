@@ -316,7 +316,6 @@ pub fn register(registry: &mut lab_runner::Registry) {
         "CORE-BLOB-NATIVE-STAGE",
         crate::core_bulk::native_stage_real,
     );
-    registry.register("changes", crate::core_dials::changes);
     registry.register("gateway_commands", crate::core_dials::commands);
     registry.register("gateway_revoke", crate::core_dials::revoke);
     registry.register("finish:CORE-GATEWAY-DIALS", crate::labcore::finish_hook);
