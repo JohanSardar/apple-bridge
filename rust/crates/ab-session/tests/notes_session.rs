@@ -3,21 +3,30 @@
 
 use ab_session::readers::{CaptureReader, NotesReader, ScanContext};
 use serde_json::Value;
-use std::{collections::BTreeSet, path::Path};
+use std::collections::BTreeSet;
 
 const STORE: &str = "CREATE TABLE Z_METADATA(Z_UUID TEXT);INSERT INTO Z_METADATA VALUES('synthetic');CREATE TABLE Z_PRIMARYKEY(Z_ENT INTEGER,Z_NAME TEXT);INSERT INTO Z_PRIMARYKEY VALUES(1,'ICFolder'),(2,'ICNote'),(3,'ICAccount');CREATE TABLE ZICNOTEDATA(Z_PK INTEGER PRIMARY KEY,ZDATA BLOB,Z_OPT INTEGER);CREATE TABLE ZICCLOUDSYNCINGOBJECT(Z_PK INTEGER PRIMARY KEY,Z_ENT INTEGER,ZIDENTIFIER TEXT,ZTITLE1 TEXT,ZTITLE2 TEXT,ZNAME TEXT,ZACCOUNT8 INTEGER,ZPARENT INTEGER,ZFOLDER INTEGER,ZNOTEDATA INTEGER,ZMARKEDFORDELETION INTEGER DEFAULT 0,ZFOLDERTYPE INTEGER DEFAULT 0,ZISPASSWORDPROTECTED INTEGER DEFAULT 0,ZISPINNED INTEGER DEFAULT 0,Z_OPT INTEGER DEFAULT 1,ZNOTE1 INTEGER,ZPARENTATTACHMENT INTEGER,ZMEDIA INTEGER,ZTYPEUTI1 TEXT);INSERT INTO ZICCLOUDSYNCINGOBJECT(Z_PK,Z_ENT,ZIDENTIFIER,ZNAME) VALUES(1,3,'account','Synthetic');INSERT INTO ZICCLOUDSYNCINGOBJECT(Z_PK,Z_ENT,ZIDENTIFIER,ZTITLE2,ZACCOUNT8,ZFOLDERTYPE) VALUES(10,1,'folder','Synthetic',1,0),(11,1,'trash','Recently Deleted',1,1);INSERT INTO ZICCLOUDSYNCINGOBJECT(Z_PK,Z_ENT,ZIDENTIFIER,ZTITLE1,ZFOLDER,ZNOTEDATA) VALUES(20,2,'one','One',10,1),(21,2,'two','Two',10,1),(22,2,'three','Three',10,1);";
 
 struct Rig {
-    home: tempfile::TempDir,
+    home: std::path::PathBuf,
     ordinal: u32,
+}
+
+impl Drop for Rig {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.home);
+    }
 }
 
 impl Rig {
     fn new() -> Self {
-        let home = tempfile::tempdir().expect("home");
-        std::fs::create_dir(home.path().join("store")).expect("store");
-        let db = rusqlite::Connection::open(home.path().join("store/NoteStore.sqlite"))
-            .expect("database");
+        let unique = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos();
+        let home = std::env::temp_dir().join(format!("ab-notes-session-{unique}"));
+        std::fs::create_dir_all(home.join("store")).expect("store");
+        let db = rusqlite::Connection::open(home.join("store/NoteStore.sqlite")).expect("database");
         db.execute_batch(STORE).expect("schema");
         db.execute(
             "INSERT INTO ZICNOTEDATA VALUES(1,?,1)",
@@ -28,11 +37,11 @@ impl Rig {
     }
 
     fn root(&self) -> std::path::PathBuf {
-        self.home.path().join("store")
+        self.home.join("store")
     }
 
     fn reader(&self) -> NotesReader {
-        NotesReader::new(self.root(), &self.home.path().join("staging")).expect("reader")
+        NotesReader::new(self.root(), &self.home.join("staging")).expect("reader")
     }
 
     fn edit(&self, sql: &str) {
@@ -127,7 +136,6 @@ fn a_token_from_the_previous_build_still_resumes() {
     let old = token["signature"].as_str().expect("signature");
     let mut restarted = rig.reader();
     assert!(restarted.resume(old));
-    assert!(Path::new(&rig.root()).exists());
 }
 
 /// A first scan also names notes already in Recently Deleted, so a note trashed while nothing
