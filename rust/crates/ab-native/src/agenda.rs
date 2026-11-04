@@ -238,7 +238,11 @@ impl Reader {
             {
                 return Err(Error::Corrupt);
             }
-            if !same_generation || !matches!(disposition, Some(Revalidation::Absent | Revalidation::Evict))
+            if !same_generation
+                || !matches!(
+                    disposition,
+                    Some(Revalidation::Absent | Revalidation::Evict)
+                )
             {
                 current.insert(identity.clone(), previous.clone());
                 continue;

@@ -213,10 +213,7 @@ fn a_container_missing_from_a_snapshot_is_deleted_only_on_a_missing_verdict()
     let first = reader.prepare(contacts_snapshot(full, &[]), &context("one"))?;
     reader.commit(first)?;
     let incremental = vec![contacts_record("contacts.contact", "p")];
-    let kept = reader.prepare(
-        contacts_snapshot(incremental.clone(), &[]),
-        &context("two"),
-    )?;
+    let kept = reader.prepare(contacts_snapshot(incremental.clone(), &[]), &context("two"))?;
     assert!(kept.observations.is_empty());
     reader.commit(kept)?;
     assert_eq!(

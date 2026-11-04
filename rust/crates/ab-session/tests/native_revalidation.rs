@@ -357,7 +357,8 @@ fn the_baseline_survives_a_restart_through_the_reader_token() -> Fallible<()> {
 }
 
 #[test]
-fn contacts_ask_about_a_missing_container_and_delete_it_only_on_a_missing_verdict() -> Fallible<()> {
+fn contacts_ask_about_a_missing_container_and_delete_it_only_on_a_missing_verdict() -> Fallible<()>
+{
     let (world, client) = rig()?;
     world.lock().map_err(|_| "poisoned")?.generation = "contacts-g1".into();
     let mut reader = AgendaReader::contacts("/nonexistent".into())
@@ -413,13 +414,21 @@ fn a_container_the_pull_omits_survives_a_refused_or_present_revalidation() -> Fa
         pull(&mut reader, &mut clock)?.ok_or("first capture")?;
         world.lock().map_err(|_| "poisoned")?.refuse = refuse;
         set(&world, "contacts.containers", vec![container("c1")])?;
-        set(&world, "contacts.contacts", vec![contact("p"), contact("r")])?;
+        set(
+            &world,
+            "contacts.contacts",
+            vec![contact("p"), contact("r")],
+        )?;
         let second = pull(&mut reader, &mut clock)?;
         if let Some(capture) = second {
             assert!(kinds(&capture, "absent").is_empty(), "refuse={refuse}");
         }
         assert_eq!(revalidations(&world)?.len(), 1);
-        set(&world, "contacts.containers", vec![container("c1"), container("c2")])?;
+        set(
+            &world,
+            "contacts.containers",
+            vec![container("c1"), container("c2")],
+        )?;
         world.lock().map_err(|_| "poisoned")?.refuse = false;
         let third = pull(&mut reader, &mut clock)?;
         if let Some(capture) = third {
