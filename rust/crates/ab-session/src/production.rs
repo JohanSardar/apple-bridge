@@ -32,6 +32,7 @@ pub const CONFIG_FILE: &str = "session/rust-capture.json";
 pub const STATE_DIRECTORY: &str = "session/capture-state";
 pub const STAGING_DIRECTORY: &str = "session/staging";
 const STAGED: &[&str] = &["notes", "voice_memos"];
+pub const MEDIA_DIRECTORY: &str = "session/media-derivatives";
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -140,6 +141,14 @@ pub fn load(home: &Path) -> Result<Option<Loaded>, Error> {
                 let text = path.to_str().ok_or(Error::Invalid)?;
                 object.insert("staging".into(), text.into());
             }
+        }
+    }
+    if let Some(source) = file.sources.get_mut("notes") {
+        let object = source.as_object_mut().ok_or(Error::Invalid)?;
+        if !object.contains_key("media_root") {
+            let path = home.join(MEDIA_DIRECTORY);
+            let text = path.to_str().ok_or(Error::Invalid)?;
+            object.insert("media_root".into(), text.into());
         }
     }
     if let Some(source) = file.sources.get_mut("usage") {

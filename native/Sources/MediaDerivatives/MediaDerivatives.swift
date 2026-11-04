@@ -31,7 +31,10 @@ public struct MediaResult: Codable, Sendable {
 }
 
 public enum MediaDerivatives {
-    public static let root = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/AppleBridge/media-derivatives/v1", isDirectory: true)
+    public static let root: URL = {
+        if let path = ProcessInfo.processInfo.environment["AB_MEDIA_DERIVATIVES_ROOT"], path.hasPrefix("/") { return URL(fileURLWithPath: path, isDirectory: true) }
+        return FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/AppleBridge/media-derivatives/v1", isDirectory: true)
+    }()
     public static var paused: Bool {
         if ProcessInfo.processInfo.thermalState == .serious || ProcessInfo.processInfo.thermalState == .critical { return true }
         guard let info = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(), let sources = IOPSCopyPowerSourcesList(info)?.takeRetainedValue() as? [CFTypeRef] else { return false }

@@ -1,3 +1,5 @@
+use crate::media_facts::MediaFacts;
+
 use super::{
     AgendaReader, Arc, BTreeMap, CaptureReader, Debug, Deserialize, Duration, Error, MailReader,
     MessagesReader, NotesReader, Path, PathBuf, SafariReader, TelephonyReader, UsageReader,
@@ -26,6 +28,10 @@ struct SourceConfig {
     facts_poll_ms: u64,
     #[serde(default)]
     store: Option<PathBuf>,
+    #[serde(default)]
+    media_helper: Option<PathBuf>,
+    #[serde(default)]
+    media_root: Option<PathBuf>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -152,7 +158,15 @@ pub fn from_config_linked(
             }
             "notes" => {
                 let staging = config.staging.clone().ok_or(Error::Invalid)?;
-                Box::new(NotesReader::new(config.root, &staging)?.holding(config.hydration_hold))
+                let media = config
+                    .media_root
+                    .clone()
+                    .and_then(|root| MediaFacts::locate(config.media_helper.clone(), root));
+                Box::new(
+                    NotesReader::new(config.root, &staging)?
+                        .holding(config.hydration_hold)
+                        .with_media(media),
+                )
             }
             "messages" => {
                 let home = match config.home.clone() {

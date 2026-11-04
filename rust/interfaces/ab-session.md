@@ -440,3 +440,9 @@ Nothing is flipped: native session mode itself is opt-in (`AB_SESSION_NATIVE=1`)
 The routed effects layer now refuses a command whose numbers the permit hash cannot represent (below 1e-4 or
 at or above 1e15) with `Rejected invalid` (`QueryError invalid` for queries) instead of closing the gateway
 stream; the session-mode path never hashes command args.
+
+### Notes media facts and Usage clipping (real-data fixes)
+
+- **Notes hydration stall.** The reader needs three Helper facts while it hydrates a note: `mime:<uti>`, `supports:<uti>|<ext>` and `derivatives:<digest>`. The session supplied only the hashtag mime, so the first note with an image attachment returned `FactsRequired`, was re-queued at the front, and every later `next` retried it forever; bodies behind it stayed `pending`. The reader now re-queues a failed job at the back, and `NotesReader` resolves facts through `media_facts::MediaFacts`, which runs the Helper executable as `AppleBridgeHelper media-facts` (request JSON on stdin, response JSON on stdout, two minute deadline, derivative bytes read from the session-owned `media_root`, default `<home>/session/media-derivatives`, via `AB_MEDIA_DERIVATIVES_ROOT`). Facts come from the same `UTType` and `MediaDerivatives` code the Swift reader uses, so records are byte-identical. A fact that cannot be resolved leaves that note pending, is retried after 60 seconds and never blocks other notes. The executable is the sibling `AppleBridgeHelper` of `ab-session`, or `media_helper` in the source config.
+- **Usage.** The session now passes the local `knowledgeC.db` display-lock and lock intervals to the Usage reader (and includes the database and its `-wal` in the change signature) when the root is `~/Library/Biome`, as the Swift source does; the hardware id is `IOPlatformUUID`. Live power-sleep events exist only in the Swift process and are not reproduced.
+
