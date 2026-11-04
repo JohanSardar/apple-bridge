@@ -248,19 +248,25 @@ fn run(
     let inbound_simulator = Arc::clone(&to_simulator);
     let mut native_reader = native;
     let inbound = thread::spawn(move || -> Result<()> {
-        loop {
-            let frame = read_native(&mut native_reader)?;
-            if frame["t"] == "Close" {
-                return Ok(());
+        let result = (|| -> Result<()> {
+            loop {
+                let frame = read_native(&mut native_reader)?;
+                if frame["t"] == "Close" {
+                    return Ok(());
+                }
+                let Some(translated) = to_ipc(&inbound_shared, &frame)? else {
+                    continue;
+                };
+                let mut stream = inbound_simulator
+                    .lock()
+                    .map_err(|_| invalid("simulator writer"))?;
+                send(&mut *stream, &translated)?;
             }
-            let Some(translated) = to_ipc(&inbound_shared, &frame)? else {
-                continue;
-            };
-            let mut stream = inbound_simulator
-                .lock()
-                .map_err(|_| invalid("simulator writer"))?;
-            send(&mut *stream, &translated)?;
+        })();
+        if let Ok(stream) = inbound_simulator.lock() {
+            let _ = stream.shutdown(Shutdown::Both);
         }
+        result
     });
     let outbound = (|| -> Result<()> {
         loop {
