@@ -194,6 +194,7 @@ fn doctor_report(home: &Path) -> Result<Value, Error> {
         crate::shape::violations(&db, started + SQLITE_BUDGET + SHAPE_BUDGET)?;
     result["shape"] = shape;
     budget_results(&mut result, integrity_complete, shape_complete)?;
+    document_checks(&db, &mut result)?;
     encryption(home, &mut result);
     encryption_warning(&mut result)?;
     for warning in ab_remote::ct::doctor(home, ab_remote::ct::now()) {
@@ -240,6 +241,44 @@ pub fn credential_lifecycle(home: &Path) -> Result<(), Error> {
     result
 }
 
+fn document_checks(db: &Connection, result: &mut Value) -> Result<(), Error> {
+    let visibility =
+        std::collections::HashMap::from([("vision".into(), true), ("pdf".into(), true)]);
+    let statuses = ab_state::source_statuses(db, &visibility).map_err(|_| Error::Invalid)?;
+    let mut checks = serde_json::Map::from_iter([
+        ("vision".to_owned(), json!("unavailable")),
+        ("pdf".to_owned(), json!("unavailable")),
+    ]);
+    for record in statuses["records"].as_array().into_iter().flatten() {
+        let data = &record["data"];
+        let Some(source) = data["source"]
+            .as_str()
+            .filter(|source| checks.contains_key(*source))
+        else {
+            continue;
+        };
+        let state = data["state"].as_str().unwrap_or_default();
+        let complete = data["coverage"]["fields"] == "complete";
+        let value = if state == "ready" && !complete {
+            "unavailable"
+        } else {
+            state
+        };
+        checks.insert(source.to_owned(), json!(value));
+    }
+    for source in ["vision", "pdf"] {
+        if checks[source] != "ready" {
+            result["warnings"]
+                .as_array_mut()
+                .ok_or(Error::Invalid)?
+                .push(json!(format!(
+                    "{source} document source is not ready; start the current Helper and check sources.status"
+                )));
+        }
+    }
+    result["document_checks"] = Value::Object(checks);
+    Ok(())
+}
 fn encryption_warning(result: &mut Value) -> Result<(), Error> {
     if result["disk_encryption"] == "enabled" {
         return Ok(());
