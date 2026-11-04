@@ -85,7 +85,7 @@ public actor Messages: Source {
                     return SourceReadiness(state: "degraded", coverage: coverage(), reason: "reconciliation_pending")
                 }
             } else { _ = try reopen() }
-            return SourceReadiness(state: "ready", coverage: await commandCoverage(), capabilities: await commands.capabilities())
+            return SourceReadiness(state: "ready", coverage: await commandCoverage(), capabilities: [])
         } catch { return SourceReadiness(state: FileManager.default.isReadableFile(atPath: path) ? "degraded" : "permission_missing", coverage: .object(["fields": .string("partial"), "missing": .array([.string("chat_db_unavailable")])]), reason: "chat_db_unavailable") }
     }
     private func coverage() -> JSON {
@@ -749,7 +749,7 @@ public actor Messages: Source {
         captureActive = false
         if let failure { throw failure }
     }
-    public func prepare(_ command: JSON) async throws -> Prepared { try await commands.prepare(command) }
+    public func prepare(_ command: JSON) async throws -> Prepared { throw SourceFailure.unsupported }
     public func primitive(_ operation: String, args: JSON, into sink: any ObservationSink) async throws -> JSON {
         if operation == "messages.reconcile" {
             try await captureCommand(args["result"], into: sink)
@@ -757,11 +757,11 @@ public actor Messages: Source {
         }
         return try await commands.primitive(operation, args: args)
     }
-    public func dispatch(_ prepared: Prepared) async throws -> JSON { try await commands.dispatch(prepared) }
-    public func resolve(_ command: String, evidence: JSON) async -> JSON { await commands.resolve(evidence) }
+    public func dispatch(_ prepared: Prepared) async throws -> JSON { throw SourceFailure.unsupported }
+    public func resolve(_ command: String, evidence: JSON) async -> JSON { evidence }
     private func commandCoverage() async -> JSON {
         var value = coverage().object
-        value["operations"] = await commands.operationCoverage()
+        value["advertise"] = await commands.advertise
         return .object(value)
     }
     public func captureCommand(_ evidence: JSON, into sink: any ObservationSink) async throws {
@@ -793,7 +793,7 @@ public actor Messages: Source {
             for attachment in attachments {try await emit(try reader.attachmentObservations(guid:attachment["guid"]),sink:sink,live:true)}
         }
     }
-    public func validate(_ prepared: Prepared) async throws {try await commands.validate(prepared)}
+    public func validate(_ prepared: Prepared) async throws { throw SourceFailure.unsupported }
     public func readBlob(handle: String, offset: Int64, length: Int) throws -> JSON {
         do {
             let bytes = try readBlobBytes(handle: handle, offset: offset, length: length)
