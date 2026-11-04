@@ -5,6 +5,8 @@ pub mod calendar;
 pub mod calendar_fixtures;
 pub mod calls;
 pub mod capture_atomic;
+pub mod capture_observers;
+pub mod capture_staging;
 pub mod cleanup;
 pub mod commands;
 pub mod connectors;
@@ -297,7 +299,13 @@ pub fn registry() -> Registry {
     registry.register("shortcuts_run", shortcuts_run::shortcuts_run);
     registry.register("focus_sim", shortcuts_run::focus_sim);
     registry.register("mac", mac::mac);
-    registry.register("capture_atomic", capture_atomic::capture_atomic);
+    registry.register("capture_atomic", |world, input, evidence| {
+        if capture_staging::SCENARIOS.contains(&evidence.scenario.as_str()) {
+            capture_staging::capture_staging(world, evidence)
+        } else {
+            capture_atomic::capture_atomic(world, input, evidence)
+        }
+    });
     registry.register("changes", live_latency::changes);
     registry.register("calendar_journey", calendar::calendar_journey);
     native_runner::register(&mut registry);
@@ -378,7 +386,9 @@ fn register_pim(registry: &mut Registry) {
     registry.register("contacts", contacts::run);
     registry.register("notes", notes::run);
     registry.register("web", |world, input, evidence| {
-        if web_agents::SCENARIOS.contains(&evidence.scenario.as_str()) {
+        if capture_observers::SCENARIOS.contains(&evidence.scenario.as_str()) {
+            capture_observers::capture_observers(world, evidence)
+        } else if web_agents::SCENARIOS.contains(&evidence.scenario.as_str()) {
             web_agents::web(world, input, evidence)
         } else if web_relay::SCENARIOS.contains(&evidence.scenario.as_str()) {
             web_relay::web_relay(world, input, evidence)

@@ -12,7 +12,7 @@ use std::{
     net::{TcpListener, TcpStream},
     path::Path,
     sync::{
-        Arc,
+        Arc, Mutex,
         atomic::{AtomicBool, AtomicU64, Ordering},
     },
     thread,
@@ -62,8 +62,26 @@ impl ClientCertVerifier for AnyClient {
     }
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct CaptureProbe {
+    pub atomic_offers: u64,
+    pub legacy_offers: u64,
+    pub atomic_welcomes: u64,
+    pub legacy_welcomes: u64,
+    pub partial_fields: u64,
+    pub partial_frames: u64,
+    pub partial_bytes: u64,
+    pub partial_ack_without_cursor: u64,
+    pub partial_ack_with_cursor: u64,
+    pub reset_frames: u64,
+    pub hello_sequences: Vec<u64>,
+}
+
 #[derive(Debug, Default)]
 struct Counters {
+    probe: Mutex<CaptureProbe>,
+    capture_reset: AtomicBool,
+    force_snapshot: AtomicBool,
     suppress: AtomicBool,
     stop: AtomicBool,
     connections: AtomicU64,
@@ -107,6 +125,104 @@ fn poll(
     }
 }
 
+fn probe(counters: &Counters) -> std::sync::MutexGuard<'_, CaptureProbe> {
+    counters
+        .probe
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
+fn offers_atomic(frame: &Value) -> bool {
+    frame["features"]
+        .as_array()
+        .is_some_and(|features| features.iter().any(|f| f == "capture_atomic"))
+}
+
+fn from_replica(text: &str, receipts: &mut Vec<bool>, counters: &Counters) -> Option<String> {
+    let Ok(mut frame) = serde_json::from_str::<Value>(text) else {
+        return Some(text.to_owned());
+    };
+    let kind = frame["t"].as_str().unwrap_or_default().to_owned();
+    let mut rewritten = false;
+    if kind == "Hello" {
+        let mut seen = probe(counters);
+        if offers_atomic(&frame) {
+            seen.atomic_offers += 1;
+        } else {
+            seen.legacy_offers += 1;
+        }
+        if let Some(sequence) = frame["cursor"]["sequence"].as_u64() {
+            seen.hello_sequences.push(sequence);
+        }
+        drop(seen);
+        if counters.force_snapshot.swap(false, Ordering::SeqCst)
+            && let Some(object) = frame.as_object_mut()
+        {
+            object.remove("cursor");
+            rewritten = true;
+        }
+    }
+    if kind == "Ack" {
+        if counters.suppress.load(Ordering::SeqCst) {
+            counters.dropped.fetch_add(1, Ordering::SeqCst);
+            return None;
+        }
+        if !receipts.is_empty() {
+            if receipts.remove(0) {
+                let mut seen = probe(counters);
+                if frame["cursor"].is_null() {
+                    seen.partial_ack_without_cursor += 1;
+                } else {
+                    seen.partial_ack_with_cursor += 1;
+                }
+            }
+        }
+    }
+    if rewritten {
+        serde_json::to_string(&frame).ok()
+    } else {
+        Some(text.to_owned())
+    }
+}
+
+fn from_gateway(text: &str, receipts: &mut Vec<bool>, counters: &Counters) -> bool {
+    let Ok(frame) = serde_json::from_str::<Value>(text) else {
+        return false;
+    };
+    let kind = frame["t"].as_str().unwrap_or_default();
+    let partial = kind == "Batch" && frame["batch"]["partial"] == true;
+    if matches!(
+        kind,
+        "Welcome" | "Reset" | "SnapshotBegin" | "SnapshotPage" | "SnapshotEnd" | "Batch"
+    ) {
+        receipts.push(partial);
+    }
+    let mut seen = probe(counters);
+    if kind == "Batch"
+        && (frame.get("partial").is_some() || frame["batch"].get("partial").is_some())
+    {
+        seen.partial_fields += 1;
+    }
+    if kind == "Welcome" {
+        if offers_atomic(&frame) {
+            seen.atomic_welcomes += 1;
+        }
+        if frame["features"].as_array().is_none_or(Vec::is_empty) {
+            seen.legacy_welcomes += 1;
+        }
+    }
+    if partial {
+        seen.partial_frames += 1;
+        seen.partial_bytes += text.len() as u64;
+        if counters.capture_reset.swap(false, Ordering::SeqCst) {
+            counters.force_snapshot.store(true, Ordering::SeqCst);
+            seen.reset_frames += 1;
+            return true;
+        }
+    }
+    false
+}
+
 fn relay(
     tcp: TcpStream,
     config: Arc<ServerConfig>,
@@ -121,17 +237,23 @@ fn relay(
     let mut upstream = FeedLink::dial(gateway_peer, replica, gateway_pin, Duration::from_secs(5))
         .map_err(invalid)?;
     counters.connections.fetch_add(1, Ordering::SeqCst);
+    let mut receipts: Vec<bool> = Vec::new();
     while !counters.stop.load(Ordering::SeqCst) {
         if let Some(text) = poll(&mut downstream)? {
-            let ack = serde_json::from_str::<Value>(&text).is_ok_and(|frame| frame["t"] == "Ack");
-            if ack && counters.suppress.load(Ordering::SeqCst) {
-                counters.dropped.fetch_add(1, Ordering::SeqCst);
-            } else {
-                upstream.send_text(&text).map_err(invalid)?;
-            }
+            let Some(forward) = from_replica(&text, &mut receipts, counters) else {
+                continue;
+            };
+            upstream.send_text(&forward).map_err(invalid)?;
         }
         if let Some(text) = upstream.try_recv_text(POLL).map_err(invalid)? {
+            let reset = from_gateway(&text, &mut receipts, counters);
             downstream.send(Message::text(text)).map_err(invalid)?;
+            if reset {
+                downstream
+                    .send(Message::text(r#"{"t":"Reset","reason":"capture_fixture"}"#))
+                    .map_err(invalid)?;
+                return Ok(());
+            }
         }
     }
     Ok(())
@@ -184,6 +306,13 @@ impl FrameProxy {
     #[must_use]
     pub fn address(&self) -> &str {
         &self.address
+    }
+    pub fn capture_reset(&self, enabled: bool) {
+        self.counters.capture_reset.store(enabled, Ordering::SeqCst);
+    }
+    #[must_use]
+    pub fn capture_probe(&self) -> CaptureProbe {
+        probe(&self.counters).clone()
     }
     pub fn suppress_acks(&self, enabled: bool) {
         self.counters.suppress.store(enabled, Ordering::SeqCst);
