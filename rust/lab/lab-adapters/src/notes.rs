@@ -652,7 +652,7 @@ fn extras(world: &World, evidence: &mut Evidence) -> Result<()> {
                     .clone_into(&mut destination);
             }
         }
-        !note.is_null() && !destination.is_empty()
+        !note.is_null() && !destination.is_empty() && note["data"]["body_status"] != "pending"
     });
     add(evidence, "tagged_fixture_visible", ready);
     if !ready {

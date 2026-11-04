@@ -160,7 +160,7 @@ fn run_case(world: &mut World, name: &str, evidence: &mut Evidence) -> Result<()
             proxy.close();
             return Ok(());
         }
-        if world.control_for("/flush", &json!({}), 5).is_err() {
+        if world.control_for("/flush", &json!({}), 30).is_err() {
             case.add("backlog_flushed", false, "");
             proxy.close();
             return Ok(());

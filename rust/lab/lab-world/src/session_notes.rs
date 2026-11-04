@@ -563,6 +563,9 @@ impl std::fmt::Debug for NotesSync {
 }
 
 fn sync_once(state: &Mutex<Notes>, directory: &Path, root: &Path, hold: &Path) -> Result<()> {
+    if crate::session_control_empty() {
+        return Ok(());
+    }
     let observations = inspect(directory)?;
     let rows: Vec<(String, String, bool, Value)> = observations
         .iter()

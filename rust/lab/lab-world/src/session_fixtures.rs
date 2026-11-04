@@ -137,6 +137,9 @@ const PEERS: &str = "import json,sqlite3,sys\nc=sqlite3.connect(sys.argv[1])\nc.
 
 impl World {
     pub(crate) fn stage_session_usage(&self, action: &Value) -> Result<()> {
+        if session_control_empty() {
+            return Ok(());
+        }
         let root = self
             .session_root("usage")
             .ok_or_else(|| Error::Invalid("no usage root".into()))?
@@ -344,6 +347,9 @@ c.close()
 
 impl World {
     pub(crate) fn stage_session_mail(&self, action: &Value) -> Result<()> {
+        if session_control_empty() {
+            return Ok(());
+        }
         let root: PathBuf = self
             .session_root("mail")
             .ok_or_else(|| Error::Invalid("no mail root".into()))?
