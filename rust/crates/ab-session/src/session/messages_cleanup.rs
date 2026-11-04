@@ -513,7 +513,13 @@ pub(super) fn run(
         deleted += removed;
         progress(config, initial, deleted, left, "deleting");
     }
-    let candidates = run.candidates()?.len() + run.unreachable.len();
+    let mut still: BTreeSet<String> = run
+        .candidates()?
+        .into_iter()
+        .map(|(guid, _)| guid)
+        .collect();
+    still.extend(run.unreachable.iter().cloned());
+    let candidates = still.len();
     let mut owned_left = 0;
     for guid in &run.ledger.owned {
         if Run::sql(run.reader.is_live_after(guid, run.ledger.baseline))? {
