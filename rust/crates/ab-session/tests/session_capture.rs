@@ -4,10 +4,9 @@ mod support;
 
 use ab_session::{
     native_facts::Client,
+    production::Options,
     queries::{MailBodies, NativeQueries},
-    readers,
-    routed::Options,
-    session,
+    readers, session,
 };
 use serde_json::{Value, json};
 use std::{
@@ -530,7 +529,7 @@ fn a_rust_command_on_a_rust_captured_source_is_bound_to_the_readers_checkpoint()
     assert_eq!(prepared["t"], "Prepared");
     send(
         &mut world.gateway,
-        &json!({"t":"Dispatch","command_id":"c1","ticket":prepared["ticket"],"origin":"interactive","owner_fence":7}),
+        &json!({"t":"Dispatch","command_id":"c1","ticket":prepared["ticket"],"origin":"interactive","owner_fence":1}),
     )?;
     answer_read(&mut world, "reminders.read_list", &read_list())?;
     answer_read(

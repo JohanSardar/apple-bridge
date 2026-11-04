@@ -1,7 +1,0 @@
-id: SESSION-PROXY-BYTES
-feature: helper.session
-levels: [sim]
-given: [{world: {}}]
-when: [{helper_ipc: {}}]
-then: [{converge: {}}]
-cleanup: [{world: {}}]

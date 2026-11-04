@@ -136,12 +136,12 @@ fn tcc_ready(_: &mut World, evidence: &mut Evidence) -> Result<()> {
 #[allow(clippy::too_many_lines)]
 fn release_commands(_: &mut World, evidence: &mut Evidence) -> Result<()> {
     let directory = scratch("ab-helper-release-")?;
-    let outcome = release_checks(&directory, evidence);
+    release_checks(&directory, evidence);
     let _ = fs::remove_dir_all(&directory);
-    outcome
+    Ok(())
 }
 #[allow(clippy::too_many_lines)]
-fn release_checks(directory: &Path, evidence: &mut Evidence) -> Result<()> {
+fn release_checks(directory: &Path, evidence: &mut Evidence) {
     let mut apps: BTreeMap<&str, PathBuf> = BTreeMap::new();
     let mut keys: BTreeMap<&str, String> = BTreeMap::new();
     for mode in ["0", "1"] {
@@ -159,7 +159,7 @@ fn release_checks(directory: &Path, evidence: &mut Evidence) -> Result<()> {
             "helper build",
         );
         if !built {
-            return Ok(());
+            return;
         }
         let verified = Command::new("codesign")
             .args(["--verify", "--strict"])
@@ -195,7 +195,6 @@ fn release_checks(directory: &Path, evidence: &mut Evidence) -> Result<()> {
         "notes-probe",
         "functional",
         "probe",
-        "wire-checks",
     ] {
         let (ok, output) = invoke(&apps["0"], &[command]);
         evidence.check(
@@ -220,22 +219,7 @@ fn release_checks(directory: &Path, evidence: &mut Evidence) -> Result<()> {
             );
         }
     }
-    let fixtures = directory.join("wire.json");
-    fs::write(&fixtures, "[]")?;
-    let fixtures = fixtures.to_string_lossy().into_owned();
-    let wire = ["wire-checks", "--fixtures", fixtures.as_str()];
-    let (ok, output) = invoke(&apps["0"], &wire);
-    evidence.check(
-        "release_rejects_valid_lab_fixture",
-        !ok && output == "unknownCommand",
-        "release rejects the lab fixture",
-    );
-    let (ok, output) = invoke(&apps["1"], &wire);
-    evidence.check(
-        "lab_executes_wire_fixture",
-        ok && output == "wire fixtures: 0 decoded",
-        "lab executes the wire fixture",
-    );
+    let wire = ["functional"];
     let before = pointer();
     let packaged = directory.join("Apple Bridge.app");
     let built = Command::new("packaging/build-app.sh")
@@ -247,7 +231,7 @@ fn release_checks(directory: &Path, evidence: &mut Evidence) -> Result<()> {
         .is_ok_and(|status| status.success());
     evidence.check("release_package_build", built, "release package build");
     if !built {
-        return Ok(());
+        return;
     }
     let signed = Command::new("codesign")
         .args(["--verify", "--deep", "--strict"])
@@ -264,7 +248,7 @@ fn release_checks(directory: &Path, evidence: &mut Evidence) -> Result<()> {
     let after = pointer();
     let kept = after.as_ref().is_some_and(|dir| {
         let (ok, output) = invoke(&Path::new(dir).join("AppleBridgeHelper"), &wire);
-        ok && output == "wire fixtures: 0 decoded"
+        !ok && output == "invalidArguments"
     });
     evidence.check(
         "lab_reader_keeps_lab_binary_after_release_build",
@@ -303,7 +287,6 @@ fn release_checks(directory: &Path, evidence: &mut Evidence) -> Result<()> {
             );
         }
     }
-    Ok(())
 }
 
 fn helper_pid(world: &World) -> Option<String> {

@@ -74,7 +74,6 @@ impl Probe for LinkProbe {
     }
 }
 
-#[cfg(feature = "rust-capture")]
 pub fn serve(link: UnixStream, request: &Value) -> Result<(), Error> {
     let probe = LinkProbe::open(link)?;
     let local = super::messages_local::Local::over(&probe);
@@ -83,15 +82,6 @@ pub fn serve(link: UnixStream, request: &Value) -> Result<(), Error> {
         .map_err(|_| Error::Invalid)
 }
 
-#[cfg(not(feature = "rust-capture"))]
-pub fn serve(link: UnixStream, request: &Value) -> Result<(), Error> {
-    let probe = LinkProbe::open(link)?;
-    run(&probe, &Driven(&probe), request)
-        .map(|_| ())
-        .map_err(|_| Error::Invalid)
-}
-
-#[cfg(feature = "rust-capture")]
 pub fn serve_cleanup(link: UnixStream, request: &Value) -> Result<(), Error> {
     let probe = LinkProbe::open(link)?;
     let local = super::messages_local::Local::over(&probe);

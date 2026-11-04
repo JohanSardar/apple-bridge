@@ -1,6 +1,6 @@
-#![cfg(feature = "rust-capture")]
+mod support;
 
-use ab_session::{native_facts::Client, readers, routed};
+use ab_session::{native_facts::Client, production::Options, readers};
 use serde_json::{Value, json};
 use std::{
     collections::BTreeMap,
@@ -103,25 +103,16 @@ fn wire(config: &Value) -> Fallible<Wire> {
     serve(server, Arc::clone(&world));
     let client = Arc::new(Client::inherited(native)?);
     let sources = readers::from_config_linked(&config.to_string(), Some(&client))?;
-    let (mut gateway, session_gateway) = UnixStream::pair()?;
-    let (mut helper, session_helper) = UnixStream::pair()?;
-    for socket in [&gateway, &helper] {
-        socket.set_read_timeout(Some(Duration::from_secs(10)))?;
-    }
-    let options = routed::Options {
+    let options = Options {
         poll: Duration::from_millis(20),
-        ..routed::Options::default()
+        ..Options::default()
     };
-    std::thread::spawn(move || {
-        routed::relay_layered(session_gateway, session_helper, sources, &options, None)
-    });
-    send(
-        &mut gateway,
-        &json!({"t":"Open","protocol":"ipc/1","owner_fence":1,"byte_credit":4_194_304,"checkpoints":{}}),
-    )?;
-    assert_eq!(receive(&mut helper)?.1["t"], "Open");
-    send(&mut helper, &json!({"t":"Ready","protocol":"ipc/1"}))?;
-    assert_eq!(receive(&mut gateway)?.1["t"], "Ready");
+    let support::Wire {
+        gateway,
+        link: helper,
+        worker: _,
+        home: _,
+    } = support::wire(sources, options, json!({}))?;
     Ok(Wire {
         gateway,
         helper,

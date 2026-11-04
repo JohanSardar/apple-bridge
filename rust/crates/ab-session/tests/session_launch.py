@@ -131,7 +131,7 @@ finish(process, sockets)
 print("ok missing home refused")
 
 home, secret = prepare_home()
-process, sockets = launch(["--session-secret", secret, "--session-home", home, "--effects-home", home])
+process, sockets = launch(["--session-secret", secret, "--session-home", home, "--capture-home", home])
 assert process.wait(timeout=15) != 0
 finish(process, sockets)
-print("ok exclusive with the routed relay")
+print("ok an unknown flag is refused")
