@@ -1,6 +1,5 @@
 use crate::{
     assertions::{Observed, await_until, converged},
-    capture_atomic::{SCOPE, start_world},
     capture_staging::sql,
     http::{Client, random_id},
     labcore, replicas,
@@ -17,6 +16,7 @@ use std::{
     process::{Command, Stdio},
 };
 
+const SCOPE: &str = "admin";
 pub const SCENARIOS: [&str; 1] = ["CORE-REPLICA-CAPTURE-OBSERVERS"];
 const COLLECTION: &str = "reminders.reminder";
 const MARKER: &str = "[ab-test capture observer]";
@@ -333,7 +333,9 @@ fn observers(world: &World, gateway: &Client, evidence: &mut Evidence) {
 }
 
 pub fn capture_observers(world: &mut World, evidence: &mut Evidence) -> Result<()> {
-    start_world(world, 1)?;
+    world.install_proxy()?;
+    world.control("/seed", &json!({"count": 1}))?;
+    replicas::start_with(world, 1, SCOPE, 0)?;
     let gateway = Client::new(world, SCOPE)?;
     let session = if world.gateway_cli(&["agent", "list"]).is_ok() {
         owner_session(world, None).ok()
