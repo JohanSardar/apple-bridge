@@ -7,13 +7,10 @@ use std::{env, fs, path::PathBuf, process::Command};
 type Patch = fn(&mut Value);
 
 fn binary() -> Option<PathBuf> {
-    let directory = env::var("AB_LAB_NATIVE_OUTPUT").ok().or_else(|| {
-        fs::read_to_string("native/.build/native-output-1")
-            .ok()
-            .map(|s| s.trim().to_owned())
-    })?;
-    let path = PathBuf::from(directory).join("MessagesSafetyChecks");
-    path.is_file().then_some(path)
+    env::var_os("AB_SESSION_BINARY")
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
+        .filter(|path| path.is_file())
 }
 fn candidate(outgoing: bool, values: &[&str]) -> Value {
     json!({"outgoing": outgoing, "values": values})
@@ -190,7 +187,7 @@ pub fn prove(evidence: &mut Evidence, prefix: &str) -> bool {
         evidence.check(
             &format!("{prefix}native_cleanup_checks_build"),
             false,
-            "MessagesSafetyChecks binary unavailable on this host",
+            "AB_SESSION_BINARY unavailable on this host",
         );
         return false;
     };
@@ -211,7 +208,7 @@ pub fn prove(evidence: &mut Evidence, prefix: &str) -> bool {
             .ok()
             .and_then(|()| {
                 Command::new(&binary)
-                    .args(["media-cleanup", "--fixtures"])
+                    .arg("--media-cleanup-check")
                     .arg(&path)
                     .output()
                     .ok()

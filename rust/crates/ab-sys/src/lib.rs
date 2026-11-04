@@ -10,6 +10,13 @@ use std::{
 };
 
 #[allow(unsafe_code)]
+#[must_use]
+pub fn user_id() -> u32 {
+    // SAFETY: getuid has no preconditions and cannot fail.
+    unsafe { libc::getuid() }
+}
+
+#[allow(unsafe_code)]
 pub fn inherited_unix_stream(fd: i32) -> io::Result<UnixStream> {
     if fd < 3 {
         return Err(io::Error::new(

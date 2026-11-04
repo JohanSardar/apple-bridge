@@ -281,7 +281,12 @@ enum HelperLabCommand {
             Task { @MainActor in
                 do {
                     let data: Data
-                    if arguments.count > 1 && arguments[1] == "cleanup-tagged-self" { data = try await MessagesCleanup.run(arguments) }
+                    if arguments.count > 1 && arguments[1] == "cleanup-tagged-self" {
+                        guard let index = arguments.firstIndex(of: "--tag"), index + 1 < arguments.count, arguments.contains("--owned-only") else { throw ProbeFailure.invalidArguments }
+                        try await RustSelfTest.shared.cleanup(tag: arguments[index + 1], report: reportURL.path)
+                        finished = true
+                        return
+                    }
                     else { data=try JSONSerialization.data(withJSONObject:MessagesProbes.run(arguments)) }
                     try data.write(to:reportURL,options:.atomic)
                     try FileManager.default.setAttributes([.posixPermissions:0o600],ofItemAtPath:reportURL.path)
