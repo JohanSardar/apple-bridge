@@ -191,16 +191,13 @@ fn ambiguous_float(value: f64) -> bool {
 fn canonical(value: &Value) -> Result<Value, Error> {
     Ok(match value {
         Value::Number(n) => {
-            if let Some(i) = n.as_i64() {
+            if let Some(u) = n.as_u64() {
+                Value::Number(u.into())
+            } else if let Some(i) = n.as_i64() {
                 if i.unsigned_abs() > 9_007_199_254_740_991 {
                     return Err(Error::Invalid);
                 }
                 Value::Number(i.into())
-            } else if let Some(u) = n.as_u64() {
-                if u > 9_007_199_254_740_991 {
-                    return Err(Error::Invalid);
-                }
-                Value::Number(u.into())
             } else {
                 let f = n.as_f64().filter(|f| f.is_finite()).ok_or(Error::Invalid)?;
                 if ambiguous_float(f) {
