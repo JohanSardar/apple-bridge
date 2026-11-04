@@ -263,11 +263,14 @@ async fn link_to_account(
             () = stopped(stop) => return Ok(false),
             () = tokio::time::sleep(Duration::from_secs(interval)) => {}
         }
-        let response = client
+        let Ok(response) = client
             .post(format!("{accounts}/v1/device-poll"))
             .json(&serde_json::json!({"polling_secret": start.polling_secret}))
             .send()
-            .await?;
+            .await
+        else {
+            continue;
+        };
         match response.status() {
             reqwest::StatusCode::ACCEPTED => {}
             reqwest::StatusCode::TOO_MANY_REQUESTS => interval = (interval + 5).min(60),

@@ -48,7 +48,9 @@ pub(crate) fn decision(
     query.insert("state".into(), state.into());
     query.insert("iss".into(), origin.into());
     if approve {
-        let (agent, _) = authority.create_oauth_agent(&client.client_name, level, grants)?;
+        let over_public_host = origin.starts_with("https://");
+        let (agent, _) =
+            authority.create_oauth_agent(&client.client_name, level, grants, over_public_host)?;
         code.principal.clone_from(&agent.id);
         match authority.issue_oauth_code(code) {
             Ok(raw) => {
