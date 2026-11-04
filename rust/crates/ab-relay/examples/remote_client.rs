@@ -6,17 +6,26 @@ use std::{path::PathBuf, sync::Arc};
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<_> = std::env::args().skip(1).collect();
     if args.len() != 4 {
-        return Err("usage: remote_client home endpoint root.pem gateway-address".into());
+        return Err(
+            "usage: remote_client home endpoint root.pem|public gateway-address\n\
+             `public` trusts the public web roots instead of a private CA. \
+             AB_RELAY_ZONE overrides the enrollment zone (default relay.test)."
+                .into(),
+        );
     }
     let home = PathBuf::from(&args[0]);
-    let pem = std::fs::read(&args[2])?;
-    let client = reqwest::Client::builder()
-        .add_root_certificate(reqwest::Certificate::from_pem(&pem)?)
-        .build()?;
+    let mut builder = reqwest::Client::builder();
     let mut roots = rustls::RootCertStore::empty();
-    for cert in rustls::pki_types::CertificateDer::pem_slice_iter(&pem) {
-        roots.add(cert?)?;
+    if args[2] == "public" {
+        roots.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
+    } else {
+        let pem = std::fs::read(&args[2])?;
+        builder = builder.add_root_certificate(reqwest::Certificate::from_pem(&pem)?);
+        for cert in rustls::pki_types::CertificateDer::pem_slice_iter(&pem) {
+            roots.add(cert?)?;
+        }
     }
+    let client = builder.build()?;
     let config = rustls::ClientConfig::builder_with_provider(Arc::new(
         rustls::crypto::ring::default_provider(),
     ))
@@ -26,7 +35,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let relay = Relay {
         home: home.clone(),
         endpoint: args[1].clone(),
-        zone: "relay.test".into(),
+        zone: std::env::var("AB_RELAY_ZONE").unwrap_or_else(|_| "relay.test".into()),
         client,
         certificates: Arc::new(Certificates::new(
             home,
