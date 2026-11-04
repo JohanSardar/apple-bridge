@@ -721,6 +721,7 @@ public final class ContactsSource: Source {
         let key = request["native_key"].string
         switch operation {
         case "contacts.read_contact":
+            meIdentifier = try? store.unifiedMeContactWithKeys(toFetch: [CNContactIdentifierKey as NSString]).identifier
             do { return .object(["exists": .bool(true), "data": try data(commandContact(key))]) }
             catch SourceFailure.conflict { return .object(["exists": .bool(false)]) }
         case "contacts.can_create":
@@ -761,6 +762,7 @@ public final class ContactsSource: Source {
 
     private func writeContact(_ request: JSON, into sink: any ObservationSink) async throws -> JSON {
         let operation = request["op"].string
+        meIdentifier = try? store.unifiedMeContactWithKeys(toFetch: [CNContactIdentifierKey as NSString]).identifier
         guard Self.operations.contains(operation) else { throw SourceFailure.unsupported }
         let save = CNSaveRequest()
         let contact: CNMutableContact
