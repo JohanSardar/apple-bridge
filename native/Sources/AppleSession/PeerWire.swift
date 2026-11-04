@@ -39,7 +39,8 @@ final class PeerWire: @unchecked Sendable {
             guard getpeereid(descriptor, &uid, &gid) == 0, uid == getuid() else { throw SourceFailure.invalid }
             if ProcessInfo.processInfo.environment["AB_SESSION_PROXY"] == "1" {
                 let binary = ProcessInfo.processInfo.environment["AB_SESSION_BINARY"] ?? Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/ab-session").path
-                let child = try SessionProxy(gateway: descriptor, binary: binary, home: sessionHome ?? URL(fileURLWithPath: secretFile).deletingLastPathComponent().path)
+                let proxyHome = sessionHome ?? URL(fileURLWithPath: secretFile).deletingLastPathComponent().path
+                let child = try SessionProxy(gateway: descriptor, binary: binary, home: proxyHome, effects: EffectsRouting.load(home: URL(fileURLWithPath: proxyHome)) != nil)
                 Darwin.close(descriptor)
                 descriptor = child.descriptor
                 proxy = child

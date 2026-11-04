@@ -290,18 +290,25 @@ public final class NotesSource: Source {
         encoder.outputFormatting = [.sortedKeys]
         return SHA256.hash(data: try encoder.encode(data)).map { String(format: "%02x", $0) }.joined()
     }
-    public func validate(_ prepared: Prepared) throws {
+    public func validate(_ prepared: Prepared, preState: JSON? = nil) throws {
         if prepared.action["op"].string == "notes.rename_folder" {
-            let folder = try find(prepared.action["native_key"].string, collection: "notes.folder")
-            guard try folderFingerprint(folder["data"]) == prepared.nativeState["native_fingerprint"].string else { throw SourceFailure.conflict }; return
+            let current = try preState.map { $0["native_fingerprint"].string } ?? folderFingerprint(find(prepared.action["native_key"].string, collection: "notes.folder")["data"])
+            guard !current.isEmpty, current == prepared.nativeState["native_fingerprint"].string else { throw SourceFailure.conflict }; return
         }
         try requireDeletionProof(prepared.action["op"].string)
         if !prepared.action["native_key"].string.isEmpty {
-            guard try find(prepared.action["native_key"].string)["data"]["native_fingerprint"] == prepared.nativeState["native_fingerprint"] else { throw SourceFailure.conflict }
+            if let preState {
+                guard !preState["native_fingerprint"].string.isEmpty, preState["native_fingerprint"] == prepared.nativeState["native_fingerprint"] else { throw SourceFailure.conflict }
+            } else {
+                guard try find(prepared.action["native_key"].string)["data"]["native_fingerprint"] == prepared.nativeState["native_fingerprint"] else { throw SourceFailure.conflict }
+            }
         }
     }
     public func dispatch(_ prepared: Prepared) async throws -> JSON {
         try validate(prepared)
+        return try await dispatchValidated(prepared)
+    }
+    public func dispatchValidated(_ prepared: Prepared) async throws -> JSON {
         let action = prepared.action, args = action["note_args"]
         let op = action["op"].string
         var scriptID = ""

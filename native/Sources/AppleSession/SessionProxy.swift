@@ -7,7 +7,7 @@ final class SessionProxy: @unchecked Sendable {
     let nativeDescriptor: Int32
     private let child: pid_t
 
-    init(gateway: Int32, binary: String, home: String) throws {
+    init(gateway: Int32, binary: String, home: String, effects: Bool) throws {
         var pair: [Int32] = [-1, -1]
         guard socketpair(AF_UNIX, SOCK_STREAM, 0, &pair) == 0 else { throw SourceFailure.unavailable }
         var native: [Int32] = [-1, -1]
@@ -35,7 +35,7 @@ final class SessionProxy: @unchecked Sendable {
         }
         var spawned: pid_t = 0
         var arguments = [binary, "--gateway-fd", "198", "--helper-fd", "199"]
-        if ProcessInfo.processInfo.environment["AB_SESSION_EFFECTS"] == "1" { arguments += ["--effects-home", home] }
+        if effects { arguments += ["--effects-home", home] }
         if FileManager.default.fileExists(atPath: (home as NSString).appendingPathComponent("session/rust-capture.json")) { arguments += ["--capture-home", home] }
         let pointers = arguments.map { strdup($0) } + [nil]
         defer { for pointer in pointers { free(pointer) } }
