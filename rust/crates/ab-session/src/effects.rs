@@ -127,7 +127,6 @@ const DISPOSITIONS: &[&str] = &[
     "failed_no_effect",
 ];
 const FACT_SOURCES: &[&str] = &["calendar", "contacts"];
-const CORRELATION_WAIT: Duration = Duration::from_secs(15);
 
 #[must_use]
 pub fn source_of(operation: &str) -> &str {
@@ -177,11 +176,23 @@ impl Routing {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct Config {
     pub routing: Routing,
     pub rust_sources: BTreeSet<String>,
     pub notes_database: Option<PathBuf>,
+    pub correlation_wait: Duration,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            routing: Routing::all(),
+            rust_sources: BTreeSet::new(),
+            notes_database: None,
+            correlation_wait: Duration::from_secs(10),
+        }
+    }
 }
 
 fn ambiguous_float(value: f64) -> bool {
@@ -485,8 +496,11 @@ impl Layer {
             && let Some(id) = value["command_id"].as_str()
         {
             let mut guard = self.guard()?;
-            if guard.outcome(id).is_some_and(|saved| saved["t"] == "Outcome")
-                && let Some(disposition) = value["disposition"].as_str()
+            if guard.outcome(id).is_some_and(|saved| {
+                saved["t"] == "Outcome"
+                    && (saved["disposition"] != value["disposition"]
+                        || saved["evidence"] != value["evidence"])
+            }) && let Some(disposition) = value["disposition"].as_str()
             {
                 let _ = guard.finish(id, disposition, &value["evidence"]);
             }
@@ -571,19 +585,18 @@ impl Layer {
                     return Ok(unavailable());
                 };
                 let names: Vec<&str> = candidates.iter().map(String::as_str).collect();
-                let wait = self.config.rust_sources.contains(source)
+                let rust_owned = self.config.rust_sources.contains(source)
                     && !FACT_SOURCES.contains(&source);
-                let deadline = Instant::now() + CORRELATION_WAIT;
+                let required = rust_owned.then_some(after);
+                let deadline = Instant::now() + self.config.correlation_wait;
                 let mut state = self.state()?;
                 loop {
-                    if let Some(checkpoint) =
-                        state.checkpoint(&names, key, wait.then_some(after))
-                    {
+                    if let Some(checkpoint) = state.checkpoint(&names, key, required) {
                         result.insert("capture_checkpoint".into(), Value::String(checkpoint));
                         break;
                     }
                     let now = Instant::now();
-                    if !wait || now >= deadline {
+                    if now >= deadline {
                         return Ok(unavailable());
                     }
                     state = self
@@ -806,12 +819,7 @@ impl Layer {
                 let Some(saved) = saved else {
                     return Ok(true);
                 };
-                if saved["t"] == "Outcome"
-                    && matches!(
-                        saved["disposition"].as_str(),
-                        Some("locally_observed" | "indeterminate")
-                    )
-                {
+                if saved["t"] == "Outcome" {
                     let mut forwarded = value.clone();
                     forwarded["saved"] = saved;
                     send(
@@ -872,7 +880,17 @@ pub fn relay(
     native: UnixStream,
     home: &Path,
 ) -> Result<(), Error> {
-    let layer = Layer::open(native, home)?;
+    relay_with(gateway, helper, native, home, Config::default())
+}
+
+pub fn relay_with(
+    gateway: UnixStream,
+    helper: UnixStream,
+    native: UnixStream,
+    home: &Path,
+    config: Config,
+) -> Result<(), Error> {
+    let layer = Layer::open_with(native, home, config)?;
     crate::routed::relay_layered(
         gateway,
         helper,

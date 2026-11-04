@@ -61,7 +61,16 @@ fn native_route(commit_capture: bool, wrong_id: bool) -> Result<(), Box<dyn std:
     }
     let route_home = home.clone();
     let relay = std::thread::spawn(move || {
-        effects::relay(session_gateway, session_helper, session_native, &route_home)
+        effects::relay_with(
+            session_gateway,
+            session_helper,
+            session_native,
+            &route_home,
+            effects::Config {
+                correlation_wait: Duration::from_millis(300),
+                ..effects::Config::default()
+            },
+        )
     });
     let result = (|| -> Result<(), Box<dyn std::error::Error>> {
         send(

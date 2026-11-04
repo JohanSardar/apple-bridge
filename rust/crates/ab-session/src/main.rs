@@ -30,6 +30,7 @@ fn lab_effects(native: Option<&str>, rust: &[String], config: &str) -> Result<Op
             routing,
             rust_sources: rust.iter().cloned().collect(),
             notes_database,
+            ..ab_session::effects::Config::default()
         },
     }))
 }
