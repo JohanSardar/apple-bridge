@@ -197,7 +197,12 @@ impl State {
     fn records(&self) -> Vec<Value> {
         let mut records = self.data["records"]
             .as_object()
-            .map(|m| m.values().cloned().collect::<Vec<_>>())
+            .map(|m| {
+                m.values()
+                    .filter(|v| v["held"] != true)
+                    .cloned()
+                    .collect::<Vec<_>>()
+            })
             .unwrap_or_default();
         records.sort_by_key(|v| string(v, "native_key"));
         records

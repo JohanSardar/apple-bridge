@@ -547,7 +547,12 @@ impl Session<'_> {
                         parts.push(json!({"index":0,"kind":"text","native_key":native,"disposition":"locally_observed","observed":true}));
                     }
                     for (index, file) in files.iter().enumerate() {
-                        if (fault == "part-no-effect" || fault == "part-progress-failure")
+                        if fault == "part-no-effect" && index + 1 == files.len() {
+                            parts.push(json!({"index":parts.len(),"kind":"attachment","disposition":"indeterminate","observed":false}));
+                            disposition = "indeterminate";
+                            continue;
+                        }
+                        if (fault == "part-progress" || fault == "part-progress-failure")
                             && index + 1 == files.len()
                         {
                             parts.push(json!({"index":parts.len(),"kind":"attachment","disposition":"failed_no_effect","observed":false}));
@@ -608,9 +613,6 @@ impl Session<'_> {
                         }
                         part["observed"] = json!(false);
                         part["disposition"] = json!("indeterminate");
-                    }
-                    if fault == "part-progress" {
-                        disposition = "indeterminate";
                     }
                 }
                 if fault == "identical-manual-send" {
@@ -963,6 +965,46 @@ impl Session<'_> {
             }
             "messages.rows_after" => {
                 let after = args["maximum"].as_u64().unwrap_or_default();
+                let receipt_first = s.fault == "part-receipt-failed-first";
+                let mut capture = Value::Null;
+                if receipt_first || s.fault == "part-receipt-failed" {
+                    let mut rows: Vec<(u64, String)> = s.data["records"]
+                        .as_object()
+                        .into_iter()
+                        .flatten()
+                        .filter(|(_, record)| {
+                            record["collection"] == "messages.message"
+                                && record["kind"] != "absent"
+                                && record["data"]["is_from_me"] == true
+                                && record["row_id"].as_u64().unwrap_or_default() > after
+                        })
+                        .map(|(key, record)| {
+                            (record["row_id"].as_u64().unwrap_or_default(), key.clone())
+                        })
+                        .collect();
+                    rows.sort();
+                    let picked = if receipt_first {
+                        rows.first()
+                    } else {
+                        rows.last()
+                    };
+                    if let Some((_, key)) = picked.cloned() {
+                        s.fault.clear();
+                        let kept: Vec<(&str, Value)> = ["row_id", "row_reads", "staged_names"]
+                            .iter()
+                            .map(|field| (*field, s.data["records"][&key][*field].clone()))
+                            .collect();
+                        let mut seen = vec![];
+                        set_error(&mut s, &mut seen, &key);
+                        for (field, value) in kept {
+                            s.data["records"][&key][field] = value;
+                        }
+                        s.save().map_err(fail)?;
+                        capture = json!({"t":"Capture","source":"messages","observations":seen});
+                    }
+                }
+                let unbound = s.fault == "part-unbound-failure";
+                let unbound = unbound || !capture.is_null();
                 let mut rows: Vec<(u64, Value)> = vec![];
                 let mut reads: Vec<(String, u64)> = vec![];
                 for (key, record) in s.data["records"].as_object().into_iter().flatten() {
@@ -975,17 +1017,30 @@ impl Session<'_> {
                     {
                         continue;
                     }
+                    if record["deferred"] == true {
+                        continue;
+                    }
                     let chat = string(&data["chat_id"]["$ref"], "native_key");
                     let body = string(data, "text");
                     let seen = record["row_reads"].as_u64().unwrap_or_default() + 1;
-                    reads.push((key.clone(), seen));
-                    rows.push((row, json!({"guid":key,"capture_chat_guid":chat,"service":data["service"].as_str().unwrap_or("iMessage"),"error":data["error_code"].as_i64().unwrap_or(0),"is_delivered":seen > 1,"text":body,"body":body,"has_body":false,"peers":if chat.is_empty() { vec![] } else { chat_peers(&s, &chat) },"attachment_names":record["staged_names"].clone()})));
+                    if !unbound {
+                        reads.push((key.clone(), seen));
+                    }
+                    rows.push((row, json!({"guid":key,"capture_chat_guid":chat,"service":data["service"].as_str().unwrap_or("iMessage"),"error":data["error_code"].as_i64().unwrap_or(0),"is_delivered":seen > 1 && !unbound && record["no_receipts"] != true,"text":body,"body":body,"has_body":false,"peers":if chat.is_empty() { vec![] } else { chat_peers(&s, &chat) },"attachment_names":record["staged_names"].clone()})));
                 }
                 for (key, seen) in reads {
                     s.data["records"][&key]["row_reads"] = json!(seen);
                 }
                 rows.sort_by_key(|(row, _)| *row);
-                Ok(json!({"rows":rows.into_iter().map(|(_, row)| row).collect::<Vec<_>>()}))
+                let answer =
+                    json!({"rows":rows.into_iter().map(|(_, row)| row).collect::<Vec<_>>()});
+                if capture.is_null() {
+                    return Ok(answer);
+                }
+                s.save().map_err(fail)?;
+                drop(s);
+                self.emit(state, capture).map_err(fail)?;
+                Ok(answer)
             }
             "messages.stage" => {
                 let m = &args["messages"];
@@ -1266,7 +1321,13 @@ impl Session<'_> {
                     == args["count"].as_u64().unwrap_or(1);
                 let wanted = s.fault.clone();
                 let part_fault = wanted.starts_with("part-");
-                let fault = if part_fault && !(last && string(part, "kind") == "attachment") {
+                let progress = wanted == "part-progress" || wanted == "part-progress-failure";
+                let applies = if progress {
+                    first
+                } else {
+                    last && string(part, "kind") == "attachment"
+                };
+                let fault = if part_fault && !applies {
                     String::new()
                 } else {
                     std::mem::take(&mut s.fault)
@@ -1335,6 +1396,15 @@ impl Session<'_> {
                         }
                     }
                     stamp_row(&mut s, &native);
+                    if fault == "part-progress" || fault == "part-progress-failure" {
+                        s.data["records"][&native]["deferred"] = json!(true);
+                        s.data["records"][&native]["no_receipts"] = json!(true);
+                    }
+                }
+                if fault == "outcome-without-capture" {
+                    for record in &seen {
+                        s.data["records"][string(record, "native_key")]["held"] = json!(true);
+                    }
                 }
                 s.save().map_err(fail)?;
                 let capture = s.scan("messages").map_err(fail)?;

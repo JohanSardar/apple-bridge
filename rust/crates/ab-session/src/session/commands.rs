@@ -157,6 +157,26 @@ fn facts_source(operation: &str) -> bool {
     )
 }
 
+fn reopenable(saved: &Value) -> bool {
+    match saved["disposition"].as_str().unwrap_or_default() {
+        "indeterminate" | "locally_observed" => true,
+        "delivery_failed" => saved["evidence"]["parts"].as_array().is_some_and(|parts| {
+            parts.iter().any(|part| {
+                matches!(
+                    part["disposition"].as_str(),
+                    Some("locally_observed" | "observed" | "indeterminate")
+                )
+            })
+        }),
+        _ => false,
+    }
+}
+
+fn capturable(disposition: &str, evidence: &Value) -> bool {
+    evidence["observed"] == true
+        && (disposition != "indeterminate" || evidence["source"] == "messages")
+}
+
 fn needs_capture(operation: &str) -> bool {
     let source = operation.split('.').next().unwrap_or_default();
     source != "mac"
@@ -605,14 +625,16 @@ impl Hub {
             return self.refuse(&id, "not_found");
         };
         let open = saved["t"] == "Outcome" && saved["disposition"] != "failed_no_effect";
-        let owned = open
-            && ["indeterminate", "locally_observed"]
-                .contains(&saved["disposition"].as_str().unwrap_or_default())
-            && core.commands.owns(
-                saved["evidence"]["prepared"]["action"]["op"]
-                    .as_str()
-                    .unwrap_or_default(),
-            );
+        let ours = core.commands.owns(
+            saved["evidence"]["prepared"]["action"]["op"]
+                .as_str()
+                .unwrap_or_default(),
+        );
+        let owned = open && ours && reopenable(&saved);
+        if open && ours && !owned {
+            drop(core);
+            return self.send_gateway(&saved_frame(&saved)?);
+        }
         if open {
             *core.commands.resolving.entry(id.clone()).or_default() += 1;
             drop(core);
@@ -728,7 +750,7 @@ impl Hub {
         if core.commands.take_resolving(&id) {
             drop(core);
             let mut evidence = parsed(&outcome.evidence);
-            if outcome.disposition != "indeterminate" && evidence["observed"] == true {
+            if capturable(&outcome.disposition, &evidence) {
                 let key = evidence["native_key"]
                     .as_str()
                     .unwrap_or_default()
@@ -786,10 +808,7 @@ impl Hub {
                 "request_hash": active.command.request_hash,
             });
         }
-        if disposition != "indeterminate"
-            && evidence["observed"] == true
-            && needs_capture(&operation)
-        {
+        if capturable(&disposition, &evidence) && needs_capture(&operation) {
             let key = evidence["native_key"]
                 .as_str()
                 .unwrap_or_default()
@@ -852,5 +871,63 @@ impl Hub {
                 .map_err(|_| Error::WorkerPanicked)?
                 .0;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::capturable;
+    use serde_json::json;
+
+    #[test]
+    fn an_observed_messages_part_is_bound_even_when_the_aggregate_is_indeterminate() {
+        let observed = json!({"source": "messages", "observed": true});
+        assert!(capturable("indeterminate", &observed));
+        assert!(capturable("locally_observed", &observed));
+        assert!(!capturable(
+            "indeterminate",
+            &json!({"source": "messages", "observed": false})
+        ));
+    }
+
+    #[test]
+    fn a_failed_aggregate_with_an_unsettled_part_can_be_resolved_again() {
+        let failed = |parts: serde_json::Value| json!({"disposition": "delivery_failed", "evidence": {"parts": parts}});
+        assert!(super::reopenable(&failed(json!([
+            {"disposition": "locally_observed"},
+            {"disposition": "delivery_failed"}
+        ]))));
+        assert!(super::reopenable(&failed(json!([
+            {"disposition": "observed"},
+            {"disposition": "delivery_failed"}
+        ]))));
+        assert!(super::reopenable(&failed(json!([
+            {"disposition": "indeterminate"},
+            {"disposition": "failed_no_effect"}
+        ]))));
+        assert!(!super::reopenable(&failed(json!([
+            {"disposition": "delivery_failed"},
+            {"disposition": "delivered"}
+        ]))));
+        assert!(!super::reopenable(&failed(json!([
+            {"disposition": "delivery_failed"}
+        ]))));
+        assert!(!super::reopenable(&failed(json!([]))));
+        assert!(super::reopenable(&json!({"disposition": "indeterminate"})));
+        assert!(super::reopenable(
+            &json!({"disposition": "locally_observed"})
+        ));
+        assert!(!super::reopenable(&json!({"disposition": "delivered"})));
+    }
+
+    #[test]
+    fn other_sources_stay_unbound_while_indeterminate() {
+        let observed = json!({"source": "notes", "observed": true});
+        assert!(!capturable("indeterminate", &observed));
+        assert!(capturable("locally_observed", &observed));
+        assert!(!capturable(
+            "locally_observed",
+            &json!({"source": "notes", "observed": false})
+        ));
     }
 }

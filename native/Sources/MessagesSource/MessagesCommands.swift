@@ -1,5 +1,7 @@
 import Foundation
 import Darwin
+import CoreGraphics
+import ApplicationServices
 import Decoders
 import SourceSupport
 
@@ -16,6 +18,20 @@ public actor MessagesCommands {
         self.agentPolicy = agentPolicy
         self.path = path ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/chat.db").path
         self.labCommands = labCommands
+    }
+    private var selfTestBaselines: [String: MessagesContentBaseline] = [:]
+    private var selfTestRows: [String: Int64] = [:]
+    private var selfTestReportURL: URL { PrivateReport.directory.appendingPathComponent("messages-selftest.json") }
+    private func selfTestLedgerURL(_ run: String) throws -> URL {
+        guard run.range(of: "^selftest_[0-9A-Za-z]+$", options: .regularExpression) != nil else { throw SourceFailure.invalid }
+        let directory = PrivateReport.directory.appendingPathComponent("messages-command-cleanup", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        return directory.appendingPathComponent(run + ".json")
+    }
+    private func selfTestLedger(_ run: String) throws -> [String: Any] {
+        let url = try selfTestLedgerURL(run)
+        guard let data = try? Data(contentsOf: url), let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { return [:] }
+        return object
     }
     private var proofURL: URL { PrivateReport.directory.appendingPathComponent("messages-command-proofs.json") }
     private var osBuild: String { ProcessInfo.processInfo.operatingSystemVersionString }
@@ -252,6 +268,90 @@ public actor MessagesCommands {
             catch { return .object(["ui": .object(["target_verified": .bool(false), "ui_error": .string(String(describing: error))])]) }
         case "messages.payload_fingerprint":
             return .object(["digest": .string(BodyDigest.hash(try JSONEncoder().encode(request["messages"])))])
+        case "messages.selftest_cached":
+            guard let data = try? Data(contentsOf: selfTestReportURL), let old = try? JSONDecoder().decode(JSON.self, from: data), old["os_build"].string == request["os_build"].string else { return .object([:]) }
+            return .object(["report": old])
+        case "messages.selftest_facts":
+            let session = CGSessionCopyCurrentDictionary() as? [String: Any]
+            let allowed = request["include_ui"].bool && AXIsProcessTrusted() && session?["CGSSessionScreenIsLocked"] as? Bool != true
+            let target = try MessagesSelfTestIsolation.target(database: MessagesDatabase())
+            return .object(["ui_allowed": .bool(allowed), "target": target.map { .object(["handle": .string($0.handle), "chat": .string($0.chat)]) } ?? .null])
+        case "messages.selftest_begin":
+            let run = request["run"].string
+            let chat = request["chat"].string
+            let database = try MessagesDatabase()
+            let baseline: MessagesContentBaseline?
+            do { baseline = chat.isEmpty ? nil : try MessagesContentBaseline.capture(chat) }
+            catch {
+                let reason = (error as? MessagesSelfTestBaselineFailure)?.description ?? "The self conversation baseline could not be verified. Keep Messages available and rerun the check."
+                return .object(["ok": .bool(false), "reason": .string(reason)])
+            }
+            let chatRow = Int64(try database.rows("SELECT COALESCE(MAX(ROWID),0) AS maximum FROM chat").first?["maximum"] ?? "0") ?? 0
+            let messageRow = Int64(try database.rows("SELECT COALESCE(MAX(ROWID),0) AS maximum FROM message").first?["maximum"] ?? "0") ?? 0
+            let registration: [String: Any] = ["scenario": "MSG-SELFTEST", "run_id": run, "baseline_max_row_id": messageRow, "media_attachment_names": [request["filename"].string], "cleanup_state": "pending_native_cleanup"]
+            try PrivateReport.write(registration, to: try selfTestLedgerURL(run))
+            selfTestBaselines[run] = baseline
+            selfTestRows[run] = messageRow
+            return .object(["ok": .bool(true), "baseline_chat": .number(Double(chatRow)), "baseline_row": .number(Double(messageRow))])
+        case "messages.selftest_ledger":
+            let run = request["run"].string
+            var registration = try selfTestLedger(run)
+            let patch = try JSONSerialization.jsonObject(with: JSONEncoder().encode(request["set"])) as? [String: Any] ?? [:]
+            for (key, value) in patch { registration[key] = value }
+            try PrivateReport.write(registration, to: try selfTestLedgerURL(run))
+            return .object([:])
+        case "messages.selftest_created":
+            let run = request["run"].string
+            var registration = try selfTestLedger(run)
+            let database = try MessagesDatabase()
+            let baseline = selfTestRows[run] ?? 0
+            let tag = request["tag"].string
+            let filename = request["filename"].string
+            var created = Set(registration["created_message_ids"] as? [String] ?? [])
+            for key in request["keys"].array.map(\.string) where !key.isEmpty { created.insert(key) }
+            let echoes = try database.rows("SELECT guid FROM message WHERE ROWID>? AND (instr(text,?)>0 OR instr(attributedBody,CAST(? AS BLOB))>0)", bindings: [String(baseline), tag, tag])
+            let files = try database.rows("SELECT DISTINCT m.guid FROM message m JOIN message_attachment_join j ON j.message_id=m.ROWID JOIN attachment a ON a.ROWID=j.attachment_id WHERE m.ROWID>? AND (a.filename=? OR a.filename LIKE ?)", bindings: [String(baseline), filename, "%/" + filename])
+            for row in echoes + files { if let guid = row["guid"] { created.insert(guid) } }
+            registration["created_message_ids"] = created.sorted()
+            try PrivateReport.write(registration, to: try selfTestLedgerURL(run))
+            return .object([:])
+        case "messages.selftest_fixture_chat":
+            let database = try MessagesDatabase()
+            guard let conversation = try? database.rows("SELECT c.guid,c.ROWID AS row_position FROM chat c JOIN chat_message_join j ON j.chat_id=c.ROWID JOIN message m ON m.ROWID=j.message_id WHERE m.guid=?", bindings: [request["target"].string]).first,
+                  let chat = conversation["guid"], let position = Int64(conversation["row_position"] ?? ""),
+                  MessagesSelfTestIsolation.qualifiesFixtureChat(chat, rowID: position, baseline: Int64(request["baseline_chat"].number), existing: request["existing_chat"].string) else { return .object(["qualifies": .bool(false)]) }
+            return .object(["qualifies": .bool(true), "chat": .string(chat)])
+        case "messages.selftest_upload":
+            let uploads = PrivateReport.directory.appendingPathComponent("messages-selftest", isDirectory: true).appendingPathComponent("message-uploads", isDirectory: true)
+            try FileManager.default.createDirectory(at: uploads, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+            let name = request["name"].string
+            guard !name.isEmpty, !name.contains("/") else { throw SourceFailure.invalid }
+            let upload = uploads.appendingPathComponent(name)
+            let bytes = Data(request["text"].string.utf8)
+            try bytes.write(to: upload, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: upload.path)
+            return .object(["path": .string(upload.path), "digest": .string(BodyDigest.hash(bytes))])
+        case "messages.selftest_upload_remove":
+            let uploads = PrivateReport.directory.appendingPathComponent("messages-selftest", isDirectory: true).appendingPathComponent("message-uploads", isDirectory: true).resolvingSymlinksInPath()
+            let file = URL(fileURLWithPath: request["path"].string).resolvingSymlinksInPath()
+            guard file.deletingLastPathComponent() == uploads else { throw SourceFailure.invalid }
+            try? FileManager.default.removeItem(at: file)
+            return .object([:])
+        case "messages.selftest_cleanup":
+            let cleaned = try await MessagesCleanup.run(["--tag", request["tag"].string, "--owned-only"])
+            let result = try JSONDecoder().decode(JSON.self, from: cleaned)
+            return .object(["passed": result["passed"], "failure": result["failure"]])
+        case "messages.selftest_restore":
+            guard let baseline = selfTestBaselines[request["run"].string] else { return .object(["restored": .bool(true)]) }
+            return .object(["restored": .bool((try? baseline.restoreAndVerify()) ?? false)])
+        case "messages.selftest_report":
+            let data = try JSONEncoder().encode(request["report"])
+            try data.write(to: selfTestReportURL, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: selfTestReportURL.path)
+            return .object([:])
+        case "messages.invalidate_proof":
+            try invalidateProof(request["kind"].string)
+            return .object([:])
         default:
             throw SourceFailure.unsupported
         }

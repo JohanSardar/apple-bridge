@@ -136,6 +136,22 @@ pub(super) fn control_messages(
             s.put(record);
             changed = vec![key.clone()];
         }
+        "release" => {
+            let held: Vec<String> = s.data["records"]
+                .as_object()
+                .into_iter()
+                .flatten()
+                .filter(|(_, record)| record["deferred"] == true || record["held"] == true)
+                .map(|(key, _)| key.clone())
+                .collect();
+            for held_key in &held {
+                if let Some(record) = s.data["records"][held_key].as_object_mut() {
+                    record.remove("deferred");
+                    record.remove("held");
+                }
+            }
+            changed = vec![];
+        }
         "nonself-chat" => {
             put(
                 &mut s,
