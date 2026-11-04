@@ -1,4 +1,5 @@
 use crate::capture::{Error, Result};
+use base64::Engine as _;
 use rusqlite::{Connection, OpenFlags, types::ValueRef};
 use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
@@ -54,14 +55,28 @@ const REQUIRED: [(&str, &[&str]); 7] = [
     ("Calendar", &["ROWID", "UUID"]),
     (
         "Location",
-        &["ROWID", "title", "address", "latitude", "longitude", "radius"],
+        &[
+            "ROWID",
+            "title",
+            "address",
+            "latitude",
+            "longitude",
+            "radius",
+        ],
     ),
     ("Participant", &["ROWID", "status"]),
     ("Conference", &["owner_id", "url"]),
     ("Attachment", &["owner_id", "file_id"]),
     (
         "AttachmentFile",
-        &["ROWID", "UUID", "filename", "local_path", "file_size", "format"],
+        &[
+            "ROWID",
+            "UUID",
+            "filename",
+            "local_path",
+            "file_size",
+            "format",
+        ],
     ),
 ];
 
@@ -73,11 +88,7 @@ pub struct Snapshot {
 
 fn rows(connection: &Connection, sql: &str) -> Result<Vec<Row>> {
     let mut statement = connection.prepare(sql).map_err(|_| Error::Corrupt)?;
-    let names: Vec<String> = statement
-        .column_names()
-        .into_iter()
-        .map(str::to_owned)
-        .collect();
+    let names: Vec<String> = statement.column_names().map(str::to_owned).collect();
     let mut cursor = statement.query([]).map_err(|_| Error::Corrupt)?;
     let mut result = Vec::new();
     while let Some(row) = cursor.next().map_err(|_| Error::Corrupt)? {
@@ -87,7 +98,7 @@ fn rows(connection: &Connection, sql: &str) -> Result<Vec<Row>> {
                 ValueRef::Text(bytes) => {
                     Value::String(String::from_utf8(bytes.to_vec()).map_err(|_| Error::Corrupt)?)
                 }
-                ValueRef::Integer(number) => finite(number as f64),
+                ValueRef::Integer(number) => finite(wide(number)),
                 ValueRef::Real(number) => finite(number),
                 _ => Value::Null,
             };
@@ -96,6 +107,16 @@ fn rows(connection: &Connection, sql: &str) -> Result<Vec<Row>> {
         result.push(object);
     }
     Ok(result)
+}
+
+#[allow(clippy::cast_precision_loss)]
+fn wide(number: i64) -> f64 {
+    number as f64
+}
+
+#[allow(clippy::cast_precision_loss)]
+fn wide_unsigned(number: u64) -> f64 {
+    number as f64
 }
 
 fn finite(number: f64) -> Value {
@@ -145,7 +166,10 @@ impl Snapshot {
             let owner = conference.get("owner_id").and_then(Value::as_f64);
             let link = text(&conference, "url");
             if let (Some(owner), false) = (owner.and_then(exact), link.is_empty()) {
-                conferences.entry(owner).or_default().insert(link.to_owned());
+                conferences
+                    .entry(owner)
+                    .or_default()
+                    .insert(link.to_owned());
             }
         }
         for item in &mut items {
@@ -234,6 +258,7 @@ impl Snapshot {
     }
 }
 
+#[allow(clippy::cast_possible_truncation)]
 fn exact(number: f64) -> Option<i64> {
     (number.fract() == 0.0 && number.abs() < 9.0e15).then_some(number as i64)
 }
@@ -380,16 +405,13 @@ impl Enrichment {
         if !force && self.snapshot.is_some() && current == self.signature {
             return true;
         }
-        match Snapshot::read(&self.database()) {
-            Ok(snapshot) => {
-                self.snapshot = Some(snapshot);
-                self.signature = current;
-                true
-            }
-            Err(_) => {
-                self.snapshot = None;
-                false
-            }
+        if let Ok(snapshot) = Snapshot::read(&self.database()) {
+            self.snapshot = Some(snapshot);
+            self.signature = current;
+            true
+        } else {
+            self.snapshot = None;
+            false
         }
     }
 
@@ -428,147 +450,15 @@ impl Enrichment {
             .as_bool()
             .unwrap_or(false);
         let row = if ready {
-            self.snapshot
-                .as_ref()
-                .and_then(|snapshot| snapshot.event(identifier, &external(native), calendar, detached))
+            self.snapshot.as_ref().and_then(|snapshot| {
+                snapshot.event(identifier, &external(native), calendar, detached)
+            })
         } else {
             None
         };
         let mut coverage = Map::new();
         if let Some(row) = row {
-            let get = |key: &str| row.get(key).cloned().unwrap_or(Value::Null);
-            put(
-                &mut data,
-                &mut coverage,
-                "store_identifier_match",
-                get("matched_by"),
-                "complete",
-                "",
-            );
-            for field in [
-                "start_location",
-                "attendee_proposals",
-                "participant_comments",
-                "store_alarm_details",
-            ] {
-                put(
-                    &mut data,
-                    &mut coverage,
-                    field,
-                    Value::Null,
-                    "unsupported",
-                    "positive_native_fixture_not_verified_on_this_os",
-                );
-            }
-            for field in [
-                "travel_advisory_behavior",
-                "invitation_status",
-                "privacy_level",
-                "priority",
-            ] {
-                put(&mut data, &mut coverage, field, get(field), "complete", "");
-            }
-            put(
-                &mut data,
-                &mut coverage,
-                "owner_participation_status",
-                get("self_status"),
-                "complete",
-                "",
-            );
-            let travel = get("travel_time");
-            let known_zero = travel.as_f64() == Some(0.0);
-            let reason = if known_zero {
-                ""
-            } else if travel.is_null() {
-                "travel_time_unavailable"
-            } else {
-                "positive_travel_time_units_not_verified_on_this_os"
-            };
-            put(
-                &mut data,
-                &mut coverage,
-                "travel_time",
-                if known_zero { travel } else { Value::Null },
-                if known_zero { "complete" } else { "unsupported" },
-                reason,
-            );
-            if get("location_title").is_null() && get("location_address").is_null() {
-                put(
-                    &mut data,
-                    &mut coverage,
-                    "structured_location",
-                    Value::Null,
-                    "complete",
-                    "",
-                );
-            } else {
-                put(
-                    &mut data,
-                    &mut coverage,
-                    "structured_location",
-                    json!({"title": get("location_title"), "address": get("location_address"), "latitude": null, "longitude": null, "radius": null}),
-                    "partial",
-                    "coordinate_units_not_verified_on_this_os",
-                );
-            }
-            let conference = get("conference_url");
-            let link = conference.as_str().unwrap_or_default();
-            if conference.is_null() || link.is_empty() {
-                put(&mut data, &mut coverage, "conference_url", Value::Null, "complete", "");
-            } else if link_scheme_allowed(link) {
-                put(&mut data, &mut coverage, "conference_url", conference.clone(), "complete", "");
-            } else {
-                put(
-                    &mut data,
-                    &mut coverage,
-                    "conference_url",
-                    Value::Null,
-                    "unsupported",
-                    "unsupported_conference_url_scheme",
-                );
-            }
-            let owner = get("item_id").as_f64().and_then(exact).unwrap_or(0);
-            let attachments = self
-                .snapshot
-                .as_ref()
-                .and_then(|snapshot| snapshot.attachments.get(&owner))
-                .cloned()
-                .unwrap_or_default();
-            let mut described = Vec::new();
-            let mut complete = true;
-            for item in &attachments {
-                match self.attachment(item) {
-                    Ok(blob) => {
-                        described.push(json!({
-                            "filename": item.get("filename").filter(|name| !name.is_null()).cloned().unwrap_or_else(|| json!("Attachment")),
-                            "mime_type": blob.mime,
-                            "blob": {"state": "present", "digest": blob.digest, "size": blob.size as f64},
-                            "derivatives": {},
-                        }));
-                        self.handles.insert(blob.digest.clone(), blob.handle.clone());
-                    }
-                    Err(_) => complete = false,
-                }
-            }
-            if !attachments.is_empty() {
-                coverage.insert(
-                    "attachment_derivatives".into(),
-                    status("unsupported", "native_calendar_derivatives_not_verified"),
-                );
-            }
-            let state = if complete { "complete" } else { "partial" };
-            let reason = if complete {
-                ""
-            } else {
-                "attachment_bytes_not_locally_available_or_path_unverified"
-            };
-            put(&mut data, &mut coverage, "attachments", Value::Array(described), state, reason);
-            let all_complete = coverage.values().all(|entry| entry["status"] == "complete");
-            data.insert(
-                "store_status".into(),
-                json!(if all_complete { "complete" } else { "partial" }),
-            );
+            self.matched(&mut data, &mut coverage, &row);
         } else {
             let reason = if ready {
                 "calendar_store_identity_unverified"
@@ -579,13 +469,187 @@ impl Enrichment {
                 .iter()
                 .filter(|field| !["store_status", "store_coverage"].contains(field))
             {
-                put(&mut data, &mut coverage, field, Value::Null, "unsupported", reason);
+                put(
+                    &mut data,
+                    &mut coverage,
+                    field,
+                    Value::Null,
+                    "unsupported",
+                    reason,
+                );
             }
             data.insert("store_status".into(), json!("unsupported"));
         }
         data.insert("store_coverage".into(), Value::Object(coverage));
         value["data"] = Value::Object(data);
         value
+    }
+
+    fn matched(
+        &mut self,
+        data: &mut Map<String, Value>,
+        coverage: &mut Map<String, Value>,
+        row: &Row,
+    ) {
+        let get = |key: &str| row.get(key).cloned().unwrap_or(Value::Null);
+        put(
+            data,
+            coverage,
+            "store_identifier_match",
+            get("matched_by"),
+            "complete",
+            "",
+        );
+        for field in [
+            "start_location",
+            "attendee_proposals",
+            "participant_comments",
+            "store_alarm_details",
+        ] {
+            put(
+                data,
+                coverage,
+                field,
+                Value::Null,
+                "unsupported",
+                "positive_native_fixture_not_verified_on_this_os",
+            );
+        }
+        for field in [
+            "travel_advisory_behavior",
+            "invitation_status",
+            "privacy_level",
+            "priority",
+        ] {
+            put(data, coverage, field, get(field), "complete", "");
+        }
+        put(
+            data,
+            coverage,
+            "owner_participation_status",
+            get("self_status"),
+            "complete",
+            "",
+        );
+        let travel = get("travel_time");
+        let known_zero = travel.as_f64() == Some(0.0);
+        let reason = if known_zero {
+            ""
+        } else if travel.is_null() {
+            "travel_time_unavailable"
+        } else {
+            "positive_travel_time_units_not_verified_on_this_os"
+        };
+        put(
+            data,
+            coverage,
+            "travel_time",
+            if known_zero { travel } else { Value::Null },
+            if known_zero {
+                "complete"
+            } else {
+                "unsupported"
+            },
+            reason,
+        );
+        if get("location_title").is_null() && get("location_address").is_null() {
+            put(
+                data,
+                coverage,
+                "structured_location",
+                Value::Null,
+                "complete",
+                "",
+            );
+        } else {
+            put(
+                data,
+                coverage,
+                "structured_location",
+                json!({"title": get("location_title"), "address": get("location_address"), "latitude": null, "longitude": null, "radius": null}),
+                "partial",
+                "coordinate_units_not_verified_on_this_os",
+            );
+        }
+        let conference = get("conference_url");
+        let link = conference.as_str().unwrap_or_default();
+        if conference.is_null() || link.is_empty() {
+            put(
+                data,
+                coverage,
+                "conference_url",
+                Value::Null,
+                "complete",
+                "",
+            );
+        } else if link_scheme_allowed(link) {
+            put(
+                data,
+                coverage,
+                "conference_url",
+                conference.clone(),
+                "complete",
+                "",
+            );
+        } else {
+            put(
+                data,
+                coverage,
+                "conference_url",
+                Value::Null,
+                "unsupported",
+                "unsupported_conference_url_scheme",
+            );
+        }
+        let owner = get("item_id").as_f64().and_then(exact).unwrap_or(0);
+        let attachments = self
+            .snapshot
+            .as_ref()
+            .and_then(|snapshot| snapshot.attachments.get(&owner))
+            .cloned()
+            .unwrap_or_default();
+        let mut described = Vec::new();
+        let mut complete = true;
+        for item in &attachments {
+            match self.attachment(item) {
+                Ok(blob) => {
+                    described.push(json!({
+                        "filename": item.get("filename").filter(|name| !name.is_null()).cloned().unwrap_or_else(|| json!("Attachment")),
+                        "mime_type": blob.mime,
+                        "blob": {"state": "present", "digest": blob.digest, "size": wide_unsigned(blob.size)},
+                        "derivatives": {},
+                    }));
+                    self.handles
+                        .insert(blob.digest.clone(), blob.handle.clone());
+                }
+                Err(_) => complete = false,
+            }
+        }
+        if !attachments.is_empty() {
+            coverage.insert(
+                "attachment_derivatives".into(),
+                status("unsupported", "native_calendar_derivatives_not_verified"),
+            );
+        }
+        let state = if complete { "complete" } else { "partial" };
+        let reason = if complete {
+            ""
+        } else {
+            "attachment_bytes_not_locally_available_or_path_unverified"
+        };
+        put(
+            data,
+            coverage,
+            "attachments",
+            Value::Array(described),
+            state,
+            reason,
+        );
+        let all_complete = coverage.values().all(|entry| entry["status"] == "complete");
+        data.insert(
+            "store_status".into(),
+            json!(if all_complete { "complete" } else { "partial" }),
+        );
     }
 
     fn handle(&mut self, digest: &str) -> String {
@@ -688,11 +752,10 @@ impl Enrichment {
         file.take(length as u64)
             .read_to_end(&mut bytes)
             .map_err(|_| Error::Incomplete)?;
-        use base64::Engine as _;
         Ok(json!({
             "t": "BlobChunk",
             "handle": handle,
-            "offset": offset as f64,
+            "offset": wide_unsigned(offset),
             "bytes": base64::engine::general_purpose::STANDARD.encode(&bytes),
             "digest": blob.digest,
             "eof": offset + bytes.len() as u64 == blob.size,

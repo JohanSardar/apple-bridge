@@ -30,8 +30,8 @@ pub mod usage;
 pub mod telephony;
 
 pub mod agenda;
-pub mod calendar_store;
 pub mod assets;
+pub mod calendar_store;
 pub mod contacts;
 pub mod voice_memo;
 
