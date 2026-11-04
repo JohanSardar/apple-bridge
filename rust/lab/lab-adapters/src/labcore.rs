@@ -266,16 +266,19 @@ pub(crate) fn settle(world: &World, evidence: &mut Evidence) -> Result<()> {
         Ok(())
     })
 }
-pub fn oversized_resets(world: &World, evidence: &mut Evidence) {
+pub fn observer_resets(world: &World) -> usize {
     let homes = std::iter::once(world.gateway_home.clone())
         .chain(replicas::endpoints().into_iter().map(|e| e.home));
-    let resets: usize = homes
+    homes
         .map(|home| {
             fs::read(home.join("lab-capture-observer-resets")).map_or(0, |raw| {
                 raw.split(|b| *b == b'\n').count().saturating_sub(1)
             })
         })
-        .sum();
+        .sum()
+}
+pub fn oversized_resets(world: &World, evidence: &mut Evidence) {
+    let resets = observer_resets(world);
     evidence.check(
         "no_oversized_capture_observer_resets",
         resets == 0,
