@@ -64,6 +64,7 @@ public actor Messages: Source {
     private var mediaPressure = false
     private var variantURLs: [String: URL] = [:]
     private let attachmentHome: URL
+    public nonisolated var attachmentsRoot: URL { attachmentHome.appendingPathComponent("Library/Messages/Attachments") }
     public init(path: String? = nil, diagnostics: URL? = nil, watcherEventsEnabled: Bool = true, labCommands: Bool = false, pinsURL: URL? = nil, attachmentHome: URL = FileManager.default.homeDirectoryForCurrentUser) {
         self.attachmentHome = attachmentHome
         self.pinsURL = pinsURL
@@ -260,19 +261,14 @@ public actor Messages: Source {
         try Task.checkCancellation()
     }
     private func attachMedia(_ result: MediaResult, to data: inout [String: Any], handles: inout [String: String]) throws {
-        data["media"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode(result.media))
-        var derivatives: [String: Any] = [:]
-        for (name, variant) in result.derivatives {
-            var value = try JSONSerialization.jsonObject(with: JSONEncoder().encode(variant)) as? [String: Any] ?? [:]
-            value.removeValue(forKey: "file")
-            value["state"] = "present"
-            derivatives[name] = value
+        let fields = try result.attachmentFields()
+        data["media"] = fields.media
+        data["derivatives"] = fields.derivatives
+        for variant in result.derivatives.values {
             handles[variant.digest] = variant.handle
             variantURLs[variant.handle] = MediaDerivatives.url(variant)
             blobDigests[variant.handle] = (variant.size, .distantPast, variant.digest)
         }
-        for (name, reason) in result.unavailable ?? [:] { derivatives[name] = ["state": "unavailable", "reason": reason] }
-        data["derivatives"] = derivatives
     }
     private func publishMedia(_ result: MediaResult, job: MediaJob, token: String, sink: any ObservationSink) async throws {
         guard token == generation, blobDigests[job.key]?.2 == job.digest, let reader else { return }

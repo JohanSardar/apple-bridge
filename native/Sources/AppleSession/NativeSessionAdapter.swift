@@ -55,7 +55,17 @@ extension AppleSession: NativeAdapter {
         return NativeFacts(items: rows, scope: .string("mac"), generation: "native/1", complete: true)
     }
 
+    private func nativeFacts(messagesMedia args: JSON) async throws -> NativeFacts {
+        guard let messages = additionalSources["messages"] as? Messages else { throw SourceFailure.unavailable }
+        guard let fields = try JSONSerialization.jsonObject(with: JSONEncoder().encode(args)) as? [String: Any] else { throw SourceFailure.invalid }
+        let answer: [String: Any]
+        do { answer = try await MessagesMediaFact.answer(fields, allowedRoot: messages.attachmentsRoot) } catch { throw SourceFailure.invalid }
+        let item = try JSONDecoder().decode(JSON.self, from: JSONSerialization.data(withJSONObject: answer, options: [.sortedKeys]))
+        return NativeFacts(items: [item], scope: .string("messages.media"), generation: "native/1", complete: true)
+    }
+
     public func facts(_ operation: String, args: JSON) async throws -> NativeFacts {
+        if operation == "messages.media" { return try await nativeFacts(messagesMedia: args) }
         if operation == "files.ubiquity" {
             guard Set(args.object.keys) == ["paths"], case .array(let paths) = args["paths"], paths.allSatisfy({ if case .string = $0 { return true } else { return false } }) else { throw SourceFailure.invalid }
             return try await nativeFacts(files: paths.map(\.string))

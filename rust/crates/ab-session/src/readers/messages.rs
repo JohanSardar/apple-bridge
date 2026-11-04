@@ -1,5 +1,9 @@
 use super::{BlobServer, CaptureReader, ScanContext, reader_error};
-use crate::Error;
+use crate::{
+    Error,
+    messages_media::{self, Job, Media},
+    native_facts::Client,
+};
 use ab_native::messages;
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use serde::{Deserialize, Serialize};
@@ -50,7 +54,7 @@ struct Item {
     bytes: usize,
     live: bool,
     absent: bool,
-    handle: Option<(String, String)>,
+    handles: Vec<(String, String)>,
 }
 
 #[derive(Debug)]
@@ -59,6 +63,7 @@ struct Blobs {
     home: PathBuf,
     known: Mutex<BTreeMap<String, Known>>,
     serving: Mutex<Option<messages::Reader>>,
+    media: Arc<Media>,
 }
 
 fn unix_ms() -> u64 {
@@ -74,6 +79,12 @@ impl Blobs {
             .get(guid)
             .filter(|known| known.declared == declared)
             .map(|known| (known.digest.clone(), known.size))
+    }
+
+    fn current(&self, guid: &str, digest: &str) -> bool {
+        self.known
+            .lock()
+            .is_ok_and(|known| known.get(guid).is_some_and(|known| known.digest == digest))
     }
 
     fn remember(&self, guid: &str, entry: Known) {
@@ -107,12 +118,17 @@ impl Blobs {
 
 impl BlobServer for Blobs {
     fn owns(&self, handle: &str) -> bool {
-        self.known
-            .lock()
-            .is_ok_and(|known| known.contains_key(handle))
+        self.media.owns(handle)
+            || self
+                .known
+                .lock()
+                .is_ok_and(|known| known.contains_key(handle))
     }
 
     fn read(&self, handle: &str, offset: u64, length: usize) -> Result<Value, Error> {
+        if self.media.owns(handle) {
+            return self.media.read(handle, offset, length);
+        }
         let known = self
             .known
             .lock()
@@ -150,6 +166,13 @@ pub struct MessagesReader {
     committed: Option<Progress>,
     pending: bool,
     failures: u32,
+    facts: Option<Arc<Client>>,
+}
+
+impl Drop for MessagesReader {
+    fn drop(&mut self) {
+        self.blobs.media.stop();
+    }
 }
 
 impl MessagesReader {
@@ -162,6 +185,7 @@ impl MessagesReader {
                 home: home.clone(),
                 known: Mutex::new(BTreeMap::new()),
                 serving: Mutex::new(None),
+                media: Media::new(),
             }),
             database,
             root,
@@ -177,7 +201,23 @@ impl MessagesReader {
             committed: None,
             pending: false,
             failures: 0,
+            facts: None,
         }
+    }
+
+    #[must_use]
+    pub fn with_media(mut self, client: Option<Arc<Client>>, retry: Duration) -> Self {
+        if let Some(client) = &client {
+            self.blobs.media.retry_after(retry);
+            let blobs = Arc::clone(&self.blobs);
+            messages_media::spawn(
+                &self.blobs.media,
+                Arc::clone(client),
+                move |guid, digest| blobs.current(guid, digest),
+            );
+        }
+        self.facts = client;
+        self
     }
 
     fn digest(reader: &messages::Reader, guid: &str) -> Result<(String, u64), Error> {
@@ -195,10 +235,12 @@ impl MessagesReader {
         }
     }
 
-    fn attach(&self, data: &mut Value, guid: &str) -> Option<(String, String)> {
-        let reader = self.reader.as_ref()?;
+    fn attach(&self, data: &mut Value, guid: &str, live: bool) -> Vec<(String, String)> {
+        let Some(reader) = self.reader.as_ref() else {
+            return Vec::new();
+        };
         if data.pointer("/blob/state").and_then(Value::as_str) != Some("present") {
-            return None;
+            return Vec::new();
         }
         let declared = data["size"].as_i64().unwrap_or(-1);
         let found = match self.blobs.lookup(guid, declared) {
@@ -207,7 +249,7 @@ impl MessagesReader {
         };
         let Ok((digest, size)) = found else {
             data["blob"] = json!({"state":"missing"});
-            return None;
+            return Vec::new();
         };
         self.blobs.remember(
             guid,
@@ -218,7 +260,53 @@ impl MessagesReader {
             },
         );
         data["blob"] = json!({"state":"present","digest":digest});
-        Some((digest, guid.to_owned()))
+        let mut handles = vec![(digest.clone(), guid.to_owned())];
+        if self.facts.is_some() {
+            handles.extend(self.derive(reader, data, guid, &digest, live));
+        }
+        handles
+    }
+
+    fn derive(
+        &self,
+        reader: &messages::Reader,
+        data: &mut Value,
+        guid: &str,
+        digest: &str,
+        live: bool,
+    ) -> Vec<(String, String)> {
+        let media = &self.blobs.media;
+        let Some(plan) = media.plan(guid, digest) else {
+            return Vec::new();
+        };
+        let handles = match (&plan.derived, plan.failed) {
+            (Some(derived), _) => derived.apply(data),
+            (None, true) => {
+                messages_media::placeholder(data);
+                Vec::new()
+            }
+            (None, false) => Vec::new(),
+        };
+        if plan.fetch
+            && let Ok(Some(source)) = reader.media_source(guid)
+        {
+            let companions = if plan.companions {
+                reader.live_companions(guid).unwrap_or_default()
+            } else {
+                Vec::new()
+            };
+            media.queue(Job {
+                guid: guid.to_owned(),
+                digest: digest.to_owned(),
+                file: source.path,
+                uti: data["uti"].as_str().unwrap_or_default().to_owned(),
+                mime: data["mime_type"].as_str().unwrap_or_default().to_owned(),
+                sticker: source.sticker,
+                companions,
+                live,
+            });
+        }
+        handles
     }
 
     fn items(&self, batches: &[messages::Batch], out: &mut Vec<Option<Item>>) -> Result<(), Error> {
@@ -239,10 +327,10 @@ impl MessagesReader {
                     "{}/{}",
                     observation.collection, observation.native_key
                 ));
-                let mut handle = None;
+                let mut handles = Vec::new();
                 if !absent && observation.collection == "messages.attachment" {
                     let mut data = row["data"].take();
-                    handle = self.attach(&mut data, &observation.native_key);
+                    handles = self.attach(&mut data, &observation.native_key, batch.live);
                     row["data"] = data;
                 }
                 let bytes = serde_json::to_vec(&row)?.len() + 1;
@@ -261,7 +349,7 @@ impl MessagesReader {
                     bytes,
                     live: batch.live,
                     absent,
-                    handle,
+                    handles,
                 }));
             }
         }
@@ -312,6 +400,14 @@ impl MessagesReader {
 
     fn fill(&mut self, context: &ScanContext) -> Result<(), Error> {
         self.at = context.observed_at()?;
+        self.blobs.media.fence(context.fence);
+        let due = self.blobs.media.due();
+        if let Some(reader) = self.reader.as_mut() {
+            reader.invalidate(
+                due.iter()
+                    .map(|guid| ("messages.attachment", guid.as_str())),
+            );
+        }
         let mut request = false;
         if self.reader.is_none() {
             let Ok(reader) = messages::Reader::open(&self.database, &self.home) else {
@@ -426,9 +522,7 @@ impl MessagesReader {
             };
             bytes += extra;
             aliases.extend(added);
-            if let Some((digest, guid)) = item.handle {
-                handles.insert(digest, guid);
-            }
+            handles.extend(item.handles);
             rows.push(item.row);
         }
         let complete = self.queue.is_empty() && self.queue_complete;

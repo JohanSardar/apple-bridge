@@ -37,6 +37,7 @@ Unknown operations return unsupported, not a dynamically discovered method.
 | contacts.groups | container IDs; group descriptors | ContactsSource/ContactsSource.swift |
 | contacts.contacts | container/group IDs; native contact fields | ContactsSource/ContactsSource.swift |
 | files.ubiquity | `args.paths`: up to 500 absolute paths under the Files roots; one `{path,status}` per path, `status` is the iCloud downloading status or `local` | FilesSource/FilesSource.swift |
+| messages.media | `args`: `digest` (SHA-256 hex), `file` and `companions` (absolute paths under the Messages Attachments root), `uti`, `mime`, `sticker`; one item `{digest, status, root, result}` with `status` `ready`, `unsupported`, `paused` or `failed`, `result` the `MediaResult` (`media`, `derivatives`, `unavailable`, `awaitingLive`) and `file` of each derivative relative to `root` | MediaDerivatives/MessagesMediaFact.swift |
 | mac.state | `args` empty; the current `mac.audio_device`, `mac.display`, `mac.power`, `mac.network` and `mac.app` rows (`kind`, `collection`, `native_key`, `data`); `Changed` source `mac` when any of them moves | MacSource/MacSource.swift |
 
 `Facts` fields: `id`, `op`, `args` object, `snapshot` (null on first page), `cursor`

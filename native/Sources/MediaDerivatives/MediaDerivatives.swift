@@ -30,6 +30,21 @@ public struct MediaResult: Codable, Sendable {
     public var media = MediaMetadata()
 }
 
+extension MediaResult {
+    public func attachmentFields() throws -> (media: Any, derivatives: [String: Any]) {
+        let media = try JSONSerialization.jsonObject(with: JSONEncoder().encode(self.media))
+        var fields: [String: Any] = [:]
+        for (name, variant) in derivatives {
+            var value = try JSONSerialization.jsonObject(with: JSONEncoder().encode(variant)) as? [String: Any] ?? [:]
+            value.removeValue(forKey: "file")
+            value["state"] = "present"
+            fields[name] = value
+        }
+        for (name, reason) in unavailable ?? [:] { fields[name] = ["state": "unavailable", "reason": reason] }
+        return (media, fields)
+    }
+}
+
 public enum MediaDerivatives {
     public static let root: URL = {
         if let path = ProcessInfo.processInfo.environment["AB_MEDIA_DERIVATIVES_ROOT"], path.hasPrefix("/") { return URL(fileURLWithPath: path, isDirectory: true) }

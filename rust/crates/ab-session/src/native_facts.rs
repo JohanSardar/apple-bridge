@@ -65,6 +65,24 @@ impl From<Error> for Failure {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+enum Patience {
+    Strict(Duration),
+    Lenient(Duration),
+}
+
+impl Patience {
+    fn limit(self) -> Duration {
+        match self {
+            Self::Strict(limit) | Self::Lenient(limit) => limit,
+        }
+    }
+
+    fn lenient(self) -> bool {
+        matches!(self, Self::Lenient(_))
+    }
+}
+
 type Changes = Arc<Mutex<BTreeSet<String>>>;
 
 #[derive(Debug)]
@@ -177,7 +195,21 @@ impl Client {
     }
 
     pub fn fetch_with(&self, fence: u64, operation: &str, args: &Value) -> Result<FactSet, Error> {
-        self.guarded(fence, |link| self.exchange(link, operation, args))
+        self.guarded(fence, |link| {
+            self.exchange(link, operation, args, Patience::Strict(IO_TIMEOUT))
+        })
+    }
+
+    pub fn fetch_patient(
+        &self,
+        fence: u64,
+        operation: &str,
+        args: &Value,
+        patience: Duration,
+    ) -> Result<FactSet, Error> {
+        self.guarded(fence, |link| {
+            self.exchange(link, operation, args, Patience::Lenient(patience))
+        })
     }
 
     pub fn revalidate(
@@ -272,6 +304,7 @@ impl Client {
         &self,
         link: &Link,
         prefix: &str,
+        patience: Patience,
         build: impl FnOnce(&str) -> Value,
     ) -> Result<Value, Failure> {
         let id = format!(
@@ -288,15 +321,17 @@ impl Client {
             let mut writer = link.writer.lock().map_err(|_| Error::WorkerPanicked)?;
             send(&mut writer, &build(&id))
         };
-        let received = sent.and_then(|()| {
-            reply
-                .recv_timeout(IO_TIMEOUT)
-                .map_err(|_| Error::Reader("native/1 stream closed".to_owned()))
-        });
+        let received = sent.map(|()| reply.recv_timeout(patience.limit()));
         if let Ok(mut waiters) = link.inbox.waiters.lock() {
             waiters.remove(&id);
         }
-        let frame = received?;
+        let frame = match received? {
+            Ok(frame) => frame,
+            Err(mpsc::RecvTimeoutError::Timeout) if patience.lenient() => {
+                return Err(Failure::Remote("timeout".to_owned()));
+            }
+            Err(_) => return Err(Error::Reader("native/1 stream closed".to_owned()).into()),
+        };
         if frame["t"] == "Error" {
             let code = frame["code"].as_str().unwrap_or("unavailable");
             return Err(Failure::Remote(code.to_owned()));
@@ -313,6 +348,7 @@ impl Client {
         let reply = self.call(
             link,
             "revalidate",
+            Patience::Strict(IO_TIMEOUT),
             |id| json!({"t":"Revalidate","id":id,"op":operation,"args":{"identities":identities}}),
         )?;
         if reply["t"] != "Revalidated" || reply["op"] != json!(operation) {
@@ -344,13 +380,19 @@ impl Client {
         Ok(verdicts)
     }
 
-    fn exchange(&self, link: &Link, operation: &str, args: &Value) -> Result<FactSet, Failure> {
+    fn exchange(
+        &self,
+        link: &Link,
+        operation: &str,
+        args: &Value,
+        patience: Patience,
+    ) -> Result<FactSet, Failure> {
         let mut snapshot = Value::Null;
         let mut cursor = Value::Null;
         let mut items: Vec<Value> = Vec::new();
         let mut first: Option<(Value, String)> = None;
         for _ in 0..MAX_PAGES {
-            let page = self.call(link, "facts", |id| {
+            let page = self.call(link, "facts", patience, |id| {
                 json!({"t":"Facts","id":id,"op":operation,"args":args,"snapshot":snapshot,"cursor":cursor,"limit":PAGE_LIMIT})
             })?;
             if page["t"] != "FactPage" || page["op"] != json!(operation) {
