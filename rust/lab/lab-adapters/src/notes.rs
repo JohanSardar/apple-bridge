@@ -17,12 +17,7 @@ use crate::{
 use lab_runner::Evidence;
 use lab_world::{Error, Result, World};
 use serde_json::{Value, json};
-use std::{
-    fs,
-    path::{Path, PathBuf},
-    process::Command,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
 pub const SCOPE: &str = "notes:read,notes:write,reminders:read,system:read";
 pub const SCENARIOS: [&str; 9] = [
@@ -116,7 +111,7 @@ pub fn run(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result<
         "NOTE-IMPORT" => crate::imports::notes(world, input, evidence),
         "NOTE-CRUD" | "NOTE-RICH-REJECT" | "NOTE-EXTERNAL" => family(world, &id, evidence),
         "NOTE-EXTRAS" => extras(world, evidence),
-        "NOTE-DECODE" | "NOTE-DECODE-FULL" => decode(&id, evidence),
+        "NOTE-DECODE" | "NOTE-DECODE-FULL" => decode(evidence),
         "NOTE-LIST" => list(world, evidence),
         "NOTE-EDIT-PARITY" => parity(world, evidence),
         other => Err(Error::Invalid(format!("notes not ported for {other}"))),
@@ -760,41 +755,13 @@ fn extras(world: &World, evidence: &mut Evidence) -> Result<()> {
     );
     Ok(())
 }
-fn build_native(package: &str, target: &str) -> Option<PathBuf> {
-    let status = Command::new("packaging/dev/build-native.sh")
-        .arg(package)
-        .env("APPLE_BRIDGE_NATIVE_LAB", "1")
-        .env("APPLE_BRIDGE_NATIVE_TARGET", target)
-        .output()
-        .ok()?;
-    if !status.status.success() {
-        return None;
-    }
-    let directory = fs::read_to_string(Path::new(package).join(".build/native-output-1")).ok()?;
-    Some(PathBuf::from(directory.trim()))
-}
-fn decode(id: &str, evidence: &mut Evidence) -> Result<()> {
-    let mut truth = String::new();
-    if id == "NOTE-DECODE-FULL" {
-        let Some(directory) = build_native("lab/truth/native", "AppleTruth") else {
-            add(evidence, "truth_build", false);
-            return Ok(());
-        };
-        truth = directory.join("AppleTruth").to_string_lossy().into_owned();
-    }
-    let Some(directory) = build_native("native", "NotesDecoderChecks") else {
-        add(evidence, "decoder_build", false);
-        return Ok(());
-    };
-    let status = Command::new(directory.join("NotesDecoderChecks"))
-        .arg("lab/fixtures/notes")
-        .env("APPLE_BRIDGE_NOTES_TRUTH", &truth)
-        .output()
-        .is_ok_and(|output| output.status.success());
-    if id == "NOTE-DECODE-FULL" {
-        add(evidence, "independent_truth_counts", status);
-    }
-    add(evidence, "gzip_protobuf_scrubbed_fixtures", status);
+fn decode(evidence: &mut Evidence) -> Result<()> {
+    crate::native_core::rust_tests(
+        evidence,
+        "gzip_protobuf_scrubbed_fixtures",
+        "ab-native",
+        &["--test", "notes_reader"],
+    );
     Ok(())
 }
 fn parity(world: &mut World, evidence: &mut Evidence) -> Result<()> {

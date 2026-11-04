@@ -13,6 +13,24 @@ pub fn inject(scenario: &mut Scenario) {
         scenario.when.push(json!({ *action: {} }));
     }
 }
+pub(crate) fn rust_tests(evidence: &mut Evidence, check: &str, package: &str, args: &[&str]) {
+    let passed = Command::new("cargo")
+        .args([
+            "test",
+            "--manifest-path",
+            "rust/Cargo.toml",
+            "--locked",
+            "-p",
+            package,
+        ])
+        .args(args)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .is_ok_and(|status| status.success());
+    evidence.check(check, passed, "Rust reader tests");
+}
+
 pub fn source_support(_: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> {
     let built = Command::new("packaging/dev/build-native.sh")
         .env("APPLE_BRIDGE_NATIVE_TARGET", "SourceSupportChecks")
@@ -37,7 +55,7 @@ pub fn source_support(_: &mut World, _: &Value, evidence: &mut Evidence) -> Resu
                 })
         });
     evidence.check(
-        "generation_wal_complete_scan_blob_checks",
+        "blob_writer_checks",
         passed,
         "generation, WAL, complete-scan and blob checks pass",
     );

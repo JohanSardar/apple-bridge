@@ -11,7 +11,7 @@ use crate::{
 use lab_runner::Evidence;
 use lab_world::{Result, World};
 use serde_json::{Value, json};
-use std::{collections::BTreeMap, process::Command, time::Instant};
+use std::{collections::BTreeMap, time::Instant};
 
 pub mod commands;
 pub mod decode;
@@ -165,18 +165,11 @@ pub fn read(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result
             );
         }
         "MSG-DECODE" => {
-            let output = Command::new("bash")
-                .arg("packaging/dev/check-decoders.sh")
-                .output();
-            let text = output
-                .as_ref()
-                .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
-                .unwrap_or_default();
-            evidence.check(
+            crate::native_core::rust_tests(
+                evidence,
                 "decoder_fixture_checks",
-                output.is_ok_and(|o| o.status.success())
-                    && text == "all decoder checks passed\nall SourceSupport checks passed",
-                "native decoder and SourceSupport checks",
+                "ab-native",
+                &["--test", "typedstream"],
             );
             let malformed = action(world, "malformed", "message-000001") && settle(world);
             evidence.check("malformed_observed", malformed, "malformed body observed");

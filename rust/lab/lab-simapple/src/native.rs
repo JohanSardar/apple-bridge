@@ -208,7 +208,7 @@ fn local_facts(
                     })
                     .map_or("local", |row| {
                         if row["data"]["downloaded"] == false {
-                            "notDownloaded"
+                            "NSURLUbiquitousItemDownloadingStatusNotDownloaded"
                         } else {
                             row["data"]["icloud_status"].as_str().unwrap_or("local")
                         }
@@ -518,7 +518,7 @@ mod tests {
             page["items"],
             json!([
                 {"path":"/Bridge Test/a.txt","status":"current"},
-                {"path":"/Bridge Test/b.txt","status":"notDownloaded"},
+                {"path":"/Bridge Test/b.txt","status":"NSURLUbiquitousItemDownloadingStatusNotDownloaded"},
                 {"path":"/Bridge Test/none","status":"local"},
             ])
         );

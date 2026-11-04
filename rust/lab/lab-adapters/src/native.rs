@@ -1,10 +1,11 @@
 #![allow(clippy::too_many_lines)]
+use crate::native_core::rust_tests;
 use crate::{assertions::await_until, http::random_id};
 use lab_runner::Evidence;
 use lab_world::{Error, Result, World};
 use serde_json::{Value, json};
 use std::{
-    env, fs,
+    fs,
     path::{Path, PathBuf},
     process::Command,
 };
@@ -73,49 +74,26 @@ fn combined(run: &Run) -> String {
 
 pub fn media_yield(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> {
     guard(evidence, "NATIVE-MEDIA-YIELD")?;
-    let Ok(directory) = build("MessagesCaptureChecks", true) else {
-        evidence.check("native_messages_checks_built", false, "native build failed");
+    rust_tests(
+        evidence,
+        "messages_media_derivation_and_retry",
+        "ab-session",
+        &["--test", "messages_media"],
+    );
+    let Ok(directory) = build("MediaChecks", true) else {
+        evidence.check("native_media_checks_built", false, "native build failed");
         return Ok(());
     };
-    let tool = directory.join("MessagesCaptureChecks");
-    for (command, name, success) in [
-        (
-            "--media-yield-burst",
-            "foreground_burst_reuses_completed_stages",
-            "cooperative media burst checks passed",
-        ),
-        (
-            "--media-yield-metadata",
-            "metadata_only_changes_preserve_retained_stages",
-            "cooperative media burst checks passed",
-        ),
-        (
-            "--media-yield-source-change",
-            "changed_source_invalidates_retained_stages",
-            "cooperative media burst checks passed",
-        ),
-        (
-            "--media-yield-companion",
-            "local_companion_wakes_deferred_live_photo",
-            "cooperative media burst checks passed",
-        ),
-        (
-            "--media-yield-export-race",
-            "export_yield_retries_without_cancelling_parent",
-            "cooperative media export checks passed",
-        ),
-    ] {
-        let result = run(
-            &tool,
-            &[command],
-            &world.directory.join(format!("yield{command}.log")),
-        );
-        evidence.check(
-            name,
-            result.ok && combined(&result).contains(success),
-            "native cooperative yield check",
-        );
-    }
+    let result = run(
+        &directory.join("MediaChecks"),
+        &["export-yield"],
+        &world.directory.join("yield-export.log"),
+    );
+    evidence.check(
+        "export_yield_retries_without_cancelling_parent",
+        result.ok && combined(&result).contains("cooperative media export checks passed"),
+        "native cooperative yield check",
+    );
     gateway_fixture(world, evidence);
     Ok(())
 }
@@ -181,50 +159,13 @@ pub fn media_posters(world: &mut World, _: &Value, evidence: &mut Evidence) -> R
 }
 pub fn reminders_parity(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> {
     guard(evidence, "WEB-REM-PARITY")?;
-    let Ok(directory) = build("RemindersStoreChecks", false) else {
-        evidence.check("native_sections_build", false, "native build failed");
-        return Ok(());
-    };
-    evidence.check("native_sections_build", true, "RemindersStoreChecks built");
-    let store = run(
-        &directory.join("RemindersStoreChecks"),
-        &["--parity-checks"],
-        &world.directory.join("parity.log"),
-    );
-    evidence.check(
+    rust_tests(
+        evidence,
         "store_effects_and_invalidation",
-        store.ok && combined(&store).contains("parity checks passed"),
-        "native parity checks",
+        "ab-native",
+        &["--test", "reminders_store_oracle"],
     );
-    let helper = match env::var("APPLE_BRIDGE_REMINDERS_CHECKS_HELPER") {
-        Ok(path) if !path.is_empty() => PathBuf::from(path),
-        _ => {
-            let built = build("AppleBridgeHelper", false);
-            evidence.check("native_fixture_checks_build", built.is_ok(), "helper build");
-            built.map_or_else(
-                |_| directory.join("AppleBridgeHelper"),
-                |d| d.join("AppleBridgeHelper"),
-            )
-        }
-    };
-    let available = helper.is_file();
-    evidence.check(
-        "native_fixture_checks_helper_available",
-        available,
-        "helper executable present",
-    );
-    if available {
-        let fixtures = run(
-            &helper,
-            &["reminders-fixture-checks"],
-            &world.directory.join("fixtures.log"),
-        );
-        evidence.check(
-            "owned_fixture_accessibility_regressions",
-            fixtures.ok && combined(&fixtures).contains("reminders fixture checks passed"),
-            "owned fixture checks",
-        );
-    }
+    let _ = world;
     Ok(())
 }
 

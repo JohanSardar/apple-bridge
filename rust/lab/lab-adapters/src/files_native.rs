@@ -165,15 +165,22 @@ fn gateway(world: &mut World, evidence: &mut Evidence) -> Result<()> {
 pub fn files_native(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> {
     match evidence.scenario.as_str() {
         "FILE-IDLE" => {
-            checks(evidence, &["FILE-IDLE"]);
+            crate::native_core::rust_tests(
+                evidence,
+                "incomplete_walk_keeps_rows_complete_walk_removes",
+                "ab-native",
+                &["--test", "files_walk"],
+            );
             Ok(())
         }
         "FILE-CAPTURE" => {
-            let id = evidence.scenario.clone();
-            if checks(evidence, &[&id]) {
-                gateway(world, evidence)?;
-            }
-            Ok(())
+            crate::native_core::rust_tests(
+                evidence,
+                "reader_walk_and_ubiquity_fact",
+                "ab-session",
+                &["--test", "files_mac_facts"],
+            );
+            gateway(world, evidence)
         }
         other => Err(Error::Invalid(format!(
             "files_native not ported for {other}"

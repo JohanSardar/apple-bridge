@@ -54,10 +54,6 @@ dist:
 	packaging/dev/build-bridge.sh bin/ab-relay-linux-amd64 x86_64-unknown-linux-musl ab-relay ab-relay
 	packaging/dev/build-bridge.sh bin/ab-relay-linux-arm64 aarch64-unknown-linux-musl ab-relay ab-relay
 
-.PHONY: decoder-checks
-decoder-checks:
-	packaging/dev/heavy.sh packaging/dev/check-decoders.sh
-
 .PHONY: rust-check rust-lint
 rust-check:
 	rust/check.sh check --workspace

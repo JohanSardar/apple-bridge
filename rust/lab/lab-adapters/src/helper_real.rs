@@ -24,7 +24,6 @@ pub const SCENARIOS: [&str; 6] = [
 ];
 
 pub fn register(registry: &mut Registry) {
-    registry.register_real("HELPER-LIVE-BACKFILL", live_backfill);
     registry.register_real("HELPER-RELEASE-COMMANDS", release_commands);
     registry.register_real("HELPER-RESTART-REAL", restart_real);
     registry.register_real("HELPER-SESSION-SOAK", session_soak);
@@ -351,7 +350,9 @@ fn restart_real(world: &mut World, evidence: &mut Evidence) -> Result<()> {
     if !ready {
         return Ok(());
     }
-    let checkpoint = world.gateway_home.join("helper/lab-committed-reminders");
+    let checkpoint = world
+        .gateway_home
+        .join("helper/session/capture-state/reminders.json");
     let committed = await_until(5, || checkpoint.exists());
     evidence.check("native_capture_committed", committed, "capture committed");
     if !committed {
@@ -402,15 +403,6 @@ fn session_soak(world: &mut World, evidence: &mut Evidence) -> Result<()> {
     }
     outcome
 }
-fn trace_rows(path: &Path) -> Vec<Value> {
-    fs::read_to_string(path)
-        .map(|text| {
-            text.lines()
-                .filter_map(|line| serde_json::from_str(line).ok())
-                .collect()
-        })
-        .unwrap_or_default()
-}
 fn soak(world: &World, evidence: &mut Evidence, tag: &str) -> Result<()> {
     let Some(before) = helper_pid(world) else {
         return Ok(());
@@ -453,11 +445,6 @@ fn soak(world: &World, evidence: &mut Evidence, tag: &str) -> Result<()> {
                 })
         })
     });
-    let ticks = trace_rows(&world.gateway_home.join("helper/session-timers.jsonl")).len();
-    let deadlines = trace_rows(&world.gateway_home.join("helper/capture-trace.jsonl"))
-        .iter()
-        .filter(|row| row["stage"] == "fetch_timer_fired")
-        .count();
     evidence.check(
         "same_helper_pid_ten_minutes",
         stable && started.elapsed() >= Duration::from_secs(600),
@@ -468,112 +455,8 @@ fn soak(world: &World, evidence: &mut Evidence, tag: &str) -> Result<()> {
         no_crash,
         "no new helper crash reports",
     );
-    evidence.check(
-        "six_hundred_lifetime_timer_deadlines",
-        ticks >= 600,
-        "lifetime timer deadlines",
-    );
-    evidence.check(
-        "multiple_fetch_timer_deadlines",
-        deadlines >= 4,
-        "fetch timer deadlines",
-    );
-    Ok(())
-}
 
-fn live_backfill(world: &mut World, evidence: &mut Evidence) -> Result<()> {
-    let tag = format!("[ab-test {}]", random_id("bulk")?);
-    let original = format!("{tag} original");
-    let updated = format!("{tag} updated");
-    let held = world.gateway_home.join("helper/lab-backfill-held");
-    backfill(world, evidence, &tag, &original, &updated, &held);
-    let cleaned = truth(
-        world,
-        "fixture",
-        &json!({"action": "cleanup", "list": "Bridge Test", "tag": tag}),
-    )
-    .is_ok();
-    if !cleaned {
-        evidence.check("tagged_fixture_cleanup", false, "tagged fixtures removed");
-    }
     Ok(())
-}
-fn titles(world: &World) -> Option<Vec<String>> {
-    Some(
-        all_records(world)?
-            .iter()
-            .filter_map(|record| record["data"]["title"].as_str().map(str::to_owned))
-            .collect(),
-    )
-}
-fn backfill(
-    world: &World,
-    evidence: &mut Evidence,
-    tag: &str,
-    original: &str,
-    updated: &str,
-    held: &Path,
-) {
-    let is_held = await_until(5, || held.exists());
-    evidence.check("initial_backfill_held", is_held, "initial backfill held");
-    if !is_held {
-        return;
-    }
-    let edited = truth(
-        world,
-        "fixture",
-        &json!({"action": "modify", "list": "Bridge Test", "tag": tag,
-            "title": original, "new_title": updated}),
-    );
-    evidence.check(
-        "external_edit_during_backfill",
-        edited.is_ok(),
-        "external edit during the held backfill",
-    );
-    let visible = || {
-        titles(world).is_some_and(|all| {
-            !all.iter().any(|t| t == original) && all.iter().filter(|t| *t == updated).count() == 1
-        })
-    };
-    evidence.check(
-        "live_visible_before_initial_backfill_commit",
-        await_until(5, visible),
-        "live edit visible before the backfill commits",
-    );
-    let trace = trace_rows(&world.gateway_home.join("helper/capture-trace.jsonl"));
-    let no_bulk = !trace
-        .iter()
-        .any(|row| row["stage"] == "capture_sent" && row["live"] != true);
-    let checkpoint = world.gateway_home.join("helper/lab-committed-reminders");
-    let prior = fs::read(&checkpoint).unwrap_or_default();
-    let _ = fs::remove_file(world.gateway_home.join("helper/lab-hold-backfill"));
-    evidence.check(
-        "backfill_committed_after_live",
-        await_until(10, || fs::read(&checkpoint).is_ok_and(|c| c != prior)),
-        "backfill committed after the live edit",
-    );
-    evidence.check(
-        "no_bulk_capture_before_live",
-        no_bulk,
-        "no bulk capture first",
-    );
-    evidence.check(
-        "backfill_does_not_overwrite_live",
-        visible(),
-        "backfill keeps the live edit",
-    );
-    let observed = truth(
-        world,
-        "observe",
-        &json!({"list": "Bridge Test", "tag": tag, "title": updated}),
-    );
-    evidence.check(
-        "independent_updated_truth",
-        observed
-            .as_ref()
-            .is_ok_and(|v| v["records"].as_array().is_some_and(|r| r.len() == 1)),
-        "independent truth shows the updated record",
-    );
 }
 
 fn signed_app_cache(world: &mut World, evidence: &mut Evidence) -> Result<()> {

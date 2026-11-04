@@ -186,8 +186,12 @@ fn deleted_messages(world: &World, evidence: &mut Evidence) -> Result<()> {
 }
 
 pub fn run(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> {
-    let (capture, _) = script(&["--rich"], "packaging/dev/check-messages-capture.sh");
-    evidence.check("native_rich_capture_and_live_mutation", capture, "");
+    crate::native_core::rust_tests(
+        evidence,
+        "native_rich_capture_and_live_mutation",
+        "ab-native",
+        &["--lib", "rich"],
+    );
     let (truth, detail) = script(&[], "packaging/dev/check-messages-truth.sh");
     evidence.check(
         "independent_truth_synthetic_field_counts",

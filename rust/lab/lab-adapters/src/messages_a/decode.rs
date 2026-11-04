@@ -6,7 +6,6 @@ use crate::{
 use lab_runner::Evidence;
 use lab_world::{Error, Result, World};
 use serde_json::{Value, json};
-use std::process::Command;
 
 pub const SCENARIOS: [&str; 2] = ["MSG-DECODE-BALLOON", "MSG-DECODE-FORMATTING"];
 const SCOPE: &str = "messages:read,contacts:read,system:read";
@@ -51,13 +50,11 @@ fn items(value: Option<&Value>, key: &str) -> usize {
 
 #[allow(clippy::too_many_lines)]
 pub fn decode(world: &mut World, evidence: &mut Evidence) -> Result<()> {
-    let script = Command::new("bash")
-        .arg("packaging/dev/check-decoders.sh")
-        .output();
-    evidence.check(
+    crate::native_core::rust_tests(
+        evidence,
         "scrubbed_native_decoder_fixtures",
-        script.is_ok_and(|output| output.status.success()),
-        "native decoder fixture checks",
+        "ab-native",
+        &["--test", "decoders"],
     );
     if !evidence.assertions.iter().all(|a| a.passed) {
         return Ok(());

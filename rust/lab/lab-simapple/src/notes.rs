@@ -333,6 +333,7 @@ impl Session<'_> {
                 ));
                 Ok(json!({"exists":true,"data":record["data"],"folder_fingerprint":digest}))
             }
+            "notes.trash_folder" => Ok(json!({"scoped_alias": null})),
             "notes.observe" => {
                 let target = string(args, "script_id");
                 let record = &s.data["records"][&target];

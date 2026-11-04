@@ -130,6 +130,7 @@ impl World {
             home.join("session/rust-capture.json"),
             serde_json::to_vec(&json!({
                 "sources": Value::Object(config),
+                "exclusive": true,
                 "watch": variable("AB_SESSION_RUST_WATCH") == "1",
                 "poll_ms": 100,
             }))?,

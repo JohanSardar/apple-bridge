@@ -1,3 +1,4 @@
+use crate::native_core::rust_tests;
 use crate::{
     assertions::{await_until, read_all, record_multiset},
     http::Client,
@@ -282,34 +283,50 @@ fn gateway_flow(world: &World, evidence: &mut Evidence) -> Result<()> {
 pub fn phone(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> {
     let id = evidence.scenario.clone();
     match id.as_str() {
-        "CALL-CAPTURE" => native_run(
+        "CALL-CAPTURE" => rust_tests(
             evidence,
-            "calls_native_fixture_build",
-            "CallsChecks",
-            &[],
             "wal_insert_reconcile_delete_partial_scan",
+            "ab-session",
+            &[
+                "--test",
+                "capture_producer",
+                "rust_calls_voicemail_and_voice_memos_are_routed",
+            ],
         ),
-        "CALL-IDLE" => native_run(
+        "CALL-IDLE" => rust_tests(
             evidence,
-            "calls_native_fixture_build",
-            "CallsChecks",
-            &["--idle"],
-            "five_minute_source_cpu_under_two_percent_and_no_idle_checkpoints",
+            "no_idle_checkpoints",
+            "ab-session",
+            &["--test", "capture_pacing"],
         ),
         "CALLS-REPLICA" => calls_replica(world, evidence)?,
         "CALL-READ-REAL" => calls_real(world, evidence)?,
-        "VM-CAPTURE" | "VMEMO-CAPTURE" | "VMEMO-LATE-ASSETS" => {
-            let check = if id == "VMEMO-LATE-ASSETS" {
-                "folders_late_transcript_audio_blob_same_record"
-            } else {
-                "metadata_wal_insert_update_delete"
-            };
-            native_run(
+        "VM-CAPTURE" | "VMEMO-CAPTURE" => rust_tests(
+            evidence,
+            "metadata_wal_insert_update_delete",
+            "ab-session",
+            &[
+                "--test",
+                "capture_producer",
+                "rust_calls_voicemail_and_voice_memos_are_routed",
+            ],
+        ),
+        "VMEMO-LATE-ASSETS" => {
+            rust_tests(
                 evidence,
-                "recordings_native_fixture_build",
-                "RecordingsChecks",
-                &[id.as_str()],
-                check,
+                "folders_late_transcript_audio_blob_same_record",
+                "ab-native",
+                &["--test", "voice_memo"],
+            );
+            rust_tests(
+                evidence,
+                "voice_memo_blob_reads_across_restart",
+                "ab-session",
+                &[
+                    "--test",
+                    "capture_producer",
+                    "rust_voice_memos_serve_blob_reads_across_restart",
+                ],
             );
         }
         _ => return Err(Error::Invalid(format!("phone not ported for {id}"))),

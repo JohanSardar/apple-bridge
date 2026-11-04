@@ -197,7 +197,13 @@ impl World {
             let helper = world.gateway_home.join("helper");
             fs::create_dir_all(&helper)?;
             fs::set_permissions(&helper, fs::Permissions::from_mode(0o700))?;
-            fs::write(helper.join("lab-capture-source"), source)?;
+            fs::create_dir_all(helper.join("session"))?;
+            fs::write(
+                helper.join("session/rust-capture.json"),
+                serde_json::to_vec(
+                    &serde_json::json!({"exclusive": true, "sources": {source: {}}}),
+                )?,
+            )?;
         }
         world.launch_gateway()?;
         world

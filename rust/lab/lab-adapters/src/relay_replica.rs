@@ -170,7 +170,7 @@ fn native_ready(world: &World, source: &str) -> bool {
         ready
             && world
                 .gateway_home
-                .join(format!("helper/lab-committed-{source}"))
+                .join(format!("helper/session/capture-state/{source}.json"))
                 .exists()
     })
 }

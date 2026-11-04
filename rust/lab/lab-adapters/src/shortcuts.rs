@@ -282,24 +282,11 @@ pub fn shortcuts_actions(world: &mut World, _: &Value, evidence: &mut Evidence) 
         )?
         .is_none();
     evidence.check("caller_paths_rejected", rejected, "path argument rejected");
-    let Some(binary) = native_binary(
+    crate::native_core::rust_tests(
         evidence,
-        "ActionsChecks",
-        &[
-            "native/Package.swift",
-            "native/Sources/ActionsChecks",
-            "native/Sources/ShortcutsSource",
-            "native/Sources/SourceSupport",
-        ],
-        true,
-    ) else {
-        return Ok(());
-    };
-    let (ok, _) = run_native(&binary, &["sim"]);
-    evidence.check(
         "bounded_metadata_discovery",
-        ok,
-        "native metadata discovery",
+        "ab-native",
+        &["--test", "shortcut_actions"],
     );
     Ok(())
 }
@@ -406,16 +393,12 @@ pub fn shortcuts_checks(world: &mut World, _: &Value, evidence: &mut Evidence) -
         fs::create_dir_all(&directory)?;
     }
     if id == "SC-CAPTURE" {
-        let binary = native_target(
+        crate::native_core::rust_tests(
             evidence,
-            "ShortcutsChecks",
-            &SHORTCUTS_NATIVE_INPUTS,
-            ("native_shortcuts_build", "native_shortcuts_output"),
+            "native_source_fixture",
+            "ab-session",
+            &["--test", "framework_sources", "shortcuts"],
         );
-        let Some(binary) = binary else { return Ok(()) };
-        let executable = directory.join("shortcuts").to_string_lossy().into_owned();
-        let (ok, _) = run_native(&binary, &[&executable, "SC-CAPTURE"]);
-        evidence.check("native_source_fixture", ok, "native source fixture");
     }
     if id == "CLK-TIMER-REAL" {
         let binary = native_target(
