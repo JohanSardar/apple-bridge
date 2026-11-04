@@ -15,6 +15,9 @@ fn the_launched_binary_pages_facts_and_serves_effects_on_two_inherited_streams()
         "{text}{}",
         String::from_utf8_lossy(&output.stderr)
     );
-    assert_eq!(text.lines().filter(|line| line.starts_with("ok ")).count(), 5);
+    assert_eq!(
+        text.lines().filter(|line| line.starts_with("ok ")).count(),
+        5
+    );
     Ok(())
 }
