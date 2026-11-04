@@ -321,7 +321,7 @@ fn to_native(shared: &Shared, frame: &Value, size: usize) -> Result<Option<Value
                         .collect()
                 })
                 .unwrap_or_default();
-            let mut scan = json!({"t":"Scan","id":id,"source":frame["source"],"generation":frame["generation"],"observations":frame["observations"].as_array().cloned().unwrap_or_default(),"scope":strings(&frame["scope"]),"completion_evidence":text(frame,"completion_evidence"),"blob_handles":handles,"live":frame["live"].as_bool().unwrap_or(false)});
+            let mut scan = json!({"t":"Scan","id":id,"source":frame["source"],"generation":frame["generation"],"observations":frame["observations"].as_array().cloned().unwrap_or_default(),"scope":strings(&frame["scope"]),"completion_evidence":text(frame,"completion_evidence"),"blob_handles":handles,"live":frame["live"].as_bool().unwrap_or(false),"whole":true});
             if !text(frame, "scan_id").is_empty() {
                 scan["scan_id"] = frame["scan_id"].clone();
             }

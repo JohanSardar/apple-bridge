@@ -69,6 +69,8 @@ pub struct Scan {
     pub blob_handles: BTreeMap<String, String>,
     #[serde(default)]
     pub live: bool,
+    #[serde(default)]
+    pub whole: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -812,6 +814,7 @@ mod tests {
             completion_evidence: "x".repeat(MAX_FRAME),
             blob_handles: BTreeMap::new(),
             live: false,
+            whole: false,
         };
         assert!(Frame::Scan(scan).encode().is_err());
     }
