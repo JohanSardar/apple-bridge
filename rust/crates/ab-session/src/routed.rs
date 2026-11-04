@@ -582,7 +582,14 @@ fn produce(
             };
             let (next, covers, token, more, adopts) = {
                 let mut reader = lock(readers, source)?;
+                let started = std::time::Instant::now();
                 let next = reader.next(&context);
+                if started.elapsed() >= Duration::from_secs(5) {
+                    eprintln!(
+                        "ab-session: {source} reader step {ordinal} took {} ms",
+                        started.elapsed().as_millis()
+                    );
+                }
                 let covers = held
                     .lock()
                     .map_err(|_| Error::WorkerPanicked)?
