@@ -12,6 +12,17 @@ fn coverage(fields: &str) -> Coverage {
     }
 }
 
+fn gateway_home(home: &std::path::Path) -> Check {
+    use std::os::unix::fs::PermissionsExt;
+    let path = home.join("runtime.json");
+    std::fs::write(
+        &path,
+        serde_json::to_vec(&serde_json::json!({"role":"gateway","home":home,"peer_address":"","api_address":"","socket":""}))?,
+    )?;
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))?;
+    Ok(())
+}
+
 fn doctor(home: &std::path::Path) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
     let output = Command::new(env!("CARGO_BIN_EXE_bridge"))
         .env("APPLE_BRIDGE_SECRET_STORE", "file")
@@ -29,6 +40,7 @@ fn doctor_reports_document_sources_like_go() -> Check {
     drop(state.source_state(Source::Vision, "ready", coverage("complete"), None, ""));
     drop(state.source_state(Source::Pdf, "ready", coverage("partial"), None, ""));
     drop(state);
+    gateway_home(home.path())?;
     let report = doctor(home.path())?;
     assert_eq!(
         report["document_checks"],
@@ -52,6 +64,7 @@ fn doctor_reports_document_sources_like_go() -> Check {
 fn doctor_marks_missing_document_sources_unavailable() -> Check {
     let home = tempfile::tempdir()?;
     drop(ab_state::State::<ab_state::Gateway>::open(home.path())?);
+    gateway_home(home.path())?;
     let report = doctor(home.path())?;
     assert_eq!(
         report["document_checks"],
