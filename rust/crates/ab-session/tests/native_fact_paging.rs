@@ -68,9 +68,7 @@ fn serve(mut stream: UnixStream, facts: Facts, page: usize, requests: Arc<Mutex<
                 .ok();
             let op = frame["op"].as_str().unwrap_or_default().to_owned();
             let reply = (|| {
-                let offset;
-                let token;
-                if frame["snapshot"].is_null() {
+                let (token, offset) = if frame["snapshot"].is_null() {
                     let Ok(guard) = facts.lock() else {
                         return json!({"t":"Error","id":frame["id"],"code":"unavailable"});
                     };
@@ -81,11 +79,11 @@ fn serve(mut stream: UnixStream, facts: Facts, page: usize, requests: Arc<Mutex<
                         return json!({"t":"Error","id":frame["id"],"code":operation.error});
                     }
                     counter += 1;
-                    token = format!("snap{counter}");
+                    let token = format!("snap{counter}");
                     snapshots.insert(token.clone(), operation);
-                    offset = 0;
+                    (token, 0)
                 } else {
-                    token = frame["snapshot"].as_str().unwrap_or_default().to_owned();
+                    let token = frame["snapshot"].as_str().unwrap_or_default().to_owned();
                     let cursor = frame["cursor"].as_str().unwrap_or_default();
                     let Some(position) = cursor
                         .strip_prefix(&format!("{token}:"))
@@ -93,8 +91,8 @@ fn serve(mut stream: UnixStream, facts: Facts, page: usize, requests: Arc<Mutex<
                     else {
                         return json!({"t":"Error","id":frame["id"],"code":"invalid"});
                     };
-                    offset = position;
-                }
+                    (token, position)
+                };
                 let Some(operation) = snapshots.get(&token) else {
                     return json!({"t":"Error","id":frame["id"],"code":"expired"});
                 };
