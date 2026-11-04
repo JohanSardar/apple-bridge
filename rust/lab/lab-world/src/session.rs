@@ -3,22 +3,13 @@ use serde_json::{Value, json};
 use std::{
     fs,
     path::{Path, PathBuf},
-    process::Command,
-    thread,
-    time::{Duration, Instant},
 };
-
-const READY: Duration = Duration::from_secs(10);
 
 #[derive(Debug, Default)]
 pub(crate) struct Session {
-    pub(crate) listen: Option<PathBuf>,
     pub(crate) gateway: String,
-    pub(crate) env: Vec<(String, String)>,
-    pub(crate) native: Option<PathBuf>,
     pub(crate) facts: Option<PathBuf>,
     pub(crate) state: PathBuf,
-    pub(crate) native_owned: bool,
     pub(crate) roots: Vec<(String, PathBuf)>,
     pub(crate) usage: std::sync::Mutex<crate::session_fixtures::Devices>,
     pub(crate) mail: std::sync::Mutex<crate::session_fixtures::Mail>,
@@ -47,21 +38,10 @@ pub fn session_sources() -> Vec<String> {
 }
 
 pub(crate) fn native_session() -> bool {
-    !matches!(variable("AB_LAB_SESSION_NATIVE").as_str(), "" | "0")
-}
-
-pub fn session_effects() -> bool {
-    session_binary().is_some() && variable("AB_LAB_SESSION_EFFECTS") == "1"
+    session_binary().is_some() || !matches!(variable("AB_LAB_SESSION_NATIVE").as_str(), "" | "0")
 }
 
 impl World {
-    pub(crate) fn helper_socket(&self, gateway: &str) -> String {
-        self.labsession
-            .listen
-            .as_ref()
-            .map_or_else(|| gateway.to_owned(), |path| path.display().to_string())
-    }
-
     pub(crate) fn session_hook(&self, route: &str, input: &Value) -> Result<()> {
         match route {
             "/usage" if self.session_root("usage").is_some() => self.stage_session_usage(input),
@@ -99,16 +79,15 @@ impl World {
     }
 
     pub(crate) fn sim_native_socket(&self) -> Option<PathBuf> {
-        self.labsession
-            .native
-            .clone()
-            .or_else(|| self.labsession.facts.clone())
+        self.labsession.facts.clone()
     }
 
     pub(crate) fn start_session(&mut self, gateway: &str) -> Result<()> {
         let sources = session_sources();
-        let effects = session_effects() && !native_session();
-        if self.labsession.listen.is_some() || (sources.is_empty() && !effects) {
+        if self.labsession.state.as_os_str().is_empty() && sources.is_empty() {
+            return Ok(());
+        }
+        if !self.labsession.state.as_os_str().is_empty() {
             return Ok(());
         }
         let facts_socket = match variable("AB_LAB_SESSION_NATIVE_FACTS").as_str() {
@@ -116,15 +95,13 @@ impl World {
             "missing" => Some(self.directory.join("native-facts-missing.sock")),
             _ => None,
         };
-        if variable("AB_LAB_SESSION_NATIVE_FACTS") == "1" && !effects {
+        if variable("AB_LAB_SESSION_NATIVE_FACTS") == "1" {
             self.labsession.facts.clone_from(&facts_socket);
         }
-        let mut producers = serde_json::Map::new();
         let mut config = serde_json::Map::new();
         for source in &sources {
             let root = self.directory.join(format!("session-{source}"));
             fs::create_dir_all(&root)?;
-            producers.insert(source.clone(), json!("Rust"));
             let mut entry = json!({"root": root});
             if let Some(socket) = &facts_socket
                 && matches!(source.as_str(), "calendar" | "contacts" | "reminders")
@@ -147,87 +124,17 @@ impl World {
             config.insert(source.clone(), entry);
         }
         gateway.clone_into(&mut self.labsession.gateway);
-        if native_session() {
-            let home = self.directory.join("session-home");
-            fs::create_dir_all(home.join("session"))?;
-            fs::write(
-                home.join("session/rust-capture.json"),
-                serde_json::to_vec(&json!({
-                    "sources": Value::Object(config),
-                    "watch": variable("AB_SESSION_RUST_WATCH") == "1",
-                    "poll_ms": 100,
-                }))?,
-            )?;
-            self.labsession.state = home.join("session/capture-state");
-            self.labsession.native_owned = true;
-            return Ok(());
-        }
-        self.labsession.state = self.directory.join("session-state");
-        self.labsession.env = vec![
-            (
-                "AB_SESSION_PRODUCERS".into(),
-                serde_json::to_string(&Value::Object(producers))?,
-            ),
-            (
-                "AB_SESSION_RUST_SOURCES".into(),
-                serde_json::to_string(&Value::Object(config))?,
-            ),
-            (
-                "AB_SESSION_RUST_STATE".into(),
-                self.labsession.state.display().to_string(),
-            ),
-        ];
-        if effects {
-            self.labsession.native = Some(self.directory.join("native.sock"));
-            self.labsession.env.push((
-                "AB_SESSION_EFFECTS_HOME".into(),
-                self.directory.join("session-effects").display().to_string(),
-            ));
-        }
-        self.labsession.listen = Some(self.directory.join("session.sock"));
-        self.spawn_session()
-    }
-
-    fn spawn_session(&mut self) -> Result<()> {
-        let binary =
-            session_binary().ok_or_else(|| Error::Invalid("AB_LAB_SESSION is not set".into()))?;
-        let listen = self
-            .labsession
-            .listen
-            .clone()
-            .ok_or_else(|| Error::Invalid("session socket".into()))?;
-        let _ = fs::remove_file(&listen);
-        let log = fs::File::options()
-            .create(true)
-            .append(true)
-            .open(self.directory.join("session.log"))?;
-        let mut command = Command::new(binary);
-        command
-            .current_dir(&self.directory)
-            .arg("--lab-listen")
-            .arg(&listen)
-            .args(["--lab-gateway", &self.labsession.gateway])
-            .envs(self.labsession.env.iter().map(|(k, v)| (k, v)))
-            .stdout(log.try_clone()?)
-            .stderr(log);
-        if let Some(native) = &self.labsession.native {
-            command.arg("--lab-native").arg(native);
-        }
-        self.labsession_child = Some(command.spawn()?);
-        let deadline = Instant::now() + READY;
-        while !listen.exists() {
-            if let Some(status) = self
-                .labsession_child
-                .as_mut()
-                .and_then(|child| child.try_wait().ok().flatten())
-            {
-                return Err(Error::Invalid(format!("session exited {status}")));
-            }
-            if Instant::now() >= deadline {
-                return Err(Error::Invalid("session readiness timeout".into()));
-            }
-            thread::sleep(Duration::from_millis(25));
-        }
+        let home = self.directory.join("session-home");
+        fs::create_dir_all(home.join("session"))?;
+        fs::write(
+            home.join("session/rust-capture.json"),
+            serde_json::to_vec(&json!({
+                "sources": Value::Object(config),
+                "watch": variable("AB_SESSION_RUST_WATCH") == "1",
+                "poll_ms": 100,
+            }))?,
+        )?;
+        self.labsession.state = home.join("session/capture-state");
         Ok(())
     }
 
@@ -249,44 +156,12 @@ impl World {
     }
 
     pub fn restart_session(&mut self) -> Result<()> {
-        if self.labsession.native_owned {
-            stop(&mut self.session);
-            let gateway = self.labsession.gateway.clone();
-            self.launch_session(&gateway)?;
-            return Ok(());
-        }
-        if self.labsession.listen.is_none() {
+        if self.labsession.state.as_os_str().is_empty() {
             return Err(Error::Invalid("no session".into()));
         }
-        stop(&mut self.labsession_child);
-        self.spawn_session()
-    }
-
-    pub(crate) fn keep_session_evidence(&self) {
-        let keep = variable("AB_LAB_SESSION_EFFECTS_EVIDENCE");
-        if keep.is_empty() || self.labsession.native.is_none() {
-            return;
-        }
-        let Some(name) = self.directory.file_name() else {
-            return;
-        };
-        let destination = Path::new(&keep).join(name);
-        if fs::create_dir_all(&destination).is_err() {
-            return;
-        }
-        let copies = [
-            (
-                self.directory.join("session-effects/dispatch-guard.log"),
-                "dispatch-guard.log",
-            ),
-            (self.directory.join("session.log"), "session.log"),
-            (self.directory.join("simapple.log"), "simapple.log"),
-            (self.directory.join("gateway.log"), "gateway.log"),
-        ];
-        for (from, to) in copies {
-            if let Ok(bytes) = fs::read(from) {
-                let _ = fs::write(destination.join(to), bytes);
-            }
-        }
+        stop(&mut self.session);
+        let gateway = self.labsession.gateway.clone();
+        self.launch_session(&gateway)?;
+        Ok(())
     }
 }

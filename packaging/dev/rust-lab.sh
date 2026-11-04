@@ -31,7 +31,7 @@ prepare() {
   require lab-families "$FAMILIES"
   require lab-simapple "$SIMAPPLE"
   if [[ -z "${AB_SESSION_BINARY:-}" ]]; then
-    AB_SESSION_BINARY=$(artifact ab-session -p ab-session --features lab,rust-capture,rust-effects --bin ab-session)
+    AB_SESSION_BINARY=$(artifact ab-session -p ab-session --features lab --bin ab-session)
   fi
   if [[ -z "${AB_RELAY_FIXTURE:-}" ]]; then
     AB_RELAY_FIXTURE=$(artifact lab_fixture -p ab-relay --examples)

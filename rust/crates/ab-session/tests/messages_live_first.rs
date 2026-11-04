@@ -1,5 +1,3 @@
-#![cfg(feature = "rust-capture")]
-
 use ab_session::readers::{CaptureReader, MessagesReader, ScanContext};
 use rusqlite::{Connection, params};
 use serde_json::Value;

@@ -1,5 +1,4 @@
 use crate::{Error, readers::BlobServer};
-use ab_wire::gateway::GatewayFrame;
 use base64::{Engine, engine::general_purpose::STANDARD};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -27,14 +26,6 @@ pub struct NativeQueries {
 }
 
 impl NativeQueries {
-    #[must_use]
-    pub fn handles(&self, frame: &GatewayFrame) -> bool {
-        let GatewayFrame::Query(query) = frame else {
-            return false;
-        };
-        self.handles_operation(&query.op)
-    }
-
     #[must_use]
     pub fn handles_operation(&self, operation: &str) -> bool {
         match operation {

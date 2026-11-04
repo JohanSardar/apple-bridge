@@ -3,139 +3,6 @@
 use ab_session::Error;
 use std::os::fd::AsRawFd;
 
-#[cfg(all(feature = "lab", feature = "rust-effects"))]
-struct LabEffects {
-    native: String,
-    home: std::path::PathBuf,
-    config: ab_session::effects::Config,
-}
-
-#[cfg(all(feature = "lab", feature = "rust-effects"))]
-fn lab_effects(
-    native: Option<&str>,
-    rust: &[String],
-    config: &str,
-) -> Result<Option<LabEffects>, Error> {
-    let Some(native) = native else {
-        return Ok(None);
-    };
-    let home = std::env::var("AB_SESSION_EFFECTS_HOME").map_err(|_| Error::Invalid)?;
-    let routing = std::env::var("AB_SESSION_EFFECTS_SOURCES").map_or_else(
-        |_| ab_session::effects::Routing::all(),
-        |list| ab_session::effects::Routing::parse(&list),
-    );
-    let sources: serde_json::Value = serde_json::from_str(config)?;
-    let notes_database = sources["notes"]["root"]
-        .as_str()
-        .map(|root| std::path::Path::new(root).join("NoteStore.sqlite"));
-    Ok(Some(LabEffects {
-        native: native.to_owned(),
-        home: std::path::PathBuf::from(home),
-        config: ab_session::effects::Config {
-            routing,
-            rust_sources: rust.iter().cloned().collect(),
-            notes_database,
-            ..ab_session::effects::Config::default()
-        },
-    }))
-}
-
-#[cfg(feature = "lab")]
-fn lab_listen(listen: &str, gateway: &str, native: Option<&str>) -> Result<(), Error> {
-    let mut selection = ab_session::ownership::Selection::default();
-    if let Ok(value) = std::env::var("AB_SESSION_PRODUCERS") {
-        let sources: std::collections::BTreeMap<
-            ab_session::ownership::SourceId,
-            ab_session::ownership::Producer,
-        > = serde_json::from_str(&value)?;
-        for (source, producer) in sources {
-            selection.select_disconnected(
-                source,
-                producer,
-                &ab_session::ownership::ConnectionState::Disconnected,
-            )?;
-        }
-    }
-    let rust: Vec<String> = selection
-        .rust_sources()
-        .iter()
-        .map(|source| {
-            serde_json::to_value(source).map(|v| v.as_str().unwrap_or_default().to_owned())
-        })
-        .collect::<Result<_, _>>()?;
-    selection.validate_routed(ab_session::production::SUPPORTED)?;
-    let config = std::env::var("AB_SESSION_RUST_SOURCES").map_err(|_| Error::Invalid)?;
-    let poll = std::time::Duration::from_millis(
-        std::env::var("AB_SESSION_RUST_POLL_MS")
-            .ok()
-            .map_or(Ok(100), |v| v.parse::<u64>())
-            .map_err(|_| Error::Invalid)?,
-    );
-    let state = std::env::var("AB_SESSION_RUST_STATE")
-        .ok()
-        .map(std::path::PathBuf::from);
-    let watch = std::env::var("AB_SESSION_RUST_WATCH").as_deref() == Ok("1");
-    #[cfg(feature = "rust-effects")]
-    let effects = lab_effects(native, &rust, &config)?;
-    #[cfg(not(feature = "rust-effects"))]
-    if native.is_some() {
-        return Err(Error::Conflict);
-    }
-    let build = move || -> Result<_, Error> {
-        let mut readers = ab_session::readers::from_config(&config)?;
-        readers.retain(|source, _| rust.contains(source));
-        if readers.len() != rust.len() {
-            return Err(Error::Invalid);
-        }
-        Ok(readers)
-    };
-    build()?;
-    let _ = std::fs::remove_file(listen);
-    let listener = std::os::unix::net::UnixListener::bind(listen)?;
-    for helper in listener.incoming() {
-        let helper = helper?;
-        let Ok(gateway) = std::os::unix::net::UnixStream::connect(gateway) else {
-            continue;
-        };
-        let readers = build()?;
-        let state = state.clone();
-        #[cfg(feature = "rust-effects")]
-        let layer = match &effects {
-            Some(effects) => {
-                let Ok(stream) = std::os::unix::net::UnixStream::connect(&effects.native) else {
-                    continue;
-                };
-                Some(ab_session::effects::Layer::open_with(
-                    stream,
-                    &effects.home,
-                    effects.config.clone(),
-                )?)
-            }
-            None => None,
-        };
-        std::thread::spawn(move || {
-            let options = ab_session::routed::Options {
-                poll,
-                watch,
-                state,
-                queries: ab_session::queries::NativeQueries::default(),
-            };
-            #[cfg(feature = "rust-effects")]
-            let overlay: Option<&dyn ab_session::routed::Overlay> = layer
-                .as_ref()
-                .map(|layer| layer as &dyn ab_session::routed::Overlay);
-            #[cfg(not(feature = "rust-effects"))]
-            let overlay: Option<&dyn ab_session::routed::Overlay> = None;
-            if let Err(error) =
-                ab_session::routed::relay_layered(gateway, helper, readers, &options, overlay)
-            {
-                eprintln!("ab-session: {error}");
-            }
-        });
-    }
-    Ok(())
-}
-
 fn inherited_descriptor(
     variable: &str,
     taken: &[i32],
@@ -151,44 +18,6 @@ fn inherited_descriptor(
 }
 
 const FACTS_DESCRIPTOR: &str = "AB_NATIVE_FACTS_FD";
-
-type Links = (
-    Option<ab_session::production::EffectsLink>,
-    Option<std::os::unix::net::UnixStream>,
-);
-
-fn native_links(
-    gateway: &std::os::unix::net::UnixStream,
-    helper: &std::os::unix::net::UnixStream,
-    effects_home: Option<String>,
-    wants_facts: bool,
-) -> Result<Links, Error> {
-    let mut taken = vec![gateway.as_raw_fd(), helper.as_raw_fd()];
-    let effects = match effects_home {
-        Some(home) => {
-            let native = inherited_descriptor("AB_NATIVE_FD", &taken)?;
-            taken.push(native.as_raw_fd());
-            Some(ab_session::production::EffectsLink {
-                native,
-                #[cfg(feature = "rust-effects")]
-                routing: ab_session::production::effects_routing(std::path::Path::new(&home))?,
-                home: std::path::PathBuf::from(home),
-            })
-        }
-        None => None,
-    };
-    let facts = if wants_facts {
-        let variable = if effects.is_none() && std::env::var_os(FACTS_DESCRIPTOR).is_none() {
-            "AB_NATIVE_FD"
-        } else {
-            FACTS_DESCRIPTOR
-        };
-        Some(inherited_descriptor(variable, &taken)?)
-    } else {
-        None
-    };
-    Ok((effects, facts))
-}
 
 fn exit_with_parent() {
     let parent = std::os::unix::process::parent_id();
@@ -207,8 +36,6 @@ fn exit_with_parent() {
 
 #[derive(Default)]
 struct Flags {
-    effects_home: Option<String>,
-    capture_home: Option<String>,
     session_secret: Option<String>,
     session_home: Option<String>,
     rust_commands: Option<String>,
@@ -220,8 +47,6 @@ fn parse_flags(args: &[String]) -> Result<Flags, Error> {
     while let Some(flag) = rest.next() {
         let value = rest.next().ok_or(Error::Invalid)?.clone();
         let slot = match flag.as_str() {
-            "--effects-home" => &mut flags.effects_home,
-            "--capture-home" => &mut flags.capture_home,
             "--session-secret" => &mut flags.session_secret,
             "--session-home" => &mut flags.session_home,
             "--rust-commands" => &mut flags.rust_commands,
@@ -230,9 +55,6 @@ fn parse_flags(args: &[String]) -> Result<Flags, Error> {
         if slot.replace(value).is_some() {
             return Err(Error::Invalid);
         }
-    }
-    if flags.rust_commands.is_some() && flags.session_secret.is_none() {
-        return Err(Error::Conflict);
     }
     Ok(flags)
 }
@@ -310,7 +132,6 @@ fn session_capture(
     Ok(Some(loaded.attached(facts)?))
 }
 
-#[cfg(feature = "rust-capture")]
 fn cleanup_messages(args: &[String]) -> Result<(), Error> {
     let [descriptor, request] = args else {
         return Err(Error::Invalid);
@@ -353,30 +174,6 @@ fn serve_session(
     )
 }
 
-#[cfg(feature = "lab")]
-fn lab_entry(args: &[String]) -> Option<Result<(), Error>> {
-    if (args.len() == 8 || args.len() == 10)
-        && args[0] == "--lab-session-listen"
-        && args[2] == "--lab-gateway"
-        && args[4] == "--session-secret"
-        && args[6] == "--session-home"
-    {
-        return Some(lab_session(args));
-    }
-    if args.len() == 4 && args[0] == "--lab-listen" && args[2] == "--lab-gateway" {
-        return Some(lab_listen(&args[1], &args[3], None));
-    }
-    if args.len() == 6
-        && args[0] == "--lab-listen"
-        && args[2] == "--lab-gateway"
-        && args[4] == "--lab-native"
-    {
-        return Some(lab_listen(&args[1], &args[3], Some(&args[5])));
-    }
-    None
-}
-
-#[allow(clippy::too_many_lines)]
 const LOG_LIMIT: u64 = 4 << 20;
 const OPEN_FILES: u64 = 4096;
 
@@ -409,8 +206,13 @@ fn run() -> Result<(), Error> {
     ab_sys::raise_open_files(OPEN_FILES);
     let args: Vec<String> = std::env::args().skip(1).collect();
     #[cfg(feature = "lab")]
-    if let Some(result) = lab_entry(&args) {
-        return result;
+    if (args.len() == 8 || args.len() == 10)
+        && args[0] == "--lab-session-listen"
+        && args[2] == "--lab-gateway"
+        && args[4] == "--session-secret"
+        && args[6] == "--session-home"
+    {
+        return lab_session(&args);
     }
     if let ["--media-cleanup-check", path] = args.iter().map(String::as_str).collect::<Vec<_>>()[..]
     {
@@ -423,7 +225,6 @@ fn run() -> Result<(), Error> {
     if args.first().map(String::as_str) == Some("--selftest-messages") {
         return selftest_messages(&args[1..]);
     }
-    #[cfg(feature = "rust-capture")]
     if args.first().map(String::as_str) == Some("--cleanup-messages") {
         return cleanup_messages(&args[1..]);
     }
@@ -437,57 +238,13 @@ fn run() -> Result<(), Error> {
         return Err(Error::Invalid);
     }
     let Flags {
-        effects_home,
-        capture_home,
         session_secret,
         session_home,
         rust_commands,
     } = parse_flags(&args[4..])?;
-
-    if let Some(secret) = session_secret {
-        if effects_home.is_some() || capture_home.is_some() {
-            return Err(Error::Conflict);
-        }
-        let home = session_home.ok_or(Error::Invalid)?;
-        return serve_session(gateway, helper, &secret, &home, rust_commands.as_deref());
-    }
-    if let Some(home) = &capture_home {
-        keep_log(std::path::Path::new(home));
-    }
-    let mut selection = ab_session::ownership::Selection::default();
-    if let Ok(value) = std::env::var("AB_SESSION_PRODUCERS") {
-        let sources: std::collections::BTreeMap<
-            ab_session::ownership::SourceId,
-            ab_session::ownership::Producer,
-        > = serde_json::from_str(&value)?;
-        for (source, producer) in sources {
-            selection.select_disconnected(
-                source,
-                producer,
-                &ab_session::ownership::ConnectionState::Disconnected,
-            )?;
-        }
-    }
-    selection.validate_proxy()?;
-    let effects_selected = std::env::var("AB_SESSION_EFFECTS").as_deref() == Ok("1");
-    if effects_selected && effects_home.is_none() {
-        return Err(Error::Conflict);
-    }
-    let capture = match &capture_home {
-        Some(home) => ab_session::production::load(std::path::Path::new(home))?,
-        None => None,
-    };
-    let gateway = ab_sys::inherited_unix_stream(gateway)?;
-    let helper = ab_sys::inherited_unix_stream(helper)?;
-    let (effects, facts) = native_links(
-        &gateway,
-        &helper,
-        effects_home,
-        capture
-            .as_ref()
-            .is_some_and(ab_session::production::Loaded::wants_inherited_facts),
-    )?;
-    ab_session::production::serve_with_facts(gateway, helper, capture.as_ref(), effects, facts)
+    let secret = session_secret.ok_or(Error::Invalid)?;
+    let home = session_home.ok_or(Error::Invalid)?;
+    serve_session(gateway, helper, &secret, &home, rust_commands.as_deref())
 }
 
 fn main() -> std::process::ExitCode {

@@ -215,12 +215,11 @@ pub fn from_config_linked(
                 }
             }
             "calendar" | "contacts" | "reminders" => {
-                if config.store.is_some()
-                    && (!["calendar", "reminders"].contains(&source.as_str())
-                        || config.facts.is_none())
-                {
+                if config.store.is_some() && !["calendar", "reminders"].contains(&source.as_str()) {
                     return Err(Error::Invalid);
                 }
+                let client =
+                    linked_client(config.facts.as_ref(), inherited)?.ok_or(Error::Invalid)?;
                 let reader = match source.as_str() {
                     "calendar" => match config.store {
                         Some(store) => AgendaReader::calendar(config.root)
@@ -234,12 +233,7 @@ pub fn from_config_linked(
                         None => AgendaReader::reminders(config.root),
                     },
                 };
-                match linked_client(config.facts.as_ref(), inherited)? {
-                    Some(client) => Box::new(
-                        reader.paged(client, Duration::from_millis(config.facts_poll_ms.max(1))),
-                    ),
-                    None => Box::new(reader),
-                }
+                Box::new(reader.paged(client, Duration::from_millis(config.facts_poll_ms.max(1))))
             }
             _ => return Err(Error::Invalid),
         };

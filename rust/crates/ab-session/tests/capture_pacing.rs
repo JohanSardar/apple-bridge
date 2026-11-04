@@ -1,11 +1,9 @@
-#![cfg(feature = "rust-capture")]
+mod support;
 
-use ab_session::{Error, readers, routed};
+use ab_session::{Error, production::Options, readers};
 use serde_json::{Value, json};
 use std::{
     collections::BTreeMap,
-    io::{Read, Write},
-    os::unix::net::UnixStream,
     path::{Path, PathBuf},
     sync::{
         Arc, Mutex,
@@ -54,21 +52,6 @@ impl readers::CaptureReader for Probe {
     }
 }
 
-fn send(socket: &mut UnixStream, value: &Value) -> Fallible<()> {
-    let bytes = serde_json::to_vec(value)?;
-    socket.write_all(&u32::try_from(bytes.len())?.to_be_bytes())?;
-    socket.write_all(&bytes)?;
-    Ok(())
-}
-
-fn receive(socket: &mut UnixStream) -> Fallible<Value> {
-    let mut header = [0; 4];
-    socket.read_exact(&mut header)?;
-    let mut bytes = vec![0; usize::try_from(u32::from_be_bytes(header))?];
-    socket.read_exact(&mut bytes)?;
-    Ok(serde_json::from_slice(&bytes)?)
-}
-
 fn scratch() -> Fallible<PathBuf> {
     let directory = std::env::temp_dir().join(format!(
         "ab-pacing-{}-{}",
@@ -94,27 +77,18 @@ fn constant_churn_is_paced_and_the_last_change_is_still_captured() -> Fallible<(
             seen: seen.clone(),
         }),
     );
-    let (mut gateway, session_gateway) = UnixStream::pair()?;
-    let (mut helper, session_helper) = UnixStream::pair()?;
-    for socket in [&gateway, &helper] {
-        socket.set_read_timeout(Some(Duration::from_secs(10)))?;
-    }
-    let options = routed::Options {
+    let options = Options {
         poll: Duration::from_secs(60),
         watch: true,
         state: None,
-        ..routed::Options::default()
+        ..Options::default()
     };
-    let worker = std::thread::spawn(move || {
-        routed::relay_layered(session_gateway, session_helper, sources, &options, None)
-    });
-    send(
-        &mut gateway,
-        &json!({"t":"Open","protocol":"ipc/1","owner_fence":1,"byte_credit":4_194_304,"checkpoints":{}}),
-    )?;
-    assert_eq!(receive(&mut helper)?["t"], "Open");
-    send(&mut helper, &json!({"t":"Ready","protocol":"ipc/1"}))?;
-    assert_eq!(receive(&mut gateway)?["t"], "Ready");
+    let support::Wire {
+        gateway,
+        link: helper,
+        worker,
+        home: _,
+    } = support::wire(sources, options, json!({}))?;
     std::thread::sleep(Duration::from_millis(700));
     let before = scans.load(Ordering::SeqCst);
 

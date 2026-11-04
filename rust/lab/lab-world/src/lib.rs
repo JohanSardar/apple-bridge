@@ -4,7 +4,7 @@ mod session_fixtures;
 mod session_notes;
 pub use proxy::FaultProxy;
 use serde_json::Value;
-pub use session::{session_binary, session_effects, session_sources};
+pub use session::{session_binary, session_sources};
 pub use session_fixtures::{session_control_empty, session_media_source, session_media_version};
 use std::{
     fs,
@@ -121,7 +121,6 @@ pub struct World {
     peer: Option<Child>,
     session: Option<Child>,
     labsession: session::Session,
-    labsession_child: Option<Child>,
     proxy: Option<FaultProxy>,
     token: String,
     gateway_env: Vec<(String, String)>,
@@ -148,7 +147,6 @@ impl World {
             peer: None,
             session: None,
             labsession: session::Session::default(),
-            labsession_child: None,
             proxy: None,
             token: String::new(),
             gateway_env: Vec::new(),
@@ -184,7 +182,6 @@ impl World {
             peer: None,
             session: None,
             labsession: session::Session::default(),
-            labsession_child: None,
             proxy: None,
             token: String::new(),
             gateway_env: Vec::new(),
@@ -270,12 +267,7 @@ impl World {
         let native = self.launch_session(&socket)?;
         let mut simapple = Command::new(&self.config.simapple);
         simapple
-            .args([
-                "simapple",
-                "--socket",
-                &self.helper_socket(&socket),
-                "--secret-file",
-            ])
+            .args(["simapple", "--socket", &socket, "--secret-file"])
             .arg(self.gateway_home.join("apple-secret"))
             .arg("--control")
             .arg(self.directory.join("sim.sock"));
@@ -357,14 +349,9 @@ impl World {
         }
     }
     fn check_children(&mut self) -> Result<()> {
-        for child in [
-            &mut self.gateway,
-            &mut self.peer,
-            &mut self.session,
-            &mut self.labsession_child,
-        ]
-        .into_iter()
-        .flatten()
+        for child in [&mut self.gateway, &mut self.peer, &mut self.session]
+            .into_iter()
+            .flatten()
         {
             if let Some(status) = child.try_wait()? {
                 return Err(Error::Invalid(format!("child exited {status}")));
@@ -600,9 +587,7 @@ impl World {
         self.stop_session_notes();
         stop(&mut self.peer);
         stop(&mut self.session);
-        stop(&mut self.labsession_child);
         stop(&mut self.gateway);
-        self.keep_session_evidence();
     }
 }
 fn stop(child: &mut Option<Child>) {

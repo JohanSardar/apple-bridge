@@ -258,7 +258,6 @@ struct Request {
     whole: bool,
     exact: bool,
     revision: Option<u64>,
-    native: Option<native::Job>,
 }
 fn enqueue(tx: &mpsc::Sender<Request>, frame: Value, wait: bool) -> Result<()> {
     enqueue_mode(tx, frame, wait, false)
@@ -284,7 +283,6 @@ fn enqueue_request(
         whole,
         exact,
         revision,
-        native: None,
     })
     .map_err(|_| invalid("session stopped"))?;
     native::changed(&source);
@@ -649,12 +647,11 @@ struct Session<'a> {
     finished_rx: mpsc::Receiver<(String, Value)>,
     hint: Option<u64>,
     full: bool,
-    real: Option<UnixStream>,
     native: bool,
 }
 impl Session<'_> {
     fn emit(&mut self, state: &Shared, frame: Value) -> Result<()> {
-        self.divert(|session| session.emit_frame(state, frame))
+        self.emit_frame(state, frame)
     }
     fn emit_frame(&mut self, state: &Shared, frame: Value) -> Result<()> {
         let owned = self.hint.is_none();
@@ -773,9 +770,6 @@ impl Session<'_> {
         Ok(())
     }
     fn serve(&mut self, state: &Shared, request: Request) -> Result<()> {
-        if let Some(job) = request.native {
-            return self.native_job(state, &job);
-        }
         if request.frame["t"] == "Close" {
             send(&mut self.stream, &request.frame)?;
             loop {
@@ -798,7 +792,7 @@ impl Session<'_> {
         Ok(())
     }
     fn emit_exact(&mut self, state: &Shared, frame: &Value) -> Result<()> {
-        self.divert(|session| session.emit_exact_frame(state, frame))
+        self.emit_exact_frame(state, frame)
     }
     fn emit_exact_frame(&mut self, state: &Shared, frame: &Value) -> Result<()> {
         let src = string(frame, "source");
@@ -852,7 +846,7 @@ impl Session<'_> {
         }
     }
     fn emit_part(&mut self, state: &Shared, frame: Value) -> Result<()> {
-        self.divert(|session| session.emit_part_frame(state, frame))
+        self.emit_part_frame(state, frame)
     }
     fn emit_part_frame(&mut self, state: &Shared, mut frame: Value) -> Result<()> {
         if frame["t"] != "Capture" {
@@ -1309,7 +1303,6 @@ fn session(
         finished_rx,
         hint: None,
         full: false,
-        real: None,
         native,
     };
     for src in sources {
@@ -1511,7 +1504,7 @@ fn run() -> Result<()> {
         }
     });
     if let Some(path) = options.get("--native-socket") {
-        native::serve(path, &state, &tx)?;
+        native::serve(path, &state)?;
     }
     let native = options.get("--native-session").cloned();
     loop {

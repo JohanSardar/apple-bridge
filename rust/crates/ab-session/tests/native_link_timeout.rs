@@ -1,5 +1,3 @@
-#![cfg(feature = "rust-capture")]
-
 use ab_session::native_facts::Client;
 use serde_json::{Value, json};
 use std::{

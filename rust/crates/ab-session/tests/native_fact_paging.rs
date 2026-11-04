@@ -1,6 +1,6 @@
-#![cfg(feature = "rust-capture")]
+mod support;
 
-use ab_session::{native_facts::Client, readers, routed};
+use ab_session::{native_facts::Client, production::Options, readers};
 use serde_json::{Value, json};
 use std::{
     collections::BTreeMap,
@@ -187,27 +187,18 @@ struct Wire {
 }
 
 fn wire(sources: BTreeMap<String, Box<dyn readers::CaptureReader>>) -> Fallible<Wire> {
-    let (mut gateway, session_gateway) = UnixStream::pair()?;
-    let (mut helper, session_helper) = UnixStream::pair()?;
-    for socket in [&gateway, &helper] {
-        socket.set_read_timeout(Some(Duration::from_secs(10)))?;
-    }
-    let options = routed::Options {
+    let options = Options {
         poll: Duration::from_millis(20),
         watch: false,
         state: None,
         queries: ab_session::queries::NativeQueries::default(),
     };
-    let worker = std::thread::spawn(move || {
-        routed::relay_layered(session_gateway, session_helper, sources, &options, None)
-    });
-    send(
-        &mut gateway,
-        &json!({"t":"Open","protocol":"ipc/1","owner_fence":1,"byte_credit":4_194_304,"checkpoints":{}}),
-    )?;
-    assert_eq!(receive(&mut helper)?.1["t"], "Open");
-    send(&mut helper, &json!({"t":"Ready","protocol":"ipc/1"}))?;
-    assert_eq!(receive(&mut gateway)?.1["t"], "Ready");
+    let support::Wire {
+        gateway,
+        link: helper,
+        worker,
+        home: _,
+    } = support::wire(sources, options, json!({}))?;
     Ok(Wire {
         gateway,
         helper,
@@ -411,13 +402,13 @@ fn helper_capture_is_only_a_hint_and_its_committed_waits_for_the_rust_commit() -
     )?;
     send(
         &mut f.wire.helper,
-        &json!({"t":"Capture","source":"calendar","generation":"swift-g","checkpoint":"h1","observations":[row("calendar.event","zzz","ignored")]}),
+        &json!({"t":"Scan","id":"h1","source":"calendar","generation":"swift-g","observations":[row("calendar.event","zzz","ignored")]}),
     )?;
     expect_silence(&mut f.wire.helper)?;
     let (size, second) = receive(&mut f.wire.gateway)?;
     assert_eq!(names(&second, "upsert"), ["b"]);
     commit(&mut f.wire, "calendar", &second, size)?;
-    assert_eq!(receive(&mut f.wire.helper)?.1["checkpoint"], "h1");
+    assert_eq!(receive(&mut f.wire.helper)?.1["id"], "h1");
     drop((f.wire.gateway, f.wire.helper));
     let _ = f.wire.worker.join();
     Ok(())
@@ -449,18 +440,18 @@ fn partial_helper_parts_release_at_once_and_only_the_final_part_pulls() -> Falli
     )?;
     send(
         &mut f.wire.helper,
-        &json!({"t":"Capture","source":"calendar","generation":"swift-g","checkpoint":"p1","scan_id":"s1","observations":[]}),
+        &json!({"t":"Scan","id":"p1","source":"calendar","generation":"swift-g","scan_id":"s1","observations":[]}),
     )?;
-    assert_eq!(receive(&mut f.wire.helper)?.1["checkpoint"], "p1");
+    assert_eq!(receive(&mut f.wire.helper)?.1["id"], "p1");
     expect_silence(&mut f.wire.gateway)?;
     send(
         &mut f.wire.helper,
-        &json!({"t":"Capture","source":"calendar","generation":"swift-g","checkpoint":"p2","scan_id":"s1","completion_evidence":"complete","observations":[]}),
+        &json!({"t":"Scan","id":"p2","source":"calendar","generation":"swift-g","scan_id":"s1","completion_evidence":"complete","observations":[]}),
     )?;
     let (size, second) = receive(&mut f.wire.gateway)?;
     assert_eq!(names(&second, "upsert"), ["b"]);
     commit(&mut f.wire, "calendar", &second, size)?;
-    assert_eq!(receive(&mut f.wire.helper)?.1["checkpoint"], "p2");
+    assert_eq!(receive(&mut f.wire.helper)?.1["id"], "p2");
     drop((f.wire.gateway, f.wire.helper));
     let _ = f.wire.worker.join();
     Ok(())

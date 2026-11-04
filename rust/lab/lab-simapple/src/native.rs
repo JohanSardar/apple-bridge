@@ -1,8 +1,7 @@
 use super::{
-    BTreeMap, Duration, Instant, Request, Result, Session, Shared, Value, calendar, contacts,
-    generation_of, invalid, json, lock, mpsc, string, thread,
+    BTreeMap, Duration, Instant, Result, Shared, Value, calendar, contacts, generation_of, invalid,
+    json, lock, string, thread,
 };
-use lab_wire::receive;
 use std::{
     io::{Read, Write},
     os::unix::{
@@ -16,7 +15,6 @@ use std::{
 const FACTS_FRAME_LIMIT: usize = 262_144;
 const READ_LIMIT: usize = 1 << 20;
 const MAX_REVALIDATE: usize = 500;
-const JOB_WAIT: Duration = Duration::from_secs(60);
 
 const REVALIDATION: [(&str, &str); 7] = [
     ("agenda.calendars", "calendar.calendar"),
@@ -46,16 +44,6 @@ const FACTS: [(&str, &str, &str); 7] = [
     ("contacts.groups", "contacts", "contacts.group"),
     ("contacts.contacts", "contacts", "contacts.contact"),
 ];
-
-#[derive(Debug)]
-pub(super) struct Job {
-    id: String,
-    op: String,
-    args: Value,
-    command_id: String,
-    ticket: String,
-    reply: mpsc::Sender<Option<Value>>,
-}
 
 struct Link {
     stream: Mutex<UnixStream>,
@@ -107,19 +95,19 @@ pub(super) fn changed(source: &str) {
     }
 }
 
-pub(super) fn serve(path: &str, state: &Shared, requests: &mpsc::Sender<Request>) -> Result<()> {
+pub(super) fn serve(path: &str, state: &Shared) -> Result<()> {
     let _ = std::fs::remove_file(path);
     let listener = UnixListener::bind(path)?;
     std::fs::set_permissions(Path::new(path), std::fs::Permissions::from_mode(0o600))?;
-    let (state, requests) = (Arc::clone(state), requests.clone());
+    let state = Arc::clone(state);
     thread::spawn(move || {
         for stream in listener.incoming() {
             let Ok(stream) = stream else {
                 break;
             };
-            let (state, requests) = (Arc::clone(&state), requests.clone());
+            let state = Arc::clone(&state);
             thread::spawn(move || {
-                if let Err(error) = connection(stream, &state, &requests) {
+                if let Err(error) = connection(stream, &state) {
                     eprintln!("native: {error}");
                 }
             });
@@ -144,7 +132,7 @@ struct Facts {
     snapshots: BTreeMap<String, Snapshot>,
 }
 
-fn connection(stream: UnixStream, state: &Shared, requests: &mpsc::Sender<Request>) -> Result<()> {
+fn connection(stream: UnixStream, state: &Shared) -> Result<()> {
     let mut reader = stream.try_clone()?;
     let link = Arc::new(Link {
         stream: Mutex::new(stream),
@@ -171,7 +159,6 @@ fn connection(stream: UnixStream, state: &Shared, requests: &mpsc::Sender<Reques
                     page(&link, &mut facts, state, &frame)?;
                 }
                 "Revalidate" => revalidate(&link, state, &frame)?,
-                "Effect" => effect(&link, requests, &frame),
                 _ => link.write(&json!({"t":"Error","id":id,"code":"unsupported"}))?,
             }
         }
@@ -184,41 +171,6 @@ fn connection(stream: UnixStream, state: &Shared, requests: &mpsc::Sender<Reques
 
 fn failure(link: &Link, id: &str, code: &str) -> Result<()> {
     link.write(&json!({"t":"Error","id":id,"code":code}))
-}
-
-fn effect(link: &Arc<Link>, requests: &mpsc::Sender<Request>, frame: &Value) {
-    let (reply, wait) = mpsc::channel();
-    let job = Job {
-        id: string(frame, "id"),
-        op: string(frame, "op"),
-        args: frame["args"].clone(),
-        command_id: string(&frame["permit"], "command_id"),
-        ticket: string(&frame["permit"], "ticket"),
-        reply,
-    };
-    let identity = job.id.clone();
-    let (link, requests) = (Arc::clone(link), requests.clone());
-    thread::spawn(move || {
-        let sent = requests.send(Request {
-            frame: Value::Null,
-            done: None,
-            whole: false,
-            exact: false,
-            revision: None,
-            native: Some(job),
-        });
-        let answer = if sent.is_ok() {
-            wait.recv_timeout(JOB_WAIT).ok().flatten()
-        } else {
-            None
-        };
-        let _ = match answer {
-            Some(evidence) => {
-                link.write(&json!({"t":"EffectResult","id":identity,"evidence":evidence}))
-            }
-            None => failure(&link, &identity, "unavailable"),
-        };
-    });
 }
 
 fn local_facts(
@@ -461,98 +413,10 @@ fn revalidate(link: &Link, state: &Shared, frame: &Value) -> Result<()> {
     link.write(&json!({"t":"Revalidated","id":id,"op":operation,"results":results}))
 }
 
-impl Session<'_> {
-    pub(super) fn native_job(&mut self, state: &Shared, job: &Job) -> Result<()> {
-        let evidence = self.native_effect(state, job);
-        let (answer, failed) = match evidence {
-            Ok(evidence) => (evidence, None),
-            Err(error) => (None, Some(error)),
-        };
-        let _ = job.reply.send(answer);
-        failed.map_or(Ok(()), Err)
-    }
-
-    fn native_effect(&mut self, state: &Shared, job: &Job) -> Result<Option<Value>> {
-        if std::env::var("AB_LAB_SESSION_EFFECTS_CONTROL").as_deref() == Ok("refuse") {
-            return Ok(None);
-        }
-        let query = job.args["session_query"] == true;
-        let frame = if query {
-            json!({"t":"Query","id":job.id,"op":job.op,"args":job.args["args"],"deadline_ms":30000})
-        } else {
-            json!({"t":"Dispatch","command_id":job.command_id,"ticket":job.ticket,"owner_fence":self.fence,"origin":job.args["origin"]})
-        };
-        let (writer, mut reader) = UnixStream::pair()?;
-        let collector = thread::spawn(move || {
-            let mut frames = Vec::new();
-            while let Ok((frame, _)) = receive(&mut reader) {
-                frames.push(frame);
-            }
-            frames
-        });
-        let real = std::mem::replace(&mut self.stream, writer);
-        let previous = self.real.replace(real);
-        let result = self.command(state, frame);
-        if let Some(real) = std::mem::replace(&mut self.real, previous) {
-            drop(std::mem::replace(&mut self.stream, real));
-        }
-        let frames = collector.join().map_err(|_| invalid("collector"))?;
-        result?;
-        for reply in frames {
-            match reply["t"].as_str() {
-                Some("QueryResult") if query => {
-                    let blobs = if reply["blobs"].is_array() {
-                        reply["blobs"].clone()
-                    } else {
-                        json!([])
-                    };
-                    return Ok(Some(
-                        json!({"observed":true,"native_query_result":reply["result_json"],"native_query_blobs":blobs}),
-                    ));
-                }
-                Some("QueryError") if query => {
-                    return Ok(Some(
-                        json!({"observed":false,"native_query_error":reply["code"]}),
-                    ));
-                }
-                Some("Outcome") if !query => {
-                    let mut fields = reply["evidence"].as_object().cloned().unwrap_or_default();
-                    fields.insert("disposition".into(), reply["disposition"].clone());
-                    fields.insert("fingerprint".into(), job.args["request_hash"].clone());
-                    return Ok(Some(Value::Object(fields)));
-                }
-                Some("Rejected") if !query => {
-                    let mut rejected = json!({"code":"unavailable","message":"unavailable"});
-                    if reply["error"].is_object() {
-                        rejected["code"] = reply["error"]["code"].clone();
-                        rejected["message"] = reply["error"]["message"].clone();
-                    }
-                    if reply["evidence"].is_object() {
-                        rejected["evidence"] = reply["evidence"].clone();
-                    }
-                    return Ok(Some(json!({"rejected":rejected})));
-                }
-                _ => {}
-            }
-        }
-        Ok(None)
-    }
-
-    pub(super) fn divert<T>(&mut self, run: impl FnOnce(&mut Self) -> T) -> T {
-        let Some(real) = self.real.take() else {
-            return run(self);
-        };
-        let diverted = std::mem::replace(&mut self.stream, real);
-        let result = run(self);
-        self.real = Some(std::mem::replace(&mut self.stream, diverted));
-        result
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::{
-        Arc, BTreeMap, Duration, Mutex, Read, Shared, UnixStream, Value, Write, json, mpsc, serve,
+        Arc, BTreeMap, Duration, Mutex, Read, Shared, UnixStream, Value, Write, json, serve,
     };
     use crate::{Bulk, State};
     use std::path::PathBuf;
@@ -593,13 +457,7 @@ mod tests {
     fn connect(records: &Value, name: &str) -> UnixStream {
         let path =
             std::env::temp_dir().join(format!("sim-native-{name}-{}.sock", std::process::id()));
-        let (requests, _held) = mpsc::channel();
-        serve(
-            path.to_str().unwrap_or_default(),
-            &state(records),
-            &requests,
-        )
-        .unwrap_or_default();
+        serve(path.to_str().unwrap_or_default(), &state(records)).unwrap_or_default();
         let mut stream = UnixStream::connect(&path).unwrap_or_else(|e| panic!("{e}"));
         stream
             .set_read_timeout(Some(Duration::from_secs(5)))

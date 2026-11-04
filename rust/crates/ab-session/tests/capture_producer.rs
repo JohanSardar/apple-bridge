@@ -1,6 +1,6 @@
-#![cfg(feature = "rust-capture")]
+mod support;
 
-use ab_session::{production, readers, routed};
+use ab_session::{production, production::Options, readers};
 use serde_json::{Value, json};
 use std::{
     io::{Read, Write},
@@ -60,100 +60,6 @@ fn expect_silence(socket: &mut UnixStream) -> Fallible<()> {
     Ok(())
 }
 
-#[test]
-fn rust_safari_replaces_helper_frames_and_consumes_committed() -> Fallible<()> {
-    let directory = std::env::temp_dir().join(format!(
-        "ab-capture-{}-{}",
-        std::process::id(),
-        SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos()
-    ));
-    std::fs::create_dir_all(&directory)?;
-    history(&directory, 2)?;
-    let sources = readers::from_config(&json!({"safari":{"root":directory}}).to_string())?;
-    let (mut gateway, session_gateway) = UnixStream::pair()?;
-    let (mut helper, session_helper) = UnixStream::pair()?;
-    for socket in [&gateway, &helper] {
-        socket.set_read_timeout(Some(Duration::from_secs(10)))?;
-    }
-    let worker = std::thread::spawn(move || {
-        routed::relay(
-            session_gateway,
-            session_helper,
-            sources,
-            Duration::from_millis(20),
-        )
-    });
-    send(
-        &mut gateway,
-        &json!({"t":"Open","protocol":"ipc/1","owner_fence":1,"byte_credit":4_194_304,"checkpoints":{"safari":{"generation":"old","checkpoint":"old-cp"}}}),
-    )?;
-    assert_eq!(receive(&mut helper)?.1["t"], "Open");
-    send(&mut helper, &json!({"t":"Ready","protocol":"ipc/1"}))?;
-    assert_eq!(receive(&mut gateway)?.1["t"], "Ready");
-
-    let (size, first) = receive(&mut gateway)?;
-    assert_eq!(first["t"], "Capture");
-    let capture = &first;
-    assert_eq!(capture["source"], "safari");
-    assert_eq!(capture["predecessor"], "");
-    assert_eq!(capture["completion_evidence"], "complete");
-    assert!(capture.get("coverage").is_none());
-    assert!(
-        capture["observations"]
-            .as_array()
-            .is_some_and(|o| !o.is_empty())
-    );
-    let checkpoint = capture["checkpoint"].clone();
-    let generation = capture["generation"].clone();
-
-    send(
-        &mut helper,
-        &json!({"t":"Capture","source":"safari","generation":"swift","checkpoint":"swift-cp","observations":[]}),
-    )?;
-    let (_, committed) = receive(&mut helper)?;
-    assert_eq!(committed["t"], "Committed");
-    assert_eq!(committed["source"], "safari");
-    assert_eq!(committed["checkpoint"], "swift-cp");
-
-    send(
-        &mut helper,
-        &json!({"t":"Capture","source":"mail","generation":"swift","checkpoint":"mail-cp","observations":[]}),
-    )?;
-    let (mail_size, forwarded) = receive(&mut gateway)?;
-    assert_eq!(forwarded["checkpoint"], "mail-cp");
-    send(
-        &mut gateway,
-        &json!({"t":"Committed","source":"mail","checkpoint":"mail-cp","credit":mail_size}),
-    )?;
-    let (_, committed) = receive(&mut helper)?;
-    assert_eq!(committed["source"], "mail");
-
-    send(
-        &mut gateway,
-        &json!({"t":"Committed","source":"safari","checkpoint":checkpoint,"credit":size}),
-    )?;
-    expect_silence(&mut helper)?;
-    expect_silence(&mut gateway)?;
-
-    history(&directory, 3)?;
-    let (size, second) = receive(&mut gateway)?;
-    assert_eq!(second["predecessor"], checkpoint);
-    assert_eq!(second["generation"], generation);
-    assert_ne!(second["checkpoint"], checkpoint);
-    assert_eq!(second["live"], true);
-    send(
-        &mut gateway,
-        &json!({"t":"Committed","source":"safari","checkpoint":second["checkpoint"],"credit":size}),
-    )?;
-    expect_silence(&mut gateway)?;
-
-    drop(gateway);
-    drop(helper);
-    let _ = worker.join();
-    std::fs::remove_dir_all(directory)?;
-    Ok(())
-}
-
 fn media_fixture(source: &str, directory: &Path, duration: Option<u32>) -> Fallible<()> {
     let (file, schema, insert) = match source {
         "phone" => (
@@ -204,26 +110,16 @@ fn media_source_is_routed(source: &str) -> Fallible<()> {
     let staging = temporary(&format!("{source}-staging"))?;
     let sources =
         readers::from_config(&json!({source:{"root":directory,"staging":staging}}).to_string())?;
-    let (mut gateway, session_gateway) = UnixStream::pair()?;
-    let (mut helper, session_helper) = UnixStream::pair()?;
-    for socket in [&gateway, &helper] {
-        socket.set_read_timeout(Some(Duration::from_secs(10)))?;
-    }
-    let worker = std::thread::spawn(move || {
-        routed::relay(
-            session_gateway,
-            session_helper,
-            sources,
-            Duration::from_millis(20),
-        )
-    });
-    send(
-        &mut gateway,
-        &json!({"t":"Open","protocol":"ipc/1","owner_fence":1,"byte_credit":4_194_304,"checkpoints":{}}),
-    )?;
-    assert_eq!(receive(&mut helper)?.1["t"], "Open");
-    send(&mut helper, &json!({"t":"Ready","protocol":"ipc/1"}))?;
-    assert_eq!(receive(&mut gateway)?.1["t"], "Ready");
+    let options = Options {
+        poll: Duration::from_millis(20),
+        ..Options::default()
+    };
+    let support::Wire {
+        mut gateway,
+        link: mut helper,
+        worker,
+        home: _,
+    } = support::wire(sources, options, json!({}))?;
     expect_silence(&mut gateway)?;
 
     media_fixture(source, &directory, Some(101))?;
@@ -279,21 +175,6 @@ fn rust_calls_voicemail_and_voice_memos_are_routed() -> Fallible<()> {
     Ok(())
 }
 
-fn full_safari(directory: &Path) -> Fallible<()> {
-    let connection = rusqlite::Connection::open(directory.join("CloudTabs.db"))?;
-    connection.execute_batch(
-        "CREATE TABLE cloud_tab_devices(device_uuid TEXT,device_name TEXT);
-         CREATE TABLE cloud_tabs(tab_uuid TEXT,device_uuid TEXT,title TEXT,url TEXT);
-         INSERT INTO cloud_tab_devices VALUES('d','Synthetic');
-         INSERT INTO cloud_tabs VALUES('t','d','Synthetic','https://example.com/');",
-    )?;
-    std::fs::write(
-        directory.join("Bookmarks.plist"),
-        "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\"><plist version=\"1.0\"><dict><key>Children</key><array><dict><key>WebBookmarkType</key><string>WebBookmarkTypeList</string><key>Title</key><string>Favorites</string><key>Children</key><array><dict><key>WebBookmarkType</key><string>WebBookmarkTypeLeaf</string><key>WebBookmarkUUID</key><string>a</string><key>URLString</key><string>https://example.com/</string><key>URIDictionary</key><dict><key>title</key><string>Synthetic</string></dict></dict></array></dict></array></dict></plist>",
-    )?;
-    Ok(())
-}
-
 fn temporary(name: &str) -> Fallible<std::path::PathBuf> {
     let directory = std::env::temp_dir().join(format!(
         "ab-{name}-{}-{}",
@@ -304,38 +185,7 @@ fn temporary(name: &str) -> Fallible<std::path::PathBuf> {
     Ok(directory)
 }
 
-struct Wire {
-    gateway: UnixStream,
-    helper: UnixStream,
-    worker: std::thread::JoinHandle<Result<(), ab_session::Error>>,
-}
-
-fn wire(
-    sources: std::collections::BTreeMap<String, Box<dyn readers::CaptureReader>>,
-    options: routed::Options,
-    checkpoints: impl Into<Value>,
-) -> Fallible<Wire> {
-    let (mut gateway, session_gateway) = UnixStream::pair()?;
-    let (mut helper, session_helper) = UnixStream::pair()?;
-    for socket in [&gateway, &helper] {
-        socket.set_read_timeout(Some(Duration::from_secs(10)))?;
-    }
-    let worker = std::thread::spawn(move || {
-        routed::relay_layered(session_gateway, session_helper, sources, &options, None)
-    });
-    send(
-        &mut gateway,
-        &json!({"t":"Open","protocol":"ipc/1","owner_fence":1,"byte_credit":4_194_304,"checkpoints":checkpoints.into()}),
-    )?;
-    assert_eq!(receive(&mut helper)?.1["t"], "Open");
-    send(&mut helper, &json!({"t":"Ready","protocol":"ipc/1"}))?;
-    assert_eq!(receive(&mut gateway)?.1["t"], "Ready");
-    Ok(Wire {
-        gateway,
-        helper,
-        worker,
-    })
-}
+use support::{Wire, wire};
 
 fn commit(wire: &mut Wire, source: &str, capture: &Value, size: usize) -> Fallible<()> {
     send(
@@ -344,82 +194,7 @@ fn commit(wire: &mut Wire, source: &str, capture: &Value, size: usize) -> Fallib
     )
 }
 
-fn wait_for(path: &Path) -> Fallible<()> {
-    for _ in 0..200 {
-        if path.exists() {
-            return Ok(());
-        }
-        std::thread::sleep(Duration::from_millis(25));
-    }
-    Err("timed out waiting for file".into())
-}
-
-fn polling(state: Option<&Path>) -> routed::Options {
-    routed::Options {
-        poll: Duration::from_millis(20),
-        watch: false,
-        state: state.map(Path::to_path_buf),
-        queries: ab_session::queries::NativeQueries::default(),
-    }
-}
-
-#[test]
-fn rust_checkpoints_resume_after_restart_without_rescan() -> Fallible<()> {
-    let directory = temporary("resume")?;
-    let state = temporary("resume-state")?;
-    history(&directory, 2)?;
-    full_safari(&directory)?;
-    let config = json!({"safari":{"root":directory}}).to_string();
-
-    let mut first = wire(
-        readers::from_config(&config)?,
-        polling(Some(&state)),
-        json!({}),
-    )?;
-    let (size, capture) = receive(&mut first.gateway)?;
-    commit(&mut first, "safari", &capture, size)?;
-    let mut capture = capture;
-    for _ in 0..2 {
-        let (size, other) = receive(&mut first.gateway)?;
-        commit(&mut first, "safari", &other, size)?;
-        capture = other;
-    }
-    wait_for(&state.join("safari.json"))?;
-    let saved: Value = serde_json::from_slice(&std::fs::read(state.join("safari.json"))?)?;
-    assert_eq!(saved["checkpoint"], capture["checkpoint"]);
-    assert_eq!(saved["generation"], capture["generation"]);
-    drop(first.gateway);
-    drop(first.helper);
-    let _ = first.worker.join();
-
-    let mut second = wire(
-        readers::from_config(&config)?,
-        polling(Some(&state)),
-        json!({"safari":{"generation":capture["generation"],"checkpoint":capture["checkpoint"]}}),
-    )?;
-    expect_silence(&mut second.gateway)?;
-    history(&directory, 3)?;
-    let (_, changed) = receive(&mut second.gateway)?;
-    assert_eq!(changed["predecessor"], capture["checkpoint"]);
-    drop(second.gateway);
-    drop(second.helper);
-    let _ = second.worker.join();
-
-    let mut mismatch = wire(
-        readers::from_config(&config)?,
-        polling(Some(&state)),
-        json!({"safari":{"generation":capture["generation"],"checkpoint":"other-checkpoint"}}),
-    )?;
-    let (_, rescan) = receive(&mut mismatch.gateway)?;
-    assert_eq!(rescan["t"], "Capture");
-    assert_eq!(rescan["live"], false);
-    drop(mismatch.gateway);
-    drop(mismatch.helper);
-    let _ = mismatch.worker.join();
-    std::fs::remove_dir_all(directory)?;
-    std::fs::remove_dir_all(state)?;
-    Ok(())
-}
+use support::polling;
 
 fn voice_memo_fixture(directory: &Path, audio: &[u8]) -> Fallible<()> {
     let connection = rusqlite::Connection::open(directory.join("CloudRecordings.db"))?;
@@ -477,7 +252,7 @@ fn rust_voice_memos_serve_blob_reads_across_restart() -> Fallible<()> {
     )?;
     assert_eq!(receive(&mut first.gateway)?.1["t"], "BlobUnavailable");
     drop(first.gateway);
-    drop(first.helper);
+    drop(first.link);
     let _ = first.worker.join();
 
     let mut second = wire(
@@ -497,7 +272,7 @@ fn rust_voice_memos_serve_blob_reads_across_restart() -> Fallible<()> {
     };
     assert_eq!(again["digest"], digest);
     drop(second.gateway);
-    drop(second.helper);
+    drop(second.link);
     let _ = second.worker.join();
     std::fs::remove_dir_all(directory)?;
     Ok(())
@@ -527,7 +302,7 @@ fn watcher_wakes_the_producer_long_before_the_poll_interval() -> Fallible<()> {
     let config = json!({"safari":{"root":directory}}).to_string();
     let mut session = wire(
         readers::from_config(&config)?,
-        routed::Options {
+        Options {
             poll: Duration::from_secs(120),
             watch: true,
             state: None,
@@ -544,7 +319,7 @@ fn watcher_wakes_the_producer_long_before_the_poll_interval() -> Fallible<()> {
     assert_eq!(second["predecessor"], first["checkpoint"]);
     assert!(started.elapsed() < Duration::from_secs(3));
     drop(session.gateway);
-    drop(session.helper);
+    drop(session.link);
     let _ = session.worker.join();
     std::fs::remove_dir_all(directory)?;
     Ok(())
@@ -561,11 +336,13 @@ fn production_config_flips_a_source_to_rust_and_back() -> Fallible<()> {
         home.join(production::CONFIG_FILE),
         json!({"sources":{"safari":{"root":directory}},"watch":false,"poll_ms":20}).to_string(),
     )?;
-    let loaded = production::load(&home)?.ok_or("config")?;
-    assert_eq!(loaded.sources(), ["safari"]);
+    assert_eq!(
+        production::load(&home)?.ok_or("config")?.sources(),
+        ["safari"]
+    );
     std::fs::write(
         home.join(production::CONFIG_FILE),
-        json!({"sources":{"calendar":{"root":directory},"contacts":{"root":directory}}})
+        json!({"sources":{"calendar":{"root":directory,"facts":"native"},"contacts":{"root":directory,"facts":"native"}}})
             .to_string(),
     )?;
     assert_eq!(
@@ -578,43 +355,14 @@ fn production_config_flips_a_source_to_rust_and_back() -> Fallible<()> {
     )?;
     assert!(production::load(&home).is_err());
 
-    let (mut gateway, session_gateway) = UnixStream::pair()?;
-    let (mut helper, session_helper) = UnixStream::pair()?;
-    for socket in [&gateway, &helper] {
-        socket.set_read_timeout(Some(Duration::from_secs(10)))?;
-    }
-    let worker = std::thread::spawn(move || {
-        production::serve(session_gateway, session_helper, Some(&loaded), None)
-    });
-    send(
-        &mut gateway,
-        &json!({"t":"Open","protocol":"ipc/1","owner_fence":1,"byte_credit":4_194_304,"checkpoints":{}}),
+    std::fs::write(
+        home.join(production::CONFIG_FILE),
+        json!({"sources":{"safari":{"root":directory}},"watch":false,"poll_ms":20}).to_string(),
     )?;
-    assert_eq!(receive(&mut helper)?.1["t"], "Open");
-    send(&mut helper, &json!({"t":"Ready","protocol":"ipc/1"}))?;
-    assert_eq!(receive(&mut gateway)?.1["t"], "Ready");
-    assert_eq!(receive(&mut gateway)?.1["source"], "safari");
-    drop(gateway);
-    drop(helper);
-    let _ = worker.join();
-
-    let (mut gateway, session_gateway) = UnixStream::pair()?;
-    let (mut helper, session_helper) = UnixStream::pair()?;
-    for socket in [&gateway, &helper] {
-        socket.set_read_timeout(Some(Duration::from_secs(10)))?;
-    }
-    let worker =
-        std::thread::spawn(move || production::serve(session_gateway, session_helper, None, None));
-    send(
-        &mut helper,
-        &json!({"t":"Capture","source":"safari","generation":"swift","checkpoint":"swift-cp","observations":[]}),
-    )?;
-    let (_, forwarded) = receive(&mut gateway)?;
-    assert_eq!(forwarded["checkpoint"], "swift-cp");
-    expect_silence(&mut gateway)?;
-    drop(gateway);
-    drop(helper);
-    let _ = worker.join();
+    let attached = production::load(&home)?.ok_or("config")?.attached(None)?;
+    let mut world = wire(attached.readers, attached.options, json!({}))?;
+    assert_eq!(receive(&mut world.gateway)?.1["source"], "safari");
+    world.finish()?;
     std::fs::remove_dir_all(home)?;
     std::fs::remove_dir_all(directory)?;
     Ok(())
@@ -667,26 +415,16 @@ fn rust_mail_scans_fixture_and_never_invents_deletions() -> Fallible<()> {
     std::fs::create_dir_all(&directory)?;
     envelope(&directory, &[1, 2, 3])?;
     let sources = readers::from_config(&json!({"mail":{"root":directory}}).to_string())?;
-    let (mut gateway, session_gateway) = UnixStream::pair()?;
-    let (mut helper, session_helper) = UnixStream::pair()?;
-    for socket in [&gateway, &helper] {
-        socket.set_read_timeout(Some(Duration::from_secs(10)))?;
-    }
-    let worker = std::thread::spawn(move || {
-        routed::relay(
-            session_gateway,
-            session_helper,
-            sources,
-            Duration::from_millis(20),
-        )
-    });
-    send(
-        &mut gateway,
-        &json!({"t":"Open","protocol":"ipc/1","owner_fence":1,"byte_credit":4_194_304,"checkpoints":{}}),
-    )?;
-    assert_eq!(receive(&mut helper)?.1["t"], "Open");
-    send(&mut helper, &json!({"t":"Ready","protocol":"ipc/1"}))?;
-    assert_eq!(receive(&mut gateway)?.1["t"], "Ready");
+    let options = Options {
+        poll: Duration::from_millis(20),
+        ..Options::default()
+    };
+    let support::Wire {
+        mut gateway,
+        link: helper,
+        worker,
+        home: _,
+    } = support::wire(sources, options, json!({}))?;
 
     let (size, first) = receive(&mut gateway)?;
     assert_eq!(first["source"], "mail");
@@ -733,26 +471,16 @@ fn rust_mail_splits_large_scan_into_committed_chunks() -> Fallible<()> {
     let rows: Vec<u32> = (1..=1000).collect();
     envelope(&directory, &rows)?;
     let sources = readers::from_config(&json!({"mail":{"root":directory}}).to_string())?;
-    let (mut gateway, session_gateway) = UnixStream::pair()?;
-    let (mut helper, session_helper) = UnixStream::pair()?;
-    for socket in [&gateway, &helper] {
-        socket.set_read_timeout(Some(Duration::from_secs(10)))?;
-    }
-    let worker = std::thread::spawn(move || {
-        routed::relay(
-            session_gateway,
-            session_helper,
-            sources,
-            Duration::from_millis(20),
-        )
-    });
-    send(
-        &mut gateway,
-        &json!({"t":"Open","protocol":"ipc/1","owner_fence":1,"byte_credit":4_194_304,"checkpoints":{}}),
-    )?;
-    assert_eq!(receive(&mut helper)?.1["t"], "Open");
-    send(&mut helper, &json!({"t":"Ready","protocol":"ipc/1"}))?;
-    assert_eq!(receive(&mut gateway)?.1["t"], "Ready");
+    let options = Options {
+        poll: Duration::from_millis(20),
+        ..Options::default()
+    };
+    let support::Wire {
+        mut gateway,
+        link: helper,
+        worker,
+        home: _,
+    } = support::wire(sources, options, json!({}))?;
 
     let mut keys = Vec::new();
     let mut checkpoints = Vec::new();
@@ -795,219 +523,6 @@ fn rust_mail_splits_large_scan_into_committed_chunks() -> Fallible<()> {
     drop(helper);
     let _ = worker.join();
     std::fs::remove_dir_all(directory)?;
-    Ok(())
-}
-
-fn event(key: &str, title: &str) -> Value {
-    json!({"kind":"upsert","collection":"calendar.event","native_key":key,"scoped_alias":format!("cal/{key}"),"data":{"title":title},"observed_at":"2026-11-03T00:00:00Z"})
-}
-
-fn names(capture: &Value, kind: &str) -> Vec<String> {
-    capture["observations"]
-        .as_array()
-        .into_iter()
-        .flatten()
-        .filter(|o| o["kind"] == kind)
-        .filter_map(|o| o["native_key"].as_str().map(str::to_owned))
-        .collect()
-}
-
-#[test]
-fn rust_calendar_diffs_helper_facts_without_false_deletion() -> Fallible<()> {
-    let sources = readers::from_config(&json!({"calendar":{"root":"/nonexistent"}}).to_string())?;
-    let (mut gateway, session_gateway) = UnixStream::pair()?;
-    let (mut helper, session_helper) = UnixStream::pair()?;
-    for socket in [&gateway, &helper] {
-        socket.set_read_timeout(Some(Duration::from_secs(10)))?;
-    }
-    let worker = std::thread::spawn(move || {
-        routed::relay(
-            session_gateway,
-            session_helper,
-            sources,
-            Duration::from_millis(20),
-        )
-    });
-    send(
-        &mut gateway,
-        &json!({"t":"Open","protocol":"ipc/1","owner_fence":1,"byte_credit":4_194_304,"checkpoints":{}}),
-    )?;
-    assert_eq!(receive(&mut helper)?.1["t"], "Open");
-    send(&mut helper, &json!({"t":"Ready","protocol":"ipc/1"}))?;
-    assert_eq!(receive(&mut gateway)?.1["t"], "Ready");
-
-    send(
-        &mut helper,
-        &json!({"t":"Capture","source":"calendar","generation":"swift-g","checkpoint":"h1","observations":[event("a","A"),event("b","B")]}),
-    )?;
-    expect_silence(&mut helper)?;
-    let (size, first) = receive(&mut gateway)?;
-    assert_eq!(first["source"], "calendar");
-    assert_eq!(first["predecessor"], "");
-    assert_eq!(first["generation"], "swift-g");
-    assert_eq!(names(&first, "upsert"), ["a", "b"]);
-    send(
-        &mut gateway,
-        &json!({"t":"Committed","source":"calendar","checkpoint":first["checkpoint"],"credit":size}),
-    )?;
-    let (_, committed) = receive(&mut helper)?;
-    assert_eq!(committed["checkpoint"], "h1");
-    expect_silence(&mut gateway)?;
-
-    send(
-        &mut helper,
-        &json!({"t":"Capture","source":"calendar","generation":"swift-g","checkpoint":"h2","observations":[event("a","A2")]}),
-    )?;
-    let (size, second) = receive(&mut gateway)?;
-    assert_eq!(second["predecessor"], first["checkpoint"]);
-    assert_eq!(names(&second, "upsert"), ["a"]);
-    assert_eq!(names(&second, "absent"), Vec::<String>::new());
-    assert_eq!(names(&second, "evict"), Vec::<String>::new());
-    send(
-        &mut gateway,
-        &json!({"t":"Committed","source":"calendar","checkpoint":second["checkpoint"],"credit":size}),
-    )?;
-    assert_eq!(receive(&mut helper)?.1["checkpoint"], "h2");
-
-    let mut gone = event("b", "B");
-    gone["kind"] = json!("evict");
-    send(
-        &mut helper,
-        &json!({"t":"Capture","source":"calendar","generation":"swift-g","checkpoint":"h3","observations":[event("a","A2"),gone]}),
-    )?;
-    let (size, third) = receive(&mut gateway)?;
-    assert_eq!(names(&third, "upsert"), Vec::<String>::new());
-    assert_eq!(names(&third, "evict"), ["b"]);
-    send(
-        &mut gateway,
-        &json!({"t":"Committed","source":"calendar","checkpoint":third["checkpoint"],"credit":size}),
-    )?;
-    assert_eq!(receive(&mut helper)?.1["checkpoint"], "h3");
-
-    send(
-        &mut helper,
-        &json!({"t":"Capture","source":"calendar","generation":"swift-g","checkpoint":"h4","observations":[]}),
-    )?;
-    assert_eq!(receive(&mut helper)?.1["checkpoint"], "h4");
-    expect_silence(&mut gateway)?;
-
-    drop(gateway);
-    drop(helper);
-    let _ = worker.join();
-    Ok(())
-}
-
-#[test]
-fn outcome_waits_for_rust_capture_of_its_key_and_rebinds_checkpoint() -> Fallible<()> {
-    let directory = std::env::temp_dir().join(format!(
-        "ab-capture-outcome-{}-{}",
-        std::process::id(),
-        SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos()
-    ));
-    std::fs::create_dir_all(&directory)?;
-    history(&directory, 2)?;
-    let sources = readers::from_config(&json!({"safari":{"root":directory}}).to_string())?;
-    let (mut gateway, session_gateway) = UnixStream::pair()?;
-    let (mut helper, session_helper) = UnixStream::pair()?;
-    for socket in [&gateway, &helper] {
-        socket.set_read_timeout(Some(Duration::from_secs(10)))?;
-    }
-    let worker = std::thread::spawn(move || {
-        routed::relay(
-            session_gateway,
-            session_helper,
-            sources,
-            Duration::from_millis(20),
-        )
-    });
-    send(
-        &mut gateway,
-        &json!({"t":"Open","protocol":"ipc/1","owner_fence":1,"byte_credit":4_194_304,"checkpoints":{}}),
-    )?;
-    assert_eq!(receive(&mut helper)?.1["t"], "Open");
-    send(&mut helper, &json!({"t":"Ready","protocol":"ipc/1"}))?;
-    assert_eq!(receive(&mut gateway)?.1["t"], "Ready");
-    let (size, capture) = receive(&mut gateway)?;
-    let key = capture["observations"][0]["native_key"].clone();
-    let checkpoint = capture["checkpoint"].clone();
-
-    send(
-        &mut gateway,
-        &json!({"t":"Dispatch","command_id":"c1","ticket":"t1"}),
-    )?;
-    assert_eq!(receive(&mut helper)?.1["t"], "Dispatch");
-    send(
-        &mut helper,
-        &json!({"t":"Outcome","command_id":"c1","disposition":"locally_observed","evidence":{"native_key":key,"observed":true,"capture_checkpoint":"stale"}}),
-    )?;
-    expect_silence(&mut gateway)?;
-    send(
-        &mut gateway,
-        &json!({"t":"Committed","source":"safari","checkpoint":checkpoint,"credit":size}),
-    )?;
-    let outcome = receive(&mut gateway)?.1;
-    assert_eq!(outcome["t"], "Outcome");
-    assert_eq!(outcome["evidence"]["capture_checkpoint"], checkpoint);
-    drop((gateway, helper));
-    let _ = worker.join();
-    Ok(())
-}
-
-#[test]
-fn calendar_parts_merge_and_command_evidence_rebinds_to_the_rust_checkpoint() -> Fallible<()> {
-    let sources = readers::from_config(&json!({"calendar":{"root":"/nonexistent"}}).to_string())?;
-    let mut wire = wire(sources, polling(None), json!({}))?;
-
-    send(
-        &mut wire.helper,
-        &json!({"t":"Capture","source":"calendar","generation":"swift-g","checkpoint":"h1","scan_id":"s1","observations":[event("a","A")]}),
-    )?;
-    assert_eq!(receive(&mut wire.helper)?.1["checkpoint"], "h1");
-    expect_silence(&mut wire.gateway)?;
-    send(
-        &mut wire.helper,
-        &json!({"t":"Capture","source":"calendar","generation":"swift-g","checkpoint":"h2","scan_id":"s1","completion_evidence":"complete","observations":[event("b","B")]}),
-    )?;
-    expect_silence(&mut wire.helper)?;
-    let (size, first) = receive(&mut wire.gateway)?;
-    assert_eq!(names(&first, "upsert"), ["a", "b"]);
-    commit(&mut wire, "calendar", &first, size)?;
-    assert_eq!(receive(&mut wire.helper)?.1["checkpoint"], "h2");
-
-    send(
-        &mut wire.gateway,
-        &json!({"t":"Dispatch","command_id":"c1","ticket":"t1"}),
-    )?;
-    assert_eq!(receive(&mut wire.helper)?.1["t"], "Dispatch");
-    send(
-        &mut wire.helper,
-        &json!({"t":"Capture","source":"calendar","generation":"swift-g","checkpoint":"h3","scan_id":"s2","completion_evidence":"complete","observations":[event("a","A")]}),
-    )?;
-    assert_eq!(receive(&mut wire.helper)?.1["checkpoint"], "h3");
-    expect_silence(&mut wire.gateway)?;
-    send(
-        &mut wire.helper,
-        &json!({"t":"Outcome","command_id":"c1","disposition":"locally_observed","evidence":{"native_key":"a","observed":true,"capture_checkpoint":"h3"}}),
-    )?;
-    let outcome = receive(&mut wire.gateway)?.1;
-    assert_eq!(
-        outcome["evidence"]["capture_checkpoint"],
-        first["checkpoint"]
-    );
-
-    send(
-        &mut wire.helper,
-        &json!({"t":"Rejected","command_id":"c2","disposition":"rejected_before_dispatch","evidence":{"native_key":"b","capture_checkpoint":"h3"}}),
-    )?;
-    let rejected = receive(&mut wire.gateway)?.1;
-    assert_eq!(rejected["t"], "Rejected");
-    assert_eq!(
-        rejected["evidence"]["capture_checkpoint"],
-        first["checkpoint"]
-    );
-
-    drop((wire.gateway, wire.helper));
-    let _ = wire.worker.join();
     Ok(())
 }
 
@@ -1054,7 +569,7 @@ fn tab_frame(checkpoint: &str, tabs: &[(i64, i64, &str)], partial: bool) -> Valu
                    "data":{"window":window,"index":index,"title":title,"url":"https://example.com/","active":*index == 1}})
         })
         .collect();
-    json!({"t":"Capture","source":"safari","generation":"swift-tabs","checkpoint":checkpoint,"scan_id":checkpoint,
+    json!({"t":"Scan","id":checkpoint,"source":"safari","generation":"swift-tabs","scan_id":checkpoint,
            "scope":["safari.tab"],"completion_evidence":if partial {"partial"} else {"complete"},"observations":rows,"live":true})
 }
 
@@ -1069,12 +584,12 @@ fn safari_live_tabs_arrive_as_helper_facts_and_leave_as_rust_captures() -> Falli
     expect_silence(&mut session.gateway)?;
 
     send(
-        &mut session.helper,
+        &mut session.link,
         &tab_frame("t1", &[(7, 1, "One"), (7, 2, "Two")], false),
     )?;
-    let (_, committed) = receive(&mut session.helper)?;
-    assert_eq!(committed["t"], "Committed");
-    assert_eq!(committed["checkpoint"], "t1");
+    let (_, committed) = receive(&mut session.link)?;
+    assert_eq!(committed["t"], "ScanCommitted");
+    assert_eq!(committed["id"], "t1");
     let (size, first) = receive(&mut session.gateway)?;
     assert_eq!(first["source"], "safari");
     assert_eq!(first["scope"], json!(["safari.tab"]));
@@ -1092,10 +607,10 @@ fn safari_live_tabs_arrive_as_helper_facts_and_leave_as_rust_captures() -> Falli
     commit(&mut session, "safari", &first, size)?;
 
     send(
-        &mut session.helper,
+        &mut session.link,
         &tab_frame("t2", &[(7, 1, "One renamed")], false),
     )?;
-    assert_eq!(receive(&mut session.helper)?.1["t"], "Committed");
+    assert_eq!(receive(&mut session.link)?.1["t"], "ScanCommitted");
     let (size, second) = receive(&mut session.gateway)?;
     assert_eq!(second["live"], true);
     assert_eq!(second["predecessor"], first["checkpoint"]);
@@ -1115,28 +630,28 @@ fn safari_live_tabs_arrive_as_helper_facts_and_leave_as_rust_captures() -> Falli
     commit(&mut session, "safari", &second, size)?;
 
     send(
-        &mut session.helper,
+        &mut session.link,
         &tab_frame("t3", &[(7, 1, "One renamed")], false),
     )?;
-    assert_eq!(receive(&mut session.helper)?.1["t"], "Committed");
+    assert_eq!(receive(&mut session.link)?.1["t"], "ScanCommitted");
     expect_silence(&mut session.gateway)?;
 
-    send(&mut session.helper, &tab_frame("t4", &[], true))?;
-    assert_eq!(receive(&mut session.helper)?.1["t"], "Committed");
+    send(&mut session.link, &tab_frame("t4", &[], true))?;
+    assert_eq!(receive(&mut session.link)?.1["t"], "ScanCommitted");
     let mut other = tab_frame("t5", &[], false);
     other["scope"] = json!(["safari.history"]);
-    send(&mut session.helper, &other)?;
-    assert_eq!(receive(&mut session.helper)?.1["t"], "Committed");
+    send(&mut session.link, &other)?;
+    assert_eq!(receive(&mut session.link)?.1["t"], "ScanCommitted");
     expect_silence(&mut session.gateway)?;
 
-    send(&mut session.helper, &tab_frame("t6", &[], false))?;
-    assert_eq!(receive(&mut session.helper)?.1["t"], "Committed");
+    send(&mut session.link, &tab_frame("t6", &[], false))?;
+    assert_eq!(receive(&mut session.link)?.1["t"], "ScanCommitted");
     let (_, closed) = receive(&mut session.gateway)?;
     assert_eq!(closed["observations"][0]["kind"], "absent");
     assert_eq!(closed["observations"][0]["native_key"], "7:1");
 
     drop(session.gateway);
-    drop(session.helper);
+    drop(session.link);
     let _ = session.worker.join();
     std::fs::remove_dir_all(directory)?;
     Ok(())
@@ -1300,17 +815,17 @@ fn messages_reader_streams_history_then_live_rows_and_serves_attachment_bytes() 
 
     expect_silence(&mut session.gateway)?;
     send(
-        &mut session.helper,
-        &json!({"t":"Capture","source":"messages","generation":"swift","checkpoint":"swift-cp","scope":["messages.message"],
+        &mut session.link,
+        &json!({"t":"Scan","id":"swift-cp","source":"messages","generation":"swift","scope":["messages.message"],
                 "completion_evidence":"","live":true,"observations":[{"kind":"upsert","collection":"messages.message","native_key":"msg-1","data":{}}]}),
     )?;
     let committed = loop {
-        let frame = receive(&mut session.helper)?.1;
-        if frame["t"] == "Committed" {
+        let frame = receive(&mut session.link)?.1;
+        if frame["t"] == "ScanCommitted" {
             break frame;
         }
     };
-    assert_eq!(committed["checkpoint"], "swift-cp");
+    assert_eq!(committed["id"], "swift-cp");
     let (size, again) = receive(&mut session.gateway)?;
     let again_keys: Vec<&str> = again["observations"]
         .as_array()
@@ -1324,7 +839,7 @@ fn messages_reader_streams_history_then_live_rows_and_serves_attachment_bytes() 
     commit(&mut session, "messages", &again, size)?;
 
     drop(session.gateway);
-    drop(session.helper);
+    drop(session.link);
     let _ = session.worker.join();
     drop(database);
     std::fs::remove_dir_all(home)?;
@@ -1413,7 +928,7 @@ fn messages_history_commits_in_single_frame_pages_and_resumes_after_a_reset() ->
     let cursor = progress["cursor"].as_i64().ok_or("cursor")?;
     assert!(cursor >= 128, "cursor {cursor}");
     drop(first.gateway);
-    drop(first.helper);
+    drop(first.link);
     let _ = first.worker.join();
 
     let mut second = wire(
@@ -1449,7 +964,7 @@ fn messages_history_commits_in_single_frame_pages_and_resumes_after_a_reset() ->
     }
     expect_silence(&mut second.gateway)?;
     drop(second.gateway);
-    drop(second.helper);
+    drop(second.link);
     let _ = second.worker.join();
     drop(database);
     std::fs::remove_dir_all(home)?;
@@ -1505,7 +1020,7 @@ fn a_busy_reader_never_delays_blob_reads_for_other_sources() -> Fallible<()> {
         &mut session.gateway,
         &json!({"t":"BlobRead","handle":"swift-notes-handle","offset":0,"length":10}),
     )?;
-    let (_, forwarded) = receive(&mut session.helper)?;
+    let (_, forwarded) = receive(&mut session.link)?;
     assert_eq!(forwarded["t"], "BlobRead");
     assert!(
         started.elapsed() < Duration::from_millis(1500),
@@ -1513,7 +1028,7 @@ fn a_busy_reader_never_delays_blob_reads_for_other_sources() -> Fallible<()> {
         started.elapsed()
     );
     drop(session.gateway);
-    drop(session.helper);
+    drop(session.link);
     let _ = session.worker.join();
     Ok(())
 }

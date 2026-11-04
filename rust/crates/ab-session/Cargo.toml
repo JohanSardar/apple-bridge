@@ -10,8 +10,6 @@ workspace = true
 [features]
 default = []
 lab = ["ab-wire/lab"]
-rust-effects = ["rust-capture"]
-rust-capture = []
 
 [dependencies]
 ab-native = { path = "../ab-native" }

@@ -119,7 +119,6 @@ fn run() -> Result<bool, Box<dyn std::error::Error>> {
     fs::create_dir_all(&output)?;
     require_lab_gateway(&gateway, &output, real)?;
     lab_adapters::replicas::configure(&gateway);
-    lab_adapters::session_proxy::configure(&simapple);
     let registry = lab_adapters::registry();
     let mut passed = !paths.is_empty();
     for (index, path) in paths.iter().enumerate() {

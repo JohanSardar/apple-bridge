@@ -1,4 +1,3 @@
-#![cfg(feature = "rust-effects")]
 use ab_session::{
     Error,
     guard::{DispatchGuard, PreparedEffect},

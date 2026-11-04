@@ -1,4 +1,7 @@
-use ab_session::{readers, routed};
+#[path = "../../ab-session/tests/support/mod.rs"]
+mod support;
+
+use ab_session::{production::Options, readers};
 use ab_state::{Gateway, State};
 use ab_wire::messages::Capture;
 use serde_json::{Value, json};
@@ -56,26 +59,17 @@ fn calls(directory: &Path, rows: &[(u32, f64)], uuid: &str) -> Fallible<()> {
 
 fn rust_scan(directory: &Path, checkpoints: &Value, state: Option<&Path>) -> Fallible<Value> {
     let sources = readers::from_config(&json!({"phone":{"root":directory}}).to_string())?;
-    let (mut gateway, session_gateway) = UnixStream::pair()?;
-    let (mut helper, session_helper) = UnixStream::pair()?;
-    for socket in [&gateway, &helper] {
-        socket.set_read_timeout(Some(Duration::from_secs(20)))?;
-    }
-    let options = routed::Options {
+    let options = Options {
         poll: Duration::from_millis(20),
         state: state.map(Path::to_path_buf),
-        ..routed::Options::default()
+        ..Options::default()
     };
-    let worker = std::thread::spawn(move || {
-        routed::relay_layered(session_gateway, session_helper, sources, &options, None)
-    });
-    send(
-        &mut gateway,
-        &json!({"t":"Open","protocol":"ipc/1","owner_fence":1,"byte_credit":4_194_304,"checkpoints":checkpoints}),
-    )?;
-    assert_eq!(receive(&mut helper)?["t"], "Open");
-    send(&mut helper, &json!({"t":"Ready","protocol":"ipc/1"}))?;
-    assert_eq!(receive(&mut gateway)?["t"], "Ready");
+    let support::Wire {
+        mut gateway,
+        link: helper,
+        worker,
+        home: _,
+    } = support::wire(sources, options, checkpoints.clone())?;
     let capture = receive(&mut gateway)?;
     assert_eq!(capture["t"], "Capture");
     if let Some(state) = state {

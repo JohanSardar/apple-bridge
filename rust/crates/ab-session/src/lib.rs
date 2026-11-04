@@ -1,7 +1,5 @@
 #![forbid(unsafe_code)]
 
-#[cfg(feature = "rust-effects")]
-pub mod effects;
 pub mod flight;
 mod frame;
 pub mod guard;
@@ -9,12 +7,9 @@ pub mod media_facts;
 pub mod messages_media;
 pub mod messages_policy;
 pub mod native_facts;
-pub mod ownership;
 pub mod production;
-pub mod proxy;
 pub mod queries;
 pub mod readers;
-pub mod routed;
 pub mod session;
 pub mod store;
 

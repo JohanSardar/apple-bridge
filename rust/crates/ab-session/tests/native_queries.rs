@@ -1,8 +1,8 @@
-#![cfg(feature = "rust-capture")]
+mod support;
 
 use ab_session::{
+    production::Options,
     queries::{MailBodies, NativeQueries},
-    routed,
 };
 use base64::{Engine, engine::general_purpose::STANDARD};
 use serde_json::{Value, json};
@@ -14,7 +14,6 @@ use std::{
     os::unix::net::UnixStream,
     path::{Path, PathBuf},
     sync::Arc,
-    time::Duration,
 };
 
 type Fallible<T> = Result<T, Box<dyn std::error::Error>>;
@@ -59,27 +58,20 @@ fn session(bodies: bool, shortcuts: bool) -> Fallible<Session> {
             .as_nanos()
     ));
     std::fs::create_dir_all(&root)?;
-    let (gateway, session_gateway) = UnixStream::pair()?;
-    let (helper, session_helper) = UnixStream::pair()?;
-    for socket in [&gateway, &helper] {
-        socket.set_read_timeout(Some(Duration::from_secs(10)))?;
-    }
-    let options = routed::Options {
+    let sources = BTreeMap::new();
+    let options = Options {
         queries: NativeQueries {
             mail_bodies: bodies.then(|| Arc::new(MailBodies::new(root.clone()))),
             shortcut_roots: shortcuts.then(|| vec![root.clone()]),
         },
-        ..routed::Options::default()
+        ..Options::default()
     };
-    std::thread::spawn(move || {
-        routed::relay_layered(
-            session_gateway,
-            session_helper,
-            BTreeMap::new(),
-            &options,
-            None,
-        )
-    });
+    let support::Wire {
+        gateway,
+        link: helper,
+        worker: _,
+        home: _,
+    } = support::wire(sources, options, json!({}))?;
     Ok(Session {
         gateway,
         helper,
