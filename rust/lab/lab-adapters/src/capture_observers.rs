@@ -1,5 +1,5 @@
 use crate::{
-    assertions::{Observed, await_until, replica_integrity},
+    assertions::{await_until, read_all, record_multiset},
     capture_staging::sql,
     http::{Client, random_id},
     labcore, replicas,
@@ -85,50 +85,16 @@ fn pending_state(replica: &Client, command: &str) -> (Option<bool>, String) {
     )
 }
 
-fn difference(gateway: &Client, replica: &Client) -> String {
+fn settled(gateway: &Client, replica: &Client) -> bool {
     let (Ok(left), Ok(right)) = (
-        crate::assertions::read_all(gateway, true, false),
-        crate::assertions::read_all(replica, true, false),
+        read_all(gateway, true, false),
+        read_all(replica, true, false),
     ) else {
-        return "unreadable".into();
+        return false;
     };
-    let keys = |read: &crate::assertions::Read| -> std::collections::BTreeMap<String, String> {
-        read.records
-            .iter()
-            .map(|r| (crate::watch::record_key(r), r["version"].to_string()))
-            .collect()
-    };
-    let (a, b) = (keys(&left), keys(&right));
-    let full = |read: &crate::assertions::Read| -> std::collections::BTreeMap<String, Value> {
-        read.records
-            .iter()
-            .map(|r| (crate::watch::record_key(r), r.clone()))
-            .collect()
-    };
-    let (fa, fb) = (full(&left), full(&right));
-    let changed: Vec<String> = fa
-        .iter()
-        .filter(|(k, v)| fb.get(*k).is_some_and(|other| other != *v))
-        .take(1)
-        .map(|(k, v)| format!("DIFF {k} gw={v} rep={}", fb[k]))
-        .collect();
-    let only: Vec<String> = a
-        .iter()
-        .filter(|(k, v)| b.get(*k) != Some(*v))
-        .map(|(k, v)| format!("gw {k}@{v} rep {:?}", b.get(k)))
-        .chain(b.keys().filter(|k| !a.contains_key(*k)).map(|k| format!("rep-only {k}")))
-        .collect();
-    let visible: Vec<Value> = left.records.clone();
-    let same = crate::assertions::record_multiset(&right.records, true)
-        == crate::assertions::record_multiset(&visible, true);
-    format!(
-        "multiset_same={same} epoch={} seq={}/{} {} {}",
-        left.cursor.epoch == right.cursor.epoch,
-        left.cursor.sequence,
-        right.cursor.sequence,
-        only.join("; "),
-        changed.join("")
-    )
+    left.cursor.epoch == right.cursor.epoch
+        && left.cursor.sequence == right.cursor.sequence
+        && record_multiset(&left.records, true) == record_multiset(&right.records, true)
 }
 
 fn approvals_page(owner: &Owner) -> Option<String> {
@@ -147,7 +113,6 @@ fn approval_observer(world: &World, gateway: &Client, owner: &Owner, evidence: &
         evidence.check("approval_authority", false, "no replica");
         return;
     };
-    let observed = Observed::new(gateway.clone(), SCOPE);
     if world.gateway_cli(&["agent", "list"]).is_err() {
         evidence.check("approval_authority", false, "agent list");
         return;
@@ -183,12 +148,8 @@ fn approval_observer(world: &World, gateway: &Client, owner: &Owner, evidence: &
     if first.is_none() {
         return;
     }
-    let settled = await_until(10, || replica_integrity(&observed));
-    evidence.check(
-        "approval_pending_replicated_after_capture",
-        settled,
-        &difference(gateway, &replica),
-    );
+    let arrived = await_until(10, || settled(gateway, &replica));
+    evidence.check("approval_pending_replicated_after_capture", arrived, "");
     let (state, detail) = pending_state(&replica, &id);
     evidence.check(
         "replica_pending_approval_survives_capture",
@@ -218,8 +179,8 @@ fn approval_observer(world: &World, gateway: &Client, owner: &Owner, evidence: &
         second.is_some(),
         "",
     );
-    let settled = await_until(10, || replica_integrity(&observed));
-    evidence.check("resolved_approval_capture_replicated", settled, "");
+    let arrived = await_until(10, || settled(gateway, &replica));
+    evidence.check("resolved_approval_capture_replicated", arrived, "");
     let (state, detail) = pending_state(&replica, &id);
     evidence.check(
         "replica_resolved_approval_survives_capture",
@@ -284,7 +245,6 @@ fn title_of(record: &Value) -> &str {
 
 #[allow(clippy::too_many_lines)]
 fn observers(world: &World, gateway: &Client, evidence: &mut Evidence) {
-    let observed = Observed::new(gateway.clone(), SCOPE);
     let Some(endpoint) = replicas::endpoints().first().cloned() else {
         return;
     };
@@ -297,7 +257,7 @@ fn observers(world: &World, gateway: &Client, evidence: &mut Evidence) {
         )
         .is_ok()
         && world.control_for("/flush", &json!({}), 5).is_ok()
-        && await_until(10, || replica_integrity(&observed));
+        && await_until(10, || settled(gateway, &replica));
     evidence.check("observer_fixture_converges", fixture, "");
     if !fixture {
         return;
