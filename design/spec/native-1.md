@@ -272,8 +272,11 @@ invalidation of failed kinds, the cleanup state and the report) over these Swift
 run's ledger registration), `selftest_ledger` (merge into the ledger), `selftest_created` (record created message ids,
 including echoes and attachment rows), `selftest_fixture_chat`, `selftest_upload` and `selftest_upload_remove`,
 `selftest_cleanup` (the ledger-based `MessagesCleanup`), `selftest_restore` (baseline restore), `selftest_report`
-and `invalidate_proof`. The Helper's `selftest messages` command still runs the Swift `MessagesSelfTest`; nothing
-launches the Rust orchestrator yet.
+and `invalidate_proof`. The Helper's `selftest messages` command (and the self-test at Helper start) spawns
+`ab-session --selftest-messages 198 <request>` on a socketpair (`RustSelfTest.swift`); the child speaks the
+ordinary handshake (`Hello`, `Welcome`, `Session`) and sends only `Primitive` frames, Swift answers
+`PrimitiveResult`/`PrimitiveError` through `MessagesCommands.primitive` and writes nothing itself except what the
+primitives write (ledger, proofs, report). The run ends when the child closes the link.
 
 ## Ownership and migration
 

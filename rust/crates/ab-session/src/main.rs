@@ -282,6 +282,17 @@ fn lab_session(args: &[String]) -> Result<(), Error> {
     Ok(())
 }
 
+fn selftest_messages(args: &[String]) -> Result<(), Error> {
+    let [descriptor, request] = args else {
+        return Err(Error::Invalid);
+    };
+    let descriptor = descriptor.parse::<i32>().map_err(|_| Error::Invalid)?;
+    let request: serde_json::Value = serde_json::from_str(request)?;
+    exit_with_parent();
+    let link = ab_sys::inherited_unix_stream(descriptor)?;
+    ab_session::session::selftest_messages(link, &request)
+}
+
 fn serve_session(
     gateway: i32,
     helper: i32,
@@ -369,6 +380,9 @@ fn run() -> Result<(), Error> {
     #[cfg(feature = "lab")]
     if let Some(result) = lab_entry(&args) {
         return result;
+    }
+    if args.first().map(String::as_str) == Some("--selftest-messages") {
+        return selftest_messages(&args[1..]);
     }
     if args.len() < 4 || args[0] != "--gateway-fd" || args[2] != "--helper-fd" {
         return Err(Error::Invalid);

@@ -28,8 +28,12 @@ mod calendar;
 mod commands;
 mod contacts;
 mod messages;
-#[allow(dead_code)]
 mod messages_selftest;
+
+pub fn selftest_messages(link: UnixStream, request: &serde_json::Value) -> Result<(), Error> {
+    messages_selftest::serve(link, request)
+}
+
 mod notes;
 mod owned;
 mod reminders;

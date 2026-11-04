@@ -1,7 +1,90 @@
 use super::messages::DRIVER;
 use super::owned::{Probe, text};
-use serde_json::{Value, json};
-use std::time::Instant;
+use crate::Error;
+use ab_wire::native::{self, Frame, Primitive, Session as NativeSession};
+use serde_json::{Value, json, value::RawValue};
+use std::{
+    cell::{Cell, RefCell},
+    io::Write,
+    os::unix::net::UnixStream,
+    time::{Duration, Instant},
+};
+
+const CALL_WAIT: Duration = Duration::from_secs(120);
+const CLEANUP_WAIT: Duration = Duration::from_secs(600);
+const HANDSHAKE_WAIT: Duration = Duration::from_secs(15);
+
+struct LinkProbe {
+    stream: RefCell<UnixStream>,
+    next: Cell<u64>,
+}
+
+impl LinkProbe {
+    fn open(mut stream: UnixStream) -> Result<Self, Error> {
+        stream.set_read_timeout(Some(HANDSHAKE_WAIT))?;
+        stream.write_all(
+            &Frame::Hello { owner_fence: 1 }
+                .encode()
+                .map_err(|_| Error::Invalid)?,
+        )?;
+        if !matches!(native::read_frame(&mut stream), Ok(Frame::Welcome)) {
+            return Err(Error::Invalid);
+        }
+        stream.write_all(
+            &Frame::Session(NativeSession::default())
+                .encode()
+                .map_err(|_| Error::Invalid)?,
+        )?;
+        Ok(Self {
+            stream: RefCell::new(stream),
+            next: Cell::new(0),
+        })
+    }
+}
+
+impl Probe for LinkProbe {
+    fn call(&self, operation: &str, args: &Value) -> Result<Value, String> {
+        let unavailable = || "unavailable".to_owned();
+        let id = {
+            self.next.set(self.next.get() + 1);
+            format!("selftest-{}", self.next.get())
+        };
+        let frame = Frame::Primitive(Primitive {
+            id: id.clone(),
+            op: operation.into(),
+            args: Some(RawValue::from_string(args.to_string()).map_err(|_| unavailable())?),
+        });
+        let wait = if operation == "messages.selftest_cleanup" {
+            CLEANUP_WAIT
+        } else {
+            CALL_WAIT
+        };
+        let mut stream = self.stream.borrow_mut();
+        stream
+            .set_read_timeout(Some(wait))
+            .map_err(|_| unavailable())?;
+        stream
+            .write_all(&frame.encode().map_err(|_| unavailable())?)
+            .map_err(|_| unavailable())?;
+        loop {
+            match native::read_frame(&mut *stream).map_err(|_| unavailable())? {
+                Frame::PrimitiveResult(answer) if answer.id == id => {
+                    return serde_json::from_str(answer.result.get()).map_err(|_| unavailable());
+                }
+                Frame::PrimitiveError(failure) if failure.id == id => return Err(failure.code),
+                Frame::Close => return Err(unavailable()),
+                _ => {}
+            }
+        }
+    }
+}
+
+pub fn serve(link: UnixStream, request: &Value) -> Result<(), Error> {
+    let probe = LinkProbe::open(link)?;
+    run(&probe, &Driven(&probe), request)
+        .map(|_| ())
+        .map_err(|_| Error::Invalid)
+}
 
 const PENDING: [(&str, &str); 10] = [
     ("reply", "reply"),
@@ -822,5 +905,68 @@ mod tests {
                 .all(|keys| keys.as_array().is_some_and(|keys| keys.len() == 1))
         );
         assert!(keys.len() >= 10);
+    }
+
+    #[test]
+    fn the_link_entry_handshakes_asks_for_facts_and_writes_the_limited_report() {
+        use ab_wire::native::{Frame, PrimitiveResult};
+        use std::{io::Write, os::unix::net::UnixStream, thread};
+        let (ours, mut theirs) = UnixStream::pair().unwrap();
+        let swift = thread::spawn(move || {
+            assert!(matches!(
+                ab_wire::native::read_frame(&mut theirs),
+                Ok(Frame::Hello { owner_fence: 1 })
+            ));
+            theirs.write_all(&Frame::Welcome.encode().unwrap()).unwrap();
+            assert!(matches!(
+                ab_wire::native::read_frame(&mut theirs),
+                Ok(Frame::Session(_))
+            ));
+            let mut seen = Vec::new();
+            while let Ok(Frame::Primitive(call)) = ab_wire::native::read_frame(&mut theirs) {
+                let result = match call.op.as_str() {
+                    "messages.selftest_facts" => json!({"ui_allowed": false, "target": null}),
+                    _ => json!({}),
+                };
+                seen.push((call.op.clone(), call.args.map(|a| a.get().to_owned())));
+                let answer = Frame::PrimitiveResult(PrimitiveResult {
+                    id: call.id,
+                    result: serde_json::value::RawValue::from_string(result.to_string()).unwrap(),
+                });
+                theirs.write_all(&answer.encode().unwrap()).unwrap();
+            }
+            seen
+        });
+        super::serve(ours, &request()).unwrap();
+        let seen = swift.join().unwrap();
+        let names: Vec<&str> = seen.iter().map(|(name, _)| name.as_str()).collect();
+        assert_eq!(
+            names,
+            ["messages.selftest_facts", "messages.selftest_report"]
+        );
+        let report: Value = serde_json::from_str(seen[1].1.as_ref().unwrap()).unwrap();
+        assert_eq!(report["report"]["state"], "limited");
+        assert_eq!(report["report"]["writes_submitted"], 0);
+    }
+
+    #[test]
+    fn a_primitive_failure_from_the_peer_stops_the_run_with_its_code() {
+        use ab_wire::native::{Frame, PrimitiveError};
+        use std::{io::Write, os::unix::net::UnixStream, thread};
+        let (ours, mut theirs) = UnixStream::pair().unwrap();
+        let swift = thread::spawn(move || {
+            let _ = ab_wire::native::read_frame(&mut theirs);
+            theirs.write_all(&Frame::Welcome.encode().unwrap()).unwrap();
+            let _ = ab_wire::native::read_frame(&mut theirs);
+            if let Ok(Frame::Primitive(call)) = ab_wire::native::read_frame(&mut theirs) {
+                let answer = Frame::PrimitiveError(PrimitiveError {
+                    id: call.id,
+                    code: "permission_missing".into(),
+                });
+                theirs.write_all(&answer.encode().unwrap()).unwrap();
+            }
+        });
+        assert!(super::serve(ours, &request()).is_err());
+        swift.join().unwrap();
     }
 }
