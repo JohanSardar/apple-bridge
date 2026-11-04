@@ -35,6 +35,7 @@ pub struct NotesReader {
     facts: notes_reader::Facts,
     media: Option<MediaFacts>,
     failed_facts: BTreeMap<String, Instant>,
+    scanned_last: bool,
 }
 
 impl NotesReader {
@@ -55,6 +56,7 @@ impl NotesReader {
             },
             media: None,
             failed_facts: BTreeMap::new(),
+            scanned_last: false,
         })
     }
 
@@ -166,6 +168,18 @@ impl CaptureReader for NotesReader {
             return Err(Error::Conflict);
         }
         let mut notes = self.notes_context(context)?;
+        // A change outranks the body backlog, which takes minutes after a restart. Taking turns
+        // keeps a store that never goes quiet from holding the bodies back forever.
+        let current = signature(&self.root)?;
+        let changed = self.committed.as_ref() != Some(&current);
+        if changed && !self.scanned_last {
+            let scan = self.reader.reconcile(&notes).map_err(reader_error)?;
+            let value = capture_value(&scan.batch)?;
+            self.pending = Some((NotesPending::Scan(Box::new(scan)), Some(current)));
+            self.scanned_last = true;
+            return Ok(Some(value));
+        }
+        self.scanned_last = false;
         let mut budget = self.reader.queued();
         while !self.held() && self.reader.has_hydration() {
             match self.reader.hydrate_next(&notes) {
@@ -192,13 +206,13 @@ impl CaptureReader for NotesReader {
                 .finish_hydration(SystemTime::now())
                 .map_err(reader_error)?;
         }
-        let current = signature(&self.root)?;
-        if self.committed.as_ref() == Some(&current) {
+        if !changed {
             return Ok(None);
         }
         let scan = self.reader.reconcile(&notes).map_err(reader_error)?;
         let value = capture_value(&scan.batch)?;
         self.pending = Some((NotesPending::Scan(Box::new(scan)), Some(current)));
+        self.scanned_last = true;
         Ok(Some(value))
     }
 

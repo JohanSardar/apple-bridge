@@ -166,7 +166,7 @@ enum ExternalChange {
             let id = try NotesScript.run("set n to make new note at (first folder whose name is \(NotesScript.quote(folder))) with properties {body:\(NotesScript.quote(body))}\nreturn id of n")
             guard !id.isEmpty else { throw Failure(reason: "no_id") }
             return done(id)
-        case "update", "delete", "restore":
+        case "update", "delete", "restore", "trash":
             let key = try text(request, "key")
             let guardLine = "set n to note id \(NotesScript.quote(key))\nif (name of n) does not start with \(NotesScript.quote(tag)) then error \"untagged\" number 9001\n"
             switch action {
@@ -176,6 +176,9 @@ enum ExternalChange {
             case "restore":
                 let folder = try text(request, "container_title")
                 _ = try NotesScript.run(guardLine + "move n to (first folder whose name is \(NotesScript.quote(folder)))\nreturn \"ok\"")
+            case "trash":
+                // What the Notes window does. Scripted `delete` only reaches the store at Notes' next save.
+                _ = try NotesScript.run(guardLine + "move n to (first folder of (container of (container of n)) whose name is \"Recently Deleted\")\nreturn \"ok\"")
             default:
                 _ = try NotesScript.run(guardLine + "delete n\nreturn \"ok\"")
             }

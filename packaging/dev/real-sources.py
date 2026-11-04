@@ -64,7 +64,7 @@ APP = {"notes": "Notes", "safari": "Safari", "mail": "Mail"}
 
 def check(name, ok, detail=""):
     results.append((name, bool(ok)))
-    print(("PASS " if ok else "FAIL ") + name + ((" " + str(detail)) if detail and not ok else ""), flush=True)
+    print(time.strftime("%H:%M:%S ") + ("PASS " if ok else "FAIL ") + name + ((" " + str(detail)) if detail and not ok else ""), flush=True)
     return bool(ok)
 
 
@@ -294,8 +294,20 @@ def started_app(name):
         launched.append(name)
 
 
+def note_store_state(title):
+    """Notes' own store, read-only: the live folder, Recently Deleted, or not written yet."""
+    store = sqlite3.connect("file:%s/NoteStore.sqlite?mode=ro" % RUST_ROOTS["notes"].replace(" ", "%20"), uri=True)
+    try:
+        row = store.execute("SELECT f.ZFOLDERTYPE, o.ZMARKEDFORDELETION FROM ZICCLOUDSYNCINGOBJECT o LEFT JOIN ZICCLOUDSYNCINGOBJECT f ON f.Z_PK = o.ZFOLDER WHERE o.ZTITLE1 = ? ORDER BY o.Z_PK DESC LIMIT 1", (title,)).fetchone()
+    finally:
+        store.close()
+    if row is None:
+        return "absent"
+    return "trash" if row[0] == 1 or row[1] else "live"
+
+
 def run_notes_lifecycle(folder_title, tag):
-    """An outside delete moves the note to Recently Deleted. It must leave the live view, and an outside move back must return it."""
+    """A note moved to Recently Deleted leaves the live view, and moving it back returns it under the same record."""
     title = tag + " lifecycle"
     created_note = helper_change("create", container_title=folder_title, title=title)
     if not check("lifecycle_create_done", created_note.get("state") == "done", created_note.get("reason")):
@@ -305,20 +317,25 @@ def run_notes_lifecycle(folder_title, tag):
     found = timed("lifecycle_create_visible", lambda: find_tagged("notes.note", title), EXTERNAL_BOUND)
     if not check("lifecycle_create_reaches_gateway", found):
         return
-    removed = helper_change("delete", key=key)
-    check("lifecycle_delete_done", removed.get("state") == "done", removed.get("reason"))
-    check("lifecycle_delete_reaches_gateway", timed("lifecycle_delete_visible", lambda: gone("notes.note", found["id"]), EXTERNAL_BOUND))
-    restored = helper_change("restore", key=key, container_title=folder_title)
-    check("lifecycle_restore_done", restored.get("state") == "done", restored.get("reason"))
-    back = timed("lifecycle_restore_visible", lambda: (lambda r: r if live(r) else None)(get("notes.note", found["id"])), EXTERNAL_BOUND)
-    check("lifecycle_restore_reaches_gateway", back)
-    if back:
-        check("lifecycle_restore_keeps_record_id", back["id"] == found["id"])
-        check("lifecycle_restore_has_body", wait_for(lambda: "external" in blob(get("notes.note", found["id"]) or {}), EXTERNAL_BOUND))
-    finally_gone = helper_change("delete", key=key)
-    if finally_gone.get("state") == "done":
+    for attempt in ("a", "b"):
+        trashed = helper_change("trash", key=key)
+        check("lifecycle_trash_done_" + attempt, trashed.get("state") == "done", trashed.get("reason"))
+        check("lifecycle_trash_in_store_" + attempt, timed("lifecycle_trash_store_" + attempt, lambda: note_store_state(title) == "trash", EXTERNAL_BOUND))
+        check("lifecycle_trash_reaches_gateway_" + attempt, timed("lifecycle_trash_visible_" + attempt, lambda: gone("notes.note", found["id"]), EXTERNAL_BOUND))
+        restored = helper_change("restore", key=key, container_title=folder_title)
+        check("lifecycle_restore_done_" + attempt, restored.get("state") == "done", restored.get("reason"))
+        back = timed("lifecycle_restore_visible_" + attempt, lambda: (lambda r: r if live(r) else None)(get("notes.note", found["id"])), EXTERNAL_BOUND)
+        check("lifecycle_restore_reaches_gateway_" + attempt, back)
+        if back:
+            check("lifecycle_restore_has_body_" + attempt, wait_for(lambda: "external" in blob(get("notes.note", found["id"]) or {}), EXTERNAL_BOUND))
+    scripted = helper_change("delete", key=key)
+    if scripted.get("state") == "done":
         externals.remove(key)
-    check("lifecycle_second_delete_reaches_gateway", timed("lifecycle_second_delete_visible", lambda: gone("notes.note", found["id"]), EXTERNAL_BOUND))
+    # Scripted delete: measured, not asserted. Notes writes it at its next save, and the gateway follows the store.
+    timed("scripted_delete_store_commit", lambda: note_store_state(title) == "trash", float(os.environ.get("REAL_SCRIPTED_BOUND", "150")))
+    note("scripted delete store_state=%s" % note_store_state(title))
+    if note_store_state(title) == "trash":
+        check("scripted_delete_reaches_gateway_once_written", timed("scripted_delete_visible", lambda: gone("notes.note", found["id"]), EXTERNAL_BOUND))
 
 
 def tab_with(token):
@@ -556,6 +573,11 @@ def cleanup_created():
             reply = command(operation, {"id": record_id} if operation != "calendar.delete_event" else {"id": record_id, "span": "this"}, record.get("version"))
             note("cleanup %s by id: %s" % (operation, brief(reply)))
             wait_for(lambda: gone(collection, record_id), 30)
+    if source == "notes":
+        for record in records("notes.note"):
+            if live(record) and tag in blob(record):
+                reply = command("notes.delete", {"id": record["id"]}, record.get("version"))
+                note("cleanup late note by id: %s" % brief(reply))
     for key in list(externals):
         removed = helper_change("delete", key=key)
         note("cleanup external by key: %s" % removed.get("state"))
@@ -588,6 +610,6 @@ after = snapshot()
 for collection, ids in before.items():
     missing = ids - after.get(collection, set())
     check("preexisting_%s_untouched" % collection, not missing, "%d missing" % len(missing))
-leftover = [r for collection in COLLECTIONS[source] for r in records(collection) if live(r) and "[ab-test] real-" in blob(r)]
+leftover = [r for collection in COLLECTIONS[source] for r in records(collection) if live(r) and tag in blob(r)]
 check("no_leftover_test_records", not leftover, "%d left" % len(leftover))
 finish(0)
