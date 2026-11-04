@@ -5,7 +5,14 @@ use std::{
     path::{Path, PathBuf},
     process::{Command, ExitCode, Stdio},
 };
-fn require_lab_gateway(gateway: &Path, output: &Path) -> Result<(), Box<dyn std::error::Error>> {
+fn require_lab_gateway(
+    gateway: &Path,
+    output: &Path,
+    real: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if real {
+        return Ok(());
+    }
     let home = output.join("gateway-capability-probe");
     fs::create_dir_all(&home)?;
     let status = Command::new(gateway)
@@ -69,9 +76,7 @@ fn run() -> Result<bool, Box<dyn std::error::Error>> {
         lab_world::require_signed_helper(helper.as_deref())?;
     }
     fs::create_dir_all(&output)?;
-    if !real {
-        require_lab_gateway(&gateway, &output)?;
-    }
+    require_lab_gateway(&gateway, &output, real)?;
     lab_adapters::replicas::configure(&gateway);
     lab_adapters::session_proxy::configure(&simapple);
     let registry = lab_adapters::registry();
