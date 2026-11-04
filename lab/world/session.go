@@ -88,7 +88,7 @@ func (w *World) startSession(ctx context.Context, gatewaySocket string) (string,
 		}
 		producers[source] = "Rust"
 		config[source] = map[string]any{"root": root}
-		if factsSocket != "" && (source == "calendar" || source == "contacts" || source == "reminders") {
+		if factsSocket != "" && (source == "calendar" || source == "contacts" || source == "reminders" || source == "mac") {
 			config[source]["facts"] = map[string]string{"socket": factsSocket}
 			config[source]["facts_poll_ms"] = 3600000
 		}
