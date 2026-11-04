@@ -68,4 +68,12 @@ public enum NativeSessionFrame {
     public static func outcome(commandID: JSON, disposition: String, evidence: JSON) -> JSON {
         .object(["t": .string("Outcome"), "command_id": commandID, "disposition": .string(disposition), "evidence": evidence])
     }
+
+    public static func primitiveResult(id: JSON, result: JSON) -> JSON {
+        .object(["t": .string("PrimitiveResult"), "id": id, "result": result])
+    }
+
+    public static func primitiveError(id: JSON, code: String) -> JSON {
+        .object(["t": .string("PrimitiveError"), "id": id, "code": .string(code)])
+    }
 }
