@@ -98,6 +98,7 @@ fn revalidation_operation(collection: &str) -> Option<&'static str> {
         "calendar.event" => "agenda.events",
         "reminders.list" => "agenda.reminder_lists",
         "reminders.reminder" => "agenda.reminders",
+        "contacts.container" => "contacts.containers",
         "contacts.contact" => "contacts.contacts",
         "contacts.group" => "contacts.groups",
         _ => return None,

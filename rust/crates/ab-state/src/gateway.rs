@@ -135,6 +135,25 @@ pub(crate) fn data(value: &Value) -> Result<Box<RawValue>> {
         .into_owned(),
     )?)
 }
+fn keeps_hydrated_note(old: Option<&Record>, observation: &Observation) -> Result<bool> {
+    let Some(old) = old.filter(|r| !r.deleted) else {
+        return Ok(false);
+    };
+    let Some(data) = observation.data.as_ref() else {
+        return Ok(false);
+    };
+    let next: Value = serde_json::from_str(data.get())?;
+    if next.get("body_status").and_then(Value::as_str) != Some("pending") {
+        return Ok(false);
+    }
+    let previous: Value = serde_json::from_str(old.data.get())?;
+    let fingerprint = next.get("native_fingerprint").and_then(Value::as_str);
+    Ok(
+        previous.get("body_status").and_then(Value::as_str) != Some("pending")
+            && fingerprint.is_some_and(|f| !f.is_empty())
+            && previous.get("native_fingerprint").and_then(Value::as_str) == fingerprint,
+    )
+}
 fn note_version(old: Option<&Record>, value: &mut Value) -> Result<()> {
     let next = value.as_object_mut().ok_or(ErrorCode::Corrupt)?;
     next.remove("content_version");
@@ -433,6 +452,13 @@ impl State<Gateway> {
                 {
                     continue;
                 }
+            }
+            if !deleted && o.collection == "notes.note" && keeps_hydrated_note(old.as_ref(), o)? {
+                tx.execute(
+                    "UPDATE records SET observed_at=? WHERE collection=? AND id=?",
+                    params![o.observed_at.as_str(), o.collection, id],
+                )?;
+                continue;
             }
             let raw = if deleted {
                 let Some(old) = &old else {

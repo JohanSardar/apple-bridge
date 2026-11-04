@@ -150,6 +150,10 @@ public final class ContactsSource: Source {
             return true
         }
     }
+    private func containerExists(_ key: String) throws -> Bool {
+        guard authorized else { throw SourceFailure.permissionMissing }
+        return try !store.containers(matching: CNContainer.predicateForContainers(withIdentifiers: [key])).isEmpty
+    }
     private func scan(into sink: any ObservationSink, live: Bool, force: Bool = false, notificationAt: UInt64 = 0, poll: Bool = false) async throws {
         let scanID = UUID().uuidString
         let metadata: [String: JSON] = ["scan_id": .string(scanID), "notification_ns": .integer(notificationAt)]
@@ -223,6 +227,7 @@ public final class ContactsSource: Source {
                 let collection = previous["collection"].string
                 if collection == "contacts.contact" { if try !isAbsent(previous["native_key"].string) { continue } }
                 if collection == "contacts.group" && groups.contains(previous["native_key"].string) { continue }
+                if collection == "contacts.container", try containerExists(previous["native_key"].string) { current[key] = previous; continue }
                 var absent = previous.object; absent["kind"] = .string("absent"); absent["revalidated"] = .bool(true); absent["observed_at"] = .string(timestamp())
                 observations.append(.object(absent))
             }
@@ -269,6 +274,7 @@ public final class ContactsSource: Source {
         guard authorized else { throw SourceFailure.permissionMissing }
         let activity = ForegroundActivity.shared.begin()
         defer { ForegroundActivity.shared.end(activity) }
+        meIdentifier = try? store.unifiedMeContactWithKeys(toFetch: [CNContactIdentifierKey as NSString]).identifier
         let current = try readEverything([:])
         guard authorized else { throw SourceFailure.permissionMissing }
         return SourceEnumeration(generation: generation, rows: current.keys.sorted().compactMap { current[$0] }, handles: blobHandles())
@@ -281,6 +287,8 @@ public final class ContactsSource: Source {
             switch identity["collection"].string {
             case "contacts.contact":
                 states.append(try isAbsent(key) ? RevalidationState.missing : RevalidationState.present)
+            case "contacts.container":
+                states.append(try containerExists(key) ? RevalidationState.present : RevalidationState.missing)
             case "contacts.group":
                 let groups = try store.groups(matching: CNGroup.predicateForGroups(withIdentifiers: [key]))
                 states.append(groups.isEmpty ? RevalidationState.missing : RevalidationState.present)
