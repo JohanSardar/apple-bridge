@@ -1139,15 +1139,17 @@ fn safari_live_tabs_arrive_as_helper_facts_and_leave_as_rust_captures() -> Falli
     Ok(())
 }
 
-fn messages_fixture(root: &Path, texts: &[&str], attachment: Option<&[u8]>) -> Fallible<()> {
+fn messages_fixture(
+    root: &Path,
+    texts: &[&str],
+    attachment: Option<&[u8]>,
+) -> Fallible<rusqlite::Connection> {
     let attachments = root.join("Attachments");
     std::fs::create_dir_all(&attachments)?;
     let connection = rusqlite::Connection::open(root.join("chat.db"))?;
+    connection.query_row("PRAGMA journal_mode=WAL", [], |row| row.get::<_, String>(0))?;
     connection.execute_batch(
-        "DROP TABLE IF EXISTS message;DROP TABLE IF EXISTS chat;DROP TABLE IF EXISTS handle;
-         DROP TABLE IF EXISTS chat_handle_join;DROP TABLE IF EXISTS chat_message_join;
-         DROP TABLE IF EXISTS attachment;DROP TABLE IF EXISTS message_attachment_join;
-         CREATE TABLE message(ROWID INTEGER PRIMARY KEY,guid TEXT,date INTEGER,text TEXT,handle_id INTEGER,is_from_me INTEGER,associated_message_guid TEXT,associated_message_type INTEGER);
+        "CREATE TABLE message(ROWID INTEGER PRIMARY KEY,guid TEXT,date INTEGER,text TEXT,handle_id INTEGER,is_from_me INTEGER,associated_message_guid TEXT,associated_message_type INTEGER);
          CREATE TABLE chat(ROWID INTEGER PRIMARY KEY,guid TEXT,service_name TEXT,display_name TEXT);
          CREATE TABLE handle(ROWID INTEGER PRIMARY KEY,id TEXT,service TEXT);
          CREATE TABLE chat_handle_join(chat_id INTEGER,handle_id INTEGER);
@@ -1179,7 +1181,7 @@ fn messages_fixture(root: &Path, texts: &[&str], attachment: Option<&[u8]>) -> F
         )?;
         connection.execute("INSERT INTO message_attachment_join VALUES(1,1)", [])?;
     }
-    Ok(())
+    Ok(connection)
 }
 
 #[test]
@@ -1191,7 +1193,7 @@ fn messages_reader_streams_history_then_live_rows_and_serves_attachment_bytes() 
     let bytes: Vec<u8> = (0..300_000_u32)
         .map(|n| u8::try_from(n % 239).unwrap_or(0))
         .collect();
-    messages_fixture(&root, &["first", "second"], Some(&bytes))?;
+    let database = messages_fixture(&root, &["first", "second"], Some(&bytes))?;
     let config = json!({"messages":{"root":root}}).to_string();
     let mut session = wire(readers::from_config(&config)?, polling(None), json!({}))?;
 
@@ -1270,7 +1272,11 @@ fn messages_reader_streams_history_then_live_rows_and_serves_attachment_bytes() 
     )?;
 
     expect_silence(&mut session.gateway)?;
-    messages_fixture(&root, &["first", "second", "third"], Some(&bytes))?;
+    database.execute(
+        "INSERT INTO message(ROWID,guid,date,text,handle_id,is_from_me) VALUES(3,'msg-3',700000000000000003,'third',1,0)",
+        [],
+    )?;
+    database.execute("INSERT INTO chat_message_join VALUES(1,3)", [])?;
     let (size, live) = receive(&mut session.gateway)?;
     assert_eq!(live["live"], true);
     let keys: Vec<&str> = live["observations"]
@@ -1312,6 +1318,7 @@ fn messages_reader_streams_history_then_live_rows_and_serves_attachment_bytes() 
     drop(session.gateway);
     drop(session.helper);
     let _ = session.worker.join();
+    drop(database);
     std::fs::remove_dir_all(home)?;
     Ok(())
 }
