@@ -372,8 +372,8 @@ fn a_committed_generation_is_adopted_so_record_ids_stay() -> Fallible<()> {
 #[test]
 fn losing_the_facts_link_ends_the_session_so_the_helper_restarts_it() -> Fallible<()> {
     let (server, client) = UnixStream::pair()?;
-    drop(server);
     let client = Arc::new(Client::inherited(client)?);
+    drop(server);
     let world = wire(
         calendar(&client, Duration::from_millis(10)),
         calendar_options(),
@@ -540,24 +540,19 @@ fn a_rust_command_on_a_rust_captured_source_is_bound_to_the_readers_checkpoint()
     )?;
     let (_, write) = receive(&mut world.link)?;
     assert_eq!(write["op"], "reminders.write");
+    assert_eq!(write["args"]["session_captures"], true);
 
-    facts.lock().unwrap().events = vec![reminder("r1", "oat milk")];
-    world.scan(
-        "h1",
-        "reminders",
-        &json!({"scan_id":"s1","scope":["reminders.reminder"],"completion_evidence":"complete"}),
-    )?;
-    let (size, capture) = receive(&mut world.gateway)?;
-    assert_eq!(capture["t"], "Capture");
-    assert_eq!(keys(&capture, "upsert"), ["r1"]);
-    world.commit("reminders", &capture, size)?;
-    let (_, committed) = receive(&mut world.link)?;
-    assert_eq!(committed["id"], "h1");
     let saved = reminder("r1", "oat milk")["data"].clone();
     send(
         &mut world.link,
         &json!({"t":"PrimitiveResult","id":write["id"],"result":{"native_key":"r1","saved":saved,"observed":saved,"exists_after":true}}),
     )?;
+    expect_silence(&mut world.gateway)?;
+    facts.lock().unwrap().events = vec![reminder("r1", "oat milk")];
+    let (size, capture) = receive(&mut world.gateway)?;
+    assert_eq!(capture["t"], "Capture");
+    assert_eq!(keys(&capture, "upsert"), ["r1"]);
+    world.commit("reminders", &capture, size)?;
     let (_, outcome) = receive(&mut world.gateway)?;
     assert_eq!(outcome["t"], "Outcome");
     assert_eq!(outcome["disposition"], "locally_observed");

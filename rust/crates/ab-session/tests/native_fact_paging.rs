@@ -768,8 +768,8 @@ fn a_changed_push_before_welcome_does_not_kill_the_facts_link() -> Fallible<()> 
 #[test]
 fn a_dead_inherited_facts_link_ends_the_session_instead_of_stalling_every_poll() -> Fallible<()> {
     let (native, server) = UnixStream::pair()?;
-    drop(server);
     let client = Arc::new(Client::inherited(native)?);
+    drop(server);
     let reader = readers::AgendaReader::contacts("/nonexistent".into())
         .paged(client, Duration::from_millis(20));
     let mut sources: BTreeMap<String, Box<dyn readers::CaptureReader>> = BTreeMap::new();
