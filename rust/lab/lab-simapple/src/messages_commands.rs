@@ -1054,6 +1054,9 @@ impl Session<'_> {
                     new_message(&mut s, &mut seen, &echo, &body, &chat, false);
                 }
                 s.save().map_err(fail)?;
+                let capture = s.scan("messages").map_err(fail)?;
+                drop(s);
+                self.emit(state, capture).map_err(fail)?;
                 Ok(json!({"error":0}))
             }
             _ => Err("unsupported"),
