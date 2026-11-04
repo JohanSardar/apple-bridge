@@ -164,7 +164,10 @@ fn source_of(operation: &str) -> &str {
 
 impl Probe for Hub {
     fn call(&self, operation: &str, args: &Value) -> Result<Value, String> {
-        let wait = if matches!(operation, "reminders.write" | "calendar.write") {
+        let wait = if matches!(
+            operation,
+            "reminders.write" | "calendar.write" | "contacts.write" | "contacts.write_group"
+        ) {
             WRITE_WAIT
         } else {
             READ_WAIT
@@ -289,7 +292,11 @@ impl Hub {
     }
 
     fn conflict_evidence(&self, source: &str, key: &str) -> Option<Value> {
-        let reconciled = self.primitive(&format!("{source}.reconcile"), &json!({}), WRITE_WAIT);
+        let reconciled = self.primitive(
+            &format!("{source}.reconcile"),
+            &json!({"conflict_key": key}),
+            WRITE_WAIT,
+        );
         let checkpoint = reconciled
             .ok()
             .and_then(|_| self.bind(key, &[], true, 0).ok().flatten())?;
@@ -376,7 +383,20 @@ impl Hub {
                 .is_ok()
         });
         let (disposition, evidence) = match observed {
-            Some(found) => ("locally_observed", found),
+            Some(mut found) => {
+                let key = found["native_key"].as_str().unwrap_or_default().to_owned();
+                match self.bind(&key, &[], true, 0)? {
+                    Some(checkpoint) if !key.is_empty() => {
+                        found["capture_checkpoint"] = Value::String(checkpoint);
+                        ("locally_observed", found)
+                    }
+                    _ => {
+                        let mut kept = evidence.clone();
+                        kept["reason"] = json!("capture_not_observed");
+                        ("indeterminate", kept)
+                    }
+                }
+            }
             None => ("indeterminate", evidence.clone()),
         };
         let outcome = Outcome {
