@@ -16,6 +16,7 @@ pub mod proxy;
 pub mod readers;
 #[cfg(feature = "rust-capture")]
 pub mod routed;
+pub mod messages_policy;
 pub mod session;
 #[cfg(feature = "rust-capture")]
 pub mod store;
