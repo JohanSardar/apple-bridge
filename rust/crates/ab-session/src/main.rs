@@ -43,6 +43,9 @@ fn lab_effects(
 
 #[cfg(feature = "rust-capture")]
 fn lab_listen(listen: &str, gateway: &str, native: Option<&str>) -> Result<(), Error> {
+    if let Some(home) = &capture_home {
+        keep_log(std::path::Path::new(home));
+    }
     let mut selection = ab_session::ownership::Selection::default();
     if let Ok(value) = std::env::var("AB_SESSION_PRODUCERS") {
         let sources: std::collections::BTreeMap<
@@ -204,6 +207,32 @@ fn exit_with_parent() {
     });
 }
 
+const LOG_LIMIT: u64 = 4 << 20;
+
+fn keep_log(home: &std::path::Path) {
+    use std::os::unix::fs::OpenOptionsExt;
+    let directory = home.join("session");
+    let path = directory.join("ab-session.log");
+    if std::fs::metadata(&path).is_ok_and(|meta| meta.len() > LOG_LIMIT) {
+        let _ = std::fs::remove_file(&path);
+    }
+    let Ok(file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .mode(0o600)
+        .open(&path)
+    else {
+        return;
+    };
+    if ab_sys::redirect_stderr(&file).is_ok() {
+        eprintln!(
+            "ab-session: start pid {} parent {}",
+            std::process::id(),
+            std::os::unix::process::parent_id()
+        );
+    }
+}
+
 fn run() -> Result<(), Error> {
     ab_sys::reset_signals();
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -299,7 +328,10 @@ fn run() -> Result<(), Error> {
 
 fn main() -> std::process::ExitCode {
     match run() {
-        Ok(()) => std::process::ExitCode::SUCCESS,
+        Ok(()) => {
+            eprintln!("ab-session: relay ended");
+            std::process::ExitCode::SUCCESS
+        }
         Err(error) => {
             eprintln!("ab-session: {error}");
             std::process::ExitCode::FAILURE
