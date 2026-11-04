@@ -1535,6 +1535,36 @@ mod tests {
     }
 
     #[test]
+    fn the_self_test_sends_pass_prepare_as_a_gated_selftest_principal() {
+        let selftest = |messages: Value| {
+            let mut value = command("", "selftest", &messages);
+            value["action"]["native_key"] = json!("");
+            value["action"]["list_key"] = json!("chat-1");
+            value
+        };
+        let text = selftest(
+            json!({"handles": ["+15550100100"], "service": "iMessage", "text": "[ab-test selftest_a] self-test"}),
+        );
+        let mut probe = Fake::new();
+        probe
+            .chats
+            .insert("chat-1".into(), vec![json!("+15550100100")]);
+        assert!(prepare(&probe, &text).is_ok());
+        let file = selftest(json!({
+            "handles": ["+15550100100"], "service": "iMessage", "text": "",
+            "files": [{"name": "ab-selftest_a.txt", "path": "/tmp/x", "digest": "d"}]
+        }));
+        assert!(prepare(&probe, &file).is_ok());
+        let untagged = selftest(
+            json!({"handles": ["+15550100100"], "service": "iMessage", "text": "self-test"}),
+        );
+        assert_eq!(
+            prepare(&probe, &untagged).unwrap_err().code,
+            "invalid"
+        );
+    }
+
+    #[test]
     fn a_gated_send_must_stay_inside_the_approved_handles() {
         let tagged_text = "[ab-test x] hi";
         let gated = |handles: Value| {
