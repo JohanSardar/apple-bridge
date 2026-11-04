@@ -214,20 +214,11 @@ fn run() -> Result<(), Error> {
     #[allow(clippy::needless_return)]
     {
         let effects = match effects_home {
-            Some(home) => {
-                let native = std::env::var("AB_NATIVE_FD")
-                    .map_err(|_| Error::Invalid)?
-                    .parse::<i32>()
-                    .map_err(|_| Error::Invalid)?;
-                if native < 3 || native == gateway.as_raw_fd() || native == helper.as_raw_fd() {
-                    return Err(Error::Invalid);
-                }
-                Some(ab_session::production::EffectsLink {
-                    native: ab_sys::inherited_unix_stream(native)?,
-                    routing: ab_session::production::effects_routing(std::path::Path::new(&home))?,
-                    home: std::path::PathBuf::from(home),
-                })
-            }
+            Some(home) => Some(ab_session::production::EffectsLink {
+                native: inherited_native(&gateway, &helper)?,
+                routing: ab_session::production::effects_routing(std::path::Path::new(&home))?,
+                home: std::path::PathBuf::from(home),
+            }),
             None => None,
         };
         let facts = match &capture {
