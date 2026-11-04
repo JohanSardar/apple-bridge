@@ -296,7 +296,22 @@ capture of the key even when the command changed nothing; Notes waits for a capt
 final part is held, and the diff runs once per scan. The producer is woken by every ingest. The lab listener
 keeps accepting while the gateway is restarting.
 
-Known gaps: native/1 fact paging in place of the Helper capture frame and Contacts container facts.
+Fact paging (`facts` in the source entry, off by default): `{"calendar":{"root":"DIR","facts":"native"}}` makes the reader a
+native/1 client instead of a consumer of the Helper `Capture` frame. `facts: "native"` uses the inherited `AB_NATIVE_FD`
+(fd 200) and is refused together with `AB_SESSION_EFFECTS` because the Swift native server takes one request at a time on that
+stream and `effects::Layer` owns it; `facts: {"socket": "/abs/path"}` dials a native/1 server (lab). `facts_poll_ms` (default
+15000) is the fallback pull interval. The client (`native_facts::Client`) sends `Hello` with the `Open` fence, then pages
+`agenda.calendars` + `agenda.events` (Calendar) or `contacts.containers` + `contacts.groups` + `contacts.contacts` (Contacts) with
+`args: {}`, `limit` 500 and the pinned `snapshot`/`cursor`. Every page must echo `id` and `op` and carry the same snapshot, scope
+and generation; a non-terminal page must have a cursor `<snapshot>:<n>` and `complete: false`. An `Error` frame, a broken page,
+a generation that differs between operations or a terminal page with `complete: false` produces no frame and no deletion; the
+next pull starts a new snapshot. Items are the observation rows the Swift scan builds (`upsert`, plus `absent`/`evict` revalidation
+results, which `NativeFactSink` now keeps); `agenda::Reader::prepare` does the diff exactly as for Helper facts. A Helper
+`Capture` for the source is only a change hint: its `Committed` is held until the pulled capture is committed (or nothing
+changed). The first pull is `live: false`.
+
+Known gaps: revalidation results come from the Swift scan's own baseline, so Swift still carries the diff/baseline code until the Rust
+side can ask for revalidation of named candidates (not in the closed native/1 op set); Reminders are not paged (no Rust reader).
 
 ### Safari live tabs (facts)
 
