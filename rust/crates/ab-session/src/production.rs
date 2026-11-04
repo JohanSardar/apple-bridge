@@ -16,6 +16,7 @@ pub const SUPPORTED: &[&str] = &[
     "calendar",
     "contacts",
     "mail",
+    "messages",
     "safari",
     "usage",
     "notes",

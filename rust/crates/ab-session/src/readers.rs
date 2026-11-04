@@ -1,4 +1,7 @@
 use crate::Error;
+
+mod messages;
+pub use messages::MessagesReader;
 use ab_native::{
     agenda, capture, contacts, mail, notes_reader, safari, telephony, usage, voice_memo,
 };
@@ -32,6 +35,9 @@ impl ScanContext {
 pub trait CaptureReader: Send + Debug {
     fn source(&self) -> &'static str;
     fn root(&self) -> &Path;
+    fn watch_paths(&self) -> Vec<PathBuf> {
+        vec![self.root().to_path_buf()]
+    }
     fn next(&mut self, context: &ScanContext) -> Result<Option<Value>, Error>;
     fn commit(&mut self) -> Result<(), Error>;
     fn token(&self) -> Option<String>;
@@ -1035,6 +1041,8 @@ struct SourceConfig {
     hydration_hold: Option<PathBuf>,
     #[serde(default)]
     staging: Option<PathBuf>,
+    #[serde(default)]
+    home: Option<PathBuf>,
 }
 
 fn lexical(path: &Path) -> Result<PathBuf, Error> {
@@ -1116,6 +1124,22 @@ pub fn from_config(config: &str) -> Result<BTreeMap<String, Box<dyn CaptureReade
             "notes" => {
                 let staging = config.staging.clone().ok_or(Error::Invalid)?;
                 Box::new(NotesReader::new(config.root, &staging)?.holding(config.hydration_hold))
+            }
+            "messages" => {
+                let home = match config.home.clone() {
+                    Some(home) => home,
+                    None if config.root.ends_with("Library/Messages") => config
+                        .root
+                        .parent()
+                        .and_then(Path::parent)
+                        .ok_or(Error::Invalid)?
+                        .to_path_buf(),
+                    None => return Err(Error::Invalid),
+                };
+                if !home.is_absolute() {
+                    return Err(Error::Invalid);
+                }
+                Box::new(MessagesReader::new(config.root, home))
             }
             "calendar" => Box::new(AgendaReader::calendar(config.root)),
             "contacts" => Box::new(AgendaReader::contacts(config.root)),

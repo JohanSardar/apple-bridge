@@ -572,7 +572,7 @@ fn production_config_flips_a_source_to_rust_and_back() -> Fallible<()> {
     );
     std::fs::write(
         home.join(production::CONFIG_FILE),
-        json!({"sources":{"messages":{"root":directory}}}).to_string(),
+        json!({"sources":{"maps":{"root":directory}}}).to_string(),
     )?;
     assert!(production::load(&home).is_err());
 
@@ -1136,5 +1136,167 @@ fn safari_live_tabs_arrive_as_helper_facts_and_leave_as_rust_captures() -> Falli
     drop(session.helper);
     let _ = session.worker.join();
     std::fs::remove_dir_all(directory)?;
+    Ok(())
+}
+
+fn messages_fixture(root: &Path, texts: &[&str], attachment: Option<&[u8]>) -> Fallible<()> {
+    let attachments = root.join("Attachments");
+    std::fs::create_dir_all(&attachments)?;
+    let connection = rusqlite::Connection::open(root.join("chat.db"))?;
+    connection.execute_batch(
+        "DROP TABLE IF EXISTS message;DROP TABLE IF EXISTS chat;DROP TABLE IF EXISTS handle;
+         DROP TABLE IF EXISTS chat_handle_join;DROP TABLE IF EXISTS chat_message_join;
+         DROP TABLE IF EXISTS attachment;DROP TABLE IF EXISTS message_attachment_join;
+         CREATE TABLE message(ROWID INTEGER PRIMARY KEY,guid TEXT,date INTEGER,text TEXT,handle_id INTEGER,is_from_me INTEGER,associated_message_guid TEXT,associated_message_type INTEGER);
+         CREATE TABLE chat(ROWID INTEGER PRIMARY KEY,guid TEXT,service_name TEXT,display_name TEXT);
+         CREATE TABLE handle(ROWID INTEGER PRIMARY KEY,id TEXT,service TEXT);
+         CREATE TABLE chat_handle_join(chat_id INTEGER,handle_id INTEGER);
+         CREATE TABLE chat_message_join(chat_id INTEGER,message_id INTEGER);
+         CREATE TABLE attachment(ROWID INTEGER PRIMARY KEY,guid TEXT,filename TEXT,mime_type TEXT,uti TEXT,total_bytes INTEGER,transfer_state INTEGER);
+         CREATE TABLE message_attachment_join(message_id INTEGER,attachment_id INTEGER);
+         INSERT INTO handle VALUES(1,'+15550100','iMessage');
+         INSERT INTO chat VALUES(1,'iMessage;-;+15550100','iMessage','');
+         INSERT INTO chat_handle_join VALUES(1,1);",
+    )?;
+    for (index, text) in texts.iter().enumerate() {
+        let row = i64::try_from(index)? + 1;
+        connection.execute(
+            "INSERT INTO message(ROWID,guid,date,text,handle_id,is_from_me) VALUES(?1,?2,?3,?4,1,0)",
+            rusqlite::params![row, format!("msg-{row}"), 700_000_000_000_000_000_i64 + row, text],
+        )?;
+        connection.execute("INSERT INTO chat_message_join VALUES(1,?1)", [row])?;
+    }
+    if let Some(bytes) = attachment {
+        let directory = attachments.join("aa");
+        std::fs::create_dir_all(&directory)?;
+        std::fs::write(directory.join("photo.bin"), bytes)?;
+        connection.execute(
+            "INSERT INTO attachment VALUES(1,'att-1',?1,'image/png','public.png',?2,5)",
+            rusqlite::params![
+                format!("{}/photo.bin", directory.display()),
+                i64::try_from(bytes.len())?
+            ],
+        )?;
+        connection.execute("INSERT INTO message_attachment_join VALUES(1,1)", [])?;
+    }
+    Ok(())
+}
+
+#[test]
+fn messages_reader_streams_history_then_live_rows_and_serves_attachment_bytes() -> Fallible<()> {
+    let home = temporary("messages-home")?;
+    let root = home.join("Library/Messages");
+    std::fs::create_dir_all(&root)?;
+    let bytes: Vec<u8> = (0..300_000_u32).map(|n| u8::try_from(n % 239).unwrap_or(0)).collect();
+    messages_fixture(&root, &["first", "second"], Some(&bytes))?;
+    let config = json!({"messages":{"root":root}}).to_string();
+    let mut session = wire(readers::from_config(&config)?, polling(None), json!({}))?;
+
+    let mut seen = std::collections::BTreeSet::new();
+    let mut handles = serde_json::Map::new();
+    let mut complete = false;
+    let mut attachment = Value::Null;
+    for _ in 0..8 {
+        let (size, frame) = receive(&mut session.gateway)?;
+        assert_eq!(frame["source"], "messages");
+        assert_eq!(frame["scope"].as_array().map(Vec::len), Some(5));
+        for row in frame["observations"].as_array().ok_or("rows")? {
+            if row["native_key"] == "att-1" && row["kind"] == "upsert" {
+                attachment = row.clone();
+            }
+            if row["kind"] == "upsert" {
+                seen.insert(format!("{}/{}", row["collection"].as_str().unwrap_or(""), row["native_key"].as_str().unwrap_or("")));
+            }
+        }
+        if let Some(found) = frame["blob_handles"].as_object() {
+            handles.extend(found.clone());
+        }
+        complete |= frame["completion_evidence"] == "complete";
+        commit(&mut session, "messages", &frame, size)?;
+        if complete {
+            break;
+        }
+    }
+    assert!(complete, "history scan never completed");
+    for key in ["messages.message/msg-1", "messages.message/msg-2", "messages.chat/iMessage;-;+15550100", "messages.attachment/att-1"] {
+        assert!(seen.contains(key), "missing {key}: {seen:?}");
+    }
+    assert_eq!(handles.len(), 1, "{attachment}");
+    let (digest, handle) = handles.iter().next().ok_or("handle")?;
+    assert_eq!(handle, "att-1");
+    assert_eq!(attachment["data"]["blob"]["digest"], *digest, "{attachment}");
+    assert!(attachment["data"]["blob"].get("handle").is_none());
+
+    let mut read = Vec::new();
+    let mut offset = 0_usize;
+    loop {
+        send(
+            &mut session.gateway,
+            &json!({"t":"BlobRead","handle":"att-1","offset":offset,"length":131_072}),
+        )?;
+        let (_, chunk) = loop {
+            let frame = receive(&mut session.gateway)?;
+            if frame.1["t"] == "BlobChunk" {
+                break frame;
+            }
+        };
+        assert_eq!(chunk["digest"], *digest);
+        let part = ab_native_decode(chunk["bytes"].as_str().ok_or("bytes")?)?;
+        offset += part.len();
+        read.extend(part);
+        if chunk["eof"] == true {
+            break;
+        }
+    }
+    assert_eq!(read, bytes);
+    send(
+        &mut session.gateway,
+        &json!({"t":"BlobRead","handle":"unknown","offset":0,"length":10}),
+    )?;
+
+    expect_silence(&mut session.gateway)?;
+    messages_fixture(&root, &["first", "second", "third"], Some(&bytes))?;
+    let (size, live) = receive(&mut session.gateway)?;
+    assert_eq!(live["live"], true);
+    let keys: Vec<&str> = live["observations"]
+        .as_array()
+        .ok_or("rows")?
+        .iter()
+        .filter(|row| row["kind"] == "upsert")
+        .map(|row| row["native_key"].as_str().unwrap_or_default())
+        .collect();
+    assert!(keys.contains(&"msg-3"), "{keys:?}");
+    assert!(!keys.contains(&"msg-1"), "{keys:?}");
+    commit(&mut session, "messages", &live, size)?;
+
+    expect_silence(&mut session.gateway)?;
+    send(
+        &mut session.helper,
+        &json!({"t":"Capture","source":"messages","generation":"swift","checkpoint":"swift-cp","scope":["messages.message"],
+                "completion_evidence":"","live":true,"observations":[{"kind":"upsert","collection":"messages.message","native_key":"msg-1","data":{}}]}),
+    )?;
+    let committed = loop {
+        let frame = receive(&mut session.helper)?.1;
+        if frame["t"] == "Committed" {
+            break frame;
+        }
+    };
+    assert_eq!(committed["checkpoint"], "swift-cp");
+    let (size, again) = receive(&mut session.gateway)?;
+    let again_keys: Vec<&str> = again["observations"]
+        .as_array()
+        .ok_or("rows")?
+        .iter()
+        .filter(|row| row["kind"] == "upsert")
+        .map(|row| row["native_key"].as_str().unwrap_or_default())
+        .collect();
+    assert!(again_keys.contains(&"msg-1"), "{again_keys:?}");
+    assert!(!again_keys.contains(&"msg-2"), "{again_keys:?}");
+    commit(&mut session, "messages", &again, size)?;
+
+    drop(session.gateway);
+    drop(session.helper);
+    let _ = session.worker.join();
+    std::fs::remove_dir_all(home)?;
     Ok(())
 }

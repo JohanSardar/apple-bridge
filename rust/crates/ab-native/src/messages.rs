@@ -275,6 +275,15 @@ impl Reader {
         self.reconciled = None;
         Ok(())
     }
+    pub fn invalidate<'a>(&mut self, identities: impl IntoIterator<Item = (&'a str, &'a str)>) {
+        for (collection, key) in identities {
+            self.hashes.remove(&format!("{collection}/{key}"));
+            self.native_hashes.remove(key);
+        }
+        if self.version.is_some() {
+            self.version = Some(i64::MIN);
+        }
+    }
     pub fn work_counts(&self) -> (u64, u64) {
         (self.rows_read.get(), self.fingerprints.get())
     }
