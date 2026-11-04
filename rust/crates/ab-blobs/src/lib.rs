@@ -719,7 +719,7 @@ mod tests {
         let mut store = Store::open(home.path(), 0)?;
         assert!(!store.rearm(&digest)?);
         store.begin(&digest, 1024)?;
-        for _ in 0..8 {
+        for _ in 0..9 {
             store.retry(&digest, false)?;
         }
         assert_eq!(store.entries()[digest.as_str()].state, BlobState::Failed);
