@@ -131,6 +131,7 @@ fn run() -> Result<(), Error> {
     if args.len() == 4 && args[0] == "--lab-listen" && args[2] == "--lab-gateway" {
         return lab_listen(&args[1], &args[3], None);
     }
+    #[cfg(feature = "rust-capture")]
     if args.len() == 6
         && args[0] == "--lab-listen"
         && args[2] == "--lab-gateway"
