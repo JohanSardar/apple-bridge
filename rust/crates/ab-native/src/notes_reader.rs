@@ -392,6 +392,9 @@ impl Reader {
     pub fn has_hydration(&self) -> bool {
         !self.order.is_empty()
     }
+    pub fn queued(&self) -> usize {
+        self.order.len()
+    }
     fn variants(
         &mut self,
         item: &mut Value,
@@ -598,7 +601,7 @@ impl Reader {
             }
             Ok(None) => Ok(None),
             Err(error @ Error::FactsRequired(_)) => {
-                self.enqueue(job, true, true);
+                self.enqueue(job, false, true);
                 Err(error)
             }
             Err(_) => {

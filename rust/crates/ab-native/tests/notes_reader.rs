@@ -90,6 +90,12 @@ fn stale_metadata_and_hydration_acknowledgements_cannot_overwrite_new_notes() {
     )
     .unwrap();
     db.execute_batch("INSERT INTO ZICCLOUDSYNCINGOBJECT(Z_PK,Z_ENT,ZIDENTIFIER,ZNOTE1,ZTYPEUTI1) VALUES(30,4,'fixture-image',20,'test.synthetic')").unwrap();
+    db.execute(
+        "INSERT INTO ZICNOTEDATA VALUES(2,?,1)",
+        [include_bytes!("../../../../lab/fixtures/notes/native-plain.gz").as_slice()],
+    )
+    .unwrap();
+    db.execute_batch("INSERT INTO ZICCLOUDSYNCINGOBJECT(Z_PK,Z_ENT,ZIDENTIFIER,ZTITLE1,ZFOLDER,ZNOTEDATA) VALUES(19,2,'second','Synthetic',10,2)").unwrap();
     let pending = reader.reconcile(&context).unwrap();
     reader.commit(pending).unwrap();
     assert!(matches!(
@@ -97,6 +103,10 @@ fn stale_metadata_and_hydration_acknowledgements_cannot_overwrite_new_notes() {
         Err(capture::Error::FactsRequired(_))
     ));
     assert!(reader.has_hydration());
+    let second = reader.hydrate_next(&context).unwrap().unwrap();
+    assert_eq!(second.batch.observations[0].native_key, "second");
+    assert!(reader.commit_hydration(second).unwrap());
+    assert_eq!(reader.queued(), 1);
     let mut facts = context.clone();
     facts.facts.mime.insert("test.synthetic".into(), None);
     let pending = reader.hydrate_next(&facts).unwrap().unwrap();

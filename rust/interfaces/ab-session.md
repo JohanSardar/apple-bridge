@@ -426,3 +426,9 @@ and the commit-ordered record of written keys. `routed::Gate` owns the only inst
 implements `flight::Ledger`; `effects::Layer` no longer registers captures or `Committed` itself and
 correlates dispatch evidence through the ledger (`sequence()` counts commits, `written()` waits for the
 key). Only rows with kind `upsert` or `absent` are correlated.
+
+### Notes media facts and Usage clipping (real-data fixes)
+
+- **Notes hydration stall.** The reader needs three Helper facts while it hydrates a note: `mime:<uti>`, `supports:<uti>|<ext>` and `derivatives:<digest>`. The session supplied only the hashtag mime, so the first note with an image attachment returned `FactsRequired`, was re-queued at the front, and every later `next` retried it forever; bodies behind it stayed `pending`. The reader now re-queues a failed job at the back, and `NotesReader` resolves facts through `media_facts::MediaFacts`, which runs the Helper executable as `AppleBridgeHelper media-facts` (request JSON on stdin, response JSON on stdout, two minute deadline, derivative bytes read from the session-owned `media_root`, default `<home>/session/media-derivatives`, via `AB_MEDIA_DERIVATIVES_ROOT`). Facts come from the same `UTType` and `MediaDerivatives` code the Swift reader uses, so records are byte-identical. A fact that cannot be resolved leaves that note pending, is retried after 60 seconds and never blocks other notes. The executable is the sibling `AppleBridgeHelper` of `ab-session`, or `media_helper` in the source config.
+- **Usage.** The session now passes the local `knowledgeC.db` display-lock and lock intervals to the Usage reader (and includes the database and its `-wal` in the change signature) when the root is `~/Library/Biome`, as the Swift source does; the hardware id is `IOPlatformUUID`. Live power-sleep events exist only in the Swift process and are not reproduced.
+

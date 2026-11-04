@@ -1,4 +1,4 @@
-use crate::{Error, native_facts};
+use crate::{Error, media_facts::MediaFacts, native_facts};
 
 mod messages;
 use ab_native::{
@@ -14,8 +14,11 @@ use std::{
     fs,
     path::{Path, PathBuf},
     sync::Arc,
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
+
+const HASHTAG: &str = "com.apple.notes.inlinetextattachment.hashtag";
+const FACT_RETRY: Duration = Duration::from_secs(60);
 
 fn reader_error(error: impl std::fmt::Display) -> Error {
     Error::Reader(error.to_string())
@@ -283,20 +286,51 @@ pub struct UsageReader {
     generation: String,
     zone: String,
     local_name: String,
+    history: Option<PathBuf>,
+    hardware_id: Option<String>,
     reader: usage::Reader,
     pending: Option<(usage::Scan, Signature)>,
     committed: Option<Signature>,
     warm: bool,
 }
 
+fn knowledge_database(root: &Path) -> Option<PathBuf> {
+    if root.file_name()? != "Biome" {
+        return None;
+    }
+    let database = root
+        .parent()?
+        .join("Application Support/Knowledge/knowledgeC.db");
+    database.is_file().then_some(database)
+}
+
+fn hardware_id() -> String {
+    std::process::Command::new("/usr/sbin/ioreg")
+        .args(["-rd1", "-c", "IOPlatformExpertDevice"])
+        .output()
+        .ok()
+        .and_then(|output| String::from_utf8(output.stdout).ok())
+        .and_then(|text| {
+            let line = text
+                .lines()
+                .find(|line| line.contains("\"IOPlatformUUID\""))?;
+            let (_, value) = line.split_once('=')?;
+            Some(value.trim().trim_matches('"').to_owned())
+        })
+        .unwrap_or_default()
+}
+
 impl UsageReader {
     #[must_use]
     pub fn new(root: PathBuf, generation: String, zone: String, local_name: String) -> Self {
+        let history = knowledge_database(&root);
         Self {
             root,
             generation,
             zone,
             local_name,
+            history,
+            hardware_id: None,
             reader: usage::Reader::default(),
             pending: None,
             committed: None,
@@ -327,10 +361,24 @@ impl CaptureReader for UsageReader {
         if self.pending.is_some() {
             return Err(Error::Conflict);
         }
-        let current = signature(&self.root)?;
+        let mut current = signature(&self.root)?;
+        if let Some(history) = &self.history {
+            current.extend(file_signature(history));
+        }
         if self.committed.as_ref() == Some(&current) {
             return Ok(None);
         }
+        let history = match &self.history {
+            Some(database) => {
+                let id = self.hardware_id.get_or_insert_with(hardware_id).clone();
+                Some(usage::HistoryContext {
+                    database: database.to_str().ok_or(Error::Invalid)?.to_owned(),
+                    hardware_id: id,
+                    now: context.now,
+                })
+            }
+            None => None,
+        };
         let read = usage::Context {
             generation: self.generation.clone(),
             checkpoint: context.checkpoint.clone(),
@@ -340,7 +388,7 @@ impl CaptureReader for UsageReader {
             local_name: self.local_name.clone(),
             blocked: Vec::new(),
             power: Vec::new(),
-            history: None,
+            history,
         };
         let Ok(scan) = self.reader.scan(&self.root, &read, self.warm) else {
             return Ok(None);
@@ -591,6 +639,10 @@ pub struct NotesReader {
     pending: Option<(NotesPending, Option<Signature>)>,
     committed: Option<Signature>,
     hold: Option<PathBuf>,
+    staging: PathBuf,
+    facts: notes_reader::Facts,
+    media: Option<MediaFacts>,
+    failed_facts: BTreeMap<String, Instant>,
 }
 
 impl NotesReader {
@@ -604,6 +656,13 @@ impl NotesReader {
             pending: None,
             committed: None,
             hold: None,
+            staging: staging.to_path_buf(),
+            facts: notes_reader::Facts {
+                mime: BTreeMap::from([(HASHTAG.to_owned(), None)]),
+                ..notes_reader::Facts::default()
+            },
+            media: None,
+            failed_facts: BTreeMap::new(),
         })
     }
 
@@ -613,11 +672,42 @@ impl NotesReader {
         self
     }
 
+    #[must_use]
+    pub fn with_media(mut self, media: Option<MediaFacts>) -> Self {
+        self.media = media;
+        self
+    }
+
+    fn resolve(&mut self, fact: &str) -> bool {
+        if self
+            .failed_facts
+            .get(fact)
+            .is_some_and(|at| at.elapsed() < FACT_RETRY)
+        {
+            return false;
+        }
+        let resolved = match &self.media {
+            Some(media) => media.resolve(fact, &self.staging, &mut self.facts),
+            None => Err(Error::Conflict),
+        };
+        match resolved {
+            Ok(()) => {
+                self.failed_facts.remove(fact);
+                true
+            }
+            Err(error) => {
+                eprintln!("ab-session: notes fact {fact}: {error}");
+                self.failed_facts.insert(fact.to_owned(), Instant::now());
+                false
+            }
+        }
+    }
+
     fn held(&self) -> bool {
         self.hold.as_ref().is_some_and(|hold| hold.exists())
     }
 
-    fn notes_context(context: &ScanContext) -> Result<notes_reader::Context, Error> {
+    fn notes_context(&self, context: &ScanContext) -> Result<notes_reader::Context, Error> {
         Ok(notes_reader::Context {
             capture: capture::Context {
                 observed_at: context.observed_at()?,
@@ -625,13 +715,7 @@ impl NotesReader {
                 scan_id: context.scan_id.clone(),
             },
             coverage: serde_json::json!({}),
-            facts: notes_reader::Facts {
-                mime: std::collections::BTreeMap::from([(
-                    "com.apple.notes.inlinetextattachment.hashtag".to_owned(),
-                    None,
-                )]),
-                ..notes_reader::Facts::default()
-            },
+            facts: self.facts.clone(),
             asset_paths: Vec::new(),
         })
     }
@@ -673,7 +757,8 @@ impl CaptureReader for NotesReader {
         if self.pending.is_some() {
             return Err(Error::Conflict);
         }
-        let notes = Self::notes_context(context)?;
+        let mut notes = self.notes_context(context)?;
+        let mut budget = self.reader.queued();
         while !self.held() && self.reader.has_hydration() {
             match self.reader.hydrate_next(&notes) {
                 Ok(Some(hydration)) => {
@@ -682,6 +767,15 @@ impl CaptureReader for NotesReader {
                     return Ok(Some(value));
                 }
                 Ok(None) => {}
+                Err(capture::Error::FactsRequired(fact)) => {
+                    if self.resolve(&fact) {
+                        notes = self.notes_context(context)?;
+                    } else if budget == 0 {
+                        break;
+                    } else {
+                        budget -= 1;
+                    }
+                }
                 Err(error) => return Err(reader_error(error)),
             }
         }
@@ -1320,6 +1414,10 @@ struct SourceConfig {
     #[serde(default)]
     home: Option<PathBuf>,
     #[serde(default)]
+    media_helper: Option<PathBuf>,
+    #[serde(default)]
+    media_root: Option<PathBuf>,
+    #[serde(default)]
     facts: Option<FactsLink>,
     #[serde(default = "default_facts_poll")]
     facts_poll_ms: u64,
@@ -1451,7 +1549,15 @@ pub fn from_config_linked(
             }
             "notes" => {
                 let staging = config.staging.clone().ok_or(Error::Invalid)?;
-                Box::new(NotesReader::new(config.root, &staging)?.holding(config.hydration_hold))
+                let media = config
+                    .media_root
+                    .clone()
+                    .and_then(|root| MediaFacts::locate(config.media_helper.clone(), root));
+                Box::new(
+                    NotesReader::new(config.root, &staging)?
+                        .holding(config.hydration_hold)
+                        .with_media(media),
+                )
             }
             "messages" => {
                 let home = match config.home.clone() {

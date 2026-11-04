@@ -61,6 +61,6 @@ let package = Package(
         .executableTarget(name: "CalendarChecks", dependencies: ["CalendarSource"], path: "Tests/CalendarChecks"),
         .executableTarget(name: "CalendarStoreOracle", dependencies: ["CalendarSource", "SourceSupport"], path: "Tests/CalendarStoreOracle"),
         .executableTarget(name: "CommandOriginChecks", dependencies: ["SourceSupport"], path: "Tests/CommandOriginChecks"),
-        .executableTarget(name: "AppleBridgeHelper", dependencies: ["AppleSession", "ShortcutsSource"])
+        .executableTarget(name: "AppleBridgeHelper", dependencies: ["AppleSession", "ShortcutsSource", "MediaDerivatives"])
     ]
 )

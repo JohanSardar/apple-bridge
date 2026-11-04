@@ -7,6 +7,8 @@ pub mod flight;
 mod frame;
 pub mod guard;
 #[cfg(feature = "rust-capture")]
+pub mod media_facts;
+#[cfg(feature = "rust-capture")]
 pub mod native_facts;
 pub mod ownership;
 #[cfg(feature = "rust-capture")]
