@@ -1185,12 +1185,15 @@ fn messages_reader_streams_history_then_live_rows_and_serves_attachment_bytes() 
     let mut seen = std::collections::BTreeSet::new();
     let mut handles = serde_json::Map::new();
     let mut complete = false;
-    let mut last = Value::Null;
+    let mut attachment = Value::Null;
     for _ in 0..8 {
         let (size, frame) = receive(&mut session.gateway)?;
         assert_eq!(frame["source"], "messages");
         assert_eq!(frame["scope"].as_array().map(Vec::len), Some(5));
         for row in frame["observations"].as_array().ok_or("rows")? {
+            if row["native_key"] == "att-1" && row["kind"] == "upsert" {
+                attachment = row.clone();
+            }
             if row["kind"] == "upsert" {
                 seen.insert(format!("{}/{}", row["collection"].as_str().unwrap_or(""), row["native_key"].as_str().unwrap_or("")));
             }
@@ -1199,7 +1202,6 @@ fn messages_reader_streams_history_then_live_rows_and_serves_attachment_bytes() 
             handles.extend(found.clone());
         }
         complete |= frame["completion_evidence"] == "complete";
-        last = frame.clone();
         commit(&mut session, "messages", &frame, size)?;
         if complete {
             break;
@@ -1212,16 +1214,8 @@ fn messages_reader_streams_history_then_live_rows_and_serves_attachment_bytes() 
     assert_eq!(handles.len(), 1);
     let (digest, handle) = handles.iter().next().ok_or("handle")?;
     assert_eq!(handle, "att-1");
-    let attachment = last["observations"]
-        .as_array()
-        .into_iter()
-        .flatten()
-        .chain(std::iter::empty())
-        .find(|row| row["native_key"] == "att-1");
-    if let Some(row) = attachment {
-        assert_eq!(row["data"]["blob"]["digest"], *digest);
-        assert!(row["data"]["blob"].get("handle").is_none());
-    }
+    assert_eq!(attachment["data"]["blob"]["digest"], *digest, "{attachment}");
+    assert!(attachment["data"]["blob"].get("handle").is_none());
 
     let mut read = Vec::new();
     let mut offset = 0_usize;
