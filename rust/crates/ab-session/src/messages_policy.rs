@@ -60,16 +60,51 @@ pub fn check(
     own: Option<&BTreeSet<String>>,
     recipients: &[String],
 ) -> Result<bool, Refusal> {
+    let outcome: Result<bool, Failure<()>> = check_with(
+        origin,
+        text,
+        file_count,
+        || Ok(own.cloned()),
+        || Ok(recipients.to_vec()),
+    );
+    outcome.map_err(|failure| match failure {
+        Failure::Policy(refusal) => refusal,
+        Failure::Source(()) => Refusal::Invalid,
+    })
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum Failure<E> {
+    Policy(Refusal),
+    Source(E),
+}
+
+pub fn check_with<E>(
+    origin: Origin,
+    text: &str,
+    file_count: usize,
+    own: impl FnOnce() -> Result<Option<BTreeSet<String>>, E>,
+    recipients: impl FnOnce() -> Result<Vec<String>, E>,
+) -> Result<bool, Failure<E>> {
     let untagged = !text.is_empty() && !tagged(text);
     let owner_self = origin == Origin::OwnerSelf && untagged;
-    if origin != Origin::Interactive
-        && untagged
-        && !(owner_self && owns_recipients(own, recipients))
-    {
-        return Err(Refusal::TextTagRequired);
+    if origin != Origin::Interactive && untagged {
+        let owned = owner_self && {
+            let own = own().map_err(Failure::Source)?;
+            match own {
+                None => false,
+                Some(own) => {
+                    let recipients = recipients().map_err(Failure::Source)?;
+                    owns_recipients(Some(&own), &recipients)
+                }
+            }
+        };
+        if !owned {
+            return Err(Failure::Policy(Refusal::TextTagRequired));
+        }
     }
     if text.is_empty() && file_count == 0 {
-        return Err(Refusal::Invalid);
+        return Err(Failure::Policy(Refusal::Invalid));
     }
     Ok(owner_self)
 }

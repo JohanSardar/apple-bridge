@@ -406,7 +406,8 @@ mod tests {
             prepare(&probe, &update(&json!({})), &stale),
             Err(Refusal {
                 code: "conflict".into(),
-                key: Some("r1".into())
+                key: Some("r1".into()),
+                message: None,
             })
         );
     }

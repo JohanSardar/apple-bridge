@@ -27,6 +27,8 @@ use std::{
 mod calendar;
 mod commands;
 mod contacts;
+#[cfg_attr(not(test), allow(dead_code))]
+mod messages;
 mod notes;
 mod owned;
 mod reminders;
