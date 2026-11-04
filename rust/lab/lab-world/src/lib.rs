@@ -405,6 +405,18 @@ impl World {
             .map(FaultProxy::heal)
             .ok_or_else(|| Error::Invalid("no fault proxy".into()))
     }
+    pub fn delay_network(&self, milliseconds: u64) -> Result<()> {
+        self.proxy
+            .as_ref()
+            .map(|proxy| proxy.delay(Duration::from_millis(milliseconds), false))
+            .ok_or_else(|| Error::Invalid("no fault proxy".into()))
+    }
+    pub fn feed_connections(&self) -> u64 {
+        self.proxy.as_ref().map_or(0, FaultProxy::established)
+    }
+    pub fn feed_closes(&self) -> u64 {
+        self.proxy.as_ref().map_or(0, FaultProxy::upstream_closed)
+    }
     pub fn blob_control(&self, input: &Value) -> Result<Value> {
         let mut command = Command::new("curl");
         command

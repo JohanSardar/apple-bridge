@@ -282,7 +282,8 @@ pub fn replica_integrity(observed: &Observed) -> bool {
             .filter(|record| visibility.allows(record))
             .cloned()
             .collect();
-        replica.cursor == gateway.cursor
+        replica.cursor.epoch == gateway.cursor.epoch
+            && replica.cursor.sequence == gateway.cursor.sequence
             && record_multiset(&replica.records, true) == record_multiset(&visible, true)
     })
 }
