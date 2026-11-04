@@ -52,7 +52,8 @@ enum ExternalChange {
         let store = EKEventStore()
         switch action {
         case "create":
-            let container = try owned(request, "container_title")
+            let container = try text(request, "container_title")
+            guard container == fixtureCalendar || container.hasPrefix(tag) else { throw Failure(reason: "untagged_container_title") }
             guard let list = store.calendars(for: .reminder).first(where: { $0.title == container && $0.allowsContentModifications }) else { throw Failure(reason: "container") }
             let reminder = EKReminder(eventStore: store)
             reminder.title = try owned(request, "title")
