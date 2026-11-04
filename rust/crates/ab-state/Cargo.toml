@@ -24,3 +24,7 @@ ed25519-dalek.workspace = true
 
 [features]
 lab = ["ab-domain/lab"]
+
+[dev-dependencies]
+lab-demo = { path = "../../lab/lab-demo" }
+tempfile = "3"
