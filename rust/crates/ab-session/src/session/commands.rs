@@ -26,6 +26,7 @@ use std::{
 
 const TICKET_SECONDS: i64 = 30;
 const BIND_WAIT: Duration = Duration::from_millis(500);
+const READER_BIND_WAIT: Duration = Duration::from_secs(15);
 const READ_WAIT: Duration = Duration::from_secs(10);
 const WRITE_WAIT: Duration = Duration::from_secs(30);
 const DISPOSITIONS: &[&str] = &[
@@ -204,6 +205,13 @@ fn source_of(operation: &str) -> &str {
 
 impl Probe for Hub {
     fn call(&self, operation: &str, args: &Value) -> Result<Value, String> {
+        if let Some(source) = operation.strip_suffix(".reconcile")
+            && let Some(done) = self.capture_reconcile(source, WRITE_WAIT)
+        {
+            return done
+                .map(|()| json!({}))
+                .map_err(|()| "unavailable".to_owned());
+        }
         let wait = if matches!(
             operation,
             "reminders.write"
@@ -356,14 +364,13 @@ impl Hub {
     }
 
     fn conflict_evidence(&self, source: &str, key: &str) -> Option<Value> {
-        let reconciled = self.primitive(
+        let reconciled = self.call(
             &format!("{source}.reconcile"),
             &json!({"conflict_key": key}),
-            WRITE_WAIT,
         );
         let checkpoint = reconciled
             .ok()
-            .and_then(|_| self.bind(key, &[], true, 0).ok().flatten())?;
+            .and_then(|_| self.bind(source, key, &[], true, 0).ok().flatten())?;
         Some(json!({"native_key": key, "capture_checkpoint": checkpoint}))
     }
 
@@ -443,13 +450,13 @@ impl Hub {
         let driver = owned::driver(source_of(operation)).ok_or(Error::Invalid)?;
         let observed = (driver.resolved)(self, evidence).filter(|found| {
             let args = (driver.reconcile_args)(found, operation);
-            self.primitive(&format!("{}.reconcile", driver.name), &args, WRITE_WAIT)
+            self.call(&format!("{}.reconcile", driver.name), &args)
                 .is_ok()
         });
         let (disposition, evidence) = match observed {
             Some(mut found) => {
                 let key = found["native_key"].as_str().unwrap_or_default().to_owned();
-                match self.bind(&key, &[], true, 0)? {
+                match self.bind(driver.name, &key, &[], true, 0)? {
                     Some(checkpoint) if !key.is_empty() => {
                         found["capture_checkpoint"] = Value::String(checkpoint);
                         let disposition = match found["disposition"].as_str() {
@@ -755,8 +762,12 @@ impl Hub {
                     .as_str()
                     .unwrap_or_default()
                     .to_owned();
+                let operation = evidence["prepared"]["action"]["op"]
+                    .as_str()
+                    .unwrap_or_default();
                 if !key.is_empty()
-                    && let Some(checkpoint) = self.bind(&key, &part_keys(&evidence), true, 0)?
+                    && let Some(checkpoint) =
+                        self.bind(source_of(operation), &key, &part_keys(&evidence), true, 0)?
                 {
                     evidence["capture_checkpoint"] = Value::String(checkpoint);
                 }
@@ -817,6 +828,7 @@ impl Hub {
                 None
             } else {
                 self.bind(
+                    source_of(&operation),
                     &key,
                     &part_keys(&evidence),
                     facts_source(&operation),
@@ -841,12 +853,19 @@ impl Hub {
 
     fn bind(
         &self,
+        source: &str,
         key: &str,
         others: &[String],
         facts: bool,
         after: u64,
     ) -> Result<Option<String>, Error> {
-        let deadline = self.clock.elapsed() + BIND_WAIT;
+        let wait = if self.capture_owns(source) {
+            self.capture_nudge(source)?;
+            READER_BIND_WAIT
+        } else {
+            BIND_WAIT
+        };
+        let deadline = self.clock.elapsed() + wait;
         let mut core = self.core()?;
         loop {
             if let Some(seen) = core.flights.latest(key)

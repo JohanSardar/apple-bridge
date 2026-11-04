@@ -471,6 +471,16 @@ impl CaptureReader for AgendaReader {
         Ok(!self.partial)
     }
 
+    fn refresh(&mut self) -> bool {
+        match self.pull.as_mut() {
+            Some(pull) => {
+                pull.hint();
+                true
+            }
+            None => false,
+        }
+    }
+
     fn next(&mut self, context: &ScanContext) -> Result<Option<Value>, Error> {
         if self.pending.is_some() {
             return Err(Error::Conflict);

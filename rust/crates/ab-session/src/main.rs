@@ -1,17 +1,16 @@
 #![forbid(unsafe_code)]
 
 use ab_session::Error;
-#[cfg(feature = "rust-capture")]
 use std::os::fd::AsRawFd;
 
-#[cfg(all(feature = "lab", feature = "rust-capture", feature = "rust-effects"))]
+#[cfg(all(feature = "lab", feature = "rust-effects"))]
 struct LabEffects {
     native: String,
     home: std::path::PathBuf,
     config: ab_session::effects::Config,
 }
 
-#[cfg(all(feature = "lab", feature = "rust-capture", feature = "rust-effects"))]
+#[cfg(all(feature = "lab", feature = "rust-effects"))]
 fn lab_effects(
     native: Option<&str>,
     rust: &[String],
@@ -41,7 +40,7 @@ fn lab_effects(
     }))
 }
 
-#[cfg(all(feature = "lab", feature = "rust-capture"))]
+#[cfg(feature = "lab")]
 fn lab_listen(listen: &str, gateway: &str, native: Option<&str>) -> Result<(), Error> {
     let mut selection = ab_session::ownership::Selection::default();
     if let Ok(value) = std::env::var("AB_SESSION_PRODUCERS") {
@@ -137,7 +136,6 @@ fn lab_listen(listen: &str, gateway: &str, native: Option<&str>) -> Result<(), E
     Ok(())
 }
 
-#[cfg(feature = "rust-capture")]
 fn inherited_descriptor(
     variable: &str,
     taken: &[i32],
@@ -152,16 +150,13 @@ fn inherited_descriptor(
     Ok(ab_sys::inherited_unix_stream(descriptor)?)
 }
 
-#[cfg(feature = "rust-capture")]
 const FACTS_DESCRIPTOR: &str = "AB_NATIVE_FACTS_FD";
 
-#[cfg(feature = "rust-capture")]
 type Links = (
     Option<ab_session::production::EffectsLink>,
     Option<std::os::unix::net::UnixStream>,
 );
 
-#[cfg(feature = "rust-capture")]
 fn native_links(
     gateway: &std::os::unix::net::UnixStream,
     helper: &std::os::unix::net::UnixStream,
@@ -262,6 +257,7 @@ fn lab_session(args: &[String]) -> Result<(), Error> {
     };
     let secret = std::fs::read(secret)?;
     let home = std::path::PathBuf::from(home);
+    let capture = ab_session::production::load(&home)?;
     let _ = std::fs::remove_file(listen);
     let listener = std::os::unix::net::UnixListener::bind(listen)?;
     for link in listener.incoming() {
@@ -270,11 +266,15 @@ fn lab_session(args: &[String]) -> Result<(), Error> {
             continue;
         };
         let (secret, home, options) = (secret.clone(), home.clone(), options.clone());
+        let attached = capture
+            .as_ref()
+            .map(|loaded| loaded.attached(None))
+            .transpose()?;
         std::thread::spawn(move || {
             let clock = std::sync::Arc::new(ab_session::session::SystemClock::start());
-            if let Err(error) =
-                ab_session::session::serve_configured(stream, link, &secret, &home, clock, &options)
-            {
+            if let Err(error) = ab_session::session::serve_attached(
+                stream, link, &secret, &home, clock, &options, attached,
+            ) {
                 eprintln!("ab-session: {error}");
             }
         });
@@ -293,6 +293,23 @@ fn selftest_messages(args: &[String]) -> Result<(), Error> {
     ab_session::session::selftest_messages(link, &request)
 }
 
+fn session_capture(
+    home: &str,
+    gateway: &std::os::unix::net::UnixStream,
+    helper: &std::os::unix::net::UnixStream,
+) -> Result<Option<ab_session::session::Attached>, Error> {
+    let Some(loaded) = ab_session::production::load(std::path::Path::new(home))? else {
+        return Ok(None);
+    };
+    let facts = if loaded.wants_inherited_facts() {
+        let taken = [gateway.as_raw_fd(), helper.as_raw_fd()];
+        Some(inherited_descriptor(FACTS_DESCRIPTOR, &taken)?)
+    } else {
+        None
+    };
+    Ok(Some(loaded.attached(facts)?))
+}
+
 fn serve_session(
     gateway: i32,
     helper: i32,
@@ -304,6 +321,7 @@ fn serve_session(
     let secret = ab_session::session::load_secret(std::path::Path::new(secret))?;
     let gateway = ab_sys::inherited_unix_stream(gateway)?;
     let helper = ab_sys::inherited_unix_stream(helper)?;
+    let capture = session_capture(home, &gateway, &helper)?;
     let options = ab_session::session::Options {
         rust_commands: rust_commands
             .unwrap_or_default()
@@ -312,13 +330,14 @@ fn serve_session(
             .map(str::to_owned)
             .collect(),
     };
-    ab_session::session::serve_configured(
+    ab_session::session::serve_attached(
         gateway,
         helper,
         &secret,
         std::path::Path::new(home),
         std::sync::Arc::new(ab_session::session::SystemClock::start()),
         &options,
+        capture,
     )
 }
 
@@ -332,11 +351,9 @@ fn lab_entry(args: &[String]) -> Option<Result<(), Error>> {
     {
         return Some(lab_session(args));
     }
-    #[cfg(feature = "rust-capture")]
     if args.len() == 4 && args[0] == "--lab-listen" && args[2] == "--lab-gateway" {
         return Some(lab_listen(&args[1], &args[3], None));
     }
-    #[cfg(feature = "rust-capture")]
     if args.len() == 6
         && args[0] == "--lab-listen"
         && args[2] == "--lab-gateway"
@@ -430,43 +447,21 @@ fn run() -> Result<(), Error> {
     if effects_selected && effects_home.is_none() {
         return Err(Error::Conflict);
     }
-    #[cfg(feature = "rust-capture")]
     let capture = match &capture_home {
         Some(home) => ab_session::production::load(std::path::Path::new(home))?,
         None => None,
     };
-    #[cfg(not(feature = "rust-capture"))]
-    if capture_home.is_some() {
-        return Err(Error::Conflict);
-    }
     let gateway = ab_sys::inherited_unix_stream(gateway)?;
     let helper = ab_sys::inherited_unix_stream(helper)?;
-    #[cfg(feature = "rust-capture")]
-    #[allow(clippy::needless_return)]
-    {
-        let (effects, facts) = native_links(
-            &gateway,
-            &helper,
-            effects_home,
-            capture
-                .as_ref()
-                .is_some_and(ab_session::production::Loaded::wants_inherited_facts),
-        )?;
-        return ab_session::production::serve_with_facts(
-            gateway,
-            helper,
-            capture.as_ref(),
-            effects,
-            facts,
-        );
-    }
-    #[cfg(not(feature = "rust-capture"))]
-    {
-        if effects_home.is_some() {
-            return Err(Error::Conflict);
-        }
-        ab_session::proxy::relay(gateway, helper)
-    }
+    let (effects, facts) = native_links(
+        &gateway,
+        &helper,
+        effects_home,
+        capture
+            .as_ref()
+            .is_some_and(ab_session::production::Loaded::wants_inherited_facts),
+    )?;
+    ab_session::production::serve_with_facts(gateway, helper, capture.as_ref(), effects, facts)
 }
 
 fn main() -> std::process::ExitCode {

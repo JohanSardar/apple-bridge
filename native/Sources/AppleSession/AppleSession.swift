@@ -428,6 +428,10 @@ public actor AppleSession: ObservationSink {
 
     public func emitCheckpoint(source: String, generation: String, checkpoint: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws {
         guard connected else { throw SourceFailure.unavailable }
+        if let link, !ownership.swiftCaptures(source) {
+            try await sendHint(link, source: source, generation: generation, observations: observations, scanID: scanID, scanStartedAt: scanStartedAt, scope: scope, completionEvidence: completionEvidence)
+            return
+        }
         let metadata: [String: JSON] = ["source": .string(source), "scan_id": .string(scanID)]
         trace.record("capture_received", fields: metadata)
         let connection = wire
@@ -477,6 +481,18 @@ public actor AppleSession: ObservationSink {
             }
             try await committedNative(source: source, generation: generation, checkpoint: checkpoint, observations: sending)
         }
+    }
+
+    private func sendHint(_ link: NativeSessionLink, source: String, generation: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String) async throws {
+        scanSequence += 1
+        let id = "scan-\(scanSequence)"
+        let started = scanID.isEmpty ? "" : (scanStartedAt.isEmpty ? timestamp() : scanStartedAt)
+        let checkpoint = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<String, any Error>) in
+            scanWaiters[id] = continuation
+            do { try link.send(NativeSessionFrame.scan(id: id, source: source, generation: generation, observations: [], scanID: scanID, scanStartedAt: started, scope: scope, completionEvidence: completionEvidence, blobHandles: [:], live: true)) }
+            catch { scanWaiters.removeValue(forKey: id); continuation.resume(throwing: error) }
+        }
+        try await committedNative(source: source, generation: generation, checkpoint: checkpoint, observations: observations)
     }
 
     private func committedNative(source: String, generation: String, checkpoint: String, observations: [JSON]) async throws {
@@ -629,9 +645,21 @@ public actor AppleSession: ObservationSink {
 
     public func runNative(socket: String, secretFile: String) async throws {
         let sessionHome = self.home.path
-        try await runNative(connect: {
+        try await runNative(connect: { [self] in
             let started = try NativeSessionLauncher.launch(socket: socket, secretFile: secretFile, home: sessionHome)
-            return (started.descriptor, { started.stop() })
+            let descriptor = started.proxy.factsDescriptor
+            let facts = NativeServer(adapter: self, factsOnly: true)
+            let serving = Task {
+                defer { Darwin.close(descriptor) }
+                try? await facts.run(descriptor: descriptor)
+            }
+            let changes = Task { await self.forwardChanges(to: facts) }
+            return (started.descriptor, {
+                changes.cancel()
+                serving.cancel()
+                shutdown(descriptor, SHUT_RDWR)
+                started.stop()
+            })
         })
     }
 

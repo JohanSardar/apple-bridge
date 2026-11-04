@@ -39,7 +39,6 @@ enum NativeSessionLauncher {
         catch { Darwin.close(gateway); throw error }
         Darwin.close(gateway)
         Darwin.close(proxy.nativeDescriptor)
-        Darwin.close(proxy.factsDescriptor)
         return Launched(descriptor: proxy.descriptor, proxy: proxy)
     }
 }

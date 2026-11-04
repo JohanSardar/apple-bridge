@@ -32,7 +32,12 @@ impl NativeQueries {
         let GatewayFrame::Query(query) = frame else {
             return false;
         };
-        match query.op.as_str() {
+        self.handles_operation(&query.op)
+    }
+
+    #[must_use]
+    pub fn handles_operation(&self, operation: &str) -> bool {
+        match operation {
             MAIL_BODY => self.mail_bodies.is_some(),
             SHORTCUT_ACTIONS => self.shortcut_roots.is_some(),
             _ => false,

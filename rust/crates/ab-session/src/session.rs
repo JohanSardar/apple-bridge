@@ -25,6 +25,7 @@ use std::{
 };
 
 mod calendar;
+mod capture;
 mod commands;
 mod contacts;
 mod messages;
@@ -37,6 +38,8 @@ pub fn selftest_messages(link: UnixStream, request: &serde_json::Value) -> Resul
 mod notes;
 mod owned;
 mod reminders;
+
+pub use capture::Attached;
 
 pub const RUST_COMMAND_SOURCES: [&str; 14] = [
     "reminders",
@@ -87,14 +90,15 @@ const OBSERVATION_LIMIT: usize = 240_000;
 const MAX_CREDIT: i64 = 4_194_304;
 const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(15);
 
-struct Origin {
-    scan: String,
-    last: bool,
+enum Origin {
+    Helper { scan: String, last: bool },
+    Reader(capture::ReaderFlight),
 }
 
 struct Core {
     flights: Flights<Origin>,
     commands: commands::Commands,
+    capture: capture::State,
     closed: bool,
 }
 
@@ -105,7 +109,9 @@ struct Hub {
     link: Mutex<UnixStream>,
     sequence: AtomicU64,
     epoch: u128,
+    fence: u64,
     clock: Arc<dyn Clock>,
+    capture: Option<capture::Capture>,
 }
 
 impl Hub {
@@ -286,6 +292,15 @@ fn gateway_frame<'scope>(
         })?,
         "Pong" => {}
         "Committed" => committed(hub, frame)?,
+        "BlobRead" if hub.capture_blob(frame)? => {}
+        "Query" if hub.capture_handles_query(&frame.op) => {
+            let frame = frame.clone();
+            scope.spawn(move || {
+                if let Err(error) = hub.capture_query(&frame) {
+                    eprintln!("ab-session: query failed: {error}");
+                }
+            });
+        }
         "Query" | "QueryCancel" | "Prepare" | "Dispatch" | "Resolve" | "BlobRead" => {
             hub.gateway_command(scope, frame)?;
         }
@@ -297,25 +312,36 @@ fn gateway_frame<'scope>(
 
 fn committed(hub: &Hub, frame: &IpcFrame) -> Result<(), Error> {
     let source = name(frame.source.ok_or(Error::Invalid)?)?;
-    let flight = {
-        let mut core = hub.core()?;
-        let matches = core.flights.get(&source).is_some_and(|flight| {
-            flight.matches(&frame.checkpoint, u64::try_from(frame.credit).ok())
-        });
-        if !matches {
-            return Err(Error::Invalid);
-        }
-        core.flights
-            .complete(&source, true, facts(&source))
-            .ok_or(Error::Conflict)?
+    let reader_last = {
+        let core = hub.core()?;
+        let flight = core
+            .flights
+            .get(&source)
+            .filter(|flight| flight.matches(&frame.checkpoint, u64::try_from(frame.credit).ok()))
+            .ok_or(Error::Invalid)?;
+        matches!(&flight.origin, Origin::Reader(origin) if origin.last)
     };
+    let token = if reader_last {
+        hub.capture_commit(&source)?
+    } else {
+        None
+    };
+    let flight = hub
+        .core()?
+        .flights
+        .complete(&source, true, facts(&source))
+        .ok_or(Error::Conflict)?;
     hub.changed.notify_all();
-    if flight.origin.last {
-        hub.send_link(&Link::ScanCommitted(ScanCommitted {
-            id: flight.origin.scan,
-            source: frame.source.ok_or(Error::Invalid)?,
-            checkpoint: flight.checkpoint,
-        }))?;
+    match &flight.origin {
+        Origin::Reader(_) => hub.capture_committed(&source, &flight, token)?,
+        Origin::Helper { scan, last: true } => {
+            hub.send_link(&Link::ScanCommitted(ScanCommitted {
+                id: scan.clone(),
+                source: frame.source.ok_or(Error::Invalid)?,
+                checkpoint: flight.checkpoint.clone(),
+            }))?;
+        }
+        Origin::Helper { .. } => {}
     }
     Ok(())
 }
@@ -402,7 +428,7 @@ fn send_chunk(
             checkpoint.to_owned(),
             size,
             typed_rows(chunk),
-            Origin {
+            Origin::Helper {
                 scan: scan.id.clone(),
                 last,
             },
@@ -535,7 +561,6 @@ pub fn serve_with(
     serve_configured(gateway, link, secret, home, clock, &Options::default())
 }
 
-#[allow(clippy::too_many_lines)]
 pub fn serve_configured(
     gateway: UnixStream,
     link: UnixStream,
@@ -543,6 +568,19 @@ pub fn serve_configured(
     home: &Path,
     clock: Arc<dyn Clock>,
     options: &Options,
+) -> Result<(), Error> {
+    serve_attached(gateway, link, secret, home, clock, options, None)
+}
+
+#[allow(clippy::too_many_lines)]
+pub fn serve_attached(
+    gateway: UnixStream,
+    link: UnixStream,
+    secret: &[u8],
+    home: &Path,
+    clock: Arc<dyn Clock>,
+    options: &Options,
+    attached: Option<Attached>,
 ) -> Result<(), Error> {
     if options
         .rust_commands
@@ -561,10 +599,16 @@ pub fn serve_configured(
             return Err(error);
         }
     };
+    let committed = committed_map(&opened)?;
+    let capture = capture::Capture::attach(attached)?;
+    let mut capture_state = capture::State::default();
+    if let Some(capture) = &capture {
+        capture.open(&mut capture_state, &committed)?;
+    }
     let mut flights = Flights::default();
     flights.open(
         u64::try_from(opened.byte_credit).map_err(|_| Error::Invalid)?,
-        committed_map(&opened)?,
+        committed,
     );
     let commands = commands::Commands::open(home, fence, &options.rust_commands)?;
     let unresolved = commands.unresolved();
@@ -572,12 +616,15 @@ pub fn serve_configured(
         core: Mutex::new(Core {
             flights,
             commands,
+            capture: capture_state,
             closed: false,
         }),
         changed: Condvar::new(),
         gateway: Mutex::new(gateway),
         link: Mutex::new(link),
         clock,
+        capture,
+        fence,
         sequence: AtomicU64::new(0),
         epoch: SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -603,6 +650,15 @@ pub fn serve_configured(
             hub.close();
             result
         });
+        let producer = scope.spawn(|| {
+            let result = hub.produce();
+            if let Err(error) = &result {
+                eprintln!("ab-session: capture ended: {error}");
+                hub.close();
+            }
+            result
+        });
+        let watcher = scope.spawn(|| hub.watch());
         let result = (|| -> Result<(), Error> {
             loop {
                 let frame = match native::read_frame(&mut link_read) {
@@ -614,8 +670,14 @@ pub fn serve_configured(
                     Link::SourceState(state) => hub.send_gateway(&state.into_ipc())?,
                     Link::Scan(scan) => {
                         let hub = &hub;
+                        let source = name(scan.source)?;
                         scope.spawn(move || {
-                            if let Err(error) = run_scan(hub, &scan) {
+                            let done = if hub.capture_owns(&source) {
+                                hub.capture_scan(&scan, &source)
+                            } else {
+                                run_scan(hub, &scan)
+                            };
+                            if let Err(error) = done {
                                 scan_failed(hub, &scan.id, &error);
                             }
                         });
@@ -657,6 +719,8 @@ pub fn serve_configured(
         })();
         hub.close();
         let upstream = upstream.join().map_err(|_| Error::WorkerPanicked)?;
-        result.and(upstream)
+        let producer = producer.join().map_err(|_| Error::WorkerPanicked)?;
+        watcher.join().map_err(|_| Error::WorkerPanicked)?;
+        result.and(upstream).and(producer)
     })
 }

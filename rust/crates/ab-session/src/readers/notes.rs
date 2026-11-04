@@ -177,6 +177,10 @@ impl CaptureReader for NotesReader {
         Ok(Some(value))
     }
 
+    fn refresh(&mut self) -> bool {
+        true
+    }
+
     fn commit(&mut self) -> Result<(), Error> {
         let (pending, current) = self.pending.take().ok_or(Error::Conflict)?;
         match pending {
