@@ -593,7 +593,7 @@ fn reminders_pull_pages_both_collections_and_follows_absent_rows_and_alias_moves
     )?;
     let (size, third) = receive(&mut f.wire.gateway)?;
     assert_eq!(names(&third, "upsert"), ["r1-rekeyed"]);
-    assert!(names(&third, "absent").is_empty());
+    assert_eq!(names(&third, "absent"), Vec::<String>::new());
     commit(&mut f.wire, "reminders", &third, size)?;
 
     set(
@@ -647,7 +647,7 @@ fn reminders_list_absence_and_incomplete_pages_never_delete() -> Fallible<()> {
     )?;
     let (_, second) = receive(&mut f.wire.gateway)?;
     assert_eq!(names(&second, "absent"), ["list-2"]);
-    assert!(names(&second, "upsert").is_empty());
+    assert_eq!(names(&second, "upsert"), Vec::<String>::new());
     Ok(())
 }
 
