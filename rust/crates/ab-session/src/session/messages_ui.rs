@@ -1,4 +1,4 @@
-use super::messages_local::Config;
+use super::messages_local::{Config, write_private};
 use super::owned::{Probe, text};
 use crate::messages_policy::{
     MediaBubble, can_replace_draft, matches_conversation, media_direction, media_target,
@@ -436,8 +436,53 @@ impl<'a> Ui<'a> {
         }
         match selected {
             Some(index) if left > 0 => Ok(bubbles[index].handle),
-            _ => Err(Failure::TargetUnavailable),
+            _ => {
+                self.media_diagnostic(&bubbles, &candidates, &names, left, outgoing);
+                Err(Failure::TargetUnavailable)
+            }
         }
+    }
+
+    fn media_diagnostic(
+        &self,
+        bubbles: &[Node],
+        candidates: &[MediaBubble],
+        names: &BTreeSet<String>,
+        left: i64,
+        outgoing: bool,
+    ) {
+        let rows: Vec<Value> = bubbles
+            .iter()
+            .zip(candidates)
+            .map(|(bubble, candidate)| {
+                let description = bubble.get(DESCRIPTION);
+                let actions = self.action_names(bubble.handle).unwrap_or_default();
+                let titles: Vec<&str> = actions
+                    .iter()
+                    .map(|name| name.lines().next().unwrap_or_default())
+                    .filter(|title| title.starts_with("Name:Quick") || *title == "AXShowMenu")
+                    .collect();
+                json!({
+                    "first_field": description.split(", ").next().unwrap_or_default(),
+                    "fields": description.split(", ").count(),
+                    "outgoing": candidate.outgoing,
+                    "is_generic_bubble": bubble.get(IDENTIFIER) == BUBBLE,
+                    "values": candidate.values.iter().filter(|value| !value.is_empty()).count(),
+                    "values_naming_file": candidate.values.iter().filter(|value| media_value_matches(value, names)).count(),
+                    "actions": titles,
+                })
+            })
+            .collect();
+        let body = json!({
+            "stage": "media_target",
+            "budget_left": left,
+            "want_outgoing": outgoing,
+            "bubbles": rows,
+        });
+        let _ = write_private(
+            &self.config.reports.join("messages-target-diagnostic.json"),
+            body.to_string().as_bytes(),
+        );
     }
 
     fn text_bubble(&self, expected: &str, outgoing: bool, cleanup: bool) -> Result<i64> {
