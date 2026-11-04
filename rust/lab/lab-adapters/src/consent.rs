@@ -274,7 +274,7 @@ pub(crate) fn agent_oauth(world: &World, site: &Site, owner: &Owner, evidence: &
     );
     for bad in ["plain", ""] {
         let (status, _) = owner_call("GET", &query(&[("code_challenge_method", bad)]), None);
-        evidence.check(&format!("reject_non_s256_{bad}"), status == 400, "");
+        evidence.check(&format!("reject_non_s256_{bad}"), status == 303, "");
     }
     let (status, _) = owner_call(
         "GET",
@@ -424,8 +424,22 @@ pub(crate) fn agent_oauth(world: &World, site: &Site, owner: &Owner, evidence: &
         "",
     );
     evidence.check(
+        "refresh_retry_tolerated",
+        refresh(&first.refresh).status == 200,
+        "",
+    );
+    let aged = edit_credentials(&site.home, |data| {
+        if let Some(rows) = data["oauth_refresh"].as_array_mut() {
+            for row in rows {
+                if row["used"] == true {
+                    row["rotated_at"] = json!(1);
+                }
+            }
+        }
+    });
+    evidence.check(
         "refresh_reuse_detected",
-        refresh(&first.refresh).status == 400,
+        aged && refresh(&first.refresh).status == 400,
         "",
     );
     evidence.check(

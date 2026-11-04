@@ -3,6 +3,8 @@ mod mcp;
 pub mod web;
 pub mod web_connector;
 mod web_metadata;
+mod web_oauth;
+mod web_pages;
 use ab_operations::{Code, Cursor, Error, Principal, Service};
 use axum::{
     Router,
@@ -126,7 +128,7 @@ fn authentication_problem(error: Error, public: bool, host: Option<&str>) -> Res
     if response.status() == StatusCode::UNAUTHORIZED {
         let scheme = if public { "https" } else { "http" };
         if let Ok(value) = format!(
-            "Bearer resource_metadata=\"{scheme}://{}/.well-known/oauth-protected-resource\"",
+            "Bearer resource_metadata=\"{scheme}://{}/.well-known/oauth-protected-resource/mcp\"",
             host.unwrap_or_default()
         )
         .parse()
@@ -493,7 +495,7 @@ mod oauth_discovery_tests {
             assert_eq!(
                 response.headers()[header::WWW_AUTHENTICATE],
                 format!(
-                    "Bearer resource_metadata=\"{scheme}://{host}/.well-known/oauth-protected-resource\""
+                    "Bearer resource_metadata=\"{scheme}://{host}/.well-known/oauth-protected-resource/mcp\""
                 )
             );
         }

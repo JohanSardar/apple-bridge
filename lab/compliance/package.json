@@ -1,0 +1,10 @@
+{
+  "name": "ab-oauth-compliance",
+  "private": true,
+  "type": "module",
+  "description": "Independent spec-strict OAuth and MCP clients run against a gateway.",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "oauth4webapi": "3.8.8"
+  }
+}

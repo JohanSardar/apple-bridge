@@ -26,7 +26,7 @@ document.querySelector('#signin')?.addEventListener('click', async () => {
   await post('/auth/' + flow + '/finish', {ceremony_id:options.ceremony_id,credential:{id:credential.id,rawId:encode(credential.rawId),type:credential.type,response,clientExtensionResults:credential.getClientExtensionResults()}});
   history.replaceState(null,'',location.pathname + location.search);
   message.textContent = 'Signed in. You may continue.';
-  if (location.pathname.startsWith('/approvals')) location.reload();
+  if (location.pathname.startsWith('/approvals') || location.pathname === '/oauth/authorize') { location.assign(location.href); return; }
   document.querySelector('#signin').hidden = true;
  } catch (error) { message.textContent = error.message; }
 });

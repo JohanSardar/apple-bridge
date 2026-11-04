@@ -7,6 +7,8 @@ license.workspace = true
 workspace = true
 [dependencies]
 ab-trust = { path = "../ab-trust" }
+ab-pages = { path = "../ab-pages" }
+cookie = "0.18"
 url = "2"
 jiff.workspace = true
 ipnet = "2"
@@ -23,6 +25,10 @@ thiserror.workspace = true
 tower = { version = "0.5", features = ["util"] }
 base64 = "0.22"
 futures-util = "0.3"
+
+[dev-dependencies]
+tempfile = "3"
+sha2.workspace = true
 
 [features]
 lab-harness = ["ab-trust/lab-harness", "ab-operations/lab-harness"]

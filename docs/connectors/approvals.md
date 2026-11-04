@@ -1,8 +1,8 @@
 # Connector approvals
 
-An unauthenticated OAuth authorization page asks the owner to approve on the Mac or paired iPhone. It shows the connector name, callback host, exact requested scopes and a four-digit matching code. Requests expire after five minutes. The random polling capability is separate from the matching code; neither a public HTTP request nor the four-digit code alone can approve a connector.
+The OAuth authorization page says which app wants what, in product words, and asks the owner to approve on the Mac or paired iPhone. It shows the connector name, callback host, requested data and a four-digit matching code. Requests expire after five minutes. The random polling capability is separate from the matching code; neither a public HTTP request nor the four-digit code alone can approve a connector.
 
-The Mac app displays Allow and Deny. The gateway launches its approval window when needed. A paired iPhone receives the encrypted request through the existing push and pending-delivery transport, displays its code and scopes, and requires Face ID before sending a signed decision. The physical iPhone check belongs to I1.
+There is one queue of requests per gateway, shared by every hostname, so a request arriving through the relay reaches the Mac and iPhone. The gateway opens the Helper's Allow and Deny window when a request starts waiting, and the window closes after a minute with nothing waiting. A paired iPhone receives the encrypted request through the existing push and pending-delivery transport, displays its code and scopes, and requires Face ID before sending a signed decision. The physical iPhone check belongs to I1.
 
 The owner can also use the CLI on the gateway Mac:
 
@@ -12,7 +12,7 @@ bridge connector allow --request <id> --code <four-digit-code> --home <gateway-h
 bridge connector deny --request <id> --code <four-digit-code> --home <gateway-home>
 ```
 
-These commands use a Unix socket in a directory accessible only to the gateway's macOS account. Five failed code attempts refuse further decisions. Public creation is limited to ten requests a minute and one hundred a day per client address, with a global limit and at most 128 outstanding requests. Approval and redirect retrieval are each single use. Denial returns OAuth `access_denied`. The existing passkey consent page remains available through “Use a passkey instead”.
+These commands use a Unix socket in a directory accessible only to the gateway's macOS account. Five failed code attempts refuse further decisions. Public creation is limited to ten requests a minute and one hundred a day per client address, with a global limit and at most 128 outstanding requests. Approval and redirect retrieval are each single use. Denial returns OAuth `access_denied`. A passkey is the fallback: once one is enrolled the page offers “Use a passkey instead”, which signs in and then offers Allow and Deny on the page.
 
 ## Reproduce A1
 

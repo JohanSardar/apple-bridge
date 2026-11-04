@@ -319,7 +319,7 @@ impl<G: Gateway> Delivery<G> {
                 &approval.id,
                 &approval.code,
                 &format!(
-                    "{}\nCode {}\nRequested data: {}",
+                    "{}\nCode {}\n{}",
                     approval.name, approval.code, approval.scopes
                 ),
                 None,

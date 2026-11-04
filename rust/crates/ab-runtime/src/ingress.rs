@@ -21,6 +21,7 @@ pub struct App {
     pub authority: Arc<ab_trust::Authority>,
     pub audit: Arc<AuditLog>,
     pub approvals: Arc<Approvals>,
+    pub connectors: Arc<ab_frontdoor::web_connector::Connectors>,
     pub phone: Router,
     pub feed: Arc<ab_replication::server::Server<ab_replication::gateway::StateAdapter>>,
     routers: Mutex<BTreeMap<String, Router>>,
@@ -35,6 +36,7 @@ impl App {
         authority: Arc<ab_trust::Authority>,
         audit: Arc<AuditLog>,
         approvals: Arc<Approvals>,
+        connectors: Arc<ab_frontdoor::web_connector::Connectors>,
         phone: Router,
         feed: Arc<ab_replication::server::Server<ab_replication::gateway::StateAdapter>>,
     ) -> Self {
@@ -45,6 +47,7 @@ impl App {
             authority,
             audit,
             approvals,
+            connectors,
             phone,
             feed,
             routers: Mutex::default(),
@@ -74,6 +77,7 @@ impl App {
             self.address,
             host.into(),
             Some(self.approvals.clone()),
+            self.connectors.clone(),
         );
         let router = frontdoor
             .router()

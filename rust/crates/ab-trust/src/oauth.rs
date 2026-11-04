@@ -3,11 +3,13 @@ use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use subtle::ConstantTimeEq;
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Client {
     #[serde(default)]
     pub client_id: String,
+    #[serde(default)]
     pub client_name: String,
     pub redirect_uris: Vec<String>,
     #[serde(default)]
@@ -16,6 +18,14 @@ pub struct Client {
     pub grant_types: Vec<String>,
     #[serde(default, deserialize_with = "nullable_strings")]
     pub response_types: Vec<String>,
+    #[serde(default)]
+    pub client_id_issued_at: i64,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub used: bool,
+}
+#[allow(clippy::trivially_copy_pass_by_ref)]
+fn is_false(value: &bool) -> bool {
+    !*value
 }
 fn nullable_strings<'de, D: serde::Deserializer<'de>>(
     deserializer: D,
@@ -48,6 +58,8 @@ pub struct Refresh {
     pub principal: String,
     pub expires_at: String,
     pub used: bool,
+    #[serde(default)]
+    pub rotated_at: i64,
 }
 #[derive(Debug, Serialize)]
 pub struct Tokens {
@@ -97,13 +109,7 @@ pub fn valid_redirect(raw: &str) -> bool {
         && u.password().is_none()
         && u.host_str().is_some()
         && (u.scheme() == "https"
-            || u.scheme() == "http"
-                && u.host_str().is_some_and(|h| {
-                    h == "localhost"
-                        || h.trim_matches(['[', ']'])
-                            .parse::<std::net::IpAddr>()
-                            .is_ok_and(|ip| ip.is_loopback())
-                }))
+            || u.scheme() == "http" && u.host_str().is_some_and(loopback_host))
 }
 pub fn agent_grants(level: &str, scopes: &[Grant]) -> Result<Vec<Grant>, Error> {
     if !["read", "approve", "full"].contains(&level) || scopes.is_empty() {
@@ -144,43 +150,130 @@ pub(crate) fn write<T: Serialize>(d: &mut Credentials, key: &str, value: &T) -> 
     Ok(())
 }
 fn equal(a: &str, b: &str) -> bool {
-    use hmac::Mac;
-    let Ok(mut mac) = hmac::Hmac::<Sha256>::new_from_slice(b"apple-bridge-token-comparison") else {
+    Sha256::digest(a.as_bytes())
+        .ct_eq(&Sha256::digest(b.as_bytes()))
+        .into()
+}
+fn pkce_verified(challenge: &str, verifier: &str) -> bool {
+    (43..=128).contains(&verifier.len())
+        && verifier
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b"-._~".contains(&b))
+        && equal(
+            challenge,
+            oauth2::PkceCodeChallenge::from_code_verifier_sha256(&oauth2::PkceCodeVerifier::new(
+                verifier.to_owned(),
+            ))
+            .as_str(),
+        )
+}
+fn loopback_host(host: &str) -> bool {
+    host == "localhost"
+        || host
+            .trim_matches(['[', ']'])
+            .parse::<std::net::IpAddr>()
+            .is_ok_and(|ip| ip.is_loopback())
+}
+pub fn redirect_matches(registered: &str, presented: &str) -> bool {
+    if registered == presented {
+        return true;
+    }
+    let (Ok(registered), Ok(presented)) = (url::Url::parse(registered), url::Url::parse(presented))
+    else {
         return false;
     };
-    mac.update(a.as_bytes());
-    let tag = mac.finalize().into_bytes();
-    let Ok(mut mac) = hmac::Hmac::<Sha256>::new_from_slice(b"apple-bridge-token-comparison") else {
-        return false;
-    };
-    mac.update(b.as_bytes());
-    mac.verify_slice(&tag).is_ok()
+    registered.scheme() == "http"
+        && presented.scheme() == "http"
+        && registered.host_str() == presented.host_str()
+        && registered.host_str().is_some_and(loopback_host)
+        && registered.path() == presented.path()
+        && registered.query() == presented.query()
+}
+pub fn display_name(client: &Client) -> String {
+    let name = client.client_name.trim();
+    if !name.is_empty() {
+        return name.chars().take(120).collect();
+    }
+    client
+        .redirect_uris
+        .first()
+        .and_then(|uri| url::Url::parse(uri).ok())
+        .and_then(|uri| uri.host_str().map(str::to_owned))
+        .unwrap_or_else(|| "Unnamed app".to_owned())
+}
+pub const OFFLINE_ACCESS: &str = "offline_access";
+const REFRESH_RETRY_SECONDS: i64 = 60;
+const MAX_CLIENTS: usize = 1000;
+const UNUSED_CLIENT_SECONDS: i64 = 86400;
+struct Spent {
+    principal: String,
+    reused: bool,
+    refresh_expires: String,
+}
+fn spend_code(codes: &mut [Code], e: &Exchange) -> Result<Spent, Error> {
+    let c = codes
+        .iter_mut()
+        .find(|c| c.hash == fingerprint(e.code.as_bytes()))
+        .ok_or(Error::Unauthorized)?;
+    if c.client_id != e.client_id
+        || c.redirect_uri != e.redirect_uri
+        || c.resource != e.resource
+        || !live(&c.expires_at)
+        || !pkce_verified(&c.challenge, &e.code_verifier)
+    {
+        return Err(Error::Unauthorized);
+    }
+    let reused = c.used;
+    c.used = true;
+    Ok(Spent {
+        principal: c.principal.clone(),
+        reused,
+        refresh_expires: expiry(90 * 86400),
+    })
+}
+fn spend_refresh(refreshes: &mut [Refresh], e: &Exchange) -> Result<Spent, Error> {
+    let r = refreshes
+        .iter_mut()
+        .find(|r| r.hash == fingerprint(e.refresh_token.as_bytes()))
+        .ok_or(Error::Unauthorized)?;
+    if r.client_id != e.client_id || r.resource != e.resource || !live(&r.expires_at) {
+        return Err(Error::Unauthorized);
+    }
+    let now = jiff::Timestamp::now().as_second();
+    let reused = r.used && now - r.rotated_at > REFRESH_RETRY_SECONDS;
+    if !r.used {
+        r.rotated_at = now;
+    }
+    r.used = true;
+    Ok(Spent {
+        principal: r.principal.clone(),
+        reused,
+        refresh_expires: r.expires_at.clone(),
+    })
 }
 impl Authority {
     pub fn register_oauth(&self, mut c: Client) -> Result<Client, Error> {
-        if c.client_name.trim().is_empty()
-            || c.client_name.len() > 120
+        if c.client_name.len() > 512
             || c.redirect_uris.is_empty()
             || c.redirect_uris.len() > 10
-            || !["", "none"].contains(&c.token_endpoint_auth_method.as_str())
             || !c.redirect_uris.iter().all(|s| valid_redirect(s))
-            || !c
-                .grant_types
-                .iter()
-                .all(|s| ["authorization_code", "refresh_token"].contains(&s.as_str()))
-            || !c.response_types.iter().all(|s| s == "code")
         {
             return Err(Error::Invalid);
         }
+        c.client_name = display_name(&c);
         c.client_id = format!("client_{}", ulid::Ulid::new());
+        c.client_id_issued_at = jiff::Timestamp::now().as_second();
+        c.used = false;
         c.token_endpoint_auth_method = "none".into();
-        if c.grant_types.is_empty() {
-            c.grant_types.push("authorization_code".into());
-        }
+        c.grant_types = vec!["authorization_code".into(), "refresh_token".into()];
         c.response_types = vec!["code".into()];
         self.update(|d| {
             let mut clients: Vec<Client> = read(d, "oauth_clients")?;
-            if clients.len() >= 1000 {
+            if clients.len() >= MAX_CLIENTS {
+                let stale = c.client_id_issued_at - UNUSED_CLIENT_SECONDS;
+                clients.retain(|existing| existing.used || existing.client_id_issued_at > stale);
+            }
+            if clients.len() >= MAX_CLIENTS {
                 return Err(Error::Unavailable);
             }
             clients.push(c.clone());
@@ -191,7 +284,16 @@ impl Authority {
     pub fn oauth_client(&self, id: &str, redirect: &str) -> Result<Client, Error> {
         read::<Client>(&self.load()?, "oauth_clients")?
             .into_iter()
-            .find(|c| c.client_id == id && c.redirect_uris.iter().any(|u| u == redirect))
+            .find(|c| {
+                c.client_id == id
+                    && c.redirect_uris
+                        .iter()
+                        .any(|u| redirect_matches(u, redirect))
+            })
+            .map(|mut c| {
+                c.client_name = display_name(&c);
+                c
+            })
             .ok_or(Error::Invalid)
     }
     pub fn create_oauth_agent(
@@ -232,53 +334,13 @@ impl Authority {
         self.update(|d| {
             let mut codes: Vec<Code> = read(d, "oauth_codes")?;
             let mut refreshes: Vec<Refresh> = read(d, "oauth_refresh")?;
-            let mut expires = expiry(90 * 86400);
-            let (principal, reused) = match e.grant_type.as_str() {
-                "authorization_code" => {
-                    let c = codes
-                        .iter_mut()
-                        .find(|c| c.hash == fingerprint(e.code.as_bytes()))
-                        .ok_or(Error::Unauthorized)?;
-                    let v = &e.code_verifier;
-                    if c.client_id != e.client_id
-                        || c.redirect_uri != e.redirect_uri
-                        || c.resource != e.resource
-                        || !live(&c.expires_at)
-                        || !(43..=128).contains(&v.len())
-                        || !v
-                            .bytes()
-                            .all(|b| b.is_ascii_alphanumeric() || b"-._~".contains(&b))
-                        || !equal(
-                            &c.challenge,
-                            &URL_SAFE_NO_PAD.encode(Sha256::digest(v.as_bytes())),
-                        )
-                    {
-                        return Err(Error::Unauthorized);
-                    }
-                    let used = c.used;
-                    c.used = true;
-                    (c.principal.clone(), used)
-                }
-                "refresh_token" => {
-                    let r = refreshes
-                        .iter_mut()
-                        .find(|r| r.hash == fingerprint(e.refresh_token.as_bytes()))
-                        .ok_or(Error::Unauthorized)?;
-                    if r.client_id != e.client_id
-                        || r.resource != e.resource
-                        || !live(&r.expires_at)
-                    {
-                        return Err(Error::Unauthorized);
-                    }
-                    expires.clone_from(&r.expires_at);
-                    let used = r.used;
-                    r.used = true;
-                    (r.principal.clone(), used)
-                }
+            let spent = match e.grant_type.as_str() {
+                "authorization_code" => spend_code(&mut codes, e)?,
+                "refresh_token" => spend_refresh(&mut refreshes, e)?,
                 _ => return Err(Error::Invalid),
             };
-            if reused {
-                if let Some(p) = d.principals.iter_mut().find(|p| p.id == principal) {
+            if spent.reused {
+                if let Some(p) = d.principals.iter_mut().find(|p| p.id == spent.principal) {
                     p.extra.insert(
                         "revoked_at".into(),
                         jiff::Timestamp::now().to_string().into(),
@@ -291,10 +353,15 @@ impl Authority {
             let p = d
                 .principals
                 .iter_mut()
-                .find(|p| p.id == principal && p.kind == "agent" && p.active())
+                .find(|p| p.id == spent.principal && p.kind == "agent" && p.active())
                 .ok_or(Error::Unauthorized)?;
             let scopes = scope(p);
-            if !e.scope.is_empty() && e.scope != scopes {
+            let granted: Vec<&str> = scopes.split_whitespace().collect();
+            if !e
+                .scope
+                .split_whitespace()
+                .all(|s| s == OFFLINE_ACCESS || granted.contains(&s))
+            {
                 return Err(Error::Invalid);
             }
             p.token_hash.clear();
@@ -303,7 +370,7 @@ impl Authority {
             accesses.retain(|a| live(&a.expires_at));
             accesses.push(Access {
                 hash: fingerprint(access.as_bytes()),
-                principal: principal.clone(),
+                principal: spent.principal.clone(),
                 resource: e.resource.clone(),
                 expires_at: expiry(3600),
             });
@@ -312,10 +379,19 @@ impl Authority {
                 hash: fingerprint(next.as_bytes()),
                 client_id: e.client_id.clone(),
                 resource: e.resource.clone(),
-                principal,
-                expires_at: expires,
+                principal: spent.principal,
+                expires_at: spent.refresh_expires,
                 used: false,
+                rotated_at: 0,
             });
+            let mut clients: Vec<Client> = read(d, "oauth_clients")?;
+            if let Some(client) = clients
+                .iter_mut()
+                .find(|c| c.client_id == e.client_id && !c.used)
+            {
+                client.used = true;
+                write(d, "oauth_clients", &clients)?;
+            }
             write(d, "oauth_codes", &codes)?;
             write(d, "oauth_refresh", &refreshes)?;
             write(d, "oauth_access", &accesses)?;
@@ -369,6 +445,62 @@ impl Authority {
 
 #[cfg(test)]
 mod compatibility_tests {
+    use super::redirect_matches;
+
+    #[test]
+    fn loopback_redirects_ignore_only_the_port() {
+        for (registered, presented, expected) in [
+            (
+                "http://localhost/callback",
+                "http://localhost:3118/callback",
+                true,
+            ),
+            (
+                "http://127.0.0.1/callback",
+                "http://127.0.0.1:49152/callback",
+                true,
+            ),
+            ("http://[::1]/callback", "http://[::1]:49152/callback", true),
+            (
+                "https://claude.ai/api/mcp/auth_callback",
+                "https://claude.ai/api/mcp/auth_callback",
+                true,
+            ),
+            ("https://claude.ai/cb", "https://claude.ai:8443/cb", false),
+            (
+                "https://localhost/callback",
+                "https://localhost:3118/callback",
+                false,
+            ),
+            (
+                "http://localhost/callback",
+                "http://localhost:3118/other",
+                false,
+            ),
+            (
+                "http://localhost/callback",
+                "http://127.0.0.1:3118/callback",
+                false,
+            ),
+            (
+                "http://localhost/callback",
+                "http://localhost.evil.test:3118/callback",
+                false,
+            ),
+            (
+                "http://localhost/callback",
+                "http://localhost:3118/callback?x=1",
+                false,
+            ),
+        ] {
+            assert_eq!(
+                redirect_matches(registered, presented),
+                expected,
+                "{registered} {presented}"
+            );
+        }
+    }
+
     #[test]
     fn registration_accepts_null_optional_arrays() -> Result<(), serde_json::Error> {
         let client: super::Client = serde_json::from_str(

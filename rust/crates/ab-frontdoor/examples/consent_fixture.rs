@@ -98,7 +98,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     let listener = tokio::net::TcpListener::bind(address).await?;
     let address = listener.local_addr()?;
-    let web = ab_frontdoor::web::Web::new(authority, address, String::new(), approvals);
+    let connectors = ab_frontdoor::web_connector::Connectors::new(authority.clone());
+    let web = ab_frontdoor::web::Web::new(authority, address, String::new(), approvals, connectors);
     let mut router = web.router();
     if let Some(url) = upstream {
         router = router.merge(
