@@ -449,6 +449,13 @@ impl State<Gateway> {
                 if o.collection == "notes.note" {
                     note_version(old.as_ref(), &mut value)?;
                 }
+                if o.collection == "messages.attachment" {
+                    let previous = match old.as_ref().filter(|r| !r.deleted) {
+                        Some(r) => Some(serde_json::from_str::<Value>(r.data.get())?),
+                        None => None,
+                    };
+                    crate::attachments::keep_known(previous.as_ref(), &mut value);
+                }
                 data(&value)?
             };
             if old
