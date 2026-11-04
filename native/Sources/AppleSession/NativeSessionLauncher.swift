@@ -35,10 +35,9 @@ enum NativeSessionLauncher {
         guard connected == 0, getpeereid(gateway, &uid, &gid) == 0, uid == getuid() else { Darwin.close(gateway); throw SourceFailure.unavailable }
         let binary = ProcessInfo.processInfo.environment["AB_SESSION_BINARY"] ?? Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/ab-session").path
         let proxy: SessionProxy
-        do { proxy = try SessionProxy(gateway: gateway, binary: binary, home: home, effects: false, session: secretFile) }
+        do { proxy = try SessionProxy(gateway: gateway, binary: binary, home: home, session: secretFile) }
         catch { Darwin.close(gateway); throw error }
         Darwin.close(gateway)
-        Darwin.close(proxy.nativeDescriptor)
         return Launched(descriptor: proxy.descriptor, proxy: proxy)
     }
 }
