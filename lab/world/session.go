@@ -47,9 +47,13 @@ func (w *World) helperSocket(gateway string) string {
 	return gateway
 }
 
+func SessionEffects() bool {
+	return os.Getenv("AB_LAB_SESSION") != "" && os.Getenv("AB_LAB_SESSION_EFFECTS") == "1"
+}
+
 func (w *World) startSession(ctx context.Context, gatewaySocket string) (string, error) {
 	sources := SessionSources()
-	if len(sources) == 0 {
+	if len(sources) == 0 && !SessionEffects() {
 		return gatewaySocket, nil
 	}
 	external, _ := ctx.Value(sessionRootsKey{}).(map[string]string)
@@ -94,7 +98,13 @@ func (w *World) startSession(ctx context.Context, gatewaySocket string) (string,
 	w.sessionEnv = []string{"AB_SESSION_PRODUCERS=" + string(producerJSON), "AB_SESSION_RUST_SOURCES=" + string(configJSON), "AB_SESSION_RUST_STATE=" + w.sessionState}
 	listen := filepath.Join(w.Dir, "session.sock")
 	w.sessionListen, w.sessionGateway = listen, gatewaySocket
-	if _, err = w.start("session", false, w.Dir, os.Getenv("AB_LAB_SESSION"), "--lab-listen", listen, "--lab-gateway", gatewaySocket); err != nil {
+	arguments := []string{"--lab-listen", listen, "--lab-gateway", gatewaySocket}
+	if SessionEffects() {
+		w.sessionNative = filepath.Join(w.Dir, "native.sock")
+		w.sessionEnv = append(w.sessionEnv, "AB_SESSION_EFFECTS_HOME="+filepath.Join(w.Dir, "session-effects"))
+		arguments = append(arguments, "--lab-native", w.sessionNative)
+	}
+	if _, err = w.start("session", false, w.Dir, os.Getenv("AB_LAB_SESSION"), arguments...); err != nil {
 		return "", err
 	}
 	if err = w.Await(10*time.Second, func() bool { _, err := os.Stat(listen); return err == nil }); err != nil {
@@ -127,7 +137,11 @@ func (w *World) RestartSession() error {
 		}
 	}
 	os.Remove(w.sessionListen)
-	if _, err := w.start("session", false, w.Dir, binary, "--lab-listen", w.sessionListen, "--lab-gateway", w.sessionGateway); err != nil {
+	arguments := []string{"--lab-listen", w.sessionListen, "--lab-gateway", w.sessionGateway}
+	if w.sessionNative != "" {
+		arguments = append(arguments, "--lab-native", w.sessionNative)
+	}
+	if _, err := w.start("session", false, w.Dir, binary, arguments...); err != nil {
 		return err
 	}
 	return w.Await(10*time.Second, func() bool { _, err := os.Stat(w.sessionListen); return err == nil })

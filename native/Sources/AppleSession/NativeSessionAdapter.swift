@@ -82,7 +82,17 @@ extension AppleSession: NativeAdapter {
         if effectsRouted {
             if args["session_query"] == .bool(true) {
                 guard routedOperation(operation), let handler = queryHandlers[operation], case .object = args["args"] else { throw SourceFailure.unsupported }
-                let output = try await handler(args["args"])
+                let output: QueryOutput
+                do { output = try await handler(args["args"]) }
+                catch let failure as SourceFailure {
+                    let code: String
+                    switch failure {
+                    case .invalid: code = "invalid"
+                    case .unsupported: code = "unsupported"
+                    default: throw failure
+                    }
+                    return .object(["observed": .bool(false), "native_query_error": .string(code)])
+                }
                 guard output.blobs.count <= 16, output.blobs.allSatisfy({ $0.size <= 64 << 20 && !$0.handle.isEmpty }) else { throw SourceFailure.invalid }
                 var result = output.result
                 var blobs: [JSON] = output.blobs.map(\.wireReference)

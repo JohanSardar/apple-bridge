@@ -700,12 +700,20 @@ impl Layer {
             prepared: json!({"op":operation,"query_id":id}),
         })?;
         let response = self.effect(id, operation, &args, &permit).and_then(|evidence| {
+            if evidence["native_query_error"].is_string() {
+                return Ok(evidence);
+            }
             if evidence["observed"] != true || evidence.get("native_query_result").is_none() {
                 return Err(Error::Conflict);
             }
             Ok(evidence)
         });
         let (disposition, evidence, result) = match response {
+            Ok(evidence) if evidence["native_query_error"].is_string() => (
+                "failed_no_effect",
+                json!({"query_id":id,"observed":false,"error":evidence["native_query_error"]}),
+                json!({"t":"QueryError","id":id,"code":evidence["native_query_error"]}),
+            ),
             Ok(evidence) => (
                 "locally_observed",
                 json!({"query_id":id,"observed":true}),

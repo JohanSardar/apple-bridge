@@ -4,8 +4,38 @@ use ab_session::Error;
 #[cfg(feature = "rust-capture")]
 use std::os::fd::AsRawFd;
 
+#[cfg(all(feature = "rust-capture", feature = "rust-effects"))]
+struct LabEffects {
+    native: String,
+    home: std::path::PathBuf,
+    config: ab_session::effects::Config,
+}
+
+#[cfg(all(feature = "rust-capture", feature = "rust-effects"))]
+fn lab_effects(native: Option<&str>, rust: &[String], config: &str) -> Result<Option<LabEffects>, Error> {
+    let Some(native) = native else {
+        return Ok(None);
+    };
+    let home = std::env::var("AB_SESSION_EFFECTS_HOME").map_err(|_| Error::Invalid)?;
+    let routing = std::env::var("AB_SESSION_EFFECTS_SOURCES")
+        .map_or_else(|_| ab_session::effects::Routing::all(), |list| ab_session::effects::Routing::parse(&list));
+    let sources: serde_json::Value = serde_json::from_str(config)?;
+    let notes_database = sources["notes"]["root"]
+        .as_str()
+        .map(|root| std::path::Path::new(root).join("NoteStore.sqlite"));
+    Ok(Some(LabEffects {
+        native: native.to_owned(),
+        home: std::path::PathBuf::from(home),
+        config: ab_session::effects::Config {
+            routing,
+            rust_sources: rust.iter().cloned().collect(),
+            notes_database,
+        },
+    }))
+}
+
 #[cfg(feature = "rust-capture")]
-fn lab_listen(listen: &str, gateway: &str) -> Result<(), Error> {
+fn lab_listen(listen: &str, gateway: &str, native: Option<&str>) -> Result<(), Error> {
     let mut selection = ab_session::ownership::Selection::default();
     if let Ok(value) = std::env::var("AB_SESSION_PRODUCERS") {
         let sources: std::collections::BTreeMap<
@@ -48,6 +78,12 @@ fn lab_listen(listen: &str, gateway: &str) -> Result<(), Error> {
         Ok(readers)
     };
     build()?;
+    #[cfg(feature = "rust-effects")]
+    let effects = lab_effects(native, &rust, &config)?;
+    #[cfg(not(feature = "rust-effects"))]
+    if native.is_some() {
+        return Err(Error::Conflict);
+    }
     let _ = std::fs::remove_file(listen);
     let listener = std::os::unix::net::UnixListener::bind(listen)?;
     for helper in listener.incoming() {
@@ -57,10 +93,30 @@ fn lab_listen(listen: &str, gateway: &str) -> Result<(), Error> {
         };
         let readers = build()?;
         let state = state.clone();
+        #[cfg(feature = "rust-effects")]
+        let layer = match &effects {
+            Some(effects) => {
+                let Ok(stream) = std::os::unix::net::UnixStream::connect(&effects.native) else {
+                    continue;
+                };
+                Some(ab_session::effects::Layer::open_with(
+                    stream,
+                    &effects.home,
+                    effects.config.clone(),
+                )?)
+            }
+            None => None,
+        };
         std::thread::spawn(move || {
             let options = ab_session::routed::Options { poll, watch, state };
+            #[cfg(feature = "rust-effects")]
+            let overlay: Option<&dyn ab_session::routed::Overlay> = layer
+                .as_ref()
+                .map(|layer| layer as &dyn ab_session::routed::Overlay);
+            #[cfg(not(feature = "rust-effects"))]
+            let overlay: Option<&dyn ab_session::routed::Overlay> = None;
             if let Err(error) =
-                ab_session::routed::relay_layered(gateway, helper, readers, &options, None)
+                ab_session::routed::relay_layered(gateway, helper, readers, &options, overlay)
             {
                 eprintln!("ab-session: {error}");
             }
@@ -73,7 +129,14 @@ fn run() -> Result<(), Error> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     #[cfg(feature = "rust-capture")]
     if args.len() == 4 && args[0] == "--lab-listen" && args[2] == "--lab-gateway" {
-        return lab_listen(&args[1], &args[3]);
+        return lab_listen(&args[1], &args[3], None);
+    }
+    if args.len() == 6
+        && args[0] == "--lab-listen"
+        && args[2] == "--lab-gateway"
+        && args[4] == "--lab-native"
+    {
+        return lab_listen(&args[1], &args[3], Some(&args[5]));
     }
     if args.len() < 4 || args[0] != "--gateway-fd" || args[2] != "--helper-fd" {
         return Err(Error::Invalid);
