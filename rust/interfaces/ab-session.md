@@ -485,8 +485,8 @@ Messages is routed per operation (`messages.send`, `messages.reply`, `messages.r
 (`AB_SESSION_RUST_COMMANDS`) does not include it. The Linux lab runs all 34 Messages scenarios on the old path
 and with the bare source owned by Rust with identical results (the six that differ from green are the
 Darwin-only native checks, which fail the same way on both). `session/messages_selftest.rs` orchestrates the
-self-test over Swift primitives and is not yet launched by anything: the Helper's `selftest messages` still runs
-the Swift `MessagesSelfTest`. A `Resolve` for an owned operation is answered from the guard log unless the
+self-test over Swift primitives; `ab-session --selftest-messages <fd> <request-json>` serves it on an inherited
+native/1 socket and the Helper's `selftest messages` launches it. A `Resolve` for an owned operation is answered from the guard log unless the
 outcome is open (indeterminate, locally observed, or a failed aggregate with an unsettled part), and the capture
 checkpoint of an observed Messages part is bound even while the aggregate is indeterminate, as the Swift
 dispatch does.
