@@ -185,3 +185,64 @@ fn canonical_permit_hash_rejects_ambiguous_numbers() -> Result<(), Box<dyn std::
     assert!(effects::request_hash(&json!({"x":9_007_199_254_740_992_u64})).is_ok());
     Ok(())
 }
+
+#[test]
+fn ambiguous_float_refuses_the_command_and_keeps_the_gateway_stream() -> Result<(), Box<dyn std::error::Error>> {
+    let home = std::env::temp_dir().join(format!(
+        "ab-effects-float-{}-{}",
+        std::process::id(),
+        SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos()
+    ));
+    let (mut gateway, session_gateway) = UnixStream::pair()?;
+    let (mut helper, session_helper) = UnixStream::pair()?;
+    let (mut native, session_native) = UnixStream::pair()?;
+    for socket in [&gateway, &helper, &native] {
+        socket.set_read_timeout(Some(Duration::from_secs(5)))?;
+    }
+    let route_home = home.clone();
+    let relay = std::thread::spawn(move || {
+        effects::relay_with(
+            session_gateway,
+            session_helper,
+            session_native,
+            &route_home,
+            effects::Config::default(),
+        )
+    });
+    let result = (|| -> Result<(), Box<dyn std::error::Error>> {
+        send(&mut gateway, &json!({"t":"Open","protocol":"ipc/1","owner_fence":7}))?;
+        assert_eq!(receive(&mut native)?["t"], "Hello");
+        send(&mut native, &json!({"t":"Welcome","protocol":"native/1","version":1}))?;
+        assert_eq!(receive(&mut helper)?["t"], "Open");
+        send(&mut helper, &json!({"t":"Ready"}))?;
+        assert_eq!(receive(&mut gateway)?["t"], "Ready");
+        for (id, magnitude) in [("float-small", 1e-7), ("float-large", 1e16)] {
+            send(
+                &mut gateway,
+                &json!({"t":"Prepare","command_id":id,"principal":"fixture","origin":{"kind":"fixture"},"request_hash":"ipc-hash","expires_at":"2099-01-01T00:00:00Z","action":{"op":"calendar.create_event","args":{"offset":magnitude}}}),
+            )?;
+            let rejected = receive(&mut gateway)?;
+            assert_eq!(rejected["t"], "Rejected");
+            assert_eq!(rejected["command_id"], id);
+            assert_eq!(rejected["error"]["code"], "invalid");
+        }
+        send(
+            &mut gateway,
+            &json!({"t":"Query","id":"float-query","op":"maps.search","args":{"radius":1e-7}}),
+        )?;
+        assert_eq!(
+            receive(&mut gateway)?,
+            json!({"t":"QueryError","id":"float-query","code":"invalid"})
+        );
+        let command = json!({"t":"Prepare","command_id":"after-float","principal":"fixture","origin":{"kind":"fixture"},"request_hash":"ipc-hash","expires_at":"2099-01-01T00:00:00Z","action":{"op":"calendar.create_event","args":{"offset":0.5}}});
+        send(&mut gateway, &command)?;
+        assert_eq!(receive(&mut helper)?, command);
+        Ok(())
+    })();
+    let _ = gateway.shutdown(Shutdown::Both);
+    let _ = helper.shutdown(Shutdown::Both);
+    let _ = native.shutdown(Shutdown::Both);
+    let _ = relay.join();
+    std::fs::remove_dir_all(home)?;
+    result
+}
