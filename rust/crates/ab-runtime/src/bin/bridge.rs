@@ -47,6 +47,7 @@ const KNOWN_FLAGS: &[&str] = &[
     "snippets",
     "private",
     "domain",
+    "relay-url",
 ];
 #[derive(Debug)]
 struct Arguments {
@@ -261,6 +262,17 @@ async fn remote(args: &Arguments, home: &std::path::Path) -> Result<(), Error> {
     let domain = args.flag("domain", "");
     if args.flags.contains_key("domain") && (via != "relay" || domain.is_empty()) {
         return Err(Error::Invalid);
+    }
+    if args.flags.contains_key("relay-url") {
+        if !["on", "key"].contains(&args.action.as_str()) || via != "relay" {
+            return Err(Error::Invalid);
+        }
+        ab_remote::state::set_relay(home, &args.flag("relay-url", ""))?;
+    }
+    if args.action == "key" {
+        let config = ab_remote::state::read::<ab_remote::state::Config>(home, "config")?;
+        println!("{}", ab_remote::relay::public_key(home, &config.relay_url)?);
+        return Ok(());
     }
     if args.action == "on" && via == "relay" {
         ab_remote::state::set_domain(home, &domain)?;

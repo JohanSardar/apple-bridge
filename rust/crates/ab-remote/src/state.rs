@@ -13,6 +13,8 @@ pub struct Config {
     pub backend: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub relay_url: String,
 }
 
 pub fn read<T: DeserializeOwned>(home: &Path, name: &str) -> Result<T> {
@@ -250,6 +252,39 @@ pub fn annotate(home: &Path, name: &str) -> Result<()> {
         Err(e) => return Err(e),
     };
     config.name = name.into();
+    write(home, "config", &config)
+}
+
+pub fn set_relay(home: &Path, url: &str) -> Result<()> {
+    use std::os::unix::fs::OpenOptionsExt;
+    if !url.starts_with("https://") {
+        return Err(Error::Contract("relay requires HTTPS"));
+    }
+    let url = url.trim_end_matches('/');
+    let dir = home.join("remote");
+    fs::create_dir_all(&dir)?;
+    fs::set_permissions(&dir, fs::Permissions::from_mode(0o700))?;
+    let lock = fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .mode(0o600)
+        .open(dir.join("config.lock"))?;
+    fs2::FileExt::lock_exclusive(&lock)?;
+    let mut config = read::<Config>(home, "config").unwrap_or_default();
+    if config.relay_url == url {
+        return Ok(());
+    }
+    if let Ok(identity) = read::<crate::relay::Identity>(home, "relay")
+        && identity.endpoint != url
+    {
+        fs::rename(
+            dir.join("relay.json"),
+            dir.join(format!("relay-previous-{}.json", &token()[..8])),
+        )?;
+    }
+    url.clone_into(&mut config.relay_url);
     write(home, "config", &config)
 }
 

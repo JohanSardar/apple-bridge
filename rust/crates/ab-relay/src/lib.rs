@@ -26,6 +26,8 @@ pub mod cloud_dns;
 pub mod ct;
 
 pub mod acme;
+pub mod app;
+pub mod authoritative;
 
 pub mod replay;
 

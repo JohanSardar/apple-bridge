@@ -77,6 +77,7 @@ pub struct Api {
     pub resolver: Arc<dyn NameResolver>,
     pub ct_origin: String,
     pub warnings: Arc<Mutex<HashMap<String, String>>>,
+    pub accounts_url: String,
 }
 impl Api {
     pub fn new(server: Arc<Server>, admin: String) -> crate::Result<Self> {
@@ -94,6 +95,7 @@ impl Api {
             )),
             ct_origin: "https://crt.sh/".into(),
             warnings: Arc::new(Mutex::new(HashMap::new())),
+            accounts_url: String::new(),
         })
     }
     pub fn router(self: Arc<Self>) -> Router {
@@ -248,6 +250,11 @@ async fn handle(
             Ok(nonce) => reply(&json!({"nonce":nonce})),
             Err(_) => error(429, "busy"),
         },
+        ("GET" | "HEAD", "/info") => {
+            let zone = api.server.store.lock().await.zone.clone();
+            reply(&json!({"zone": zone, "accounts": api.accounts_url}))
+        }
+        ("POST", "/admit") => admit(&api, &body, token).await,
         ("POST", "/enroll" | "/rotate") => enrollment(&api, &body, path).await,
         ("POST", "/iphone/push") => {
             let Some(request) = decode::<crate::push::Request>(&body) else {
@@ -330,6 +337,28 @@ async fn revoke(api: &Api, body: &[u8], token: &str) -> Response {
     }
     api.server.disconnect(&input.hostname).await;
     StatusCode::NO_CONTENT.into_response()
+}
+
+#[derive(Debug, Default, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+struct Admit {
+    public_key: String,
+}
+async fn admit(api: &Api, body: &[u8], token: &str) -> Response {
+    if api.admin.is_empty() || digest(token) != digest(&api.admin) {
+        return error(403, "denied");
+    }
+    let Some(input) = decode::<Admit>(body) else {
+        return error(400, "invalid request");
+    };
+    let result = api.server.store.lock().await.admit(&input.public_key);
+    match result {
+        Ok(credential) => {
+            api.server.disconnect(&credential.hostname).await;
+            reply(&credential)
+        }
+        Err(_) => error(403, "admission refused"),
+    }
 }
 
 async fn policy(api: &Api, body: &[u8], token: &str) -> Response {

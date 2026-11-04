@@ -12,7 +12,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Limits {
     pub connections: i64,
@@ -226,13 +226,23 @@ impl Store {
         {
             return Err(Error::Denied);
         }
+        self.issue(input.public_key, &input.hostname)
+    }
+    pub fn admit(&mut self, public_key: &str) -> Result<Credential> {
+        let key = B64.decode(public_key).map_err(|_| Error::Denied)?;
+        if key.len() != 32 {
+            return Err(Error::Denied);
+        }
+        self.issue(public_key.to_owned(), "")
+    }
+    fn issue(&mut self, public_key: String, hostname: &str) -> Result<Credential> {
         let mut host = self
             .devices
             .iter()
-            .find(|(_, d)| d.public_key == input.public_key)
+            .find(|(_, d)| d.public_key == public_key)
             .map(|(h, _)| h.clone())
             .unwrap_or_default();
-        if !input.hostname.is_empty() && input.hostname != host {
+        if !hostname.is_empty() && hostname != host {
             return Err(Error::Denied);
         }
         if host.is_empty() {
@@ -245,7 +255,7 @@ impl Store {
         }
         let old = self.devices.get(&host).cloned();
         let mut device = old.clone().unwrap_or(Device {
-            public_key: input.public_key,
+            public_key,
             hostname: host.clone(),
             limits: self.defaults,
             month: month(),
@@ -301,6 +311,11 @@ impl Store {
         revoked: bool,
     ) -> Result<()> {
         let old = self.devices.get(host).cloned().ok_or(Error::Denied)?;
+        let limits = if limits == Limits::default() {
+            old.limits
+        } else {
+            limits
+        };
         if !limits.valid() {
             return Err(Error::Denied);
         }

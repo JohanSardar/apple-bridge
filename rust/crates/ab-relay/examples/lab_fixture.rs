@@ -138,6 +138,7 @@ impl Fixture {
                     client: reqwest::Client::new(),
                 });
                 let server = Arc::new(Server {
+                    app: None,
                     store: self.store.clone(),
                     sessions: Mutex::new(HashMap::new()),
                     idle: Duration::from_secs(2),
