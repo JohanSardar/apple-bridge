@@ -27,8 +27,10 @@ actor NativeFactSink: ObservationSink {
         try await emit(source: source, generation: generation, observations: observations, scanID: scanID, scanStartedAt: scanStartedAt, scope: scope, completionEvidence: completionEvidence, blobHandles: blobHandles, live: live)
     }
 
-    func result(collection: String? = nil) -> NativeFacts {
-        var items = records.keys.sorted().compactMap { records[$0] }.filter { collection == nil || $0["collection"].string == collection }
+    func result(collection: String? = nil, enriching enrich: (@Sendable ([JSON], String) async -> [JSON])? = nil) async -> NativeFacts {
+        var rows = records.keys.sorted().compactMap { records[$0] }
+        if let enrich { rows = await enrich(rows, generation) }
+        var items = rows.filter { collection == nil || $0["collection"].string == collection }
         if collection == nil || collection == "contacts.contact" || collection == "calendar.event" {
             items += handles.keys.sorted().map { JSON.object(["kind": .string("blob_handle"), "digest": .string($0), "handle": .string(handles[$0] ?? "")]) }
         }

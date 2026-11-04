@@ -55,6 +55,11 @@ impl Default for Reader {
 }
 
 impl Reader {
+    #[must_use]
+    pub fn reminders() -> Self {
+        Self::new("reminders", &["reminders.list", "reminders.reminder"])
+    }
+
     pub(crate) fn new(source: &str, scope: &[&str]) -> Self {
         Self {
             source: source.into(),
@@ -97,8 +102,7 @@ impl Reader {
             row["observed_at"] = Value::String(context.observed_at.clone());
             let differs = self.records.get(&identity).is_none_or(|previous| {
                 !crate::capture::data_equal(&previous["data"].to_string(), &row["data"].to_string())
-                    || (self.source == "calendar"
-                        && previous["scoped_alias"] != row["scoped_alias"])
+                    || (self.aliased() && previous["scoped_alias"] != row["scoped_alias"])
             });
             if snapshot.force || !same_generation || differs {
                 changes.push(row.clone());
@@ -136,11 +140,15 @@ impl Reader {
             completion_evidence: "complete",
             observations: changes
                 .iter()
-                .map(encode_observation)
+                .map(|row| encode_observation(row, self.source == "reminders"))
                 .collect::<Result<_>>()?,
             previous: self.clone(),
             next,
         })
+    }
+
+    fn aliased(&self) -> bool {
+        matches!(self.source.as_str(), "calendar" | "reminders")
     }
 
     fn validate(&self, snapshot: &Snapshot, context: &Context) -> Result<()> {
@@ -180,9 +188,14 @@ impl Reader {
                 continue;
             }
             let alias = previous["scoped_alias"].as_str().unwrap_or_default();
-            if self.source == "calendar"
-                && !alias.is_empty()
-                && current.values().any(|row| row["scoped_alias"] == alias)
+            if !alias.is_empty()
+                && match self.source.as_str() {
+                    "calendar" => current.values().any(|row| row["scoped_alias"] == alias),
+                    "reminders" => current.values().any(|row| {
+                        row["collection"] == previous["collection"] && row["scoped_alias"] == alias
+                    }),
+                    _ => false,
+                }
             {
                 continue;
             }
@@ -233,7 +246,7 @@ impl Reader {
     }
 }
 
-fn encode_observation(row: &Value) -> Result<Observation> {
+fn encode_observation(row: &Value, omit_empty_alias: bool) -> Result<Observation> {
     let kind = match row["kind"].as_str() {
         Some("upsert") => "upsert",
         Some("absent") => "absent",
@@ -245,7 +258,10 @@ fn encode_observation(row: &Value) -> Result<Observation> {
         kind,
         collection: row["collection"].as_str().ok_or(Error::Corrupt)?.into(),
         native_key: row["native_key"].as_str().ok_or(Error::Corrupt)?.into(),
-        scoped_alias: row["scoped_alias"].as_str().map(str::to_owned),
+        scoped_alias: row["scoped_alias"]
+            .as_str()
+            .filter(|alias| !omit_empty_alias || !alias.is_empty())
+            .map(str::to_owned),
         observed_at: row["observed_at"].as_str().ok_or(Error::Corrupt)?.into(),
         data: Some(serde_json::from_slice(&bytes)?),
         revalidated: (kind != "upsert").then_some(true),

@@ -317,8 +317,19 @@ results, which `NativeFactSink` now keeps); `agenda::Reader::prepare` does the d
 `Capture` for the source is only a change hint: its `Committed` is held until the pulled capture is committed (or nothing
 changed). The first pull is `live: false`.
 
+Reminders (`"reminders"` in `production::SUPPORTED`, off by default) pull the same way: `agenda.reminder_lists` + `agenda.reminders`
+through `AgendaReader::reminders` and `ab_native::agenda::Reader::reminders()` (scope `reminders.list`, `reminders.reminder`). The Rust
+diff compares `data` and `scoped_alias`, drops a record whose alias reappears under another key in the same collection (the Swift
+`tracked` rule), and deletes only on an `absent` row (Swift's `calendarItem(withIdentifier:)` check decides that); an identity that merely
+disappears from the page stays. An empty alias is omitted from the capture, as the Swift list rows omit it. The Swift fact scan now emits
+`absent` rows for the baseline identities it can no longer find (it did so only for the live scan before), and `AppleSession.facts`
+runs the SQLite store enrichment (`store_*` fields) over the pulled rows with the fact scan's own `RemindersStoreEnrichment`, so pulled rows
+carry the same fields as the IPC capture. `reminders` is also a fact source for outcome binding (`effects::FACT_SOURCES`,
+`routed::holds_facts`): the latest committed capture of the key binds the Outcome.
+
 Known gaps: revalidation results come from the Swift scan's own baseline, so Swift still carries the diff/baseline code until the Rust
-side can ask for revalidation of named candidates (not in the closed native/1 op set); Reminders are not paged (no Rust reader).
+side can ask for revalidation of named candidates (not in the closed native/1 op set). The Reminders SQLite store projection
+(`RemindersStore*`, 1,295 lines) is not ported: it reads the Reminders database, has no oracle in Rust, and still enriches the rows in Swift.
 
 ### Safari live tabs (facts)
 

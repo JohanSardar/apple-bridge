@@ -125,6 +125,24 @@ func (f *fakeApple) nativeFacts(op string, fence int) (nativeSnapshot, string) {
 			return nativeSnapshot{}, "permission_missing"
 		}
 		collection = map[string]string{"agenda.calendars": "calendar.calendar", "agenda.events": "calendar.event"}[op]
+	case "agenda.reminder_lists", "agenda.reminders":
+		f.mu.Lock()
+		denied := f.permissionMissing
+		var observations []contracts.Observation
+		if !denied {
+			for _, o := range f.records {
+				if contracts.CollectionSource(o.Collection) == contracts.Reminders {
+					observations = append(observations, o)
+				}
+			}
+		}
+		generation := f.generation
+		f.mu.Unlock()
+		if denied {
+			return nativeSnapshot{}, "permission_missing"
+		}
+		capture = contracts.Capture{Observations: observations, Generation: generation}
+		collection = map[string]string{"agenda.reminder_lists": "reminders.list", "agenda.reminders": "reminders.reminder"}[op]
 	case "contacts.containers", "contacts.groups", "contacts.contacts":
 		f.mu.Lock()
 		denied := f.contactPermissionMissing

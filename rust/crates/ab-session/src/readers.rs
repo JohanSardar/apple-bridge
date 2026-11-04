@@ -798,6 +798,7 @@ impl CaptureReader for MailReader {
 enum AgendaState {
     Calendar(agenda::Reader),
     Contacts(contacts::Reader),
+    Reminders(agenda::Reader),
 }
 
 impl AgendaState {
@@ -809,19 +810,20 @@ impl AgendaState {
                 "contacts.group".into(),
                 "contacts.container".into(),
             ],
+            Self::Reminders(_) => vec!["reminders.list".into(), "reminders.reminder".into()],
         }
     }
 
     fn knows(&self, identity: &str) -> bool {
         match self {
-            Self::Calendar(reader) => reader.knows(identity),
+            Self::Calendar(reader) | Self::Reminders(reader) => reader.knows(identity),
             Self::Contacts(reader) => reader.knows(identity),
         }
     }
 
     fn generation(&self) -> &str {
         match self {
-            Self::Calendar(reader) => reader.generation(),
+            Self::Calendar(reader) | Self::Reminders(reader) => reader.generation(),
             Self::Contacts(reader) => reader.generation(),
         }
     }
@@ -832,14 +834,14 @@ impl AgendaState {
         context: &capture::Context,
     ) -> capture::Result<agenda::Pending> {
         match self {
-            Self::Calendar(reader) => reader.prepare(snapshot, context),
+            Self::Calendar(reader) | Self::Reminders(reader) => reader.prepare(snapshot, context),
             Self::Contacts(reader) => reader.prepare(snapshot, context),
         }
     }
 
     fn commit(&mut self, pending: agenda::Pending) -> capture::Result<()> {
         match self {
-            Self::Calendar(reader) => reader.commit(pending),
+            Self::Calendar(reader) | Self::Reminders(reader) => reader.commit(pending),
             Self::Contacts(reader) => reader.commit(pending),
         }
     }
@@ -926,6 +928,19 @@ impl AgendaReader {
     }
 
     #[must_use]
+    pub fn reminders(root: PathBuf) -> Self {
+        Self {
+            source: "reminders",
+            root,
+            state: AgendaState::Reminders(agenda::Reader::reminders()),
+            facts: None,
+            partial: false,
+            pending: None,
+            pull: None,
+        }
+    }
+
+    #[must_use]
     pub fn paged(mut self, client: Arc<native_facts::Client>, interval: Duration) -> Self {
         let operations: &'static [&'static str] = match self.state {
             AgendaState::Calendar(_) => &["agenda.calendars", "agenda.events"],
@@ -934,6 +949,7 @@ impl AgendaReader {
                 "contacts.groups",
                 "contacts.contacts",
             ],
+            AgendaState::Reminders(_) => &["agenda.reminder_lists", "agenda.reminders"],
         };
         self.pull = Some(native_facts::Pull::new(client, operations, interval));
         self
@@ -1261,11 +1277,11 @@ pub fn from_config_linked(
                 }
                 Box::new(MessagesReader::new(config.root, home))
             }
-            "calendar" | "contacts" => {
-                let reader = if source == "calendar" {
-                    AgendaReader::calendar(config.root)
-                } else {
-                    AgendaReader::contacts(config.root)
+            "calendar" | "contacts" | "reminders" => {
+                let reader = match source.as_str() {
+                    "calendar" => AgendaReader::calendar(config.root),
+                    "contacts" => AgendaReader::contacts(config.root),
+                    _ => AgendaReader::reminders(config.root),
                 };
                 match linked_client(config.facts.as_ref(), inherited)? {
                     Some(client) => Box::new(

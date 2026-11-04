@@ -126,7 +126,7 @@ const DISPOSITIONS: &[&str] = &[
     "delivery_failed",
     "failed_no_effect",
 ];
-const FACT_SOURCES: &[&str] = &["calendar", "contacts"];
+const FACT_SOURCES: &[&str] = &["calendar", "contacts", "reminders"];
 
 #[must_use]
 pub fn source_of(operation: &str) -> &str {
