@@ -873,6 +873,9 @@ impl Session<'_> {
                 self.emit(state, capture).map_err(fail)?;
                 Ok(json!({}))
             }
+            "calendar.write" if std::env::var("AB_LAB_PRIMITIVE_CONTROL").as_deref() == Ok("refuse") => {
+                Err("unavailable")
+            }
             "calendar.write" => {
                 drop(s);
                 self.calendar_write(state, args)
