@@ -293,7 +293,11 @@ fn blob(wire: &mut Wire, handle: &str) -> Fallible<Vec<u8>> {
     loop {
         send(
             &mut wire.gateway,
-            &json!({"t":"BlobRead","handle":handle,"offset":bytes.len(),"length":131_072}),
+            &if bytes.is_empty() {
+                json!({"t":"BlobRead","handle":handle,"length":131_072})
+            } else {
+                json!({"t":"BlobRead","handle":handle,"offset":bytes.len(),"length":131_072})
+            },
         )?;
         let chunk = loop {
             let (size, frame) = receive(&mut wire.gateway)?;
