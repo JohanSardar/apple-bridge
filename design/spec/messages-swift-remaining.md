@@ -7,11 +7,8 @@ route proofs, the correlation and the self-test step order are Rust (`session/me
 
 ## 1. Old command path (duplicated in Rust; removable once Messages is Rust-routed by default)
 
-Not mechanical today. The Helper default (`AB_SESSION_RUST_COMMANDS` in `AppleSession/SessionProxy.swift:42`) does
-not include `messages`, native session mode is opt-in (`AB_SESSION_NATIVE=1`), and `ipc/1` mode still serves
-Messages Prepare/Validate/Dispatch/Resolve through `Messages.swift` (`prepare` 752, `dispatch` 760, `resolve` 761,
-`validate` 796) called by `AppleSession.swift` (1084 validate, 1098 dispatch, 1127 capture) and
-`NativeSessionAdapter.swift:243`. The `Source` protocol requires those four methods.
+Session mode hands Messages commands to Rust by default (`AB_SESSION_RUST_COMMANDS` in `AppleSession/SessionProxy.swift`).
+Only `ipc/1` mode still serves them through `Messages.swift`, and the rows below go when #843 removes that mode.
 
 | Swift | Decision | Rust owner |
 |---|---|---|
@@ -20,7 +17,7 @@ Messages Prepare/Validate/Dispatch/Resolve through `Messages.swift` (`prepare` 7
 | `validate` 495, `dispatchAccessibility` 499, `dispatchConversation` 462 | dispatch-time revalidation, UI effect observation, read-state matcher | `validate_send`, `write_targeted`, `write_conversation`, `messages_policy::read_state_matches` |
 | `dispatch` 585, `parts` 559/562, `stagedAudioPart` 554, `correlate` 637, `aggregate` 663, `resolve` 668 | per-part send order, chat.db correlation, aggregate disposition, Resolve | `write_send`, `correlate`, `aggregate`, `resolved` |
 | `MessagesSendPolicy.swift`, `MessageActionWindow.swift`, `MessagesRecipient.swift`, `MessagesReadStateFixture.swift` (`matches`, `authorizes`, `validate`) | tag rule, windows, recipient match, read-state matcher and ledger authorisation | `messages_policy.rs` |
-| `MessagesSource/Messages.swift` `commandCoverage` 764 and `MessagesCommands.capabilities` 49, `operationCoverage` 53 | which Messages operations are advertised, from the route proofs | still Swift: Rust reads `messages.route_proofs` but the advertised capability list is computed here |
+| `MessagesSource/Messages.swift` `commandCoverage` and `MessagesCommands.capabilities`, `operationCoverage` | which Messages operations are advertised, from the route proofs | `messages_advertise.rs` |
 | test targets `MessagesSafetyChecks` (`PolicyVectors.swift`, `main.swift`), `MessagesCaptureChecks/Rich.swift`, `Tests/CommandOriginChecks` | the Swift copies of the 43 policy vectors and origin rules | `tests/messages_policy_vectors.rs`, `messages.rs` tests |
 | `SourceSupport/CommandOrigin.swift` | origin parsing; also used by `AppleSession`, `NativeSessionAdapter`, `HelperLabCommand` | `messages.rs` `origin_of` |
 
