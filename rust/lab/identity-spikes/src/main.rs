@@ -22,7 +22,8 @@ fn database(path: &Path, table: &str) -> Value {
 }
 
 fn reminders_store(home: &Path) -> Value {
-    let stores = home.join("Library/Group Containers/group.com.apple.reminders/Container_v1/Stores");
+    let stores =
+        home.join("Library/Group Containers/group.com.apple.reminders/Container_v1/Stores");
     let found = std::fs::read_dir(&stores).map(|entries| {
         let mut paths: Vec<PathBuf> = entries
             .filter_map(Result::ok)
