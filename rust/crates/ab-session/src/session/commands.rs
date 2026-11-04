@@ -79,6 +79,10 @@ impl Commands {
         })
     }
 
+    fn owns(&self, operation: &str) -> bool {
+        self.owned.contains(source_of(operation)) || self.owned.contains(operation)
+    }
+
     fn take_resolving(&mut self, id: &str) -> bool {
         match self.resolving.get_mut(id) {
             Some(count) if *count > 1 => {
@@ -233,7 +237,7 @@ impl Hub {
             return self.refuse(&id, "conflict");
         }
         commands.preparing = Some(command.clone());
-        let owned = commands.owned.contains(source_of(&command.operation()));
+        let owned = commands.owns(&command.operation());
         drop(core);
         if owned {
             scope.spawn(move || {
@@ -256,12 +260,28 @@ impl Hub {
         let Some(driver) = owned::driver(source_of(&command.operation())) else {
             return Err(Error::Invalid);
         };
-        match (driver.prepare)(self, &action, &expected) {
+        let command_value = json!({
+            "command_id": command.command_id,
+            "principal": command.principal,
+            "origin": command.origin,
+            "expires_at": command.expires_at,
+            "action": action,
+            "expected_state": expected,
+        });
+        let decided = match driver.prepare_command {
+            Some(prepare) => prepare(self, &command_value),
+            None => (driver.prepare)(self, &action, &expected),
+        };
+        match decided {
             Ok(state) => self.prepared(Prepared {
                 command_id: command.command_id.clone(),
                 native_state: raw(&state)?,
-                route: "eventkit".into(),
-                candidate_ids: Vec::new(),
+                route: state["route"].as_str().unwrap_or_default().to_owned(),
+                candidate_ids: state["candidate_ids"]
+                    .as_array()
+                    .map(|items| items.iter().map(raw).collect::<Result<Vec<_>, _>>())
+                    .transpose()?
+                    .unwrap_or_default(),
                 fingerprint: command.request_hash.clone(),
             }),
             Err(refusal) => self.rejected_by_helper(self.rejection(
@@ -392,7 +412,15 @@ impl Hub {
                 match self.bind(&key, &[], true, 0)? {
                     Some(checkpoint) if !key.is_empty() => {
                         found["capture_checkpoint"] = Value::String(checkpoint);
-                        ("locally_observed", found)
+                        let disposition = match found["disposition"].as_str() {
+                            Some("delivered") if driver.name == "messages" => "delivered",
+                            Some("delivery_failed") if driver.name == "messages" => {
+                                "delivery_failed"
+                            }
+                            Some("indeterminate") if driver.name == "messages" => "indeterminate",
+                            _ => "locally_observed",
+                        };
+                        (disposition, found)
                     }
                     _ => {
                         let mut kept = evidence.clone();
@@ -521,16 +549,12 @@ impl Hub {
             native_state: ticket.prepared.native_state.clone(),
             fingerprint: ticket.prepared.fingerprint.clone(),
         };
-        let owned = core
-            .commands
-            .owned
-            .contains(source_of(&ticket.command.operation()))
-            .then(|| {
-                (
-                    ticket.command.clone(),
-                    parsed(&ticket.prepared.native_state),
-                )
-            });
+        let owned = core.commands.owns(&ticket.command.operation()).then(|| {
+            (
+                ticket.command.clone(),
+                parsed(&ticket.prepared.native_state),
+            )
+        });
         core.commands.active = Some(Active {
             command: ticket.command,
             prepared: ticket.prepared,
@@ -564,11 +588,11 @@ impl Hub {
         let owned = open
             && ["indeterminate", "locally_observed"]
                 .contains(&saved["disposition"].as_str().unwrap_or_default())
-            && core.commands.owned.contains(source_of(
+            && core.commands.owns(
                 saved["evidence"]["prepared"]["action"]["op"]
                     .as_str()
                     .unwrap_or_default(),
-            ));
+            );
         if open {
             *core.commands.resolving.entry(id.clone()).or_default() += 1;
             drop(core);
