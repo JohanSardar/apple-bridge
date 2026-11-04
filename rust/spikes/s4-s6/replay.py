@@ -16,7 +16,7 @@ def differences(left, right, path=""):
     if isinstance(left, dict) and isinstance(right, dict):
         return [item for key in sorted(left.keys() | right.keys()) for item in differences(left.get(key), right.get(key), path + "/" + key)]
     if left != right:
-        return [{"path": path, "go": left, "rust": right}]
+        return [{"path": path, "golden": left, "rust": right}]
     return []
 
 def run():

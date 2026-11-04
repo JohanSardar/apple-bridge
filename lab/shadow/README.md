@@ -1,3 +1,5 @@
+> Sections below that mention Go describe the verification recorded while the Go gateway still existed; see Running at the end for the current Rust-only tools.
+
 # Shadow IPC tooling
 
 The orchestrator owns the later live run. This worker has used only disposable gateways and synthetic data. The tool still fails closed on unsupported conversations; it is not a claim that the full Phase 4 live gate is ready.
@@ -5,9 +7,9 @@ The orchestrator owns the later live run. This worker has used only disposable g
 From the repository root, with Python 3.9+ and built binaries, the single shell workflow is:
 
 ```sh
-bridge-lab shadow record --socket-tap "$SHADOW/helper.sock" --upstream "$ISOLATED_SOCKET" --admission-listen 127.0.0.1:18081 --admission-upstream "$ISOLATED_API" --duration 24h --output "$SHADOW/recording" &&
-bridge-lab shadow replay --recording "$SHADOW/recording/ipc.shadow" --starting-home "$OFFLINE_STARTING_HOME" --output "$SHADOW/replayed" --go "$GO_BINARY" --rust "$RUST_BINARY" &&
-bridge-lab shadow diff --left "$SHADOW/replayed/go" --right "$SHADOW/replayed/rust"
+python3 lab/shadow/shadow.py record --socket-tap "$SHADOW/helper.sock" --upstream "$ISOLATED_SOCKET" --admission-listen 127.0.0.1:18081 --admission-upstream "$ISOLATED_API" --duration 24h --output "$SHADOW/recording" &&
+python3 lab/shadow/shadow.py replay --recording "$SHADOW/recording/ipc.shadow" --starting-home "$OFFLINE_STARTING_HOME" --output "$SHADOW/replayed" --left "$LEFT_BINARY" --right "$RIGHT_BINARY" &&
+python3 lab/shadow/shadow.py diff --left "$SHADOW/replayed/left" --right "$SHADOW/replayed/right"
 ```
 
 `SHADOW` must be an owner-only directory outside every checkout. The starting home must be an offline snapshot from before recording, including credentials for admitted API requests. Replay is Linux-only and requires a network namespace containing only loopback; it attempts an unprivileged `unshare` when needed and never falls back to launching in the host network. Saved nonempty `remote/` adapters are refused because host Unix sockets are not isolated by a network namespace. Helper connections must explicitly use the tap, and API clients must explicitly use the admission listener. The tool never discovers, replaces or renames sockets. An IPC-only recording cannot reconstruct command admission. The API proxy currently supports POST `/v1/op/*` with Content-Length; it is not coverage of MCP, replicated commands, OAuth, approval routes or iPhone ingress.
@@ -54,12 +56,12 @@ Remaining live-run qualification includes every admission ingress, overlapping a
 
 ```sh
 python3 lab/shadow/shadow.py decisions --recording "$SHADOW/recording/ipc.shadow" --home "$FINAL_HOME_COPY" --output "$SHADOW/decisions.json"
-python3 lab/shadow/shadow.py replay --recording "$SHADOW/recording/ipc.shadow" --starting-home "$OFFLINE_STARTING_HOME" --output "$SHADOW/replayed" --go "$GO_LAB_BINARY" --rust "$RUST_LAB_BINARY" --decisions "$SHADOW/decisions.json" --exact
+python3 lab/shadow/shadow.py replay --recording "$SHADOW/recording/ipc.shadow" --starting-home "$OFFLINE_STARTING_HOME" --output "$SHADOW/replayed" --left "$LEFT_BINARY" --right "$RIGHT_BINARY" --decisions "$SHADOW/decisions.json" --exact
 ```
 
 `decisions` reads `state.db` of a stopped copy of the home read-only for the allocated bridge IDs and sets `clock: recorded`. In that mode replay waits until the gateway's database files are quiet, then moves the lab clock to each row's recorded wall time before delivering it, so decision clocks follow the recorded conversation instead of replay speed. Replay also drains Ready and SourceState persistence before moving on. Go now emits Ready-time source states in sorted order (as Rust already does) so the journal order no longer depends on map iteration.
 
-`prove.py --go "$GO_LAB_BINARY" --rust "$RUST_LAB_BINARY"` records REST, MCP, record-read and `X-Ingress: cli` admissions, then requires the exact decision replay.
+`prove.py --bridge "$BRIDGE" --simapple "$LAB_SIMAPPLE" --tools "$AB_SHADOW_TOOLS"` records REST, MCP, record-read and `X-Ingress: cli` admissions, then requires the exact decision replay.
 
 Delegated feed commands are covered by the section below. iPhone traffic reaches the gateway over the peer listener, not the HTTP front door, so the recorder does not observe it and replay cannot re-issue it.
 Not covered: delegated feed traffic reaches the gateway over the peer listener, not the HTTP front door, so the recorder does not observe it and replay cannot re-issue it (its handshakes use fresh nonces and delegation certificates). A gateway-side feed observer plus a peer-protocol replayer is still required. iPhone ingress is covered below.
@@ -73,7 +75,7 @@ The manifest has `now` (an RFC3339 nanosecond timestamp) and `aliases` (a map fr
 For the existing disposable synthetic fixture, a focused proof reads its stopped final home to recover the allocated IDs and first command's creation clock, then requires exact replay equality:
 
 ```sh
-python3 lab/shadow/prove_decisions.py --fixture "$EXISTING_SYNTHETIC_PROOF" --output "$SHADOW/decision-proof" --go "$GO_LAB_BINARY" --rust "$RUST_LAB_BINARY"
+python3 lab/shadow/prove_decisions.py --fixture "$EXISTING_SYNTHETIC_PROOF" --output "$SHADOW/decision-proof" --left "$LEFT_BINARY" --right "$RIGHT_BINARY"
 ```
 
 This is a fixed-clock fixture seam, not a complete recording of clock decisions. It does not yet capture or replay advancing decision clocks, generated command IDs, trust/OAuth clocks or every ingress. The recorder still observes REST command admissions only; authenticated MCP, delegated feed, CLI and iPhone observation/replay remain required before a read-only live capture can be certified. Do not use this fixture manifest to claim a replay of arbitrary recorded live traffic. No live gateway was accessed to develop or verify this seam.
@@ -92,24 +94,26 @@ Lab-tagged Go and Rust `lab-harness` gateways append one JSON line per delegated
 
 `shadow record --delegated-log <file>` (the file must not exist beforehand) merges those lines into the transcript at stop, by wall time, as `admission`/`response` rows with `ingress: feed`.
 
-`shadow replay --feed-peer-home <home> --lab-binary bin/bridge-lab` re-drives each feed row with `bridge-lab shadow-feed`, which loads the synthetic replica from the peer home, signs a fresh delegation with the recorded principal and request hash, and posts to the clone's peer listener. The starting home must already enroll that replica (`bridge pair` then `bridge join --home <peer-home>`), the peer home is copied per gateway and the response outcome must equal the recorded one. Replay without `--feed-peer-home` fails closed when the recording has feed rows. `prove.py` pairs a synthetic replica before snapshotting the starting home, records a feed submit, status and list, and requires 8 of 8 exact Go-vs-Go replays plus zero Go-vs-Rust table differences (`--lab` sets the `bridge-lab` path).
+`shadow replay --feed-peer-home <home> --lab-binary "$AB_SHADOW_TOOLS"` re-drives each feed row with `ab-shadow-tools shadow-feed`, which loads the synthetic replica from the peer home, signs a fresh delegation with the recorded principal and request hash, and posts to the clone's peer listener. The starting home must already enroll that replica (`bridge pair` then `bridge join --home <peer-home>`), the peer home is copied per gateway and the response outcome must equal the recorded one. Replay without `--feed-peer-home` fails closed when the recording has feed rows. `prove.py` pairs a synthetic replica before snapshotting the starting home, records a feed submit, status and list, and requires 8 of 8 exact Go-vs-Go replays plus zero Go-vs-Rust table differences (`--lab` sets the `bridge-lab` path).
 ## iPhone ingress
 
 Lab Go (`Delivery.Handler`) and Rust (`ab-iphone` router) gateways accept `APPLE_BRIDGE_LAB_IPHONE_OBSERVER`, a Unix socket served by `shadow record --iphone-observer <socket>`. Before handling each `/v1/iphone/*` POST (including `/approval`, `/result` and `/pending`), the gateway sends the request's path, device ID, `at` and payload to the recorder and waits for its acknowledgment, then reports the response status and body afterwards. The recorder appends them as an `admission`/`response` pair with `ingress: iphone` and no signature, so they keep their order against the IPC frames the approval or result causes. An unreachable observer fails the request closed with 503.
 
 `APPLE_BRIDGE_LAB_IPHONE_PLAINTEXT=1` lets both lab gateways serve `/v1/iphone/*` on the loopback API listener, which production requires TLS or the public host for. Replay sets it for the cloned gateways and never sets the observer.
 
-`shadow replay --iphone-device <file>` re-drives those rows. The file holds a synthetic paired device ID and Ed25519 seed (`bridge-lab iphone-device --home <home> --output <file>` pairs one through the real pairing path before the starting snapshot). Each replayed request gets a fresh signature over the recorded payload. With a recorded clock, its `at` is the row's wall second and both gateways verify it, expire commands and sweep against the decision clock, so repeated replays are byte-identical. Without one it uses the current time. A recording from a real phone replays only against a starting home whose paired phone is replaced by the synthetic device.
+`shadow replay --iphone-device <file>` re-drives those rows. The file holds a synthetic paired device ID and Ed25519 seed (`ab-shadow-tools iphone-device --home <home> --output <file>` pairs one through the real pairing path before the starting snapshot). Each replayed request gets a fresh signature over the recorded payload. With a recorded clock, its `at` is the row's wall second and both gateways verify it, expire commands and sweep against the decision clock, so repeated replays are byte-identical. Without one it uses the current time. A recording from a real phone replays only against a starting home whose paired phone is replaced by the synthetic device.
 
 `prove.py` pairs a synthetic device and an approval-level agent before the snapshot, then has the agent submit `iphone.ping`, and the device approve it, poll `/pending` and send a signed `observed` result. It requires the command to end `observed`, 8 of 8 exact Go-vs-Go replays and zero Go-vs-Rust table differences. The result is signed but not authenticated by Apple: it does not prove a real phone executed anything.
 
-## Without Go
+## Running
 
-The synthetic proof and replay run with no Go toolchain and no `bin/bridge-lab`. Build `bridge` (`ab-runtime --features lab-queries`), `lab-simapple` and `ab-shadow-tools`, then:
+Parity against Go ends with the Go deletion. Nothing in the repository builds a Go gateway any more, and the replay and proof tools are Rust-only by default. `shadow.py replay` replays a recording into two gateway clones, `--left` and `--right` (the old `--go` and `--rust` spellings still work), and diffs their homes. Pointing both at the same Rust `bridge` proves exact determinism; pointing them at two Rust builds compares those builds. The prebuilt Go rollback binary can still be passed by hand as `--left` for a one-off comparison, but no gate depends on it.
+
+The synthetic proof and replay need no Go toolchain. Build `bridge` (`ab-runtime --features lab-queries`), `lab-simapple` and `ab-shadow-tools`, then:
 
 ```sh
-python3 lab/shadow/prove.py --output "$SHADOW/synthetic-proof" --bridge "$BRIDGE" --go "$BRIDGE" --rust "$BRIDGE" --simapple "$LAB_SIMAPPLE" --tools "$AB_SHADOW_TOOLS"
+python3 lab/shadow/prove.py --output "$SHADOW/synthetic-proof" --bridge "$BRIDGE" --simapple "$LAB_SIMAPPLE" --tools "$AB_SHADOW_TOOLS"
 python3 lab/shadow/shadow.py replay ... --lab-binary "$AB_SHADOW_TOOLS"
 ```
 
-`ab-shadow-tools iphone-device` and `ab-shadow-tools shadow-feed` replace the `bridge-lab` subcommands of the same names. `--go` may point at a prebuilt Go gateway for a Go-versus-Rust comparison. Linux replay still needs the loopback-only network namespace described above.
+`ab-shadow-tools iphone-device` and `ab-shadow-tools shadow-feed` are the iPhone device and delegated-feed helpers. Linux replay still needs the loopback-only network namespace described above.

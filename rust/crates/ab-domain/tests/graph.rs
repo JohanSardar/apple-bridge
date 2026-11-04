@@ -92,7 +92,7 @@ fn enforce_workspace_dependency_boundaries() -> Result<(), Box<dyn std::error::E
                 );
             }
         }
-        if name.starts_with("lab-") || *name == "bridge-lab" {
+        if name.starts_with("lab-") {
             assert!(
                 deps.iter()
                     .all(|d| names.get(d).is_none_or(|n| !n.starts_with("ab-"))),
