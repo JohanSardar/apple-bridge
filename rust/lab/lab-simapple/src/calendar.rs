@@ -829,16 +829,24 @@ impl Session<'_> {
         match op {
             "calendar.read_event" => {
                 let record = &s.data["records"][&key];
-                if key.is_empty() || record["collection"] != "calendar.event" || record["kind"] == "absent" {
+                if key.is_empty()
+                    || record["collection"] != "calendar.event"
+                    || record["kind"] == "absent"
+                {
                     return Ok(json!({"exists":false,"known_absent":true}));
                 }
                 let data = record["data"].clone();
                 let list = string(&data["calendar_id"]["$ref"], "native_key");
-                Ok(json!({"exists":true,"writable":writable(&s.data["records"][&list]),"calendar_key":list,"all_day":data["all_day"]==true,"data":data,"native_result":data}))
+                Ok(
+                    json!({"exists":true,"writable":writable(&s.data["records"][&list]),"calendar_key":list,"all_day":data["all_day"]==true,"data":data,"native_result":data}),
+                )
             }
             "calendar.read_calendar" => {
                 let record = &s.data["records"][&key];
-                if key.is_empty() || record["collection"] != "calendar.calendar" || record["kind"] == "absent" {
+                if key.is_empty()
+                    || record["collection"] != "calendar.calendar"
+                    || record["kind"] == "absent"
+                {
                     return Ok(json!({"exists":false}));
                 }
                 Ok(json!({"exists":true,"writable":writable(record),"data":record["data"]}))
@@ -855,7 +863,8 @@ impl Session<'_> {
             }
             "calendar.reconcile" => {
                 let absent = string(args, "absent_key");
-                let capture = if absent.is_empty() || s.data["records"][&absent]["kind"] != "absent" {
+                let capture = if absent.is_empty() || s.data["records"][&absent]["kind"] != "absent"
+                {
                     s.scan("calendar").map_err(fail)?
                 } else {
                     json!({"t":"Capture","source":"calendar","observations":[s.data["records"][&absent].clone()],"scan_id":id("scan").map_err(fail)?,"scope":["calendar.calendar","calendar.event"],"scan_started_at":now(),"completion_evidence":"complete"})
@@ -909,7 +918,9 @@ impl Session<'_> {
             return Ok(json!({"native_key":native,"exists_after":false}));
         }
         if op == "calendar.create_calendar" {
-            return Ok(json!({"native_key":native,"saved_title":request["title"],"observed_title":actual["title"],"actual":actual,"exists_after":true}));
+            return Ok(
+                json!({"native_key":native,"saved_title":request["title"],"observed_title":actual["title"],"actual":actual,"exists_after":true}),
+            );
         }
         let goal = if request["recurrence"].is_null() {
             json!({})
@@ -918,7 +929,8 @@ impl Session<'_> {
         } else {
             json!({"recurrence":request["recurrence"]})
         };
-        Ok(json!({"native_key":native,"goal":goal,"all_day":false,"actual":actual,"exists_after":true}))
+        Ok(
+            json!({"native_key":native,"goal":goal,"all_day":false,"actual":actual,"exists_after":true}),
+        )
     }
 }
-
