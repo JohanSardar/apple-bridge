@@ -336,6 +336,7 @@ dependencies = [
  "ab-wire",
  "base64 0.22.1",
  "jiff",
+ "plist",
  "rusqlite",
  "serde",
  "serde_json",
