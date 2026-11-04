@@ -1475,9 +1475,8 @@ pub fn from_config_linked(
                 }
                 let reader = match source.as_str() {
                     "calendar" => match config.store {
-                        Some(store) => {
-                            AgendaReader::calendar(config.root).with_calendar_store(lexical(&store)?)
-                        }
+                        Some(store) => AgendaReader::calendar(config.root)
+                            .with_calendar_store(lexical(&store)?),
                         None => AgendaReader::calendar(config.root),
                     },
                     "contacts" => AgendaReader::contacts(config.root),

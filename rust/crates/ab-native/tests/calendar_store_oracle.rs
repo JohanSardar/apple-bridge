@@ -51,7 +51,12 @@ fn run(root: PathBuf) -> Fallible<(Vec<Value>, Vec<String>)> {
     let mut enrichment = Enrichment::new(root);
     let enriched = enrichment.enrich(
         &ordered,
-        &|native| lookups[native]["external"].as_str().unwrap_or_default().to_owned(),
+        &|native| {
+            lookups[native]["external"]
+                .as_str()
+                .unwrap_or_default()
+                .to_owned()
+        },
         true,
     );
     Ok((enriched, enrichment.handles().keys().cloned().collect()))
@@ -59,7 +64,8 @@ fn run(root: PathBuf) -> Fallible<(Vec<Value>, Vec<String>)> {
 
 #[test]
 fn rust_enrichment_matches_the_swift_oracle_on_the_fixture_store() -> Fallible<()> {
-    let expected: Value = serde_json::from_str(include_str!("parity/calendar-store/expected.json"))?;
+    let expected: Value =
+        serde_json::from_str(include_str!("parity/calendar-store/expected.json"))?;
     let (enriched, digests) = run(prepare("oracle")?)?;
     let want = expected["observations"].as_array().ok_or("observations")?;
     assert_eq!(enriched.len(), want.len());
@@ -80,7 +86,7 @@ fn a_missing_or_unreadable_store_is_unsupported_and_never_invents_fields() -> Fa
     let _ = fs::remove_dir_all(&root);
     fs::create_dir_all(&root)?;
     let (enriched, digests) = run(root)?;
-    assert!(digests.is_empty());
+    assert_eq!(digests.len(), 0);
     let event = enriched
         .iter()
         .find(|row| row["native_key"] == "ID-B")
@@ -110,6 +116,10 @@ fn attachment_bytes_are_served_in_bounded_confined_chunks() -> Fallible<()> {
     assert_eq!(chunk["eof"], false);
     assert!(enrichment.read_blob(&handle, 0, 0).is_err());
     assert!(enrichment.read_blob(&handle, 0, 1 << 20).is_err());
-    assert!(enrichment.read_blob("calendar-attachment:unknown", 0, 4).is_err());
+    assert!(
+        enrichment
+            .read_blob("calendar-attachment:unknown", 0, 4)
+            .is_err()
+    );
     Ok(())
 }

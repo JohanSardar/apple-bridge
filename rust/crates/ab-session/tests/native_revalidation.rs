@@ -560,7 +560,8 @@ fn the_rust_store_enriches_pulled_calendar_events_and_serves_their_attachments()
     let mut clock = Clock(0);
     let cal = "AAAAAAAA-0000-0000-0000-000000000001";
     let mut plain = event("ID-H", "H");
-    plain["data"]["calendar_id"] = json!({"$ref":{"collection":"calendar.calendar","native_key":cal}});
+    plain["data"]["calendar_id"] =
+        json!({"$ref":{"collection":"calendar.calendar","native_key":cal}});
     plain["scoped_alias"] = json!("src/cal/EXT-H");
     set(&world, "agenda.calendars", vec![calendar(cal)])?;
     set(&world, "agenda.events", vec![plain])?;
@@ -573,10 +574,17 @@ fn the_rust_store_enriches_pulled_calendar_events_and_serves_their_attachments()
         enriched["data"]["store_identifier_match"],
         "calendarItemIdentifier:unique_identifier"
     );
-    assert_eq!(enriched["data"]["attachments"].as_array().map(Vec::len), Some(2));
+    assert_eq!(
+        enriched["data"]["attachments"].as_array().map(Vec::len),
+        Some(2)
+    );
     let handles = capture["blob_handles"].as_object().ok_or("blob handles")?;
     assert_eq!(handles.len(), 2);
-    let handle = handles.values().next().and_then(Value::as_str).ok_or("handle")?;
+    let handle = handles
+        .values()
+        .next()
+        .and_then(Value::as_str)
+        .ok_or("handle")?;
     assert!(reader.owns(handle));
     assert_eq!(reader.handle_prefix(), Some("calendar-attachment:"));
     assert_eq!(reader.blob(handle, 0, 3)?["t"], "BlobChunk");
