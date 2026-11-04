@@ -167,6 +167,7 @@ pub struct MessagesReader {
     pending: bool,
     failures: u32,
     facts: Option<Arc<Client>>,
+    waited_on: bool,
 }
 
 impl Drop for MessagesReader {
@@ -202,6 +203,7 @@ impl MessagesReader {
             pending: false,
             failures: 0,
             facts: None,
+            waited_on: false,
         }
     }
 
@@ -487,6 +489,20 @@ impl MessagesReader {
         Ok(())
     }
 
+    fn live_ahead(&mut self, context: &ScanContext) -> Result<(), Error> {
+        self.at = context.observed_at()?;
+        let Some(reader) = self.reader.as_mut() else {
+            return Ok(());
+        };
+        let batches = reader.poll(false).map_err(reader_error)?;
+        let mut collected: Vec<Option<Item>> = Vec::new();
+        self.items(&batches, &mut collected)?;
+        for item in collected.into_iter().flatten().rev() {
+            self.queue.push_front(item);
+        }
+        Ok(())
+    }
+
     fn piece(&mut self, context: &ScanContext) -> Result<Option<Value>, Error> {
         if self.queue.is_empty() && !self.queue_complete {
             return Ok(None);
@@ -574,6 +590,7 @@ fn collect(value: &Value, at: &str, aliases: &mut BTreeMap<String, Value>) {
 
 impl CaptureReader for MessagesReader {
     fn refresh(&mut self) -> bool {
+        self.waited_on = true;
         true
     }
 
@@ -651,7 +668,10 @@ impl CaptureReader for MessagesReader {
         }
         if self.queue.is_empty() && !self.queue_complete {
             self.fill(context)?;
+        } else if self.waited_on {
+            self.live_ahead(context)?;
         }
+        self.waited_on = false;
         let piece = self.piece(context)?;
         self.pending = piece.is_some();
         Ok(piece)
