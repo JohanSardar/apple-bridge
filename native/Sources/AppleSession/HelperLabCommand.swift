@@ -242,6 +242,12 @@ enum HelperLabCommand {
             try JSONEncoder().encode(result!).write(to: reportURL, options: .atomic)
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
             return true
+        case "external-change":
+            let reportURL = try report(arguments)
+            guard let index = arguments.firstIndex(of: "--request"), index + 1 < arguments.count,
+                  let request = try JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: arguments[index + 1]))) as? [String: Any] else { throw ProbeFailure.invalidArguments }
+            try PrivateReport.write(ExternalChange.run(request), to: reportURL)
+            return true
         case "notes-probe":
             let reportURL = try report(arguments)
             var error: NSDictionary?
