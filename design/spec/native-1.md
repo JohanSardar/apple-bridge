@@ -222,15 +222,20 @@ Reminders primitives (`reminders.*` operations):
 | `reminders.read_list` | `native_key` | `{exists, writable, data}` (`data` is the list's native fields) |
 | `reminders.read_reminder` | `native_key` | `{exists, writable, list_key, data}` (`writable` is the owning list's) |
 | `reminders.can_create_list` | none | `{allowed}` (the default account accepts a new list) |
-| `reminders.reconcile` | none | `{}` after Swift emitted a fresh `Scan` of the source (used to evidence a conflict) |
-| `reminders.write` | `op`, `native_key`, `list_key`, `args` | `{native_key, saved, observed, exists_after}`: `saved` is the record as written, `observed` a fresh read of it, `null` when absent. Swift emits its normal `Scan` of the change before answering |
+| `reminders.reconcile` | none, or `absent_key` and `list` | `{}` after Swift emitted a fresh `Scan` of the source (used to evidence a conflict); with `absent_key` it emits the revalidated absence of that key instead (used to resolve a delete) |
+| `reminders.write` | `op`, `native_key`, `list_key`, `args`, `command_id` (diagnostic only) | `{native_key, saved, observed, exists_after}`: `saved` is the record as written, `observed` a fresh read of it, `null` when absent. Swift emits its normal `Scan` of the change before answering |
 
 Rust decides: unsupported operation or read-only list (`unsupported`); a missing reminder, a changed list or
 reminder, an unexpected owning list (`conflict`, with `{native_key, capture_checkpoint}` evidence when the
 fresh scan shows the key); drift between `Prepare` and `Dispatch` (rejected before any write, the dispatch
 slot already written to the guard); and whether the read-back proves the write (`locally_observed`) or not
 (`indeterminate`, never retried). Projection-only fields (store enrichment) never take part in a comparison.
-`Resolve` after a restart still goes to Swift (`saved` forwarded) until its resolve logic moves.
+`Resolve` after a restart is Rust too: for an open outcome of a Rust-owned operation Rust reads the list or reminder
+through `reminders.read_list` / `reminders.read_reminder`, decides whether the framework shows the command's effect
+(`locally_observed` with `resolved: true`) or not (`indeterminate`, evidence unchanged), and asks for
+`reminders.reconcile` before answering. In session mode the Helper starts `ab-session` with
+`--rust-commands reminders` (`AB_SESSION_RUST_COMMANDS` overrides the list), so Swift's native-session `Prepare`,
+`Dispatch` and `Resolve` handlers refuse `reminders.*`.
 
 ## Ownership and migration
 
