@@ -155,7 +155,17 @@ SESSION_ENV = {
     'AB_LAB_SESSION_EFFECTS': '1',
     'AB_LAB_SESSION_NATIVE_FACTS': '1',
 }
-SESSION_SAMPLE = ['notes/NOTE-CRUD', 'files/FILE-COMMANDS', 'mac/MAC-ACTIONS', 'maps/MAP-SIM', 'vision/PDF-TEXT', 'CORE-RESUME']
+SESSION_SAMPLE = ['notes/NOTE-CRUD', 'messages/MSG-EDIT', 'shortcuts/SC-RUN-REAL', 'files/FILE-COMMANDS', 'mac/MAC-ACTIONS', 'maps/MAP-SIM', 'vision/PDF-TEXT', 'CORE-RESUME']
+SESSION_FIXTURE_SOURCES = {
+    'linux': 'notes,usage',
+    'darwin': 'safari,phone,voicemail,voice_memos,mail',
+}
+SESSION_FIXTURE_SCENARIOS = {
+    'linux': ['notes/NOTE-CRUD', 'notes/NOTE-EXTERNAL', 'notes/NOTE-EXTRAS', 'notes/NOTE-IMPORT', 'notes/NOTE-EDIT-PARITY',
+              'notes/NOTE-RICH-REJECT', 'usage/USE-IMPORT', 'usage/USE-LOCK-CLIP', 'usage/USE-READONLY', 'usage/USE-REMOTE-LAG'],
+    'darwin': ['safari/SAF-CAPTURE', 'phone/CALL-CAPTURE', 'phone/VM-CAPTURE', 'phone/VMEMO-CAPTURE', 'mail/MAIL-CAPTURE',
+               'mail/MAIL-BODY', 'mail/MAIL-LIVE', 'mail/MAIL-NO-FALSE-DELETE'],
+}
 SESSION_CONTROL_SCENARIOS = ['calendar/CAL-CRUD', 'contacts/CON-CRUD', 'reminders/REM-CRUD']
 SESSION_CONTROLS = {
     'revalidate-refuse': {'AB_LAB_SESSION_REVALIDATE_CONTROL': 'refuse'},
@@ -267,18 +277,26 @@ def main():
     parser.add_argument('--web-agents', dest='web_agents', action='store_true')
     parser.add_argument('--darwin-core', dest='darwin_core', action='store_true')
     parser.add_argument('--session', action='store_true')
+    parser.add_argument('--session-fixtures', dest='session_fixtures', choices=sorted(SESSION_FIXTURE_SCENARIOS))
     parser.add_argument('--session-control', dest='session_control', choices=sorted(SESSION_CONTROLS))
     args = parser.parse_args()
-    session = args.session or bool(args.session_control)
+    session = args.session or bool(args.session_control) or bool(args.session_fixtures)
+    if args.session_fixtures:
+        os.environ['AB_LAB_SESSION_SOURCES'] = SESSION_FIXTURE_SOURCES[args.session_fixtures]
+        if os.environ.get('AB_LAB_SESSION_RESTART') is None:
+            os.environ['AB_LAB_SESSION_RESTART'] = '1'
     if session:
         binary = os.environ.get('AB_SESSION_BINARY')
         if not binary:
             parser.error('--session needs AB_SESSION_BINARY (the ab-session binary)')
         os.environ['AB_LAB_SESSION'] = binary
-        os.environ.update(SESSION_ENV)
+        if not args.session_fixtures:
+            os.environ.update(SESSION_ENV)
         os.environ.update(SESSION_CONTROLS.get(args.session_control, {}))
         args.go_rust_gateway = True
-        if args.session_control:
+        if args.session_fixtures:
+            args.scenario = (args.scenario or []) + SESSION_FIXTURE_SCENARIOS[args.session_fixtures]
+        elif args.session_control:
             args.scenario = (args.scenario or []) + SESSION_CONTROL_SCENARIOS
         else:
             args.scenario = (args.scenario or []) + [n for n in CALENDAR_SCENARIOS if n != 'web/WEB-CAL-WRITE'] + CONTACTS_SCENARIOS + REMINDER_SCENARIOS + REMINDER_NATIVE_SCENARIOS + SESSION_SAMPLE

@@ -19,6 +19,9 @@ pub(crate) struct Session {
     pub(crate) facts: Option<PathBuf>,
     pub(crate) state: PathBuf,
     pub(crate) roots: Vec<(String, PathBuf)>,
+    pub(crate) usage: std::sync::Mutex<crate::session_fixtures::Devices>,
+    pub(crate) mail: std::sync::Mutex<crate::session_fixtures::Mail>,
+    pub(crate) notes: Option<crate::session_notes::NotesSync>,
 }
 
 fn variable(name: &str) -> String {
@@ -52,6 +55,42 @@ impl World {
             .listen
             .as_ref()
             .map_or_else(|| gateway.to_owned(), |path| path.display().to_string())
+    }
+
+    pub(crate) fn session_hook(&self, route: &str, input: &Value) -> Result<()> {
+        match route {
+            "/usage" if self.session_root("usage").is_some() => self.stage_session_usage(input),
+            "/dataset" if self.session_root("mail").is_some() => self.stage_session_mail(input),
+            _ => Ok(()),
+        }
+    }
+
+    pub(crate) fn session_after(&self, route: &str) {
+        if route == "/external-change"
+            && let Some(notes) = &self.labsession.notes
+            && let Err(error) = notes.sync()
+        {
+            eprintln!("lab session notes: {error}");
+        }
+    }
+
+    pub(crate) fn start_session_notes(&mut self) {
+        if self.labsession.notes.is_some() {
+            return;
+        }
+        if let Some(root) = self.session_root("notes").map(Path::to_path_buf) {
+            self.labsession.notes = Some(crate::session_notes::NotesSync::start(
+                self.directory.clone(),
+                root,
+                self.directory.join("session-notes-hold"),
+            ));
+        }
+    }
+
+    pub(crate) fn stop_session_notes(&mut self) {
+        if let Some(notes) = self.labsession.notes.as_mut() {
+            notes.stop();
+        }
     }
 
     pub(crate) fn sim_native_socket(&self) -> Option<PathBuf> {

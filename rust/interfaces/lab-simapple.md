@@ -390,3 +390,7 @@ Stable additions: `core_frames.rs` is a TLS and WebSocket frame proxy between re
 - `Changed` is pushed to every subscribed connection when a control route enqueues a calendar, contacts or reminders capture.
 
 Switches (same names as the Go lab): `AB_LAB_SESSION_REVALIDATE_CONTROL=refuse|partial`, `AB_LAB_SESSION_EFFECTS_CONTROL=refuse`. A sleeping `test.sleep` query through `Effect` has no answer and fails with `unavailable`; QueryCancel is not forwarded by the session either.
+
+Session proof notes. `CORE-HELPER-RESTART` with a fact source routed through the session (`AB_LAB_SESSION_SOURCES` containing `contacts` or `reminders`) fails `helper_checkpoint_resume_without_rescan` in both the Go harness and the Rust runner, by design: simapple resumes without a rescan only when the checkpoint the gateway offers in `Open` equals the one it committed itself, and with the session producing the gateway checkpoints (`rs-...`) the offered value is never simapple's, so it rescans that source (calendar always rescans). The session diffs the pulled facts and emits nothing for an unchanged source, so the gateway sees no change.
+
+`SC-RUN-REAL` has a sim level and runs under the Rust runner. It needs `ab-shortcuts-checks` (`AB_LAB_SHORTCUTS_CHECKS`, or next to the gateway binary); `packaging/dev/rust-lab.sh` now builds it.

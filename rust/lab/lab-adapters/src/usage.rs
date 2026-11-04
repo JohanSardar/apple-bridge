@@ -31,6 +31,24 @@ fn send(world: &World, device: &str, platform: &str, events: &[Value]) -> bool {
         )
         .is_ok()
 }
+pub(crate) fn session_restart(world: &mut World, evidence: &mut Evidence) {
+    if std::env::var("AB_LAB_SESSION_RESTART").as_deref() != Ok("1")
+        || !lab_world::session_sources()
+            .iter()
+            .any(|source| source == "usage")
+    {
+        return;
+    }
+    let before = world.session_checkpoint("usage");
+    evidence.check("session_checkpoint_persisted", !before.is_empty(), "");
+    evidence.check("session_restarted", world.restart_session().is_ok(), "");
+    std::thread::sleep(std::time::Duration::from_secs(3));
+    evidence.check(
+        "session_resumed_without_rescan",
+        !before.is_empty() && world.session_checkpoint("usage") == before,
+        "",
+    );
+}
 fn latest(client: &Client, device: &str) -> String {
     let Ok(read) = read_all(client, false, true) else {
         return String::new();
@@ -167,6 +185,7 @@ pub fn cases(world: &mut World, input: &Value, evidence: &mut Evidence) -> Resul
     if !clipped {
         return Ok(());
     }
+    session_restart(world, evidence);
     match id.as_str() {
         "USE-LOCK-CLIP" => lock_clip(world, &gateway, evidence),
         "USE-REMOTE-LAG" => {

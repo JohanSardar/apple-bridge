@@ -8,3 +8,6 @@ workspace = true
 [dependencies]
 serde_json.workspace = true
 thiserror.workspace = true
+base64 = "0.22"
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+jiff.workspace = true

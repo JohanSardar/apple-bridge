@@ -268,7 +268,7 @@ pub fn usage(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()
     let observed = Observed::new(gateway.clone(), SCOPE);
     let base = 1_800_100_800.0_f64;
     let event = |offset: f64, starting: bool, bundle: &str| json!({"at": base + offset, "starting": starting, "bundle": bundle});
-    let send = |device: &str, platform: &str, events: Vec<Value>| {
+    let send = |world: &World, device: &str, platform: &str, events: Vec<Value>| {
         world
             .control(
                 "/usage",
@@ -278,6 +278,7 @@ pub fn usage(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()
     };
     let app = "test.synthetic.alpha";
     if !send(
+        world,
         "local",
         "mac",
         vec![
@@ -303,9 +304,11 @@ pub fn usage(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()
     if !clipped {
         return Ok(());
     }
+    crate::usage::session_restart(world, evidence);
     evidence.check(
         "remote_import",
         send(
+            world,
             "remote",
             "iphone",
             vec![event(0.0, true, app), event(120.0, false, app)],

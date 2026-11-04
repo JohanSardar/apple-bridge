@@ -16,7 +16,7 @@ use std::{
         atomic::{AtomicBool, AtomicU64, Ordering},
     },
     thread,
-    time::Duration,
+    time::{Duration, Instant},
 };
 use tungstenite::{Message, WebSocket};
 
@@ -248,6 +248,9 @@ fn relay(
                 downstream
                     .send(Message::text(r#"{"t":"Reset","reason":"capture_fixture"}"#))
                     .map_err(invalid)?;
+                let _ = downstream.close(None);
+                let drained = Instant::now() + Duration::from_secs(5);
+                while Instant::now() < drained && poll(&mut downstream).is_ok() {}
                 return Ok(());
             }
         }

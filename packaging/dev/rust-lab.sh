@@ -38,9 +38,13 @@ prepare() {
     cargo build --manifest-path "$manifest" --locked -p ab-replication --example relay2_fixture
     [[ -x "$(dirname "$AB_RELAY_FIXTURE")/relay2_fixture" ]] || { echo "relay2_fixture missing next to $AB_RELAY_FIXTURE" >&2; exit 1; }
   fi
+  if [[ -z "${AB_LAB_SHORTCUTS_CHECKS:-}" ]]; then
+    AB_LAB_SHORTCUTS_CHECKS=$(artifact ab-shortcuts-checks -p ab-shortcuts --features lab-harness --bin ab-shortcuts-checks)
+  fi
   require ab-session "$AB_SESSION_BINARY"
+  require ab-shortcuts-checks "$AB_LAB_SHORTCUTS_CHECKS"
   require lab_fixture "$AB_RELAY_FIXTURE"
-  export AB_SESSION_BINARY AB_RELAY_FIXTURE
+  export AB_SESSION_BINARY AB_RELAY_FIXTURE AB_LAB_SHORTCUTS_CHECKS
 }
 
 scenario_files() {
