@@ -81,6 +81,7 @@ func (f *fakeApple) serveNative(ctx context.Context, path string) (func(), error
 
 func (f *fakeApple) nativeConnection(ctx context.Context, conn net.Conn) {
 	defer conn.Close()
+	facts := &factSession{}
 	for ctx.Err() == nil {
 		frame, err := readNative(conn)
 		if err != nil {
@@ -91,7 +92,12 @@ func (f *fakeApple) nativeConnection(ctx context.Context, conn net.Conn) {
 		json.Unmarshal(frame["id"], &id)
 		switch kind {
 		case "Hello":
+			facts.hello(frame)
 			if writeNative(conn, map[string]any{"t": "Welcome", "protocol": "native/1", "version": 1}) != nil {
+				return
+			}
+		case "Facts":
+			if f.nativeFactsPage(conn, facts, frame) != nil {
 				return
 			}
 		case "Effect":

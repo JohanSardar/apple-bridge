@@ -51,6 +51,13 @@ func SessionEffects() bool {
 	return os.Getenv("AB_LAB_SESSION") != "" && os.Getenv("AB_LAB_SESSION_EFFECTS") == "1"
 }
 
+func (w *World) simNativeSocket() string {
+	if w.sessionNative != "" {
+		return w.sessionNative
+	}
+	return w.sessionFacts
+}
+
 func (w *World) startSession(ctx context.Context, gatewaySocket string) (string, error) {
 	sources := SessionSources()
 	if len(sources) == 0 && !SessionEffects() {
@@ -58,7 +65,15 @@ func (w *World) startSession(ctx context.Context, gatewaySocket string) (string,
 	}
 	external, _ := ctx.Value(sessionRootsKey{}).(map[string]string)
 	producers := map[string]string{}
-	config := map[string]map[string]string{}
+	config := map[string]map[string]any{}
+	factsMode := os.Getenv("AB_LAB_SESSION_NATIVE_FACTS")
+	factsSocket := ""
+	if factsMode == "1" || factsMode == "missing" {
+		factsSocket = filepath.Join(w.Dir, "native.sock")
+		if factsMode == "1" && !SessionEffects() {
+			w.sessionFacts = factsSocket
+		}
+	}
 	w.sessionRoots = map[string]string{}
 	for _, source := range sources {
 		root := external[source]
@@ -69,7 +84,11 @@ func (w *World) startSession(ctx context.Context, gatewaySocket string) (string,
 			}
 		}
 		producers[source] = "Rust"
-		config[source] = map[string]string{"root": root}
+		config[source] = map[string]any{"root": root}
+		if factsSocket != "" && (source == "calendar" || source == "contacts") {
+			config[source]["facts"] = map[string]string{"socket": factsSocket}
+			config[source]["facts_poll_ms"] = 3600000
+		}
 		if source == "notes" || source == "voice_memos" {
 			staging := filepath.Join(w.Dir, "session-staging-"+source)
 			if err := os.MkdirAll(staging, 0700); err != nil {

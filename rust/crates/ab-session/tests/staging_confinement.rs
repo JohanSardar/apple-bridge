@@ -54,6 +54,7 @@ fn context(round: u32) -> ScanContext {
         checkpoint: format!("checkpoint-{round}"),
         scan_id: format!("scan-{round}"),
         now: 1_800_000_000.0 + f64::from(round),
+        fence: 1,
     }
 }
 

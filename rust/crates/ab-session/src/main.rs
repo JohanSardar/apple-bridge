@@ -132,6 +132,21 @@ fn lab_listen(listen: &str, gateway: &str, native: Option<&str>) -> Result<(), E
     Ok(())
 }
 
+#[cfg(feature = "rust-capture")]
+fn inherited_native(
+    gateway: &std::os::unix::net::UnixStream,
+    helper: &std::os::unix::net::UnixStream,
+) -> Result<std::os::unix::net::UnixStream, Error> {
+    let native = std::env::var("AB_NATIVE_FD")
+        .map_err(|_| Error::Invalid)?
+        .parse::<i32>()
+        .map_err(|_| Error::Invalid)?;
+    if native < 3 || native == gateway.as_raw_fd() || native == helper.as_raw_fd() {
+        return Err(Error::Invalid);
+    }
+    Ok(ab_sys::inherited_unix_stream(native)?)
+}
+
 fn run() -> Result<(), Error> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     #[cfg(feature = "rust-capture")]
@@ -199,23 +214,29 @@ fn run() -> Result<(), Error> {
     #[allow(clippy::needless_return)]
     {
         let effects = match effects_home {
-            Some(home) => {
-                let native = std::env::var("AB_NATIVE_FD")
-                    .map_err(|_| Error::Invalid)?
-                    .parse::<i32>()
-                    .map_err(|_| Error::Invalid)?;
-                if native < 3 || native == gateway.as_raw_fd() || native == helper.as_raw_fd() {
-                    return Err(Error::Invalid);
-                }
-                Some(ab_session::production::EffectsLink {
-                    native: ab_sys::inherited_unix_stream(native)?,
-                    routing: ab_session::production::effects_routing(std::path::Path::new(&home))?,
-                    home: std::path::PathBuf::from(home),
-                })
-            }
+            Some(home) => Some(ab_session::production::EffectsLink {
+                native: inherited_native(&gateway, &helper)?,
+                routing: ab_session::production::effects_routing(std::path::Path::new(&home))?,
+                home: std::path::PathBuf::from(home),
+            }),
             None => None,
         };
-        return ab_session::production::serve(gateway, helper, capture.as_ref(), effects);
+        let facts = match &capture {
+            Some(loaded) if loaded.wants_inherited_facts() => {
+                if effects.is_some() {
+                    return Err(Error::Conflict);
+                }
+                Some(inherited_native(&gateway, &helper)?)
+            }
+            _ => None,
+        };
+        return ab_session::production::serve_with_facts(
+            gateway,
+            helper,
+            capture.as_ref(),
+            effects,
+            facts,
+        );
     }
     #[cfg(not(feature = "rust-capture"))]
     {

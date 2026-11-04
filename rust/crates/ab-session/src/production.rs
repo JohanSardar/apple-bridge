@@ -1,5 +1,6 @@
 use crate::{
     Error,
+    native_facts::Client,
     ownership::{ConnectionState, Producer, Selection, SourceId},
     readers::{self, CaptureReader},
     routed::{self, Options},
@@ -9,6 +10,7 @@ use std::{
     collections::BTreeMap,
     os::unix::net::UnixStream,
     path::{Path, PathBuf},
+    sync::Arc,
     time::Duration,
 };
 
@@ -72,7 +74,19 @@ impl Loaded {
     }
 
     pub fn readers(&self) -> Result<BTreeMap<String, Box<dyn CaptureReader>>, Error> {
-        readers::from_config(&self.sources)
+        self.readers_with(None)
+    }
+
+    pub fn readers_with(
+        &self,
+        facts: Option<&Arc<Client>>,
+    ) -> Result<BTreeMap<String, Box<dyn CaptureReader>>, Error> {
+        readers::from_config_linked(&self.sources, facts)
+    }
+
+    #[must_use]
+    pub fn wants_inherited_facts(&self) -> bool {
+        readers::wants_inherited_facts(&self.sources)
     }
 }
 
@@ -161,7 +175,7 @@ pub fn load(home: &Path) -> Result<Option<Loaded>, Error> {
             state: Some(home.join(STATE_DIRECTORY)),
         },
     };
-    loaded.readers()?;
+    loaded.readers_with(Some(&Arc::new(Client::detached())))?;
     Ok(Some(loaded))
 }
 
@@ -222,6 +236,20 @@ pub fn serve(
     capture: Option<&Loaded>,
     effects: Option<EffectsLink>,
 ) -> Result<(), Error> {
+    serve_with_facts(gateway, helper, capture, effects, None)
+}
+
+pub fn serve_with_facts(
+    gateway: UnixStream,
+    helper: UnixStream,
+    capture: Option<&Loaded>,
+    effects: Option<EffectsLink>,
+    facts: Option<UnixStream>,
+) -> Result<(), Error> {
+    let facts = match facts {
+        Some(stream) => Some(Arc::new(Client::inherited(stream)?)),
+        None => None,
+    };
     #[cfg(feature = "rust-effects")]
     if let Some(link) = effects {
         let mut config = crate::effects::Config {
@@ -238,7 +266,10 @@ pub fn serve(
             config,
         )?;
         let (readers, options) = match capture {
-            Some(loaded) => (loaded.readers()?, loaded.options().clone()),
+            Some(loaded) => (
+                loaded.readers_with(facts.as_ref())?,
+                loaded.options().clone(),
+            ),
             None => (BTreeMap::new(), Options::default()),
         };
         return routed::relay_layered(gateway, helper, readers, &options, Some(&layer));
@@ -248,9 +279,13 @@ pub fn serve(
         return Err(Error::Conflict);
     }
     match capture {
-        Some(loaded) => {
-            routed::relay_layered(gateway, helper, loaded.readers()?, loaded.options(), None)
-        }
+        Some(loaded) => routed::relay_layered(
+            gateway,
+            helper,
+            loaded.readers_with(facts.as_ref())?,
+            loaded.options(),
+            None,
+        ),
         None => crate::proxy::relay(gateway, helper),
     }
 }

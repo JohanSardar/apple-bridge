@@ -143,8 +143,8 @@ func (w *World) RestartHelper() error {
 		return err
 	}
 	simArgs := []string{"simapple", "--socket", w.helperSocket(cfg.Socket), "--secret-file", filepath.Join(w.Gateway.Home, "apple-secret"), "--control", filepath.Join(w.Dir, "sim.sock")}
-	if w.sessionNative != "" {
-		simArgs = append(simArgs, "--native-socket", w.sessionNative)
+	if socket := w.simNativeSocket(); socket != "" {
+		simArgs = append(simArgs, "--native-socket", socket)
 	}
 	restarted, err := w.start("simapple", false, w.Dir, w.simAppleBinary(), simArgs...)
 	if err != nil {
