@@ -80,3 +80,16 @@ pub fn kill_process_group(pid: u32) {
     // SAFETY: kill takes integer arguments only and has no memory effects.
     unsafe { libc::kill(-pid, libc::SIGKILL) };
 }
+
+#[allow(unsafe_code)]
+pub fn reset_signals() {
+    // SAFETY: signal, sigemptyset and pthread_sigmask receive valid constants and a local set.
+    unsafe {
+        for signal in [libc::SIGTERM, libc::SIGINT, libc::SIGHUP, libc::SIGQUIT] {
+            libc::signal(signal, libc::SIG_DFL);
+        }
+        let mut empty: libc::sigset_t = std::mem::zeroed();
+        libc::sigemptyset(&raw mut empty);
+        libc::pthread_sigmask(libc::SIG_SETMASK, &raw const empty, std::ptr::null_mut());
+    }
+}

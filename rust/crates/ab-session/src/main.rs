@@ -132,7 +132,23 @@ fn lab_listen(listen: &str, gateway: &str, native: Option<&str>) -> Result<(), E
     Ok(())
 }
 
+fn exit_with_parent() {
+    let parent = std::os::unix::process::parent_id();
+    if parent <= 1 {
+        std::process::exit(0);
+    }
+    std::thread::spawn(move || {
+        loop {
+            std::thread::sleep(std::time::Duration::from_millis(500));
+            if std::os::unix::process::parent_id() != parent {
+                std::process::exit(0);
+            }
+        }
+    });
+}
+
 fn run() -> Result<(), Error> {
+    ab_sys::reset_signals();
     let args: Vec<String> = std::env::args().skip(1).collect();
     #[cfg(feature = "rust-capture")]
     if args.len() == 4 && args[0] == "--lab-listen" && args[2] == "--lab-gateway" {
@@ -151,6 +167,7 @@ fn run() -> Result<(), Error> {
     }
     let gateway = args[1].parse::<i32>().map_err(|_| Error::Invalid)?;
     let helper = args[3].parse::<i32>().map_err(|_| Error::Invalid)?;
+    exit_with_parent();
     if gateway < 3 || helper < 3 || gateway == helper {
         return Err(Error::Invalid);
     }

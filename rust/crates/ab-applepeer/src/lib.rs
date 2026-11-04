@@ -300,16 +300,6 @@ impl Commands {
         )
         .await?;
         let answer = tokio::time::timeout(Duration::from_secs(10), rx).await;
-        if answer.is_err() {
-            let s = self.session.lock().await;
-            if s.fence == guard.fence
-                && let Some(writer) = &s.writer
-            {
-                let _ = writer.lock().await.shutdown().await;
-            }
-            drop(s);
-            self.detach(guard.fence).await;
-        }
         let frame = answer
             .map_err(|_| Code::Unavailable)?
             .map_err(|_| Code::Unavailable)?;

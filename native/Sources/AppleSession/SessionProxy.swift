@@ -30,7 +30,15 @@ final class SessionProxy: @unchecked Sendable {
             Darwin.close(pair[0]); Darwin.close(pair[1]); Darwin.close(native[0]); Darwin.close(native[1]); throw SourceFailure.unavailable
         }
         defer { posix_spawnattr_destroy(&attributes) }
-        guard posix_spawnattr_setflags(&attributes, Int16(POSIX_SPAWN_CLOEXEC_DEFAULT)) == 0 else {
+        var defaults = sigset_t()
+        sigfillset(&defaults)
+        sigdelset(&defaults, SIGKILL)
+        sigdelset(&defaults, SIGSTOP)
+        var mask = sigset_t()
+        sigemptyset(&mask)
+        guard posix_spawnattr_setsigdefault(&attributes, &defaults) == 0,
+              posix_spawnattr_setsigmask(&attributes, &mask) == 0,
+              posix_spawnattr_setflags(&attributes, Int16(POSIX_SPAWN_CLOEXEC_DEFAULT | POSIX_SPAWN_SETSIGDEF | POSIX_SPAWN_SETSIGMASK)) == 0 else {
             Darwin.close(pair[0]); Darwin.close(pair[1]); Darwin.close(native[0]); Darwin.close(native[1]); throw SourceFailure.unavailable
         }
         var spawned: pid_t = 0

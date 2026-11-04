@@ -17,6 +17,15 @@ trap 'rm -rf "$stage"' EXIT
 app="$stage/AppleBridgeHelper.app"
 mkdir -p "$app/Contents/MacOS"
 cp "$output/AppleBridgeHelper" "$app/Contents/MacOS/AppleBridgeHelper"
+session=${AB_SESSION_BINARY:-}
+if [[ -z $session && ${AB_SESSION_BUILD:-} == 1 ]]; then
+    session=$("$root/packaging/dev/build-session.sh")
+fi
+if [[ -n $session ]]; then
+    [[ -x $session && -f $session ]]
+    cp "$session" "$app/Contents/MacOS/ab-session"
+    chmod 755 "$app/Contents/MacOS/ab-session"
+fi
 cp "$root/packaging/dev/Info.plist" "$app/Contents/Info.plist"
 python3 "$root/packaging/dev/app-intents.py" "$app"
 "$root/packaging/dev/sign.sh" "$app"

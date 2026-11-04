@@ -27,9 +27,26 @@ def digest_bundle(app):
             digest.update(path.read_bytes())
     return digest.hexdigest()
 
+def session_inputs(root, environment):
+    binary = environment.get("AB_SESSION_BINARY")
+    if binary:
+        return {"binary_sha256": hashlib.sha256(Path(binary).read_bytes()).hexdigest()}
+    if environment.get("AB_SESSION_BUILD") == "1":
+        digest = hashlib.sha256()
+        base = root / "rust"
+        paths = [base / "Cargo.lock", base / "Cargo.toml"]
+        for directory, children, files in os.walk(base / "crates"):
+            children[:] = [name for name in children if name not in {"target", "node_modules", ".git"}]
+            paths.extend(Path(directory) / name for name in files if name.endswith((".rs", ".toml")))
+        for path in sorted(paths):
+            if path.is_file():
+                digest.update(str(path.relative_to(root)).encode() + b"\0" + path.read_bytes() + b"\0")
+        return {"sources_sha256": digest.hexdigest()}
+    return {}
+
 def source_key(root):
     digest = hashlib.sha256()
-    wanted = {"Info.plist", "Truth-Info.plist", "Helper.entitlements", "sign.sh", "sign-gui.py", "build-helper.sh", "build-truth.sh", "build-native.sh", "build-native.py", "generate-source-registrations.py", "sdkroot.sh", "signed-app-cache.py", "signed_app_inputs.py", "app-intents.py"}
+    wanted = {"Info.plist", "Truth-Info.plist", "Helper.entitlements", "sign.sh", "sign-gui.py", "build-helper.sh", "build-truth.sh", "build-native.sh", "build-native.py", "generate-source-registrations.py", "sdkroot.sh", "signed-app-cache.py", "signed_app_inputs.py", "app-intents.py", "build-session.sh"}
     for base in [root / "native", root / "lab/truth/native", root / "packaging/dev", root / "packaging/app-intents"]:
         paths = []
         for directory, children, files in os.walk(base):
@@ -65,6 +82,7 @@ def source_key(root):
     for name in ["APPLE_BRIDGE_SWIFTC", "APPLE_BRIDGE_SDK", "SDKROOT", "DEVELOPER_DIR", "TOOLCHAINS", "APPLE_BRIDGE_SIGNING_GUI", "APPLE_BRIDGE_SIGNING_IDENTITY", "APPLE_BRIDGE_KEEP_SDKROOT", "APPLE_BRIDGE_NATIVE_TARGET", "SWIFT_EXEC", "CC", "CXX", "CFLAGS", "CXXFLAGS", "SWIFTFLAGS"]:
         toolchain[name] = os.environ.get(name, "")
     toolchain["native_lab_condition"] = lab
+    toolchain["session"] = session_inputs(root, os.environ)
     if os.environ.get("APPLE_BRIDGE_SIGNING_IDENTITY") == "-":
         require(lab == "1", "ad-hoc signing requires a lab build")
         certificate = "ad-hoc"

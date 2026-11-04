@@ -5,6 +5,9 @@ root=$(cd "$(dirname "$0")/../.." && pwd)
 [[ $# -ge 1 && $# -le 2 ]] || exit 1
 if [[ ${APPLE_BRIDGE_SIGNING_IDENTITY:-} == - ]]; then
     [[ ${APPLE_BRIDGE_NATIVE_LAB:-1} == 1 ]] || exit 1
+    if [[ -f "$1/Contents/MacOS/ab-session" ]]; then
+        codesign --force --sign - --options runtime --timestamp=none "$1/Contents/MacOS/ab-session"
+    fi
     codesign --force --sign - --options runtime --timestamp=none --entitlements "$root/packaging/dev/Helper.entitlements" "$1"
     codesign --verify --strict "$1"
     exit
@@ -39,6 +42,9 @@ shutil.copyfile(profile, app / "Contents/embedded.provisionprofile")
 print(hashlib.sha1(data["DeveloperCertificates"][0]).hexdigest().upper())
 PYPROFILE
 )
+    if [[ -f "$1/Contents/MacOS/ab-session" ]]; then
+        codesign --force --sign "$identity" --options runtime --timestamp=none "$1/Contents/MacOS/ab-session"
+    fi
     codesign --force --sign "$identity" --options runtime --timestamp=none --entitlements "$entitlements" "$1"
     codesign --verify --strict "$1"
     exit
@@ -46,6 +52,9 @@ fi
 if [[ -n ${2:-} ]]; then
     if [[ -f "$1/Contents/MacOS/bridge" ]]; then
         codesign --force --sign "$2" --options runtime --timestamp "$1/Contents/MacOS/bridge"
+    fi
+    if [[ -f "$1/Contents/MacOS/ab-session" ]]; then
+        codesign --force --sign "$2" --options runtime --timestamp "$1/Contents/MacOS/ab-session"
     fi
     codesign --force --sign "$2" --options runtime --timestamp --entitlements "$root/packaging/dev/Helper.entitlements" "$1"
     codesign --verify --strict "$1"
@@ -60,6 +69,9 @@ case "$bundle_id" in
 esac
 if [[ -f "$1/Contents/MacOS/bridge" ]]; then
     codesign --force --keychain "$keychain" --sign "$identity" --options runtime --timestamp=none "$1/Contents/MacOS/bridge"
+fi
+if [[ -f "$1/Contents/MacOS/ab-session" ]]; then
+    codesign --force --keychain "$keychain" --sign "$identity" --options runtime --timestamp=none "$1/Contents/MacOS/ab-session"
 fi
 codesign --force --keychain "$keychain" --sign "$identity" --options runtime --timestamp=none --entitlements "$root/packaging/dev/Helper.entitlements" --requirements "=designated => identifier \"$bundle_id\" and certificate leaf = H\"$identity\"" "$1"
 codesign --verify --strict "$1"

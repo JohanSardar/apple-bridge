@@ -32,6 +32,11 @@ impl ScanContext {
     }
 }
 
+pub trait BlobServer: Send + Sync + Debug {
+    fn owns(&self, handle: &str) -> bool;
+    fn read(&self, handle: &str, offset: u64, length: usize) -> Result<Value, Error>;
+}
+
 pub trait CaptureReader: Send + Debug {
     fn source(&self) -> &'static str;
     fn root(&self) -> &Path;
@@ -43,6 +48,15 @@ pub trait CaptureReader: Send + Debug {
     fn token(&self) -> Option<String>;
     fn resume(&mut self, token: &str) -> bool;
     fn owns(&self, _handle: &str) -> bool {
+        false
+    }
+    fn handle_prefix(&self) -> Option<&'static str> {
+        None
+    }
+    fn blobs(&self) -> Option<std::sync::Arc<dyn BlobServer>> {
+        None
+    }
+    fn more(&self) -> bool {
         false
     }
     fn blob(&mut self, _handle: &str, _offset: u64, _length: usize) -> Result<Value, Error> {
@@ -516,6 +530,10 @@ impl CaptureReader for VoiceMemosReader {
         handle.starts_with("voice-memo-blob:")
     }
 
+    fn handle_prefix(&self) -> Option<&'static str> {
+        Some("voice-memo-blob:")
+    }
+
     fn blob(&mut self, handle: &str, offset: u64, length: usize) -> Result<Value, Error> {
         self.assets()?
             .read_blob(handle, offset, length)
@@ -636,6 +654,10 @@ impl CaptureReader for NotesReader {
 
     fn owns(&self, handle: &str) -> bool {
         handle.starts_with("notes-blob:")
+    }
+
+    fn handle_prefix(&self) -> Option<&'static str> {
+        Some("notes-blob:")
     }
 
     fn blob(&mut self, handle: &str, offset: u64, length: usize) -> Result<Value, Error> {
