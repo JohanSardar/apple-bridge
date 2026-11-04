@@ -1,0 +1,2462 @@
+[
+  {
+    "label" : "initial",
+    "observations" : [
+      {
+        "collection" : "reminders.list",
+        "data" : {
+          "badge_emblem" : "star",
+          "categorize_groceries" : true,
+          "display_order" : 1.5,
+          "grocery_locale" : "en_US",
+          "is_group" : false,
+          "parent_id" : null,
+          "pinned" : true,
+          "pinned_at" : "2023-11-06T21:46:40.000Z",
+          "sections" : [
+
+          ],
+          "shared_owner_name" : "Owner",
+          "sharing_status" : 2,
+          "smart_filter" : null,
+          "smart_list_type" : null,
+          "sorting_style" : 1,
+          "store_color" : null,
+          "store_coverage" : {
+            "badge_emblem" : {
+              "status" : "complete"
+            },
+            "categorize_groceries" : {
+              "status" : "complete"
+            },
+            "display_order" : {
+              "status" : "complete"
+            },
+            "grocery_locale" : {
+              "status" : "complete"
+            },
+            "is_group" : {
+              "status" : "complete"
+            },
+            "parent_id" : {
+              "status" : "complete"
+            },
+            "pinned" : {
+              "status" : "complete"
+            },
+            "pinned_at" : {
+              "status" : "complete"
+            },
+            "sections" : {
+              "status" : "complete"
+            },
+            "shared_owner_name" : {
+              "status" : "complete"
+            },
+            "sharing_status" : {
+              "status" : "complete"
+            },
+            "smart_filter" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "smart_list_type" : {
+              "status" : "complete"
+            },
+            "sorting_style" : {
+              "status" : "complete"
+            },
+            "store_color" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_identifier" : {
+              "status" : "complete"
+            }
+          },
+          "store_identifier" : "00000010-0000-4000-8000-000000000010",
+          "store_status" : "partial",
+          "title" : "Home"
+        },
+        "kind" : "upsert",
+        "native_key" : "00000010-0000-4000-8000-000000000010",
+        "scoped_alias" : ""
+      },
+      {
+        "collection" : "reminders.list",
+        "data" : {
+          "badge_emblem" : null,
+          "categorize_groceries" : false,
+          "display_order" : 2.5,
+          "grocery_locale" : null,
+          "is_group" : false,
+          "parent_id" : null,
+          "pinned" : false,
+          "pinned_at" : null,
+          "sections" : [
+
+          ],
+          "shared_owner_name" : null,
+          "sharing_status" : null,
+          "smart_filter" : null,
+          "smart_list_type" : null,
+          "sorting_style" : "manual",
+          "store_color" : null,
+          "store_coverage" : {
+            "badge_emblem" : {
+              "status" : "complete"
+            },
+            "categorize_groceries" : {
+              "status" : "complete"
+            },
+            "display_order" : {
+              "status" : "complete"
+            },
+            "grocery_locale" : {
+              "status" : "complete"
+            },
+            "is_group" : {
+              "status" : "complete"
+            },
+            "parent_id" : {
+              "status" : "complete"
+            },
+            "pinned" : {
+              "status" : "complete"
+            },
+            "pinned_at" : {
+              "status" : "complete"
+            },
+            "sections" : {
+              "status" : "complete"
+            },
+            "shared_owner_name" : {
+              "status" : "complete"
+            },
+            "sharing_status" : {
+              "status" : "complete"
+            },
+            "smart_filter" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "smart_list_type" : {
+              "status" : "complete"
+            },
+            "sorting_style" : {
+              "status" : "complete"
+            },
+            "store_color" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_identifier" : {
+              "status" : "complete"
+            }
+          },
+          "store_identifier" : "00000020-0000-4000-8000-000000000020",
+          "store_status" : "partial",
+          "title" : "Work"
+        },
+        "kind" : "upsert",
+        "native_key" : "00000020-0000-4000-8000-000000000020",
+        "scoped_alias" : ""
+      },
+      {
+        "collection" : "reminders.list",
+        "data" : {
+          "badge_emblem" : null,
+          "categorize_groceries" : null,
+          "display_order" : null,
+          "grocery_locale" : null,
+          "is_group" : false,
+          "parent_id" : null,
+          "pinned" : null,
+          "pinned_at" : null,
+          "sections" : [
+
+          ],
+          "shared_owner_name" : "1",
+          "sharing_status" : null,
+          "smart_filter" : null,
+          "smart_list_type" : null,
+          "sorting_style" : null,
+          "store_color" : null,
+          "store_coverage" : {
+            "badge_emblem" : {
+              "status" : "complete"
+            },
+            "categorize_groceries" : {
+              "status" : "complete"
+            },
+            "display_order" : {
+              "status" : "complete"
+            },
+            "grocery_locale" : {
+              "status" : "complete"
+            },
+            "is_group" : {
+              "status" : "complete"
+            },
+            "parent_id" : {
+              "status" : "complete"
+            },
+            "pinned" : {
+              "status" : "complete"
+            },
+            "pinned_at" : {
+              "status" : "complete"
+            },
+            "sections" : {
+              "status" : "complete"
+            },
+            "shared_owner_name" : {
+              "status" : "complete"
+            },
+            "sharing_status" : {
+              "status" : "complete"
+            },
+            "smart_filter" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "smart_list_type" : {
+              "status" : "complete"
+            },
+            "sorting_style" : {
+              "status" : "complete"
+            },
+            "store_color" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_identifier" : {
+              "status" : "complete"
+            }
+          },
+          "store_identifier" : "00000030-0000-4000-8000-000000000030",
+          "store_status" : "partial",
+          "title" : "Smart"
+        },
+        "kind" : "upsert",
+        "native_key" : "00000030-0000-4000-8000-000000000030",
+        "scoped_alias" : ""
+      },
+      {
+        "collection" : "reminders.list",
+        "data" : {
+          "badge_emblem" : null,
+          "categorize_groceries" : null,
+          "display_order" : 3.5,
+          "grocery_locale" : null,
+          "is_group" : true,
+          "parent_id" : null,
+          "pinned" : null,
+          "pinned_at" : null,
+          "sections" : [
+
+          ],
+          "shared_owner_name" : null,
+          "sharing_status" : null,
+          "smart_filter" : null,
+          "smart_list_type" : null,
+          "sorting_style" : null,
+          "store_color" : null,
+          "store_coverage" : {
+            "badge_emblem" : {
+              "status" : "complete"
+            },
+            "categorize_groceries" : {
+              "status" : "complete"
+            },
+            "display_order" : {
+              "status" : "complete"
+            },
+            "grocery_locale" : {
+              "status" : "complete"
+            },
+            "is_group" : {
+              "status" : "complete"
+            },
+            "parent_id" : {
+              "status" : "complete"
+            },
+            "pinned" : {
+              "status" : "complete"
+            },
+            "pinned_at" : {
+              "status" : "complete"
+            },
+            "sections" : {
+              "status" : "complete"
+            },
+            "shared_owner_name" : {
+              "status" : "complete"
+            },
+            "sharing_status" : {
+              "status" : "complete"
+            },
+            "smart_filter" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "smart_list_type" : {
+              "status" : "complete"
+            },
+            "sorting_style" : {
+              "status" : "complete"
+            },
+            "store_color" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_identifier" : {
+              "status" : "complete"
+            }
+          },
+          "store_identifier" : "00000040-0000-4000-8000-000000000040",
+          "store_status" : "partial",
+          "title" : "Group"
+        },
+        "kind" : "upsert",
+        "native_key" : "00000040-0000-4000-8000-000000000040",
+        "scoped_alias" : ""
+      },
+      {
+        "collection" : "reminders.list",
+        "data" : {
+          "badge_emblem" : null,
+          "categorize_groceries" : null,
+          "display_order" : 4.5,
+          "grocery_locale" : null,
+          "is_group" : false,
+          "parent_id" : {
+            "$ref" : {
+              "collection" : "reminders.list",
+              "native_key" : "00000040-0000-4000-8000-000000000040"
+            }
+          },
+          "pinned" : null,
+          "pinned_at" : null,
+          "sections" : [
+
+          ],
+          "shared_owner_name" : null,
+          "sharing_status" : null,
+          "smart_filter" : null,
+          "smart_list_type" : null,
+          "sorting_style" : null,
+          "store_color" : null,
+          "store_coverage" : {
+            "badge_emblem" : {
+              "status" : "complete"
+            },
+            "categorize_groceries" : {
+              "status" : "complete"
+            },
+            "display_order" : {
+              "status" : "complete"
+            },
+            "grocery_locale" : {
+              "status" : "complete"
+            },
+            "is_group" : {
+              "status" : "complete"
+            },
+            "parent_id" : {
+              "status" : "complete"
+            },
+            "pinned" : {
+              "status" : "complete"
+            },
+            "pinned_at" : {
+              "status" : "complete"
+            },
+            "sections" : {
+              "status" : "complete"
+            },
+            "shared_owner_name" : {
+              "status" : "complete"
+            },
+            "sharing_status" : {
+              "status" : "complete"
+            },
+            "smart_filter" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "smart_list_type" : {
+              "status" : "complete"
+            },
+            "sorting_style" : {
+              "status" : "complete"
+            },
+            "store_color" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_identifier" : {
+              "status" : "complete"
+            }
+          },
+          "store_identifier" : "00000050-0000-4000-8000-000000000050",
+          "store_status" : "partial",
+          "title" : "Child"
+        },
+        "kind" : "upsert",
+        "native_key" : "00000050-0000-4000-8000-000000000050",
+        "scoped_alias" : ""
+      },
+      {
+        "collection" : "reminders.reminder",
+        "data" : {
+          "assignment" : null,
+          "attachment_ids" : null,
+          "created_at" : "2023-11-09T14:56:07.500Z",
+          "early_reminders" : null,
+          "flagged" : false,
+          "manual_order" : null,
+          "parent_id" : null,
+          "section_id" : null,
+          "store_alarms" : null,
+          "store_coverage" : {
+            "assignment" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "attachment_ids" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "created_at" : {
+              "status" : "complete"
+            },
+            "early_reminders" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "flagged" : {
+              "status" : "complete"
+            },
+            "manual_order" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "parent_id" : {
+              "status" : "complete"
+            },
+            "section_id" : {
+              "status" : "complete"
+            },
+            "store_alarms" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_identifier" : {
+              "status" : "complete"
+            },
+            "store_recurrence" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "tags" : {
+              "status" : "complete"
+            }
+          },
+          "store_identifier" : "000000A0-0000-4000-8000-0000000000A0",
+          "store_recurrence" : null,
+          "store_status" : "partial",
+          "tags" : [
+            "home"
+          ],
+          "title" : "A"
+        },
+        "kind" : "upsert",
+        "native_key" : "000000A0-0000-4000-8000-0000000000A0",
+        "scoped_alias" : ""
+      },
+      {
+        "collection" : "reminders.reminder",
+        "data" : {
+          "assignment" : null,
+          "attachment_ids" : null,
+          "created_at" : "2023-11-09T14:56:08.250Z",
+          "early_reminders" : null,
+          "flagged" : true,
+          "manual_order" : null,
+          "parent_id" : {
+            "$ref" : {
+              "collection" : "reminders.reminder",
+              "native_key" : "000000A0-0000-4000-8000-0000000000A0"
+            }
+          },
+          "section_id" : null,
+          "store_alarms" : null,
+          "store_coverage" : {
+            "assignment" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "attachment_ids" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "created_at" : {
+              "status" : "complete"
+            },
+            "early_reminders" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "flagged" : {
+              "status" : "complete"
+            },
+            "manual_order" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "parent_id" : {
+              "status" : "complete"
+            },
+            "section_id" : {
+              "status" : "complete"
+            },
+            "store_alarms" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_identifier" : {
+              "status" : "complete"
+            },
+            "store_recurrence" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "tags" : {
+              "status" : "complete"
+            }
+          },
+          "store_identifier" : "000000B0-0000-4000-8000-0000000000B0",
+          "store_recurrence" : null,
+          "store_status" : "partial",
+          "tags" : [
+
+          ],
+          "title" : "B"
+        },
+        "kind" : "upsert",
+        "native_key" : "000000B0-0000-4000-8000-0000000000B0",
+        "scoped_alias" : ""
+      },
+      {
+        "collection" : "reminders.reminder",
+        "data" : {
+          "assignment" : null,
+          "attachment_ids" : null,
+          "created_at" : null,
+          "early_reminders" : null,
+          "flagged" : null,
+          "manual_order" : null,
+          "parent_id" : null,
+          "section_id" : null,
+          "store_alarms" : null,
+          "store_coverage" : {
+            "assignment" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "attachment_ids" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "created_at" : {
+              "status" : "complete"
+            },
+            "early_reminders" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "flagged" : {
+              "status" : "unavailable"
+            },
+            "manual_order" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "parent_id" : {
+              "status" : "complete"
+            },
+            "section_id" : {
+              "status" : "complete"
+            },
+            "store_alarms" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_identifier" : {
+              "status" : "complete"
+            },
+            "store_recurrence" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "tags" : {
+              "status" : "complete"
+            }
+          },
+          "store_identifier" : "000000C0-0000-4000-8000-0000000000C0",
+          "store_recurrence" : null,
+          "store_status" : "partial",
+          "tags" : [
+
+          ],
+          "title" : "C"
+        },
+        "kind" : "upsert",
+        "native_key" : "000000C0-0000-4000-8000-0000000000C0",
+        "scoped_alias" : ""
+      },
+      {
+        "collection" : "reminders.reminder",
+        "data" : {
+          "assignment" : null,
+          "attachment_ids" : null,
+          "created_at" : null,
+          "early_reminders" : null,
+          "flagged" : null,
+          "manual_order" : null,
+          "parent_id" : null,
+          "section_id" : null,
+          "store_alarms" : null,
+          "store_coverage" : {
+            "assignment" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "attachment_ids" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "created_at" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "early_reminders" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "flagged" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "manual_order" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "parent_id" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "section_id" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "store_alarms" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "store_identifier" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "store_recurrence" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "tags" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            }
+          },
+          "store_identifier" : null,
+          "store_recurrence" : null,
+          "store_status" : "unavailable",
+          "tags" : null,
+          "title" : "D"
+        },
+        "kind" : "upsert",
+        "native_key" : "000000D0-0000-4000-8000-0000000000D0",
+        "scoped_alias" : ""
+      },
+      {
+        "collection" : "reminders.reminder",
+        "data" : {
+          "assignment" : null,
+          "attachment_ids" : null,
+          "created_at" : null,
+          "early_reminders" : null,
+          "flagged" : null,
+          "manual_order" : null,
+          "parent_id" : null,
+          "section_id" : null,
+          "store_alarms" : null,
+          "store_coverage" : {
+            "assignment" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "attachment_ids" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "created_at" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "early_reminders" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "flagged" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "manual_order" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "parent_id" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "section_id" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "store_alarms" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "store_identifier" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "store_recurrence" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "tags" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            }
+          },
+          "store_identifier" : null,
+          "store_recurrence" : null,
+          "store_status" : "unavailable",
+          "tags" : null,
+          "title" : "E"
+        },
+        "kind" : "upsert",
+        "native_key" : "000000E0-0000-4000-8000-0000000000E0",
+        "scoped_alias" : ""
+      },
+      {
+        "collection" : "reminders.reminder",
+        "data" : {
+          "assignment" : null,
+          "attachment_ids" : null,
+          "created_at" : null,
+          "early_reminders" : null,
+          "flagged" : null,
+          "manual_order" : null,
+          "parent_id" : null,
+          "section_id" : null,
+          "store_alarms" : null,
+          "store_coverage" : {
+            "assignment" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "attachment_ids" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "created_at" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "early_reminders" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "flagged" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "manual_order" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "parent_id" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "section_id" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "store_alarms" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "store_identifier" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "store_recurrence" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "tags" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            }
+          },
+          "store_identifier" : null,
+          "store_recurrence" : null,
+          "store_status" : "unavailable",
+          "tags" : null,
+          "title" : "U"
+        },
+        "kind" : "upsert",
+        "native_key" : "unknown-key",
+        "scoped_alias" : ""
+      }
+    ]
+  },
+  {
+    "label" : "flag",
+    "observations" : [
+      {
+        "collection" : "reminders.reminder",
+        "data" : {
+          "assignment" : null,
+          "attachment_ids" : null,
+          "created_at" : null,
+          "early_reminders" : null,
+          "flagged" : false,
+          "manual_order" : null,
+          "parent_id" : null,
+          "section_id" : null,
+          "store_alarms" : null,
+          "store_coverage" : {
+            "assignment" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "attachment_ids" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "created_at" : {
+              "status" : "complete"
+            },
+            "early_reminders" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "flagged" : {
+              "status" : "complete"
+            },
+            "manual_order" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "parent_id" : {
+              "status" : "complete"
+            },
+            "section_id" : {
+              "status" : "complete"
+            },
+            "store_alarms" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_identifier" : {
+              "status" : "complete"
+            },
+            "store_recurrence" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "tags" : {
+              "status" : "complete"
+            }
+          },
+          "store_identifier" : "000000C0-0000-4000-8000-0000000000C0",
+          "store_recurrence" : null,
+          "store_status" : "partial",
+          "tags" : [
+
+          ],
+          "title" : "C"
+        },
+        "kind" : "upsert",
+        "native_key" : "000000C0-0000-4000-8000-0000000000C0",
+        "scoped_alias" : ""
+      }
+    ]
+  },
+  {
+    "label" : "rename tag",
+    "observations" : [
+      {
+        "collection" : "reminders.reminder",
+        "data" : {
+          "assignment" : null,
+          "attachment_ids" : null,
+          "created_at" : "2023-11-09T14:56:07.500Z",
+          "early_reminders" : null,
+          "flagged" : false,
+          "manual_order" : null,
+          "parent_id" : null,
+          "section_id" : null,
+          "store_alarms" : null,
+          "store_coverage" : {
+            "assignment" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "attachment_ids" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "created_at" : {
+              "status" : "complete"
+            },
+            "early_reminders" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "flagged" : {
+              "status" : "complete"
+            },
+            "manual_order" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "parent_id" : {
+              "status" : "complete"
+            },
+            "section_id" : {
+              "status" : "complete"
+            },
+            "store_alarms" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_identifier" : {
+              "status" : "complete"
+            },
+            "store_recurrence" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "tags" : {
+              "status" : "complete"
+            }
+          },
+          "store_identifier" : "000000A0-0000-4000-8000-0000000000A0",
+          "store_recurrence" : null,
+          "store_status" : "partial",
+          "tags" : [
+            "renamed"
+          ],
+          "title" : "A"
+        },
+        "kind" : "upsert",
+        "native_key" : "000000A0-0000-4000-8000-0000000000A0",
+        "scoped_alias" : ""
+      }
+    ]
+  },
+  {
+    "label" : "manual order",
+    "observations" : [
+      {
+        "collection" : "reminders.reminder",
+        "data" : {
+          "assignment" : null,
+          "attachment_ids" : null,
+          "created_at" : "2023-11-09T14:56:07.500Z",
+          "early_reminders" : null,
+          "flagged" : false,
+          "manual_order" : 1,
+          "parent_id" : null,
+          "section_id" : null,
+          "store_alarms" : null,
+          "store_coverage" : {
+            "assignment" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "attachment_ids" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "created_at" : {
+              "status" : "complete"
+            },
+            "early_reminders" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "flagged" : {
+              "status" : "complete"
+            },
+            "manual_order" : {
+              "status" : "complete"
+            },
+            "parent_id" : {
+              "status" : "complete"
+            },
+            "section_id" : {
+              "status" : "complete"
+            },
+            "store_alarms" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_identifier" : {
+              "status" : "complete"
+            },
+            "store_recurrence" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "tags" : {
+              "status" : "complete"
+            }
+          },
+          "store_identifier" : "000000A0-0000-4000-8000-0000000000A0",
+          "store_recurrence" : null,
+          "store_status" : "partial",
+          "tags" : [
+            "renamed"
+          ],
+          "title" : "A"
+        },
+        "kind" : "upsert",
+        "native_key" : "000000A0-0000-4000-8000-0000000000A0",
+        "scoped_alias" : ""
+      },
+      {
+        "collection" : "reminders.reminder",
+        "data" : {
+          "assignment" : null,
+          "attachment_ids" : null,
+          "created_at" : "2023-11-09T14:56:08.250Z",
+          "early_reminders" : null,
+          "flagged" : true,
+          "manual_order" : 0,
+          "parent_id" : {
+            "$ref" : {
+              "collection" : "reminders.reminder",
+              "native_key" : "000000A0-0000-4000-8000-0000000000A0"
+            }
+          },
+          "section_id" : null,
+          "store_alarms" : null,
+          "store_coverage" : {
+            "assignment" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "attachment_ids" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "created_at" : {
+              "status" : "complete"
+            },
+            "early_reminders" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "flagged" : {
+              "status" : "complete"
+            },
+            "manual_order" : {
+              "status" : "complete"
+            },
+            "parent_id" : {
+              "status" : "complete"
+            },
+            "section_id" : {
+              "status" : "complete"
+            },
+            "store_alarms" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_identifier" : {
+              "status" : "complete"
+            },
+            "store_recurrence" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "tags" : {
+              "status" : "complete"
+            }
+          },
+          "store_identifier" : "000000B0-0000-4000-8000-0000000000B0",
+          "store_recurrence" : null,
+          "store_status" : "partial",
+          "tags" : [
+
+          ],
+          "title" : "B"
+        },
+        "kind" : "upsert",
+        "native_key" : "000000B0-0000-4000-8000-0000000000B0",
+        "scoped_alias" : ""
+      },
+      {
+        "collection" : "reminders.reminder",
+        "data" : {
+          "assignment" : null,
+          "attachment_ids" : null,
+          "created_at" : null,
+          "early_reminders" : null,
+          "flagged" : false,
+          "manual_order" : null,
+          "parent_id" : null,
+          "section_id" : null,
+          "store_alarms" : null,
+          "store_coverage" : {
+            "assignment" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "attachment_ids" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "created_at" : {
+              "status" : "complete"
+            },
+            "early_reminders" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "flagged" : {
+              "status" : "complete"
+            },
+            "manual_order" : {
+              "reason" : "reminder_not_in_ordering",
+              "status" : "partial"
+            },
+            "parent_id" : {
+              "status" : "complete"
+            },
+            "section_id" : {
+              "status" : "complete"
+            },
+            "store_alarms" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_identifier" : {
+              "status" : "complete"
+            },
+            "store_recurrence" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "tags" : {
+              "status" : "complete"
+            }
+          },
+          "store_identifier" : "000000C0-0000-4000-8000-0000000000C0",
+          "store_recurrence" : null,
+          "store_status" : "partial",
+          "tags" : [
+
+          ],
+          "title" : "C"
+        },
+        "kind" : "upsert",
+        "native_key" : "000000C0-0000-4000-8000-0000000000C0",
+        "scoped_alias" : ""
+      }
+    ]
+  },
+  {
+    "label" : "manual order reversed",
+    "observations" : [
+      {
+        "collection" : "reminders.reminder",
+        "data" : {
+          "assignment" : null,
+          "attachment_ids" : null,
+          "created_at" : "2023-11-09T14:56:07.500Z",
+          "early_reminders" : null,
+          "flagged" : false,
+          "manual_order" : 0,
+          "parent_id" : null,
+          "section_id" : null,
+          "store_alarms" : null,
+          "store_coverage" : {
+            "assignment" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "attachment_ids" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "created_at" : {
+              "status" : "complete"
+            },
+            "early_reminders" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "flagged" : {
+              "status" : "complete"
+            },
+            "manual_order" : {
+              "status" : "complete"
+            },
+            "parent_id" : {
+              "status" : "complete"
+            },
+            "section_id" : {
+              "status" : "complete"
+            },
+            "store_alarms" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_identifier" : {
+              "status" : "complete"
+            },
+            "store_recurrence" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "tags" : {
+              "status" : "complete"
+            }
+          },
+          "store_identifier" : "000000A0-0000-4000-8000-0000000000A0",
+          "store_recurrence" : null,
+          "store_status" : "partial",
+          "tags" : [
+            "renamed"
+          ],
+          "title" : "A"
+        },
+        "kind" : "upsert",
+        "native_key" : "000000A0-0000-4000-8000-0000000000A0",
+        "scoped_alias" : ""
+      },
+      {
+        "collection" : "reminders.reminder",
+        "data" : {
+          "assignment" : null,
+          "attachment_ids" : null,
+          "created_at" : "2023-11-09T14:56:08.250Z",
+          "early_reminders" : null,
+          "flagged" : true,
+          "manual_order" : 1,
+          "parent_id" : {
+            "$ref" : {
+              "collection" : "reminders.reminder",
+              "native_key" : "000000A0-0000-4000-8000-0000000000A0"
+            }
+          },
+          "section_id" : null,
+          "store_alarms" : null,
+          "store_coverage" : {
+            "assignment" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "attachment_ids" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "created_at" : {
+              "status" : "complete"
+            },
+            "early_reminders" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "flagged" : {
+              "status" : "complete"
+            },
+            "manual_order" : {
+              "status" : "complete"
+            },
+            "parent_id" : {
+              "status" : "complete"
+            },
+            "section_id" : {
+              "status" : "complete"
+            },
+            "store_alarms" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_identifier" : {
+              "status" : "complete"
+            },
+            "store_recurrence" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "tags" : {
+              "status" : "complete"
+            }
+          },
+          "store_identifier" : "000000B0-0000-4000-8000-0000000000B0",
+          "store_recurrence" : null,
+          "store_status" : "partial",
+          "tags" : [
+
+          ],
+          "title" : "B"
+        },
+        "kind" : "upsert",
+        "native_key" : "000000B0-0000-4000-8000-0000000000B0",
+        "scoped_alias" : ""
+      }
+    ]
+  },
+  {
+    "label" : "sections json",
+    "observations" : [
+      {
+        "collection" : "reminders.list",
+        "data" : {
+          "badge_emblem" : "star",
+          "categorize_groceries" : true,
+          "display_order" : 1.5,
+          "grocery_locale" : "en_US",
+          "is_group" : false,
+          "parent_id" : null,
+          "pinned" : true,
+          "pinned_at" : "2023-11-06T21:46:40.000Z",
+          "sections" : [
+            {
+              "id" : "00000702-0000-4000-8000-000000000702",
+              "kind" : "store",
+              "order" : 0,
+              "reminder_ids" : [
+                {
+                  "$ref" : {
+                    "collection" : "reminders.reminder",
+                    "native_key" : "000000B0-0000-4000-8000-0000000000B0"
+                  }
+                }
+              ],
+              "title" : "Second"
+            },
+            {
+              "id" : "00000701-0000-4000-8000-000000000701",
+              "kind" : "store",
+              "order" : 1,
+              "reminder_ids" : [
+                {
+                  "$ref" : {
+                    "collection" : "reminders.reminder",
+                    "native_key" : "000000A0-0000-4000-8000-0000000000A0"
+                  }
+                }
+              ],
+              "title" : "First"
+            }
+          ],
+          "shared_owner_name" : "Owner",
+          "sharing_status" : 2,
+          "smart_filter" : null,
+          "smart_list_type" : null,
+          "sorting_style" : 1,
+          "store_color" : null,
+          "store_coverage" : {
+            "badge_emblem" : {
+              "status" : "complete"
+            },
+            "categorize_groceries" : {
+              "status" : "complete"
+            },
+            "display_order" : {
+              "status" : "complete"
+            },
+            "grocery_locale" : {
+              "status" : "complete"
+            },
+            "is_group" : {
+              "status" : "complete"
+            },
+            "parent_id" : {
+              "status" : "complete"
+            },
+            "pinned" : {
+              "status" : "complete"
+            },
+            "pinned_at" : {
+              "status" : "complete"
+            },
+            "sections" : {
+              "status" : "complete"
+            },
+            "shared_owner_name" : {
+              "status" : "complete"
+            },
+            "sharing_status" : {
+              "status" : "complete"
+            },
+            "smart_filter" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "smart_list_type" : {
+              "status" : "complete"
+            },
+            "sorting_style" : {
+              "status" : "complete"
+            },
+            "store_color" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_identifier" : {
+              "status" : "complete"
+            }
+          },
+          "store_identifier" : "00000010-0000-4000-8000-000000000010",
+          "store_status" : "partial",
+          "title" : "Home"
+        },
+        "kind" : "upsert",
+        "native_key" : "00000010-0000-4000-8000-000000000010",
+        "scoped_alias" : ""
+      },
+      {
+        "collection" : "reminders.reminder",
+        "data" : {
+          "assignment" : null,
+          "attachment_ids" : null,
+          "created_at" : "2023-11-09T14:56:07.500Z",
+          "early_reminders" : null,
+          "flagged" : false,
+          "manual_order" : 0,
+          "parent_id" : null,
+          "section_id" : "00000701-0000-4000-8000-000000000701",
+          "store_alarms" : null,
+          "store_coverage" : {
+            "assignment" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "attachment_ids" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "created_at" : {
+              "status" : "complete"
+            },
+            "early_reminders" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "flagged" : {
+              "status" : "complete"
+            },
+            "manual_order" : {
+              "status" : "complete"
+            },
+            "parent_id" : {
+              "status" : "complete"
+            },
+            "section_id" : {
+              "status" : "complete"
+            },
+            "store_alarms" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_identifier" : {
+              "status" : "complete"
+            },
+            "store_recurrence" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "tags" : {
+              "status" : "complete"
+            }
+          },
+          "store_identifier" : "000000A0-0000-4000-8000-0000000000A0",
+          "store_recurrence" : null,
+          "store_status" : "partial",
+          "tags" : [
+            "renamed"
+          ],
+          "title" : "A"
+        },
+        "kind" : "upsert",
+        "native_key" : "000000A0-0000-4000-8000-0000000000A0",
+        "scoped_alias" : ""
+      },
+      {
+        "collection" : "reminders.reminder",
+        "data" : {
+          "assignment" : null,
+          "attachment_ids" : null,
+          "created_at" : "2023-11-09T14:56:08.250Z",
+          "early_reminders" : null,
+          "flagged" : true,
+          "manual_order" : 1,
+          "parent_id" : {
+            "$ref" : {
+              "collection" : "reminders.reminder",
+              "native_key" : "000000A0-0000-4000-8000-0000000000A0"
+            }
+          },
+          "section_id" : "00000702-0000-4000-8000-000000000702",
+          "store_alarms" : null,
+          "store_coverage" : {
+            "assignment" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "attachment_ids" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "created_at" : {
+              "status" : "complete"
+            },
+            "early_reminders" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "flagged" : {
+              "status" : "complete"
+            },
+            "manual_order" : {
+              "status" : "complete"
+            },
+            "parent_id" : {
+              "status" : "complete"
+            },
+            "section_id" : {
+              "status" : "complete"
+            },
+            "store_alarms" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_identifier" : {
+              "status" : "complete"
+            },
+            "store_recurrence" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "tags" : {
+              "status" : "complete"
+            }
+          },
+          "store_identifier" : "000000B0-0000-4000-8000-0000000000B0",
+          "store_recurrence" : null,
+          "store_status" : "partial",
+          "tags" : [
+
+          ],
+          "title" : "B"
+        },
+        "kind" : "upsert",
+        "native_key" : "000000B0-0000-4000-8000-0000000000B0",
+        "scoped_alias" : ""
+      }
+    ]
+  },
+  {
+    "label" : "sections keyed archive order and xml plist membership",
+    "observations" : [
+      {
+        "collection" : "reminders.list",
+        "data" : {
+          "badge_emblem" : "star",
+          "categorize_groceries" : true,
+          "display_order" : 1.5,
+          "grocery_locale" : "en_US",
+          "is_group" : false,
+          "parent_id" : null,
+          "pinned" : true,
+          "pinned_at" : "2023-11-06T21:46:40.000Z",
+          "sections" : [
+            {
+              "id" : "00000701-0000-4000-8000-000000000701",
+              "kind" : "store",
+              "order" : 0,
+              "reminder_ids" : [
+                {
+                  "$ref" : {
+                    "collection" : "reminders.reminder",
+                    "native_key" : "000000A0-0000-4000-8000-0000000000A0"
+                  }
+                }
+              ],
+              "title" : "First"
+            },
+            {
+              "id" : "00000702-0000-4000-8000-000000000702",
+              "kind" : "store",
+              "order" : 1,
+              "reminder_ids" : [
+                {
+                  "$ref" : {
+                    "collection" : "reminders.reminder",
+                    "native_key" : "000000B0-0000-4000-8000-0000000000B0"
+                  }
+                }
+              ],
+              "title" : "Second"
+            }
+          ],
+          "shared_owner_name" : "Owner",
+          "sharing_status" : 2,
+          "smart_filter" : null,
+          "smart_list_type" : null,
+          "sorting_style" : 1,
+          "store_color" : null,
+          "store_coverage" : {
+            "badge_emblem" : {
+              "status" : "complete"
+            },
+            "categorize_groceries" : {
+              "status" : "complete"
+            },
+            "display_order" : {
+              "status" : "complete"
+            },
+            "grocery_locale" : {
+              "status" : "complete"
+            },
+            "is_group" : {
+              "status" : "complete"
+            },
+            "parent_id" : {
+              "status" : "complete"
+            },
+            "pinned" : {
+              "status" : "complete"
+            },
+            "pinned_at" : {
+              "status" : "complete"
+            },
+            "sections" : {
+              "status" : "complete"
+            },
+            "shared_owner_name" : {
+              "status" : "complete"
+            },
+            "sharing_status" : {
+              "status" : "complete"
+            },
+            "smart_filter" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "smart_list_type" : {
+              "status" : "complete"
+            },
+            "sorting_style" : {
+              "status" : "complete"
+            },
+            "store_color" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_identifier" : {
+              "status" : "complete"
+            }
+          },
+          "store_identifier" : "00000010-0000-4000-8000-000000000010",
+          "store_status" : "partial",
+          "title" : "Home"
+        },
+        "kind" : "upsert",
+        "native_key" : "00000010-0000-4000-8000-000000000010",
+        "scoped_alias" : ""
+      }
+    ]
+  },
+  {
+    "label" : "sections malformed",
+    "observations" : [
+      {
+        "collection" : "reminders.list",
+        "data" : {
+          "badge_emblem" : "star",
+          "categorize_groceries" : true,
+          "display_order" : 1.5,
+          "grocery_locale" : "en_US",
+          "is_group" : false,
+          "parent_id" : null,
+          "pinned" : true,
+          "pinned_at" : "2023-11-06T21:46:40.000Z",
+          "sections" : null,
+          "shared_owner_name" : "Owner",
+          "sharing_status" : 2,
+          "smart_filter" : null,
+          "smart_list_type" : null,
+          "sorting_style" : 1,
+          "store_color" : null,
+          "store_coverage" : {
+            "badge_emblem" : {
+              "status" : "complete"
+            },
+            "categorize_groceries" : {
+              "status" : "complete"
+            },
+            "display_order" : {
+              "status" : "complete"
+            },
+            "grocery_locale" : {
+              "status" : "complete"
+            },
+            "is_group" : {
+              "status" : "complete"
+            },
+            "parent_id" : {
+              "status" : "complete"
+            },
+            "pinned" : {
+              "status" : "complete"
+            },
+            "pinned_at" : {
+              "status" : "complete"
+            },
+            "sections" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "shared_owner_name" : {
+              "status" : "complete"
+            },
+            "sharing_status" : {
+              "status" : "complete"
+            },
+            "smart_filter" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "smart_list_type" : {
+              "status" : "complete"
+            },
+            "sorting_style" : {
+              "status" : "complete"
+            },
+            "store_color" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_identifier" : {
+              "status" : "complete"
+            }
+          },
+          "store_identifier" : "00000010-0000-4000-8000-000000000010",
+          "store_status" : "partial",
+          "title" : "Home"
+        },
+        "kind" : "upsert",
+        "native_key" : "00000010-0000-4000-8000-000000000010",
+        "scoped_alias" : ""
+      },
+      {
+        "collection" : "reminders.reminder",
+        "data" : {
+          "assignment" : null,
+          "attachment_ids" : null,
+          "created_at" : "2023-11-09T14:56:07.500Z",
+          "early_reminders" : null,
+          "flagged" : false,
+          "manual_order" : 0,
+          "parent_id" : null,
+          "section_id" : null,
+          "store_alarms" : null,
+          "store_coverage" : {
+            "assignment" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "attachment_ids" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "created_at" : {
+              "status" : "complete"
+            },
+            "early_reminders" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "flagged" : {
+              "status" : "complete"
+            },
+            "manual_order" : {
+              "status" : "complete"
+            },
+            "parent_id" : {
+              "status" : "complete"
+            },
+            "section_id" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_alarms" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_identifier" : {
+              "status" : "complete"
+            },
+            "store_recurrence" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "tags" : {
+              "status" : "complete"
+            }
+          },
+          "store_identifier" : "000000A0-0000-4000-8000-0000000000A0",
+          "store_recurrence" : null,
+          "store_status" : "partial",
+          "tags" : [
+            "renamed"
+          ],
+          "title" : "A"
+        },
+        "kind" : "upsert",
+        "native_key" : "000000A0-0000-4000-8000-0000000000A0",
+        "scoped_alias" : ""
+      },
+      {
+        "collection" : "reminders.reminder",
+        "data" : {
+          "assignment" : null,
+          "attachment_ids" : null,
+          "created_at" : "2023-11-09T14:56:08.250Z",
+          "early_reminders" : null,
+          "flagged" : true,
+          "manual_order" : 1,
+          "parent_id" : {
+            "$ref" : {
+              "collection" : "reminders.reminder",
+              "native_key" : "000000A0-0000-4000-8000-0000000000A0"
+            }
+          },
+          "section_id" : null,
+          "store_alarms" : null,
+          "store_coverage" : {
+            "assignment" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "attachment_ids" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "created_at" : {
+              "status" : "complete"
+            },
+            "early_reminders" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "flagged" : {
+              "status" : "complete"
+            },
+            "manual_order" : {
+              "status" : "complete"
+            },
+            "parent_id" : {
+              "status" : "complete"
+            },
+            "section_id" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_alarms" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_identifier" : {
+              "status" : "complete"
+            },
+            "store_recurrence" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "tags" : {
+              "status" : "complete"
+            }
+          },
+          "store_identifier" : "000000B0-0000-4000-8000-0000000000B0",
+          "store_recurrence" : null,
+          "store_status" : "partial",
+          "tags" : [
+
+          ],
+          "title" : "B"
+        },
+        "kind" : "upsert",
+        "native_key" : "000000B0-0000-4000-8000-0000000000B0",
+        "scoped_alias" : ""
+      },
+      {
+        "collection" : "reminders.reminder",
+        "data" : {
+          "assignment" : null,
+          "attachment_ids" : null,
+          "created_at" : null,
+          "early_reminders" : null,
+          "flagged" : false,
+          "manual_order" : null,
+          "parent_id" : null,
+          "section_id" : null,
+          "store_alarms" : null,
+          "store_coverage" : {
+            "assignment" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "attachment_ids" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "created_at" : {
+              "status" : "complete"
+            },
+            "early_reminders" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "flagged" : {
+              "status" : "complete"
+            },
+            "manual_order" : {
+              "reason" : "reminder_not_in_ordering",
+              "status" : "partial"
+            },
+            "parent_id" : {
+              "status" : "complete"
+            },
+            "section_id" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_alarms" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_identifier" : {
+              "status" : "complete"
+            },
+            "store_recurrence" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "tags" : {
+              "status" : "complete"
+            }
+          },
+          "store_identifier" : "000000C0-0000-4000-8000-0000000000C0",
+          "store_recurrence" : null,
+          "store_status" : "partial",
+          "tags" : [
+
+          ],
+          "title" : "C"
+        },
+        "kind" : "upsert",
+        "native_key" : "000000C0-0000-4000-8000-0000000000C0",
+        "scoped_alias" : ""
+      }
+    ]
+  },
+  {
+    "label" : "tag ambiguity",
+    "observations" : [
+      {
+        "collection" : "reminders.reminder",
+        "data" : {
+          "assignment" : null,
+          "attachment_ids" : null,
+          "created_at" : "2023-11-09T14:56:07.500Z",
+          "early_reminders" : null,
+          "flagged" : false,
+          "manual_order" : 0,
+          "parent_id" : null,
+          "section_id" : null,
+          "store_alarms" : null,
+          "store_coverage" : {
+            "assignment" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "attachment_ids" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "created_at" : {
+              "status" : "complete"
+            },
+            "early_reminders" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "flagged" : {
+              "status" : "complete"
+            },
+            "manual_order" : {
+              "status" : "complete"
+            },
+            "parent_id" : {
+              "status" : "complete"
+            },
+            "section_id" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_alarms" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_identifier" : {
+              "status" : "complete"
+            },
+            "store_recurrence" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "tags" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            }
+          },
+          "store_identifier" : "000000A0-0000-4000-8000-0000000000A0",
+          "store_recurrence" : null,
+          "store_status" : "partial",
+          "tags" : null,
+          "title" : "A"
+        },
+        "kind" : "upsert",
+        "native_key" : "000000A0-0000-4000-8000-0000000000A0",
+        "scoped_alias" : ""
+      },
+      {
+        "collection" : "reminders.reminder",
+        "data" : {
+          "assignment" : null,
+          "attachment_ids" : null,
+          "created_at" : "2023-11-09T14:56:08.250Z",
+          "early_reminders" : null,
+          "flagged" : true,
+          "manual_order" : 1,
+          "parent_id" : {
+            "$ref" : {
+              "collection" : "reminders.reminder",
+              "native_key" : "000000A0-0000-4000-8000-0000000000A0"
+            }
+          },
+          "section_id" : null,
+          "store_alarms" : null,
+          "store_coverage" : {
+            "assignment" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "attachment_ids" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "created_at" : {
+              "status" : "complete"
+            },
+            "early_reminders" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "flagged" : {
+              "status" : "complete"
+            },
+            "manual_order" : {
+              "status" : "complete"
+            },
+            "parent_id" : {
+              "status" : "complete"
+            },
+            "section_id" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_alarms" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_identifier" : {
+              "status" : "complete"
+            },
+            "store_recurrence" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "tags" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            }
+          },
+          "store_identifier" : "000000B0-0000-4000-8000-0000000000B0",
+          "store_recurrence" : null,
+          "store_status" : "partial",
+          "tags" : null,
+          "title" : "B"
+        },
+        "kind" : "upsert",
+        "native_key" : "000000B0-0000-4000-8000-0000000000B0",
+        "scoped_alias" : ""
+      }
+    ]
+  },
+  {
+    "label" : "parent changes identifier",
+    "observations" : [
+      {
+        "collection" : "reminders.reminder",
+        "data" : {
+          "assignment" : null,
+          "attachment_ids" : null,
+          "created_at" : null,
+          "early_reminders" : null,
+          "flagged" : null,
+          "manual_order" : null,
+          "parent_id" : null,
+          "section_id" : null,
+          "store_alarms" : null,
+          "store_coverage" : {
+            "assignment" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "attachment_ids" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "created_at" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "early_reminders" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "flagged" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "manual_order" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "parent_id" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "section_id" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "store_alarms" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "store_identifier" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "store_recurrence" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "tags" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            }
+          },
+          "store_identifier" : null,
+          "store_recurrence" : null,
+          "store_status" : "unavailable",
+          "tags" : null,
+          "title" : "A"
+        },
+        "kind" : "upsert",
+        "native_key" : "000000A0-0000-4000-8000-0000000000A0",
+        "scoped_alias" : ""
+      },
+      {
+        "collection" : "reminders.reminder",
+        "data" : {
+          "assignment" : null,
+          "attachment_ids" : null,
+          "created_at" : "2023-11-09T14:56:08.250Z",
+          "early_reminders" : null,
+          "flagged" : true,
+          "manual_order" : 1,
+          "parent_id" : null,
+          "section_id" : null,
+          "store_alarms" : null,
+          "store_coverage" : {
+            "assignment" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "attachment_ids" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "created_at" : {
+              "status" : "complete"
+            },
+            "early_reminders" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "flagged" : {
+              "status" : "complete"
+            },
+            "manual_order" : {
+              "status" : "complete"
+            },
+            "parent_id" : {
+              "reason" : "parent_identity_unavailable",
+              "status" : "partial"
+            },
+            "section_id" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_alarms" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_identifier" : {
+              "status" : "complete"
+            },
+            "store_recurrence" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "tags" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            }
+          },
+          "store_identifier" : "000000B0-0000-4000-8000-0000000000B0",
+          "store_recurrence" : null,
+          "store_status" : "partial",
+          "tags" : null,
+          "title" : "B"
+        },
+        "kind" : "upsert",
+        "native_key" : "000000B0-0000-4000-8000-0000000000B0",
+        "scoped_alias" : ""
+      }
+    ]
+  },
+  {
+    "label" : "list parent and group",
+    "observations" : [
+      {
+        "collection" : "reminders.list",
+        "data" : {
+          "badge_emblem" : null,
+          "categorize_groceries" : false,
+          "display_order" : 2.5,
+          "grocery_locale" : null,
+          "is_group" : false,
+          "parent_id" : {
+            "$ref" : {
+              "collection" : "reminders.list",
+              "native_key" : "00000040-0000-4000-8000-000000000040"
+            }
+          },
+          "pinned" : false,
+          "pinned_at" : null,
+          "sections" : [
+
+          ],
+          "shared_owner_name" : null,
+          "sharing_status" : null,
+          "smart_filter" : null,
+          "smart_list_type" : null,
+          "sorting_style" : "manual",
+          "store_color" : null,
+          "store_coverage" : {
+            "badge_emblem" : {
+              "status" : "complete"
+            },
+            "categorize_groceries" : {
+              "status" : "complete"
+            },
+            "display_order" : {
+              "status" : "complete"
+            },
+            "grocery_locale" : {
+              "status" : "complete"
+            },
+            "is_group" : {
+              "status" : "complete"
+            },
+            "parent_id" : {
+              "status" : "complete"
+            },
+            "pinned" : {
+              "status" : "complete"
+            },
+            "pinned_at" : {
+              "status" : "complete"
+            },
+            "sections" : {
+              "status" : "complete"
+            },
+            "shared_owner_name" : {
+              "status" : "complete"
+            },
+            "sharing_status" : {
+              "status" : "complete"
+            },
+            "smart_filter" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "smart_list_type" : {
+              "status" : "complete"
+            },
+            "sorting_style" : {
+              "status" : "complete"
+            },
+            "store_color" : {
+              "reason" : "store_decoder_unverified",
+              "status" : "unsupported"
+            },
+            "store_identifier" : {
+              "status" : "complete"
+            }
+          },
+          "store_identifier" : "00000020-0000-4000-8000-000000000020",
+          "store_status" : "partial",
+          "title" : "Work"
+        },
+        "kind" : "upsert",
+        "native_key" : "00000020-0000-4000-8000-000000000020",
+        "scoped_alias" : ""
+      }
+    ]
+  },
+  {
+    "label" : "deleted reminder",
+    "observations" : [
+      {
+        "collection" : "reminders.reminder",
+        "data" : {
+          "assignment" : null,
+          "attachment_ids" : null,
+          "created_at" : null,
+          "early_reminders" : null,
+          "flagged" : null,
+          "manual_order" : null,
+          "parent_id" : null,
+          "section_id" : null,
+          "store_alarms" : null,
+          "store_coverage" : {
+            "assignment" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "attachment_ids" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "created_at" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "early_reminders" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "flagged" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "manual_order" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "parent_id" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "section_id" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "store_alarms" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "store_identifier" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "store_recurrence" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            },
+            "tags" : {
+              "reason" : "unique_exact_store_identity_unavailable",
+              "status" : "unavailable"
+            }
+          },
+          "store_identifier" : null,
+          "store_recurrence" : null,
+          "store_status" : "unavailable",
+          "tags" : null,
+          "title" : "C"
+        },
+        "kind" : "upsert",
+        "native_key" : "000000C0-0000-4000-8000-0000000000C0",
+        "scoped_alias" : ""
+      }
+    ]
+  },
+  {
+    "label" : "absent observation",
+    "observations" : [
+      {
+        "collection" : "reminders.reminder",
+        "kind" : "absent",
+        "native_key" : "000000C0-0000-4000-8000-0000000000C0"
+      }
+    ]
+  }
+]
