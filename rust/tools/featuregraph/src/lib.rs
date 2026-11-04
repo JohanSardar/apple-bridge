@@ -1,5 +1,6 @@
 mod model;
 mod page;
+mod yaml;
 
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -8,9 +9,11 @@ use std::{
     path::{Path, PathBuf},
 };
 
-pub use model::{Evidence, Feature, FeatureView, Graph, LevelResult, Limit, ScenarioRef, ScenarioView};
+pub use model::{
+    Evidence, Feature, FeatureView, Graph, LevelResult, Limit, ScenarioRef, ScenarioView,
+};
 pub use page::render;
-use serde::Deserialize;
+pub use yaml::{Head, parse_head};
 
 #[derive(Debug)]
 pub struct Checker {
@@ -19,18 +22,10 @@ pub struct Checker {
     pub problems: Vec<String>,
 }
 
-#[derive(Debug, Default, Deserialize)]
-struct Head {
-    id: Option<String>,
-    feature: Option<String>,
-    levels: Option<Vec<String>>,
-}
-
 impl Checker {
     pub fn load(root: &Path) -> Result<Self, String> {
         let raw = fs::read_to_string(root.join("features.yaml")).map_err(|e| e.to_string())?;
-        let graph: Graph =
-            serde_yaml::from_str(&raw).map_err(|e| format!("features.yaml: {e}"))?;
+        let graph = yaml::parse_graph(&raw).map_err(|e| format!("features.yaml: {e}"))?;
         Ok(Self::new(root, graph))
     }
 
@@ -97,10 +92,7 @@ impl Checker {
                     ));
                 }
                 if s.status == "dropped" && s.reason.trim().is_empty() {
-                    self.fail(format!(
-                        "{}: dropped scenario {} has no reason",
-                        f.id, s.id
-                    ));
+                    self.fail(format!("{}: dropped scenario {} has no reason", f.id, s.id));
                 }
                 if let Some(prev) = owner.get(&s.id) {
                     self.fail(format!(
@@ -125,10 +117,7 @@ impl Checker {
                 }
                 for l in &s.levels {
                     if !self.graph.levels.contains_key(l) {
-                        self.fail(format!(
-                            "{}: scenario {} has unknown level {l}",
-                            f.id, s.id
-                        ));
+                        self.fail(format!("{}: scenario {} has unknown level {l}", f.id, s.id));
                     }
                     let mut result = self.result(&s.id, l);
                     if s.status == "dropped" || f.status == "dropped" {
@@ -154,8 +143,8 @@ impl Checker {
             if f.status == "done" || f.status == "limited" {
                 for sv in &v.views {
                     for r in &sv.results {
-                        let excused =
-                            f.status == "limited" && limited.contains(&format!("{}/{}", sv.id, r.level));
+                        let excused = f.status == "limited"
+                            && limited.contains(&format!("{}/{}", sv.id, r.level));
                         if r.state != "passed" && r.state != "dropped" && !excused {
                             self.fail(format!(
                                 "{} is {} but {} at {} is {}",
@@ -188,15 +177,15 @@ impl Checker {
             let Ok(raw) = fs::read_to_string(&path) else {
                 continue;
             };
-            let head: Head = serde_yaml::from_str(&raw).unwrap_or_default();
-            let id = head.id.unwrap_or_default();
+            let head = parse_head(&raw).unwrap_or_default();
+            let id = head.id;
             if id.is_empty() {
                 self.fail(format!("scenario file {} has no id", display(&path)));
                 continue;
             }
             let rel = display(path.strip_prefix(&self.root).unwrap_or(&path));
-            let feature = head.feature.unwrap_or_default();
-            let head_levels = head.levels.unwrap_or_default();
+            let feature = head.feature;
+            let head_levels = head.levels;
             if let Some(prev) = files.get(&id).cloned() {
                 if features.get(&id) != Some(&feature) || head_levels.is_empty() {
                     self.fail(format!(

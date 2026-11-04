@@ -20,20 +20,26 @@ pub fn lint_rust(relative: &str, path: &Path) -> Vec<Finding> {
     }
 }
 
-fn raw_string_end(s: &[u8], at: usize) -> Option<Option<usize>> {
+enum Raw {
+    Plain,
+    Unterminated,
+    Ends(usize),
+}
+
+fn raw_string_end(s: &[u8], at: usize) -> Raw {
     if s.get(at) != Some(&b'r') {
-        return None;
+        return Raw::Plain;
     }
     let mut j = at + 1;
     while s.get(j) == Some(&b'#') {
         j += 1;
     }
     if s.get(j) != Some(&b'"') {
-        return None;
+        return Raw::Plain;
     }
     let mut end = vec![b'"'];
     end.extend(std::iter::repeat_n(b'#', j - at - 1));
-    Some(find(&s[j + 1..], &end).map(|k| j + 1 + k + end.len()))
+    find(&s[j + 1..], &end).map_or(Raw::Unterminated, |k| Raw::Ends(j + 1 + k + end.len()))
 }
 
 fn scan_rust(relative: &str, s: &[u8]) -> Vec<Finding> {
@@ -53,19 +59,19 @@ fn scan_rust(relative: &str, s: &[u8]) -> Vec<Finding> {
                 i += 1;
             }
             match raw_string_end(s, i) {
-                Some(Some(next)) => {
-                    line += s[start..next].iter().filter(|b| **b == b'\n').count();
+                Raw::Ends(next) => {
+                    line += s[start..next]
+                        .iter()
+                        .fold(0, |n, b| n + usize::from(*b == b'\n'));
                     i = next;
                     continue;
                 }
-                Some(None) => break,
-                None => i = start,
+                Raw::Unterminated => break,
+                Raw::Plain => i = start,
             }
         }
         let quote_like = s[i] == b'"'
-            || (s[i] == b'\''
-                && i + 2 < n
-                && (s[i + 2] == b'\'' || s[i + 1] == b'\\'));
+            || (s[i] == b'\'' && i + 2 < n && (s[i + 2] == b'\'' || s[i + 1] == b'\\'));
         if quote_like {
             let q = s[i];
             i += 1;
@@ -100,7 +106,11 @@ fn scan_rust(relative: &str, s: &[u8]) -> Vec<Finding> {
             i += 2;
             continue;
         }
-        if s[i] == b'#' && DOC_ATTRIBUTE.as_ref().is_some_and(|re| re.is_match(&s[i..])) {
+        if s[i] == b'#'
+            && DOC_ATTRIBUTE
+                .as_ref()
+                .is_some_and(|re| re.is_match(&s[i..]))
+        {
             out.push(Finding::new(relative, line, "doc attribute"));
         }
         i += 1;

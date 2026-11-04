@@ -58,9 +58,9 @@ pub fn lint_tree(root: &Path) -> Vec<Finding> {
             .unwrap_or_default();
         if name == "Cargo.toml" {
             findings.extend(lint_cargo(&relative, &path));
-        } else if name.ends_with(".rs") {
+        } else if path.extension().is_some_and(|ext| ext == "rs") {
             findings.extend(lint_rust(&relative, &path));
-        } else if name.ends_with(".swift") {
+        } else if path.extension().is_some_and(|ext| ext == "swift") {
             findings.extend(lint_swift(&relative, &path));
         }
     }

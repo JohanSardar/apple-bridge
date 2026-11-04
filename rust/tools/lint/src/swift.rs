@@ -11,7 +11,9 @@ pub fn lint_swift(relative: &str, path: &Path) -> Vec<Finding> {
 
 fn tools_version_header(line: &[u8]) -> bool {
     line.strip_prefix(b"// swift-tools-version:")
-        .is_some_and(|rest| !rest.is_empty() && rest.iter().all(|b| b.is_ascii_digit() || *b == b'.'))
+        .is_some_and(|rest| {
+            !rest.is_empty() && rest.iter().all(|b| b.is_ascii_digit() || *b == b'.')
+        })
 }
 
 fn scan_swift(relative: &str, path: &Path, src: &[u8]) -> Vec<Finding> {

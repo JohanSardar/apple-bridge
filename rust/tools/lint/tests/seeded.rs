@@ -15,8 +15,16 @@ fn write(root: &Path, relative: &str, body: &str) {
 
 fn baseline(root: &Path) {
     write(root, "native/Package.swift", PACKAGE);
-    write(root, "native/Sources/AppleSession/HelperCommand.swift", HELPER);
-    write(root, "native/Sources/AppleSession/SessionSources.swift", SOURCES);
+    write(
+        root,
+        "native/Sources/AppleSession/HelperCommand.swift",
+        HELPER,
+    );
+    write(
+        root,
+        "native/Sources/AppleSession/SessionSources.swift",
+        SOURCES,
+    );
     write(
         root,
         "rust/crates/ab-sys/src/lib.rs",
@@ -27,8 +35,16 @@ fn baseline(root: &Path) {
         "rust/crates/ab-wire/src/lib.rs",
         "const A: &str = \"https://x.invalid/* ok */\";\nconst B: &str = br###\"// /* */\"###;\nconst C: char = '/';\n",
     );
-    write(root, "native/Sources/App/Ok.swift", "let url = \"https://x.invalid//ok\"\nlet raw = \"\"\"\n// inside\n\"\"\"\n");
-    write(root, "rust/Cargo.toml", "[dependencies]\nserde_json = \"1\"\n");
+    write(
+        root,
+        "native/Sources/App/Ok.swift",
+        "let url = \"https://x.invalid//ok\"\nlet raw = \"\"\"\n// inside\n\"\"\"\n",
+    );
+    write(
+        root,
+        "rust/Cargo.toml",
+        "[dependencies]\nserde_json = \"1\"\n",
+    );
 }
 
 fn lint_with(relative: &str, body: &str) -> Vec<Finding> {
@@ -62,7 +78,11 @@ fn swift_line_comment() {
 
 #[test]
 fn swift_block_comment() {
-    assert_caught("native/Sources/App/A.swift", "/* x */\nlet a = 1\n", "comment");
+    assert_caught(
+        "native/Sources/App/A.swift",
+        "/* x */\nlet a = 1\n",
+        "comment",
+    );
 }
 
 #[test]
@@ -81,12 +101,20 @@ fn swift_header_allowed_only_in_package_first_line() {
 
 #[test]
 fn rust_line_comment() {
-    assert_caught("rust/crates/ab-wire/src/a.rs", "fn f() {}\n// x\n", "comment");
+    assert_caught(
+        "rust/crates/ab-wire/src/a.rs",
+        "fn f() {}\n// x\n",
+        "comment",
+    );
 }
 
 #[test]
 fn rust_block_comment() {
-    assert_caught("rust/crates/ab-wire/src/a.rs", "/* x */ fn f() {}\n", "comment");
+    assert_caught(
+        "rust/crates/ab-wire/src/a.rs",
+        "/* x */ fn f() {}\n",
+        "comment",
+    );
 }
 
 #[test]
@@ -122,7 +150,9 @@ fn cargo_banned_features() {
     for feature in ["arbitrary_precision", "preserve_order"] {
         assert_caught(
             "rust/crates/ab-wire/Cargo.toml",
-            &format!("[dependencies]\nserde_json = {{ version = \"1\", features = [\"{feature}\"] }}\n"),
+            &format!(
+                "[dependencies]\nserde_json = {{ version = \"1\", features = [\"{feature}\"] }}\n"
+            ),
             &format!("banned JSON feature: {feature}"),
         );
     }
@@ -150,7 +180,11 @@ fn bootstrap_registration_injection() {
     ] {
         let body = format!(
             "{}try? await peer.register(NewSource())\n",
-            if relative.ends_with("HelperCommand.swift") { HELPER } else { SOURCES }
+            if relative.ends_with("HelperCommand.swift") {
+                HELPER
+            } else {
+                SOURCES
+            }
         );
         assert_caught(
             relative,
@@ -164,7 +198,17 @@ fn bootstrap_registration_injection() {
 fn skipped_directories_are_ignored() {
     let dir = tempfile::tempdir().unwrap_or_else(|e| panic!("{e}"));
     baseline(dir.path());
-    for skipped in ["target", ".build", "node_modules", "fixtures", "testdata", "evidence", "bin", ".git", ".worktrees"] {
+    for skipped in [
+        "target",
+        ".build",
+        "node_modules",
+        "fixtures",
+        "testdata",
+        "evidence",
+        "bin",
+        ".git",
+        ".worktrees",
+    ] {
         write(dir.path(), &format!("rust/{skipped}/a.rs"), "// x\n");
     }
     assert_eq!(lint_tree(dir.path()), Vec::new());

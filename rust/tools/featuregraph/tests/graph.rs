@@ -1,4 +1,4 @@
-use ab_featuregraph::{Checker, Feature, Graph, ScenarioRef};
+use ab_featuregraph::{Checker, Feature, Graph, ScenarioRef, parse_head};
 use std::{collections::BTreeMap, fs, path::Path};
 
 fn repository() -> &'static Path {
@@ -28,26 +28,13 @@ fn web_scenario_levels_match_graph() {
             continue;
         }
         let raw = fs::read_to_string(&path).unwrap_or_else(|e| panic!("{e}"));
-        let scenario: ScenarioRef = serde_yaml::from_str::<serde_yaml::Value>(&raw)
-            .map(|value| ScenarioRef {
-                id: value["id"].as_str().unwrap_or_default().to_owned(),
-                levels: value["levels"]
-                    .as_sequence()
-                    .map(|items| {
-                        items
-                            .iter()
-                            .filter_map(|v| v.as_str().map(str::to_owned))
-                            .collect()
-                    })
-                    .unwrap_or_default(),
-                ..ScenarioRef::default()
-            })
-            .unwrap_or_else(|e| panic!("{e}"));
-        let mut want = levels.get(&scenario.id).cloned().unwrap_or_default();
-        let mut got = scenario.levels.clone();
+        let head = parse_head(&raw).unwrap_or_else(|| panic!("{} unreadable", path.display()));
+        let id = head.id;
+        let mut got = head.levels;
+        let mut want = levels.get(&id).cloned().unwrap_or_default();
         want.sort();
         got.sort();
-        assert_eq!(got, want, "{}: manifest levels differ from graph", scenario.id);
+        assert_eq!(got, want, "{id}: manifest levels differ from graph");
     }
 }
 
@@ -62,13 +49,69 @@ struct Case {
 }
 
 const CASES: [Case; 7] = [
-    Case { name: "dropped_feature", feature_status: "dropped", feature_reason: "Outside scope", scenario: false, scenario_status: "", scenario_reason: "", want_problem: false },
-    Case { name: "feature_requires_reason", feature_status: "dropped", feature_reason: "", scenario: false, scenario_status: "", scenario_reason: "", want_problem: true },
-    Case { name: "active_feature_requires_scenarios", feature_status: "done", feature_reason: "", scenario: false, scenario_status: "", scenario_reason: "", want_problem: true },
-    Case { name: "dropped_scenario", feature_status: "done", feature_reason: "", scenario: true, scenario_status: "dropped", scenario_reason: "Restricted entitlement", want_problem: false },
-    Case { name: "scenario_requires_reason", feature_status: "done", feature_reason: "", scenario: true, scenario_status: "dropped", scenario_reason: "", want_problem: true },
-    Case { name: "active_scenario_requires_proof", feature_status: "done", feature_reason: "", scenario: true, scenario_status: "", scenario_reason: "", want_problem: true },
-    Case { name: "unknown_scenario_status", feature_status: "done", feature_reason: "", scenario: true, scenario_status: "ignored", scenario_reason: "", want_problem: true },
+    Case {
+        name: "dropped_feature",
+        feature_status: "dropped",
+        feature_reason: "Outside scope",
+        scenario: false,
+        scenario_status: "",
+        scenario_reason: "",
+        want_problem: false,
+    },
+    Case {
+        name: "feature_requires_reason",
+        feature_status: "dropped",
+        feature_reason: "",
+        scenario: false,
+        scenario_status: "",
+        scenario_reason: "",
+        want_problem: true,
+    },
+    Case {
+        name: "active_feature_requires_scenarios",
+        feature_status: "done",
+        feature_reason: "",
+        scenario: false,
+        scenario_status: "",
+        scenario_reason: "",
+        want_problem: true,
+    },
+    Case {
+        name: "dropped_scenario",
+        feature_status: "done",
+        feature_reason: "",
+        scenario: true,
+        scenario_status: "dropped",
+        scenario_reason: "Restricted entitlement",
+        want_problem: false,
+    },
+    Case {
+        name: "scenario_requires_reason",
+        feature_status: "done",
+        feature_reason: "",
+        scenario: true,
+        scenario_status: "dropped",
+        scenario_reason: "",
+        want_problem: true,
+    },
+    Case {
+        name: "active_scenario_requires_proof",
+        feature_status: "done",
+        feature_reason: "",
+        scenario: true,
+        scenario_status: "",
+        scenario_reason: "",
+        want_problem: true,
+    },
+    Case {
+        name: "unknown_scenario_status",
+        feature_status: "done",
+        feature_reason: "",
+        scenario: true,
+        scenario_status: "ignored",
+        scenario_reason: "",
+        want_problem: true,
+    },
 ];
 
 #[test]
@@ -102,7 +145,6 @@ fn dropped_qualification() {
             levels: BTreeMap::from([("sim".to_owned(), "simulation".to_owned())]),
             requirements: BTreeMap::from([("R-API".to_owned(), "API".to_owned())]),
             features: vec![feature],
-            ..Graph::default()
         };
         let mut checker = Checker::new(root.path(), graph);
         let views = checker.check();
@@ -114,7 +156,11 @@ fn dropped_qualification() {
             checker.problems
         );
         if !case.want_problem && case.scenario {
-            assert_eq!(views[0].views[0].results[0].state, "dropped", "{}", case.name);
+            assert_eq!(
+                views[0].views[0].results[0].state, "dropped",
+                "{}",
+                case.name
+            );
         }
     }
 }

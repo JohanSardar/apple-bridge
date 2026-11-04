@@ -20,13 +20,11 @@ fn main() -> ExitCode {
                 return ExitCode::from(2);
             }
         };
-        match inline.or_else(|| args.next()) {
-            Some(value) => *target = PathBuf::from(value),
-            None => {
-                let _ = writeln!(std::io::stderr(), "flag needs an argument: {arg}");
-                return ExitCode::from(2);
-            }
-        }
+        let Some(value) = inline.or_else(|| args.next()) else {
+            let _ = writeln!(std::io::stderr(), "flag needs an argument: {arg}");
+            return ExitCode::from(2);
+        };
+        *target = PathBuf::from(value);
     }
     let mut checker = match Checker::load(&root) {
         Ok(checker) => checker,
@@ -36,11 +34,11 @@ fn main() -> ExitCode {
         }
     };
     let views = checker.check();
-    if let Some(path) = html.filter(|p| !p.as_os_str().is_empty()) {
-        if let Err(error) = fs::write(&path, render(&checker.graph, &views)) {
-            let _ = writeln!(std::io::stderr(), "{error}");
-            return ExitCode::from(2);
-        }
+    if let Some(path) = html.filter(|p| !p.as_os_str().is_empty())
+        && let Err(error) = fs::write(&path, render(&checker.graph, &views))
+    {
+        let _ = writeln!(std::io::stderr(), "{error}");
+        return ExitCode::from(2);
     }
     println!("{}", summarize(&views));
     if checker.problems.is_empty() {
