@@ -11,10 +11,10 @@ workspace = true
 default = []
 lab = ["ab-wire/lab"]
 rust-effects = ["rust-capture"]
-rust-capture = ["dep:ab-native", "dep:base64"]
+rust-capture = []
 
 [dependencies]
-ab-native = { path = "../ab-native", optional = true }
+ab-native = { path = "../ab-native" }
 ab-sys = { path = "../ab-sys" }
 ab-wire = { path = "../ab-wire" }
 serde.workspace = true
@@ -22,7 +22,7 @@ serde_json.workspace = true
 thiserror.workspace = true
 
 sha2.workspace = true
-base64 = { version = "=0.22.1", optional = true }
+base64 = { version = "=0.22.1" }
 jiff.workspace = true
 
 [dev-dependencies]

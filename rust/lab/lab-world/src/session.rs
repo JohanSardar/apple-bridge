@@ -18,6 +18,7 @@ pub(crate) struct Session {
     pub(crate) native: Option<PathBuf>,
     pub(crate) facts: Option<PathBuf>,
     pub(crate) state: PathBuf,
+    pub(crate) native_owned: bool,
     pub(crate) roots: Vec<(String, PathBuf)>,
     pub(crate) usage: std::sync::Mutex<crate::session_fixtures::Devices>,
     pub(crate) mail: std::sync::Mutex<crate::session_fixtures::Mail>,
@@ -43,6 +44,10 @@ pub fn session_sources() -> Vec<String> {
         .collect();
     sources.sort();
     sources
+}
+
+pub(crate) fn native_session() -> bool {
+    !matches!(variable("AB_LAB_SESSION_NATIVE").as_str(), "" | "0")
 }
 
 pub fn session_effects() -> bool {
@@ -102,7 +107,7 @@ impl World {
 
     pub(crate) fn start_session(&mut self, gateway: &str) -> Result<()> {
         let sources = session_sources();
-        let effects = session_effects();
+        let effects = session_effects() && !native_session();
         if self.labsession.listen.is_some() || (sources.is_empty() && !effects) {
             return Ok(());
         }
@@ -141,6 +146,22 @@ impl World {
             self.labsession.roots.push((source.clone(), root));
             config.insert(source.clone(), entry);
         }
+        gateway.clone_into(&mut self.labsession.gateway);
+        if native_session() {
+            let home = self.directory.join("session-home");
+            fs::create_dir_all(home.join("session"))?;
+            fs::write(
+                home.join("session/rust-capture.json"),
+                serde_json::to_vec(&json!({
+                    "sources": Value::Object(config),
+                    "watch": variable("AB_SESSION_RUST_WATCH") == "1",
+                    "poll_ms": 100,
+                }))?,
+            )?;
+            self.labsession.state = home.join("session/capture-state");
+            self.labsession.native_owned = true;
+            return Ok(());
+        }
         self.labsession.state = self.directory.join("session-state");
         self.labsession.env = vec![
             (
@@ -164,7 +185,6 @@ impl World {
             ));
         }
         self.labsession.listen = Some(self.directory.join("session.sock"));
-        gateway.clone_into(&mut self.labsession.gateway);
         self.spawn_session()
     }
 
@@ -229,6 +249,12 @@ impl World {
     }
 
     pub fn restart_session(&mut self) -> Result<()> {
+        if self.labsession.native_owned {
+            stop(&mut self.session);
+            let gateway = self.labsession.gateway.clone();
+            self.launch_session(&gateway)?;
+            return Ok(());
+        }
         if self.labsession.listen.is_none() {
             return Err(Error::Invalid("no session".into()));
         }

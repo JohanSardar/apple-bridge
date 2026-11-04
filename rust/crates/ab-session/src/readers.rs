@@ -88,6 +88,9 @@ pub trait CaptureReader: Send + Debug {
     fn ingest(&mut self, _capture: &Value) -> Result<bool, Error> {
         Ok(false)
     }
+    fn refresh(&mut self) -> bool {
+        false
+    }
 }
 
 fn capture_value(batch: &impl Serialize) -> Result<Value, Error> {

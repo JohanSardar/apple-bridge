@@ -218,8 +218,7 @@ impl World {
         Ok(world)
     }
     fn launch_session(&mut self, gateway_socket: &str) -> Result<Option<PathBuf>> {
-        let mode = std::env::var("AB_LAB_SESSION_NATIVE").unwrap_or_default();
-        if mode.is_empty() || mode == "0" {
+        if !session::native_session() {
             return Ok(None);
         }
         if self.session.is_some() {

@@ -163,6 +163,16 @@ fence. The ipc/1 byte format toward the gateway is unchanged; frames are built f
 | `ScanFailed` | Rust to Swift | `id`, `code`: the scan was not sent (`invalid`) or the session cannot send it (`unavailable`) |
 | `Close` | either | ends the session |
 
+Capture of a source named in `<home>/session/rust-capture.json` belongs to ab-session: its readers run in the
+session process, spend the same credit and checkpoints as Swift scans, and persist `capture-state/<source>.json`.
+Swift starts no capture for such a source (Safari keeps only its live tabs). A `Scan` of an owned source is a hint: its
+rows are not forwarded, it wakes the reader, and `ScanCommitted` follows once the reader's capture that came after it
+is committed (at once when the reader has nothing to do with it). `<source>.reconcile` is answered by ab-session when
+the reader can look again by itself, without a `Primitive`. Blob handles and `mail.body` of an owned source are answered
+without Swift. A source that takes framework facts uses the separate facts stream (`AB_NATIVE_FACTS_FD`,
+`Hello`/`Welcome`, `Facts`, `Revalidate`, `Changed`), served by a `factsOnly` NativeServer for the life of the session; the
+session ends when that stream is gone for good, and the Helper starts a new one.
+
 Swift sends observations only. ab-session owns the byte credit (a whole frame including its 4-byte header
 is the cost; one pool for all sources), one flight per source, chunking (16000 bytes of observations per
 frame, 64000 when `live`, 240000 for live Calendar, absences last), checkpoints (a fresh session checkpoint
