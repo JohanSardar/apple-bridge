@@ -93,6 +93,7 @@ struct Shared {
     closed: bool,
     flights: Flights<Origin>,
     saved: BTreeMap<String, (String, String)>,
+    bound: BTreeMap<String, (String, String)>,
     dispatched: BTreeMap<String, u64>,
 }
 
@@ -189,6 +190,31 @@ fn wait_open(gate: &Gate) -> Result<bool, Error> {
     Ok(true)
 }
 
+fn reported_generation(shared: &mut Shared, source: &str, native: &str, adopts: bool) -> String {
+    if !adopts {
+        return native.to_owned();
+    }
+    if let Some((bound, reported)) = shared.bound.get(source)
+        && bound == native
+    {
+        return reported.clone();
+    }
+    let reported = if shared.bound.contains_key(source) {
+        native.to_owned()
+    } else {
+        shared
+            .flights
+            .committed(source)
+            .map(|(generation, _)| generation.clone())
+            .filter(|generation| !generation.is_empty())
+            .unwrap_or_else(|| native.to_owned())
+    };
+    shared
+        .bound
+        .insert(source.to_owned(), (native.to_owned(), reported.clone()));
+    reported
+}
+
 fn persist(
     gate: &Gate,
     token: Option<String>,
@@ -211,6 +237,12 @@ fn persist(
     if shared.saved.get(source) == Some(&(checkpoint.clone(), token.clone())) {
         return Ok(());
     }
+    let native = shared
+        .bound
+        .get(source)
+        .filter(|(_, reported)| *reported == generation)
+        .map(|(native, _)| native.clone())
+        .unwrap_or_default();
     drop(shared);
     if generation.is_empty() || checkpoint.is_empty() {
         return Ok(());
@@ -221,6 +253,7 @@ fn persist(
             generation,
             checkpoint: checkpoint.clone(),
             token: token.clone(),
+            native,
         },
     )?;
     gate.lock()?
@@ -387,8 +420,14 @@ fn send_scan(
     source: &str,
     capture: &Value,
     mut covers: Covers,
+    adopts: bool,
 ) -> Result<bool, Error> {
-    let generation = text(capture, "generation")?.to_owned();
+    let generation = reported_generation(
+        &mut *gate.lock()?,
+        source,
+        text(capture, "generation")?,
+        adopts,
+    );
     let checkpoint = text(capture, "checkpoint")?.to_owned();
     let chunks = split(capture)?;
     let final_index = chunks.len() - 1;
@@ -400,6 +439,7 @@ fn send_scan(
             format!("{checkpoint}-{index}")
         };
         chunk["checkpoint"] = Value::String(chunk_checkpoint.clone());
+        chunk["generation"] = Value::String(generation.clone());
         let predecessor = gate.lock()?.flights.predecessor(source, &generation);
         chunk["predecessor"] = Value::String(predecessor);
         chunk["t"] = json!("Capture");
@@ -540,7 +580,7 @@ fn produce(
                 now: now()?,
                 fence,
             };
-            let (next, covers, token, more) = {
+            let (next, covers, token, more, adopts) = {
                 let mut reader = lock(readers, source)?;
                 let next = reader.next(&context);
                 let covers = held
@@ -549,7 +589,13 @@ fn produce(
                     .remove(source)
                     .unwrap_or_default();
                 let more = next.is_ok() && reader.more();
-                (next, covers, reader.token(), more)
+                (
+                    next,
+                    covers,
+                    reader.token(),
+                    more,
+                    reader.adopts_generation(),
+                )
             };
             if more {
                 again.push(source);
@@ -567,7 +613,7 @@ fn produce(
                     continue;
                 }
             };
-            if !send_scan(gate, to_gateway, layer, source, &capture, covers)? {
+            if !send_scan(gate, to_gateway, layer, source, &capture, covers, adopts)? {
                 return Ok(());
             }
         }
@@ -728,6 +774,17 @@ fn gateway_frame(
                     let Some(record) = store.load(source) else {
                         continue;
                     };
+                    if !record.native.is_empty()
+                        && shared
+                            .flights
+                            .committed(source)
+                            .is_some_and(|(g, _)| *g == record.generation)
+                    {
+                        shared.bound.insert(
+                            source.clone(),
+                            (record.native.clone(), record.generation.clone()),
+                        );
+                    }
                     let matches = shared
                         .flights
                         .committed(source)

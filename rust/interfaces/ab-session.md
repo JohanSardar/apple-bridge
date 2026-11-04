@@ -264,6 +264,20 @@ Open: NOTE-LIST asserts a note inside a recently-deleted folder and a fixed thum
 - **With `rust-effects`.** `effects::Layer` is an overlay on the same relay (`routed::relay_layered`). Rust captures register their keys with the effects state before being written, so Dispatch evidence correlation sees Rust-committed captures like Swift ones. `effects::relay` now runs through the same relay.
 - **Production switch.** `ab-session --gateway-fd N --helper-fd M [--effects-home H] [--capture-home H]`. With `--capture-home`, `<helper home>/session/rust-capture.json` (the Helper home is `<gateway home>/helper`; `flip-capture.sh --home` takes the gateway home) (`{"sources":{"safari":{"root":"..."}},"watch":true,"poll_ms":5000}`) selects Rust sources (`safari`, `usage`, `notes`, `voice_memos`, `mail`, `phone`, `voicemail`, `calendar`, `contacts`, `messages`; Calendar and Contacts take `{"root":"DIR"}` only as the watcher root because their data arrives as Helper facts); an unsupported source fails startup, an absent file or empty `sources` is the verbatim proxy. Flipping a source is editing the file and restarting the Helper; flipping back is removing the entry. The Swift SessionProxy passes `--capture-home` only when the file exists. A binary built without `rust-capture` rejects the flag. Generation changes on a flip cost one rescan and never a false deletion.
 
+Record ids across a flip. The gateway reuses a record id only for the same `(source, generation, collection, native_key)` or the
+same `scoped_alias`, and a Rust reader hashes its own generation, so a flipped source (Phone, Mail, Notes, Messages, Calendar, Contacts)
+used to write a second id per item beside the Swift ones and leave the old ones alive; Safari kept its ids only because its aliases carry no
+generation. The routed relay therefore adopts the generation the gateway has committed for the source: on its first scan of a connection
+the Rust reader's native generation is bound to `Open.checkpoints[source].generation` and every capture reports that generation
+(`routed::reported_generation`; predecessor, flights and the committed checkpoint use the reported one). The binding is saved next to the
+checkpoint in `capture-state/<source>.json` (`native`) and restored on `Open` while the gateway's committed generation is still the saved
+one. A native generation change while Rust owns the source (a regenerated database) is reported as itself, i.e. a normal generation change.
+Rolling back is the same in reverse: Swift emits its own generation, which is the committed one, so ids stay. A reader whose scans legitimately
+carry several generations (`CaptureReader::adopts_generation` false: Safari) is not rewritten. `tests/generation_adoption.rs` fails on the
+id doubling, on a rollback that duplicates or loses a record, and on a regenerated database being adopted. `flip-capture.sh` writes
+`"facts":"native"` for `calendar`, `contacts` and `reminders`; without that link the Helper's Swift capture is suppressed by the switch and
+the reader has no facts.
+
 Bundling: `AB_SESSION_BINARY=<path>` or `AB_SESSION_BUILD=1` (builds `ab-session` with `rust-capture,rust-effects` through `packaging/dev/build-session.sh`) makes `packaging/dev/build-helper.sh` copy it to `Contents/MacOS/ab-session`; `sign.sh` signs it with the identity of the app before the app itself, so the app's designated requirement is unchanged. Both values are part of the signed-app cache key.
 
 Staging never lives in an Apple container. `voice_memos` and `notes` need a `staging` path that is not inside or above the source root (symlinks and `..` resolved); `production::load` fills `<home>/session/staging/<source>` when it is absent and `from_config` fails without one. `tests/staging_confinement.rs` fails if a scan, commit or blob read creates any path under the root. Staged files are copied to a temp name and hard-linked into place inside the staging directory, so no rename crosses a device.

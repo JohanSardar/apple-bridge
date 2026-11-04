@@ -13,6 +13,8 @@ pub struct Record {
     pub generation: String,
     pub checkpoint: String,
     pub token: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub native: String,
 }
 
 #[derive(Debug)]

@@ -41,7 +41,7 @@ cfg.setdefault("poll_ms", 5000)
 for line in open(plan):
     name, root = line.rstrip("\n").split("\t", 1)
     entry = {"root": root}
-    if name in ("files", "mac"):
+    if name in ("calendar", "contacts", "reminders", "files", "mac"):
         entry["facts"] = "native"
     if name == "files":
         entry["home"] = base
@@ -66,7 +66,7 @@ verify:
   python3 -m json.tool "$CONFIG"
   ps -ax -o pid,command | grep '[a]b-session' | grep -- '--capture-home'
   ls "$HELPER_HOME/session/capture-state/"     (one <source>.json per flipped source after its first Rust commit)
-  gateway: a Ready frame lists the source and its first Rust capture arrives with generation rust-native/1 (a generation change costs one rescan, never a false deletion)
+  gateway: a Ready frame lists the source and its first Rust capture arrives under the generation the gateway already committed for the source (record ids are kept)
 rollback (instant, no data loss):
   $(dirname "$0")/unflip-capture.sh ${ARGS[0]} --home "$HOME_DIR" --restart-helper
 V
