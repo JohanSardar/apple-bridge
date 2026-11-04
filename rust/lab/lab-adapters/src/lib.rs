@@ -222,6 +222,7 @@ pub fn registry() -> Registry {
     });
     registry.register("file_commands", filecmd::commands);
     registry.register_standalone("CORE-PERMISSION-STATUS", permission_status::real);
+    registry.register("CORE-PERMISSION-STATUS", permission_status::sim);
     registry.register_real("CORE-QUERY-HELPER", query_helper::real);
     for id in maps::REAL {
         registry.register_real(id, maps::real);
