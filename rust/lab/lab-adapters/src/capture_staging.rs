@@ -41,7 +41,7 @@ fn prune_history(world: &mut World, through: u64) -> bool {
         .and_then(|db| {
             db.execute(
                 "UPDATE journal SET committed_at=unixepoch()-3600 WHERE seq<=?",
-                [through],
+                [i64::try_from(through).unwrap_or(i64::MAX)],
             )
         })
         .is_ok();
