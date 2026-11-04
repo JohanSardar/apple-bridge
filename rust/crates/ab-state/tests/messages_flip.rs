@@ -162,3 +162,40 @@ fn changed_file_replaces_known_derivatives() {
     );
     std::fs::remove_dir_all(home).expect("cleanup");
 }
+
+#[test]
+fn a_failed_media_answer_does_not_empty_known_derivatives() {
+    let home = std::env::temp_dir().join(format!("ab-flip-failed-{}", std::process::id()));
+    std::fs::create_dir_all(&home).expect("home");
+    let known = json!({
+        "blob": {"state":"present","digest":"d1"},
+        "media": {"width": 640},
+        "derivatives": {"thumb": {"digest":"t1","state":"present"}}
+    });
+    {
+        let mut store = State::<Gateway>::open(&home).expect("state");
+        store
+            .commit_capture(&capture(
+                "swift",
+                "",
+                "1",
+                SOURCE_DATA,
+                &[upsert("a", &known)],
+            ))
+            .expect("seed");
+        store
+            .commit_capture(&capture(
+                "rust",
+                "",
+                "r1",
+                REPLACED,
+                &[upsert(
+                    "a",
+                    &json!({"blob":{"state":"present","digest":"d1"},"media":{},"derivatives":{}}),
+                )],
+            ))
+            .expect("failed answer");
+    }
+    assert_eq!(rows(&home)[0].2, known);
+    std::fs::remove_dir_all(home).expect("cleanup");
+}

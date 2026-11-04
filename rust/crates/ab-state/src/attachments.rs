@@ -9,6 +9,10 @@ fn digest(blob: Option<&Value>) -> Option<&str> {
         .filter(|digest| !digest.is_empty())
 }
 
+fn is_empty_object(value: &Value) -> bool {
+    value.as_object().is_some_and(serde_json::Map::is_empty)
+}
+
 fn state(blob: Option<&Value>) -> &str {
     blob.and_then(|blob| blob.get("state"))
         .and_then(Value::as_str)
@@ -36,9 +40,8 @@ pub(crate) fn keep_known(old: Option<&Value>, next: &mut Value) {
         return;
     }
     for name in KEPT_FIELDS {
-        if !fields.contains_key(name)
-            && let Some(value) = old.get(name)
-        {
+        let omitted = fields.get(name).is_none_or(is_empty_object);
+        if omitted && let Some(value) = old.get(name).filter(|value| !is_empty_object(value)) {
             fields.insert(name.into(), value.clone());
         }
     }
@@ -67,15 +70,30 @@ mod tests {
     }
 
     #[test]
-    fn same_digest_keeps_derivatives_only_when_absent() {
+    fn same_digest_keeps_derivatives_the_incoming_record_omits_or_empties() {
         let mut next = json!({"blob":{"state":"present","digest":"aa"}});
         keep_known(Some(&old()), &mut next);
         assert_eq!(next["derivatives"], old()["derivatives"]);
         let mut next =
             json!({"blob":{"state":"present","digest":"aa"},"media":{},"derivatives":{}});
         keep_known(Some(&old()), &mut next);
-        assert_eq!(next["media"], json!({}));
-        assert_eq!(next["derivatives"], json!({}));
+        assert_eq!(next["media"], old()["media"]);
+        assert_eq!(next["derivatives"], old()["derivatives"]);
+    }
+
+    #[test]
+    fn a_new_non_empty_answer_replaces_what_was_known() {
+        let mut next = json!({
+            "blob":{"state":"present","digest":"aa"},
+            "media":{"width":20},
+            "derivatives":{"display":{"digest":"cc","state":"present"}}
+        });
+        keep_known(Some(&old()), &mut next);
+        assert_eq!(next["media"], json!({"width":20}));
+        assert_eq!(
+            next["derivatives"],
+            json!({"display":{"digest":"cc","state":"present"}})
+        );
     }
 
     #[test]
