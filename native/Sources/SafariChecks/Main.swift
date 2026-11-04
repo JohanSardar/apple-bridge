@@ -9,6 +9,11 @@ import SQLite3
 @main
 struct Main {
     static func main() async throws {
+        if CommandLine.arguments.count > 2 && CommandLine.arguments[2] == "SAF-TABS-ONLY" {
+            try await tabsOnlyChecks()
+            print("tabs-only ok")
+            return
+        }
         if CommandLine.arguments.count > 2 && ["SAF-HISTORY-REAL", "SAF-BOOKMARKS-REAL"].contains(CommandLine.arguments[2]) {
             let source = SafariSource(directory: URL(fileURLWithPath: CommandLine.arguments[1]))
             let rows: [JSON]
