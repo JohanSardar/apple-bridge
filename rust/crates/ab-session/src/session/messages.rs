@@ -1558,10 +1558,7 @@ mod tests {
         let untagged = selftest(
             json!({"handles": ["+15550100100"], "service": "iMessage", "text": "self-test"}),
         );
-        assert_eq!(
-            prepare(&probe, &untagged).unwrap_err().code,
-            "invalid"
-        );
+        assert_eq!(prepare(&probe, &untagged).unwrap_err().code, "invalid");
     }
 
     #[test]
