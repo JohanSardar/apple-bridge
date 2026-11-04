@@ -1,3 +1,4 @@
+import json
 import fcntl
 import os
 from pathlib import Path
@@ -24,9 +25,18 @@ def require_isolation():
     raise SystemExit(result.returncode)
 
 
+def inert_status(entry):
+    if entry.name != 'status.json' or entry.is_symlink() or not entry.is_file():
+        return False
+    try:
+        return json.loads(entry.read_text()).get('state') == 'off'
+    except (OSError, ValueError, AttributeError):
+        return False
+
+
 def require_home(home):
     remote = Path(home) / 'remote'
-    if remote.exists() and any(remote.iterdir()):
+    if remote.exists() and any(not inert_status(entry) for entry in remote.iterdir()):
         raise ValueError('replay refuses saved remote adapters: host Unix sockets are outside network isolation')
 
 
