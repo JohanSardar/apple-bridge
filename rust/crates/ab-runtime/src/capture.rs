@@ -203,10 +203,23 @@ pub async fn hydrate(
                     break;
                 }
             }
-            tally.record(succeeded, rearmed, known, transferred);
+            tally.record(match (succeeded, known, transferred) {
+                (true, _, _) if rearmed => Outcome::Recovered,
+                (true, _, _) => Outcome::Stored,
+                (false, false, _) => Outcome::Unknown,
+                (false, true, true) => Outcome::FailedAfterRetry,
+                (false, true, false) => Outcome::PreviouslyFailed,
+            });
         }
         tally.report(total);
     }
+}
+enum Outcome {
+    Stored,
+    Recovered,
+    Unknown,
+    FailedAfterRetry,
+    PreviouslyFailed,
 }
 #[derive(Default)]
 struct Tally {
@@ -216,15 +229,13 @@ struct Tally {
     unknown: usize,
 }
 impl Tally {
-    fn record(&mut self, succeeded: bool, rearmed: bool, known: bool, transferred: bool) {
-        if succeeded {
-            self.recovered += usize::from(rearmed);
-        } else if !known {
-            self.unknown += 1;
-        } else if transferred {
-            self.failed_after_retry += 1;
-        } else {
-            self.previously_failed += 1;
+    fn record(&mut self, outcome: Outcome) {
+        match outcome {
+            Outcome::Recovered => self.recovered += 1,
+            Outcome::Unknown => self.unknown += 1,
+            Outcome::FailedAfterRetry => self.failed_after_retry += 1,
+            Outcome::PreviouslyFailed => self.previously_failed += 1,
+            Outcome::Stored => {}
         }
     }
     fn report(&self, total: usize) {
