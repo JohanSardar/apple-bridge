@@ -31,6 +31,8 @@ fn require_lab_gateway(
     )
     .into())
 }
+use std::{env, fs, path::PathBuf, process::ExitCode};
+#[allow(clippy::too_many_lines)]
 fn run() -> Result<bool, Box<dyn std::error::Error>> {
     let mut args = env::args().skip(1);
     if args.next().as_deref() != Some("run") {
@@ -84,6 +86,9 @@ fn run() -> Result<bool, Box<dyn std::error::Error>> {
     for (index, path) in paths.iter().enumerate() {
         let mut scenario: Scenario = serde_saphyr::from_slice(&fs::read(path)?)?;
         lab_adapters::prepare(&mut scenario);
+        lab_adapters::shortcuts::inject(&mut scenario);
+        lab_adapters::connectors::inject(&mut scenario);
+        lab_adapters::native_core::inject(&mut scenario);
         if scenario.when.is_empty()
             && lab_adapters::readmodels::SCENARIOS.contains(&scenario.id.as_str())
         {
