@@ -183,7 +183,7 @@ public final class RemindersSource: Source {
             let changed = observation["data"] != (committed[key]?["data"] ?? .null)
             if forceFull || changed || committed[key]?["scoped_alias"] != observation["scoped_alias"] { observations.append(observation) }
         }
-        for (key, previous) in tracked where live && current[key] == nil {
+        for (key, previous) in tracked where (live || fullRead) && current[key] == nil {
             let alias = previous["scoped_alias"].string
             if !alias.isEmpty && current.values.contains(where: { $0["collection"] == previous["collection"] && $0["scoped_alias"].string == alias }) { continue }
             if previous["collection"].string == "reminders.reminder", let scope, !scope.contains(previous["data"]["list_id"]["$ref"]["native_key"].string) { continue }

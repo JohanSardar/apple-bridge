@@ -295,7 +295,7 @@ fn note_dispatch(shared: &mut Shared, value: &Value) {
 }
 
 fn holds_facts(source: &str) -> bool {
-    matches!(source, "calendar" | "contacts")
+    matches!(source, "calendar" | "contacts" | "reminders")
 }
 
 fn note_observed(shared: &mut Shared, source: &str, flight: &Flight) {
