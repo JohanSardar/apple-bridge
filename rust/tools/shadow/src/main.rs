@@ -1,4 +1,7 @@
-use ab_trust::{Authority, Grant, Principal, iphone};
+use ab_trust::{
+    Authority, Grant, Principal, iphone,
+    wire::gojson::{CommandHash, GoTime},
+};
 use base64::{Engine, engine::general_purpose::STANDARD};
 use ed25519_dalek::{Signer, SigningKey};
 use hmac::{Hmac, Mac};
@@ -170,6 +173,24 @@ fn post(
         },
     ))
 }
+fn command_id(command: &Value, id: &mut String, hash: &mut String) -> Result<(), Failure> {
+    command["command_id"]
+        .as_str()
+        .unwrap_or_default()
+        .clone_into(id);
+    if hash.is_empty() {
+        let expires = GoTime::parse(command["expires_at"].as_str().unwrap_or("0001-01-01T00:00:00Z"))?;
+        *hash = CommandHash {
+            op: command["op"].as_str().unwrap_or_default(),
+            args: serde_json::to_string(&command["args"])?.as_bytes(),
+            version: command["expected_version"].as_u64().unwrap_or_default(),
+            expires,
+            era: command["admission_era"].as_str().unwrap_or_default(),
+        }
+        .digest()?;
+    }
+    Ok(())
+}
 fn shadow_feed(args: impl Iterator<Item = String>) -> Result<(), Failure> {
     let values = flags(args)?;
     let peer_home = required(&values, "--peer-home")?;
@@ -179,13 +200,41 @@ fn shadow_feed(args: impl Iterator<Item = String>) -> Result<(), Failure> {
     let request: Value = serde_json::from_str(&input)?;
     let authority = Authority::open(peer_home)?;
     let enrollment = authority.enrollment()?.ok_or("peer home is not enrolled")?;
-    let body = STANDARD.decode(request["body"].as_str().filter(|b| !b.is_empty()).ok_or("body required")?)?;
     let delegation = &request["delegation"];
     let text = |key: &str| delegation[key].as_str().unwrap_or_default().to_owned();
-    let id = text("command_id");
-    let hash = Some(text("request_hash"))
-        .filter(|hash| !hash.is_empty())
-        .unwrap_or_else(|| hex::encode(Sha256::digest(&body)));
+    let mut id = text("command_id");
+    let mut hash = text("request_hash");
+    let body = if let Some(raw) = request["body"].as_str().filter(|b| !b.is_empty()) {
+        STANDARD.decode(raw)?
+    } else {
+        let method = request["method"].as_str().unwrap_or_default();
+        if !["submit", "status", "list"].contains(&method) {
+            return Err("unsupported feed method".into());
+        }
+        let mut command = request["command"].clone();
+        if command.is_null() {
+            command = json!({"args": null});
+        }
+        if command.get("expires_at").is_none() {
+            command["expires_at"] = json!("0001-01-01T00:00:00Z");
+        }
+        if method == "submit" && request["command"].is_object() {
+            command_id(&command, &mut id, &mut hash)?;
+        } else if let Some(query_id) = request["query"]["command_id"].as_str()
+            && id.is_empty()
+        {
+            query_id.clone_into(&mut id);
+        }
+        let query = if request["query"].is_null() {
+            json!({})
+        } else {
+            request["query"].clone()
+        };
+        serde_json::to_vec(&json!({"method": method, "command": command, "query": query}))?
+    };
+    if hash.is_empty() {
+        hash = hex::encode(Sha256::digest(&body));
+    }
     let grants = delegation["local_grants"]
         .as_array()
         .map(|list| {
