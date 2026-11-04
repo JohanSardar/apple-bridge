@@ -190,8 +190,7 @@ impl<'a> Difference<'a> {
                 .get(id)
                 .is_none_or(|row| number(row, "ZMARKEDFORDELETION") != 0.0)
                 && let Some(old) = self
-                    .previous
-                    .objects
+                    .all
                     .get(id)
                     .filter(|row| integer(row, "Z_ENT") == self.entities.folder)
                 && let Some(key) = old.get("ZIDENTIFIER").and_then(serde_json::Value::as_str)
@@ -289,7 +288,7 @@ impl<'a> Difference<'a> {
                 .filter(|row| number(row, "ZMARKEDFORDELETION") == 0.0)
             {
                 keys.insert(text(row, "ZIDENTIFIER").to_owned());
-            } else if let Some(row) = self.previous.objects.get(&pk)
+            } else if let Some(row) = self.all.get(&pk)
                 && let Some(key) = row.get("ZIDENTIFIER").and_then(serde_json::Value::as_str)
             {
                 removed.insert(format!("notes.note/{key}"));
