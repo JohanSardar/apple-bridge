@@ -42,7 +42,7 @@ curl -fsSL https://raw.githubusercontent.com/JohanSardar/apple-bridge/main/deplo
 bash install.sh --domain bridge.example.com --owner-key YOUR_MAC_KEY
 ```
 
-The first start asks Let's Encrypt for a certificate, which needs step 2 to be live. If DNS hasn't spread yet, the service keeps retrying on its own. To check it:
+The first start asks Let's Encrypt for a certificate, which needs step 2 to be live. If DNS hasn't spread yet, the service retries every two minutes. Let's Encrypt allows five failed tries an hour, so if it keeps failing, fix DNS and wait up to an hour. To check it:
 
 ```sh
 ab-relay-admin status
@@ -59,11 +59,11 @@ It prints your address, for example `https://8f3a….bridge.example.com/mcp`. Yo
 
 ## 5. Connect an app
 
-**Claude:** Settings → Connectors (or Customize → Connectors) → Add custom connector. Paste your address, ending in `/mcp`.
+**Claude:** Customize → Connectors → Add → Add custom connector. Paste your address, ending in `/mcp`.
 
-**ChatGPT:** Settings → Apps → Advanced settings → turn on Developer mode, then Create app. Paste the same address and choose OAuth. Developer mode needs a paid ChatGPT plan.
+**ChatGPT:** turn on Developer mode in ChatGPT's settings, then create an app with the same address and OAuth. Developer mode needs a paid ChatGPT plan.
 
-A page opens saying which app wants what, with a four-digit code. Your Mac shows the same code in an Allow or Deny window. Check that the codes match, then choose Allow. Your iPhone can approve too, if it's paired.
+A page opens saying which app wants what, with a four-digit code. Your Mac shows the same code in an Allow or Deny window. Check that the codes match, then choose Allow. Your iPhone can approve too, if it's paired. On a Mac with no screen in reach, `bridge connector pending` and `bridge connector allow --request ID --code CODE` do the same.
 
 ## Letting other people use your relay
 
@@ -109,3 +109,7 @@ Everything worth keeping is in `/var/lib/ab-relay`, `/var/lib/ab-relay-control`,
 | `certificate request failed` in `journalctl -u ab-relay` | Let's Encrypt couldn't check your domain | Check step 2 with `dig NS bridge.example.com` and open port 53 |
 | A connector says it can't reach the server | Your Mac is off, or Remote is off | `bridge remote status` on the Mac |
 | The approval window doesn't appear | Apple Bridge isn't running on the Mac | Open Apple Bridge, or run `bridge connector pending` |
+
+## Moving the sign-in address
+
+Sign-in is at `app.<domain>`, on the relay itself. To serve it somewhere else, change `-app-host` and `AB_PUBLIC_URL` together and restart. The new name must resolve to the relay, and the relay must be able to answer its DNS challenge.

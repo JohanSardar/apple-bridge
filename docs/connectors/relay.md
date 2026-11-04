@@ -1,17 +1,32 @@
-# Relay connectors
+# Connecting Claude and ChatGPT
 
-Use the gateway's `bridge remote status` URL followed by `/mcp` as the connector endpoint. The public relay preserves the gateway's OAuth discovery and authorization endpoints. Keep the gateway running while connecting and calling tools.
+Run `bridge remote status` on your Mac. Your connector address is the URL it shows, followed by `/mcp`. Keep the Mac on and Apple Bridge running while you connect and use it.
 
-In ChatGPT, sign in, enable developer mode in settings if required by the account, and create a custom MCP connector using that endpoint and OAuth. In Claude web, sign in and add a custom connector from Settings > Connectors with the same endpoint. Complete the bridge authorization screen using the owner session and approve only the intended read scopes. Login approval remains pending until Johan completes it; relay reachability alone does not count as connector approval.
+**Claude:** Customize → Connectors → Add → Add custom connector. Give it a name, paste the address and choose Continue, then Add, then Connect.
 
-In Claude Code, register an HTTP MCP server with `claude mcp add --transport http apple-bridge <endpoint>`, then use `/mcp` to authenticate and approve the bridge login. Ask the client to call `records_query` with `limit: 1` against tagged test data. Confirm a successful tool result, rather than a text response claiming success. Do not save returned personal records, authorization codes, or credentials as evidence.
+**ChatGPT:** turn on Developer mode in ChatGPT's settings, then create an app with this address and OAuth. Developer mode needs a paid plan. OpenAI moves these settings often, and this path hasn't been walked with a real ChatGPT account yet.
 
-Run each qualification separately:
+**Claude Code:** `claude mcp add --transport http apple-bridge <address>`, then `/mcp` to sign in.
 
+A page says which app wants what and shows a four-digit code. Approve on your Mac or paired iPhone if the code matches. See [connector approvals](approvals.md).
+
+## What was proven with real clients
+
+On 2026-11-04, with Claude on claude.ai and a gateway on a private copy of real data:
+
+| Relay | Mac admitted by | Result |
+|---|---|---|
+| Hosted, `ab.lexaai.tech` | Account, by browser link | Connected, read real records |
+| Self-hosted, with accounts | Account, by browser link | Connected, read real records |
+| Self-hosted, no accounts, fresh install from the published release | Owner key | Connected, read real records |
+
+Each read was checked against the database. ChatGPT has not been run for real yet: it is held to OpenAI's published requirements in `rust/crates/ab-frontdoor/tests/oauth_compliance.rs`, and `lab/compliance/` runs independent clients through a real relay.
+
+## Checking a relay
+
+```sh
+cd lab/compliance && npm install
+node oauth-clients.mjs https://your-mac-address path/to/approve-command
 ```
-make real SCENARIOS=lab/scenarios/core/CONN-CHATGPT.yaml
-make real SCENARIOS=lab/scenarios/core/CONN-CLAUDE-AI.yaml
-make real SCENARIOS=lab/scenarios/core/CONN-CLAUDE-CODE.yaml
-```
 
-The web scenarios currently report `limited: needs connector login`: the available browser is signed out of ChatGPT and Claude web requires security verification. They do not claim an approved OAuth grant or successful web tool call. Claude Code qualification creates a temporary synthetic gateway through the public relay, loads an isolated bearer-authenticated MCP connector configuration, and requires an actual Claude tool-use event and successful tool result. Its temporary credentials and gateway are cleaned up. This proves the Code transport and tool call, while interactive OAuth approval is a separate owner step.
+The approve command gets the request id and code as its two arguments. Run this against a real relay address, not only locally: some checks only apply on a public host, and that is where the worst bug in this area hid.
