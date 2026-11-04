@@ -125,6 +125,37 @@ root after in-flight work ends. No arbitrary filesystem paths accepted from nati
 permission_missing, expired, conflict, corrupt. Failures after dispatch are evidence
 of indeterminate outcome, never evidence of safe retry.
 
+## Session frames (ab-session owns ipc/1)
+
+In session mode the Helper starts `ab-session --gateway-fd N --helper-fd M --session-secret FILE`. The
+gateway descriptor is an unauthenticated connected stream; the helper descriptor carries native/1 only
+and is the only stream Swift uses for gateway traffic. ab-session reads the 32-byte secret (regular file,
+mode 0600, parent 0700, same owner), performs the ipc/1 Challenge/Authenticate exchange, validates `Open`
+(`ipc/1`, positive fence, `byte_credit` 1..4194304), then runs the native/1 handshake with the gateway's
+fence. The ipc/1 byte format toward the gateway is unchanged; frames are built from `ab_wire::IpcFrame` and
+`Capture`, and the codecs below live in `ab_wire::native`.
+
+| Frame | Direction | Fields |
+| --- | --- | --- |
+| `Session` | Rust to Swift, after `Welcome` | `checkpoints`: source to `{generation, checkpoint, refresh_blobs}` from `Open` |
+| `Ready` | Swift to Rust, once | `coverage`, `capabilities`, `helper_build`, `os_build`; forwarded as ipc/1 `Ready` |
+| `SourceState` | Swift to Rust | `source`, `state`, `coverage`, `capabilities`, `reason`; forwarded as ipc/1 `SourceState` |
+| `Scan` | Swift to Rust | `id`, `source`, `generation`, `observations`, `scan_id`, `scope`, `scan_started_at`, `completion_evidence`, `blob_handles`, `live` |
+| `ScanCommitted` | Rust to Swift | `id`, `source`, `checkpoint`: the gateway committed the scan's final frame |
+| `ScanFailed` | Rust to Swift | `id`, `code`: the scan was not sent (`invalid`) or the session cannot send it (`unavailable`) |
+| `Close` | either | ends the session |
+
+Swift sends observations only. ab-session owns the byte credit (a whole frame including its 4-byte header
+is the cost; one pool for all sources), one flight per source, chunking (16000 bytes of observations per
+frame, 64000 when `live`, 240000 for live Calendar, absences last), checkpoints (a fresh session checkpoint
+per scan, derived `-N` checkpoints for intermediate frames), predecessor (the committed checkpoint of the
+same generation, else empty) and acknowledgement. A `Committed` that does not match the flight's
+checkpoint and whole-frame credit, or that has no flight, closes the session. `Ping` is answered by
+ab-session. Command traffic (`Prepare`, `Dispatch`, `Resolve`, `Query`, `BlobRead`) has no native/1 frame yet
+and fails closed: `Rejected unsupported`, `Rejected conflict`, `Rejected not_found`, `QueryError unsupported`
+and `BlobUnavailable`. Session mode is therefore capture-only and not selectable in production until those
+frames land.
+
 ## Ownership and migration
 
 See rust/interfaces/ab-session.md. Exactly one external ipc/1 session and one authoritative
