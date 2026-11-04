@@ -9,6 +9,7 @@ workspace = true
 
 [features]
 default = []
+lab = []
 rust-effects = ["dep:sha2", "dep:jiff", "rust-capture"]
 rust-capture = ["dep:ab-native", "dep:sha2", "dep:base64"]
 

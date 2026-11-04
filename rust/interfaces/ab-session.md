@@ -48,27 +48,21 @@ File refs: {path,size,sha256,mime}; confined to session-owned 0700 exchange root
 
 ## Reader ownership API
 
-Session owns selection; readers emit observations only (no gateway handle). Per source:
-Swift (default), Shadow (Swift authoritative, Rust diff only), Rust (future routed mode).
-Proxy rejects any configured authoritative Rust producer; it cannot safely filter IPC.
-One external session. In Swift/Shadow mode Swift assigns capture IDs, spends credits,
-receives Committed and persists checkpoints. In routed Rust mode ab-session does all four;
-ab-native only reads/diffs. Switch only disconnected after all captures committed;
-reopen with committed checkpoint, exactly one selected producer. No hot takeover.
-Shadow compares key+canonical data+scope+generation+completeness; never sends captures,
-spends credits, acknowledges or persists an authoritative checkpoint. Partial scans cannot
-certify equality or deletion. Native/1 facts are NOT ipc/1 Captures.
+Exactly one producer per source, decided at registration. Per source: Swift (default) or Rust.
+When the capture switch (`session/rust-capture.json`) names a source, the Helper does not start
+that source's Swift capture at all (`CaptureOwnership` in AppleSession; Safari keeps only its live
+tabs); it still registers the source for commands, queries and facts. Proxy rejects any configured
+authoritative Rust producer; it cannot safely filter IPC. In Swift mode Swift assigns capture IDs,
+spends credits, receives Committed and persists checkpoints. In routed Rust mode ab-session does all
+four; ab-native only reads and diffs. Switch only disconnected after all captures committed; reopen
+with committed checkpoint. No hot takeover. Native/1 facts are NOT ipc/1 Captures.
 
 Native request_hash: lowercase SHA256 hex of canonical args JSON (recursively sorted keys, compact UTF-8, unescaped slash, no non-finite numbers). Separate from frozen ipc/1 request_hash. Hello includes positive owner_fence; permit must match it. expires_at is Unix seconds (integer).
 
 Swift integration agreement: Helper reserves separate native socketpair child fd 200 via AB_NATIVE_FD; raw IPC proxy does not read it or send Hello. Native server rejects effects conflict while Swift IPC owns authority. Source adapters initially support full bounded scope args={} only; unsupported filters return unsupported. contacts.history accepts history_token. Scope may be structured {collections,history_token}; pages bind exact scope equality. Release uses args.file_ref and replies Released with id.
 
 Binary selection configuration: AB_SESSION_PRODUCERS JSON object maps source names to
-"Swift", "Shadow", "Rust". Default Swift. Rust fails closed in this proxy build.
-Reader integration: session-owned adapters wrap ab-native readers and implement ownership::ShadowReader::snapshot(SourceId) -> ObservationSet (ab-native must not depend on ab-session);
-call shadow_once with Swift fact adapter and ab-native reader. API accepts no writer or
-checkpoint sink and returns Equal/Incomplete/Different. Records are canonical JSON bytes
-keyed by native key; no duplicate keys. ab-native adapters remain worker-owned.
+"Swift" or "Rust". Default Swift. Rust fails closed in this proxy build.
 
 ## Swift endpoint delivery
 
@@ -79,7 +73,7 @@ collection scopes include collections and the Contacts history_token. Contacts h
 pages individual changed identifiers, without implying deletion. Completed snapshots
 release their retained rows; continuation after terminal completion returns expired.
 Existing registered query operations maps.snapshot, pdf.search, audio.transcribe and
-shortcuts.actions, plus shortcuts.run, are permit-gated native effects. The closed
+plus shortcuts.run, are permit-gated native effects (shortcuts.actions is answered by ab-session itself when the shortcuts source is routed: `ab_native::shortcut_actions`). The closed
 Swift catalogue is NativeServer.effectOperations. The proxy leaves effects disabled;
 AppleSession.runNative is exclusive with the IPC run loop and is not selected by the
 current raw Rust proxy. No live framework parity or production cutover was performed.
@@ -175,7 +169,7 @@ Build ab-session with `--features rust-capture`. Without it the binary is unchan
 `Selection::validate_proxy` still rejects `Producer::Rust`. The mode is separate from the
 fd-launched proxy and from `rust-effects`; the two relays are not combined yet.
 
-Entry point: `ab-session --lab-listen PATH --lab-gateway PATH`. It listens where the Helper (or
+Entry point: `ab-session --lab-listen PATH --lab-gateway PATH`, present only in a binary built with `--features lab,rust-capture` (the shipped build has no `--lab-*` flags). It listens where the Helper (or
 simapple) would dial the gateway, dials the gateway socket for every accepted connection, and runs
 `routed::relay`. Configuration is two environment variables:
 `AB_SESSION_PRODUCERS={"safari":"Rust"}` selects sources (others stay Swift/simapple), and

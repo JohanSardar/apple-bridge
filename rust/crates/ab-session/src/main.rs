@@ -4,14 +4,14 @@ use ab_session::Error;
 #[cfg(feature = "rust-capture")]
 use std::os::fd::AsRawFd;
 
-#[cfg(all(feature = "rust-capture", feature = "rust-effects"))]
+#[cfg(all(feature = "lab", feature = "rust-capture", feature = "rust-effects"))]
 struct LabEffects {
     native: String,
     home: std::path::PathBuf,
     config: ab_session::effects::Config,
 }
 
-#[cfg(all(feature = "rust-capture", feature = "rust-effects"))]
+#[cfg(all(feature = "lab", feature = "rust-capture", feature = "rust-effects"))]
 fn lab_effects(
     native: Option<&str>,
     rust: &[String],
@@ -41,7 +41,7 @@ fn lab_effects(
     }))
 }
 
-#[cfg(feature = "rust-capture")]
+#[cfg(all(feature = "lab", feature = "rust-capture"))]
 fn lab_listen(listen: &str, gateway: &str, native: Option<&str>) -> Result<(), Error> {
     let mut selection = ab_session::ownership::Selection::default();
     if let Ok(value) = std::env::var("AB_SESSION_PRODUCERS") {
@@ -115,7 +115,12 @@ fn lab_listen(listen: &str, gateway: &str, native: Option<&str>) -> Result<(), E
             None => None,
         };
         std::thread::spawn(move || {
-            let options = ab_session::routed::Options { poll, watch, state };
+            let options = ab_session::routed::Options {
+                poll,
+                watch,
+                state,
+                queries: ab_session::queries::NativeQueries::default(),
+            };
             #[cfg(feature = "rust-effects")]
             let overlay: Option<&dyn ab_session::routed::Overlay> = layer
                 .as_ref()
@@ -237,6 +242,7 @@ fn parse_flags(args: &[String]) -> Result<Flags, Error> {
     Ok(flags)
 }
 
+#[cfg(feature = "lab")]
 fn lab_session(args: &[String]) -> Result<(), Error> {
     let [_, listen, _, gateway, _, secret, _, home] = args else {
         return Err(Error::Invalid);
@@ -288,21 +294,19 @@ fn serve_session(
     )
 }
 
-#[allow(clippy::too_many_lines)]
-fn run() -> Result<(), Error> {
-    ab_sys::reset_signals();
-    let args: Vec<String> = std::env::args().skip(1).collect();
+#[cfg(feature = "lab")]
+fn lab_entry(args: &[String]) -> Option<Result<(), Error>> {
     if args.len() == 8
         && args[0] == "--lab-session-listen"
         && args[2] == "--lab-gateway"
         && args[4] == "--session-secret"
         && args[6] == "--session-home"
     {
-        return lab_session(&args);
+        return Some(lab_session(args));
     }
     #[cfg(feature = "rust-capture")]
     if args.len() == 4 && args[0] == "--lab-listen" && args[2] == "--lab-gateway" {
-        return lab_listen(&args[1], &args[3], None);
+        return Some(lab_listen(&args[1], &args[3], None));
     }
     #[cfg(feature = "rust-capture")]
     if args.len() == 6
@@ -310,7 +314,18 @@ fn run() -> Result<(), Error> {
         && args[2] == "--lab-gateway"
         && args[4] == "--lab-native"
     {
-        return lab_listen(&args[1], &args[3], Some(&args[5]));
+        return Some(lab_listen(&args[1], &args[3], Some(&args[5])));
+    }
+    None
+}
+
+#[allow(clippy::too_many_lines)]
+fn run() -> Result<(), Error> {
+    ab_sys::reset_signals();
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    #[cfg(feature = "lab")]
+    if let Some(result) = lab_entry(&args) {
+        return result;
     }
     if args.len() < 4 || args[0] != "--gateway-fd" || args[2] != "--helper-fd" {
         return Err(Error::Invalid);

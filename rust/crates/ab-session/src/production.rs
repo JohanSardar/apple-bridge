@@ -2,6 +2,7 @@ use crate::{
     Error,
     native_facts::Client,
     ownership::{ConnectionState, Producer, Selection, SourceId},
+    queries::{MailBodies, NativeQueries},
     readers::{self, CaptureReader},
     routed::{self, Options},
 };
@@ -166,6 +167,19 @@ pub fn load(home: &Path) -> Result<Option<Loaded>, Error> {
         .get("notes")
         .and_then(|source| source["root"].as_str())
         .map(PathBuf::from);
+    let mail_bodies = file
+        .sources
+        .get("mail")
+        .and_then(|source| source["root"].as_str())
+        .map(|root| {
+            let root = Path::new(root);
+            let root = if root.ends_with("MailData") {
+                root.parent().unwrap_or(root)
+            } else {
+                root
+            };
+            Arc::new(MailBodies::new(root.to_path_buf()))
+        });
     let loaded = Loaded {
         notes_root,
         sources: serde_json::to_string(&file.sources)?,
@@ -174,6 +188,10 @@ pub fn load(home: &Path) -> Result<Option<Loaded>, Error> {
             poll: Duration::from_millis(file.poll_ms),
             watch: file.watch,
             state: Some(home.join(STATE_DIRECTORY)),
+            queries: NativeQueries {
+                mail_bodies,
+                shortcut_roots: None,
+            },
         },
     };
     loaded.readers_with(Some(&Arc::new(Client::detached())))?;
@@ -253,6 +271,7 @@ pub fn serve_with_facts(
     };
     #[cfg(feature = "rust-effects")]
     if let Some(link) = effects {
+        let shortcut_actions = link.routing.routes(crate::queries::SHORTCUT_ACTIONS);
         let mut config = crate::effects::Config {
             routing: link.routing,
             ..crate::effects::Config::default()
@@ -266,13 +285,18 @@ pub fn serve_with_facts(
             &link.home.join(EFFECTS_DIRECTORY),
             config,
         )?;
-        let (readers, options) = match capture {
+        let (readers, mut options) = match capture {
             Some(loaded) => (
                 loaded.readers_with(facts.as_ref())?,
                 loaded.options().clone(),
             ),
             None => (BTreeMap::new(), Options::default()),
         };
+        if shortcut_actions {
+            options.queries.shortcut_roots = Some(ab_native::shortcut_actions::default_roots(
+                Path::new(&std::env::var_os("HOME").ok_or(Error::Invalid)?),
+            ));
+        }
         return routed::relay_layered(gateway, helper, readers, &options, Some(&layer));
     }
     #[cfg(not(feature = "rust-effects"))]

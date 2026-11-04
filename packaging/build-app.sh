@@ -25,6 +25,10 @@ mkdir -p "$app/Contents/MacOS" "$app/Contents/Library/LaunchAgents"
 APPLE_BRIDGE_NATIVE_LAB=0 APPLE_BRIDGE_NATIVE_TARGET=AppleBridgeHelper "$root/packaging/dev/build-native.sh" "$root/native"
 cp "$(cat "$root/native/.build/native-output-0")/AppleBridgeHelper" "$app/Contents/MacOS/AppleBridgeHelper"
 "$root/packaging/dev/build-bridge.sh" "$app/Contents/MacOS/bridge" aarch64-apple-darwin
+session=${AB_SESSION_BINARY:-$("$root/packaging/dev/build-session.sh")}
+[[ -f $session && -x $session ]]
+cp "$session" "$app/Contents/MacOS/ab-session"
+chmod 755 "$app/Contents/MacOS/ab-session"
 cp "$root/packaging/dev/Info.plist" "$app/Contents/Info.plist"
 python3 - "$app" "$app_home" "$api" "$peer" <<'CONFIG'
 import plistlib

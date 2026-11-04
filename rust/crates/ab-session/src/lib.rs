@@ -13,6 +13,8 @@ pub mod ownership;
 pub mod production;
 pub mod proxy;
 #[cfg(feature = "rust-capture")]
+pub mod queries;
+#[cfg(feature = "rust-capture")]
 pub mod readers;
 #[cfg(feature = "rust-capture")]
 pub mod routed;

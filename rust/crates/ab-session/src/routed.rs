@@ -1,10 +1,12 @@
 use crate::{
     Error,
     flight::{Flight, Flights, Ledger, Refused, rows},
-    frame::{MAX_FRAME, read_frame, send, text},
+    frame::{MAX_FRAME, read_frame, send, send_large, text},
+    queries::NativeQueries,
     readers::{BlobServer, CaptureReader, ScanContext},
     store::{Record, Store},
 };
+use ab_wire::gateway::{BlobRead, Committed, Dispatch, GatewayFrame};
 use serde_json::{Value, json};
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -59,6 +61,7 @@ pub struct Options {
     pub poll: Duration,
     pub watch: bool,
     pub state: Option<std::path::PathBuf>,
+    pub queries: NativeQueries,
 }
 
 impl Default for Options {
@@ -67,6 +70,7 @@ impl Default for Options {
             poll: Duration::from_millis(100),
             watch: false,
             state: None,
+            queries: NativeQueries::default(),
         }
     }
 }
@@ -319,10 +323,10 @@ fn register(
     )
 }
 
-fn note_dispatch(shared: &mut Shared, value: &Value) {
+fn note_dispatch(shared: &mut Shared, dispatch: Dispatch) {
     let sequence = shared.flights.sequence();
-    if let Some(id) = value["command_id"].as_str() {
-        shared.dispatched.insert(id.to_owned(), sequence);
+    if let Some(id) = dispatch.command_id {
+        shared.dispatched.insert(id, sequence);
     }
 }
 
@@ -612,11 +616,15 @@ fn unavailable(handle: &str) -> Value {
     json!({"t":"BlobUnavailable","handle":handle,"reason":"unavailable"})
 }
 
-fn blob_reply(blobs: &Blobs, readers: &Readers, value: &Value) -> Result<Option<Value>, Error> {
-    let handle = text(value, "handle")?;
-    let offset = value["offset"].as_u64();
-    let length = value["length"]
-        .as_u64()
+fn blob_reply(
+    blobs: &Blobs,
+    readers: &Readers,
+    request: &BlobRead,
+) -> Result<Option<Value>, Error> {
+    let handle = request.handle.as_str();
+    let offset = request.offset;
+    let length = request
+        .length
         .filter(|length| (1..=131_072).contains(length))
         .and_then(|length| usize::try_from(length).ok());
     for server in &blobs.servers {
@@ -652,19 +660,14 @@ fn committed(
     readers: &Readers,
     store: Option<&Store>,
     to_helper: &Mutex<UnixStream>,
-    value: &Value,
+    frame: &Committed,
 ) -> Result<bool, Error> {
-    let source = text(value, "source")?;
+    let source = frame.source.as_str();
     let shared = gate.lock()?;
     let Some(flight) = shared.flights.get(source) else {
         return Ok(true);
     };
-    if flight.origin.rust
-        && !flight.matches(
-            value["checkpoint"].as_str().unwrap_or_default(),
-            value["credit"].as_u64(),
-        )
-    {
+    if flight.origin.rust && !flight.matches(&frame.checkpoint, frame.credit) {
         return Err(Error::Conflict);
     }
     let (rust, last) = (flight.origin.rust, flight.origin.last);
@@ -698,11 +701,11 @@ fn gateway_frame(
     store: Option<&Store>,
     to_gateway: &Mutex<UnixStream>,
     to_helper: &Mutex<UnixStream>,
-    value: &Value,
+    frame: GatewayFrame,
 ) -> Result<bool, Error> {
-    match value["t"].as_str() {
-        Some("BlobRead") => {
-            let Some(reply) = blob_reply(blobs, readers, value)? else {
+    match frame {
+        GatewayFrame::BlobRead(request) => {
+            let Some(reply) = blob_reply(blobs, readers, &request)? else {
                 return Ok(true);
             };
             send(
@@ -711,31 +714,15 @@ fn gateway_frame(
             )?;
             Ok(false)
         }
-        Some("Open") => {
+        GatewayFrame::Open(open) => {
             let mut shared = gate.lock()?;
-            let credit = value["byte_credit"].as_u64().unwrap_or(0);
-            shared.fence = value["owner_fence"].as_u64().unwrap_or(0);
-            let committed = value["checkpoints"]
-                .as_object()
+            shared.fence = open.owner_fence;
+            let committed = open
+                .checkpoints
                 .into_iter()
-                .flatten()
-                .map(|(source, checkpoint)| {
-                    (
-                        source.clone(),
-                        (
-                            checkpoint["generation"]
-                                .as_str()
-                                .unwrap_or_default()
-                                .to_owned(),
-                            checkpoint["checkpoint"]
-                                .as_str()
-                                .unwrap_or_default()
-                                .to_owned(),
-                        ),
-                    )
-                })
+                .map(|(source, point)| (source, (point.generation, point.checkpoint)))
                 .collect();
-            shared.flights.open(credit, committed);
+            shared.flights.open(open.byte_credit, committed);
             if let Some(store) = store {
                 for source in readers.keys() {
                     let Some(record) = store.load(source) else {
@@ -757,12 +744,12 @@ fn gateway_frame(
             gate.changed.notify_all();
             Ok(true)
         }
-        Some("Committed") => committed(gate, readers, store, to_helper, value),
-        Some("Dispatch") => {
-            note_dispatch(&mut *gate.lock()?, value);
+        GatewayFrame::Committed(frame) => committed(gate, readers, store, to_helper, &frame),
+        GatewayFrame::Dispatch(dispatch) => {
+            note_dispatch(&mut *gate.lock()?, dispatch);
             Ok(true)
         }
-        _ => Ok(true),
+        GatewayFrame::Query(_) | GatewayFrame::Other => Ok(true),
     }
 }
 
@@ -808,6 +795,7 @@ pub fn relay_layered(
         servers: readers
             .values()
             .filter_map(|reader| reader.blobs())
+            .chain(options.queries.blob_server())
             .collect(),
         prefixed: readers
             .iter()
@@ -829,6 +817,17 @@ pub fn relay_layered(
         let upstream = scope.spawn(|| -> Result<(), Error> {
             let result = (|| loop {
                 let (bytes, value) = read_frame(&mut gateway_read)?;
+                let typed = GatewayFrame::from_value(&value).map_err(|_| Error::Invalid)?;
+                if options.queries.handles(&typed) {
+                    let (to_gateway, queries) = (&to_gateway, &options.queries);
+                    scope.spawn(move || {
+                        let reply = queries.answer(&value);
+                        if let Ok(mut output) = to_gateway.lock() {
+                            let _ = send_large(&mut output, &reply);
+                        }
+                    });
+                    continue;
+                }
                 let layered = match layer {
                     Some(layer) => layer.gateway(scope, &value, &to_gateway, &to_helper, &gate)?,
                     None => true,
@@ -840,7 +839,7 @@ pub fn relay_layered(
                     store,
                     &to_gateway,
                     &to_helper,
-                    &value,
+                    typed,
                 )?;
                 if layered && pass {
                     to_helper

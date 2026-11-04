@@ -100,6 +100,7 @@ public actor AppleSession: ObservationSink {
     func routedOperation(_ operation: String) -> Bool { effectsRouting?.routes(operation) ?? false }
     private func narrowed(_ capabilities: [String]) -> [String] { effectsRouting?.narrowed(capabilities) ?? capabilities }
     private let guardLog: DispatchGuard
+    private let ownership: CaptureOwnership
     private let socket: String
     private let secretFile: String
     private let gatewayPID: Int32
@@ -114,6 +115,7 @@ public actor AppleSession: ObservationSink {
         self.trace = trace
         sources = try SessionSources.Builtins(home: home, labEnabled: commandsEnabled, trace: trace)
         effectsRouting = EffectsRouting.load(home: home)
+        ownership = CaptureOwnership(home: home)
         guardLog = try DispatchGuard(home: home)
         let pidFile = home.appendingPathComponent("helper.pid")
         try Data(String(getpid()).utf8).write(to: pidFile, options: .atomic)
@@ -155,10 +157,7 @@ public actor AppleSession: ObservationSink {
                 try connected.send(.object(["t": .string("Ready"), "protocol": .string("ipc/1"), "coverage": .object(coverage), "capabilities": .object(capabilities), "helper_build": .string("m1-session"), "os_build": .string(ProcessInfo.processInfo.operatingSystemVersionString)]))
                 try await publishReadiness()
                 for outcome in await guardLog.outcomes.values where outcome["disposition"].string == "indeterminate" { try connected.send(outcome) }
-                let captureSource = labEnabled ? (try? String(contentsOf: home.appendingPathComponent("lab-capture-source"), encoding: .utf8)) : nil
-                if captureSource == nil || captureSource == "reminders" { captureTasks.append(Task { await self.capture() }) }
-                if captureSource == nil || captureSource == "calendar" { captureTasks.append(Task { await self.captureAdditional(calendar) }) }
-                for source in additionalSources.values where captureSource == nil || captureSource == source.name { captureTasks.append(Task { await self.captureAdditional(source) }) }
+                startCaptures()
                 let watchdog = Task {
                     var delay = Duration.seconds(1)
                     while !Task.isCancelled {
@@ -182,6 +181,14 @@ public actor AppleSession: ObservationSink {
             try await Task.sleep(for: .milliseconds(backoff))
             backoff = min(backoff * 2, 2000)
         }
+    }
+
+    private func startCaptures() {
+        let selected = labEnabled ? (try? String(contentsOf: home.appendingPathComponent("lab-capture-source"), encoding: .utf8)) : nil
+        func wanted(_ name: String) -> Bool { (selected == nil || selected == name) && ownership.swiftCaptures(name) }
+        if wanted("reminders") { captureTasks.append(Task { await self.capture() }) }
+        if wanted("calendar") { captureTasks.append(Task { await self.captureAdditional(calendar) }) }
+        for source in additionalSources.values where wanted(source.name) { captureTasks.append(Task { await self.captureAdditional(source) }) }
     }
 
     private func receive(_ wire: PeerWire) async throws -> JSON {
@@ -614,10 +621,7 @@ public actor AppleSession: ObservationSink {
                 }
                 try connected.send(NativeSessionFrame.ready(coverage: coverage, capabilities: capabilities, helperBuild: "m1-session", osBuild: ProcessInfo.processInfo.operatingSystemVersionString))
                 try await publishReadiness()
-                let captureSource = labEnabled ? (try? String(contentsOf: home.appendingPathComponent("lab-capture-source"), encoding: .utf8)) : nil
-                if captureSource == nil || captureSource == "reminders" { captureTasks.append(Task { await self.capture() }) }
-                if captureSource == nil || captureSource == "calendar" { captureTasks.append(Task { await self.captureAdditional(calendar) }) }
-                for source in additionalSources.values where captureSource == nil || captureSource == source.name { captureTasks.append(Task { await self.captureAdditional(source) }) }
+                startCaptures()
                 let watchdog = Task {
                     var delay = Duration.seconds(1)
                     while !Task.isCancelled {

@@ -16,14 +16,23 @@ final class Once: @unchecked Sendable {
     }
 }
 
+final class Counter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = 0
+    func take() { lock.lock(); value += 1; lock.unlock() }
+    var count: Int { lock.lock(); defer { lock.unlock() }; return value }
+}
+
 struct FakeSource: Source {
     let name = "phone"
     let once = Once()
+    let started = Counter()
     let observes: Bool
     func open() async -> SourceReadiness {
         SourceReadiness(state: "ready", coverage: .object(["fields": .string("complete")]), capabilities: ["phone.set"])
     }
     func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
+        started.take()
         guard once.take() else { try await Task.sleep(for: .seconds(3600)); return }
         let rows: [JSON] = (0..<3).map { .object(["kind": .string("upsert"), "collection": .string("phone.item"), "native_key": .string("k\($0)"), "data": .object(["n": .integer(UInt64($0))]), "observed_at": .string("2026-01-02T03:04:05Z")]) }
         try await sink.emit(source: "phone", generation: "g1", observations: rows, scanID: "scan-a", scanStartedAt: "", scope: ["phone.item"], completionEvidence: "complete", blobHandles: [:], live: false)
@@ -65,6 +74,7 @@ struct SessionChecks {
             try await live(descriptor)
             return
         }
+        try await ownership()
         let home = FileManager.default.temporaryDirectory.appendingPathComponent("ab-session-checks-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         try Data("phone".utf8).write(to: home.appendingPathComponent("lab-capture-source"))
@@ -117,6 +127,36 @@ struct SessionChecks {
         shutdown(helperDescriptor, SHUT_RDWR)
         _ = await running.value
         print("session checks passed")
+    }
+
+    @MainActor
+    static func ownership() async throws {
+        for flipped in [true, false] {
+            let home = FileManager.default.temporaryDirectory.appendingPathComponent("ab-session-owner-" + UUID().uuidString)
+            try FileManager.default.createDirectory(at: home.appendingPathComponent("session"), withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+            try Data("phone".utf8).write(to: home.appendingPathComponent("lab-capture-source"))
+            if flipped { try Data("{\"sources\":{\"phone\":{\"root\":\"/nonexistent\"}}}".utf8).write(to: home.appendingPathComponent("session/rust-capture.json")) }
+            let session = try AppleSession(socket: home.appendingPathComponent("none.sock").path, secretFile: home.appendingPathComponent("none").path, home: home, gatewayPID: getpid(), commandsEnabled: true)
+            let source = FakeSource(observes: true)
+            try await session.register(source)
+            var pair: [Int32] = [-1, -1]
+            guard socketpair(AF_UNIX, SOCK_STREAM, 0, &pair) == 0 else { throw CheckFailure.failed("socketpair") }
+            let helperDescriptor = pair[0]
+            let peer = Peer(wire: try NativeWire(descriptor: pair[1]))
+            let running = Task { try? await session.runNative(connect: { (helperDescriptor, {}) }) }
+            try peer.wire.send(.object(["t": .string("Hello"), "protocol": .string("native/1"), "version": .integer(1), "owner_fence": .integer(7)]))
+            _ = try await peer.next("Welcome")
+            try peer.wire.send(.object(["t": .string("Session"), "checkpoints": .object([:])]))
+            let ready = try await peer.next("Ready")
+            try check(ready["capabilities"]["phone"].array.contains(.string("phone.set")), "a rust-owned source still serves its commands")
+            try await Task.sleep(for: .seconds(2))
+            try check(flipped ? source.started.count == 0 : source.started.count == 1, flipped ? "swift capture must not start for a rust-owned source" : "swift capture starts when the switch is off")
+            running.cancel()
+            shutdown(pair[1], SHUT_RDWR)
+            shutdown(helperDescriptor, SHUT_RDWR)
+            _ = await running.value
+        }
+        print("ownership checks passed")
     }
 
     @MainActor

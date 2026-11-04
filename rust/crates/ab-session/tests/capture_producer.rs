@@ -359,6 +359,7 @@ fn polling(state: Option<&Path>) -> routed::Options {
         poll: Duration::from_millis(20),
         watch: false,
         state: state.map(Path::to_path_buf),
+        queries: ab_session::queries::NativeQueries::default(),
     }
 }
 
@@ -530,6 +531,7 @@ fn watcher_wakes_the_producer_long_before_the_poll_interval() -> Fallible<()> {
             poll: Duration::from_secs(120),
             watch: true,
             state: None,
+            queries: ab_session::queries::NativeQueries::default(),
         },
         json!({}),
     )?;

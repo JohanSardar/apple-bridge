@@ -9,12 +9,6 @@ import UsageSource
 
 @MainActor
 internal enum SessionSources {
-    static func rustCaptureSources(home: URL) -> Set<String> {
-        guard let data = try? Data(contentsOf: home.appendingPathComponent("session/rust-capture.json")),
-              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let sources = object["sources"] as? [String: Any] else { return [] }
-        return Set(sources.keys)
-    }
     static func rustStore(home: URL, source: String) -> Bool {
         guard let data = try? Data(contentsOf: home.appendingPathComponent("session/rust-capture.json")),
               let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],

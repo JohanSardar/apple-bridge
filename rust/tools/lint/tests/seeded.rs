@@ -213,3 +213,123 @@ fn skipped_directories_are_ignored() {
     }
     assert_eq!(lint_tree(dir.path()), Vec::new());
 }
+
+fn caught_boundary(relative: &str, body: &str, concept: &str) {
+    let findings = lint_with(relative, body);
+    assert!(
+        findings.iter().any(|f| f.path == relative
+            && f.message.starts_with("boundary: ")
+            && f.message.contains(concept)),
+        "{relative} {body:?} not caught: {findings:?}"
+    );
+}
+
+#[test]
+fn boundary_catches_sqlite_in_swift() {
+    caught_boundary(
+        "native/Sources/NewSource/Reader.swift",
+        "import SQLite3\n",
+        "sqlite concept",
+    );
+    caught_boundary(
+        "native/Sources/NewSource/Reader.swift",
+        "let rc = sqlite3_open(path, &db)\n",
+        "sqlite concept",
+    );
+}
+
+#[test]
+fn boundary_catches_gateway_concepts_in_swift() {
+    for (body, token) in [
+        ("let key = \"capture_checkpoint\"\n", "capture_checkpoint"),
+        ("var credit = 0\n", "credit"),
+        ("case \"Committed\":\n", "Committed"),
+        ("case \"ScanCommitted\":\n", "ScanCommitted"),
+        ("var committed = [String]()\n", "committed"),
+        ("let observedBaselines = [:]\n", "Baseline"),
+    ] {
+        caught_boundary("native/Sources/NewSource/Sink.swift", body, token);
+    }
+}
+
+#[test]
+fn boundary_ignores_unrelated_words() {
+    let findings = lint_with(
+        "native/Sources/NewSource/Plain.swift",
+        "let creditCard = 1\nlet uncommittedChange = 2\n",
+    );
+    assert_eq!(findings, Vec::new());
+}
+
+#[test]
+fn boundary_ignores_check_targets_and_tests() {
+    for relative in [
+        "native/Sources/NewChecks/main.swift",
+        "native/Sources/NewOracle/main.swift",
+        "native/Tests/NewChecks/Main.swift",
+    ] {
+        let findings = lint_with(relative, "import SQLite3\nvar credit = 0\n");
+        assert_eq!(findings, Vec::new(), "{relative}");
+    }
+}
+
+#[test]
+fn boundary_allowlist_admits_exactly_the_listed_rule() {
+    let dir = tempfile::tempdir().unwrap_or_else(|e| panic!("{e}"));
+    baseline(dir.path());
+    write(
+        dir.path(),
+        "native/boundary-allowlist.txt",
+        "sqlite native/Sources/Old/Reader.swift moves-to-rust\n",
+    );
+    write(
+        dir.path(),
+        "native/Sources/Old/Reader.swift",
+        "import SQLite3\nvar credit = 0\n",
+    );
+    let findings = lint_tree(dir.path());
+    assert_eq!(findings.len(), 1, "{findings:?}");
+    assert!(findings[0].message.contains("gateway concept"));
+}
+
+#[test]
+fn boundary_stale_allowlist_entry_fails() {
+    let dir = tempfile::tempdir().unwrap_or_else(|e| panic!("{e}"));
+    baseline(dir.path());
+    write(
+        dir.path(),
+        "native/boundary-allowlist.txt",
+        "gateway native/Sources/Gone/Sink.swift moves-to-rust\nsqlite native/Sources/App/Ok.swift moves-to-rust\n",
+    );
+    let findings = lint_tree(dir.path());
+    assert_eq!(findings.len(), 2, "{findings:?}");
+    assert!(
+        findings
+            .iter()
+            .all(|f| f.path == "native/boundary-allowlist.txt"
+                && f.message.starts_with("stale allowlist entry"))
+    );
+}
+
+#[test]
+fn boundary_rejects_malformed_allowlist() {
+    let dir = tempfile::tempdir().unwrap_or_else(|e| panic!("{e}"));
+    baseline(dir.path());
+    write(
+        dir.path(),
+        "native/boundary-allowlist.txt",
+        "gateway native/Sources/App/Ok.swift\nwhatever native/Sources/App/Ok.swift reason\n",
+    );
+    let findings = lint_tree(dir.path());
+    assert_eq!(findings.len(), 2, "{findings:?}");
+}
+
+#[test]
+fn boundary_real_allowlist_is_exactly_todays_violations() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..");
+    let findings: Vec<_> = lint_tree(&root)
+        .into_iter()
+        .filter(|f| f.message.starts_with("boundary:") || f.message.starts_with("stale allowlist"))
+        .collect();
+    assert_eq!(findings, Vec::new());
+}
