@@ -1004,19 +1004,15 @@ fn resolved(path: &Path) -> Result<PathBuf, Error> {
     let mut tail = Vec::new();
     let mut head = path.as_path();
     loop {
-        match head.canonicalize() {
-            Ok(mut base) => {
-                for part in tail.iter().rev() {
-                    base.push(part);
-                }
-                return Ok(base);
+        if let Ok(mut base) = head.canonicalize() {
+            for part in tail.iter().rev() {
+                base.push(part);
             }
-            Err(_) => {
-                let name = head.file_name().ok_or(Error::Invalid)?;
-                tail.push(name.to_owned());
-                head = head.parent().ok_or(Error::Invalid)?;
-            }
+            return Ok(base);
         }
+        let name = head.file_name().ok_or(Error::Invalid)?;
+        tail.push(name.to_owned());
+        head = head.parent().ok_or(Error::Invalid)?;
     }
 }
 
