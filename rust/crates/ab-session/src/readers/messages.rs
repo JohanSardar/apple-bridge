@@ -573,6 +573,10 @@ fn collect(value: &Value, at: &str, aliases: &mut BTreeMap<String, Value>) {
 }
 
 impl CaptureReader for MessagesReader {
+    fn refresh(&mut self) -> bool {
+        true
+    }
+
     fn source(&self) -> &'static str {
         "messages"
     }
