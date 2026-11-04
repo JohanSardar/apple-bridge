@@ -51,6 +51,7 @@ pub mod maps;
 pub mod media;
 pub mod messages_a;
 pub mod messages_b;
+pub mod messages_real;
 pub mod messages_rich;
 pub mod messages_visibility;
 pub mod native;
@@ -333,6 +334,7 @@ pub fn registry() -> Registry {
         Ok(())
     });
     registry.register_real("MSG-DELETE-VISIBILITY", messages_visibility::real);
+    registry.register_real("MSG-SEND-SELF-TEXT", messages_real::self_text);
     registry.register_real("CALL-READ-REAL", |world, evidence| {
         calls::phone(world, &serde_json::Value::Null, evidence)
     });
