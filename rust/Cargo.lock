@@ -2504,6 +2504,7 @@ dependencies = [
  "hmac 0.12.1",
  "jiff",
  "lab-demo",
+ "lab-probe",
  "lab-relay",
  "lab-runner",
  "lab-wire",

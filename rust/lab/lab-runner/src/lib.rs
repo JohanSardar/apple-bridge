@@ -1,8 +1,8 @@
 pub mod safety;
-use lab_world::{Error, RealConfig, Result, World};
+use lab_world::{Error, RealConfig, Result, World, WorldConfig};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::{
     thread,
     time::{Duration, Instant},
@@ -65,6 +65,7 @@ pub type StandaloneHandler = fn(&mut Evidence) -> Result<()>;
 pub struct Registry {
     handlers: BTreeMap<String, Handler>,
     real: BTreeMap<String, RealHandler>,
+    simulated: BTreeSet<String>,
     standalone: BTreeMap<String, StandaloneHandler>,
 }
 #[must_use]
@@ -72,7 +73,17 @@ pub fn supports_level(scenario: &Scenario, level: &str) -> bool {
     scenario.levels.iter().any(|s| s == level)
         || (level == "sim" && scenario.levels.iter().any(|s| s == "replica"))
         || (level == "real"
-            && matches!(scenario.id.as_str(), "MAC-REPLICA" | "FILE-REPLICA")
+            && matches!(
+                scenario.id.as_str(),
+                "MAC-REPLICA"
+                    | "FILE-REPLICA"
+                    | "WEB-RELAY-COMMAND"
+                    | "WEB-RELAY-CONNECT"
+                    | "WEB-RELAY-NATIVE-AGENTS"
+                    | "WEB-RELAY-PUBLIC-AGENTS"
+                    | "WEB-RELAY-REPLICA"
+                    | "WEB-RELAY-REPLICA-BLOBS"
+            )
             && scenario.levels.iter().any(|s| s == "replica"))
 }
 impl Registry {
@@ -81,6 +92,10 @@ impl Registry {
     }
     pub fn register_real(&mut self, id: &str, handler: RealHandler) {
         self.real.insert(id.into(), handler);
+    }
+    pub fn register_real_simulated(&mut self, id: &str, handler: RealHandler) {
+        self.real.insert(id.into(), handler);
+        self.simulated.insert(id.into());
     }
     pub fn register_standalone(&mut self, id: &str, handler: StandaloneHandler) {
         self.standalone.insert(id.into(), handler);
@@ -126,7 +141,16 @@ impl Registry {
             }
             return Ok(evidence);
         }
-        let mut world = World::start_real(config)?;
+        let mut world = if self.simulated.contains(&scenario.id) {
+            World::start(WorldConfig {
+                gateway: config.gateway,
+                simapple: config.simapple,
+                directory: config.directory,
+                scope: config.scope,
+            })?
+        } else {
+            World::start_real(config)?
+        };
         if let Some(handler) = self.real.get(&scenario.id)
             && let Err(error) = handler(&mut world, &mut evidence)
         {

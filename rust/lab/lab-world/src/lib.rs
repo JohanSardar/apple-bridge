@@ -31,6 +31,7 @@ pub struct WorldConfig {
 #[derive(Debug, Clone)]
 pub struct RealConfig {
     pub gateway: PathBuf,
+    pub simapple: PathBuf,
     pub helper_app: Option<PathBuf>,
     pub directory: PathBuf,
     pub scope: String,
