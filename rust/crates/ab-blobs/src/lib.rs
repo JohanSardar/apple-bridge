@@ -101,6 +101,14 @@ impl Default for Entry {
         }
     }
 }
+impl Entry {
+    #[must_use]
+    pub fn rearmable(&self) -> bool {
+        self.state == BlobState::Failed
+            && self.reason == "ipc_retry_exhausted"
+            && self.corruptions == 0
+    }
+}
 fn zero_time() -> String {
     "0001-01-01T00:00:00Z".into()
 }
@@ -296,7 +304,7 @@ impl Store {
         let Some(e) = self.manifest.entries.get_mut(d.as_str()) else {
             return Ok(false);
         };
-        if e.state != BlobState::Failed || e.reason != "ipc_retry_exhausted" || e.corruptions > 0 {
+        if !e.rearmable() {
             return Ok(false);
         }
         e.state = BlobState::Pending;
