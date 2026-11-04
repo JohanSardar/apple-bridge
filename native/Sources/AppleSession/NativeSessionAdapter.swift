@@ -47,7 +47,8 @@ extension AppleSession: NativeAdapter {
         let calendar = builtins.calendar, reminders = builtins.reminders, contacts = builtins.contacts
         switch operation {
         case "agenda.calendars", "agenda.events":
-            let enumeration = try await cache.read("calendar") { try await calendar.enumerate() }
+            let rustStore = await SessionSources.rustStore(home: home, source: "calendar")
+            let enumeration = try await cache.read("calendar") { try await calendar.enumerate(storeInRust: rustStore) }
             return page(enumeration, collection: operation == "agenda.events" ? "calendar.event" : "calendar.calendar", handles: operation == "agenda.events")
         case "agenda.reminder_lists", "agenda.reminders":
             let enrichment = builtins.remindersStore

@@ -408,7 +408,7 @@ public final class CalendarSource: Source {
         try await scan(into: sink, live: true, command: revision)
     }
 
-    public func enumerate() async throws -> SourceEnumeration {
+    public func enumerate(storeInRust: Bool = false) async throws -> SourceEnumeration {
         guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
         let activity = ForegroundActivity.shared.begin()
         defer { ForegroundActivity.shared.end(activity) }
@@ -431,9 +431,9 @@ public final class CalendarSource: Source {
             }
         }
         guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
-        current = await storeEnrichment.enrich(current, lookups: lookups, force: true)
+        if !storeInRust { current = await storeEnrichment.enrich(current, lookups: lookups, force: true) }
         try saveLookups()
-        return SourceEnumeration(generation: "eventkit-calendar-v1", rows: current.keys.sorted().compactMap { current[$0] }, handles: storeEnrichment.handles)
+        return SourceEnumeration(generation: "eventkit-calendar-v1", rows: current.keys.sorted().compactMap { current[$0] }, handles: storeInRust ? [:] : storeEnrichment.handles)
     }
 
     public func revalidate(_ identities: [JSON]) async throws -> [String] {
