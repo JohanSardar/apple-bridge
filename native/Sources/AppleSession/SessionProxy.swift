@@ -39,7 +39,7 @@ final class SessionProxy: @unchecked Sendable {
         var spawned: pid_t = 0
         var arguments = [binary, "--gateway-fd", "198", "--helper-fd", "199"]
         if let session {
-            let owned = ProcessInfo.processInfo.environment["AB_SESSION_RUST_COMMANDS"] ?? "reminders"
+            let owned = ProcessInfo.processInfo.environment["AB_SESSION_RUST_COMMANDS"] ?? "reminders,calendar"
             arguments += ["--session-secret", session, "--session-home", home]
             if !owned.isEmpty { arguments += ["--rust-commands", owned] }
         }

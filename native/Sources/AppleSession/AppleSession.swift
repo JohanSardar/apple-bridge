@@ -496,14 +496,21 @@ public actor AppleSession: ObservationSink {
         try? connection.send(NativeSessionFrame.rejected(commandID: frame["command_id"], code: details.code, message: details.message, evidence: details.evidence))
     }
 
+    private static func rustOwned(_ operation: String) -> Bool {
+        operation.hasPrefix("reminders.") || operation.hasPrefix("calendar.")
+    }
+
     private func nativePrimitive(_ frame: JSON) async {
         let activity = ForegroundActivity.shared.begin()
         defer { ForegroundActivity.shared.end(activity) }
         guard let connection = link else { return }
         let id = frame["id"]
         do {
-            guard frame["op"].string.hasPrefix("reminders.") else { throw SourceFailure.unsupported }
-            let result = try await source.primitive(frame["op"].string, args: frame["args"], into: self)
+            let operation = frame["op"].string
+            let result: JSON
+            if operation.hasPrefix("reminders.") { result = try await source.primitive(operation, args: frame["args"], into: self) }
+            else if operation.hasPrefix("calendar.") { result = try await calendar.primitive(operation, args: frame["args"], into: self) }
+            else { throw SourceFailure.unsupported }
             guard link === connection, !Task.isCancelled else { return }
             try connection.send(NativeSessionFrame.primitiveResult(id: id, result: result))
         } catch {
@@ -522,8 +529,8 @@ public actor AppleSession: ObservationSink {
             _ = try CommandOrigin(frame)
             guard !frame["command_id"].string.isEmpty, !frame["principal"].string.isEmpty, !frame["request_hash"].string.isEmpty, let expires = parseTimestamp(frame["expires_at"].string), expires > Date() else { throw SourceFailure.invalid }
             let selected = additionalSources[captureRoute(frame["action"]["op"].string)] ?? source
-            guard !frame["action"]["op"].string.hasPrefix("reminders.") else { throw SourceFailure.unsupported }
-            let prepared = frame["action"]["op"].string.hasPrefix("contacts.") ? try await contacts.prepare(frame) : frame["action"]["op"].string.hasPrefix("calendar.") ? try await calendar.prepare(frame) : try await selected.prepare(frame)
+            guard !Self.rustOwned(frame["action"]["op"].string) else { throw SourceFailure.unsupported }
+            let prepared = frame["action"]["op"].string.hasPrefix("contacts.") ? try await contacts.prepare(frame) : try await selected.prepare(frame)
             guard !Task.isCancelled, link === connection, expires > Date() else { throw SourceFailure.expired }
             try connection.send(NativeSessionFrame.prepared(commandID: frame["command_id"], nativeState: prepared.nativeState, route: prepared.nativeState["route"].string.isEmpty ? "eventkit" : prepared.nativeState["route"].string, candidateIDs: prepared.nativeState["candidate_ids"].array, fingerprint: prepared.fingerprint))
         } catch { if link === connection && !Task.isCancelled { await nativeReject(frame, error: error, connection: connection) } }
@@ -534,7 +541,7 @@ public actor AppleSession: ObservationSink {
         defer { ForegroundActivity.shared.end(activity) }
         guard let connection = link else { return }
         let operation = frame["action"]["op"].string
-        guard !operation.hasPrefix("reminders.") else {
+        guard !Self.rustOwned(operation) else {
             try? connection.send(NativeSessionFrame.rejected(commandID: frame["command_id"], code: "unsupported", message: "unsupported", evidence: nil))
             return
         }
@@ -565,7 +572,7 @@ public actor AppleSession: ObservationSink {
         do {
             if ["indeterminate", "locally_observed"].contains(disposition) {
                 let operation = saved["evidence"]["prepared"]["action"]["op"].string
-                guard !operation.hasPrefix("reminders.") else { throw SourceFailure.unsupported }
+                guard !Self.rustOwned(operation) else { throw SourceFailure.unsupported }
                 let selected = additionalSources[captureRoute(operation)] ?? source
                 let resolved = operation.hasPrefix("contacts.") ? await contacts.resolve(id, evidence: saved["evidence"]) : operation.hasPrefix("calendar.") ? await calendar.resolve(id, evidence: saved["evidence"]) : await selected.resolve(id, evidence: saved["evidence"])
                 if resolved["observed"].bool {

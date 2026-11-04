@@ -703,34 +703,46 @@ public final class CalendarSource: Source {
         _ = try validateNative(prepared)
     }
 
-    public func dispatch(_ prepared: Prepared) async throws -> JSON {
+    private struct Performed {
+        var native: String
+        var calendarResult: JSON = .null
+        var goal: JSON = .null
+        var allDay = false
+        var actual: JSON = .null
+        var savedTitle: JSON = .null
+        var observedTitle: JSON = .null
+        var existsAfter = false
+    }
+
+    private func perform(_ action: JSON, validated: EKEvent?) async throws -> Performed {
         let waitStarted = CaptureTrace.now()
         waitingCommands += 1
         defer { waitingCommands -= 1 }
         while scanning { try await Task.sleep(for: .milliseconds(10)) }
-        gate.trace.record("calendar_command_scan_wait", fields: ["duration_ns": .integer(CaptureTrace.now() - waitStarted), "operation": .string(prepared.action["op"].string)])
-        let validated = try validateNative(prepared)
-        let action = prepared.action, operation = prepared.action["op"].string
-        var native = action["native_key"].string
-        var actualResult = JSON.null
+        let operation = action["op"].string
+        gate.trace.record("calendar_command_scan_wait", fields: ["duration_ns": .integer(CaptureTrace.now() - waitStarted), "operation": .string(operation)])
+        var performed = Performed(native: action["native_key"].string)
         if operation == "calendar.create_calendar" {
             guard let source = gate.store.defaultCalendarForNewEvents?.source else { throw SourceFailure.unavailable }
             let calendar = EKCalendar(for: .event, eventStore: gate.store)
             calendar.source = source; calendar.title = args(action)["title"].string
             gate.trace.record("calendar_native_save_started", fields: ["operation": .string(operation)])
             try gate.store.saveCalendar(calendar, commit: true)
-            native = calendar.calendarIdentifier
+            performed.native = calendar.calendarIdentifier
             pendingScope = pendingScope ?? CalendarScanScope(interval: CalendarTime.window(Date()), calendars: [])
-            gate.trace.record("calendar_native_effect", keys: [native], fields: ["operation": .string(operation)])
-            guard let observed = gate.store.calendar(withIdentifier: native), observed.title == calendar.title else { throw SourceFailure.unavailable }
-            actualResult = calendarData(observed)
+            gate.trace.record("calendar_native_effect", keys: [performed.native], fields: ["operation": .string(operation)])
+            let observed = gate.store.calendar(withIdentifier: performed.native)
+            performed.savedTitle = .string(calendar.title)
+            performed.observedTitle = observed.map { .string($0.title) } ?? .null
+            performed.calendarResult = observed.map(calendarData) ?? .null
+            performed.existsAfter = observed != nil
         } else {
-            let event = operation == "calendar.create_event" ? EKEvent(eventStore: gate.store) : try validated ?? fresh(native)
+            let event = operation == "calendar.create_event" ? EKEvent(eventStore: gate.store) : try validated ?? fresh(performed.native)
             if operation != "calendar.create_event" { touch(event, future: args(action)["span"].string == "future") }
             event.calendar = try writable(action["list_key"].string)
             let span: EKSpan = args(action)["span"].string == "future" ? .futureEvents : .thisEvent
-            let goal = operation == "calendar.delete_event" ? JSON.null : try requestedGoal(event, args(action), calendar: event.calendar)
-            let intendedAllDay = args(action).object["all_day"]?.bool ?? event.isAllDay
+            performed.goal = operation == "calendar.delete_event" ? JSON.null : try requestedGoal(event, args(action), calendar: event.calendar)
+            performed.allDay = args(action).object["all_day"]?.bool ?? event.isAllDay
             if operation == "calendar.delete_event" {
                 gate.trace.record("calendar_native_save_started", fields: ["operation": .string(operation)])
                 try gate.store.remove(event, span: span, commit: true)
@@ -738,27 +750,84 @@ public final class CalendarSource: Source {
                 try patch(event, args(action))
                 gate.trace.record("calendar_native_save_started", fields: ["operation": .string(operation)])
                 try gate.store.save(event, span: span, commit: true)
-                if Self.canMaterialize(event) { native = key(event) }
+                if Self.canMaterialize(event) { performed.native = key(event) }
             }
             if operation != "calendar.delete_event" {
                 if Self.canMaterialize(event) { touch(event, future: span == .futureEvents || event.hasRecurrenceRules) }
                 else { pendingScope = nil }
             }
-            gate.trace.record("calendar_native_effect", keys: [native], fields: ["operation": .string(operation)])
+            gate.trace.record("calendar_native_effect", keys: [performed.native], fields: ["operation": .string(operation)])
+            commandRevision += 1
+            commandNeedsCapture = true
             if operation == "calendar.delete_event" {
-                guard (try? fresh(native)) == nil else { throw SourceFailure.unavailable }
+                performed.existsAfter = (try? fresh(performed.native)) != nil
             } else {
-                commandRevision += 1
-                commandNeedsCapture = true
-                let observed = try? fresh(native)
-                let actual = observed.map(nativeResult) ?? .null
-                if let observed { native = key(observed) }
-                return CalendarPostcondition.evidence(native: native, fingerprint: prepared.fingerprint, actual: actual, expected: goal, allDay: intendedAllDay)
+                let observed = try? fresh(performed.native)
+                performed.actual = observed.map(nativeResult) ?? .null
+                if let observed { performed.native = key(observed) }
+                performed.existsAfter = observed != nil
             }
+            return performed
         }
         commandRevision += 1
         commandNeedsCapture = true
-        return .object(["native_key": .string(native), "fingerprint": .string(prepared.fingerprint), "observed": .bool(true), "native_result": actualResult, "absent": .bool(operation == "calendar.delete_event")])
+        return performed
+    }
+
+    public func dispatch(_ prepared: Prepared) async throws -> JSON {
+        let validated = try validateNative(prepared)
+        let action = prepared.action, operation = prepared.action["op"].string
+        let performed = try await perform(action, validated: validated)
+        if operation == "calendar.create_calendar" {
+            guard performed.observedTitle == performed.savedTitle, performed.savedTitle != .null else { throw SourceFailure.unavailable }
+            return .object(["native_key": .string(performed.native), "fingerprint": .string(prepared.fingerprint), "observed": .bool(true), "native_result": performed.calendarResult, "absent": .bool(false)])
+        }
+        if operation == "calendar.delete_event" {
+            guard !performed.existsAfter else { throw SourceFailure.unavailable }
+            return .object(["native_key": .string(performed.native), "fingerprint": .string(prepared.fingerprint), "observed": .bool(true), "native_result": .null, "absent": .bool(true)])
+        }
+        return CalendarPostcondition.evidence(native: performed.native, fingerprint: prepared.fingerprint, actual: performed.actual, expected: performed.goal, allDay: performed.allDay)
+    }
+
+    public func primitive(_ operation: String, args request: JSON, into sink: any ObservationSink) async throws -> JSON {
+        guard commandsEnabled else { throw SourceFailure.unsupported }
+        guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
+        let native = request["native_key"].string
+        switch operation {
+        case "calendar.read_event":
+            guard !native.isEmpty else { return .object(["exists": .bool(false), "known_absent": .bool(false)]) }
+            let event: EKEvent
+            do { event = try fresh(native) } catch SourceFailure.conflict { return .object(["exists": .bool(false), "known_absent": .bool(knownAbsent(native))]) }
+            return .object(["exists": .bool(true), "writable": .bool(event.calendar.allowsContentModifications && !event.calendar.isSubscribed), "calendar_key": .string(event.calendar.calendarIdentifier), "all_day": .bool(event.isAllDay), "data": data(event), "native_result": nativeResult(event)])
+        case "calendar.read_calendar":
+            guard !native.isEmpty, let calendar = gate.store.calendar(withIdentifier: native) else { return .object(["exists": .bool(false)]) }
+            return .object(["exists": .bool(true), "writable": .bool(calendar.allowsContentModifications && !calendar.isSubscribed), "data": calendarData(calendar)])
+        case "calendar.can_create_calendar":
+            return .object(["allowed": .bool(gate.store.defaultCalendarForNewEvents?.allowsContentModifications == true)])
+        case "calendar.goal":
+            let existing = native.isEmpty ? EKEvent(eventStore: gate.store) : try fresh(native)
+            let calendar = try writable(request["list_key"].string)
+            let goal = try requestedGoal(existing, request["calendar_args"], calendar: calendar, baseline: request["baseline"])
+            return .object(["goal": goal, "all_day": .bool(existing.isAllDay)])
+        case "calendar.reconcile":
+            if request["absent_key"].string.isEmpty { try await reconcile(into: sink) }
+            else { try await confirmAbsence(request["absent_key"].string, into: sink) }
+            return .object([:])
+        case "calendar.write":
+            let action: JSON = .object(["op": request["op"], "native_key": request["native_key"], "list_key": request["list_key"], "calendar_args": request["calendar_args"]])
+            let performed = try await perform(action, validated: nil)
+            try await reconcile(into: sink)
+            if request["op"].string == "calendar.delete_event" && !performed.existsAfter { try await confirmAbsence(performed.native, into: sink) }
+            var result: [String: JSON] = ["native_key": .string(performed.native), "exists_after": .bool(performed.existsAfter)]
+            if request["op"].string == "calendar.create_calendar" {
+                result["saved_title"] = performed.savedTitle; result["observed_title"] = performed.observedTitle; result["actual"] = performed.calendarResult
+            } else if request["op"].string != "calendar.delete_event" {
+                result["goal"] = performed.goal; result["all_day"] = .bool(performed.allDay); result["actual"] = performed.actual
+            }
+            return .object(result)
+        default:
+            throw SourceFailure.unsupported
+        }
     }
 
     public func confirmAbsence(_ native: String, into sink: any ObservationSink) async throws {
