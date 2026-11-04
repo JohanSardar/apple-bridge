@@ -18,8 +18,7 @@ const BUDGET_MS: f64 = 200.0;
 fn query(args: &Value, deadline: i64) -> Result<Value> {
     Ok(json!({"id": random_id("qry")?, "args": args, "deadline_ms": deadline}))
 }
-fn roundtrip(world: &World, evidence: &mut Evidence) -> Result<()> {
-    let client = Client::new(world, SCOPE)?;
+pub(crate) fn echo_checks(client: &Client, evidence: &mut Evidence) -> Result<()> {
     let args = json!({"value":"lab"});
     let mut samples = vec![];
     let mut results_ok = true;
@@ -48,6 +47,12 @@ fn roundtrip(world: &World, evidence: &mut Evidence) -> Result<()> {
         max < BUDGET_MS,
         &format!("max {max:.1} ms"),
     );
+    Ok(())
+}
+fn roundtrip(world: &World, evidence: &mut Evidence) -> Result<()> {
+    let client = Client::new(world, SCOPE)?;
+    echo_checks(&client, evidence)?;
+    let args = json!({"value":"lab"});
     let q = query(&args, 1000)?;
     let rest = client.call("test.echo", &q, 20)?;
     let mcp = client.call_mcp("test.echo", &q, 20)?;
@@ -219,7 +224,7 @@ fn await_effect(world: &World, id: &str, want: u64, limit: Duration) -> bool {
         thread::sleep(Duration::from_millis(10));
     }
 }
-fn cancellation(
+pub(crate) fn cancellation(
     world: &World,
     client: &Client,
     mcp: bool,
@@ -273,6 +278,7 @@ pub fn queries(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<
         "CORE-QUERY-BLOB" => blob(world, evidence),
         "CORE-QUERY-SCOPE" => scope(world, evidence),
         "CORE-QUERY-DEADLINE" => deadline(world, evidence),
+        "CORE-QUERY-REPLICA" => crate::query_replica::run(world, evidence),
         other if vision::owns(other) => vision::run(world, evidence),
         other => Err(Error::Invalid(format!(
             "queries variant not ported: {other}"

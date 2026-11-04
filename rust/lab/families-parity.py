@@ -103,7 +103,7 @@ CORE_BULK_SCENARIOS = ['CORE-ACK-DURABLE', 'CORE-CAPTURE-ALIASES', 'CORE-CREDENT
                        'CORE-DISCONNECT-DETECT', 'CORE-DOCTOR', 'CORE-CLOCK-DELAY']
 SCENARIOS += CORE_BULK_SCENARIOS
 SCENARIOS += ROBUST_SCENARIOS
-REAL_ONLY_COMPILED = ['APP-ALARM-REAL', 'APP-APPROVE-REAL', 'APP-CAPTURE-REAL', 'APP-CMD-REAL',
+REAL_ONLY_COMPILED = ['CORE-PERMISSION-STATUS', 'CORE-QUERY-HELPER', 'APP-ALARM-REAL', 'APP-APPROVE-REAL', 'APP-CAPTURE-REAL', 'APP-CMD-REAL',
     'APP-DEVICE-REAL', 'APP-HEALTH-REAL', 'APP-HEALTH-WRITE-REAL', 'APP-INTENTS-REAL', 'APP-LIVE-REAL',
     'APP-LOC-REAL', 'APP-MOTION-REAL', 'APP-NOTIFY-REAL', 'APP-PAIR-REAL', 'APP-SCREENTIME-REAL',
     'APP-SHELL-REAL', 'AUD-TRANSCRIBE', 'BT-REAL', 'CALL-READ-REAL', 'CALLS-REPLICA', 'CONN-CLAUDE-CODE',
@@ -122,6 +122,9 @@ SCENARIOS += ['CORE-SIM-PROGRESS-RECOVERY', 'CORE-SNAPSHOT-POOL']
 MOVED_TO_RUST_TESTS = {
     'core/CORE-SEARCH-UPDATE-PERF': 'drives the Go state store in-process; the Rust runner has no store access. Ported to rust/crates/ab-state/tests/search_update_perf.rs (make rust-search-perf). Speed numbers are recorded, not enforced. The Go assertions search_unavailable_during_rebuild, search_rest_preparing_is_retryable_error_not_empty, search_mcp_preparing_is_retryable_error_not_empty and restart_resumes_pending_rebuild have no Rust equivalent because ab-state rebuilds the search index inside open() instead of in a background migration.',
 }
+CAPTURE_SCENARIOS = ['CORE-REPLICA-CAPTURE-ATOMIC', 'CORE-LIVE-LATENCY', 'CORE-MESSAGES-SHAPE']
+BENCH_SCENARIOS = ['CORE-READMODEL-UPDATE-PERF']
+REPLICA_SCENARIOS = ['CORE-QUERY-REPLICA']
 
 
 def ignored(scenario, name):
@@ -215,6 +218,9 @@ def main():
     parser.add_argument('--helper', action='store_true')
     parser.add_argument('--web', dest='web', action='store_true')
     parser.add_argument('--native-media', dest='native_media', action='store_true')
+    parser.add_argument('--bench', action='store_true')
+    parser.add_argument('--replica', action='store_true')
+    parser.add_argument('--core-capture', dest='core_capture', action='store_true')
     parser.add_argument('--calendar', dest='calendar', action='store_true')
     parser.add_argument('--calendar-native', dest='calendar_native', action='store_true')
     parser.add_argument('--vision', action='store_true')
@@ -280,6 +286,12 @@ def main():
         args.scenario = (args.scenario or []) + VISION_SCENARIOS
     if args.vision_native:
         args.scenario = (args.scenario or []) + VISION_NATIVE_SCENARIOS
+    if args.core_capture:
+        args.scenario = (args.scenario or []) + CAPTURE_SCENARIOS
+    if args.replica:
+        args.scenario = (args.scenario or []) + REPLICA_SCENARIOS
+    if args.bench:
+        args.scenario = (args.scenario or []) + BENCH_SCENARIOS
     if args.native_media:
         args.scenario = (args.scenario or []) + NATIVE_MEDIA_SCENARIOS
     if args.maps:
@@ -302,7 +314,8 @@ def main():
     if not args.rust_only:
         with (out / 'go.jsonl').open('w') as stream:
             impl = ['--impl', 'gateway=rust', '--rust-binary', str(Path(args.gateway).resolve())] if args.go_rust_gateway else []
-            subprocess.run([args.go_lab, 'run', *files, '--level', 'sim', '--json', *impl],
+            level = ['--level', 'replica', '--local-replicas'] if args.replica else ['--level', 'sim']
+            subprocess.run([args.go_lab, 'run', *files, *level, '--json', *impl],
                            stdout=stream, timeout=900, check=True)
     with (out / 'rust.jsonl').open('w') as stream:
         subprocess.run([args.families, 'run', *files, '--gateway', args.gateway,

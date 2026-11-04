@@ -829,12 +829,14 @@ pub fn is_capacity(error: &Error) -> bool {
 #[cfg(feature = "lab")]
 fn capture_observer_reset(db: &Connection) {
     use std::io::Write;
+    use std::os::unix::fs::OpenOptionsExt;
     let Some(home) = db.path().and_then(|p| Path::new(p).parent()) else {
         return;
     };
     if let Ok(mut file) = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
+        .mode(0o600)
         .open(home.join("lab-capture-observer-resets"))
     {
         let _written = file.write_all(b"reset\n");

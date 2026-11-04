@@ -113,6 +113,47 @@ pub fn spawn(world: &World, scope: &str, cap: u64, extra: &[String]) -> Result<u
     });
     Ok(index)
 }
+pub fn spawn_dialed(world: &World, scope: &str) -> Result<usize> {
+    let peer = world.pair_address()?;
+    let index = lock(&ENDPOINTS).len();
+    let home = world.directory.join(format!("replica{index}"));
+    let name = format!("replica{index}");
+    let listen = {
+        let socket = std::net::TcpListener::bind("127.0.0.1:0")?;
+        socket.local_addr()?.to_string()
+    };
+    let code = world.gateway_cli(&[
+        "pair",
+        "--peer-addr",
+        &peer,
+        "--name",
+        &name,
+        "--scope",
+        scope,
+        "--dial-replica",
+        &listen,
+    ])?;
+    cli(&home, &["join", code.trim(), "--listen", &listen])?;
+    let token = cli(&home, &["token", "create", "--scope", scope])?;
+    let log = fs::File::create(world.directory.join(format!("{name}.log")))?;
+    let child = Command::new(binary()?)
+        .args(["start", "--role", "replica", "--home"])
+        .arg(&home)
+        .args(["--api-addr", "127.0.0.1:0", "--listen", &listen])
+        .env("APPLE_BRIDGE_SECRET_STORE", "file")
+        .stdout(log.try_clone()?)
+        .stderr(log)
+        .spawn()?;
+    lock(&CHILDREN).push(child);
+    let address = await_runtime(&home)?;
+    lock(&ENDPOINTS).push(Endpoint {
+        home,
+        address,
+        token,
+        scope: scope.to_owned(),
+    });
+    Ok(index)
+}
 pub fn wait_connected(seconds: u64) -> Result<()> {
     let deadline = Instant::now() + Duration::from_secs(seconds);
     loop {

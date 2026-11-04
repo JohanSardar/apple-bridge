@@ -4,6 +4,7 @@ pub mod blobs;
 pub mod calendar;
 pub mod calendar_fixtures;
 pub mod calls;
+pub mod capture_atomic;
 pub mod cleanup;
 pub mod commands;
 pub mod connectors;
@@ -11,6 +12,7 @@ pub mod consent;
 pub mod contacts;
 pub mod contacts_list;
 pub mod core;
+pub mod core_demo;
 pub mod core_journey;
 pub mod core_robust;
 pub mod demo;
@@ -35,6 +37,7 @@ pub mod iphone_real;
 pub mod journey;
 pub mod labcore;
 pub mod live;
+pub mod live_latency;
 pub mod mac;
 pub mod mac_real;
 pub mod mail;
@@ -50,12 +53,16 @@ pub mod native_runner;
 pub mod notes;
 pub mod packaging;
 pub mod pair;
+pub mod permission_status;
 pub mod phone;
 pub mod pkginstall;
 pub mod poster;
 pub mod private;
 pub mod queries;
+pub mod query_helper;
+pub mod query_replica;
 pub mod rawhttp;
+pub mod readmodel_perf;
 pub mod readmodels;
 pub mod recovery_cases;
 pub mod registration;
@@ -174,6 +181,10 @@ pub fn registry() -> Registry {
             labcore::start_world(world, id, usize::try_from(replicas).unwrap_or(0))?;
         } else if native_runner::starts_world(id) {
             native_runner::start_world(world)?;
+        } else if replicas != 0 && id == "CORE-QUERY-REPLICA" {
+            query_replica::start_world(world, usize::try_from(replicas).unwrap_or(0))?;
+        } else if replicas != 0 && capture_atomic::SCENARIOS.contains(&id) {
+            capture_atomic::start_world(world, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && robust::SCENARIOS.contains(&id) {
             robust::start(world, id, usize::try_from(replicas).unwrap_or(0))?;
         } else if replicas != 0 && contacts_list::SCENARIOS.contains(&id) {
@@ -206,6 +217,8 @@ pub fn registry() -> Registry {
         }
     });
     registry.register("file_commands", filecmd::commands);
+    registry.register_standalone("CORE-PERMISSION-STATUS", permission_status::real);
+    registry.register_real("CORE-QUERY-HELPER", query_helper::real);
     for id in maps::REAL {
         registry.register_real(id, maps::real);
     }
@@ -282,6 +295,8 @@ pub fn registry() -> Registry {
     registry.register("shortcuts_run", shortcuts_run::shortcuts_run);
     registry.register("focus_sim", shortcuts_run::focus_sim);
     registry.register("mac", mac::mac);
+    registry.register("capture_atomic", capture_atomic::capture_atomic);
+    registry.register("changes", live_latency::changes);
     registry.register("calendar_journey", calendar::calendar_journey);
     native_runner::register(&mut registry);
     registry.register("helper_ipc", helper_ipc::cases);
