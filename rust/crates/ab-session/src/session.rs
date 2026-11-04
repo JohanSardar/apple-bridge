@@ -2,12 +2,13 @@ use crate::{
     Error,
     flight::{Flight, Flights, Refused, typed_rows},
 };
-use ab_domain::{ErrorCode, Source};
 use ab_wire::{
     crypto::ipc_proof,
     framing::MAX_FRAME,
     messages::{IpcFrame, Observation},
-    native::{self, Frame as Link, Scan, ScanCommitted, ScanFailed, Session},
+    native::{
+        self, ErrorCode, Frame as Link, Scan, ScanCommitted, ScanFailed, Session, Source,
+    },
 };
 use serde_json::value::RawValue;
 use std::{

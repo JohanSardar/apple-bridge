@@ -2,7 +2,7 @@ use crate::{
     gojson::GoTime,
     messages::{Capture, Checkpoint, IpcFrame, Observation},
 };
-use ab_domain::{ErrorCode, Source};
+pub use ab_domain::{ErrorCode, Source};
 use serde::{
     Deserialize, Serialize,
     de::{self, IgnoredAny, MapAccess, Visitor},
