@@ -1,7 +1,8 @@
 use ab_iphone::{
     Error,
     delivery::{
-        CaptureReceipt, CaptureUpload, Gateway, HealthBatch, LocationRecord, QueuedCommand,
+        CaptureReceipt, CaptureUpload, ConnectorApproval, Gateway, HealthBatch, LocationRecord,
+        QueuedCommand,
     },
 };
 use ab_operations::{
@@ -22,6 +23,7 @@ use std::sync::{Arc, Weak};
 
 #[derive(Debug)]
 pub struct PhoneGateway {
+    pub connectors: Arc<ab_frontdoor::web_connector::Connectors>,
     #[cfg(feature = "lab-harness")]
     pub home: std::path::PathBuf,
     pub state: GatewayStore,
@@ -54,6 +56,27 @@ fn id(row: &QueuedCommand) -> Result<String, Error> {
     Ok(command.id)
 }
 impl Gateway for PhoneGateway {
+    fn connector_pending(&mut self) -> Result<Vec<ConnectorApproval>, Error> {
+        let pending = self.connectors.pending().map_err(|_| Error::Unavailable)?;
+        Ok(pending
+            .into_iter()
+            .map(|summary| ConnectorApproval {
+                expires: summary
+                    .expires_at
+                    .parse::<jiff::Timestamp>()
+                    .map_or(0, jiff::Timestamp::as_second),
+                id: summary.id,
+                code: summary.code,
+                name: summary.client_name,
+                scopes: summary.access,
+            })
+            .collect())
+    }
+    fn connector_decide(&mut self, id: &str, hash: &str, approve: bool) -> Result<(), Error> {
+        self.connectors
+            .decide(id, hash, approve)
+            .map_err(|_| Error::Conflict)
+    }
     fn commands(&mut self) -> Result<Vec<QueuedCommand>, Error> {
         self.state
             .commands()

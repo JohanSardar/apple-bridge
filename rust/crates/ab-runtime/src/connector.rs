@@ -1,5 +1,5 @@
 use crate::Error;
-use ab_frontdoor::web::Web;
+use ab_frontdoor::web_connector::Connectors;
 use axum::{
     Json, Router,
     extract::State,
@@ -29,23 +29,25 @@ struct Decision {
     code: String,
     approve: bool,
 }
-async fn pending(State(web): State<Arc<Web>>) -> Result<Json<Value>, StatusCode> {
-    web.pending_connectors()
+async fn pending(State(connectors): State<Arc<Connectors>>) -> Result<Json<Value>, StatusCode> {
+    connectors
+        .pending()
         .and_then(|p| serde_json::to_value(p).map_err(|_| ab_trust::Error::Unavailable))
         .map(Json)
         .map_err(|_| StatusCode::BAD_REQUEST)
 }
 async fn decide(
-    State(web): State<Arc<Web>>,
+    State(connectors): State<Arc<Connectors>>,
     Json(input): Json<Decision>,
 ) -> Result<Json<Value>, StatusCode> {
-    web.decide_connector(&input.id, &input.code, input.approve)
+    connectors
+        .decide(&input.id, &input.code, input.approve)
         .map(|()| Json(json!({"accepted":true})))
         .map_err(|_| StatusCode::BAD_REQUEST)
 }
 pub async fn serve(
     listener: tokio::net::UnixListener,
-    web: Arc<Web>,
+    connectors: Arc<Connectors>,
     mut stop: tokio::sync::watch::Receiver<bool>,
 ) -> Result<(), Error> {
     let path = listener
@@ -57,7 +59,7 @@ pub async fn serve(
     let router = Router::new()
         .route("/pending", get(pending))
         .route("/decision", post(decide))
-        .with_state(web);
+        .with_state(connectors);
     let mut tasks = tokio::task::JoinSet::new();
     loop {
         tokio::select! {
@@ -76,6 +78,38 @@ pub async fn serve(
     tasks.abort_all();
     std::fs::remove_file(path)?;
     Ok(())
+}
+pub fn approval_window(
+    helper_app: String,
+    home: std::path::PathBuf,
+) -> Option<Arc<dyn Fn() + Send + Sync>> {
+    if !cfg!(target_os = "macos") || helper_app.is_empty() {
+        return None;
+    }
+    let open = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    Some(Arc::new(move || {
+        if open.swap(true, std::sync::atomic::Ordering::SeqCst) {
+            return;
+        }
+        let bridge = std::env::current_exe().unwrap_or_default();
+        let (helper_app, home, open) = (helper_app.clone(), home.clone(), open.clone());
+        std::thread::spawn(move || {
+            let status = std::process::Command::new("open")
+                .args(["-n", "-W", "-g", "-a"])
+                .arg(&helper_app)
+                .args(["--args", "connector-approvals"])
+                .arg(&home)
+                .arg(&bridge)
+                .stdin(std::process::Stdio::null())
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .status();
+            if status.is_err() {
+                eprintln!("connector approval window could not open");
+            }
+            open.store(false, std::sync::atomic::Ordering::SeqCst);
+        });
+    }))
 }
 pub async fn command(home: &Path, action: &str, id: &str, code: &str) -> Result<Value, Error> {
     let client = reqwest::Client::builder()

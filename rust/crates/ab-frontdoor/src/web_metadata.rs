@@ -1,6 +1,6 @@
 use ab_trust::{
     Error,
-    oauth::{Client, valid_redirect},
+    oauth::{Client, display_name, redirect_matches, valid_redirect},
 };
 use std::{
     io::Read,
@@ -71,7 +71,11 @@ impl Fetcher {
             .get(id)
             .filter(|(_, expires)| *expires > clock())
         {
-            return if client.redirect_uris.iter().any(|u| u == redirect) {
+            return if client
+                .redirect_uris
+                .iter()
+                .any(|u| redirect_matches(u, redirect))
+            {
                 Ok(client.clone())
             } else {
                 Err(Error::Invalid)
@@ -130,15 +134,17 @@ impl Fetcher {
             if raw.len() > 5120 {
                 return Err(Error::Invalid);
             }
-            let c: Client = serde_json::from_slice(&raw)?;
+            let mut c: Client = serde_json::from_slice(&raw)?;
             if c.client_id != id
-                || c.redirect_uris.is_empty()
-                || !c.redirect_uris.iter().any(|u| u == redirect)
+                || !c
+                    .redirect_uris
+                    .iter()
+                    .any(|u| redirect_matches(u, redirect))
                 || !c.redirect_uris.iter().all(|u| valid_redirect(u))
-                || !["", "none"].contains(&c.token_endpoint_auth_method.as_str())
             {
                 return Err(Error::Invalid);
             }
+            c.client_name = display_name(&c);
             let ttl = cache_ttl(&headers);
             if ttl > 0 {
                 let mut cache = self.cache.lock().map_err(|_| Error::Unavailable)?;

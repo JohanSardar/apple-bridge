@@ -1,0 +1,9 @@
+[package]
+name = "ab-pages"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "The one page shell and stylesheet behind every Apple Bridge web page."
+
+[lints]
+workspace = true

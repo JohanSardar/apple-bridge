@@ -36,6 +36,7 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let client_name: String
         let redirect_host: String
         let scopes: [String]
+        let access: String?
         let expires_at: String
     }
 
@@ -50,14 +51,18 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let executable = connectorExecutable
         connectorTask = Task { @MainActor [weak self] in
             var failures = 0
+            var idle = 0
             while !Task.isCancelled {
                 let data = await Task.detached { Self.connectorCommand(["pending"] + options, executable: executable) }.value
                 failures = data == nil ? failures + 1 : 0
                 if self?.connectorHome != nil, failures >= 3 { NSApplication.shared.terminate(nil); return }
+                let waiting = data.flatMap { try? JSONDecoder().decode([ConnectorRequest].self, from: $0) }?.isEmpty == false
+                idle = waiting || self?.window?.attachedSheet != nil ? 0 : idle + 1
+                if self?.connectorHome != nil, idle >= 30 { NSApplication.shared.terminate(nil); return }
                 if let self, let data, let requests = try? JSONDecoder().decode([ConnectorRequest].self, from: data), let request = requests.first, let window = self.window, window.attachedSheet == nil {
                     let alert = NSAlert()
                     alert.messageText = "Allow \(request.client_name) to connect?"
-                    alert.informativeText = "Code \(request.code)\n\nMatch this code in your browser.\nRequested data: \(request.scopes.joined(separator: ", "))\nReturns to: \(request.redirect_host)\nExpires in five minutes."
+                    alert.informativeText = "Code \(request.code)\n\nAllow only if this code matches your browser.\n\n\(request.access ?? request.scopes.joined(separator: ", "))\n\nReturns to: \(request.redirect_host)\nExpires in five minutes."
                     alert.addButton(withTitle: "Allow")
                     alert.addButton(withTitle: "Deny")
                     alert.buttons.first?.keyEquivalent = ""

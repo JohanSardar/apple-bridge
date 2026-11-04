@@ -63,9 +63,11 @@ pub async fn start(mut config: Config, authority: Arc<ab_trust::Authority>) -> R
     }));
     let local = Arc::new(local);
     local.recover()?;
+    let connectors = ab_frontdoor::web_connector::Connectors::new(authority.clone());
     let phone = Arc::new(ab_iphone::delivery::Delivery::new(
         authority.clone(),
         crate::iphone::PhoneGateway {
+            connectors: connectors.clone(),
             #[cfg(feature = "lab-harness")]
             home: config.home.clone(),
             state: (*store).clone(),
@@ -147,7 +149,18 @@ pub async fn start(mut config: Config, authority: Arc<ab_trust::Authority>) -> R
         api_listener.local_addr()?,
         String::new(),
         Some(approvals.clone()),
+        connectors.clone(),
     );
+    let window = crate::connector::approval_window(config.helper_app.clone(), config.home.clone());
+    let notify_phone = Arc::downgrade(&phone);
+    connectors.on_waiting(Arc::new(move || {
+        if let Some(phone) = notify_phone.upgrade() {
+            phone.wake();
+        }
+        if let Some(window) = &window {
+            window();
+        }
+    }));
     let phone_router = crate::iphone::router(&phone);
     let router = frontdoor
         .router()
@@ -159,7 +172,7 @@ pub async fn start(mut config: Config, authority: Arc<ab_trust::Authority>) -> R
     let connector_listener = crate::connector::bind(&config.home)?;
     tasks.spawn(crate::connector::serve(
         connector_listener,
-        web,
+        connectors.clone(),
         receiver.clone(),
     ));
     #[cfg(feature = "lab-harness")]
@@ -183,6 +196,7 @@ pub async fn start(mut config: Config, authority: Arc<ab_trust::Authority>) -> R
         authority.clone(),
         audit,
         approvals,
+        connectors,
         phone_router,
         feed.clone(),
     ));

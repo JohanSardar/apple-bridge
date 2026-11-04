@@ -1,9 +1,5 @@
-use ab_trust::{
-    Authority, Grant, Principal,
-    devices::Session,
-    oauth::{self, Client, Code, Exchange},
-    passkeys,
-};
+use crate::web_pages;
+use ab_trust::{Authority, Principal, devices::Session, oauth, passkeys};
 use axum::{
     Router,
     body::to_bytes,
@@ -12,9 +8,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::any,
 };
-use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use serde_json::{Value, json};
-use std::fmt::Write;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -52,7 +46,6 @@ struct Rate {
 }
 #[derive(Debug, Default)]
 pub(crate) struct Memory {
-    pub(crate) connectors: HashMap<String, crate::web_connector::Pending>,
     ceremonies: HashMap<String, Ceremony>,
     rates: HashMap<String, Rate>,
     global: Rate,
@@ -65,7 +58,8 @@ pub struct Web {
     pub public_host: String,
     pub approvals: Option<Arc<dyn Approvals>>,
     pub(crate) memory: Mutex<Memory>,
-    metadata: crate::web_metadata::Fetcher,
+    pub(crate) metadata: crate::web_metadata::Fetcher,
+    pub(crate) connectors: Arc<crate::web_connector::Connectors>,
 }
 impl Web {
     pub fn new(
@@ -73,6 +67,7 @@ impl Web {
         address: std::net::SocketAddr,
         public_host: String,
         approvals: Option<Arc<dyn Approvals>>,
+        connectors: Arc<crate::web_connector::Connectors>,
     ) -> Arc<Self> {
         Arc::new(Self {
             authority,
@@ -81,12 +76,13 @@ impl Web {
             approvals,
             memory: Mutex::default(),
             metadata: crate::web_metadata::Fetcher::default(),
+            connectors,
         })
     }
     pub fn router(self: Arc<Self>) -> Router {
         Router::new().fallback(any(handle)).with_state(self)
     }
-    fn allow(&self, key: &str, auth: bool, limit: u32) -> bool {
+    pub(crate) fn allow(&self, key: &str, auth: bool, limit: u32) -> bool {
         let Ok(mut m) = self.memory.lock() else {
             return false;
         };
@@ -186,10 +182,10 @@ impl Web {
         reject(401, "unauthorized")
     }
 }
-fn reject(status: u16, code: &str) -> Response {
+pub(crate) fn reject(status: u16, code: &str) -> Response {
     respond(status, &json!({"error":{"code":code,"message":code}}))
 }
-fn respond(status: u16, value: &impl serde::Serialize) -> Response {
+pub(crate) fn respond(status: u16, value: &impl serde::Serialize) -> Response {
     let bytes = serde_json::to_vec(value).unwrap_or_default();
     let raw = String::from_utf8_lossy(&bytes)
         .replace('&', "\\u0026")
@@ -205,19 +201,6 @@ fn respond(status: u16, value: &impl serde::Serialize) -> Response {
     )
         .into_response()
 }
-fn escape(s: &str) -> String {
-    s.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&#34;")
-        .replace('\'', "&#39;")
-        .replace('+', "&#43;")
-}
-fn page(title: &str, body: &str) -> Response {
-    ([(header::CONTENT_TYPE,"text/html; charset=utf-8"),(header::CACHE_CONTROL,"no-store")],format!("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width\"><title>Apple Bridge</title><link rel=\"stylesheet\" href=\"/consent.css\"><script src=\"/webauthn.js\" defer></script></head><body><main><nav><a href=\"/\">Apple Bridge</a> · <a href=\"/approvals\">Approvals</a></nav><h1>{}</h1>{body}</main></body></html>",escape(title))).into_response()
-}
-const SIGNIN: &str =
-    "<button id=\"signin\">Sign in with passkey</button><p id=\"message\" role=\"status\"></p>";
 pub(crate) fn fields(raw: &str) -> HashMap<String, Vec<String>> {
     let mut m: HashMap<String, Vec<String>> = HashMap::new();
     for (k, v) in url::form_urlencoded::parse(raw.as_bytes()) {
@@ -225,18 +208,8 @@ pub(crate) fn fields(raw: &str) -> HashMap<String, Vec<String>> {
     }
     m
 }
-fn field<'a>(m: &'a HashMap<String, Vec<String>>, k: &str) -> &'a str {
+pub(crate) fn field<'a>(m: &'a HashMap<String, Vec<String>>, k: &str) -> &'a str {
     m.get(k).and_then(|v| v.first()).map_or("", String::as_str)
-}
-fn scopes(q: &HashMap<String, Vec<String>>) -> Vec<Grant> {
-    let raw = field(q, "scope");
-    if raw.trim().is_empty() {
-        return Grant::parse("messages:read").into_iter().collect();
-    }
-    raw.split_whitespace()
-        .filter_map(|s| Grant::parse(s).ok())
-        .filter(|g| oauth::agent_grants("approve", std::slice::from_ref(g)).is_ok())
-        .collect()
 }
 async fn handle(State(web): State<Arc<Web>>, request: Request) -> Response {
     let (mut parts, body) = request.into_parts();
@@ -347,11 +320,14 @@ fn dispatch(w: &Web, r: &axum::http::request::Parts, body: &[u8], secure: bool) 
         .headers
         .get(header::COOKIE)
         .and_then(|v| v.to_str().ok())
-        .unwrap_or_default()
-        .split(';')
-        .filter_map(|v| v.trim().split_once('='))
-        .find(|(k, _)| *k == cookie_name)
-        .map_or("", |(_, v)| v);
+        .and_then(|raw| {
+            cookie::Cookie::split_parse(raw)
+                .flatten()
+                .find(|c| c.name() == cookie_name)
+                .map(|c| c.value().to_owned())
+        })
+        .unwrap_or_default();
+    let cookie = cookie.as_str();
     let protected =
         path.starts_with("/auth/") || path.starts_with("/approvals") || path == "/oauth/authorize";
     let anonymous = method == "GET" && path == "/oauth/authorize"
@@ -375,7 +351,7 @@ fn dispatch(w: &Web, r: &axum::http::request::Parts, body: &[u8], secure: bool) 
             identity = w.authority.authenticate_device(cookie).ok();
             if identity.is_none() {
                 if method == "GET" && path == "/approvals" && cookie.is_empty() {
-                    return page("Sign in for approvals", SIGNIN);
+                    return web_pages::sign_in_for_approvals();
                 }
                 return reject(401, "unauthorized");
             }
@@ -403,26 +379,22 @@ fn dispatch(w: &Web, r: &axum::http::request::Parts, body: &[u8], secure: bool) 
     response
 }
 fn set_cookie(response: &mut Response, name: &str, token: &str, s: &Session) {
-    let mut value = format!("{name}={token}; Path=/; HttpOnly; SameSite=Strict");
-    if name.starts_with("__Host-") {
-        value.push_str("; Secure");
-    }
-    if s.kind == "trusted" {
-        let age = s.expires_at.parse::<jiff::Timestamp>().map_or(1, |t| {
-            (t.as_second() - jiff::Timestamp::now().as_second()).max(1)
-        });
-        let _ = write!(value, "; Max-Age={age}");
-        if let Ok(expires) = s.expires_at.parse::<jiff::Timestamp>()
-            && let Ok(seconds) = u64::try_from(expires.as_second())
-        {
-            let _ = write!(
-                value,
-                "; Expires={}",
-                httpdate::fmt_http_date(std::time::UNIX_EPOCH + Duration::from_secs(seconds))
-            );
+    let mut built = cookie::Cookie::build((name.to_owned(), token.to_owned()))
+        .path("/")
+        .http_only(true)
+        .same_site(cookie::SameSite::Strict)
+        .secure(name.starts_with("__Host-"));
+    if s.kind == "trusted"
+        && let Ok(expires) = s.expires_at.parse::<jiff::Timestamp>()
+    {
+        built = built.max_age(cookie::time::Duration::seconds(
+            (expires.as_second() - jiff::Timestamp::now().as_second()).max(1),
+        ));
+        if let Ok(at) = cookie::time::OffsetDateTime::from_unix_timestamp(expires.as_second()) {
+            built = built.expires(at);
         }
     }
-    if let Ok(value) = value.parse() {
+    if let Ok(value) = built.build().to_string().parse() {
         response.headers_mut().append(header::SET_COOKIE, value);
     }
 }
@@ -438,159 +410,46 @@ fn route(
 ) -> Response {
     let path = r.uri.path();
     let method = r.method.as_str();
-    match (method,path) {
-        ("GET","/")=>page("Apple Bridge",&format!("{SIGNIN}<p>Consent and pending agent approvals. Manage agents with <code>bridge agent create</code>, <code>bridge agent list</code> and <code>bridge agent revoke</code>.</p>")),
-        ("GET","/enroll")=>page("Enroll first passkey",SIGNIN),
-        ("GET","/webauthn.js")=>([(header::CONTENT_TYPE,"text/javascript; charset=utf-8")],include_str!("../assets/webauthn.js")).into_response(),
-        ("GET","/consent.css")=>([(header::CONTENT_TYPE,"text/css")],"body{font:18px system-ui;line-height:1.6;margin:2rem auto;padding:0 1rem;max-width:48rem;color:#222;background:#fafafa}label{display:block}button,select{font:inherit;margin:.5rem;padding:.4rem}article,fieldset{border:1px solid #aaa;padding:1rem;margin:1rem 0}pre{white-space:pre-wrap;overflow-wrap:anywhere}a{color:#174b91}").into_response(),
-        ("GET","/.well-known/oauth-protected-resource"|"/.well-known/oauth-protected-resource/mcp")=>respond(200,&json!({"resource":format!("{origin}/mcp"),"authorization_servers":[origin],"scopes_supported":all_scopes(),"bearer_methods_supported":["header"]})),
-        ("GET","/.well-known/oauth-authorization-server")=>respond(200,&json!({"issuer":origin,"authorization_endpoint":format!("{origin}/oauth/authorize"),"token_endpoint":format!("{origin}/oauth/token"),"registration_endpoint":format!("{origin}/oauth/register"),"response_types_supported":["code"],"grant_types_supported":["authorization_code","refresh_token"],"token_endpoint_auth_methods_supported":["none"],"code_challenge_methods_supported":["S256"],"scopes_supported":all_scopes(),"client_id_metadata_document_supported":true,"authorization_response_iss_parameter_supported":true})),
-        ("POST","/oauth/register")=>serde_json::from_slice::<Client>(body).ok().and_then(|c|w.authority.register_oauth(c).ok()).map_or_else(||respond(400,&json!({"error":"invalid_client_metadata"})),|c|respond(201,&c)),
-        ("POST","/oauth/token")=>{
-            let f=fields(&String::from_utf8_lossy(body));if f.is_empty() || f.values().any(|v|v.len()!=1){return respond(400,&json!({"error":"invalid_request"}));}
-            if !["authorization_code","refresh_token"].contains(&field(&f,"grant_type")){return respond(400,&json!({"error":"unsupported_grant_type"}));}
-            if field(&f,"resource")!=format!("{origin}/mcp"){return respond(400,&json!({"error":"invalid_target"}));}
-            let e=Exchange {grant_type:field(&f,"grant_type").into(),client_id:field(&f,"client_id").into(),code:field(&f,"code").into(),redirect_uri:field(&f,"redirect_uri").into(),code_verifier:field(&f,"code_verifier").into(),resource:field(&f,"resource").into(),refresh_token:field(&f,"refresh_token").into(),scope:field(&f,"scope").into()};
-            w.authority.exchange_oauth(&e).map_or_else(|_|respond(400,&json!({"error":"invalid_grant"})),|t|respond(200,&t))
+    match (method, path) {
+        ("GET", "/") => web_pages::home(),
+        ("GET", "/enroll") => web_pages::enroll(),
+        ("GET", "/webauthn.js") => script(include_str!("../assets/webauthn.js")),
+        ("GET", "/assets/connector.js") => script(include_str!("../assets/connector.js")),
+        ("GET", ab_pages::STYLESHEET_PATH) => {
+            ([(header::CONTENT_TYPE, "text/css")], ab_pages::STYLESHEET).into_response()
         }
-        ("POST","/oauth/pending")=>pending_request(w,r,body,origin,ip,q),
-        ("GET",_) if path.starts_with("/oauth/pending/")=>{
-            if !w.allow(&format!("connector-poll:{ip}"),false,10){return reject(429,"Wait a moment and try again.");}
-            w.poll_connector(path.trim_start_matches("/oauth/pending/"),origin).map_or_else(|_|reject(410,"This approval has expired or was already used. Start again from your connector."),|redirect|respond(200,&json!({"redirect":redirect})))
-        },
-        ("GET"|"POST","/oauth/authorize")=>authorize(w,r,body,origin,q,identity),
-        ("GET","/auth/session")=>identity.map_or_else(||reject(401,"unauthorized"),|(_,s)|respond(200,s)),
-        ("POST",_) if path.starts_with("/auth/")=>auth(w,path,body,origin,ip,identity),
-        ("GET"|"POST",_) if path.starts_with("/approvals")=>approval(w,path,method,body,identity),
-        _=>StatusCode::NOT_FOUND.into_response(),
+        (
+            "GET",
+            "/.well-known/oauth-protected-resource" | "/.well-known/oauth-protected-resource/mcp",
+        ) => respond(200, &crate::web_oauth::protected_resource(origin)),
+        ("GET", "/.well-known/oauth-authorization-server") => {
+            respond(200, &crate::web_oauth::authorization_server(origin))
+        }
+        ("POST", "/oauth/register") => crate::web_oauth::register(w, body),
+        ("POST", "/oauth/token") => crate::web_oauth::token(w, body, origin),
+        ("POST", "/oauth/pending") => crate::web_oauth::pending_request(w, origin, ip, q),
+        ("GET", _) if path.starts_with("/oauth/pending/") => {
+            crate::web_oauth::pending_poll(w, path, origin, ip)
+        }
+        ("GET" | "POST", "/oauth/authorize") => {
+            crate::web_oauth::authorize(w, r, body, origin, q, identity)
+        }
+        ("GET", "/auth/session") => {
+            identity.map_or_else(|| reject(401, "unauthorized"), |(_, s)| respond(200, s))
+        }
+        ("POST", _) if path.starts_with("/auth/") => auth(w, path, body, origin, ip, identity),
+        ("GET" | "POST", _) if path.starts_with("/approvals") => {
+            approval(w, path, method, body, identity)
+        }
+        _ => StatusCode::NOT_FOUND.into_response(),
     }
 }
-fn all_scopes() -> Vec<String> {
-    ab_trust::Grant::agent_scopes()
-}
-#[allow(clippy::too_many_lines)]
-fn authorize(
-    w: &Web,
-    r: &axum::http::request::Parts,
-    body: &[u8],
-    origin: &str,
-    q: &HashMap<String, Vec<String>>,
-    identity: Option<&(Principal, Session)>,
-) -> Response {
-    let invalid = || respond(400, &json!({"error":"invalid_request"}));
-    if q.values().any(|v| v.len() != 1)
-        || field(q, "response_type") != "code"
-        || field(q, "resource") != format!("{origin}/mcp")
-        || field(q, "state").len() > 2048
-        || field(q, "code_challenge_method") != "S256"
-        || !URL_SAFE_NO_PAD
-            .decode(field(q, "code_challenge"))
-            .is_ok_and(|b| b.len() == 32)
-        || scopes(q).is_empty()
-    {
-        return invalid();
-    }
-    let client_result = if field(q, "client_id").starts_with("https://") {
-        w.metadata
-            .fetch(field(q, "client_id"), field(q, "redirect_uri"))
-    } else {
-        w.authority
-            .oauth_client(field(q, "client_id"), field(q, "redirect_uri"))
-    };
-    let Ok(client) = client_result else {
-        return invalid();
-    };
-    if r.method == "GET" {
-        if field(q, "format") == "json" {
-            let Ok(dest) = url::Url::parse(field(q, "redirect_uri")) else {
-                return invalid();
-            };
-            return respond(
-                200,
-                &json!({"client_name":client.client_name,"redirect_host":dest.authority(),"scopes":scopes(q),"groups":groups()}),
-            );
-        }
-        let mut body = format!(
-            "<p>{} requests access to this bridge.</p>",
-            escape(&client.client_name)
-        );
-        if identity.is_none() {
-            body.push_str(SIGNIN);
-        }
-        body.push_str("<form method=\"post\"><label>Agent level <select name=\"level\"><option value=\"read\">Read</option><option value=\"approve\" selected>Approve every command</option><option value=\"full\">Full</option></select></label><fieldset><legend>Scopes</legend>");
-        for g in scopes(q) {
-            let _ = write!(
-                body,
-                "<label><input type=\"checkbox\" name=\"scopes\" value=\"{}\" checked>{}</label>",
-                escape(g.as_str()),
-                escape(g.as_str())
-            );
-        }
-        body.push_str("</fieldset><button name=\"decision\" value=\"approve\">Allow connection</button><button name=\"decision\" value=\"reject\">Reject</button></form>");
-        return page("Connect an agent", &body);
-    }
-    let form = r.headers.get(header::CONTENT_TYPE).is_some_and(|v| {
-        v.as_bytes()
-            .starts_with(b"application/x-www-form-urlencoded")
-    });
-    let input: Value = if form {
-        let f = fields(&String::from_utf8_lossy(body));
-        json!({"decision":field(&f,"decision"),"level":field(&f,"level"),"scopes":f.get("scopes").cloned().unwrap_or_default()})
-    } else {
-        let Ok(v) = serde_json::from_slice(body) else {
-            return invalid();
-        };
-        v
-    };
-    let decision = input["decision"].as_str().unwrap_or_default();
-    if !["approve", "reject"].contains(&decision) {
-        return invalid();
-    }
-    let level = input["level"]
-        .as_str()
-        .filter(|v| !v.is_empty())
-        .unwrap_or("approve");
-    let grants = if decision == "approve" {
-        let Ok(grants) = serde_json::from_value::<Vec<Grant>>(input["scopes"].clone()) else {
-            return respond(400, &json!({"error":"invalid_scope"}));
-        };
-        match oauth::agent_grants(level, &grants) {
-            Ok(grants) if ab_trust::subset(&grants, &scopes(q)) => grants,
-            _ => return respond(400, &json!({"error":"invalid_scope"})),
-        }
-    } else {
-        Vec::new()
-    };
-    let code = Code {
-        client_id: client.client_id.clone(),
-        redirect_uri: field(q, "redirect_uri").into(),
-        challenge: field(q, "code_challenge").into(),
-        resource: field(q, "resource").into(),
-        ..Code::default()
-    };
-    let Ok(dest) = crate::web_connector::decision(
-        w,
-        &client,
-        code,
-        field(q, "state"),
-        origin,
-        decision == "approve",
-        level,
-        &grants,
-    ) else {
-        return reject(503, "unavailable");
-    };
-    if form {
-        page(
-            "Connection authorized",
-            &format!(
-                "<p><a id=\"connector-redirect\" href=\"{}\">Continue to connector</a></p>",
-                escape(&dest)
-            ),
-        )
-    } else {
-        respond(200, &json!({"redirect":dest}))
-    }
+fn script(source: &'static str) -> Response {
+    (
+        [(header::CONTENT_TYPE, "text/javascript; charset=utf-8")],
+        source,
+    )
+        .into_response()
 }
 #[allow(clippy::too_many_lines)]
 fn auth(
@@ -725,22 +584,7 @@ fn approval(
         let Ok(rows) = a.pending() else {
             return reject(503, "unavailable");
         };
-        let mut body = String::new();
-        for row in &rows {
-            let id = escape(row["command_id"].as_str().unwrap_or_default());
-            let _ = write!(
-                body,
-                "<article><h2>{}</h2><p>{} · {id}</p><pre>{}</pre><details><summary>Owner arguments</summary><pre>{}</pre></details><form method=\"post\" action=\"/approvals/{id}\"><button name=\"decision\" value=\"approve\">Approve</button><button name=\"decision\" value=\"reject\">Reject</button></form></article>",
-                escape(row["operation"].as_str().unwrap_or_default()),
-                escape(row["principal"].as_str().unwrap_or_default()),
-                escape(row["arguments"].as_str().unwrap_or_default()),
-                escape(row["owner_arguments"].as_str().unwrap_or_default())
-            );
-        }
-        if rows.is_empty() {
-            body.push_str("<p>No pending approvals.</p>");
-        }
-        return page("Pending approvals", &body);
+        return web_pages::approvals(&rows);
     }
     let Some(id) = path.strip_prefix("/approvals/") else {
         return StatusCode::NOT_FOUND.into_response();
@@ -760,103 +604,12 @@ fn approval(
     };
     record.map_or_else(
         |_| {
-            reject(
-                if method == "GET" { 404 } else { 409 },
-                if method == "GET" {
-                    "not_found"
-                } else {
-                    "conflict"
-                },
-            )
+            if method == "GET" {
+                reject(404, "not_found")
+            } else {
+                reject(409, "conflict")
+            }
         },
-        |record| {
-            page(
-                "Command status",
-                &format!(
-                    "<pre>{}</pre>",
-                    escape(&serde_json::to_string_pretty(&record).unwrap_or_default())
-                ),
-            )
-        },
+        |record| web_pages::command_status(&record),
     )
-}
-
-fn pending_request(
-    web: &Web,
-    request: &axum::http::request::Parts,
-    _body: &[u8],
-    origin: &str,
-    ip: &str,
-    query: &HashMap<String, Vec<String>>,
-) -> Response {
-    if !web.allow(&format!("connector-create:{ip}"), true, 50) {
-        return reject(429, "Too many requests. Wait a minute and try again.");
-    }
-    let mut request = request.clone();
-    request.method = axum::http::Method::GET;
-    let validation = authorize(web, &request, &[], origin, query, None);
-    if validation.status() != 200 {
-        return reject(
-            400,
-            "This connection request is invalid. Start again from your connector.",
-        );
-    }
-    let result = if field(query, "client_id").starts_with("https://") {
-        web.metadata
-            .fetch(field(query, "client_id"), field(query, "redirect_uri"))
-    } else {
-        web.authority
-            .oauth_client(field(query, "client_id"), field(query, "redirect_uri"))
-    };
-    let Ok(client) = result else {
-        return reject(
-            400,
-            "This connection request is invalid. Start again from your connector.",
-        );
-    };
-    let code = Code {
-        client_id: client.client_id.clone(),
-        redirect_uri: field(query, "redirect_uri").into(),
-        challenge: field(query, "code_challenge").into(),
-        resource: field(query, "resource").into(),
-        ..Code::default()
-    };
-    web.connector_begin(client, code, field(query, "state"), origin, scopes(query))
-        .map_or_else(
-            |_| reject(503, "Approval is unavailable. Try again in a few minutes."),
-            |summary| respond(201, &summary),
-        )
-}
-
-fn groups() -> Vec<Value> {
-    let titles = [
-        "Audio",
-        "Calendar",
-        "Contacts",
-        "Files",
-        "Focus",
-        "Health",
-        "iPhone",
-        "Mac",
-        "Mail",
-        "Location",
-        "Maps",
-        "Messages",
-        "Notes",
-        "PDF",
-        "Phone",
-        "Capture",
-        "Print",
-        "Voice Memos",
-        "Voicemail",
-        "Reminders",
-        "Safari",
-        "Shortcuts",
-        "Speech",
-        "Usage",
-        "Vision",
-        #[cfg(feature = "lab-harness")]
-        "Lab dummy",
-    ];
-    all_scopes().chunks(2).zip(titles).map(|(grants,title)|json!({"source":grants[0].trim_end_matches(":read"),"title":title,"grants":grants,"agent":true})).collect()
 }
