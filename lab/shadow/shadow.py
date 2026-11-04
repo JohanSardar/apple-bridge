@@ -633,7 +633,7 @@ def replay(args):
         raise ValueError('recording ends with unacknowledged captures, admissions or commands')
     if not captures:
         raise ValueError('recording has no captures')
-    for binary, name in ((args.go_binary, 'go'), (args.rust_binary, 'rust')):
+    for binary, name in ((args.left_binary, 'left'), (args.right_binary, 'right')):
         home = destination / name
         if home.exists():
             raise ValueError('replay home already exists')
@@ -707,7 +707,7 @@ def replay(args):
                     process.wait()
                 if active_conn:
                     active_conn.close()
-    return diff(argparse.Namespace(left=destination / 'go', right=destination / 'rust', exact=args.exact))
+    return diff(argparse.Namespace(left=destination / 'left', right=destination / 'right', exact=args.exact))
 
 
 def decisions(args):
@@ -897,10 +897,10 @@ def main():
     p.add_argument('--decisions')
     p.add_argument('--iphone-device')
     p.add_argument('--exact', action='store_true')
-    p.add_argument('--go-binary', '--go', dest='go_binary', required=True)
-    p.add_argument('--rust-binary', '--rust', dest='rust_binary', required=True)
+    p.add_argument('--left-binary', '--left', '--go-binary', '--go', dest='left_binary', required=True)
+    p.add_argument('--right-binary', '--right', '--rust-binary', '--rust', dest='right_binary', required=True)
     p.add_argument('--feed-peer-home')
-    p.add_argument('--lab-binary', default='bin/bridge-lab')
+    p.add_argument('--lab-binary')
     p = sub.add_parser('decisions')
     for option in ('recording', 'home', 'output'):
         p.add_argument('--' + option, required=True)

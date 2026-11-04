@@ -19,4 +19,4 @@ try:
         samples.append({'digest': digest})
     print(json.dumps({'counts': counts, 'samples': samples}))
 except (sqlite3.Error, OSError, ValueError, TypeError, UnicodeError):
-    sys.exit('Mail Truth unavailable: Full Disk Access for the terminal running bridge-lab and a V10 Envelope Index required')
+    sys.exit('Mail Truth unavailable: Full Disk Access for the terminal running lab-families and a V10 Envelope Index required')

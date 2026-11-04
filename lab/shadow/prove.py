@@ -58,16 +58,13 @@ def main():
     os.umask(0o077)
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', required=True)
-    parser.add_argument('--go', default='bin/bridge')
-    parser.add_argument('--rust', default='bin/bridge')
-    parser.add_argument('--go-go-runs', type=int, default=8)
-    parser.add_argument('--lab', default='bin/bridge-lab')
-    parser.add_argument('--bridge', default='bin/bridge')
-    parser.add_argument('--simapple', default='')
-    parser.add_argument('--tools', default='')
+    parser.add_argument('--bridge', required=True)
+    parser.add_argument('--simapple', required=True)
+    parser.add_argument('--tools', required=True)
+    parser.add_argument('--repeat-runs', type=int, default=8)
     args = parser.parse_args()
-    simapple = [args.simapple] if args.simapple else [args.lab, 'simapple']
-    tools = args.tools or args.lab
+    simapple = [args.simapple]
+    tools = args.tools
     root = private_directory(args.output)
     if list(root.iterdir()):
         raise ValueError('synthetic output must be empty')
@@ -312,13 +309,13 @@ def main():
         raise RuntimeError('alias identity and envelope clock equivalence failed')
     manifest = root / 'decisions.json'
     subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'decisions', '--recording', str(recording), '--home', str(home), '--starting-home', str(root / 'starting'), '--output', str(manifest)], check=True, stdout=subprocess.DEVNULL)
-    for run in range(args.go_go_runs):
-        result = subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'replay', '--recording', str(recording), '--starting-home', str(root / 'starting'), '--output', str(root / ('replay-go-go-' + str(run))), '--go', args.go, '--rust', args.go, '--decisions', str(manifest), '--iphone-device', str(root / 'iphone-device.json'), '--exact', '--feed-peer-home', str(feed_peer), '--lab-binary', tools], capture_output=True, text=True)
+    for run in range(args.repeat_runs):
+        result = subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'replay', '--recording', str(recording), '--starting-home', str(root / 'starting'), '--output', str(root / ('replay-repeat-' + str(run))), '--left', args.bridge, '--right', args.bridge, '--decisions', str(manifest), '--iphone-device', str(root / 'iphone-device.json'), '--exact', '--feed-peer-home', str(feed_peer), '--lab-binary', tools], capture_output=True, text=True)
         report = json.loads(result.stdout) if result.stdout else {'digests': []}
         if result.returncode or not report['digests'] or any(not row['equal'] for row in report['digests']):
-            raise RuntimeError('synthetic Go-Go exact replay failed in run ' + str(run) + ': ' + result.stderr.strip())
-        shutil.rmtree(root / ('replay-go-go-' + str(run)))
-    result = subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'replay', '--recording', str(recording), '--starting-home', str(root / 'starting'), '--output', str(root / 'replay-exact'), '--go', args.go, '--rust', args.rust, '--decisions', str(manifest), '--iphone-device', str(root / 'iphone-device.json'), '--exact', '--feed-peer-home', str(feed_peer), '--lab-binary', tools], capture_output=True, text=True)
+            raise RuntimeError('synthetic repeated exact replay failed in run ' + str(run) + ': ' + result.stderr.strip())
+        shutil.rmtree(root / ('replay-repeat-' + str(run)))
+    result = subprocess.run([sys.executable, 'lab/shadow/shadow.py', 'replay', '--recording', str(recording), '--starting-home', str(root / 'starting'), '--output', str(root / 'replay-exact'), '--left', args.bridge, '--right', args.bridge, '--decisions', str(manifest), '--iphone-device', str(root / 'iphone-device.json'), '--exact', '--feed-peer-home', str(feed_peer), '--lab-binary', tools], capture_output=True, text=True)
     report = json.loads(result.stdout) if result.stdout else {'digests': []}
     if result.returncode or any(not row['equal'] for row in report['digests']):
         raise RuntimeError('synthetic exact decision replay failed: ' + result.stderr.strip())
@@ -330,7 +327,7 @@ def main():
     feed_rows = sum(1 for line in recording.read_text().splitlines() if json.loads(line).get('ingress') == 'feed')
     if feed_rows != 3:
         raise RuntimeError('delegated feed observer recorded ' + str(feed_rows) + ' of 3 commands')
-    print(json.dumps({'delegated_feed_commands_recorded': feed_rows, 'exact_decision_replay_equal': True, 'iphone_ingress_rows': sum(1 for line in recording.read_text().splitlines() if json.loads(line).get('ingress') == 'iphone' and json.loads(line)['direction'] == 'admission'), 'ingress_kinds': ingress, 'alias_clock_equivalence': True, 'go_go_exact_replay_runs_equal': args.go_go_runs, 'rust_diff_tables': len(report['digests']), 'synthetic_capture_recorded': True, 'identical_home_equal': True, 'changed_gojson_bytes_detected': True, 'record_data_key_order_detected': True, 'record_data_clock_detected': True, 'seeded_mismatches_detected': detected, 'frame_types': sorted(kinds)}))
+    print(json.dumps({'delegated_feed_commands_recorded': feed_rows, 'exact_decision_replay_equal': True, 'iphone_ingress_rows': sum(1 for line in recording.read_text().splitlines() if json.loads(line).get('ingress') == 'iphone' and json.loads(line)['direction'] == 'admission'), 'ingress_kinds': ingress, 'alias_clock_equivalence': True, 'repeated_exact_replay_runs_equal': args.repeat_runs, 'rust_diff_tables': len(report['digests']), 'synthetic_capture_recorded': True, 'identical_home_equal': True, 'changed_gojson_bytes_detected': True, 'record_data_key_order_detected': True, 'record_data_clock_detected': True, 'seeded_mismatches_detected': detected, 'frame_types': sorted(kinds)}))
 
 
 if __name__ == '__main__':

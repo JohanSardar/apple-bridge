@@ -6,31 +6,11 @@ threshold_kb=${APPLE_BRIDGE_MIN_FREE_KB:-15728640}
 headroom_kb=${APPLE_BRIDGE_TRIM_HEADROOM_KB:-1048576}
 free_kb=$(df -k / | awk 'NR==2{print $4}')
 [ "$free_kb" -ge $((threshold_kb + headroom_kb)) ] && exit 0
-cache=""
-if command -v go >/dev/null 2>&1; then cache=$(go env GOCACHE 2>/dev/null); fi
 target=${CARGO_TARGET_DIR:-}
 if [ -n "$target" ] && [ -d "$target" ]; then
   # Incremental compilation state is rebuilt on demand and grows by gigabytes across worker branches.
   find "$target" -type d -name incremental -prune -mmin +120 -exec rm -rf {} + 2>/dev/null
   [ "$(df -k / | awk 'NR==2{print $4}')" -lt $((threshold_kb + headroom_kb)) ] && find "$target" -type d -name incremental -prune -mmin +60 -exec rm -rf {} + 2>/dev/null
 fi
-if [ -n "$cache" ] && [ -d "$cache" ]; then
-  find "$cache" -type f -size +20M -mmin +60 -delete 2>/dev/null
-  # Go refreshes an entry's mtime on use once it is over an hour old, so entries older than two hours went unused for
-  # at least an hour. Five workers building different trees grow the cache by gigabytes between trims.
-  find "$cache" -type f -mmin +120 -delete 2>/dev/null
-  # Still under the floor plus headroom: also drop entries untouched for an hour; a miss only costs a rebuild.
-  [ "$(df -k / | awk 'NR==2{print $4}')" -lt $((threshold_kb + headroom_kb)) ] && find "$cache" -type f -mmin +60 -delete 2>/dev/null
-  find "$cache" -type d -empty -delete 2>/dev/null
-fi
 find /tmp/ablab -mindepth 1 -maxdepth 1 -type d -mmin +360 -exec rm -rf {} + 2>/dev/null
-# go run/go test leave go-build*/go-link-* work directories behind when interrupted. Remove ones older than 2 hours
-# that no running process executes from.
-temp=$(getconf DARWIN_USER_TEMP_DIR 2>/dev/null || echo "${TMPDIR:-/tmp}/")
-for dir in "$temp"go-build* "$temp"go-link-*; do
-  [ -d "$dir" ] || continue
-  [ -n "$(find "$dir" -maxdepth 0 -mmin +120 2>/dev/null)" ] || continue
-  pgrep -f "$dir/" >/dev/null 2>&1 && continue
-  rm -rf "$dir"
-done
 echo "trim-disk: free $(df -h / | awk 'NR==2{print $4}') after trimming" >&2

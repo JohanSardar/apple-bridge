@@ -1,0 +1,6 @@
+{
+  "AGENT-SUITE": "the agent level ran only on the deleted Go lab; no Rust agent runner exists",
+  "QUERY-AGENT": "the agent level ran only on the deleted Go lab; no Rust agent runner exists",
+  "RMT-ONECOMMAND-FLOW": "tests the embedded Tailscale flow that FINAL-PLAN section 1 dropped; it ran only on the deleted Go lab",
+  "RMT-TS-EMBEDDED": "tests the embedded Tailscale flow that FINAL-PLAN section 1 dropped; it ran only on the deleted Go lab"
+}

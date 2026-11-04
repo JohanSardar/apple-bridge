@@ -55,7 +55,7 @@ class BuildBridgeTests(unittest.TestCase):
     def test_packaging_entry_points_no_longer_build_go(self):
         for name in ["packaging/build-app.sh", "packaging/release/release.py", "Makefile", "deploy/relay/README.md"]:
             text = (ROOT / name).read_text()
-            self.assertNotIn("go build", text.replace("go build -p 2 ./...", ""), name)
+            self.assertNotIn("go build", text, name)
             self.assertNotIn("./cmd/bridge\n", text, name)
         for name in ["packaging/build-app.sh", "packaging/release/release.py"]:
             self.assertIn("build-bridge.sh", (ROOT / name).read_text(), name)
