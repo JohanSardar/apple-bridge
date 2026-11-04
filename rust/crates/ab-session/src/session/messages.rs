@@ -309,6 +309,88 @@ pub(super) fn validate(probe: &dyn Probe, command: &Value, state: &Value) -> Res
     }
 }
 
+pub(super) fn correlate(part: &Value, route: &Value, rows: &[Value]) -> Value {
+    let wanted_chat = text(route, "chat");
+    let wanted_handle = text(route, "handle");
+    let mut matches: Vec<&Value> = Vec::new();
+    for row in rows {
+        if !wanted_chat.is_empty() && text(row, "capture_chat_guid") != wanted_chat {
+            continue;
+        }
+        if !wanted_handle.is_empty() {
+            let peers = strings(&row["peers"]);
+            if peers.len() != 1 || normalize(&peers[0]) != normalize(wanted_handle) {
+                continue;
+            }
+        }
+        let same = if text(part, "kind") == "text" {
+            row["body"].as_str() == part["text"].as_str()
+        } else {
+            strings(&row["attachment_names"])
+                .iter()
+                .any(|name| name == text(part, "name"))
+        };
+        if same {
+            matches.push(row);
+        }
+    }
+    if matches.len() > 1 {
+        return json!({"disposition": "indeterminate", "ambiguous": true, "candidate_count": matches.len()});
+    }
+    if let Some(row) = matches.first() {
+        let code = row["error"].as_i64().unwrap_or(0);
+        let disposition = if code != 0 {
+            "delivery_failed"
+        } else if row["is_delivered"] == true {
+            "delivered"
+        } else {
+            "locally_observed"
+        };
+        return json!({"native_key": row["guid"], "disposition": disposition, "observed": true, "error_code": code});
+    }
+    let ghosts = rows
+        .iter()
+        .filter(|row| {
+            text(row, "service") == "SMS"
+                && text(row, "capture_chat_guid").is_empty()
+                && text(row, "text").is_empty()
+                && row["has_body"] != true
+        })
+        .count();
+    if ghosts > 0 {
+        return json!({"disposition": "delivery_failed", "reason": "empty_unjoined_sms", "candidate_count": ghosts});
+    }
+    json!({"disposition": "indeterminate"})
+}
+
+pub(super) fn aggregate(parts: &[Value], fingerprint: &str, baseline: &Value) -> Value {
+    let dispositions: Vec<&str> = parts.iter().map(|part| text(part, "disposition")).collect();
+    let disposition =
+        if dispositions.contains(&"indeterminate") || dispositions.contains(&"not_dispatched") {
+            "indeterminate"
+        } else if dispositions.contains(&"delivery_failed") {
+            "delivery_failed"
+        } else if dispositions.iter().all(|value| *value == "delivered") {
+            "delivered"
+        } else {
+            "locally_observed"
+        };
+    let native_key = parts
+        .iter()
+        .find(|part| !text(part, "native_key").is_empty())
+        .map_or(Value::Null, |part| part["native_key"].clone());
+    json!({
+        "source": "messages",
+        "collection": "messages.message",
+        "native_key": native_key,
+        "observed": parts.iter().any(|part| part["observed"] == true),
+        "disposition": disposition,
+        "parts": parts,
+        "fingerprint": fingerprint,
+        "baseline": baseline,
+    })
+}
+
 #[cfg(test)]
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
@@ -816,5 +898,178 @@ mod tests {
         unknown.own = None;
         assert!(validate(&unknown, &note, &state).is_err());
         assert!(validate(&unknown, &note, &json!({"owner_self": false})).is_ok());
+    }
+
+    fn row(guid: &str, chat: &str, body: &str) -> Value {
+        json!({"guid": guid, "capture_chat_guid": chat, "service": "iMessage", "error": 0, "is_delivered": false,
+            "text": body, "body": body, "has_body": false, "peers": ["+15550100100"], "attachment_names": []})
+    }
+
+    fn text_part(body: &str) -> Value {
+        json!({"kind": "text", "text": body})
+    }
+
+    #[test]
+    fn one_matching_row_is_observed_and_its_state_picks_the_disposition() {
+        let route = json!({"kind": "chat_id_raw", "chat": "chat-1"});
+        let plain = row("g1", "chat-1", "hello");
+        let found = correlate(&text_part("hello"), &route, std::slice::from_ref(&plain));
+        assert_eq!(
+            (found["disposition"].as_str(), found["native_key"].as_str()),
+            (Some("locally_observed"), Some("g1"))
+        );
+        let mut delivered = plain.clone();
+        delivered["is_delivered"] = json!(true);
+        assert_eq!(
+            correlate(&text_part("hello"), &route, &[delivered.clone()])["disposition"],
+            "delivered"
+        );
+        delivered["error"] = json!(22);
+        let failed = correlate(&text_part("hello"), &route, &[delivered]);
+        assert_eq!(
+            (
+                failed["disposition"].as_str(),
+                failed["error_code"].as_i64()
+            ),
+            (Some("delivery_failed"), Some(22))
+        );
+    }
+
+    #[test]
+    fn rows_of_another_chat_text_or_peer_never_match() {
+        let route = json!({"kind": "chat_id_raw", "chat": "chat-1"});
+        assert_eq!(
+            correlate(&text_part("hello"), &route, &[row("g1", "chat-2", "hello")])["disposition"],
+            "indeterminate"
+        );
+        assert_eq!(
+            correlate(&text_part("hello"), &route, &[row("g1", "chat-1", "other")])["disposition"],
+            "indeterminate"
+        );
+        let buddy =
+            json!({"kind": "imessage_buddy", "handle": "+1 (555) 010-0100", "service": "iMessage"});
+        assert_eq!(
+            correlate(&text_part("hello"), &buddy, &[row("g1", "chat-1", "hello")])["disposition"],
+            "locally_observed"
+        );
+        let mut group = row("g1", "chat-1", "hello");
+        group["peers"] = json!(["+15550100100", "+15559990000"]);
+        assert_eq!(
+            correlate(&text_part("hello"), &buddy, &[group])["disposition"],
+            "indeterminate"
+        );
+        let mut elsewhere = row("g1", "chat-1", "hello");
+        elsewhere["peers"] = json!(["+15559990000"]);
+        assert_eq!(
+            correlate(&text_part("hello"), &buddy, &[elsewhere])["disposition"],
+            "indeterminate"
+        );
+    }
+
+    #[test]
+    fn two_matches_are_ambiguous_and_never_pick_one() {
+        let route = json!({"kind": "chat_id_raw", "chat": "chat-1"});
+        let found = correlate(
+            &text_part("hello"),
+            &route,
+            &[row("g1", "chat-1", "hello"), row("g2", "chat-1", "hello")],
+        );
+        assert_eq!(
+            (
+                found["disposition"].as_str(),
+                found["ambiguous"].as_bool(),
+                found["candidate_count"].as_u64()
+            ),
+            (Some("indeterminate"), Some(true), Some(2))
+        );
+        assert!(found["native_key"].is_null());
+    }
+
+    #[test]
+    fn attachments_match_by_name_and_empty_unjoined_sms_rows_are_failures() {
+        let route = json!({"kind": "chat_id_raw", "chat": "chat-1"});
+        let mut with_file = row("g1", "chat-1", "");
+        with_file["attachment_names"] = json!(["0-a.txt"]);
+        let part = json!({"kind": "attachment", "name": "0-a.txt"});
+        assert_eq!(
+            correlate(&part, &route, std::slice::from_ref(&with_file))["disposition"],
+            "locally_observed"
+        );
+        assert_eq!(
+            correlate(
+                &json!({"kind": "attachment", "name": "1-b.txt"}),
+                &route,
+                &[with_file]
+            )["disposition"],
+            "indeterminate"
+        );
+        let ghost = json!({"guid": "gx", "capture_chat_guid": "", "service": "SMS", "error": 0, "text": "", "has_body": false, "peers": [], "attachment_names": []});
+        let failed = correlate(&text_part("hello"), &route, std::slice::from_ref(&ghost));
+        assert_eq!(
+            (
+                failed["disposition"].as_str(),
+                failed["reason"].as_str(),
+                failed["candidate_count"].as_u64()
+            ),
+            (Some("delivery_failed"), Some("empty_unjoined_sms"), Some(1))
+        );
+        let mut not_ghost = ghost.clone();
+        not_ghost["has_body"] = json!(true);
+        assert_eq!(
+            correlate(&text_part("hello"), &route, &[not_ghost])["disposition"],
+            "indeterminate"
+        );
+        let mut joined = ghost;
+        joined["capture_chat_guid"] = json!("chat-9");
+        assert_eq!(
+            correlate(&text_part("hello"), &route, &[joined])["disposition"],
+            "indeterminate"
+        );
+        assert_eq!(
+            correlate(&text_part("hello"), &route, &[])["disposition"],
+            "indeterminate"
+        );
+    }
+
+    #[test]
+    fn the_aggregate_is_only_as_good_as_its_worst_part() {
+        let state = json!({"max_row_id": 1});
+        let part = |disposition: &str, key: &str| json!({"disposition": disposition, "native_key": key, "observed": !key.is_empty()});
+        let all = |parts: &[Value]| aggregate(parts, "fp", &state);
+        assert_eq!(
+            all(&[part("delivered", "a"), part("delivered", "b")])["disposition"],
+            "delivered"
+        );
+        assert_eq!(
+            all(&[part("delivered", "a"), part("locally_observed", "b")])["disposition"],
+            "locally_observed"
+        );
+        assert_eq!(
+            all(&[part("delivered", "a"), part("delivery_failed", "b")])["disposition"],
+            "delivery_failed"
+        );
+        assert_eq!(
+            all(&[part("delivery_failed", "a"), part("indeterminate", "")])["disposition"],
+            "indeterminate"
+        );
+        assert_eq!(
+            all(&[
+                part("delivered", "a"),
+                json!({"disposition": "not_dispatched"})
+            ])["disposition"],
+            "indeterminate"
+        );
+        let mixed = all(&[part("indeterminate", ""), part("delivered", "b")]);
+        assert_eq!(
+            (mixed["native_key"].as_str(), mixed["observed"].as_bool()),
+            (Some("b"), Some(true))
+        );
+        let none = all(&[part("indeterminate", "")]);
+        assert!(none["native_key"].is_null());
+        assert_eq!(none["observed"], false);
+        assert_eq!(
+            (none["fingerprint"].as_str(), none["baseline"].clone()),
+            (Some("fp"), state)
+        );
     }
 }
