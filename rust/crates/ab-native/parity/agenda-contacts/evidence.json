@@ -1,7 +1,7 @@
 {
   "source_sha256": {
     "native/Sources/CalendarSource/CalendarSource.swift": "6beea98de4e717b77a7d69f51fc734ed539cb3706abd8649df7f2efbb5101f9a",
-    "native/Sources/ContactsSource/ContactsSource.swift": "1ee7bb783b956c03dcbb2df55e8132ec80be7fe4b65d9ed188d30d6cd8144f8e",
+    "native/Sources/ContactsSource/ContactsSource.swift": "8ab9541a42af7e32724e1504e97db0bcc65089dc8f7e3b3fbc1487f61df73329",
     "native/Sources/SourceSupport/Source.swift": "95c6ee2908205c9ecb9cefa38e5c4f2bf61ed8b44e7027a98efc106a1e5e13ed",
     "native/Sources/CalendarSource/CalendarTime.swift": "b78dc9f93211bec04f98762c47201f48972786da3a5c83b9c176a95bfb9d7527",
     "native/Sources/CalendarSource/CalendarScanScope.swift": "1382700d11a415052180b25101ca53e907c675c56638ac7dacd87f0fc9d2e5c4"
