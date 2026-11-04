@@ -333,6 +333,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "ab-shadow-tools"
+version = "0.0.0"
+dependencies = [
+ "ab-trust",
+ "base64 0.22.1",
+ "data-encoding",
+ "ed25519-dalek",
+ "hex",
+ "hmac 0.12.1",
+ "rand 0.8.8",
+ "rustls",
+ "serde_json",
+ "sha2 0.10.9",
+ "x25519-dalek",
+]
+
+[[package]]
 name = "ab-shortcuts"
 version = "0.0.0"
 dependencies = [

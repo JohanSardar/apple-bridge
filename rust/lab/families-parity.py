@@ -183,6 +183,7 @@ def main():
     for name in ['families', 'go-lab', 'gateway', 'simapple', 'output']:
         parser.add_argument('--' + name)
     parser.add_argument('--check-real-only', dest='check_real_only', action='store_true')
+    parser.add_argument('--rust-only', dest='rust_only', action='store_true')
     parser.add_argument('--scenario', action='append')
     parser.add_argument('--import', dest='imports', action='store_true')
     parser.add_argument('--messages-a', dest='messages_a', action='store_true')
@@ -222,6 +223,8 @@ def main():
         check_real_only(args.families)
         return
     for name in ['families', 'go_lab', 'gateway', 'simapple', 'output']:
+        if args.rust_only and name == 'go_lab':
+            continue
         if not getattr(args, name):
             parser.error('--' + name.replace('_', '-') + ' is required')
     for flag, group in [(args.usage, USAGE_SCENARIOS), (args.darwin_usage, DARWIN_USAGE_SCENARIOS), (args.calls, CALLS_SCENARIOS), (args.helper, HELPER_SCENARIOS)]:
@@ -292,15 +295,24 @@ def main():
     root = Path(__file__).resolve().parents[2] / 'lab' / 'scenarios'
     names = [n if '/' in n else f'core/{n}' for n in args.scenario or SCENARIOS]
     files = [str(root / f'{name}.yaml') for name in names]
-    with (out / 'go.jsonl').open('w') as stream:
-        impl = ['--impl', 'gateway=rust', '--rust-binary', str(Path(args.gateway).resolve())] if args.go_rust_gateway else []
-        subprocess.run([args.go_lab, 'run', *files, '--level', 'sim', '--json', *impl],
-                       stdout=stream, timeout=900, check=True)
+    if not args.rust_only:
+        with (out / 'go.jsonl').open('w') as stream:
+            impl = ['--impl', 'gateway=rust', '--rust-binary', str(Path(args.gateway).resolve())] if args.go_rust_gateway else []
+            subprocess.run([args.go_lab, 'run', *files, '--level', 'sim', '--json', *impl],
+                           stdout=stream, timeout=900, check=True)
     with (out / 'rust.jsonl').open('w') as stream:
         subprocess.run([args.families, 'run', *files, '--gateway', args.gateway,
                         '--simapple', args.simapple, '--output', str(out / 'worlds')],
                        stdout=stream, timeout=900, check=True)
-    go, rust = verdicts(out / 'go.jsonl'), verdicts(out / 'rust.jsonl')
+    rust = verdicts(out / 'rust.jsonl')
+    if args.rust_only:
+        failing = {name: sorted(a for a, (passed, status) in checks.items() if not passed and status != 'unverified') for name, checks in rust.items()}
+        failing = {name: bad for name, bad in failing.items() if bad}
+        if len(rust) != len(files) or failing:
+            raise SystemExit(f'rust verdicts failed\n{failing}')
+        print(json.dumps({'scenarios': sorted(rust), 'rust_only': True}))
+        return
+    go = verdicts(out / 'go.jsonl')
     if len(go) != len(files) or go != rust or not all(all(p or st == 'unverified' for p, st in v.values()) for v in rust.values()):
         raise SystemExit(f'verdict mismatch\ngo={go}\nrust={rust}')
     print(json.dumps({'scenarios': sorted(rust), 'identical': True, 'moved': MOVED_TO_RUST_TESTS}))

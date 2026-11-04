@@ -121,12 +121,12 @@ native/                             Swift package (macOS 26, Swift 6.3, CLT only
   Sources/Decoders/                 typedstream, SEGB, Notes protobuf (pure, fixture-tested)
   Tests/DecodersTests/              decoder + time-math tests only
 lab/                                Harness (Go packages used by cmd/bridge-lab)
-  world/ simapple/ truth/ scenarios/ agent/ featuregraph/ evidence/
+  world/ simapple/ truth/ scenarios/ agent/ evidence/
   truth/native/                     AppleTruth: separate Swift package, shares no code with native/
   scenarios/<source>/*.yaml         scenario definitions
   fixtures/                         scrubbed decoder fixtures
 packaging/                          app bundle, Info.plist, entitlements, SMAppService plist, signing scripts
-tools/                              lint (zero comments, import boundaries), featuregraph checker + HTML render
+tools/                              lint (zero comments, import boundaries); the feature graph checker and HTML render live in rust/tools/featuregraph
 features.yaml                       feature graph
 GLOSSARY.md  PRINCIPLES.md  docs/adr/  design/
 ```
@@ -753,7 +753,7 @@ Runs on Ubuntu: `codex exec` with model `gpt-6-luna`, MCP configured to the Ubun
 
 ### 17.6 FeatureGraph
 
-`features.yaml` (root) is the DAG feature → requirement → module → scenarios → levels → status → evidence. `tools/featuregraph` checks: every feature has ≥ 1 scenario; every scenario file referenced exists and references its feature; dependencies acyclic; `done` requires every required level's latest evidence passing (`lab/evidence/<level>/<scenario>.json`, redacted); renders `design/features.html`.
+`features.yaml` (root) is the DAG feature → requirement → module → scenarios → levels → status → evidence. `rust/tools/featuregraph` (`make features`) checks: every feature has ≥ 1 scenario; every scenario file referenced exists and references its feature; dependencies acyclic; `done` requires every required level's latest evidence passing (`lab/evidence/<level>/<scenario>.json`, redacted); renders `design/features.html`.
 
 ### 17.7 Evidence
 

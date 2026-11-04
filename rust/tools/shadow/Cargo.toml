@@ -1,0 +1,22 @@
+[package]
+name = "ab-shadow-tools"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+[lints]
+workspace = true
+[[bin]]
+name = "ab-shadow-tools"
+path = "src/main.rs"
+[dependencies]
+ab-trust = { path = "../../crates/ab-trust" }
+serde_json.workspace = true
+sha2.workspace = true
+rustls.workspace = true
+ed25519-dalek.workspace = true
+x25519-dalek = { workspace = true, features = ["static_secrets"] }
+hmac = "0.12"
+base64 = "0.22"
+data-encoding = "2"
+hex = "0.4"
+rand = "0.8"

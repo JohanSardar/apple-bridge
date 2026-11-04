@@ -12,7 +12,7 @@ import sys
 import time
 
 
-def execute(entry, binary, timeout, logs, implementation, rust_binary, startup_blocker):
+def execute(entry, binary, timeout, logs, implementation, rust_binary, startup_blocker, families=None, simapple=None):
     started = time.monotonic()
     target = logs / (entry['id'] + '.log')
     if 'gateway=rust' in implementation and re.search(r'^impl: go-only$', Path(entry['path']).read_text(), re.M):
@@ -25,12 +25,15 @@ def execute(entry, binary, timeout, logs, implementation, rust_binary, startup_b
             blockers.append('ab-runtime: Rust bridge executable unavailable')
         if blockers:
             target.write_text('\n'.join(blockers) + '\n')
-            return {'id': entry['id'], 'seconds': 0, 'status': 'blocked', 'execution_status': 'not-started', 'implementation': implementation, 'required_features': entry['packages'], 'blocked_on': blockers, 'harness_audit': gateway_blockers(entry)}
+            return {'id': entry['id'], 'seconds': 0, 'status': 'blocked', 'execution_status': 'not-started', 'implementation': implementation, 'required_features': entry['packages'], 'blocked_on': blockers, 'harness_audit': [] if families else gateway_blockers(entry)}
     with target.open('wb') as output:
-        command = [binary, 'run', entry['path'], '--level', 'sim', '--prebuilt', '--json']
-        command += ['--impl', implementation]
-        if rust_binary:
-            command += ['--rust-binary', rust_binary]
+        if families:
+            command = [families, 'run', entry['path'], '--gateway', rust_binary, '--simapple', simapple, '--output', str(logs / (entry['id'] + '.world'))]
+        else:
+            command = [binary, 'run', entry['path'], '--level', 'sim', '--prebuilt', '--json']
+            command += ['--impl', implementation]
+            if rust_binary:
+                command += ['--rust-binary', rust_binary]
         marker = logs / (entry['id'] + '.started')
         serialized = platform.system() == 'Darwin' and (Path.home() / 'bin/ab-local').is_file()
         if serialized:
@@ -80,7 +83,7 @@ def execute(entry, binary, timeout, logs, implementation, rust_binary, startup_b
     row = {'id': entry['id'], 'seconds': round(time.monotonic() - started, 3), 'status': status, 'implementation': implementation}
     if 'gateway=rust' in implementation:
         blockers = list(scenario_blockers)
-        row['harness_audit'] = gateway_blockers(entry)
+        row['harness_audit'] = [] if families else gateway_blockers(entry)
         if startup_blocker:
             blockers.append(startup_blocker)
         if not rust_binary or not Path(rust_binary).is_file():
@@ -116,6 +119,10 @@ def main():
     parser.add_argument('--run-at-end', action='store_true')
     parser.add_argument('--host', choices=['linux', 'darwin', 'all'], default=platform.system().lower())
     parser.add_argument('--binary', default='bin/bridge-lab')
+    parser.add_argument('--runner', choices=['go', 'rust'], default='go')
+    parser.add_argument('--families-binary', default='')
+    parser.add_argument('--simapple-binary', default='')
+    parser.add_argument('--level', choices=['sim', 'replica'], default='sim')
     parser.add_argument('--impl', default='gateway=go,replica=go')
     parser.add_argument('--rust-binary', default='')
     parser.add_argument('--map', default='lab/test-selection.json')
@@ -132,11 +139,18 @@ def main():
         if key not in known:
             parser.error('unknown selection: ' + key)
         ids.update(known[key])
-    entries = [e for e in inventory['scenarios'] if 'sim' in e['levels'] and (not args.select or e['id'] in ids) and (args.host == 'all' or e['host'] == args.host) and (bool(args.select) or (e['recommendation'] == 'run-at-end') == args.run_at_end)]
+    if args.runner == 'rust':
+        args.impl = 'gateway=rust'
+        if not args.rust_binary or not args.families_binary or not args.simapple_binary:
+            parser.error('--runner rust needs --rust-binary, --families-binary and --simapple-binary')
+        for name in (args.families_binary, args.simapple_binary):
+            if not Path(name).is_file() or not os.access(name, os.X_OK):
+                parser.error('executable required: ' + name)
+    entries = [e for e in inventory['scenarios'] if args.level in e['levels'] and (not args.select or e['id'] in ids) and (args.host == 'all' or e['host'] == args.host) and (bool(args.select) or (e['recommendation'] == 'run-at-end') == args.run_at_end)]
     if not entries:
-        parser.error('selection contains no SIM scenarios for this host')
+        parser.error('selection contains no ' + args.level.upper() + ' scenarios for this host')
     binary_path = Path(args.binary).resolve()
-    if not binary_path.is_file() or not os.access(binary_path, os.X_OK):
+    if args.runner == 'go' and (not binary_path.is_file() or not os.access(binary_path, os.X_OK)):
         parser.error('prebuilt bridge-lab executable required')
     destination = Path(args.output)
     if destination.exists():
@@ -168,7 +182,7 @@ def main():
     started = time.monotonic()
     rows = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.parallel) as pool:
-        futures = [pool.submit(execute, e, binary, args.timeout, destination, args.impl, args.rust_binary, startup_blocker) for e in entries]
+        futures = [pool.submit(execute, e, binary, args.timeout, destination, args.impl, args.rust_binary, startup_blocker, str(Path(args.families_binary).resolve()) if args.runner == 'rust' else None, str(Path(args.simapple_binary).resolve()) if args.runner == 'rust' else None) for e in entries]
         for future in concurrent.futures.as_completed(futures):
             row = future.result()
             rows.append(row)

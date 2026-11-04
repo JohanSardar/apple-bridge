@@ -76,6 +76,46 @@ rust-search-perf:
 rust-ci: lint rust-test rust-search-perf rust-lint rust-lab-independence
 	python3 rust/check-native-graph.py
 	go test ./contracts/golden ./internal/frontdoor ./internal/iphone ./internal/web ./lab/scenarios -run Golden -count=1
+	$(MAKE) rust-golden
+
+.PHONY: rust-golden rust-gate
+rust-golden:
+	rust/check.sh test --workspace --locked golden
+
+rust-gate: lint-rust-sources rust-test rust-lint rust-lab-independence
+	python3 rust/check-native-graph.py
+	$(MAKE) rust-golden
+	python3 packaging/dev/test_source_registrations.py
+
+.PHONY: rust-build rust-sim rust-families rust-real rust-replica rust-agent rust-gateway-matrix rust-replica-matrix rust-sim-parallel
+RUST_NATIVE_BUILD := $(if $(filter Darwin,$(shell uname -s)),packaging/dev/heavy.sh packaging/dev/build-native.sh,true)
+rust-build:
+	rust/check.sh build --workspace --locked
+	$(RUST_NATIVE_BUILD)
+
+rust-sim:
+	SIM_JOBS="$(SIM_JOBS)" SIM_TIMEOUT="$(SIM_TIMEOUT)" SIM_SELECT="$(SIM_SELECT)" packaging/dev/rust-lab.sh sim $(if $(filter-out lab/scenarios,$(SCENARIOS)),$(SCENARIOS),)
+
+rust-families:
+	packaging/dev/rust-lab.sh families $(FAMILIES_FLAGS)
+
+rust-real:
+	packaging/dev/rust-lab.sh real $(SCENARIOS)
+
+rust-replica:
+	SIM_JOBS="$(SIM_JOBS)" SIM_TIMEOUT="$(SIM_TIMEOUT)" SIM_SELECT="$(SIM_SELECT)" packaging/dev/rust-lab.sh replica
+
+rust-agent:
+	packaging/dev/rust-lab.sh agent
+
+rust-gateway-matrix:
+	AB_LAB_RUNNER=rust RUST_BRIDGE="$(RUST_BRIDGE)" SIM_JOBS="$(SIM_JOBS)" SIM_TIMEOUT="$(SIM_TIMEOUT)" SIM_OUTPUT="$(SIM_OUTPUT)" SIM_SELECT="$(SIM_SELECT)" packaging/dev/gateway-matrix.sh
+
+rust-replica-matrix:
+	AB_LAB_RUNNER=rust REPLICA_MATRIX_FLAGS="$(REPLICA_MATRIX_FLAGS)" SCENARIOS="$(SCENARIOS)" packaging/dev/replica-matrix.sh
+
+rust-sim-parallel:
+	SIM_JOBS="$(SIM_JOBS)" SIM_TIMEOUT="$(SIM_TIMEOUT)" SIM_OUTPUT="$(SIM_OUTPUT)" SIM_SELECT="$(SIM_SELECT)" packaging/dev/rust-lab.sh sim
 
 .PHONY: replica-matrix replica-matrix-go
 REPLICA_MATRIX_FLAGS ?= --local-replicas --jobs 4
