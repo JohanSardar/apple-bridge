@@ -2,6 +2,7 @@ use crate::{Error, Result, World};
 use serde_json::{Value, json};
 use std::{
     collections::BTreeMap,
+    fmt::Write as _,
     fs,
     path::{Path, PathBuf},
     process::Command,
@@ -182,7 +183,13 @@ impl World {
                     "ipad" => (2, "iPad"),
                     _ => (2, "iPhone"),
                 };
-                json!([id, format!("Synthetic {} {id}", device.platform), platform, i32::from(id == "local"), model])
+                json!([
+                    id,
+                    format!("Synthetic {} {id}", device.platform),
+                    platform,
+                    i32::from(id == "local"),
+                    model
+                ])
             })
             .collect();
         drop(devices);
@@ -192,10 +199,7 @@ impl World {
         let _ = fs::remove_file(&temporary);
         python(
             PEERS,
-            &[
-                &temporary.to_string_lossy(),
-                &serde_json::to_string(&rows)?,
-            ],
+            &[&temporary.to_string_lossy(), &serde_json::to_string(&rows)?],
         )?;
         fs::rename(temporary, directory.join("sync.db"))?;
         Ok(())
@@ -216,7 +220,7 @@ struct Message {
     sender: String,
     received: f64,
     read: bool,
-    message_id: String,
+    external_id: String,
 }
 
 fn invalid(what: &str) -> Error {
@@ -229,7 +233,7 @@ fn path_escape(segment: &str) -> String {
         if byte.is_ascii_alphanumeric() || b"-_.~$&+=:@".contains(&byte) {
             out.push(char::from(byte));
         } else {
-            out.push_str(&format!("%{byte:02X}"));
+            let _ = write!(out, "%{byte:02X}");
         }
     }
     out
@@ -245,8 +249,10 @@ impl Mail {
             let data = &record["data"];
             match record["collection"].as_str().unwrap_or_default() {
                 "mail.account" => {
-                    self.kinds
-                        .insert(key.to_owned(), data["kind"].as_str().unwrap_or_default().to_owned());
+                    self.kinds.insert(
+                        key.to_owned(),
+                        data["kind"].as_str().unwrap_or_default().to_owned(),
+                    );
                 }
                 "mail.mailbox" => {
                     let id = key
@@ -288,7 +294,7 @@ impl Mail {
                             sender: data["from"].as_str().unwrap_or_default().to_owned(),
                             received,
                             read: data["read"].as_bool().unwrap_or_default(),
-                            message_id: data["message_id"].as_str().unwrap_or_default().to_owned(),
+                            external_id: data["message_id"].as_str().unwrap_or_default().to_owned(),
                         },
                     );
                 }
@@ -308,7 +314,12 @@ impl Mail {
                     .split('/')
                     .map(path_escape)
                     .collect();
-                let kind = self.kinds.get(account).cloned().unwrap_or_default().to_lowercase();
+                let kind = self
+                    .kinds
+                    .get(account)
+                    .cloned()
+                    .unwrap_or_default()
+                    .to_lowercase();
                 json!([id, format!("{kind}://{account}/{}", segments.join("/"))])
             })
             .collect();
@@ -316,14 +327,22 @@ impl Mail {
             .messages
             .iter()
             .map(|(id, m)| {
-                json!([id, m.mailbox, m.subject, m.sender, m.received, i32::from(m.read), m.message_id])
+                json!([
+                    id,
+                    m.mailbox,
+                    m.subject,
+                    m.sender,
+                    m.received,
+                    i32::from(m.read),
+                    m.external_id
+                ])
             })
             .collect();
         json!({"mailboxes": mailboxes, "messages": messages})
     }
 }
 
-const MAIL: &str = r#"import json,sqlite3,sys
+const MAIL: &str = r"import json,sqlite3,sys
 rows=json.load(open(sys.argv[2]))
 c=sqlite3.connect(sys.argv[1])
 c.execute('PRAGMA journal_mode=DELETE')
@@ -343,7 +362,7 @@ for rowid,mailbox,subject,sender,received,read,message_id in rows['messages']:
     c.execute('INSERT INTO messages(ROWID,mailbox,subject,sender,date_received,read,message_id) VALUES(?,?,?,?,?,?,?)',(rowid,mailbox,intern('subjects','subject',subjects,subject),intern('addresses','address',addresses,sender),received,read,message_id))
 c.commit()
 c.close()
-"#;
+";
 
 impl World {
     pub(crate) fn stage_session_mail(&self, action: &Value) -> Result<()> {

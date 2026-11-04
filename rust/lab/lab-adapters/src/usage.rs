@@ -33,7 +33,9 @@ fn send(world: &World, device: &str, platform: &str, events: &[Value]) -> bool {
 }
 pub(crate) fn session_restart(world: &mut World, evidence: &mut Evidence) {
     if std::env::var("AB_LAB_SESSION_RESTART").as_deref() != Ok("1")
-        || !lab_world::session_sources().iter().any(|source| source == "usage")
+        || !lab_world::session_sources()
+            .iter()
+            .any(|source| source == "usage")
     {
         return;
     }

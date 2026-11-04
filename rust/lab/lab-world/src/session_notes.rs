@@ -142,7 +142,10 @@ fn body_from(paragraphs: &mut [Paragraph], revision: &str) -> Vec<u8> {
     let mut document = varint(2, 0);
     document.extend(field(3, 2, &note));
     let raw = field(2, 2, &document);
-    let comment: Vec<u8> = revision.chars().filter_map(|c| u8::try_from(u32::from(c)).ok()).collect();
+    let comment: Vec<u8> = revision
+        .chars()
+        .filter_map(|c| u8::try_from(u32::from(c)).ok())
+        .collect();
     let mut encoder = GzBuilder::new()
         .comment(comment)
         .write(Vec::new(), Compression::default());
@@ -172,9 +175,10 @@ fn unescape(text: &str) -> String {
             _ => name
                 .strip_prefix('#')
                 .and_then(|digits| {
-                    digits
-                        .strip_prefix(['x', 'X'])
-                        .map_or_else(|| digits.parse::<u32>().ok(), |hex| u32::from_str_radix(hex, 16).ok())
+                    digits.strip_prefix(['x', 'X']).map_or_else(
+                        || digits.parse::<u32>().ok(),
+                        |hex| u32::from_str_radix(hex, 16).ok(),
+                    )
                 })
                 .and_then(char::from_u32),
         };
@@ -221,7 +225,9 @@ fn tokens(source: &str) -> Vec<Token> {
         if inner.starts_with('!') {
             continue;
         }
-        let (closing, inner) = inner.strip_prefix('/').map_or((false, inner), |inner| (true, inner));
+        let (closing, inner) = inner
+            .strip_prefix('/')
+            .map_or((false, inner), |inner| (true, inner));
         let name: String = inner
             .chars()
             .take_while(|c| !c.is_whitespace() && *c != '/')
@@ -401,7 +407,10 @@ fn write_notes(
         let mut rows: Vec<Value> = Vec::new();
         for (account, name) in &account_names {
             let pk = state.assign(0, account);
-            rows.push(json!([pk, 3, account, null, null, name, null, null, null, null, 0, 0, 0, 0, 1, null, null, null, null, null, null, null, null]));
+            rows.push(json!([
+                pk, 3, account, null, null, name, null, null, null, null, 0, 0, 0, 0, 1, null,
+                null, null, null, null, null, null, null
+            ]));
         }
         for (key, (data, deleted)) in &folders {
             let account = text_of(data, "account");
@@ -424,14 +433,38 @@ fn write_notes(
             );
             let pk = state.assign(1, key);
             let account_pk = state.account_pk.get(&account).copied();
-            rows.push(json!([pk, 1, key, null, title, null, account_pk, parent, null, null, i32::from(*deleted), i32::from(recent), 0, 0, revision, null, null, null, null, null, smart, null, null]));
+            rows.push(json!([
+                pk,
+                1,
+                key,
+                null,
+                title,
+                null,
+                account_pk,
+                parent,
+                null,
+                null,
+                i32::from(*deleted),
+                i32::from(recent),
+                0,
+                0,
+                revision,
+                null,
+                null,
+                null,
+                null,
+                null,
+                smart,
+                null,
+                null
+            ]));
         }
         let mut bodies: Vec<Value> = Vec::new();
         let first_folder = folders.keys().next().copied();
         for (key, (data, deleted)) in &notes {
             let mut folder_key = reference_key(&data["folder_id"]);
             if !folders.contains_key(folder_key.as_str()) {
-                folder_key = first_folder.unwrap_or_default().to_owned();
+                first_folder.unwrap_or_default().clone_into(&mut folder_key);
             }
             if folder_key.is_empty() {
                 continue;
@@ -455,7 +488,13 @@ fn write_notes(
                 } else {
                     html_paragraphs(&markup)
                 };
-                for (index, block) in data["blocks"].as_array().cloned().unwrap_or_default().iter().enumerate() {
+                for (index, block) in data["blocks"]
+                    .as_array()
+                    .cloned()
+                    .unwrap_or_default()
+                    .iter()
+                    .enumerate()
+                {
                     if index < built.len() && block["list_style"] == "checklist" {
                         let mut identifier = key.as_bytes().to_vec();
                         identifier.resize(16, 0);
@@ -472,11 +511,19 @@ fn write_notes(
             if paragraphs.is_some() {
                 tags = data["tags"]
                     .as_array()
-                    .map(|values| values.iter().filter_map(|v| v.as_str().map(str::to_owned)).collect())
+                    .map(|values| {
+                        values
+                            .iter()
+                            .filter_map(|v| v.as_str().map(str::to_owned))
+                            .collect()
+                    })
                     .unwrap_or_default();
             }
             for (index, tag) in tags.iter().enumerate() {
-                let identifier = format!("{key}-tag-{}", char::from(b'a' + u8::try_from(index).unwrap_or(0)));
+                let identifier = format!(
+                    "{key}-tag-{}",
+                    char::from(b'a' + u8::try_from(index).unwrap_or(0))
+                );
                 if let Some(last) = paragraphs.as_mut().and_then(|built| built.last_mut()) {
                     last.runs.push(Run {
                         text: "\u{fffc}".into(),
@@ -485,7 +532,31 @@ fn write_notes(
                     });
                 }
                 let attachment = state.assign(2, &format!("attachment:{identifier}"));
-                rows.push(json!([attachment, 4, identifier, null, null, null, null, null, null, null, 0, 0, 0, 0, 1, pk, null, null, HASHTAG_UTI, tag, null, null, null]));
+                rows.push(json!([
+                    attachment,
+                    4,
+                    identifier,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    0,
+                    0,
+                    0,
+                    0,
+                    1,
+                    pk,
+                    null,
+                    null,
+                    HASHTAG_UTI,
+                    tag,
+                    null,
+                    null,
+                    null
+                ]));
             }
             let (body, body_pk) = match paragraphs.as_mut() {
                 Some(built) => (
@@ -498,11 +569,37 @@ fn write_notes(
             let modified = notes_date(&data["modified_at"]);
             let revision = state.version(
                 &format!("note:{key}"),
-                &json!([title, body, locked, pinned, folder_key, deleted, created, modified, tags]),
+                &json!([
+                    title, body, locked, pinned, folder_key, deleted, created, modified, tags
+                ]),
             );
             bodies.push(json!([pk, body, revision]));
             let folder = state.folder_pk.get(&folder_key).copied();
-            rows.push(json!([pk, 2, key, title, null, null, null, null, folder, body_pk, i32::from(*deleted), 0, i32::from(locked), i32::from(pinned), revision, null, null, null, null, null, null, created, modified]));
+            rows.push(json!([
+                pk,
+                2,
+                key,
+                title,
+                null,
+                null,
+                null,
+                null,
+                folder,
+                body_pk,
+                i32::from(*deleted),
+                0,
+                i32::from(locked),
+                i32::from(pinned),
+                revision,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                created,
+                modified
+            ]));
         }
         let encoded_rows = serde_json::to_string(&rows)?;
         let encoded_bodies = serde_json::to_string(&bodies)?;
@@ -534,7 +631,14 @@ fn write_notes(
 
 fn inspect(directory: &Path) -> Result<Vec<Value>> {
     let output = Command::new("curl")
-        .args(["--silent", "--show-error", "--fail", "--max-time", "5", "--unix-socket"])
+        .args([
+            "--silent",
+            "--show-error",
+            "--fail",
+            "--max-time",
+            "5",
+            "--unix-socket",
+        ])
         .arg(directory.join("sim.sock"))
         .arg("http://sim/inspect")
         .stdout(Stdio::piped())
@@ -569,7 +673,12 @@ fn sync_once(state: &Mutex<Notes>, directory: &Path, root: &Path, hold: &Path) -
     let observations = inspect(directory)?;
     let rows: Vec<(String, String, bool, Value)> = observations
         .iter()
-        .filter(|row| matches!(row["collection"].as_str(), Some("notes.folder" | "notes.note")))
+        .filter(|row| {
+            matches!(
+                row["collection"].as_str(),
+                Some("notes.folder" | "notes.note")
+            )
+        })
         .map(|row| {
             (
                 text_of(row, "collection"),
@@ -583,7 +692,9 @@ fn sync_once(state: &Mutex<Notes>, directory: &Path, root: &Path, hold: &Path) -
             )
         })
         .collect();
-    let mut state = state.lock().map_err(|_| Error::Invalid("notes state".into()))?;
+    let mut state = state
+        .lock()
+        .map_err(|_| Error::Invalid("notes state".into()))?;
     write_notes(&mut state, root, hold, &rows)
 }
 

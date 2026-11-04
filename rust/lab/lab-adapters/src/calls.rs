@@ -249,9 +249,7 @@ fn gateway_flow(world: &World, evidence: &mut Evidence) -> Result<()> {
             } else {
                 row["data"]["fixture_version"].as_u64()
             };
-            if seen_version != Some(version)
-                || row["version"].as_u64() != Some(version)
-            {
+            if seen_version != Some(version) || row["version"].as_u64() != Some(version) {
                 return false;
             }
             let current = row["id"].as_str().map(str::to_owned);
