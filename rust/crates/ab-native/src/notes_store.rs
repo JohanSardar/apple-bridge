@@ -426,6 +426,17 @@ fn full_body(
 fn data_value(row: &Row, key: &str, default: Value) -> Value {
     row.get(key).cloned().unwrap_or(default)
 }
+pub(crate) fn generation(path: &Path) -> Result<String> {
+    let db = Database::open(path)?;
+    let uuid = db
+        .query("SELECT Z_UUID FROM Z_METADATA", &[])?
+        .first()
+        .map(|r| text(r, "Z_UUID").to_owned())
+        .filter(|v| !v.is_empty())
+        .ok_or(Error::Corrupt)?;
+    Ok(format!("notes-{uuid}"))
+}
+
 pub(crate) fn read(
     db: &Database,
     path: &Path,

@@ -65,7 +65,7 @@ fn writable_calendar(probe: &dyn Probe, key: &str) -> Result<(), Refusal> {
     }
 }
 
-fn goal(probe: &dyn Probe, action: &Value, baseline: &Value) -> Result<Value, Refusal> {
+fn goal(probe: &dyn Probe, action: &Value, prior: &Value) -> Result<Value, Refusal> {
     probe
         .call(
             "calendar.goal",
@@ -73,7 +73,7 @@ fn goal(probe: &dyn Probe, action: &Value, baseline: &Value) -> Result<Value, Re
                 "native_key": action["native_key"],
                 "list_key": action["list_key"],
                 "calendar_args": request(action),
-                "baseline": baseline,
+                "prior": prior,
             }),
         )
         .map_err(|code| native_failure(&code))

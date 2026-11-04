@@ -118,6 +118,7 @@ struct Hub {
     sequence: AtomicU64,
     epoch: u128,
     fence: u64,
+    os_build: String,
     clock: Arc<dyn Clock>,
     capture: Option<capture::Capture>,
 }
@@ -518,7 +519,8 @@ fn start(
     gateway: &mut UnixStream,
     link: &mut UnixStream,
     secret: &[u8],
-) -> Result<(IpcFrame, u64), Error> {
+    capture: Option<&capture::Capture>,
+) -> Result<(IpcFrame, u64, String), Error> {
     gateway.set_read_timeout(Some(HANDSHAKE_TIMEOUT))?;
     link.set_read_timeout(Some(HANDSHAKE_TIMEOUT))?;
     authenticate(gateway, secret)?;
@@ -540,11 +542,15 @@ fn start(
     let Ok(Link::Ready(mut ready)) = native::read_frame(link) else {
         return Err(Error::Invalid);
     };
+    let os_build = ready.os_build.clone();
+    if let Some(capture) = capture {
+        capture.advertise(&mut ready, fence)?;
+    }
     messages_advertise::apply(&mut ready.coverage, &mut ready.capabilities);
     gateway.write_all(&ready.into_ipc().encode().map_err(|_| Error::Invalid)?)?;
     gateway.set_read_timeout(None)?;
     link.set_read_timeout(None)?;
-    Ok((opened, fence))
+    Ok((opened, fence, os_build))
 }
 
 pub fn serve(
@@ -596,16 +602,17 @@ pub fn serve_attached(
     }
     let mut gateway_read = gateway.try_clone()?;
     let mut link_read = link.try_clone()?;
-    let (opened, fence) = match start(&mut gateway_read, &mut link_read, secret) {
-        Ok(started) => started,
-        Err(error) => {
-            let _ = gateway.shutdown(Shutdown::Both);
-            let _ = link.shutdown(Shutdown::Both);
-            return Err(error);
-        }
-    };
-    let committed = committed_map(&opened)?;
     let capture = capture::Capture::attach(attached)?;
+    let (opened, fence, os_build) =
+        match start(&mut gateway_read, &mut link_read, secret, capture.as_ref()) {
+            Ok(started) => started,
+            Err(error) => {
+                let _ = gateway.shutdown(Shutdown::Both);
+                let _ = link.shutdown(Shutdown::Both);
+                return Err(error);
+            }
+        };
+    let committed = committed_map(&opened)?;
     let mut capture_state = capture::State::default();
     if let Some(capture) = &capture {
         capture.open(&mut capture_state, &committed)?;
@@ -630,6 +637,7 @@ pub fn serve_attached(
         clock,
         capture,
         fence,
+        os_build,
         sequence: AtomicU64::new(0),
         epoch: SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -681,7 +689,7 @@ pub fn serve_attached(
                         let source = name(scan.source)?;
                         scope.spawn(move || {
                             let done = if hub.capture_owns(&source) {
-                                hub.capture_scan(&scan, &source)
+                                Err(Error::Conflict)
                             } else {
                                 run_scan(hub, &scan)
                             };

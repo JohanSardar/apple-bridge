@@ -18,6 +18,7 @@ fn inherited_descriptor(
 }
 
 const FACTS_DESCRIPTOR: &str = "AB_NATIVE_FACTS_FD";
+const DEFAULT_RUST_COMMANDS: &str = "reminders,calendar,contacts,notes,messages";
 
 fn exit_with_parent() {
     let parent = std::os::unix::process::parent_id();
@@ -39,6 +40,7 @@ struct Flags {
     session_secret: Option<String>,
     session_home: Option<String>,
     rust_commands: Option<String>,
+    user_home: Option<String>,
 }
 
 fn parse_flags(args: &[String]) -> Result<Flags, Error> {
@@ -50,6 +52,7 @@ fn parse_flags(args: &[String]) -> Result<Flags, Error> {
             "--session-secret" => &mut flags.session_secret,
             "--session-home" => &mut flags.session_home,
             "--rust-commands" => &mut flags.rust_commands,
+            "--user-home" => &mut flags.user_home,
             _ => return Err(Error::Invalid),
         };
         if slot.replace(value).is_some() {
@@ -79,7 +82,7 @@ fn lab_session(args: &[String]) -> Result<(), Error> {
     };
     let secret = std::fs::read(secret)?;
     let home = std::path::PathBuf::from(home);
-    let capture = ab_session::production::load(&home)?;
+    let capture = ab_session::production::load(&home, None)?;
     let _ = std::fs::remove_file(listen);
     let listener = std::os::unix::net::UnixListener::bind(listen)?;
     for link in listener.incoming() {
@@ -117,10 +120,13 @@ fn selftest_messages(args: &[String]) -> Result<(), Error> {
 
 fn session_capture(
     home: &str,
+    user: Option<&str>,
     gateway: &std::os::unix::net::UnixStream,
     helper: &std::os::unix::net::UnixStream,
 ) -> Result<Option<ab_session::session::Attached>, Error> {
-    let Some(loaded) = ab_session::production::load(std::path::Path::new(home))? else {
+    let Some(loaded) =
+        ab_session::production::load(std::path::Path::new(home), user.map(std::path::Path::new))?
+    else {
         return Ok(None);
     };
     let facts = if loaded.wants_inherited_facts() {
@@ -148,15 +154,17 @@ fn serve_session(
     helper: i32,
     secret: &str,
     home: &str,
+    user: Option<&str>,
     rust_commands: Option<&str>,
 ) -> Result<(), Error> {
     keep_log(std::path::Path::new(home));
     let secret = ab_session::session::load_secret(std::path::Path::new(secret))?;
     let gateway = ab_sys::inherited_unix_stream(gateway)?;
     let helper = ab_sys::inherited_unix_stream(helper)?;
-    let capture = session_capture(home, &gateway, &helper)?;
+    let capture = session_capture(home, user, &gateway, &helper)?;
+    let owned = rust_commands.or(user.map(|_| DEFAULT_RUST_COMMANDS));
     let options = ab_session::session::Options {
-        rust_commands: rust_commands
+        rust_commands: owned
             .unwrap_or_default()
             .split(',')
             .filter(|source| !source.is_empty())
@@ -241,10 +249,18 @@ fn run() -> Result<(), Error> {
         session_secret,
         session_home,
         rust_commands,
+        user_home,
     } = parse_flags(&args[4..])?;
     let secret = session_secret.ok_or(Error::Invalid)?;
     let home = session_home.ok_or(Error::Invalid)?;
-    serve_session(gateway, helper, &secret, &home, rust_commands.as_deref())
+    serve_session(
+        gateway,
+        helper,
+        &secret,
+        &home,
+        user_home.as_deref(),
+        rust_commands.as_deref(),
+    )
 }
 
 fn main() -> std::process::ExitCode {

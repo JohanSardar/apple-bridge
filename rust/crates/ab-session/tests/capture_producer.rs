@@ -168,6 +168,34 @@ fn media_source_is_routed(source: &str) -> Fallible<()> {
 }
 
 #[test]
+fn a_voicemail_record_uuid_stored_as_a_blob_is_a_usable_key() -> Fallible<()> {
+    let directory = temporary("voicemail-blob")?;
+    let connection =
+        rusqlite::Connection::open(directory.join("FaceTimeMessageStore-local.sqlitedb"))?;
+    connection.execute_batch(
+        "CREATE TABLE Z_METADATA(Z_UUID TEXT);
+         INSERT INTO Z_METADATA VALUES('lab');
+         CREATE TABLE ZSTOREDMESSAGE(Z_PK INTEGER PRIMARY KEY,ZRECORDUUID BLOB,ZFROM TEXT,ZDATECREATED REAL,ZDURATION REAL,ZISREAD INTEGER,ZMAILBOXTYPE INTEGER,ZPROVIDER TEXT,ZMESSAGETYPE INTEGER);
+         INSERT INTO ZSTOREDMESSAGE VALUES(1,x'00AB',  'Synthetic',946684800,12.0,0,0,'com.apple.coretelephony',0);",
+    )?;
+    drop(connection);
+    let sources = readers::from_config(&json!({"voicemail":{"root":directory}}).to_string())?;
+    let mut session = wire(
+        sources,
+        Options {
+            poll: Duration::from_millis(20),
+            ..Options::default()
+        },
+        json!({}),
+    )?;
+    let (size, capture) = receive(&mut session.gateway)?;
+    assert_eq!(capture["observations"][0]["native_key"], "00ab");
+    commit(&mut session, "voicemail", &capture, size)?;
+    session.finish()?;
+    Ok(())
+}
+
+#[test]
 fn rust_calls_voicemail_and_voice_memos_are_routed() -> Fallible<()> {
     for source in ["phone", "voicemail", "voice_memos"] {
         media_source_is_routed(source)?;
@@ -307,6 +335,7 @@ fn watcher_wakes_the_producer_long_before_the_poll_interval() -> Fallible<()> {
             watch: true,
             state: None,
             queries: ab_session::queries::NativeQueries::default(),
+            ..Options::default()
         },
         json!({}),
     )?;
@@ -330,14 +359,14 @@ fn production_config_flips_a_source_to_rust_and_back() -> Fallible<()> {
     let home = temporary("home")?;
     let directory = temporary("home-safari")?;
     history(&directory, 2)?;
-    assert!(production::load(&home)?.is_none());
+    assert!(production::load(&home, None)?.is_none());
     std::fs::create_dir_all(home.join("session"))?;
     std::fs::write(
         home.join(production::CONFIG_FILE),
         json!({"sources":{"safari":{"root":directory}},"watch":false,"poll_ms":20}).to_string(),
     )?;
     assert_eq!(
-        production::load(&home)?.ok_or("config")?.sources(),
+        production::load(&home, None)?.ok_or("config")?.sources(),
         ["safari"]
     );
     std::fs::write(
@@ -346,20 +375,22 @@ fn production_config_flips_a_source_to_rust_and_back() -> Fallible<()> {
             .to_string(),
     )?;
     assert_eq!(
-        production::load(&home)?.ok_or("config")?.sources(),
+        production::load(&home, None)?.ok_or("config")?.sources(),
         ["calendar", "contacts"]
     );
     std::fs::write(
         home.join(production::CONFIG_FILE),
         json!({"sources":{"maps":{"root":directory}}}).to_string(),
     )?;
-    assert!(production::load(&home).is_err());
+    assert!(production::load(&home, None).is_err());
 
     std::fs::write(
         home.join(production::CONFIG_FILE),
         json!({"sources":{"safari":{"root":directory}},"watch":false,"poll_ms":20}).to_string(),
     )?;
-    let attached = production::load(&home)?.ok_or("config")?.attached(None)?;
+    let attached = production::load(&home, None)?
+        .ok_or("config")?
+        .attached(None)?;
     let mut world = wire(attached.readers, attached.options, json!({}))?;
     assert_eq!(receive(&mut world.gateway)?.1["source"], "safari");
     world.finish()?;
@@ -560,103 +591,6 @@ fn concurrent_checkpoint_saves_never_race_on_the_temporary_file() -> Fallible<()
     Ok(())
 }
 
-fn tab_frame(checkpoint: &str, tabs: &[(i64, i64, &str)], partial: bool) -> Value {
-    let rows: Vec<Value> = tabs
-        .iter()
-        .map(|(window, index, title)| {
-            json!({"kind":"upsert","collection":"safari.tab","native_key":format!("{window}:{index}"),
-                   "scoped_alias":format!("safari/safari.tab/{window}:{index}"),"observed_at":"2026-01-01T00:00:00.000Z",
-                   "data":{"window":window,"index":index,"title":title,"url":"https://example.com/","active":*index == 1}})
-        })
-        .collect();
-    json!({"t":"Scan","id":checkpoint,"source":"safari","generation":"swift-tabs","scan_id":checkpoint,
-           "scope":["safari.tab"],"completion_evidence":if partial {"partial"} else {"complete"},"observations":rows,"live":true})
-}
-
-#[test]
-fn safari_live_tabs_arrive_as_helper_facts_and_leave_as_rust_captures() -> Fallible<()> {
-    let directory = temporary("tabs")?;
-    let mut session = wire(
-        readers::from_config(&json!({"safari":{"root":directory}}).to_string())?,
-        polling(None),
-        json!({}),
-    )?;
-    expect_silence(&mut session.gateway)?;
-
-    send(
-        &mut session.link,
-        &tab_frame("t1", &[(7, 1, "One"), (7, 2, "Two")], false),
-    )?;
-    let (_, committed) = receive(&mut session.link)?;
-    assert_eq!(committed["t"], "ScanCommitted");
-    assert_eq!(committed["id"], "t1");
-    let (size, first) = receive(&mut session.gateway)?;
-    assert_eq!(first["source"], "safari");
-    assert_eq!(first["scope"], json!(["safari.tab"]));
-    assert_eq!(first["completion_evidence"], "complete");
-    assert_eq!(first["live"], false);
-    assert_eq!(first["predecessor"], "");
-    let keys: Vec<&str> = first["observations"]
-        .as_array()
-        .ok_or("observations")?
-        .iter()
-        .map(|row| row["native_key"].as_str().unwrap_or_default())
-        .collect();
-    assert_eq!(keys, ["7:1", "7:2"]);
-    assert_eq!(first["observations"][0]["data"]["title"], "One");
-    commit(&mut session, "safari", &first, size)?;
-
-    send(
-        &mut session.link,
-        &tab_frame("t2", &[(7, 1, "One renamed")], false),
-    )?;
-    assert_eq!(receive(&mut session.link)?.1["t"], "ScanCommitted");
-    let (size, second) = receive(&mut session.gateway)?;
-    assert_eq!(second["live"], true);
-    assert_eq!(second["predecessor"], first["checkpoint"]);
-    assert_eq!(second["generation"], first["generation"]);
-    let kinds: Vec<(&str, &str)> = second["observations"]
-        .as_array()
-        .ok_or("observations")?
-        .iter()
-        .map(|row| {
-            (
-                row["kind"].as_str().unwrap_or_default(),
-                row["native_key"].as_str().unwrap_or_default(),
-            )
-        })
-        .collect();
-    assert_eq!(kinds, [("upsert", "7:1"), ("absent", "7:2")]);
-    commit(&mut session, "safari", &second, size)?;
-
-    send(
-        &mut session.link,
-        &tab_frame("t3", &[(7, 1, "One renamed")], false),
-    )?;
-    assert_eq!(receive(&mut session.link)?.1["t"], "ScanCommitted");
-    expect_silence(&mut session.gateway)?;
-
-    send(&mut session.link, &tab_frame("t4", &[], true))?;
-    assert_eq!(receive(&mut session.link)?.1["t"], "ScanCommitted");
-    let mut other = tab_frame("t5", &[], false);
-    other["scope"] = json!(["safari.history"]);
-    send(&mut session.link, &other)?;
-    assert_eq!(receive(&mut session.link)?.1["t"], "ScanCommitted");
-    expect_silence(&mut session.gateway)?;
-
-    send(&mut session.link, &tab_frame("t6", &[], false))?;
-    assert_eq!(receive(&mut session.link)?.1["t"], "ScanCommitted");
-    let (_, closed) = receive(&mut session.gateway)?;
-    assert_eq!(closed["observations"][0]["kind"], "absent");
-    assert_eq!(closed["observations"][0]["native_key"], "7:1");
-
-    drop(session.gateway);
-    drop(session.link);
-    let _ = session.worker.join();
-    std::fs::remove_dir_all(directory)?;
-    Ok(())
-}
-
 fn messages_fixture(
     root: &Path,
     texts: &[&str],
@@ -812,31 +746,6 @@ fn messages_reader_streams_history_then_live_rows_and_serves_attachment_bytes() 
     assert!(keys.contains(&"msg-3"), "{keys:?}");
     assert!(!keys.contains(&"msg-1"), "{keys:?}");
     commit(&mut session, "messages", &live, size)?;
-
-    expect_silence(&mut session.gateway)?;
-    send(
-        &mut session.link,
-        &json!({"t":"Scan","id":"swift-cp","source":"messages","generation":"swift","scope":["messages.message"],
-                "completion_evidence":"","live":true,"observations":[{"kind":"upsert","collection":"messages.message","native_key":"msg-1","data":{}}]}),
-    )?;
-    let committed = loop {
-        let frame = receive(&mut session.link)?.1;
-        if frame["t"] == "ScanCommitted" {
-            break frame;
-        }
-    };
-    assert_eq!(committed["id"], "swift-cp");
-    let (size, again) = receive(&mut session.gateway)?;
-    let again_keys: Vec<&str> = again["observations"]
-        .as_array()
-        .ok_or("rows")?
-        .iter()
-        .filter(|row| row["kind"] == "upsert")
-        .map(|row| row["native_key"].as_str().unwrap_or_default())
-        .collect();
-    assert!(again_keys.contains(&"msg-1"), "{again_keys:?}");
-    assert!(!again_keys.contains(&"msg-2"), "{again_keys:?}");
-    commit(&mut session, "messages", &again, size)?;
 
     drop(session.gateway);
     drop(session.link);

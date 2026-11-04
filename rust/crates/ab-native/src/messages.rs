@@ -114,6 +114,14 @@ struct Scan {
     cursor: i64,
     seen: BTreeSet<String>,
 }
+#[must_use]
+pub fn pins_readable(home: &Path) -> bool {
+    fs::read(home.join("Library/Preferences/com.apple.messages.pinning.plist"))
+        .ok()
+        .and_then(|bytes| crate::plist::decode(&bytes).ok())
+        .is_some()
+}
+
 #[derive(Debug)]
 pub struct Reader {
     pending_scan: Option<Scan>,

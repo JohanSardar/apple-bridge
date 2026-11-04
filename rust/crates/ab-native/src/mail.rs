@@ -8,6 +8,29 @@ const GENERATION: &str = "SELECT 'mail-v10'";
 pub fn coverage() -> Value {
     json!({"fields":"partial","missing":["account settings, recipients, attachment files and local body availability require qualification"]})
 }
+#[must_use]
+pub fn readable(path: &Path) -> bool {
+    Snapshot::open(path, GENERATION).is_ok_and(|reader| {
+        reader
+            .require(&[
+                (
+                    "messages",
+                    &[
+                        "mailbox",
+                        "subject",
+                        "sender",
+                        "date_received",
+                        "read",
+                        "message_id",
+                    ],
+                ),
+                ("mailboxes", &["url"]),
+                ("subjects", &["subject"]),
+                ("addresses", &["address"]),
+            ])
+            .is_ok()
+    })
+}
 fn projection(
     reader: &Snapshot,
     rows: Vec<capture::Row>,

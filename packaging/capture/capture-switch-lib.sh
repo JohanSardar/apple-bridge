@@ -1,4 +1,4 @@
-ALL_SOURCES="safari usage notes voice_memos mail phone voicemail calendar contacts reminders messages files mac"
+ALL_SOURCES="safari usage notes voice_memos mail phone voicemail calendar contacts reminders messages files mac focus shortcuts pdf"
 LIVE_HOME="$HOME/Library/Application Support/AppleBridgeLive"
 
 die() { echo "error: $*" >&2; exit 1; }
@@ -76,7 +76,7 @@ source_root() {
     phone) echo "$SOURCE_BASE/Library/Application Support/CallHistoryDB" ;;
     voicemail) echo "$SOURCE_BASE/Library/Group Containers/group.com.apple.FaceTime/com.apple.facetimemessagestored/Data Store" ;;
     files) echo "$SOURCE_BASE/Library/Mobile Documents/com~apple~CloudDocs/Bridge Test" ;;
-    calendar|contacts|reminders|mac) echo "$HELPER_HOME/session/facts/$1" ;;
+    calendar|contacts|reminders|mac|focus|shortcuts|pdf) echo "$HELPER_HOME/session/facts/$1" ;;
   esac
 }
 

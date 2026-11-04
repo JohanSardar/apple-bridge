@@ -1,6 +1,7 @@
 use super::{
-    CaptureReader, Debug, Error, MAX_ROWS, Path, PathBuf, ScanContext, Signature, Value,
-    capture_value, confine_staging, context_for, decode, encode, file_signature, reader_error,
+    CaptureReader, Debug, Error, MAX_ROWS, Path, PathBuf, Readiness, ReadinessContext, ScanContext,
+    Signature, Value, capture_value, confine_staging, context_for, decode, encode, file_signature,
+    json, reader_error,
 };
 use ab_native::{capture, voice_memo};
 
@@ -65,6 +66,20 @@ impl CaptureReader for VoiceMemosReader {
         self.assets()?
             .read_blob(handle, offset, length)
             .map_err(reader_error)
+    }
+
+    fn readiness(&mut self, _context: &ReadinessContext<'_>) -> Option<Readiness> {
+        let unknown = json!({"fields": "unknown"});
+        Some(if !self.path.exists() {
+            Readiness::not("unavailable", unknown, "store not present")
+        } else if voice_memo::readable(&self.path) {
+            Readiness::ready(
+                json!({"fields": "metadata_and_local_assets", "transcript": "embedded_if_present", "audio": "local_if_present"}),
+                &[],
+            )
+        } else {
+            Readiness::not("unavailable", unknown, "store_access_or_schema_unavailable")
+        })
     }
 
     fn next(&mut self, context: &ScanContext) -> Result<Option<Value>, Error> {

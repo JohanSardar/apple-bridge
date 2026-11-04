@@ -37,10 +37,16 @@ per identity, and Swift pushes `Changed` (`source`,`generation`); both ride the 
 
 ## Reader ownership
 
-Exactly one producer per source, decided when the session starts. `<home>/session/rust-capture.json` names the sources ab-session captures;
-the Helper starts no capture for them (`CaptureOwnership`; Safari keeps only its live tabs) and still registers them for commands,
-queries and facts. A source that is not named stays with Swift: Swift sends observations as `Scan` frames and ab-session owns their chunks,
-credit and checkpoints. Switching a source means editing the file and restarting the Helper; there is no hot takeover.
+ab-session captures every source. The Helper starts no capture; it answers facts and primitives and reports the
+readiness of the sources whose readiness is a framework fact. The Helper passes `--user-home DIR` and the session
+builds its configuration from that home (`production::defaults`). `<home>/session/rust-capture.json` is an
+override: per-source fields merge over the defaults, a source it does not name is still captured, and
+`"exclusive": true` limits the session to the named sources (an entry with its own `root` is then taken as
+written). Without `--user-home` the file alone decides, and no file means no capture; that is how a fixture run stays
+away from the machine's real data.
+
+A `Scan` frame of a source the session captures is refused with `ScanFailed`. `Scan` exists only for the lab's
+simulated Helper, for sources the session does not capture in that run.
 
 ## Rust capture in session mode
 
@@ -50,11 +56,9 @@ checkpoint of the same generation, else empty), assigns a checkpoint and scan id
 in the same `flight::Flights` as Swift scans. A gateway `Committed` for a reader flight must match checkpoint and credit; it calls
 `CaptureReader::commit` while the flight is still open, returns credit and advances the committed checkpoint.
 
-A `Scan` of an owned source is a hint: `CaptureReader::ingest` sees it and Swift sends no rows. `Ok(true)` holds its `ScanCommitted` until the
-reader's capture that followed it is committed, `Ok(false)` releases it at once. `<source>.reconcile` is answered by the session when
-`CaptureReader::refresh` returns true (agenda facts readers, Notes): it returns after a reader pass that began after the request has finished. `bind` nudges
-the reader and waits up to 15 s for the capture of a key in an owned source, 0.5 s otherwise. Messages keeps its `Primitive`: its reader needs the Helper's row
-identities.
+`<source>.reconcile` is answered by the session when `CaptureReader::refresh` returns true (agenda facts readers, Notes, Messages): it returns after a reader pass that began after the request has finished. `CaptureReader::answer` lets a reader serve a command's read from the store it owns (`notes.read`, `notes.observe`, `notes.trash_folder`). `bind` nudges the reader and waits up to 15 s for the capture of a key in an owned source, 0.5 s otherwise.
+
+Readiness: `CaptureReader::readiness` decides state, coverage, capabilities and reason for sources that are read from a store (phone, voicemail, voice memos, usage, mail, notes, messages, files, shortcuts). The session overrides those in `Ready` and sends `SourceState` when one changes, checked every 30 s. A reader that returns `None` (agenda, contacts, Mac, Focus, Safari, PDF) leaves it to the Helper.
 
 Configuration in a lab world: `AB_LAB_SESSION_SOURCES=a,b` writes `session-home/session/rust-capture.json` from fixture directories, and `--lab-session-listen` loads it.
 
@@ -124,7 +128,7 @@ Open: NOTE-LIST asserts a note inside a recently-deleted folder and a fixed thum
 - **Checkpoint persistence.** With a state directory (`<home>/session/capture-state` in production) the session fsyncs `<source>.json` (`generation`, `checkpoint`, reader `token`) after the gateway commits a Rust capture and the reader has settled. The token is the committed input-tree signature. On `Open`, a record is trusted only when its generation and checkpoint equal `Open.checkpoints[source]`; the reader then resumes and an unchanged source emits nothing. A mismatch (or no record) means a normal first full scan under the gateway's predecessor, so a stale or crashed state file can only cause a rescan, never a skipped change.
 - **Blob handles.** A reader can own a handle prefix (`CaptureReader::owns`/`blob`). Gateway `BlobRead` frames for an owned handle are answered by the session with `BlobChunk` or `BlobUnavailable`, and are never forwarded to the Helper. Voice Memos (`voice_memos`, config `root` and required `staging`) produces `voice-memo-blob:<digest>` handles; the asset store re-adopts staged files on open, so handles keep resolving after a restart.
 - **Watcher scheduling.** `ab_sys::watch::Watcher` uses kqueue (`EVFILT_VNODE`, macOS) or inotify (Linux) on every directory and file under a reader's root and re-registers after each event. An event wakes the producer immediately (15 ms debounce). The poll interval is only the fallback; if the watcher cannot start, polling continues unchanged. `watch` in the config file (default true).
-- **Switch.** `<helper home>/session/rust-capture.json` (the Helper home is `<gateway home>/helper`; `flip-capture.sh --home` takes the gateway home), for example `{"sources":{"safari":{"root":"..."}},"watch":true,"poll_ms":5000}`, selects sources (`production::SUPPORTED`). An unsupported source fails startup; an absent file or empty `sources` means the session owns no capture. A generation change on a switch costs one rescan and never a false deletion.
+- **Override file.** `<helper home>/session/rust-capture.json` (the Helper home is `<gateway home>/helper`), for example `{"sources":{"safari":{"root":"..."}},"watch":true,"poll_ms":5000}`. A source outside `production::SUPPORTED` fails startup.
 
 Record ids across a flip. The gateway reuses a record id only for the same `(source, generation, collection, native_key)` or the
 same `scoped_alias`, and a Rust reader hashes its own generation, so a flipped source (Phone, Mail, Notes, Messages, Calendar, Contacts)
@@ -134,11 +138,13 @@ the Rust reader's native generation is bound to `Open.checkpoints[source].genera
 (`reported_generation` in `session/capture.rs`; predecessor, flights and the committed checkpoint use the reported one). The binding is saved next to the
 checkpoint in `capture-state/<source>.json` (`native`) and restored on `Open` while the gateway's committed generation is still the saved
 one. A native generation change while Rust owns the source (a regenerated database) is reported as itself, i.e. a normal generation change.
-Rolling back is the same in reverse: Swift emits its own generation, which is the committed one, so ids stay. A reader whose scans legitimately
+A reader whose scans legitimately
 carry several generations (`CaptureReader::adopts_generation` false: Safari) is not rewritten. `tests/generation_adoption.rs` fails on the
-id doubling, on a rollback that duplicates or loses a record, and on a regenerated database being adopted. `flip-capture.sh` writes
-`"facts":"native"` for `calendar`, `contacts` and `reminders`; without that link the Helper's Swift capture is suppressed by the switch and
-the reader has no facts.
+id doubling, on a rollback that duplicates or loses a record, and on a regenerated database being adopted.
+
+Files has no alias and the old Swift capture made a new generation per Helper start, so an existing home holds alive `files.item`
+records from past generations. Adoption keeps the ids of the last generation and stops the growth; the older ones stay until someone
+removes them on purpose.
 
 Bundling: `AB_SESSION_BINARY=<path>` or `AB_SESSION_BUILD=1` (builds `ab-session` through `packaging/dev/build-session.sh`) makes `packaging/dev/build-helper.sh` copy it to `Contents/MacOS/ab-session`; `sign.sh` signs it with the identity of the app before the app itself, so the app's designated requirement is unchanged. Both values are part of the signed-app cache key.
 
@@ -213,21 +219,9 @@ generation emits nothing and deletes nothing (`tests/native_revalidation.rs`; si
 keeps its baseline (`resume`). `native_facts::Client` multiplexes frames by id on one stream with a reader
 thread; `Changed` marks the source due, `facts_poll_ms` is only the fallback.
 
-Known gaps: Swift still runs its ipc/1 capture scans (with their baselines) for these sources until the
-Helper capture path is deleted; effects keep their own stream (fd 200) next to the facts stream (fd 201)
-because `effects.rs` still has its own synchronous native link. The Reminders SQLite store projection and
-the Calendar store enrichment are still read in Swift (`RemindersStore*`, `CalendarStoreEnrichment`).
-
 ### Safari live tabs (facts)
 
-`safari.tab` comes from AppleScript, so it stays in Swift and arrives as facts. With `safari` in
-`session/rust-capture.json` the registration builds `SafariSource(tabsOnly: true)`: only the 5 s tab
-loop runs, and its `Capture` (scope `["safari.tab"]`, complete evidence, upserts for every open tab) is
-the full current tab set; the first emission is never skipped, even when empty. `SafariReader::ingest`
-stores it, the Helper `Committed` is released at once, and `safari::Reader::tabs` diffs it against the
-last committed tabs (upserts for changes, `absent` for closed tabs, `live` after the first scan). Frames
-with another scope, partial evidence or a malformed row are ignored. History, bookmarks and cloud tabs
-are read by the Rust reader from the Safari directory.
+`safari.tab` comes from AppleScript. `SafariReader` pulls the `safari.tabs` fact every 5 s on its own thread, so a slow script never holds up the capture loop. The answer is the full current tab set; `safari::Reader::tabs` diffs it against the last committed tabs (upserts for changes, `absent` for closed tabs). A failed read changes nothing.
 
 ### Messages
 
@@ -257,11 +251,7 @@ the resumed scan ends).
 Attachment digests are SHA-256 over the file read through `Reader::read_blob`, cached per guid and declared
 size. `blob_handles` maps digest to the attachment guid. BlobRead for a known guid is answered by the
 session from a dedicated `chat.db` connection (`readers::BlobServer`), without touching the scan lock.
-A Helper `Capture` for `messages` (the Swift `captureCommand` evidence) is not forwarded: its
-`(collection, native_key)` list invalidates those fingerprints (`Reader::invalidate`) so the next poll
-re-emits them even when the row did not change, and `bind_outcome` can attach the Rust checkpoint.
-With `messages` in the config the Helper builds `Messages(rustCapture: true)`: its capture loop idles,
-commands and `captureCommand` keep working.
+`messages.reconcile` is answered by the reader (`CaptureReader::refresh`).
 
 Isolation: the gateway thread never waits for a scan. The session keeps one
 lock per reader, answers BlobRead for a handle owned by a `BlobServer` lock-free and waits at most two

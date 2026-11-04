@@ -232,6 +232,92 @@ fn effect_visible(operation: &str, action: &Value, state: &Value, seen: &Value) 
     }
 }
 
+fn body_html(text: &str) -> String {
+    text.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .split('\n')
+        .map(|line| {
+            if line.is_empty() {
+                "<div><br></div>".to_owned()
+            } else {
+                format!("<div>{line}</div>")
+            }
+        })
+        .collect()
+}
+
+fn found(probe: &dyn Probe, collection: &str, key: &str) -> Result<Value, String> {
+    let record = probe.call(
+        "notes.read",
+        &json!({"native_key": key, "collection": collection}),
+    )?;
+    if record["exists"] == true {
+        Ok(record)
+    } else {
+        Err("conflict".to_owned())
+    }
+}
+
+fn resolve_script(
+    probe: &dyn Probe,
+    operation: &str,
+    action: &Value,
+    request: &mut Value,
+) -> Result<(), String> {
+    let args = &action["note_args"];
+    let key = text(action, "native_key");
+    let folder_of = |probe: &dyn Probe| found(probe, "notes.folder", text(action, "folder_key"));
+    match operation {
+        "notes.rename_folder" => {
+            let folder = found(probe, "notes.folder", key)?;
+            request["folder_id"] = folder["scoped_alias"].clone();
+            request["old_title"] = folder["data"]["title"].clone();
+            request["title"] = args["title"].clone();
+        }
+        "notes.create_folder" => request["title"] = args["title"].clone(),
+        "notes.create" => {
+            request["folder_id"] = folder_of(probe)?["scoped_alias"].clone();
+            let content = format!("{}\n{}", text(args, "title"), text(args, "plain_text"));
+            request["html"] = json!(body_html(&content));
+        }
+        "notes.move" => {
+            request["note_id"] = found(probe, "notes.note", key)?["scoped_alias"].clone();
+            request["folder_id"] = folder_of(probe)?["scoped_alias"].clone();
+        }
+        "notes.delete" => {
+            let note = found(probe, "notes.note", key)?;
+            let folder_key = text(&note["data"]["folder_id"]["$ref"], "native_key").to_owned();
+            let folder = found(probe, "notes.folder", &folder_key)?;
+            let trash = probe.call("notes.trash_folder", &json!({"native_key": folder_key}))?;
+            request["note_id"] = note["scoped_alias"].clone();
+            request["folder_id"] = folder["scoped_alias"].clone();
+            request["trash_folder_id"] = trash["scoped_alias"].clone();
+        }
+        "notes.update" => {
+            let note = found(probe, "notes.note", key)?;
+            request["note_id"] = note["scoped_alias"].clone();
+            request["html"] = if args["html"].is_null() {
+                let body = if text(args, "mode") == "append" {
+                    format!(
+                        "{}{}",
+                        text(&note["data"], "plain_text"),
+                        text(args, "plain_text")
+                    )
+                } else {
+                    text(args, "plain_text").to_owned()
+                };
+                json!(body_html(&body))
+            } else {
+                args["html"].clone()
+            };
+        }
+        _ => return Err("unsupported".to_owned()),
+    }
+    Ok(())
+}
+
 pub(super) fn write(
     probe: &dyn Probe,
     command_id: &str,
@@ -239,16 +325,15 @@ pub(super) fn write(
     state: &Value,
 ) -> Result<Value, String> {
     let operation = text(action, "op");
-    let written = probe.call(
-        "notes.write",
-        &json!({
-            "op": action["op"],
-            "native_key": action["native_key"],
-            "folder_key": action["folder_key"],
-            "note_args": action["note_args"],
-            "command_id": command_id,
-        }),
-    )?;
+    let mut request = json!({
+        "op": action["op"],
+        "native_key": action["native_key"],
+        "folder_key": action["folder_key"],
+        "note_args": action["note_args"],
+        "command_id": command_id,
+    });
+    resolve_script(probe, operation, action, &mut request)?;
+    let written = probe.call("notes.write", &request)?;
     let script_id = text(&written, "script_id").to_owned();
     for attempt in 0..OBSERVATIONS {
         let seen = probe.call(
@@ -356,7 +441,7 @@ mod tests {
                     }
                     json!({"exists": true, "data": data})
                 }
-                ("notes.read", Some("notes.folder")) if key == "d1" => {
+                ("notes.read", Some("notes.folder")) if matches!(key, "d1" | "d2" | "") => {
                     json!({"exists": true, "data": self.folder, "folder_fingerprint": "ff1"})
                 }
                 ("notes.read", _) => json!({"exists": false}),

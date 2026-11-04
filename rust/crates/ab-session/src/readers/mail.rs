@@ -1,11 +1,19 @@
 use super::{
-    CaptureReader, Debug, Error, Path, PathBuf, ScanContext, Signature, Value, capture_value,
-    reader_error, signature,
+    CaptureReader, Debug, Error, Path, PathBuf, Readiness, ReadinessContext, ScanContext,
+    Signature, Value, capture_value, reader_error, signature,
 };
 use ab_native::{capture, mail};
 
 const MAIL_DATABASE: &str = "Envelope Index";
 const MAIL_MAX_ROWS: usize = 1_000_000;
+const OPERATIONS: [&str; 6] = [
+    "mail.create_draft",
+    "mail.send",
+    "mail.move",
+    "mail.set_flag",
+    "mail.mark_read",
+    "mail.delete",
+];
 
 #[derive(Debug)]
 pub struct MailReader {
@@ -49,6 +57,18 @@ impl CaptureReader for MailReader {
 
     fn resume(&mut self, _token: &str) -> bool {
         false
+    }
+
+    fn readiness(&mut self, _context: &ReadinessContext<'_>) -> Option<Readiness> {
+        Some(if mail::readable(&self.root.join(MAIL_DATABASE)) {
+            Readiness::ready(mail::coverage(), &OPERATIONS)
+        } else {
+            Readiness::not(
+                "permission_missing",
+                mail::coverage(),
+                "Full Disk Access and a supported V10 Envelope Index required",
+            )
+        })
     }
 
     fn next(&mut self, context: &ScanContext) -> Result<Option<Value>, Error> {

@@ -3,6 +3,44 @@ use serde_json::json;
 use std::{path::Path, time::Duration};
 const GENERATION: &str = "SELECT Z_UUID FROM Z_METADATA";
 
+const CALL_COLUMNS: &[&str] = &[
+    "Z_PK",
+    "ZADDRESS",
+    "ZNAME",
+    "ZDATE",
+    "ZDURATION",
+    "ZORIGINATED",
+    "ZANSWERED",
+    "ZSERVICE_PROVIDER",
+    "ZCALLTYPE",
+];
+const VOICEMAIL_COLUMNS: &[&str] = &[
+    "Z_PK",
+    "ZRECORDUUID",
+    "ZFROM",
+    "ZDATECREATED",
+    "ZDURATION",
+    "ZISREAD",
+    "ZMAILBOXTYPE",
+    "ZPROVIDER",
+    "ZMESSAGETYPE",
+];
+
+#[must_use]
+pub fn calls_readable(path: &Path) -> bool {
+    Snapshot::open(path, GENERATION)
+        .is_ok_and(|reader| reader.require(&[("ZCALLRECORD", CALL_COLUMNS)]).is_ok())
+}
+
+#[must_use]
+pub fn voicemail_readable(path: &Path) -> bool {
+    Snapshot::open(path, GENERATION).is_ok_and(|reader| {
+        reader
+            .require(&[("ZSTOREDMESSAGE", VOICEMAIL_COLUMNS)])
+            .is_ok()
+    })
+}
+
 pub fn calls(
     path: &Path,
     state: &State,
@@ -11,20 +49,7 @@ pub fn calls(
     max_rows: usize,
 ) -> Result<Pending> {
     let reader = Snapshot::open(path, GENERATION)?;
-    reader.require(&[(
-        "ZCALLRECORD",
-        &[
-            "Z_PK",
-            "ZADDRESS",
-            "ZNAME",
-            "ZDATE",
-            "ZDURATION",
-            "ZORIGINATED",
-            "ZANSWERED",
-            "ZSERVICE_PROVIDER",
-            "ZCALLTYPE",
-        ],
-    )])?;
+    reader.require(&[("ZCALLRECORD", CALL_COLUMNS)])?;
     let rows=reader.query("SELECT CAST(Z_PK AS TEXT) AS id,ZADDRESS,ZNAME,ZDATE,ZDURATION,ZORIGINATED,ZANSWERED,ZSERVICE_PROVIDER,ZCALLTYPE FROM ZCALLRECORD",&[],max_rows,Duration::from_secs(5))?;
     let mut observations = Vec::new();
     for row in rows {
@@ -80,21 +105,8 @@ pub fn voicemail(
     max_rows: usize,
 ) -> Result<Pending> {
     let reader = Snapshot::open(path, GENERATION)?;
-    reader.require(&[(
-        "ZSTOREDMESSAGE",
-        &[
-            "Z_PK",
-            "ZRECORDUUID",
-            "ZFROM",
-            "ZDATECREATED",
-            "ZDURATION",
-            "ZISREAD",
-            "ZMAILBOXTYPE",
-            "ZPROVIDER",
-            "ZMESSAGETYPE",
-        ],
-    )])?;
-    let rows=reader.query("SELECT COALESCE(NULLIF(ZRECORDUUID,''),CAST(Z_PK AS TEXT)) AS id,ZRECORDUUID,ZFROM,ZDATECREATED,ZDURATION,ZISREAD,ZMAILBOXTYPE,ZPROVIDER,ZMESSAGETYPE FROM ZSTOREDMESSAGE",&[],max_rows,Duration::from_secs(5))?;
+    reader.require(&[("ZSTOREDMESSAGE", VOICEMAIL_COLUMNS)])?;
+    let rows=reader.query("SELECT CASE WHEN typeof(ZRECORDUUID)='blob' THEN lower(hex(ZRECORDUUID)) ELSE COALESCE(NULLIF(ZRECORDUUID,''),CAST(Z_PK AS TEXT)) END AS id,ZFROM,ZDATECREATED,ZDURATION,ZISREAD,ZMAILBOXTYPE,ZPROVIDER,ZMESSAGETYPE FROM ZSTOREDMESSAGE",&[],max_rows,Duration::from_secs(5))?;
     let mut observations = Vec::new();
     for row in rows {
         let n = |k| capture::number(&row, k);

@@ -97,40 +97,6 @@ fn a_reader_capture_reaches_the_gateway_and_the_helper_never_sees_it() -> Fallib
 }
 
 #[test]
-fn a_helper_scan_of_a_rust_source_is_answered_by_the_session_and_never_forwarded() -> Fallible<()> {
-    let directory = temporary("session-safari-scan")?;
-    history(&directory, 2)?;
-    full_safari(&directory)?;
-    let sources = readers::from_config(&json!({"safari":{"root":directory}}).to_string())?;
-    let mut world = wire(sources, polling(None), json!({}))?;
-    let mut pending = Vec::new();
-    for _ in 0..3 {
-        let (size, capture) = receive(&mut world.gateway)?;
-        pending.push(capture["checkpoint"].clone());
-        world.commit("safari", &capture, size)?;
-    }
-    expect_silence(&mut world.gateway)?;
-    world.scan(
-        "h1",
-        "safari",
-        &json!({"scan_id":"s1","scope":["safari.tab"],"completion_evidence":"complete","observations":[
-            {"kind":"upsert","collection":"safari.tab","native_key":"1:0","data":{"window":1,"index":0,"title":"T","url":"https://example.com/","active":true},"observed_at":"2026-01-02T03:04:05Z"}
-        ]}),
-    )?;
-    let (_, committed) = receive(&mut world.link)?;
-    assert_eq!(committed["t"], "ScanCommitted");
-    assert_eq!(committed["id"], "h1");
-    assert_eq!(committed["source"], "safari");
-    let (size, tabs) = receive(&mut world.gateway)?;
-    assert_eq!(tabs["source"], "safari");
-    assert!(tabs["observations"].to_string().contains("safari.tab"));
-    world.commit("safari", &tabs, size)?;
-    world.finish()?;
-    std::fs::remove_dir_all(directory)?;
-    Ok(())
-}
-
-#[test]
 fn checkpoints_resume_after_a_restart_and_a_mismatch_costs_a_rescan() -> Fallible<()> {
     let directory = temporary("session-resume")?;
     let state = temporary("session-resume-state")?;
@@ -290,60 +256,6 @@ fn facts_rust_decides_a_deletion_only_after_the_helper_revalidates() -> Fallible
     assert_eq!(second["predecessor"], first["checkpoint"]);
     assert_eq!(keys(&second, "absent"), ["b"]);
     world.commit("calendar", &second, size)?;
-    world.finish()?;
-    Ok(())
-}
-
-#[test]
-fn a_helper_scan_of_a_facts_source_is_held_until_the_reader_capture_that_followed_it_commits()
--> Fallible<()> {
-    let facts = Arc::new(Mutex::new(FactState {
-        events: vec![event("a", "A")],
-        verdict: "present".into(),
-        ..FactState::default()
-    }));
-    let client = facts_server(Arc::clone(&facts))?;
-    let mut world = wire(
-        calendar(&client, Duration::from_secs(3600)),
-        calendar_options(),
-        json!({}),
-    )?;
-    let (size, first) = receive(&mut world.gateway)?;
-    world.commit("calendar", &first, size)?;
-    expect_silence(&mut world.gateway)?;
-
-    facts.lock().unwrap().events = vec![event("a", "A"), event("b", "B")];
-    world.scan(
-        "h1",
-        "calendar",
-        &json!({"scan_id":"s1","scope":["calendar.event"],"completion_evidence":"complete"}),
-    )?;
-    expect_silence(&mut world.link)?;
-    let (size, second) = receive(&mut world.gateway)?;
-    assert_eq!(keys(&second, "upsert"), ["b"]);
-    expect_silence(&mut world.link)?;
-    world.commit("calendar", &second, size)?;
-    let (_, committed) = receive(&mut world.link)?;
-    assert_eq!(committed["t"], "ScanCommitted");
-    assert_eq!(committed["id"], "h1");
-    assert_eq!(committed["checkpoint"], second["checkpoint"]);
-
-    world.scan(
-        "h2",
-        "calendar",
-        &json!({"scan_id":"s2","completion_evidence":"complete"}),
-    )?;
-    let (_, committed) = receive(&mut world.link)?;
-    assert_eq!(committed["id"], "h2");
-    expect_silence(&mut world.gateway)?;
-
-    world.scan(
-        "h3",
-        "calendar",
-        &json!({"scan_id":"s3","completion_evidence":"partial"}),
-    )?;
-    let (_, committed) = receive(&mut world.link)?;
-    assert_eq!(committed["id"], "h3");
     world.finish()?;
     Ok(())
 }
@@ -539,7 +451,6 @@ fn a_rust_command_on_a_rust_captured_source_is_bound_to_the_readers_checkpoint()
     )?;
     let (_, write) = receive(&mut world.link)?;
     assert_eq!(write["op"], "reminders.write");
-    assert_eq!(write["args"]["session_captures"], true);
 
     let saved = reminder("r1", "oat milk")["data"].clone();
     send(

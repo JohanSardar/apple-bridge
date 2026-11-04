@@ -213,14 +213,8 @@ impl Probe for Hub {
                 .map(|()| json!({}))
                 .map_err(|()| "unavailable".to_owned());
         }
-        if matches!(
-            operation,
-            "reminders.write" | "calendar.write" | "contacts.write"
-        ) && self.capture_owns(source_of(operation))
-        {
-            let mut args = args.clone();
-            args["session_captures"] = json!(true);
-            return self.primitive(operation, &args, WRITE_WAIT);
+        if let Some(answer) = self.capture_answer(source_of(operation), operation, args) {
+            return answer;
         }
         let wait = if matches!(
             operation,

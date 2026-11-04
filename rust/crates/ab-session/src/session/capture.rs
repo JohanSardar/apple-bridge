@@ -6,12 +6,12 @@ use crate::{
     native_facts::Client,
     production::{Loaded, Options},
     queries::NativeQueries,
-    readers::{BlobServer, CaptureReader, ScanContext},
+    readers::{BlobServer, CaptureReader, Readiness, ReadinessContext, ScanContext},
     store::{Record, Store},
 };
 use ab_wire::{
     messages::IpcFrame,
-    native::{Frame as Link, Scan, ScanCommitted, Source},
+    native::{Ready, SourceState},
 };
 use serde_json::{Value, json};
 use std::{
@@ -33,21 +33,15 @@ const SCAN_DUTY: u32 = 16;
 const BULK_CHUNK_BYTES: usize = 16_000;
 const LIVE_CHUNK_BYTES: usize = 64_000;
 const BLOB_LOCK_WAIT: Duration = Duration::from_secs(2);
+const READINESS_EVERY: Duration = Duration::from_secs(30);
 
 type Slot = Mutex<Box<dyn CaptureReader>>;
 type Readers = BTreeMap<String, Slot>;
 type Targets = Vec<(String, Vec<PathBuf>)>;
 
-#[derive(Clone, Debug)]
-pub(super) struct Cover {
-    id: String,
-    source: Source,
-}
-
 #[derive(Debug)]
 pub(super) struct ReaderFlight {
     pub(super) last: bool,
-    covers: Vec<Cover>,
     pass: u64,
     more: bool,
 }
@@ -85,11 +79,12 @@ pub(super) struct Capture {
     targets: Targets,
     servers: Vec<Arc<dyn BlobServer>>,
     prefixed: Vec<(&'static str, String)>,
-    held: Mutex<BTreeMap<String, Vec<Cover>>>,
     store: Option<Store>,
     poll: Duration,
     watch: bool,
     queries: NativeQueries,
+    told: Mutex<BTreeMap<String, Readiness>>,
+    readiness: bool,
 }
 
 enum Point {
@@ -263,6 +258,10 @@ fn lock_within(
     }
 }
 
+fn raw(value: &Value) -> Result<Box<serde_json::value::RawValue>, Error> {
+    Ok(serde_json::value::RawValue::from_string(value.to_string())?)
+}
+
 fn unavailable(handle: &str) -> Value {
     json!({"t":"BlobUnavailable","handle":handle,"reason":"unavailable"})
 }
@@ -291,12 +290,39 @@ impl Capture {
                 .into_iter()
                 .map(|(source, reader)| (source, Mutex::new(reader)))
                 .collect(),
-            held: Mutex::new(BTreeMap::new()),
             store: options.state.as_deref().map(Store::open).transpose()?,
             poll: options.poll,
             watch: options.watch,
             queries,
+            told: Mutex::new(BTreeMap::new()),
+            readiness: options.readiness,
         }))
+    }
+
+    pub(super) fn advertise(&self, ready: &mut Ready, fence: u64) -> Result<(), Error> {
+        if !self.readiness {
+            return Ok(());
+        }
+        let context = ReadinessContext {
+            fence,
+            os_build: &ready.os_build,
+        };
+        let mut told = BTreeMap::new();
+        for source in self.readers.keys() {
+            if let Some(readiness) = self.lock(source)?.readiness(&context) {
+                told.insert(source.clone(), readiness);
+            }
+        }
+        for (source, readiness) in &told {
+            ready
+                .coverage
+                .insert(source.clone(), raw(&readiness.coverage)?);
+            ready
+                .capabilities
+                .insert(source.clone(), raw(&json!(readiness.capabilities))?);
+        }
+        *self.told.lock().map_err(|_| Error::WorkerPanicked)? = told;
+        Ok(())
     }
 
     fn lock(&self, source: &str) -> Result<MutexGuard<'_, Box<dyn CaptureReader>>, Error> {
@@ -382,6 +408,46 @@ impl Hub {
         self.capture.as_ref().is_some_and(|c| c.owns(source))
     }
 
+    fn tell_readiness(&self, source: &str, readiness: &Readiness) -> Result<(), Error> {
+        let mut state = SourceState {
+            source: serde_json::from_value(json!(source))?,
+            state: readiness.state.to_owned(),
+            coverage: BTreeMap::from([(source.to_owned(), raw(&readiness.coverage)?)]),
+            capabilities: BTreeMap::from([(
+                source.to_owned(),
+                raw(&json!(readiness.capabilities))?,
+            )]),
+            reason: readiness.reason.clone(),
+        };
+        super::messages_advertise::apply(&mut state.coverage, &mut state.capabilities);
+        self.send_gateway(&state.into_ipc())
+    }
+
+    fn refresh_readiness(&self, opening: bool) -> Result<(), Error> {
+        let Some(capture) = self.capture.as_ref().filter(|capture| capture.readiness) else {
+            return Ok(());
+        };
+        let context = ReadinessContext {
+            fence: self.fence,
+            os_build: &self.os_build,
+        };
+        for source in capture.readers.keys() {
+            let Some(readiness) = capture.lock(source)?.readiness(&context) else {
+                continue;
+            };
+            let changed = {
+                let mut told = capture.told.lock().map_err(|_| Error::WorkerPanicked)?;
+                let changed = told.get(source) != Some(&readiness);
+                told.insert(source.clone(), readiness.clone());
+                changed
+            };
+            if opening || changed {
+                self.tell_readiness(source, &readiness)?;
+            }
+        }
+        Ok(())
+    }
+
     fn poke(&self, source: &str, urgent: bool) -> Result<(), Error> {
         let mut core = self.core()?;
         if urgent {
@@ -392,6 +458,19 @@ impl Hub {
         drop(core);
         self.changed.notify_all();
         Ok(())
+    }
+
+    pub(super) fn capture_answer(
+        &self,
+        source: &str,
+        operation: &str,
+        args: &Value,
+    ) -> Option<Result<Value, String>> {
+        let capture = self.capture.as_ref()?;
+        if !capture.owns(source) {
+            return None;
+        }
+        capture.lock(source).ok()?.answer(operation, args)
     }
 
     pub(super) fn capture_reconcile(&self, source: &str, wait: Duration) -> Option<Result<(), ()>> {
@@ -439,50 +518,6 @@ impl Hub {
         {
             capture.lock(source)?.refresh();
             self.poke(source, true)?;
-        }
-        Ok(())
-    }
-
-    pub(super) fn capture_scan(&self, scan: &Scan, source: &str) -> Result<(), Error> {
-        let capture = self.capture.as_ref().ok_or(Error::Conflict)?;
-        let value = serde_json::to_value(scan)?;
-        let cover = Cover {
-            id: scan.id.clone(),
-            source: scan.source,
-        };
-        let mut reader = capture.lock(source)?;
-        let release = match reader.ingest(&value) {
-            Ok(true) => {
-                capture
-                    .held
-                    .lock()
-                    .map_err(|_| Error::WorkerPanicked)?
-                    .entry(source.to_owned())
-                    .or_default()
-                    .push(cover);
-                None
-            }
-            Ok(false) => Some(cover),
-            Err(error) => {
-                eprintln!("ab-session: {source} facts: {error}");
-                Some(cover)
-            }
-        };
-        drop(reader);
-        if let Some(cover) = release {
-            self.release(std::slice::from_ref(&cover), None)?;
-        }
-        self.poke(source, true)
-    }
-
-    fn release(&self, covers: &[Cover], checkpoint: Option<&str>) -> Result<(), Error> {
-        for cover in covers {
-            let checkpoint = checkpoint.map_or_else(|| self.next_checkpoint(), str::to_owned);
-            self.send_link(&Link::ScanCommitted(ScanCommitted {
-                id: cover.id.clone(),
-                source: cover.source,
-                checkpoint,
-            }))?;
         }
         Ok(())
     }
@@ -546,7 +581,6 @@ impl Hub {
             source,
             Point::Completed(flight.generation.clone(), flight.checkpoint.clone()),
         )?;
-        self.release(&origin.covers, Some(&flight.checkpoint))?;
         if !origin.more {
             self.finish_pass(source, origin.pass)?;
         }
@@ -646,7 +680,7 @@ impl Hub {
         &self,
         source: &str,
         capture: &Value,
-        mut flight: ReaderFlight,
+        flight: &ReaderFlight,
         adopts: bool,
     ) -> Result<bool, Error> {
         let generation = {
@@ -689,11 +723,6 @@ impl Hub {
                     keys.clone(),
                     Origin::Reader(ReaderFlight {
                         last,
-                        covers: if last {
-                            flight.covers.clone()
-                        } else {
-                            Vec::new()
-                        },
                         pass: flight.pass,
                         more: flight.more,
                     }),
@@ -712,9 +741,6 @@ impl Hub {
                             .0;
                     }
                 }
-            }
-            if last {
-                flight.covers.clear();
             }
             drop(core);
             self.write_gateway(&bytes)?;
@@ -772,7 +798,13 @@ impl Hub {
         let sources: Vec<String> = capture.readers.keys().cloned().collect();
         let mut pace: BTreeMap<String, Pace> = BTreeMap::new();
         let mut lost: BTreeMap<String, u32> = BTreeMap::new();
+        self.refresh_readiness(true)?;
+        let mut readiness_at = Instant::now();
         loop {
+            if readiness_at.elapsed() >= READINESS_EVERY {
+                self.refresh_readiness(false)?;
+                readiness_at = Instant::now();
+            }
             let mut deadline: Option<Instant> = None;
             for source in &sources {
                 let state = pace.entry(source.clone()).or_default();
@@ -799,7 +831,7 @@ impl Hub {
                     core.capture.started += 1;
                     (core.flights.sequence(), core.capture.started)
                 };
-                let (next, covers, token, more, adopts) = {
+                let (next, token, more, adopts) = {
                     let mut reader = capture.lock(source)?;
                     let started = Instant::now();
                     let next = reader.next(&context);
@@ -809,20 +841,8 @@ impl Hub {
                             started.elapsed().as_millis()
                         );
                     }
-                    let covers = capture
-                        .held
-                        .lock()
-                        .map_err(|_| Error::WorkerPanicked)?
-                        .remove(source)
-                        .unwrap_or_default();
                     let more = next.is_ok() && reader.more();
-                    (
-                        next,
-                        covers,
-                        reader.token(),
-                        more,
-                        reader.adopts_generation(),
-                    )
+                    (next, reader.token(), more, reader.adopts_generation())
                 };
                 state.cost = began.elapsed();
                 if more {
@@ -834,7 +854,6 @@ impl Hub {
                 let found = match next {
                     Ok(Some(found)) => found,
                     Ok(None) => {
-                        self.release(&covers, None)?;
                         self.persist(token, source, Point::Idle(sequence))?;
                         if !more {
                             self.finish_pass(source, pass)?;
@@ -843,7 +862,6 @@ impl Hub {
                     }
                     Err(error) => {
                         eprintln!("ab-session: {source} reader: {error}");
-                        self.release(&covers, None)?;
                         self.finish_pass(source, pass)?;
                         if matches!(error, Error::LinkLost) {
                             let strikes = lost.entry(source.clone()).or_default();
@@ -860,11 +878,10 @@ impl Hub {
                 };
                 let flight = ReaderFlight {
                     last: true,
-                    covers,
                     pass,
                     more,
                 };
-                if !self.send_capture(source, &found, flight, adopts)? {
+                if !self.send_capture(source, &found, &flight, adopts)? {
                     return Ok(());
                 }
             }

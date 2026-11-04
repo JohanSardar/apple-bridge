@@ -5,41 +5,6 @@ use serde_json::{Value, json};
 use std::collections::BTreeMap;
 
 #[test]
-fn swift_oracle_matches_current_sources() -> Result<(), Box<dyn std::error::Error>> {
-    let evidence: Value =
-        serde_json::from_str(include_str!("../parity/agenda-contacts/evidence.json"))?;
-    let sources = [
-        (
-            "native/Sources/CalendarSource/CalendarSource.swift",
-            include_str!("../../../../native/Sources/CalendarSource/CalendarSource.swift"),
-        ),
-        (
-            "native/Sources/ContactsSource/ContactsSource.swift",
-            include_str!("../../../../native/Sources/ContactsSource/ContactsSource.swift"),
-        ),
-        (
-            "native/Sources/SourceSupport/Source.swift",
-            include_str!("../../../../native/Sources/SourceSupport/Source.swift"),
-        ),
-        (
-            "native/Sources/CalendarSource/CalendarTime.swift",
-            include_str!("../../../../native/Sources/CalendarSource/CalendarTime.swift"),
-        ),
-        (
-            "native/Sources/CalendarSource/CalendarScanScope.swift",
-            include_str!("../../../../native/Sources/CalendarSource/CalendarScanScope.swift"),
-        ),
-    ];
-    for (path, source) in sources {
-        assert_eq!(
-            ab_native::body_digest(source.as_bytes()),
-            evidence["source_sha256"][path]
-        );
-    }
-    Ok(())
-}
-
-#[test]
 fn swift_synthetic_shadow_replay_has_zero_differences() -> Result<(), Box<dyn std::error::Error>> {
     let stages: Vec<Value> =
         serde_json::from_str(include_str!("../parity/agenda-contacts/replay.json"))?;

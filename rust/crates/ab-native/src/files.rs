@@ -13,7 +13,7 @@ pub const MAX_DEPTH: usize = 16;
 pub const MAX_ROOTS: usize = 16;
 pub const TAGS_ATTRIBUTE: &str = "com.apple.metadata:_kMDItemUserTags";
 pub const LOCAL: &str = "local";
-pub const NOT_DOWNLOADED: &str = "notDownloaded";
+pub const NOT_DOWNLOADED: &str = "NSURLUbiquitousItemDownloadingStatusNotDownloaded";
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Entry {

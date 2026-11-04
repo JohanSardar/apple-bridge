@@ -243,11 +243,10 @@ fn rust_walks_files_and_asks_swift_only_for_ubiquity() -> Fallible<()> {
     let facts_home = scratch("fileshome")?;
     let mut w = wire(&json!({"files":{"root":root,"facts":"native","home":facts_home}}))?;
     let b = root.join("sub/b.pdf").to_string_lossy().into_owned();
-    w.world
-        .lock()
-        .map_err(|_| "poisoned")?
-        .statuses
-        .insert(b.clone(), "notDownloaded".into());
+    w.world.lock().map_err(|_| "poisoned")?.statuses.insert(
+        b.clone(),
+        "NSURLUbiquitousItemDownloadingStatusNotDownloaded".into(),
+    );
     let (size, first) = receive(&mut w.gateway)?;
     assert_eq!(first["source"], "files");
     assert_eq!(first["scope"], json!(["files.item"]));
@@ -269,7 +268,10 @@ fn rust_walks_files_and_asks_swift_only_for_ubiquity() -> Fallible<()> {
     assert_eq!(row(&a)["icloud_status"], "local");
     assert_eq!(row(&a)["downloaded"], true);
     assert_eq!(row(&a)["tags"], json!([]));
-    assert_eq!(row(&b)["icloud_status"], "notDownloaded");
+    assert_eq!(
+        row(&b)["icloud_status"],
+        "NSURLUbiquitousItemDownloadingStatusNotDownloaded"
+    );
     assert_eq!(row(&b)["downloaded"], false);
     assert_eq!(
         row(&root.join("sub").to_string_lossy())["kind"],

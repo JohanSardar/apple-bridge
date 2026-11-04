@@ -1,6 +1,6 @@
 use super::{
-    CaptureReader, Debug, Error, Path, PathBuf, ScanContext, Signature, Value, capture_value,
-    decode, encode, file_signature, reader_error, signature,
+    CaptureReader, Debug, Error, Path, PathBuf, Readiness, ReadinessContext, ScanContext,
+    Signature, Value, capture_value, decode, encode, file_signature, json, reader_error, signature,
 };
 use ab_native::usage;
 
@@ -95,6 +95,22 @@ impl CaptureReader for UsageReader {
     fn resume(&mut self, token: &str) -> bool {
         self.committed = decode(token);
         self.committed.is_some()
+    }
+
+    fn readiness(&mut self, _context: &ReadinessContext<'_>) -> Option<Readiness> {
+        let coverage = json!({"fields": "estimated", "missing": [
+            "settings_parity: unproven",
+            "historical lock/sleep gaps outside local knowledgeC evidence",
+            "remote names unavailable where absent from DevicePeer; distinct platform/id fallback",
+            "remote batches may lag",
+        ]});
+        Some(
+            if std::fs::read_dir(self.root.join(STREAM).join("local")).is_ok() {
+                Readiness::ready(coverage, &[])
+            } else {
+                Readiness::not("permission_missing", coverage, "full_disk_access_required")
+            },
+        )
     }
 
     fn next(&mut self, context: &ScanContext) -> Result<Option<Value>, Error> {

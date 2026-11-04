@@ -1,4 +1,4 @@
-use super::{BlobServer, CaptureReader, ScanContext, reader_error};
+use super::{BlobServer, CaptureReader, Readiness, ReadinessContext, ScanContext, reader_error};
 use crate::{
     Error,
     messages_media::{self, Job, Media},
@@ -31,6 +31,7 @@ const STEP_BUDGET: Duration = Duration::from_millis(750);
 const BULK_BYTES: usize = 16_000;
 const LIVE_BYTES: usize = 64_000;
 const FAILURES_BEFORE_REOPEN: u32 = 5;
+const REPORTS: &str = "Library/Application Support/AppleBridgeDev";
 
 #[derive(Debug, Clone)]
 struct Known {
@@ -594,6 +595,55 @@ impl CaptureReader for MessagesReader {
         true
     }
 
+    fn readiness(&mut self, context: &ReadinessContext<'_>) -> Option<Readiness> {
+        let unavailable = || {
+            Readiness::not(
+                "permission_missing",
+                json!({"fields": "partial", "missing": ["chat_db_unavailable"]}),
+                "chat_db_unavailable",
+            )
+        };
+        if std::fs::File::open(&self.database).is_err() {
+            return Some(unavailable());
+        }
+        let gaps = if let Some(reader) = self.reader.as_ref() {
+            reader.coverage_gaps()
+        } else {
+            let Ok(reader) = messages::Reader::open(&self.database, &self.home) else {
+                let mut degraded = unavailable();
+                degraded.state = "degraded";
+                return Some(degraded);
+            };
+            reader.coverage_gaps()
+        };
+        let mut missing: Vec<String> = [
+            "messages.chat.muted_until",
+            "messages.message.audio.transcription",
+            "messages.message.audio.kept",
+            "messages.message.recoverable_until",
+            "messages.chat.recoverable_until",
+            "messages.chat.muted",
+        ]
+        .into_iter()
+        .map(str::to_owned)
+        .collect();
+        if !messages::pins_readable(&self.home) {
+            missing.push("messages.chat.pinned_index".to_owned());
+        }
+        missing.extend(gaps);
+        Some(Readiness::ready(
+            json!({
+                "fields": "partial",
+                "missing": missing,
+                "advertise": {
+                    "report_dir": self.home.join(REPORTS),
+                    "os_build": context.os_build,
+                },
+            }),
+            &[],
+        ))
+    }
+
     fn source(&self) -> &'static str {
         "messages"
     }
@@ -620,25 +670,6 @@ impl CaptureReader for MessagesReader {
     fn resume(&mut self, token: &str) -> bool {
         self.resuming = serde_json::from_str(token).ok();
         self.resuming.is_some()
-    }
-
-    fn ingest(&mut self, capture: &Value) -> Result<bool, Error> {
-        let Some(reader) = self.reader.as_mut() else {
-            return Ok(false);
-        };
-        let identities: Vec<(&str, &str)> = capture["observations"]
-            .as_array()
-            .into_iter()
-            .flatten()
-            .filter_map(|row| {
-                Some((
-                    row["collection"].as_str().filter(|c| SCOPE.contains(c))?,
-                    row["native_key"].as_str().filter(|k| !k.is_empty())?,
-                ))
-            })
-            .collect();
-        reader.invalidate(identities);
-        Ok(false)
     }
 
     fn owns(&self, handle: &str) -> bool {
