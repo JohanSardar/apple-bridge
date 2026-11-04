@@ -1,4 +1,6 @@
-use super::owned::{Driver, Probe, Refusal, Settled, conflict, equal, native_failure, refuse, text};
+use super::owned::{
+    Driver, Probe, Refusal, Settled, conflict, equal, native_failure, refuse, text,
+};
 use serde_json::{Map, Value, json};
 
 const OPERATIONS: [&str; 8] = [

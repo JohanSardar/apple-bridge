@@ -1,4 +1,6 @@
-use super::owned::{Driver, Probe, Refusal, Settled, conflict, equal, native_failure, refuse, text};
+use super::owned::{
+    Driver, Probe, Refusal, Settled, conflict, equal, native_failure, refuse, text,
+};
 use serde_json::{Map, Value, json};
 
 const OPERATIONS: [&str; 4] = [
@@ -406,12 +408,18 @@ mod tests {
             self.calls.borrow_mut().push(operation.into());
             let key = args["native_key"].as_str().unwrap_or_default();
             Ok(match operation {
-                "calendar.read_event" if key == "e1" => json!({"exists": true, "writable": self.calendar_writable,
+                "calendar.read_event" if key == "e1" => {
+                    json!({"exists": true, "writable": self.calendar_writable,
                     "calendar_key": "work", "all_day": self.event["all_day"], "data": self.event,
-                    "native_result": self.event}),
-                "calendar.read_event" => json!({"exists": false, "known_absent": self.known_absent}),
-                "calendar.read_calendar" if key == "work" => json!({"exists": true, "writable": self.calendar_writable,
-                    "data": {"title": "Work"}}),
+                    "native_result": self.event})
+                }
+                "calendar.read_event" => {
+                    json!({"exists": false, "known_absent": self.known_absent})
+                }
+                "calendar.read_calendar" if key == "work" => {
+                    json!({"exists": true, "writable": self.calendar_writable,
+                    "data": {"title": "Work"}})
+                }
                 "calendar.read_calendar" => json!({"exists": false}),
                 "calendar.can_create_calendar" => json!({"allowed": true}),
                 "calendar.goal" => return self.goal.clone().map_err(str::to_owned),
@@ -431,7 +439,8 @@ mod tests {
 
     fn expected() -> Value {
         let mut state = event_data("standup");
-        state["calendar_id"] = json!({"$ref": {"collection": "calendar.calendar", "native_key": "elsewhere"}});
+        state["calendar_id"] =
+            json!({"$ref": {"collection": "calendar.calendar", "native_key": "elsewhere"}});
         state["travel_time"] = json!(300);
         state
     }
@@ -450,18 +459,30 @@ mod tests {
         assert_eq!(refusal.code, "conflict");
         assert_eq!(refusal.key.as_deref(), Some("e1"));
         let moved = update(&json!({"expected_list_key": "elsewhere"}));
-        assert_eq!(prepare(&Fake::new(), &moved, &expected()).unwrap_err().code, "conflict");
+        assert_eq!(
+            prepare(&Fake::new(), &moved, &expected()).unwrap_err().code,
+            "conflict"
+        );
         let gone = update(&json!({"native_key": "gone"}));
-        assert_eq!(prepare(&Fake::new(), &gone, &expected()).unwrap_err().code, "conflict");
+        assert_eq!(
+            prepare(&Fake::new(), &gone, &expected()).unwrap_err().code,
+            "conflict"
+        );
     }
 
     #[test]
     fn unsupported_requests_are_refused_before_any_read() {
         let probe = Fake::new();
         let all = update(&json!({"calendar_args": {"title": "x", "span": "all"}}));
-        assert_eq!(prepare(&probe, &all, &expected()).unwrap_err().code, "unsupported");
+        assert_eq!(
+            prepare(&probe, &all, &expected()).unwrap_err().code,
+            "unsupported"
+        );
         let unknown = json!({"op": "calendar.explode"});
-        assert_eq!(prepare(&probe, &unknown, &Value::Null).unwrap_err().code, "unsupported");
+        assert_eq!(
+            prepare(&probe, &unknown, &Value::Null).unwrap_err().code,
+            "unsupported"
+        );
         assert!(probe.calls.borrow().is_empty());
     }
 
@@ -469,15 +490,34 @@ mod tests {
     fn read_only_calendars_and_invalid_goals_are_refused() {
         let mut probe = Fake::new();
         probe.calendar_writable = false;
-        assert_eq!(prepare(&probe, &update(&json!({})), &expected()).unwrap_err().code, "unsupported");
+        assert_eq!(
+            prepare(&probe, &update(&json!({})), &expected())
+                .unwrap_err()
+                .code,
+            "unsupported"
+        );
         let create = json!({"op": "calendar.create_event", "list_key": "work", "calendar_args": {"title": "x"}});
-        assert_eq!(prepare(&probe, &create, &Value::Null).unwrap_err().code, "unsupported");
+        assert_eq!(
+            prepare(&probe, &create, &Value::Null).unwrap_err().code,
+            "unsupported"
+        );
         let mut invalid = Fake::new();
         invalid.goal = Err("invalid");
-        assert_eq!(prepare(&invalid, &update(&json!({})), &expected()).unwrap_err().code, "invalid");
+        assert_eq!(
+            prepare(&invalid, &update(&json!({})), &expected())
+                .unwrap_err()
+                .code,
+            "invalid"
+        );
         let delete = update(&json!({"op": "calendar.delete_event"}));
         assert!(prepare(&invalid, &delete, &expected()).is_ok());
-        assert!(!invalid.calls.borrow().iter().any(|call| call == "calendar.goal"));
+        assert!(
+            !invalid
+                .calls
+                .borrow()
+                .iter()
+                .any(|call| call == "calendar.goal")
+        );
     }
 
     #[test]
@@ -487,10 +527,16 @@ mod tests {
         let state = prepare(&probe, &action, &expected()).unwrap();
         assert!(validate(&probe, &action, &state).is_ok());
         probe.event["title"] = json!("edited");
-        assert_eq!(validate(&probe, &action, &state).unwrap_err().code, "conflict");
+        assert_eq!(
+            validate(&probe, &action, &state).unwrap_err().code,
+            "conflict"
+        );
         probe.event = event_data("standup");
         probe.calendar_writable = false;
-        assert_eq!(validate(&probe, &action, &state).unwrap_err().code, "unsupported");
+        assert_eq!(
+            validate(&probe, &action, &state).unwrap_err().code,
+            "unsupported"
+        );
     }
 
     #[test]
@@ -505,19 +551,28 @@ mod tests {
         assert_eq!(settled.evidence["observed"], false);
         assert_eq!(settled.evidence["reason"], "native_postcondition_mismatch");
         let unseen = json!({"native_key": "e1", "actual": null, "goal": {"title": "retro"}, "all_day": false});
-        assert_eq!(settle("calendar.update_event", &unseen).unwrap().disposition, "indeterminate");
+        assert_eq!(
+            settle("calendar.update_event", &unseen)
+                .unwrap()
+                .disposition,
+            "indeterminate"
+        );
         assert!(settle("calendar.update_event", &json!({"actual": {}, "goal": {}})).is_none());
     }
 
     #[test]
     fn deletes_and_new_calendars_need_their_own_read_back() {
         let gone = json!({"native_key": "e1", "exists_after": false});
-        assert_eq!(settle("calendar.delete_event", &gone).unwrap().evidence["absent"], true);
+        assert_eq!(
+            settle("calendar.delete_event", &gone).unwrap().evidence["absent"],
+            true
+        );
         let still = json!({"native_key": "e1", "exists_after": true});
         assert!(settle("calendar.delete_event", &still).is_none());
         let made = json!({"native_key": "c1", "saved_title": "Trips", "observed_title": "Trips", "actual": {"title": "Trips"}});
         assert!(settle("calendar.create_calendar", &made).is_some());
-        let renamed = json!({"native_key": "c1", "saved_title": "Trips", "observed_title": "Other"});
+        let renamed =
+            json!({"native_key": "c1", "saved_title": "Trips", "observed_title": "Other"});
         assert!(settle("calendar.create_calendar", &renamed).is_none());
         let unseen = json!({"native_key": "c1", "saved_title": "Trips", "observed_title": null});
         assert!(settle("calendar.create_calendar", &unseen).is_none());
@@ -527,12 +582,33 @@ mod tests {
     fn recurrence_and_alarms_compare_unordered_and_all_day_ends_by_utc_date() {
         let rule = |end: &str| json!({"frequency": "daily", "interval": 1, "count": 0, "end": end, "days_of_week": [], "first_day_of_week": 1});
         let other = json!({"frequency": "daily", "interval": 1, "count": 0, "end": "2026-03-04T05:00:00Z", "days_of_week": [], "first_day_of_week": 2});
-        assert!(matches(&json!({"recurrence": [rule("2026-03-04T00:00:00Z")]}), &json!({"recurrence": [other]}), true));
-        assert!(!matches(&json!({"recurrence": [rule("2026-03-05T00:00:00Z")]}), &json!({"recurrence": [other]}), true));
-        assert!(!matches(&json!({"recurrence": [rule("2026-03-04T00:00:00Z")]}), &json!({"recurrence": [other]}), false));
-        let a = json!({"relative_offset": -60}); let b = json!({"relative_offset": -600});
-        assert!(matches(&json!({"alarms": [a, b]}), &json!({"alarms": [b, a]}), false));
-        assert!(!matches(&json!({"alarms": [a]}), &json!({"alarms": [a, b]}), false));
+        assert!(matches(
+            &json!({"recurrence": [rule("2026-03-04T00:00:00Z")]}),
+            &json!({"recurrence": [other]}),
+            true
+        ));
+        assert!(!matches(
+            &json!({"recurrence": [rule("2026-03-05T00:00:00Z")]}),
+            &json!({"recurrence": [other]}),
+            true
+        ));
+        assert!(!matches(
+            &json!({"recurrence": [rule("2026-03-04T00:00:00Z")]}),
+            &json!({"recurrence": [other]}),
+            false
+        ));
+        let a = json!({"relative_offset": -60});
+        let b = json!({"relative_offset": -600});
+        assert!(matches(
+            &json!({"alarms": [a, b]}),
+            &json!({"alarms": [b, a]}),
+            false
+        ));
+        assert!(!matches(
+            &json!({"alarms": [a]}),
+            &json!({"alarms": [a, b]}),
+            false
+        ));
         assert!(!matches(&json!(null), &json!({}), false));
     }
 
@@ -545,11 +621,18 @@ mod tests {
         probe.event["title"] = json!("changed");
         assert!(resolved(&probe, &evidence).is_none());
         let mut delete = evidence.clone();
-        delete["prepared"]["action"] = update(&json!({"op": "calendar.delete_event", "native_key": "gone"}));
+        delete["prepared"]["action"] =
+            update(&json!({"op": "calendar.delete_event", "native_key": "gone"}));
         delete["native_key"] = json!("gone");
         assert_eq!(resolved(&probe, &delete).unwrap()["absent"], true);
         probe.known_absent = false;
         assert!(resolved(&probe, &delete).is_none());
-        assert!(resolved(&probe, &json!({"prepared": {"action": {"op": "calendar.update_event"}}})).is_none());
+        assert!(
+            resolved(
+                &probe,
+                &json!({"prepared": {"action": {"op": "calendar.update_event"}}})
+            )
+            .is_none()
+        );
     }
 }

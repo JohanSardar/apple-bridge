@@ -248,7 +248,11 @@ impl Hub {
                 candidate_ids: Vec::new(),
                 fingerprint: command.request_hash.clone(),
             }),
-            Err(refusal) => self.rejected_by_helper(self.rejection(source_of(&command.operation()), &command.command_id, &refusal)?),
+            Err(refusal) => self.rejected_by_helper(self.rejection(
+                source_of(&command.operation()),
+                &command.command_id,
+                &refusal,
+            )?),
         }
     }
 
