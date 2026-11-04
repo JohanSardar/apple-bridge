@@ -429,7 +429,7 @@ attachment that is now offloaded or unreadable, and `media` / `derivatives`. `ab
 (`attachments::keep_known`, applied in `commit_capture` to `messages.attachment` only) therefore carries the
 previous record's `blob.digest` into an incoming `offloaded` or `missing` blob that has none, and carries
 `media` and `derivatives` that the incoming record omits when its blob digest equals the previous one. A
-changed digest, a `pending` blob, or keys present (even empty) in the incoming record replace as before, and a
+changed digest, a `pending` blob, or a non-empty `media` / `derivatives` in the incoming record replace as before (an empty object counts as omitted: a failed or unreachable `messages.media` answer re-emits `media:{}` / `derivatives:{}` and must not empty what is known), and a
 tombstoned record is never revived with old fields. The rule is a no-op for the Swift producer, which always
 emits those keys. Derivatives for attachments first seen after a flip are built by `messages_media`: Rust decides which attachment, which digest, when to retry and how the row records the result; Swift answers one narrow `native/1` fact, `messages.media`, with ImageIO / AVFoundation and its digest-keyed cache.
 
