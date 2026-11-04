@@ -4,3 +4,4 @@ mod fields;
 pub mod framing;
 pub mod gojson;
 pub mod messages;
+pub mod native;

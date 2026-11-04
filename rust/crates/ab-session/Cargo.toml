@@ -15,6 +15,7 @@ rust-capture = ["dep:ab-native", "dep:sha2", "dep:base64"]
 [dependencies]
 ab-native = { path = "../ab-native", optional = true }
 ab-sys = { path = "../ab-sys" }
+ab-wire = { path = "../ab-wire" }
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true

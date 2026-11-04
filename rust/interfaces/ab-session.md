@@ -391,3 +391,18 @@ and the asynchronous pending-blob state; large attachments are hashed on the pol
 The sim MSG family cannot run with the session on: simapple's message records are a model (`title`,
 synthetic keys) that cannot be inverted into a `chat.db`, so the family stays on the Helper path in the
 sim and the reader is proven by `tests/capture_producer.rs` and the 46-stage Swift/Rust projection oracle.
+
+
+## Session mode (step 1 of the Swift boundary plan)
+
+`ab-session --gateway-fd N --helper-fd M --session-secret FILE` makes ab-session the only ipc/1 peer:
+`session::serve` authenticates, validates `Open`, speaks the native/1 session frames of `design/spec/native-1.md`
+to Swift and owns credit, flights, chunking, checkpoints, predecessor and `Committed`. It is exclusive with
+`--effects-home` and `--capture-home` and fails closed for commands (see the spec). The default remains the
+verbatim proxy and the routed relay, which keep the Swift ipc/1 peer.
+
+One flight tracker: `flight::Flights` holds the credit pool, one flight per source, committed checkpoints
+and the commit-ordered record of written keys. `routed::Gate` owns the only instance in a relay and
+implements `flight::Ledger`; `effects::Layer` no longer registers captures or `Committed` itself and
+correlates dispatch evidence through the ledger (`sequence()` counts commits, `written()` waits for the
+key). Only rows with kind `upsert` or `absent` are correlated.

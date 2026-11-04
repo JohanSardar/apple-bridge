@@ -1,5 +1,6 @@
 use crate::{
     Error,
+    flight::Ledger,
     frame::{read_frame, send, text},
     guard::{DispatchGuard, PreparedEffect},
 };
@@ -11,7 +12,7 @@ use std::{
     os::unix::net::UnixStream,
     path::{Path, PathBuf},
     sync::{
-        Arc, Condvar, Mutex, MutexGuard,
+        Arc, Mutex, MutexGuard,
         atomic::{AtomicBool, Ordering},
     },
     thread,
@@ -250,26 +251,15 @@ struct Ticket {
     expires: Instant,
 }
 
-#[derive(Debug)]
-struct Flight {
-    checkpoint: String,
-    keys: Vec<(String, String)>,
-    bytes: usize,
-    sequence: u64,
-}
-
 #[derive(Debug, Default)]
 struct State {
     fence: u64,
     commands: BTreeMap<String, Value>,
     tickets: BTreeMap<String, Ticket>,
-    flights: BTreeMap<String, Flight>,
-    sequence: u64,
-    committed: BTreeMap<(String, String), (String, u64)>,
 }
 
 impl State {
-    fn helper(&mut self, value: &Value, size: usize) -> Result<(), Error> {
+    fn helper(&mut self, value: &Value) -> Result<(), Error> {
         match value["t"].as_str() {
             Some("Prepared") => {
                 let id = text(value, "command_id")?;
@@ -294,72 +284,9 @@ impl State {
                     self.commands.remove(id);
                 }
             }
-            Some("Capture") => {
-                let source = text(value, "source")?.to_owned();
-                let checkpoint = text(value, "checkpoint")?.to_owned();
-                let observations: &[Value] = match &value["observations"] {
-                    Value::Array(items) => items,
-                    Value::Null => &[],
-                    _ => return Err(Error::Invalid),
-                };
-                let keys = observations
-                    .iter()
-                    .filter(|o| o["kind"] == "upsert" || o["kind"] == "absent")
-                    .map(|o| {
-                        Ok((
-                            text(o, "collection")?.to_owned(),
-                            text(o, "native_key")?.to_owned(),
-                        ))
-                    })
-                    .collect::<Result<Vec<_>, Error>>()?;
-                self.sequence = self.sequence.checked_add(1).ok_or(Error::Invalid)?;
-                if self
-                    .flights
-                    .insert(
-                        source,
-                        Flight {
-                            checkpoint,
-                            keys,
-                            bytes: size,
-                            sequence: self.sequence,
-                        },
-                    )
-                    .is_some()
-                {
-                    return Err(Error::Conflict);
-                }
-            }
             _ => {}
         }
         Ok(())
-    }
-
-    fn committed(&mut self, value: &Value) -> Result<(), Error> {
-        let source = text(value, "source")?;
-        let flight = self.flights.get(source).ok_or(Error::Conflict)?;
-        if value["checkpoint"] != flight.checkpoint
-            || value["credit"].as_u64()
-                != Some(u64::try_from(flight.bytes).map_err(|_| Error::Invalid)?)
-        {
-            return Err(Error::Conflict);
-        }
-        let flight = self.flights.remove(source).ok_or(Error::Conflict)?;
-        for key in flight.keys {
-            self.committed
-                .insert(key, (flight.checkpoint.clone(), flight.sequence));
-        }
-        Ok(())
-    }
-
-    fn checkpoint(&self, collections: &[&str], key: &str, after: Option<u64>) -> Option<String> {
-        collections.iter().find_map(|collection| {
-            let (checkpoint, sequence) = self
-                .committed
-                .get(&((*collection).to_owned(), key.to_owned()))?;
-            after
-                .is_none_or(|after| *sequence > after)
-                .then(|| checkpoint.clone())
-        })
     }
 }
 
@@ -433,7 +360,6 @@ fn handshake(native: &Mutex<UnixStream>, fence: u64) -> Result<(), Error> {
 pub struct Layer {
     guard: Mutex<DispatchGuard>,
     state: Mutex<State>,
-    changed: Condvar,
     native: Mutex<UnixStream>,
     native_shutdown: UnixStream,
     active: AtomicBool,
@@ -447,12 +373,13 @@ impl crate::routed::Overlay for Layer {
         value: &Value,
         output: &Arc<Mutex<UnixStream>>,
         helper: &Mutex<UnixStream>,
+        ledger: &'scope dyn Ledger,
     ) -> Result<bool, Error> {
-        Layer::gateway(self, scope, value, output, helper)
+        Layer::gateway(self, scope, value, output, helper, ledger)
     }
 
-    fn helper(&self, value: &Value, size: usize) -> Result<(), Error> {
-        Layer::helper(self, value, size)
+    fn helper(&self, value: &Value) -> Result<(), Error> {
+        Layer::helper(self, value)
     }
 
     fn helper_ready(&self, output: &Mutex<UnixStream>) -> Result<(), Error> {
@@ -475,7 +402,6 @@ impl Layer {
         Ok(Self {
             guard: Mutex::new(DispatchGuard::open(home)?),
             state: Mutex::new(State::default()),
-            changed: Condvar::new(),
             native_shutdown: native.try_clone()?,
             native: Mutex::new(native),
             active: AtomicBool::new(false),
@@ -495,7 +421,7 @@ impl Layer {
         self.guard.lock().map_err(|_| Error::WorkerPanicked)
     }
 
-    pub fn helper(&self, value: &Value, size: usize) -> Result<(), Error> {
+    pub fn helper(&self, value: &Value) -> Result<(), Error> {
         if value["t"] == "Outcome"
             && let Some(id) = value["command_id"].as_str()
         {
@@ -509,7 +435,7 @@ impl Layer {
                 let _ = guard.finish(id, disposition, &value["evidence"]);
             }
         }
-        self.state()?.helper(value, size)
+        self.state()?.helper(value)
     }
 
     pub fn helper_ready(&self, output: &Mutex<UnixStream>) -> Result<(), Error> {
@@ -548,6 +474,7 @@ impl Layer {
         command: &Value,
         prepared: &Value,
         after: u64,
+        ledger: &dyn Ledger,
     ) -> Result<(String, Value), Error> {
         let operation = command["action"]["op"].as_str().unwrap_or_default();
         let unavailable = || {
@@ -603,24 +530,13 @@ impl Layer {
                 let rust_owned =
                     self.config.rust_sources.contains(source) && !FACT_SOURCES.contains(&source);
                 let required = rust_owned.then_some(after);
-                let deadline = Instant::now() + self.config.correlation_wait;
-                let mut state = self.state()?;
-                loop {
-                    if let Some(checkpoint) = state.checkpoint(&names, key, required) {
-                        result.insert("capture_checkpoint".into(), Value::String(checkpoint));
-                        break;
-                    }
-                    let now = Instant::now();
-                    if now >= deadline {
-                        result.insert("reason".into(), json!("capture_not_observed"));
-                        return Ok(("indeterminate".to_owned(), Value::Object(result)));
-                    }
-                    state = self
-                        .changed
-                        .wait_timeout(state, (deadline - now).min(Duration::from_millis(100)))
-                        .map_err(|_| Error::WorkerPanicked)?
-                        .0;
-                }
+                let Some(checkpoint) =
+                    ledger.written(&names, key, required, self.config.correlation_wait)?
+                else {
+                    result.insert("reason".into(), json!("capture_not_observed"));
+                    return Ok(("indeterminate".to_owned(), Value::Object(result)));
+                };
+                result.insert("capture_checkpoint".into(), Value::String(checkpoint));
                 true
             }
         };
@@ -635,6 +551,7 @@ impl Layer {
         id: &str,
         command: &Value,
         rejected: &Value,
+        ledger: &dyn Ledger,
     ) -> Result<Value, Error> {
         let code = rejected["code"]
             .as_str()
@@ -650,7 +567,7 @@ impl Layer {
             let operation = command["action"]["op"].as_str().unwrap_or_default();
             let found = collections(operation, &rejected["evidence"]).and_then(|candidates| {
                 let names: Vec<&str> = candidates.iter().map(String::as_str).collect();
-                self.state().ok()?.checkpoint(&names, key, None)
+                ledger.written(&names, key, None, Duration::ZERO).ok()?
             });
             if let Some(checkpoint) = found {
                 evidence = Some(json!({"native_key":key,"capture_checkpoint":checkpoint}));
@@ -663,9 +580,10 @@ impl Layer {
         self.guard()?.outcome(id).cloned().ok_or(Error::Invalid)
     }
 
-    fn dispatch(&self, frame: &Value) -> Result<Value, Error> {
+    fn dispatch(&self, frame: &Value, ledger: &dyn Ledger) -> Result<Value, Error> {
         let command_id = &frame["command_id"];
-        let (ticket, fence, sequence) = {
+        let sequence = ledger.sequence()?;
+        let (ticket, fence) = {
             let mut state = self.state()?;
             let Some(ticket) = state.tickets.remove(text(frame, "ticket")?) else {
                 return Ok(rejection(command_id, "conflict", "conflict", None));
@@ -677,7 +595,7 @@ impl Layer {
             {
                 return Ok(rejection(command_id, "conflict", "conflict", None));
             }
-            (ticket, state.fence, state.sequence)
+            (ticket, state.fence)
         };
         let command = ticket.command;
         let id = text(&command, "command_id")?;
@@ -719,10 +637,10 @@ impl Layer {
         if let Ok(evidence) = &response
             && evidence["rejected"].is_object()
         {
-            return self.settle_rejection(id, &command, &evidence["rejected"]);
+            return self.settle_rejection(id, &command, &evidence["rejected"], ledger);
         }
         let (disposition, evidence) = match response {
-            Ok(evidence) => self.correlate(&evidence, &command, &prepared, sequence)?,
+            Ok(evidence) => self.correlate(&evidence, &command, &prepared, sequence, ledger)?,
             Err(_) => (
                 "indeterminate".to_owned(),
                 json!({"reason":"native_effect_evidence_unavailable","prepared":prepared}),
@@ -791,6 +709,7 @@ impl Layer {
         value: &Value,
         output: &Arc<Mutex<UnixStream>>,
         helper: &Mutex<UnixStream>,
+        ledger: &'scope dyn Ledger,
     ) -> Result<bool, Error> {
         match value["t"].as_str() {
             Some("Open") => {
@@ -828,17 +747,13 @@ impl Layer {
                 state.tickets.retain(|_, t| Instant::now() < t.expires);
                 state.commands.insert(id, value.clone());
             }
-            Some("Committed") => {
-                self.state()?.committed(value)?;
-                self.changed.notify_all();
-            }
             Some("Dispatch")
                 if self
                     .state()?
                     .tickets
                     .contains_key(value["ticket"].as_str().unwrap_or_default()) =>
             {
-                self.spawn(scope, value, output, false)?;
+                self.spawn(scope, value, output, ledger, false)?;
                 return Ok(false);
             }
             Some("Query")
@@ -846,7 +761,7 @@ impl Layer {
                     EFFECT_QUERIES.contains(&op) && self.config.routing.routes(op)
                 }) =>
             {
-                self.spawn(scope, value, output, true)?;
+                self.spawn(scope, value, output, ledger, true)?;
                 return Ok(false);
             }
             Some("Resolve") => {
@@ -879,6 +794,7 @@ impl Layer {
         scope: &'scope thread::Scope<'scope, '_>,
         value: &Value,
         output: &Arc<Mutex<UnixStream>>,
+        ledger: &'scope dyn Ledger,
         is_query: bool,
     ) -> Result<(), Error> {
         if self.active.swap(true, Ordering::SeqCst) {
@@ -890,7 +806,7 @@ impl Layer {
             let result = if is_query {
                 self.query(&value)
             } else {
-                self.dispatch(&value)
+                self.dispatch(&value, ledger)
             };
             self.active.store(false, Ordering::SeqCst);
             if let Ok(mut output) = output.lock() {
