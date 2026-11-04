@@ -815,8 +815,10 @@ public final class CalendarSource: Source {
         case "calendar.write":
             let action: JSON = .object(["op": request["op"], "native_key": request["native_key"], "list_key": request["list_key"], "calendar_args": request["calendar_args"]])
             let performed = try await perform(action, validated: nil)
-            try await reconcile(into: sink)
-            if request["op"].string == "calendar.delete_event" && !performed.existsAfter { try await confirmAbsence(performed.native, into: sink) }
+            if !request["session_captures"].bool {
+                try await reconcile(into: sink)
+                if request["op"].string == "calendar.delete_event" && !performed.existsAfter { try await confirmAbsence(performed.native, into: sink) }
+            }
             var result: [String: JSON] = ["native_key": .string(performed.native), "exists_after": .bool(performed.existsAfter)]
             if request["op"].string == "calendar.create_calendar" {
                 result["saved_title"] = performed.savedTitle; result["observed_title"] = performed.observedTitle; result["actual"] = performed.calendarResult

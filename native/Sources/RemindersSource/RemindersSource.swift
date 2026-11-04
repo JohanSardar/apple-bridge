@@ -534,8 +534,10 @@ public final class RemindersSource: Source {
             existsAfter = after != nil
             observed = after.map(data) ?? .null
         }
-        try await reconcile(into: sink)
-        if !existsAfter { try await confirmAbsence(key, list: operation == "reminders.delete_list", into: sink) }
+        if !args["session_captures"].bool {
+            try await reconcile(into: sink)
+            if !existsAfter { try await confirmAbsence(key, list: operation == "reminders.delete_list", into: sink) }
+        }
         return .object(["native_key": .string(key), "saved": saved, "observed": observed, "exists_after": .bool(existsAfter)])
     }
 }

@@ -537,6 +537,9 @@ public actor AppleSession: ObservationSink {
             }
             else if operation.hasPrefix("notes."), let notes = additionalSources["notes"] as? NotesSource { result = try await notes.primitive(operation, args: frame["args"], into: self) }
             else { throw SourceFailure.unsupported }
+            if operation.hasSuffix(".write") || operation.hasSuffix(".write_group"), let nativeSources {
+                await nativeSources.enumerations.invalidate(captureRoute(operation))
+            }
             guard link === connection, !Task.isCancelled else { return }
             try connection.send(NativeSessionFrame.primitiveResult(id: id, result: result))
         } catch {

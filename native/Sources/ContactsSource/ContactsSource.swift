@@ -778,8 +778,10 @@ public final class ContactsSource: Source {
         let exists = !(try isAbsent(contact.identifier))
         let saved: JSON = deleted ? .null : try data(contact)
         let observed: JSON = exists && !deleted ? try data(fresh(contact.identifier)) : .null
-        try await reconcile(into: sink)
-        if deleted && !exists { try await confirmAbsence(contact.identifier, into: sink) }
+        if !request["session_captures"].bool {
+            try await reconcile(into: sink)
+            if deleted && !exists { try await confirmAbsence(contact.identifier, into: sink) }
+        }
         return .object(["native_key": .string(contact.identifier), "exists_after": .bool(exists), "saved": saved, "observed": observed])
     }
 

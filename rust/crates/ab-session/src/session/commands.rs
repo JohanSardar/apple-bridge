@@ -27,6 +27,7 @@ use std::{
 const TICKET_SECONDS: i64 = 30;
 const BIND_WAIT: Duration = Duration::from_millis(500);
 const READER_BIND_WAIT: Duration = Duration::from_secs(15);
+const READER_NUDGE: Duration = Duration::from_secs(1);
 const READ_WAIT: Duration = Duration::from_secs(10);
 const WRITE_WAIT: Duration = Duration::from_secs(30);
 const DISPOSITIONS: &[&str] = &[
@@ -211,6 +212,15 @@ impl Probe for Hub {
             return done
                 .map(|()| json!({}))
                 .map_err(|()| "unavailable".to_owned());
+        }
+        if matches!(
+            operation,
+            "reminders.write" | "calendar.write" | "contacts.write"
+        ) && self.capture_owns(source_of(operation))
+        {
+            let mut args = args.clone();
+            args["session_captures"] = json!(true);
+            return self.primitive(operation, &args, WRITE_WAIT);
         }
         let wait = if matches!(
             operation,
@@ -859,17 +869,19 @@ impl Hub {
         facts: bool,
         after: u64,
     ) -> Result<Option<String>, Error> {
-        let wait = if self.capture_owns(source) {
-            self.capture_nudge(source)?;
-            READER_BIND_WAIT
-        } else {
-            BIND_WAIT
-        };
-        let deadline = self.clock.elapsed() + wait;
+        let owned = self.capture_owns(source);
+        let deadline = self.clock.elapsed() + if owned { READER_BIND_WAIT } else { BIND_WAIT };
+        let mut nudge = self.clock.elapsed();
         let mut core = self.core()?;
         loop {
+            if owned && self.clock.elapsed() >= nudge {
+                drop(core);
+                self.capture_nudge(source)?;
+                nudge = self.clock.elapsed() + READER_NUDGE;
+                core = self.core()?;
+            }
             if let Some(seen) = core.flights.latest(key)
-                && (facts || seen.sequence > after)
+                && ((facts && !owned) || seen.sequence > after)
             {
                 let mut best = (seen.sequence, seen.checkpoint.clone());
                 for other in others {
@@ -881,8 +893,14 @@ impl Hub {
                 }
                 return Ok(Some(best.1));
             }
-            if core.closed || self.clock.elapsed() >= deadline {
+            if core.closed {
                 return Ok(None);
+            }
+            if self.clock.elapsed() >= deadline {
+                let unchanged = (owned && facts)
+                    .then(|| core.flights.latest(key).map(|seen| seen.checkpoint.clone()))
+                    .flatten();
+                return Ok(unchanged);
             }
             core = self
                 .changed
