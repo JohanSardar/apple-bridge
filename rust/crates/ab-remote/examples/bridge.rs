@@ -2,6 +2,15 @@ use ab_remote::{Gateway, Ingress, certificate::Certificates, relay::Relay, tails
 use rustls::pki_types::{CertificateDer, pem::PemObject};
 use std::{path::PathBuf, sync::Arc};
 
+type Resolvers = Result<Option<Arc<dyn ab_remote::dns::Resolver>>, Box<dyn std::error::Error>>;
+
+fn resolver(address: Option<&str>) -> Resolvers {
+    Ok(match address {
+        Some(address) => Some(Arc::new(ab_remote::dns::Hickory::server(address.parse()?)?)),
+        None => None,
+    })
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -40,7 +49,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             certificates.root = option("--ca").map(PathBuf::from);
             certificates
         }
-        .ensure(&id, &client)
+        .ensure(
+            &id,
+            &option("--domain").unwrap_or_else(|| id.credential.hostname.clone()),
+            &client,
+        )
         .await?;
         return Ok(());
     }
@@ -72,6 +85,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 option("--directory").unwrap_or_default(),
             )),
             tls: Arc::new(tls),
+            domain: option("--domain").unwrap_or_default(),
+            resolver: resolver(option("--dns-server").as_deref())?,
+            domain_poll: std::time::Duration::from_millis(200),
         }));
     }
     if via == "tailscale-app" || via == "both" {

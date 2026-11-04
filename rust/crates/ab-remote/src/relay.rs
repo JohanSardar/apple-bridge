@@ -1,5 +1,8 @@
 use crate::{
-    Error, Gateway, Ingress, IngressFuture, Result, certificate::Certificates, smux, state, stopped,
+    Error, Gateway, Ingress, IngressFuture, Progress, Result,
+    certificate::Certificates,
+    dns::{self, Resolver},
+    smux, state, stopped,
 };
 use ab_wire::framing::{RelayChallenge, RelayProof};
 use base64::{
@@ -148,11 +151,22 @@ pub struct Relay {
     pub client: reqwest::Client,
     pub certificates: Arc<Certificates>,
     pub tls: Arc<rustls::ClientConfig>,
+    pub domain: String,
+    pub resolver: Option<Arc<dyn Resolver>>,
+    pub domain_poll: Duration,
 }
 impl Ingress for Relay {
     fn run(&self, gateway: Gateway, mut stop: watch::Receiver<bool>) -> IngressFuture<'_> {
         Box::pin(async move {
             let id = enroll(&self.home, &self.endpoint, &self.zone, &self.client).await?;
+            let host = if self.domain.is_empty() {
+                id.credential.hostname.clone()
+            } else {
+                if !self.claim(&id, &gateway, &mut stop).await? {
+                    return Ok(());
+                }
+                self.domain.clone()
+            };
             let notifications = crate::ct::Notifications {
                 home: self.home.clone(),
             };
@@ -176,7 +190,7 @@ impl Ingress for Relay {
                 tokio::select! {
                     () = stopped(&mut stop) => return Ok(()),
                     result = &mut monitor => return result,
-                    result = self.connect(&id, gateway.clone()) => { if let Err(e) = result { eprintln!("relay connection ended: {e}"); } }
+                    result = self.connect(&id, &host, gateway.clone()) => { if let Err(e) = result { eprintln!("relay connection ended: {e}"); } }
                 }
                 tokio::select! { () = stopped(&mut stop) => return Ok(()), () = tokio::time::sleep(delay) => {} }
                 delay = (delay * 2).min(Duration::from_secs(2));
@@ -185,7 +199,52 @@ impl Ingress for Relay {
     }
 }
 impl Relay {
-    async fn connect(&self, identity: &Identity, gateway: Gateway) -> Result<()> {
+    async fn claim(
+        &self,
+        identity: &Identity,
+        gateway: &Gateway,
+        stop: &mut watch::Receiver<bool>,
+    ) -> Result<bool> {
+        let system;
+        let resolver: &dyn Resolver = if let Some(resolver) = &self.resolver {
+            resolver.as_ref()
+        } else {
+            system = dns::Hickory::system()?;
+            &system
+        };
+        loop {
+            let missing =
+                dns::missing_records(resolver, &self.domain, &identity.credential.hostname).await;
+            if missing.is_empty() {
+                break;
+            }
+            gateway.progress(
+                "relay",
+                Progress {
+                    state: "pending",
+                    message: format!("Missing DNS records: {}", missing.join("; ")),
+                    pending_link: String::new(),
+                    last_error: String::new(),
+                    link: String::new(),
+                },
+            );
+            tokio::select! {
+                () = stopped(stop) => return Ok(false),
+                () = tokio::time::sleep(self.domain_poll) => {}
+            }
+        }
+        identity
+            .control(
+                &self.client,
+                "/domain",
+                &format!("domain:{}", self.domain),
+                serde_json::json!({"domain": self.domain}),
+            )
+            .await?;
+        gateway.clear_progress("relay");
+        Ok(true)
+    }
+    async fn connect(&self, identity: &Identity, host: &str, gateway: Gateway) -> Result<()> {
         let proof = identity.proof(&self.client, "tunnel").await?;
         let mut request = format!("{}/tunnel", self.endpoint.replacen("https://", "wss://", 1))
             .into_client_request()?;
@@ -208,12 +267,14 @@ impl Relay {
         )
         .await
         .map_err(|_| Error::Contract("tunnel timeout"))??;
-        self.certificates.ensure(identity, &self.client).await?;
-        let _active = gateway.ready("relay", &identity.credential.hostname);
+        self.certificates
+            .ensure(identity, host, &self.client)
+            .await?;
+        let _active = gateway.ready("relay", host);
         let certs = self.certificates.clone();
         let renew = async {
             loop {
-                certs.ensure(identity, &self.client).await?;
+                certs.ensure(identity, host, &self.client).await?;
                 tokio::time::sleep(Duration::from_hours(12)).await;
             }
             #[allow(unreachable_code)]

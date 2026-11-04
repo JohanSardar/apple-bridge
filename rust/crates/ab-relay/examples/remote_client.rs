@@ -33,6 +33,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "https://acme.invalid/directory".into(),
         )),
         tls: Arc::new(config),
+        domain: String::new(),
+        resolver: None,
+        domain_poll: std::time::Duration::from_secs(5),
     };
     let (stop, rx) = tokio::sync::watch::channel(false);
     tokio::spawn(async move {
