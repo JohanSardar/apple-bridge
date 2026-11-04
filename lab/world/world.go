@@ -69,6 +69,7 @@ type World struct {
 	sessionSocket     string
 	sessionState      string
 	sessionListen     string
+	sessionNative     string
 	sessionGateway    string
 	sessionRoots      map[string]string
 	sessionUsage      map[string]*sessionDevice
@@ -474,6 +475,9 @@ func newEnvironment(ctx context.Context, level string, replicas, seed int, nativ
 			return nil, err
 		}
 		simArgs := []string{"simapple", "--socket", helperSocket, "--secret-file", filepath.Join(gatewayHome, "apple-secret"), "--control", control}
+		if w.sessionNative != "" {
+			simArgs = append(simArgs, "--native-socket", w.sessionNative)
+		}
 		if legacy, _ := ctx.Value(legacyHelperKey{}).(bool); legacy {
 			simArgs = append(simArgs, "--legacy-sources")
 		}
@@ -609,6 +613,18 @@ func (w *World) Close() {
 	}
 	for _, home := range w.localExtraHomes {
 		os.RemoveAll(home)
+	}
+	if keep := os.Getenv("AB_LAB_SESSION_EFFECTS_EVIDENCE"); keep != "" && w.sessionNative != "" {
+		destination := filepath.Join(keep, filepath.Base(w.Dir))
+		os.MkdirAll(destination, 0700)
+		if guard, err := os.ReadFile(filepath.Join(w.Dir, "session-effects", "dispatch-guard.log")); err == nil {
+			os.WriteFile(filepath.Join(destination, "dispatch-guard.log"), guard, 0600)
+		}
+		for _, name := range []string{"session.log", "simapple.log", "gateway.log"} {
+			if data, err := os.ReadFile(filepath.Join(w.Dir, name)); err == nil {
+				os.WriteFile(filepath.Join(destination, name), data, 0600)
+			}
+		}
 	}
 	os.RemoveAll(w.Dir)
 	if w.secretOverride {
