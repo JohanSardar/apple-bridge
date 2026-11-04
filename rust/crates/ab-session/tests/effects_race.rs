@@ -187,7 +187,8 @@ fn canonical_permit_hash_rejects_ambiguous_numbers() -> Result<(), Box<dyn std::
 }
 
 #[test]
-fn ambiguous_float_refuses_the_command_and_keeps_the_gateway_stream() -> Result<(), Box<dyn std::error::Error>> {
+fn ambiguous_float_refuses_the_command_and_keeps_the_gateway_stream()
+-> Result<(), Box<dyn std::error::Error>> {
     let home = std::env::temp_dir().join(format!(
         "ab-effects-float-{}-{}",
         std::process::id(),
@@ -210,9 +211,15 @@ fn ambiguous_float_refuses_the_command_and_keeps_the_gateway_stream() -> Result<
         )
     });
     let result = (|| -> Result<(), Box<dyn std::error::Error>> {
-        send(&mut gateway, &json!({"t":"Open","protocol":"ipc/1","owner_fence":7}))?;
+        send(
+            &mut gateway,
+            &json!({"t":"Open","protocol":"ipc/1","owner_fence":7}),
+        )?;
         assert_eq!(receive(&mut native)?["t"], "Hello");
-        send(&mut native, &json!({"t":"Welcome","protocol":"native/1","version":1}))?;
+        send(
+            &mut native,
+            &json!({"t":"Welcome","protocol":"native/1","version":1}),
+        )?;
         assert_eq!(receive(&mut helper)?["t"], "Open");
         send(&mut helper, &json!({"t":"Ready"}))?;
         assert_eq!(receive(&mut gateway)?["t"], "Ready");
