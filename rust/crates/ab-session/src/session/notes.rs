@@ -21,6 +21,7 @@ const FORBIDDEN_ORIGINAL: [&str; 6] = [
 ];
 const HTML_LIMIT: usize = 1_000_000;
 const OBSERVATIONS: u32 = 100;
+const BODY_READS: u32 = 60;
 const OBSERVATION_GAP: Duration = if cfg!(test) {
     Duration::ZERO
 } else {
@@ -102,6 +103,12 @@ fn read(probe: &dyn Probe, collection: &str, key: &str) -> Result<Value, Refusal
     }
 }
 
+fn body_pending(data: &Value) -> bool {
+    data["content_status"]
+        .as_str()
+        .is_some_and(|status| status != "complete")
+}
+
 pub(super) fn prepare(
     probe: &dyn Probe,
     action: &Value,
@@ -114,7 +121,14 @@ pub(super) fn prepare(
     let key = text(action, "native_key");
     let mut state = Value::Null;
     if !key.is_empty() {
-        let found = read(probe, collection(operation), key)?;
+        let mut found = read(probe, collection(operation), key)?;
+        for _ in 0..BODY_READS {
+            if operation != "notes.update" || !body_pending(&found["data"]) {
+                break;
+            }
+            thread::sleep(OBSERVATION_GAP);
+            found = read(probe, collection(operation), key)?;
+        }
         let before = found["data"].clone();
         if operation == "notes.update" {
             let html = &action["note_args"]["html"];
@@ -303,6 +317,7 @@ mod tests {
 
     struct Fake {
         calls: RefCell<Vec<String>>,
+        pending_reads: RefCell<u32>,
         note: Value,
         folder: Value,
         seen: RefCell<Vec<Value>>,
@@ -318,6 +333,7 @@ mod tests {
         fn new() -> Self {
             Self {
                 calls: RefCell::new(Vec::new()),
+                pending_reads: RefCell::new(0),
                 note: note("<div>hello</div>"),
                 folder: json!({"title": "Bridge Test [ab-test x]", "read_only": false}),
                 seen: RefCell::new(Vec::new()),
@@ -331,7 +347,14 @@ mod tests {
             let key = args["native_key"].as_str().unwrap_or_default();
             Ok(match (operation, args["collection"].as_str()) {
                 ("notes.read", Some("notes.note")) if key == "n1" => {
-                    json!({"exists": true, "data": self.note})
+                    let mut pending = self.pending_reads.borrow_mut();
+                    let mut data = self.note.clone();
+                    if *pending > 0 {
+                        *pending -= 1;
+                        data["editable"] = json!("none");
+                        data["content_status"] = json!("partial");
+                    }
+                    json!({"exists": true, "data": data})
                 }
                 ("notes.read", Some("notes.folder")) if key == "d1" => {
                     json!({"exists": true, "data": self.folder, "folder_fingerprint": "ff1"})
@@ -362,6 +385,38 @@ mod tests {
 
     fn expected() -> Value {
         json!({"native_fingerprint": "f1"})
+    }
+
+    #[test]
+    fn an_update_waits_for_a_body_still_arriving_and_refuses_one_that_never_does() {
+        let arriving = Fake::new();
+        *arriving.pending_reads.borrow_mut() = 3;
+        assert!(prepare(&arriving, &update(&json!({})), &expected()).is_ok());
+        assert_eq!(*arriving.pending_reads.borrow(), 0);
+
+        let stuck = Fake::new();
+        *stuck.pending_reads.borrow_mut() = BODY_READS + 5;
+        assert_eq!(
+            prepare(&stuck, &update(&json!({})), &expected())
+                .unwrap_err()
+                .code,
+            "unsupported"
+        );
+        assert_eq!(*stuck.pending_reads.borrow(), 4);
+
+        let rich = {
+            let mut probe = Fake::new();
+            probe.note["editable"] = json!("rich");
+            probe
+        };
+        let _ = prepare(&rich, &update(&json!({})), &expected());
+        let reads = rich
+            .calls
+            .borrow()
+            .iter()
+            .filter(|call| *call == "notes.read")
+            .count();
+        assert_eq!(reads, 1, "a finished body is decided at once");
     }
 
     #[test]
