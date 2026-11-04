@@ -31,7 +31,7 @@ fn require_lab_gateway(
     )
     .into())
 }
-fn check(args: impl Iterator<Item = String>) -> Result<bool, Box<dyn std::error::Error>> {
+fn check(args: impl Iterator<Item = String>) -> bool {
     let registry = lab_adapters::registry();
     let mut passed = true;
     let mut count = 0;
@@ -62,14 +62,14 @@ fn check(args: impl Iterator<Item = String>) -> Result<bool, Box<dyn std::error:
             serde_json::json!({"scenario": id, "ok": ok, "kind": detail})
         );
     }
-    Ok(passed && count > 0)
+    passed && count > 0
 }
 #[allow(clippy::too_many_lines)]
 fn run() -> Result<bool, Box<dyn std::error::Error>> {
     let mut args = env::args().skip(1);
     match args.next().as_deref() {
         Some("run") => {}
-        Some("check") => return check(args),
+        Some("check") => return Ok(check(args)),
         _ => {
             return Err(
                 "usage: lab-families run YAML... --gateway BIN --simapple BIN --output DIR [--level sim|real --helper-app APP] | lab-families check YAML...".into(),
