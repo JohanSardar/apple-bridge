@@ -129,11 +129,35 @@ fn start_with(
     checkpoints: &Value,
     clock: std::sync::Arc<dyn session::Clock>,
 ) -> World {
+    start_configured(
+        home,
+        credit,
+        checkpoints,
+        clock,
+        &session::Options::default(),
+    )
+}
+
+fn start_configured(
+    home: std::path::PathBuf,
+    credit: i64,
+    checkpoints: &Value,
+    clock: std::sync::Arc<dyn session::Clock>,
+    options: &session::Options,
+) -> World {
+    let options = options.clone();
     let (mut gateway, session_gateway) = UnixStream::pair().expect("pair");
     let (mut link, session_link) = UnixStream::pair().expect("pair");
     let session_home = home.clone();
     let session = thread::spawn(move || {
-        session::serve_with(session_gateway, session_link, &SECRET, &session_home, clock)
+        session::serve_configured(
+            session_gateway,
+            session_link,
+            &SECRET,
+            &session_home,
+            clock,
+            &options,
+        )
     });
     authenticate(&mut gateway, true);
     open(&mut gateway, credit, checkpoints);
@@ -880,4 +904,294 @@ fn evidence_whose_key_is_never_committed_degrades_after_the_bind_window_on_the_i
     let lines = guard_lines(&world.home);
     assert_eq!(lines.last().expect("line")["disposition"], "indeterminate");
     let _ = finish(world);
+}
+
+fn owned() -> session::Options {
+    session::Options {
+        rust_commands: vec!["reminders".into()],
+    }
+}
+
+fn start_owned() -> World {
+    start_configured(
+        fresh_home(),
+        4_194_304,
+        &json!({}),
+        std::sync::Arc::new(session::SystemClock::start()),
+        &owned(),
+    )
+}
+
+fn reminder_data(title: &str) -> Value {
+    json!({"title": title, "notes": null, "priority": 0, "completed": false,
+        "list_id": {"$ref": {"collection": "reminders.list", "native_key": "work"}}})
+}
+
+fn reminder_prepare(id: &str, title: &str) -> IpcFrame {
+    let mut prepare = frame("Prepare");
+    prepare.command_id = id.into();
+    prepare.principal = "owner".into();
+    prepare.request_hash = format!("hash-{id}");
+    prepare.origin = "interactive".into();
+    prepare.expires_at = future();
+    prepare.action = Some(raw(&json!({"op": "reminders.update", "native_key": "r1",
+        "list_key": "work", "args": {"title": "oat milk"}})));
+    prepare.expected_state = Some(raw(&reminder_data(title)));
+    prepare
+}
+
+fn primitive(world: &mut World) -> (String, String, Value) {
+    let Ok(Frame::Primitive(request)) = native::read_frame(&mut world.link) else {
+        panic!("expected a primitive");
+    };
+    let args = request.args.map_or(Value::Null, |args| {
+        serde_json::from_str(args.get()).expect("args")
+    });
+    (request.id, request.op, args)
+}
+
+fn answer(world: &mut World, id: &str, result: &Value) {
+    native::write_frame(
+        &mut world.link,
+        &Frame::PrimitiveResult(native::PrimitiveResult {
+            id: id.into(),
+            result: raw(result),
+        }),
+    )
+    .expect("answer");
+}
+
+fn expect_read(world: &mut World, operation: &str, result: &Value) -> Value {
+    let (id, op, args) = primitive(world);
+    assert_eq!(op, operation);
+    answer(world, &id, result);
+    args
+}
+
+fn reminder_read(title: &str) -> Value {
+    json!({"exists": true, "writable": true, "list_key": "work", "data": reminder_data(title)})
+}
+
+fn list_read(writable: bool) -> Value {
+    json!({"exists": true, "writable": writable, "data": {"title": "Work", "writable": writable}})
+}
+
+fn ticket_for(world: &mut World, id: &str, title: &str, current: &str) -> String {
+    ipc_send(&mut world.gateway, &reminder_prepare(id, title));
+    let args = expect_read(world, "reminders.read_reminder", &reminder_read(current));
+    assert_eq!(args, json!({"native_key": "r1"}));
+    expect_read(world, "reminders.read_list", &list_read(true));
+    let (prepared, _) = ipc_read(&mut world.gateway).expect("prepared");
+    assert_eq!(prepared["t"], "Prepared");
+    assert_eq!(prepared["native_state"], reminder_data(current));
+    assert_eq!(prepared["fingerprint"], format!("hash-{id}"));
+    prepared["ticket"].as_str().expect("ticket").to_owned()
+}
+
+#[test]
+fn a_rust_owned_reminders_command_is_decided_in_rust_and_swift_only_reads_and_writes() {
+    let mut world = start_owned();
+    let ticket = ticket_for(&mut world, "c1", "milk", "milk");
+    ipc_send(&mut world.gateway, &dispatch_frame("c1", &ticket, 7));
+    expect_read(&mut world, "reminders.read_list", &list_read(true));
+    expect_read(
+        &mut world,
+        "reminders.read_reminder",
+        &reminder_read("milk"),
+    );
+    let started = guard_lines(&world.home);
+    assert_eq!(started[0]["t"], "DispatchStarted");
+    let (id, op, args) = primitive(&mut world);
+    assert_eq!(op, "reminders.write");
+    assert_eq!(
+        args,
+        json!({"op": "reminders.update", "native_key": "r1", "list_key": "work", "args": {"title": "oat milk"}})
+    );
+    native::write_frame(
+        &mut world.link,
+        &Frame::Scan(scan("s1", "reminders", &[("upsert", "r1", 10)], false)),
+    )
+    .expect("scan");
+    let data = reminder_data("oat milk");
+    answer(
+        &mut world,
+        &id,
+        &json!({"native_key": "r1", "saved": data, "observed": data, "exists_after": true}),
+    );
+    let (capture, size) = ipc_read(&mut world.gateway).expect("capture");
+    commit(&mut world.gateway, &capture, size);
+    let (outcome, _) = ipc_read(&mut world.gateway).expect("outcome");
+    assert_eq!(outcome["t"], "Outcome");
+    assert_eq!(outcome["disposition"], "locally_observed");
+    assert_eq!(outcome["evidence"]["native_key"], "r1");
+    assert_eq!(outcome["evidence"]["observed"], true);
+    assert_eq!(outcome["evidence"]["absent"], false);
+    assert_eq!(
+        outcome["evidence"]["capture_checkpoint"],
+        capture["checkpoint"]
+    );
+    assert_eq!(
+        outcome["evidence"]["prepared"]["native_state"],
+        reminder_data("milk")
+    );
+    let _ = finish(world);
+}
+
+#[test]
+fn a_stale_expected_state_is_refused_in_rust_with_the_conflicting_capture_as_evidence() {
+    let mut world = start_owned();
+    ipc_send(&mut world.gateway, &reminder_prepare("c1", "bread"));
+    expect_read(
+        &mut world,
+        "reminders.read_reminder",
+        &reminder_read("milk"),
+    );
+    let (id, op, _) = primitive(&mut world);
+    assert_eq!(op, "reminders.reconcile");
+    native::write_frame(
+        &mut world.link,
+        &Frame::Scan(scan("s1", "reminders", &[("upsert", "r1", 10)], false)),
+    )
+    .expect("scan");
+    answer(&mut world, &id, &json!({}));
+    let (capture, size) = ipc_read(&mut world.gateway).expect("capture");
+    commit(&mut world.gateway, &capture, size);
+    let (rejected, _) = ipc_read(&mut world.gateway).expect("rejected");
+    assert_eq!(rejected["t"], "Rejected");
+    assert_eq!(rejected["error"]["code"], "conflict");
+    assert_eq!(rejected["evidence"]["native_key"], "r1");
+    assert_eq!(
+        rejected["evidence"]["capture_checkpoint"],
+        capture["checkpoint"]
+    );
+    assert!(guard_lines_absent(&world.home));
+    let _ = finish(world);
+}
+
+#[test]
+fn a_read_only_list_is_refused_and_nothing_is_dispatched() {
+    let mut world = start_owned();
+    let mut prepare = reminder_prepare("c1", "milk");
+    prepare.action = Some(raw(
+        &json!({"op": "reminders.create", "list_key": "work", "args": {"title": "x"}}),
+    ));
+    ipc_send(&mut world.gateway, &prepare);
+    expect_read(&mut world, "reminders.read_list", &list_read(false));
+    let (rejected, _) = ipc_read(&mut world.gateway).expect("rejected");
+    assert_eq!(rejected["error"]["code"], "unsupported");
+    assert!(rejected["evidence"].is_null());
+    assert!(guard_lines_absent(&world.home));
+    let _ = finish(world);
+}
+
+#[test]
+fn a_reminder_edited_between_prepare_and_dispatch_is_rejected_before_any_write() {
+    let mut world = start_owned();
+    let ticket = ticket_for(&mut world, "c1", "milk", "milk");
+    ipc_send(&mut world.gateway, &dispatch_frame("c1", &ticket, 7));
+    expect_read(&mut world, "reminders.read_list", &list_read(true));
+    expect_read(
+        &mut world,
+        "reminders.read_reminder",
+        &reminder_read("edited meanwhile"),
+    );
+    let (id, op, _) = primitive(&mut world);
+    assert_eq!(op, "reminders.reconcile");
+    native::write_frame(
+        &mut world.link,
+        &Frame::Scan(scan("s1", "reminders", &[("upsert", "r1", 10)], false)),
+    )
+    .expect("scan");
+    answer(&mut world, &id, &json!({}));
+    let (capture, size) = ipc_read(&mut world.gateway).expect("capture");
+    commit(&mut world.gateway, &capture, size);
+    let (rejected, _) = ipc_read(&mut world.gateway).expect("rejected");
+    assert_eq!(rejected["t"], "Rejected");
+    assert_eq!(rejected["error"]["code"], "conflict");
+    world
+        .link
+        .set_read_timeout(Some(Duration::from_millis(300)))
+        .expect("timeout");
+    while let Ok(frame) = native::read_frame(&mut world.link) {
+        assert!(
+            matches!(frame, Frame::ScanCommitted(_)),
+            "a primitive or dispatch was sent after a failed validation"
+        );
+    }
+    let _ = finish(world);
+}
+
+#[test]
+fn a_write_that_is_not_read_back_is_indeterminate_never_observed() {
+    for answer_with in [
+        Some(
+            json!({"native_key": "r1", "saved": reminder_data("oat milk"), "observed": reminder_data("milk"), "exists_after": true}),
+        ),
+        None,
+    ] {
+        let mut world = start_owned();
+        let ticket = ticket_for(&mut world, "c1", "milk", "milk");
+        ipc_send(&mut world.gateway, &dispatch_frame("c1", &ticket, 7));
+        expect_read(&mut world, "reminders.read_list", &list_read(true));
+        expect_read(
+            &mut world,
+            "reminders.read_reminder",
+            &reminder_read("milk"),
+        );
+        let (id, op, _) = primitive(&mut world);
+        assert_eq!(op, "reminders.write");
+        match answer_with {
+            Some(result) => answer(&mut world, &id, &result),
+            None => native::write_frame(
+                &mut world.link,
+                &Frame::PrimitiveError(native::PrimitiveError {
+                    id,
+                    code: "permission_missing".into(),
+                }),
+            )
+            .expect("error"),
+        }
+        let (outcome, _) = ipc_read(&mut world.gateway).expect("outcome");
+        assert_eq!(outcome["t"], "Outcome");
+        assert_eq!(outcome["disposition"], "indeterminate");
+        assert_eq!(outcome["evidence"]["observed"], false);
+        assert!(outcome["evidence"]["capture_checkpoint"].is_null());
+        let _ = finish(world);
+    }
+}
+
+#[test]
+fn only_the_named_sources_are_rust_owned_and_the_default_is_swift() {
+    let mut world = start_owned();
+    ipc_send(&mut world.gateway, &prepare_frame("c1", "notes.update"));
+    assert!(matches!(
+        native::read_frame(&mut world.link),
+        Ok(Frame::Prepare(_))
+    ));
+    let _ = finish(world);
+    let mut world = start(4_194_304, &json!({}));
+    ipc_send(&mut world.gateway, &reminder_prepare("c2", "milk"));
+    assert!(matches!(
+        native::read_frame(&mut world.link),
+        Ok(Frame::Prepare(_))
+    ));
+    let _ = finish(world);
+}
+
+#[test]
+fn an_unknown_rust_owned_source_refuses_to_start() {
+    let (gateway, session_gateway) = UnixStream::pair().expect("pair");
+    let (link, session_link) = UnixStream::pair().expect("pair");
+    let result = session::serve_configured(
+        session_gateway,
+        session_link,
+        &SECRET,
+        &fresh_home(),
+        std::sync::Arc::new(session::SystemClock::start()),
+        &session::Options {
+            rust_commands: vec!["messages".into()],
+        },
+    );
+    assert!(matches!(result, Err(Error::Invalid)));
+    drop((gateway, link));
 }

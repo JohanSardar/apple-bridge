@@ -211,6 +211,7 @@ struct Flags {
     capture_home: Option<String>,
     session_secret: Option<String>,
     session_home: Option<String>,
+    rust_commands: Option<String>,
 }
 
 fn parse_flags(args: &[String]) -> Result<Flags, Error> {
@@ -223,11 +224,15 @@ fn parse_flags(args: &[String]) -> Result<Flags, Error> {
             "--capture-home" => &mut flags.capture_home,
             "--session-secret" => &mut flags.session_secret,
             "--session-home" => &mut flags.session_home,
+            "--rust-commands" => &mut flags.rust_commands,
             _ => return Err(Error::Invalid),
         };
         if slot.replace(value).is_some() {
             return Err(Error::Invalid);
         }
+    }
+    if flags.rust_commands.is_some() && flags.session_secret.is_none() {
+        return Err(Error::Conflict);
     }
     Ok(flags)
 }
@@ -255,13 +260,35 @@ fn lab_session(args: &[String]) -> Result<(), Error> {
     Ok(())
 }
 
-fn serve_session(gateway: i32, helper: i32, secret: &str, home: &str) -> Result<(), Error> {
+fn serve_session(
+    gateway: i32,
+    helper: i32,
+    secret: &str,
+    home: &str,
+    rust_commands: Option<&str>,
+) -> Result<(), Error> {
     let secret = ab_session::session::load_secret(std::path::Path::new(secret))?;
     let gateway = ab_sys::inherited_unix_stream(gateway)?;
     let helper = ab_sys::inherited_unix_stream(helper)?;
-    ab_session::session::serve(gateway, helper, &secret, std::path::Path::new(home))
+    let options = ab_session::session::Options {
+        rust_commands: rust_commands
+            .unwrap_or_default()
+            .split(',')
+            .filter(|source| !source.is_empty())
+            .map(str::to_owned)
+            .collect(),
+    };
+    ab_session::session::serve_configured(
+        gateway,
+        helper,
+        &secret,
+        std::path::Path::new(home),
+        std::sync::Arc::new(ab_session::session::SystemClock::start()),
+        &options,
+    )
 }
 
+#[allow(clippy::too_many_lines)]
 fn run() -> Result<(), Error> {
     ab_sys::reset_signals();
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -299,13 +326,15 @@ fn run() -> Result<(), Error> {
         capture_home,
         session_secret,
         session_home,
+        rust_commands,
     } = parse_flags(&args[4..])?;
+
     if let Some(secret) = session_secret {
         if effects_home.is_some() || capture_home.is_some() {
             return Err(Error::Conflict);
         }
         let home = session_home.ok_or(Error::Invalid)?;
-        return serve_session(gateway, helper, &secret, &home);
+        return serve_session(gateway, helper, &secret, &home, rust_commands.as_deref());
     }
     let mut selection = ab_session::ownership::Selection::default();
     if let Ok(value) = std::env::var("AB_SESSION_PRODUCERS") {

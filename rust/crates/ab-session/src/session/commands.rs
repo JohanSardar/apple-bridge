@@ -1,4 +1,4 @@
-use super::{Hub, rejected};
+use super::{Hub, rejected, reminders};
 use crate::{
     Error,
     guard::{DispatchGuard, PreparedEffect, durable_action},
@@ -6,8 +6,8 @@ use crate::{
 use ab_wire::{
     messages::IpcFrame,
     native::{
-        BlobRead, Command, Dispatch, Frame as Link, Outcome, Prepared, Query, QueryCancel,
-        Rejected, Resolve,
+        BlobRead, Command, Dispatch, Frame as Link, Outcome, Prepared, Primitive, Query,
+        QueryCancel, Rejected, Resolve,
     },
 };
 use serde_json::{Value, json};
@@ -16,11 +16,14 @@ use std::{
     fmt::Write as _,
     io::Read,
     path::Path,
+    thread,
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
 const TICKET_SECONDS: i64 = 30;
 const BIND_WAIT: Duration = Duration::from_secs(15);
+const READ_WAIT: Duration = Duration::from_secs(10);
+const WRITE_WAIT: Duration = Duration::from_secs(30);
 const DISPOSITIONS: &[&str] = &[
     "locally_observed",
     "indeterminate",
@@ -49,10 +52,14 @@ pub(super) struct Commands {
     active: Option<Active>,
     resolving: BTreeMap<String, u32>,
     queries: BTreeSet<String>,
+    owned: BTreeSet<String>,
+    primitives: BTreeMap<String, Option<Result<Value, String>>>,
+    abandoned: BTreeSet<String>,
+    next_primitive: u64,
 }
 
 impl Commands {
-    pub(super) fn open(home: &Path, fence: u64) -> Result<Self, Error> {
+    pub(super) fn open(home: &Path, fence: u64, owned: &[String]) -> Result<Self, Error> {
         Ok(Self {
             guard: DispatchGuard::open(home)?,
             fence,
@@ -61,6 +68,10 @@ impl Commands {
             active: None,
             resolving: BTreeMap::new(),
             queries: BTreeSet::new(),
+            owned: owned.iter().cloned().collect(),
+            primitives: BTreeMap::new(),
+            abandoned: BTreeSet::new(),
+            next_primitive: 0,
         })
     }
 
@@ -133,11 +144,30 @@ fn saved_frame(saved: &Value) -> Result<IpcFrame, Error> {
     Ok(serde_json::from_value(saved.clone())?)
 }
 
+fn source_of(operation: &str) -> &str {
+    operation.split('.').next().unwrap_or_default()
+}
+
+impl reminders::Probe for Hub {
+    fn call(&self, operation: &str, args: &Value) -> Result<Value, String> {
+        let wait = if operation == "reminders.write" {
+            WRITE_WAIT
+        } else {
+            READ_WAIT
+        };
+        self.primitive(operation, args, wait)
+    }
+}
+
 impl Hub {
-    pub(super) fn gateway_command(&self, frame: &IpcFrame) -> Result<(), Error> {
+    pub(super) fn gateway_command<'scope>(
+        &'scope self,
+        scope: &'scope thread::Scope<'scope, '_>,
+        frame: &IpcFrame,
+    ) -> Result<(), Error> {
         match frame.t.as_str() {
-            "Prepare" => self.prepare(frame),
-            "Dispatch" => self.dispatch(frame),
+            "Prepare" => self.prepare(scope, frame),
+            "Dispatch" => self.dispatch(scope, frame),
             "Resolve" => self.resolve(frame),
             "Query" => self.query(frame),
             "QueryCancel" => self.send_link(&Link::QueryCancel(QueryCancel {
@@ -152,7 +182,11 @@ impl Hub {
         self.send_gateway(&rejected(command_id, code)?)
     }
 
-    fn prepare(&self, frame: &IpcFrame) -> Result<(), Error> {
+    fn prepare<'scope>(
+        &'scope self,
+        scope: &'scope thread::Scope<'scope, '_>,
+        frame: &IpcFrame,
+    ) -> Result<(), Error> {
         let id = frame.command_id.clone();
         let Ok(command) = Command::from_ipc(frame) else {
             return self.refuse(&id, "invalid");
@@ -179,11 +213,181 @@ impl Hub {
             return self.refuse(&id, "conflict");
         }
         commands.preparing = Some(command.clone());
+        let owned = commands.owned.contains(source_of(&command.operation()));
         drop(core);
+        if owned {
+            scope.spawn(move || {
+                if let Err(error) = self.prepare_owned(&command) {
+                    eprintln!("ab-session: prepare failed: {error}");
+                    self.close();
+                }
+            });
+            return Ok(());
+        }
         self.send_link(&Link::Prepare(command))
     }
 
-    fn dispatch(&self, frame: &IpcFrame) -> Result<(), Error> {
+    fn prepare_owned(&self, command: &Command) -> Result<(), Error> {
+        let action = parsed(&command.action);
+        let expected = command
+            .expected_state
+            .as_deref()
+            .map_or(Value::Null, parsed);
+        match reminders::prepare(self, &action, &expected) {
+            Ok(state) => self.prepared(Prepared {
+                command_id: command.command_id.clone(),
+                native_state: raw(&state)?,
+                route: "eventkit".into(),
+                candidate_ids: Vec::new(),
+                fingerprint: command.request_hash.clone(),
+            }),
+            Err(refusal) => self.rejected_by_helper(self.rejection(&command.command_id, &refusal)?),
+        }
+    }
+
+    fn rejection(&self, command_id: &str, refusal: &reminders::Refusal) -> Result<Rejected, Error> {
+        let evidence = refusal
+            .key
+            .as_deref()
+            .map(|key| self.conflict_evidence(key));
+        let (code, evidence) = match evidence {
+            Some(None) => ("unavailable", None),
+            Some(Some(found)) => (refusal.code.as_str(), Some(found)),
+            None => (refusal.code.as_str(), None),
+        };
+        Ok(Rejected {
+            command_id: command_id.into(),
+            code: code.into(),
+            message: code.into(),
+            evidence: evidence.map(|value| raw(&value)).transpose()?,
+        })
+    }
+
+    fn conflict_evidence(&self, key: &str) -> Option<Value> {
+        let reconciled = self.primitive("reminders.reconcile", &json!({}), WRITE_WAIT);
+        let checkpoint = reconciled
+            .ok()
+            .and_then(|_| self.bind(key, true, 0).ok().flatten())?;
+        Some(json!({"native_key": key, "capture_checkpoint": checkpoint}))
+    }
+
+    pub(super) fn primitive(
+        &self,
+        operation: &str,
+        args: &Value,
+        wait: Duration,
+    ) -> Result<Value, String> {
+        let unavailable = || "unavailable".to_owned();
+        let id = {
+            let mut core = self.core().map_err(|_| unavailable())?;
+            core.commands.next_primitive += 1;
+            let id = format!("primitive-{}", core.commands.next_primitive);
+            core.commands.primitives.insert(id.clone(), None);
+            id
+        };
+        let frame = Link::Primitive(Primitive {
+            id: id.clone(),
+            op: operation.into(),
+            args: Some(raw(args).map_err(|_| unavailable())?),
+        });
+        let deadline = self.clock.elapsed() + wait;
+        let sent = self.send_link(&frame);
+        let mut core = self.core().map_err(|_| unavailable())?;
+        loop {
+            if sent.is_ok() && matches!(core.commands.primitives.get(&id), Some(Some(_))) {
+                return core
+                    .commands
+                    .primitives
+                    .remove(&id)
+                    .flatten()
+                    .unwrap_or_else(|| Err(unavailable()));
+            }
+            if sent.is_err() || core.closed || self.clock.elapsed() >= deadline {
+                if core
+                    .commands
+                    .primitives
+                    .remove(&id)
+                    .is_some_and(|slot| slot.is_none())
+                {
+                    core.commands.abandoned.insert(id);
+                }
+                return Err(unavailable());
+            }
+            core = self
+                .changed
+                .wait_timeout(core, Duration::from_millis(20))
+                .map_err(|_| unavailable())?
+                .0;
+        }
+    }
+
+    pub(super) fn finish_primitive(
+        &self,
+        id: &str,
+        answer: Result<Value, String>,
+    ) -> Result<(), Error> {
+        let mut core = self.core()?;
+        if core.commands.abandoned.remove(id) {
+            return Ok(());
+        }
+        match core.commands.primitives.get_mut(id) {
+            Some(slot @ None) => *slot = Some(answer),
+            _ => return Err(Error::Invalid),
+        }
+        drop(core);
+        self.changed.notify_all();
+        Ok(())
+    }
+
+    fn dispatch_owned(&self, command: &Command, state: &Value) -> Result<(), Error> {
+        let action = parsed(&command.action);
+        let operation = command.operation();
+        if let Err(refusal) = reminders::validate(self, &action, state) {
+            return self.rejected_by_helper(self.rejection(&command.command_id, &refusal)?);
+        }
+        let prepared = json!({
+            "action": durable_action(&action),
+            "native_state": state,
+            "request_hash": command.request_hash,
+        });
+        let (disposition, evidence) = match reminders::write(self, &action) {
+            Ok(written) if reminders::verified(&operation, &written) => (
+                "locally_observed",
+                json!({
+                    "native_key": written["native_key"],
+                    "fingerprint": command.request_hash,
+                    "observed": true,
+                    "absent": reminders::absent(&operation),
+                    "before": state,
+                    "candidate_ids": state["candidate_ids"],
+                    "prepared": prepared,
+                }),
+            ),
+            Ok(_) => (
+                "indeterminate",
+                json!({"observed": false, "reason": "dispatch_evidence_unavailable", "native_error_code": "unavailable", "prepared": prepared}),
+            ),
+            Err(code) => (
+                "indeterminate",
+                json!({"observed": false, "reason": "dispatch_evidence_unavailable", "native_error_code": code, "prepared": prepared}),
+            ),
+        };
+        let outcome = Outcome {
+            command_id: command.command_id.clone(),
+            disposition: disposition.into(),
+            evidence: raw(&evidence)?,
+        };
+        if let Some((active, outcome)) = self.outcome_from_helper(outcome)? {
+            self.settle(&active, outcome)?;
+        }
+        Ok(())
+    }
+
+    fn dispatch<'scope>(
+        &'scope self,
+        scope: &'scope thread::Scope<'scope, '_>,
+        frame: &IpcFrame,
+    ) -> Result<(), Error> {
         let mut core = self.core()?;
         let after = core.flights.sequence();
         let fence = core.commands.fence;
@@ -239,12 +443,31 @@ impl Hub {
             native_state: ticket.prepared.native_state.clone(),
             fingerprint: ticket.prepared.fingerprint.clone(),
         };
+        let owned = core
+            .commands
+            .owned
+            .contains(source_of(&ticket.command.operation()))
+            .then(|| {
+                (
+                    ticket.command.clone(),
+                    parsed(&ticket.prepared.native_state),
+                )
+            });
         core.commands.active = Some(Active {
             command: ticket.command,
             prepared: ticket.prepared,
             after,
         });
         drop(core);
+        if let Some((command, state)) = owned {
+            scope.spawn(move || {
+                if let Err(error) = self.dispatch_owned(&command, &state) {
+                    eprintln!("ab-session: dispatch failed: {error}");
+                    self.close();
+                }
+            });
+            return Ok(());
+        }
         self.send_link(&Link::Dispatch(message))
     }
 
