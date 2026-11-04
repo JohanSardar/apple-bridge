@@ -1,5 +1,4 @@
 import Foundation
-import CryptoKit
 import SourceSupport
 
 public struct NativeFacts: Sendable {
@@ -22,15 +21,12 @@ public struct NativeEffectRejection: Error, Sendable {
 }
 
 public protocol NativeAdapter: Sendable {
-    func effectsAllowed() async -> Bool
     func facts(_ operation: String, args: JSON) async throws -> NativeFacts
     func revalidate(_ operation: String, identities: [JSON]) async throws -> [String]
     func forwardChanges(to server: NativeServer) async
-    func effect(_ operation: String, args: JSON, permit: JSON) async throws -> JSON
 }
 
 public extension NativeAdapter {
-    func effectsAllowed() async -> Bool { true }
     func revalidate(_ operation: String, identities: [JSON]) async throws -> [String] { throw SourceFailure.unsupported }
     func forwardChanges(to server: NativeServer) async {}
 }
@@ -40,19 +36,6 @@ public actor NativeServer {
     public static let maximumUbiquityPaths = 500
     public static let revalidationCollections: [String: String] = ["agenda.calendars": "calendar.calendar", "agenda.events": "calendar.event", "agenda.reminder_lists": "reminders.list", "agenda.reminders": "reminders.reminder", "contacts.containers": "contacts.container", "contacts.groups": "contacts.group", "contacts.contacts": "contacts.contact"]
     public static let maximumRevalidation = 500
-    public static let effectOperations: Set<String> = [
-        "calendar.create_event", "calendar.update_event", "calendar.delete_event", "calendar.create_calendar",
-        "notes.create", "notes.update", "notes.delete", "notes.create_folder", "notes.move", "notes.rename_folder", "notes.delete_folder",
-        "mail.create_draft", "mail.send", "mail.move", "mail.set_flag", "mail.mark_read", "mail.delete",
-        "files.create", "files.write", "files.move", "files.rename", "files.trash", "files.set_tags", "files.download", "files.evict", "files.transform",
-        "reminders.create", "reminders.update", "reminders.complete", "reminders.delete", "reminders.create_list", "reminders.rename_list", "reminders.delete_list", "reminders.uncomplete",
-        "contacts.create", "contacts.update", "contacts.delete", "contacts.create_group", "contacts.rename_group", "contacts.delete_group", "contacts.add_member", "contacts.remove_member",
-        "messages.send", "messages.reply", "messages.react", "messages.edit", "messages.unsend", "messages.mark_read", "messages.mark_unread", "messages.delete_message", "messages.delete_chat",
-        "media.derive", "vision.ocr", "pdf.text", "pdf.search", "pdf.annotate", "audio.transcribe", "speech.synthesize", "speech.say", "capture.play_sound",
-        "maps.snapshot", "maps.search", "maps.nearby", "maps.directions", "maps.eta", "maps.open", "location.current", "location.geocode", "location.reverse_geocode",
-        "capture.screenshot", "capture.camera_photo", "capture.record_audio", "mac.screen_record", "print.document", "focus.set", "shortcuts.run",
-        "mac.set_volume", "mac.set_mute", "mac.set_appearance", "mac.launch_app", "mac.activate_app", "mac.quit_app", "mac.keep_awake", "mac.clipboard_write", "mac.clipboard_read", "mac.notify", "mac.open_settings", "mac.set_wallpaper", "mac.network_check", "mac.bluetooth_devices", "mac.time_machine_status", "mac.recognize_song", "mac.iwork_export"
-    ]
     private struct Snapshot {
         let operation: String
         let args: JSON
@@ -60,24 +43,13 @@ public actor NativeServer {
         let expiry: Date
     }
     private let adapter: any NativeAdapter
-    private let files: NativeFiles?
-    private let factsOnly: Bool
     private var fence: UInt64 = 0
     private var opened = false
     private var inflight: Set<String> = []
     private var wire: NativeWire?
-    private var usedNonces: Set<String> = []
-    private var usedCommands: Set<String> = []
     private var snapshots: [String: Snapshot] = [:]
 
-    public init(adapter: any NativeAdapter, files: NativeFiles? = nil, factsOnly: Bool = false) { self.adapter = adapter; self.files = files; self.factsOnly = factsOnly }
-
-    public static func requestHash(operation: String, args: JSON) throws -> String {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-        let bytes = try encoder.encode(args)
-        return SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined()
-    }
+    public init(adapter: any NativeAdapter) { self.adapter = adapter }
 
     public func handle(_ frame: JSON) async -> JSON {
         do {
@@ -92,40 +64,8 @@ public actor NativeServer {
             guard inflight.insert(requestID).inserted else { throw SourceFailure.conflict }
             defer { inflight.remove(requestID) }
             switch frame["t"].string {
-            case "Release":
-                guard !factsOnly, let files else { throw SourceFailure.unsupported }
-                try await files.release(frame["args"]["file_ref"])
-                return .object(["t": .string("Released"), "id": frame["id"]])
             case "Facts": return try await page(frame)
             case "Revalidate": return try await revalidate(frame)
-            case "Effect":
-                guard !factsOnly else { throw SourceFailure.unsupported }
-                let op = frame["op"].string
-                guard Self.effectOperations.contains(op) else { throw SourceFailure.unsupported }
-                guard await adapter.effectsAllowed() else { throw SourceFailure.conflict }
-                let permit = frame["permit"]
-                guard permit["operation"].string == op, permit["owner_fence"].unsigned == fence,
-                      !permit["command_id"].string.isEmpty, !permit["ticket"].string.isEmpty, permit["nonce"].string.count == 64, permit["nonce"].string.allSatisfy({ "0123456789abcdef".contains($0) }),
-                      permit["request_hash"].string == (try Self.requestHash(operation: op, args: frame["args"])) else { throw SourceFailure.invalid }
-                guard case .integer(let expires) = permit["expires_at"], expires > UInt64(Date().timeIntervalSince1970) else { throw SourceFailure.expired }
-                guard !usedNonces.contains(permit["nonce"].string), !usedCommands.contains(permit["command_id"].string), usedNonces.count < 10000 else { throw SourceFailure.conflict }
-                usedNonces.insert(permit["nonce"].string); usedCommands.insert(permit["command_id"].string)
-                var result: JSON
-                do { result = try await adapter.effect(op, args: frame["args"], permit: permit) }
-                catch let rejection as NativeEffectRejection {
-                    var rejected: [String: JSON] = ["code": .string(rejection.code), "message": .string(rejection.message)]
-                    if rejection.evidence != .null { rejected["evidence"] = rejection.evidence }
-                    result = .object(["rejected": .object(rejected)])
-                }
-                catch {
-                    result = .object(["disposition": .string("indeterminate"), "observed": .bool(false), "reason": .string("native_effect_evidence_unavailable")])
-                }
-                let encoded = try JSONEncoder().encode(result)
-                if encoded.count > 240000 {
-                    guard let files else { throw SourceFailure.unavailable }
-                    result = .object(["file_ref": try await files.write(encoded, mime: "application/json")])
-                }
-                return .object(["t": .string("EffectResult"), "id": frame["id"], "evidence": result])
             default: throw SourceFailure.unsupported
             }
         } catch {

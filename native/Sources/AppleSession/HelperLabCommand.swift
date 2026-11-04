@@ -81,33 +81,6 @@ enum HelperLabCommand {
             while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
             try JSONEncoder().encode(result!).write(to: reportURL, options: .atomic)
             return true
-        case "wire-checks":
-            guard let index = arguments.firstIndex(of: "--fixtures"), index + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
-            let frames = try JSONDecoder().decode([JSON].self, from: Data(contentsOf: URL(fileURLWithPath: arguments[index + 1])))
-            for frame in frames {
-                let body = try JSONEncoder().encode(frame)
-                guard !frame["t"].string.isEmpty, body.count <= 1024 * 1024 + 64 * 1024, body.count <= 256 * 1024 || frame["t"].string == "QueryResult" else { throw ProbeFailure.invalidArguments }
-                var length = UInt32(body.count).bigEndian
-                var bytes = withUnsafeBytes(of: &length) { Data($0) }
-                bytes.append(body)
-                let decoded = try JSONDecoder().decode(JSON.self, from: bytes.dropFirst(4))
-                guard decoded == frame else { throw ProbeFailure.invalidArguments }
-                switch frame["t"].string {
-                case "Open": guard frame["protocol"].string == "ipc/1", frame["owner_fence"].number > 0 else { throw ProbeFailure.invalidArguments }
-                case "Prepare":
-                    _ = try CommandOrigin(frame)
-                    guard !frame["command_id"].string.isEmpty, parseTimestamp(frame["expires_at"].string) != nil else { throw ProbeFailure.invalidArguments }
-                case "Dispatch": guard !frame["command_id"].string.isEmpty, !frame["ticket"].string.isEmpty, frame["owner_fence"].unsigned > 0 else { throw ProbeFailure.invalidArguments }
-                case "Outcome": if frame["disposition"].string == "locally_observed" {
-                    let evidence = frame["evidence"]
-                    guard !evidence["fingerprint"].string.isEmpty, !evidence["capture_checkpoint"].string.isEmpty, !evidence["native_key"].string.isEmpty, evidence["observed"].bool else { throw ProbeFailure.invalidArguments }
-                }
-                case "Capture": guard !frame["generation"].string.isEmpty, !frame["checkpoint"].string.isEmpty else { throw ProbeFailure.invalidArguments }
-                default: break
-                }
-            }
-            print("wire fixtures: \(frames.count) decoded")
-            return true
         case "reminders-store-profile":
             let reportURL = try report(arguments)
             var result: Result<JSON, any Error>?
