@@ -168,6 +168,9 @@ func (f *fakeApple) runNative(ctx context.Context, job nativeJob, fence uint64, 
 }
 
 func (f *fakeApple) nativeEffect(ctx context.Context, job nativeJob, fence uint64, emit func(contracts.Capture, uint64) error, checkpoint func(contracts.Source) string) (json.RawMessage, error) {
+	if os.Getenv("AB_LAB_SESSION_EFFECTS_CONTROL") == "refuse" {
+		return nil, contracts.ErrUnavailable
+	}
 	writer, reader, err := wirePair()
 	if err != nil {
 		return nil, err
