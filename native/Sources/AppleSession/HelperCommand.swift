@@ -79,7 +79,7 @@ public enum HelperCommand {
             if kill(gatewayPID, 0) != 0 { return }
             let peer = try AppleSession(socket: socket, secretFile: secretFile, home: home, gatewayPID: gatewayPID, commandsEnabled: arguments.contains("--lab-commands"))
             Task { @MainActor in
-                if !arguments.contains("--lab-commands") { _ = try? await MessagesSelfTest.shared.run() }
+                if !arguments.contains("--lab-commands") { _ = try? await RustSelfTest.shared.run() }
                 await SessionSources.register(into: peer, home: home, labEnabled: arguments.contains("--lab-commands"))
                 if ProcessInfo.processInfo.environment["AB_SESSION_NATIVE"] == "1" { try? await peer.runNative(socket: socket, secretFile: secretFile) }
                 else { try? await peer.run() }
@@ -118,7 +118,7 @@ public enum HelperCommand {
             Task { @MainActor in
                 do {
                     let result: JSON
-                    result = try await MessagesSelfTest.shared.run(force: arguments.contains("--force"), includeUI: !arguments.contains("--no-ui"))
+                    result = try await RustSelfTest.shared.run(force: arguments.contains("--force"), includeUI: !arguments.contains("--no-ui"))
                     try JSONEncoder().encode(result).write(to: reportURL, options: .atomic)
                     try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
                 } catch { try? PrivateReport.write(["state": "unavailable", "reason": String(describing: error)], to: reportURL) }
