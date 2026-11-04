@@ -107,7 +107,7 @@ preflight_binary() {
     return 0
   fi
   [ -x "$binary" ] || die "ab-session not found or not executable: $binary"
-  grep -aq "session/rust-capture.json" "$binary" || die "$binary was built without the rust-capture feature (it would reject --capture-home)"
+  grep -aq "session/rust-capture.json" "$binary" || die "$binary was built without the rust-capture feature (it would ignore the switch)"
   echo "ok: $binary supports the capture switch"
 }
 
@@ -127,11 +127,7 @@ helper_pid() {
 helper_env_check() {
   local pid; pid="$(helper_pid || true)"
   if [ -z "$pid" ]; then echo "helper: not running for this home (no live pid in $HELPER_HOME/helper.pid)"; return 0; fi
-  if ps -E -ww -p "$pid" 2>/dev/null | tr ' ' '\n' | grep -q '^AB_SESSION_PROXY=1$'; then
-    echo "helper pid $pid: AB_SESSION_PROXY=1 (the session proxy is in front of the Helper)"
-  else
-    echo "helper pid $pid: AB_SESSION_PROXY is NOT 1. The switch cannot take effect until the gateway is started with AB_SESSION_PROXY=1 (and AB_SESSION_BINARY or a bundled Contents/MacOS/ab-session)."
-  fi
+  echo "helper pid $pid: reads the switch at its next start"
 }
 
 restart_helper() {

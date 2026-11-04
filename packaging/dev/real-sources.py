@@ -23,7 +23,6 @@ FACTS_SOURCES = ("calendar", "contacts", "reminders")
 # Live capture owners: REAL_RUST_SOURCES lists what ab-session captures, the way the live switch file does. Empty keeps the Swift path.
 rust_sources = [name for name in os.environ.get("REAL_RUST_SOURCES", "").split(",") if name]
 if rust_sources:
-    env["AB_SESSION_PROXY"] = "1"
     os.makedirs(gateway_home + "/helper/session", mode=0o700)
     switch = {"poll_ms": 5000, "watch": True, "sources": {}}
     for name in rust_sources:

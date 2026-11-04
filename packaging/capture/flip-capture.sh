@@ -64,7 +64,7 @@ cat <<V
 
 verify:
   python3 -m json.tool "$CONFIG"
-  ps -ax -o pid,command | grep '[a]b-session' | grep -- '--capture-home'
+  ps -ax -o pid,command | grep '[a]b-session'
   ls "$HELPER_HOME/session/capture-state/"     (one <source>.json per flipped source after its first Rust commit)
   gateway: a Ready frame lists the source and its first Rust capture arrives under the generation the gateway already committed for the source (record ids are kept)
 rollback (instant, no data loss):
