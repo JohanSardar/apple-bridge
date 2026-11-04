@@ -65,12 +65,15 @@ rust-lint: lint-rust-sources
 	rust/check.sh clippy -p ab-session --all-targets --features rust-effects,rust-capture -- -D warnings
 	rust/check.sh deny check
 
-.PHONY: rust-test rust-ci
+.PHONY: rust-test rust-search-perf rust-ci
 rust-test:
 	rust/check.sh test --workspace --locked
 	rust/check.sh test -p ab-session --features rust-effects,rust-capture --locked
 
-rust-ci: lint rust-test rust-lint rust-lab-independence
+rust-search-perf:
+	rust/check.sh test --release --locked -p ab-state --test search_update_perf -- --ignored --nocapture
+
+rust-ci: lint rust-test rust-search-perf rust-lint rust-lab-independence
 	python3 rust/check-native-graph.py
 	go test ./contracts/golden ./internal/frontdoor ./internal/iphone ./internal/web ./lab/scenarios -run Golden -count=1
 

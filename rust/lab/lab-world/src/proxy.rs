@@ -13,7 +13,7 @@ use std::{
 
 #[derive(Debug)]
 struct State {
-    target: String,
+    target: Mutex<String>,
     partitioned: AtomicBool,
     blackhole: AtomicBool,
     delay_ms: AtomicU64,
@@ -36,7 +36,7 @@ impl FaultProxy {
         let listener = TcpListener::bind("127.0.0.1:0")?;
         let address = listener.local_addr()?.to_string();
         let state = Arc::new(State {
-            target: target.to_owned(),
+            target: Mutex::new(target.to_owned()),
             partitioned: AtomicBool::new(false),
             blackhole: AtomicBool::new(false),
             delay_ms: AtomicU64::new(0),
@@ -60,6 +60,10 @@ impl FaultProxy {
             }
         });
         Ok(Self { address, state })
+    }
+
+    pub fn retarget(&self, target: &str) {
+        target.clone_into(&mut lock(&self.state.target));
     }
 
     #[must_use]
@@ -121,7 +125,8 @@ fn forward(state: &Arc<State>, downstream: TcpStream) {
         let _ = downstream.shutdown(Shutdown::Both);
         return;
     }
-    let Ok(upstream) = TcpStream::connect(&state.target) else {
+    let target = lock(&state.target).clone();
+    let Ok(upstream) = TcpStream::connect(&target) else {
         return;
     };
     let id = state.next.fetch_add(1, Ordering::SeqCst);
