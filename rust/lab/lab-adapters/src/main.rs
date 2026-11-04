@@ -31,7 +31,6 @@ fn require_lab_gateway(
     )
     .into())
 }
-use std::{env, fs, path::PathBuf, process::ExitCode};
 #[allow(clippy::too_many_lines)]
 fn run() -> Result<bool, Box<dyn std::error::Error>> {
     let mut args = env::args().skip(1);
