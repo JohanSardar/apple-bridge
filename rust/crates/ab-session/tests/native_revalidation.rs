@@ -542,3 +542,44 @@ fn a_changed_push_makes_the_pull_due_and_without_one_the_long_interval_holds() -
     assert!(pull(&mut reader, &mut clock)?.is_none());
     Ok(())
 }
+
+#[test]
+fn the_rust_store_enriches_pulled_calendar_events_and_serves_their_attachments() -> Fallible<()> {
+    let root = std::env::temp_dir().join(format!("ab-session-calstore-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(root.join("Attachments"))?;
+    rusqlite::Connection::open(root.join("Calendar.sqlitedb"))?.execute_batch(include_str!(
+        "../../ab-native/tests/parity/calendar-store/schema.sql"
+    ))?;
+    std::fs::write(root.join("Attachments/a.pdf"), b"pdf-bytes-1")?;
+    std::fs::write(root.join("Attachments/b.txt"), b"hello")?;
+    let (world, client) = rig()?;
+    let mut reader = AgendaReader::calendar("/nonexistent".into())
+        .paged(Arc::clone(&client), Duration::from_millis(1))
+        .with_calendar_store(root);
+    let mut clock = Clock(0);
+    let cal = "AAAAAAAA-0000-0000-0000-000000000001";
+    let mut plain = event("ID-H", "H");
+    plain["data"]["calendar_id"] = json!({"$ref":{"collection":"calendar.calendar","native_key":cal}});
+    plain["scoped_alias"] = json!("src/cal/EXT-H");
+    set(&world, "agenda.calendars", vec![calendar(cal)])?;
+    set(&world, "agenda.events", vec![plain])?;
+    let capture = pull(&mut reader, &mut clock)?.ok_or("capture")?;
+    let enriched = capture["observations"]
+        .as_array()
+        .and_then(|rows| rows.iter().find(|row| row["native_key"] == "ID-H"))
+        .ok_or("event row")?;
+    assert_eq!(
+        enriched["data"]["store_identifier_match"],
+        "calendarItemIdentifier:unique_identifier"
+    );
+    assert_eq!(enriched["data"]["attachments"].as_array().map(Vec::len), Some(2));
+    let handles = capture["blob_handles"].as_object().ok_or("blob handles")?;
+    assert_eq!(handles.len(), 2);
+    let handle = handles.values().next().and_then(Value::as_str).ok_or("handle")?;
+    assert!(reader.owns(handle));
+    assert_eq!(reader.handle_prefix(), Some("calendar-attachment:"));
+    assert_eq!(reader.blob(handle, 0, 3)?["t"], "BlobChunk");
+    assert!(!AgendaReader::calendar("/nonexistent".into()).owns(handle));
+    Ok(())
+}
