@@ -510,9 +510,10 @@ mod tests {
             "invalid"
         );
         let delete = update(&json!({"op": "calendar.delete_event"}));
-        assert!(prepare(&invalid, &delete, &expected()).is_ok());
+        let deleting = Fake::new();
+        assert!(prepare(&deleting, &delete, &expected()).is_ok());
         assert!(
-            !invalid
+            !deleting
                 .calls
                 .borrow()
                 .iter()
