@@ -495,13 +495,7 @@ fn contacts_pull_all_three_collections_over_the_socket_link() -> Fallible<()> {
                 contact("contacts.group", "g2"),
             ],
         ),
-        (
-            "contacts.contacts",
-            vec![
-                contact("contacts.contact", "p1"),
-                json!({"kind":"blob_handle","digest":"d1","handle":"media:d1"}),
-            ],
-        ),
+        ("contacts.contacts", vec![contact("contacts.contact", "p1")]),
     ] {
         set(
             &facts,
@@ -732,7 +726,13 @@ fn contacts_over_socket(
     for (op, rows) in [
         ("contacts.containers", vec![]),
         ("contacts.groups", vec![]),
-        ("contacts.contacts", vec![contact("contacts.contact", "p1")]),
+        (
+            "contacts.contacts",
+            vec![
+                contact("contacts.contact", "p1"),
+                json!({"kind":"blob_handle","digest":"d1","handle":"media:d1"}),
+            ],
+        ),
     ] {
         set(
             &facts,
