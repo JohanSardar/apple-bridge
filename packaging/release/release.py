@@ -63,6 +63,18 @@ def sparkle():
     return tools
 
 
+def bundle_session(app, environment=None):
+    environment = os.environ if environment is None else environment
+    binary = environment.get("AB_SESSION_BINARY") or output(ROOT / "packaging/dev/build-session.sh").splitlines()[-1]
+    source = Path(binary)
+    if not source.is_file() or not os.access(source, os.X_OK):
+        raise ValueError("The ab-session binary is missing or not executable; the release cannot run without it.")
+    destination = app / "Contents/MacOS/ab-session"
+    shutil.copy2(source, destination)
+    destination.chmod(0o755)
+    return destination
+
+
 def compile_tool(tools):
     target = tools / "release-tool"
     run("swiftc", "-sdk", SDK, "-swift-version", "6", "-warnings-as-errors", "-parse-as-library", ROOT / "packaging/release/ReleaseCore.swift", ROOT / "packaging/release/Tools.swift", "-o", target)
@@ -141,6 +153,7 @@ def build(args):
     native_output = Path((ROOT / "native/.build/native-output-0").read_text().strip())
     shutil.copy2(native_output / "AppleBridgeHelper", app / "Contents/MacOS/AppleBridgeHelper")
     run(ROOT / "packaging/dev/build-bridge.sh", app / "Contents/MacOS/bridge", "aarch64-apple-darwin")
+    bundle_session(app)
     run("ditto", tools / "Sparkle.framework", app / "Contents/Frameworks/Sparkle.framework")
     run("swiftc", "-sdk", SDK, "-swift-version", "6", "-warnings-as-errors", "-parse-as-library", "-F", tools, "-framework", "Sparkle", "-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks", ROOT / "packaging/release/ReleaseCore.swift", ROOT / "packaging/release/Launcher.swift", "-o", app / "Contents/MacOS/AppleBridgeLauncher")
     info = plistlib.loads((ROOT / "packaging/dev/Info.plist").read_bytes())

@@ -32,6 +32,31 @@ class ReleaseTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 release.https(url)
 
+    def test_release_bundles_the_session_binary_beside_the_helper(self):
+        with tempfile.TemporaryDirectory(prefix="ab-test-bundle-") as temp:
+            app = Path(temp) / "Apple Bridge.app"
+            (app / "Contents/MacOS").mkdir(parents=True)
+            binary = Path(temp) / "ab-session"
+            binary.write_bytes(b"session")
+            binary.chmod(0o755)
+            bundled = release.bundle_session(app, {"AB_SESSION_BINARY": str(binary)})
+            self.assertEqual(bundled, app / "Contents/MacOS/ab-session")
+            self.assertEqual(bundled.read_bytes(), b"session")
+            self.assertTrue(bundled.stat().st_mode & 0o111)
+
+    def test_release_refuses_a_missing_session_binary(self):
+        with tempfile.TemporaryDirectory(prefix="ab-test-bundle-") as temp:
+            app = Path(temp) / "Apple Bridge.app"
+            (app / "Contents/MacOS").mkdir(parents=True)
+            with self.assertRaises(ValueError):
+                release.bundle_session(app, {"AB_SESSION_BINARY": str(Path(temp) / "missing")})
+            plain = Path(temp) / "plain"
+            plain.write_bytes(b"x")
+            plain.chmod(0o644)
+            with self.assertRaises(ValueError):
+                release.bundle_session(app, {"AB_SESSION_BINARY": str(plain)})
+            self.assertFalse((app / "Contents/MacOS/ab-session").exists())
+
 
 if __name__ == "__main__":
     unittest.main()
