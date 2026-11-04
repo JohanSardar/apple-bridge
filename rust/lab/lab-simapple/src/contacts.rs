@@ -138,6 +138,80 @@ pub(super) fn control_contacts(
     Ok(json!({"effect_done":true}))
 }
 
+fn contacts_effect(
+    s: &mut super::State,
+    action: &Value,
+    before: &Value,
+    key: &mut String,
+) -> std::result::Result<(Value, bool, String), &'static str> {
+    let op = string(action, "op");
+    if key.is_empty() {
+        *key = id("contact").map_err(|_| "unavailable")?;
+    }
+    let mut data = json!({"note":"unavailable","container_id":"default","writable":true});
+    if let (Some(target), Some(source)) = (data.as_object_mut(), before.as_object()) {
+        for (k, v) in source {
+            target.insert(k.clone(), v.clone());
+        }
+    }
+    let mut patch = action["args"].as_object().cloned().unwrap_or_default();
+    patch.remove("id");
+    patch.remove("contact_id");
+    let group = GROUP_OPS.contains(&op.as_str());
+    if group {
+        if before.is_null() {
+            data = json!({"container_id":"default","writable":true,"member_ids":[]});
+        }
+        if op == "contacts.add_member" || op == "contacts.remove_member" {
+            let member = string(action, "list_key");
+            let contact = s.data["records"][&member].clone();
+            if contact.is_null()
+                || contact["kind"] == "absent"
+                || contact["data"]["container_id"] != data["container_id"]
+            {
+                return Err("unsupported");
+            }
+            let mut members: Vec<Value> = data["member_ids"]
+                .as_array()
+                .cloned()
+                .unwrap_or_default()
+                .into_iter()
+                .filter(|entry| string(&entry["$ref"], "native_key") != member)
+                .collect();
+            if op == "contacts.add_member" {
+                members.push(reference(&member));
+            }
+            data["member_ids"] = json!(members);
+        }
+    }
+    for (k, v) in &patch {
+        data[k] = v.clone();
+    }
+    if let Some(encoded) = patch
+        .get("image")
+        .and_then(|image| image["base64"].as_str())
+    {
+        let Some(image) = store_image(s, encoded) else {
+            return Err("invalid");
+        };
+        data["image"] = image;
+    }
+    let collection = if group {
+        "contacts.group"
+    } else {
+        "contacts.contact"
+    };
+    let observed_digest = digest(&serde_json::to_vec(&data).map_err(|_| "unavailable")?);
+    let mut record = observation(collection, key, data);
+    alias(&mut record, collection, key);
+    let absent = op == "contacts.delete" || op == "contacts.delete_group";
+    if absent {
+        record["kind"] = json!("absent");
+        record["revalidated"] = json!(true);
+    }
+    Ok((record, absent, observed_digest))
+}
+
 fn member_available(s: &super::State, action: &Value) -> bool {
     let op = string(action, "op");
     if op != "contacts.add_member" && op != "contacts.remove_member" {
@@ -241,7 +315,6 @@ impl Session<'_> {
             return self.reject(frame, "expired");
         }
         let action = ticket.prepare["action"].clone();
-        let op = string(&action, "op");
         let mut key = string(&action, "native_key");
         let mut s = lock(state)?;
         if s.denied.get("contacts") == Some(&true) {
@@ -260,72 +333,15 @@ impl Session<'_> {
             return self.reject(frame, "unsupported");
         }
         s.guard(&json!({"command_id":command,"ticket":frame["ticket"],"started_at":now()}))?;
-        if key.is_empty() {
-            key = id("contact")?;
-        }
-        let mut data = json!({"note":"unavailable","container_id":"default","writable":true});
-        if let (Some(target), Some(source)) = (data.as_object_mut(), ticket.before.as_object()) {
-            for (k, v) in source {
-                target.insert(k.clone(), v.clone());
-            }
-        }
-        let mut patch = action["args"].as_object().cloned().unwrap_or_default();
-        patch.remove("id");
-        patch.remove("contact_id");
-        let group = GROUP_OPS.contains(&op.as_str());
-        if group {
-            if ticket.before.is_null() {
-                data = json!({"container_id":"default","writable":true,"member_ids":[]});
-            }
-            if op == "contacts.add_member" || op == "contacts.remove_member" {
-                let member = string(&action, "list_key");
-                let contact = s.data["records"][&member].clone();
-                if contact.is_null()
-                    || contact["kind"] == "absent"
-                    || contact["data"]["container_id"] != data["container_id"]
-                {
+        let before = ticket.before.clone();
+        let (record, absent, observed_digest) =
+            match contacts_effect(&mut s, &action, &before, &mut key) {
+                Ok(effect) => effect,
+                Err(code) => {
                     drop(s);
-                    return self.reject(frame, "unsupported");
+                    return self.reject(frame, code);
                 }
-                let mut members: Vec<Value> = data["member_ids"]
-                    .as_array()
-                    .cloned()
-                    .unwrap_or_default()
-                    .into_iter()
-                    .filter(|entry| string(&entry["$ref"], "native_key") != member)
-                    .collect();
-                if op == "contacts.add_member" {
-                    members.push(reference(&member));
-                }
-                data["member_ids"] = json!(members);
-            }
-        }
-        for (k, v) in &patch {
-            data[k] = v.clone();
-        }
-        if let Some(encoded) = patch
-            .get("image")
-            .and_then(|image| image["base64"].as_str())
-        {
-            let Some(image) = store_image(&mut s, encoded) else {
-                drop(s);
-                return self.reject(frame, "invalid");
             };
-            data["image"] = image;
-        }
-        let collection = if group {
-            "contacts.group"
-        } else {
-            "contacts.contact"
-        };
-        let observed_digest = digest(&serde_json::to_vec(&data)?);
-        let mut record = observation(collection, &key, data);
-        alias(&mut record, collection, &key);
-        let absent = op == "contacts.delete" || op == "contacts.delete_group";
-        if absent {
-            record["kind"] = json!("absent");
-            record["revalidated"] = json!(true);
-        }
         s.put(record);
         let sequence = s.data["contact_sequence"].as_u64().unwrap_or_default() + 1;
         s.data["contact_sequence"] = json!(sequence);
@@ -411,4 +427,137 @@ pub(super) fn blob(state: &Shared, frame: &Value) -> Result<Value> {
     Ok(
         json!({"t":"BlobChunk","handle":handle,"offset":offset,"bytes":engine.encode(&bytes[offset..end]),"digest":digest,"eof":end == bytes.len()}),
     )
+}
+
+impl Session<'_> {
+    pub(super) fn contacts_primitive(&mut self, state: &Shared, frame: &Value) -> Result<()> {
+        let id = frame["id"].clone();
+        let answer = self.contacts_answer(state, &frame["args"], &string(frame, "op"));
+        match answer {
+            Ok(result) => send(
+                &mut self.stream,
+                &json!({"t":"PrimitiveResult","id":id,"result":result}),
+            )?,
+            Err(code) => send(
+                &mut self.stream,
+                &json!({"t":"PrimitiveError","id":id,"code":code}),
+            )?,
+        };
+        Ok(())
+    }
+
+    #[allow(clippy::too_many_lines)]
+    fn contacts_answer(
+        &mut self,
+        state: &Shared,
+        args: &Value,
+        op: &str,
+    ) -> std::result::Result<Value, &'static str> {
+        let fail = |_| "unavailable";
+        let key = string(args, "native_key");
+        let mut s = lock(state).map_err(fail)?;
+        if s.denied.get("contacts") == Some(&true) {
+            return Err("permission_missing");
+        }
+        let record = s.data["records"][&key].clone();
+        let live = |collection: &str| {
+            !key.is_empty() && record["collection"] == collection && record["kind"] != "absent"
+        };
+        match op {
+            "contacts.read_contact" => Ok(if live("contacts.contact") {
+                json!({"exists":true,"data":record["data"]})
+            } else {
+                json!({"exists":false})
+            }),
+            "contacts.read_group" => Ok(if live("contacts.group") {
+                json!({"exists":true,"data":record["data"]})
+            } else {
+                json!({"exists":false})
+            }),
+            "contacts.can_create" => Ok(json!({"allowed":true})),
+            "contacts.group_capabilities" => Ok(json!({"operations":GROUP_OPS})),
+            "contacts.check_patch" => {
+                let encoded = args["args"]["image"]["base64"].as_str();
+                if encoded.is_some_and(|text| {
+                    base64::engine::general_purpose::STANDARD
+                        .decode(text)
+                        .is_err()
+                }) {
+                    return Err("invalid");
+                }
+                Ok(json!({}))
+            }
+            "contacts.goal" => {
+                if !live("contacts.contact") {
+                    return Err("conflict");
+                }
+                let actual = record["data"].clone();
+                let mut desired = actual.clone();
+                for (name, value) in args["args"].as_object().cloned().unwrap_or_default() {
+                    if name == "id" || name == "contact_id" {
+                        continue;
+                    }
+                    desired[&name] = value;
+                }
+                if let Some(encoded) = args["args"]["image"]["base64"].as_str() {
+                    let bytes = base64::engine::general_purpose::STANDARD
+                        .decode(encoded)
+                        .map_err(|_| "invalid")?;
+                    desired["image"] = json!({"digest":digest(&bytes),"state":"present"});
+                }
+                Ok(json!({"actual":actual,"desired":desired}))
+            }
+            "contacts.reconcile" => {
+                let capture = snapshot(&s, false).map_err(fail)?;
+                drop(s);
+                self.emit(state, capture).map_err(fail)?;
+                Ok(json!({}))
+            }
+            "contacts.write" | "contacts.write_group"
+                if std::env::var("AB_LAB_PRIMITIVE_CONTROL").as_deref() == Ok("refuse") =>
+            {
+                Err("unavailable")
+            }
+            "contacts.write" | "contacts.write_group" => {
+                let before = record["data"].clone();
+                let mut native = key.clone();
+                let action = json!({"op":args["op"],"native_key":args["native_key"],"list_key":args["list_key"],"args":args["args"]});
+                let (record, absent, _) = contacts_effect(&mut s, &action, &before, &mut native)?;
+                let command = string(args, "command_id");
+                let shown = record["data"].clone();
+                s.put(record);
+                let sequence = s.data["contact_sequence"].as_u64().unwrap_or_default() + 1;
+                s.data["contact_sequence"] = json!(sequence);
+                if !command.is_empty() {
+                    let count = s.data["effects"][&command].as_u64().unwrap_or_default() + 1;
+                    s.data["effects"][&command] = json!(count);
+                }
+                let fault = std::mem::take(&mut s.fault);
+                s.save().map_err(fail)?;
+                if fault == "crash-after-effect" {
+                    std::process::exit(78);
+                }
+                let capture = snapshot(&s, false).map_err(fail)?;
+                drop(s);
+                self.emit(state, capture).map_err(fail)?;
+                if fault == "crash-before-outcome" {
+                    std::process::exit(78);
+                }
+                if op == "contacts.write_group" {
+                    return Ok(json!({"native_key":native}));
+                }
+                let ambiguous = fault == "ambiguous-outcome";
+                let saved = if absent { Value::Null } else { shown.clone() };
+                let observed = if absent || ambiguous {
+                    Value::Null
+                } else {
+                    shown
+                };
+                Ok(
+                    json!({"native_key":native,"exists_after":!absent || ambiguous,"saved":saved,"observed":observed}),
+                )
+            }
+            _ => Err("unsupported"),
+        }
+    }
 }
