@@ -99,7 +99,7 @@ impl CloudDns {
                         answer
                             .answers()
                             .iter()
-                            .any(|txt| txt.data.to_string() == value)
+                            .any(|txt| published(&txt.data, value))
                     }) {
                         break;
                     }
@@ -182,6 +182,14 @@ impl CloudDns {
         Ok(())
     }
 }
+fn published(record: &hickory_resolver::proto::rr::RData, value: &str) -> bool {
+    match record {
+        hickory_resolver::proto::rr::RData::TXT(txt) => {
+            txt.txt_data.iter().flatten().copied().eq(value.bytes())
+        }
+        _ => false,
+    }
+}
 impl DnsProvider for CloudDns {
     fn txt<'a>(
         &'a self,
@@ -193,5 +201,23 @@ impl DnsProvider for CloudDns {
                 .await
                 .map_err(|_| Error::Denied)?
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use super::published;
+    use hickory_resolver::proto::rr::{RData, rdata::TXT};
+
+    #[test]
+    fn a_published_value_is_recognized_from_the_record_itself() {
+        let record = RData::TXT(TXT::new(vec!["p9JG8PAA".to_owned(), "4Wf7".to_owned()]));
+        assert!(published(&record, "p9JG8PAA4Wf7"));
+        assert!(!published(&record, "p9JG8PAA"));
+        assert!(!published(
+            &RData::TXT(TXT::new(vec!["other".to_owned()])),
+            "p9JG8PAA4Wf7"
+        ));
     }
 }
