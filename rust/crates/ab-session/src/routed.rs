@@ -85,6 +85,7 @@ type Held = Mutex<BTreeMap<String, Covers>>;
 
 #[derive(Debug, Default)]
 struct Shared {
+    fence: u64,
     opened: bool,
     ready: bool,
     closed: bool,
@@ -529,10 +530,12 @@ fn produce(
                 continue;
             }
             ordinal += 1;
+            let fence = gate.lock()?.fence;
             let context = ScanContext {
                 checkpoint: format!("rs-{epoch:x}-{ordinal}"),
                 scan_id: format!("rs-scan-{epoch:x}-{ordinal}"),
                 now: now()?,
+                fence,
             };
             let (next, covers, token, more) = {
                 let mut reader = lock(readers, source)?;
@@ -719,6 +722,7 @@ fn gateway_frame(
         Some("Open") => {
             let mut shared = gate.lock()?;
             let credit = value["byte_credit"].as_u64().unwrap_or(0);
+            shared.fence = value["owner_fence"].as_u64().unwrap_or(0);
             shared.credit = credit;
             shared.total = credit;
             if let Some(checkpoints) = value["checkpoints"].as_object() {

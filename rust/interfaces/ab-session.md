@@ -298,7 +298,27 @@ capture of the key even when the command changed nothing; Notes waits for a capt
 final part is held, and the diff runs once per scan. The producer is woken by every ingest. The lab listener
 keeps accepting while the gateway is restarting.
 
-Known gaps: native/1 fact paging in place of the Helper capture frame and Contacts container facts.
+Fact paging (`facts` in the source entry, off by default): `{"calendar":{"root":"DIR","facts":"native"}}` makes the reader a
+native/1 client instead of a consumer of the Helper `Capture` frame. `facts: "native"` uses its own inherited stream,
+`AB_NATIVE_FACTS_FD` (fd 201), so it runs together with `AB_SESSION_EFFECTS`: the Swift native server handles one request at a
+time per stream, and an `Effect` in flight (a transcription, a screen recording) would block every page pull if both shared fd 200,
+so effects keep fd 200 (`AB_NATIVE_FD`) and facts get a second stream and a second `NativeServer(factsOnly: true)`, which answers
+`Facts` and refuses `Effect` and `Release` with `unsupported` (permit nonces are per server, so effects can never be replayed there).
+Without `AB_SESSION_EFFECTS` and without `AB_NATIVE_FACTS_FD` the facts client falls back to `AB_NATIVE_FD`. The two descriptors must
+differ from each other, the gateway fd and the Helper fd. `ipc/1`, `feed/1` and the native/1 frames are unchanged.
+`facts: {"socket": "/abs/path"}` dials a native/1 server (lab: the second connection to the same simapple socket). `facts_poll_ms` (default
+15000) is the fallback pull interval. The client (`native_facts::Client`) sends `Hello` with the `Open` fence, then pages
+`agenda.calendars` + `agenda.events` (Calendar) or `contacts.containers` + `contacts.groups` + `contacts.contacts` (Contacts) with
+`args: {}`, `limit` 500 and the pinned `snapshot`/`cursor`. Every page must echo `id` and `op` and carry the same snapshot, scope
+and generation; a non-terminal page must have a cursor `<snapshot>:<n>` and `complete: false`. An `Error` frame, a broken page,
+a generation that differs between operations or a terminal page with `complete: false` produces no frame and no deletion; the
+next pull starts a new snapshot. Items are the observation rows the Swift scan builds (`upsert`, plus `absent`/`evict` revalidation
+results, which `NativeFactSink` now keeps); `agenda::Reader::prepare` does the diff exactly as for Helper facts. A Helper
+`Capture` for the source is only a change hint: its `Committed` is held until the pulled capture is committed (or nothing
+changed). The first pull is `live: false`.
+
+Known gaps: revalidation results come from the Swift scan's own baseline, so Swift still carries the diff/baseline code until the Rust
+side can ask for revalidation of named candidates (not in the closed native/1 op set); Reminders are not paged (no Rust reader).
 
 ### Safari live tabs (facts)
 
