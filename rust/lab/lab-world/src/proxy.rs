@@ -20,6 +20,8 @@ struct State {
     delay_both: AtomicBool,
     closed: AtomicBool,
     next: AtomicU64,
+    established: AtomicU64,
+    upstream_closed: AtomicU64,
     connections: Mutex<HashMap<u64, TcpStream>>,
 }
 
@@ -41,6 +43,8 @@ impl FaultProxy {
             delay_both: AtomicBool::new(false),
             closed: AtomicBool::new(false),
             next: AtomicU64::new(0),
+            established: AtomicU64::new(0),
+            upstream_closed: AtomicU64::new(0),
             connections: Mutex::new(HashMap::new()),
         });
         let accepting = state.clone();
@@ -89,6 +93,16 @@ impl FaultProxy {
         self.state.blackhole.store(false, Ordering::SeqCst);
     }
 
+    #[must_use]
+    pub fn established(&self) -> u64 {
+        self.state.established.load(Ordering::SeqCst)
+    }
+
+    #[must_use]
+    pub fn upstream_closed(&self) -> u64 {
+        self.state.upstream_closed.load(Ordering::SeqCst)
+    }
+
     pub fn close(&self) {
         self.state.closed.store(true, Ordering::SeqCst);
         self.partition();
@@ -111,6 +125,7 @@ fn forward(state: &Arc<State>, downstream: TcpStream) {
         return;
     };
     let id = state.next.fetch_add(1, Ordering::SeqCst);
+    state.established.fetch_add(1, Ordering::SeqCst);
     let (Ok(down_a), Ok(down_b), Ok(up_a), Ok(up_b)) = (
         downstream.try_clone(),
         downstream.try_clone(),
@@ -158,7 +173,12 @@ fn pipe(state: &State, from: &TcpStream, to: &TcpStream, to_upstream: bool) {
     let mut buffer = vec![0_u8; 32 * 1024];
     loop {
         match source.read(&mut buffer) {
-            Ok(0) | Err(_) => break,
+            Ok(0) | Err(_) => {
+                if !to_upstream {
+                    state.upstream_closed.fetch_add(1, Ordering::SeqCst);
+                }
+                break;
+            }
             Ok(n) => {
                 if state.blackhole.load(Ordering::SeqCst) {
                     continue;

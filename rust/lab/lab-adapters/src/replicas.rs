@@ -31,7 +31,7 @@ impl Endpoint {
 pub fn configure(gateway: &Path) {
     let _ = GATEWAY.set(gateway.to_owned());
 }
-pub(crate) fn binary() -> Result<&'static Path> {
+pub fn binary() -> Result<&'static Path> {
     GATEWAY
         .get()
         .map(PathBuf::as_path)
@@ -71,43 +71,50 @@ pub fn start_with_args(
     cap: u64,
     extra: &[String],
 ) -> Result<()> {
-    let peer = world.pair_address()?;
-    let base = lock(&ENDPOINTS).len();
-    for index in base..base + count {
-        let home = world.directory.join(format!("replica{index}"));
-        let name = format!("replica{index}");
-        let code = world.gateway_cli(&[
-            "pair",
-            "--peer-addr",
-            &peer,
-            "--name",
-            &name,
-            "--scope",
-            scope,
-        ])?;
-        cli(&home, &["join", code.trim()])?;
-        let token = cli(&home, &["token", "create", "--scope", scope])?;
-        let log = fs::File::create(world.directory.join(format!("{name}.log")))?;
-        let child = Command::new(binary()?)
-            .args(["start", "--role", "replica", "--home"])
-            .arg(&home)
-            .args(["--api-addr", "127.0.0.1:0"])
-            .args(["--blob-cap", &cap.to_string()])
-            .args(extra)
-            .env("APPLE_BRIDGE_SECRET_STORE", "file")
-            .stdout(log.try_clone()?)
-            .stderr(log)
-            .spawn()?;
-        lock(&CHILDREN).push(child);
-        let address = await_runtime(&home)?;
-        lock(&ENDPOINTS).push(Endpoint {
-            home,
-            address,
-            token,
-            scope: scope.to_owned(),
-        });
+    for _ in 0..count {
+        spawn(world, scope, cap, extra)?;
     }
-    let deadline = Instant::now() + Duration::from_secs(15);
+    wait_connected(15)
+}
+pub fn spawn(world: &World, scope: &str, cap: u64, extra: &[String]) -> Result<usize> {
+    let peer = world.pair_address()?;
+    let index = lock(&ENDPOINTS).len();
+    let home = world.directory.join(format!("replica{index}"));
+    let name = format!("replica{index}");
+    let code = world.gateway_cli(&[
+        "pair",
+        "--peer-addr",
+        &peer,
+        "--name",
+        &name,
+        "--scope",
+        scope,
+    ])?;
+    cli(&home, &["join", code.trim()])?;
+    let token = cli(&home, &["token", "create", "--scope", scope])?;
+    let log = fs::File::create(world.directory.join(format!("{name}.log")))?;
+    let child = Command::new(binary()?)
+        .args(["start", "--role", "replica", "--home"])
+        .arg(&home)
+        .args(["--api-addr", "127.0.0.1:0"])
+        .args(["--blob-cap", &cap.to_string()])
+        .args(extra)
+        .env("APPLE_BRIDGE_SECRET_STORE", "file")
+        .stdout(log.try_clone()?)
+        .stderr(log)
+        .spawn()?;
+    lock(&CHILDREN).push(child);
+    let address = await_runtime(&home)?;
+    lock(&ENDPOINTS).push(Endpoint {
+        home,
+        address,
+        token,
+        scope: scope.to_owned(),
+    });
+    Ok(index)
+}
+pub fn wait_connected(seconds: u64) -> Result<()> {
+    let deadline = Instant::now() + Duration::from_secs(seconds);
     loop {
         let connected = endpoints().iter().all(|endpoint| {
             status(endpoint).is_ok_and(|value| value["replica"]["state"] == "connected")
@@ -120,6 +127,41 @@ pub fn start_with_args(
         }
         thread::sleep(Duration::from_millis(50));
     }
+}
+pub fn signal(index: usize, name: &str) -> Result<()> {
+    let id = lock(&CHILDREN)
+        .get(index)
+        .map(Child::id)
+        .ok_or_else(|| Error::Invalid("replica index".into()))?;
+    let status = Command::new("kill")
+        .arg(format!("-{name}"))
+        .arg(id.to_string())
+        .status()?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(Error::Invalid(format!("signal {name} failed")))
+    }
+}
+pub fn update(index: usize, token: Option<&str>, scope: &str) {
+    if let Some(endpoint) = lock(&ENDPOINTS).get_mut(index) {
+        if let Some(token) = token {
+            token.clone_into(&mut endpoint.token);
+        }
+        scope.clone_into(&mut endpoint.scope);
+    }
+}
+pub fn identity(index: usize) -> Result<String> {
+    let endpoint = endpoints()
+        .get(index)
+        .cloned()
+        .ok_or_else(|| Error::Invalid("replica index".into()))?;
+    let document: Value =
+        serde_json::from_slice(&fs::read(endpoint.home.join("credentials.json"))?)?;
+    document["enrollment"]["replica_id"]
+        .as_str()
+        .map(str::to_owned)
+        .ok_or_else(|| Error::Invalid("replica identity".into()))
 }
 fn await_runtime(home: &Path) -> Result<String> {
     let deadline = Instant::now() + Duration::from_secs(20);
@@ -188,19 +230,4 @@ pub fn restart(index: usize) -> Result<()> {
     drop(children);
     await_runtime(&endpoint.home)?;
     Ok(())
-}
-pub fn signal(index: usize, name: &str) -> Result<()> {
-    let id = lock(&CHILDREN)
-        .get(index)
-        .map(Child::id)
-        .ok_or_else(|| Error::Invalid("replica index".into()))?;
-    let status = Command::new("kill")
-        .arg(format!("-{name}"))
-        .arg(id.to_string())
-        .status()?;
-    if status.success() {
-        Ok(())
-    } else {
-        Err(Error::Invalid(format!("signal {name} failed")))
-    }
 }

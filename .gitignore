@@ -5,6 +5,7 @@ bin/
 *.sqlite-wal
 *.sqlite-shm
 *.db
+!rust/lab/fixtures/**/*.db
 lab/evidence/private/
 .env
 *.env
