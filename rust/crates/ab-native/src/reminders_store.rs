@@ -266,7 +266,9 @@ impl Columns<'_> {
         match self.value(index) {
             ValueRef::Integer(number) => Some(Scalar::Integer(number)),
             ValueRef::Real(number) => Some(Scalar::Real(number)),
-            ValueRef::Text(bytes) => Some(Scalar::Text(String::from_utf8_lossy(bytes).into_owned())),
+            ValueRef::Text(bytes) => {
+                Some(Scalar::Text(String::from_utf8_lossy(bytes).into_owned()))
+            }
             _ => None,
         }
     }
@@ -389,25 +391,33 @@ impl Store {
         self.predicates.clear();
         let mut entities = BTreeMap::new();
         let mut parents = BTreeMap::new();
-        self.query("SELECT Z_ENT,Z_NAME,Z_SUPER FROM Z_PRIMARYKEY", None, |row| {
-            let id = row.integer(0).ok_or(Error::Corrupt)?;
-            let name = row.text(1).ok_or(Error::Corrupt)?;
-            if entities.contains_key(&id) {
-                return Err(Error::Corrupt);
-            }
-            entities.insert(id, name);
-            parents.insert(id, row.integer(2));
-            Ok(())
-        })?;
+        self.query(
+            "SELECT Z_ENT,Z_NAME,Z_SUPER FROM Z_PRIMARYKEY",
+            None,
+            |row| {
+                let id = row.integer(0).ok_or(Error::Corrupt)?;
+                let name = row.text(1).ok_or(Error::Corrupt)?;
+                if entities.contains_key(&id) {
+                    return Err(Error::Corrupt);
+                }
+                entities.insert(id, name);
+                parents.insert(id, row.integer(2));
+                Ok(())
+            },
+        )?;
         self.entities = entities;
         for table in Table::ALL {
             let mut schema = BTreeSet::new();
-            self.query(&format!("PRAGMA table_info({})", table.name()), None, |row| {
-                if let Some(name) = row.text(1) {
-                    schema.insert(name);
-                }
-                Ok(())
-            })?;
+            self.query(
+                &format!("PRAGMA table_info({})", table.name()),
+                None,
+                |row| {
+                    if let Some(name) = row.text(1) {
+                        schema.insert(name);
+                    }
+                    Ok(())
+                },
+            )?;
             if !schema.contains("Z_PK") {
                 return Err(Error::Unsupported);
             }
@@ -433,7 +443,9 @@ impl Store {
                     .iter()
                     .copied()
                     .chain(parents.iter().filter_map(|(id, parent)| {
-                        parent.filter(|parent| descendants.contains(parent)).map(|_| *id)
+                        parent
+                            .filter(|parent| descendants.contains(parent))
+                            .map(|_| *id)
                     }))
                     .collect();
                 if next == descendants {
@@ -481,7 +493,13 @@ impl Store {
         let selected: Vec<&str> = table
             .fields()
             .into_iter()
-            .map(|field| if schema.contains(field) { field } else { "NULL" })
+            .map(|field| {
+                if schema.contains(field) {
+                    field
+                } else {
+                    "NULL"
+                }
+            })
             .collect();
         let predicate = self.predicates.get(&table).map_or("0", String::as_str);
         let sql = format!(
@@ -650,7 +668,12 @@ impl Session {
         }
         let has_history = ["Z_PK", "ZENTITY", "ZENTITYPK", "ZTRANSACTIONID"]
             .iter()
-            .all(|field| store.columns.get("ACHANGE").is_some_and(|set| set.contains(*field)))
+            .all(|field| {
+                store
+                    .columns
+                    .get("ACHANGE")
+                    .is_some_and(|set| set.contains(*field))
+            })
             && store
                 .columns
                 .get("ATRANSACTION")
@@ -670,14 +693,17 @@ impl Session {
         if let (Some(token), true) = (self.history_token, has_history)
             && token > 0
         {
-            valid_token = store.scalar("SELECT COUNT(*) FROM ACHANGE WHERE Z_PK=?", Some(token))? == 1
+            valid_token = store.scalar("SELECT COUNT(*) FROM ACHANGE WHERE Z_PK=?", Some(token))?
+                == 1
                 && latest_history >= token;
         }
         if let (Some(token), true) = (self.transaction_token, has_history)
             && token > 0
         {
-            let anchor =
-                store.scalar("SELECT COUNT(*) FROM ATRANSACTION WHERE Z_PK=?", Some(token))? == 1;
+            let anchor = store.scalar(
+                "SELECT COUNT(*) FROM ATRANSACTION WHERE Z_PK=?",
+                Some(token),
+            )? == 1;
             valid_token = valid_token && anchor && latest_transaction >= token;
         }
         let mut next = self.cached.clone();
@@ -686,7 +712,8 @@ impl Session {
         let mut decoded = 0;
         let mut reloaded: BTreeSet<Table> = BTreeSet::new();
         let mut changes: BTreeMap<Table, BTreeSet<i64>> = BTreeMap::new();
-        let needs_full = full || !self.initialized || changed_schema || (has_history && !valid_token);
+        let needs_full =
+            full || !self.initialized || changed_schema || (has_history && !valid_token);
         if needs_full {
             mode = "full";
             next = Snapshot::default();
@@ -722,7 +749,8 @@ impl Session {
                 mode = "versions";
                 let current = Self::read_versions(store)?;
                 for table in Table::ALL {
-                    let (Some(now), Some(previous)) = (current.get(&table), self.versions.get(&table))
+                    let (Some(now), Some(previous)) =
+                        (current.get(&table), self.versions.get(&table))
                     else {
                         let before = next.keys(table);
                         next.clear(table);
@@ -788,7 +816,11 @@ impl Session {
         store.execute("COMMIT")?;
         let pick = |table: Table, current: &Snapshot, previous: &Snapshot| -> BTreeSet<i64> {
             if mode == "full" {
-                current.keys(table).union(&previous.keys(table)).copied().collect()
+                current
+                    .keys(table)
+                    .union(&previous.keys(table))
+                    .copied()
+                    .collect()
             } else {
                 changes.get(&table).cloned().unwrap_or_default()
             }

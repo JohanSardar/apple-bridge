@@ -21,7 +21,9 @@ pub fn paths_in(stores: &Path) -> Result<Vec<PathBuf>> {
             path.file_name()
                 .and_then(|name| name.to_str())
                 .is_some_and(|name| name.starts_with("Data-"))
-                && path.extension().is_some_and(|extension| extension == "sqlite")
+                && path
+                    .extension()
+                    .is_some_and(|extension| extension == "sqlite")
                 && path.is_file()
         })
         .collect();
@@ -217,7 +219,8 @@ impl Enrichment {
 
     fn read(&mut self, path: &Path) -> Result<ReadResult> {
         if !self.sessions.contains_key(path) {
-            self.sessions.insert(path.to_path_buf(), Session::new(path)?);
+            self.sessions
+                .insert(path.to_path_buf(), Session::new(path)?);
         }
         self.sessions
             .get_mut(path)
@@ -237,8 +240,14 @@ impl Enrichment {
             .copied()
             .filter(|key| {
                 !snapshot.lists.contains_key(key)
-                    || previous.lists.get(key).and_then(|list| list.ordering_json.clone())
-                        != snapshot.lists.get(key).and_then(|list| list.ordering_json.clone())
+                    || previous
+                        .lists
+                        .get(key)
+                        .and_then(|list| list.ordering_json.clone())
+                        != snapshot
+                            .lists
+                            .get(key)
+                            .and_then(|list| list.ordering_json.clone())
                     || self
                         .manual_orders
                         .get(path)
@@ -319,11 +328,7 @@ impl Enrichment {
             section_lists.extend(previous.sections.get(key).and_then(|row| row.list));
             section_lists.extend(snapshot.sections.get(key).and_then(|row| row.list));
         }
-        let states: Vec<i64> = result
-            .list_keys
-            .union(&section_lists)
-            .copied()
-            .collect();
+        let states: Vec<i64> = result.list_keys.union(&section_lists).copied().collect();
         for key in states {
             let validated = snapshot
                 .lists
@@ -360,7 +365,10 @@ impl Enrichment {
                 snapshot
                     .reminders
                     .values()
-                    .filter(|row| row.parent.is_some_and(|parent| changed_parents.contains(&parent)))
+                    .filter(|row| {
+                        row.parent
+                            .is_some_and(|parent| changed_parents.contains(&parent))
+                    })
                     .map(|row| row.identity.key),
             );
         }
@@ -386,8 +394,16 @@ impl Enrichment {
                 }
             }
         }
-        let reminder_columns = result.columns.get("ZREMCDREMINDER").cloned().unwrap_or_default();
-        let list_columns = result.columns.get("ZREMCDBASELIST").cloned().unwrap_or_default();
+        let reminder_columns = result
+            .columns
+            .get("ZREMCDREMINDER")
+            .cloned()
+            .unwrap_or_default();
+        let list_columns = result
+            .columns
+            .get("ZREMCDBASELIST")
+            .cloned()
+            .unwrap_or_default();
         let tag_columns: ColumnSets = result.columns.clone();
         for key in changed_reminders {
             let old = names(
@@ -401,13 +417,26 @@ impl Enrichment {
             let value = snapshot.reminders.get(&key).map(|row| {
                 let order = row
                     .list
-                    .and_then(|list| self.manual_orders.get(path).and_then(|orders| orders.get(&list)))
+                    .and_then(|list| {
+                        self.manual_orders
+                            .get(path)
+                            .and_then(|orders| orders.get(&list))
+                    })
                     .cloned()
                     .unwrap_or(ManualOrder::Unsupported);
                 let sections = row.list.and_then(|list| {
-                    self.section_states.get(path).and_then(|states| states.get(&list))
+                    self.section_states
+                        .get(path)
+                        .and_then(|states| states.get(&list))
                 });
-                projection::reminder(row, &snapshot, &reminder_columns, &order, sections, &tag_columns)
+                projection::reminder(
+                    row,
+                    &snapshot,
+                    &reminder_columns,
+                    &order,
+                    sections,
+                    &tag_columns,
+                )
             });
             self.update(path, old, native, value, touched);
         }
@@ -427,7 +456,8 @@ impl Enrichment {
                     .lists
                     .values()
                     .filter(|list| {
-                        list.parent.is_some_and(|parent| changed_groups.contains(&parent))
+                        list.parent
+                            .is_some_and(|parent| changed_groups.contains(&parent))
                             || list
                                 .alternate_parent
                                 .is_some_and(|parent| changed_groups.contains(&parent))

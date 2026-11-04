@@ -23,7 +23,8 @@ fn normalized(value: &Value) -> Value {
 }
 
 fn replay(name: &str, schema: &str, steps: &str) -> Fallible<Vec<Value>> {
-    let path = std::env::temp_dir().join(format!("ab-remstore-{name}-{}.sqlite", std::process::id()));
+    let path =
+        std::env::temp_dir().join(format!("ab-remstore-{name}-{}.sqlite", std::process::id()));
     let _ = std::fs::remove_file(&path);
     let database = Connection::open(&path)?;
     database.execute_batch(schema)?;
@@ -51,7 +52,10 @@ fn compare(got: &[Value], expected: &str) -> Fallible<()> {
         let label = wanted["label"].as_str().unwrap_or_default();
         let left = normalized(&got["observations"]);
         let right = normalized(&wanted["observations"]);
-        let (left, right) = (left.as_array().ok_or("rows")?, right.as_array().ok_or("rows")?);
+        let (left, right) = (
+            left.as_array().ok_or("rows")?,
+            right.as_array().ok_or("rows")?,
+        );
         assert_eq!(left.len(), right.len(), "{label}: row count");
         for (a, b) in left.iter().zip(right) {
             assert_eq!(a, b, "{label}: {} {}", a["collection"], a["native_key"]);
@@ -67,7 +71,10 @@ fn history_mode_matches_the_swift_oracle_step_by_step() -> Fallible<()> {
         include_str!("parity/reminders-store/schema.sql"),
         include_str!("parity/reminders-store/steps.json"),
     )?;
-    compare(&got, include_str!("parity/reminders-store/expected-history.json"))
+    compare(
+        &got,
+        include_str!("parity/reminders-store/expected-history.json"),
+    )
 }
 
 #[test]
@@ -77,7 +84,10 @@ fn version_mode_matches_the_swift_oracle_step_by_step() -> Fallible<()> {
         include_str!("parity/reminders-store/schema-versions.sql"),
         include_str!("parity/reminders-store/steps-versions.json"),
     )?;
-    compare(&got, include_str!("parity/reminders-store/expected-versions.json"))
+    compare(
+        &got,
+        include_str!("parity/reminders-store/expected-versions.json"),
+    )
 }
 
 #[test]
