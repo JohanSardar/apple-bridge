@@ -133,19 +133,22 @@ fn lab_listen(listen: &str, gateway: &str, native: Option<&str>) -> Result<(), E
 }
 
 #[cfg(feature = "rust-capture")]
-fn inherited_native(
-    gateway: &std::os::unix::net::UnixStream,
-    helper: &std::os::unix::net::UnixStream,
+fn inherited_descriptor(
+    variable: &str,
+    taken: &[i32],
 ) -> Result<std::os::unix::net::UnixStream, Error> {
-    let native = std::env::var("AB_NATIVE_FD")
+    let descriptor = std::env::var(variable)
         .map_err(|_| Error::Invalid)?
         .parse::<i32>()
         .map_err(|_| Error::Invalid)?;
-    if native < 3 || native == gateway.as_raw_fd() || native == helper.as_raw_fd() {
+    if descriptor < 3 || taken.contains(&descriptor) {
         return Err(Error::Invalid);
     }
-    Ok(ab_sys::inherited_unix_stream(native)?)
+    Ok(ab_sys::inherited_unix_stream(descriptor)?)
 }
+
+#[cfg(feature = "rust-capture")]
+const FACTS_DESCRIPTOR: &str = "AB_NATIVE_FACTS_FD";
 
 fn run() -> Result<(), Error> {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -213,20 +216,28 @@ fn run() -> Result<(), Error> {
     #[cfg(feature = "rust-capture")]
     #[allow(clippy::needless_return)]
     {
+        let mut taken = vec![gateway.as_raw_fd(), helper.as_raw_fd()];
         let effects = match effects_home {
-            Some(home) => Some(ab_session::production::EffectsLink {
-                native: inherited_native(&gateway, &helper)?,
-                routing: ab_session::production::effects_routing(std::path::Path::new(&home))?,
-                home: std::path::PathBuf::from(home),
-            }),
+            Some(home) => {
+                let native = inherited_descriptor("AB_NATIVE_FD", &taken)?;
+                taken.push(native.as_raw_fd());
+                Some(ab_session::production::EffectsLink {
+                    native,
+                    routing: ab_session::production::effects_routing(std::path::Path::new(&home))?,
+                    home: std::path::PathBuf::from(home),
+                })
+            }
             None => None,
         };
         let facts = match &capture {
             Some(loaded) if loaded.wants_inherited_facts() => {
-                if effects.is_some() {
-                    return Err(Error::Conflict);
-                }
-                Some(inherited_native(&gateway, &helper)?)
+                let variable = if effects.is_none() && std::env::var_os(FACTS_DESCRIPTOR).is_none()
+                {
+                    "AB_NATIVE_FD"
+                } else {
+                    FACTS_DESCRIPTOR
+                };
+                Some(inherited_descriptor(variable, &taken)?)
             }
             _ => None,
         };

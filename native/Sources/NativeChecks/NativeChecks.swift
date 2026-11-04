@@ -170,6 +170,19 @@ struct NativeChecks {
             }
             try check(rows == fixtures[operation].array, "scenario facts \(operation)")
         }
+        let factsOnly = NativeServer(adapter: FakeNative(), factsOnly: true)
+        let effectsServer = NativeServer(adapter: FakeNative())
+        _ = await factsOnly.handle(hello)
+        _ = await effectsServer.handle(hello)
+        let facts = await factsOnly.handle(.object(["t": .string("Facts"), "id": .string("facts-only"), "op": .string("contacts.contacts"), "args": .object([:]), "snapshot": .null, "cursor": .null, "limit": .integer(10)]))
+        try check(facts["t"] == .string("FactPage") && facts["items"].array.count == 5, "facts-only server pages facts")
+        let sharedArgs: JSON = .object(["text": .string("synthetic")])
+        let sharedPermit: [String: JSON] = ["command_id": .string("command-shared"), "owner_fence": .integer(7), "ticket": .string("ticket-shared"), "request_hash": .string(try NativeServer.requestHash(operation: "messages.reply", args: sharedArgs)), "operation": .string("messages.reply"), "expires_at": .integer(UInt64(Date().timeIntervalSince1970) + 30), "nonce": .string(String(repeating: "b", count: 64))]
+        let shared: JSON = .object(["t": .string("Effect"), "id": .string("shared"), "op": .string("messages.reply"), "args": sharedArgs, "permit": .object(sharedPermit)])
+        let refused = await factsOnly.handle(shared)
+        try check(refused["t"] == .string("Error") && refused["code"] == .string("unsupported"), "facts-only server refuses effects")
+        let accepted = await effectsServer.handle(shared)
+        try check(accepted["t"] == .string("EffectResult"), "effects server keeps its permit after the facts-only refusal")
         print("native/1 checks passed")
     }
 }
