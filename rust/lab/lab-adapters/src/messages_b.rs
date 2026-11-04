@@ -58,7 +58,9 @@ fn data_of(record: &Value) -> Value {
 }
 
 pub fn dispatch(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result<()> {
-    if evidence.scenario == "MSG-MEDIA-CLEANUP" {
+    if evidence.scenario == "MSG-MEDIA-CLEANUP"
+        || crate::messages_a::commands::ALL.contains(&evidence.scenario.as_str())
+    {
         crate::cleanup::messages_commands(world, input, evidence)
     } else if crate::messages_visibility::SCENARIOS.contains(&evidence.scenario.as_str()) {
         crate::messages_visibility::sim(world, input, evidence)
