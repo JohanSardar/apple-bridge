@@ -367,6 +367,9 @@ fn run() -> Result<(), Error> {
         let home = session_home.ok_or(Error::Invalid)?;
         return serve_session(gateway, helper, &secret, &home, rust_commands.as_deref());
     }
+    if let Some(home) = &capture_home {
+        keep_log(std::path::Path::new(home));
+    }
     let mut selection = ab_session::ownership::Selection::default();
     if let Ok(value) = std::env::var("AB_SESSION_PRODUCERS") {
         let sources: std::collections::BTreeMap<
