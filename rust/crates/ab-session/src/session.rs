@@ -6,9 +6,7 @@ use ab_wire::{
     crypto::ipc_proof,
     framing::MAX_FRAME,
     messages::{IpcFrame, Observation},
-    native::{
-        self, ErrorCode, Frame as Link, Scan, ScanCommitted, ScanFailed, Session, Source,
-    },
+    native::{self, ErrorCode, Frame as Link, Scan, ScanCommitted, ScanFailed, Session, Source},
 };
 use serde_json::value::RawValue;
 use std::{
