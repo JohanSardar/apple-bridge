@@ -215,11 +215,17 @@ fn reported_generation(shared: &mut Shared, source: &str, native: &str, adopts: 
     reported
 }
 
+enum Point {
+    Completed(String, String),
+    Idle(u64),
+}
+
 fn persist(
     gate: &Gate,
     token: Option<String>,
     store: Option<&Store>,
     source: &str,
+    point: Point,
 ) -> Result<(), Error> {
     let Some(store) = store else {
         return Ok(());
@@ -228,11 +234,17 @@ fn persist(
         return Ok(());
     };
     let shared = gate.lock()?;
-    if shared.flights.contains(source) {
-        return Ok(());
-    }
-    let Some((generation, checkpoint)) = shared.flights.committed(source).cloned() else {
-        return Ok(());
+    let (generation, checkpoint) = match point {
+        Point::Completed(generation, checkpoint) => (generation, checkpoint),
+        Point::Idle(sequence) => {
+            if shared.flights.contains(source) || shared.flights.sequence() != sequence {
+                return Ok(());
+            }
+            let Some(point) = shared.flights.committed(source).cloned() else {
+                return Ok(());
+            };
+            point
+        }
     };
     if shared.saved.get(source) == Some(&(checkpoint.clone(), token.clone())) {
         return Ok(());
@@ -580,6 +592,7 @@ fn produce(
                 now: now()?,
                 fence,
             };
+            let sequence = gate.lock()?.flights.sequence();
             let (next, covers, token, more, adopts) = {
                 let mut reader = lock(readers, source)?;
                 let started = std::time::Instant::now();
@@ -611,7 +624,7 @@ fn produce(
                 Ok(Some(capture)) => capture,
                 Ok(None) => {
                     release(to_helper, source, &covers)?;
-                    persist(gate, token, store, source)?;
+                    persist(gate, token, store, source, Point::Idle(sequence))?;
                     continue;
                 }
                 Err(error) => {
@@ -739,7 +752,8 @@ fn committed(
     gate.changed.notify_all();
     if rust {
         if last {
-            persist(gate, token, store, source)?;
+            let point = Point::Completed(flight.generation.clone(), flight.checkpoint.clone());
+            persist(gate, token, store, source, point)?;
             release(to_helper, source, &flight.origin.covers)?;
         }
         return Ok(false);
