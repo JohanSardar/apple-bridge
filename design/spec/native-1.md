@@ -194,10 +194,7 @@ command's expiry, one shot), validates `Dispatch` (ticket, origin, command id, f
 `Rejected` to the same log, answers `Resolve` from the log (offering every recorded outcome except
 `failed_no_effect` to Swift with `saved`; Swift decides whether to re-observe or echo it), and reports unresolved dispatches after `Ready` on the next connection. A `Rejected` that
 arrives for a started dispatch is recorded as a rejection; a started dispatch without an outcome stays
-indeterminate. For an observed `Outcome` with a `native_key`, ab-session waits (15 seconds) for a committed
-scan containing that key after the dispatch started (facts sources: the latest) and writes it as
-`capture_checkpoint`; otherwise the outcome degrades to indeterminate with `reason: capture_not_observed`.
-`evidence.prepared` is filled by ab-session when Swift omits it. Results larger than a native frame fail as
+indeterminate. For an observed `Outcome` with a `native_key`, ab-session binds `capture_checkpoint` to the committed scan that contains that key after the dispatch started (facts sources: the latest), waiting at most half a second for a scan that is still being acknowledged. A Helper reports an outcome only after its own reconciling scan was committed, so a key that is still unobserved is forwarded unchanged and without a checkpoint: the gateway's own capture bound decides (honest unknown). `evidence.prepared` is filled by ab-session when Swift omits it. Results larger than a native frame fail as
 `QueryError unavailable`; the oversized-body path stays a blob handle served through `BlobRead`.
 
 ### Primitives (Rust-owned commands, off by default)

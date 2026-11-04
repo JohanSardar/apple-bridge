@@ -25,7 +25,7 @@ use std::{
 };
 
 const TICKET_SECONDS: i64 = 30;
-const BIND_WAIT: Duration = Duration::from_secs(15);
+const BIND_WAIT: Duration = Duration::from_millis(500);
 const READ_WAIT: Duration = Duration::from_secs(10);
 const WRITE_WAIT: Duration = Duration::from_secs(30);
 const DISPOSITIONS: &[&str] = &[
@@ -118,6 +118,16 @@ fn parsed(raw: &serde_json::value::RawValue) -> Value {
 
 fn raw(value: &Value) -> Result<Box<serde_json::value::RawValue>, Error> {
     Ok(serde_json::value::RawValue::from_string(value.to_string())?)
+}
+
+fn part_keys(evidence: &Value) -> Vec<String> {
+    evidence["parts"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|part| part["native_key"].as_str().map(str::to_owned))
+        .filter(|key| !key.is_empty())
+        .collect()
 }
 
 fn facts_source(operation: &str) -> bool {
@@ -283,7 +293,7 @@ impl Hub {
         let reconciled = self.primitive(&format!("{source}.reconcile"), &json!({}), WRITE_WAIT);
         let checkpoint = reconciled
             .ok()
-            .and_then(|_| self.bind(key, true, 0).ok().flatten())?;
+            .and_then(|_| self.bind(key, &[], true, 0).ok().flatten())?;
         Some(json!({"native_key": key, "capture_checkpoint": checkpoint}))
     }
 
@@ -653,8 +663,21 @@ impl Hub {
         let id = outcome.command_id.clone();
         let mut core = self.core()?;
         if core.commands.take_resolving(&id) {
+            drop(core);
+            let mut evidence = parsed(&outcome.evidence);
+            if outcome.disposition != "indeterminate" && evidence["observed"] == true {
+                let key = evidence["native_key"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .to_owned();
+                if !key.is_empty()
+                    && let Some(checkpoint) = self.bind(&key, &part_keys(&evidence), true, 0)?
+                {
+                    evidence["capture_checkpoint"] = Value::String(checkpoint);
+                }
+            }
+            let mut core = self.core()?;
             let saved = core.commands.guard.outcome(&id).cloned();
-            let evidence = parsed(&outcome.evidence);
             let changed = saved.is_none_or(|saved| {
                 saved["disposition"] != outcome.disposition || saved["evidence"] != evidence
             });
@@ -711,13 +734,15 @@ impl Hub {
             let bound = if key.is_empty() {
                 None
             } else {
-                self.bind(&key, facts_source(&operation), active.after)?
+                self.bind(
+                    &key,
+                    &part_keys(&evidence),
+                    facts_source(&operation),
+                    active.after,
+                )?
             };
             if let Some(checkpoint) = bound {
                 evidence["capture_checkpoint"] = Value::String(checkpoint);
-            } else {
-                disposition = "indeterminate".into();
-                evidence["reason"] = json!("capture_not_observed");
             }
         }
         let saved = {
@@ -732,14 +757,28 @@ impl Hub {
         self.send_gateway(&saved_frame(&saved)?)
     }
 
-    fn bind(&self, key: &str, facts: bool, after: u64) -> Result<Option<String>, Error> {
+    fn bind(
+        &self,
+        key: &str,
+        others: &[String],
+        facts: bool,
+        after: u64,
+    ) -> Result<Option<String>, Error> {
         let deadline = self.clock.elapsed() + BIND_WAIT;
         let mut core = self.core()?;
         loop {
             if let Some(seen) = core.flights.latest(key)
                 && (facts || seen.sequence > after)
             {
-                return Ok(Some(seen.checkpoint.clone()));
+                let mut best = (seen.sequence, seen.checkpoint.clone());
+                for other in others {
+                    if let Some(other) = core.flights.latest(other)
+                        && other.sequence > best.0
+                    {
+                        best = (other.sequence, other.checkpoint.clone());
+                    }
+                }
+                return Ok(Some(best.1));
             }
             if core.closed || self.clock.elapsed() >= deadline {
                 return Ok(None);
