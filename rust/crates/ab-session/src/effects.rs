@@ -597,7 +597,8 @@ impl Layer {
                     }
                     let now = Instant::now();
                     if now >= deadline {
-                        return Ok(unavailable());
+                        result.insert("reason".into(), json!("capture_not_observed"));
+                        return Ok(("indeterminate".to_owned(), Value::Object(result)));
                     }
                     state = self
                         .changed

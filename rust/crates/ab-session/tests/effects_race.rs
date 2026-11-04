@@ -47,6 +47,7 @@ fn query_fixture(
     Ok(())
 }
 
+#[allow(clippy::too_many_lines)]
 fn native_route(commit_capture: bool, wrong_id: bool) -> Result<(), Box<dyn std::error::Error>> {
     let home = std::env::temp_dir().join(format!(
         "ab-effects-{}-{}",

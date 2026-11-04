@@ -267,7 +267,7 @@ fn pre_dispatch_rejection_from_the_native_side_is_durable_and_resolvable() -> Fa
     send(&mut harness.helper, &delivered)?;
     assert_eq!(receive(&mut harness.gateway)?, delivered);
     send(&mut harness.gateway, &json!({"t":"Resolve","command_id":"shipped"}))?;
-    assert_eq!(receive(&mut harness.gateway)?["disposition"], "delivered");
+    assert_eq!(receive(&mut harness.helper)?["saved"]["disposition"], "delivered");
     Ok(())
 }
 
