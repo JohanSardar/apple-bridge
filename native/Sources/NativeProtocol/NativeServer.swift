@@ -54,6 +54,7 @@ public actor NativeServer {
     }
     private let adapter: any NativeAdapter
     private let files: NativeFiles?
+    private let factsOnly: Bool
     private var fence: UInt64 = 0
     private var opened = false
     private var active = false
@@ -61,7 +62,7 @@ public actor NativeServer {
     private var usedCommands: Set<String> = []
     private var snapshots: [String: Snapshot] = [:]
 
-    public init(adapter: any NativeAdapter, files: NativeFiles? = nil) { self.adapter = adapter; self.files = files }
+    public init(adapter: any NativeAdapter, files: NativeFiles? = nil, factsOnly: Bool = false) { self.adapter = adapter; self.files = files; self.factsOnly = factsOnly }
 
     public static func requestHash(operation: String, args: JSON) throws -> String {
         let encoder = JSONEncoder()
@@ -84,11 +85,12 @@ public actor NativeServer {
             defer { active = false }
             switch frame["t"].string {
             case "Release":
-                guard let files else { throw SourceFailure.unsupported }
+                guard !factsOnly, let files else { throw SourceFailure.unsupported }
                 try await files.release(frame["args"]["file_ref"])
                 return .object(["t": .string("Released"), "id": frame["id"]])
             case "Facts": return try await page(frame)
             case "Effect":
+                guard !factsOnly else { throw SourceFailure.unsupported }
                 let op = frame["op"].string
                 guard Self.effectOperations.contains(op) else { throw SourceFailure.unsupported }
                 guard await adapter.effectsAllowed() else { throw SourceFailure.conflict }

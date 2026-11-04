@@ -68,11 +68,14 @@ func (w *World) startSession(ctx context.Context, gatewaySocket string) (string,
 	config := map[string]map[string]any{}
 	factsMode := os.Getenv("AB_LAB_SESSION_NATIVE_FACTS")
 	factsSocket := ""
-	if factsMode == "1" || factsMode == "missing" {
+	switch factsMode {
+	case "1":
 		factsSocket = filepath.Join(w.Dir, "native.sock")
-		if factsMode == "1" && !SessionEffects() {
+		if !SessionEffects() {
 			w.sessionFacts = factsSocket
 		}
+	case "missing":
+		factsSocket = filepath.Join(w.Dir, "native-facts-missing.sock")
 	}
 	w.sessionRoots = map[string]string{}
 	for _, source := range sources {
