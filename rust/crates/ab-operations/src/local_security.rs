@@ -785,3 +785,72 @@ async fn a_preview_is_only_for_a_pending_approval() {
         Code::NotFound
     );
 }
+
+#[test]
+fn authorization_rejects_read_agents_even_with_write_grants() {
+    let fixture = fixture();
+    for kind in ["agent", "delegated"] {
+        let reader = principal(
+            "replica:peer/agent:reader",
+            kind,
+            "read",
+            &["messages:write"],
+        );
+        assert_eq!(
+            fixture
+                .gateway
+                .authorize(&reader, "messages.send")
+                .expect_err("read agent")
+                .code,
+            Code::Unauthorized
+        );
+    }
+    let writer = principal("token:writer", "token", "", &["messages:write"]);
+    assert!(fixture.gateway.authorize(&writer, "messages.send").is_ok());
+    let ungranted = principal("token:reader", "token", "", &["messages:read"]);
+    assert_eq!(
+        fixture
+            .gateway
+            .authorize(&ungranted, "messages.send")
+            .expect_err("missing grant")
+            .code,
+        Code::Unauthorized
+    );
+}
+
+#[tokio::test]
+async fn approval_entry_points_reject_invalid_deciders_before_lookup() {
+    let fixture = fixture();
+    let review = OwnerReview {
+        binding: "",
+        accepted_unpreviewable: false,
+    };
+    assert_eq!(
+        fixture
+            .gateway
+            .decide(&agent(), "missing", true, &review)
+            .await
+            .expect_err("owner required")
+            .code,
+        Code::Unauthorized
+    );
+    let device = principal("device:reader", "device", "", &["messages:read"]);
+    assert_eq!(
+        fixture
+            .gateway
+            .decide(&device, "missing", true, &review)
+            .await
+            .expect_err("admin required")
+            .code,
+        Code::Unauthorized
+    );
+    assert_eq!(
+        fixture
+            .gateway
+            .decide_phone("missing", "", true)
+            .await
+            .expect_err("hash required")
+            .code,
+        Code::Invalid
+    );
+}

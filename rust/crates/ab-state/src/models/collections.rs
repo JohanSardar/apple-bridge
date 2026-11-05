@@ -1,4 +1,9 @@
-use super::*;
+use super::{
+    Connection, ErrorCode, Identity, Result, Sha256, Sql, Value, Visibility, b, data, edge, json,
+    limit, list, one, s, text, thread_items, time, token, visible,
+};
+use sha2::Digest;
+use std::fmt::Write;
 
 pub(super) fn collection(db: &Connection, visibility: &Visibility, query: &Value) -> Result<Value> {
     let count = limit(query)?;
@@ -125,8 +130,8 @@ pub(super) fn search(db: &Connection, visibility: &Visibility, query: &Value) ->
     if !txt.is_empty() {
         let terms = txt
             .split(|c: char| !c.is_alphanumeric())
-            .filter(|t| !t.is_empty())
-            .map(|t| format!("\"{}\"*", t.replace('"', "\"\"")))
+            .filter(|term| !term.is_empty())
+            .map(|term| format!("\"{}\"*", term.replace('"', "\"\"")))
             .collect::<Vec<_>>()
             .join(" AND ");
         if terms.is_empty() {

@@ -1,4 +1,7 @@
-use super::*;
+use super::{
+    Connection, ErrorCode, Record, Result, Sql, Value, Visibility, b, data, edge, handle, json,
+    kind, limit, list, normalize, one, params, pin_text, s, text, token, visible,
+};
 
 #[allow(clippy::too_many_lines)]
 pub(super) fn chats(db: &Connection, visibility: &Visibility, query: &Value) -> Result<Value> {
@@ -106,7 +109,7 @@ pub(super) fn chats(db: &Connection, visibility: &Visibility, query: &Value) -> 
     Ok(out)
 }
 #[allow(clippy::too_many_lines)]
-pub(super) fn summary(db: &Connection, visibility: &Visibility, record: &Record) -> Result<Value> {
+fn summary(db: &Connection, visibility: &Visibility, record: &Record) -> Result<Value> {
     let fields = data(record)?;
     let id = record.id.as_str();
     let (at, unread): (String, i64) = db.query_row(
@@ -121,7 +124,9 @@ pub(super) fn summary(db: &Connection, visibility: &Visibility, record: &Record)
         s(&fields, "muted_until")
             .parse::<jiff::Timestamp>()
             .ok()
-            .map_or(Value::Null, |t| json!(t > crate::replay::now()))
+            .map_or(Value::Null, |timestamp| {
+                json!(timestamp > crate::replay::now())
+            })
     };
     let mut known = fields["filter"].is_null() || s(&fields, "filter") == "known";
     let mut avatars = Vec::new();
@@ -173,7 +178,7 @@ pub(super) fn summary(db: &Connection, visibility: &Visibility, record: &Record)
         if !md["retracted_at"].is_null()
             || md["retracted_parts"]
                 .as_array()
-                .is_some_and(|a| !a.is_empty())
+                .is_some_and(|attachments| !attachments.is_empty())
         {
             preview["kind"] = "unsent".into();
         } else if s(&md, "kind") == "group_event" {
@@ -191,8 +196,8 @@ pub(super) fn summary(db: &Connection, visibility: &Visibility, record: &Record)
             )?;
             if !media.is_empty() {
                 let mut kinds = Vec::new();
-                for a in &media {
-                    let k = kind(&data(a)?);
+                for attachments in &media {
+                    let k = kind(&data(attachments)?);
                     if !kinds.contains(&k) {
                         kinds.push(k);
                     }

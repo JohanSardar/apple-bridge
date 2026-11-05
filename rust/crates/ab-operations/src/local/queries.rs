@@ -1,4 +1,7 @@
-use super::*;
+use super::{
+    Code, Duration, Error, IpcFrame, LocalGateway, NativeQuery, Principal, RawValue, Value,
+    descriptor_for, json, raw, valid_command_id,
+};
 
 impl LocalGateway {
     pub async fn query(
@@ -156,12 +159,15 @@ impl LocalGateway {
             || frame
                 .result_json
                 .as_ref()
-                .is_some_and(|v| v.get().len() > 1 << 20)
-            || frame.blobs.as_ref().is_some_and(|v| v.len() > 16)
+                .is_some_and(|value| value.get().len() > 1 << 20)
+            || frame.blobs.as_ref().is_some_and(|value| value.len() > 16)
         {
             return Err(Code::Corrupt.into());
         }
-        audit.result_bytes = frame.result_json.as_ref().map_or(0, |v| v.get().len());
+        audit.result_bytes = frame
+            .result_json
+            .as_ref()
+            .map_or(0, |value| value.get().len());
         audit.blob_bytes = frame
             .blobs
             .as_ref()
@@ -183,7 +189,7 @@ impl LocalGateway {
                 store.hydrate(
                     self.peer.as_ref(),
                     &crate::QueryBlobContext {
-                        principal: principal,
+                        principal,
                         id: &query.id,
                         scope,
                         max_size: 64 << 20,

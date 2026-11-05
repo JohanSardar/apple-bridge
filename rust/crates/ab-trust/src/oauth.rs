@@ -550,7 +550,7 @@ impl Authority {
             }))
         })?
     }
-    pub fn authenticate_oauth(&self, raw: &str) -> Result<Principal, Error> {
+    pub(crate) fn authenticate_oauth(&self, raw: &str) -> Result<Principal, Error> {
         let d = self.load()?;
         let hash = fingerprint(raw.as_bytes());
         let access = read::<Access>(&d, "oauth_access")?

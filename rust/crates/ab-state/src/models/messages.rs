@@ -1,5 +1,9 @@
-use super::*;
+use super::{
+    Connection, ErrorCode, Record, Result, Sql, Value, Visibility, data, edge, json, limit, list,
+    one, params, s, text, thread_items, time, token, visible,
+};
 
+#[allow(clippy::too_many_lines)]
 pub(super) fn thread(db: &Connection, visibility: &Visibility, query: &Value) -> Result<Value> {
     let count = limit(query)?;
     let chat = s(query, "chat_id");

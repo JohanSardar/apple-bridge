@@ -1,4 +1,7 @@
-use super::*;
+use super::{
+    Arc, BTreeMap, Code, Command, Cursor, Debug, Deserialize, Disposition, Error, IpcFrame,
+    Principal, RawValue, Serialize, State, Value, target_collection,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CommandRecord {
@@ -96,8 +99,8 @@ pub trait ActionResolver: Debug + Send + Sync {
         if command.op.starts_with("messages.") {
             let args: Value =
                 serde_json::from_str(command.args.get()).map_err(|_| Code::Invalid)?;
-            if args.as_object().is_some_and(|o| {
-                o.iter().any(|(key, value)| {
+            if args.as_object().is_some_and(|object| {
+                object.iter().any(|(key, value)| {
                     key.eq_ignore_ascii_case("files")
                         && value.as_array().is_some_and(|files| !files.is_empty())
                 })
@@ -132,7 +135,7 @@ pub trait ActionResolver: Debug + Send + Sync {
         let evidence: Value = frame
             .evidence
             .as_ref()
-            .and_then(|v| serde_json::from_str(v.get()).ok())
+            .and_then(|value| serde_json::from_str(value.get()).ok())
             .unwrap_or(Value::Null);
         let observed =
             frame.disposition == "locally_observed" || frame.disposition == "absent_confirmed";
@@ -172,7 +175,7 @@ pub trait ActionResolver: Debug + Send + Sync {
         frame
             .error
             .as_ref()
-            .map(|v| serde_json::from_str(v.get()).map_err(|_| Code::Corrupt.into()))
+            .map(|value| serde_json::from_str(value.get()).map_err(|_| Code::Corrupt.into()))
             .transpose()
     }
 }

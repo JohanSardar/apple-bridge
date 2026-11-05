@@ -14,7 +14,7 @@ pub use identity::Authority;
 pub use pairing::{Enrollment, PairCode, pair_proof};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 pub use store::{
     CredentialStore, FileStore, KeychainStore, LibsecretStore, StoreEnvironment, atomic_write,
     backend_name, select,
@@ -173,94 +173,6 @@ pub fn effective_grants(grants: &[Grant], ceiling: &[Grant]) -> Vec<Grant> {
         .collect()
 }
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
-pub struct Principal {
-    pub id: String,
-    pub kind: String,
-    pub grants: Vec<Grant>,
-    #[serde(default)]
-    pub revision: u64,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub fingerprint: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub token_hash: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub level: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub dial: String,
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub remote: bool,
-    #[serde(flatten)]
-    pub extra: BTreeMap<String, serde_json::Value>,
-}
-impl Principal {
-    pub fn relay2(&self) -> bool {
-        self.extra
-            .get("relay2")
-            .and_then(serde_json::Value::as_bool)
-            .unwrap_or(false)
-    }
-    pub fn active(&self) -> bool {
-        if self.extra.get("revoked_at").is_some_and(|v| !v.is_null()) {
-            return false;
-        }
-        self.extra
-            .get("expires_at")
-            .and_then(serde_json::Value::as_str)
-            .is_none_or(|v| {
-                v == "0001-01-01T00:00:00Z"
-                    || v.parse::<jiff::Timestamp>()
-                        .is_ok_and(|t| t > jiff::Timestamp::now())
-            })
-    }
-    pub fn visibility(&self) -> Visibility {
-        let mut v = Visibility::default();
-        v.principals.insert(self.id.clone());
-        v.commands_all = self.kind == "replica";
-        for g in &self.grants {
-            if g.0 == "admin" {
-                v.all = true;
-                v.commands_all = true;
-            }
-            if let Some((s, _)) = g.0.split_once(':') {
-                v.sources.insert(s.into());
-            }
-        }
-        v
-    }
-}
-#[derive(Clone, Debug, Default)]
-pub struct Visibility {
-    pub sources: BTreeSet<String>,
-    pub principals: BTreeSet<String>,
-    pub commands_all: bool,
-    pub all: bool,
-}
-impl Visibility {
-    pub fn allows(&self, record: &ab_domain::Record) -> bool {
-        let source = serde_json::to_value(record.source)
-            .ok()
-            .and_then(|v| v.as_str().map(str::to_owned));
-        if !self.all && !source.is_some_and(|s| self.sources.contains(&s)) {
-            return false;
-        }
-        if record.collection != ab_domain::Collection::SystemCommand || self.commands_all {
-            return true;
-        }
-        serde_json::from_str::<serde_json::Value>(record.data.get())
-            .ok()
-            .and_then(|v| {
-                v.get("principal")
-                    .and_then(serde_json::Value::as_str)
-                    .map(str::to_owned)
-            })
-            .is_some_and(|p| {
-                self.principals.contains(&p)
-                    || p.split_once('/')
-                        .is_some_and(|(_, local)| self.principals.contains(local))
-            })
-    }
-}
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Credentials {
     #[serde(default, deserialize_with = "null_default")]
     pub principals: Vec<Principal>,
@@ -276,53 +188,6 @@ pub fn parse_grants(scope: &str) -> Result<Vec<Grant>, Error> {
         return Err(Error::Invalid);
     }
     scope.split(',').map(Grant::parse).collect()
-}
-impl Visibility {
-    pub fn to_map(&self) -> std::collections::HashMap<String, bool> {
-        let mut map: std::collections::HashMap<String, bool> =
-            self.sources.iter().map(|s| (s.clone(), true)).collect();
-        if self.all {
-            for source in [
-                #[cfg(feature = "lab-harness")]
-                "labdummy",
-                "location",
-                "audio",
-                "calendar",
-                "capture",
-                "contacts",
-                "files",
-                "focus",
-                "health",
-                "iphone",
-                "mac",
-                "mail",
-                "maps",
-                "messages",
-                "notes",
-                "pdf",
-                "phone",
-                "print",
-                "reminders",
-                "safari",
-                "shortcuts",
-                "speech",
-                "system",
-                "usage",
-                "vision",
-                "voice_memos",
-                "voicemail",
-            ] {
-                map.insert(source.into(), true);
-            }
-        }
-        for id in &self.principals {
-            map.insert(format!("principal:{id}"), true);
-        }
-        if self.commands_all {
-            map.insert("commands:all".into(), true);
-        }
-        map
-    }
 }
 
 pub use ab_domain as domain;
@@ -347,3 +212,6 @@ pub trait ApprovalReauthorizer: std::fmt::Debug + Send + Sync {
         hash: &'a str,
     ) -> Reauthorization<'a>;
 }
+
+mod principal;
+pub use principal::{Principal, Visibility};

@@ -216,7 +216,7 @@ async fn dial(
 pub async fn connect(code: &str, address: &str) -> Result<()> {
     connect_with(&crate::localapi::LocalApi::Discover, code, address).await
 }
-pub async fn connect_with(
+pub(crate) async fn connect_with(
     api: &crate::localapi::LocalApi,
     code: &str,
     address: &str,

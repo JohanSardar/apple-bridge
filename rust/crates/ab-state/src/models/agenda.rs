@@ -1,4 +1,4 @@
-use super::*;
+use super::{Connection, ErrorCode, Result, Value, Visibility, b, data, json, list, s, visible};
 
 pub(super) fn agenda(db: &Connection, visibility: &Visibility, query: &Value) -> Result<Value> {
     let start = s(query, "start")
@@ -55,6 +55,10 @@ pub(super) fn agenda(db: &Connection, visibility: &Visibility, query: &Value) ->
             }
         }
     }
-    out.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.id.as_str().cmp(b.1.id.as_str())));
+    out.sort_by(|left, right| {
+        left.0
+            .cmp(&right.0)
+            .then(left.1.id.as_str().cmp(right.1.id.as_str()))
+    });
     Ok(json!({"records":out.into_iter().map(|(_,record)|record).collect::<Vec<_>>()}))
 }

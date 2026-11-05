@@ -1,4 +1,4 @@
-use super::*;
+use super::{ErrorCode, Result, Value};
 
 pub(super) fn validate_query(operation: &str, query: &Value) -> Result<()> {
     let allowed = match operation {
@@ -20,7 +20,10 @@ pub(super) fn validate_query(operation: &str, query: &Value) -> Result<()> {
     };
     let fields = query.as_object().ok_or(ErrorCode::Invalid)?;
     for (key, value) in fields {
-        if !allowed.split_whitespace().any(|a| a == key) {
+        if !allowed
+            .split_whitespace()
+            .any(|allowed_field| allowed_field == key)
+        {
             return Err(ErrorCode::Invalid.into());
         }
         if value.is_null() {
@@ -29,9 +32,11 @@ pub(super) fn validate_query(operation: &str, query: &Value) -> Result<()> {
         let valid = match key.as_str() {
             "limit" => value.as_i64().is_some(),
             "unread" | "show_completed" => value.is_boolean(),
-            "participants" | "ids" | "calendars" => value
-                .as_array()
-                .is_some_and(|items| items.iter().all(|v| v.is_string() || v.is_null())),
+            "participants" | "ids" | "calendars" => value.as_array().is_some_and(|items| {
+                items
+                    .iter()
+                    .all(|value| value.is_string() || value.is_null())
+            }),
             _ => value.is_string(),
         };
         if !valid {

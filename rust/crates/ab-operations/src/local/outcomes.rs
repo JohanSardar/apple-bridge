@@ -1,4 +1,7 @@
-use super::*;
+use super::{
+    Code, CommandRecord, Cursor, Disposition, Duration, Error, IpcFrame, LocalGateway,
+    OutcomeEvidence, Principal, State, Value, descriptor_for, json, raw,
+};
 
 impl LocalGateway {
     pub(super) async fn apply_outcome(
@@ -23,7 +26,7 @@ impl LocalGateway {
             let mut evidence: Value = frame
                 .evidence
                 .as_ref()
-                .and_then(|v| serde_json::from_str(v.get()).ok())
+                .and_then(|value| serde_json::from_str(value.get()).ok())
                 .unwrap_or(Value::Null);
             let id = format!("qry_{}", ulid::Ulid::new());
             let mut blobs =
@@ -36,7 +39,7 @@ impl LocalGateway {
                     .hydrate(
                         self.peer.as_ref(),
                         &crate::QueryBlobContext {
-                            principal: principal,
+                            principal,
                             id: &id,
                             scope: &descriptor.scope,
                             max_size: 128 << 20,
@@ -109,7 +112,7 @@ impl LocalGateway {
             let evidence: Value = frame
                 .evidence
                 .as_ref()
-                .and_then(|v| serde_json::from_str(v.get()).ok())
+                .and_then(|value| serde_json::from_str(value.get()).ok())
                 .unwrap_or(Value::Null);
             if evidence["fingerprint"] != record.request_hash
                 || evidence["observed"] != true
@@ -249,7 +252,7 @@ impl LocalGateway {
         }
         let error = frame
             .error
-            .map(|v| serde_json::from_str(v.get()).map_err(|_| Code::Corrupt))
+            .map(|value| serde_json::from_str(value.get()).map_err(|_| Code::Corrupt))
             .transpose()?;
         self.transition(record, state, Some(disposition), frame.evidence, error)
     }

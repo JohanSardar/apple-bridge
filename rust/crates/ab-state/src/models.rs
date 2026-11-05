@@ -1,5 +1,3 @@
-use std::fmt::Write;
-
 #[derive(serde::Serialize)]
 struct Identity<'a> {
     #[serde(skip_serializing_if = "str::is_empty")]
@@ -19,7 +17,7 @@ use crate::{ErrorCode, Record, Result, State, Visibility, head, records};
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use rusqlite::{Connection, params, types::Value as Sql};
 use serde_json::{Value, json};
-use sha2::{Digest, Sha256};
+use sha2::Sha256;
 use std::collections::{BTreeMap, HashMap};
 fn data(record: &Record) -> Result<Value> {
     Ok(serde_json::from_str(record.data.get())?)
@@ -325,7 +323,6 @@ impl<Role> State<Role> {
         Ok(out)
     }
 }
-#[allow(clippy::too_many_lines)]
 fn pin_text(db: &Connection, record: &Record, fields: &Value) -> Result<String> {
     if !s(fields, "text").is_empty() {
         return Ok(s(fields, "text").into());
@@ -381,7 +378,7 @@ mod collections;
 mod messages;
 mod validation;
 use agenda::agenda;
-use chats::{chats, summary};
+use chats::chats;
 use collections::{collection, search};
 use messages::thread;
 use validation::validate_query;

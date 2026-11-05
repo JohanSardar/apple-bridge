@@ -1,4 +1,6 @@
-use super::*;
+use super::{
+    BTreeMap, Code, CommandPart, CommandRecord, Error, IpcFrame, LocalGateway, State, Value, raw,
+};
 
 impl LocalGateway {
     #[allow(clippy::too_many_lines)]
@@ -49,7 +51,7 @@ impl LocalGateway {
         let previous: Value = record
             .evidence
             .as_ref()
-            .and_then(|v| serde_json::from_str(v.get()).ok())
+            .and_then(|value| serde_json::from_str(value.get()).ok())
             .unwrap_or(Value::Null);
         let mut proofs = BTreeMap::new();
         for principal in previous["parts"].as_array().into_iter().flatten() {
@@ -125,7 +127,9 @@ impl LocalGateway {
             }
             let prior_proof = proofs.get(&(index as u64));
             let same_key = prior_proof.is_some_and(|old| {
-                old["native_key"].as_str().is_some_and(|v| !v.is_empty())
+                old["native_key"]
+                    .as_str()
+                    .is_some_and(|value| !value.is_empty())
                     && old["native_key"] == principal["native_key"]
             });
             let bound_failure = prior.disposition == "observed"
@@ -142,10 +146,12 @@ impl LocalGateway {
             }
             if prior.disposition != "indeterminate"
                 && prior_proof.is_some_and(|old| {
-                    old["native_key"].as_str().is_some_and(|v| !v.is_empty())
+                    old["native_key"]
+                        .as_str()
+                        .is_some_and(|value| !value.is_empty())
                         && principal["native_key"]
                             .as_str()
-                            .is_some_and(|v| !v.is_empty())
+                            .is_some_and(|value| !value.is_empty())
                         && old["native_key"] != principal["native_key"]
                 })
             {
