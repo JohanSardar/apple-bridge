@@ -1,8 +1,8 @@
 #![forbid(unsafe_code)]
 mod descriptors;
 mod reference;
-pub use reference::operations_reference_markdown;
 use ab_domain::Source;
+pub use reference::operations_reference_markdown;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 

@@ -84,7 +84,7 @@ fn render_parameters(out: &mut String, input: &Value) {
             } else {
                 "no"
             },
-            cell(description_text(schema)),
+            cell(&description_text(schema)),
         );
     }
 }
@@ -140,6 +140,6 @@ fn description_text(schema: &Value) -> String {
     parts.join(" ")
 }
 
-fn cell(text: String) -> String {
+fn cell(text: &str) -> String {
     text.replace('|', "\\|").replace('\n', " ")
 }
