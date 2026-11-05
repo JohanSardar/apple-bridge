@@ -644,6 +644,10 @@ mod tests {
                 json!({"title": "t", "body": "b", "action_url": "https://"}),
             ),
             (
+                "mac.notify",
+                json!({"title": "t", "body": "b", "action_url": "ftp://example.com/x"}),
+            ),
+            (
                 "mac.open_settings",
                 json!({"pane": "x-apple.systempreferences:com.apple.other"}),
             ),

@@ -53,6 +53,12 @@ extension AppleSession: NativeAdapter {
             guard args.object.isEmpty else { throw SourceFailure.unsupported }
             return nativeFacts(single: await FocusSource.frameworkStatus(), scope: "focus")
         }
+        if operation == "calendar.candidates" {
+            return NativeFacts(items: try await sources.calendar.candidates(args["query"]), scope: .string("calendar"), generation: "native/1", complete: true)
+        }
+        if operation == "calendar.account" {
+            return nativeFacts(single: await sources.calendar.account(args["calendar"].string), scope: "calendar")
+        }
         if operation == "mac.pasteboard" {
             guard args.object.isEmpty, let mac = additionalSources["mac"] as? MacSource else { throw SourceFailure.unsupported }
             return nativeFacts(single: try await mac.primitive("mac.pasteboard_policy", args: .object([:])), scope: "mac")
@@ -94,7 +100,7 @@ extension AppleSession: NativeAdapter {
 
     public func revalidate(_ operation: String, identities: [JSON]) async throws -> [String] {
         switch operation {
-        case "agenda.calendars", "agenda.events": return try await sources.calendar.revalidate(identities)
+        case "agenda.calendars": return try await sources.calendar.revalidate(identities)
         case "agenda.reminder_lists", "agenda.reminders": return try await sources.reminders.revalidate(identities)
         case "contacts.containers", "contacts.groups", "contacts.contacts": return try await sources.contacts.revalidate(identities)
         default: throw SourceFailure.unsupported

@@ -2,6 +2,7 @@ use super::{
     Arc, BTreeMap, CaptureReader, Debug, Duration, Error, Path, PathBuf, ScanContext, Value, json,
     native_facts, reader_error,
 };
+use crate::calendar_lookup::{self, Candidates, Lookups, Query};
 use ab_native::{agenda, calendar_store, capture, contacts, reminders_enrichment};
 
 #[derive(Debug)]
@@ -119,6 +120,7 @@ pub struct AgendaReader {
     replay: bool,
     store: Option<calendar_store::Enrichment>,
     reminders_store: Option<reminders_enrichment::Enrichment>,
+    lookups: Option<Arc<Lookups>>,
 }
 
 impl AgendaReader {
@@ -134,6 +136,7 @@ impl AgendaReader {
             replay: false,
             store: None,
             reminders_store: None,
+            lookups: None,
         }
     }
 
@@ -149,6 +152,7 @@ impl AgendaReader {
             replay: false,
             store: None,
             reminders_store: None,
+            lookups: None,
         }
     }
 
@@ -164,6 +168,7 @@ impl AgendaReader {
             replay: false,
             store: None,
             reminders_store: None,
+            lookups: None,
         }
     }
 
@@ -200,8 +205,31 @@ impl AgendaReader {
             return Ok(verdicts);
         }
         let mut grouped: BTreeMap<&'static str, Vec<Value>> = BTreeMap::new();
+        let now = jiff::Zoned::now();
         for previous in self.state.unaccounted(&facts.rows) {
             let collection = previous["collection"].as_str().unwrap_or_default();
+            if collection == "calendar.event"
+                && let Some(lookups) = &self.lookups
+            {
+                let native = previous["native_key"].as_str().ok_or(Error::Invalid)?;
+                let source = FactCandidates {
+                    client: pull.client(),
+                    fence,
+                };
+                let state =
+                    calendar_lookup::revalidate(&source, lookups, native, &previous["data"], &now)
+                        .map_err(|_| Error::Invalid)?;
+                let identity = format!("{collection}/{native}");
+                verdicts.insert(
+                    identity,
+                    match state {
+                        calendar_lookup::PRESENT => agenda::Revalidation::Present,
+                        calendar_lookup::MISSING => agenda::Revalidation::Absent,
+                        _ => agenda::Revalidation::Evict,
+                    },
+                );
+                continue;
+            }
             let Some(operation) = revalidation_operation(collection) else {
                 continue;
             };
@@ -246,6 +274,11 @@ impl AgendaReader {
             }
         }
         Ok(verdicts)
+    }
+
+    pub fn with_lookups(mut self, path: PathBuf) -> Result<Self, Error> {
+        self.lookups = Some(Arc::new(Lookups::open(Some(path))?));
+        Ok(self)
     }
 
     #[must_use]
@@ -312,6 +345,21 @@ impl AgendaReader {
             return Ok(());
         };
         let generation = collected.generation.clone();
+        if let Some(lookups) = &self.lookups {
+            for row in &mut collected.rows {
+                let Some(fields) = row.as_object_mut() else {
+                    continue;
+                };
+                if let Some(locator) = calendar_lookup::take_locator(fields) {
+                    let key = fields
+                        .get("native_key")
+                        .and_then(Value::as_str)
+                        .unwrap_or_default();
+                    lookups.remember(key, &locator)?;
+                }
+            }
+            lookups.save()?;
+        }
         self.enrich(&mut collected, &generation);
         let capture = json!({"generation": collected.generation, "observations": collected.rows, "blob_handles": collected.handles, "live": live});
         self.facts = Some(self.parse(&capture)?);
@@ -356,7 +404,45 @@ impl AgendaReader {
     }
 }
 
+struct FactCandidates<'a> {
+    client: &'a native_facts::Client,
+    fence: u64,
+}
+
+impl Candidates for FactCandidates<'_> {
+    fn candidates(&self, query: &Query) -> Result<Vec<Value>, String> {
+        self.client
+            .fetch_with(
+                self.fence,
+                "calendar.candidates",
+                &json!({"query": query.encode()}),
+            )
+            .map(|set| set.items)
+            .map_err(|_| "unavailable".to_owned())
+    }
+
+    fn calendar_account(&self, calendar: &str) -> Result<Option<String>, String> {
+        let set = self
+            .client
+            .fetch_with(
+                self.fence,
+                "calendar.account",
+                &json!({"calendar": calendar}),
+            )
+            .map_err(|_| "unavailable".to_owned())?;
+        Ok(set
+            .items
+            .first()
+            .and_then(|item| item["account"].as_str())
+            .map(str::to_owned))
+    }
+}
+
 impl CaptureReader for AgendaReader {
+    fn lookups(&self) -> Option<Arc<Lookups>> {
+        self.lookups.clone()
+    }
+
     fn source(&self) -> &'static str {
         self.source
     }

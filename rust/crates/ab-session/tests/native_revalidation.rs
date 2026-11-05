@@ -717,3 +717,51 @@ fn the_rust_store_enriches_pulled_reminders_from_the_store_and_never_invents_fie
     assert_eq!(list["data"]["badge_emblem"], "star");
     Ok(())
 }
+
+#[test]
+fn with_a_lookup_table_rust_decides_whether_an_unlisted_event_is_gone() -> Fallible<()> {
+    let (world, client) = rig()?;
+    let table = std::env::temp_dir().join(format!("ab-lookups-reader-{}.json", std::process::id()));
+    let _ = std::fs::remove_file(&table);
+    let mut reader = calendar_reader(&client).with_lookups(table.clone())?;
+    let mut clock = Clock(0);
+    let start = (jiff::Timestamp::now() + jiff::SignedDuration::from_hours(24)).to_string();
+    let row = |key: &str| {
+        let mut row = event(key, "synthetic");
+        row["data"]["start"] = json!(start);
+        row["locator"] = json!({"event_identifier": key, "calendar": "c", "account": "a", "external": "", "occurrence": null});
+        row
+    };
+    set(&world, "agenda.calendars", vec![calendar("c")])?;
+    set(&world, "agenda.events", vec![row("kept"), row("gone")])?;
+    let first = pull(&mut reader, &mut clock)?.ok_or("first pull")?;
+    assert!(
+        first["observations"]
+            .as_array()
+            .ok_or("rows")?
+            .iter()
+            .all(|row| row.get("locator").is_none())
+    );
+    let saved: Value = serde_json::from_slice(&std::fs::read(&table)?)?;
+    assert_eq!(saved["kept"]["event_identifier"], "kept");
+
+    set(&world, "agenda.events", vec![])?;
+    set(
+        &world,
+        "calendar.candidates",
+        vec![
+            json!({"can_materialize": true, "key": "kept", "calendar": "c", "account": "a", "all_day": false, "start": start, "end": start}),
+        ],
+    )?;
+    let second = pull(&mut reader, &mut clock)?.ok_or("second pull")?;
+    assert_eq!(kinds(&second, "absent"), ["gone"]);
+    let asked = world.lock().map_err(|_| "poisoned")?.requests.clone();
+    assert!(
+        !asked
+            .iter()
+            .any(|frame| frame["t"] == "Revalidate" && frame["op"] == "agenda.events"),
+        "Swift is not asked to decide"
+    );
+    std::fs::remove_file(&table)?;
+    Ok(())
+}
