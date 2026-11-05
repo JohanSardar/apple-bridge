@@ -142,7 +142,12 @@ async fn current(app: &App, headers: &HeaderMap) -> Result<Session> {
         .get(header::COOKIE)
         .and_then(|value| value.to_str().ok())
         .ok_or(Error::Unauthorized)?;
-    app.accounts.session(cookie).await
+    let source = headers
+        .get("x-forwarded-for")
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.split(',').next())
+        .map_or("127.0.0.1", str::trim);
+    app.accounts.session(cookie, source).await
 }
 
 async fn dashboard(State(app): State<App>, headers: HeaderMap) -> Response {
@@ -197,7 +202,7 @@ async fn proxy_accounts(
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
     request: Request,
 ) -> Response {
-    if request.uri().path() == "/api/auth/delete-user" {
+    if request.uri().path().starts_with("/api/auth/delete-user") {
         return Error::Forbidden.into_response();
     }
     let (parts, body) = request.into_parts();

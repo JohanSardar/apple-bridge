@@ -72,6 +72,7 @@ fn options() -> std::result::Result<HashMap<String, String>, Box<dyn std::error:
             "app-slots",
             "source-slots",
             "first-request-timeout",
+            "keep-alive-timeout",
         ]
         .contains(&key.as_str())
         {
@@ -110,6 +111,7 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
     server.capacity = configured_capacity(&args)?;
     let deadlines = ConnectionDeadlines {
         first_request: humantime::parse_duration(&get("first-request-timeout", "10s"))?,
+        idle: humantime::parse_duration(&get("keep-alive-timeout", "30s"))?,
         ..ConnectionDeadlines::default()
     };
     let control_slots = Arc::new(Semaphore::new(server.capacity.control));
@@ -173,7 +175,14 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
         ));
     }
     let own_listener = control.map(|listener| (listener, control_slots));
-    let api_task = serve_control(own_listener, control_rx, make, acceptor, stop_api, deadlines);
+    let api_task = serve_control(
+        own_listener,
+        control_rx,
+        make,
+        acceptor,
+        stop_api,
+        deadlines,
+    );
     tokio::select! { result = server.serve(public,stop.clone()) => result?, () = api_task => {} }
     stop.cancel();
     Ok(())
@@ -237,6 +246,7 @@ async fn control_tls(
     Ok(builder.with_single_cert(certs, key)?)
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn serve_app(
     path: PathBuf,
     host: String,
@@ -341,13 +351,14 @@ fn configured_capacity(
     args: &HashMap<String, String>,
 ) -> std::result::Result<Capacity, Box<dyn std::error::Error>> {
     let defaults = Capacity::default();
-    let slots = |key: &str, default: usize| -> std::result::Result<usize, Box<dyn std::error::Error>> {
-        let value = args.get(key).map_or(Ok(default), |value| value.parse())?;
-        if value == 0 {
-            return Err(format!("{key} must be positive").into());
-        }
-        Ok(value)
-    };
+    let slots =
+        |key: &str, default: usize| -> std::result::Result<usize, Box<dyn std::error::Error>> {
+            let value = args.get(key).map_or(Ok(default), |value| value.parse())?;
+            if value == 0 {
+                return Err(format!("{key} must be positive").into());
+            }
+            Ok(value)
+        };
     Ok(Capacity {
         unrouted: slots("unrouted-slots", defaults.unrouted)?,
         tenant: slots("tenant-slots", defaults.tenant)?,

@@ -5,7 +5,9 @@ use ab_relay::{
     server::Server,
     store::{Limits, Store},
 };
-use ab_remote::{Gateway, Ingress, certificate::Certificates, relay::Identity, relay::Relay, state};
+use ab_remote::{
+    Gateway, Ingress, certificate::Certificates, relay::Identity, relay::Relay, state,
+};
 use futures_util::{SinkExt, StreamExt};
 use hyper_util::{
     rt::{TokioExecutor, TokioIo},
@@ -255,10 +257,7 @@ async fn a_visitor_that_drops_without_close_notify_releases_the_mac_connection()
     for visit in 1..=8 {
         let socket = TcpStream::connect(fixture.public).await.unwrap();
         let mut secure = connector
-            .connect(
-                ServerName::try_from(tunnel.host.clone()).unwrap(),
-                socket,
-            )
+            .connect(ServerName::try_from(tunnel.host.clone()).unwrap(), socket)
             .await
             .unwrap();
         secure.write_all(b"GET / HTTP/1.1\r\n\r\n").await.unwrap();
@@ -292,9 +291,11 @@ async fn a_visitor_that_drops_without_close_notify_releases_the_mac_connection()
 async fn a_large_response_reaches_the_visitor_before_the_stream_closes() {
     let fixture = fixture(4).await;
     let body = vec![b'x'; 3 << 20];
-    let mut response =
-        format!("HTTP/1.1 200 OK\r\ncontent-length: {}\r\nconnection: close\r\n\r\n", body.len())
-            .into_bytes();
+    let mut response = format!(
+        "HTTP/1.1 200 OK\r\ncontent-length: {}\r\nconnection: close\r\n\r\n",
+        body.len()
+    )
+    .into_bytes();
     response.extend_from_slice(&body);
     let (upstream, _origin) = counting_origin(response.clone()).await;
     let tunnel = real_tunnel(&fixture, upstream).await;
@@ -343,9 +344,12 @@ async fn fake_mac(fixture: &Fixture, features: Option<&str>) -> FakeMac {
         .unwrap();
     let _: Identity = state::read(home.path(), "relay").unwrap();
     let proof = identity.proof(&http, "tunnel").await.unwrap();
-    let mut request = format!("{}/tunnel", fixture.endpoint.replacen("https://", "wss://", 1))
-        .into_client_request()
-        .unwrap();
+    let mut request = format!(
+        "{}/tunnel",
+        fixture.endpoint.replacen("https://", "wss://", 1)
+    )
+    .into_client_request()
+    .unwrap();
     request.headers_mut().insert(
         "X-Bridge-Proof",
         proof.encode_header().unwrap().parse().unwrap(),
@@ -568,7 +572,7 @@ async fn a_mac_from_before_this_release_gets_only_the_frames_it_understands() {
             .all(|command| matches!(*command, SYN | FIN | DATA | WINDOW_UPDATE)),
         "unknown frames reached an old Mac: {seen:?}"
     );
-    assert_eq!(seen.get(&DATA).copied().unwrap_or(0) > 0, true);
+    assert!(seen.get(&DATA).copied().unwrap_or(0) > 0);
     assert!(!mac.closed.is_cancelled());
     fixture.stop.cancel();
 }
@@ -587,7 +591,7 @@ async fn a_mac_that_asks_for_it_learns_the_address_the_relay_accepted() {
     fixture.stop.cancel();
 }
 
-async fn stalling_origin() -> (SocketAddr, Origin) {
+fn stalling_origin() -> (SocketAddr, Origin) {
     let socket = tokio::net::TcpSocket::new_v4().unwrap();
     socket.set_recv_buffer_size(4096).unwrap();
     socket.bind("127.0.0.1:0".parse().unwrap()).unwrap();
@@ -621,7 +625,7 @@ async fn stalling_origin() -> (SocketAddr, Origin) {
 #[tokio::test]
 async fn a_gateway_that_stops_reading_one_stream_does_not_stall_the_mac_tunnel() {
     let fixture = fixture(8).await;
-    let (upstream, _origin) = stalling_origin().await;
+    let (upstream, _origin) = stalling_origin();
     let tunnel = real_tunnel(&fixture, upstream).await;
     let connector = visitor_tls(tunnel.site.clone());
     let socket = TcpStream::connect(fixture.public).await.unwrap();
@@ -678,6 +682,15 @@ async fn a_visitor_that_stalls_the_tls_handshake_is_closed_by_the_mac() {
     fixture.stop.cancel();
 }
 
+async fn closes_within(stream: &mut TcpStream, within: Duration) -> bool {
+    let mut buffer = [0u8; 4096];
+    tokio::time::timeout(within, async {
+        while stream.read(&mut buffer).await.is_ok_and(|n| n > 0) {}
+    })
+    .await
+    .is_ok()
+}
+
 #[tokio::test]
 async fn visitors_past_the_mac_stream_limit_cost_only_those_visitors() {
     let fixture = fixture(64).await;
@@ -688,24 +701,13 @@ async fn visitors_past_the_mac_stream_limit_cost_only_those_visitors() {
     for _ in 0..40 {
         rest.push(visitor(fixture.public, &tunnel.host).await);
     }
-    let mut closed = false;
-    if let Some(last) = rest.last_mut() {
-        let mut buffer = [0u8; 4096];
-        for _ in 0..20 {
-            match tokio::time::timeout(Duration::from_secs(1), last.read(&mut buffer)).await {
-                Ok(Ok(0) | Err(_)) => {
-                    closed = true;
-                    break;
-                }
-                Ok(Ok(_)) | Err(_) => {}
-            }
-        }
-    }
-    assert!(closed, "a stream past the Mac's limit was never refused");
-    let mut buffer = [0u8; 4096];
-    let early = tokio::time::timeout(Duration::from_secs(1), first.read(&mut buffer)).await;
+    let last = rest.last_mut().unwrap();
     assert!(
-        !matches!(early, Ok(Ok(0) | Err(_))),
+        closes_within(last, Duration::from_secs(5)).await,
+        "a stream past the Mac's limit was never refused"
+    );
+    assert!(
+        !closes_within(&mut first, Duration::from_secs(2)).await,
         "a stream under the limit died with the tunnel"
     );
     tunnel.stop.send(true).unwrap();

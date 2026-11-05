@@ -30,7 +30,13 @@ fn router(dir: &tempfile::TempDir) -> Router {
     Arc::new(Api::new(server, "admin-token".into()).unwrap()).router()
 }
 
-async fn send(router: &Router, method: &str, path: &str, source: &str, body: &Value) -> (StatusCode, Value) {
+async fn send(
+    router: &Router,
+    method: &str,
+    path: &str,
+    source: &str,
+    body: &Value,
+) -> (StatusCode, Value) {
     let address: SocketAddr = format!("{source}:1").parse().unwrap();
     let mut request = Request::builder()
         .method(method)
@@ -45,7 +51,10 @@ async fn send(router: &Router, method: &str, path: &str, source: &str, body: &Va
     let bytes = axum::body::to_bytes(response.into_body(), 1 << 16)
         .await
         .unwrap();
-    (status, serde_json::from_slice(&bytes).unwrap_or(Value::Null))
+    (
+        status,
+        serde_json::from_slice(&bytes).unwrap_or(Value::Null),
+    )
 }
 
 #[tokio::test]
@@ -119,7 +128,11 @@ async fn a_flood_of_challenges_cannot_stop_a_mac_getting_a_usable_one() {
     }
     let (status, value) = send(&router, "GET", "/challenge", "203.0.113.9", &Value::Null).await;
     assert_eq!(status, StatusCode::OK);
-    assert!(value["nonce"].as_str().is_some_and(|nonce| !nonce.is_empty()));
+    assert!(
+        value["nonce"]
+            .as_str()
+            .is_some_and(|nonce| !nonce.is_empty())
+    );
 }
 
 #[tokio::test]

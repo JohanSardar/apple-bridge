@@ -12,7 +12,7 @@ pub struct Session {
 }
 
 pub trait Accounts: Send + Sync {
-    fn session<'a>(&'a self, cookie: &'a str) -> SessionFuture<'a>;
+    fn session<'a>(&'a self, cookie: &'a str, source: &'a str) -> SessionFuture<'a>;
 }
 
 #[derive(Debug, Clone)]
@@ -49,12 +49,13 @@ struct CurrentSession {
     created_at: String,
 }
 impl Accounts for BetterAuth {
-    fn session<'a>(&'a self, cookie: &'a str) -> SessionFuture<'a> {
+    fn session<'a>(&'a self, cookie: &'a str, source: &'a str) -> SessionFuture<'a> {
         Box::pin(async move {
             let response = self
                 .client
                 .get(format!("{}/api/auth/get-session", self.url))
                 .header("cookie", cookie)
+                .header("x-forwarded-for", source)
                 .send()
                 .await
                 .map_err(|_| Error::Unavailable)?;

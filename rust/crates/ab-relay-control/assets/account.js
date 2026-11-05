@@ -67,8 +67,8 @@ el('device-lookup')?.addEventListener('submit', guard(async event => {
   el('device-fingerprint').textContent = grant.fingerprint;
   el('device-age').textContent = grant.age_seconds == null ? 'Unknown' : grant.age_seconds < 60 ? 'Just now' : `${Math.round(grant.age_seconds / 60)} minutes ago`;
   el('device-source').textContent = grant.source ?? 'Unknown';
-  el('device-network').textContent = grant.same_network === true ? 'This Mac is on the same network as this browser.' : 'This Mac is not on the same network as this browser. That is expected only if you are linking a Mac somewhere else.';
-  el('device-network').className = grant.same_network === true ? 'muted small' : 'status small error';
+  el('device-network').textContent = grant.same_network === true ? 'This Mac is on the same network as this browser.' : grant.same_network === false ? 'This Mac is not on the same network as this browser. That is expected only if you are linking a Mac somewhere else.' : '';
+  el('device-network').className = grant.same_network === false ? 'status small error' : 'muted small';
   el('device-mine').checked = false;
   el('device-allow').disabled = true;
   el('device-confirm').hidden = false;

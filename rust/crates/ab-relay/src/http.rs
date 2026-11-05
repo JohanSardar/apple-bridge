@@ -300,8 +300,7 @@ async fn handle(
             let Some(proof) = header_proof(&headers) else {
                 return error(403, "denied");
             };
-            if !api.nonce_is_live(&proof)
-                || !api.server.store.lock().await.verify(&proof, "tunnel")
+            if !api.nonce_is_live(&proof) || !api.server.store.lock().await.verify(&proof, "tunnel")
             {
                 return error(403, "denied");
             }
@@ -313,9 +312,9 @@ async fn handle(
                     .get(ab_wire::framing::TUNNEL_FEATURES_HEADER)
                     .and_then(|value| value.to_str().ok())
                     .is_some_and(|value| {
-                        value
-                            .split(',')
-                            .any(|feature| feature.trim() == ab_wire::framing::TUNNEL_FEATURE_SOURCE)
+                        value.split(',').any(|feature| {
+                            feature.trim() == ab_wire::framing::TUNNEL_FEATURE_SOURCE
+                        })
                     }),
             };
             ws.max_message_size(4 << 20)
@@ -526,8 +525,7 @@ async fn certificate(api: &Api, body: &[u8]) -> Response {
         return error(403, "denied");
     }
     let mut store = api.server.store.lock().await;
-    if !store.verify(&input.proof, &format!("certificate:{}", input.fingerprint))
-    {
+    if !store.verify(&input.proof, &format!("certificate:{}", input.fingerprint)) {
         return error(403, "denied");
     }
     match store.certificate(&input.proof.hostname, &input.fingerprint) {

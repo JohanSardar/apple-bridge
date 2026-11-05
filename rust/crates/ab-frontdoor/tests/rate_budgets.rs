@@ -48,18 +48,11 @@ impl Fixture {
             let address: SocketAddr = source.parse().unwrap();
             request.extensions_mut().insert(ConnectInfo(address));
         }
-        self.router
-            .clone()
-            .oneshot(request)
-            .await
-            .unwrap()
-            .status()
+        self.router.clone().oneshot(request).await.unwrap().status()
     }
     async fn exhaust(&self, source: Option<&str>) -> usize {
         for attempt in 0..1000 {
-            let status = self
-                .post("/auth/login/options", &json!({}), source)
-                .await;
+            let status = self.post("/auth/login/options", &json!({}), source).await;
             if status == StatusCode::TOO_MANY_REQUESTS {
                 return attempt;
             }
@@ -90,8 +83,12 @@ async fn addresses_inside_one_ipv6_network_share_a_budget() {
     let f = fixture();
     f.exhaust(Some("[2001:db8:1:2::1]:0")).await;
     assert_eq!(
-        f.post("/auth/login/options", &json!({}), Some("[2001:db8:1:2::9]:0"))
-            .await,
+        f.post(
+            "/auth/login/options",
+            &json!({}),
+            Some("[2001:db8:1:2::9]:0")
+        )
+        .await,
         StatusCode::TOO_MANY_REQUESTS
     );
 }

@@ -52,8 +52,12 @@ impl Relay {
 
     async fn start_with(control: Control, open_file_limit: Option<u32>, extra: &[&str]) -> Self {
         let dir = TempDir::new().unwrap();
-        let identity =
-            rcgen::generate_simple_self_signed(vec![CONTROL_HOST.into(), APP_HOST.into()]).unwrap();
+        let identity = rcgen::generate_simple_self_signed(vec![
+            CONTROL_HOST.into(),
+            APP_HOST.into(),
+            "localhost".into(),
+        ])
+        .unwrap();
         let certificate = identity.cert.pem();
         let key = identity.signing_key.serialize_pem();
         let cert_path = dir.path().join("control-cert.pem");
@@ -429,4 +433,128 @@ async fn one_address_cannot_hold_more_than_its_share_of_anonymous_connections() 
             .expect("another address was refused"),
         StatusCode::OK
     );
+}
+
+#[tokio::test]
+async fn an_attached_tunnel_outlives_every_connection_deadline() {
+    use ab_remote::{Gateway, Ingress, certificate::Certificates, relay::Relay as MacRelay};
+    let relay = Relay::start_with(
+        Control::OwnListener,
+        None,
+        &[
+            "--first-request-timeout",
+            "1s",
+            "--keep-alive-timeout",
+            "1s",
+        ],
+    )
+    .await;
+    let endpoint = format!("https://localhost:{}", relay.control.port());
+    let root = relay.certificate.clone();
+    let http = reqwest::Client::builder()
+        .no_proxy()
+        .add_root_certificate(reqwest::Certificate::from_der(&root).unwrap())
+        .build()
+        .unwrap();
+    let mut roots = rustls::RootCertStore::empty();
+    roots.add(root).unwrap();
+    let tls = rustls::ClientConfig::builder_with_provider(Arc::new(
+        rustls::crypto::ring::default_provider(),
+    ))
+    .with_safe_default_protocol_versions()
+    .unwrap()
+    .with_root_certificates(roots)
+    .with_no_client_auth();
+    let home = TempDir::new().unwrap();
+    let identity = ab_remote::relay::enroll(home.path(), &endpoint, CONTROL_HOST, &http)
+        .await
+        .unwrap();
+    let host = identity.credential.hostname;
+    let site = rcgen::generate_simple_self_signed(vec![host.clone()]).unwrap();
+    let remote = home.path().join("remote");
+    fs::create_dir_all(&remote).unwrap();
+    fs::write(remote.join("relay-cert.pem"), site.cert.pem()).unwrap();
+    fs::write(
+        remote.join("relay-key.pem"),
+        site.signing_key.serialize_pem(),
+    )
+    .unwrap();
+    let origin = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let origin_address = origin.local_addr().unwrap();
+    tokio::spawn(async move {
+        while let Ok((mut socket, _)) = origin.accept().await {
+            tokio::spawn(async move {
+                let mut buffer = [0u8; 1024];
+                let _ = socket.read(&mut buffer).await;
+                let _ = socket
+                    .write_all(
+                        b"HTTP/1.1 200 OK\r\ncontent-length: 2\r\nconnection: close\r\n\r\nok",
+                    )
+                    .await;
+                let _ = socket.shutdown().await;
+            });
+        }
+    });
+    let adapter = MacRelay {
+        home: home.path().to_owned(),
+        endpoint,
+        zone: CONTROL_HOST.into(),
+        client: http,
+        certificates: Arc::new(Certificates::new(
+            home.path().to_owned(),
+            "https://acme.invalid/directory".into(),
+        )),
+        tls: Arc::new(tls),
+        domain: String::new(),
+        resolver: None,
+        domain_poll: Duration::from_millis(100),
+    };
+    let (statuses, observed) = tokio::sync::watch::channel(std::collections::BTreeMap::new());
+    let gateway = Gateway::new(origin_address).with_status(statuses);
+    let (stop, stopped) = tokio::sync::watch::channel(false);
+    tokio::spawn(async move { adapter.run(gateway, stopped).await });
+    for _ in 0..200 {
+        if observed
+            .borrow()
+            .get("relay")
+            .is_some_and(|entry| entry.active)
+        {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(25)).await;
+    }
+    assert!(
+        observed
+            .borrow()
+            .get("relay")
+            .is_some_and(|entry| entry.active)
+    );
+    tokio::time::sleep(Duration::from_secs(4)).await;
+    assert!(
+        observed
+            .borrow()
+            .get("relay")
+            .is_some_and(|entry| entry.active),
+        "the tunnel was cut off by a deadline meant for ordinary requests"
+    );
+    let mut roots = rustls::RootCertStore::empty();
+    roots.add(site.cert.der().clone()).unwrap();
+    let config = rustls::ClientConfig::builder_with_provider(Arc::new(
+        rustls::crypto::ring::default_provider(),
+    ))
+    .with_safe_default_protocol_versions()
+    .unwrap()
+    .with_root_certificates(roots)
+    .with_no_client_auth();
+    let socket = TcpStream::connect(relay.public).await.unwrap();
+    let mut visit = tokio_rustls::TlsConnector::from(Arc::new(config))
+        .connect(ServerName::try_from(host).unwrap(), socket)
+        .await
+        .unwrap();
+    visit.write_all(b"GET / HTTP/1.1\r\n\r\n").await.unwrap();
+    visit.flush().await.unwrap();
+    let mut reply = Vec::new();
+    let _ = tokio::time::timeout(Duration::from_secs(5), visit.read_to_end(&mut reply)).await;
+    assert!(reply.ends_with(b"ok"));
+    stop.send(true).unwrap();
 }
