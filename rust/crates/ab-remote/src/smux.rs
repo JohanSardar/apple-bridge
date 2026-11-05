@@ -398,7 +398,7 @@ mod tests {
             for id in 0..u32::try_from(MAX_STREAMS * 200).unwrap() {
                 let opened = frame(0, id * 2 + 2, &[]).unwrap();
                 if relay.send(Message::Binary(opened.into())).await.is_err() {
-                    return;
+                    break;
                 }
             }
             std::future::pending::<()>().await;
