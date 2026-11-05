@@ -17,6 +17,8 @@ pub(crate) fn validate(c: &Command, now: Timestamp) -> Result<Args, Error> {
         notes(c, &a)?;
     } else if op.starts_with("messages.") {
         messages(c, &a)?;
+    } else if op.starts_with("mail.") {
+        mail(c, &a)?;
     } else if op.starts_with("mac.") && op != "mac.screen_record" {
         mac(c, &a)?;
     } else if op.starts_with("files.") {
@@ -124,6 +126,8 @@ pub(crate) fn shape(op: &str) -> &'static str {
         "NoteArgs"
     } else if op.starts_with("messages.") {
         "MessagesArgs"
+    } else if op.starts_with("mail.") {
+        "MailArgs"
     } else if op.starts_with("files.") {
         "FileArgs"
     } else if op == "mac.screen_record"
@@ -446,6 +450,34 @@ fn calendar(c: &Command, a: &Args) -> Result<(), Error> {
         }
     }
     check(!p(a, "availability") || (-1.0..=3.0).contains(&n(a, "availability")))
+}
+fn mail(c: &Command, a: &Args) -> Result<(), Error> {
+    match c.op.as_str() {
+        "mail.create_draft" | "mail.send" => {
+            check(!arr(a, "to").is_empty() && !s(a, "subject").is_empty())?;
+            for address in arr(a, "to").iter().chain(arr(a, "cc")) {
+                check(
+                    address
+                        .as_str()
+                        .is_some_and(ab_wire::native::mail_recipient),
+                )?;
+            }
+            if !arr(a, "attachments").is_empty()
+                || !s(a, "reply_to").is_empty()
+                || !s(a, "forward_of").is_empty()
+            {
+                return Err(Error::Unsupported);
+            }
+            Ok(())
+        }
+        "mail.move" => check(
+            !s(a, "id").is_empty() && !s(a, "mailbox").is_empty() && !s(a, "account").is_empty(),
+        ),
+        "mail.set_flag" => check(!s(a, "id").is_empty() && p(a, "flagged")),
+        "mail.mark_read" => check(!s(a, "id").is_empty() && p(a, "read")),
+        "mail.delete" => check(!s(a, "id").is_empty()),
+        _ => Err(Error::Unsupported),
+    }
 }
 fn safe(path: &str) -> bool {
     !path.starts_with('/')
@@ -900,4 +932,91 @@ fn action_url(raw: &str) -> bool {
         }
     }
     true
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod mail_tests {
+    use super::validate;
+    use crate::{ActionContext, Command, Error, native_action};
+    use serde_json::{Value, json};
+
+    fn command(op: &str, args: &Value) -> Command {
+        Command {
+            id: "cmd".into(),
+            op: op.into(),
+            args: serde_json::value::RawValue::from_string(args.to_string()).unwrap(),
+            expected_version: 0,
+            wait_ms: 0,
+        }
+    }
+
+    fn checked(op: &str, args: &Value) -> Result<(), Error> {
+        validate(&command(op, args), jiff::Timestamp::now()).map(|_| ())
+    }
+
+    #[test]
+    fn a_plain_draft_passes_and_reaches_the_native_action() {
+        let args =
+            json!({"to": ["a@example.com"], "cc": ["b@example.com"], "subject": "s", "body": "b"});
+        checked("mail.create_draft", &args).unwrap();
+        checked("mail.send", &args).unwrap();
+        let context = ActionContext {
+            origin: String::new(),
+            ..ActionContext::default()
+        };
+        let action: Value = serde_json::from_slice(
+            &native_action(&command("mail.create_draft", &args), &context).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(action["op"], "mail.create_draft");
+        assert_eq!(action["args"], args);
+    }
+
+    #[test]
+    fn who_mail_can_reach_is_refused_before_any_effect() {
+        for op in ["mail.create_draft", "mail.send"] {
+            for args in [
+                json!({"subject": "s"}),
+                json!({"to": [], "subject": "s"}),
+                json!({"to": ["a@example.com"]}),
+                json!({"to": ["a@example.com"], "subject": ""}),
+                json!({"to": ["plain"], "subject": "s"}),
+                json!({"to": ["a@example.com, b@example.com"], "subject": "s"}),
+                json!({"to": ["a@example.com\nbcc: b@example.com"], "subject": "s"}),
+                json!({"to": ["Name <a@example.com>"], "subject": "s"}),
+                json!({"to": ["a@example.com"], "cc": ["nope"], "subject": "s"}),
+                json!({"to": ["a@example.com"], "bcc": ["b@example.com"], "subject": "s"}),
+            ] {
+                assert_eq!(checked(op, &args), Err(Error::Invalid), "{op} {args}");
+            }
+            for args in [
+                json!({"to": ["a@example.com"], "subject": "s", "attachments": ["x"]}),
+                json!({"to": ["a@example.com"], "subject": "s", "reply_to": "1"}),
+                json!({"to": ["a@example.com"], "subject": "s", "forward_of": "1"}),
+            ] {
+                assert_eq!(checked(op, &args), Err(Error::Unsupported), "{op} {args}");
+            }
+        }
+    }
+
+    #[test]
+    fn message_commands_name_the_message_and_the_change() {
+        checked("mail.delete", &json!({"id": "m"})).unwrap();
+        checked("mail.set_flag", &json!({"id": "m", "flagged": false})).unwrap();
+        checked("mail.mark_read", &json!({"id": "m", "read": true})).unwrap();
+        checked(
+            "mail.move",
+            &json!({"id": "m", "mailbox": "A", "account": "B"}),
+        )
+        .unwrap();
+        for (op, args) in [
+            ("mail.delete", json!({})),
+            ("mail.set_flag", json!({"id": "m"})),
+            ("mail.mark_read", json!({"id": "m"})),
+            ("mail.move", json!({"id": "m", "mailbox": "A"})),
+        ] {
+            assert_eq!(checked(op, &args), Err(Error::Invalid), "{op}");
+        }
+    }
 }

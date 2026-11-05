@@ -20,6 +20,9 @@ impl ActionResolver for Actions {
         if command.op.starts_with("mac.") && command.op != "mac.screen_record" {
             return mac_action(command);
         }
+        if command.op.starts_with("mail.") {
+            return self.mail(principal, command);
+        }
         if native_command(&command.op) {
             return native_action(command);
         }
@@ -52,6 +55,9 @@ impl ActionResolver for Actions {
             return Ok(problem);
         }
         let args: Value = serde_json::from_str(command.args.get()).map_err(|_| Code::Invalid)?;
+        if command.op.starts_with("mail.") && args["id"].is_null() {
+            return Ok(problem);
+        }
         let id = args["id"].as_str().ok_or(Code::Corrupt)?;
         let collection = collection(&command.op);
         let native_key = self.state.with(|state| state.native_key(collection, id))?;
@@ -98,7 +104,9 @@ impl ActionResolver for Actions {
 }
 
 fn collection(op: &str) -> &str {
-    if op.starts_with("calendar.") {
+    if op.starts_with("mail.") {
+        "mail.message"
+    } else if op.starts_with("calendar.") {
         "calendar.event"
     } else if op.starts_with("contacts.") {
         if op.contains("group") || op.ends_with("_member") {
@@ -181,6 +189,56 @@ fn command_error(error: ab_commands::Error) -> Error {
 }
 
 impl Actions {
+    fn mail(&self, principal: &Principal, command: &Command) -> Result<PreparedAction, Error> {
+        let shaped = ab_commands::Command {
+            id: command.id.clone(),
+            op: command.op.clone(),
+            args: command.args.clone(),
+            expected_version: command.expected_version,
+            wait_ms: i64::try_from(command.wait_ms).map_err(|_| Code::Invalid)?,
+        };
+        ab_commands::validate(&shaped, jiff::Timestamp::now()).map_err(command_error)?;
+        let args: Value = serde_json::from_str(command.args.get()).map_err(|_| Code::Invalid)?;
+        let id = args["id"].as_str().unwrap_or_default();
+        let mut context = ab_commands::ActionContext {
+            origin: command.origin.clone(),
+            ..ab_commands::ActionContext::default()
+        };
+        if !id.is_empty() {
+            let visibility = ab_operations::state_visibility(&principal.visibility());
+            let record =
+                self.state.with(|state| {
+                    let result = state.read(
+                        &visibility,
+                        &ab_state::ReadQuery {
+                            collection: "mail.message".into(),
+                            id: id.into(),
+                            ..ab_state::ReadQuery::default()
+                        },
+                    )?;
+                    result.records.into_iter().next().ok_or_else(|| {
+                        ab_state::Error::Contract(ab_trust::domain::ErrorCode::NotFound)
+                    })
+                })?;
+            if record.version != command.expected_version {
+                let mut error = Error::from(Code::Conflict);
+                error.current =
+                    Some(serde_json::value::to_raw_value(&record).map_err(|_| Code::Corrupt)?);
+                return Err(error);
+            }
+            context.native_key = self
+                .state
+                .with(|state| state.native_key("mail.message", id))?;
+        }
+        let bytes = ab_commands::native_action(&shaped, &context).map_err(command_error)?;
+        Ok(PreparedAction {
+            action: serde_json::from_slice(&bytes).map_err(|_| Code::Corrupt)?,
+            expected_state: None,
+            collection: "mail.message".into(),
+            serialization_key: if id.is_empty() { "mail" } else { id }.into(),
+        })
+    }
+
     #[allow(clippy::too_many_lines)]
     fn prepare(&self, principal: &Principal, command: &Command) -> Result<PreparedAction, Error> {
         if !["reminders.", "contacts.", "notes."]
