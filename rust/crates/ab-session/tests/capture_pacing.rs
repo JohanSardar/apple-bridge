@@ -9,7 +9,7 @@ use std::{
         Arc, Mutex,
         atomic::{AtomicBool, AtomicUsize, Ordering},
     },
-    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
+    time::{Duration, Instant},
 };
 
 type Fallible<T> = Result<T, Box<dyn std::error::Error>>;
@@ -53,13 +53,7 @@ impl readers::CaptureReader for Probe {
 }
 
 fn scratch() -> Fallible<PathBuf> {
-    let directory = std::env::temp_dir().join(format!(
-        "ab-pacing-{}-{}",
-        std::process::id(),
-        SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos()
-    ));
-    std::fs::create_dir_all(&directory)?;
-    Ok(directory)
+    support::temporary("pacing")
 }
 
 #[test]

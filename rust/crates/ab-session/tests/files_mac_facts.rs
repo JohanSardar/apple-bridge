@@ -308,8 +308,7 @@ fn rust_walks_files_and_asks_swift_only_for_ubiquity() -> Fallible<()> {
     commit(&mut w, "files", &first, size)?;
     assert!(silent(&mut w.gateway)?);
 
-    std::fs::remove_file(root.join("a.txt"))?;
-    write(&root.join("c.md"), b"gamma")?;
+    std::fs::rename(root.join("a.txt"), root.join("c.md"))?;
     let (size, second) = receive(&mut w.gateway)?;
     assert_eq!(second["predecessor"], first["checkpoint"]);
     assert_eq!(second["live"], true);
