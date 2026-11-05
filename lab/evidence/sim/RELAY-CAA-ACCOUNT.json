@@ -1,0 +1,56 @@
+{
+ "impl": "rust",
+ "implementations": {
+  "gateway": "rust"
+ },
+ "scenario": "RELAY-CAA-ACCOUNT",
+ "level": "sim",
+ "passed": true,
+ "git_sha": "cf0b6efb3576209c34ea0a6c9f01e1b0f7ddbbd9",
+ "at": "2026-11-05T20:23:20Z",
+ "hosts": [
+  "ubuntu"
+ ],
+ "assertions": [
+  {
+   "name": "rust_fixture_executed",
+   "passed": true
+  },
+  {
+   "name": "enrollment_caa_records",
+   "passed": true
+  },
+  {
+   "name": "wrong_account_denied",
+   "passed": true
+  },
+  {
+   "name": "wrong_method_denied",
+   "passed": true
+  },
+  {
+   "name": "alternate_issuer_denied",
+   "passed": true
+  },
+  {
+   "name": "wildcard_denied",
+   "passed": true
+  },
+  {
+   "name": "signed_rotation_recovery",
+   "passed": true
+  },
+  {
+   "name": "cname_target_policy",
+   "passed": true
+  },
+  {
+   "name": "dns_operator_residual_risk",
+   "passed": true
+  },
+  {
+   "name": "dns_failure_preserves_binding",
+   "passed": true
+  }
+ ]
+}
