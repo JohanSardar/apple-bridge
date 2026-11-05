@@ -203,6 +203,37 @@ fn rust_calls_voicemail_and_voice_memos_are_routed() -> Fallible<()> {
     Ok(())
 }
 
+#[test]
+fn a_call_history_locked_during_a_scan_is_scanned_again_once_free() -> Fallible<()> {
+    let directory = temporary("locked-phone")?;
+    media_fixture("phone", &directory, Some(101))?;
+    let holder = rusqlite::Connection::open(directory.join("CallHistory.storedata"))?;
+    holder.execute_batch("BEGIN EXCLUSIVE")?;
+    let sources = readers::from_config(&json!({"phone":{"root":directory}}).to_string())?;
+    let options = Options {
+        poll: Duration::from_millis(20),
+        ..Options::default()
+    };
+    let support::Wire {
+        mut gateway,
+        link: helper,
+        worker,
+        home: _,
+    } = support::wire(sources, options, json!({}))?;
+    expect_silence(&mut gateway)?;
+
+    holder.execute_batch("ROLLBACK")?;
+    let (_, capture) = receive(&mut gateway)?;
+    assert_eq!(capture["source"], "phone");
+    assert_eq!(capture["observations"][0]["kind"], "upsert");
+
+    drop(gateway);
+    drop(helper);
+    let _ = worker.join();
+    std::fs::remove_dir_all(directory)?;
+    Ok(())
+}
+
 fn temporary(name: &str) -> Fallible<std::path::PathBuf> {
     let directory = std::env::temp_dir().join(format!(
         "ab-{name}-{}-{}",
