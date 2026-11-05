@@ -757,7 +757,10 @@ async fn a_policy_request_is_one_a_relay_from_before_versions_accepts() {
         String::from_utf8_lossy(&buffer[..n]).into_owned()
     });
     let relay = ab_relay_control::RelayApi::new(&url, "token".into(), None).unwrap();
-    relay.policy("mac.example.test", true, false, 42).await.unwrap();
+    relay
+        .policy("mac.example.test", true, false, 42)
+        .await
+        .unwrap();
     let request = seen.await.unwrap();
     let (head, body) = request.split_once("\r\n\r\n").unwrap();
     let body: Value = serde_json::from_str(body).unwrap();
