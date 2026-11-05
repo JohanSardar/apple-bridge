@@ -15,7 +15,7 @@ public actor AppleSession {
     var link: NativeSessionLink?
     private var facts: NativeServer?
     private var connected: Bool { link != nil }
-    private var permissionStates: [String: String] = [:]
+    private var lastStatus: JSON = .null
     var additionalSources: [String: any Source] = [:]
     private var queryAudio: [String: (Data, Date)] = [:]
     var queryHandlers: [String: @Sendable (JSON) async throws -> QueryOutput] = [:]
@@ -63,35 +63,28 @@ public actor AppleSession {
 
     private func disconnect() {
         link?.close(); link = nil
-        permissionStates = [:]
+        lastStatus = .null
         for task in frameTasks.values { task.cancel() }
         frameTasks = [:]
         for task in queryTasks.values { task.cancel() }; queryTasks = [:]
     }
 
-    public func sourceState(source: String, state: String, coverage: JSON, capabilities: [String], reason: String) async throws {
-        guard let link else { throw SourceFailure.unavailable }
-        do {
-            try link.send(NativeSessionFrame.sourceState(source: source, state: state, coverage: coverage, capabilities: capabilities, reason: reason))
+    private var allSources: [any Source] { [source, calendar] + additionalSources.values }
+
+    private func frameworkStatus() async -> JSON {
+        var status: [String: JSON] = [:]
+        for source in allSources {
+            if let fields = await source.status() { status[source.name] = fields }
         }
+        return .object(status)
     }
 
-    private var frameworkSources: [any Source] {
-        [source, calendar] + additionalSources.values.filter { !SessionSources.rustDecidesReadiness.contains($0.name) }
+    private func publishStatus(on connected: NativeSessionLink) async throws {
+        let status = await frameworkStatus()
+        guard status != lastStatus else { return }
+        lastStatus = status
+        try connected.send(.object(["t": .string("FrameworkStatus"), "status": status]))
     }
-
-    private func publishReadiness(force: Bool = false) async throws {
-        for source in frameworkSources {
-            let readiness = await source.open()
-            if force || readiness.state != permissionStates[source.name] {
-                permissionStates[source.name] = readiness.state
-                try await sourceState(source: source.name, state: readiness.state, coverage: readiness.coverage, capabilities: readiness.capabilities, reason: readiness.reason)
-            }
-        }
-    }
-
-
-
 
     private func launchFrame(_ frame: JSON) {
         let id = UUID()
@@ -265,23 +258,16 @@ public actor AppleSession {
                 let descriptor = started.descriptor
                 let connected = try await Task.detached { try NativeSessionLink(descriptor: descriptor) }.value
                 link = connected
-                var coverage: [String: JSON] = [:]
-                var capabilities: [String: JSON] = [:]
-                for source in frameworkSources {
-                    let state = await source.open()
-                    coverage[source.name] = state.coverage
-                    capabilities[source.name] = .array(state.capabilities.map(JSON.string))
-                }
-                try connected.send(NativeSessionFrame.ready(coverage: coverage, capabilities: capabilities, helperBuild: "m1-session", osBuild: ProcessInfo.processInfo.operatingSystemVersionString))
-                try await publishReadiness(force: true)
+                try connected.send(NativeSessionFrame.ready(framework: await frameworkStatus(), helperBuild: "m1-session", osBuild: ProcessInfo.processInfo.operatingSystemVersionString))
+                try await publishStatus(on: connected)
                 let watchdog = Task {
                     var delay = Duration.seconds(1)
                     while !Task.isCancelled {
                         do { try await Task.sleep(for: delay) } catch { return }
                         if kill(self.gatewayPID, 0) != 0 { connected.close(); return }
-                        let previous = self.permissionStates
-                        try? await self.publishReadiness()
-                        delay = previous == self.permissionStates ? min(.seconds(30), delay * 2) : .seconds(1)
+                        let previous = self.lastStatus
+                        try? await self.publishStatus(on: connected)
+                        delay = previous == self.lastStatus ? min(.seconds(30), delay * 2) : .seconds(1)
                     }
                 }
                 defer { watchdog.cancel() }

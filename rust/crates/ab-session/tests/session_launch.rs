@@ -1,4 +1,4 @@
-#![cfg(unix)]
+#![cfg(all(unix, feature = "lab"))]
 
 #[test]
 fn the_launched_binary_is_the_only_ipc_peer_when_given_a_session_secret()

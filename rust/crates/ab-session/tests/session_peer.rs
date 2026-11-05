@@ -1,3 +1,4 @@
+#![cfg(feature = "lab")]
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 use ab_session::{Error, session};
 use ab_wire::gojson::GoTime;
@@ -180,6 +181,7 @@ fn start_configured(
             os_build: "o".into(),
             coverage: [("reminders".to_owned(), raw(&json!({"state": "ready"})))].into(),
             capabilities: [("reminders".to_owned(), raw(&json!(["reminders.create"])))].into(),
+            framework: None,
         }),
     )
     .expect("ready");

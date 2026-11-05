@@ -17,7 +17,7 @@ can hold" is.
 | Permissions | `AppleSession/Permissions`, `NewPermissions`, `AppleBridgeHelper/SetupPermissions` | TCC status and request APIs. `SetupPermissions` opens protected SQLite files only to ask TCC whether Full Disk Access is held |
 | EventKit | enumerate, revalidate, write and change notifications in `CalendarSource`, `RemindersSource`, `AgendaGate` | `EKEventStore` is the only API that writes and the only one with live identifiers |
 | Contacts | enumerate, revalidate, write, change history in `ContactsSource`, `ContactsHistory` | `CNContactStore`, including the Objective-C history request |
-| AppleScript | `NotesScript`, `NotesRichEdit`, `NotesFolderUI`, `MailCommands`, `SafariTabs`, `MacExtrasQueries` | `NSAppleScript` runs inside the identity that holds the Automation grant |
+| AppleScript | `AppleScriptRunner`, `NotesScript`, `NotesFolderUI`, `SafariTabs` | `NSAppleScript` runs inside the identity that holds the Automation grant |
 | Accessibility | `MessagesAXPrimitives`, `MessagesAccessibility`, `MessagesNavigation`, `MessagesUISession`, `MessagesNativeSession`, `MessagesAppleScript` | AX APIs and the IMCore route |
 | Media | `MediaDerivatives`, `MediaExportGuard` | ImageIO, AVFoundation, QuickLook |
 | Files frameworks | `ubiquity`, coordinated read, `transform` in `FilesSource` | `URLResourceValues`, `NSFileCoordinator`, PDFKit, ImageIO |
@@ -87,28 +87,54 @@ the Helper answers facts and primitives.
 Facts Swift still answers, all framework values: `agenda.*`, `contacts.*`, `files.ubiquity`, `mac.state`,
 `focus.status`, `safari.tabs`, `messages.media`, `pdf.artifacts`, `accessibility.trusted`.
 
-### Logic that is still in Swift
+### Commands (2026-11-04, after Swift stopped capturing)
 
-Nothing here reads a store or decides what a record is. It is command logic, outside capture, and it is still logic:
+Swift no longer takes `Prepare`, `Dispatch` or `Resolve`, and has no command handling. ab-session has a driver per
+source and calls a primitive for each framework call. In a production ab-session a command for a source with no
+driver is refused; a helper-fed `Scan` and helper-routed commands exist only with the `lab` feature, for the lab's
+simulated Helper.
+
+| Source | Moved to Rust | Stays in Swift, and why |
+| --- | --- | --- |
+| Mail | argument and recipient rules, AppleScript text, read-back, error text | `NSAppleScript` run: the Automation grant belongs to the Helper |
+| Files | path confinement, create, write, move, rename, `mdfind`, read rules, staged blobs | tags (`URLResourceValues`), trash and iCloud calls (`FileManager`), coordinated read (`NSFileCoordinator`), transforms (ImageIO, PDFKit) |
+| Mac | bounds, read-backs, settings panes, iWork script and checks, `tmutil`, `system_profiler` | AppleScript run, `NSPasteboard`, `UNUserNotificationCenter`, `NSWorkspace`, the wallpaper call, the IOKit sleep assertion and its timer |
+| Shortcuts | the `shortcuts` CLI run, bounds, evidence | nothing |
+| Focus | `focus.set` rules, the AB Focus run, read-back through `Assertions.json` | `INFocusStatusCenter` status |
+| PDF | document rules, annotation bounds, artifacts, blobs | PDFKit inspect and annotate |
+| Capture | argument rules, artifact verification, `lp` | ScreenCaptureKit, AVFoundation, `NSPrinter` names, PDFKit |
+| Speech, sounds | text, name and volume rules | `AVSpeechSynthesizer`, `NSSound` |
+| Maps | coordinate and mode rules, read-back | `MKMapItem` |
+| Calendar | occurrence lookup, `calendar-lookups.json`, positive absence, present, missing or outside the range | EventKit queries and writes; `candidates` reports what EventKit says |
+| Contacts | when a photo is derived | the derivation (ImageIO, AVFoundation) |
+| All framework sources | coverage text, capabilities, state and reason | one raw status per source: authorized or not, language count |
+
+### What is still logic in Swift
+
+Small, listed so nobody has to guess.
 
 | Where | What it decides | Why it is still there |
 | --- | --- | --- |
-| `MailCommands` | argument checks, AppleScript text, read-back rules for `mail.*` | Prepare/Dispatch path not yet primitives. Moving it is the Reminders pattern; the AppleScript run stays |
-| `MacSource.dispatch`, `prepare` | argument bounds, read-back checks for `mac.*` | Same. The framework calls stay; the bounds and comparisons can move |
-| `FilesCommands`, `FilesSource.search`, `read` | path confinement, `mdfind` predicate, command read-back | Same. `mdfind` needs no framework; coordination and tags do |
-| `ShortcutsSource` | runs the `shortcuts` CLI, bounds, timeout | No framework needed. It can move with `shortcuts.run` |
-| `FocusSource` | `focus.set` argument rules, reading `Assertions.json` for its read-back, polling | Same pattern. Rust already has the parse (`ab_native::focus`) |
-| `PDFSource`, `CaptureSource`, `SpeechPlayback`, `MapsCommands` | argument checks before a framework call | Thin, and each check sits next to the call it guards |
-| `CalendarSource.lookup`, `knownAbsent`, `revalidate` | how to find an event occurrence again | Depends on EventKit identifiers; the data is `calendar-lookups.json`. Candidate for facts plus a Rust decision |
-| `ContactsSource.makePhoto` scheduling | when to derive a photo | Thin: it derives on first sight and tells Rust the source changed |
-| `AppleSession` Prepare, Dispatch, Resolve | routing for the sources above | Goes when the last of them becomes primitives |
-| Readiness of framework sources | coverage text and capability lists in Swift `open()` | The state is a framework fact; the text could move |
+| Queries: `PDFQueries`, `MapsQueries`, `SpeechQueries`, `VisionQueries`, `AudioQueries`, `MacClipboardQueries`, `MacNetworkQueries` | argument bounds next to the framework call | They answer read-only `Query` frames. Moving only the bound would need a Rust table per query and changes nothing they can do |
+| `CalendarTime.chunks`, `identity`, `floating`, `recurrenceEnd` | the windows of a full enumeration, the record key's format, a recurrence's end date | The key must match every existing record id. Enumeration and the recurrence end run against EventKit objects |
+| `CalendarSource.patch`, `requestedGoal`, `RemindersSource.patch`, `ContactsSource` writes | how JSON fields map to framework properties | That mapping is the framework call |
+| `ContactsSource.groupCapabilities` | reads the group proof file for this OS build | It writes the proof it reads. Its result is a fact in the raw status |
+| `MessagesAXPrimitives`, `NotesFolderUI` | how to find a control in another app's accessibility tree | AX calls have to run in the Helper. The decision to act is in Rust |
+| `AppleSession` watchdog | polls status, doubling up to 30 s, and sends it when it changes | Timing of a framework read |
+| `PackagedApp`, `SetupWindow`, `SetupPermissions` | onboarding flow and which permission to ask for | AppKit, ServiceManagement, TCC requests |
 
 ### What the allowlist still holds
 
-`native/boundary-allowlist.txt` has two entries, each with its reason. `SetupPermissions` opens protected stores only
-to ask TCC whether Full Disk Access is held, which needs the Helper's identity. `ClockTimers` drives the Clock app with
-Accessibility and reads its timer store back; that read is logic and moves with the Clock driver.
+`native/boundary-allowlist.txt` has one entry. `SetupPermissions` opens protected stores only to ask TCC whether Full
+Disk Access is held, which needs the Helper's identity. `ClockTimers` is gone: only retired Go runs called it, and no
+operation reached it.
+
+### Permissions
+
+ab-session is a `posix_spawn` child of the Helper with responsibility not disclaimed, so what moved keeps the
+Helper's TCC identity. File changes, `mdfind`, `shortcuts`, `tmutil` and `system_profiler` ran for real on a Helper
+matching the reference requirement, with no prompt logged. Everything that needs a grant by identity (Automation,
+pasteboard, Calendar, Focus, Screen Recording, Microphone, Camera, notifications) stays a Swift call.
 
 ### Record ids on a real home
 
@@ -118,4 +144,5 @@ before this work: the Swift and the Rust reader both failed on a real store, bec
 
 ### The lab
 
-`Scan` remains on the link only so the lab's simulated Helper can feed the session. Nothing in production sends it.
+`Scan`, and commands routed to a helper, compile only with ab-session's `lab` feature, so the lab's simulated Helper can
+still feed a session. A production build refuses them. `make rust-test` runs those tests with the feature on.

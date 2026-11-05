@@ -49,6 +49,13 @@ pub struct Ready {
     pub helper_build: String,
     #[serde(default)]
     pub os_build: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub framework: Option<Raw>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct FrameworkStatus {
+    pub status: Raw,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -237,6 +244,7 @@ pub enum Frame {
     Session(Session),
     Ready(Ready),
     SourceState(SourceState),
+    FrameworkStatus(FrameworkStatus),
     Scan(Scan),
     ScanCommitted(ScanCommitted),
     ScanFailed(ScanFailed),
@@ -363,6 +371,7 @@ impl Frame {
             "Session" => Self::Session(body(bytes)?),
             "Ready" => Self::Ready(body(bytes)?),
             "SourceState" => Self::SourceState(body(bytes)?),
+            "FrameworkStatus" => Self::FrameworkStatus(body(bytes)?),
             "Scan" => {
                 let scan: Scan = body(bytes)?;
                 if scan.id.is_empty() {
@@ -413,6 +422,7 @@ impl Frame {
             Self::Session(frame) => tagged("Session", frame),
             Self::Ready(frame) => tagged("Ready", frame),
             Self::SourceState(frame) => tagged("SourceState", frame),
+            Self::FrameworkStatus(frame) => tagged("FrameworkStatus", frame),
             Self::Scan(frame) => tagged("Scan", frame),
             Self::ScanCommitted(frame) => tagged("ScanCommitted", frame),
             Self::ScanFailed(frame) => tagged("ScanFailed", frame),

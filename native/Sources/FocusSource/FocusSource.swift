@@ -17,6 +17,9 @@ public final class FocusSource: Source {
         }
         return .object(["authorization": .string(authorization), "center_focused": center.authorizationStatus == .authorized ? center.focusStatus.isFocused.map { .bool($0) } ?? .null : .null])
     }
+    public func status() async -> JSON? {
+        .object(["authorization": Self.frameworkStatus()["authorization"]])
+    }
     public func primitive(_ operation: String, args: JSON) async throws -> JSON {
         guard operation == "focus.framework_status" else { throw SourceFailure.unsupported }
         return Self.frameworkStatus()

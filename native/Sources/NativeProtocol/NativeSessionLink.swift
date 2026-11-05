@@ -36,12 +36,8 @@ public final class NativeSessionLink: @unchecked Sendable {
 }
 
 public enum NativeSessionFrame {
-    public static func ready(coverage: [String: JSON], capabilities: [String: JSON], helperBuild: String, osBuild: String) -> JSON {
-        .object(["t": .string("Ready"), "coverage": .object(coverage), "capabilities": .object(capabilities), "helper_build": .string(helperBuild), "os_build": .string(osBuild)])
-    }
-
-    public static func sourceState(source: String, state: String, coverage: JSON, capabilities: [String], reason: String) -> JSON {
-        .object(["t": .string("SourceState"), "source": .string(source), "state": .string(state), "coverage": .object([source: coverage]), "capabilities": .object([source: .array(capabilities.map(JSON.string))]), "reason": .string(reason)])
+    public static func ready(framework: JSON, helperBuild: String, osBuild: String) -> JSON {
+        .object(["t": .string("Ready"), "framework": framework, "helper_build": .string(helperBuild), "os_build": .string(osBuild)])
     }
 
     public static func primitiveResult(id: JSON, result: JSON) -> JSON {

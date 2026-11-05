@@ -31,6 +31,7 @@ public struct CaptureSource: Source {
     public init(provider: any CaptureProvider = SystemCaptureProvider()) {
         self.provider = provider
     }
+    public func status() async -> JSON? { .object([:]) }
     public func primitive(_ operation: String, args: JSON) async throws -> JSON {
         switch operation {
         case "capture.play_sound":

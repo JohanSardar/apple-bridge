@@ -345,6 +345,12 @@ impl AgendaReader {
             return Ok(());
         };
         let generation = collected.generation.clone();
+        if self.source == "contacts" {
+            let client = pull.client();
+            for digest in collected.rows.iter().filter_map(photo_to_derive) {
+                let _ = client.fetch_with(context.fence, DERIVE_PHOTO, &json!({"digest": digest}));
+            }
+        }
         if let Some(lookups) = &self.lookups {
             for row in &mut collected.rows {
                 let Some(fields) = row.as_object_mut() else {
@@ -402,6 +408,16 @@ impl AgendaReader {
                 .cloned(),
         })
     }
+}
+
+const DERIVE_PHOTO: &str = "contacts.derive_photo";
+
+fn photo_to_derive(row: &Value) -> Option<&str> {
+    let data = &row["data"];
+    if row["collection"] != "contacts.contact" || !data["derivatives"].is_null() {
+        return None;
+    }
+    data["image"]["digest"].as_str()
 }
 
 struct FactCandidates<'a> {

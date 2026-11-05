@@ -411,6 +411,25 @@ impl Hub {
         self.capture.as_ref().is_some_and(|c| c.owns(source))
     }
 
+    pub(super) fn tell_framework(
+        &self,
+        framework: &ab_wire::native::FrameworkStatus,
+    ) -> Result<(), Error> {
+        let status: Value = serde_json::from_str(framework.status.get())?;
+        for (source, readiness) in super::readiness::framework(&status, &self.os_build) {
+            let changed = {
+                let mut core = self.core()?;
+                let changed = core.framework.get(&source) != Some(&readiness);
+                core.framework.insert(source.clone(), readiness.clone());
+                changed
+            };
+            if changed {
+                self.tell_readiness(&source, &readiness)?;
+            }
+        }
+        Ok(())
+    }
+
     fn tell_readiness(&self, source: &str, readiness: &Readiness) -> Result<(), Error> {
         let mut state = SourceState {
             source: serde_json::from_value(json!(source))?,
@@ -588,6 +607,7 @@ impl Hub {
         flight: &Flight<Origin>,
         token: Option<String>,
     ) -> Result<(), Error> {
+        #[allow(irrefutable_let_patterns)]
         let Origin::Reader(origin) = &flight.origin else {
             return Err(Error::Invalid);
         };

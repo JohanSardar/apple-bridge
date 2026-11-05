@@ -5,7 +5,8 @@ responsibility, passing fd 198 (gateway), fd 199 (session link) and fd 200 (fact
 overrides that executable for a lab build. ab-session authenticates and owns ipc/1; Swift speaks only native/1. Child termination closes the session,
 and reconnecting starts a fresh child.
 
-`NativeServer` wraps `NativeAdapter` on the facts stream; `AppleSession` supplies the framework adapter. Frames are capped
+Commands reach Swift only as `Primitive` frames. `Ready` and `FrameworkStatus` carry raw status per source; ab-session
+turns it into coverage, capabilities and state. `NativeServer` wraps `NativeAdapter` on the facts stream; `AppleSession` supplies the framework adapter. Frames are capped
 at 256 KiB. Full reads use pinned, bounded-lifetime snapshots and snapshot-bound cursors. Intermediate and incomplete pages never
 claim completeness. Current source adapters accept full native scope with
 empty args; filtered requests fail unsupported. Calendar scope is the existing CalendarTime window. Facts enumerate only what the framework returns now:

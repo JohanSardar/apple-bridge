@@ -25,7 +25,6 @@ public final class ContactsSource: Source {
     private let photoInputDirectory: URL
     private static let groupOperations = ["contacts.create_group", "contacts.rename_group", "contacts.delete_group", "contacts.add_member", "contacts.remove_member"]
     private static let operations = ["contacts.create", "contacts.update", "contacts.delete"]
-    public nonisolated static let coverage: JSON = .object(["fields": .string("partial"), "missing": .array([.string("note: CNContactNoteKey requires com.apple.developer.contacts.notes; Helper lacks this restricted entitlement"), .string("writability: conservatively limited to default container"), .string("contact_poster: unavailable through public Contacts API on this SDK")])])
     private static let scalarKeys = ["given_name": CNContactGivenNameKey, "middle_name": CNContactMiddleNameKey, "family_name": CNContactFamilyNameKey, "previous_family_name": CNContactPreviousFamilyNameKey, "nickname": CNContactNicknameKey, "name_prefix": CNContactNamePrefixKey, "name_suffix": CNContactNameSuffixKey, "phonetic_given_name": CNContactPhoneticGivenNameKey, "phonetic_middle_name": CNContactPhoneticMiddleNameKey, "phonetic_family_name": CNContactPhoneticFamilyNameKey, "phonetic_organization": CNContactPhoneticOrganizationNameKey, "organization": CNContactOrganizationNameKey, "job_title": CNContactJobTitleKey, "department": CNContactDepartmentNameKey]
     private static var keys: [any CNKeyDescriptor] {
         (Array(scalarKeys.values) + [CNContactIdentifierKey, CNContactTypeKey, CNContactPhoneNumbersKey, CNContactEmailAddressesKey, CNContactPostalAddressesKey, CNContactUrlAddressesKey, CNContactBirthdayKey, CNContactNonGregorianBirthdayKey, CNContactDatesKey, CNContactSocialProfilesKey, CNContactInstantMessageAddressesKey, CNContactRelationsKey, CNContactImageDataKey, CNContactThumbnailImageDataKey, CNContactImageDataAvailableKey]).map { $0 as NSString }
@@ -38,11 +37,8 @@ public final class ContactsSource: Source {
 
     private var authorized: Bool { CNContactStore.authorizationStatus(for: .contacts) == .authorized }
 
-    public func open() async -> SourceReadiness {
-        var coverage = Self.coverage.object
-        let proven = groupCapabilities()
-        coverage["operations"] = .array(Self.groupOperations.map { .object(["operation": .string($0), "proven": .bool(proven.contains($0)), "reason": .string(proven.contains($0) ? "proven_public_contacts_save_request" : "os_build_group_proof_required")]) })
-        return SourceReadiness(state: authorized ? "ready" : "permission_missing", coverage: .object(coverage), capabilities: authorized && commandsEnabled ? (Self.operations + groupCapabilities()) : [], reason: authorized ? "" : "contacts_full_access_required")
+    public func status() async -> JSON? {
+        .object(["authorized": .bool(authorized), "proven_groups": .array(groupCapabilities().map(JSON.string))])
     }
 
     private func hash(_ bytes: Data) -> String { SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined() }
@@ -94,7 +90,6 @@ public final class ContactsSource: Source {
             fields["image"] = .object(["digest": .string(digest), "state": .string("present")])
             if photoResults[digest] == nil { photoResults[digest] = MediaDerivatives.cached(digest) }
             if let result = photoResults[digest] { try attachPhoto(result, to: &fields) }
-            else if queuedPhotos.insert(digest).inserted { Task { await self.makePhoto(digest) } }
         }
         if let image = contact.thumbnailImageData {
             let digest = hash(image)
@@ -214,6 +209,12 @@ public final class ContactsSource: Source {
         let (stream, continuation) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
         photoReady = continuation
         return stream
+    }
+    public func derivePhoto(_ digest: String) -> JSON {
+        if blobs["contacts-image:" + digest] != nil, photoResults[digest] == nil, queuedPhotos.insert(digest).inserted {
+            Task { await self.makePhoto(digest) }
+        }
+        return .object([:])
     }
     private func makePhoto(_ digest: String) async {
         defer { queuedPhotos.remove(digest) }

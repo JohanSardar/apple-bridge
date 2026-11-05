@@ -64,25 +64,15 @@ public func parseTimestamp(_ value: String) -> Date? {
     return format.date(from: value) ?? ISO8601DateFormatter().date(from: value)
 }
 
-public struct SourceReadiness: Sendable {
-    public let state: String
-    public let coverage: JSON
-    public let capabilities: [String]
-    public let reason: String
-    public init(state: String, coverage: JSON, capabilities: [String] = [], reason: String = "") {
-        self.state = state; self.coverage = coverage; self.capabilities = capabilities; self.reason = reason
-    }
-}
-
 public protocol Source: Sendable {
     var name: String { get }
-    func open() async -> SourceReadiness
+    func status() async -> JSON?
     func primitive(_ operation: String, args: JSON) async throws -> JSON
 }
 
 public extension Source {
     func primitive(_ operation: String, args: JSON) async throws -> JSON { throw SourceFailure.unsupported }
-    func open() async -> SourceReadiness { SourceReadiness(state: "ready", coverage: .object([:])) }
+    func status() async -> JSON? { nil }
 }
 
 @globalActor

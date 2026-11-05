@@ -5,13 +5,7 @@ import SourceSupport
 public actor VisionReadiness: Source {
     public nonisolated let name = "vision"
     public init() {}
-    public func open() async -> SourceReadiness {
-        do {
-            let languages = try VNRecognizeTextRequest().supportedRecognitionLanguages()
-            guard !languages.isEmpty else { throw SourceFailure.unavailable }
-            return SourceReadiness(state: "ready", coverage: .object(["fields": .string("complete"), "language_count": .number(Double(languages.count))]))
-        } catch {
-            return SourceReadiness(state: "unavailable", coverage: .object(["fields": .string("unsupported")]), reason: "recognition_languages_unavailable")
-        }
+    public func status() async -> JSON? {
+        .object(["languages": .number(Double((try? VNRecognizeTextRequest().supportedRecognitionLanguages())?.count ?? 0))])
     }
 }

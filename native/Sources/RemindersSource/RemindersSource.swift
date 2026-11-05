@@ -10,7 +10,6 @@ public final class RemindersSource: Source {
     private let gate: AgendaGate
     private let commandsEnabled: Bool
     public nonisolated static let operations = ["reminders.create", "reminders.update", "reminders.complete", "reminders.uncomplete", "reminders.delete", "reminders.create_list", "reminders.rename_list", "reminders.delete_list"]
-    public nonisolated static let coverage: JSON = .object(["fields": .string("partial"), "missing": .array([.string("recurrence: next incomplete instance only")]), "operations": RemindersParity.coverage])
 
     public nonisolated init(gate: AgendaGate, commandsEnabled: Bool = false) {
         self.gate = gate; self.commandsEnabled = commandsEnabled
@@ -26,8 +25,8 @@ public final class RemindersSource: Source {
 
 
 
-    public func open() async -> SourceReadiness {
-        SourceReadiness(state: gate.authorized(.reminder) ? "ready" : "permission_missing", coverage: Self.coverage, capabilities: commandsEnabled && gate.authorized(.reminder) ? Self.operations : [], reason: gate.authorized(.reminder) ? "" : "reminders_full_access_required")
+    public func status() async -> JSON? {
+        .object(["authorized": .bool(gate.authorized(.reminder))])
     }
 
     private func listData(_ calendar: EKCalendar) -> JSON {

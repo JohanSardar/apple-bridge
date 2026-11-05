@@ -6,7 +6,6 @@ public final class NotesSource: Source {
     public nonisolated let name = "notes"
     public static let operations = ["notes.create", "notes.update", "notes.delete", "notes.create_folder", "notes.move", "notes.rename_folder"]
     public init() {}
-    public func open() async -> SourceReadiness { SourceReadiness(state: "ready", coverage: .object([:])) }
     public func primitive(_ operation: String, args request: JSON) async throws -> JSON {
         guard operation == "notes.write", Self.operations.contains(request["op"].string) else { throw SourceFailure.unsupported }
         let quote = NotesScript.quote
