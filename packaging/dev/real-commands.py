@@ -368,16 +368,17 @@ def run_mac():
     reply = command("mac.keep_awake", {"on": False})
     check("mac_keep_awake_off_observed", observed(reply), brief(reply))
     before = query("mac.clipboard_read", {})
-    saved = before.get("result", before) if isinstance(before, dict) else {}
-    if isinstance(saved, dict) and not (isinstance(before, dict) and before.get("error")):
+    saved = before.get("result_json", before.get("result", before)) if isinstance(before, dict) else {}
+    if isinstance(saved, dict) and isinstance(saved.get("text"), str):
         reply = command("mac.clipboard_write", {"text": tag})
         check("mac_clipboard_write_observed", observed(reply), brief(reply))
-        if isinstance(saved.get("text"), str):
-            reply = command("mac.clipboard_write", {"text": saved["text"]})
-            check("mac_clipboard_restored", observed(reply), brief(reply))
-    else:
+        reply = command("mac.clipboard_write", {"text": saved["text"]})
+        check("mac_clipboard_restored", observed(reply), brief(reply))
+    elif isinstance(before, dict) and before.get("error"):
         reply = command("mac.clipboard_write", {"text": tag})
         check("mac_clipboard_write_refused_without_always_allow", isinstance(reply, dict) and reply.get("error"), brief(reply))
+    else:
+        print("INFO mac.clipboard_write not run: the clipboard could not be read back to restore it")
     reply = command("mac.notify", {"title": tag, "body": "Apple Bridge test notification"})
     print("INFO mac.notify", brief(reply))
     had_settings = running("System Settings")
