@@ -444,6 +444,40 @@ impl Reader {
         };
         self.prepare(kind, scan, input, &prior, context)
     }
+    #[must_use]
+    pub fn tab_keys(&self) -> Vec<String> {
+        self.states.get(&Kind::Tabs).map_or_else(Vec::new, |state| {
+            state
+                .records
+                .iter()
+                .map(|row| row.key.native_key.clone())
+                .collect()
+        })
+    }
+
+    pub fn resume_tabs(&mut self, keys: &[String]) {
+        if keys.is_empty() {
+            return;
+        }
+        self.states.insert(
+            Kind::Tabs,
+            KindState {
+                generation: TABS_GENERATION.into(),
+                records: keys
+                    .iter()
+                    .map(|key| Stored {
+                        key: Key {
+                            collection: "safari.tab".into(),
+                            native_key: key.clone(),
+                        },
+                        data: String::new(),
+                    })
+                    .collect(),
+                ..KindState::default()
+            },
+        );
+    }
+
     pub fn tabs(&mut self, tabs: &[Tab], context: &ReadContext) -> Result<Option<Pending>> {
         let prior = self.states.get(&Kind::Tabs).cloned().unwrap_or_default();
         let mut observations = Vec::with_capacity(tabs.len());

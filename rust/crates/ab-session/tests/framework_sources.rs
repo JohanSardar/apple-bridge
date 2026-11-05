@@ -87,6 +87,55 @@ fn keys(capture: &Value) -> Vec<(String, String)> {
 }
 
 #[test]
+fn a_restart_retires_the_tabs_it_told_the_gateway_about() -> Fallible<()> {
+    let root = temporary("tab-restart")?;
+    let sockets = temporary("tab-restart-sock")?;
+    let facts: Facts = Facts::default();
+    set(
+        &facts,
+        "safari.tabs",
+        vec![tab(7, 1, "One"), tab(7, 2, "Two")],
+    )?;
+    let socket = fact_server(&sockets, &facts)?;
+    let config =
+        json!({"safari":{"root":root,"facts":{"socket":socket},"tabs_poll_ms":1}}).to_string();
+    let context = readers::ScanContext {
+        checkpoint: "c1".into(),
+        scan_id: "s1".into(),
+        now: 1_800_000_000.0,
+        fence: 7,
+    };
+    let mut first = readers::from_config(&config)?
+        .remove("safari")
+        .ok_or("safari reader")?;
+    let batch = first.next(&context)?.ok_or("first batch")?;
+    assert_eq!(keys(&batch).len(), 2, "{batch}");
+    first.commit()?;
+    let token = first.token().ok_or("token")?;
+
+    set(&facts, "safari.tabs", vec![tab(9, 1, "New window")])?;
+    let mut restarted = readers::from_config(&config)?
+        .remove("safari")
+        .ok_or("safari reader")?;
+    assert!(restarted.resume(&token));
+    let context = readers::ScanContext {
+        checkpoint: "c2".into(),
+        ..context
+    };
+    let batch = restarted.next(&context)?.ok_or("second batch")?;
+    assert_eq!(
+        keys(&batch),
+        [
+            ("upsert".to_owned(), "9:1".to_owned()),
+            ("absent".to_owned(), "7:1".to_owned()),
+            ("absent".to_owned(), "7:2".to_owned()),
+        ]
+    );
+    restarted.commit()?;
+    Ok(())
+}
+
+#[test]
 fn safari_tabs_come_from_a_pulled_fact_and_a_failed_read_removes_nothing() -> Fallible<()> {
     let root = temporary("tabs")?;
     let sockets = temporary("tabs-sock")?;
