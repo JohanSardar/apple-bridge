@@ -68,7 +68,7 @@ Invariants: a snapshot ends with a `complete` marker. Deletions are emitted only
 - **NotesSource**: NoteStore.sqlite protobuf reader; AppleScript writes; rejects unsupported rich edits.
 - **ScreenTimeSource**: Biome SEGB reader (local + remote devices), device names from `DevicePeer`, lock/sleep clipping, read-only. Emits per-session and per-day records flagged `estimated`.
 
-Code-level tests here only for decoders (typedstream, SEGB, Notes protobuf) against fixtures captured from the Air, and for time math (windowing, DST, occurrences, session clipping).
+Code-level tests here only for decoders (typedstream, SEGB, Notes protobuf) against fixtures captured from the test Mac, and for time math (windowing, DST, occurrences, session clipping).
 
 ### Go side (`bridge/`, one binary, two modes)
 

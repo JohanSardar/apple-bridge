@@ -20,7 +20,7 @@
   },
   "known_variability": "CAL-SPLIT-FRAME-CAP failed replica latency in the first Go baseline under load, then passed on Go. Two intermediate Rust runs failed latency limits while their functional assertions passed. The final rebased Rust and Go runs both pass all 21 scenarios; earlier failures are retained here as variability rather than erased. These results are retained without weakening the scenario.",
   "commands": {
-    "matrix": "python3 lab/testing/sim_parallel.py --parallel 2 --timeout 180 --select cal --map /home/johan/gf-cal-map.json --impl gateway=rust --rust-binary /home/johan/targets/gf-cal/debug/bridge --output /home/johan/w/gf-cal-rust-rebased",
+    "matrix": "python3 lab/testing/sim_parallel.py --parallel 2 --timeout 180 --select cal --map /home/developer/gf-cal-map.json --impl gateway=rust --rust-binary /home/developer/targets/gf-cal/debug/bridge --output /home/developer/w/gf-cal-rust-rebased",
     "build": "cargo build --manifest-path rust/Cargo.toml -p ab-runtime --features lab-harness --bin bridge",
     "checks": "make rust-ci"
   },

@@ -1,4 +1,4 @@
-REPLICA_IMPL="gateway=go,replica=rust" REPLICA_MATRIX_FLAGS="--local-replicas --jobs 1" RUST_BRIDGE="/home/johan/ab-phase3-frozen/bridge-4ce8f25e" SCENARIOS="/home/johan/ab-phase3-ubuntu-scenarios" packaging/dev/replica-matrix.sh
+REPLICA_IMPL="gateway=go,replica=rust" REPLICA_MATRIX_FLAGS="--local-replicas --jobs 1" RUST_BRIDGE="/home/developer/ab-phase3-frozen/bridge-4ce8f25e" SCENARIOS="/home/developer/ab-phase3-ubuntu-scenarios" packaging/dev/replica-matrix.sh
 CALLS-REPLICA replica passed=true quiet=true latency=null
 running CALLS-REPLICA replica
 CORE-BENCH replica passed=true quiet=true latency={"effect_done→gateway_visible":{"samples":1,"p50_ms":7.282048,"p95_ms":7.282048,"max_ms":7.282048,"timeouts":0},"effect_done→replica_visible:replica0":{"samples":1,"p50_ms":87.803531,"p95_ms":87.803531,"max_ms":87.803531,"timeouts":0},"fts5_query_gateway":{"samples":100,"p50_ms":4.77404,"p95_ms":7.934181,"max_ms":12.203372,"timeouts":0}}

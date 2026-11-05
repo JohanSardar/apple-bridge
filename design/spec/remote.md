@@ -8,7 +8,7 @@ Readiness resolves the hostname using public DNS (1.1.1.1), pins a public IPv4 a
 
 Status is JSON. Connection snippets use the ready public origin for Claude Code, claude.ai, ChatGPT, Codex and Grok. The Agents page retains per-agent bearer examples and offers the OAuth Claude Code command beside the connector URL.
 
-RMT-ONECOMMAND-FLOW runs production manager, command and HTTP probe code with an isolated fake LocalClient and listener. The fake approval opener advances login and Funnel authorization; the synthetic stream duration is shortened to one second. No real tailnet state is used. RMT-STATUS-OFF real, RMT-TS-EMBEDDED and CONN-* remain limited pending Johan authorizing an embedded node and configuring hosted connectors. Real public Ubuntu/off evidence cannot be obtained under the unattended no-login/no-Serve-change constraint.
+RMT-ONECOMMAND-FLOW runs production manager, command and HTTP probe code with an isolated fake LocalClient and listener. The fake approval opener advances login and Funnel authorization; the synthetic stream duration is shortened to one second. No real tailnet state is used. RMT-STATUS-OFF real, RMT-TS-EMBEDDED and CONN-* remain limited pending the owner authorizing an embedded node and configuring hosted connectors. Real public Ubuntu/off evidence cannot be obtained under the unattended no-login/no-Serve-change constraint.
 
 ## Public enrollment and private access (T10–T11)
 

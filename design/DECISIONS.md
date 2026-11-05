@@ -1,7 +1,7 @@
-# User decisions (Johan)
+# User decisions (the owner)
 
 ## 2026-10-16, grilling round 1
-- **Audience: built for everybody.** A real product other people install, not just Johan's tool.
+- **Audience: built for everybody.** A real product other people install, not just the owner’s tool.
 - **Scope:** all the data that syncs with the iPhone through the Mac: Calendar, Reminders, Messages "and other similar ones" (Contacts, Notes, ...). Mac only: no iPhone app, no iPhone-only APIs.
 - **iMessage: every function imaginable, full depth.** Send, edit, react, unsend, reply, and so on. Implication: some of these likely need private APIs. That conflicts with the SIP-on / public-API recommendation and must be resolved explicitly.
 - **Speed target: under 1 second** end to end while the Mac is awake, if possible.
@@ -16,21 +16,21 @@
 - Calendar window: 2 years back to 2 years ahead, sliding daily.
 - Mac is the only data path in v1. A direct-iCloud connector comes later.
 - Working name: Apple Bridge.
-- Screen Time: read-only source built from Biome App.InFocus (local + synced remote devices). Per app, per device, approximate. SIP stays on. Tested on the Air; see ../research/screentime-probe-results.md.
+- Screen Time: read-only source built from Biome App.InFocus (local + synced remote devices). Per app, per device, approximate. SIP stays on. Tested on the test Mac; see ../research/screentime-probe-results.md.
 - iMessage advanced actions: accessibility automation (Beeper platform-imessage approach), SIP on.
 
 ## 2026-10-16, grilling round 3 (process and tests)
-- **Build everything on the MacBook Air.** The Ubuntu laptop is used when needed as the "other device" (replica plus remote agent) in tests.
-- **No separate test account.** Tests use Johan's real Apple account; "just don't do anything stupid". iMessage tests text Johan himself (his number or his iCloud email).
+- **Build everything on the test Mac.** The Ubuntu laptop is used when needed as the "other device" (replica plus remote agent) in tests.
+- **No separate test account.** Tests use the owner’s real Apple account; "just don't do anything stupid". iMessage tests text the owner himself (his number or his iCloud email).
 - Accepted: Astra gets the raw requirements plus the settled decisions/research, not Claude's architecture. Two E2E levels (sim + real). A real agent (GPT-6-Luna via Codex, MCP only) plus a scripted client. Code-level tests only where E2E can't reach (decoders, time math, crash/race timing). Test-first from failing E2E scenarios, with the <1 s latency measured. Outputs: GLOSSARY, module map, ADRs, E2E scenario list, features.yaml feature graph.
 - **Agents extend the test plan themselves:** whenever an agent finds something that needs a test or an E2E scenario that isn't written down, it writes the scenario down and implements it.
 
 ## 2026-10-16, grilling round 4
-- No spare Apple IDs. Group-chat tests use the contact "Ben" (number kept in the untracked local test config, never committed) as the other member. NOTE: Johan's thread with Ben shows "Text Message • RCS", i.e. Ben isn't on iMessage. Tests with Ben exercise RCS/SMS groups, not iMessage groups.
-- New git repo on the Air plus a GitHub repo (private until public release).
-- Johan will fix the Tailscale ACL (ubuntu-server <-> Macs).
-- Agents keep building autonomously and never block on Johan.
-- **Do not start building until Johan explicitly says so.**
+- No spare Apple IDs. Group-chat tests use the contact "the authorized group-test participant" (number kept in the untracked local test config, never committed) as the other member. NOTE: the owner’s thread with the authorized group-test participant shows "Text Message • RCS", i.e. the authorized group-test participant isn't on iMessage. Tests with the authorized group-test participant exercise RCS/SMS groups, not iMessage groups.
+- New git repo on the test Mac plus a GitHub repo (private until public release).
+- the owner will fix the Tailscale ACL (replica-host <-> Macs).
+- Agents keep building autonomously and never block on the owner.
+- **Do not start building until the owner explicitly says so.**
 
 ## 2026-10-20, web app grilling (locked)
 - **What:** an open-source web UI on top of the bridge covering Messages, Reminders, Calendar, Contacts and Notes. It copies Apple's layout and behavior closely, with polish beyond it. Each user self-hosts on their own Mac or macOS VM. Order: Messages (with Contacts read for names and avatars), then Reminders, Calendar, Contacts, Notes. Screen Time, Photos, Mail and FaceTime are out for now.
@@ -77,18 +77,18 @@
   - derived files sync as blobs
 - **Notifications:** Web Push is off by default and opt-in per device. Notifications carry no message content unless previews are enabled.
 - **Quality bar:** macOS keyboard shortcuts, screen-reader labels, Reduce Motion, Reduce Transparency and Increase Contrast. The latest two versions of Safari, Chrome/Edge and Firefox. A string catalog and right-to-left-safe layout, English first.
-- **Specs:** `design/web/<app>.md`, written from captures of the real apps on the Air and Apple's Design Resources, lists every action, state and item type with measurements and motion. It is Johan's only stop: he skims each spec before that app is built. Screenshots stay in a gitignored local folder.
+- **Specs:** `design/web/<app>.md`, written from captures of the real apps on the test Mac and Apple's Design Resources, lists every action, state and item type with measurements and motion. It is the owner’s only stop: he skims each spec before that app is built. Screenshots stay in a gitignored local folder.
 - **Demo mode:** `bridge web --demo` serves a rich synthetic dataset built on the sim world. It's used for contributors, README media and CI browser tests.
 - **Tests:**
   - Playwright E2E for every spec item on demo/sim data: light and dark, phone and desktop, WebKit, Chromium and Firefox.
-  - The same items at the real level on Johan's own Apple ID and handles, tagged and cleaned up.
+  - The same items at the real level on the owner’s own Apple ID and handles, tagged and cleaned up.
   - Things that need another person acting (their reactions, edits, typing, iMessage groups) are `limited` at the real level.
   - Automated performance gates on the speed budgets.
   - Code-level tests only for spring and virtual-list math.
   - A new `web` level and `R-WEB-*` requirements in `features.yaml`, and TypeScript added to `make lint`.
 - **Process:**
-  - Build on the Air.
+  - Build on the test Mac.
   - Milestones: W0 Messages study and spec plus design tokens; W1 foundations (front door, Funnel, passkeys, agent connect, shell, demo mode, read models, live path, media pipeline); W2 Messages read; W3 Messages write plus the self-test; W4 Messages parity; then each other app through spec, read, write and parity.
   - Merge on green, following the 2026-10-17 no-review rule.
-  - Never ask Johan anything except his spec skims.
-- **Install:** a notarized build signed with Johan's Developer ID (Homebrew cask), then `bridge setup` and `bridge remote on`. Setup checks iMessage activation, which is unreliable in macOS VMs (needs macOS 15+ on both host and guest), and says plainly when Messages can't work there.
+  - Never ask the owner anything except his spec skims.
+- **Install:** a notarized build signed with the owner’s Developer ID (Homebrew cask), then `bridge setup` and `bridge remote on`. Setup checks iMessage activation, which is unreliable in macOS VMs (needs macOS 15+ on both host and guest), and says plainly when Messages can't work there.

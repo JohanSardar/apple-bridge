@@ -2,7 +2,6 @@
 
 # ab-session integration contract
 
-Owner worktree: /Users/johansardar/.t3/worktrees/apple-bridge/t3-6e4deed1
 Branch: t3/ab-session-native-proxy. Canonical protocol: design/spec/native-1.md.
 
 ## Launch

@@ -1,35 +1,48 @@
 # Apple Bridge for Mac
 
-Your Mac's Apple data (Messages, Calendar, Reminders, Contacts, Notes, Screen Time) as a live, fully synced, read/write copy on any computer, with one REST API and one MCP server.
+Apple Bridge gives AI apps and developers REST and MCP access to Apple data on a Mac, including Messages, Calendar, Reminders, Contacts and Notes.
 
-This repository owns the Rust gateway, native Mac Helper, consent pages, relay and gateway-side iPhone integration. The native iPhone app, widgets, extensions, client-side fixtures, signed builds and TestFlight tooling live in [apple-bridge-iphone](https://github.com/JohanSardar/apple-bridge-iphone).
+**Early access · by invite.**
 
-## Get started
+## Status and install
 
-Install Apple Bridge on your Mac, then choose how apps reach it:
+Early access is by invite from the repository maintainers. Public installation is not available yet: there is no public Mac installer or Homebrew package. The Mac release targets Apple Silicon and macOS 26 or later. Capabilities vary by source and macOS permissions; see the [feature status](features.yaml).
 
-- **Hosted relay:** ask for an invite, then run `bridge remote on`. A browser page links your Mac to your account.
-- **Your own relay:** follow [Run your own relay](docs/self-host.md). It takes about ten minutes and needs a small Linux server and a domain.
+## Quick start
 
-Either way your Mac approves every app that connects to its data. See [connector approvals](docs/connectors/approvals.md).
+These steps are for invited testers who already have Apple Bridge installed and running on their Mac:
 
-## Mac development
+1. Open Apple Bridge and grant the permissions for the sources you want to use.
+2. For the hosted relay, run this on that Mac:
 
-Use `make build` to build the gateway and native Helper. `make lint`, `make features` and `make rust-ci` check this repository. `make sim`, `make real` and `make replica` run the scenarios through the Rust lab runner. Mac builds need no iPhone checkout or Xcode iOS SDK. On the Air, run build and test steps serially through `~/bin/ab-local`.
+   ```sh
+   bridge remote on
+   ```
 
-## iPhone integration
+   Follow the account-linking page using your invitation. Use the connector address it prints, ending in `/mcp`, in your app's custom MCP connector settings.
+3. Compare the code shown by the connecting app with the approval request on your Mac. Check the requested access, then allow or deny it.
+4. Ask the app to read one item from a source you enabled. Available operations depend on your permissions and the source's current support.
 
-The gateway still owns pairing, `/v1/iphone/*`, command admission, the ledger, signed record ingestion and relay/APNs delivery. The iPhone repository owns device execution, permissions, keys and receipts. Their wire protocol and installed bundle IDs are unchanged.
+## How apps reach your Mac
 
-Only scenarios that compile phone models or drive the phone harness need a checkout of the app. Clone it separately and set its location explicitly:
+Choose one of these routes:
 
-```sh
-git clone https://github.com/JohanSardar/apple-bridge-iphone.git ../apple-bridge-iphone
-APPLE_BRIDGE_IPHONE_ROOT=/path/to/apple-bridge-iphone ~/bin/ab-local make sim SCENARIOS=lab/scenarios/iphone/APP-SHELL-SIM.yaml
-```
+- **Hosted relay (by invite):** for apps outside your Mac, including hosted MCP connectors. Your Mac must stay awake and connected. The relay forwards traffic; TLS ends on your Mac. See [connector setup and approvals](docs/connectors/approvals.md).
+- **This Mac only (not yet tested with a real app):** no account or server is needed. Only apps running on that Mac can use the local REST/MCP endpoint. ChatGPT and Claude's websites cannot reach it. App-specific local setup is not yet qualified.
+- **Your own server (advanced):** run the relay on a Linux server with a domain you control. You still need Apple Bridge installed on your Mac. Follow [self-hosting](docs/self-host.md).
 
-Gateway pairing and delivery checks still run here without the app checkout. The integrated [feature graph](features.yaml) links app-owned modules to the iPhone repository. App build instructions and physical qualification history moved with the app.
+## How approvals protect you
 
-Status: in development. Design: [design/](design/). Research: [research/](research/).
+Connecting through a relay does not grant an app access to your data. The connector request names the app and the access it wants; compare the matching code before approving on your Mac or paired iPhone. You can deny the request. Agents can have read-only, approval-required or full access: choose the least access your task needs. Approval-required writes wait for a separate decision; full access permits supported writes without that step.
 
-The full SolidJS web app lives on the `web-app` branch. Main serves only consent, passkey enrollment and agent approvals; agent management uses `bridge agent`.
+Review [connector approvals](docs/connectors/approvals.md) before connecting an app. Report suspected vulnerabilities through the private route in [SECURITY.md](SECURITY.md).
+
+## Documentation
+
+- [Feature status and known limits](features.yaml)
+- [Self-hosting](docs/self-host.md)
+- [Connector approvals](docs/connectors/approvals.md)
+- [Architecture decisions](docs/adr/)
+- [Changelog](CHANGELOG.md)
+- [Contributing and building from source](CONTRIBUTING.md)
+- [MIT licence](LICENSE)

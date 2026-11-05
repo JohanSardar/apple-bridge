@@ -56,11 +56,11 @@ Sources in v1: **Messages** (iMessage, SMS, RCS; full depth), **Calendar**, **Re
 
 iPhone app; direct-iCloud connector; private-API injection; disabling SIP; offline command queues; CRDT multi-writer merging; multiple source Macs; Health.
 
-### 1.3 Safety rules for every test and agent (from Johan)
+### 1.3 Safety rules for every test and agent (from the owner)
 
-- iMessage tests text only Johan himself (his own number or iCloud email, discovered from his own contact card or Messages). Group tests may include Ben (handle in `~/.config/apple-bridge/test-contacts.env` on the Air, never committed). Never text anyone else.
+- iMessage tests text only the owner himself (his own number or iCloud email, discovered from his own contact card or Messages). Group tests may include the authorized group-test participant (handle in `~/.config/apple-bridge/test-contacts.env` on the test Mac, never committed). Never text anyone else.
 - Test data is tagged and cleaned up: calendar **"Bridge Test"**, reminders list **"Bridge Test"**, contacts with organization **"Bridge Test"**, notes folder **"Bridge Test"**, message text containing **`[ab-test <id>]`**.
-- Never modify or delete Johan's data that tests didn't create. SIP stays on. No security setting changes.
+- Never modify or delete the owner’s data that tests didn't create. SIP stays on. No security setting changes.
 - Never commit personal data (numbers, emails, message text, usage numbers, IPs, tokens). Fixtures are scrubbed with synthetic values that keep binary structure valid.
 
 ---
@@ -74,7 +74,7 @@ The canonical glossary is `GLOSSARY.md` (domain language only). Key terms: **Sou
 ## 3. Deployment and processes
 
 ```text
-┌─────────────────────────── Mac (MacBook Air, always on) ────────────────────────────┐
+┌─────────────────────────── Mac (test Mac, always on) ────────────────────────────┐
 │  Apple Bridge.app                                                                  │
 │   ├─ AppleBridgeHelper (Swift)  ══ ApplePeer IPC (owner-only Unix socket) ══╗       │
 │   └─ bridge (Go, role=gateway)  ◄═══════════════════════════════════════════╝       │
@@ -88,7 +88,7 @@ The canonical glossary is `GLOSSARY.md` (domain language only). Key terms: **Sou
    · Blobs · Trust · Frontdoor (REST+MCP on 127.0.0.1)
 ```
 
-- One `bridge` Go binary, two roles. Self-contained per OS/arch (`darwin/arm64`, `linux/amd64`, `linux/arm64`), pure Go (`modernc.org/sqlite`), cross-compiled on the Air.
+- One `bridge` Go binary, two roles. Self-contained per OS/arch (`darwin/arm64`, `linux/amd64`, `linux/arm64`), pure Go (`modernc.org/sqlite`), cross-compiled on the test Mac.
 - The Helper is the only process touching Apple data. The gateway is the only sequencer and command authority. Replicas are equal; Ubuntu is just one replica.
 - The Helper and the gateway ship and upgrade together inside one app bundle.
 
@@ -133,9 +133,9 @@ features.yaml                       feature graph
 GLOSSARY.md  PRINCIPLES.md  docs/adr/  design/
 ```
 
-Toolchain on the Air: Go 1.27 (Homebrew), Swift 6.3.3 CLT (no Xcode, so no XCTest UI; Swift Testing via `swift test` works with CLT on macOS 26; if not, decoder tests run as an executable target `DecoderChecks` that exits non-zero on failure). Dependencies (keep minimal, permissive licenses): `modernc.org/sqlite`, `github.com/coder/websocket`, `github.com/modelcontextprotocol/go-sdk`, `gopkg.in/yaml.v3`. Swift: system frameworks only (SQLite3, EventKit, Contacts, ApplicationServices, Security, CryptoKit, Network, ServiceManagement).
+Toolchain on the test Mac: Go 1.27 (Homebrew), Swift 6.3.3 CLT (no Xcode, so no XCTest UI; Swift Testing via `swift test` works with CLT on macOS 26; if not, decoder tests run as an executable target `DecoderChecks` that exits non-zero on failure). Dependencies (keep minimal, permissive licenses): `modernc.org/sqlite`, `github.com/coder/websocket`, `github.com/modelcontextprotocol/go-sdk`, `gopkg.in/yaml.v3`. Swift: system frameworks only (SQLite3, EventKit, Contacts, ApplicationServices, Security, CryptoKit, Network, ServiceManagement).
 
-All builds, tests and services run on the Air. `make` targets (Makefile at root): `make build` (Go + Swift), `make lint`, `make features` (checker + HTML), `make sim` (sim-level scenario suite), `make real`, `make replica`, `make agent`, `make dist` (cross-compiled replicas into `bin/`).
+All builds, tests and services run on the test Mac. `make` targets (Makefile at root): `make build` (Go + Swift), `make lint`, `make features` (checker + HTML), `make sim` (sim-level scenario suite), `make real`, `make replica`, `make agent`, `make dist` (cross-compiled replicas into `bin/`).
 
 ---
 
@@ -642,7 +642,7 @@ Rules (F2, F3, D4):
 - Scope change for a replica → new subscription revision → purge + snapshot of the new scope.
 - Local SSE (`GET /v1/changes?after=`) reuses the same framing semantics for local subscribers, filtered by the caller's Visibility. An oversized capture resets local observers before any part is exposed (`event: reset` with `error: reset` for SSE); clients and internal RYW, status and approval watchers re-read the committed snapshot instead of consuming feed parts.
 
-Budgets (provisional, benchmarked in M0/M5 on the Air): 256 KiB frames, 1 MiB blob chunks, 4 MiB credit.
+Budgets (provisional, benchmarked in M0/M5 on the test Mac): 256 KiB frames, 1 MiB blob chunks, 4 MiB credit.
 
 ---
 
@@ -690,7 +690,7 @@ Budgets (provisional, benchmarked in M0/M5 on the Air): 256 KiB frames, 1 MiB bl
 - `doctor`: permissions, disk encryption (FileVault on macOS, LUKS check on Linux → warning), file modes, clock skew vs gateway, versions, and `shape`: counts of stored Messages records that drift from the §6.2 field shapes (`<collection>.<field>: unknown_field|missing_field|wrong_type|unexpected_null`), checked by the one shape module in `internal/contracts` against which the Helper, SimApplePeer and the demo are held.
 - `restore <backup>`: install backup read-only; rotate epoch and admission era; then serve.
 - Sleep: gateway holds an `IOPMAssertion`-equivalent via the Helper (`ProcessInfo.beginActivity(.idleSystemSleepDisabled)`) while serving. Logout/sleep/shutdown/FileVault pre-login are outages; replicas detect them independently.
-- **Packaging (M5):** `Apple Bridge.app` contains the Helper (main executable, UI for onboarding), `bridge` in `Contents/MacOS`, LaunchAgent plist registered with `SMAppService.agent`. Signed app with hardened runtime; notarization is optional, not required. Open-source users may build from source or use right-click → Open for an unnotarized build. Foreground onboarding requests FDA (opens System Settings pane), Automation (Messages, System Events), Accessibility, Contacts, full Calendar, Reminders. Dev builds use a stable self-signed code-signing identity created on the Air so TCC grants survive rebuilds.
+- **Packaging (M5):** `Apple Bridge.app` contains the Helper (main executable, UI for onboarding), `bridge` in `Contents/MacOS`, LaunchAgent plist registered with `SMAppService.agent`. Signed app with hardened runtime; notarization is optional, not required. Open-source users may build from source or use right-click → Open for an unnotarized build. Foreground onboarding requests FDA (opens System Settings pane), Automation (Messages, System Events), Accessibility, Contacts, full Calendar, Reminders. Dev builds use a stable self-signed code-signing identity created on the test Mac so TCC grants survive rebuilds.
 - Files: `~/Library/Application Support/AppleBridge/` (gateway) and `$XDG_DATA_HOME/apple-bridge/` (Linux replica); all 0600/0700 including WAL, indexes, blobs, ledger, logs.
 
 ---
@@ -712,7 +712,7 @@ bridge-lab features [--check] [--html out.html]
 
 ### 17.1 World
 
-Owns processes, isolated homes (`/tmp/ablab/<world>/…` on each host), ports, network fault proxy (a TCP proxy between replica and gateway owned by the lab that can partition, delay, or cut mid-frame), and artifact cleanup. Hosts: `air` (local when the lab runs on the Air) and `ubuntu` (driven over `ssh ubuntu` with a control master). `SimEnvironment` = gateway + SimApplePeer + N replicas, all real binaries. `RealAirEnvironment` = gateway + the real Swift Helper on the Air (+ Ubuntu replica for the replica level).
+Owns processes, isolated homes (`/tmp/ablab/<world>/…` on each host), ports, network fault proxy (a TCP proxy between replica and gateway owned by the lab that can partition, delay, or cut mid-frame), and artifact cleanup. Hosts: `air` (local when the lab runs on the test Mac) and `ubuntu` (driven over `ssh ubuntu` with a control master). `SimEnvironment` = gateway + SimApplePeer + N replicas, all real binaries. `RealAirEnvironment` = gateway + the real Swift Helper on the test Mac (+ Ubuntu replica for the replica level).
 
 ### 17.2 SimApplePeer
 
@@ -809,7 +809,7 @@ Levels: **S** = sim, **R** = real (Air), **P** = replica on Ubuntu, **A** = MCP 
 | CORE-BLOB-GC | Blob deleted only after no record/snapshot/command references and pins | S |
 | CORE-GATEWAY-DIALS | Gateway-initiated connection to a listening replica: snapshot, live, resume after partition, command forwarding over the same connection, revoke | S P |
 | CORE-DISCONNECT-DETECT | Gateway host goes away; replica reports disconnected + staleness within 15 s; reads continue | S P |
-| CORE-BENCH | modernc SQLite+FTS5+WAL RSS/latency on the Air with 200k messages synthetic | S |
+| CORE-BENCH | modernc SQLite+FTS5+WAL RSS/latency on the test Mac with 200k messages synthetic | S |
 
 ### 18.2 Messages (M1)
 
@@ -829,7 +829,7 @@ Levels: **S** = sim, **R** = real (Air), **P** = replica on Ubuntu, **A** = MCP 
 | MSG-UNSEND | Unsend within 2 min; retracted visible; > 2 min rejected | S R |
 | MSG-MARK-READ | Mark chat read/unread | S R |
 | MSG-DELETE | Delete a test message and a test chat; absence published only after complete scan | S R |
-| MSG-GROUP-CREATE | Create iMessage group (sim) / RCS group with Ben (real if capability proven) | S R |
+| MSG-GROUP-CREATE | Create iMessage group (sim) / RCS group with the authorized group-test participant (real if capability proven) | S R |
 | MSG-GROUP-MANAGE | Rename, add, remove, leave (iMessage group: sim; real where an iMessage group is available) | S |
 | MSG-RECEIPTS | Delivered/read timestamps update on replica | S R |
 | MSG-DECODE | Unicode (emoji, RTL, combining), long text, mentions, multipart, malformed body → undecoded not empty | S + decoder fixtures |
@@ -903,7 +903,7 @@ Levels: **S** = sim, **R** = real (Air), **P** = replica on Ubuntu, **A** = MCP 
 | ID | Scenario | Levels |
 |---|---|---|
 | USE-IMPORT | Devices and app_day estimates match an independent decode by AppleTruth (python-equivalent algorithm) | S R |
-| USE-LOCK-CLIP | Locked/asleep intervals clipped from Mac totals (sim events; real lock via fixture `pmset displaysleepnow` is not allowed without Johan → sim + historical evidence) | S R |
+| USE-LOCK-CLIP | Locked/asleep intervals clipped from Mac totals (sim events; real lock via fixture `pmset displaysleepnow` is not allowed without the owner → sim + historical evidence) | S R |
 | USE-REMOTE-LAG | Delayed remote batches update past days; freshness per device | S R |
 | USE-SEGB-DECODE | SEGB fixtures incl. truncated/malformed records | decoder fixtures |
 | USE-READONLY | Any write op on usage → unsupported | S |
@@ -924,13 +924,13 @@ Levels: **S** = sim, **R** = real (Air), **P** = replica on Ubuntu, **A** = MCP 
 ## 19. Code-level test allowance
 
 Only where E2E cannot reach:
-- Decoders: typedstream, message_summary_info, Notes protobuf, SEGB — fixtures captured from this Air and scrubbed (`lab/fixtures/`, `native/Tests/DecodersTests`).
+- Decoders: typedstream, message_summary_info, Notes protobuf, SEGB — fixtures captured from this test Mac and scrubbed (`lab/fixtures/`, `native/Tests/DecodersTests`).
 - Time math: calendar window chunks, DST, occurrence identity, session pairing and clipping.
 - Crash/race timing that can't be triggered from outside: State transaction boundaries (kill points injected through a lab-only build tag), dispatch guard fsync ordering.
 
 If behaviour can be tested from outside, no unit test.
 
-## 20. Quality gates (`make lint`, CI-equivalent run on the Air)
+## 20. Quality gates (`make lint`, CI-equivalent run on the test Mac)
 
 - **Zero comments** in Go and Swift source (including generated code and test code): `tools/lint` fails on any `//`, `/*`, `///` comment token (Go via `go/scanner`, Swift via a tokenizer that respects string literals). Build tags use file-name suffixes (`_lab.go`) instead of `//go:build` lines where possible; the only permitted exception is the `//go:build` constraint line when unavoidable, enumerated in the linter.
 - Import boundaries per §5.
@@ -943,15 +943,15 @@ If behaviour can be tested from outside, no unit test.
 Each milestone proves its riskiest unknown first, starts every feature as a failing E2E scenario, and ends with reviews done, scenarios passing at assigned levels, pushed, PROGRESS.md truthful.
 
 - **M0 — Harness and core at sim level.** Contracts, State, Operations, Replication, Blobs, Trust, Frontdoor (REST+MCP), Runtime basics; `bridge-lab` World/SimApplePeer/SimTruth/Scenarios/FeatureGraph; all CORE-* scenarios at S; CORE-BOOT/RESUME/PAIR/SCOPE-LEAK/CMD-OFFLINE/CMD-CONFLICT/LIVE-LATENCY at P with a Linux replica on Ubuntu. Riskiest first: State snapshot/ApplyBatch correctness and feed gap rules.
-- **M1 — Messages, Reminders, Calendar end to end.** Riskiest first: (1) stable dev signing + TCC grant batch on the Air; (2) AppleScript send to self on 26.7.1; (3) Accessibility bubble targeting (react/edit/unsend). Then Swift Helper session, AgendaGate, sources, AppleTruth; scenarios sim → real → replica → agent.
+- **M1 — Messages, Reminders, Calendar end to end.** Riskiest first: (1) stable dev signing + TCC grant batch on the test Mac; (2) AppleScript send to self on 26.7.1; (3) Accessibility bubble targeting (react/edit/unsend). Then Swift Helper session, AgendaGate, sources, AppleTruth; scenarios sim → real → replica → agent.
 - **M2 — Contacts.**
-- **M3 — Notes.** Riskiest first: protobuf decode on this Air's NoteStore schema; AppleScript write round-trip.
+- **M3 — Notes.** Riskiest first: protobuf decode on this test Mac's NoteStore schema; AppleScript write round-trip.
 - **M4 — Usage.** Riskiest first: lock/display evidence streams on 25G241.
 - **M5 — Packaging and full agent suite.** Riskiest first: signed app, onboarding and background service. Notarization is optional.
 
 ## 22. Known limits (truthful, kept current)
 
-- Messages W2 native gaps on this Air: pinned order and mute expiry have no proven non-UI source; both remain null with `coverage.missing`. Audio transcription and an explicit Keep decision are not exposed by the observed schema; `kept` remains null rather than inferring Keep from the expirable flag. `schedule.state` preserves the native integer as `native_<n>` until state meanings are independently proven; `scheduled_for` is the message's native date. Recoverable tables expose `delete_date` but no recovery deadline; `deleted_at` is captured and `recoverable_until` remains null with coverage, rather than claiming an exact retention period. Sticker geometry is emitted only where all four stored transform components exist; older sticker records without placement retain `is_sticker`. Unreadable/malformed balloon archives remain typed placeholders with a digest and decode status. Missing native samples for a kind are verified with synthetic fixtures and do not establish real occurrence of that kind.
+- Messages W2 native gaps on this test Mac: pinned order and mute expiry have no proven non-UI source; both remain null with `coverage.missing`. Audio transcription and an explicit Keep decision are not exposed by the observed schema; `kept` remains null rather than inferring Keep from the expirable flag. `schedule.state` preserves the native integer as `native_<n>` until state meanings are independently proven; `scheduled_for` is the message's native date. Recoverable tables expose `delete_date` but no recovery deadline; `deleted_at` is captured and `recoverable_until` remains null with coverage, rather than claiming an exact retention period. Sticker geometry is emitted only where all four stored transform components exist; older sticker records without placement retain `is_sticker`. Unreadable/malformed balloon archives remain typed placeholders with a digest and decode status. Missing native samples for a kind are verified with synthetic fixtures and do not establish real occurrence of that kind.
 - Apple arrival lag (iPhone → Mac via iCloud) is outside the < 1 s target; Screen Time remote data lags ~20 h.
 - Messages history = what's on the Mac; Messages in iCloud may keep only recent items locally.
 - Calendar = ±2 years sliding window; recurrence "all" span unsupported.
@@ -959,7 +959,7 @@ Each milestone proves its riskiest unknown first, starts every feature as a fail
 - Contacts notes unavailable without Apple's restricted entitlement; group management later.
 - Notes: plain-text edits only; rich edits reject; locked notes title-only.
 - Usage: estimates, not Screen Time Settings totals; parity unproven.
-- iMessage group features verified at sim level and self-chat where possible; Ben is RCS/SMS.
+- iMessage group features verified at sim level and self-chat where possible; the authorized group-test participant is RCS/SMS.
 - Sleep, logout, shutdown, FileVault pre-login are outages.
 - Replicas without direct gateway reachability can pair through Remote and use its public Funnel URL (§12, §23.5). Remote must already be enabled on the gateway.
 - Local file access on a replica bypasses API scopes; revocation cannot erase copied data.
@@ -1020,7 +1020,7 @@ Operations (descriptors in `internal/contracts/operations.go`; available through
 - They're never journaled and never authoritative.
 - Visibility is applied at read time, as for every read.
 
-**Budgets on the Air:**
+**Budgets on the test Mac:**
 - `messages.chats` first page ≤ 15 ms p95 at 500 chats.
 - `messages.thread` page of 100 ≤ 10 ms p95 on a 170k-message store.
 
