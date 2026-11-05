@@ -332,6 +332,7 @@ fn principal(value: ab_trust::Principal) -> Principal {
             .unwrap_or_default()
             .into(),
         remote: value.remote,
+        expires_at: None,
     }
 }
 fn trust_error(error: &ab_trust::Error) -> Error {

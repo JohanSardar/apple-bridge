@@ -92,8 +92,15 @@ pub struct ConnectorApproval {
     pub id: String,
     pub code: String,
     pub name: String,
+    pub host: String,
     pub scopes: String,
     pub expires: i64,
+}
+fn connector_prompt(approval: &ConnectorApproval) -> String {
+    format!(
+        "{}\nCode {}\n{}",
+        approval.name, approval.code, approval.scopes
+    )
 }
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Job {
@@ -326,10 +333,7 @@ impl<G: Gateway> Delivery<G> {
                 &phone,
                 &approval.id,
                 &approval.code,
-                &format!(
-                    "{}\nCode {}\n{}",
-                    approval.name, approval.code, approval.scopes
-                ),
+                &connector_prompt(&approval),
                 None,
                 approval.expires,
             )?);
@@ -969,4 +973,37 @@ fn serialize_time<S: serde::Serializer>(value: &str, serializer: S) -> Result<S:
 pub struct HealthCursor {
     pub sequence: u64,
     pub digest: String,
+}
+
+#[cfg(test)]
+mod connector_prompt_tests {
+    use super::{ConnectorApproval, connector_prompt};
+
+    fn approval(host: &str) -> ConnectorApproval {
+        ConnectorApproval {
+            id: "connector:synthetic".into(),
+            code: "1234".into(),
+            name: "Claude".into(),
+            host: host.into(),
+            scopes: "Read: Messages".into(),
+            expires: 0,
+        }
+    }
+
+    #[test]
+    fn the_phone_shows_where_a_connector_returns() {
+        let body = connector_prompt(&approval("evil.example.invalid"));
+        assert!(body.starts_with("Returns to evil.example.invalid\n"), "{body}");
+        assert!(body.contains("App calls itself: Claude"), "{body}");
+        assert!(body.contains("Code 1234"), "{body}");
+        assert!(body.contains("Read: Messages"), "{body}");
+    }
+
+    #[test]
+    fn a_local_callback_is_called_out() {
+        for host in ["localhost:3118", "127.0.0.1:49152", "[::1]:49152"] {
+            let body = connector_prompt(&approval(host));
+            assert!(body.starts_with("Returns to an app on this computer"), "{body}");
+        }
+    }
 }

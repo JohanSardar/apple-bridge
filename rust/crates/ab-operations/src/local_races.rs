@@ -139,6 +139,7 @@ async fn queued_version_is_checked_after_the_preceding_object_lock()
         level: String::new(),
         resource: String::new(),
         remote: false,
+        expires_at: None,
     };
     let task = tokio::spawn(async move {
         gateway

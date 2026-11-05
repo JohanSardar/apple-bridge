@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 mod adapters;
+pub mod approval_review;
 pub mod clock;
 pub mod command_contract;
 mod gateway_store;
@@ -150,6 +151,7 @@ pub struct Principal {
     pub level: String,
     pub resource: String,
     pub remote: bool,
+    pub expires_at: Option<jiff::Timestamp>,
 }
 impl Principal {
     pub fn is_agent(&self) -> bool {

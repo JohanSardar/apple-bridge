@@ -1,4 +1,5 @@
-use ab_operations::{Code, local::LocalGateway};
+use ab_frontdoor::web::{AttachmentFile, Reviewed};
+use ab_operations::{Code, approval_review::OwnerReview, local::LocalGateway};
 use ab_trust::{Error, Principal};
 use serde_json::{Value, json};
 use std::sync::Arc;
@@ -39,7 +40,16 @@ impl ab_frontdoor::web::Approvals for Approvals {
             .unwrap_or(row);
         Ok(serde_json::to_value(row)?)
     }
-    fn decide(&self, owner: &Principal, id: &str, approve: bool) -> Result<Value, Error> {
+    fn attachment(&self, _id: &str, _index: usize) -> Result<AttachmentFile, Error> {
+        Err(Error::Invalid)
+    }
+    fn decide(
+        &self,
+        owner: &Principal,
+        id: &str,
+        approve: bool,
+        reviewed: &Reviewed<'_>,
+    ) -> Result<Value, Error> {
         let owner = ab_operations::Principal {
             id: owner.id.clone(),
             kind: owner.kind.clone(),
@@ -51,9 +61,18 @@ impl ab_frontdoor::web::Approvals for Approvals {
             level: owner.level.clone(),
             resource: String::new(),
             remote: owner.remote,
+            expires_at: None,
         };
         let result = tokio::runtime::Handle::current()
-            .block_on(self.0.decide(&owner, id, approve))
+            .block_on(self.0.decide(
+                &owner,
+                id,
+                approve,
+                &OwnerReview {
+                    binding: reviewed.binding,
+                    accepted_unpreviewable: reviewed.accepted_unpreviewable,
+                },
+            ))
             .map_err(|value| error(&value))?;
         Ok(serde_json::from_str(result.get())?)
     }

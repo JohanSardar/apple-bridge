@@ -960,6 +960,7 @@ impl LocalGateway {
         owner: &Principal,
         id: &str,
         approve: bool,
+        _review: &crate::approval_review::OwnerReview<'_>,
     ) -> Result<Box<RawValue>, Error> {
         if owner.kind != "device" {
             return Err(Code::Unauthorized.into());
@@ -1024,6 +1025,7 @@ impl LocalGateway {
                     grants: p.grants.iter().map(|g| g.as_str().to_owned()).collect(),
                     resource: String::new(),
                     remote: p.remote,
+                    expires_at: None,
                 })
                 .map_err(|e| {
                     Error::from(if matches!(e, ab_trust::Error::Unauthorized) {
@@ -1493,6 +1495,9 @@ fn resolvable(r: &CommandRecord) -> bool {
 #[cfg(test)]
 #[path = "local_evidence.rs"]
 mod evidence;
+#[cfg(test)]
+#[path = "local_security.rs"]
+mod security;
 #[cfg(test)]
 #[path = "local_races.rs"]
 mod races;

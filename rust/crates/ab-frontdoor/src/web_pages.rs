@@ -331,6 +331,24 @@ mod tests {
     use super::*;
 
     #[test]
+    fn a_write_grant_also_shows_that_it_reads() {
+        let grants = [Grant::parse("messages:write").expect("grant")];
+        assert_eq!(
+            access(&grants),
+            Access {
+                read: vec!["Messages".into()],
+                change: vec!["Messages".into()],
+            }
+        );
+        assert_eq!(
+            access_sentence(&grants),
+            "Read: Messages\nAsk to change (each change needs your approval): Messages"
+        );
+        let section = access_section(&grants);
+        assert!(section.contains("Can read, and ask to make changes"), "{section}");
+    }
+
+    #[test]
     fn scopes_become_product_words() {
         let grants: Vec<Grant> = ["messages:read", "calendar:read", "calendar:write"]
             .iter()
