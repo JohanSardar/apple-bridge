@@ -79,7 +79,6 @@ public enum HelperCommand {
             if kill(gatewayPID, 0) != 0 { return }
             let peer = try AppleSession(socket: socket, secretFile: secretFile, home: home, gatewayPID: gatewayPID, commandsEnabled: arguments.contains("--lab-commands"))
             Task { @MainActor in
-                if !arguments.contains("--lab-commands") { _ = try? await RustSelfTest.shared.run() }
                 await SessionSources.register(into: peer, home: home, labEnabled: arguments.contains("--lab-commands"))
                 try? await peer.runNative(socket: socket, secretFile: secretFile)
                 NSApplication.shared.terminate(nil)
