@@ -56,6 +56,7 @@ Review [connector approvals](docs/connectors/approvals.md) before connecting an 
 ## Documentation
 
 - [Feature status and known limits](features.yaml)
+- [Operations reference](docs/reference/operations.md)
 - [Self-hosting](docs/self-host.md)
 - [Connector approvals](docs/connectors/approvals.md)
 - [Architecture decisions](docs/adr/)
