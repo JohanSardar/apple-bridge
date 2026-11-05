@@ -11,6 +11,7 @@ ab-shortcuts = { path = "../ab-shortcuts" }
 ab-iphone = { path = "../ab-iphone" }
 ab-catalog = { path = "../ab-catalog" }
 ab-applepeer = { path = "../ab-applepeer" }
+clap = { version = "4", features = ["derive"] }
 rand = "0.8"
 data-encoding = "2"
 rustls.workspace = true

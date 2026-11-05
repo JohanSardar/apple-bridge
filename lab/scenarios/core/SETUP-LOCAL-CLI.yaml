@@ -1,0 +1,7 @@
+id: SETUP-LOCAL-CLI
+feature: core.local-setup
+levels: [sim]
+given: [{world: {replicas: 0}}]
+when: [{setup_local: {collection: reminders.reminder, count: 25}}]
+then: []
+cleanup: [{world: {}}]

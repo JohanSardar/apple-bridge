@@ -98,6 +98,7 @@ pub mod robust;
 pub mod safari;
 pub mod search;
 pub mod security;
+pub mod setup_cli;
 pub mod shortcut_sign;
 pub mod shortcuts;
 pub mod shortcuts_run;
@@ -227,6 +228,7 @@ pub fn registry() -> Registry {
         }
     });
     registry.register("file_commands", filecmd::commands);
+    registry.register("setup_local", setup_cli::run);
     registry.register_standalone("CORE-PERMISSION-STATUS", permission_status::real);
     registry.register("CORE-PERMISSION-STATUS", permission_status::sim);
     registry.register_real("CORE-QUERY-HELPER", query_helper::real);
