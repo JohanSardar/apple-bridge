@@ -1,6 +1,6 @@
 # Set up Apple Bridge on your own Mac
 
-Agents on your Mac, such as Claude Code and Codex, connect to one local address: `http://127.0.0.1:7780/mcp`. You need no account, server or domain. Nothing leaves your Mac through Apple Bridge unless you turn on remote use yourself.
+Agents on your Mac, such as Claude Code and Codex, connect to one local address: `http://127.0.0.1:7780/mcp`. You need no account, server or domain. Apple Bridge sends nothing off your Mac unless you turn on remote use yourself, though an agent you connect may send what it reads to its own service.
 
 ## Quick start
 
@@ -44,7 +44,7 @@ bridge connector allow --request <id> --code <code>
 | `--scope project` | Claude Code only: save it in this project's `.mcp.json`. Claude Code then asks you to approve it once: run `claude` in that folder, choose "Use this MCP server", and run `bridge link` again. The default, `user`, works in every project with no extra step |
 | `--name NAME` | Use another name in the agent |
 | `--no-login` | Add the server now and sign in later with `claude mcp login apple-bridge` |
-| `--no-browser` | For a session without a browser: prints the address, then you paste the final address back |
+| `--no-browser` | Claude Code only, for a session without a browser: prints the address, then you paste the final address back |
 | `--print` | Show the agent's commands and run nothing |
 
 Without a terminal, for example when an agent runs it, `bridge link` adds the server and prints the sign-in command for you to run. It never allows a request itself.
@@ -130,3 +130,36 @@ bridge down --home /tmp/bridge-try
 ```
 
 `APPLE_BRIDGE_SECRET_STORE=file` keeps this folder's secrets in a file inside it, so it does not touch your Keychain. Use it only for test folders.
+
+## How long the first sync takes
+
+A real first sync has not been timed: it needs the Helper reading a Mac's real Apple data, and that was out of bounds for testing. What has been measured is the gateway's side:
+
+- **Storing records:** 195,243 synthetic messages went through the real capture path into a fresh home in 44.5 s on an 8 GB MacBook Air that was also running other work (4,391 records per second, single run). That is the same number of records as the test copy, but real records are about three times larger once stored (1.9 GB against 576 MB).
+- **Not included:** the time to read Apple's own stores, and attachments.
+
+So expect minutes, not hours, for a Mac of this size, and treat that as an estimate until a real run confirms it. `bridge stats --watch` shows the real progress.
+
+## What has been proven
+
+Measured with [`packaging/dev/local-setup-proof.py`](../packaging/dev/local-setup-proof.py) on an 8 GB MacBook Air, with a release build, Claude Code 2.1.318 and `--scope project` in a scratch folder.
+
+| Step | Fresh, empty home | Fresh home, test copy of data (195,243 records) |
+|---|---|---|
+| `bridge up` | PROOF_EMPTY_UP | PROOF_COPY_UP |
+| `bridge stats` | PROOF_EMPTY_STATS | PROOF_COPY_STATS |
+| `bridge link`, server registered | PROOF_EMPTY_LINK | PROOF_COPY_LINK |
+| Signed in | PROOF_EMPTY_SIGNIN | PROOF_COPY_SIGNIN |
+| First real read by Claude Code | PROOF_EMPTY_READ | PROOF_COPY_READ |
+| Claude Code ran `bridge stats` and read the total | PROOF_EMPTY_STATSREAD | PROOF_COPY_STATSREAD |
+
+Times are cumulative from the start of `bridge up`, from one run each. On the test copy, `bridge stats` matched the source on all 32 collections, and Claude Code's read returned the right count through the local MCP route and sign-in. Only counts were checked.
+
+Limits of this proof:
+
+- A script played the browser, using the same requests as the sign-in page, and allowed the request with `bridge connector allow`. So a person's time to read and approve is not included, and the Apple Bridge approval window was not exercised.
+- `--scope project` needs one approval in Claude Code. It took about 6 s under script and is left out of the times, because the default scope does not need it. The default `--scope user` flow itself was not run, to keep the real Claude Code configuration unchanged.
+- The data home was a clone of `state.db` and `ledger.db` from a frozen test copy, with no Helper running. Live data was not used.
+- Codex: `bridge link codex` completed real sign-in in about 7 s and `codex mcp list` showed it signed in. No real read was made through Codex.
+- `bridge permissions guide` was tested through a fixture only, because a real run would show real macOS prompts. Its Helper call has not run against a real Helper.
+- A gateway started by `bridge up` from inside the packaged app has not been tested.
