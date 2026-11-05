@@ -516,7 +516,65 @@ def run_capture():
     os.remove(handle.name)
 
 
-RUNNERS = {"mail": run_mail, "files": run_files, "mac": run_mac, "shortcuts": run_shortcuts, "focus": run_focus, "pdf": run_pdf, "playback": run_playback, "maps": run_maps, "capture": run_capture}
+def calendar_events(title):
+    reply = op("search", {"text": title, "collection": "calendar.event", "limit": 200})
+    rows = reply.get("records") if isinstance(reply, dict) else None
+    return [r for r in rows or [] if not r.get("deleted") and r.get("data", {}).get("title") == title]
+
+
+def run_calendar():
+    calendar = next((r for r in records("calendar.calendar", 100) if r["data"].get("title") == "Bridge Test" and r["data"].get("writable") and not r.get("deleted")), None)
+    if not check("calendar_bridge_test_found", calendar):
+        return
+    start = time.strftime("%Y-%m-%dT%H:00:00Z", time.gmtime(time.time() + 3 * 86400))
+    end = time.strftime("%Y-%m-%dT%H:30:00Z", time.gmtime(time.time() + 3 * 86400))
+    single = tag + " single"
+    reply = command("calendar.create_event", {"calendar_id": calendar["id"], "title": single, "start": start, "end": end})
+    check("calendar_create_observed", observed(reply), brief(reply))
+    event = wait_for(lambda: next(iter(calendar_events(single)), None), 60)
+    if not check("calendar_event_reaches_gateway", event):
+        return
+    ledger("calendar", event["id"])
+    reply = command("calendar.update_event", {"id": event["id"], "span": "this", "title": single + " v2"}, event["version"])
+    check("calendar_update_observed", observed(reply), brief(reply))
+    updated = wait_for(lambda: next(iter(calendar_events(single + " v2")), None), 60)
+    check("calendar_update_reaches_gateway", updated)
+    stale = command("calendar.update_event", {"id": event["id"], "span": "this", "title": "stale"}, event["version"])
+    check("calendar_stale_version_refused", refused(stale, "conflict"), brief(stale))
+    updated = updated or event
+    reply = command("calendar.delete_event", {"id": updated["id"], "span": "this"}, updated["version"])
+    check("calendar_delete_observed", observed(reply), brief(reply))
+    check("calendar_delete_reaches_gateway", wait_for(lambda: not calendar_events(single + " v2"), 60))
+
+    series = tag + " series"
+    reply = command("calendar.create_event", {"calendar_id": calendar["id"], "title": series, "start": start, "end": end, "recurrence": [{"frequency": "daily", "interval": 1, "count": 4}]})
+    check("calendar_series_create_observed", observed(reply), brief(reply))
+    rows = wait_for(lambda: (lambda found: found if len(found) == 4 else None)(calendar_events(series)), 90)
+    if not check("calendar_four_occurrences_reach_gateway", rows, len(calendar_events(series))):
+        return
+    for row in rows:
+        ledger("calendar", row["id"])
+    second = sorted(rows, key=lambda r: r["data"]["start"])[1]
+    moved = series + " one"
+    reply = command("calendar.update_event", {"id": second["id"], "span": "this", "title": moved}, second["version"])
+    check("calendar_occurrence_update_observed", observed(reply), brief(reply))
+    changed = wait_for(lambda: next(iter(calendar_events(moved)), None), 60)
+    check("calendar_occurrence_update_reaches_gateway", changed)
+    check("calendar_other_occurrences_untouched", wait_for(lambda: len(calendar_events(series)) == 3, 60), len(calendar_events(series)))
+    if changed:
+        ledger("calendar", changed["id"])
+        reply = command("calendar.delete_event", {"id": changed["id"], "span": "this"}, changed["version"])
+        check("calendar_occurrence_delete_observed", observed(reply), brief(reply))
+        check("calendar_occurrence_delete_reaches_gateway", wait_for(lambda: not calendar_events(moved), 60))
+    remaining = sorted(calendar_events(series), key=lambda r: r["data"]["start"])
+    check("calendar_three_left_after_occurrence_delete", wait_for(lambda: len(calendar_events(series)) == 3, 60), len(remaining))
+    first = sorted(calendar_events(series), key=lambda r: r["data"]["start"])[0]
+    reply = command("calendar.delete_event", {"id": first["id"], "span": "future"}, first["version"])
+    check("calendar_series_delete_observed", observed(reply), brief(reply))
+    check("calendar_series_gone", wait_for(lambda: not calendar_events(series), 90), len(calendar_events(series)))
+
+
+RUNNERS = {"calendar": run_calendar, "mail": run_mail, "files": run_files, "mac": run_mac, "shortcuts": run_shortcuts, "focus": run_focus, "pdf": run_pdf, "playback": run_playback, "maps": run_maps, "capture": run_capture}
 
 
 def main():

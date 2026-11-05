@@ -46,7 +46,7 @@ enum ExternalChange {
             let listener = await gate.changes()
             await gate.remindersHint(DispatchTime.now().uptimeNanoseconds)
             try await Task.sleep(for: .milliseconds(200))
-            let source = try CalendarSource(gate: gate, home: root, commandsEnabled: false)
+            let source = CalendarSource(gate: gate, commandsEnabled: false)
             let enumeration = try await source.enumerate()
             _ = listener
             return ("done", "rows \(enumeration.rows.count)")

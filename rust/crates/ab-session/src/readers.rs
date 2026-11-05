@@ -137,6 +137,9 @@ pub trait CaptureReader: Send + Debug {
     fn answer(&mut self, _operation: &str, _args: &Value) -> Option<Result<Value, String>> {
         None
     }
+    fn lookups(&self) -> Option<Arc<crate::calendar_lookup::Lookups>> {
+        None
+    }
 }
 
 fn capture_value(batch: &impl Serialize) -> Result<Value, Error> {

@@ -2,6 +2,9 @@ use serde_json::Value;
 
 pub(super) trait Probe {
     fn call(&self, operation: &str, args: &Value) -> Result<Value, String>;
+    fn lookups(&self) -> Option<std::sync::Arc<crate::calendar_lookup::Lookups>> {
+        None
+    }
     fn staged(&self, _prefix: &str) -> Option<std::sync::Arc<crate::staged::StagedBlobs>> {
         None
     }

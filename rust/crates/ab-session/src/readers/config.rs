@@ -30,6 +30,8 @@ struct SourceConfig {
     #[serde(default)]
     store: Option<PathBuf>,
     #[serde(default)]
+    lookups: Option<PathBuf>,
+    #[serde(default)]
     media_helper: Option<PathBuf>,
     #[serde(default)]
     media_root: Option<PathBuf>,
@@ -270,6 +272,10 @@ pub fn from_config_linked(
                             .with_reminders_store(lexical(&store)?),
                         None => AgendaReader::reminders(config.root),
                     },
+                };
+                let reader = match config.lookups.filter(|_| source == "calendar") {
+                    Some(path) => reader.with_lookups(lexical(&path)?)?,
+                    None => reader,
                 };
                 Box::new(reader.paged(client, Duration::from_millis(config.facts_poll_ms.max(1))))
             }

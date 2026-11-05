@@ -23,7 +23,7 @@ internal enum SessionSources {
             agenda = AgendaGate()
             contacts = try ContactsSource(home: home, commandsEnabled: true)
             reminders = RemindersSource(gate: agenda, commandsEnabled: true)
-            calendar = try CalendarSource(gate: agenda, home: home, commandsEnabled: true)
+            calendar = CalendarSource(gate: agenda, commandsEnabled: true)
         }
     }
 }

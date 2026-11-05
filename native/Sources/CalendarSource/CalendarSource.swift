@@ -10,17 +10,8 @@ public final class CalendarSource: Source {
     public static let coverage: JSON = .object(["operations": CalendarParity.coverage, "fields": .string("partial"), "missing": .array(["travel_time: positive native units unverified", "structured_location: coordinate units unverified", "detached store identities", "calendar attachment derivatives", "start location, proposals, comments and extra store alarms: positive native fixtures pending"].map(JSON.string))])
     private let gate: AgendaGate
     private let commandsEnabled: Bool
-    private let lookupURL: URL
-    private var lookups: [String: JSON] = [:]
-    private var savedLookups: [String: JSON] = [:]
-
-
-
-    public nonisolated init(gate: AgendaGate, home: URL, commandsEnabled: Bool) throws {
+    public nonisolated init(gate: AgendaGate, commandsEnabled: Bool) {
         self.gate = gate; self.commandsEnabled = commandsEnabled
-        lookupURL = home.appendingPathComponent("calendar-lookups.json")
-        if FileManager.default.fileExists(atPath: lookupURL.path) { lookups = try JSONDecoder().decode([String: JSON].self, from: Data(contentsOf: lookupURL)) }
-        savedLookups = lookups
     }
 
     public func open() async -> SourceReadiness {
@@ -83,7 +74,9 @@ public final class CalendarSource: Source {
     private func eventObservation(_ event: EKEvent, native: String) -> JSON {
         let occurrence = event.hasRecurrenceRules || event.isDetached ? event.occurrenceDate.map { "|" + (event.isAllDay ? CalendarTime.floating($0, zone: .current) : timestamp($0)) } ?? "" : ""
         let alias = event.calendarItemExternalIdentifier.map { _ in event.calendar.source.sourceIdentifier + "/" + event.calendar.calendarIdentifier + "/" + seriesIdentifier(event) + occurrence } ?? ""
-        return observation("calendar.event", native, data(event), alias: alias)
+        var row = observation("calendar.event", native, data(event), alias: alias).object
+        row["locator"] = locator(event)
+        return .object(row)
     }
 
     private func events(_ interval: DateInterval, calendars: Set<String>? = nil) throws -> [EKEvent] {
@@ -95,17 +88,6 @@ public final class CalendarSource: Source {
         guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
         return events
     }
-
-
-
-
-    private func saveLookups() throws {
-        guard lookups != savedLookups else { return }
-        try JSONEncoder().encode(lookups).write(to: lookupURL, options: .atomic)
-        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: lookupURL.path)
-        savedLookups = lookups
-    }
-
 
 
 
@@ -124,43 +106,20 @@ public final class CalendarSource: Source {
                 guard Self.canMaterialize(event) else { throw SourceFailure.unavailable }
                 let native = key(event)
                 guard current["calendar.event/" + native] == nil else { continue }
-                try remember(event)
                 current["calendar.event/" + native] = eventObservation(event, native: native)
             }
         }
         guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
-        try saveLookups()
         return SourceEnumeration(generation: "eventkit-calendar-v1", rows: current.keys.sorted().compactMap { current[$0] })
     }
 
     public func revalidate(_ identities: [JSON]) async throws -> [String] {
         guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
-        let bounds = CalendarTime.window(Date())
-        var states: [String] = []
-        for identity in identities {
-            let native = identity["native_key"].string
-            switch identity["collection"].string {
-            case "calendar.calendar":
-                states.append(gate.store.calendar(withIdentifier: native) == nil ? RevalidationState.missing : RevalidationState.present)
-            case "calendar.event":
-                if let found = try lookup(native) {
-                    let value = data(found)
-                    let zone = value["all_day"].bool ? TimeZone.current : (TimeZone(identifier: value["time_zone"].string) ?? .current)
-                    guard let start = try? CalendarTime.date(value["start"].string, allDay: value["all_day"].bool, zone: zone), let end = try? CalendarTime.date(value["end"].string, allDay: value["all_day"].bool, zone: zone) else { states.append(RevalidationState.present); continue }
-                    states.append(start >= bounds.end || end <= bounds.start ? RevalidationState.outsideScope : RevalidationState.present)
-                } else {
-                    let value = identity["data"]
-                    let original = value["occurrence_date"].string.isEmpty ? value["start"].string : value["occurrence_date"].string
-                    guard let date = try? CalendarTime.date(original, allDay: value["all_day"].bool, zone: .current) else { states.append(RevalidationState.present); continue }
-                    states.append(date < bounds.start || date >= bounds.end ? RevalidationState.outsideScope : RevalidationState.missing)
-                }
-            default: throw SourceFailure.invalid
-            }
-            guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
+        return try identities.map { identity in
+            guard identity["collection"].string == "calendar.calendar" else { throw SourceFailure.invalid }
+            return gate.store.calendar(withIdentifier: identity["native_key"].string) == nil ? RevalidationState.missing : RevalidationState.present
         }
-        return states
     }
-
 
     public nonisolated static func canMaterialize(_ event: EKEvent) -> Bool {
         guard event.startDate != nil, event.endDate != nil,
@@ -169,71 +128,44 @@ public final class CalendarSource: Source {
     }
 
 
-    private func remember(_ event: EKEvent) throws {
-        guard Self.canMaterialize(event), let calendar = event.calendar, let account = calendar.source else { throw SourceFailure.unavailable }
-        lookups[key(event)] = .object(["event_identifier": .string(event.eventIdentifier ?? ""), "calendar": .string(calendar.calendarIdentifier), "account": .string(account.sourceIdentifier), "external": .string(event.calendarItemExternalIdentifier == nil ? "" : seriesIdentifier(event)), "occurrence": event.occurrenceDate.map { .string(timestamp($0)) } ?? .null])
+    private func locator(_ event: EKEvent) -> JSON {
+        .object(["event_identifier": .string(event.eventIdentifier ?? ""), "calendar": .string(event.calendar?.calendarIdentifier ?? ""), "account": .string(event.calendar?.source?.sourceIdentifier ?? ""), "external": .string(event.calendarItemExternalIdentifier == nil ? "" : seriesIdentifier(event)), "occurrence": event.occurrenceDate.map { .string(timestamp($0)) } ?? .null])
     }
 
-    private func lookup(_ native: String) throws -> EKEvent? {
-        guard gate.authorized(.event), let identity = lookups[native] else { return nil }
-        func matches(_ event: EKEvent) throws -> Bool {
-            guard Self.canMaterialize(event), let calendar = event.calendar, let account = calendar.source else { throw SourceFailure.unavailable }
-            guard calendar.calendarIdentifier == identity["calendar"].string, account.sourceIdentifier == identity["account"].string else { return false }
-            if key(event) == native { return true }
-            guard !identity["external"].string.isEmpty, seriesIdentifier(event) == identity["external"].string else { return false }
-            if event.isAllDay, let original = event.occurrenceDate, let civil = native.split(separator: "|").last, civil.count == 10 {
-                return CalendarTime.floating(original, zone: .current) == String(civil)
-            }
-            return (event.occurrenceDate.map { JSON.string(timestamp($0)) } ?? .null) == identity["occurrence"]
-        }
-        if native.contains("|"), let original = parseTimestamp(identity["occurrence"].string) {
-            var originals = [original]
-            if let civil = native.split(separator: "|").last, civil.count == 10 {
-                originals += [TimeZone.current, TimeZone(secondsFromGMT: 0)!].compactMap { try? CalendarTime.date(String(civil), allDay: true, zone: $0) }
-            }
-            for anchor in Set(originals) {
-                let alias = identity["external"].string + "/RID=" + String(Int(anchor.timeIntervalSinceReferenceDate))
-                if let event = try gate.store.calendarItems(withExternalIdentifier: alias).compactMap({ $0 as? EKEvent }).first(where: matches) { return event }
-            }
-            let anchor = originals.count > 1 ? originals[1] : original
-            if let event = try events(DateInterval(start: anchor.addingTimeInterval(-1), end: anchor.addingTimeInterval(1))).first(where: matches) { return event }
-            if let event = gate.store.event(withIdentifier: identity["event_identifier"].string), event.isDetached, try matches(event) { return event }
-            return nil
-        }
-        if let event = gate.store.event(withIdentifier: identity["event_identifier"].string), try matches(event) { return event }
-        if !identity["external"].string.isEmpty {
-            if let event = try gate.store.calendarItems(withExternalIdentifier: identity["external"].string).compactMap({ $0 as? EKEvent }).first(where: matches) { return event }
-        }
-        return nil
+    private func candidate(_ event: EKEvent) -> JSON {
+        guard Self.canMaterialize(event), let calendar = event.calendar, let account = calendar.source else { return .object(["can_materialize": .bool(false)]) }
+        let zone = event.isAllDay ? TimeZone.current : (event.timeZone ?? .current)
+        return .object(["can_materialize": .bool(true), "key": .string(key(event)), "calendar": .string(calendar.calendarIdentifier), "account": .string(account.sourceIdentifier), "series": .string(seriesIdentifier(event)), "occurrence": event.occurrenceDate.map { .string(timestamp($0)) } ?? .null, "occurrence_civil": event.occurrenceDate.map { .string(CalendarTime.floating($0, zone: .current)) } ?? .null, "all_day": .bool(event.isAllDay), "detached": .bool(event.isDetached), "start": .string(event.isAllDay ? CalendarTime.floating(event.startDate, zone: zone) : timestamp(event.startDate)), "end": .string(event.isAllDay ? CalendarTime.floating(event.endDate, zone: zone) : timestamp(event.endDate)), "time_zone": event.timeZone.map { .string($0.identifier) } ?? .null, "locator": locator(event)])
     }
 
-    private func knownAbsent(_ native: String) -> Bool {
-        guard gate.authorized(.event), let identity = lookups[native], !identity["event_identifier"].string.isEmpty else { return false }
-        if native.contains("|") {
-            let calendar = identity["calendar"].string, account = identity["account"].string
-            guard gate.store.calendar(withIdentifier: calendar)?.source?.sourceIdentifier == account else { return false }
-            let original: Date?
-            if let civil = native.split(separator: "|").last, civil.count == 10 {
-                original = try? CalendarTime.date(String(civil), allDay: true, zone: .current)
-            } else { original = parseTimestamp(identity["occurrence"].string) }
-            guard let original, let captured = try? events(DateInterval(start: original.addingTimeInterval(-1), end: original.addingTimeInterval(1)), calendars: [calendar]) else { return false }
-            guard captured.allSatisfy(Self.canMaterialize) else { return false }
-            let missing: Bool
-            do { missing = try lookup(native) == nil } catch { return false }
-            return gate.authorized(.event) && gate.store.calendar(withIdentifier: calendar)?.source?.sourceIdentifier == account && missing && !captured.contains { key($0) == native }
-        }
-        return gate.store.event(withIdentifier: identity["event_identifier"].string) == nil
-    }
-
-    private func fresh(_ native: String) throws -> EKEvent {
+    private func answering(_ query: JSON) throws -> [EKEvent] {
         guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
-        if let event = try lookup(native) { return event }
-        for chunk in CalendarTime.chunks(Date()) {
-            let captured = try events(chunk)
-            guard captured.allSatisfy(Self.canMaterialize) else { throw SourceFailure.unavailable }
-            if let event = captured.first(where: { key($0) == native }) { try remember(event); return event }
+        switch query["via"].string {
+        case "identifier":
+            guard !query["identifier"].string.isEmpty, let event = gate.store.event(withIdentifier: query["identifier"].string) else { return [] }
+            return [event]
+        case "external":
+            return gate.store.calendarItems(withExternalIdentifier: query["external"].string).compactMap { $0 as? EKEvent }
+        case "window":
+            let interval = DateInterval(start: Date(timeIntervalSince1970: query["start"].number), end: Date(timeIntervalSince1970: query["end"].number))
+            let found = try events(interval, calendars: query["calendar"].string.isEmpty ? nil : [query["calendar"].string])
+            return query["key"].string.isEmpty ? found : found.filter { !Self.canMaterialize($0) || key($0) == query["key"].string }
+        default:
+            throw SourceFailure.invalid
         }
-        throw SourceFailure.conflict
+    }
+
+    public func candidates(_ query: JSON) throws -> [JSON] {
+        try answering(query).map(candidate)
+    }
+
+    public func account(_ calendar: String) -> JSON {
+        .object(["account": (gate.store.calendar(withIdentifier: calendar)?.source?.sourceIdentifier).map(JSON.string) ?? .null])
+    }
+
+    private func selected(_ selector: JSON) throws -> EKEvent {
+        guard let event = try answering(selector["query"]).first(where: { Self.canMaterialize($0) && key($0) == selector["key"].string }) else { throw SourceFailure.conflict }
+        return event
     }
 
     private func writable(_ key: String) throws -> EKCalendar {
@@ -320,13 +252,13 @@ public final class CalendarSource: Source {
         var calendarResult: JSON = .null
         var goal: JSON = .null
         var allDay = false
-        var actual: JSON = .null
         var savedTitle: JSON = .null
         var observedTitle: JSON = .null
         var existsAfter = false
+        var locator: JSON = .null
     }
 
-    private func perform(_ action: JSON) async throws -> Performed {
+    private func perform(_ action: JSON, selector: JSON) async throws -> Performed {
         let operation = action["op"].string
         var performed = Performed(native: action["native_key"].string)
         if operation == "calendar.create_calendar" {
@@ -341,7 +273,7 @@ public final class CalendarSource: Source {
             performed.calendarResult = observed.map(calendarData) ?? .null
             performed.existsAfter = observed != nil
         } else {
-            let event = operation == "calendar.create_event" ? EKEvent(eventStore: gate.store) : try fresh(performed.native)
+            let event = operation == "calendar.create_event" ? EKEvent(eventStore: gate.store) : try selected(selector)
             event.calendar = try writable(action["list_key"].string)
             let span: EKSpan = args(action)["span"].string == "future" ? .futureEvents : .thisEvent
             performed.goal = operation == "calendar.delete_event" ? JSON.null : try requestedGoal(event, args(action), calendar: event.calendar)
@@ -353,14 +285,7 @@ public final class CalendarSource: Source {
                 try gate.store.save(event, span: span, commit: true)
                 if Self.canMaterialize(event) { performed.native = key(event) }
             }
-            if operation == "calendar.delete_event" {
-                performed.existsAfter = (try? fresh(performed.native)) != nil
-            } else {
-                let observed = try? fresh(performed.native)
-                performed.actual = observed.map(nativeResult) ?? .null
-                if let observed { performed.native = key(observed) }
-                performed.existsAfter = observed != nil
-            }
+            if operation != "calendar.delete_event", Self.canMaterialize(event) { performed.locator = locator(event) }
             return performed
         }
         return performed
@@ -372,29 +297,32 @@ public final class CalendarSource: Source {
         guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
         let native = request["native_key"].string
         switch operation {
+        case "calendar.candidates":
+            return .object(["items": .array(try candidates(request["query"]))])
+        case "calendar.account":
+            return account(request["calendar"].string)
         case "calendar.read_event":
-            guard !native.isEmpty else { return .object(["exists": .bool(false), "known_absent": .bool(false)]) }
             let event: EKEvent
-            do { event = try fresh(native) } catch SourceFailure.conflict { return .object(["exists": .bool(false), "known_absent": .bool(knownAbsent(native))]) }
-            return .object(["exists": .bool(true), "writable": .bool(event.calendar.allowsContentModifications && !event.calendar.isSubscribed), "calendar_key": .string(event.calendar.calendarIdentifier), "all_day": .bool(event.isAllDay), "data": data(event), "native_result": nativeResult(event)])
+            do { event = try selected(request["selector"]) } catch SourceFailure.conflict { return .object(["exists": .bool(false), "known_absent": .bool(false)]) }
+            return .object(["exists": .bool(true), "key": .string(key(event)), "writable": .bool(event.calendar.allowsContentModifications && !event.calendar.isSubscribed), "calendar_key": .string(event.calendar.calendarIdentifier), "all_day": .bool(event.isAllDay), "data": data(event), "native_result": nativeResult(event)])
         case "calendar.read_calendar":
             guard !native.isEmpty, let calendar = gate.store.calendar(withIdentifier: native) else { return .object(["exists": .bool(false)]) }
             return .object(["exists": .bool(true), "writable": .bool(calendar.allowsContentModifications && !calendar.isSubscribed), "data": calendarData(calendar)])
         case "calendar.can_create_calendar":
             return .object(["allowed": .bool(gate.store.defaultCalendarForNewEvents?.allowsContentModifications == true)])
         case "calendar.goal":
-            let existing = native.isEmpty ? EKEvent(eventStore: gate.store) : try fresh(native)
+            let existing = native.isEmpty ? EKEvent(eventStore: gate.store) : try selected(request["selector"])
             let calendar = try writable(request["list_key"].string)
             let goal = try requestedGoal(existing, request["calendar_args"], calendar: calendar, prior: request["prior"])
             return .object(["goal": goal, "all_day": .bool(existing.isAllDay)])
         case "calendar.write":
             let action: JSON = .object(["op": request["op"], "native_key": request["native_key"], "list_key": request["list_key"], "calendar_args": request["calendar_args"]])
-            let performed = try await perform(action)
+            let performed = try await perform(action, selector: request["selector"])
             var result: [String: JSON] = ["native_key": .string(performed.native), "exists_after": .bool(performed.existsAfter)]
             if request["op"].string == "calendar.create_calendar" {
                 result["saved_title"] = performed.savedTitle; result["observed_title"] = performed.observedTitle; result["actual"] = performed.calendarResult
             } else if request["op"].string != "calendar.delete_event" {
-                result["goal"] = performed.goal; result["all_day"] = .bool(performed.allDay); result["actual"] = performed.actual
+                result["goal"] = performed.goal; result["all_day"] = .bool(performed.allDay); result["locator"] = performed.locator
             }
             return .object(result)
         default:

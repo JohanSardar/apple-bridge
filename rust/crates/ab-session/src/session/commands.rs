@@ -207,6 +207,10 @@ fn source_of(operation: &str) -> &str {
 }
 
 impl Probe for Hub {
+    fn lookups(&self) -> Option<std::sync::Arc<crate::calendar_lookup::Lookups>> {
+        self.capture_lookups()
+    }
+
     fn staged(&self, prefix: &str) -> Option<std::sync::Arc<crate::staged::StagedBlobs>> {
         self.capture_staged(prefix)
     }
@@ -355,7 +359,14 @@ impl Hub {
             "action": action,
             "expected_state": expected,
         });
-        if let Err(refusal) = super::messages::origin_of(&command_value) {
+        let checks_origin = !matches!(
+            source_of(&command.operation()),
+            "reminders" | "calendar" | "contacts" | "notes" | "messages"
+        );
+        if let Some(refusal) = checks_origin
+            .then(|| super::messages::origin_of(&command_value).err())
+            .flatten()
+        {
             return self.rejected_by_helper(self.rejection(
                 source_of(&command.operation()),
                 &command.command_id,
