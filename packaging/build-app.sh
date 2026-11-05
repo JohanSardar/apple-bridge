@@ -8,7 +8,7 @@ api="127.0.0.1:7780"
 peer="127.0.0.1:7443"
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --notarize) echo "Notarization requires Johan's Apple Developer ID" >&2; exit 1 ;;
+        --notarize) echo "Notarization requires a configured Apple Developer ID" >&2; exit 1 ;;
         --identity) identity=$2; shift 2 ;;
         --home) app_home=$2; shift 2 ;;
         --api-addr) api=$2; shift 2 ;;

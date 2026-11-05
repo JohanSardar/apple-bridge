@@ -28,7 +28,7 @@ Reproduce from the workspace: `python3 rust/spikes/budget.py`. The controller mu
 
 ## S2: Helper TCC child attribution
 
-**PASS for the requested launch matrix on this MacBook Air, macOS 26.7.1 (2026-11-02).** The network-free Rust probe is embedded in a newly built lab Helper with bundle ID `com.johansardar.applebridge.services`, signed by certificate SHA-1 `7746ED75674E4CEAF4A091FBCE4C24673EE0ECC4`. The live Helper, gateway and bridge home were not modified. Each real invocation took `~/bin/ab-local`; Cargo used jobs=2 and the shared `~/ab-cargo-target`.
+**PASS for the requested launch matrix on this test Mac, macOS 26.7.1 (2026-11-02).** The network-free Rust probe is embedded in a newly built lab Helper with bundle ID `com.johansardar.applebridge.services`, signed by certificate SHA-1 `7746ED75674E4CEAF4A091FBCE4C24673EE0ECC4`. The live Helper, gateway and bridge home were not modified. Each real invocation took `~/bin/ab-local`; Cargo used jobs=2 and the shared `~/ab-cargo-target`.
 
 | Launch | Result | Attribution and access evidence |
 | --- | --- | --- |

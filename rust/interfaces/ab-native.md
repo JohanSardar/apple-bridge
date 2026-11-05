@@ -215,7 +215,7 @@ Reproduce Swift tools with `bash parity/usage/build-swift.sh /tmp/ab-usage-tools
 from this crate (or use the script's repository-relative path). Build the Rust
 example and `parity/usage/data-bytes.go` on the build host, then run
 `python3 parity/usage/compare.py /tmp/ab-usage-tools/usage-oracle
-/home/johan/targets/phase6-native/debug/examples/fixture-reader` on the Air.
+/home/developer/targets/phase6-native/debug/examples/fixture-reader` on the test Mac.
 The Go helper path expected by that script is
 `~/targets/phase6-native/fixture-data-bytes` on `ssh build`.
 

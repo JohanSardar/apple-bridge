@@ -10,7 +10,7 @@ A general product, **not** tied to Toy or any one agent:
 - **Any** other computer can attach a **full, live, 100% synced local copy** of that data, with **read and write** access, set up in a few minutes.
 - Any agent (Toy on the Ubuntu laptop, a completely different agent on a different computer, Claude, a script, a phone) uses the same API and MCP surface.
 
-User requirements (Johan, verbatim intent):
+User requirements (the owner, verbatim intent):
 
 1. Sync is **push**, always on and fast. Replicas almost never request data; it's already there.
 2. Server ← replica traffic is for **writes**: send iMessages, create/edit reminders, calendar events, everything Apple exposes.
@@ -181,7 +181,7 @@ Same on the Mac and on every replica:
 
 - Name.
 - Replica language (Go vs TypeScript).
-- Just Johan, or also designed for other people to install?
+- Just the owner, or also designed for other people to install?
 - v1 source set and order.
 - Blob policy: download all attachments eagerly, or cap by size?
 - Health / Screen Time: route through the Mac server (one hub for all Apple data) or a separate path?

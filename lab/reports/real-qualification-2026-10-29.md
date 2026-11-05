@@ -26,7 +26,7 @@ Unique scenario invocations: 70. AI-LOCAL retried once after native-build conten
 | CONN-CLAUDE-CODE | missing | failed | exit 1 | Requires an authorized public embedded node and Ubuntu curl; unattended login and system Serve changes are forbidden |
 | CONN-RELAY-CLAUDE | missing | failed | exit 1 | NS delegation absent; trusted control TLS and VM DNS scopes/IAM require operator setup |
 | FOC-IDLE | missing | failed | exit 1 | Five-minute Helper CPU qualification remains pending; no idle CPU measurement claimed. |
-| FOC-PHONE-SYNC | missing | failed | exit 1 | Johan must have the paired iPhone available and qualify Focus sync after a safe AB Focus set/readback/restore implementation |
+| FOC-PHONE-SYNC | missing | failed | exit 1 | the owner must have the paired iPhone available and qualify Focus sync after a safe AB Focus set/readback/restore implementation |
 | FOC-SET-REAL | missing | failed | exit 1 | AB Focus pack is not supplied: verify Set Focus identifiers/parameters and provide/import packaging/shortcuts/AB Focus.shortcut; then qualify set/readback/restore (syncs to iPhone) |
 | FOC-STATUS-REAL | missing | failed | exit 1 | System Settings > Privacy & Security > Focus: authorize AppleBridgeHelper.app (dev.applebridge.helper); real runner currently hard-codes limited and needs a status probe |
 | IWORK-REAL | missing | failed | exit 1 | Failed assertions: real_qualification_batched_at_end |
@@ -77,12 +77,12 @@ Unique scenario invocations: 70. AI-LOCAL retried once after native-build conten
 | MAIL-SEND-SELF-REAL | failed | failed | exit 1 | grant: Automation dev.applebridge.helper → com.apple.mail; no configured Mail account |
 | MAP-IDLE | failed | failed | exit 1 | Failed assertions: helper_reached_idle, five_minute_idle_cpu_under_2_percent |
 | MSG-DELETE-REAL | failed | failed | skipped | skipped: requires unlocked Mac with Messages UI available and an unused own self-chat handle; no safe UI cleanup demonstrated at lock screen |
-| MSG-GROUP-CREATE | failed | failed | skipped | skipped: runner sends to configured non-self Remy/Ben handles; self-chat-only rule forbids this scenario |
-| MSG-GROUP-MANAGE | failed | failed | skipped | skipped: runner sends to configured non-self Remy/Ben handles; self-chat-only rule forbids this scenario |
+| MSG-GROUP-CREATE | failed | failed | skipped | skipped: runner sends to configured non-self Remy/the authorized group-test participant handles; self-chat-only rule forbids this scenario |
+| MSG-GROUP-MANAGE | failed | failed | skipped | skipped: runner sends to configured non-self Remy/the authorized group-test participant handles; self-chat-only rule forbids this scenario |
 | MSG-READSTATE-REAL | failed | failed | skipped | skipped: requires unlocked Mac with Messages UI available and an unused own self-chat handle; no safe UI cleanup demonstrated at lock screen |
 | MSG-RESEND | failed | failed | skipped | skipped: requires a uniquely identified failed self-chat test message via APPLE_BRIDGE_RESEND_RUN; existing self-chat residue must remain untouched |
 | MSG-SELFTEST | failed | failed | skipped | skipped: historical selftest leaves text/file residue when UI cleanup is deferred; existing residue untouched |
-| MSG-SEND-RCS-GROUP | failed | failed | skipped | skipped: runner sends to configured non-self Remy/Ben handles; self-chat-only rule forbids this scenario |
+| MSG-SEND-RCS-GROUP | failed | failed | skipped | skipped: runner sends to configured non-self Remy/the authorized group-test participant handles; self-chat-only rule forbids this scenario |
 | MUS-IDLE | failed | failed | exit 1 | Budget-limited: interrupted during the single serial attempt; fresh failure evidence saved. No passing idle CPU measurement established. |
 | NOTE-CRUD | failed | failed | skipped | skipped: historical tagged cleanup failed; safe cleanup must be proved before new mutations |
 | PHO-IDLE | failed | failed | exit 1 | Photos grant missing; whole-Helper CPU qualification blocked by T53 |
@@ -93,7 +93,7 @@ Unique scenario invocations: 70. AI-LOCAL retried once after native-build conten
 | RMT-STATUS-OFF | failed | failed | exit 1 | Requires an authorized public embedded node and Ubuntu curl; unattended login and system Serve changes are forbidden |
 | SAF-IDLE | failed | failed | exit 1 | Failed assertions: helper_cpu_under_two_percent_for_five_minutes |
 | SC-RUN-REAL | failed | failed | exit 1 | Failed assertions: bounded_runner_completed, echo_output_matches |
-| SIRI-INTENTS | failed | failed | exit 1 | App Intents metadata missing from Helper bundle; full Xcode metadata toolchain required. Johan must verify Apple Bridge status appears in Shortcuts and runs. |
+| SIRI-INTENTS | failed | failed | exit 1 | App Intents metadata missing from Helper bundle; full Xcode metadata toolchain required. the owner must verify Apple Bridge status appears in Shortcuts and runs. |
 | USE-ACTION-PROBE | failed | failed | exit 1 | Screen Time action output unmeasured; pack setup: packaging/shortcuts/screen-time-probe.md. No shortcuts executed; retain Biome pending owner-qualified pack. |
 | VIS-IDLE | failed | failed | exit 1 | Failed assertions: helper_cpu_under_two_percent |
 | WEB-MEDIA-VARIANTS | failed | failed | skipped | skipped: historical run failed tagged media cleanup; unlock Mac and prove per-run Messages cleanup before new self-chat attachments; existing residue untouched |

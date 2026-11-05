@@ -69,7 +69,7 @@ Runtime's QueryAuditSink appends the Go-shaped operation/argument_bytes/result_b
 
 ## G-F APP-LOC-SIM binary qualification
 
-The location scenario retains the Swift fake adapter proof and sends its five location records twice through the selected gateway's signed HTTP ingress. Readback uses records.query; each of the five location/geofence commands is admitted through REST, decrypted with the independent phone wire decoder, completed through signed HTTP and read back through commands.status. Invalid geofence validation uses HTTP, and coordinate-bearing receipts remain rejected. All behavioral assertions pass against Go first and then Rust on the Air, serially through ab-local; no real location adapter or device permission request runs.
+The location scenario retains the Swift fake adapter proof and sends its five location records twice through the selected gateway's signed HTTP ingress. Readback uses records.query; each of the five location/geofence commands is admitted through REST, decrypted with the independent phone wire decoder, completed through signed HTTP and read back through commands.status. Invalid geofence validation uses HTTP, and coordinate-bearing receipts remain rejected. All behavioral assertions pass against Go first and then Rust on the test Mac, serially through ab-local; no real location adapter or device permission request runs.
 
 ## G-F owner approval metadata
 

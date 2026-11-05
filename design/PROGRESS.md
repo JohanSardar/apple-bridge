@@ -1,12 +1,12 @@
 # Progress
 
-One line per unit. Rules: BUILD-GOAL.md (2026-10-17 update: no reviews, merge on green, trimmed tests), WORKER-RULES.md.
+One line per unit. Current rules: ../AGENTS.md; historical process notes below are superseded.
 
 ## Environment
 - Air: macOS 26.7.1, SIP on, 8 GB, Go 1.27, Swift 6.3.3 CLT (SwiftPM broken → `packaging/dev/build-native.sh`), heavy jobs via `packaging/dev/heavy.sh` (2 slots).
 - Access: `ssh -o ControlPath=none air` (reverse tunnel 127.0.0.1:2222); Ubuntu→Air direct impossible, Air→Ubuntu direct works. VNC: `~/tools/airvnc.py`. Screen locked tonight (Accessibility UI unavailable while locked).
 - TCC: Helper (dev.applebridge.helper) and AppleTruth (dev.applebridge.truth) hold Reminders/Calendar/Contacts (user TCC rows, backups in `~/Library/Application Support/AppleBridgeDev/`); Helper also FDA, Accessibility, Automation. Never change the dev signing cert; per-run app copies only.
-- Johan unreachable: identity-bound items → `limited` with reason.
+- the owner unreachable: identity-bound items → `limited` with reason.
 
 ## Final status (2026-10-23, leader)
 This section supersedes the earlier IN PROGRESS, TODO and "waiting" lines below. Per-app results and exact numbers are in design/MILESTONE-GATES.md.
@@ -25,15 +25,15 @@ This section supersedes the earlier IN PROGRESS, TODO and "waiting" lines below.
   - Groups and typing: own-handles-only rule.
   - Reminders and Calendar parity mutations: Automation consent pending, never automated.
   - Notes delete and real writes: AppleScript delete no-ops on 25G241, and no verified cleanup route exists.
-  - Embedded tsnet Remote: needs a tailnet device approval through Johan's login.
+  - Embedded tsnet Remote: needs a tailnet device approval through the owner’s login.
   - Contacts public relay: 20/20 delivered, but p95 1.45 s under external TCC load.
   - web.media cold arrival: same own-handle send restriction.
 - **Release web build:** lab fixtures excluded (#315). Cacheable gzip is 593,179 of 614,400 bytes; the largest route is 60,296 of 61,440.
-- **Test data left on Johan's Apple ID (disclosed, never purged):**
+- **Test data left on the owner’s Apple ID (disclosed, never purged):**
   - Messages own-handle chat (ROWID 40): 29 of 57 tagged items removed to Recently Deleted, 28 remain active.
   - Messages Recently Deleted: earlier tagged items there expire with the OS.
   - Notes: 1 active tagged test note, 1 tagged test folder and the untagged "Bridge Test" base folder. 35 tagged notes sit in Recently Deleted.
-- **Host:** Johan's transcript-mirror launchd job is restored at wrap-up.
+- **Host:** the owner’s transcript-mirror launchd job is restored at wrap-up.
 
 ## Units
 - DONE spec + tooling: SPEC, glossary, ADRs, features.yaml + checker, zero-comment lint.
@@ -46,7 +46,7 @@ This section supersedes the earlier IN PROGRESS, TODO and "waiting" lines below.
 - Messages commands merged (36be10a, c250164): self text/files pass sim/real/replica; incoming echo real+replica; history import 161,121 msgs in 381 s, 0 mismatches → messages.read + messages.send DONE. Actions/groups LIMITED at real level (screen lock; no 2nd iMessage account). File cap removed (cb41f84: staged blob paths; 5 MiB self-send verified, 696 ms). Test-message cleanup awaits unlock.
 - DONE Notes (56b6570): 5 sim, 4 real + 2 Ubuntu replica pass while locked; independent JXA Truth and unique tagged folders; external p95 real 590 ms / replica 555 ms. Notes restart cleared a stalled Automation queue; one earlier transient replica delete failure remains recorded in lab/evidence/notes-automation-diagnosis.json.
 - DONE Usage/Screen Time: read-only Biome source, independent Truth, lock/day math + scrubbed CRLF fixtures; five sim scenarios and USE-IMPORT real pass (1,246 app/day records, zero mismatches); absent DevicePeer names are explicit, historical sleep/settings parity remain estimates.
-- LIMITED packaging.app (3658b73): signed Apple Bridge.app, SMAppService agent, dedicated keychain (works with login Keychain locked); PKG-INSTALL + PKG-BACKGROUND real pass; notarization needs Johan's Developer ID; GUI onboarding clicks and reboot untested.
+- LIMITED packaging.app (3658b73): signed Apple Bridge.app, SMAppService agent, dedicated keychain (works with login Keychain locked); PKG-INSTALL + PKG-BACKGROUND real pass; notarization needs the owner’s Developer ID; GUI onboarding clicks and reboot untested.
 - DONE agent suite (31891ec): Codex gpt-6-luna on Ubuntu, MCP only, 7 tasks across 6 sources, each 2/2, graded by independent Truth.
 
 ## Status (2026-10-17 final)
@@ -54,9 +54,9 @@ This section supersedes the earlier IN PROGRESS, TODO and "waiting" lines below.
 - Open follow-ups (not blocking): command responses > 256 KiB over the gateway-dials feed; delete tagged self-test messages once the screen is unlocked; Notes Automation can stall (relaunch Notes) — consider auto-recovery.
 
 ## Limits
-- messages.actions/groups real: Accessibility needs an unlocked screen (Johan's password); iMessage group management needs a second iMessage account.
-- core.trust CORE-CRED-LIFECYCLE/real: login Keychain locked (needs Johan's password).
-- packaging.app notarization: needs Johan's Developer ID.
+- messages.actions/groups real: Accessibility needs an unlocked screen (the owner’s password); iMessage group management needs a second iMessage account.
+- core.trust CORE-CRED-LIFECYCLE/real: login Keychain locked (needs the owner’s password).
+- packaging.app notarization: needs the owner’s Developer ID.
 
 ## Follow-up (2026-10-17, unlocked-session brief)
 - packaging.app DONE: R-PKG now makes notarization optional; fresh PKG-INSTALL/real and PKG-BACKGROUND/real pass. Initial background startup health failure retained; cause unproven. Current feature totals: 21 done, 3 limited (175/183 scenario-levels passing).
@@ -64,14 +64,14 @@ This section supersedes the earlier IN PROGRESS, TODO and "waiting" lines below.
 - Cleanup retained 30 tagged message candidates (GUI unavailable) and one provably empty calendar (created by an earlier run, forbidden to delete under this-run ownership rule). Details and exact commands: `lab/evidence/messages-unlocked-recheck.json`; screenshots: shared checkout `lab/evidence/private/unlocked-recheck/` (gitignored). This entry supersedes earlier environment/limit notes; no new scenarios.
 
 ## Authorized follow-up (2026-10-17)
-- DONE earlier-build empty calendar cleanup: explicit Johan authorization, independent unbounded enumeration found one Bridge Test calendar with zero events; signed AppleTruth removed it and a fresh unbounded audit found zero calendars. Evidence: `lab/evidence/messages-real-session-cleanup.json`. `make lint` and `make features` pass.
+- DONE earlier-build empty calendar cleanup: explicit the owner authorization, independent unbounded enumeration found one Bridge Test calendar with zero events; signed AppleTruth removed it and a fresh unbounded audit found zero calendars. Evidence: `lab/evidence/messages-real-session-cleanup.json`. `make lint` and `make features` pass.
 
 
 ## Real Messages follow-up (2026-10-18)
-- Corrected the prior VNC-based lock inference. No VNC was used in this attempt. The signed dev Helper is Accessibility-trusted inside Johan's session. The latest GUI probes return Messages AX `-25204`, and process samples show Messages waiting on call capabilities/IMCore queues and `callservicesd` waiting on CoreTelephony. This proves an unresponsive service, not a locked desktop.
+- Corrected the prior VNC-based lock inference. No VNC was used in this attempt. The signed dev Helper is Accessibility-trusted inside the owner’s session. The latest GUI probes return Messages AX `-25204`, and process samples show Messages waiting on call capabilities/IMCore queues and `callservicesd` waiting on CoreTelephony. This proves an unresponsive service, not a locked desktop.
 - Historical real AppleTruth passes: MSG-REACT `run_01M56MHBV8SHMN009CBF2SJQC2` proved heart and emoji add/remove; MSG-UNSEND `run_01M56MPXB151A0X8AKAZXXPGZ5` proved native retracted-part state even though `date_retracted` remains zero. Each latency has one sample, so p50/p95/max are identical: heart add 11527.44 ms, heart remove 5905.39 ms, emoji add 7698.76 ms, emoji remove 10152.61 ms, unsend 7314.79 ms. Full assertions: `lab/evidence/messages-real-session-green.json`.
-- Reply remains unproven: an earlier tagged reply had no `thread_originator_guid`. Edit input/model and semantic-state fixes have not passed a real retest. Group creation remains unproven. The approved Remy/Ben composer offered SMS and rejected an RCS request before sending. SMS does not support the requested membership changes. Own iCloud email acceptance as a distinct participant remains unverified; the Apple minimums are two other participants for rename/add and three for removal. No eligible management success is claimed.
-- The login Keychain was confirmed locked before Johan prohibited further tests. The earlier GUI credential attempt caused an authentication dialog. Johan dismissed its user-session SecurityAgent; subsequent user-owned agents were dismissed without entering a password, and the `_securityagent` process was untouched. No further login-Keychain test was run after the prohibition. The lifecycle stays limited; no password or unlock action is requested.
+- Reply remains unproven: an earlier tagged reply had no `thread_originator_guid`. Edit input/model and semantic-state fixes have not passed a real retest. Group creation remains unproven. The approved Remy/the authorized group-test participant composer offered SMS and rejected an RCS request before sending. SMS does not support the requested membership changes. Own iCloud email acceptance as a distinct participant remains unverified; the Apple minimums are two other participants for rename/add and three for removal. No eligible management success is claimed.
+- The login Keychain was confirmed locked before the owner prohibited further tests. The earlier GUI credential attempt caused an authentication dialog. the owner dismissed its user-session SecurityAgent; subsequent user-owned agents were dismissed without entering a password, and the `_securityagent` process was untouched. No further login-Keychain test was run after the prohibition. The lifecycle stays limited; no password or unlock action is requested.
 - Cleanup is incomplete: 17 individually tagged self-messages were removed in earlier attempts. The final unbounded candidate audit found 63 active tagged self-messages and the final deletion attempt removed zero (`validate:targetUnavailable`). Expired Remy test notices could not be unsent. The earlier-build empty Bridge Test calendar was independently verified empty, deleted, merged and pushed as `e08fd0fbe1808c1d9a299d45088086caa43aaf14`.
 - The final real MSG-REACT and MSG-UNSEND retries both failed at `native_send_observed_with_fingerprint_checkpoint`, before executing the action. The preceding MSG-EDIT retry failed the same prerequisite; its remaining group/reply suite was interrupted and does not establish a new management result. Native implementation and runners are checkpointed on branch `messages-real-session`, commit `aaa7ec2eb8af5c94e2f4d8ed38f618e8140f9480`, and are deliberately not merged because the final real gate is red. This report merges evidence/status corrections only.
 - Verification on the worker checkpoint: `packaging/dev/heavy.sh make lint` PASS; `make features` PASS (24 features, 21 done, 3 limited; 175/183 scenario-levels passing). No new scenario IDs, dependencies, or SPEC changes. Exact retry commands and redacted final evidence: `lab/evidence/messages-real-session-final.json`. No implementation feature is newly marked done.
@@ -79,7 +79,7 @@ This section supersedes the earlier IN PROGRESS, TODO and "waiting" lines below.
 
 ## Messages finish attempt (2026-10-18)
 - Login-Keychain lifecycle now PASS without UI: process-local Security interaction is disabled before credential calls; create/read/rotate/revoke takes 302 ms (one sample, p50/p95/max equal). No keychain locks/settings changes. core.trust DONE. Existing python3 loads the system Security framework; no Python package dependency.
-- Native Messages actions remain BLOCKED: unlocked desktop confirmed without VNC; signed Helper AX-trusted, Messages AX -25204 even immediately after authorized user-owned SecurityAgent dismissal. One real MSG-EDIT prerequisite self-send is indeterminate (-1712); Edit was not dispatched. Normal Quit also times out; sample waits in IMCore/TelephonyUtilities. No foreign service restart or additional recipients. Group eligibility remains LIMITED (approved Remy/Ben pair previously SMS; true iMessage/RCS group unproven).
+- Native Messages actions remain BLOCKED: unlocked desktop confirmed without VNC; signed Helper AX-trusted, Messages AX -25204 even immediately after authorized user-owned SecurityAgent dismissal. One real MSG-EDIT prerequisite self-send is indeterminate (-1712); Edit was not dispatched. Normal Quit also times out; sample waits in IMCore/TelephonyUtilities. No foreign service restart or additional recipients. Group eligibility remains LIMITED (approved Remy/the authorized group-test participant pair previously SMS; true iMessage/RCS group unproven).
 - Tagged self cleanup: unbounded authorized scan 119 candidates, 0 removed, 119 remain; earlier brief count was 63, increase cause unproven. Native target validation is unavailable. Earlier Remy notices not claimed removed.
 - 24/24 Messages sim scenarios and CORE-CREDENTIAL-STORE/sim PASS. Fixed check-messages-capture.sh to build MessagesCaptureChecks when only Helper had been built; failing then passing MSG-WATCHER-REARM retained. make lint and make features PASS (22 done, 1 limited, 1 blocked; 176/183 scenario-levels). No new scenario IDs or SPEC edits.
 - Native implementation aaa7ec2 and finish changes stay in messages-finish; no merge/push while requested real E2E is red. Exact commands, session probes, cleanup and historical versus fresh action latency evidence: lab/evidence/messages-finish.json.
@@ -95,15 +95,15 @@ This section supersedes the earlier IN PROGRESS, TODO and "waiting" lines below.
 
 ## Web app (DECISIONS 2026-10-20, SPEC §23)
 - Transcript text leaves subpixel shaping slack; DOM sizes correct virtual heights and tail silhouettes with anchor compensation. Font readiness, matching loaded promises and an intrinsic probe handle late fonts without loadingdone. WEB-MSG-TEXT-SIZING covers the reported string, 500 seeded cases, demo text and late-font/anchor geometry.
-Process: every change ships as a small PR (WORKER-RULES, Git and GitHub). Status lives in features.yaml; one line per unit here. Updated 2026-10-21.
+Process: every change ships as a small PR (AGENTS.md, Git and GitHub). Status lives in features.yaml; one line per unit here. Updated 2026-10-21.
 
-- DONE W0: decisions, the Messages spec (`design/web/messages.md`), SPEC §23 with W2–W8 unit tables (#98–#100), ADRs 0015–0020 and the Reminders/Calendar/Contacts/Notes drafts. On 2026-10-22 Johan delegated the skim to the leader, who approved the drafts as the working spec. The input gate was redefined as our own main-thread cost (#103), and the list rules were pinned (#105).
+- DONE W0: decisions, the Messages spec (`design/web/messages.md`), SPEC §23 with W2–W8 unit tables (#98–#100), ADRs 0015–0020 and the Reminders/Calendar/Contacts/Notes drafts. On 2026-10-22 the owner delegated the skim to the leader, who approved the drafts as the working spec. The input gate was redefined as our own main-thread cost (#103), and the list rules were pinned (#105).
 - DONE W1-RM: chat, thread and collection read models (#2), plus rich filters, collections and `messages.handles` (#14, #22).
 - DONE W1-WEB / web.frontdoor: front door, passkey sessions and `web/1` live views (#3–#5); hardening (#15, #19, #23, #24); contact thumbnails and the handles route (#16, #38); canceled-view errors (#71).
 - DONE W1-AGENT: credentials, activity, approvals, OAuth, screens and polish (#18, #26, #32, #47, #54, #62, #64, #68, #81). Replica delegation (#73) and approved replica writes (#78) shipped with W1-RELAY.
 - DONE W1-UI: Solid shell, design system, springs, virtual list and web-level runner (#6–#8). 120 Hz is unproven on this 60 Hz headless host (`input_8ms_proven:false`).
 - DONE W1-DEMO: deterministic 60-contact / 40-chat / 5,000-message world, demo sessions and CLI, rich runner (#20, #25, #30).
-- IN PROGRESS W1-REMOTE: the system Funnel backend is real on the Air, with public REST/MCP/SSE at REST p95 60 ms (#27–#29, #34). The embedded tsnet login needs a GUI approval on the Air.
+- IN PROGRESS W1-REMOTE: the system Funnel backend is real on the test Mac, with public REST/MCP/SSE at REST p95 60 ms (#27–#29, #34). The embedded tsnet login needs a GUI approval on the test Mac.
 - IN PROGRESS W1-MEDIA: Helper variants (#9). Cleanup of six tagged self-chat bubbles and cold-arrival latency wait for the unlock.
 - IN PROGRESS W1-RELAY: Safari local session (#40), relay auth/pairing/feed (#45, #52, #55), replay/revocation (#56), remote commands (#67), native agent commands over the public route (#83), feed pipelining (#76), upload resume (#92) and blob staging (#90). R-LIVE waits on LIVE-FIX.
 - IN PROGRESS LIVE-FIX (#75): native Reminders capture fixed. Relay-added p95 is 35 ms pipelined vs 124 ms serial. The real Calendar regression sweep is running. `CAL-ALLDAY-FUTURE` fails on baseline too (civil offset, Truth, cleanup audit) and is tracked separately. Earlier fixes: #72, #91, #96.
@@ -135,26 +135,26 @@ Process: every change ships as a small PR (WORKER-RULES, Git and GitHub). Status
 - IN PROGRESS W3-COMPOSE: exact observed record IDs (#86), safe resend identity (#88), State pool fix (#94), live source capability proofs (#101). The command layer and composer are next.
 - DONE (code) W3-HELPER: interactive origin gate, self-test, guarded resend, recoverable delete and chat actions (#51, #57, #59, #60, #63, #65). UI proofs wait for the unlock.
 - DONE (store) W5-STORE: Reminders Core Data reader and enrichment (#115, #120), `reminders.lists`/`reminders.items` read models at gateway p95 about 4–5 ms (#150, hardening #161), verified native manual ordering (#160) and rich demo data (#157). Tags, attachment IDs, assignment, store alarms/recurrence, early reminders, sections, filters and the color archive remain unsupported from the native store until positive fixtures exist.
-- IN PROGRESS W5-UI: read-only Reminders sidebar and list views with `web/1` live updates (#166). Paging is a documented follow-up, because Johan's largest real view is far below the 2 MiB view cap.
+- IN PROGRESS W5-UI: read-only Reminders sidebar and list views with `web/1` live updates (#166). Paging is a documented follow-up, because the owner’s largest real view is far below the 2 MiB view cap.
 - TODO: W4 parity, W5-UI/WRITE/PARITY, W6–W8.
 - IN PROGRESS W2-TRANSCRIPT: indexed originator-filtered reads and scoped live counts (#61); focused replies use an independent bounded reader with native modal dismissal and active-source viewer restoration. Transcript motion/performance remain pending.
 - Dev infrastructure: re-entrant heavy.sh with an OS-matching SDK and an exclusive lane (#11, #35, #36, #37, #44), per-step gating (#74), per-project web budgets (#39), detached Air runs (#42), explicit ff updates (#89), disk trim (#95).
-- **Waiting on the Air being unlocked** (lock screen; passwords are never typed):
+- **Waiting on the test Mac being unlocked** (lock screen; passwords are never typed):
   - Messages capture pass for `messages.md` §17 and the "to verify" rows.
   - The W3 unlock script (cleanup of W1-MEDIA bubbles and self-test bubbles, then the UI proofs).
   - Embedded tsnet login approval (`/tmp/ablab/w1-remote-embedded-check/remote-on.log`).
 - UPDATE 2026-10-21 night:
   - **Merged:** per-part command outcomes (#141), video and Live Photo bubbles (#108), the Reminders `reminders.lists`/`reminders.items` read models at gateway p95 about 5 ms (#150), a memory-gated sim lane beside the single heavy slot (#151–#153, #156), and a lab gate that fails any run during which the Helper crashed (#155).
   - **Fixing:** a Helper SIGABRT in Messages media export. Cancellation reached `cancelExport()` before the async export configured its session (W2-MEDIA, priority). Real Calendar and Contacts acceptance reruns wait for that fix.
-- **Waiting on the Air's system Tailscale**, which has been stopped since before 16:31 local on 2026-10-21. That is Johan's host state and agents never change it. These gates are recorded as host-blocked and rerun when it's back:
+- **Waiting on the test Mac's system Tailscale**, which has been stopped since before 16:31 local on 2026-10-21. That is the owner’s host state and agents never change it. These gates are recorded as host-blocked and rerun when it's back:
   - #141: the public relay gate (`remote_on_system`).
   - #154: the six `runRelayWorld` relay scenarios (CONNECT, COMMAND, PUBLIC-AGENTS, NATIVE-AGENTS, REPLICA-BLOBS, REPLICA), plus CORE-GATEWAY-DIALS at replica level if its Tailscale dial fails.
   - Contacts public-path R-LIVE (#139).
-  - **Update 2026-10-22:** Johan delegated host fixes, and the leader turned the Air's Tailscale back on (`tailscale up`, Serve config unchanged by md5). The gates above are no longer host-blocked; each PR reruns its public gates before merge.
-  - The Air reaches the Ubuntu replica host over LAN while Tailscale is stopped: its lab `ubuntu` SSH alias tries `ubuntu-server` first and falls back to the Ubuntu LAN address (original config at `~/.ssh/config.bak-ablab-20261021`).
+  - **Update 2026-10-22:** the owner delegated host fixes, and the leader turned the test Mac's Tailscale back on (`tailscale up`, Serve config unchanged by md5). The gates above are no longer host-blocked; each PR reruns its public gates before merge.
+  - The Air reaches the Ubuntu replica host over LAN while Tailscale is stopped: its lab `ubuntu` SSH alias tries `replica-host` first and falls back to the Ubuntu LAN address (original config at `~/.ssh/config.bak-ablab-20261021`).
 - UPDATE 2026-10-21 late night:
   - **Merged:** Helper media-export crash fix (#159), Calendar invalidated-capture crash fix (#163), demo Reminders data (#157), native manual ordering (#160), read-model hardening (#161), and dev infrastructure: YAML latency classification (#162), the dispatch-only rebase rule (#164), and host-thrash guards for sensitive and extreme cases (#168–#170).
-  - **Host:** Johan's own `com.excerlock.transcript-mirror` launchd job (another project, never touched by agents) runs every 30 minutes and pushes the 8 GB Air into heavy swap for part of each cycle. `heavy.sh` holds sensitive jobs and, during extreme thrash, other heavy jobs. Timing results that overlap such a window are host-invalid and rerun.
+  - **Host:** the owner’s own `com.excerlock.transcript-mirror` launchd job (another project, never touched by agents) runs every 30 minutes and pushes the 8 GB Air into heavy swap for part of each cycle. `heavy.sh` holds sensitive jobs and, during extreme thrash, other heavy jobs. Timing results that overlap such a window are host-invalid and rerun.
   - **Found:** every record update scans the whole FTS table (`records_fts` keyed by UNINDEXED columns). LIVE-FIX is fixing it with stable FTS row keys and a failing-first perf proof.
   - **Calendar:** a real probe (macOS 26.7.1) showed location and both alarm edits don't advance `lastModifiedDate`. The occurrence stamp is metadata plus location plus alarms, with the 900 s full rebuild as backstop (#143).
 

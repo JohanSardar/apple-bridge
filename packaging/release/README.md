@@ -27,7 +27,7 @@ Export these values from your private configuration:
 | `ASC_ISSUER_ID` | Its issuer ID |
 | `SPARKLE_KEY_FILE` | Absolute path to a mode-600 file containing a base64 32-byte Ed25519 seed |
 
-Generate a new update seed only for the first release, using `umask 077; openssl rand -base64 32 > /private/path/update.seed`. Preserve it: previous releases trust its public key. No command needs Johan's login password. The old login-keychain `Identity.swift` path has been removed.
+Generate a new update seed only for the first release, using `umask 077; openssl rand -base64 32 > /private/path/update.seed`. Preserve it: previous releases trust its public key. No command needs the owner’s login password. The old login-keychain `Identity.swift` path has been removed.
 
 ## Mac release
 
@@ -76,7 +76,7 @@ swiftc -sdk /Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk \
 
 It copies the app and bundled helper into a temporary HOME under the user's cache, installs actual credentials in the app's own dedicated keychain, creates state/cache/preferences fixtures, runs `tccutil reset All dev.applebridge.r1test.uninstall`, deletes that keychain, and uninstalls. It checks that no files remain under the temporary HOME. LaunchServices must see the fixture before TCC reset; `/var/folders` fixtures are ignored. No desktop app launches with an overridden HOME, no actual user grants are reset, and no login service is registered by the check.
 
-The product uninstall explicitly confirms removal, unregisters the gateway and main-app login services, stops the setup helper, deletes the app credential keychain, resets `dev.applebridge.helper` TCC permissions, clears updater preferences and standard app data paths, and removes the app bundle including its helper. Redirected ancestors are refused; unregister, credential and TCC failures stop cleanup. `R1-DMG-REAL` runs locally on the Pro. It checks the stapled DMG, requires Gatekeeper to report `accepted` and `source=Notarized Developer ID`, mounts it read-only, verifies the bundled app with `codesign --verify --deep --strict`, checks the Applications link, and detaches the volume. It does not launch the product or change permissions.
+The product uninstall explicitly confirms removal, unregisters the gateway and main-app login services, stops the setup helper, deletes the app credential keychain, resets `dev.applebridge.helper` TCC permissions, clears updater preferences and standard app data paths, and removes the app bundle including its helper. Redirected ancestors are refused; unregister, credential and TCC failures stop cleanup. `R1-DMG-REAL` runs locally on the build Mac. It checks the stapled DMG, requires Gatekeeper to report `accepted` and `source=Notarized Developer ID`, mounts it read-only, verifies the bundled app with `codesign --verify --deep --strict`, checks the Applications link, and detaches the volume. It does not launch the product or change permissions.
 
 ## iPhone releases
 
@@ -92,4 +92,4 @@ The Pro qualification produced `dist/r1c-dmg3/AppleBridge.dmg` and the internal-
 
 TestFlight version 0.1.2 build 4 is independently confirmed as VALID and INTERNAL_ONLY with no beta groups and external testing NOT_APPLICABLE. ASC's internal build state is MISSING_EXPORT_COMPLIANCE; the encryption declaration remains to be completed before assigning internal testers.
 
-If a notarization wait times out, preserve the signed artifact and query the existing submission with `notarytool history` and `notarytool info`, using the same path-based ASC key arguments. Once the DMG submission is Accepted, run `xcrun stapler staple`, the validation and Gatekeeper commands above, then rerun `R1-DMG-REAL` on the Pro with `APPLE_BRIDGE_RELEASE_DMG` pointing at that DMG. Do not queue this check on the Air.
+If a notarization wait times out, preserve the signed artifact and query the existing submission with `notarytool history` and `notarytool info`, using the same path-based ASC key arguments. Once the DMG submission is Accepted, run `xcrun stapler staple`, the validation and Gatekeeper commands above, then rerun `R1-DMG-REAL` on the build Mac with `APPLE_BRIDGE_RELEASE_DMG` pointing at that DMG. Do not queue this check on the test Mac.

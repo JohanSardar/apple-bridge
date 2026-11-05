@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "ab-applepeer"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "ab-operations",
  "ab-wire",
@@ -20,7 +20,7 @@ dependencies = [
 
 [[package]]
 name = "ab-blobs"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "ab-domain",
  "ab-trust",
@@ -35,7 +35,7 @@ dependencies = [
 
 [[package]]
 name = "ab-catalog"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "ab-domain",
  "serde",
@@ -44,7 +44,7 @@ dependencies = [
 
 [[package]]
 name = "ab-commands"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "ab-catalog",
  "ab-wire",
@@ -60,7 +60,7 @@ dependencies = [
 
 [[package]]
 name = "ab-domain"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -69,7 +69,7 @@ dependencies = [
 
 [[package]]
 name = "ab-featuregraph"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -79,7 +79,7 @@ dependencies = [
 
 [[package]]
 name = "ab-frontdoor"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "ab-catalog",
  "ab-operations",
@@ -106,7 +106,7 @@ dependencies = [
 
 [[package]]
 name = "ab-iphone"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "ab-trust",
  "ab-wire",
@@ -123,7 +123,7 @@ dependencies = [
 
 [[package]]
 name = "ab-lint"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "regex",
  "tempfile",
@@ -131,7 +131,7 @@ dependencies = [
 
 [[package]]
 name = "ab-native"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "ab-domain",
  "ab-wire",
@@ -149,7 +149,7 @@ dependencies = [
 
 [[package]]
 name = "ab-operations"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "ab-blobs",
  "ab-catalog",
@@ -167,11 +167,11 @@ dependencies = [
 
 [[package]]
 name = "ab-pages"
-version = "0.0.0"
+version = "0.1.2"
 
 [[package]]
 name = "ab-relay"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "ab-remote",
  "ab-wire",
@@ -206,7 +206,7 @@ dependencies = [
 
 [[package]]
 name = "ab-relay-control"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "ab-pages",
  "ab-wire",
@@ -231,7 +231,7 @@ dependencies = [
 
 [[package]]
 name = "ab-remote"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "ab-wire",
  "base64 0.22.1",
@@ -261,7 +261,7 @@ dependencies = [
 
 [[package]]
 name = "ab-replication"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "ab-blobs",
  "ab-state",
@@ -290,7 +290,7 @@ dependencies = [
 
 [[package]]
 name = "ab-runtime"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "ab-applepeer",
  "ab-blobs",
@@ -330,7 +330,7 @@ dependencies = [
 
 [[package]]
 name = "ab-session"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "ab-native",
  "ab-shortcuts",
@@ -348,7 +348,7 @@ dependencies = [
 
 [[package]]
 name = "ab-shadow-tools"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "ab-trust",
  "base64 0.22.1",
@@ -365,7 +365,7 @@ dependencies = [
 
 [[package]]
 name = "ab-shortcuts"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "ab-sys",
  "jiff",
@@ -378,7 +378,7 @@ dependencies = [
 
 [[package]]
 name = "ab-spikes"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "ab-wire",
  "axum",
@@ -399,7 +399,7 @@ dependencies = [
 
 [[package]]
 name = "ab-state"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "ab-domain",
  "ab-wire",
@@ -420,14 +420,14 @@ dependencies = [
 
 [[package]]
 name = "ab-sys"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "libc",
 ]
 
 [[package]]
 name = "ab-trust"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "ab-domain",
  "ab-sys",
@@ -466,7 +466,7 @@ dependencies = [
 
 [[package]]
 name = "ab-wire"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "ab-domain",
  "aes-gcm 0.10.3",
@@ -2495,7 +2495,7 @@ dependencies = [
 
 [[package]]
 name = "lab-adapters"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "aes-gcm 0.10.3",
  "base64 0.22.1",
@@ -2530,7 +2530,7 @@ dependencies = [
 
 [[package]]
 name = "lab-demo"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "base64 0.22.1",
  "crc32fast",
@@ -2544,7 +2544,7 @@ dependencies = [
 
 [[package]]
 name = "lab-probe"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "base64 0.22.1",
  "hex",
@@ -2562,7 +2562,7 @@ dependencies = [
 
 [[package]]
 name = "lab-relay"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "base64 0.22.1",
  "data-encoding",
@@ -2584,7 +2584,7 @@ dependencies = [
 
 [[package]]
 name = "lab-runner"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "lab-world",
  "serde",
@@ -2594,7 +2594,7 @@ dependencies = [
 
 [[package]]
 name = "lab-simapple"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "base64 0.22.1",
  "crc32fast",
@@ -2615,7 +2615,7 @@ dependencies = [
 
 [[package]]
 name = "lab-wire"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "base64 0.22.1",
  "hex",
@@ -2628,7 +2628,7 @@ dependencies = [
 
 [[package]]
 name = "lab-world"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "base64 0.22.1",
  "flate2",

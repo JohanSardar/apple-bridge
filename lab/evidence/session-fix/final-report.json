@@ -36,7 +36,7 @@
     "internal/runtime": "Durable commit boundary timestamps and credential error diagnosis in doctor",
     "internal/trust": "Typed Keychain failure with store and remedy; explicit file backend under private home when selected",
     "packaging/dev": "Optional new destination bundle paths; existing certificate, bundle IDs and designated requirements preserved",
-    "design/WORKER-RULES.md": "Document immutable per-World native bundles",
+    "AGENTS.md": "Document immutable per-World native bundles",
     "lab/truth/native": "Independent native save timestamps, safe error reason evidence and read-only all-list inventory"
   },
   "dependency": {

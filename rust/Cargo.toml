@@ -5,7 +5,7 @@ members = ["crates/*", "tools/*", "spikes", "lab/lab-*"]
 [workspace.package]
 edition = "2024"
 license = "MIT"
-version = "0.0.0"
+version = "0.1.2"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
@@ -50,3 +50,8 @@ inherits = "dev"
 [patch.crates-io]
 webauthn-rs-core = { path = "vendor/webauthn-rs-core" }
 crypto-glue = { path = "vendor/crypto-glue" }
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+strip = "symbols"

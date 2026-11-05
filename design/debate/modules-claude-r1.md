@@ -18,7 +18,7 @@ Files: Astra `../astra/MODULES-astra.md`; Claude `../claude/MODULES-claude.md` (
 - **C5. The UI actor** serializing Accessibility actions, verifying targets, and aborting on human interference.
 - **C6. Feed details:** `subscriptionRevision`, `(after, through]` coverage including filtered changes, credits, and provisional frame/credit budgets.
 - **C7. `Trust`** with Keychain / Linux secret-store adapters; delegated identity on forwarded commands.
-- **C8. A `Runtime` module** (start, pair, doctor, upgrade, restore, packaging, onboarding). Note: Johan said "don't worry about making the CLI", so `Runtime`'s commands are an operator minimum (pairing needs one), not a product CLI.
+- **C8. A `Runtime` module** (start, pair, doctor, upgrade, restore, packaging, onboarding). Note: the owner said "don't worry about making the CLI", so `Runtime`'s commands are an operator minimum (pairing needs one), not a product CLI.
 - **C9. Health published through State's journal**, not as a separate module.
 - **C10. Repo layout:** accept Astra's (`contracts/`, `native/`, `internal/`, `cmd/`, `lab/`).
 
@@ -35,7 +35,7 @@ Reasons:
 ### D2. How much of the outer surface is generated
 Astra: Contracts is small; generate types, codecs and validation; operation semantics and MCP tools are handwritten.
 Claude: agree that semantics are handwritten (in `Operations`). But the **REST routes, OpenAPI and MCP tool registrations should be generated from operation descriptors** in Contracts (name, input/output types, scope, capability flag, versions, and a handwritten description string). Reasons:
-- Johan wants REST and MCP to be "the same API". Generating both from one descriptor makes drift impossible, which is pstack's "encode lessons in structure".
+- the owner wants REST and MCP to be "the same API". Generating both from one descriptor makes drift impossible, which is pstack's "encode lessons in structure".
 - MCP tool quality comes from the description and shape, which live in the descriptor and are reviewed there.
 - Frontdoor stays a thin adapter with no per-operation hand wiring to forget.
 Compromise offer: hand-written per-operation descriptors (not raw JSON Schema) as the single source, generating both adapters plus OpenAPI.

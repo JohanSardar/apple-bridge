@@ -24,13 +24,13 @@ ssh air '~/bin/ab-real A1 ship/a1-approve connector CONN-CLAUDE-AI CONN-CHATGPT'
 
 Both sim scenarios prove an owner-local approval, OAuth redirect and token exchange, a successful `records_query` MCP call, the agent's requested scopes, denial, a wrong code, expiry, replay, separate concurrent requests and rate limits.
 
-The real runner builds the current web UI, starts an isolated gateway through the public relay, and writes `~/Library/Application Support/AppleBridgeDev/connector-conn-claude-ai.json` or `connector-conn-chatgpt.json` on the Air. Each handoff contains `connector_url` and `approval_home`; it is removed when that scenario finishes. The runner approves matching Claude or ChatGPT requests through the owner-local Mac socket and waits for the connector to use its OAuth agent.
+The real runner builds the current web UI, starts an isolated gateway through the public relay, and writes `~/Library/Application Support/AppleBridgeDev/connector-conn-claude-ai.json` or `connector-conn-chatgpt.json` on the test Mac. Each handoff contains `connector_url` and `approval_home`; it is removed when that scenario finishes. The runner approves matching Claude or ChatGPT requests through the owner-local Mac socket and waits for the connector to use its OAuth agent.
 
-Within the real runner's five-minute handoff window, use Chrome on the Air, already signed in to the connector:
+Within the real runner's five-minute handoff window, use Chrome on the test Mac, already signed in to the connector:
 
 1. In Claude.ai Settings → Connectors, add the handoff's `connector_url` as a custom connector and connect. In ChatGPT Settings → Apps/Connectors, add the same scenario's custom MCP URL (enable developer mode if required).
 2. Follow the OAuth page. It must display “Approve on your Mac or iPhone” and a matching four-digit code. The isolated runner completes the Mac approval itself; a packaged gateway instead opens Apple Bridge's Allow/Deny window.
 3. In a new conversation, enable that connector and ask it to call `records_query` for one `messages.chat` record from the isolated bridge. Do not paste the records into evidence.
 4. Remove the temporary connector after the check. The runner removes its handoff, disables its isolated relay and deletes its isolated state.
 
-A browser that is signed out cannot complete either real scenario. The logged-in Chrome session on the Air must be driven by the orchestrator if it is unavailable to this agent.
+A browser that is signed out cannot complete either real scenario. The logged-in Chrome session on the test Mac must be driven by the orchestrator if it is unavailable to this agent.

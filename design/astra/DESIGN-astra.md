@@ -6,14 +6,14 @@ Build **one reusable Apple-data system with a gateway and optional local replica
 
 **Components and placement**
 
-- **MacBook Air: Apple gateway.** A Swift app runs in Johan’s logged-in session, with Apple permissions and iCloud/Messages configured. It reads Apple stores and executes writes. A separate, portable gateway service maintains a normalized database, durable change journal, command queue, and API/MCP endpoint. Keep the Mac awake; launch both at login.
+- **test Mac: Apple gateway.** A Swift app runs in the owner’s logged-in session, with Apple permissions and iCloud/Messages configured. It reads Apple stores and executes writes. A separate, portable gateway service maintains a normalized database, durable change journal, command queue, and API/MCP endpoint. Keep the Mac awake; launch both at login.
 - **iPhone: companion app.** A signed Swift app exports HealthKit data and, where available, Screen Time data to the gateway. It retains unsent changes locally. It executes supported Health writes when iOS permits it to run. The Mac cannot substitute for the iPhone’s Health store. [Apple HealthKit availability](https://developer.apple.com/documentation/healthkit/setting-up-healthkit)
 - **Ubuntu and future computers: replica service.** Each maintains its own SQLite database, attachment directory, local API/MCP endpoint, synchronization connection, and pending writes. The assistant remains a separate process. Installation needs the gateway address and a scoped pairing credential.
-- **MacBook Pro:** remains an ordinary Apple client. Data stored only there needs an additional connector; iCloud cannot mirror unsynced local accounts automatically.
+- **build Mac:** remains an ordinary Apple client. Data stored only there needs an additional connector; iCloud cannot mirror unsynced local accounts automatically.
 
 **Synchronization**
 
-Apple’s own synchronization brings supported data onto the Air. Our adapters observe local changes, record normalized upserts/deletions durably, and push them to every subscribed replica over authenticated WebSockets. Consumers query their local database; reads never trigger Apple requests.
+Apple’s own synchronization brings supported data onto the test Mac. Our adapters observe local changes, record normalized upserts/deletions durably, and push them to every subscribed replica over authenticated WebSockets. Consumers query their local database; reads never trigger Apple requests.
 
 Pairing transfers a consistent snapshot plus its journal position, then replays subsequent changes. Persist acknowledgments, stable source identifiers, versions, deletion tombstones, and blob hashes. Reconnect resumes from the last committed position; an expired cursor requires another snapshot. Transfer selected attachments proactively, with explicit download/coverage status.
 
@@ -59,7 +59,7 @@ Choose Swift for Apple adapters; TypeScript/Node.js for the shared gateway/repli
 
 First prove macOS 26 message sending, EventKit changes, and iPhone Health export. Then build the journal and two interchangeable replicas; verify disconnect/replay and conflicting writes before adding Notes and eligible Screen Time export. Main risks are Apple API/schema changes, iOS scheduling, Mac sleep/reboots requiring login, and expanded exposure of replicated private data.
 
-Ask Johan:
+Ask the owner:
 
 - What exact iOS version, physical region, and Apple Account region apply?
 - Will he maintain a signed iPhone companion app and developer provisioning?
