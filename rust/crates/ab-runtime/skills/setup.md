@@ -17,7 +17,7 @@ bridge permissions guide   # run in a terminal; it opens Settings and macOS may 
 bridge stats --watch       # counts per source as each one finishes
 ```
 
-`bridge link` registers the server, then signs in through the browser. The page shows a four-digit code. The owner allows it by typing that code into the `bridge link` prompt, in the Apple Bridge window, or with `bridge connector allow --request <id> --code <code>`. Never allow a request on the owner's behalf; they must check the code.
+`bridge link` registers the server, then signs in through the browser. The page shows a four-digit code. The owner allows it in the Apple Bridge window, or with `bridge connector allow --request <id> --code <code>`. Never allow a request on the owner's behalf; they must check the code.
 
 ## Checks
 

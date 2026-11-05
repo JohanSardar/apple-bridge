@@ -9,7 +9,7 @@ use std::{
 };
 
 const NON_INTERACTIVE_WATCH_LIMIT: Duration = Duration::from_secs(300);
-const DEFAULT_SETTLE: Duration = Duration::from_secs(15);
+const DEFAULT_SETTLE: Duration = Duration::from_secs(30);
 const PROGRESS_EVERY: Duration = Duration::from_secs(5);
 const POLL: Duration = Duration::from_secs(1);
 
@@ -396,7 +396,13 @@ impl Tracker {
             && self.seen.values().all(|seen| seen.finished);
         if everything_done && !self.announced_done {
             self.announced_done = true;
-            events.push(Event::AllFinished(snapshot.total, now - self.began));
+            let last_change = self
+                .seen
+                .values()
+                .map(|seen| seen.changed)
+                .max()
+                .unwrap_or(self.began);
+            events.push(Event::AllFinished(snapshot.total, last_change - self.began));
         } else if !everything_done {
             self.announced_done = false;
         }
@@ -447,7 +453,7 @@ impl Tracker {
         }
         if source.state != "unknown" && now - seen.changed >= settle {
             seen.finished = true;
-            events.push(Event::Finished(source.clone(), now - seen.since));
+            events.push(Event::Finished(source.clone(), seen.changed - seen.since));
         } else if seen.changed > seen.reported && now - seen.reported >= PROGRESS_EVERY {
             seen.reported = now;
             events.push(Event::Progress(source.clone()));

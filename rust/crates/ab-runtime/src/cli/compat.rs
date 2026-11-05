@@ -1,4 +1,28 @@
+use super::Cli;
+use clap::CommandFactory;
 use std::ffi::{OsStr, OsString};
+
+const TOLERANT_COMMANDS: &[&str] = &[
+    "status",
+    "doctor",
+    "remote",
+    "connector",
+    "agent",
+    "start",
+    "pair",
+    "join",
+    "connect",
+    "token",
+    "revoke",
+    "scope",
+    "web",
+    "backup",
+    "restore",
+    "install-credentials",
+    "shortcuts",
+    "selftest",
+    "setup",
+];
 
 const BOOLEAN_FLAGS: &[&str] = &[
     "remote",
@@ -78,6 +102,56 @@ fn rewrite(argument: &OsStr) -> Rewrite {
     }
 }
 
+fn declared_flags(arguments: &[OsString]) -> Option<Vec<String>> {
+    let root = Cli::command();
+    let verb = arguments.get(1)?.to_str()?;
+    if !TOLERANT_COMMANDS.contains(&verb) {
+        return None;
+    }
+    let mut command = root.find_subcommand(verb)?;
+    if let Some(nested) = arguments
+        .get(2)
+        .and_then(|action| action.to_str())
+        .and_then(|action| command.find_subcommand(action))
+    {
+        command = nested;
+    }
+    let mut flags: Vec<String> = command
+        .get_arguments()
+        .filter_map(|argument| argument.get_long().map(str::to_owned))
+        .collect();
+    flags.push("home".to_owned());
+    Some(flags)
+}
+
+fn without_ignored_flags(arguments: Vec<OsString>) -> Vec<OsString> {
+    let Some(declared) = declared_flags(&arguments) else {
+        return arguments;
+    };
+    let mut output = Vec::with_capacity(arguments.len());
+    let mut remaining = arguments.into_iter();
+    while let Some(argument) = remaining.next() {
+        let name = argument
+            .to_str()
+            .and_then(|text| text.strip_prefix("--"))
+            .map(|long| {
+                long.split_once('=')
+                    .map_or(long, |(name, _)| name)
+                    .to_owned()
+            });
+        let has_value = argument.to_str().is_some_and(|text| text.contains('='));
+        match name {
+            Some(name) if known(&name) && !declared.contains(&name) => {
+                if VALUE_FLAGS.contains(&name.as_str()) && !has_value {
+                    remaining.next();
+                }
+            }
+            _ => output.push(argument),
+        }
+    }
+    output
+}
+
 pub fn normalize(arguments: impl IntoIterator<Item = OsString>) -> Vec<OsString> {
     let mut output = Vec::new();
     for argument in arguments {
@@ -87,7 +161,7 @@ pub fn normalize(arguments: impl IntoIterator<Item = OsString>) -> Vec<OsString>
             Rewrite::Replace(replacement) => output.push(replacement),
         }
     }
-    output
+    without_ignored_flags(output)
 }
 
 #[cfg(test)]
@@ -118,6 +192,24 @@ mod tests {
         assert_eq!(
             run(&["bridge", "pair", "--iphone=true", "--via-remote=false"]),
             ["bridge", "pair", "--iphone"]
+        );
+    }
+
+    #[test]
+    fn older_commands_ignore_flags_they_never_used_and_new_ones_stay_strict() {
+        assert_eq!(
+            run(&[
+                "bridge", "pair", "--name", "r", "--scope", "a:read", "--force"
+            ]),
+            ["bridge", "pair", "--scope", "a:read"]
+        );
+        assert_eq!(
+            run(&["bridge", "agent", "create", "--name", "n", "--via=x"]),
+            ["bridge", "agent", "create", "--name", "n"]
+        );
+        assert_eq!(
+            run(&["bridge", "up", "--force", "--name", "r"]),
+            ["bridge", "up", "--force", "--name", "r"]
         );
     }
 

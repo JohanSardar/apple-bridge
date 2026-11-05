@@ -4,14 +4,14 @@ use super::{
 };
 use std::{
     collections::BTreeSet,
-    io::{BufRead, IsTerminal, Write},
+    io::{IsTerminal, Write},
     path::Path,
     process::{Command, Stdio},
-    sync::mpsc,
     time::Duration,
 };
 
-const TRY_IT: &str = "Try it: ask your agent \"How many messages, contacts and events do I have in Apple Bridge?\"\nAgent instructions: bridge skills get core";
+const REGISTER_BUDGET: Duration = Duration::from_secs(20);
+const TRY_IT: &str = "Try it: ask your agent \"Use Apple Bridge to show my reminder lists. Then run bridge stats and tell me how much has synced.\"\nAgent instructions: bridge skills get core";
 
 struct Plan {
     program: &'static str,
@@ -19,6 +19,7 @@ struct Plan {
     install: &'static str,
     register: Vec<String>,
     login: Vec<String>,
+    register_signs_in: bool,
 }
 
 fn strings(parts: &[&str]) -> Vec<String> {
@@ -53,6 +54,7 @@ fn plan(
                     url,
                 ]),
                 login,
+                register_signs_in: false,
             })
         }
         LinkClient::Codex => Some(Plan {
@@ -61,6 +63,7 @@ fn plan(
             install: "https://developers.openai.com/codex",
             register: strings(&["mcp", "add", name, "--url", url]),
             login: strings(&["mcp", "login", name]),
+            register_signs_in: true,
         }),
         LinkClient::Other => None,
     }
@@ -143,17 +146,46 @@ fn register(plan: &Plan, name: &str, url: &str) -> Outcome {
     )))
 }
 
-fn stdin_lines() -> mpsc::Receiver<String> {
-    let (sender, receiver) = mpsc::channel();
-    std::thread::spawn(move || {
-        for line in std::io::stdin().lock().lines() {
-            let Ok(line) = line else { return };
-            if sender.send(line).is_err() {
-                return;
+fn register_without_signing_in(plan: &Plan, name: &str, url: &str) -> Outcome {
+    let mut child = Command::new(plan.program)
+        .args(&plan.register)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|error| {
+            if error.kind() == std::io::ErrorKind::NotFound {
+                missing(plan)
+            } else {
+                Failure::new(format!("Could not run {}: {error}.", plan.program))
             }
+        })?;
+    let deadline = std::time::Instant::now() + REGISTER_BUDGET;
+    loop {
+        let (_, details) = run_quietly(plan, &strings(&["mcp", "get", name]))?;
+        if details.contains(url) {
+            let _ = child.kill();
+            let _ = child.wait();
+            println!("Added {name} to {} at {url}.", plan.title);
+            return Ok(());
         }
-    });
-    receiver
+        if std::time::Instant::now() >= deadline || child.try_wait()?.is_some() {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(
+                Failure::new(format!("{} did not save the server.", plan.title)).next(format!(
+                    "Try it yourself: {}",
+                    shown(plan.program, &plan.register)
+                )),
+            );
+        }
+        std::thread::sleep(Duration::from_millis(200));
+    }
+}
+
+fn awaiting_approval(plan: &Plan, name: &str) -> Outcome<bool> {
+    let (_, details) = run_quietly(plan, &strings(&["mcp", "get", name]))?;
+    Ok(details.contains("Pending approval"))
 }
 
 fn say(text: &str) {
@@ -188,13 +220,7 @@ async fn newest_request(home: &Path, seen: &BTreeSet<String>) -> Option<Waiting>
         .find(|request| !seen.contains(&request.id))
 }
 
-async fn approve_from_terminal(home: &Path, request: &Waiting, code: &str) -> bool {
-    crate::connector::command(home, "allow", &request.id, code.trim())
-        .await
-        .is_ok()
-}
-
-fn explain_request(home: &Path, request: &Waiting, can_type: bool) {
+fn explain_request(home: &Path, request: &Waiting) {
     let home_flag = if crate::default_home().is_ok_and(|default| default == home) {
         String::new()
     } else {
@@ -205,54 +231,27 @@ fn explain_request(home: &Path, request: &Waiting, can_type: bool) {
         "{} wants to connect. {}",
         request.client_name, request.access
     ));
-    if can_type {
-        say("Type the four-digit code shown in your browser to allow it. Press Enter to skip:");
-    } else {
-        say("Allow it, using the four-digit code shown in your browser:");
-        say(&format!(
-            "  bridge connector allow --request {} --code CODE{home_flag}",
-            request.id
-        ));
-    }
+    say("Check the four-digit code in your browser, then allow it in the Apple Bridge window.");
+    say("No window? In another terminal:");
+    say(&format!(
+        "  bridge connector allow --request {} --code CODE{home_flag}",
+        request.id
+    ));
 }
 
-async fn login(home: &Path, plan: &Plan, args: &LinkArgs) -> Outcome<bool> {
-    let can_type = !args.no_browser && std::io::stdin().is_terminal();
-    let mut command = Command::new(plan.program);
-    command.args(&plan.login);
-    if !args.no_browser {
-        command.stdin(Stdio::null());
-    }
-    let mut child = command
+async fn sign_in(home: &Path, plan: &Plan, arguments: &[String]) -> Outcome<bool> {
+    let mut child = Command::new(plan.program)
+        .args(arguments)
         .spawn()
         .map_err(|error| Failure::new(format!("Could not start sign-in: {error}.")))?;
-    let typed = can_type.then(stdin_lines);
     let mut seen = BTreeSet::new();
-    let mut current: Option<Waiting> = None;
     loop {
         if let Some(status) = child.try_wait()? {
             return Ok(status.success());
         }
-        if current.is_none()
-            && let Some(request) = newest_request(home, &seen).await
-        {
-            explain_request(home, &request, can_type);
-            seen.insert(request.id.clone());
-            current = Some(request);
-        }
-        if let (Some(lines), Some(request)) = (&typed, &current)
-            && let Ok(line) = lines.try_recv()
-        {
-            if !line.trim().is_empty() {
-                if approve_from_terminal(home, request, &line).await {
-                    say("Allowed. Finishing sign-in…");
-                } else {
-                    say(
-                        "That code did not match. Check the browser and allow it with `bridge connector allow`.",
-                    );
-                }
-            }
-            current = None;
+        if let Some(request) = newest_request(home, &seen).await {
+            explain_request(home, &request);
+            seen.insert(request.id);
         }
         tokio::time::sleep(Duration::from_millis(250)).await;
     }
@@ -270,15 +269,30 @@ pub async fn link(home: &Path, args: &LinkArgs) -> Outcome {
         println!("{}", shown(plan.program, &plan.login));
         return Ok(());
     }
-    register(&plan, &args.name, &url)?;
-    let wants_login = !args.no_login && (args.no_browser || std::io::stdin().is_terminal());
-    if !wants_login {
+    let can_sign_in = !args.no_login && std::io::stdin().is_terminal();
+    let sign_in_arguments = if plan.register_signs_in {
+        if !can_sign_in {
+            register_without_signing_in(&plan, &args.name, &url)?;
+        }
+        &plan.register
+    } else {
+        register(&plan, &args.name, &url)?;
+        if awaiting_approval(&plan, &args.name)? {
+            println!("Claude Code asks you to approve project servers first:");
+            println!(
+                "  run `claude` in this folder and choose \"Use this MCP server\", then run this command again."
+            );
+            return Ok(());
+        }
+        &plan.login
+    };
+    if !can_sign_in {
         println!("To finish, run this in a terminal and approve it in the browser:");
         println!("  {}", shown(plan.program, &plan.login));
         println!("{TRY_IT}");
         return Ok(());
     }
-    if login(home, &plan, args).await? {
+    if sign_in(home, &plan, sign_in_arguments).await? {
         println!("{} is connected.", plan.title);
         println!("{TRY_IT}");
         Ok(())

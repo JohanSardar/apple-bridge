@@ -62,7 +62,7 @@ fn fake_tool(directory: &Path, name: &str) -> Result<PathBuf, std::io::Error> {
     std::fs::write(
         &path,
         format!(
-            "#!/bin/sh\nprintf '%s\\n' \"$*\" >> '{}'\nif [ \"$FAKE_EXISTS\" = 1 ] && [ \"$2\" = add ]; then echo 'MCP server apple-bridge already exists in user config' >&2; exit 1; fi\nif [ \"$2\" = get ]; then echo \"URL: $FAKE_URL\"; fi\nexit 0\n",
+            "#!/bin/sh\nprintf '%s\\n' \"$*\" >> '{}'\nif [ \"$FAKE_EXISTS\" = 1 ] && [ \"$2\" = add ]; then echo 'MCP server apple-bridge already exists in user config' >&2; exit 1; fi\nif [ \"$2\" = get ]; then echo \"URL: $FAKE_URL\"; echo \"$FAKE_STATUS\"; fi\nif [ \"$2\" = add ] && [ \"$FAKE_ADD_WAITS\" = 1 ]; then sleep 60; fi\nexit 0\n",
             log.display()
         ),
     )?;
@@ -251,20 +251,28 @@ fn link_registers_each_agent_without_a_terminal_and_never_approves() -> Check {
     assert!(claude.status.success(), "{}", text(&claude.stderr));
     let calls = std::fs::read_to_string(&claude_log)?;
     assert_eq!(
-        calls.trim(),
-        format!("mcp add --transport http --scope user apple-bridge {url}")
+        calls.lines().next(),
+        Some(format!("mcp add --transport http --scope user apple-bridge {url}").as_str())
     );
+    assert!(!calls.contains("mcp login"));
     assert!(text(&claude.stdout).contains("claude mcp login apple-bridge"));
 
     let project = link(&["link", "claude-code", "--scope", "project", "--name", "ab"])?;
     assert!(project.status.success());
     assert!(std::fs::read_to_string(&claude_log)?.contains(&format!("--scope project ab {url}")));
 
-    let codex = link(&["link", "codex"])?;
-    assert!(codex.status.success());
+    let codex = bridge()
+        .env("PATH", &path)
+        .env("FAKE_URL", &url)
+        .env("FAKE_ADD_WAITS", "1")
+        .args(["link", "codex", "--home"])
+        .arg(home.path())
+        .output()?;
+    assert!(codex.status.success(), "{}", text(&codex.stderr));
+    assert!(text(&codex.stdout).contains("codex mcp login apple-bridge"));
     assert_eq!(
-        std::fs::read_to_string(&codex_log)?.trim(),
-        format!("mcp add apple-bridge --url {url}")
+        std::fs::read_to_string(&codex_log)?.lines().next(),
+        Some(format!("mcp add apple-bridge --url {url}").as_str())
     );
 
     let print = link(&["link", "codex", "--print"])?;
@@ -311,6 +319,37 @@ fn link_accepts_the_same_server_and_refuses_a_different_one() -> Check {
     let different = link("http://elsewhere.example/mcp".to_owned())?;
     assert_eq!(different.status.code(), Some(1));
     assert!(text(&different.stderr).contains("different server"));
+    Ok(())
+}
+
+#[test]
+fn link_waits_for_claude_code_to_approve_a_project_server() -> Check {
+    let tools = tempfile::tempdir()?;
+    let log = fake_tool(tools.path(), "claude")?;
+    let home = tempfile::tempdir()?;
+    let api = free_port()?;
+    let (_guard, _) = up(home.path(), &api)?;
+    let path = format!(
+        "{}:{}",
+        tools.path().display(),
+        std::env::var("PATH").unwrap_or_default()
+    );
+    let output = bridge()
+        .env("PATH", &path)
+        .env("FAKE_STATUS", "Status: ⏸ Pending approval")
+        .args([
+            "link",
+            "claude",
+            "--scope",
+            "project",
+            "--no-browser",
+            "--home",
+        ])
+        .arg(home.path())
+        .output()?;
+    assert!(output.status.success(), "{}", text(&output.stderr));
+    assert!(text(&output.stdout).contains("approve project servers first"));
+    assert!(!std::fs::read_to_string(&log)?.contains("mcp login"));
     Ok(())
 }
 
@@ -619,6 +658,17 @@ fn every_form_that_scripts_and_the_helper_use_still_parses() -> Check {
             "x:1",
             "--dial-replica",
             "y:2",
+        ],
+        &[
+            "pair",
+            "--peer-addr",
+            "x:1",
+            "--name",
+            "replica",
+            "--scope",
+            "a:read",
+            "--home",
+            "/h",
         ],
         &["pair", "--iphone", "--via-remote", "--home", "/h"],
         &["pair", "--via-remote", "--home", "/h"],

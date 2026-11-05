@@ -210,7 +210,7 @@ pub struct StatsArgs {
     #[arg(
         long,
         value_name = "SECONDS",
-        default_value_t = 15,
+        default_value_t = 30,
         help = "A source counts as finished after this long without new records"
     )]
     pub settle: u64,
