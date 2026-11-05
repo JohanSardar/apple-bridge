@@ -275,6 +275,68 @@ const NATIVEMESSAGEFILE: &[Field] = &[
         omit: false,
     },
 ];
+const MAILARGS: &[Field] = &[
+    Field {
+        name: "id",
+        kind: "string",
+        omit: true,
+    },
+    Field {
+        name: "to",
+        kind: "[]string",
+        omit: true,
+    },
+    Field {
+        name: "cc",
+        kind: "[]string",
+        omit: true,
+    },
+    Field {
+        name: "subject",
+        kind: "string",
+        omit: true,
+    },
+    Field {
+        name: "body",
+        kind: "string",
+        omit: true,
+    },
+    Field {
+        name: "attachments",
+        kind: "[]string",
+        omit: true,
+    },
+    Field {
+        name: "reply_to",
+        kind: "string",
+        omit: true,
+    },
+    Field {
+        name: "forward_of",
+        kind: "string",
+        omit: true,
+    },
+    Field {
+        name: "mailbox",
+        kind: "string",
+        omit: true,
+    },
+    Field {
+        name: "account",
+        kind: "string",
+        omit: true,
+    },
+    Field {
+        name: "read",
+        kind: "*bool",
+        omit: true,
+    },
+    Field {
+        name: "flagged",
+        kind: "*bool",
+        omit: true,
+    },
+];
 const MACARGS: &[Field] = &[
     Field {
         name: "document_blob",
@@ -806,6 +868,7 @@ pub fn fields(name: &str) -> &'static [Field] {
         "MessageFile" => MESSAGEFILE,
         "NativeMessageFile" => NATIVEMESSAGEFILE,
         "MacArgs" => MACARGS,
+        "MailArgs" => MAILARGS,
         "FileArgs" => FILEARGS,
         "FocusSetArgs" => FOCUSSETARGS,
         "ShortcutRunArgs" => SHORTCUTRUNARGS,

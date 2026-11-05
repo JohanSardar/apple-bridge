@@ -2697,9 +2697,34 @@
                   },
                   "args": {
                     "additionalProperties": false,
-                    "properties": {},
+                    "properties": {
+                      "name": {
+                        "enum": [
+                          "Basso",
+                          "Blow",
+                          "Bottle",
+                          "Frog",
+                          "Funk",
+                          "Glass",
+                          "Hero",
+                          "Morse",
+                          "Ping",
+                          "Pop",
+                          "Purr",
+                          "Sosumi",
+                          "Submarine",
+                          "Tink"
+                        ],
+                        "type": "string"
+                      },
+                      "volume": {
+                        "maximum": 1,
+                        "minimum": 0,
+                        "type": "number"
+                      }
+                    },
                     "required": [
-                      "id"
+                      "name"
                     ],
                     "type": "object"
                   },
@@ -11244,9 +11269,24 @@
                   },
                   "args": {
                     "additionalProperties": false,
-                    "properties": {},
+                    "properties": {
+                      "mode": {
+                        "enum": [
+                          "Do Not Disturb"
+                        ],
+                        "type": "string"
+                      },
+                      "on": {
+                        "type": "boolean"
+                      },
+                      "until": {
+                        "format": "date-time",
+                        "type": "string"
+                      }
+                    },
                     "required": [
-                      "id"
+                      "mode",
+                      "on"
                     ],
                     "type": "object"
                   },
@@ -27416,9 +27456,33 @@
                   },
                   "args": {
                     "additionalProperties": false,
-                    "properties": {},
+                    "properties": {
+                      "body": {
+                        "type": "string"
+                      },
+                      "cc": {
+                        "items": {
+                          "description": "One bare address, such as name@example.com. No display names, commas or line breaks.",
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "subject": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "to": {
+                        "items": {
+                          "description": "One bare address, such as name@example.com. No display names, commas or line breaks.",
+                          "type": "string"
+                        },
+                        "minItems": 1,
+                        "type": "array"
+                      }
+                    },
                     "required": [
-                      "id"
+                      "to",
+                      "subject"
                     ],
                     "type": "object"
                   },
@@ -27761,7 +27825,11 @@
                   },
                   "args": {
                     "additionalProperties": false,
-                    "properties": {},
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      }
+                    },
                     "required": [
                       "id"
                     ],
@@ -28106,9 +28174,17 @@
                   },
                   "args": {
                     "additionalProperties": false,
-                    "properties": {},
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "read": {
+                        "type": "boolean"
+                      }
+                    },
                     "required": [
-                      "id"
+                      "id",
+                      "read"
                     ],
                     "type": "object"
                   },
@@ -28451,9 +28527,23 @@
                   },
                   "args": {
                     "additionalProperties": false,
-                    "properties": {},
+                    "properties": {
+                      "account": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "id": {
+                        "type": "string"
+                      },
+                      "mailbox": {
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
                     "required": [
-                      "id"
+                      "id",
+                      "mailbox",
+                      "account"
                     ],
                     "type": "object"
                   },
@@ -28796,9 +28886,33 @@
                   },
                   "args": {
                     "additionalProperties": false,
-                    "properties": {},
+                    "properties": {
+                      "body": {
+                        "type": "string"
+                      },
+                      "cc": {
+                        "items": {
+                          "description": "One bare address, such as name@example.com. No display names, commas or line breaks.",
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "subject": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "to": {
+                        "items": {
+                          "description": "One bare address, such as name@example.com. No display names, commas or line breaks.",
+                          "type": "string"
+                        },
+                        "minItems": 1,
+                        "type": "array"
+                      }
+                    },
                     "required": [
-                      "id"
+                      "to",
+                      "subject"
                     ],
                     "type": "object"
                   },
@@ -29141,9 +29255,17 @@
                   },
                   "args": {
                     "additionalProperties": false,
-                    "properties": {},
+                    "properties": {
+                      "flagged": {
+                        "type": "boolean"
+                      },
+                      "id": {
+                        "type": "string"
+                      }
+                    },
                     "required": [
-                      "id"
+                      "id",
+                      "flagged"
                     ],
                     "type": "object"
                   },
@@ -29800,10 +29922,83 @@
                   },
                   "args": {
                     "additionalProperties": false,
-                    "properties": {},
-                    "required": [
-                      "id"
+                    "oneOf": [
+                      {
+                        "required": [
+                          "lat",
+                          "lon"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "from",
+                          "to",
+                          "mode"
+                        ]
+                      }
                     ],
+                    "properties": {
+                      "from": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "lat": {
+                            "maximum": 90,
+                            "minimum": -90,
+                            "type": "number"
+                          },
+                          "lon": {
+                            "maximum": 180,
+                            "minimum": -180,
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "lat",
+                          "lon"
+                        ],
+                        "type": "object"
+                      },
+                      "lat": {
+                        "maximum": 90,
+                        "minimum": -90,
+                        "type": "number"
+                      },
+                      "lon": {
+                        "maximum": 180,
+                        "minimum": -180,
+                        "type": "number"
+                      },
+                      "mode": {
+                        "enum": [
+                          "driving",
+                          "walking",
+                          "transit",
+                          "cycling"
+                        ],
+                        "type": "string"
+                      },
+                      "to": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "lat": {
+                            "maximum": 90,
+                            "minimum": -90,
+                            "type": "number"
+                          },
+                          "lon": {
+                            "maximum": 180,
+                            "minimum": -180,
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "lat",
+                          "lon"
+                        ],
+                        "type": "object"
+                      }
+                    },
+                    "required": [],
                     "type": "object"
                   },
                   "command_id": {
@@ -37445,9 +37640,79 @@
                   },
                   "args": {
                     "additionalProperties": false,
-                    "properties": {},
+                    "oneOf": [
+                      {
+                        "required": [
+                          "data_base64"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "blob"
+                        ]
+                      }
+                    ],
+                    "properties": {
+                      "annotations": {
+                        "items": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "height": {
+                              "exclusiveMinimum": 0,
+                              "type": "number"
+                            },
+                            "page": {
+                              "maximum": 1000,
+                              "minimum": 1,
+                              "type": "integer"
+                            },
+                            "text": {
+                              "maxLength": 4096,
+                              "type": "string"
+                            },
+                            "type": {
+                              "enum": [
+                                "note",
+                                "highlight"
+                              ],
+                              "type": "string"
+                            },
+                            "width": {
+                              "exclusiveMinimum": 0,
+                              "type": "number"
+                            },
+                            "x": {
+                              "minimum": 0,
+                              "type": "number"
+                            },
+                            "y": {
+                              "minimum": 0,
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "page",
+                            "type",
+                            "x",
+                            "y",
+                            "width",
+                            "height"
+                          ],
+                          "type": "object"
+                        },
+                        "maxItems": 100,
+                        "minItems": 1,
+                        "type": "array"
+                      },
+                      "blob": {
+                        "type": "string"
+                      },
+                      "data_base64": {
+                        "type": "string"
+                      }
+                    },
                     "required": [
-                      "id"
+                      "annotations"
                     ],
                     "type": "object"
                   },
@@ -44371,9 +44636,20 @@
                   },
                   "args": {
                     "additionalProperties": false,
-                    "properties": {},
+                    "properties": {
+                      "text": {
+                        "maxLength": 2048,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "volume": {
+                        "maximum": 1,
+                        "minimum": 0,
+                        "type": "number"
+                      }
+                    },
                     "required": [
-                      "id"
+                      "text"
                     ],
                     "type": "object"
                   },
