@@ -1,8 +1,5 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-//! These run the real `ab-relay` binary, because the failure they guard against
-//! is the process, or its sign-in host, stopping for everyone.
-
 use reqwest::StatusCode;
 use rustls::pki_types::ServerName;
 use std::{
@@ -22,17 +19,13 @@ use tokio::{
 
 const CONTROL_HOST: &str = "relay.test";
 const APP_HOST: &str = "app.relay.test";
-/// Each reset only sometimes lands between the relay reading the `ClientHello`
-/// and taking the connection off the queue, so one attempt proves little.
 const RESETS: usize = 200;
 const OPEN_FILE_LIMIT: u32 = 64;
 const HELD_CONNECTIONS: usize = 96;
 
 #[derive(Clone, Copy)]
 enum Control {
-    /// Control and sign-in hosts share the public port and are routed by SNI.
     SharedPort,
-    /// Control has its own listener.
     OwnListener,
 }
 
@@ -62,7 +55,6 @@ impl Relay {
         let key_path = dir.path().join("control-key.pem");
         fs::write(&cert_path, &certificate).unwrap();
         fs::write(&key_path, &key).unwrap();
-        // A certificate already in place means the sign-in host never asks an ACME server.
         let app_tls = dir.path().join("control-tls/app");
         fs::create_dir_all(&app_tls).unwrap();
         fs::write(app_tls.join("relay-cert.pem"), &certificate).unwrap();
@@ -169,7 +161,6 @@ impl Relay {
         panic!("the relay never logged {text:?}: {}", self.log());
     }
 
-    /// A full TLS connection and HTTP request, as the next real client would make.
     async fn request(&self, host: &str, address: SocketAddr) -> StatusCode {
         reqwest::Client::builder()
             .no_proxy()
@@ -185,7 +176,6 @@ impl Relay {
             .status()
     }
 
-    /// The listener closes just before the relay logs why, so give the log a moment.
     async fn connect(&mut self, address: SocketAddr) -> TcpStream {
         match TcpStream::connect(address).await {
             Ok(socket) => socket,
@@ -203,11 +193,9 @@ impl Relay {
         let hello = client_hello(host);
         for _ in 0..RESETS {
             let mut socket = self.connect(self.public).await;
-            // A relay that is already going down may not take the bytes.
             let _ = socket.write_all(&hello).await;
             socket.set_zero_linger().unwrap();
         }
-        // The relay works through its queue on its own time.
         tokio::time::sleep(Duration::from_millis(500)).await;
     }
 
@@ -271,7 +259,9 @@ async fn an_app_host_reset_right_after_client_hello_leaves_the_sign_in_host_serv
 #[tokio::test]
 async fn a_failed_accept_on_the_public_listener_does_not_stop_the_relay() {
     let mut relay = Relay::start(Control::SharedPort, Some(OPEN_FILE_LIMIT)).await;
-    relay.hold_connections_until_accept_fails(relay.public).await;
+    relay
+        .hold_connections_until_accept_fails(relay.public)
+        .await;
     assert_eq!(
         relay.request(CONTROL_HOST, relay.public).await,
         StatusCode::OK

@@ -160,7 +160,7 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
         ));
     }
     let api_task = serve_control(control, control_rx, make, acceptor, stop_api);
-    tokio::select! { result = server.serve(public,stop.clone()) => result?, result = api_task => result? }
+    tokio::select! { result = server.serve(public,stop.clone()) => result?, () = api_task => {} }
     stop.cancel();
     Ok(())
 }
@@ -250,12 +250,7 @@ async fn serve_app(
         return;
     };
     let make = router.into_make_service_with_connect_info();
-    if serve_control(None, incoming, make, acceptor, stop)
-        .await
-        .is_err()
-    {
-        eprintln!("sign-in host stopped");
-    }
+    serve_control(None, incoming, make, acceptor, stop).await;
 }
 
 async fn serve_control(
@@ -264,7 +259,7 @@ async fn serve_control(
     mut make: IntoMakeServiceWithConnectInfo<axum::Router, SocketAddr>,
     acceptor: TlsAcceptor,
     stop_api: CancellationToken,
-) -> std::result::Result<(), Box<dyn std::error::Error>> {
+) {
     let mut workers = tokio::task::JoinSet::new();
     loop {
         tokio::select! {
@@ -272,14 +267,21 @@ async fn serve_control(
             Some(_) = workers.join_next(), if !workers.is_empty() => {},
             accepted = async {
                 tokio::select! {
-                    result = async { match &control { Some(listener)=>listener.accept().await, None=>std::future::pending().await } } => result.map(|(socket,_)| ab_relay::server::ControlConnection { socket,prefix:Vec::new(),completed:None }),
-                    result = incoming.recv() => result.ok_or_else(|| std::io::Error::other("control listener closed")),
+                    result = async { match &control { Some(listener)=>listener.accept().await, None=>std::future::pending().await } } => result.map(|(socket,peer)| Some(ab_relay::server::ControlConnection { socket,peer,prefix:Vec::new(),completed:None })),
+                    connection = incoming.recv() => Ok(connection),
                 }
             } => {
-                let ab_relay::server::ControlConnection { socket,prefix,completed } = accepted?;
-                let peer = socket.peer_addr()?;
+                let ab_relay::server::ControlConnection { socket,peer,prefix,completed } = match accepted {
+                    Ok(Some(connection)) => connection,
+                    Ok(None) => break,
+                    Err(e) => {
+                        eprintln!("control accept failed: {e}");
+                        tokio::time::sleep(ab_relay::server::ACCEPT_RETRY).await;
+                        continue;
+                    }
+                };
                 let socket = ab_relay::replay::Replay::new(socket,prefix);
-                let service = make.call(peer).await?; let acceptor = acceptor.clone();
+                let Ok(service) = make.call(peer).await; let acceptor = acceptor.clone();
                 workers.spawn(async move {
                     let _completed = completed;
                     if let Ok(Ok(tls)) = tokio::time::timeout(Duration::from_secs(5),acceptor.accept(socket)).await {
@@ -293,7 +295,6 @@ async fn serve_control(
     }
     workers.abort_all();
     while workers.join_next().await.is_some() {}
-    Ok::<_, Box<dyn std::error::Error>>(())
 }
 
 fn configured_store(
