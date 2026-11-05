@@ -228,6 +228,7 @@ impl RelayProof {
 
 pub const TUNNEL_FEATURES_HEADER: &str = "X-Bridge-Tunnel-Features";
 pub const TUNNEL_FEATURE_SOURCE: &str = "source";
+pub const POLICY_VERSION_HEADER: &str = "X-Bridge-Policy-Version";
 
 #[must_use]
 pub fn encode_tunnel_source(source: std::net::IpAddr) -> Vec<u8> {

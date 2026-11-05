@@ -740,3 +740,31 @@ async fn a_session_lookup_carries_the_callers_address_so_callers_do_not_share_a_
     ));
     assert!(seen.await.unwrap().contains("x-forwarded-for: 203.0.113.7"));
 }
+
+#[tokio::test]
+async fn a_policy_request_is_one_a_relay_from_before_versions_accepts() {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    let seen = tokio::spawn(async move {
+        let (mut socket, _) = listener.accept().await.unwrap();
+        let mut buffer = vec![0; 4096];
+        let n = socket.read(&mut buffer).await.unwrap();
+        socket
+            .write_all(b"HTTP/1.1 204 No Content\r\n\r\n")
+            .await
+            .unwrap();
+        String::from_utf8_lossy(&buffer[..n]).into_owned()
+    });
+    let relay = ab_relay_control::RelayApi::new(&url, "token".into(), None).unwrap();
+    relay.policy("mac.example.test", true, false, 42).await.unwrap();
+    let request = seen.await.unwrap();
+    let (head, body) = request.split_once("\r\n\r\n").unwrap();
+    let body: Value = serde_json::from_str(body).unwrap();
+    assert_eq!(
+        body,
+        json!({"hostname": "mac.example.test", "disabled": true, "revoked": false}),
+        "an older relay refuses unknown fields"
+    );
+    assert!(head.to_lowercase().contains("x-bridge-policy-version: 42"));
+}

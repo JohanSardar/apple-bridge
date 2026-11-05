@@ -55,7 +55,7 @@ fi
 [[ "$public_ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Could not tell this server's public IP. Pass --public-ip." >&2; exit 1; }
 
 work=$(mktemp -d)
-trap 'rm -rf "$work"' EXIT
+trap 'status=$?; rm -rf "$work"; [ "$status" = 0 ] || echo "The install stopped before it finished. Fix the error above and run it again; repeating it is safe." >&2' EXIT
 if [ -z "$bundle" ]; then
   if [ "$version" = latest ]; then
     version=$(curl -fsS -m 20 "https://api.github.com/repos/$REPO/releases?per_page=30" | python3 -c 'import json,sys
@@ -81,30 +81,16 @@ service_user ab-relay /var/lib/ab-relay
 if [ "$accounts" = 1 ]; then
   service_user ab-control /var/lib/ab-relay-control
   service_user ab-accounts /var/lib/ab-accounts
-  systemctl stop ab-relay-control ab-accounts 2>/dev/null || true
 fi
 install -d -m 0751 -o root -g root /etc/ab-relay
 install -d -m 0755 /usr/local/lib/ab-relay/bin
-own_state ab-relay /var/lib/ab-relay
 install -m 0755 "$source_dir"/bin/* /usr/local/lib/ab-relay/bin/
-install -m 0755 "$source_dir/ab-relay-admin" /usr/local/bin/ab-relay-admin
-install -m 0644 "$source_dir"/systemd/ab-relay.service /etc/systemd/system/ab-relay.service
 touch /etc/ab-relay/owner-keys
 chown root:ab-relay /etc/ab-relay/owner-keys
 chmod 0640 /etc/ab-relay/owner-keys
-if [ -n "$owner_key" ]; then
-  /usr/local/bin/ab-relay-admin add-key "$owner_key"
-fi
 token_file=/etc/ab-relay/admin-token
 if [ ! -s "$token_file" ]; then
   (umask 077; head -c 32 /dev/urandom | base64 | tr -d '\n=' | tr '+/' '-_' >"$token_file")
-fi
-if [ "$accounts" = 1 ]; then
-  chown root:ab-control "$token_file"
-  chmod 0640 "$token_file"
-else
-  chown root:root "$token_file"
-  chmod 0600 "$token_file"
 fi
 if [ "$dns" = authoritative ]; then
   bind_ip=$(ip -4 route get 1.1.1.1 | sed -n 's/.* src \([0-9.]*\).*/\1/p')
@@ -135,15 +121,10 @@ if [ "$accounts" = 1 ]; then
     tar -C "$node_root" --strip-components=1 -xJf "$work/node.tar.xz"
   fi
   install -m 0644 "$source_dir/accounts.mjs" /usr/local/lib/ab-relay/accounts.mjs
-  install -m 0644 "$source_dir"/systemd/ab-accounts.service "$source_dir"/systemd/ab-relay-control.service /etc/systemd/system/
   secret=/etc/ab-relay/accounts-secret
   if [ ! -s "$secret" ]; then
     (umask 077; head -c 48 /dev/urandom | base64 | tr -d '\n' >"$secret")
   fi
-  chown root:ab-accounts "$secret"
-  chmod 0640 "$secret"
-  own_state ab-control /var/lib/ab-relay-control
-  own_state ab-accounts /var/lib/ab-accounts
   cat >/etc/ab-relay/accounts.env <<ENV
 AB_PUBLIC_URL=https://app.$domain
 AB_ACCOUNTS_DB=/var/lib/ab-accounts/accounts.sqlite
@@ -165,6 +146,25 @@ ENV
   chmod 0600 /etc/ab-relay/accounts.env /etc/ab-relay/control.env
 fi
 
+if [ "$accounts" = 1 ]; then
+  systemctl stop ab-relay-control ab-accounts 2>/dev/null || true
+  chown root:ab-control "$token_file"
+  chmod 0640 "$token_file"
+  chown root:ab-accounts "$secret"
+  chmod 0640 "$secret"
+  own_state ab-control /var/lib/ab-relay-control
+  own_state ab-accounts /var/lib/ab-accounts
+  install -m 0644 "$source_dir"/systemd/ab-accounts.service "$source_dir"/systemd/ab-relay-control.service /etc/systemd/system/
+else
+  chown root:root "$token_file"
+  chmod 0600 "$token_file"
+fi
+own_state ab-relay /var/lib/ab-relay
+install -m 0755 "$source_dir/ab-relay-admin" /usr/local/bin/ab-relay-admin
+install -m 0644 "$source_dir"/systemd/ab-relay.service /etc/systemd/system/ab-relay.service
+if [ -n "$owner_key" ]; then
+  /usr/local/bin/ab-relay-admin add-key "$owner_key"
+fi
 systemctl daemon-reload
 systemctl enable --now ab-relay
 systemctl restart ab-relay

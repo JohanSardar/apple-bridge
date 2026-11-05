@@ -162,6 +162,9 @@ where
                         return Err(Error::Contract("smux stream reused"));
                     }
                     if streams.len() >= MAX_STREAMS {
+                        if tasks.len() >= MAX_STREAMS * 2 {
+                            return Err(Error::Contract("smux stream limit"));
+                        }
                         let tx = tx.clone();
                         let close = frame(1, id, &[])?;
                         tasks.spawn(async move {
@@ -339,5 +342,77 @@ async fn outbound(
             .await
             .map_err(|_| Error::Contract("smux closed"))?;
         sent = sent.wrapping_add(u32::try_from(n).map_err(|_| Error::Contract("smux length"))?);
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+    use crate::relay::{Credential, Identity};
+    use base64::{Engine, engine::general_purpose::STANDARD};
+    use tokio_tungstenite::tungstenite::protocol::Role;
+
+    async fn loaded_certificates(home: &std::path::Path) -> Arc<Certificates> {
+        let host = "mac.relay.test";
+        let certified = rcgen::generate_simple_self_signed(vec![host.to_owned()]).unwrap();
+        let remote = home.join("remote");
+        std::fs::create_dir_all(&remote).unwrap();
+        std::fs::write(remote.join("relay-cert.pem"), certified.cert.pem()).unwrap();
+        std::fs::write(
+            remote.join("relay-key.pem"),
+            certified.signing_key.serialize_pem(),
+        )
+        .unwrap();
+        let certificates = Arc::new(Certificates::new(
+            home.to_owned(),
+            "https://acme.invalid/directory".into(),
+        ));
+        let key = ed25519_dalek::SigningKey::from_bytes(&[9; 32]);
+        let identity = Identity {
+            key: STANDARD.encode(key.to_keypair_bytes()),
+            credential: Credential {
+                hostname: host.into(),
+                credential: "c".into(),
+            },
+            endpoint: "https://relay.invalid".into(),
+        };
+        let reported = certificates
+            .ensure(&identity, host, &reqwest::Client::new())
+            .await;
+        assert!(matches!(reported, Err(Error::Http(_))), "{reported:?}");
+        certificates.config().unwrap();
+        certificates
+    }
+
+    #[tokio::test]
+    async fn a_flood_of_stream_opens_past_the_limit_ends_the_tunnel_instead_of_growing_tasks() {
+        let home = tempfile::tempdir().unwrap();
+        let certificates = loaded_certificates(home.path()).await;
+        let (mac_side, relay_side) = tokio::io::duplex(4096);
+        let mac = WebSocketStream::from_raw_socket(mac_side, Role::Server, None).await;
+        let mut relay = WebSocketStream::from_raw_socket(relay_side, Role::Client, None).await;
+        let gateway = Gateway::new("127.0.0.1:1".parse().unwrap());
+        let serving = tokio::spawn(serve(mac, gateway, certificates));
+        let flood = async {
+            for id in 0..u32::try_from(MAX_STREAMS * 200).unwrap() {
+                let opened = frame(0, id * 2 + 2, &[]).unwrap();
+                if relay.send(Message::Binary(opened.into())).await.is_err() {
+                    return;
+                }
+            }
+            std::future::pending::<()>().await;
+        };
+        let ended = tokio::time::timeout(Duration::from_secs(10), async {
+            tokio::select! {
+                result = serving => result.unwrap(),
+                () = flood => unreachable!(),
+            }
+        })
+        .await;
+        assert!(
+            matches!(ended, Ok(Err(Error::Contract("smux stream limit")))),
+            "{ended:?}"
+        );
     }
 }

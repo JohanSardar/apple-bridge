@@ -225,7 +225,6 @@ struct Policy {
     limits: Limits,
     disabled: bool,
     revoked: bool,
-    version: i64,
 }
 #[derive(Debug, Default, Deserialize)]
 #[serde(default, deny_unknown_fields)]
@@ -295,7 +294,14 @@ async fn handle(
             crate::push::handle(&api, request, token).await
         }
         ("POST", "/revoke") => revoke(&api, &body, token).await,
-        ("POST", "/policy") => policy(&api, &body, token).await,
+        ("POST", "/policy") => {
+            let version = headers
+                .get(ab_wire::framing::POLICY_VERSION_HEADER)
+                .and_then(|value| value.to_str().ok())
+                .and_then(|value| value.parse().ok())
+                .unwrap_or(0);
+            policy(&api, &body, token, version).await
+        }
         ("GET", "/tunnel") => {
             let Some(proof) = header_proof(&headers) else {
                 return error(403, "denied");
@@ -407,7 +413,7 @@ async fn admit(api: &Api, body: &[u8], token: &str) -> Response {
     }
 }
 
-async fn policy(api: &Api, body: &[u8], token: &str) -> Response {
+async fn policy(api: &Api, body: &[u8], token: &str, version: i64) -> Response {
     if api.admin.is_empty() || digest(token) != digest(&api.admin) {
         return error(403, "denied");
     }
@@ -419,7 +425,7 @@ async fn policy(api: &Api, body: &[u8], token: &str) -> Response {
         input.limits,
         input.disabled,
         input.revoked,
-        input.version,
+        version,
     );
     match applied {
         Ok(true) => api.server.disconnect(&input.hostname).await,

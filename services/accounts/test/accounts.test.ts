@@ -202,11 +202,11 @@ function loadAccountPage(url: string) {
 
 test('the page after sign-in stays on this site, however the address is written', () => {
   const nextPage = loadAccountPage('https://app.example.test/sign-in');
-  for (const offsite of ['/\\\\review.invalid', '/\\review.invalid/x', '//review.invalid', 'https://review.invalid/', '/\t/review.invalid', '\\\\review.invalid', 'javascript:alert(1)']) {
+  for (const offsite of ['/\\\\review.invalid', '/\\review.invalid/x', '//review.invalid', 'https://review.invalid/', '/\t/review.invalid', '\\\\review.invalid', 'javascript:alert(1)', 'https://app.example.test//review.invalid/x', '/.//review.invalid/x']) {
     const target = new URL(nextPage(offsite), 'https://app.example.test');
     assert.equal(target.origin, 'https://app.example.test', offsite);
   }
   assert.equal(nextPage(null), '/');
-  assert.equal(nextPage('/device?code=BCDF-GHJK'), '/device?code=BCDF-GHJK');
-  assert.equal(nextPage('/'), '/');
+  assert.equal(nextPage('/device?code=BCDF-GHJK'), 'https://app.example.test/device?code=BCDF-GHJK');
+  assert.equal(nextPage('/'), 'https://app.example.test/');
 });

@@ -25,7 +25,7 @@ function nextPage() {
   if (!next) return '/';
   try {
     const target = new URL(next, location.origin);
-    return target.origin === location.origin ? target.pathname + target.search + target.hash : '/';
+    return target.origin === location.origin ? target.href : '/';
   } catch {
     return '/';
   }

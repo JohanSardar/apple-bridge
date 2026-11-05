@@ -6,7 +6,7 @@ All notable changes are documented here, following [Keep a Changelog](https://ke
 
 ### Changed
 
-- Self-hosted relays run accounts, control and relay as separate system users. Run the installer again to upgrade. Upgrade the relay before or together with the control service, because the control service now sends a policy version an older relay refuses. To go back, stop control and accounts, run `chown -R ab-relay:ab-relay /var/lib/ab-relay-control /var/lib/ab-accounts`, then run the previous release's installer.
+- Self-hosted relays run accounts, control and relay as separate system users. Run the installer again to upgrade. To go back, stop control and accounts, run `chown -R ab-relay:ab-relay /var/lib/ab-relay-control /var/lib/ab-accounts`, then run the previous release's installer.
 
 ### Security
 

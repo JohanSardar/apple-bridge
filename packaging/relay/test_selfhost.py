@@ -53,11 +53,29 @@ class Identities(unittest.TestCase):
             script.index("own_state ab-control"),
             "state must not change owner under a running service",
         )
-        self.assertLess(
-            script.index("systemctl restart ab-relay\n"),
-            script.index("systemctl restart ab-accounts ab-relay-control"),
-            "the relay must accept versioned policy before control sends it",
-        )
+
+    def test_nothing_running_is_touched_until_every_file_is_ready(self):
+        script = INSTALL.read_text()
+        stop = script.index("systemctl stop ab-relay-control ab-accounts")
+        for written in (
+            ">/etc/ab-relay/relay.env",
+            "cat >/etc/ab-relay/accounts.env",
+            "cat >/etc/ab-relay/control.env",
+            "/usr/local/lib/ab-relay/accounts.mjs",
+        ):
+            self.assertLess(script.index(written), stop, written)
+        for cutover in (
+            'chown root:ab-control "$token_file"',
+            'chown root:ab-accounts "$secret"',
+            '/etc/systemd/system/ab-relay.service',
+            '"$source_dir"/systemd/ab-accounts.service',
+            'ab-relay-admin" /usr/local/bin/ab-relay-admin',
+            "systemctl daemon-reload",
+        ):
+            self.assertGreater(script.index(cutover), stop, cutover)
+
+    def test_a_failed_install_says_how_to_recover(self):
+        self.assertIn("run it again", INSTALL.read_text())
 
     def test_the_admin_tool_reaches_accounts_as_the_accounts_user(self):
         self.assertIn("runuser -u ab-accounts", (SELFHOST / "ab-relay-admin").read_text())

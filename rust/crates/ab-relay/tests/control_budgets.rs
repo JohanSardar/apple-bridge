@@ -37,14 +37,27 @@ async fn send(
     source: &str,
     body: &Value,
 ) -> (StatusCode, Value) {
+    send_versioned(router, method, path, source, body, None).await
+}
+
+async fn send_versioned(
+    router: &Router,
+    method: &str,
+    path: &str,
+    source: &str,
+    body: &Value,
+    version: Option<i64>,
+) -> (StatusCode, Value) {
     let address: SocketAddr = format!("{source}:1").parse().unwrap();
     let mut request = Request::builder()
         .method(method)
         .uri(path)
         .header(header::CONTENT_TYPE, "application/json")
-        .header(header::AUTHORIZATION, "Bearer admin-token")
-        .body(Body::from(body.to_string()))
-        .unwrap();
+        .header(header::AUTHORIZATION, "Bearer admin-token");
+    if let Some(version) = version {
+        request = request.header("X-Bridge-Policy-Version", version);
+    }
+    let mut request = request.body(Body::from(body.to_string())).unwrap();
     request.extensions_mut().insert(ConnectInfo(address));
     let response = router.clone().oneshot(request).await.unwrap();
     let status = response.status();
@@ -149,16 +162,20 @@ async fn a_late_policy_write_cannot_undo_a_newer_one() {
     .await;
     assert_eq!(status, StatusCode::OK, "{admitted}");
     let hostname = admitted["hostname"].as_str().unwrap().to_owned();
-    let post = |body: Value| {
+    let post = |body: Value, version: Option<i64>| {
         let router = router.clone();
-        async move { send(&router, "POST", "/policy", "127.0.0.1", &body).await.0 }
+        async move {
+            send_versioned(&router, "POST", "/policy", "127.0.0.1", &body, version)
+                .await
+                .0
+        }
     };
     assert_eq!(
-        post(json!({"hostname": hostname, "disabled": true, "version": 7})).await,
+        post(json!({"hostname": hostname, "disabled": true}), Some(7)).await,
         StatusCode::NO_CONTENT
     );
     assert_eq!(
-        post(json!({"hostname": hostname, "disabled": false, "version": 6})).await,
+        post(json!({"hostname": hostname, "disabled": false}), Some(6)).await,
         StatusCode::NO_CONTENT,
         "a stale write is acknowledged so the sender stops retrying it"
     );
@@ -166,7 +183,7 @@ async fn a_late_policy_write_cannot_undo_a_newer_one() {
         serde_json::from_slice(&std::fs::read(dir.path().join("relay.json")).unwrap()).unwrap();
     assert_eq!(state[&hostname]["disabled"], true, "the stale write won");
     assert_eq!(
-        post(json!({"hostname": hostname, "disabled": false})).await,
+        post(json!({"hostname": hostname, "disabled": false}), None).await,
         StatusCode::NO_CONTENT,
         "a control service from before this release sends no version and is still obeyed"
     );

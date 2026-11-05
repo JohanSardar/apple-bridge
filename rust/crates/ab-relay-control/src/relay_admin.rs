@@ -90,7 +90,8 @@ impl RelayAdmin for RelayApi {
                 .client
                 .post(format!("{}/policy", self.url))
                 .bearer_auth(&self.token)
-                .json(&json!({"hostname": hostname, "disabled": disabled, "revoked": revoked, "version": version}))
+                .header(ab_wire::framing::POLICY_VERSION_HEADER, version)
+                .json(&json!({"hostname": hostname, "disabled": disabled, "revoked": revoked}))
                 .send()
                 .await
                 .map_err(|_| Error::Unavailable)?;
