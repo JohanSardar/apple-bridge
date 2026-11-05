@@ -1042,7 +1042,10 @@ mod approval_prompt_tests {
         let row = row(None);
         let (hash, body) = approval_prompt(&row, &row.fields().unwrap()).unwrap();
         assert_eq!(hash, "request");
-        assert!(body.starts_with("messages.send\nAgent: agent:x\n{"), "{body}");
+        assert!(
+            body.starts_with("messages.send\nAgent: agent:x\n{"),
+            "{body}"
+        );
     }
 }
 
@@ -1064,7 +1067,10 @@ mod connector_prompt_tests {
     #[test]
     fn the_phone_shows_where_a_connector_returns() {
         let body = connector_prompt(&approval("evil.example.invalid"));
-        assert!(body.starts_with("Returns to evil.example.invalid\n"), "{body}");
+        assert!(
+            body.starts_with("Returns to evil.example.invalid\n"),
+            "{body}"
+        );
         assert!(body.contains("App calls itself: Claude"), "{body}");
         assert!(body.contains("Code 1234"), "{body}");
         assert!(body.contains("Read: Messages"), "{body}");
@@ -1074,7 +1080,10 @@ mod connector_prompt_tests {
     fn a_local_callback_is_called_out() {
         for host in ["localhost:3118", "127.0.0.1:49152", "[::1]:49152"] {
             let body = connector_prompt(&approval(host));
-            assert!(body.starts_with("Returns to an app on this computer"), "{body}");
+            assert!(
+                body.starts_with("Returns to an app on this computer"),
+                "{body}"
+            );
         }
     }
 }

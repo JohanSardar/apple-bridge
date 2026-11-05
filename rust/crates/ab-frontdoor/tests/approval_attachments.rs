@@ -135,9 +135,15 @@ impl Server {
     }
 }
 async fn text(response: Response<Body>) -> String {
-    String::from_utf8(to_bytes(response.into_body(), 1 << 20).await.unwrap().to_vec()).unwrap()
+    String::from_utf8(
+        to_bytes(response.into_body(), 1 << 20)
+            .await
+            .unwrap()
+            .to_vec(),
+    )
+    .unwrap()
 }
-fn header_of<'a>(response: &'a Response<Body>, name: header::HeaderName) -> &'a str {
+fn header_of(response: &Response<Body>, name: header::HeaderName) -> &str {
     response.headers()[name].to_str().unwrap()
 }
 
@@ -173,8 +179,14 @@ async fn a_text_preview_is_inert() {
     let s = server();
     let response = s.get("/approvals/cmd_text/attachments/0").await;
     assert_eq!(response.status(), StatusCode::OK);
-    assert_eq!(header_of(&response, header::CONTENT_TYPE), "text/plain; charset=utf-8");
-    assert_eq!(header_of(&response, header::X_CONTENT_TYPE_OPTIONS), "nosniff");
+    assert_eq!(
+        header_of(&response, header::CONTENT_TYPE),
+        "text/plain; charset=utf-8"
+    );
+    assert_eq!(
+        header_of(&response, header::X_CONTENT_TYPE_OPTIONS),
+        "nosniff"
+    );
     assert_eq!(header_of(&response, header::CACHE_CONTROL), "no-store");
     assert!(header_of(&response, header::CONTENT_SECURITY_POLICY).contains("sandbox"));
     assert_eq!(text(response).await, "<script>alert(1)</script>");
@@ -192,7 +204,10 @@ async fn an_image_preview_uses_only_the_detected_type() {
 async fn anything_else_only_downloads_under_a_neutral_name() {
     let s = server();
     let response = s.get("/approvals/cmd_binary/attachments/0").await;
-    assert_eq!(header_of(&response, header::CONTENT_TYPE), "application/octet-stream");
+    assert_eq!(
+        header_of(&response, header::CONTENT_TYPE),
+        "application/octet-stream"
+    );
     assert_eq!(
         header_of(&response, header::CONTENT_DISPOSITION),
         "attachment; filename=\"attachment-1.bin\""
@@ -214,8 +229,14 @@ async fn a_preview_needs_an_owner_session() {
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
-    assert_eq!(s.get("/approvals/cmd_text/attachments/x").await.status(), StatusCode::NOT_FOUND);
-    assert_eq!(s.get("/approvals/cmd_text/attachments/3").await.status(), StatusCode::NOT_FOUND);
+    assert_eq!(
+        s.get("/approvals/cmd_text/attachments/x").await.status(),
+        StatusCode::NOT_FOUND
+    );
+    assert_eq!(
+        s.get("/approvals/cmd_text/attachments/3").await.status(),
+        StatusCode::NOT_FOUND
+    );
 }
 
 #[tokio::test]
@@ -230,6 +251,11 @@ async fn the_decision_carries_the_reviewed_binding_and_consent() {
     assert_eq!(response.status(), StatusCode::OK);
     assert_eq!(
         s.fake.decided.lock().unwrap().as_slice(),
-        [("cmd_binary".to_owned(), true, "binding-binary".to_owned(), true)]
+        [(
+            "cmd_binary".to_owned(),
+            true,
+            "binding-binary".to_owned(),
+            true
+        )]
     );
 }

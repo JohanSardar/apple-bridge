@@ -94,7 +94,8 @@ fn document_input(a: &Args) -> Result<(), Error> {
     if p(a, "blob") {
         let reference = a["blob"].as_object().ok_or(Error::Invalid)?;
         let query = !s(reference, "query_id").is_empty();
-        let record = !s(reference, "record_id").is_empty() && !s(reference, "collection").is_empty();
+        let record =
+            !s(reference, "record_id").is_empty() && !s(reference, "collection").is_empty();
         check(digest(s(reference, "digest")) && query != record)?;
     }
     Ok(())
@@ -589,9 +590,7 @@ fn capture(op: &str, a: &Args) -> Result<(), Error> {
             !p(a, "display")
                 && !p(a, "window")
                 && n(a, "seconds") == 0.0
-                && ["file", "printer"]
-                    .iter()
-                    .all(|k| s(a, k).is_empty())
+                && ["file", "printer"].iter().all(|k| s(a, k).is_empty())
         }
         "capture.record_audio" | "mac.screen_record" => {
             (1.0..=if op == "mac.screen_record" {

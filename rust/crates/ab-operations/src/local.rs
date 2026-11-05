@@ -1504,8 +1504,8 @@ fn resolvable(r: &CommandRecord) -> bool {
 #[path = "local_evidence.rs"]
 mod evidence;
 #[cfg(test)]
-#[path = "local_security.rs"]
-mod security;
-#[cfg(test)]
 #[path = "local_races.rs"]
 mod races;
+#[cfg(test)]
+#[path = "local_security.rs"]
+mod security;

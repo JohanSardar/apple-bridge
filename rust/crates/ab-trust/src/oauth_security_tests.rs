@@ -133,7 +133,7 @@ fn the_retry_secret_is_dropped_once_its_window_ends() {
     refresh(&authority, &first.refresh_token).unwrap();
     let saved = authority.load().unwrap();
     let rows: Vec<Refresh> = read(&saved, "oauth_refresh").unwrap();
-    assert!(!rows.iter().find(|row| row.used).unwrap().retry_salt.is_empty());
+    assert_ne!(rows.iter().find(|row| row.used).unwrap().retry_salt, "");
     backdate_rotation(&authority, 61);
     let (_, later) = connected(&authority);
     refresh(&authority, &later.refresh_token).unwrap();
@@ -291,7 +291,10 @@ fn stale_last_used_is_still_refreshed() {
 #[test]
 fn client_names_lose_line_breaks_and_invisible_controls() {
     let shown = |name: &str| display_name(&client(name, &[CALLBACK.to_owned()]));
-    assert_eq!(shown("Claude\nCode 1234\r\nmessages"), "Claude Code 1234 messages");
+    assert_eq!(
+        shown("Claude\nCode 1234\r\nmessages"),
+        "Claude Code 1234 messages"
+    );
     assert_eq!(shown("Clau\u{202e}de\u{200b}\u{2066}"), "Claude");
     assert_eq!(shown("Cla\u{2028}ude\u{85}x\u{e0041}"), "Cla ude x");
     assert_eq!(shown("  \n\t "), "claude.ai");
@@ -318,7 +321,10 @@ fn registered_names_are_stored_normalized() {
         })
         .unwrap();
     assert_eq!(
-        authority.oauth_client(&legacy, CALLBACK).unwrap().client_name,
+        authority
+            .oauth_client(&legacy, CALLBACK)
+            .unwrap()
+            .client_name,
         "Old name"
     );
 }

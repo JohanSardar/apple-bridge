@@ -54,7 +54,12 @@ impl LocalQueryStore {
         }
         self.read_blob(digest, offset, length).await
     }
-    pub(crate) async fn read_blob(&self, digest: &str, offset: u64, length: u64) -> Result<Vec<u8>, Error> {
+    pub(crate) async fn read_blob(
+        &self,
+        digest: &str,
+        offset: u64,
+        length: u64,
+    ) -> Result<Vec<u8>, Error> {
         let d = ab_blobs::Digest::try_from(digest.to_owned()).map_err(|_| Code::Invalid)?;
         let file = self
             .blobs
@@ -163,7 +168,10 @@ impl LocalQueryStore {
         Ok(args)
     }
     async fn stage_document(mut args: Value, inline_limit: usize) -> Result<DocumentInput, Error> {
-        if let Some(encoded) = args["data_base64"].as_str().filter(|s| s.len() > inline_limit) {
+        if let Some(encoded) = args["data_base64"]
+            .as_str()
+            .filter(|s| s.len() > inline_limit)
+        {
             if encoded.len() > (8_usize << 20).div_ceil(3) * 4 {
                 return Err(Code::Invalid.into());
             }

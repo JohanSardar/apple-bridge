@@ -7,7 +7,7 @@ use base64::{Engine, engine::general_purpose::STANDARD};
 use serde::Serialize;
 use serde_json::Value;
 
-const MAX_TEXT_PREVIEW: u64 = 1 << 20;
+const MAX_TEXT_PREVIEW: usize = 1 << 20;
 const MAX_INSPECT: u64 = 16 << 20;
 const EXCERPT_CHARS: usize = 200;
 
@@ -170,7 +170,7 @@ fn classify(
         Preview::TooLarge
     } else if image.is_some() {
         Preview::Image
-    } else if text.is_some() && size <= MAX_TEXT_PREVIEW {
+    } else if text.is_some() && size <= MAX_TEXT_PREVIEW as u64 {
         Preview::Text
     } else {
         Preview::DownloadOnly
@@ -220,7 +220,7 @@ impl LocalGateway {
             let reference = record.upload_references.get(id).ok_or(Code::NotFound)?;
             let size = u64::try_from(reference.size).map_err(|_| Code::Corrupt)?;
             let head = store
-                .read_blob(&reference.digest, 0, MAX_TEXT_PREVIEW.min(size))
+                .read_blob(&reference.digest, 0, size.min(MAX_TEXT_PREVIEW as u64))
                 .await?;
             return Ok(classify(index, name, reference.digest.clone(), size, &head));
         }
@@ -230,7 +230,7 @@ impl LocalGateway {
             name,
             ab_trust::fingerprint(&bytes),
             bytes.len() as u64,
-            &bytes[..bytes.len().min(MAX_TEXT_PREVIEW as usize)],
+            &bytes[..bytes.len().min(MAX_TEXT_PREVIEW)],
         ))
     }
     pub async fn approval_review(&self, record: &CommandRecord) -> Result<ApprovalReview, Error> {

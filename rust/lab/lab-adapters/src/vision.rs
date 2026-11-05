@@ -282,7 +282,10 @@ fn documents(client: &Client, id: &str, evidence: &mut Evidence) -> Result<()> {
         let path = absolute(file);
         for (check, args) in [
             ("file_path_refused", json!({"file": path})),
-            ("file_opt_in_refused", json!({"file": path, "allow_file": true})),
+            (
+                "file_opt_in_refused",
+                json!({"file": path, "allow_file": true}),
+            ),
         ] {
             let refused = ask(client, op, &args, 10000)?;
             evidence.check(
