@@ -42,6 +42,9 @@ shutil.copyfile(profile, app / "Contents/embedded.provisionprofile")
 print(hashlib.sha1(data["DeveloperCertificates"][0]).hexdigest().upper())
 PYPROFILE
 )
+    if [[ -f "$1/Contents/MacOS/bridge" ]]; then
+        codesign --force --sign "$identity" --options runtime --timestamp=none --identifier bridge "$1/Contents/MacOS/bridge"
+    fi
     if [[ -f "$1/Contents/MacOS/ab-session" ]]; then
         codesign --force --sign "$identity" --options runtime --timestamp=none "$1/Contents/MacOS/ab-session"
     fi
@@ -51,7 +54,7 @@ PYPROFILE
 fi
 if [[ -n ${2:-} ]]; then
     if [[ -f "$1/Contents/MacOS/bridge" ]]; then
-        codesign --force --sign "$2" --options runtime --timestamp "$1/Contents/MacOS/bridge"
+        codesign --force --sign "$2" --options runtime --timestamp --identifier bridge "$1/Contents/MacOS/bridge"
     fi
     if [[ -f "$1/Contents/MacOS/ab-session" ]]; then
         codesign --force --sign "$2" --options runtime --timestamp "$1/Contents/MacOS/ab-session"
@@ -68,7 +71,7 @@ case "$bundle_id" in
     *) exit 1 ;;
 esac
 if [[ -f "$1/Contents/MacOS/bridge" ]]; then
-    codesign --force --keychain "$keychain" --sign "$identity" --options runtime --timestamp=none "$1/Contents/MacOS/bridge"
+    codesign --force --keychain "$keychain" --sign "$identity" --options runtime --timestamp=none --identifier bridge "$1/Contents/MacOS/bridge"
 fi
 if [[ -f "$1/Contents/MacOS/ab-session" ]]; then
     codesign --force --keychain "$keychain" --sign "$identity" --options runtime --timestamp=none "$1/Contents/MacOS/ab-session"

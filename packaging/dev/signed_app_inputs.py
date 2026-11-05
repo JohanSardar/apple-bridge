@@ -83,6 +83,8 @@ def source_key(root):
         toolchain[name] = os.environ.get(name, "")
     toolchain["native_lab_condition"] = lab
     toolchain["session"] = session_inputs(root, os.environ)
+    if os.environ.get("AB_HELPER_BRIDGE_BINARY"):
+        toolchain["bridge_sha256"] = hashlib.sha256(Path(os.environ["AB_HELPER_BRIDGE_BINARY"]).read_bytes()).hexdigest()
     if os.environ.get("APPLE_BRIDGE_SIGNING_IDENTITY") == "-":
         require(lab == "1", "ad-hoc signing requires a lab build")
         certificate = "ad-hoc"

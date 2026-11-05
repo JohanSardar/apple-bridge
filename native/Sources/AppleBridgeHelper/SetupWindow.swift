@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import CoreImage.CIFilterBuiltins
+import SourceSupport
 
 @MainActor
 final class SetupModel: ObservableObject {
@@ -12,6 +13,7 @@ final class SetupModel: ObservableObject {
     @Published var remoteReady = false
     @Published var syncEnabled = false
     @Published var connectorURL = ""
+    @Published var certificateWarning = ""
     let home: URL
     let permissions = SetupPermissions()
     var install: (() throws -> Void)?
@@ -66,6 +68,7 @@ final class SetupModel: ObservableObject {
         syncEnabled = syncStatus?() ?? false
         if let expiry = pairingExpiry, expiry < Date() { qr = nil; message = "Pairing code expired. Click Show Pairing QR to try again, or continue without a phone."; pairingExpiry = nil }
         guard !testing else { return }
+        certificateWarning = PackagedApp.certificateWarning(home: home.path) ?? ""
         struct Remote: Decodable { let state: String; let url: String }
         if let data = try? Data(contentsOf: home.appendingPathComponent("remote/status.json")), let remote = try? JSONDecoder().decode(Remote.self, from: data), remote.state == "on", let url = URL(string: remote.url), url.scheme == "https", url.host != nil {
             remoteReady = true
@@ -107,28 +110,8 @@ final class SetupModel: ObservableObject {
         }
     }
     nonisolated static func command(_ arguments: [String], home: String) -> Data? {
-        let process = Process()
-        process.executableURL = Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/bridge")
-        process.arguments = arguments + ["--home", home]
-        let output = Pipe()
-        process.standardOutput = output
-        process.standardError = FileHandle.nullDevice
-        do {
-            try process.run()
-            let timer = DispatchSource.makeTimerSource(queue: .global())
-            timer.schedule(deadline: .now() + 60)
-            timer.setEventHandler {
-                if process.isRunning { process.terminate() }
-                DispatchQueue.global().asyncAfter(deadline: .now() + 5) {
-                    if process.isRunning { kill(process.processIdentifier, SIGKILL) }
-                }
-            }
-            timer.resume()
-            let data = output.fileHandleForReading.readDataToEndOfFile()
-            process.waitUntilExit()
-            timer.cancel()
-            return process.terminationStatus == 0 ? data : nil
-        } catch { return nil }
+        guard let path = try? TrustedChild.bridge() else { return nil }
+        return TrustedChild.capture(path, identifier: TrustedChild.bridgeName, arguments: arguments + ["--home", home], timeout: 60)
     }
     func enableSync() {
         guard !testing, busy.insert("sync").inserted else { return }
@@ -279,6 +262,9 @@ struct SetupView: View {
     }
     var remoteControls: some View {
         VStack(alignment: .leading, spacing: 8) {
+            if !model.certificateWarning.isEmpty {
+                Label(model.certificateWarning, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange).textSelection(.enabled)
+            }
             Text(model.remoteReady ? "✓ Remote ready" : "Remote is needed for iPhone pairing and AI connectors.")
             if !model.remoteReady { Button(model.busy.contains("remote") ? "Connecting…" : "Enable Remote") { model.enableRemote() }.disabled(model.busy.contains("remote")) }
         }

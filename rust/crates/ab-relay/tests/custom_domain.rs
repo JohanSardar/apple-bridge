@@ -303,6 +303,7 @@ async fn custom_domain_waits_for_records_registers_and_routes_by_sni() {
         domain: domain.into(),
         resolver: Some(Arc::new(dns::Hickory::server(dns_address).unwrap())),
         domain_poll: Duration::from_millis(100),
+        certificate_monitor: false,
     };
     let upstream = origin().await;
     let (statuses, observed) = watch::channel(std::collections::BTreeMap::new());
@@ -389,6 +390,7 @@ async fn custom_domain_owned_by_another_device_is_refused() {
         domain: domain.into(),
         resolver: Some(Arc::new(dns::Hickory::server(dns_address).unwrap())),
         domain_poll: Duration::from_millis(100),
+        certificate_monitor: false,
     };
     let claimed = ab_remote::relay::enroll(home.path(), &fixture.endpoint, "relay.test", &http)
         .await

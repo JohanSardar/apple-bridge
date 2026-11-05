@@ -54,6 +54,7 @@ impl Certificates {
             return Err(Error::Contract("certificate hostname mismatch"));
         }
         let fingerprint = Sha256::digest(leaf.as_ref()).to_vec();
+        let key_entry = crate::ct::key_entry(parsed.public_key().raw);
         let key = PrivateKeyDer::from_pem_slice(key.as_bytes())?;
         let config = rustls::ServerConfig::builder_with_provider(Arc::new(
             rustls::crypto::ring::default_provider(),
@@ -61,10 +62,8 @@ impl Certificates {
         .with_protocol_versions(&[&rustls::version::TLS13])?
         .with_no_client_auth()
         .with_single_cert(chain, key)?;
-        if crate::ct::enabled(&self.home) {
-            let value = crate::ct::hex(&fingerprint);
-            crate::ct::remember(&self.home, &value)?;
-        }
+        crate::ct::remember(&self.home, &crate::ct::hex(&fingerprint))?;
+        crate::ct::remember(&self.home, &key_entry)?;
         *self
             .current
             .write()
@@ -130,6 +129,10 @@ impl Certificates {
             order.poll_ready(&RetryPolicy::default()).await?;
             let key_pem = load_key(&key_path)?;
             let key = rcgen::KeyPair::from_pem(&key_pem)?;
+            crate::ct::remember(
+                &self.home,
+                &crate::ct::key_entry(&rcgen::PublicKeyData::subject_public_key_info(&key)),
+            )?;
             let csr = certificate_request(host, &key)?;
             order.finalize_csr(csr.der()).await?;
             let pem = order.poll_certificate(&RetryPolicy::default()).await?;

@@ -2,18 +2,18 @@ import Foundation
 import Darwin
 import SourceSupport
 
-enum NativeSessionLauncher {
-    struct Launched: Sendable {
-        let descriptor: Int32
+public enum NativeSessionLauncher {
+    public struct Launched: Sendable {
+        public let descriptor: Int32
         let proxy: SessionProxy
-        func stop() {
+        public func stop() {
             shutdown(descriptor, SHUT_RDWR)
             proxy.reap()
             Darwin.close(descriptor)
         }
     }
 
-    static func launch(socket path: String, secretFile: String, home: String) throws -> Launched {
+    public static func launch(socket path: String, secretFile: String, home: String) throws -> Launched {
         var info = stat()
         guard lstat(secretFile, &info) == 0, info.st_uid == getuid(), info.st_mode & 0o777 == 0o600, info.st_mode & S_IFMT == S_IFREG else { throw SourceFailure.invalid }
         let parent = URL(fileURLWithPath: path).deletingLastPathComponent().path
@@ -33,10 +33,11 @@ enum NativeSessionLauncher {
         var uid: uid_t = 0
         var gid: gid_t = 0
         guard connected == 0, getpeereid(gateway, &uid, &gid) == 0, uid == getuid() else { Darwin.close(gateway); throw SourceFailure.unavailable }
-        let binary = ProcessInfo.processInfo.environment["AB_SESSION_BINARY"] ?? Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/ab-session").path
         let proxy: SessionProxy
-        do { proxy = try SessionProxy(gateway: gateway, binary: binary, home: home, session: secretFile) }
-        catch { Darwin.close(gateway); throw error }
+        do {
+            try TrustedChild.verifyGateway(gateway)
+            proxy = try SessionProxy(gateway: gateway, binary: try TrustedChild.session(), home: home, session: secretFile)
+        } catch { Darwin.close(gateway); throw error }
         Darwin.close(gateway)
         return Launched(descriptor: proxy.descriptor, proxy: proxy)
     }

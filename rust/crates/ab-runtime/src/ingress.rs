@@ -184,13 +184,14 @@ fn publish(
         "off"
     };
     let private = active.is_some_and(|(name, _)| name == "private");
-    let written = ab_remote::state::write(
-        home,
-        "status",
-        &serde_json::json!({"id":config.id,"state":state,
+    let mut document = serde_json::json!({"id":config.id,"state":state,
         "backend":active.map_or(config.backend.as_str(),|(name,_)|name.as_str()),"url":active.filter(|(name,_)| name.as_str() != "private").map_or_else(String::new,|(_,status)|format!("https://{}",status.host)),
-        "message": if private { ab_remote::state::read::<String>(home,"invitation").unwrap_or_default() } else { progress.map_or_else(String::new,|progress|progress.message.clone()) },"last_error":progress.map_or("",|progress|progress.last_error.as_str()),"pending_link":progress.map_or("",|progress|progress.pending_link.as_str()),"tls_termination": if private { "Tailscale encrypted private transport" } else { "on this Mac" },"certificate_expiry":active.and_then(|(_,status)|status.certificate_expiry.clone()).unwrap_or_else(||"0001-01-01T00:00:00Z".into())}),
-    );
+        "message": if private { ab_remote::state::read::<String>(home,"invitation").unwrap_or_default() } else { progress.map_or_else(String::new,|progress|progress.message.clone()) },"last_error":progress.map_or("",|progress|progress.last_error.as_str()),"pending_link":progress.map_or("",|progress|progress.pending_link.as_str()),"tls_termination": if private { "Tailscale encrypted private transport" } else { "on this Mac" },"certificate_expiry":active.and_then(|(_,status)|status.certificate_expiry.clone()).unwrap_or_else(||"0001-01-01T00:00:00Z".into())});
+    let ct_warning = ab_remote::ct::owner_warning(home, ab_remote::ct::now());
+    if !ct_warning.is_empty() {
+        document["ct_warning"] = ct_warning.into();
+    }
+    let written = ab_remote::state::write(home, "status", &document);
     match written {
         Err(ab_remote::Error::Io(error)) if error.raw_os_error() == Some(28) => Ok(()),
         other => other.map_err(Into::into),
@@ -428,6 +429,7 @@ fn adapter(home: &Path, name: &str) -> Result<Box<dyn Ingress>, Error> {
         domain,
         resolver,
         domain_poll: std::time::Duration::from_secs(5),
+        certificate_monitor: !cfg!(feature = "lab-harness"),
         endpoint: relay_endpoint(home),
         zone: std::env::var("APPLE_BRIDGE_RELAY_ZONE").unwrap_or_default(),
         client,
@@ -476,6 +478,46 @@ mod legacy_tests {
             selected(home.path())?,
             BTreeMap::from([("relay".into(), true)])
         );
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod ct_status_tests {
+    use super::*;
+    type Check = Result<(), Box<dyn std::error::Error>>;
+
+    fn publish_with_report(home: &Path) -> Result<ab_remote::state::Status, Error> {
+        publish(home, &BTreeMap::new(), &ab_remote::IngressStatuses::new())?;
+        Ok(ab_remote::state::read(home, "status")?)
+    }
+
+    #[test]
+    fn an_unknown_certificate_reaches_the_status_the_owner_reads() -> Check {
+        let home = tempfile::tempdir()?;
+        let report: ab_remote::ct::Report = serde_json::from_value(serde_json::json!({
+            "checked_at": ab_remote::ct::now(),
+            "names": ["mac.example.test"],
+            "unknown": [],
+            "unexpected": {"f00d": {
+                "fingerprint": "f00d",
+                "names": ["mac.example.test"],
+                "precertificate": false
+            }}
+        }))?;
+        ab_remote::state::write(home.path(), "ct-monitor", &report)?;
+        let status = publish_with_report(home.path())?;
+        assert!(status.ct_warning.contains("mac.example.test"), "{status:?}");
+        assert!(status.ct_warning.contains("not prevention"), "{status:?}");
+        Ok(())
+    }
+
+    #[test]
+    fn a_healthy_monitor_adds_no_status_field() -> Check {
+        let home = tempfile::tempdir()?;
+        publish_with_report(home.path())?;
+        let raw = std::fs::read_to_string(home.path().join("remote/status.json"))?;
+        assert!(!raw.contains("ct_warning"), "{raw}");
         Ok(())
     }
 }

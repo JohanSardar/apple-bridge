@@ -77,9 +77,14 @@ public enum HelperCommand {
             lifetime.resume()
             defer { lifetime.cancel() }
             if kill(gatewayPID, 0) != 0 { return }
-            let peer = try AppleSession(socket: socket, secretFile: secretFile, home: home, gatewayPID: gatewayPID, commandsEnabled: arguments.contains("--lab-commands"))
+            #if LAB
+            let labCommands = arguments.contains("--lab-commands")
+            #else
+            let labCommands = false
+            #endif
+            let peer = try AppleSession(socket: socket, secretFile: secretFile, home: home, gatewayPID: gatewayPID, commandsEnabled: labCommands)
             Task { @MainActor in
-                await SessionSources.register(into: peer, home: home, labEnabled: arguments.contains("--lab-commands"))
+                await SessionSources.register(into: peer, home: home, labEnabled: labCommands)
                 try? await peer.runNative(socket: socket, secretFile: secretFile)
                 NSApplication.shared.terminate(nil)
             }
@@ -89,6 +94,7 @@ public enum HelperCommand {
         guard let command = arguments.first, ["selftest", "status", "onboard", "authorize-reminders"].contains(command) else { throw HelperCommandFailure.unknownCommand }
         guard let reportIndex = arguments.firstIndex(of: "--report"), reportIndex + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
         let reportURL = try PrivateReport.validate(arguments[reportIndex + 1])
+        #if LAB
         if arguments.first == "selftest", arguments.dropFirst().first == "contacts-groups" {
             let descriptor = Darwin.open(PrivateReport.directory.appendingPathComponent("contacts-groups-selftest.lock").path, O_CREAT | O_RDWR | O_NOFOLLOW, 0o600)
             guard descriptor >= 0 else { throw ProbeFailure.unavailable }
@@ -107,6 +113,7 @@ public enum HelperCommand {
             while !finished { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
             return
         }
+        #endif
         if arguments.first == "selftest", arguments.dropFirst().first == "messages" {
             var finished = false
             DispatchQueue.global().asyncAfter(deadline: .now() + 600) { @Sendable in

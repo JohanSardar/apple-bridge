@@ -339,6 +339,7 @@ pub struct Relay {
     pub domain: String,
     pub resolver: Option<Arc<dyn Resolver>>,
     pub domain_poll: Duration,
+    pub certificate_monitor: bool,
 }
 impl Ingress for Relay {
     fn run(&self, gateway: Gateway, mut stop: watch::Receiver<bool>) -> IngressFuture<'_> {
@@ -356,27 +357,31 @@ impl Ingress for Relay {
             };
             let notifications = crate::ct::Notifications {
                 home: self.home.clone(),
+                status: Some(gateway.clone()),
             };
             let monitor = async {
-                if crate::ct::enabled(&self.home) {
-                    let ct_client = crate::ct::PublicCt::new()?;
-                    crate::ct::run(
-                        &self.home,
-                        &id.credential.hostname,
-                        &ct_client,
-                        &notifications,
-                    )
-                    .await
-                } else {
-                    std::future::pending::<Result<()>>().await
+                if self.certificate_monitor {
+                    match crate::ct::PublicCt::new() {
+                        Ok(ct_client) => {
+                            crate::ct::run(
+                                &self.home,
+                                &id.credential.hostname,
+                                &ct_client,
+                                &notifications,
+                            )
+                            .await;
+                        }
+                        Err(error) => eprintln!("CT monitor could not start: {error}"),
+                    }
                 }
+                std::future::pending::<()>().await;
             };
             tokio::pin!(monitor);
             let mut delay = Duration::from_millis(100);
             loop {
                 tokio::select! {
                     () = stopped(&mut stop) => return Ok(()),
-                    result = &mut monitor => return result,
+                    () = &mut monitor => return Ok(()),
                     result = self.connect(&id, &host, gateway.clone()) => {
                         if let Err(e) = result {
                             if refused_by_relay(&e) {

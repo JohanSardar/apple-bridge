@@ -15,8 +15,34 @@ Product commands include `session`, `status`, `onboard` and the Messages `selfte
 - `probe`
 - `wire-checks`
 - `media-cleanup-checks`
+- `selftest contacts-groups`
 
 A release Helper rejects these with `unknownCommand`, even when given valid lab arguments. Shared implementations used by product self-test, command safety and cleanup remain in release builds.
+
+## Code identity
+
+A release Helper trusts only code signed by its own certificate. It compares each of these against its own leaf certificate, a fixed identifier and the hardened runtime:
+
+| What | Identifier | When |
+|---|---|---|
+| The process listening on the gateway socket | `bridge` | Before starting a session |
+| `Contents/MacOS/ab-session` | `ab-session` | Before and after spawning it, while it is suspended |
+| `Contents/MacOS/bridge` | `bridge` | Before and after spawning it, while it is suspended |
+| The parent of `media-facts` | `ab-session` | Before answering |
+
+A lab build skips these checks and keeps its overrides: `AB_SESSION_BINARY`, `AB_SESSION_RUST_COMMANDS`, `--lab-commands` and the executable argument to `connector-approvals`. A release build compiles those four out.
+
+So a release gateway must itself be signed with the Helper's certificate, with `--options runtime` and identifier `bridge`, and a release Helper must bundle `bridge`. `packaging/build-app.sh` does both. A Helper built separately takes the binary through `AB_HELPER_BRIDGE_BINARY`.
+
+### What this does not stop
+
+Same-user code remains a partly trusted party. These gaps are open:
+
+- It can run the genuinely signed `bridge` against a home it controls, and the Helper accepts that gateway. Its own gateway can then ask for the same native work. It can also run `bridge selftest messages`.
+- It can copy the app somewhere writable and race the check. Verifying a file and spawning it are separate path lookups, and macOS has no way to execute the exact file that was verified. A replaced executable starts suspended, but any same-user process can send it `SIGCONT` before the Helper checks it and kills it. So suspension narrows this race and doesn't close it. Closing it means removing the child process, which is the static-library route in ADR 0023.
+- How macOS attributes permissions to the Helper's child processes has not been established.
+
+`packaging/dev/test_helper_identity.py` checks this with throwaway certificates and no real permissions. It needs `HelperIdentityChecks` and `HelperIdentityFixture` from a native build, and takes `--lab` for a lab build. `--helper` also attacks a test-signed copy of a release Helper. `--bridge` runs a real `bridge` binary, hardened and test-signed, in an isolated home with the file secret store and checks that it passes as the gateway peer. Never point these at an installed Helper or a real home.
 
 ## Immutable signed apps
 

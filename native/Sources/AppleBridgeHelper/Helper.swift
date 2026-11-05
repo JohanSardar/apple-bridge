@@ -2,6 +2,7 @@ import Foundation
 import AppKit
 import Darwin
 import AppleSession
+import SourceSupport
 
 @main
 struct AppleBridgeHelper {
@@ -9,6 +10,7 @@ struct AppleBridgeHelper {
     static func main() {
         umask(0o077)
         if CommandLine.arguments.count == 2, CommandLine.arguments[1] == "media-facts" {
+            guard (try? TrustedChild.verifySessionParent()) != nil else { exit(1) }
             exit(MediaFacts.run())
         }
         #if LAB

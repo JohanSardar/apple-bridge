@@ -660,10 +660,31 @@ impl Phone {
         let (status, body) = gateway.public("/v1/iphone/pair", &serde_json::to_vec(&request)?)?;
         if status == 200 {
             let result: Value = serde_json::from_slice(&body)?;
-            self.id = result["id"].as_str().unwrap_or_default().to_owned();
-            self.gateway_key = STANDARD
+            let device = result["id"].as_str().unwrap_or_default();
+            let gateway_key = STANDARD
                 .decode(result["gateway_key"].as_str().unwrap_or_default())
                 .map_err(|e| invalid(e.to_string()))?;
+            if code["gateway_key"] != result["gateway_key"] {
+                return Err(invalid("pair response key differs from the pairing code"));
+            }
+            let proof = STANDARD
+                .decode(result["pair_proof"].as_str().unwrap_or_default())
+                .map_err(|e| invalid(e.to_string()))?;
+            let mut response = format!(
+                "apple-bridge-iphone-pair-response/1\0{id}\0{}\0{device}\0",
+                code["address"].as_str().unwrap_or_default()
+            )
+            .into_bytes();
+            response.extend_from_slice(&signing);
+            response.extend_from_slice(&encryption);
+            response.extend_from_slice(&gateway_key);
+            let mut mac =
+                <HmacSha256 as Mac>::new_from_slice(&key).map_err(|e| invalid(e.to_string()))?;
+            mac.update(&response);
+            mac.verify_slice(&proof)
+                .map_err(|_| invalid("pair response proof is invalid"))?;
+            device.clone_into(&mut self.id);
+            self.gateway_key = gateway_key;
         }
         Ok(status)
     }
