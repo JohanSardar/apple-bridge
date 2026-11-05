@@ -935,6 +935,7 @@ fn action_url(raw: &str) -> bool {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod mail_tests {
     use super::validate;
     use crate::{ActionContext, Command, Error, native_action};

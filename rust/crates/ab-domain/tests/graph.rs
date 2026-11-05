@@ -65,6 +65,7 @@ fn enforce_workspace_dependency_boundaries() -> Result<(), Box<dyn std::error::E
                 "ab-blobs",
                 "ab-trust",
                 "ab-catalog",
+                "ab-pages",
             ],
         ),
         ("ab-remote", &["ab-trust", "ab-wire"]),

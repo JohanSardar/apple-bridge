@@ -450,14 +450,14 @@ pub fn revalidate(
             PRESENT
         });
     }
-    let original = match text(data, "occurrence_date") {
+    let captured = match text(data, "occurrence_date") {
         "" => text(data, "start"),
-        date => date,
+        occurrence => occurrence,
     };
-    let Some(date) = date_of(original, data["all_day"] == true, &local_zone()) else {
+    let Some(moment) = date_of(captured, data["all_day"] == true, &local_zone()) else {
         return Ok(PRESENT);
     };
-    Ok(if date < first || date >= last {
+    Ok(if moment < first || moment >= last {
         OUTSIDE_SCOPE
     } else {
         MISSING

@@ -276,12 +276,12 @@ impl AgendaReader {
         Ok(verdicts)
     }
 
-    #[must_use]
     pub fn with_lookups(mut self, path: PathBuf) -> Result<Self, Error> {
         self.lookups = Some(Arc::new(Lookups::open(Some(path))?));
         Ok(self)
     }
 
+    #[must_use]
     pub fn with_calendar_store(mut self, root: PathBuf) -> Self {
         if self.source == "calendar" {
             self.store = Some(calendar_store::Enrichment::new(root));
