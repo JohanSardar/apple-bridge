@@ -204,6 +204,16 @@ def run_mail():
         check("mail_send_self_in_store", rows, rows)
         for row, _ in rows or []:
             ledger("mail", row)
+        both = wait_for(lambda: (lambda found: found if len(found) == 2 else None)(store_rows(sent_subject)), 120, 2)
+        if check("mail_self_send_has_two_copies", both, store_rows(sent_subject)):
+            for index in range(2):
+                trash = next((r["id"] for r in records("mail.mailbox") if "Deleted" in r["data"].get("name", "")), "")
+                copy = wait_for(lambda: next((r for r in records_search(sent_subject) if not r.get("deleted") and r["data"].get("subject") == sent_subject and trash not in json.dumps(r["data"].get("mailbox_ids"))), None), 60)
+                if not check("mail_delete_copy_%d_found" % index, copy):
+                    break
+                reply = command("mail.delete", {"id": copy["id"]}, copy["version"])
+                check("mail_delete_copy_%d_observed" % index, observed(reply), brief(reply))
+            check("mail_both_copies_in_trash", wait_for(lambda: len([row for row in store_rows(sent_subject) if "Deleted" in row[1]]) == 2, 30), store_rows(sent_subject))
     if not was:
         subprocess.run(["pkill", "-TERM", "-x", "Mail"])
 
